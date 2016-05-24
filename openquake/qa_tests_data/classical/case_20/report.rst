@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 20
 =================================
 
-gem-tstation:/home/michele/ssd/calc_16392.hdf5 updated Wed May 18 18:19:21 2016
+gem-tstation:/home/michele/ssd/calc_19168.hdf5 updated Tue May 24 14:32:56 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -20,8 +20,8 @@ width_of_mfd_bin             1.0
 area_source_discretization   10.0               
 random_seed                  106                
 master_seed                  0                  
-sites_per_tile               1000               
-oqlite_version               '0.13.0-git034c0a0'
+sites_per_tile               10000              
+oqlite_version               '0.13.0-git1f78261'
 ============================ ===================
 
 Input files
@@ -145,25 +145,25 @@ Slowest sources
 trt_model_id source_id source_class              weight split_num filter_time split_time calc_time
 ============ ========= ========================= ====== ========= =========== ========== =========
 0            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0      
-11           SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
-6            SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
-7            SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
-5            COMFLT1   ComplexFaultSource        62     1         0.001       0.0        0.0      
-0            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
-1            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
-10           SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
-7            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0      
 3            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
 4            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
-0            COMFLT1   ComplexFaultSource        29     1         0.001       0.0        0.0      
+0            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
+10           SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
+9            SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
+1            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
 2            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
-2            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0      
 5            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
 8            SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
-9            SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
-1            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0      
+6            SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
+7            SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
+11           SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
+0            COMFLT1   ComplexFaultSource        29     1         0.001       0.0        0.0      
 2            COMFLT1   ComplexFaultSource        29     1         0.001       0.0        0.0      
-5            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0      
+7            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0      
+4            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0      
+1            COMFLT1   ComplexFaultSource        29     1         0.001       0.0        0.0      
+1            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0      
+10           CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0      
 ============ ========= ========================= ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -173,7 +173,7 @@ source_class              filter_time split_time calc_time counts
 ========================= =========== ========== ========= ======
 CharacteristicFaultSource 0.013       0.0        0.0       12    
 ComplexFaultSource        0.013       0.0        0.0       12    
-SimpleFaultSource         0.015       0.0        0.0       12    
+SimpleFaultSource         0.014       0.0        0.0       12    
 ========================= =========== ========== ========= ======
 
 Information about the tasks
@@ -185,11 +185,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.603     0.0       1     
-managing sources               0.131     0.0       1     
-filtering sources              0.041     0.0       36    
-total count_eff_ruptures       0.007     0.0       30    
-store source_info              0.005     0.0       1     
-aggregate curves               6.154E-04 0.0       30    
-reading site collection        3.195E-05 0.0       1     
+reading composite source model 0.607     0.0       1     
+managing sources               0.137     0.0       1     
+filtering sources              0.040     0.0       36    
+total count_eff_ruptures       0.008     0.0       30    
+store source_info              0.006     0.0       1     
+aggregate curves               6.409E-04 0.0       30    
+reading site collection        3.314E-05 0.0       1     
 ============================== ========= ========= ======

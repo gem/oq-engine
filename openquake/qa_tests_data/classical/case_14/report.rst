@@ -1,7 +1,7 @@
 Classical PSHA QA test with sites_csv
 =====================================
 
-gem-tstation:/home/michele/ssd/calc_16393.hdf5 updated Wed May 18 18:19:21 2016
+gem-tstation:/home/michele/ssd/calc_19169.hdf5 updated Tue May 24 14:32:56 2016
 
 num_sites = 10, sitecol = 1.13 KB
 
@@ -20,8 +20,8 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0               
 random_seed                  23                 
 master_seed                  0                  
-sites_per_tile               1000               
-oqlite_version               '0.13.0-git034c0a0'
+sites_per_tile               10000              
+oqlite_version               '0.13.0-git1f78261'
 ============================ ===================
 
 Input files
@@ -115,12 +115,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.054     0.0       1     
+managing sources               0.052     0.0       1     
 splitting sources              0.034     0.0       1     
-reading composite source model 0.007     0.0       1     
-store source_info              0.007     0.0       1     
+reading composite source model 0.008     0.0       1     
+store source_info              0.005     0.0       1     
 total count_eff_ruptures       0.004     0.0       14    
 filtering sources              0.002     0.0       1     
-aggregate curves               3.476E-04 0.0       14    
-reading site collection        1.149E-04 0.0       1     
+aggregate curves               2.096E-04 0.0       14    
+reading site collection        1.221E-04 0.0       1     
 ============================== ========= ========= ======

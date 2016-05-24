@@ -1,7 +1,7 @@
 Classical Tiling for Turkey reduced
 ===================================
 
-gem-tstation:/home/michele/ssd/calc_16425.hdf5 updated Wed May 18 18:20:46 2016
+gem-tstation:/home/michele/ssd/calc_19201.hdf5 updated Tue May 24 14:34:21 2016
 
 num_sites = 83, sitecol = 4.42 KB
 
@@ -21,7 +21,7 @@ area_source_discretization   25.0
 random_seed                  323                
 master_seed                  0                  
 sites_per_tile               10                 
-oqlite_version               '0.13.0-git034c0a0'
+oqlite_version               '0.13.0-git1f78261'
 ============================ ===================
 
 Input files
@@ -138,11 +138,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               2.913     0.0       1     
-reading composite source model 0.745     0.0       1     
-filtering sources              0.227     0.0       279   
-reading site collection        0.009     0.0       1     
+managing sources               2.895     0.0       1     
+reading composite source model 0.778     0.0       1     
+filtering sources              0.226     0.0       279   
+reading site collection        0.011     0.0       1     
 total count_eff_ruptures       0.005     0.0       15    
 store source_info              0.004     0.0       1     
-aggregate curves               1.962E-04 0.0       15    
+aggregate curves               1.764E-04 0.0       15    
 ============================== ========= ========= ======
