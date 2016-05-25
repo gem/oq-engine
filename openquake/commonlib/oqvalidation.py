@@ -28,6 +28,35 @@ from openquake.commonlib.riskmodels import get_risk_files
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 
 
+def getdefault(dic_with_default, key):
+    """
+    :param dic_with_default: a dictionary with a 'default' key
+    :param key: a key that may be present in the dictionary or not
+    :returns: the value associated to the key, or to 'default'
+    """
+    try:
+        return dic_with_default[key]
+    except KeyError:
+        return dic_with_default['default']
+
+
+def fix_maximum_distance(max_dist, trts):
+    """
+    Make sure the dictionary maximum_distance (provided by the user in the
+    job.ini file) is filled for all tectonic region types and has no key
+    named 'default'.
+    """
+    for trt in trts:
+        try:
+            max_dist[trt] = getdefault(max_dist, trt)
+        except KeyError:
+            raise ValueError(
+                'The parameter `maximum_distance` in the job.ini '
+                'file is missing the TRT %r' % trt)
+    if 'default' in max_dist:
+        del max_dist['default']
+
+
 class OqParam(valid.ParamSet):
     siteparam = dict(
         vs30measured='reference_vs30_type',
@@ -348,6 +377,7 @@ class OqParam(valid.ParamSet):
             missing = ', '.join(set(self._gsims_by_trt) - trts)
             self.error = 'missing distance for %s and no default' % missing
             return False
+        fix_maximum_distance(self.maximum_distance, self._gsims_by_trt)
         return True
 
     def is_valid_intensity_measure_types(self):

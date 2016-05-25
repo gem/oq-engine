@@ -650,7 +650,7 @@ def compute_ruptures(branch_info, source, sitecol, oqparam, monitor):
     :returns:
         Dictionary of rupture instances associated to a TRT ID
     """
-    integration_distance = oqparam.maximum_distance["default"]
+    integration_distance = oqparam.maximum_distance[DEFAULT_TRT]
     res = AccumDict()
     res.calc_times = AccumDict()
     serial = 1

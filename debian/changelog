@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Reduce the data transfer of the realization association object
+  * Optimized the filtering of PointSources
   * Initial work on the UCERF event based hazard calculator
   * Added a test calculation crossing the International Date Line (Alaska)
   * Removed the RlzsAssoc object from the datastore

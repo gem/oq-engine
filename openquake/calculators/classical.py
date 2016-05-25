@@ -156,10 +156,7 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
         assert src.trt_model_id == trt_model_id
     gsims = rlzs_assoc.gsims_by_trt_id[trt_model_id]
     trt = sources[0].tectonic_region_type
-    try:
-        max_dist = monitor.oqparam.maximum_distance[trt]
-    except KeyError:
-        max_dist = monitor.oqparam.maximum_distance['default']
+    max_dist = monitor.oqparam.maximum_distance[trt]
 
     dic = AccumDict()
     dic.siteslice = slice(siteidx, siteidx + len(sitecol))
