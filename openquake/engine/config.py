@@ -121,6 +121,7 @@ def context(section, **kw):
 
 def get_section(section):
     """A dictionary of key/value pairs for the given `section` or `None`."""
+    abort_if_no_config_available()
     return cfg.get(section)
 
 
