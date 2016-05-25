@@ -1,0 +1,93 @@
+Architecture of the OpenQuake Engine
+====================================
+
+The OpenQuake Engine version 2.0 is a complete rewrite of the version
+1.0, so a new document describing the overall architecture is
+needed. Whereas in the past the Engine was database-centric and
+structured as a Web application with an Object Relational Mapper, now
+it is calculation-centric and structured as a scientific application:
+everything is done in memory as much as possible and there is no database
+nor ORM. Intermediate results are stored in HDF5 format and in the
+calculations we work as much as possible in terms of arrays which are
+efficiently manipulated at C/Fortran speed with a stack of well
+know scientific libraries (numpy/scipy).
+
+Design principles
+-----------------
+
+The main design principle has been *simplicity*: everything has to be
+as simple as possible (but not simplest). From the beginning the goal
+has been to keep the engine simple enough that a single person can
+understand it, can debug it and can extend it without tremendous
+efforts. All the rest come from simplicity: in the last three years
+99% of the performance improvements came from free just from removing
+complications. When a thing is simple it is easy to improve it. The
+battle for simplicity is neverending, so there are still several
+things in the engine that are more complex that they should: we are
+still working on that.
+
+After simplicity the second design goal has been *performance*: the
+engine is a number chrunching application after all, and we need to run
+massively parallel calculations taking days or weeks of
+runtime. Efficiency in terms of computation time and memory
+requirements is of paramount importance, since it makes the difference
+between being able to run a computation and being unable to do it.
+Being too slow to be usable should be considered as a bug.
+
+The third requirement is the one of *reproducibility*, which is the same as
+testability: it is essential a suite of tests checking that the calculators
+are providing the expected outputs against a set of predefined inputs.
+With respect to OpenQuake Engine 1.0 we have at least tripled the number
+of scientific tests, testing a lot more corner cases and a lot more
+functionalities. On the other hand several programming unit tests have
+been removed: they were testing implementations details of an implementation
+that has been removed and replaced with a simpler one.
+
+Components of the OpenQuake Engine
+-----------------------------------
+
+The OpenQuake Engine suite is composed of several components:
+
+- a set of *support libraries* addressing different concerns like reading the
+  inputs and writing the outputs, implementing basic geometric manipulations,
+  helpers for distributed computing and generic programming utilities
+- *hazardlib and risklib*, providing the building blocks for hazard and
+  risk calculations, notably the GMPEs for hazard and the core functions
+  to produce the losses from the vulnerability/fragility functions for risk
+- the hazard and risk *calculators*, implementing the core logic
+  of the engine
+- the *datastore*, which is an HDF5 file working as a short term storage/cache
+  for the calculations and it is possible to run a calculation starting from an
+  existing datastore, to avoid recomputing everything every time. 
+- the *database* which is a sqlite file working as a long storage of the
+  calculation metadata, things like then start/stop time of the computations,
+  the descriptions, the performances, the logs, etc. The bulk scientific data
+  (essentially big arrays) are kept in the datastore, not in the database.
+- the *database server* is a service mediating the interaction
+  between the calculators and the database and it is automatically started
+- the *Web UI* is a web applications that allows to run and monitor
+  computations via a browser.
+
+The GMPE library in hazardlib and the calculators libraries are designed
+to be extensible, so that it is easy to add a new GMPE class or a new
+calculator. We routinely add several new GMPEs per release; adding new
+calculators is less common and it requires more expertise, but it is possible
+and it has been done several times in the last years. In particular it is
+often easier to add specific calculator optimized for a given use case rather
+than complicating the current calculators.
+
+The results of a computation are automatically saved in the datastore
+and can be exported in a portable format, such as XML or CSV.  You
+can assume that the datastore of version X of the engine will not work
+with version X + 1: on the contrary, the exported files will likely be
+same across different versions, therefore it is important to export
+all of the outputs you are interested it before doing an upgrade of
+the Engine, otherwise you will be forced to downgrade in order to be
+able to export the previous results.
+
+The WebUI provides a REST API for third party applications: for instance
+a QGIS plugin could download the maps generated by the engine via the
+WebUI and display them. There is lot of functionality in the API which
+is documented here: https://github.com/gem/oq-engine/blob/master/engine_api.md
+It is even possible to build your own user interface on top of it, since
+the API is stable and kept backward compatible.
