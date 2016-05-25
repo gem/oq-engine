@@ -1,7 +1,7 @@
 Event-Based Hazard QA Test, Case 18
 ===================================
 
-gem-tstation:/home/michele/ssd/calc_19186.hdf5 updated Tue May 24 14:33:41 2016
+gem-tstation:/home/michele/ssd/calc_19689.hdf5 updated Wed May 25 08:34:31 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.001
 area_source_discretization   10.0               
 random_seed                  1064               
 master_seed                  0                  
-oqlite_version               '0.13.0-git1f78261'
+oqlite_version               '0.13.0-git1cc9966'
 ============================ ===================
 
 Input files
@@ -86,7 +86,7 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         PointSource  75     1         0.005       2.193E-05  2.840    
+0            1         PointSource  75     1         0.005       2.217E-05  2.864    
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -94,36 +94,36 @@ Computation times by source typology
 ============ =========== ========== ========= ======
 source_class filter_time split_time calc_time counts
 ============ =========== ========== ========= ======
-PointSource  0.005       2.193E-05  2.840     1     
+PointSource  0.005       2.217E-05  2.864     1     
 ============ =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
-================================= ===== ========= ===== ===== =========
-measurement                       mean  stddev    min   max   num_tasks
-compute_ruptures.time_sec         2.841 NaN       2.841 2.841 1        
-compute_ruptures.memory_mb        0.0   NaN       0.0   0.0   1        
-compute_gmfs_and_curves.time_sec  0.002 2.011E-04 0.001 0.002 6        
-compute_gmfs_and_curves.memory_mb 0.0   0.0       0.0   0.0   6        
-================================= ===== ========= ===== ===== =========
+================================= ========= ========= ========= ========= =========
+measurement                       mean      stddev    min       max       num_tasks
+compute_ruptures.time_sec         2.864     NaN       2.864     2.864     1        
+compute_ruptures.memory_mb        -0.515625 NaN       -0.515625 -0.515625 1        
+compute_gmfs_and_curves.time_sec  0.001     3.245E-04 9.589E-04 0.002     6        
+compute_gmfs_and_curves.memory_mb 0.0       0.0       0.0       0.0       6        
+================================= ========= ========= ========= ========= =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         2.841     0.0       1     
+total compute_ruptures         2.864     0.0       1     
 reading composite source model 0.011     0.0       1     
-store source_info              0.010     0.0       1     
-total compute_gmfs_and_curves  0.010     0.0       6     
-saving ruptures                0.009     0.0       1     
+store source_info              0.011     0.0       1     
+total compute_gmfs_and_curves  0.008     0.0       6     
+saving ruptures                0.008     0.0       1     
 managing sources               0.008     0.0       1     
 filtering sources              0.005     0.0       1     
 saving gmfs                    0.004     0.0       6     
-make contexts                  0.004     0.0       6     
+make contexts                  0.003     0.0       6     
 compute poes                   0.003     0.0       6     
 aggregate curves               0.002     0.0       1     
 filtering ruptures             0.001     0.0       6     
-reading site collection        3.791E-05 0.0       1     
-splitting sources              2.193E-05 0.0       1     
+reading site collection        3.815E-05 0.0       1     
+splitting sources              2.217E-05 0.0       1     
 ============================== ========= ========= ======
