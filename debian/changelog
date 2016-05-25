@@ -1,6 +1,7 @@
   [Michele Simionato]
   * If uniform_hazard_spectra is true, the UHS curves must be generated
     even if hazard_maps is false; the hazard maps must not be exported
+  * Optimized the filtering of PointSources
   * Initial work on the UCERF event based hazard calculator
   * Added a test calculation crossing the International Date Line (Alaska)
   * Removed the RlzsAssoc object from the datastore
