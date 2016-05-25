@@ -31,6 +31,7 @@ import numpy
 from openquake.baselib.python3compat import raise_
 from openquake.baselib.general import (
     AccumDict, groupby, block_splitter, group_array)
+from openquake.hazardlib.site import Tile
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib.node import read_nodes
 from openquake.commonlib import logictree, sourceconverter, parallel, valid
@@ -841,6 +842,7 @@ class SourceManager(object):
         self.monitor = monitor
         self.filter_sources = filter_sources
         self.num_tiles = num_tiles
+        self.rlzs_assoc = csm.info.get_rlzs_assoc()
         self.split_map = {}  # trt_model_id, source_id -> split sources
         self.source_chunks = []
         self.infos = {}  # trt_model_id, source_id -> SourceInfo tuple
@@ -860,33 +862,27 @@ class SourceManager(object):
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.maxweight)
 
-    def get_sources(self, kind, sitecol):
+    def get_sources(self, kind, tile):
         """
         :param kind: a string 'light', 'heavy' or 'all'
-        :param sitecol: a SiteCollection instance
-        :returns: the sources of the given kind affecting the given sitecol
+        :param tile: a :class:`openquake.hazardlib.site.Tile` instance
+        :returns: the sources of the given kind affecting the given tile
         """
         filter_mon = self.monitor('filtering sources')
         split_mon = self.monitor('splitting sources')
         for src in self.csm.get_sources(kind):
             filter_time = split_time = 0
             if self.filter_sources:
-                try:
-                    max_dist = self.maximum_distance[src.tectonic_region_type]
-                except KeyError:
-                    max_dist = self.maximum_distance['default']
                 with filter_mon:
                     try:
-                        sites = src.filter_sites_by_distance_to_source(
-                            max_dist, sitecol)
+                        if src not in tile:
+                            continue
                     except:
                         etype, err, tb = sys.exc_info()
                         msg = 'An error occurred with source id=%s: %s'
                         msg %= (src.source_id, err)
                         raise_(etype, msg, tb)
                 filter_time = filter_mon.dt
-                if sites is None:
-                    continue
             if kind == 'heavy':
                 if (src.trt_model_id, src.id) not in self.split_map:
                     logging.info('splitting %s of weight %s',
@@ -934,18 +930,15 @@ class SourceManager(object):
     def submit_sources(self, sitecol, siteidx=0):
         """
         Submit the light sources and then the (split) heavy sources.
-        Only the sources affecting the sitecol as considered. Also,
-        set the .seed attribute of each source.
+        Only the sources affecting the sitecol as considered.
         """
-        rlzs_assoc = self.csm.info.get_rlzs_assoc()
+        tile = Tile(sitecol, self.maximum_distance)
         for kind in ('light', 'heavy'):
             if self.filter_sources:
                 logging.info('Filtering %s sources', kind)
-            sources = list(self.get_sources(kind, sitecol))
+            sources = list(self.get_sources(kind, tile))
             if not sources:
                 continue
-            # set a seed for each split source; the seed is used
-            # only by the event based calculator, but it is set anyway
             for src in sources:
                 self.csm.filtered_weight += src.weight
             nblocks = 0
@@ -954,7 +947,7 @@ class SourceManager(object):
                     operator.attrgetter('weight'),
                     operator.attrgetter('trt_model_id')):
                 sent = self.tm.submit(block, sitecol, siteidx,
-                                      rlzs_assoc, self.monitor.new())
+                                      self.rlzs_assoc, self.monitor.new())
                 self.source_chunks.append(
                     (len(block), block.weight, sum(sent.values())))
                 nblocks += 1
@@ -997,15 +990,3 @@ def count_eff_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     acc.eff_ruptures = {sources[0].trt_model_id:
                         sum(src.num_ruptures for src in sources)}
     return acc
-
-
-class DummySourceManager(SourceManager):
-    """
-    A SourceManager submitting tasks of kind `count_eff_ruptures`: this is
-    used by the reports produced by `oq-lite info --report`.
-    """
-    def __init__(self, csm, taskfunc, maximum_distance, dstore, monitor,
-                 random_seed=None, filter_sources=True, num_tiles=1):
-        SourceManager.__init__(self, csm, count_eff_ruptures, maximum_distance,
-                               dstore, monitor, random_seed, filter_sources,
-                               num_tiles)

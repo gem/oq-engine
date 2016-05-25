@@ -137,7 +137,6 @@ def build_report(job_ini, output_dir=None):
     calc = base.calculators(oq)
     # some taken is care so that the real calculation is not run:
     # the goal is to extract information about the source management only
-    calc.SourceManager = source.DummySourceManager
     with mock.patch.object(
             calc.__class__, 'core_task', source.count_eff_ruptures):
         calc.pre_execute()
