@@ -757,7 +757,9 @@ class UCERFEventBasedRuptureCalculator(
         for trt_id in val:
             ltbrid, dt = val.calc_times[trt_id]
             info = source.SourceInfo(
-                trt_id, ltbrid, 'UcerfBranch', 1, 0, 0, 0, dt)
+                trt_id, ltbrid,
+                source_class=UCERFSESControl.__class__.__name__,
+                weight=1, sources=1, filter_time=0, split_time=0, calc_time=dt)
             self.infos.append(info)
         return acc + val
 
