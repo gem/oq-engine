@@ -652,7 +652,7 @@ def compute_ruptures(branch_info, source, sitecol, oqparam, monitor):
     """
     integration_distance = oqparam.maximum_distance[DEFAULT_TRT]
     res = AccumDict()
-    res.calc_times = []
+    res.calc_times = AccumDict()
     serial = 1
     filter_mon = monitor('update_background_site_filter', measuremem=False)
     event_mon = monitor('sampling ruptures', measuremem=False)
@@ -688,8 +688,8 @@ def compute_ruptures(branch_info, source, sitecol, oqparam, monitor):
                             numpy.array(events, event_based.event_dt),
                             source.source_id, trt_model_id, serial))
                     serial += 1
-            dt = time.time() - t0
-            res.calc_times.append((ltbrid, dt))
+        dt = time.time() - t0
+        res.calc_times[trt_model_id] = (ltbrid, dt)
         res[trt_model_id] = ses_ruptures
     res.trt = DEFAULT_TRT
     return res
@@ -730,6 +730,7 @@ class UCERFEventBasedRuptureCalculator(
         self.csm = source.CompositeSourceModel(
             self.smlt, source_models, set_weight=False)
         self.rup_data = {}
+        self.infos = []
 
     def execute(self):
         """
@@ -741,11 +742,26 @@ class UCERFEventBasedRuptureCalculator(
         ruptures_by_trt_id = parallel.apply_reduce(
             compute_ruptures,
             (id_set, self.source, self.sitecol, self.oqparam, self.monitor),
-            concurrent_tasks=self.oqparam.concurrent_tasks)
+            concurrent_tasks=self.oqparam.concurrent_tasks, agg=self.agg)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             functools.partial(self.count_eff_ruptures, ruptures_by_trt_id))
-        self.datastore['csm_info'] = self.rlzs_assoc.csm_info
+        self.datastore['csm_info'] = self.csm.info
+        self.datastore['source_info'] = numpy.array(
+            self.infos, source.source_info_dt)
         return ruptures_by_trt_id
+
+    def agg(self, acc, val):
+        """
+        Aggregated the ruptures and the calculation times
+        """
+        for trt_id in val:
+            ltbrid, dt = val.calc_times[trt_id]
+            info = source.SourceInfo(
+                trt_id, ltbrid,
+                source_class=UCERFSESControl.__class__.__name__,
+                weight=1, sources=1, filter_time=0, split_time=0, calc_time=dt)
+            self.infos.append(info)
+        return acc + val
 
 
 @base.calculators.add('ucerf_event_based')

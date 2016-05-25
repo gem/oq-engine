@@ -161,7 +161,7 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
     dic = AccumDict()
     dic.siteslice = slice(siteidx, siteidx + len(sitecol))
     if monitor.oqparam.poes_disagg:
-        sm_id = rlzs_assoc.csm_info.get_source_model(trt_model_id).ordinal
+        sm_id = rlzs_assoc.sm_ids[trt_model_id]
         dic.bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
     else:
         dic.bbs = []
@@ -242,7 +242,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.store_source_info(curves_by_trt_id)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             partial(self.count_eff_ruptures, curves_by_trt_id))
-        self.datastore['csm_info'] = self.rlzs_assoc.csm_info
+        self.datastore['csm_info'] = self.csm.info
         return curves_by_trt_id
 
     def store_source_info(self, curves_by_trt_id):
