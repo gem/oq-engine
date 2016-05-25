@@ -1,7 +1,7 @@
 Scenario QA Test 3
 ==================
 
-gem-tstation:/home/michele/ssd/calc_19196.hdf5 updated Tue May 24 14:34:14 2016
+gem-tstation:/home/michele/ssd/calc_19699.hdf5 updated Wed May 25 08:35:05 2016
 
 num_sites = 4, sitecol = 877 B
 
@@ -21,7 +21,7 @@ area_source_discretization   None
 random_seed                  3                  
 master_seed                  0                  
 avg_losses                   False              
-oqlite_version               '0.13.0-git1f78261'
+oqlite_version               '0.13.0-git1cc9966'
 ============================ ===================
 
 Input files
@@ -62,7 +62,7 @@ Information about the tasks
 ---------------------------
 ======================= ===== ========= ========= ===== =========
 measurement             mean  stddev    min       max   num_tasks
-scenario_risk.time_sec  0.001 5.674E-04 4.339E-04 0.002 4        
+scenario_risk.time_sec  0.001 3.676E-04 7.341E-04 0.002 4        
 scenario_risk.memory_mb 0.0   0.0       0.0       0.0   4        
 ======================= ===== ========= ========= ===== =========
 
@@ -71,14 +71,14 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-computing gmfs          0.057     0.0       1     
+computing gmfs          0.031     0.0       1     
 filtering sites         0.006     0.0       1     
 total scenario_risk     0.005     0.0       4     
 reading exposure        0.004     0.0       1     
-computing riskmodel     0.003     0.0       4     
+computing riskmodel     0.002     0.0       4     
 saving gmfs             0.002     0.0       1     
-building epsilons       5.748E-04 0.0       1     
-building hazard         4.871E-04 0.0       4     
-building riskinputs     4.439E-04 0.0       1     
-reading site collection 7.868E-06 0.0       1     
+building epsilons       6.380E-04 0.0       1     
+building hazard         4.623E-04 0.0       4     
+building riskinputs     4.621E-04 0.0       1     
+reading site collection 8.821E-06 0.0       1     
 ======================= ========= ========= ======

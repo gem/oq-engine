@@ -1,7 +1,7 @@
 Classical PSHA using Alaska 2007 active shallow crust grid model
 ================================================================
 
-gem-tstation:/home/michele/ssd/calc_19164.hdf5 updated Tue May 24 14:32:45 2016
+gem-tstation:/home/michele/ssd/calc_19667.hdf5 updated Wed May 25 08:33:34 2016
 
 num_sites = 21, sitecol = 1.62 KB
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                 
 master_seed                  0                  
 sites_per_tile               10000              
-oqlite_version               '0.13.0-git1f78261'
+oqlite_version               '0.13.0-git1cc9966'
 ============================ ===================
 
 Input files
@@ -77,7 +77,7 @@ Informational data
 count_eff_ruptures_max_received_per_task 4046             
 count_eff_ruptures_num_tasks             3                
 count_eff_ruptures_sent.monitor          11370            
-count_eff_ruptures_sent.rlzs_assoc       10374            
+count_eff_ruptures_sent.rlzs_assoc       4299             
 count_eff_ruptures_sent.sitecol          2751             
 count_eff_ruptures_sent.siteidx          15               
 count_eff_ruptures_sent.sources          4582             
@@ -97,9 +97,9 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            70088     PointSource  2.300  1         8.202E-05   1.407E-05  0.0      
-0            6736      PointSource  2.300  1         7.391E-05   2.003E-05  0.0      
-0            8878      PointSource  2.300  1         7.987E-05   1.311E-05  0.0      
+0            70088     PointSource  2.300  1         9.298E-05   1.502E-05  0.0      
+0            6736      PointSource  2.300  1         8.488E-05   2.217E-05  0.0      
+0            8878      PointSource  2.300  1         9.012E-05   1.407E-05  0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -107,7 +107,7 @@ Computation times by source typology
 ============ =========== ========== ========= ======
 source_class filter_time split_time calc_time counts
 ============ =========== ========== ========= ======
-PointSource  2.358E-04   4.721E-05  0.0       3     
+PointSource  2.680E-04   5.126E-05  0.0       3     
 ============ =========== ========== ========= ======
 
 Information about the tasks
@@ -120,11 +120,11 @@ Slowest operations
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
 reading composite source model 0.018     0.0       1     
-store source_info              0.009     0.0       1     
 managing sources               0.007     0.0       1     
+store source_info              0.005     0.0       1     
 filtering sources              0.001     0.0       14    
-total count_eff_ruptures       8.802E-04 0.0       3     
-reading site collection        1.619E-04 0.0       1     
-aggregate curves               8.512E-05 0.0       3     
-splitting sources              4.721E-05 0.0       3     
+total count_eff_ruptures       8.881E-04 0.0       3     
+reading site collection        1.581E-04 0.0       1     
+splitting sources              5.126E-05 0.0       3     
+aggregate curves               4.482E-05 0.0       3     
 ============================== ========= ========= ======
