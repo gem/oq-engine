@@ -1,7 +1,7 @@
 Event Based QA Test, Case 12
 ============================
 
-gem-tstation:/home/michele/ssd/calc_19190.hdf5 updated Tue May 24 14:34:10 2016
+gem-tstation:/home/michele/ssd/calc_19693.hdf5 updated Wed May 25 08:35:01 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             1.0
 area_source_discretization   10.0               
 random_seed                  1066               
 master_seed                  0                  
-oqlite_version               '0.13.0-git1f78261'
+oqlite_version               '0.13.0-git1cc9966'
 ============================ ===================
 
 Input files
@@ -95,8 +95,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         PointSource  0.025  1         8.893E-05   0.0        0.061    
-1            2         PointSource  0.025  1         6.104E-05   0.0        0.053    
+0            1         PointSource  0.025  1         9.203E-05   0.0        0.068    
+1            2         PointSource  0.025  1         6.294E-05   0.0        0.067    
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -104,37 +104,37 @@ Computation times by source typology
 ============ =========== ========== ========= ======
 source_class filter_time split_time calc_time counts
 ============ =========== ========== ========= ======
-PointSource  1.500E-04   0.0        0.114     2     
+PointSource  1.550E-04   0.0        0.134     2     
 ============ =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
-================================= ===== ====== ===== ===== =========
-measurement                       mean  stddev min   max   num_tasks
-compute_ruptures.time_sec         0.058 0.006  0.053 0.062 2        
-compute_ruptures.memory_mb        0.0   0.0    0.0   0.0   2        
-compute_gmfs_and_curves.time_sec  0.030 0.003  0.028 0.033 2        
-compute_gmfs_and_curves.memory_mb 0.0   0.0    0.0   0.0   2        
-================================= ===== ====== ===== ===== =========
+================================= ====== ========= ===== ===== =========
+measurement                       mean   stddev    min   max   num_tasks
+compute_ruptures.time_sec         0.068  7.801E-04 0.067 0.068 2        
+compute_ruptures.memory_mb        -0.375 0.177     -0.5  -0.25 2        
+compute_gmfs_and_curves.time_sec  0.038  8.520E-04 0.037 0.038 2        
+compute_gmfs_and_curves.memory_mb 0.0    0.0       0.0   0.0   2        
+================================= ====== ========= ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.115     0.0       2     
-saving ruptures                0.084     0.0       1     
-total compute_gmfs_and_curves  0.060     0.0       2     
-compute poes                   0.046     0.0       2     
-store source_info              0.011     0.0       1     
-bulding hazard curves          0.010     0.0       2     
+total compute_ruptures         0.135     0.0       2     
+total compute_gmfs_and_curves  0.075     0.0       2     
+saving ruptures                0.074     0.0       1     
+compute poes                   0.058     0.0       2     
+bulding hazard curves          0.012     0.0       2     
+store source_info              0.010     0.0       1     
 reading composite source model 0.006     0.0       1     
-aggregating hcurves            0.003     0.0       2     
+aggregate curves               0.003     0.0       4     
 managing sources               0.003     0.0       1     
-aggregate curves               0.002     0.0       4     
-saving gmfs                    0.002     0.0       2     
-make contexts                  0.001     0.0       2     
-filtering ruptures             8.540E-04 0.0       2     
-filtering sources              1.500E-04 0.0       2     
-reading site collection        3.695E-05 0.0       1     
+aggregating hcurves            0.002     0.0       2     
+make contexts                  0.002     0.0       2     
+saving gmfs                    0.001     0.0       2     
+filtering ruptures             0.001     0.0       2     
+filtering sources              1.550E-04 0.0       2     
+reading site collection        4.101E-05 0.0       1     
 ============================== ========= ========= ======

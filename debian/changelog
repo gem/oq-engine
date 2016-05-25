@@ -1,6 +1,10 @@
   [Michele Simionato]
   * Provided a better error message in the case of absence of openquake.cfg
   * Removed the check on the export_dir when using the WebUI
+  * Reduce the data transfer of the realization association object
+  * If uniform_hazard_spectra is true, the UHS curves must be generated
+    even if hazard_maps is false; the hazard maps must not be exported
+  * Optimized the filtering of PointSources
   * Initial work on the UCERF event based hazard calculator
   * Added a test calculation crossing the International Date Line (Alaska)
 
