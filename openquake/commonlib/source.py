@@ -330,14 +330,12 @@ class RlzsAssoc(collections.Mapping):
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
         self.rlzs_by_smodel = [[] for _ in range(len(csm_info.source_models))]
         self.gsims_by_trt_id = {}
-        sm_ids = []
-        samples = []
+        self.sm_ids = {}
+        self.samples = {}
         for sm in csm_info.source_models:
             for tm in sm.trt_models:
-                sm_ids.append(sm.ordinal)
-                samples.append(sm.samples)
-        self.sm_ids = numpy.array(sm_ids, U32)
-        self.samples = numpy.array(samples, U32)
+                self.sm_ids[tm.id] = sm.ordinal
+                self.samples[tm.id] = sm.samples
 
     def _init(self):
         """

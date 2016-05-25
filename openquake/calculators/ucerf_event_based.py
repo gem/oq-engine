@@ -744,7 +744,7 @@ class UCERFEventBasedRuptureCalculator(
             concurrent_tasks=self.oqparam.concurrent_tasks)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             functools.partial(self.count_eff_ruptures, ruptures_by_trt_id))
-        self.datastore['csm_info'] = self.rlzs_assoc.csm_info
+        self.datastore['csm_info'] = self.rlzs_assoc.csm.info
         return ruptures_by_trt_id
 
 
