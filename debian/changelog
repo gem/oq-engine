@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized the filtering of PointSources
   * Initial work on the UCERF event based hazard calculator
   * Added a test calculation crossing the International Date Line (Alaska)
   * Removed the RlzsAssoc object from the datastore
