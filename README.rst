@@ -26,12 +26,13 @@ shapely for geometric primitives routines.
 
 Development and support
 -----------------------
-hazardlib is being actively developed by GEM foundation as a part of OpenQuake
-project (though it doesn’t mean hazardlib depends on openquake). The OpenQuake
-development infrastructure is used for developing hazardlib: the public repository
-is available on github: http://github.com/gem/oq-hazardlib. Bugs can be reported
-on launchpad: https://bugs.launchpad.net/openquake/. Mailing list is available
-as well: http://groups.google.com/group/openquake-users. You can also ask for
+
+hazardlib is being actively developed by GEM foundation as a part of
+OpenQuake project (though it doesn’t mean hazardlib depends on OpenQuake).
+The OpenQuake development infrastructure is used for developing hazardlib:
+the public repository is available on github:
+http://github.com/gem/oq-hazardlib. A mailing list is available as well:
+http://groups.google.com/group/openquake-users. You can also ask for
 support on IRC channel #openquake on freenode.
 
 Installation
