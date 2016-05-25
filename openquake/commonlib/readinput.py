@@ -518,14 +518,11 @@ def get_job_info(oqparam, source_models, sitecol):
     imtls = oqparam.imtls
     n_sites = len(sitecol) if sitecol else 0
 
-    # the imtls dictionary has values None when the levels are unknown
+    # the imtls object has values [NaN] when the levels are unknown
     # (this is a valid case for the event based hazard calculator)
-    if None in imtls.values():  # there are no levels
-        n_imts = len(imtls)
-        n_levels = 0
-    else:  # there are levels
-        n_imts = len(imtls)
-        n_levels = sum(len(ls) for ls in imtls.values()) / float(n_imts)
+    n_imts = len(imtls)
+    n_levels = sum(len(ls) if hasattr(ls, '__len__') else 0
+                   for ls in imtls.values()) / float(n_imts)
 
     n_realizations = oqparam.number_of_logic_tree_samples or sum(
         sm.gsim_lt.get_num_paths() for sm in source_models)

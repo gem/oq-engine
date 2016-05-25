@@ -1,6 +1,8 @@
   [Michele Simionato]
   * Provided a better error message in the case of absence of openquake.cfg
   * Removed the check on the export_dir when using the WebUI
+  * Initial work on the UCERF event based hazard calculator
+  * Added a test calculation crossing the International Date Line (Alaska)
 
   [Daniele Viganò]
   * Remove the dependency from the python 'pwd' package which is not

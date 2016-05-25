@@ -21,14 +21,14 @@ from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
-    case_18, case_19, case_20, case_21)
+    case_18, case_19, case_20, case_21, case_22)
 from openquake.commonlib.export import export
 
 
 class ClassicalTestCase(CalculatorTestCase):
 
-    def assert_curves_ok(self, expected, test_dir, delta=None):
-        out = self.run_calc(test_dir, 'job.ini', exports='csv')
+    def assert_curves_ok(self, expected, test_dir, delta=None, **kw):
+        out = self.run_calc(test_dir, 'job.ini', exports='csv', **kw)
         got = (out['hcurves', 'csv'] + out.get(('hmaps', 'csv'), []) +
                out.get(('uhs', 'csv'), []))
         self.assertEqual(len(expected), len(got))
@@ -256,3 +256,8 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
             'hazard_curve-smltp_b1_mfd3_mid_dip_dip45-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_b1_mfd3_mid_dip_dip60-gsimltp_Sad1997.csv'],
             case_21.__file__, delta=1E-7)
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_22(self):  # crossing date line calculation for Alaska
+        self.assert_curves_ok(['hazard_curve-mean.csv'], case_22.__file__,
+                              individual_curves='false')

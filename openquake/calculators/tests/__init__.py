@@ -64,6 +64,9 @@ class CalculatorTestCase(unittest.TestCase):
         inis = [os.path.join(self.testdir, ini) for ini in job_ini.split(',')]
         params = readinput.get_params(inis)
         params.update(kw)
+
+        oqvalidation.OqParam.calculation_mode.validator.choices = tuple(
+            base.calculators)
         oq = oqvalidation.OqParam(**params)
         oq.validate()
         # change this when debugging the test
