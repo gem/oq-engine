@@ -77,7 +77,9 @@ The OpenQuake Engine suite is composed of several components:
   database and datastores and it is possible to list and export the results
 - the engine can also run on a cluster of machines: in that case
   you have to start the *rabbitmq* and *celery* components which
-  are not required on a single machine installation.
+  are not required on a single machine installation. In that case a
+  minimal amount of configuration is needed, but in single machine
+  installations the engine works out of the box without configuring anything
 
 The GMPE library in hazardlib and the calculators libraries are designed
 to be extensible, so that it is easy to add a new GMPE class or a new
