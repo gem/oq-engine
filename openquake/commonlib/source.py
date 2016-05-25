@@ -31,6 +31,7 @@ import numpy
 from openquake.baselib.python3compat import raise_
 from openquake.baselib.general import (
     AccumDict, groupby, block_splitter, group_array)
+from openquake.hazardlib.site import Tile
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib.node import read_nodes
 from openquake.commonlib import logictree, sourceconverter, parallel, valid
@@ -324,11 +325,18 @@ class RlzsAssoc(collections.Mapping):
     (3, 'CampbellBozorgnia2008()') ['#7-SM2_a3b1-CB2008']
     """
     def __init__(self, csm_info):
-        self.csm_info = csm_info
+        self.seed = csm_info.seed
+        self.num_samples = csm_info.num_samples
         self.rlzs_assoc = collections.defaultdict(list)
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
         self.rlzs_by_smodel = [[] for _ in range(len(csm_info.source_models))]
         self.gsims_by_trt_id = {}
+        self.sm_ids = {}
+        self.samples = {}
+        for sm in csm_info.source_models:
+            for tm in sm.trt_models:
+                self.sm_ids[tm.id] = sm.ordinal
+                self.samples[tm.id] = sm.samples
 
     def _init(self):
         """
@@ -336,11 +344,10 @@ class RlzsAssoc(collections.Mapping):
         the (reduced) weights of the realizations and the attribute
         gsims_by_trt_id.
         """
-        num_samples = self.csm_info.num_samples
-        if num_samples:
-            assert len(self.realizations) == num_samples
+        if self.num_samples:
+            assert len(self.realizations) == self.num_samples
             for rlz in self.realizations:
-                rlz.weight = 1. / num_samples
+                rlz.weight = 1. / self.num_samples
         else:
             tot_weight = sum(rlz.weight for rlz in self.realizations)
             if tot_weight == 0:
@@ -354,13 +361,6 @@ class RlzsAssoc(collections.Mapping):
         self.gsims_by_trt_id = groupby(
             self.rlzs_assoc, operator.itemgetter(0),
             lambda group: sorted(gsim for trt_id, gsim in group))
-
-    @property
-    def num_samples(self):
-        """
-        Underlying number_of_logic_tree_samples
-        """
-        return self.csm_info.source_model_lt.num_samples
 
     @property
     def realizations(self):
@@ -401,19 +401,19 @@ class RlzsAssoc(collections.Mapping):
             rlzs.append(rlz)
         self.rlzs_by_smodel[lt_model.ordinal] = rlzs
 
-    def extract(self, rlz_indices):
+    def extract(self, rlz_indices, csm_info):
         """
         Extract a RlzsAssoc instance containing only the given realizations.
 
         :param rlz_indices: a list of realization indices from 0 to R - 1
         """
-        assoc = self.__class__(self.csm_info)
+        assoc = self.__class__(csm_info)
         if len(rlz_indices) == 1:
             realizations = [self.realizations[rlz_indices[0]]]
         else:
             realizations = operator.itemgetter(*rlz_indices)(self.realizations)
         rlzs_smpath = groupby(realizations, operator.attrgetter('sm_lt_path'))
-        smodel_from = {sm.path: sm for sm in self.csm_info.source_models}
+        smodel_from = {sm.path: sm for sm in csm_info.source_models}
         for smpath, rlzs in rlzs_smpath.items():
             assoc._add_realizations(
                 [r.ordinal for r in rlzs], smodel_from[smpath],
@@ -842,6 +842,7 @@ class SourceManager(object):
         self.monitor = monitor
         self.filter_sources = filter_sources
         self.num_tiles = num_tiles
+        self.rlzs_assoc = csm.info.get_rlzs_assoc()
         self.split_map = {}  # trt_model_id, source_id -> split sources
         self.source_chunks = []
         self.infos = {}  # trt_model_id, source_id -> SourceInfo tuple
@@ -861,33 +862,27 @@ class SourceManager(object):
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.maxweight)
 
-    def get_sources(self, kind, sitecol):
+    def get_sources(self, kind, tile):
         """
         :param kind: a string 'light', 'heavy' or 'all'
-        :param sitecol: a SiteCollection instance
-        :returns: the sources of the given kind affecting the given sitecol
+        :param tile: a :class:`openquake.hazardlib.site.Tile` instance
+        :returns: the sources of the given kind affecting the given tile
         """
         filter_mon = self.monitor('filtering sources')
         split_mon = self.monitor('splitting sources')
         for src in self.csm.get_sources(kind):
             filter_time = split_time = 0
             if self.filter_sources:
-                try:
-                    max_dist = self.maximum_distance[src.tectonic_region_type]
-                except KeyError:
-                    max_dist = self.maximum_distance['default']
                 with filter_mon:
                     try:
-                        sites = src.filter_sites_by_distance_to_source(
-                            max_dist, sitecol)
+                        if src not in tile:
+                            continue
                     except:
                         etype, err, tb = sys.exc_info()
                         msg = 'An error occurred with source id=%s: %s'
                         msg %= (src.source_id, err)
                         raise_(etype, msg, tb)
                 filter_time = filter_mon.dt
-                if sites is None:
-                    continue
             if kind == 'heavy':
                 if (src.trt_model_id, src.id) not in self.split_map:
                     logging.info('splitting %s of weight %s',
@@ -935,18 +930,15 @@ class SourceManager(object):
     def submit_sources(self, sitecol, siteidx=0):
         """
         Submit the light sources and then the (split) heavy sources.
-        Only the sources affecting the sitecol as considered. Also,
-        set the .seed attribute of each source.
+        Only the sources affecting the sitecol as considered.
         """
-        rlzs_assoc = self.csm.info.get_rlzs_assoc()
+        tile = Tile(sitecol, self.maximum_distance)
         for kind in ('light', 'heavy'):
             if self.filter_sources:
                 logging.info('Filtering %s sources', kind)
-            sources = list(self.get_sources(kind, sitecol))
+            sources = list(self.get_sources(kind, tile))
             if not sources:
                 continue
-            # set a seed for each split source; the seed is used
-            # only by the event based calculator, but it is set anyway
             for src in sources:
                 self.csm.filtered_weight += src.weight
             nblocks = 0
@@ -955,7 +947,7 @@ class SourceManager(object):
                     operator.attrgetter('weight'),
                     operator.attrgetter('trt_model_id')):
                 sent = self.tm.submit(block, sitecol, siteidx,
-                                      rlzs_assoc, self.monitor.new())
+                                      self.rlzs_assoc, self.monitor.new())
                 self.source_chunks.append(
                     (len(block), block.weight, sum(sent.values())))
                 nblocks += 1
@@ -998,15 +990,3 @@ def count_eff_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     acc.eff_ruptures = {sources[0].trt_model_id:
                         sum(src.num_ruptures for src in sources)}
     return acc
-
-
-class DummySourceManager(SourceManager):
-    """
-    A SourceManager submitting tasks of kind `count_eff_ruptures`: this is
-    used by the reports produced by `oq-lite info --report`.
-    """
-    def __init__(self, csm, taskfunc, maximum_distance, dstore, monitor,
-                 random_seed=None, filter_sources=True, num_tiles=1):
-        SourceManager.__init__(self, csm, count_eff_ruptures, maximum_distance,
-                               dstore, monitor, random_seed, filter_sources,
-                               num_tiles)

@@ -194,7 +194,12 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         for fmt in fmts:
             if not fmt:
                 continue
-            for key in self.datastore:  # top level keys
+            keys = set(self.datastore)
+            if (self.oqparam.uniform_hazard_spectra and not
+                    self.oqparam.hazard_maps):
+                # do not export the hazard maps, even if they are there
+                keys.remove('hmaps')
+            for key in sorted(keys):  # top level keys
                 if 'rlzs' in key and not individual_curves:
                     continue  # skip individual curves
                 ekey = (key, fmt)

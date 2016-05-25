@@ -808,7 +808,7 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
             list(map(len, csm.trt_models)))
 
         # test the method extract
-        assoc = rlzs_assoc.extract([1, 5])
+        assoc = rlzs_assoc.extract([1, 5], csm.info)
         self.assertEqual(str(assoc), """\
 <RlzsAssoc(size=4, rlzs=2)
 0,SadighEtAl1997(): ['<1,b1_b3_b6,b2_b3,w=0.5>']
@@ -854,7 +854,7 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
             "1,SadighEtAl1997(): ['<1,b2,b1,w=0.2>', '<2,b2,b1,w=0.2>', '<3,b2,b1,w=0.2>', '<4,b2,b1,w=0.2>']>")
 
         # check CompositionInfo serialization
-        dic, attrs = assoc.csm_info.__toh5__()
+        dic, attrs = csm.info.__toh5__()
         new = object.__new__(CompositionInfo)
         new.__fromh5__(dic, attrs)
-        self.assertEqual(repr(new), repr(assoc.csm_info))
+        self.assertEqual(repr(new), repr(csm.info))
