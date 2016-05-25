@@ -37,6 +37,9 @@ Requires: %{dev_deps}
 
 BuildRequires: systemd python-setuptools
 
+Obsoletes: python-oq-risklib
+Provides: python-oq-risklib
+
 %description
 
 OpenQuake is an open source application that allows users to
