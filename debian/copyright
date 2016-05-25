@@ -1,6 +1,6 @@
 Format: http://dep.debian.net/deps/dep5
-Upstream-Name: python-oq-risklib
-Source: http://github.com/gem/oq-risklib
+Upstream-Name: python-oq-engine
+Source: http://github.com/gem/oq-engine
 
 Files: *
 Copyright: 2012-2016 GEM Foundation
