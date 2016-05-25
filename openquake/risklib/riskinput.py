@@ -637,7 +637,7 @@ def create(GmfColl, eb_ruptures, sitecol, imts, rlzs_assoc,
     ctx_mon = monitor('make contexts')
     gmf_mon = monitor('compute poes')
     sites = sitecol.complete
-    samples = rlzs_assoc.csm_info.get_source_model(trt_id).samples
+    samples = rlzs_assoc.samples[trt_id]
     gmfcoll = GmfColl(imts, rlzs)
     for ebr in eb_ruptures:
         rup = ebr.rupture

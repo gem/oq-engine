@@ -33,7 +33,7 @@ from openquake.hazardlib.calc.hazard_curve import (
     array_of_curves, ProbabilityMap)
 from openquake.hazardlib import geo
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import readinput, parallel, datastore
+from openquake.commonlib import readinput, parallel, datastore, oqvalidation
 from openquake.commonlib.util import max_rel_diff_index, Rupture
 from openquake.risklib.riskinput import create
 from openquake.calculators import base
@@ -218,18 +218,6 @@ class EBRupture(object):
                                         self.serial, self.trt_id)
 
 
-def getdefault(dic_with_default, key):
-    """
-    :param dic_with_default: a dictionary with a 'default' key
-    :param key: a key that may be present in the dictionary or not
-    :returns: the value associated to the key, or to 'default'
-    """
-    try:
-        return dic_with_default[key]
-    except KeyError:
-        return dic_with_default['default']
-
-
 @parallel.litetask
 def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     """
@@ -254,10 +242,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     trt_model_id = sources[0].trt_model_id
     oq = monitor.oqparam
     trt = sources[0].tectonic_region_type
-    try:
-        max_dist = oq.maximum_distance[trt]
-    except KeyError:
-        max_dist = oq.maximum_distance['default']
+    max_dist = oq.maximum_distance[trt]
     cmaker = ContextMaker(rlzs_assoc.gsims_by_trt_id[trt_model_id])
     params = cmaker.REQUIRES_RUPTURE_PARAMETERS
     rup_data_dt = numpy.dtype(
@@ -267,7 +252,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     rup_data = []
     calc_times = []
     rup_mon = monitor('filtering ruptures', measuremem=False)
-    sm = rlzs_assoc.csm_info.get_source_model(trt_model_id)
+    num_samples = rlzs_assoc.samples[trt_model_id]
 
     # Compute and save stochastic event sets
     for src in sources:
@@ -279,8 +264,8 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
             filter_sites_by_distance_to_rupture,
             integration_distance=max_dist, sites=s_sites)
         num_occ_by_rup = sample_ruptures(
-            src, oq.ses_per_logic_tree_path, sm.samples,
-            rlzs_assoc.csm_info.seed)
+            src, oq.ses_per_logic_tree_path, num_samples,
+            rlzs_assoc.seed)
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
@@ -375,7 +360,7 @@ def fix_minimum_intensity(min_iml, imts):
     if min_iml:
         for imt in imts:
             try:
-                min_iml[imt] = getdefault(min_iml, imt)
+                min_iml[imt] = oqvalidation.getdefault(min_iml, imt)
             except KeyError:
                 raise ValueError(
                     'The parameter `minimum_intensity` in the job.ini '
