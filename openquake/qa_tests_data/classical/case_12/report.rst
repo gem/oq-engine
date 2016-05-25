@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 12
 =================================
 
-gem-tstation:/home/michele/ssd/calc_16399.hdf5 updated Wed May 18 18:19:46 2016
+gem-tstation:/home/michele/ssd/calc_19175.hdf5 updated Tue May 24 14:33:21 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -20,8 +20,8 @@ width_of_mfd_bin             1.0
 area_source_discretization   10.0               
 random_seed                  1066               
 master_seed                  0                  
-sites_per_tile               1000               
-oqlite_version               '0.13.0-git034c0a0'
+sites_per_tile               10000              
+oqlite_version               '0.13.0-git1f78261'
 ============================ ===================
 
 Input files
@@ -82,7 +82,7 @@ Informational data
 ======================================== ==============
 count_eff_ruptures_max_received_per_task 2687          
 count_eff_ruptures_num_tasks             2             
-count_eff_ruptures_sent.monitor          4862          
+count_eff_ruptures_sent.monitor          4858          
 count_eff_ruptures_sent.rlzs_assoc       5486          
 count_eff_ruptures_sent.sitecol          874           
 count_eff_ruptures_sent.siteidx          10            
@@ -103,8 +103,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         PointSource  0.025  1         8.798E-05   0.0        0.0      
-1            2         PointSource  0.025  1         6.008E-05   0.0        0.0      
+0            1         PointSource  0.025  1         7.296E-05   0.0        0.0      
+1            2         PointSource  0.025  1         4.601E-05   0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -112,7 +112,7 @@ Computation times by source typology
 ============ =========== ========== ========= ======
 source_class filter_time split_time calc_time counts
 ============ =========== ========== ========= ======
-PointSource  1.481E-04   0.0        0.0       2     
+PointSource  1.190E-04   0.0        0.0       2     
 ============ =========== ========== ========= ======
 
 Information about the tasks
@@ -125,10 +125,10 @@ Slowest operations
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
 reading composite source model 0.005     0.0       1     
-store source_info              0.005     0.0       1     
-managing sources               0.003     0.0       1     
-total count_eff_ruptures       4.611E-04 0.0       2     
-filtering sources              1.481E-04 0.0       2     
-aggregate curves               3.719E-05 0.0       2     
-reading site collection        3.600E-05 0.0       1     
+store source_info              0.004     0.0       1     
+managing sources               0.002     0.0       1     
+total count_eff_ruptures       5.522E-04 0.0       2     
+filtering sources              1.190E-04 0.0       2     
+reading site collection        3.099E-05 0.0       1     
+aggregate curves               3.004E-05 0.0       2     
 ============================== ========= ========= ======
