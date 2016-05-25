@@ -1,7 +1,7 @@
 Scenario Damage
 ===============
 
-gem-tstation:/home/michele/ssd/calc_16341.hdf5 updated Wed May 18 18:18:23 2016
+gem-tstation:/home/michele/ssd/calc_19116.hdf5 updated Tue May 24 14:31:58 2016
 
 num_sites = 7, sitecol = 690 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  42                 
 master_seed                  0                  
-oqlite_version               '0.13.0-git034c0a0'
+oqlite_version               '0.13.0-git1f78261'
 ============================ ===================
 
 Input files
@@ -59,7 +59,7 @@ Information about the tasks
 ---------------------------
 ========================= ===== ====== ===== ===== =========
 measurement               mean  stddev min   max   num_tasks
-scenario_damage.time_sec  0.024 NaN    0.024 0.024 1        
+scenario_damage.time_sec  0.012 NaN    0.012 0.012 1        
 scenario_damage.memory_mb 0.0   NaN    0.0   0.0   1        
 ========================= ===== ====== ===== ===== =========
 
@@ -68,14 +68,14 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-total scenario_damage   0.024     0.0       1     
-computing riskmodel     0.024     0.0       1     
+total scenario_damage   0.012     0.0       1     
+computing riskmodel     0.012     0.0       1     
 filtering sites         0.007     0.0       1     
 reading exposure        0.003     0.0       1     
 computing gmfs          0.002     0.0       1     
 saving gmfs             0.001     0.0       1     
-assoc_assets_sites      6.340E-04 0.0       1     
-building hazard         1.230E-04 0.0       1     
-building riskinputs     1.049E-04 0.0       1     
-reading site collection 9.704E-05 0.0       1     
+assoc_assets_sites      6.371E-04 0.0       1     
+building riskinputs     1.080E-04 0.0       1     
+reading site collection 1.040E-04 0.0       1     
+building hazard         7.391E-05 0.0       1     
 ======================= ========= ========= ======
