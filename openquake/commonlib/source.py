@@ -325,11 +325,18 @@ class RlzsAssoc(collections.Mapping):
     (3, 'CampbellBozorgnia2008()') ['#7-SM2_a3b1-CB2008']
     """
     def __init__(self, csm_info):
-        self.csm_info = csm_info
+        self.seed = csm_info.seed
+        self.num_samples = csm_info.num_samples
         self.rlzs_assoc = collections.defaultdict(list)
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
         self.rlzs_by_smodel = [[] for _ in range(len(csm_info.source_models))]
         self.gsims_by_trt_id = {}
+        self.sm_ids = {}
+        self.samples = {}
+        for sm in csm_info.source_models:
+            for tm in sm.trt_models:
+                self.sm_ids[tm.id] = sm.ordinal
+                self.samples[tm.id] = sm.samples
 
     def _init(self):
         """
@@ -337,11 +344,10 @@ class RlzsAssoc(collections.Mapping):
         the (reduced) weights of the realizations and the attribute
         gsims_by_trt_id.
         """
-        num_samples = self.csm_info.num_samples
-        if num_samples:
-            assert len(self.realizations) == num_samples
+        if self.num_samples:
+            assert len(self.realizations) == self.num_samples
             for rlz in self.realizations:
-                rlz.weight = 1. / num_samples
+                rlz.weight = 1. / self.num_samples
         else:
             tot_weight = sum(rlz.weight for rlz in self.realizations)
             if tot_weight == 0:
@@ -355,13 +361,6 @@ class RlzsAssoc(collections.Mapping):
         self.gsims_by_trt_id = groupby(
             self.rlzs_assoc, operator.itemgetter(0),
             lambda group: sorted(gsim for trt_id, gsim in group))
-
-    @property
-    def num_samples(self):
-        """
-        Underlying number_of_logic_tree_samples
-        """
-        return self.csm_info.source_model_lt.num_samples
 
     @property
     def realizations(self):
@@ -402,19 +401,19 @@ class RlzsAssoc(collections.Mapping):
             rlzs.append(rlz)
         self.rlzs_by_smodel[lt_model.ordinal] = rlzs
 
-    def extract(self, rlz_indices):
+    def extract(self, rlz_indices, csm_info):
         """
         Extract a RlzsAssoc instance containing only the given realizations.
 
         :param rlz_indices: a list of realization indices from 0 to R - 1
         """
-        assoc = self.__class__(self.csm_info)
+        assoc = self.__class__(csm_info)
         if len(rlz_indices) == 1:
             realizations = [self.realizations[rlz_indices[0]]]
         else:
             realizations = operator.itemgetter(*rlz_indices)(self.realizations)
         rlzs_smpath = groupby(realizations, operator.attrgetter('sm_lt_path'))
-        smodel_from = {sm.path: sm for sm in self.csm_info.source_models}
+        smodel_from = {sm.path: sm for sm in csm_info.source_models}
         for smpath, rlzs in rlzs_smpath.items():
             assoc._add_realizations(
                 [r.ordinal for r in rlzs], smodel_from[smpath],
