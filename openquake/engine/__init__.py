@@ -52,18 +52,8 @@ along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import os
-from openquake.baselib.general import git_suffix
-
-
-# version number follows the syntax <major>.<minor>.<patchlevel>[<suffix>]
-# where major, minor and patchlevel are numbers.
-# suffix follows the ubuntu versioning rules.
-# for development version suffix is:
-#  "-" + <pkg-version> + "+dev" + <secs_since_epoch> + "-" + <commit-id>
-# NB: the next line is managed by packager.sh script (we retrieve the version
-#     using sed and optionally replace it)
-__version__ = '2.0.0'
-__version__ += git_suffix(__file__)
+from openquake.risklib import __version__
+# we want engine.__version__ == risklib.__version__ == commonlib.__version__
 
 # The path to the OpenQuake root directory
 OPENQUAKE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
