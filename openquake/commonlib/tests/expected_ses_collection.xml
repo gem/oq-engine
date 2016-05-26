@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <stochasticEventSetCollection
+    sourceModelTreePath="b8_b9_b10"
+    >
+        <stochasticEventSet
+        id="1"
+        investigationTime="50.0"
+        >
+            <rupture
+            dip="40.0"
+            id="TAG"
+            magnitude="5.5"
+            rake="10.0"
+            strike="1.0"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <planarSurface>
+                    <topLeft depth="10.0" lat="1.01" lon="1.1"/>
+                    <topRight depth="20.0" lat="2.01" lon="2.1"/>
+                    <bottomLeft depth="40.0" lat="4.01" lon="4.1"/>
+                    <bottomRight depth="30.0" lat="3.01" lon="3.1"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="41.0"
+            id="TAG"
+            magnitude="6.5"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <mesh
+                cols="2"
+                rows="2"
+                >
+                    <node col="0" depth="10.5" lat="5.01" lon="5.1" row="0"/>
+                    <node col="1" depth="10.6" lat="6.01" lon="6.1" row="0"/>
+                    <node col="0" depth="10.7" lat="7.01" lon="7.1" row="1"/>
+                    <node col="1" depth="10.8" lat="8.01" lon="8.1" row="1"/>
+                </mesh>
+            </rupture>
+        </stochasticEventSet>
+        <stochasticEventSet
+        id="2"
+        investigationTime="40.0"
+        >
+            <rupture
+            dip="42.0"
+            id="TAG"
+            magnitude="5.4"
+            rake="12.0"
+            strike="2.0"
+            tectonicRegion="Stable Shallow Crust"
+            >
+                <planarSurface>
+                    <topLeft depth="10.0" lat="1.01" lon="1.1"/>
+                    <topRight depth="20.0" lat="2.01" lon="2.1"/>
+                    <bottomLeft depth="40.0" lat="4.01" lon="4.1"/>
+                    <bottomRight depth="30.0" lat="3.01" lon="3.1"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="43.0"
+            id="TAG"
+            magnitude="6.4"
+            rake="13.0"
+            strike="3.0"
+            tectonicRegion="Stable Shallow Crust"
+            >
+                <mesh
+                cols="2"
+                rows="2"
+                >
+                    <node col="0" depth="10.1" lat="5.02" lon="5.2" row="0"/>
+                    <node col="1" depth="10.2" lat="6.02" lon="6.2" row="0"/>
+                    <node col="0" depth="10.3" lat="7.02" lon="7.2" row="1"/>
+                    <node col="1" depth="10.4" lat="8.02" lon="8.2" row="1"/>
+                </mesh>
+            </rupture>
+            <rupture
+            dip="44.0"
+            id="TAG"
+            magnitude="7.4"
+            rake="14.0"
+            strike="4.0"
+            tectonicRegion="Stable Shallow Crust"
+            >
+                <planarSurface>
+                    <topLeft depth="21.0" lat="1.0" lon="-1.0"/>
+                    <topRight depth="21.0" lat="1.0" lon="1.0"/>
+                    <bottomLeft depth="59.0" lat="-1.0" lon="-1.0"/>
+                    <bottomRight depth="59.0" lat="-1.0" lon="1.0"/>
+                </planarSurface>
+                <planarSurface>
+                    <topLeft depth="20.0" lat="1.1" lon="0.0"/>
+                    <topRight depth="20.0" lat="2.0" lon="1.1"/>
+                    <bottomLeft depth="80.0" lat="0.0" lon="0.9"/>
+                    <bottomRight depth="80.0" lat="0.9" lon="2.0"/>
+                </planarSurface>
+            </rupture>
+        </stochasticEventSet>
+    </stochasticEventSetCollection>
+</nrml>

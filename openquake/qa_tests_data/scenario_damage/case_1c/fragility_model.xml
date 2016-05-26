@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+>
+    <fragilityModel
+    assetCategory="building"
+    id="fm_4_converted_from_NRML_04"
+    lossCategory="structural"
+    >
+        <description>
+            Fragility Functions for Case 1a
+        </description>
+        <limitStates>
+            slight moderate extreme complete
+        </limitStates>
+        <fragilityFunction
+        format="discrete"
+        id="Wood"
+        shape="logncdf"
+        >
+            <imls
+            imt="PGA"
+            noDamageLimit="0"
+            >
+                0.2 0.4 0.6 0.8 1.0 1.2 1.4 1.6 1.8 2.0 2.2 2.4 2.6 2.8 3.0 3.2 3.4 3.6 3.8 4.0 4.2 4.4 4.6 4.8 5.0
+            </imls>
+            <poes
+            ls="slight"
+            >
+                0.0 0.152 0.846 0.993 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0
+            </poes>
+            <poes
+            ls="moderate"
+            >
+                0.0 0.014 0.129 0.35 0.576 0.747 0.857 0.921 0.957 0.977 0.987 0.993 0.996 0.998 0.999 0.999 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0
+            </poes>
+            <poes
+            ls="extreme"
+            >
+                0.0 0.008 0.085 0.196 0.325 0.45 0.561 0.653 0.728 0.787 0.833 0.87 0.898 0.92 0.937 0.95 0.96 0.968 0.975 0.98 0.984 0.987 0.989 0.991 0.993
+            </poes>
+            <poes
+            ls="complete"
+            >
+                0.0 0.006 0.067 0.171 0.263 0.354 0.438 0.514 0.58 0.637 0.687 0.729 0.766 0.797 0.823 0.846 0.866 0.882 0.897 0.909 0.92 0.93 0.938 0.945 0.951
+            </poes>
+        </fragilityFunction>
+    </fragilityModel>
+</nrml>

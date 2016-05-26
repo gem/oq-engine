@@ -1,0 +1,21 @@
+ruptureId,aggregate_loss,insured_loss
+col=00~ses=0003~src=1~rup=001-01,3.4616440E+02,      NAN
+col=00~ses=0003~src=1~rup=001-02,1.0186693E+03,      NAN
+col=00~ses=0003~src=2~rup=001-01,9.6345268E+01,      NAN
+col=00~ses=0004~src=1~rup=003-01,2.4001301E+03,      NAN
+col=00~ses=0005~src=2~rup=001-01,3.9287317E+02,      NAN
+col=00~ses=0005~src=3~rup=002-01,1.3983832E+03,      NAN
+col=00~ses=0006~src=1~rup=004-01,4.8668851E+02,      NAN
+col=00~ses=0009~src=2~rup=005-01,1.1200859E+03,      NAN
+col=00~ses=0010~src=2~rup=001-01,2.1540485E+02,      NAN
+col=00~ses=0011~src=2~rup=002-01,2.8536737E+02,      NAN
+col=00~ses=0013~src=1~rup=003-01,2.1977872E+02,      NAN
+col=00~ses=0013~src=2~rup=001-01,1.1199845E+03,      NAN
+col=00~ses=0015~src=2~rup=001-01,2.8837778E+02,      NAN
+col=00~ses=0016~src=2~rup=005-01,7.6999817E+02,      NAN
+col=00~ses=0018~src=2~rup=001-01,1.2527375E+02,      NAN
+col=00~ses=0018~src=2~rup=001-02,9.4782288E+01,      NAN
+col=00~ses=0018~src=2~rup=001-03,4.3568372E+02,      NAN
+col=00~ses=0018~src=3~rup=001-01,6.1111975E+02,      NAN
+col=00~ses=0019~src=1~rup=004-01,6.2173706E+02,      NAN
+col=00~ses=0019~src=3~rup=004-01,1.8593300E+03,      NAN
