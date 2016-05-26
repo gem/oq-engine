@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+>
+    <fragilityModel
+    assetCategory="building"
+    id="fm_9_converted_from_NRML_04"
+    lossCategory="nonstructural"
+    >
+        <description>
+            cont ff | tax1 | zero miniml
+        </description>
+        <limitStates>
+            ds1 ds2 ds3 ds4
+        </limitStates>
+        <fragilityFunction
+        format="continuous"
+        id="tax1"
+        shape="logncdf"
+        >
+            <imls imt="PGA" maxIML="5.0" minIML="0.0" noDamageLimit="0"/>
+            <params ls="ds1" mean="3.0000000E-01" stddev="7.3000000E-01"/>
+            <params ls="ds2" mean="6.0000000E-01" stddev="6.8000000E-01"/>
+            <params ls="ds3" mean="1.2000000E+00" stddev="6.7000000E-01"/>
+            <params ls="ds4" mean="2.4000000E+00" stddev="6.5000000E-01"/>
+        </fragilityFunction>
+    </fragilityModel>
+</nrml>

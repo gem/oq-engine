@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <collapseMap>
+        <CMNode>
+            <gml:Point>
+                <gml:pos>
+                    81.13882 28.41117
+                </gml:pos>
+            </gml:Point>
+            <cf assetRef="a4351" mean="0.00000E+00" stdDev="0.00000E+00"/>
+        </CMNode>
+        <CMNode>
+            <gml:Point>
+                <gml:pos>
+                    81.21382 28.71117
+                </gml:pos>
+            </gml:Point>
+            <cf assetRef="a395" mean="0.00000E+00" stdDev="0.00000E+00"/>
+        </CMNode>
+        <CMNode>
+            <gml:Point>
+                <gml:pos>
+                    81.21382 29.98617
+                </gml:pos>
+            </gml:Point>
+            <cf assetRef="a7180" mean="0.00000E+00" stdDev="0.00000E+00"/>
+        </CMNode>
+        <CMNode>
+            <gml:Point>
+                <gml:pos>
+                    81.96382 27.96117
+                </gml:pos>
+            </gml:Point>
+            <cf assetRef="a2925" mean="0.00000E+00" stdDev="0.00000E+00"/>
+        </CMNode>
+        <CMNode>
+            <gml:Point>
+                <gml:pos>
+                    81.96382 28.56117
+                </gml:pos>
+            </gml:Point>
+            <cf assetRef="a3518" mean="0.00000E+00" stdDev="0.00000E+00"/>
+        </CMNode>
+        <CMNode>
+            <gml:Point>
+                <gml:pos>
+                    82.78882 29.46117
+                </gml:pos>
+            </gml:Point>
+            <cf assetRef="a2544" mean="0.00000E+00" stdDev="0.00000E+00"/>
+        </CMNode>
+        <CMNode>
+            <gml:Point>
+                <gml:pos>
+                    83.23882 28.11117
+                </gml:pos>
+            </gml:Point>
+            <cf assetRef="a4102" mean="2.62380E+02" stdDev="2.37383E+02"/>
+        </CMNode>
+        <CMNode>
+            <gml:Point>
+                <gml:pos>
+                    83.46382 28.93617
+                </gml:pos>
+            </gml:Point>
+            <cf assetRef="a125" mean="1.10691E-02" stdDev="2.51657E-03"/>
+        </CMNode>
+        <CMNode>
+            <gml:Point>
+                <gml:pos>
+                    83.91382 29.31117
+                </gml:pos>
+            </gml:Point>
+            <cf assetRef="a4498" mean="4.54653E-02" stdDev="2.52110E-02"/>
+        </CMNode>
+        <CMNode>
+            <gml:Point>
+                <gml:pos>
+                    85.26382 27.36117
+                </gml:pos>
+            </gml:Point>
+            <cf assetRef="a8309" mean="1.38519E+02" stdDev="1.06089E+02"/>
+        </CMNode>
+        <CMNode>
+            <gml:Point>
+                <gml:pos>
+                    87.58882 27.43617
+                </gml:pos>
+            </gml:Point>
+            <cf assetRef="a5229" mean="0.00000E+00" stdDev="0.00000E+00"/>
+        </CMNode>
+    </collapseMap>
+</nrml>

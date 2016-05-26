@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <totalDmgDist>
+        <damageStates>
+            no_damage LS1 LS2
+        </damageStates>
+        <damage ds="no_damage" mean="3.62116E+03" stddev="6.47520E+02"/>
+        <damage ds="LS1" mean="1.75718E+03" stddev="2.54012E+02"/>
+        <damage ds="LS2" mean="6.21658E+02" stddev="6.15764E+02"/>
+    </totalDmgDist>
+</nrml>

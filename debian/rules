@@ -16,17 +16,17 @@ export DH_OPTIONS
 
 bd=openquake/bin
 
-TRUSTY_DEP = python-amqp, python-django
-TRUSTY_REC =
-PRECISE_DEP = python-django16
+DEFAULT_DEP = python-amqp, python-django, python-h5py (>= 2.2.1)
+DEFAULT_REC =
+PRECISE_DEP = python-django16, python-h5py (= 2.2.1-1build3~precise03)
 PRECISE_REC =
 
-ifeq ($(shell lsb_release --codename --short),trusty)
-	DEPENDS = -Vdist:Depends="$(TRUSTY_DEP)"
-	RECOMMENDS = -Vdist:Recommends="$(TRUSTY_REC)"
-else
+ifeq ($(shell lsb_release --codename --short),precise)
 	DEPENDS = -Vdist:Depends="$(PRECISE_DEP)"
 	RECOMMENDS = -Vdist:Recommends="$(PRECISE_REC)"
+else
+	DEPENDS = -Vdist:Depends="$(DEFAULT_DEP)"
+	RECOMMENDS = -Vdist:Recommends="$(DEFAULT_REC)"
 endif
 
 %:
