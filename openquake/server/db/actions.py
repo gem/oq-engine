@@ -16,7 +16,6 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
-import zipfile
 import operator
 from datetime import datetime
 
@@ -24,9 +23,7 @@ from django.core import exceptions
 from django import db
 
 from openquake.commonlib import datastore, valid
-from openquake.commonlib.export import export
 from openquake.server.db import models
-from openquake.engine.export import core
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
 
@@ -304,7 +301,7 @@ def log(job_id, timestamp, level, process, message):
     """
     db.connection.cursor().execute(
         'INSERT INTO log (job_id, timestamp, level, process, message) VALUES'
-        '(?, ?, ?, ?, ?)', (job_id, timestamp, level, process, message))
+        '(%s, %s, %s, %s, %s)', (job_id, timestamp, level, process, message))
 
 
 def get_log(job_id):
