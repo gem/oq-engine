@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+    <!-- Spectral Acceleration (SA) example -->
+    <hazardCurves sourceModelTreePath="b1_b2_b4" gsimTreePath="b1_b2" investigationTime="50.0" IMT="SA" saPeriod="0.025" saDamping="5.0">
+        <IMLs>5.0000e-03 7.0000e-03 1.3700e-02</IMLs>
+
+        <hazardCurve>
+            <gml:Point>
+                <gml:pos>-122.5000 37.5000</gml:pos>
+            </gml:Point>
+            <poEs>9.8728e-01 9.8266e-01 9.4957e-01</poEs>
+        </hazardCurve>
+        <hazardCurve>
+            <gml:Point>
+                <gml:pos>-123.5000 37.5000</gml:pos>
+            </gml:Point>
+            <poEs>9.8728e-02 9.8266e-02 9.4957e-02</poEs>
+        </hazardCurve>
+    </hazardCurves>
+
+    <!-- Basic example, using PGA as IMT -->
+    <hazardCurves sourceModelTreePath="b1_b2_b3" gsimTreePath="b1_b7" investigationTime="50.0" IMT="PGA">
+        <IMLs>5.0000e-03 7.0000e-03 1.3700e-02</IMLs>
+
+        <hazardCurve>
+            <gml:Point>
+                <gml:pos>-122.5000 37.5000</gml:pos>
+            </gml:Point>
+            <poEs>9.8728e-01 9.8266e-01 9.4957e-01</poEs>
+        </hazardCurve>
+        <hazardCurve>
+            <gml:Point>
+                <gml:pos>-123.5000 37.5000</gml:pos>
+            </gml:Point>
+            <poEs>9.8728e-02 9.8266e-02 9.4957e-02</poEs>
+        </hazardCurve>
+    </hazardCurves>
+</nrml>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+>
+    <fragilityModel
+    assetCategory="building"
+    id="fm_15_converted_from_NRML_04"
+    lossCategory="structural"
+    >
+        <description>
+            Fragility model for Nepal
+        </description>
+        <limitStates>
+            slight moderate extensive complete
+        </limitStates>
+        <fragilityFunction
+        format="continuous"
+        id="W"
+        shape="logncdf"
+        >
+            <imls imt="PGA" maxIML="1.4" minIML="0.05" noDamageLimit="5.0000000E-02"/>
+            <params ls="slight" mean="1.6000000E-01" stddev="1.0400000E-01"/>
+            <params ls="moderate" mean="2.2500000E-01" stddev="1.5800000E-01"/>
+            <params ls="extensive" mean="4.0000000E-01" stddev="3.0000000E-01"/>
+            <params ls="complete" mean="6.0000000E-01" stddev="4.8000000E-01"/>
+        </fragilityFunction>
+    </fragilityModel>
+</nrml>

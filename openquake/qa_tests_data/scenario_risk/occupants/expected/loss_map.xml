@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <lossMap
+    gsimTreePath="b_1,b1"
+    investigationTime="None"
+    lossType="occupants"
+    poE="None"
+    riskInvestigationTime="None"
+    unit="people"
+    >
+        <node>
+            <gml:Point>
+                <gml:pos>
+                    81.2985 29.1098
+                </gml:pos>
+            </gml:Point>
+            <loss assetRef="a1" mean="3.99457E-01" stdDev="1.43061E-01"/>
+        </node>
+        <node>
+            <gml:Point>
+                <gml:pos>
+                    83.0823 27.9006
+                </gml:pos>
+            </gml:Point>
+            <loss assetRef="a2" mean="9.88255E-01" stdDev="2.16218E-01"/>
+        </node>
+        <node>
+            <gml:Point>
+                <gml:pos>
+                    85.7477 27.9015
+                </gml:pos>
+            </gml:Point>
+            <loss assetRef="a3" mean="1.05517E+00" stdDev="5.29275E-01"/>
+        </node>
+    </lossMap>
+</nrml>

@@ -1,0 +1,98 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <sourceModel name="Some Source Model">
+        <characteristicFaultSource id="1" name="characteristic source, complex fault arbitrary mfd" tectonicRegion="Subduction Interface">
+            <arbitraryMFD>
+                <occurRates>0.0006 0.0008 0.0004</occurRates>
+                <magnitudes>8.6 8.8 9.0</magnitudes>
+            </arbitraryMFD>
+            <rake>60.0</rake>
+            <surface>
+                <!-- Characteristic source with a complex fault surface -->
+                <complexFaultGeometry>
+                    <faultTopEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -124.704  40.363  0.5493260E+01
+                                -124.977  41.214  0.4988560E+01
+                                -125.140  42.096  0.4897340E+01
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultTopEdge>
+
+                    <intermediateEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -124.704  40.363  0.5593260E+01
+                                -124.977  41.214  0.5088560E+01
+                                -125.140  42.096  0.4997340E+01
+                            </gml:posList>
+                        </gml:LineString>
+                    </intermediateEdge>
+
+                    <intermediateEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -124.704  40.363  0.5693260E+01
+                                -124.977  41.214  0.5188560E+01
+                                -125.140  42.096  0.5097340E+01
+                            </gml:posList>
+                        </gml:LineString>
+                    </intermediateEdge>
+
+                    <faultBottomEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -123.829  40.347  0.2038490E+02
+                                -124.137  41.218  0.1741390E+02
+                                -124.252  42.115  0.1752740E+02
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultBottomEdge>
+                </complexFaultGeometry>
+            </surface>
+        </characteristicFaultSource>
+        <simpleFaultSource id="2A" name="Mount Diablo Thrust YC Characteristic Rate" tectonicRegion="Active Shallow Crust">
+
+            <simpleFaultGeometry>
+                <gml:LineString>
+                    <gml:posList>
+                        -121.82290 37.73010
+                        -122.03880 37.87710
+                    </gml:posList>
+                </gml:LineString>
+
+                <dip>45.0</dip>
+                <upperSeismoDepth>10.0</upperSeismoDepth>
+                <lowerSeismoDepth>20.0</lowerSeismoDepth>
+            </simpleFaultGeometry>
+
+            <magScaleRel>WC1994</magScaleRel>
+
+            <ruptAspectRatio>1.5</ruptAspectRatio>
+            <YoungsCoppersmithMFD minMag="5.0" bValue="1.0" binWidth="0.1" characteristicMag="7.0" characteristicRate="0.005"/>
+            <rake>30.0</rake>
+        </simpleFaultSource>
+        <simpleFaultSource id="2B" name="Mount Diablo Thrust YC Total Moment Rate" tectonicRegion="Active Shallow Crust">
+            <simpleFaultGeometry>
+                <gml:LineString>
+                    <gml:posList>
+                        -121.82290 37.73010
+                        -122.03880 37.87710
+                    </gml:posList>
+                </gml:LineString>
+
+                <dip>45.0</dip>
+                <upperSeismoDepth>10.0</upperSeismoDepth>
+                <lowerSeismoDepth>20.0</lowerSeismoDepth>
+            </simpleFaultGeometry>
+
+            <magScaleRel>WC1994</magScaleRel>
+
+            <ruptAspectRatio>1.5</ruptAspectRatio>
+            <YoungsCoppersmithMFD minMag="5.0" bValue="1.0" binWidth="0.1" characteristicMag="7.0" totalMomentRate="1.05E19"/>
+            <rake>30.0</rake>
+        </simpleFaultSource>
+    </sourceModel>
+</nrml>
