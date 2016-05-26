@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <gmfCollection
+    gsimTreePath="b2"
+    sourceModelTreePath="b_1"
+    >
+        <gmfSet
+        stochasticEventSetId="1"
+        >
+            <gmf
+            IMT="PGA"
+            ruptureId="scenario-0000000000~ses=1"
+            >
+                <node gmv="4.4088796E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
+                <node gmv="1.5812968E-01" lat="1.0000000E-01" lon="0.0000000E+00"/>
+                <node gmv="1.8856022E-01" lat="2.0000000E-01" lon="0.0000000E+00"/>
+            </gmf>
+            <gmf
+            IMT="PGA"
+            ruptureId="scenario-0000000001~ses=1"
+            >
+                <node gmv="5.5027795E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
+                <node gmv="3.1089500E-01" lat="1.0000000E-01" lon="0.0000000E+00"/>
+                <node gmv="3.3439004E-01" lat="2.0000000E-01" lon="0.0000000E+00"/>
+            </gmf>
+            <gmf
+            IMT="PGA"
+            ruptureId="scenario-0000000002~ses=1"
+            >
+                <node gmv="3.0689678E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
+                <node gmv="4.0547168E-01" lat="1.0000000E-01" lon="0.0000000E+00"/>
+                <node gmv="2.3538798E-01" lat="2.0000000E-01" lon="0.0000000E+00"/>
+            </gmf>
+            <gmf
+            IMT="PGA"
+            ruptureId="scenario-0000000003~ses=1"
+            >
+                <node gmv="4.1737476E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
+                <node gmv="2.4170108E-01" lat="1.0000000E-01" lon="0.0000000E+00"/>
+                <node gmv="1.5482794E-01" lat="2.0000000E-01" lon="0.0000000E+00"/>
+            </gmf>
+            <gmf
+            IMT="PGA"
+            ruptureId="scenario-0000000004~ses=1"
+            >
+                <node gmv="7.3927176E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
+                <node gmv="4.2143977E-01" lat="1.0000000E-01" lon="0.0000000E+00"/>
+                <node gmv="2.7153188E-01" lat="2.0000000E-01" lon="0.0000000E+00"/>
+            </gmf>
+            <gmf
+            IMT="PGA"
+            ruptureId="scenario-0000000005~ses=1"
+            >
+                <node gmv="7.4372798E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
+                <node gmv="3.7371778E-01" lat="1.0000000E-01" lon="0.0000000E+00"/>
+                <node gmv="3.8095480E-01" lat="2.0000000E-01" lon="0.0000000E+00"/>
+            </gmf>
+            <gmf
+            IMT="PGA"
+            ruptureId="scenario-0000000006~ses=1"
+            >
+                <node gmv="2.3636161E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
+                <node gmv="1.5618138E-01" lat="1.0000000E-01" lon="0.0000000E+00"/>
+                <node gmv="1.9495340E-01" lat="2.0000000E-01" lon="0.0000000E+00"/>
+            </gmf>
+            <gmf
+            IMT="PGA"
+            ruptureId="scenario-0000000007~ses=1"
+            >
+                <node gmv="2.7041486E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
+                <node gmv="3.5756323E-01" lat="1.0000000E-01" lon="0.0000000E+00"/>
+                <node gmv="1.7185162E-01" lat="2.0000000E-01" lon="0.0000000E+00"/>
+            </gmf>
+            <gmf
+            IMT="PGA"
+            ruptureId="scenario-0000000008~ses=1"
+            >
+                <node gmv="2.0601587E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
+                <node gmv="2.3488592E-01" lat="1.0000000E-01" lon="0.0000000E+00"/>
+                <node gmv="2.1889159E-01" lat="2.0000000E-01" lon="0.0000000E+00"/>
+            </gmf>
+            <gmf
+            IMT="PGA"
+            ruptureId="scenario-0000000009~ses=1"
+            >
+                <node gmv="3.7917218E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
+                <node gmv="2.9352593E-01" lat="1.0000000E-01" lon="0.0000000E+00"/>
+                <node gmv="4.9782658E-01" lat="2.0000000E-01" lon="0.0000000E+00"/>
+            </gmf>
+        </gmfSet>
+    </gmfCollection>
+</nrml>

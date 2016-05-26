@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+>
+    <fragilityModel
+    assetCategory="building"
+    id="converted-from-NRML-0.4"
+    lossCategory="structural"
+    >
+        <description>
+            Fragility model for Pavia (continuous)
+        </description>
+        <limitStates>
+            slight moderate extensive complete
+        </limitStates>
+        <fragilityFunction
+        format="continuous"
+        id="RC/DMRF-D/LR"
+        shape="logncdf"
+        >
+            <imls imt="PGA" maxIML="9.9" minIML="0.1" noDamageLimit="5.0000000E-02"/>
+            <params ls="slight" mean="1.1190000E+01" stddev="8.2700000E+00"/>
+            <params ls="moderate" mean="2.7980000E+01" stddev="2.0677000E+01"/>
+            <params ls="extensive" mean="4.8050000E+01" stddev="4.2490000E+01"/>
+            <params ls="complete" mean="1.0890000E+02" stddev="1.2370000E+02"/>
+        </fragilityFunction>
+        <fragilityFunction
+        format="continuous"
+        id="RC/DMRF-D/HR"
+        shape="logncdf"
+        >
+            <imls imt="PGA" maxIML="9.9" minIML="0.1" noDamageLimit="0"/>
+            <params ls="slight" mean="1.1180000E+01" stddev="8.2800000E+00"/>
+            <params ls="moderate" mean="2.7990000E+01" stddev="2.0667000E+01"/>
+            <params ls="extensive" mean="4.8060000E+01" stddev="4.2480000E+01"/>
+            <params ls="complete" mean="1.0880000E+02" stddev="1.2360000E+02"/>
+        </fragilityFunction>
+    </fragilityModel>
+</nrml>
