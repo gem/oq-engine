@@ -19,6 +19,7 @@
 """Engine: A collection of fundamental functions for initializing and running
 calculations."""
 
+import os
 import sys
 import signal
 import traceback
@@ -48,8 +49,8 @@ if USE_CELERY:
             sys.exit("No live compute nodes, aborting calculation")
         num_cores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
         OqParam.concurrent_tasks.default = 2 * num_cores
-        logs.LOG.info('Using %s, %d cores',
-                      ', '.join(sorted(stats)), num_cores)
+        logs.LOG.info(
+            'Using %s, %d cores', ', '.join(sorted(stats)), num_cores)
 
     def celery_cleanup(terminate, task_ids=()):
         """
@@ -77,24 +78,21 @@ def expose_outputs(dstore):
 
     :param dstore: datastore
     """
+    oq = dstore['oqparam']
     exportable = set(ekey[0] for ekey in export.export)
     # small hack: remove the sescollection outputs from scenario
     # calculators, as requested by Vitor
-    calcmode = dstore['oqparam'].calculation_mode
-    if 'scenario' in calcmode and 'sescollection' in exportable:
-        exportable.remove('sescollection')
-    dskeys = []  # datastore keys, a list of strings
-    # another hack: if the user has asked from UHS curves and there are
-    # hazard maps, put them in the list of exported outputs
-    uhs = dstore['oqparam'].uniform_hazard_spectra
-    if uhs and 'hmaps' in dstore:
-        dskeys.append('uhs')
-    for key in dstore:
-        if key in exportable:
-            if key == 'realizations' and len(dstore['realizations']) == 1:
-                continue  # do not export a single realization
-            dskeys.append(key)
-    logs.dbcmd('create_outputs', dstore.calc_id, dskeys)
+    calcmode = oq.calculation_mode
+    dskeys = set(dstore) & exportable  # exportable datastore keys
+    if oq.uniform_hazard_spectra:
+        dskeys.add('uhs')  # export them
+    if 'hmaps' in dskeys and not oq.hazard_maps:
+        dskeys.remove('hmaps')  # do not export
+    if 'realizations' in dskeys and len(dstore['realizations']) <= 1:
+        dskeys.remove('realizations')  # do not export a single realization
+    if 'sescollection' in dskeys and 'scenario' in calcmode:
+        exportable.remove('sescollection')  # do not export
+    logs.dbcmd('create_outputs', dstore.calc_id, sorted(dskeys))
 
 
 class MasterKilled(KeyboardInterrupt):
@@ -165,10 +163,10 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     :param exports:
         A comma-separated string of export types.
     """
-    if USE_CELERY:
-        set_concurrent_tasks_default()
     monitor = Monitor('total runtime', measuremem=True)
     with logs.handle(job_id, log_level, log_file):  # run the job
+        if USE_CELERY and os.environ.get('OQ_DISTRIBUTE') == 'celery':
+            set_concurrent_tasks_default()
         calc = base.calculators(oqparam, monitor, calc_id=job_id)
         tb = 'None\n'
         try:
@@ -177,6 +175,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             expose_outputs(calc.datastore)
             records = views.performance_view(calc.datastore)
             logs.dbcmd('save_performance', job_id, records)
+            calc.datastore.close()
             logs.LOG.info('Calculation %d finished correctly in %d seconds',
                           job_id, calc.monitor.duration)
         except:

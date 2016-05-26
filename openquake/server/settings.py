@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import getpass
 
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS
 
@@ -50,8 +51,8 @@ STATICFILES_DIRS = [
 # We need a 'default' database to make Django happy:
 DATABASE = {
     'ENGINE': 'django.db.backends.sqlite3',
-    'NAME': DB_SECTION.get('file'),
-    'USER': 'openquake',
+    'NAME': os.path.expanduser(DB_SECTION.get('file')),
+    'USER': getpass.getuser(),
     'HOST': DB_SECTION.get('host'),
     'PORT': DB_SECTION.get('port'),
 }

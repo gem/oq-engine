@@ -18,21 +18,27 @@ BuildArch: noarch
 Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-engine
 
+Patch1: openquake.cfg.patch
+
 Requires(pre): shadow-utils
 
-%define common_deps python numpy scipy python-shapely python-psutil python-mock python-futures h5py python-amqp python-celery python-django python-docutils rabbitmq-server sudo
-%define oqlib_deps python-oq-hazardlib >= 0.20.0 python-oq-risklib >= 0.13.0
+%define common_deps sudo systemd python numpy scipy python-shapely python-psutil python-decorator python-mock python-futures h5py python-amqp python-celery python-django python-docutils python-prctl python-gunicorn rabbitmq-server
+%define oqlib_deps python-oq-hazardlib >= 0.20.0
 %define dev_deps python-nose python-coverage
+
 Requires: %{common_deps}
 Requires: %{oqlib_deps}
 Requires: %{dev_deps}
 
-# Since tests are currently not enabled during the packaging phase, the following build dependencies are not required
+# since tests are currently not enabled during the packaging phase, the following build dependencies are not required
 #BuildRequires: %{common_deps}
 #BuildRequires: %{dev_deps}
 #BuildRequires: %{oqlib_deps}
 
-BuildRequires: python-setuptools
+BuildRequires: systemd python-setuptools
+
+Obsoletes: python-oq-risklib
+Provides: python-oq-risklib
 
 %description
 
@@ -44,7 +50,7 @@ the PYTHONPATH; when using binary packages, if a celeryconfig.py is not
 available the OpenQuake Engine default celeryconfig.py, located in
 /usr/share/openquake/engine, is used.
 
-Copyright (C) 2010-2016, GEM Foundation.
+Copyright (C) 2010-2016 GEM Foundation
 
 %pre
 getent group %{oquser} >/dev/null || groupadd -r %{oquser}
@@ -56,6 +62,8 @@ exit 0
 %prep
 %setup -n %{oqrepo}-%{oqversion}-%{oqrelease} -n %{oqrepo}-%{oqversion}-%{oqrelease}
 
+%patch1 -p1
+
 %build
 python setup.py build
 
@@ -65,10 +73,20 @@ python setup.py build
 %install
 python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --record=INSTALLED_FILES
 # create directories where the files will be located
-mkdir -p %{buildroot}/%{_sysconfdir}/openquake
-mkdir -p %{buildroot}/%{_datadir}/openquake/engine
+mkdir -p %{buildroot}%{_sysconfdir}/openquake
+mkdir -p %{buildroot}%{_datadir}/openquake/engine
+mkdir -p %{buildroot}%{_unitdir}
 install -m 644 celeryconfig.py %{buildroot}/%{_datadir}/openquake/engine
 install -m 644 openquake.cfg %{buildroot}/%{_sysconfdir}/openquake
+install -m 644 rpm/systemd/openquake-dbserver.service %{buildroot}%{_unitdir}/openquake-dbserver.service
+install -m 644 rpm/systemd/openquake-webui.service %{buildroot}%{_unitdir}/openquake-webui.service
+install -m 644 rpm/systemd/openquake-celery.service %{buildroot}%{_unitdir}/openquake-celery.service
+cp -R demos %{buildroot}/%{_datadir}/openquake/engine
+
+%post
+%systemd_post openquake-dbserver.service
+%systemd_post openquake-webui.service
+%systemd_post openquake-celery.service
 
 %clean
 rm -rf %{buildroot}
@@ -78,6 +96,9 @@ rm -rf %{buildroot}
 %doc README.md LICENSE CONTRIBUTORS.txt doc
 %{_datadir}/openquake/engine
 %{_sysconfdir}/openquake/openquake.cfg
+%{_unitdir}/openquake-dbserver.service
+%{_unitdir}/openquake-webui.service
+%{_unitdir}/openquake-celery.service
 
 %changelog
 * %(date -d @%{oqtimestamp} '+%a %b %d %Y') GEM Automatic Packager <gem-autopack@openquake.org> %{oqversion}-%{oqtimestamp}_%{oqrelease}

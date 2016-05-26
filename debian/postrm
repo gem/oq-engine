@@ -23,6 +23,9 @@ case "$1" in
     # This package has been removed, but its configuration has not yet
     # been purged.
     :
+    if pgrep supervisord 2>&1 > /dev/null; then
+        supervisorctl reload
+    fi
     for dir in  /usr/lib/python2.7/dist-packages/openquake/engine /usr/share/doc/${GEM_DEB_PACKAGE} /usr/lib/python2.7/dist-packages/openquake.engine-*egg-info
     do
         rm -rf $dir
@@ -39,7 +42,7 @@ case "$1" in
     # This package has previously been removed and is now having
     # its configuration purged from the system.
     :
-    for dir in  /etc/openquake /usr/lib/python2.7/dist-packages/openquake/engine /usr/share/doc/${GEM_DEB_PACKAGE} /usr/lib/python2.7/dist-packages/openquake.engine-*egg-info
+    for dir in  /etc/openquake /usr/share/openquake/engine /usr/lib/python2.7/dist-packages/openquake/engine /usr/share/doc/${GEM_DEB_PACKAGE} /usr/lib/python2.7/dist-packages/openquake.engine-*egg-info
     do
         rm -rf $dir
     done

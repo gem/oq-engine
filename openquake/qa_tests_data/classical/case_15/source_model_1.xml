@@ -1,0 +1,60 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+    <sourceModel name="Example source model consisting of 2 point sources, one belonging to Active Shallow Crust and one to Stable Continental Crust">
+
+        <pointSource id="1" name="point1" tectonicRegion="Active Shallow Crust">
+
+            <pointGeometry>
+                <gml:Point>
+                    <gml:pos>-0.1 0.0</gml:pos>
+                </gml:Point>
+
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>10.0</lowerSeismoDepth>
+            </pointGeometry>
+
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>1.0</ruptAspectRatio>
+
+            <truncGutenbergRichterMFD aValue="3.0" bValue="1.0" minMag="5.0" maxMag="6.5" />
+
+            <nodalPlaneDist>
+                <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0" />
+            </nodalPlaneDist>
+
+            <hypoDepthDist>
+                <hypoDepth probability="1.0" depth="5.0" />
+            </hypoDepthDist>
+
+        </pointSource>
+
+        <pointSource id="2" name="point2" tectonicRegion="Stable Continental Crust">
+
+            <pointGeometry>
+                <gml:Point>
+                    <gml:pos>+0.1 0.0</gml:pos>
+                </gml:Point>
+
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>10.0</lowerSeismoDepth>
+            </pointGeometry>
+
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>1.0</ruptAspectRatio>
+
+            <truncGutenbergRichterMFD aValue="3.0" bValue="1.0" minMag="5.0" maxMag="6.5" />
+
+            <nodalPlaneDist>
+                <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0" />
+            </nodalPlaneDist>
+
+            <hypoDepthDist>
+                <hypoDepth probability="1.0" depth="5.0" />
+            </hypoDepthDist>
+
+        </pointSource>
+
+    </sourceModel>
+</nrml>

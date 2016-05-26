@@ -35,7 +35,7 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 
 from openquake.baselib.general import groupby, writetmp
-from openquake.commonlib import nrml, readinput
+from openquake.commonlib import nrml, readinput, oqvalidation
 from openquake.commonlib.parallel import safely_call
 from openquake.commonlib.export import export
 from openquake.engine import __version__ as oqversion
@@ -43,7 +43,7 @@ from openquake.engine.export import core
 from openquake.engine import engine, logs
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import executor, utils
-from openquake.server.db import models, actions
+from openquake.server.db import models
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -66,6 +66,9 @@ ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
                   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
                   'Access-Control-Max-Age': 1000,
                   'Access-Control-Allow-Headers': '*'}
+
+# disable check on the export_dir, since the WebUI exports in a tmpdir
+oqvalidation.OqParam.is_valid_export_dir = lambda self: True
 
 
 # Credit for this decorator to https://gist.github.com/aschem/1308865.
@@ -405,7 +408,8 @@ def calc_results(request, calc_id):
     for result in results:
         try:  # output from the datastore
             rtype = result.ds_key
-            outtypes = output_types[rtype]
+            # Catalina asked to remove the .txt outputs (used for the GMFs)
+            outtypes = [ot for ot in output_types[rtype] if ot != 'txt']
         except KeyError:
             continue  # non-exportable outputs should not be shown
         url = urlparse.urljoin(base_url, 'v1/calc/result/%d' % result.id)
@@ -458,7 +462,8 @@ def get_result(request, result_id):
     # the job which it is related too is not complete,
     # throw back a 404.
     try:
-        job_status, ds_key = logs.dbcmd('get_result', result_id)
+        job_id, job_status, datadir, ds_key = logs.dbcmd(
+            'get_result', result_id)
         if not job_status == 'complete':
             return HttpResponseNotFound()
     except models.NotFound:
@@ -469,7 +474,8 @@ def get_result(request, result_id):
 
     tmpdir = tempfile.mkdtemp()
     try:
-        exported = core.export(result_id, tmpdir, export_type=export_type)
+        exported = core.export_from_datastore(
+            (ds_key, export_type), job_id, datadir, tmpdir)
     except DataStoreExportError as exc:
         # TODO: there should be a better error page
         return HttpResponse(content='%s: %s' % (exc.__class__.__name__, exc),
@@ -483,7 +489,8 @@ def get_result(request, result_id):
         export_type, DEFAULT_CONTENT_TYPE)
     try:
         fname = 'output-%s-%s' % (result_id, os.path.basename(exported))
-        data = open(exported).read()
+        # 'b' is needed when running the WebUI on Windows
+        data = open(exported, 'rb').read()
         response = HttpResponse(data, content_type=content_type)
         response['Content-Length'] = len(data)
         response['Content-Disposition'] = 'attachment; filename=%s' % fname

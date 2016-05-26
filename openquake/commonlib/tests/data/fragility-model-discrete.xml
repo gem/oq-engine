@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <fragilityModel
+    format="discrete"
+    >
+        <description>
+            Fragility model for Pavia (discrete)
+        </description>
+        <limitStates>
+            minor moderate severe collapse
+        </limitStates>
+        <ffs
+        noDamageLimit="5.0"
+        >
+            <taxonomy>
+                RC/DMRF-D/LR
+            </taxonomy>
+            <IML
+            IMT="MMI"
+            imlUnit="g"
+            >
+                7.0 8.0 9.0 10.0 11.0
+            </IML>
+            <ffd
+            ls="minor"
+            >
+                <poEs>
+                    0.0 0.09 0.56 0.91 0.98
+                </poEs>
+            </ffd>
+            <ffd
+            ls="moderate"
+            >
+                <poEs>
+                    0.0 0.0 0.04 0.78 0.96
+                </poEs>
+            </ffd>
+            <ffd
+            ls="severe"
+            >
+                <poEs>
+                    0.0 0.0 0.0 0.29 0.88
+                </poEs>
+            </ffd>
+            <ffd
+            ls="collapse"
+            >
+                <poEs>
+                    0.0 0.0 0.0 0.03 0.63
+                </poEs>
+            </ffd>
+        </ffs>
+        <ffs>
+            <taxonomy>
+                RC/DMRF-D/HR
+            </taxonomy>
+            <IML
+            IMT="MMI"
+            imlUnit="g"
+            >
+                7.0 8.0 9.0 10.0 11.0
+            </IML>
+            <ffd
+            ls="minor"
+            >
+                <poEs>
+                    0.0 0.09 0.56 0.92 0.99
+                </poEs>
+            </ffd>
+            <ffd
+            ls="moderate"
+            >
+                <poEs>
+                    0.0 0.0 0.04 0.79 0.97
+                </poEs>
+            </ffd>
+            <ffd
+            ls="severe"
+            >
+                <poEs>
+                    0.0 0.0 0.0 0.3 0.89
+                </poEs>
+            </ffd>
+            <ffd
+            ls="collapse"
+            >
+                <poEs>
+                    0.0 0.0 0.0 0.04 0.64
+                </poEs>
+            </ffd>
+        </ffs>
+    </fragilityModel>
+</nrml>

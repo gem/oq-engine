@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <fragilityModel
+    format="continuous"
+    >
+        <description>
+            Fragility model for Pavia (continuous)
+        </description>
+        <limitStates>
+            slight moderate extensive complete
+        </limitStates>
+        <ffs
+        noDamageLimit="0.05"
+        type="lognormal"
+        >
+            <taxonomy>
+                RC/DMRF-D/LR
+            </taxonomy>
+            <IML IMT="PGA" imlUnit="g" maxIML="9.9" minIML="0.1"/>
+            <ffc
+            ls="slight"
+            >
+                <params mean="11.19" stddev="8.27"/>
+            </ffc>
+            <ffc
+            ls="moderate"
+            >
+                <params mean="27.98" stddev="20.677"/>
+            </ffc>
+            <ffc
+            ls="extensive"
+            >
+                <params mean="48.05" stddev="42.49"/>
+            </ffc>
+            <ffc
+            ls="complete"
+            >
+                <params mean="108.9" stddev="123.7"/>
+            </ffc>
+        </ffs>
+        <ffs>
+            <taxonomy>
+                RC/DMRF-D/HR
+            </taxonomy>
+            <IML IMT="PGA" imlUnit="g" maxIML="9.9" minIML="0.1"/>
+            <ffc
+            ls="slight"
+            >
+                <params mean="11.18" stddev="8.28"/>
+            </ffc>
+            <ffc
+            ls="moderate"
+            >
+                <params mean="27.99" stddev="20.667"/>
+            </ffc>
+            <ffc
+            ls="extensive"
+            >
+                <params mean="48.06" stddev="42.48"/>
+            </ffc>
+            <ffc
+            ls="complete"
+            >
+                <params mean="108.8" stddev="123.6"/>
+            </ffc>
+        </ffs>
+    </fragilityModel>
+</nrml>

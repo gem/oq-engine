@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+    <sourceModel name="Classical Hazard QA Test, Case 6 source model">
+        <simpleFaultSource id="1" name="simple fault source" tectonicRegion="active shallow crust">
+
+            <simpleFaultGeometry>
+                <gml:LineString>
+                    <gml:posList>
+                        -0.0449660802959 2.75337803259e-18
+                        0.0449660802959 -8.26013409776e-18
+                    </gml:posList>
+                </gml:LineString>
+
+                <dip>90.0</dip>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>1.0</lowerSeismoDepth>
+            </simpleFaultGeometry>
+
+            <magScaleRel>PeerMSR</magScaleRel>
+
+            <ruptAspectRatio>1.0</ruptAspectRatio>
+
+            <incrementalMFD minMag="4.0" binWidth="1.0">
+                <occurRates>1.0</occurRates>
+            </incrementalMFD>
+
+            <rake>0.0</rake>
+        </simpleFaultSource>
+
+        <complexFaultSource id="2" name="complex fault source" tectonicRegion="active shallow crust">
+            <complexFaultGeometry>
+                <faultTopEdge>
+                    <gml:LineString>
+                        <gml:posList>
+                            0.0 0.0 0.0
+                            0.0269796481776 -4.95608078426e-18 0.0
+                            0.0503447088845 -9.2481722742e-18 1.5
+                        </gml:posList>
+                    </gml:LineString>
+                </faultTopEdge>
+
+                <faultBottomEdge>
+                    <gml:LineString>
+                        <gml:posList>
+                            0.0 0.0 1.0
+                            0.0269796481776 -4.95608078426e-18 1.0
+                            0.0503447088845 -9.2481722742e-18 2.5
+                        </gml:posList>
+                    </gml:LineString>
+                </faultBottomEdge>
+            </complexFaultGeometry>
+
+            <magScaleRel>PeerMSR</magScaleRel>
+            <ruptAspectRatio>1.0</ruptAspectRatio>
+
+            <incrementalMFD minMag="4.0" binWidth="0.1">
+                <occurRates>1.0</occurRates>
+            </incrementalMFD>
+
+            <rake>0.0</rake>
+        </complexFaultSource>
+    </sourceModel>
+</nrml>
