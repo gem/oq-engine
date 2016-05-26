@@ -96,6 +96,7 @@ class PointSource(ParametricSeismicSource):
         self.hypocenter_distribution = hypocenter_distribution
         self.upper_seismogenic_depth = upper_seismogenic_depth
         self.lower_seismogenic_depth = lower_seismogenic_depth
+        self.max_radius = 0
 
     def _get_max_rupture_projection_radius(self):
         """
@@ -105,9 +106,11 @@ class PointSource(ParametricSeismicSource):
         :returns:
             Half of maximum rupture's diagonal surface projection.
         """
+        if self.max_radius:  # already computed
+            return self.max_radius
+
         # extract maximum magnitude
         max_mag, _rate = self.get_annual_occurrence_rates()[-1]
-        max_radius = 0.0
         for (np_prob, np) in self.nodal_plane_distribution.data:
             # compute rupture dimensions
             rup_length, rup_width = self._get_rupture_dimensions(max_mag, np)
@@ -115,9 +118,9 @@ class PointSource(ParametricSeismicSource):
             rup_width = rup_width * math.cos(math.radians(np.dip))
             # the projection radius is half of the rupture diagonal
             radius = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
-            if radius > max_radius:
-                max_radius = radius
-        return max_radius
+            if radius > self.max_radius:
+                self.max_radius = radius
+        return self.max_radius
 
     def get_rupture_enclosing_polygon(self, dilation=0):
         """
