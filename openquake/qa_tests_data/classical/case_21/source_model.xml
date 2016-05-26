@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Fault Source for Logic Tree 1"
+    >
+        <simpleFaultSource
+        id="SFLT1"
+        name="Simple Fault 1 - Central"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <simpleFaultGeometry>
+                <gml:LineString>
+                    <gml:posList>
+                        -65.0 -0.38221 -65.0 0.38221
+                    </gml:posList>
+                </gml:LineString>
+                <dip>
+                    45.0
+                </dip>
+                <upperSeismoDepth>
+                    0.0
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    12.0
+                </lowerSeismoDepth>
+            </simpleFaultGeometry>
+            <magScaleRel>
+                PeerMSR
+            </magScaleRel>
+            <ruptAspectRatio>
+                2.0
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="0.1"
+            minMag="6.5"
+            >
+                <occurRates>0.01 0.005
+                </occurRates>
+            </incrementalMFD>
+            <rake>
+                0.0
+            </rake>
+        </simpleFaultSource>
+        <simpleFaultSource
+        id="SFLT2"
+        name="Simple Fault 2 - North"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <simpleFaultGeometry>
+                <gml:LineString>
+                    <gml:posList>
+                        -65.0 0.38221 -65.0 1.14663
+                    </gml:posList>
+                </gml:LineString>
+                <dip>
+                    45.0
+                </dip>
+                <upperSeismoDepth>
+                    0.0
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    12.0
+                </lowerSeismoDepth>
+            </simpleFaultGeometry>
+            <magScaleRel>
+                PeerMSR
+            </magScaleRel>
+            <ruptAspectRatio>
+                2.0
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="0.1"
+            minMag="6.5"
+            >
+                <occurRates>0.01 0.005
+                </occurRates>
+            </incrementalMFD>
+            <rake>
+                0.0
+            </rake>
+        </simpleFaultSource>
+    </sourceModel>
+</nrml>

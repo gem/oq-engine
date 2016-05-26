@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2016 GEM Foundation
+# Copyright (C) 2013-2016 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import re
 import sys
 from setuptools import setup, find_packages
@@ -93,9 +94,14 @@ setup(
     namespace_packages=['openquake'],
     install_requires=[
         'openquake.hazardlib',
-        'openquake.risklib',
+        'numpy',
+        'scipy',
+        'decorator',
+        'psutil >= 0.4.1',
     ],
     scripts=["openquake/engine/bin/oq_create_db",
              "openquake/engine/bin/oq_reset_db"],
+    test_loader='openquake.baselib.runtests:TestLoader',
+    test_suite='openquake.risklib,openquake.commonlib,openquake.calculators',
     zip_safe=False,
     )

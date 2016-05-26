@@ -1,0 +1,4953 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <exposureModel
+    category="buildings"
+    id="ep"
+    >
+        <description>
+            Exposure model for CITY C
+        </description>
+        <conversions>
+            <costTypes>
+                <costType name="structural" type="aggregated" unit="EUR"/>
+            </costTypes>
+        </conversions>
+        <assets>
+            <asset
+            id="a2"
+            taxonomy="MS-FLSB-2"
+            >
+                <location lat="1.5593070E+01" lon="-7.8167810E+01"/>
+                <costs>
+                    <cost type="structural" value="6.1276227E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a8"
+            taxonomy="MS-SLSB-1"
+            >
+                <location lat="1.5593260E+01" lon="-7.8168210E+01"/>
+                <costs>
+                    <cost type="structural" value="4.2519289E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a10"
+            taxonomy="MS-FLSB-2"
+            >
+                <location lat="1.5593160E+01" lon="-7.8168420E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4155217E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a13"
+            taxonomy="MS-FLSB-2"
+            >
+                <location lat="1.5592740E+01" lon="-7.8167920E+01"/>
+                <costs>
+                    <cost type="structural" value="7.1610875E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a20"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5593720E+01" lon="-7.8166560E+01"/>
+                <costs>
+                    <cost type="structural" value="1.0733129E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a27"
+            taxonomy="MS-FLSB-2"
+            >
+                <location lat="1.5594150E+01" lon="-7.8166330E+01"/>
+                <costs>
+                    <cost type="structural" value="1.3424460E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a28"
+            taxonomy="MS-SLSB-1"
+            >
+                <location lat="1.5593790E+01" lon="-7.8165840E+01"/>
+                <costs>
+                    <cost type="structural" value="4.2031099E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a42"
+            taxonomy="MS-FLSB-2"
+            >
+                <location lat="1.5593190E+01" lon="-7.8167320E+01"/>
+                <costs>
+                    <cost type="structural" value="5.0684235E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a45"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5594390E+01" lon="-7.8165280E+01"/>
+                <costs>
+                    <cost type="structural" value="7.8189859E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a68"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5600320E+01" lon="-7.8163730E+01"/>
+                <costs>
+                    <cost type="structural" value="1.9593331E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a89"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5600450E+01" lon="-7.8163160E+01"/>
+                <costs>
+                    <cost type="structural" value="3.7873635E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a90"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5594550E+01" lon="-7.8164950E+01"/>
+                <costs>
+                    <cost type="structural" value="4.0445971E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a95"
+            taxonomy="MS-FLSB-2"
+            >
+                <location lat="1.5594170E+01" lon="-7.8165060E+01"/>
+                <costs>
+                    <cost type="structural" value="6.4367175E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a101"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5598780E+01" lon="-7.8163550E+01"/>
+                <costs>
+                    <cost type="structural" value="3.3800326E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a125"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5581630E+01" lon="-7.8161500E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4572077E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a127"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5582460E+01" lon="-7.8161850E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4855448E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a132"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5582370E+01" lon="-7.8161620E+01"/>
+                <costs>
+                    <cost type="structural" value="3.3900493E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a135"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5582380E+01" lon="-7.8161920E+01"/>
+                <costs>
+                    <cost type="structural" value="9.2368035E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a137"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5582160E+01" lon="-7.8161550E+01"/>
+                <costs>
+                    <cost type="structural" value="7.7266178E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a161"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5587950E+01" lon="-7.8164010E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1601907E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a166"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5588500E+01" lon="-7.8163540E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2877870E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a177"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5579050E+01" lon="-7.8160420E+01"/>
+                <costs>
+                    <cost type="structural" value="6.1532804E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a184"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5579680E+01" lon="-7.8160440E+01"/>
+                <costs>
+                    <cost type="structural" value="7.2727926E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a198"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5578290E+01" lon="-7.8160240E+01"/>
+                <costs>
+                    <cost type="structural" value="2.8451737E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a208"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5580210E+01" lon="-7.8160670E+01"/>
+                <costs>
+                    <cost type="structural" value="8.9545432E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a225"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5585560E+01" lon="-7.8164290E+01"/>
+                <costs>
+                    <cost type="structural" value="1.0325612E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a231"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5591380E+01" lon="-7.8164270E+01"/>
+                <costs>
+                    <cost type="structural" value="2.7126847E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a253"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5596450E+01" lon="-7.8166180E+01"/>
+                <costs>
+                    <cost type="structural" value="1.9286073E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a257"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5595160E+01" lon="-7.8167150E+01"/>
+                <costs>
+                    <cost type="structural" value="1.7354592E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a270"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5595570E+01" lon="-7.8167360E+01"/>
+                <costs>
+                    <cost type="structural" value="2.3532139E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a288"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5594950E+01" lon="-7.8166570E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4190125E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a291"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5594730E+01" lon="-7.8166550E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4038654E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a298"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5597110E+01" lon="-7.8165910E+01"/>
+                <costs>
+                    <cost type="structural" value="2.0636931E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a299"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5597190E+01" lon="-7.8166010E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2759203E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a325"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5595390E+01" lon="-7.8166490E+01"/>
+                <costs>
+                    <cost type="structural" value="2.4208238E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a343"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5596050E+01" lon="-7.8166110E+01"/>
+                <costs>
+                    <cost type="structural" value="1.5398881E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a369"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5598720E+01" lon="-7.8170670E+01"/>
+                <costs>
+                    <cost type="structural" value="9.2931887E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a376"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5599280E+01" lon="-7.8172370E+01"/>
+                <costs>
+                    <cost type="structural" value="7.9014572E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a395"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5597740E+01" lon="-7.8175900E+01"/>
+                <costs>
+                    <cost type="structural" value="9.1790578E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a407"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5597820E+01" lon="-7.8178680E+01"/>
+                <costs>
+                    <cost type="structural" value="1.9369750E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a416"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5599610E+01" lon="-7.8167420E+01"/>
+                <costs>
+                    <cost type="structural" value="8.5559995E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a420"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5577850E+01" lon="-7.8159800E+01"/>
+                <costs>
+                    <cost type="structural" value="3.8318982E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a428"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5577100E+01" lon="-7.8159450E+01"/>
+                <costs>
+                    <cost type="structural" value="5.8952526E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a436"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5576530E+01" lon="-7.8158210E+01"/>
+                <costs>
+                    <cost type="structural" value="5.8076788E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a461"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5575160E+01" lon="-7.8158170E+01"/>
+                <costs>
+                    <cost type="structural" value="3.2340027E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a470"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5574780E+01" lon="-7.8157640E+01"/>
+                <costs>
+                    <cost type="structural" value="5.3731686E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a482"
+            taxonomy="PCR-RCSM-5"
+            >
+                <location lat="1.5574500E+01" lon="-7.8157220E+01"/>
+                <costs>
+                    <cost type="structural" value="2.2274254E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a494"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5573510E+01" lon="-7.8157290E+01"/>
+                <costs>
+                    <cost type="structural" value="9.1630850E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a502"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5572130E+01" lon="-7.8156000E+01"/>
+                <costs>
+                    <cost type="structural" value="9.1092557E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a505"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5571380E+01" lon="-7.8155000E+01"/>
+                <costs>
+                    <cost type="structural" value="9.2170952E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a509"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5570390E+01" lon="-7.8154780E+01"/>
+                <costs>
+                    <cost type="structural" value="1.9793377E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a518"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5572620E+01" lon="-7.8156660E+01"/>
+                <costs>
+                    <cost type="structural" value="2.8104209E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a519"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5572530E+01" lon="-7.8157030E+01"/>
+                <costs>
+                    <cost type="structural" value="7.5376945E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a529"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5572050E+01" lon="-7.8156530E+01"/>
+                <costs>
+                    <cost type="structural" value="5.0616385E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a544"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5571190E+01" lon="-7.8155880E+01"/>
+                <costs>
+                    <cost type="structural" value="5.7943841E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a550"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5570870E+01" lon="-7.8155670E+01"/>
+                <costs>
+                    <cost type="structural" value="6.7376691E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a584"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5569380E+01" lon="-7.8153980E+01"/>
+                <costs>
+                    <cost type="structural" value="1.9054285E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a590"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5569610E+01" lon="-7.8154570E+01"/>
+                <costs>
+                    <cost type="structural" value="7.8831300E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a599"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5569490E+01" lon="-7.8154480E+01"/>
+                <costs>
+                    <cost type="structural" value="3.3351727E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a601"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5569230E+01" lon="-7.8154290E+01"/>
+                <costs>
+                    <cost type="structural" value="2.3043047E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a609"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5569000E+01" lon="-7.8154720E+01"/>
+                <costs>
+                    <cost type="structural" value="3.1962183E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a638"
+            taxonomy="MR-SLSB-1"
+            >
+                <location lat="1.5591210E+01" lon="-7.8165360E+01"/>
+                <costs>
+                    <cost type="structural" value="9.7687047E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a652"
+            taxonomy="MR-SLSB-1"
+            >
+                <location lat="1.5590570E+01" lon="-7.8163790E+01"/>
+                <costs>
+                    <cost type="structural" value="5.6635719E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a657"
+            taxonomy="A-SPSB-1"
+            >
+                <location lat="1.5592600E+01" lon="-7.8166450E+01"/>
+                <costs>
+                    <cost type="structural" value="5.1691866E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a659"
+            taxonomy="A-SPSB-1"
+            >
+                <location lat="1.5592550E+01" lon="-7.8166690E+01"/>
+                <costs>
+                    <cost type="structural" value="4.9378067E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a684"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5576820E+01" lon="-7.8158820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.7313712E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a685"
+            taxonomy="PCR-SLSB-1"
+            >
+                <location lat="1.5587600E+01" lon="-7.8164320E+01"/>
+                <costs>
+                    <cost type="structural" value="3.0040379E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a704"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5586720E+01" lon="-7.8164970E+01"/>
+                <costs>
+                    <cost type="structural" value="1.5091152E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a716"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5586440E+01" lon="-7.8164230E+01"/>
+                <costs>
+                    <cost type="structural" value="2.1877206E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a717"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5586610E+01" lon="-7.8164370E+01"/>
+                <costs>
+                    <cost type="structural" value="3.0968932E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a721"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5592760E+01" lon="-7.8165510E+01"/>
+                <costs>
+                    <cost type="structural" value="2.6920954E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a729"
+            taxonomy="MR-SLSB-1"
+            >
+                <location lat="1.5593330E+01" lon="-7.8166170E+01"/>
+                <costs>
+                    <cost type="structural" value="2.9085492E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a738"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5588440E+01" lon="-7.8164930E+01"/>
+                <costs>
+                    <cost type="structural" value="2.8130240E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a776"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5593560E+01" lon="-7.8164730E+01"/>
+                <costs>
+                    <cost type="structural" value="6.1938689E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a818"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5588930E+01" lon="-7.8163820E+01"/>
+                <costs>
+                    <cost type="structural" value="8.8303957E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a827"
+            taxonomy="A-SPSB-1"
+            >
+                <location lat="1.5589490E+01" lon="-7.8165440E+01"/>
+                <costs>
+                    <cost type="structural" value="6.8380218E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a852"
+            taxonomy="A-SPSB-1"
+            >
+                <location lat="1.5588520E+01" lon="-7.8164580E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2226503E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a853"
+            taxonomy="A-SPSB-1"
+            >
+                <location lat="1.5589310E+01" lon="-7.8164900E+01"/>
+                <costs>
+                    <cost type="structural" value="1.0494468E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a859"
+            taxonomy="MR-SLSB-1"
+            >
+                <location lat="1.5590030E+01" lon="-7.8164830E+01"/>
+                <costs>
+                    <cost type="structural" value="8.3389777E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a865"
+            taxonomy="MS-SLSB-1"
+            >
+                <location lat="1.5591410E+01" lon="-7.8165770E+01"/>
+                <costs>
+                    <cost type="structural" value="4.4671416E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a874"
+            taxonomy="MS-SLSB-1"
+            >
+                <location lat="1.5590420E+01" lon="-7.8165500E+01"/>
+                <costs>
+                    <cost type="structural" value="3.2925515E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a883"
+            taxonomy="A-SPSB-1"
+            >
+                <location lat="1.5591770E+01" lon="-7.8166140E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2190205E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a909"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5588160E+01" lon="-7.8165700E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8206905E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a930"
+            taxonomy="MS-SLSB-1"
+            >
+                <location lat="1.5590910E+01" lon="-7.8166800E+01"/>
+                <costs>
+                    <cost type="structural" value="4.6347350E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a957"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5592300E+01" lon="-7.8167610E+01"/>
+                <costs>
+                    <cost type="structural" value="7.3362440E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a967"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5577700E+01" lon="-7.8160640E+01"/>
+                <costs>
+                    <cost type="structural" value="7.8180553E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a972"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5576870E+01" lon="-7.8160440E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4010292E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a981"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5576690E+01" lon="-7.8160390E+01"/>
+                <costs>
+                    <cost type="structural" value="2.3091058E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a992"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5576040E+01" lon="-7.8160760E+01"/>
+                <costs>
+                    <cost type="structural" value="1.7318337E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a996"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5576480E+01" lon="-7.8160870E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1748767E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1001"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5576120E+01" lon="-7.8160970E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4075193E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1014"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5575870E+01" lon="-7.8160630E+01"/>
+                <costs>
+                    <cost type="structural" value="2.1502002E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1019"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5575340E+01" lon="-7.8160910E+01"/>
+                <costs>
+                    <cost type="structural" value="9.6645699E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1027"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5570370E+01" lon="-7.8158910E+01"/>
+                <costs>
+                    <cost type="structural" value="5.4659263E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1034"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5570700E+01" lon="-7.8159000E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4378302E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1035"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5570730E+01" lon="-7.8158840E+01"/>
+                <costs>
+                    <cost type="structural" value="3.5610626E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1040"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5570590E+01" lon="-7.8159270E+01"/>
+                <costs>
+                    <cost type="structural" value="2.1210700E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1050"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5571430E+01" lon="-7.8159230E+01"/>
+                <costs>
+                    <cost type="structural" value="2.3351136E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1056"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5571990E+01" lon="-7.8159550E+01"/>
+                <costs>
+                    <cost type="structural" value="5.6756055E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1062"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5572480E+01" lon="-7.8159950E+01"/>
+                <costs>
+                    <cost type="structural" value="4.8864117E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1063"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5572520E+01" lon="-7.8160040E+01"/>
+                <costs>
+                    <cost type="structural" value="4.0193965E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1065"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5572290E+01" lon="-7.8159860E+01"/>
+                <costs>
+                    <cost type="structural" value="7.7252952E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1074"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5572950E+01" lon="-7.8160290E+01"/>
+                <costs>
+                    <cost type="structural" value="3.9761443E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1086"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5574080E+01" lon="-7.8161710E+01"/>
+                <costs>
+                    <cost type="structural" value="3.1999174E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1092"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5574470E+01" lon="-7.8161320E+01"/>
+                <costs>
+                    <cost type="structural" value="9.9889190E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1094"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5574340E+01" lon="-7.8161130E+01"/>
+                <costs>
+                    <cost type="structural" value="2.7696575E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1095"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5574410E+01" lon="-7.8161050E+01"/>
+                <costs>
+                    <cost type="structural" value="5.8117388E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1126"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5572150E+01" lon="-7.8163190E+01"/>
+                <costs>
+                    <cost type="structural" value="1.9026665E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1134"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5571240E+01" lon="-7.8168000E+01"/>
+                <costs>
+                    <cost type="structural" value="4.3328759E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1140"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5570900E+01" lon="-7.8169080E+01"/>
+                <costs>
+                    <cost type="structural" value="9.1079028E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1149"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5571390E+01" lon="-7.8167460E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8053652E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1150"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5571570E+01" lon="-7.8167410E+01"/>
+                <costs>
+                    <cost type="structural" value="3.3945164E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1166"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5571990E+01" lon="-7.8165300E+01"/>
+                <costs>
+                    <cost type="structural" value="1.5048323E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1169"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5572130E+01" lon="-7.8165080E+01"/>
+                <costs>
+                    <cost type="structural" value="3.1458770E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1175"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5572610E+01" lon="-7.8164770E+01"/>
+                <costs>
+                    <cost type="structural" value="1.3291576E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1183"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5574770E+01" lon="-7.8163140E+01"/>
+                <costs>
+                    <cost type="structural" value="2.9058547E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1185"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5574760E+01" lon="-7.8162840E+01"/>
+                <costs>
+                    <cost type="structural" value="3.2993576E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1186"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5575000E+01" lon="-7.8162870E+01"/>
+                <costs>
+                    <cost type="structural" value="3.9566300E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1194"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5575160E+01" lon="-7.8162920E+01"/>
+                <costs>
+                    <cost type="structural" value="2.9771993E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1200"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5574440E+01" lon="-7.8162810E+01"/>
+                <costs>
+                    <cost type="structural" value="5.0074207E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1237"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5575480E+01" lon="-7.8161820E+01"/>
+                <costs>
+                    <cost type="structural" value="5.6690041E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1241"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5575680E+01" lon="-7.8162050E+01"/>
+                <costs>
+                    <cost type="structural" value="3.8787869E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1245"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5575170E+01" lon="-7.8161350E+01"/>
+                <costs>
+                    <cost type="structural" value="5.4084845E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1247"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5575790E+01" lon="-7.8162030E+01"/>
+                <costs>
+                    <cost type="structural" value="6.6484193E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1262"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5575840E+01" lon="-7.8161950E+01"/>
+                <costs>
+                    <cost type="structural" value="2.4915913E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1281"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5576510E+01" lon="-7.8162190E+01"/>
+                <costs>
+                    <cost type="structural" value="2.2831561E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1282"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5576570E+01" lon="-7.8162180E+01"/>
+                <costs>
+                    <cost type="structural" value="4.0647087E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1317"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5576470E+01" lon="-7.8161370E+01"/>
+                <costs>
+                    <cost type="structural" value="2.1988383E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1323"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5576550E+01" lon="-7.8161490E+01"/>
+                <costs>
+                    <cost type="structural" value="7.0700070E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1374"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5577290E+01" lon="-7.8161680E+01"/>
+                <costs>
+                    <cost type="structural" value="3.2712170E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1375"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5577370E+01" lon="-7.8161720E+01"/>
+                <costs>
+                    <cost type="structural" value="3.2431086E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1380"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5577670E+01" lon="-7.8160940E+01"/>
+                <costs>
+                    <cost type="structural" value="4.1436119E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1392"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5577790E+01" lon="-7.8161440E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4960657E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1393"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5577980E+01" lon="-7.8161260E+01"/>
+                <costs>
+                    <cost type="structural" value="5.1403160E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1402"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5579080E+01" lon="-7.8161730E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4399285E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1409"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5579510E+01" lon="-7.8161970E+01"/>
+                <costs>
+                    <cost type="structural" value="6.3618306E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1418"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5579780E+01" lon="-7.8162120E+01"/>
+                <costs>
+                    <cost type="structural" value="4.5878621E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1420"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5579690E+01" lon="-7.8162210E+01"/>
+                <costs>
+                    <cost type="structural" value="3.5284603E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1430"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5580280E+01" lon="-7.8163030E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8312460E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1438"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5580430E+01" lon="-7.8162860E+01"/>
+                <costs>
+                    <cost type="structural" value="8.4319441E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1447"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5580760E+01" lon="-7.8162960E+01"/>
+                <costs>
+                    <cost type="structural" value="7.9995224E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1451"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5580690E+01" lon="-7.8162720E+01"/>
+                <costs>
+                    <cost type="structural" value="1.3724596E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1453"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5580800E+01" lon="-7.8162720E+01"/>
+                <costs>
+                    <cost type="structural" value="4.5013538E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1478"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5570530E+01" lon="-7.8158320E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2454012E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1483"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5571180E+01" lon="-7.8157450E+01"/>
+                <costs>
+                    <cost type="structural" value="2.3264746E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1490"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5571160E+01" lon="-7.8157950E+01"/>
+                <costs>
+                    <cost type="structural" value="6.6594208E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1497"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5571560E+01" lon="-7.8157710E+01"/>
+                <costs>
+                    <cost type="structural" value="2.9837619E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1506"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5571760E+01" lon="-7.8157980E+01"/>
+                <costs>
+                    <cost type="structural" value="4.3350973E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1507"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5572060E+01" lon="-7.8157930E+01"/>
+                <costs>
+                    <cost type="structural" value="4.0994182E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1539"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5572220E+01" lon="-7.8159120E+01"/>
+                <costs>
+                    <cost type="structural" value="8.5085782E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1544"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5572320E+01" lon="-7.8158970E+01"/>
+                <costs>
+                    <cost type="structural" value="9.7923835E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1557"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5572920E+01" lon="-7.8158870E+01"/>
+                <costs>
+                    <cost type="structural" value="2.3480713E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1563"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5575640E+01" lon="-7.8159340E+01"/>
+                <costs>
+                    <cost type="structural" value="2.0161569E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1570"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5576230E+01" lon="-7.8159760E+01"/>
+                <costs>
+                    <cost type="structural" value="4.2117531E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1583"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5574800E+01" lon="-7.8159810E+01"/>
+                <costs>
+                    <cost type="structural" value="5.0485166E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1609"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5574660E+01" lon="-7.8158870E+01"/>
+                <costs>
+                    <cost type="structural" value="5.7576998E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1610"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5574290E+01" lon="-7.8158690E+01"/>
+                <costs>
+                    <cost type="structural" value="1.0475446E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1625"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5572630E+01" lon="-7.8158190E+01"/>
+                <costs>
+                    <cost type="structural" value="2.4756429E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1626"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5572760E+01" lon="-7.8158280E+01"/>
+                <costs>
+                    <cost type="structural" value="2.8713112E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1643"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5572360E+01" lon="-7.8157310E+01"/>
+                <costs>
+                    <cost type="structural" value="2.9902389E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1658"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5571200E+01" lon="-7.8156850E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4821559E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1664"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5570800E+01" lon="-7.8156090E+01"/>
+                <costs>
+                    <cost type="structural" value="8.8129633E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1680"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5568090E+01" lon="-7.8154330E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4335346E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1696"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5576530E+01" lon="-7.8164800E+01"/>
+                <costs>
+                    <cost type="structural" value="9.1671779E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1722"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5576990E+01" lon="-7.8162340E+01"/>
+                <costs>
+                    <cost type="structural" value="2.8279930E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1736"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5575440E+01" lon="-7.8162980E+01"/>
+                <costs>
+                    <cost type="structural" value="2.3869451E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1739"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5575510E+01" lon="-7.8163200E+01"/>
+                <costs>
+                    <cost type="structural" value="3.5696047E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1748"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5574760E+01" lon="-7.8163470E+01"/>
+                <costs>
+                    <cost type="structural" value="3.5609674E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1803"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5580600E+01" lon="-7.8163710E+01"/>
+                <costs>
+                    <cost type="structural" value="2.6640333E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1808"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5580470E+01" lon="-7.8163870E+01"/>
+                <costs>
+                    <cost type="structural" value="1.9907738E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1820"
+            taxonomy="PCR-SLSB-1"
+            >
+                <location lat="1.5581170E+01" lon="-7.8162980E+01"/>
+                <costs>
+                    <cost type="structural" value="4.1078549E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1837"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5579330E+01" lon="-7.8161210E+01"/>
+                <costs>
+                    <cost type="structural" value="1.7123468E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1863"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5579980E+01" lon="-7.8161480E+01"/>
+                <costs>
+                    <cost type="structural" value="2.7760674E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1875"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5580490E+01" lon="-7.8162140E+01"/>
+                <costs>
+                    <cost type="structural" value="2.2519402E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1878"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5580670E+01" lon="-7.8162160E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1458795E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1904"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5580840E+01" lon="-7.8161870E+01"/>
+                <costs>
+                    <cost type="structural" value="2.9425313E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1907"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5580140E+01" lon="-7.8161930E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8009820E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1909"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5580010E+01" lon="-7.8161820E+01"/>
+                <costs>
+                    <cost type="structural" value="3.5673739E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1919"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5580210E+01" lon="-7.8161270E+01"/>
+                <costs>
+                    <cost type="structural" value="2.4279762E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1925"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5580340E+01" lon="-7.8161530E+01"/>
+                <costs>
+                    <cost type="structural" value="4.7305490E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1933"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5580550E+01" lon="-7.8161340E+01"/>
+                <costs>
+                    <cost type="structural" value="8.7454003E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1935"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5580750E+01" lon="-7.8161260E+01"/>
+                <costs>
+                    <cost type="structural" value="8.0968367E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1938"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5580730E+01" lon="-7.8161390E+01"/>
+                <costs>
+                    <cost type="structural" value="3.0787434E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1940"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5580710E+01" lon="-7.8161550E+01"/>
+                <costs>
+                    <cost type="structural" value="5.4969830E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1962"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5580980E+01" lon="-7.8161360E+01"/>
+                <costs>
+                    <cost type="structural" value="2.0042078E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1963"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5581070E+01" lon="-7.8161370E+01"/>
+                <costs>
+                    <cost type="structural" value="1.9045427E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1979"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5581110E+01" lon="-7.8161580E+01"/>
+                <costs>
+                    <cost type="structural" value="1.3815399E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1982"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5581210E+01" lon="-7.8161700E+01"/>
+                <costs>
+                    <cost type="structural" value="1.9609638E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1985"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5581010E+01" lon="-7.8161810E+01"/>
+                <costs>
+                    <cost type="structural" value="2.8279412E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1991"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5581200E+01" lon="-7.8162040E+01"/>
+                <costs>
+                    <cost type="structural" value="9.2227821E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2005"
+            taxonomy="MC-RCSB-1"
+            >
+                <location lat="1.5581520E+01" lon="-7.8161730E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8625885E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2036"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5582040E+01" lon="-7.8162080E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1091178E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2051"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5582110E+01" lon="-7.8162110E+01"/>
+                <costs>
+                    <cost type="structural" value="7.2535843E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2069"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5581070E+01" lon="-7.8165080E+01"/>
+                <costs>
+                    <cost type="structural" value="2.0790009E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2103"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5580700E+01" lon="-7.8168570E+01"/>
+                <costs>
+                    <cost type="structural" value="3.0666010E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2104"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5580290E+01" lon="-7.8168480E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4226083E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2113"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5580070E+01" lon="-7.8169530E+01"/>
+                <costs>
+                    <cost type="structural" value="2.1291547E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2121"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5578600E+01" lon="-7.8171150E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1182003E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2123"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5578510E+01" lon="-7.8172000E+01"/>
+                <costs>
+                    <cost type="structural" value="2.0962993E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2127"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5578010E+01" lon="-7.8172130E+01"/>
+                <costs>
+                    <cost type="structural" value="8.9537020E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2133"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5577150E+01" lon="-7.8172710E+01"/>
+                <costs>
+                    <cost type="structural" value="4.1381375E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2150"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5578530E+01" lon="-7.8174440E+01"/>
+                <costs>
+                    <cost type="structural" value="1.7071280E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2153"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5582690E+01" lon="-7.8164920E+01"/>
+                <costs>
+                    <cost type="structural" value="4.6266937E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2154"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5582750E+01" lon="-7.8164960E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1363501E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2161"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5583050E+01" lon="-7.8165090E+01"/>
+                <costs>
+                    <cost type="structural" value="1.0343017E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2163"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5582890E+01" lon="-7.8164790E+01"/>
+                <costs>
+                    <cost type="structural" value="4.7477625E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2168"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5582680E+01" lon="-7.8164670E+01"/>
+                <costs>
+                    <cost type="structural" value="6.7714070E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2169"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5582650E+01" lon="-7.8164760E+01"/>
+                <costs>
+                    <cost type="structural" value="1.0412228E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2173"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5582260E+01" lon="-7.8164650E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2211043E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2181"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5581840E+01" lon="-7.8164810E+01"/>
+                <costs>
+                    <cost type="structural" value="7.3162608E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2194"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5582420E+01" lon="-7.8165500E+01"/>
+                <costs>
+                    <cost type="structural" value="1.3707126E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2202"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5582360E+01" lon="-7.8166100E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1034877E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2211"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5581210E+01" lon="-7.8164550E+01"/>
+                <costs>
+                    <cost type="structural" value="4.1337878E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2215"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5581620E+01" lon="-7.8164210E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2003535E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2222"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5583260E+01" lon="-7.8164720E+01"/>
+                <costs>
+                    <cost type="structural" value="2.0980060E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2231"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5584060E+01" lon="-7.8164970E+01"/>
+                <costs>
+                    <cost type="structural" value="2.1144283E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2233"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5583810E+01" lon="-7.8165240E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4081667E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2239"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5583770E+01" lon="-7.8165570E+01"/>
+                <costs>
+                    <cost type="structural" value="2.0322734E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2249"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5583460E+01" lon="-7.8165690E+01"/>
+                <costs>
+                    <cost type="structural" value="3.8915924E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2253"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5583350E+01" lon="-7.8165890E+01"/>
+                <costs>
+                    <cost type="structural" value="1.3404376E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2306"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5583660E+01" lon="-7.8166510E+01"/>
+                <costs>
+                    <cost type="structural" value="3.2261228E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2319"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5584340E+01" lon="-7.8166330E+01"/>
+                <costs>
+                    <cost type="structural" value="4.2245176E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2324"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5584190E+01" lon="-7.8165920E+01"/>
+                <costs>
+                    <cost type="structural" value="3.6935393E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2331"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5584600E+01" lon="-7.8165920E+01"/>
+                <costs>
+                    <cost type="structural" value="1.7875278E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2343"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5584670E+01" lon="-7.8165230E+01"/>
+                <costs>
+                    <cost type="structural" value="2.7612872E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2376"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5582510E+01" lon="-7.8163070E+01"/>
+                <costs>
+                    <cost type="structural" value="1.0948443E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2385"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5582480E+01" lon="-7.8162740E+01"/>
+                <costs>
+                    <cost type="structural" value="2.0339310E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2405"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5584830E+01" lon="-7.8164020E+01"/>
+                <costs>
+                    <cost type="structural" value="7.8350424E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2425"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5585160E+01" lon="-7.8165970E+01"/>
+                <costs>
+                    <cost type="structural" value="8.2414572E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2427"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5585010E+01" lon="-7.8165730E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2108900E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2437"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5585420E+01" lon="-7.8165930E+01"/>
+                <costs>
+                    <cost type="structural" value="1.3923117E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2438"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5585180E+01" lon="-7.8165890E+01"/>
+                <costs>
+                    <cost type="structural" value="2.3081270E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2454"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5584600E+01" lon="-7.8166520E+01"/>
+                <costs>
+                    <cost type="structural" value="8.9462779E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2479"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5585300E+01" lon="-7.8166770E+01"/>
+                <costs>
+                    <cost type="structural" value="3.9382502E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2490"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5584540E+01" lon="-7.8166980E+01"/>
+                <costs>
+                    <cost type="structural" value="1.6456992E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2510"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5585600E+01" lon="-7.8166860E+01"/>
+                <costs>
+                    <cost type="structural" value="2.3842203E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2517"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5586280E+01" lon="-7.8166650E+01"/>
+                <costs>
+                    <cost type="structural" value="2.2830333E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2524"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5586110E+01" lon="-7.8165990E+01"/>
+                <costs>
+                    <cost type="structural" value="1.9833887E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2537"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5583380E+01" lon="-7.8167890E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2089842E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2538"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5583450E+01" lon="-7.8167960E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8636336E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2544"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5582700E+01" lon="-7.8168480E+01"/>
+                <costs>
+                    <cost type="structural" value="1.0317035E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2564"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5582440E+01" lon="-7.8168900E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1882325E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2569"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5582510E+01" lon="-7.8169310E+01"/>
+                <costs>
+                    <cost type="structural" value="1.7909950E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2575"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5583910E+01" lon="-7.8167570E+01"/>
+                <costs>
+                    <cost type="structural" value="8.6090225E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2588"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5583410E+01" lon="-7.8168500E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2686537E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2597"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5582960E+01" lon="-7.8169640E+01"/>
+                <costs>
+                    <cost type="structural" value="9.9105491E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2606"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5582260E+01" lon="-7.8169890E+01"/>
+                <costs>
+                    <cost type="structural" value="4.3238358E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2619"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5582320E+01" lon="-7.8170430E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4424804E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2638"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5582400E+01" lon="-7.8173180E+01"/>
+                <costs>
+                    <cost type="structural" value="5.7508684E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2639"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5582570E+01" lon="-7.8172960E+01"/>
+                <costs>
+                    <cost type="structural" value="2.3850959E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2641"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5582330E+01" lon="-7.8173100E+01"/>
+                <costs>
+                    <cost type="structural" value="3.2602683E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2642"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5583010E+01" lon="-7.8173990E+01"/>
+                <costs>
+                    <cost type="structural" value="3.5663883E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2649"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5582190E+01" lon="-7.8174560E+01"/>
+                <costs>
+                    <cost type="structural" value="8.9289690E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2662"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5585260E+01" lon="-7.8167510E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4747196E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2666"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5585130E+01" lon="-7.8168090E+01"/>
+                <costs>
+                    <cost type="structural" value="2.0564661E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2667"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5585060E+01" lon="-7.8168140E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4495428E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2688"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5585360E+01" lon="-7.8168100E+01"/>
+                <costs>
+                    <cost type="structural" value="6.3561853E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2691"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5585470E+01" lon="-7.8168520E+01"/>
+                <costs>
+                    <cost type="structural" value="1.9042587E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2694"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5585670E+01" lon="-7.8168330E+01"/>
+                <costs>
+                    <cost type="structural" value="2.7759616E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2706"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5585650E+01" lon="-7.8167720E+01"/>
+                <costs>
+                    <cost type="structural" value="8.5181465E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2722"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5585530E+01" lon="-7.8167610E+01"/>
+                <costs>
+                    <cost type="structural" value="1.7814614E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2730"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5586050E+01" lon="-7.8167600E+01"/>
+                <costs>
+                    <cost type="structural" value="1.6768180E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2736"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5586210E+01" lon="-7.8167390E+01"/>
+                <costs>
+                    <cost type="structural" value="5.0901221E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2749"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5586200E+01" lon="-7.8168430E+01"/>
+                <costs>
+                    <cost type="structural" value="1.9531128E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2756"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5586120E+01" lon="-7.8168080E+01"/>
+                <costs>
+                    <cost type="structural" value="2.0942316E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2764"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5584100E+01" lon="-7.8169290E+01"/>
+                <costs>
+                    <cost type="structural" value="1.0809883E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2767"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5584450E+01" lon="-7.8169500E+01"/>
+                <costs>
+                    <cost type="structural" value="1.0511510E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2774"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5583730E+01" lon="-7.8170200E+01"/>
+                <costs>
+                    <cost type="structural" value="9.8759122E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2775"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5583790E+01" lon="-7.8170190E+01"/>
+                <costs>
+                    <cost type="structural" value="2.2536445E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2778"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5583950E+01" lon="-7.8170550E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2202180E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2790"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5584750E+01" lon="-7.8169080E+01"/>
+                <costs>
+                    <cost type="structural" value="7.1085595E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2808"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5585620E+01" lon="-7.8169160E+01"/>
+                <costs>
+                    <cost type="structural" value="5.7378454E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2811"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5585570E+01" lon="-7.8168980E+01"/>
+                <costs>
+                    <cost type="structural" value="2.2337397E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2818"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5586090E+01" lon="-7.8169380E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4186754E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2826"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5586490E+01" lon="-7.8170010E+01"/>
+                <costs>
+                    <cost type="structural" value="8.8553451E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2837"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5586780E+01" lon="-7.8169550E+01"/>
+                <costs>
+                    <cost type="structural" value="5.9496811E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2838"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5586820E+01" lon="-7.8169610E+01"/>
+                <costs>
+                    <cost type="structural" value="3.1391477E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2845"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5587270E+01" lon="-7.8168970E+01"/>
+                <costs>
+                    <cost type="structural" value="1.0152494E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2851"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5586380E+01" lon="-7.8168880E+01"/>
+                <costs>
+                    <cost type="structural" value="4.6309068E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2858"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5586460E+01" lon="-7.8168550E+01"/>
+                <costs>
+                    <cost type="structural" value="3.8690344E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2864"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5586400E+01" lon="-7.8168170E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2193436E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2886"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5586380E+01" lon="-7.8167770E+01"/>
+                <costs>
+                    <cost type="structural" value="1.9179543E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2897"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5586440E+01" lon="-7.8167930E+01"/>
+                <costs>
+                    <cost type="structural" value="1.0792490E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2910"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5586650E+01" lon="-7.8167200E+01"/>
+                <costs>
+                    <cost type="structural" value="4.2702988E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2921"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5586890E+01" lon="-7.8167700E+01"/>
+                <costs>
+                    <cost type="structural" value="2.9411214E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2925"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5586950E+01" lon="-7.8167970E+01"/>
+                <costs>
+                    <cost type="structural" value="3.1901761E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2933"
+            taxonomy="PCR-SLSB-1"
+            >
+                <location lat="1.5586620E+01" lon="-7.8166900E+01"/>
+                <costs>
+                    <cost type="structural" value="7.5512895E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2968"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5589560E+01" lon="-7.8172150E+01"/>
+                <costs>
+                    <cost type="structural" value="2.4818732E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2981"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5590910E+01" lon="-7.8171050E+01"/>
+                <costs>
+                    <cost type="structural" value="1.6430442E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2988"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5591400E+01" lon="-7.8170500E+01"/>
+                <costs>
+                    <cost type="structural" value="5.3658287E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2991"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5591240E+01" lon="-7.8170230E+01"/>
+                <costs>
+                    <cost type="structural" value="8.1633333E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3005"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5591630E+01" lon="-7.8169730E+01"/>
+                <costs>
+                    <cost type="structural" value="1.3991690E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3010"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5591110E+01" lon="-7.8169590E+01"/>
+                <costs>
+                    <cost type="structural" value="2.3582042E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3016"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5590650E+01" lon="-7.8170070E+01"/>
+                <costs>
+                    <cost type="structural" value="7.6747673E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3020"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5590630E+01" lon="-7.8170150E+01"/>
+                <costs>
+                    <cost type="structural" value="9.3134925E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3034"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5590220E+01" lon="-7.8170220E+01"/>
+                <costs>
+                    <cost type="structural" value="8.4573930E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3044"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5589140E+01" lon="-7.8169010E+01"/>
+                <costs>
+                    <cost type="structural" value="7.5967188E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3047"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5588950E+01" lon="-7.8169060E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2411070E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3053"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5589000E+01" lon="-7.8169220E+01"/>
+                <costs>
+                    <cost type="structural" value="9.1826605E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3063"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5590340E+01" lon="-7.8170820E+01"/>
+                <costs>
+                    <cost type="structural" value="7.9039320E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3066"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5590370E+01" lon="-7.8170610E+01"/>
+                <costs>
+                    <cost type="structural" value="8.6562772E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3080"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5590150E+01" lon="-7.8169510E+01"/>
+                <costs>
+                    <cost type="structural" value="3.2454644E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3104"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5589640E+01" lon="-7.8169290E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1536003E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3130"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5589140E+01" lon="-7.8170550E+01"/>
+                <costs>
+                    <cost type="structural" value="5.2145518E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3135"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5589190E+01" lon="-7.8170120E+01"/>
+                <costs>
+                    <cost type="structural" value="2.8753552E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3142"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5588770E+01" lon="-7.8169870E+01"/>
+                <costs>
+                    <cost type="structural" value="3.1989744E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3148"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5588620E+01" lon="-7.8170040E+01"/>
+                <costs>
+                    <cost type="structural" value="2.0425890E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3171"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5588280E+01" lon="-7.8170230E+01"/>
+                <costs>
+                    <cost type="structural" value="4.1249628E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3184"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5588520E+01" lon="-7.8170510E+01"/>
+                <costs>
+                    <cost type="structural" value="6.5982004E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3205"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5589080E+01" lon="-7.8170720E+01"/>
+                <costs>
+                    <cost type="structural" value="4.5530042E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3208"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5589210E+01" lon="-7.8170860E+01"/>
+                <costs>
+                    <cost type="structural" value="1.7416414E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3212"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5589390E+01" lon="-7.8171020E+01"/>
+                <costs>
+                    <cost type="structural" value="6.9873128E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3235"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5588880E+01" lon="-7.8171240E+01"/>
+                <costs>
+                    <cost type="structural" value="3.9303716E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3257"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5587610E+01" lon="-7.8170650E+01"/>
+                <costs>
+                    <cost type="structural" value="3.1910171E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3272"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5588020E+01" lon="-7.8170510E+01"/>
+                <costs>
+                    <cost type="structural" value="5.0156822E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3280"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5587550E+01" lon="-7.8170430E+01"/>
+                <costs>
+                    <cost type="structural" value="6.5722887E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3293"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5587420E+01" lon="-7.8170870E+01"/>
+                <costs>
+                    <cost type="structural" value="8.1721214E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3299"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5587200E+01" lon="-7.8170490E+01"/>
+                <costs>
+                    <cost type="structural" value="9.6854933E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3314"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5587960E+01" lon="-7.8170400E+01"/>
+                <costs>
+                    <cost type="structural" value="4.6351844E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3321"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5588020E+01" lon="-7.8170280E+01"/>
+                <costs>
+                    <cost type="structural" value="8.1548105E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3327"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5588080E+01" lon="-7.8170150E+01"/>
+                <costs>
+                    <cost type="structural" value="6.5982183E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3330"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5588060E+01" lon="-7.8170060E+01"/>
+                <costs>
+                    <cost type="structural" value="9.8065286E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3366"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5587950E+01" lon="-7.8169620E+01"/>
+                <costs>
+                    <cost type="structural" value="3.9693139E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3370"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5588030E+01" lon="-7.8169740E+01"/>
+                <costs>
+                    <cost type="structural" value="8.1375217E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3374"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5588090E+01" lon="-7.8169780E+01"/>
+                <costs>
+                    <cost type="structural" value="5.8804599E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3402"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5588270E+01" lon="-7.8169050E+01"/>
+                <costs>
+                    <cost type="structural" value="9.8757168E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3407"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5588400E+01" lon="-7.8168980E+01"/>
+                <costs>
+                    <cost type="structural" value="7.0046640E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3413"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5588490E+01" lon="-7.8168660E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4164989E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3422"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5587370E+01" lon="-7.8169610E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8886724E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3424"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5587730E+01" lon="-7.8169200E+01"/>
+                <costs>
+                    <cost type="structural" value="2.3537549E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3429"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5587080E+01" lon="-7.8169770E+01"/>
+                <costs>
+                    <cost type="structural" value="7.1084725E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3431"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5587220E+01" lon="-7.8169600E+01"/>
+                <costs>
+                    <cost type="structural" value="4.0238092E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3439"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5587750E+01" lon="-7.8169140E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4069968E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3452"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5587850E+01" lon="-7.8168600E+01"/>
+                <costs>
+                    <cost type="structural" value="8.5958750E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3462"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5588170E+01" lon="-7.8168530E+01"/>
+                <costs>
+                    <cost type="structural" value="8.9276291E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3470"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5587450E+01" lon="-7.8168510E+01"/>
+                <costs>
+                    <cost type="structural" value="1.5090374E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3483"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5587360E+01" lon="-7.8168180E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4474406E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3492"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5588620E+01" lon="-7.8172710E+01"/>
+                <costs>
+                    <cost type="structural" value="7.6260788E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3498"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5590920E+01" lon="-7.8172140E+01"/>
+                <costs>
+                    <cost type="structural" value="1.3939907E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3502"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5590980E+01" lon="-7.8172360E+01"/>
+                <costs>
+                    <cost type="structural" value="8.9934831E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3518"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5591350E+01" lon="-7.8171720E+01"/>
+                <costs>
+                    <cost type="structural" value="3.2653238E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3519"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5591440E+01" lon="-7.8171620E+01"/>
+                <costs>
+                    <cost type="structural" value="1.6395795E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3528"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5591380E+01" lon="-7.8170950E+01"/>
+                <costs>
+                    <cost type="structural" value="2.3817394E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3545"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5591870E+01" lon="-7.8170630E+01"/>
+                <costs>
+                    <cost type="structural" value="1.0895935E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3570"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5592110E+01" lon="-7.8170980E+01"/>
+                <costs>
+                    <cost type="structural" value="1.3092394E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3625"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5592730E+01" lon="-7.8170390E+01"/>
+                <costs>
+                    <cost type="structural" value="5.6283139E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3637"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5593190E+01" lon="-7.8169930E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4693860E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3656"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5593340E+01" lon="-7.8170580E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8082548E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3687"
+            taxonomy="MS-SLSB-1"
+            >
+                <location lat="1.5590080E+01" lon="-7.8168660E+01"/>
+                <costs>
+                    <cost type="structural" value="3.0636470E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3698"
+            taxonomy="MS-SLSB-1"
+            >
+                <location lat="1.5589620E+01" lon="-7.8168970E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4958259E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3702"
+            taxonomy="MS-FLSB-2"
+            >
+                <location lat="1.5589900E+01" lon="-7.8169100E+01"/>
+                <costs>
+                    <cost type="structural" value="1.3500243E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3713"
+            taxonomy="MS-SLSB-1"
+            >
+                <location lat="1.5590040E+01" lon="-7.8168370E+01"/>
+                <costs>
+                    <cost type="structural" value="1.9954028E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3732"
+            taxonomy="MS-SLSB-1"
+            >
+                <location lat="1.5590440E+01" lon="-7.8168840E+01"/>
+                <costs>
+                    <cost type="structural" value="1.5133390E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3740"
+            taxonomy="MS-SLSB-1"
+            >
+                <location lat="1.5590900E+01" lon="-7.8168870E+01"/>
+                <costs>
+                    <cost type="structural" value="1.3847020E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3741"
+            taxonomy="MS-FLSB-2"
+            >
+                <location lat="1.5591060E+01" lon="-7.8168870E+01"/>
+                <costs>
+                    <cost type="structural" value="1.7187155E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3757"
+            taxonomy="MS-FLSB-2"
+            >
+                <location lat="1.5591740E+01" lon="-7.8168900E+01"/>
+                <costs>
+                    <cost type="structural" value="4.3994649E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3758"
+            taxonomy="MS-SLSB-1"
+            >
+                <location lat="1.5591660E+01" lon="-7.8168900E+01"/>
+                <costs>
+                    <cost type="structural" value="2.9315365E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3767"
+            taxonomy="MS-FLSB-2"
+            >
+                <location lat="1.5591590E+01" lon="-7.8169490E+01"/>
+                <costs>
+                    <cost type="structural" value="3.7766201E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3775"
+            taxonomy="MS-SLSB-1"
+            >
+                <location lat="1.5591820E+01" lon="-7.8169350E+01"/>
+                <costs>
+                    <cost type="structural" value="9.4366797E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3780"
+            taxonomy="MS-FLSB-2"
+            >
+                <location lat="1.5591930E+01" lon="-7.8169410E+01"/>
+                <costs>
+                    <cost type="structural" value="6.1895067E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3802"
+            taxonomy="MS-FLSB-2"
+            >
+                <location lat="1.5592510E+01" lon="-7.8169190E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2389793E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3826"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5592690E+01" lon="-7.8172310E+01"/>
+                <costs>
+                    <cost type="structural" value="3.7287265E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3827"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5592780E+01" lon="-7.8172230E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1518480E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3845"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5592950E+01" lon="-7.8171900E+01"/>
+                <costs>
+                    <cost type="structural" value="1.0965037E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3866"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5593920E+01" lon="-7.8170870E+01"/>
+                <costs>
+                    <cost type="structural" value="7.6357242E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3867"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5593890E+01" lon="-7.8170960E+01"/>
+                <costs>
+                    <cost type="structural" value="1.6650720E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3868"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5593560E+01" lon="-7.8170580E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2742618E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3870"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5593920E+01" lon="-7.8170730E+01"/>
+                <costs>
+                    <cost type="structural" value="2.4740444E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3905"
+            taxonomy="MS-FLSB-2"
+            >
+                <location lat="1.5593050E+01" lon="-7.8168690E+01"/>
+                <costs>
+                    <cost type="structural" value="1.0919688E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3907"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5592800E+01" lon="-7.8168800E+01"/>
+                <costs>
+                    <cost type="structural" value="5.9841077E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3913"
+            taxonomy="MS-FLSB-2"
+            >
+                <location lat="1.5592010E+01" lon="-7.8168370E+01"/>
+                <costs>
+                    <cost type="structural" value="5.2966508E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3939"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5590410E+01" lon="-7.8175300E+01"/>
+                <costs>
+                    <cost type="structural" value="8.2151844E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3954"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5589990E+01" lon="-7.8173980E+01"/>
+                <costs>
+                    <cost type="structural" value="5.0415500E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3955"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5590050E+01" lon="-7.8174040E+01"/>
+                <costs>
+                    <cost type="structural" value="9.7804299E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3959"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5589710E+01" lon="-7.8173140E+01"/>
+                <costs>
+                    <cost type="structural" value="4.3238107E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3961"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5589620E+01" lon="-7.8173220E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2487169E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3967"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5589980E+01" lon="-7.8173810E+01"/>
+                <costs>
+                    <cost type="structural" value="9.0929526E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3971"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5590180E+01" lon="-7.8173900E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2737902E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3995"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5592350E+01" lon="-7.8173610E+01"/>
+                <costs>
+                    <cost type="structural" value="2.7148846E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3998"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5599240E+01" lon="-7.8173820E+01"/>
+                <costs>
+                    <cost type="structural" value="9.5162641E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4011"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5598620E+01" lon="-7.8173620E+01"/>
+                <costs>
+                    <cost type="structural" value="6.6281147E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4021"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5598550E+01" lon="-7.8174610E+01"/>
+                <costs>
+                    <cost type="structural" value="1.9496518E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4034"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5599380E+01" lon="-7.8175770E+01"/>
+                <costs>
+                    <cost type="structural" value="7.0215148E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4072"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5598610E+01" lon="-7.8177550E+01"/>
+                <costs>
+                    <cost type="structural" value="1.5884893E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4073"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5598520E+01" lon="-7.8177580E+01"/>
+                <costs>
+                    <cost type="structural" value="4.1571395E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4077"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5596490E+01" lon="-7.8178680E+01"/>
+                <costs>
+                    <cost type="structural" value="1.7303176E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4079"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5596620E+01" lon="-7.8178860E+01"/>
+                <costs>
+                    <cost type="structural" value="1.6343315E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4080"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5596410E+01" lon="-7.8178930E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4243168E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4095"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5598720E+01" lon="-7.8179660E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2737266E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4100"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5597620E+01" lon="-7.8180960E+01"/>
+                <costs>
+                    <cost type="structural" value="1.3524200E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4102"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5598350E+01" lon="-7.8180310E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1760145E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4111"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5595610E+01" lon="-7.8177150E+01"/>
+                <costs>
+                    <cost type="structural" value="1.5063635E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4112"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5595460E+01" lon="-7.8177130E+01"/>
+                <costs>
+                    <cost type="structural" value="1.5409540E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4126"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5596210E+01" lon="-7.8176490E+01"/>
+                <costs>
+                    <cost type="structural" value="2.1834449E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4143"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5596800E+01" lon="-7.8176130E+01"/>
+                <costs>
+                    <cost type="structural" value="6.6065273E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4145"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5597010E+01" lon="-7.8176050E+01"/>
+                <costs>
+                    <cost type="structural" value="1.9456380E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4153"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5596890E+01" lon="-7.8174420E+01"/>
+                <costs>
+                    <cost type="structural" value="1.0800487E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4156"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5596950E+01" lon="-7.8174220E+01"/>
+                <costs>
+                    <cost type="structural" value="1.6256938E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4159"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5596940E+01" lon="-7.8174010E+01"/>
+                <costs>
+                    <cost type="structural" value="4.5225437E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4184"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5595390E+01" lon="-7.8173120E+01"/>
+                <costs>
+                    <cost type="structural" value="4.0988616E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4197"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5594530E+01" lon="-7.8173590E+01"/>
+                <costs>
+                    <cost type="structural" value="9.4386549E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4209"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5594420E+01" lon="-7.8173390E+01"/>
+                <costs>
+                    <cost type="structural" value="2.5103471E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4230"
+            taxonomy="MS-FLSB-2"
+            >
+                <location lat="1.5591200E+01" lon="-7.8167930E+01"/>
+                <costs>
+                    <cost type="structural" value="9.8453295E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4251"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5608310E+01" lon="-7.8174720E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4526677E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4261"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5603420E+01" lon="-7.8172230E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4123429E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4285"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5602820E+01" lon="-7.8172000E+01"/>
+                <costs>
+                    <cost type="structural" value="3.0390178E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4300"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5601880E+01" lon="-7.8173540E+01"/>
+                <costs>
+                    <cost type="structural" value="2.1738844E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4305"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5601420E+01" lon="-7.8174030E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4042932E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4308"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5601810E+01" lon="-7.8174410E+01"/>
+                <costs>
+                    <cost type="structural" value="9.3604908E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4311"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5602030E+01" lon="-7.8174480E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8911196E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4314"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5601150E+01" lon="-7.8173230E+01"/>
+                <costs>
+                    <cost type="structural" value="1.3746230E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4325"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5601200E+01" lon="-7.8174240E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2670676E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4351"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5598530E+01" lon="-7.8172430E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8963457E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4356"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5596910E+01" lon="-7.8173790E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1492282E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4360"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5596680E+01" lon="-7.8173380E+01"/>
+                <costs>
+                    <cost type="structural" value="3.5475673E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4364"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5596580E+01" lon="-7.8173520E+01"/>
+                <costs>
+                    <cost type="structural" value="3.1179814E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4392"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5595840E+01" lon="-7.8172570E+01"/>
+                <costs>
+                    <cost type="structural" value="1.0878400E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4393"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5596030E+01" lon="-7.8172520E+01"/>
+                <costs>
+                    <cost type="structural" value="3.8057815E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4412"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5595610E+01" lon="-7.8172300E+01"/>
+                <costs>
+                    <cost type="structural" value="6.2009164E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4414"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5595600E+01" lon="-7.8172090E+01"/>
+                <costs>
+                    <cost type="structural" value="1.5279944E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4426"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5595150E+01" lon="-7.8172700E+01"/>
+                <costs>
+                    <cost type="structural" value="3.2375878E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4436"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5594730E+01" lon="-7.8172590E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2322576E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4452"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5594470E+01" lon="-7.8171500E+01"/>
+                <costs>
+                    <cost type="structural" value="2.7377820E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4453"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5594620E+01" lon="-7.8171590E+01"/>
+                <costs>
+                    <cost type="structural" value="4.2000618E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4458"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5594440E+01" lon="-7.8170900E+01"/>
+                <costs>
+                    <cost type="structural" value="5.6051712E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4460"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5594410E+01" lon="-7.8170620E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4389378E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4465"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5594580E+01" lon="-7.8171370E+01"/>
+                <costs>
+                    <cost type="structural" value="1.7562961E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4493"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5594780E+01" lon="-7.8170480E+01"/>
+                <costs>
+                    <cost type="structural" value="9.5933953E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4498"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5594920E+01" lon="-7.8170520E+01"/>
+                <costs>
+                    <cost type="structural" value="5.3069360E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4502"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5594990E+01" lon="-7.8170870E+01"/>
+                <costs>
+                    <cost type="structural" value="2.0390381E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4518"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5595780E+01" lon="-7.8171480E+01"/>
+                <costs>
+                    <cost type="structural" value="1.5003229E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4524"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5595250E+01" lon="-7.8171060E+01"/>
+                <costs>
+                    <cost type="structural" value="2.1324543E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4533"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5595210E+01" lon="-7.8170780E+01"/>
+                <costs>
+                    <cost type="structural" value="9.3348978E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4538"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5595970E+01" lon="-7.8171320E+01"/>
+                <costs>
+                    <cost type="structural" value="4.3790375E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4540"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5596010E+01" lon="-7.8171060E+01"/>
+                <costs>
+                    <cost type="structural" value="1.3848795E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4548"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5596270E+01" lon="-7.8172220E+01"/>
+                <costs>
+                    <cost type="structural" value="4.7128131E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4549"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5596280E+01" lon="-7.8172120E+01"/>
+                <costs>
+                    <cost type="structural" value="2.5734557E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4553"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5596080E+01" lon="-7.8171780E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4903755E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4602"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5600220E+01" lon="-7.8172330E+01"/>
+                <costs>
+                    <cost type="structural" value="1.5469839E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4610"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5601490E+01" lon="-7.8172460E+01"/>
+                <costs>
+                    <cost type="structural" value="9.5432052E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4617"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5601050E+01" lon="-7.8172600E+01"/>
+                <costs>
+                    <cost type="structural" value="1.8799825E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4632"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5600440E+01" lon="-7.8171600E+01"/>
+                <costs>
+                    <cost type="structural" value="2.1687178E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4633"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5600400E+01" lon="-7.8171760E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4346677E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4643"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5601750E+01" lon="-7.8172080E+01"/>
+                <costs>
+                    <cost type="structural" value="6.9912121E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4647"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5594150E+01" lon="-7.8169930E+01"/>
+                <costs>
+                    <cost type="structural" value="6.7969215E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4652"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5594040E+01" lon="-7.8169970E+01"/>
+                <costs>
+                    <cost type="structural" value="2.2734242E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4662"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5594480E+01" lon="-7.8169510E+01"/>
+                <costs>
+                    <cost type="structural" value="3.4927157E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4664"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5594460E+01" lon="-7.8169350E+01"/>
+                <costs>
+                    <cost type="structural" value="1.5107145E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4666"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5594390E+01" lon="-7.8169180E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2047879E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4678"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5603650E+01" lon="-7.8170770E+01"/>
+                <costs>
+                    <cost type="structural" value="7.9899011E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4682"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5602110E+01" lon="-7.8171530E+01"/>
+                <costs>
+                    <cost type="structural" value="4.4446258E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4688"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5602040E+01" lon="-7.8171080E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1107253E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4695"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5600640E+01" lon="-7.8170910E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2918919E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4702"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5599780E+01" lon="-7.8169570E+01"/>
+                <costs>
+                    <cost type="structural" value="2.8250584E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4707"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5598650E+01" lon="-7.8169970E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4916587E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4711"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5598630E+01" lon="-7.8169880E+01"/>
+                <costs>
+                    <cost type="structural" value="1.3615531E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4721"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5596580E+01" lon="-7.8170810E+01"/>
+                <costs>
+                    <cost type="structural" value="5.9926279E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4724"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5596350E+01" lon="-7.8170680E+01"/>
+                <costs>
+                    <cost type="structural" value="1.6635399E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4729"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5596140E+01" lon="-7.8170220E+01"/>
+                <costs>
+                    <cost type="structural" value="2.0001429E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4731"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5596070E+01" lon="-7.8170490E+01"/>
+                <costs>
+                    <cost type="structural" value="2.1912503E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4737"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5595310E+01" lon="-7.8170180E+01"/>
+                <costs>
+                    <cost type="structural" value="2.2232547E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4743"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5595070E+01" lon="-7.8170190E+01"/>
+                <costs>
+                    <cost type="structural" value="1.7087344E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4751"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5595390E+01" lon="-7.8169880E+01"/>
+                <costs>
+                    <cost type="structural" value="1.7900185E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4768"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5595820E+01" lon="-7.8169480E+01"/>
+                <costs>
+                    <cost type="structural" value="7.1101537E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4774"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5596000E+01" lon="-7.8169180E+01"/>
+                <costs>
+                    <cost type="structural" value="1.6136079E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4837"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5596270E+01" lon="-7.8168430E+01"/>
+                <costs>
+                    <cost type="structural" value="1.3169281E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4839"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5597120E+01" lon="-7.8168890E+01"/>
+                <costs>
+                    <cost type="structural" value="8.9500327E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4845"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5598600E+01" lon="-7.8166170E+01"/>
+                <costs>
+                    <cost type="structural" value="4.6540047E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4854"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5599050E+01" lon="-7.8168460E+01"/>
+                <costs>
+                    <cost type="structural" value="6.3012883E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4867"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5599470E+01" lon="-7.8168270E+01"/>
+                <costs>
+                    <cost type="structural" value="7.1651417E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4875"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5600230E+01" lon="-7.8168490E+01"/>
+                <costs>
+                    <cost type="structural" value="2.3606998E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4883"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5600480E+01" lon="-7.8169290E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2699406E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4938"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5603500E+01" lon="-7.8168500E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2333382E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4944"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5594010E+01" lon="-7.8168000E+01"/>
+                <costs>
+                    <cost type="structural" value="4.6999249E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4951"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5594710E+01" lon="-7.8168530E+01"/>
+                <costs>
+                    <cost type="structural" value="5.3561590E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4954"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5594380E+01" lon="-7.8168610E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4951514E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4960"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5594160E+01" lon="-7.8168860E+01"/>
+                <costs>
+                    <cost type="structural" value="2.1610095E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4972"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5593740E+01" lon="-7.8168310E+01"/>
+                <costs>
+                    <cost type="structural" value="7.6876475E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4976"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5593930E+01" lon="-7.8167950E+01"/>
+                <costs>
+                    <cost type="structural" value="7.6098175E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5010"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5608630E+01" lon="-7.8171420E+01"/>
+                <costs>
+                    <cost type="structural" value="1.6913266E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5011"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5608430E+01" lon="-7.8171880E+01"/>
+                <costs>
+                    <cost type="structural" value="1.7950895E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5021"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5609090E+01" lon="-7.8171140E+01"/>
+                <costs>
+                    <cost type="structural" value="4.0078146E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5028"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5609280E+01" lon="-7.8171390E+01"/>
+                <costs>
+                    <cost type="structural" value="6.8033016E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5033"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5609340E+01" lon="-7.8171680E+01"/>
+                <costs>
+                    <cost type="structural" value="4.2283015E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5061"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5599320E+01" lon="-7.8163560E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4501620E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5072"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5600970E+01" lon="-7.8164160E+01"/>
+                <costs>
+                    <cost type="structural" value="3.5998634E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5085"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5602130E+01" lon="-7.8165410E+01"/>
+                <costs>
+                    <cost type="structural" value="3.7148444E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5103"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5602390E+01" lon="-7.8166300E+01"/>
+                <costs>
+                    <cost type="structural" value="5.4563790E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5107"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5602440E+01" lon="-7.8166220E+01"/>
+                <costs>
+                    <cost type="structural" value="1.3446384E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5109"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5603040E+01" lon="-7.8166340E+01"/>
+                <costs>
+                    <cost type="structural" value="7.8083911E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5124"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5602880E+01" lon="-7.8167320E+01"/>
+                <costs>
+                    <cost type="structural" value="1.9724170E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5134"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5603510E+01" lon="-7.8167250E+01"/>
+                <costs>
+                    <cost type="structural" value="4.5138040E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5142"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5603670E+01" lon="-7.8168010E+01"/>
+                <costs>
+                    <cost type="structural" value="1.5263622E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5177"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5609420E+01" lon="-7.8175740E+01"/>
+                <costs>
+                    <cost type="structural" value="5.1187293E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5207"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5607910E+01" lon="-7.8172610E+01"/>
+                <costs>
+                    <cost type="structural" value="2.0674684E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5217"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5606920E+01" lon="-7.8171860E+01"/>
+                <costs>
+                    <cost type="structural" value="2.2957596E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5224"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5605640E+01" lon="-7.8171160E+01"/>
+                <costs>
+                    <cost type="structural" value="1.7566363E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5229"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5605520E+01" lon="-7.8170180E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2373872E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5245"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5606540E+01" lon="-7.8170670E+01"/>
+                <costs>
+                    <cost type="structural" value="3.5435248E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5246"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5606750E+01" lon="-7.8169910E+01"/>
+                <costs>
+                    <cost type="structural" value="4.6174782E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5253"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5607050E+01" lon="-7.8171020E+01"/>
+                <costs>
+                    <cost type="structural" value="3.3982456E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5276"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5609120E+01" lon="-7.8172620E+01"/>
+                <costs>
+                    <cost type="structural" value="5.4215608E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5277"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5608980E+01" lon="-7.8173490E+01"/>
+                <costs>
+                    <cost type="structural" value="4.8828598E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5282"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5609600E+01" lon="-7.8173840E+01"/>
+                <costs>
+                    <cost type="structural" value="1.9367540E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5315"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5610060E+01" lon="-7.8176310E+01"/>
+                <costs>
+                    <cost type="structural" value="1.7414529E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5317"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5599170E+01" lon="-7.8167240E+01"/>
+                <costs>
+                    <cost type="structural" value="2.0840025E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5321"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5610640E+01" lon="-7.8177670E+01"/>
+                <costs>
+                    <cost type="structural" value="2.8534091E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5325"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5610600E+01" lon="-7.8176590E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1176955E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5336"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5611750E+01" lon="-7.8177150E+01"/>
+                <costs>
+                    <cost type="structural" value="2.9441863E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5341"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5611490E+01" lon="-7.8177350E+01"/>
+                <costs>
+                    <cost type="structural" value="1.5974711E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5344"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5611520E+01" lon="-7.8175810E+01"/>
+                <costs>
+                    <cost type="structural" value="3.1543102E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5349"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5611510E+01" lon="-7.8176610E+01"/>
+                <costs>
+                    <cost type="structural" value="2.5940019E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5356"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5611790E+01" lon="-7.8176430E+01"/>
+                <costs>
+                    <cost type="structural" value="5.1603292E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5369"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5612460E+01" lon="-7.8176890E+01"/>
+                <costs>
+                    <cost type="structural" value="8.5558405E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5396"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5612950E+01" lon="-7.8178040E+01"/>
+                <costs>
+                    <cost type="structural" value="2.3968358E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5402"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5613250E+01" lon="-7.8178720E+01"/>
+                <costs>
+                    <cost type="structural" value="6.7702658E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5411"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5613400E+01" lon="-7.8179640E+01"/>
+                <costs>
+                    <cost type="structural" value="6.5264186E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5425"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5586540E+01" lon="-7.8162910E+01"/>
+                <costs>
+                    <cost type="structural" value="2.2034836E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5426"
+            taxonomy="PCR-RCSM-5"
+            >
+                <location lat="1.5589020E+01" lon="-7.8163280E+01"/>
+                <costs>
+                    <cost type="structural" value="4.4338687E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5432"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5608610E+01" lon="-7.8172170E+01"/>
+                <costs>
+                    <cost type="structural" value="6.5629627E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5433"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5608890E+01" lon="-7.8172280E+01"/>
+                <costs>
+                    <cost type="structural" value="8.6209012E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5460"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5609280E+01" lon="-7.8172900E+01"/>
+                <costs>
+                    <cost type="structural" value="6.6129516E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5464"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5609520E+01" lon="-7.8172970E+01"/>
+                <costs>
+                    <cost type="structural" value="3.8028653E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5480"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5587010E+01" lon="-7.8163510E+01"/>
+                <costs>
+                    <cost type="structural" value="4.2558324E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5501"
+            taxonomy="A-SPSB-1"
+            >
+                <location lat="1.5587960E+01" lon="-7.8166870E+01"/>
+                <costs>
+                    <cost type="structural" value="3.6180151E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5512"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5585380E+01" lon="-7.8163120E+01"/>
+                <costs>
+                    <cost type="structural" value="1.6266775E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5515"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5585110E+01" lon="-7.8162950E+01"/>
+                <costs>
+                    <cost type="structural" value="5.9376848E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5520"
+            taxonomy="MS-SLSB-1"
+            >
+                <location lat="1.5590240E+01" lon="-7.8168000E+01"/>
+                <costs>
+                    <cost type="structural" value="1.5652284E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5527"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5580600E+01" lon="-7.8160650E+01"/>
+                <costs>
+                    <cost type="structural" value="8.5897958E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5535"
+            taxonomy="A-SPSB-1"
+            >
+                <location lat="1.5589840E+01" lon="-7.8168020E+01"/>
+                <costs>
+                    <cost type="structural" value="2.7348311E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5542"
+            taxonomy="A-SPSB-1"
+            >
+                <location lat="1.5589640E+01" lon="-7.8167710E+01"/>
+                <costs>
+                    <cost type="structural" value="3.1088483E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5543"
+            taxonomy="MS-SLSB-1"
+            >
+                <location lat="1.5589690E+01" lon="-7.8167620E+01"/>
+                <costs>
+                    <cost type="structural" value="8.3688109E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5545"
+            taxonomy="MS-SLSB-1"
+            >
+                <location lat="1.5589840E+01" lon="-7.8167530E+01"/>
+                <costs>
+                    <cost type="structural" value="8.1285996E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5555"
+            taxonomy="MS-SLSB-1"
+            >
+                <location lat="1.5589320E+01" lon="-7.8167480E+01"/>
+                <costs>
+                    <cost type="structural" value="1.3211548E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5560"
+            taxonomy="MS-SLSB-1"
+            >
+                <location lat="1.5589210E+01" lon="-7.8167720E+01"/>
+                <costs>
+                    <cost type="structural" value="1.0713441E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5564"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5588900E+01" lon="-7.8167900E+01"/>
+                <costs>
+                    <cost type="structural" value="8.1677792E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5596"
+            taxonomy="MC-RLSB-2"
+            >
+                <location lat="1.5588270E+01" lon="-7.8166860E+01"/>
+                <costs>
+                    <cost type="structural" value="1.6212404E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5597"
+            taxonomy="A-SPSB-1"
+            >
+                <location lat="1.5588450E+01" lon="-7.8166950E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1332889E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5601"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5596650E+01" lon="-7.8169420E+01"/>
+                <costs>
+                    <cost type="structural" value="1.0618991E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5603"
+            taxonomy="W-SLFB-1"
+            >
+                <location lat="1.5596780E+01" lon="-7.8169570E+01"/>
+                <costs>
+                    <cost type="structural" value="5.0500696E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5605"
+            taxonomy="W-FLFB-2"
+            >
+                <location lat="1.5596870E+01" lon="-7.8169430E+01"/>
+                <costs>
+                    <cost type="structural" value="5.8369801E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5618"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5596450E+01" lon="-7.8169570E+01"/>
+                <costs>
+                    <cost type="structural" value="1.6104120E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5625"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5596280E+01" lon="-7.8169750E+01"/>
+                <costs>
+                    <cost type="structural" value="2.4320806E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5629"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5597220E+01" lon="-7.8169810E+01"/>
+                <costs>
+                    <cost type="structural" value="6.3125712E+03"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5644"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5588270E+01" lon="-7.8162450E+01"/>
+                <costs>
+                    <cost type="structural" value="1.3767345E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5651"
+            taxonomy="MR-SLSB-1"
+            >
+                <location lat="1.5587700E+01" lon="-7.8162380E+01"/>
+                <costs>
+                    <cost type="structural" value="1.4884687E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5667"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5597570E+01" lon="-7.8167130E+01"/>
+                <costs>
+                    <cost type="structural" value="4.0254684E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="a5686"
+            taxonomy="MR-RCSB-2"
+            >
+                <location lat="1.5602860E+01" lon="-7.8169800E+01"/>
+                <costs>
+                    <cost type="structural" value="2.6464989E+04"/>
+                </costs>
+            </asset>
+        </assets>
+    </exposureModel>
+</nrml>
