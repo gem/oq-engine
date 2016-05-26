@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <dmgDistPerTaxonomy>
+        <damageStates>
+            no_damage LS1 LS2
+        </damageStates>
+        <DDNode>
+            <taxonomy>
+                RC
+            </taxonomy>
+            <damage ds="no_damage" mean="9.98633E+02" stddev="4.91484E+02"/>
+            <damage ds="LS1" mean="7.20007E+02" stddev="2.49635E+02"/>
+            <damage ds="LS2" mean="2.81360E+02" stddev="2.50646E+02"/>
+        </DDNode>
+    </dmgDistPerTaxonomy>
+</nrml>

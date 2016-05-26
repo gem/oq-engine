@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2016 GEM Foundation
+# Copyright (C) 2013-2016 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,7 +25,7 @@ def get_version():
     version_re = r"^__version__\s+=\s+['\"]([^'\"]*)['\"]"
     version = None
 
-    package_init = 'openquake/engine/__init__.py'
+    package_init = 'openquake/risklib/__init__.py'
     for line in open(package_init, 'r'):
         version_match = re.search(version_re, line, re.M)
         if version_match:
@@ -49,7 +49,7 @@ the PYTHONPATH; when using binary packages, if a celeryconfig.py is not
 available the OpenQuake Engine default celeryconfig.py, located in
 /usr/share/openquake/engine, is used.
 
-Copyright (C) 2010-2016, GEM Foundation.
+Copyright (C) 2010-2016 GEM Foundation
 """
 
 PY_MODULES = ['openquake.engine.bin.openquake_cli']
@@ -93,9 +93,14 @@ setup(
     namespace_packages=['openquake'],
     install_requires=[
         'openquake.hazardlib',
-        'openquake.risklib',
+        'numpy',
+        'scipy',
+        'decorator',
+        'psutil >= 0.4.1',
     ],
     scripts=["openquake/engine/bin/oq_create_db",
              "openquake/engine/bin/oq_reset_db"],
+    test_loader='openquake.baselib.runtests:TestLoader',
+    test_suite='openquake.risklib,openquake.commonlib,openquake.calculators',
     zip_safe=False,
     )

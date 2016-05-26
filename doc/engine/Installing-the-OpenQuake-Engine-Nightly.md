@@ -41,9 +41,9 @@ oq-engine --upgrade-db
 ```
 
 ## Run OQ Engine
-You are now ready to run the OQ Engine. First, try running one of the demos included with the package. There are several demo calculations located in `/usr/share/openquake/risklib/demos`. Example:
+You are now ready to run the OQ Engine. First, try running one of the demos included with the package. There are several demo calculations located in `/usr/share/openquake/engine/demos`. Example:
 <pre>
-oq-engine --run-hazard=/usr/share/openquake/risklib/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini
+oq-engine --run-hazard=/usr/share/openquake/engine/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini
 </pre>
 
 The output should look something like this:
