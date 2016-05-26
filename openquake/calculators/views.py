@@ -296,8 +296,9 @@ def view_job_info(token, dstore):
     Determine the amount of data transferred from the controller node
     to the workers and back in a classical calculation.
     """
-    job_info = list(h5py.File.__getitem__(dstore.hdf5, 'job_info'))
-    return rst_table(job_info)
+    job_info = h5py.File.__getitem__(dstore.hdf5, 'job_info')
+    rows = [(k, ast.literal_eval(v)) for k, v in job_info]
+    return rst_table(rows)
 
 
 @view.add('avglosses_data_transfer')
