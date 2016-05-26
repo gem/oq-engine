@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+    <bcrMap statistics="quantile" quantileValue="0.50"
+            lossCategory="economic_loss" unit="EUR" interestRate="1.0"
+            assetLifeExpectancy="20" lossType="structural">
+
+        <node>
+            <gml:Point>
+                <gml:pos>-116.0 41.0</gml:pos>
+            </gml:Point>
+
+            <bcr assetRef="asset_1" ratio="15.23" aalOrig="1.1" aalRetr="1.0" />
+            <bcr assetRef="asset_2" ratio="25.23" aalOrig="2.1" aalRetr="2.0" />
+        </node>
+
+        <node>
+            <gml:Point>
+                <gml:pos>-116.0 42.0</gml:pos>
+            </gml:Point>
+
+            <bcr assetRef="asset_3" ratio="64.23" aalOrig="2.1" aalRetr="2.0" />
+        </node>
+    </bcrMap>
+</nrml>
