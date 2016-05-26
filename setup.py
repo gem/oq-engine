@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import re
 import sys
 from setuptools import setup, find_packages
@@ -26,7 +25,7 @@ def get_version():
     version_re = r"^__version__\s+=\s+['\"]([^'\"]*)['\"]"
     version = None
 
-    package_init = 'openquake/engine/__init__.py'
+    package_init = 'openquake/risklib/__init__.py'
     for line in open(package_init, 'r'):
         version_match = re.search(version_re, line, re.M)
         if version_match:
