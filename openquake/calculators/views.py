@@ -263,7 +263,7 @@ def view_params(token, dstore):
         params.append('avg_losses')
     if 'classical' in oq.calculation_mode:
         params.append('sites_per_tile')
-    params.append('oqlite_version')
+    params.append('engine_version')
     return rst_table([(param, repr(getattr(oq, param, None)))
                       for param in params])
 

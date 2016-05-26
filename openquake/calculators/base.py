@@ -102,9 +102,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
 
     def save_params(self, **kw):
         """
-        Update the current calculation parameters and save oqlite_version
+        Update the current calculation parameters and save engine_version
         """
-        vars(self.oqparam).update(oqlite_version=__version__, **kw)
+        vars(self.oqparam).update(engine_version=__version__, **kw)
         self.datastore['oqparam'] = self.oqparam  # save the updated oqparam
         self.datastore.flush()
 
