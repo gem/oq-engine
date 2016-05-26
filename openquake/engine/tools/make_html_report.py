@@ -90,8 +90,7 @@ class HtmlTable(object):
 
 
 JOB_STATS = '''
-SELECT id, user_name, start_time, stop_time, status,
-stop_time - start_time AS duration FROM job WHERE id=?;
+SELECT id, user_name, start_time, stop_time, status FROM job WHERE id=?;
 '''
 
 ALL_JOBS = '''
@@ -142,6 +141,18 @@ def make_tabs(tag_ids, tag_status, tag_contents):
     return templ % ('\n'.join(lis), '\n'.join(contents))
 
 
+def add_duration(stats):
+    START_TIME = 2
+    STOP_TIME = 3
+    stats[0] = stats[0] + ['duration']
+    for i, rec in enumerate(stats[1:], 1):
+        if rec[STOP_TIME] is None:
+            duration = '?'
+        else:
+            duration = (rec[STOP_TIME] - rec[START_TIME]).total_seconds()
+        stats[i] = rec + (duration,)
+
+
 def make_report(isodate='today'):
     """
     Build a HTML report with the computations performed at the given isodate.
@@ -165,10 +176,10 @@ def make_report(isodate='today'):
     for job_id, user, status, ds_calc in jobs:
         tag_ids.append(job_id)
         tag_status.append(status)
-        stats = dbcmd('fetch', JOB_STATS, job_id)[1:]
-        if not stats:
+        stats = dbcmd('fetch', JOB_STATS, job_id)
+        if not stats[1:]:
             continue
-        (job_id, user, start_time, stop_time, status, duration) = stats[0]
+        (job_id, user, start_time, stop_time, status) = stats[1]
         try:
             ds = read(job_id, datadir=os.path.dirname(ds_calc))
             txt = view_fullreport('fullreport', ds).decode('utf-8')
@@ -181,8 +192,8 @@ def make_report(isodate='today'):
 
         page = report['html_title']
 
-        job_stats = dbcmd('fetch', JOB_STATS, job_id)
-        page += html(job_stats)
+        add_duration(stats)
+        page += html(stats)
 
         page += report['fragment']
 

@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2015-2016, GEM Foundation.
+ Copyright (C) 2015-2016 GEM Foundation
 
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU Affero General Public License as
@@ -173,8 +173,8 @@
             },
 
             show_traceback: function(e) {
+                e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
-
                 var myXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/traceback",
                                     error: function (jqXHR, textStatus, errorThrown) {
                                         if (jqXHR.status == 404) {
@@ -306,6 +306,7 @@
             },
 
             show_log: function(e) {
+                e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
                 var is_running = ($(e.target).attr('is-running') == "true");
 

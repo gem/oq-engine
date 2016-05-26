@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+>
+    <fragilityModel
+    assetCategory="building"
+    id="fm_1_converted_from_NRML_04"
+    lossCategory="structural"
+    >
+        <description>
+            fragility model
+        </description>
+        <limitStates>
+            Slight Moderate Extensive Collapse
+        </limitStates>
+        <fragilityFunction
+        format="continuous"
+        id="MUR/LWAL/HEX:1"
+        shape="logncdf"
+        >
+            <imls imt="PGA" maxIML="3.0" minIML="0.025" noDamageLimit="0"/>
+            <params ls="Slight" mean="1.3035080E+00" stddev="6.5424800E-01"/>
+            <params ls="Moderate" mean="2.3994900E+00" stddev="1.6555780E+00"/>
+            <params ls="Extensive" mean="2.9818240E+00" stddev="2.1621230E+00"/>
+            <params ls="Collapse" mean="5.0809000E+00" stddev="4.7378360E+00"/>
+        </fragilityFunction>
+        <fragilityFunction
+        format="continuous"
+        id="MUR/LWAL/HEX:2"
+        shape="logncdf"
+        >
+            <imls imt="PGA" maxIML="3.0" minIML="0.025" noDamageLimit="0"/>
+            <params ls="Slight" mean="4.5446200E-01" stddev="1.3364700E-01"/>
+            <params ls="Moderate" mean="7.3628600E-01" stddev="2.9020000E-01"/>
+            <params ls="Extensive" mean="1.0083020E+00" stddev="4.1319900E-01"/>
+            <params ls="Collapse" mean="1.3899060E+00" stddev="6.4721000E-01"/>
+        </fragilityFunction>
+        <fragilityFunction
+        format="continuous"
+        id="MUR/LWAL/HEX:3"
+        shape="logncdf"
+        >
+            <imls imt="PGA" maxIML="3.0" minIML="0.025" noDamageLimit="0"/>
+            <params ls="Slight" mean="3.2407600E-01" stddev="9.4958000E-02"/>
+            <params ls="Moderate" mean="4.5015700E-01" stddev="1.5025100E-01"/>
+            <params ls="Extensive" mean="5.9408100E-01" stddev="2.2361000E-01"/>
+            <params ls="Collapse" mean="7.7837500E-01" stddev="2.4303400E-01"/>
+        </fragilityFunction>
+        <fragilityFunction
+        format="continuous"
+        id="MUR/LWAL/HEX:4"
+        shape="logncdf"
+        >
+            <imls imt="SA(0.4)" maxIML="3.0" minIML="0.025" noDamageLimit="0"/>
+            <params ls="Slight" mean="2.7798800E-01" stddev="8.0567000E-02"/>
+            <params ls="Moderate" mean="3.3054500E-01" stddev="6.6776000E-02"/>
+            <params ls="Extensive" mean="4.1785100E-01" stddev="1.3360700E-01"/>
+            <params ls="Collapse" mean="5.6277300E-01" stddev="1.4056300E-01"/>
+        </fragilityFunction>
+        <fragilityFunction
+        format="continuous"
+        id="MUR/LWAL/HEX:5"
+        shape="logncdf"
+        >
+            <imls imt="SA(0.4)" maxIML="3.0" minIML="0.025" noDamageLimit="0"/>
+            <params ls="Slight" mean="2.1515900E-01" stddev="3.7283000E-02"/>
+            <params ls="Moderate" mean="2.8576700E-01" stddev="8.4646000E-02"/>
+            <params ls="Extensive" mean="3.4602800E-01" stddev="1.0544900E-01"/>
+            <params ls="Collapse" mean="4.5145600E-01" stddev="1.1276000E-01"/>
+        </fragilityFunction>
+        <fragilityFunction
+        format="continuous"
+        id="MUR/LWAL/HEX:6"
+        shape="logncdf"
+        >
+            <imls imt="SA(0.4)" maxIML="3.0" minIML="0.025" noDamageLimit="0"/>
+            <params ls="Slight" mean="2.0448000E-01" stddev="5.6879000E-02"/>
+            <params ls="Moderate" mean="2.3886300E-01" stddev="6.6949000E-02"/>
+            <params ls="Extensive" mean="2.8014300E-01" stddev="8.8973000E-02"/>
+            <params ls="Collapse" mean="3.5899400E-01" stddev="1.0328300E-01"/>
+        </fragilityFunction>
+    </fragilityModel>
+</nrml>

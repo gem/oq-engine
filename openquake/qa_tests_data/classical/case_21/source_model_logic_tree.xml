@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+    <logicTree logicTreeID="lt1">
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="sourceModel" branchSetID="bs1">
+                <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>source_model.xml</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        <logicTreeBranchingLevel branchingLevelID="bl2">
+            <logicTreeBranchSet uncertaintyType="incrementalMFDAbsolute"
+                                branchSetID="bs_flt_mfd"
+                                applyToSources="SFLT1">
+                <logicTreeBranch branchID="mfd1">
+                    <uncertaintyModel>
+                        <incrementalMFD
+                            binWidth="0.1"
+                            minMag="6.5"
+                        >
+                            <occurRates>
+                                0.01
+                            </occurRates>
+                        </incrementalMFD>
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.33</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="mfd2">
+                    <uncertaintyModel>
+                        <incrementalMFD
+                            binWidth="0.1"
+                            minMag="6.7"
+                        >
+                            <occurRates>
+                                0.075
+                            </occurRates>
+                        </incrementalMFD>
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.34</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="mfd3">
+                    <uncertaintyModel>
+                        <incrementalMFD
+                            binWidth="0.1"
+                            minMag="6.3"
+                        >
+                            <occurRates>
+                                0.0125
+                            </occurRates>
+                        </incrementalMFD>
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.33</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        <logicTreeBranchingLevel branchingLevelID="bl3">
+            <logicTreeBranchSet uncertaintyType="simpleFaultDipRelative"
+                                branchSetID="bs_flt1_rel_dip"
+                                applyToSources="SFLT1">
+                <logicTreeBranch branchID="low_dip">
+                    <uncertaintyModel>-10.0</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="mid_dip">
+                    <uncertaintyModel>0.0</uncertaintyModel>
+                    <uncertaintyWeight>0.6</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="high_dip">
+                    <uncertaintyModel>10.0</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        <logicTreeBranchingLevel branchingLevelID="bl4">
+            <logicTreeBranchSet uncertaintyType="simpleFaultDipAbsolute"
+                                branchSetID="bs_flt2_abs_dip"
+                                applyToSources="SFLT2">
+                <logicTreeBranch branchID="dip30">
+                    <uncertaintyModel>30.0</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="dip45">
+                    <uncertaintyModel>45.0</uncertaintyModel>
+                    <uncertaintyWeight>0.6</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="dip60">
+                    <uncertaintyModel>60.0</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+    </logicTree>
+</nrml>

@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+	<exposureModel id="exp1" category="buildings">
+		<description>
+			Exposure Model for Single Asset Tests
+		</description>
+		<conversions>
+			<costTypes>
+			  <costType name="structural" type="per_asset" unit="USD" />
+			</costTypes>
+		</conversions>
+		<assets>
+			<asset id="a1" number="1"  taxonomy="Wood" >
+				<location lon="-122.000" lat="38.113" />
+				<costs>
+					<cost type="structural" value="1" />
+				</costs>
+			</asset>
+		</assets>
+	</exposureModel>
+</nrml>
