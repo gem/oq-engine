@@ -438,7 +438,7 @@ def get_source_models(oqparam, source_model_lt, in_memory=True):
                         "with the ones in %r" % (sm, trt_model.trt, gsim_file))
                 trt_model.gsims = gsim_lt.values[trt_model.trt]
         else:
-            gsim_lt = logictree.DummyGsimLogicTree()
+            gsim_lt = logictree.GsimLogicTree.from_(oqparam.gsim)
         weight = rlz.weight / num_samples
         num_gsim_paths = (num_samples if oqparam.number_of_logic_tree_samples
                           else gsim_lt.get_num_paths())

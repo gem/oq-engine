@@ -1430,15 +1430,3 @@ class GsimLogicTree(object):
                                     b.id, b.uncertainty, b.weight)
                  for b in self.branches if b.effective]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
-
-
-class DummyGsimLogicTree(object):
-    """
-    A dummy GSIM logic tree object containing a single realization
-    """
-    def get_num_paths(self):
-        """Return 1"""
-        return 1
-
-    def __iter__(self):
-        yield Realization({}, 1, (), 0, ())
