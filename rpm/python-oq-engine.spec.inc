@@ -22,9 +22,10 @@ Patch1: openquake.cfg.patch
 
 Requires(pre): shadow-utils
 
-%define common_deps sudo systemd python numpy scipy python-shapely python-psutil python-mock python-futures h5py python-amqp python-celery python-django python-docutils python-gunicorn rabbitmq-server
-%define oqlib_deps python-oq-hazardlib >= 0.20.0 python-oq-risklib >= 0.13.0
+%define common_deps sudo systemd python numpy scipy python-shapely python-psutil python-decorator python-mock python-futures h5py python-amqp python-celery python-django python-docutils python-prctl python-gunicorn rabbitmq-server
+%define oqlib_deps python-oq-hazardlib >= 0.20.0
 %define dev_deps python-nose python-coverage
+
 Requires: %{common_deps}
 Requires: %{oqlib_deps}
 Requires: %{dev_deps}
@@ -36,6 +37,9 @@ Requires: %{dev_deps}
 
 BuildRequires: systemd python-setuptools
 
+Obsoletes: python-oq-risklib
+Provides: python-oq-risklib
+
 %description
 
 OpenQuake is an open source application that allows users to
@@ -46,7 +50,7 @@ the PYTHONPATH; when using binary packages, if a celeryconfig.py is not
 available the OpenQuake Engine default celeryconfig.py, located in
 /usr/share/openquake/engine, is used.
 
-Copyright (C) 2010-2016, GEM Foundation.
+Copyright (C) 2010-2016 GEM Foundation
 
 %pre
 getent group %{oquser} >/dev/null || groupadd -r %{oquser}
@@ -77,6 +81,7 @@ install -m 644 openquake.cfg %{buildroot}/%{_sysconfdir}/openquake
 install -m 644 rpm/systemd/openquake-dbserver.service %{buildroot}%{_unitdir}/openquake-dbserver.service
 install -m 644 rpm/systemd/openquake-webui.service %{buildroot}%{_unitdir}/openquake-webui.service
 install -m 644 rpm/systemd/openquake-celery.service %{buildroot}%{_unitdir}/openquake-celery.service
+cp -R demos %{buildroot}/%{_datadir}/openquake/engine
 
 %post
 %systemd_post openquake-dbserver.service

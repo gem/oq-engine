@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# packager.sh  Copyright (C) 2014-2016, GEM Foundation.
+# packager.sh  Copyright (C) 2014-2016 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -41,7 +41,7 @@ fi
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-engine"
-GEM_GIT_DEPS="oq-hazardlib oq-risklib"
+GEM_GIT_DEPS="oq-hazardlib"
 GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
@@ -335,7 +335,7 @@ _devtest_innervm_run () {
                      export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
                      set -x
                  fi
-                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" ;
+                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine\" ;
                  cd oq-engine
                  nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
                  nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
@@ -396,7 +396,7 @@ _builddoc_innervm_run () {
     # install sources of this package
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
-    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" ; cd oq-engine/doc ; make html"
+    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine\" ; cd oq-engine/doc ; make html"
     scp -r "${lxc_ip}:oq-engine/doc/build/html" "out_${BUILD_UBUVER}/" || true
 
     # TODO: version check
@@ -569,7 +569,7 @@ celeryd_wait $GEM_MAXLOOP"
             set -x
         fi
 
-        cd /usr/share/openquake/risklib/demos
+        cd /usr/share/openquake/engine/demos
 
         for ini in \$(find . -name job.ini | sort); do
             echo \"Running \$ini\"
@@ -1179,7 +1179,7 @@ fi
 cd "$GEM_BUILD_SRC"
 
 # version info from openquake/engine/__init__.py
-ini_vers="$(cat openquake/engine/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
+ini_vers="$(cat openquake/risklib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
 ini_maj="$(echo "$ini_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
 ini_min="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.\([0-9]\+\).*/\1/gp')"
 ini_bfx="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')"
