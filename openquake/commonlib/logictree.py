@@ -1284,6 +1284,16 @@ class GsimLogicTree(object):
                 "'applyToTectonicRegionType' in %s" %
                 set(tectonic_region_types))
 
+    def check_imts(self, imts):
+        """
+        Make sure the IMTs are recognized by all GSIMs in the logic tree
+        """
+        for trt in self.values:
+            for gsim in self.values[trt]:
+                missing = set(imts) - gsim.get_imts()
+                if missing:
+                    raise ValueError('%s not defined for %s' % (missing, gsim))
+
     def __str__(self):
         """
         :returns: an XML string representing the logic tree
