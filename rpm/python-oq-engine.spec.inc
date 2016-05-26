@@ -50,7 +50,7 @@ the PYTHONPATH; when using binary packages, if a celeryconfig.py is not
 available the OpenQuake Engine default celeryconfig.py, located in
 /usr/share/openquake/engine, is used.
 
-Copyright (C) 2010-2016, GEM Foundation.
+Copyright (C) 2010-2016 GEM Foundation
 
 %pre
 getent group %{oquser} >/dev/null || groupadd -r %{oquser}
