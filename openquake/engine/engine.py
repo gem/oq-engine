@@ -78,24 +78,21 @@ def expose_outputs(dstore):
 
     :param dstore: datastore
     """
+    oq = dstore['oqparam']
     exportable = set(ekey[0] for ekey in export.export)
     # small hack: remove the sescollection outputs from scenario
     # calculators, as requested by Vitor
-    calcmode = dstore['oqparam'].calculation_mode
-    if 'scenario' in calcmode and 'sescollection' in exportable:
-        exportable.remove('sescollection')
-    dskeys = []  # datastore keys, a list of strings
-    # another hack: if the user has asked from UHS curves and there are
-    # hazard maps, put them in the list of exported outputs
-    uhs = dstore['oqparam'].uniform_hazard_spectra
-    if uhs and 'hmaps' in dstore:
-        dskeys.append('uhs')
-    for key in dstore:
-        if key in exportable:
-            if key == 'realizations' and len(dstore['realizations']) == 1:
-                continue  # do not export a single realization
-            dskeys.append(key)
-    logs.dbcmd('create_outputs', dstore.calc_id, dskeys)
+    calcmode = oq.calculation_mode
+    dskeys = set(dstore) & exportable  # exportable datastore keys
+    if oq.uniform_hazard_spectra:
+        dskeys.add('uhs')  # export them
+    if 'hmaps' in dskeys and not oq.hazard_maps:
+        dskeys.remove('hmaps')  # do not export
+    if 'realizations' in dskeys and len(dstore['realizations']) <= 1:
+        dskeys.remove('realizations')  # do not export a single realization
+    if 'sescollection' in dskeys and 'scenario' in calcmode:
+        exportable.remove('sescollection')  # do not export
+    logs.dbcmd('create_outputs', dstore.calc_id, sorted(dskeys))
 
 
 class MasterKilled(KeyboardInterrupt):
