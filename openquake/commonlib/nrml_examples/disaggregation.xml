@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <!-- One file per site per IMT -->
+    <disaggMatrices IMT="SA" saPeriod="0.1" saDamping="5.0"
+                    investigationTime="50.0"
+                    sourceModelTreePath="b1_b2_b3" gsimTreePath="b1_b7"
+                    lon="1.0" lat="0.1"
+                    magBinEdges="3, 4, 5" distBinEdges="0, 10, 20" epsBinEdges="-3, 3">
+
+        <disaggMatrix type="Mag" dims="2" poE="0.1" iml="0.5">
+            <prob index="0" value="0.57" />
+            <prob index="1" value="0.29" />
+        </disaggMatrix>
+
+        <disaggMatrix type="Mag,Dist,Eps" dims="2,2,1" poE="0.1" iml="0.5">
+            <prob index="0,0,0" value="0.33" />
+            <prob index="0,1,0" value="0.21" />
+            <prob index="1,0,0" value="0.45" />
+            <prob index="1,1,0" value="0.001" />
+        </disaggMatrix>
+
+    </disaggMatrices>
+</nrml>

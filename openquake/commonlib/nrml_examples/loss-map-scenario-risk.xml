@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+    <!-- Note: this is a loss map for a single event (deterministic scenario). -->
+    <!-- attributes sourceModelTreePath, gsimTreePath, lossCategory, and unit are optional. -->
+    <lossMap sourceModelTreePath="b1|b2" gsimTreePath="b1|b2" lossCategory="economic_loss" investigationTime="50.0" unit="EUR" lossType="structural">
+        <node>
+            <gml:Point>
+                <gml:pos>-116.0 41.0</gml:pos>
+            </gml:Point>
+
+            <loss assetRef="asset_1" mean="10.0" stdDev="0.5" />
+            <loss assetRef="asset_2" mean="20.0" stdDev="1.0" />
+        </node>
+
+        <node>
+            <gml:Point>
+                <gml:pos>-116.0 42.0</gml:pos>
+            </gml:Point>
+
+            <loss assetRef="asset_3" mean="30.0" stdDev="2.0" />
+        </node>
+    </lossMap>
+</nrml>

@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2016, GEM Foundation
+#  Copyright (C) 2016 GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -28,6 +28,9 @@ from openquake.engine import config
 from openquake.server.db import actions
 from openquake.server.settings import DATABASE
 from django.db import connection
+import django
+if hasattr(django, 'setup'):  # >= 1.7
+    django.setup()
 
 queue = Queue()
 
