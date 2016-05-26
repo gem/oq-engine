@@ -1,0 +1,89 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <sourceModel name="Source Model 1">
+      <areaSource id="1" name="Area Active Shallow Crust" tectonicRegion="Active Shallow Crust">
+          <areaGeometry>
+              <gml:Polygon>
+                  <gml:exterior>
+                      <gml:LinearRing>
+                          <gml:posList>
+                              -0.5 -0.5
+                              -0.5  0.5
+                               0.5  0.5
+                               0.5 -0.5
+                          </gml:posList>
+                      </gml:LinearRing>
+                  </gml:exterior>
+              </gml:Polygon>
+              <upperSeismoDepth>0.0</upperSeismoDepth>
+              <lowerSeismoDepth>10.0</lowerSeismoDepth>
+          </areaGeometry>
+          <magScaleRel>PointMSR</magScaleRel>
+          <ruptAspectRatio>1.0</ruptAspectRatio>
+          <truncGutenbergRichterMFD aValue="4.0" bValue="1.0" minMag="5.0" maxMag="6.5" />
+          <nodalPlaneDist>
+              <nodalPlane probability="1." strike="0.0" dip="90.0" rake="0.0" />
+          </nodalPlaneDist>
+          <hypoDepthDist>
+              <hypoDepth probability="1.0" depth="5.0" />
+          </hypoDepthDist>
+      </areaSource>
+
+      <areaSource id="2" name="Area Subduction IntraSlab" tectonicRegion="Subduction IntraSlab">
+          <areaGeometry>
+              <gml:Polygon>
+                  <gml:exterior>
+                      <gml:LinearRing>
+                          <gml:posList>
+                              -0.5 -0.5
+                              -0.5  0.5
+                               0.5  0.5
+                               0.5 -0.5
+                          </gml:posList>
+                      </gml:LinearRing>
+                  </gml:exterior>
+              </gml:Polygon>
+              <upperSeismoDepth>40.0</upperSeismoDepth>
+              <lowerSeismoDepth>70.0</lowerSeismoDepth>
+          </areaGeometry>
+          <magScaleRel>PointMSR</magScaleRel>
+          <ruptAspectRatio>1.0</ruptAspectRatio>
+          <truncGutenbergRichterMFD aValue="3.0" bValue="1.0" minMag="5.0" maxMag="6.5" />
+          <nodalPlaneDist>
+              <nodalPlane probability="1." strike="0.0" dip="90.0" rake="0.0" />
+          </nodalPlaneDist>
+          <hypoDepthDist>
+              <hypoDepth probability="1.0" depth="50.0" />
+          </hypoDepthDist>
+      </areaSource>
+
+      <areaSource id="3" name="Area Active Shallow Crust" tectonicRegion="Active Shallow Crust">
+          <areaGeometry>
+              <gml:Polygon>
+                  <gml:exterior>
+                      <gml:LinearRing>
+                          <gml:posList>
+                              -3.5 -3.5
+                              -3.5 -2.5
+                              -2.5 -2.5
+                              -2.5 -3.5
+                          </gml:posList>
+                      </gml:LinearRing>
+                  </gml:exterior>
+              </gml:Polygon>
+              <upperSeismoDepth>0.0</upperSeismoDepth>
+              <lowerSeismoDepth>10.0</lowerSeismoDepth>
+          </areaGeometry>
+          <magScaleRel>PointMSR</magScaleRel>
+          <ruptAspectRatio>1.0</ruptAspectRatio>
+          <truncGutenbergRichterMFD aValue="4.0" bValue="1.0" minMag="5.0" maxMag="6.5" />
+          <nodalPlaneDist>
+              <nodalPlane probability="1." strike="0.0" dip="90.0" rake="0.0" />
+          </nodalPlaneDist>
+          <hypoDepthDist>
+              <hypoDepth probability="1.0" depth="5.0" />
+          </hypoDepthDist>
+      </areaSource>
+
+  </sourceModel>
+</nrml>

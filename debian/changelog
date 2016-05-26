@@ -1,4 +1,32 @@
+  [Michele Simionato]
+  * Provided a better error message in the case of absence of openquake.cfg
+  * Removed the check on the export_dir when using the WebUI
+  * Reduce the data transfer of the realization association object
+  * If uniform_hazard_spectra is true, the UHS curves must be generated
+    even if hazard_maps is false; the hazard maps must not be exported
+  * Optimized the filtering of PointSources
+  * Initial work on the UCERF event based hazard calculator
+  * Added a test calculation crossing the International Date Line (Alaska)
+
   [Daniele Viganò]
+  * Remove the dependency from the python 'pwd' package which is not
+    available on Windows
+  * Supervisord init scripts are now provided for the dbserver, celery
+    and the webui. Celery is not started by default, other two are.
+
+  [Michele Simionato]
+  * Another export fix: made sure it is run by the current user
+  * Fixed the export: if the export directory does not exists, it is created
+  * Introduced the configuration variable `multi_user`, false for source
+    installations and true for package installations
+  * Fixed the WebUI export
+  * Removed the .txt outputs from the WebUI page engine/<output_id>/outputs
+    (they are useful only internally)
+  * Fixed the export: first the xml exporter is tried and then the csv exporter;
+    if both are available, only the first is used, not both of them
+
+  [Daniele Viganò]
+  * Add support for Ubuntu 16.04 (xenial) packages
   * Removed the openquake_worker.cfg file because it is not used anymore
 
   [Michele Simionato]

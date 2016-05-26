@@ -26,7 +26,7 @@ set -e
 GEM_DEB_PACKAGE="python-oq-engine"
 
 LSB_RELEASE=$(lsb_release --codename --short)
-if [ "$LSB_RELEASE" != "precise" -a "$LSB_RELEASE" != "trusty" ]; then
+if [ "$LSB_RELEASE" != "precise" -a "$LSB_RELEASE" != "trusty" -a "$LSB_RELEASE" != "xenial" ]; then
     db_input high python-oq-engine/distro_alert || true
     db_go
 fi
@@ -53,34 +53,40 @@ if [ $(cat /etc/passwd | grep ^openquake: | wc -l) -eq 0 ]; then
 fi
 
 HDIR=/usr/share/openquake/engine
-IDIR=/usr/lib/python2.7/dist-packages/openquake/engine
 mkdir -p $HDIR
-
-rm -f $HDIR/celeryconfig.py.new_in_this_release
-cp $IDIR/celeryconfig.py $HDIR
 chown -R $USER.$USER $HDIR
 
-SDIR=/etc/openquake
-for cfg in openquake.cfg
-do
-    rm -f $SDIR/$cfg.new_in_this_release
-    if [ -f $SDIR/$cfg ]; then
-        if ! diff $IDIR/$cfg $SDIR/$cfg >/dev/null; then
-            cp $IDIR/$cfg $SDIR/$cfg.new_in_this_release
-        fi
-    else
-        mkdir -p $SDIR
-        cp $IDIR/$cfg $SDIR
-        chmod 644 $SDIR/$cfg
-    fi
-done
-chown -R $USER.$USER $SDIR
+# create logs directory
+LDIR=/var/log/openquake
+mkdir -p $LDIR
+chown -R $USER.adm $LDIR
 
 # create the database. This is run as "openquake" by default
 /usr/bin/oq_create_db
 
 # delete obsolete .pyc files in /usr/share/openquake
 find /usr/share/openquake -type f -name \*.pyc -exec rm -f {} \;
+
+# setup supervisord
+# - if supervisord is running:
+#   - reload config and start the dbserver and the webui
+# - if supervisord is NOT running:
+#   - make sure it's started during boot
+#   - start it
+
+echo "Setup supervisord"
+
+if pgrep supervisord 2>&1 > /dev/null; then
+    supervisorctl reload
+else
+    if command -v systemctl 2>&1 > /dev/null; then
+        systemctl enable supervisor.service
+        systemctl start supervisor.service
+    else
+        update-rc.d supervisor defaults || true
+        /etc/init.d/supervisor start
+    fi
+fi
 
 #touch /tmp/mop-pause
 #while [ 1 ]; do
