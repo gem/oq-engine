@@ -1,18 +1,6 @@
 openquake.commonlib package
 ===========================
 
-Subpackages
------------
-
-.. toctree::
-
-    openquake.commonlib.export
-    openquake.commonlib.nrml_examples
-    openquake.commonlib.tests
-
-Submodules
-----------
-
 openquake.commonlib.concurrent_futures_process_mpatch module
 ------------------------------------------------------------
 

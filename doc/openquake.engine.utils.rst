@@ -1,9 +1,6 @@
 openquake.engine.utils package
 ==============================
 
-Submodules
-----------
-
 openquake.engine.utils.version module
 -------------------------------------
 

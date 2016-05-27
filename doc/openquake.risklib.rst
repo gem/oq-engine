@@ -1,16 +1,6 @@
 openquake.risklib package
 =========================
 
-Subpackages
------------
-
-.. toctree::
-
-    openquake.risklib.tests
-
-Submodules
-----------
-
 openquake.risklib.riskinput module
 ----------------------------------
 

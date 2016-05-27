@@ -1,9 +1,6 @@
 openquake.commands package
 ==========================
 
-Submodules
-----------
-
 openquake.commands.export module
 --------------------------------
 
