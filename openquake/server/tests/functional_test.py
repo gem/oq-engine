@@ -26,7 +26,6 @@ import sys
 import json
 import time
 import unittest
-import platform
 import subprocess
 import tempfile
 import requests
@@ -35,9 +34,6 @@ if requests.__version__ < '1.0.0':
     requests.Response.text = property(lambda self: self.content)
 if hasattr(django, 'setup'):
     django.setup()  # for Django >= 1.7
-
-
-UBUNTU12 = platform.dist() == ('Ubuntu', '12.04', 'precise')
 
 
 class EngineServerTestCase(unittest.TestCase):
@@ -105,6 +101,10 @@ class EngineServerTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        if django.get_version() < '1.5':
+            # the WebUI is unsupported
+            raise unittest.SkipTest
+
         cls.job_ids = []
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
@@ -141,9 +141,6 @@ class EngineServerTestCase(unittest.TestCase):
         assert resp.status_code == 404, resp
 
     def test_ok(self):
-        if UBUNTU12:
-            # this test is broken for unknown reasons
-            raise unittest.SkipTest
         job_id = self.postzip('archive_ok.zip')
         self.wait()
         log = self.get('%s/log/:' % job_id)

@@ -302,7 +302,7 @@ def log(job_id, timestamp, level, process, message):
     """
     db.connection.cursor().execute(
         'INSERT INTO log (job_id, timestamp, level, process, message) VALUES'
-        '(?, ?, ?, ?, ?)', (job_id, timestamp, level, process, message))
+        '(%s, %s, %s, %s, %s)', (job_id, timestamp, level, process, message))
 
 
 def get_log(job_id):
