@@ -111,8 +111,7 @@ class DbServer(object):
             self.thread.join()
 
 
-def runserver(dbpathport=None, loglevel='WARN', logfile=None):
-    logfile = logfile or DATABASE['LOG']
+def runserver(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
     if dbpathport:  # assume a string of the form "dbpath:port"
         dbpath, port = dbpathport.split(':')
@@ -125,8 +124,8 @@ def runserver(dbpathport=None, loglevel='WARN', logfile=None):
 
 parser = sap.Parser(runserver)
 parser.arg('dbpathport', 'dbpath:port')
+parser.arg('logfile', 'log file')
 parser.opt('loglevel', 'WARN or INFO')
-parser.opt('logfile', 'filename (log to stdout if None)', '-f')
 
 if __name__ == '__main__':
     parser.callfunc()
