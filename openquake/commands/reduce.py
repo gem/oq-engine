@@ -20,7 +20,8 @@
 from __future__ import print_function
 import random
 import shutil
-from openquake.commonlib import nrml, valid
+from openquake.risklib import valid
+from openquake.commonlib import nrml
 from openquake.commonlib import sap
 
 
