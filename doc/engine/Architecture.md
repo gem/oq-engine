@@ -86,14 +86,14 @@ is a Python package containing several modules or event
 subpackages. The stack is a dependency tower where the higher levels
 depends on the lower levels but not viceversa:
 
-level 8:            commands
-level 7:            server
-level 6:            engine
-level 5:            calculators
-level 4:            commonlib
-level 3:            risklib
-level 2:            hazardlib
-level 1:            baselib
+- level 8:            commands
+- level 7:            server
+- level 6:            engine
+- level 5:            calculators
+- level 4:            commonlib
+- level 3:            risklib
+- level 2:            hazardlib
+- level 1:            baselib
 
 The GMPE library in hazardlib and the calculators libraries are designed
 to be extensible, so that it is easy to add a new GMPE class or a new
