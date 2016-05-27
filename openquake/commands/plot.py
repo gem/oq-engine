@@ -18,7 +18,7 @@
 
 from __future__ import print_function
 from openquake.commonlib import sap, datastore
-from openquake.commonlib.commands.show import get_hcurves_and_means
+from openquake.commands.show import get_hcurves_and_means
 
 
 def make_figure(indices, imtls, spec_curves, curves=(), label=''):

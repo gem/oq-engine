@@ -90,12 +90,12 @@ class HtmlTable(object):
 
 
 JOB_STATS = '''
-SELECT id, user_name, start_time, stop_time, status FROM job WHERE id=?;
+SELECT id, user_name, start_time, stop_time, status FROM job WHERE id=%s;
 '''
 
 ALL_JOBS = '''
 SELECT id, user_name, status, ds_calc_dir FROM job
-WHERE start_time >= ? AND start_time < ? ORDER BY stop_time
+WHERE start_time >= %s AND start_time < %s ORDER BY stop_time
 '''
 
 PAGE_TEMPLATE = '''\
