@@ -10,8 +10,8 @@ Index: oq-engine/openquake.cfg
 -file = ~/oqdata/db.sqlite3
 -log = ~/oqdata/dbserver.log
 +multi_user = true
-+file = /var/lib/openquake/oqdata/db.sqlite3
-+log = /var/lib/openquake/oqdata/dbserver.log
++file = /var/lib/openquake/db.sqlite3
++log = /var/lib/openquake/dbserver.log
  host = localhost
  port = 1999
  authkey = changeme
