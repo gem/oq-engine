@@ -1,16 +1,6 @@
 openquake.server.db package
 ===========================
 
-Subpackages
------------
-
-.. toctree::
-
-    openquake.server.db.schema
-
-Submodules
-----------
-
 openquake.server.db.actions module
 ----------------------------------
 

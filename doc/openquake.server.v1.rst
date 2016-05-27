@@ -1,9 +1,6 @@
 openquake.server.v1 package
 ===========================
 
-Submodules
-----------
-
 openquake.server.v1.calc_urls module
 ------------------------------------
 

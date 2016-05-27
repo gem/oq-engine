@@ -1,18 +1,6 @@
 openquake.server package
 ========================
 
-Subpackages
------------
-
-.. toctree::
-
-    openquake.server.db
-    openquake.server.tests
-    openquake.server.v1
-
-Submodules
-----------
-
 openquake.server.dbserver module
 --------------------------------
 

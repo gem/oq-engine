@@ -1,9 +1,6 @@
 openquake.engine.bin package
 ============================
 
-Submodules
-----------
-
 openquake.engine.bin.openquake_cli module
 -----------------------------------------
 
