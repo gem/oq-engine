@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <exposureModel id="ep" category="buildings">
+    <description>Exposure model for buildings</description>
+    <assets>
+      <asset id="a1" taxonomy="RM" number="3">
+        <location lon="81.2985" lat="29.1098"/>
+        <occupancies>
+          <occupancy occupants="20" period="day"/>
+          <occupancy occupants="38" period="transit"/>
+          <occupancy occupants="50" period="night"/>
+        </occupancies>
+      </asset>
+      <asset id="a2" taxonomy="RC" number="500">
+        <location lon="83.082298" lat="27.9006"/>
+        <occupancies>
+          <occupancy occupants="30" period="day"/>
+          <occupancy occupants="35" period="transit"/>
+          <occupancy occupants="40" period="night"/>
+        </occupancies>
+      </asset>
+      <asset id="a3" taxonomy="W" number="1000">
+        <location lon="85.747703" lat="27.9015"/>
+        <occupancies>
+          <occupancy occupants="15" period="day"/>
+          <occupancy occupants="20" period="transit"/>
+          <occupancy occupants="30" period="night"/>
+        </occupancies>
+      </asset>
+    </assets>
+  </exposureModel>
+</nrml>
