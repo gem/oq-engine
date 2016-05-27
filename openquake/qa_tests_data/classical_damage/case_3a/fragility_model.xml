@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+>
+    <fragilityModel
+    assetCategory="building"
+    id="fm_9_converted_from_NRML_04"
+    lossCategory="structural"
+    >
+        <description>
+            Fragility Functions for Case 3a
+        </description>
+        <limitStates>
+            slight moderate extreme complete
+        </limitStates>
+        <fragilityFunction
+        format="continuous"
+        id="Wood"
+        shape="logncdf"
+        >
+            <imls imt="PGA" maxIML="1.40" minIML="0.05"/>
+            <params ls="slight" mean="1.6000000E-01" stddev="1.0400000E-01"/>
+            <params ls="moderate" mean="2.2500000E-01" stddev="1.5800000E-01"/>
+            <params ls="extreme" mean="4.0000000E-01" stddev="3.0000000E-01"/>
+            <params ls="complete" mean="6.0000000E-01" stddev="4.8000000E-01"/>
+        </fragilityFunction>
+        <fragilityFunction
+        format="continuous"
+        id="Steel"
+        shape="logncdf"
+        >
+            <imls imt="PGA" maxIML="1.40" minIML="0.05"/>
+            <params ls="slight" mean="1.8400000E-01" stddev="1.3100000E-01"/>
+            <params ls="moderate" mean="3.1900000E-01" stddev="2.2700000E-01"/>
+            <params ls="extreme" mean="6.6300000E-01" stddev="4.7200000E-01"/>
+            <params ls="complete" mean="1.2270000E+00" stddev="8.7300000E-01"/>
+        </fragilityFunction>
+    </fragilityModel>
+</nrml>
