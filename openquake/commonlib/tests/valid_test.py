@@ -18,7 +18,7 @@
 
 import unittest
 from openquake.hazardlib import imt
-from openquake.commonlib import valid
+from openquake.risklib import valid
 
 
 class ValidationTestCase(unittest.TestCase):

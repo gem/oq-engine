@@ -28,7 +28,8 @@ import numpy
 
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip
-from openquake.commonlib import readinput, parallel, datastore, valid, source
+from openquake.risklib import valid
+from openquake.commonlib import readinput, parallel, datastore, source
 from openquake.calculators import base, event_based
 
 from openquake.hazardlib.geo.surface.multi import MultiSurface
