@@ -9,7 +9,7 @@ set -e
 
 OQ_USER='openquake'
 OQ_DB_SCRIPT='-m openquake.server.db.upgrade_manager'
-OQ_DB=$(eval echo "~${OQ_USER}/db.sqlite3")
+OQ_DB=$(eval echo "~${OQ_USER}/oqdata/db.sqlite3")
 
 help() {
     echo "Syntax: $(basename "$0") [-u user] [-s /custom/python/script.py] [-d /custom/db/path/to/db.sqlite3]"
