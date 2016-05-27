@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <gmfCollection
+    gsimTreePath="b1_b7_b15"
+    sourceModelTreePath="b1_b2_b3"
+    >
+        <gmfSet
+        investigationTime="50.0"
+        stochasticEventSetId="1"
+        >
+            <gmf
+            IMT="SA"
+            ruptureId="i=1"
+            saDamping="5.0"
+            saPeriod="0.1"
+            >
+                <node gmv="0.0000000E+00" lat="0.0000000E+00" lon="0.0000000E+00"/>
+                <node gmv="2.0000000E-01" lat="1.0000000E-01" lon="1.0000000E-01"/>
+            </gmf>
+            <gmf
+            IMT="SA"
+            ruptureId="i=2"
+            saDamping="5.0"
+            saPeriod="0.2"
+            >
+                <node gmv="4.0000000E-01" lat="2.0000000E-01" lon="2.0000000E-01"/>
+                <node gmv="6.0000000E-01" lat="3.0000000E-01" lon="3.0000000E-01"/>
+            </gmf>
+        </gmfSet>
+        <gmfSet
+        investigationTime="40.0"
+        stochasticEventSetId="2"
+        >
+            <gmf
+            IMT="SA"
+            ruptureId="i=3"
+            saDamping="5.0"
+            saPeriod="0.3"
+            >
+                <node gmv="8.0000000E-01" lat="4.0000000E-01" lon="4.0000000E-01"/>
+                <node gmv="1.0000000E+00" lat="5.0000000E-01" lon="5.0000000E-01"/>
+            </gmf>
+            <gmf
+            IMT="PGA"
+            ruptureId="i=4"
+            >
+                <node gmv="1.2000000E+00" lat="6.0000000E-01" lon="6.0000000E-01"/>
+                <node gmv="1.4000000E+00" lat="7.0000000E-01" lon="7.0000000E-01"/>
+            </gmf>
+        </gmfSet>
+        <gmfSet
+        investigationTime="30.0"
+        stochasticEventSetId="3"
+        >
+            <gmf
+            IMT="PGA"
+            ruptureId="i=5"
+            >
+                <node gmv="1.6000000E+00" lat="8.0000000E-01" lon="8.0000000E-01"/>
+                <node gmv="1.8000000E+00" lat="9.0000000E-01" lon="9.0000000E-01"/>
+            </gmf>
+            <gmf
+            IMT="PGA"
+            ruptureId="i=6"
+            >
+                <node gmv="2.0000000E+00" lat="1.0000000E+00" lon="1.0000000E+00"/>
+                <node gmv="2.2000000E+00" lat="1.1000000E+00" lon="1.1000000E+00"/>
+            </gmf>
+        </gmfSet>
+    </gmfCollection>
+</nrml>

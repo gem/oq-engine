@@ -1,0 +1,149 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <sourceModel>
+    <areaSource id="18" name="CHAS089" tectonicRegion="Active Shallow Crust">
+      <areaGeometry>
+        <gml:Polygon>
+          <gml:exterior>
+            <gml:LinearRing>
+              <gml:posList>6.6702469996 46.414743 7.53313400043 46.8140070003 7.87179500024 46.8909909999 7.95010499985 46.582204 7.7550249996 46.4309760003 7.40461400024 46.4713339999 6.79655300022 46.1807919996</gml:posList>
+            </gml:LinearRing>
+          </gml:exterior>
+        </gml:Polygon>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </areaGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.7" binWidth="0.2">
+        <occurRates>0.00531980303446 0.00351475900956 0.00232217824894 0.00153424795418 0.00101366757095 0.000669723522582 0.000442481943346 0.000292344920831 0.000193150373751 0.000127613186418 8.43131961455e-05 5.57051762739e-05 1.10359961593e-05 7.29141035466e-06 1.60579568269e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.2"/>
+      </hypoDepthDist>
+    </areaSource>
+    <areaSource id="25" name="SEAS978" tectonicRegion="Shield">
+      <areaGeometry>
+        <gml:Polygon>
+          <gml:exterior>
+            <gml:LinearRing>
+              <gml:posList>19.2645939997 59.8057960004 19.9999999997 59.4999999999 22.3231359999 59.5923579998 19.6564110002 54.6336320003 17.6421999999 54.7557369997 15.7884689997 54.2880830003 14.9501280004 54.5304959998 14.8817730003 54.9681850004 14.7917019997 55.6160410001 14.7399999996 55.9999999997 13.6499999998 56.6000000003 15.1980650001 58.8016059998 17.6021340004 60.501002</gml:posList>
+            </gml:LinearRing>
+          </gml:exterior>
+        </gml:Polygon>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </areaGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.7" binWidth="0.2">
+        <occurRates>0.000635639133876 0.000401061179958 0.00025305249708 0.000159665331572 0.000100742013614 6.35639133876e-05 4.01061179958e-05 2.5305249708e-05 1.59665331572e-05 1.00742013614e-05 3.1786644024e-06 1.20359759063e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="17.0"/>
+      </hypoDepthDist>
+    </areaSource>
+    <areaSource id="26" name="SEAS978" tectonicRegion="Shield">
+      <areaGeometry>
+        <gml:Polygon>
+          <gml:exterior>
+            <gml:LinearRing>
+              <gml:posList>19.2645939997 59.8057960004 19.9999999997 59.4999999999 22.3231359999 59.5923579998 19.6564110002 54.6336320003 17.6421999999 54.7557369997 15.7884689997 54.2880830003 14.9501280004 54.5304959998 14.8817730003 54.9681850004 14.7917019997 55.6160410001 14.7399999996 55.9999999997 13.6499999998 56.6000000003 15.1980650001 58.8016059998 17.6021340004 60.501002</gml:posList>
+            </gml:LinearRing>
+          </gml:exterior>
+        </gml:Polygon>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </areaGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.7" binWidth="0.2">
+        <occurRates>0.000508511307101 0.000320848943966 0.000202441997664 0.000127732265258 8.05936108913e-05 5.08511307101e-05 3.20848943966e-05 2.02441997664e-05 1.27732265258e-05 8.05936108913e-06 2.54293152192e-06 9.62878072507e-07</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="-90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="17.0"/>
+      </hypoDepthDist>
+    </areaSource>
+    <areaSource id="27" name="SEAS978" tectonicRegion="Shield">
+      <areaGeometry>
+        <gml:Polygon>
+          <gml:exterior>
+            <gml:LinearRing>
+              <gml:posList>19.2645939997 59.8057960004 19.9999999997 59.4999999999 22.3231359999 59.5923579998 19.6564110002 54.6336320003 17.6421999999 54.7557369997 15.7884689997 54.2880830003 14.9501280004 54.5304959998 14.8817730003 54.9681850004 14.7917019997 55.6160410001 14.7399999996 55.9999999997 13.6499999998 56.6000000003 15.1980650001 58.8016059998 17.6021340004 60.501002</gml:posList>
+            </gml:LinearRing>
+          </gml:exterior>
+        </gml:Polygon>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </areaGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.7" binWidth="0.2">
+        <occurRates>0.000127127826775 8.02122359916e-05 5.06104994161e-05 3.19330663144e-05 2.01484027228e-05 1.27127826775e-05 8.02122359916e-06 5.06104994161e-06 3.19330663144e-06 2.01484027228e-06 6.3573288048e-07 2.40719518127e-07</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="17.0"/>
+      </hypoDepthDist>
+    </areaSource>
+    <areaSource id="1" name="CZAS080" tectonicRegion="Volcanic">
+      <areaGeometry>
+        <gml:Polygon>
+          <gml:exterior>
+            <gml:LinearRing>
+              <gml:posList>12.1880080001 50.3116200002 12.5496150004 50.3977820003 12.7242969998 50.1621349999 12.3540189998 50.1204280003</gml:posList>
+            </gml:LinearRing>
+          </gml:exterior>
+        </gml:Polygon>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </areaGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.7" binWidth="0.2">
+        <occurRates>0.00939996230419 0.00528598725888 0.0029725290801 0.00167157594207 0.000939996230419 0.000528598725888 0.000148357718379</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="11.0"/>
+      </hypoDepthDist>
+    </areaSource>
+    <areaSource id="2" name="CZAS080" tectonicRegion="Volcanic">
+      <areaGeometry>
+        <gml:Polygon>
+          <gml:exterior>
+            <gml:LinearRing>
+              <gml:posList>12.1880080001 50.3116200002 12.5496150004 50.3977820003 12.7242969998 50.1621349999 12.3540189998 50.1204280003</gml:posList>
+            </gml:LinearRing>
+          </gml:exterior>
+        </gml:Polygon>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </areaGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.7" binWidth="0.2">
+        <occurRates>0.00104444025602 0.000587331917653 0.0003302810089 0.00018573066023 0.000104444025602 5.87331917653e-05 1.6484190931e-05</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="-90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="11.0"/>
+      </hypoDepthDist>
+    </areaSource>
+  </sourceModel>
+</nrml>
