@@ -25,13 +25,13 @@ import unittest
 
 from openquake.baselib.general import writetmp
 from openquake.calculators.tests import check_platform
-from openquake.commonlib.commands.info import info
-from openquake.commonlib.commands.tidy import tidy
-from openquake.commonlib.commands.show import show
-from openquake.commonlib.commands.show_attrs import show_attrs
-from openquake.commonlib.commands.export import export
-from openquake.commonlib.commands.reduce import reduce
-from openquake.commonlib.commands import run
+from openquake.commands.info import info
+from openquake.commands.tidy import tidy
+from openquake.commands.show import show
+from openquake.commands.show_attrs import show_attrs
+from openquake.commands.export import export
+from openquake.commands.reduce import reduce
+from openquake.commands import run
 from openquake.qa_tests_data.classical import case_1
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
