@@ -118,7 +118,7 @@ class EngineServerTestCase(unittest.TestCase):
         cls.fd, cls.errfname = tempfile.mkstemp()
         cls.dbs = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.dbserver', tmpdb],
-            env=env, stderr=cls.fd)  # redirect the server logs
+            env=env, stderr=cls.fd)  # redirect the server errors
         cls.proc = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
              cls.hostport, '--noreload', '--nothreading', 'tmpdb=' + tmpdb],
