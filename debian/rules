@@ -16,9 +16,9 @@ export DH_OPTIONS
 
 bd=openquake/bin
 
-DEFAULT_DEP = python-amqp, python-django, python-h5py (>= 2.2.1)
+DEFAULT_DEP = python-amqp, python-h5py (>= 2.2.1)
 DEFAULT_REC =
-PRECISE_DEP = python-django16, python-h5py (= 2.2.1-1build3~precise03)
+PRECISE_DEP = python-h5py (= 2.2.1-1build3~precise03)
 PRECISE_REC =
 
 ifeq ($(shell lsb_release --codename --short),precise)
