@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <lossMap
+    gsimTreePath="b1"
+    investigationTime="50.0"
+    lossType="structural"
+    poE="0.01"
+    riskInvestigationTime="50.0"
+    sourceModelTreePath="b_1"
+    unit="USD"
+    >
+        <node>
+            <gml:Point>
+                <gml:pos>
+                    1.0 1.0
+                </gml:pos>
+            </gml:Point>
+            <loss assetRef="a1" value="2.64586E-01"/>
+        </node>
+    </lossMap>
+</nrml>

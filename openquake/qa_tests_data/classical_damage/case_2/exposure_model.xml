@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <exposureModel id="ep" category="buildings">
+    <description>Exposure model for buildings</description>
+    <conversions>
+      <costTypes>
+      </costTypes>
+    </conversions>
+    <assets>
+      <asset id="a1" taxonomy="W" number="1">
+        <location lon="83.313823" lat="29.461172"/>
+	<costs />
+      </asset>
+    </assets>
+  </exposureModel>
+</nrml>
