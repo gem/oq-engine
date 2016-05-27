@@ -557,7 +557,7 @@ celeryd_wait $GEM_MAXLOOP"
             echo \"There's no 'openquake' user on this system. Installation may have failed.\"
             exit 1
         fi
-        sudo -u openquake python -m openquake.server.db.upgrade_manager ~openquake/db.sqlite3
+        sudo -u openquake python -m openquake.server.db.upgrade_manager ~openquake/oqdata/db.sqlite3
         
         # dbserver should be already started by supervisord. Let's have a check
         # FIXME instead of using a 'sleep' we should use a better way to check that
