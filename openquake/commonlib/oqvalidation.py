@@ -22,7 +22,8 @@ import numpy
 
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.probability_map import Imtls
-from openquake.commonlib import valid, parallel, logictree
+from openquake.risklib import valid
+from openquake.commonlib import parallel, logictree
 from openquake.commonlib.riskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']

@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Moved openquake.commonlib.commands -> openquake.commands and
+    openquake.commonlib.valid -> openquake.risklib.valid to have a
+    linear tower of internal dependencies
+  * Supported all versions of Django >= 1.5
   * Provided a better error message in the case of absence of openquake.cfg
   * Removed the check on the export_dir when using the WebUI
   * Reduce the data transfer of the realization association object
