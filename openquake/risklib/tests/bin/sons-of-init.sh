@@ -1,7 +1,7 @@
 #!/bin/bash
 # set -x
 cd demos/hazard
-../../bin/oq-lite run LogicTreeCase3ClassicalPSHA/job.ini --exports xml &
+oq-engine --run LogicTreeCase3ClassicalPSHA/job.ini --exports xml &
 lite_pid=$!
 sleep 5
 kill -SEGV $lite_pid
