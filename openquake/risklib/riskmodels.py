@@ -22,8 +22,7 @@ import functools
 import numpy
 
 from openquake.baselib.general import CallableDict, AccumDict
-from openquake.commonlib import valid
-from openquake.risklib import utils, scientific
+from openquake.risklib import utils, scientific, valid
 
 U32 = numpy.uint32
 F32 = numpy.float32

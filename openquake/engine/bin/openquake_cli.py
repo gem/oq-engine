@@ -58,7 +58,8 @@ import openquake.engine
 from openquake.engine import engine, logs
 from openquake.engine.tools.make_html_report import make_report
 from openquake.engine.export import core
-from openquake.commonlib import datastore, valid
+from openquake.risklib import valid
+from openquake.commonlib import datastore
 from openquake.calculators import views
 
 from openquake.commonlib.concurrent_futures_process_mpatch import (
