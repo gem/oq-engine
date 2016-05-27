@@ -22,7 +22,7 @@ BOLD=`tput bold`
 NORMAL=`tput sgr0`
 OQ_CREATE_DB='oq_create_db'
 OQ_USER='openquake'
-OQ_DB=$(eval echo "~${OQ_USER}/db.sqlite3")
+OQ_DB=$(eval echo "~${OQ_USER}/oqdata/db.sqlite3")
 
 command -v oq_create_db &> /dev/null || {
     if [ -x "./${OQ_CREATE_DB}" ]; then
