@@ -40,8 +40,9 @@ from openquake.baselib.general import block_splitter
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
+from openquake.risklib import valid
 from openquake.commonlib.node import context, striptag
-from openquake.commonlib import valid, parallel
+from openquake.commonlib import parallel
 
 # the following is arbitrary, it is used to decide when to parallelize
 # the filtering (MS)
