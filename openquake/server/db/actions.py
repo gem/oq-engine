@@ -22,7 +22,8 @@ from datetime import datetime
 from django.core import exceptions
 from django import db
 
-from openquake.commonlib import datastore, valid
+from openquake.risklib import valid
+from openquake.commonlib import datastore
 from openquake.server.db import models
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
