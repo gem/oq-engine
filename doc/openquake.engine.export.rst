@@ -1,9 +1,6 @@
 openquake.engine.export package
 ===============================
 
-Submodules
-----------
-
 openquake.engine.export.core module
 -----------------------------------
 

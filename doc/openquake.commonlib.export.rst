@@ -1,9 +1,6 @@
 openquake.commonlib.export package
 ==================================
 
-Submodules
-----------
-
 openquake.commonlib.export.hazard module
 ----------------------------------------
 
