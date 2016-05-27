@@ -1,16 +1,6 @@
 openquake.calculators package
 =============================
 
-Subpackages
------------
-
-.. toctree::
-
-    openquake.calculators.tests
-
-Submodules
-----------
-
 openquake.calculators.base module
 ---------------------------------
 

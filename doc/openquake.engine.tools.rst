@@ -1,9 +1,6 @@
 openquake.engine.tools package
 ==============================
 
-Submodules
-----------
-
 openquake.engine.tools.correct_complex_sources module
 -----------------------------------------------------
 
