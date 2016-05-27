@@ -24,6 +24,7 @@ import tempfile
 import unittest
 
 from openquake.baselib.general import writetmp
+from openquake import commonlib
 from openquake.calculators.tests import check_platform
 from openquake.commands.info import info
 from openquake.commands.tidy import tidy
@@ -37,7 +38,7 @@ from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import case_5
 
-DATADIR = os.path.join(os.path.dirname(__file__), 'data')
+DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
 
 
 class Print(object):
