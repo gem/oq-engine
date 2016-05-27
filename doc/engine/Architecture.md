@@ -1,7 +1,7 @@
 Architecture of the OpenQuake Engine v2
 =========================================
 
-The OpenQuake Engine version 2.0 is a complete rewrite of the version
+The OpenQuake Engine version 2.0 is a complete rewrite of version
 1.0, so a new document describing the overall architecture is
 needed. Whereas in the past the Engine was database-centric and
 structured as a Web application with an Object Relational Mapper, now
@@ -39,7 +39,7 @@ The third requirement is the one of *reproducibility*, which is the
 same as testability: it is essential to have a suite of tests checking
 that the calculators are providing the expected outputs against a set
 of predefined inputs.  With respect to OpenQuake Engine 1.0 we have at
-least tripled the number of scientific tests, testing a lot more
+least tripled the number of scientific tests. We are testing a lot more
 corner cases and a lot more functionalities. On the other hand several
 programming unit tests have been removed: they were testing
 implementations details of an implementation that has been removed and
@@ -80,6 +80,20 @@ The OpenQuake Engine suite is composed of several components:
   are not required on a single machine installation. In that case a
   minimal amount of configuration is needed, but in single machine
   installations the engine works out of the box without configuring anything
+
+This is the full stack of libraries used by the engine: each of those
+is a Python package containing several modules or event
+subpackages. The stack is a dependency tower where the higher levels
+depends on the lower levels but not viceversa:
+
+level 8:            commands
+level 7:            server
+level 6:            engine
+level 5:            calculators
+level 4:            commonlib
+level 3:            risklib
+level 2:            hazardlib
+level 1:            baselib
 
 The GMPE library in hazardlib and the calculators libraries are designed
 to be extensible, so that it is easy to add a new GMPE class or a new
