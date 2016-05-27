@@ -37,6 +37,7 @@ class IndependenceTestCase(unittest.TestCase):
         assert_independent('openquake.risklib', 'openquake.calculators')
 
     def test_commonlib(self):
+        assert_independent('openquake.commonlib', 'openquake.calculators')
         assert_independent('openquake.commonlib.node', 'openquake.hazardlib')
         # NB: ugly: parallel uses GroundShakingIntensityModel
         # assert_independent('openquake.commonlib.parallel', 'openquake.hazardlib')
