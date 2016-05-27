@@ -192,7 +192,8 @@ class SiteCollection(object):
         self._backarc = numpy.zeros(n, dtype=bool)
 
         for i in range(n):
-            self.sids[i] = sites[i].id
+            sid = sites[i].id  # is None if not defined
+            self.sids[i] = i if sid is None else sid
             self.lons[i] = sites[i].location.longitude
             self.lats[i] = sites[i].location.latitude
             self._vs30[i] = sites[i].vs30
