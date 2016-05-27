@@ -296,9 +296,8 @@ def main():
             sys.exit('Please start the DbServer: '
                      'see the documentation for details')
         # otherwise start the DbServer automatically
-        dblog = os.path.expanduser('~/oq-dbserver.log')
         subprocess.Popen([sys.executable, '-m', 'openquake.server.dbserver',
-                          '-l', 'INFO'], stderr=open(dblog, 'w'))
+                          '-l', 'INFO'])
     if args.upgrade_db:
         logs.set_level('info')
         msg = logs.dbcmd('what_if_I_upgrade', 'read_scripts')
