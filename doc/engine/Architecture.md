@@ -92,7 +92,7 @@ depends on the lower levels but not viceversa:
 - level 5: calculators (hazard and risk calculators)
 - level 4: commonlib (read/write XML, logic trees, datastore)
 - level 3: risklib (validation, risk models, risk inputs)
-- level 2: hazardlib (geometric utilites, GSIM library, source objects)
+- level 2: hazardlib (geometric utilites, GSIM library, source and site objects)
 - level 1: baselib (programming utilities, monitoring, Python 3 compatibility)
 
 `baselib` and `hazardlib` are very stable and can be used outside of the
