@@ -59,7 +59,7 @@ class Site(object):
 
         :class:`Sites <Site>` are pickleable
     """
-    _slots_ = 'location vs30 vs30measured z1pt0 z2pt5 backarc id'.split()
+    _slots_ = 'location vs30 vs30measured z1pt0 z2pt5 backarc'.split()
 
     def __init__(self, location, vs30, vs30measured, z1pt0, z2pt5,
                  backarc=False):
@@ -458,8 +458,7 @@ class FilteredSiteCollection(object):
         """
         for i, location in enumerate(self.mesh):
             yield Site(location, self.vs30[i], self.vs30measured[i],
-                       self.z1pt0[i], self.z2pt5[i],
-                       self.backarc[i], self.sids[i])
+                       self.z1pt0[i], self.z2pt5[i], self.backarc[i])
 
     def __len__(self):
         """Return the number of filtered sites"""

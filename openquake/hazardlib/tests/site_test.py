@@ -151,13 +151,13 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
 class SiteCollectionFilterTestCase(unittest.TestCase):
     SITES = [
         Site(location=Point(10, 20, 30), vs30=1.2, vs30measured=True,
-             z1pt0=3, z2pt5=5, id=0),
+             z1pt0=3, z2pt5=5),
         Site(location=Point(11, 12, 13), vs30=55.4, vs30measured=False,
-             z1pt0=6, z2pt5=8, id=1),
+             z1pt0=6, z2pt5=8),
         Site(location=Point(0, 2, 0), vs30=2, vs30measured=True,
-             z1pt0=9, z2pt5=17, id=2),
+             z1pt0=9, z2pt5=17),
         Site(location=Point(1, 1, 3), vs30=4, vs30measured=False,
-             z1pt0=22, z2pt5=11, id=3)
+             z1pt0=22, z2pt5=11)
     ]
 
     def test_filter(self):
@@ -172,7 +172,6 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         arreq(filtered.mesh.lons, [10, 0])
         arreq(filtered.mesh.lats, [20, 2])
         arreq(filtered.sids, [0, 2])
-        arreq([site.id for site in filtered], [0, 2])
         self.assertIs(filtered.mesh.depths, None)
 
         filtered = col.filter(numpy.array([False, True, True, True]))
