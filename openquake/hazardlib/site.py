@@ -142,7 +142,7 @@ class SiteCollection(object):
     _slots_ = dtype.names
 
     @classmethod
-    def from_points(cls, lons, lats, site_ids, sitemodel):
+    def from_points(cls, lons, lats, sitemodel):
         """
         Build the site collection from
 
@@ -150,8 +150,6 @@ class SiteCollection(object):
             a sequence of longitudes
         :param lats:
             a sequence of latitudes
-        :param site_ids:
-            a sequence of distinct integers
         :param sitemodel:
             an object containing the attributes
             reference_vs30_value,
@@ -160,12 +158,11 @@ class SiteCollection(object):
             reference_depth_to_2pt5km_per_sec,
             reference_backarc
         """
-        assert len(lons) == len(lats) == len(site_ids), (
-            len(lons), len(lats), len(site_ids))
+        assert len(lons) == len(lats), (len(lons), len(lats))
         self = cls.__new__(cls)
         self.complete = self
         self.total_sites = len(lons)
-        self.sids = numpy.array(site_ids, int)
+        self.sids = numpy.arange(len(lons), dtype=numpy.uint32)
         self.lons = numpy.array(lons)
         self.lats = numpy.array(lats)
         self._vs30 = sitemodel.reference_vs30_value
