@@ -51,9 +51,6 @@ class Site(object):
     :param backarc":
         Boolean value, ``True`` if the site is in the subduction backarc and
         ``False`` if it is in the subduction forearc or is unknown
-    :param id:
-        Optional parameter with default 0. If given, it should be an
-        integer identifying the site univocally.
 
     :raises ValueError:
         If any of ``vs30``, ``z1pt0`` or ``z2pt5`` is zero or negative.
@@ -62,10 +59,10 @@ class Site(object):
 
         :class:`Sites <Site>` are pickleable
     """
-    _slots_ = 'location vs30 vs30measured z1pt0 z2pt5 backarc id'.split()
+    _slots_ = 'location vs30 vs30measured z1pt0 z2pt5 backarc'.split()
 
     def __init__(self, location, vs30, vs30measured, z1pt0, z2pt5,
-                 backarc=False, id=0):
+                 backarc=False):
         if not vs30 > 0:
             raise ValueError('vs30 must be positive')
         if not z1pt0 > 0:
@@ -78,7 +75,6 @@ class Site(object):
         self.z1pt0 = z1pt0
         self.z2pt5 = z2pt5
         self.backarc = backarc
-        self.id = id
 
     def __str__(self):
         """
@@ -146,7 +142,7 @@ class SiteCollection(object):
     _slots_ = dtype.names
 
     @classmethod
-    def from_points(cls, lons, lats, site_ids, sitemodel):
+    def from_points(cls, lons, lats, sitemodel):
         """
         Build the site collection from
 
@@ -154,8 +150,6 @@ class SiteCollection(object):
             a sequence of longitudes
         :param lats:
             a sequence of latitudes
-        :param site_ids:
-            a sequence of distinct integers
         :param sitemodel:
             an object containing the attributes
             reference_vs30_value,
@@ -164,12 +158,11 @@ class SiteCollection(object):
             reference_depth_to_2pt5km_per_sec,
             reference_backarc
         """
-        assert len(lons) == len(lats) == len(site_ids), (
-            len(lons), len(lats), len(site_ids))
+        assert len(lons) == len(lats), (len(lons), len(lats))
         self = cls.__new__(cls)
         self.complete = self
         self.total_sites = len(lons)
-        self.sids = numpy.array(site_ids, int)
+        self.sids = numpy.arange(len(lons), dtype=numpy.uint32)
         self.lons = numpy.array(lons)
         self.lats = numpy.array(lats)
         self._vs30 = sitemodel.reference_vs30_value
@@ -192,7 +185,7 @@ class SiteCollection(object):
         self._backarc = numpy.zeros(n, dtype=bool)
 
         for i in range(n):
-            self.sids[i] = sites[i].id
+            self.sids[i] = i
             self.lons[i] = sites[i].location.longitude
             self.lats[i] = sites[i].location.latitude
             self._vs30[i] = sites[i].vs30
@@ -265,13 +258,11 @@ class SiteCollection(object):
         if isinstance(self.vs30, float):  # from points
             for i, location in enumerate(self.mesh):
                 yield Site(location, self._vs30, self._vs30measured,
-                           self._z1pt0, self._z2pt5, self._backarc,
-                           self.sids[i])
+                           self._z1pt0, self._z2pt5, self._backarc)
         else:  # from sites
             for i, location in enumerate(self.mesh):
                 yield Site(location, self.vs30[i], self.vs30measured[i],
-                           self.z1pt0[i], self.z2pt5[i], self.backarc[i],
-                           self.sids[i])
+                           self.z1pt0[i], self.z2pt5[i], self.backarc[i])
 
     def filter(self, mask):
         """
@@ -464,8 +455,7 @@ class FilteredSiteCollection(object):
         """
         for i, location in enumerate(self.mesh):
             yield Site(location, self.vs30[i], self.vs30measured[i],
-                       self.z1pt0[i], self.z2pt5[i],
-                       self.backarc[i], self.sids[i])
+                       self.z1pt0[i], self.z2pt5[i], self.backarc[i])
 
     def __len__(self):
         """Return the number of filtered sites"""
