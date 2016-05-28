@@ -51,9 +51,6 @@ class Site(object):
     :param backarc":
         Boolean value, ``True`` if the site is in the subduction backarc and
         ``False`` if it is in the subduction forearc or is unknown
-    :param id:
-        Optional parameter with default 0. If given, it should be an
-        integer identifying the site univocally.
 
     :raises ValueError:
         If any of ``vs30``, ``z1pt0`` or ``z2pt5`` is zero or negative.
@@ -65,7 +62,7 @@ class Site(object):
     _slots_ = 'location vs30 vs30measured z1pt0 z2pt5 backarc id'.split()
 
     def __init__(self, location, vs30, vs30measured, z1pt0, z2pt5,
-                 backarc=False, id=0):
+                 backarc=False):
         if not vs30 > 0:
             raise ValueError('vs30 must be positive')
         if not z1pt0 > 0:
@@ -78,7 +75,6 @@ class Site(object):
         self.z1pt0 = z1pt0
         self.z2pt5 = z2pt5
         self.backarc = backarc
-        self.id = id
 
     def __str__(self):
         """
@@ -192,8 +188,7 @@ class SiteCollection(object):
         self._backarc = numpy.zeros(n, dtype=bool)
 
         for i in range(n):
-            sid = sites[i].id  # is None if not defined
-            self.sids[i] = i if sid is None else sid
+            self.sids[i] = i
             self.lons[i] = sites[i].location.longitude
             self.lats[i] = sites[i].location.latitude
             self._vs30[i] = sites[i].vs30

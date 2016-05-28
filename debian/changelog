@@ -1,6 +1,5 @@
   [Michele Simionato]
-  * Bug fix: instantiating a SiteCollection automatically sets the site IDs
-    if they are not set already
+  * Removed the .id attribute from the Site class
 
   [Graeme Weatherill]
   * Updates coefficients to Montalva et al. GMPE and updates year to 2016
