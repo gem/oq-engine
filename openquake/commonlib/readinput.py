@@ -238,8 +238,7 @@ def get_site_model(oqparam):
         yield valid.site_param(**node.attrib)
 
 
-def get_site_collection(oqparam, mesh=None, site_ids=None,
-                        site_model_params=None):
+def get_site_collection(oqparam, mesh=None, site_model_params=None):
     """
     Returns a SiteCollection instance by looking at the points and the
     site model defined by the configuration parameters.
@@ -249,9 +248,6 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
     :param mesh:
         a mesh of hazardlib points; if None the mesh is
         determined by invoking get_mesh
-    :param site_ids:
-        a list of integers to identify the points; if None, a
-        range(1, len(points) + 1) is used
     :param site_model_params:
         object with a method .get_closest returning the closest site
         model parameters
@@ -260,14 +256,13 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
         mesh = get_mesh(oqparam)
     if mesh is None:
         return
-    site_ids = site_ids or list(range(len(mesh)))
     if oqparam.inputs.get('site_model'):
         if site_model_params is None:
             # read the parameters directly from their file
             site_model_params = geo.geodetic.GeographicObjects(
                 get_site_model(oqparam))
         sitecol = []
-        for i, pt in zip(site_ids, mesh):
+        for pt in mesh:
             # NB: the mesh, when read from the datastore, is a 32 bit array;
             # however, the underlying C library expects 64 bit floats, thus
             # we have to cast float(pt.longitude), float(pt.latitude);
@@ -279,12 +274,12 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
                              'distance of %d km!' % (pt, dist))
             sitecol.append(
                 site.Site(pt, param.vs30, param.measured,
-                          param.z1pt0, param.z2pt5, param.backarc, i))
+                          param.z1pt0, param.z2pt5, param.backarc))
         return site.SiteCollection(sitecol)
 
     # else use the default site params
     return site.SiteCollection.from_points(
-        mesh.lons, mesh.lats, site_ids, oqparam)
+        mesh.lons, mesh.lats, range(len(mesh)), oqparam)
 
 
 def get_gsim_lt(oqparam, trts=['*']):
