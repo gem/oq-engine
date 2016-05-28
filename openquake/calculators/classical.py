@@ -222,8 +222,8 @@ class ClassicalCalculator(base.HazardCalculator):
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()  # trt_id -> eff_ruptures
         zd.bb_dict = {
-            (smodel.ordinal, site.id): BoundingBox(smodel.ordinal, site.id)
-            for site in self.sitecol
+            (smodel.ordinal, sid): BoundingBox(smodel.ordinal, sid)
+            for sid in self.sitecol.sids
             for smodel in self.csm.source_models
         } if self.oqparam.poes_disagg else {}
         return zd
