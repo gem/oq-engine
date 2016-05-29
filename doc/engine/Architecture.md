@@ -81,10 +81,10 @@ The OpenQuake Engine suite is composed of several components:
   minimal amount of configuration is needed, but in single machine
   installations the engine works out of the box without configuring anything
 
-This is the full stack of libraries used by the engine: each of those
+This is the full stack of libraries used by the engine: each one
 is a Python package containing several modules or event
 subpackages. The stack is a dependency tower where the higher levels
-depends on the lower levels but not viceversa:
+depend on the lower levels but not viceversa:
 
 - level 8:            commands
 - level 7:            server
