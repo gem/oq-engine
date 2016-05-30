@@ -285,10 +285,7 @@ def build_name(dstore, rlz, prefix, fmt, sampling):
     :returns: relative pathname including the extension
     """
     if hasattr(rlz, 'sm_lt_path'):  # full realization
-        smlt_path = '_'.join(rlz.sm_lt_path)
-        suffix = '-ltr_%d' % rlz.ordinal if sampling else ''
-        fname = '%s-smltp_%s-gsimltp_%s%s.%s' % (
-            prefix, smlt_path, rlz.gsim_rlz.uid, suffix, fmt)
+        fname = '%s-rlz_%04d.%s' % (prefix, rlz.ordinal, fmt)
     else:  # GSIM logic tree realization used in scenario calculators
         fname = '%s_%s.%s' % (prefix, rlz.uid, fmt)
     return dstore.export_path(fname)
