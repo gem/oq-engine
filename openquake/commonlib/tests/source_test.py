@@ -787,8 +787,8 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         self.assertEqual(
             str(assoc),
             "<RlzsAssoc(size=2, rlzs=1)\n0,SadighEtAl1997(): "
-            "['<0,b1_b5_b8,b2_b3,w=1.0>']\n"
-            "1,ChiouYoungs2008(): ['<0,b1_b5_b8,b2_b3,w=1.0>']>")
+            "['<0,b1_b5_b8~b2_b3,w=1.0>']\n"
+            "1,ChiouYoungs2008(): ['<0,b1_b5_b8~b2_b3,w=1.0>']>")
 
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
@@ -811,10 +811,10 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         assoc = rlzs_assoc.extract([1, 5], csm.info)
         self.assertEqual(str(assoc), """\
 <RlzsAssoc(size=4, rlzs=2)
-0,SadighEtAl1997(): ['<1,b1_b3_b6,b2_b3,w=0.5>']
-1,ChiouYoungs2008(): ['<1,b1_b3_b6,b2_b3,w=0.5>']
-4,SadighEtAl1997(): ['<5,b1_b3_b8,b2_b3,w=0.5>']
-5,ChiouYoungs2008(): ['<5,b1_b3_b8,b2_b3,w=0.5>']>""")
+0,SadighEtAl1997(): ['<1,b1_b3_b6~b2_b3,w=0.5>']
+1,ChiouYoungs2008(): ['<1,b1_b3_b6~b2_b3,w=0.5>']
+4,SadighEtAl1997(): ['<5,b1_b3_b8~b2_b3,w=0.5>']
+5,ChiouYoungs2008(): ['<5,b1_b3_b8~b2_b3,w=0.5>']>""")
 
         # removing 9 trt_models out of 18
         def count_ruptures(trt_model):
@@ -825,15 +825,15 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         assoc = csm.info.get_rlzs_assoc(count_ruptures)
         expected_assoc = """\
 <RlzsAssoc(size=9, rlzs=9)
-0,SadighEtAl1997(): ['<0,b1_b3_b6,@_b3,w=0.04>']
-2,SadighEtAl1997(): ['<1,b1_b3_b7,@_b3,w=0.12>']
-4,SadighEtAl1997(): ['<2,b1_b3_b8,@_b3,w=0.04>']
-6,SadighEtAl1997(): ['<3,b1_b4_b6,@_b3,w=0.12>']
-8,SadighEtAl1997(): ['<4,b1_b4_b7,@_b3,w=0.36>']
-10,SadighEtAl1997(): ['<5,b1_b4_b8,@_b3,w=0.12>']
-12,SadighEtAl1997(): ['<6,b1_b5_b6,@_b3,w=0.04>']
-14,SadighEtAl1997(): ['<7,b1_b5_b7,@_b3,w=0.12>']
-16,SadighEtAl1997(): ['<8,b1_b5_b8,@_b3,w=0.04>']>"""
+0,SadighEtAl1997(): ['<0,b1_b3_b6~@_b3,w=0.04>']
+2,SadighEtAl1997(): ['<1,b1_b3_b7~@_b3,w=0.12>']
+4,SadighEtAl1997(): ['<2,b1_b3_b8~@_b3,w=0.04>']
+6,SadighEtAl1997(): ['<3,b1_b4_b6~@_b3,w=0.12>']
+8,SadighEtAl1997(): ['<4,b1_b4_b7~@_b3,w=0.36>']
+10,SadighEtAl1997(): ['<5,b1_b4_b8~@_b3,w=0.12>']
+12,SadighEtAl1997(): ['<6,b1_b5_b6~@_b3,w=0.04>']
+14,SadighEtAl1997(): ['<7,b1_b5_b7~@_b3,w=0.12>']
+16,SadighEtAl1997(): ['<8,b1_b5_b8~@_b3,w=0.04>']>"""
         self.assertEqual(str(assoc), expected_assoc)
         self.assertEqual(len(assoc.realizations), 9)
 
@@ -850,8 +850,8 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         self.assertEqual(
             str(assoc),
             "<RlzsAssoc(size=2, rlzs=5)\n"
-            "0,SadighEtAl1997(): ['<0,b1,b1,w=0.2>']\n"
-            "1,SadighEtAl1997(): ['<1,b2,b1,w=0.2>', '<2,b2,b1,w=0.2>', '<3,b2,b1,w=0.2>', '<4,b2,b1,w=0.2>']>")
+            "0,SadighEtAl1997(): ['<0,b1~b1,w=0.2>']\n"
+            "1,SadighEtAl1997(): ['<1,b2~b1,w=0.2>', '<2,b2~b1,w=0.2>', '<3,b2~b1,w=0.2>', '<4,b2~b1,w=0.2>']>")
 
         # check CompositionInfo serialization
         dic, attrs = csm.info.__toh5__()
