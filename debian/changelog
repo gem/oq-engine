@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * The realizations are now exported as a CSV file
   * Escaped taxonomies in the datastore
   * The Web UI log tool is now escaping the HTML
   * Moved openquake.commonlib.commands -> openquake.commands and
