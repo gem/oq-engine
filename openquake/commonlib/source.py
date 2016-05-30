@@ -71,7 +71,7 @@ class LtRealization(object):
     @property
     def uid(self):
         """An unique identifier for effective realizations"""
-        return '_'.join(self.sm_lt_path) + ',' + self.gsim_rlz.uid
+        return '_'.join(self.sm_lt_path) + '~' + self.gsim_rlz.uid
 
     def __eq__(self, other):
         return repr(self) == repr(other)
