@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Escaped taxonomies in the datastore
   * Moved openquake.commonlib.commands -> openquake.commands and
     openquake.commonlib.valid -> openquake.risklib.valid to have a
     linear tower of internal dependencies
