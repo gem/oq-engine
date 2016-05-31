@@ -887,5 +887,5 @@ def export_realizations(ekey, dstore):
     for i, rlz in enumerate(rlzs):
         data.append([i, rlz['uid'], rlz['weight']])
     path = dstore.export_path('realizations.csv')
-    writers.write_csv(path, data, fmt='%s', sep='\t')
+    writers.write_csv(path, data, fmt='%s')
     return [path]

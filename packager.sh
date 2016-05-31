@@ -343,7 +343,8 @@ _devtest_innervm_run () {
                  # OQ Engine QA tests (splitted into multiple execution to track the performance)
                  nosetests  -a '${skip_tests}qa,hazard' -v --with-xunit --xunit-file=xunit-qa-hazard.xml
                  nosetests  -a '${skip_tests}qa,risk' -v --with-xunit --xunit-file=xunit-qa-risk.xml
-
+                 nosetests -v --with-doctest --with-coverage --cover-package=openquake.risklib openquake/risklib
+                 nosetests -v --with-doctest --with-coverage --cover-package=openquake.commonlib openquake/commonlib
                  python-coverage xml --include=\"openquake/*\"
         "
         scp "${lxc_ip}:oq-engine/xunit-*.xml" "out_${BUILD_UBUVER}/" || true

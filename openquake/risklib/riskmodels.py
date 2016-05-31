@@ -18,6 +18,7 @@
 
 from __future__ import division
 import inspect
+import urllib
 import functools
 import numpy
 
@@ -149,7 +150,7 @@ class Asset(object):
             asset collection ordinal
         """
         self.id = asset_id
-        self.taxonomy = taxonomy
+        self.taxonomy = urllib.quote_plus(taxonomy)
         self.number = number
         self.location = location
         self.values = values
