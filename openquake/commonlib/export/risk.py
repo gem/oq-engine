@@ -174,8 +174,7 @@ def export_agg_losses_ebr(ekey, dstore):
         for loss_type in loss_types:
             data = agg_losses['rlz-%03d/%s' % (rlz.ordinal, loss_type)].value
             data.sort(order='loss')
-            dest = dstore.export_path(
-                'agg_losses-rlz%03d-%s.csv' % (rlz.ordinal, loss_type))
+            dest = dstore.build_fname('agg_losses-' + loss_type, rlz, 'csv')
             tags = etags[data['rup_id']]
             if data.dtype['loss'].shape == (2,):  # insured losses
                 losses = data['loss'][:, 0]
@@ -216,7 +215,7 @@ def export_rcurves(ekey, dstore):
     assets = get_assets(dstore)
     curves = compactify(dstore[ekey[0]].value)
     name = ekey[0].split('-')[0]
-    writer = writers.CsvWriter(fmt='%9.7E')
+    writer = writers.CsvWriter(fmt=FIVEDIGITS)
     for rlz in rlzs:
         array = compose_arrays(assets, curves[:, rlz.ordinal])
         path = dstore.export_path('%s-%s.csv' % (name, rlz.uid))
@@ -528,12 +527,9 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
                     ins = '_ins' if insflag else ''
                     rlz = rlzs[r]
                     unit = unit_by_lt[lt]
-                    suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (
-                        rlz.uid, lt)
                     root = ekey[0][:-5]  # strip -rlzs
-                    name = '%s%s-poe-%s%s.%s' % (
-                        root, suffix, poe, ins, ekey[1])
-                    fname = dstore.export_path(name)
+                    name = '%s-%s-poe-%s%s' % (root, lt, poe, ins)
+                    fname = dstore.build_fname(name, rlz, ekey[1])
                     data = []
                     poe_str = 'poe~%s' % poe + ins
                     for ass, stat in zip(assetcol, lmaps[poe_str]):
@@ -605,12 +601,9 @@ def export_loss_map_xml_geojson(ekey, dstore):
             for r in range(R):
                 rlz = rlzs[r]
                 unit = unit_by_lt[lt]
-                suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (
-                    rlz.uid, lt)
                 root = ekey[0][:-5]  # strip -rlzs
-                name = '%s%s%s.%s' % (
-                    root, suffix, '_ins' if ins else '', ekey[1])
-                fname = dstore.export_path(name)
+                name = '%s-%s%s' % (root, lt, '_ins' if ins else '')
+                fname = dstore.build_fname(name, rlz, ekey[1])
                 data = []
                 for ass, mean, stddev in zip(
                         assetcol, means[:, r], stddevs[:, r]):
