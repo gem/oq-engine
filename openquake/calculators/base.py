@@ -31,12 +31,10 @@ import numpy
 from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
-from openquake.commonlib import (
-    readinput, riskmodels, datastore, source, __version__)
-from openquake.commonlib.oqvalidation import OqParam
+from openquake.commonlib import readinput, riskmodels, datastore, source
+from openquake.commonlib.oqvalidation import OqParam, __version__
 from openquake.commonlib.parallel import starmap, executor
 from openquake.commonlib.views import view, rst_table, stats
-from openquake.risklib import riskinput
 from openquake.baselib.python3compat import with_metaclass
 
 get_taxonomy = operator.attrgetter('taxonomy')
@@ -122,6 +120,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         self.close = close
         self.set_log_format()
+        logging.info('Using engine version %s', __version__)
         if (concurrent_tasks is not None and concurrent_tasks !=
                 OqParam.concurrent_tasks.default):
             self.oqparam.concurrent_tasks = concurrent_tasks
