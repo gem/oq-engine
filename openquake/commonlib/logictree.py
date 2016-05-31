@@ -1269,7 +1269,7 @@ class GsimLogicTree(object):
                                  nodes=[ltbranch])])])
         return cls(str(gsim), ['*'], ltnode=lt)
 
-    def __init__(self, fname, tectonic_region_types, ltnode=None):
+    def __init__(self, fname, tectonic_region_types=['*'], ltnode=None):
         self.fname = fname
         self.tectonic_region_types = trts = sorted(tectonic_region_types)
         if len(trts) > len(set(trts)):
@@ -1296,10 +1296,9 @@ class GsimLogicTree(object):
         Reduce the GsimLogicTree.
 
         :param trts: a subset of tectonic region types
+        :returns: a reduced GsimLogicTree instance
         """
-        self.tectonic_region_types = sorted(trts)
-        self.values = collections.defaultdict(list)
-        self.all_trts, self.branches = self._build_trts_branches()
+        return self.__class__(self.fname, sorted(trts), ltnode=self._ltnode)
 
     def get_num_branches(self):
         """
