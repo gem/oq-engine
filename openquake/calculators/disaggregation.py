@@ -32,7 +32,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import parallel
-from openquake.calculators.calc import gen_ruptures_for_site
+from openquake.commonlib.calc import gen_ruptures_for_site
 from openquake.calculators import base, classical
 
 DISAGG_RES_FMT = 'disagg/poe-%(poe)s-rlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
@@ -138,7 +138,7 @@ def compute_disagg(sitecol, sources, trt_model_id, rlzs_assoc,
         monitor of the currently running job
     :returns:
         a dictionary of probability arrays, with composite key
-        (site.id, rlz.id, poe, imt, iml, trt_names).
+        (sid, rlz.id, poe, imt, iml, trt_names).
     """
     trt = sources[0].tectonic_region_type
     try:
@@ -147,15 +147,15 @@ def compute_disagg(sitecol, sources, trt_model_id, rlzs_assoc,
         max_dist = oqparam.maximum_distance['default']
     trt_num = dict((trt, i) for i, trt in enumerate(trt_names))
     gsims = rlzs_assoc.gsims_by_trt_id[trt_model_id]
-    result = {}  # site.id, rlz.id, poe, imt, iml, trt_names -> array
+    result = {}  # sid, rlz.id, poe, imt, iml, trt_names -> array
 
     collecting_mon = monitor('collecting bins')
     arranging_mon = monitor('arranging bins')
 
-    for site in sitecol:
+    for site, sid in zip(sitecol, sitecol.sids):
         # edges as wanted by disagg._arrange_data_in_bins
         try:
-            edges = bin_edges[site.id]
+            edges = bin_edges[sid]
         except KeyError:
             # bin_edges for a given site are missing if the site is far away
             continue
@@ -167,7 +167,7 @@ def compute_disagg(sitecol, sources, trt_model_id, rlzs_assoc,
             continue
         with collecting_mon:
             bdata = _collect_bins_data(
-                trt_num, source_ruptures, site, curves_dict[site.id],
+                trt_num, source_ruptures, site, curves_dict[sid],
                 trt_model_id, rlzs_assoc, gsims, oqparam.imtls,
                 oqparam.poes_disagg, oqparam.truncation_level,
                 oqparam.num_epsilon_bins, monitor)
@@ -194,7 +194,7 @@ def compute_disagg(sitecol, sources, trt_model_id, rlzs_assoc,
 
                         # call disagg._arrange_data_in_bins
                         with arranging_mon:
-                            key = (site.id, rlzi, poe, imt, iml, trt_names)
+                            key = (sid, rlzi, poe, imt, iml, trt_names)
                             matrix = disagg._arrange_data_in_bins(
                                 bins, edges + (trt_names,))
                             result[key] = numpy.array(
@@ -214,7 +214,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
     def agg_result(self, acc, result):
         """
         Collect the results coming from compute_disagg into self.results,
-        a dictionary with key (site.id, rlz.id, poe, imt, iml, trt_names)
+        a dictionary with key (sid, rlz.id, poe, imt, iml, trt_names)
         and values which are probability arrays.
 
         :param acc: dictionary accumulating the results
@@ -270,11 +270,11 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
             logging.info('%d mag bins from %s to %s', len(mag_edges) - 1,
                          min_mag, max_mag)
             for trt_model in smodel.trt_models:
-                for site in sitecol:
-                    curves = curves_dict[site.id]
+                for sid, site in zip(sitecol.sids, sitecol):
+                    curves = curves_dict[sid]
                     if not curves:
                         continue  # skip zero-valued hazard curves
-                    bb = curves_by_trt_gsim.bb_dict[sm_id, site.id]
+                    bb = curves_by_trt_gsim.bb_dict[sm_id, sid]
                     if not bb:
                         logging.info(
                             'location %s was too far, skipping disaggregation',
@@ -293,13 +293,13 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                         '%d lat bins from %s to %s', len(lon_edges) - 1,
                         bb.south, bb.north)
 
-                    self.bin_edges[sm_id, site.id] = (
+                    self.bin_edges[sm_id, sid] = (
                         mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
 
                 bin_edges = {}
-                for site in sitecol:
-                    if (sm_id, site.id) in self.bin_edges:
-                        bin_edges[site.id] = self.bin_edges[sm_id, site.id]
+                for sid, site in zip(sitecol.sids, sitecol):
+                    if (sm_id, sid) in self.bin_edges:
+                        bin_edges[sid] = self.bin_edges[sm_id, sid]
 
                 for srcs in split_in_blocks(trt_model, nblocks):
                     all_args.append(

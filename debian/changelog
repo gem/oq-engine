@@ -1,5 +1,10 @@
   [Michele Simionato]
   * Added a default location `~/oqdata/dbserver.log` for the DbServer log
+  * Now the gsim_logic_tree file is parsed only once
+  * Added a document about the architecture of the engine
+  * The realizations are now exported as a CSV file
+  * Escaped taxonomies in the datastore
+  * The Web UI log tool is now escaping the HTML
   * Moved openquake.commonlib.commands -> openquake.commands and
     openquake.commonlib.valid -> openquake.risklib.valid to have a
     linear tower of internal dependencies

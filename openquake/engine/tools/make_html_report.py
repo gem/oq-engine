@@ -24,7 +24,7 @@ import itertools
 from docutils.examples import html_parts
 
 from openquake.commonlib.datastore import read
-from openquake.calculators.views import view_fullreport
+from openquake.commonlib.views import view_fullreport
 from openquake.engine.logs import dbcmd
 
 tablecounter = itertools.count(0)

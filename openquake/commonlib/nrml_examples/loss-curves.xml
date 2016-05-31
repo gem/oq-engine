@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4">
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
 
     <!-- `unit` is optional. If the file has been produced using
     mean or quantile hazard curves, no `sourceModelTreePath` and `gsimTreePath`
