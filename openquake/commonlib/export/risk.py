@@ -257,8 +257,6 @@ def export_damage(ekey, dstore):
     for l, r in itertools.product(range(L), range(R)):
         lt = loss_types[l]
         rlz = rlzs[r]
-        suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (rlz.uid, lt)
-
         dd_asset = []
         for n, ass in enumerate(assetcol):
             assref = aref[ass['idx']]
@@ -271,13 +269,13 @@ def export_damage(ekey, dstore):
                         dist['mean'][ds], dist['stddev'][ds]))
 
         f1 = export_dmg_xml(('dmg_dist_per_asset', 'xml'), dstore,
-                            dmg_states, dd_asset, suffix)
+                            dmg_states, dd_asset, lt, rlz)
         max_damage = dmg_states[-1]
         # the collapse map is extracted from the damage distribution per asset
         # (dda) by taking the value corresponding to the maximum damage
         collapse_map = [dda for dda in dd_asset if dda.dmg_state == max_damage]
         f2 = export_dmg_xml(('collapse_map', 'xml'), dstore,
-                            dmg_states, collapse_map, suffix)
+                            dmg_states, collapse_map, lt, rlz)
         fnames.extend(sum((f1 + f2).values(), []))
     return sorted(fnames)
 
@@ -298,8 +296,6 @@ def export_damage_taxon(ekey, dstore):
     for l, r in itertools.product(range(L), range(R)):
         lt = loss_types[l]
         rlz = rlzs[r]
-        suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (rlz.uid, lt)
-
         dd_taxo = []
         for t in range(T):
             dist = dmg_by_taxon[t, r][lt]
@@ -310,7 +306,7 @@ def export_damage_taxon(ekey, dstore):
                         dist['mean'][ds], dist['stddev'][ds]))
 
         f = export_dmg_xml(('dmg_dist_per_taxonomy', 'xml'),
-                           dstore, dmg_states, dd_taxo, suffix)
+                           dstore, dmg_states, dd_taxo, lt, rlz)
         fnames.extend(sum(f.values(), []))
     return sorted(fnames)
 
@@ -329,8 +325,6 @@ def export_damage_total(ekey, dstore):
     for l, r in itertools.product(range(L), range(R)):
         lt = loss_types[l]
         rlz = rlzs[r]
-        suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (rlz.uid, lt)
-
         dd_total = []
         for ds in range(D):
             dist = dmg_total[r][lt]
@@ -338,7 +332,7 @@ def export_damage_total(ekey, dstore):
                 dmg_states[ds], dist['mean'][ds], dist['stddev'][ds]))
 
         f = export_dmg_xml(('dmg_dist_total', 'xml'), dstore,
-                           dmg_states, dd_total, suffix)
+                           dmg_states, dd_total, lt, rlz)
         fnames.extend(sum(f.values(), []))
     return sorted(fnames)
 
@@ -465,7 +459,7 @@ def export_dmg_totalcsv(ekey, dstore):
     return writer.getsaved()
 
 
-def export_dmg_xml(key, dstore, damage_states, dmg_data, suffix):
+def export_dmg_xml(key, dstore, damage_states, dmg_data, lt, rlz):
     """
     Export damage outputs in XML format.
 
@@ -477,10 +471,12 @@ def export_dmg_xml(key, dstore, damage_states, dmg_data, suffix):
         the list of damage states
     :param dmg_data:
         a list [(loss_type, unit, asset_ref, mean, stddev), ...]
-    :param suffix:
-        a suffix specifying the GSIM realization
+    :param lt:
+        loss type string
+    :param rlz:
+        a realization object
     """
-    dest = dstore.export_path('%s%s.%s' % (key[0], suffix, key[1]))
+    dest = dstore.build_fname('%s-%s' % (key[0], lt), rlz, key[1])
     risk_writers.DamageWriter(damage_states).to_nrml(key[0], dmg_data, dest)
     return AccumDict({key: [dest]})
 
@@ -517,7 +513,6 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
                  if export_type == 'geojson' else
                  risk_writers.LossMapXMLWriter)
     loss_types = loss_maps.dtype.names
-    L = len(loss_types)
     for lt in loss_types:
         loss_maps_lt = loss_maps[lt]
         for r in range(R):
@@ -672,7 +667,6 @@ def _gen_writers(dstore, writercls, root):
     oq = dstore['oqparam']
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     cost_types = dstore['cost_types']
-    L, R = len(cost_types), len(rlzs)
     poes = oq.conditional_loss_poes if 'maps' in root else [None]
     for poe in poes:
         poe_str = '-%s' % poe if poe is not None else ''
@@ -681,11 +675,11 @@ def _gen_writers(dstore, writercls, root):
             for ins in range(oq.insured_losses + 1):
                 if root.endswith('-rlzs'):
                     for rlz in rlzs:
-                        suffix = ('' if L == 1 and R == 1
-                                  else '-gsimltp_%s_%s' % (rlz.uid, loss_type))
-                        dest = dstore.export_path('%s%s%s%s.xml' % (
-                            root[:-5],  # strip -rlzs
-                            suffix, poe_str, '_ins' if ins else ''))
+                        dest = dstore.build_fname(
+                            '%s-%s-%s%s' %
+                            (root[:-5],  # strip -rlzs
+                             loss_type, poe_str, '_ins' if ins else ''),
+                            rlz, 'xml')
                         yield writercls(
                             dest, oq.investigation_time, poe=poe,
                             loss_type=loss_type, unit=ct['unit'],
@@ -834,10 +828,9 @@ def export_bcr_map_rlzs(ekey, dstore):
     writercls = risk_writers.BCRMapXMLWriter
     fnames = []
     for rlz in realizations:
-        suffix = '.xml' if R == 1 else '-gsimltp_%s.xml' % rlz.uid
         for l, loss_type in enumerate(loss_types):
             rlz_data = bcr_data[loss_type][:, rlz.ordinal]
-            path = dstore.export_path('bcr-%s%s' % (loss_type, suffix))
+            path = dstore.build_fname('bcr-%s' + loss_type, rlz, 'xml')
             writer = writercls(
                 path, oq.interest_rate, oq.asset_life_expectancy, loss_type,
                 **get_paths(rlz))
