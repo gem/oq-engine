@@ -19,12 +19,12 @@ The main design principle has been *simplicity*: everything has to be
 as simple as possible (but not simplest). The goal has been to keep
 the engine simple enough that a single person can understand it, can
 debug it and can extend it without tremendous efforts. All the rest
-come from simplicity: transparency, ability to inspect and debug, modularity,
+comes from simplicity: transparency, ability to inspect and debug, modularity,
 adaptability of the code, etc. Even efficiency: in the last three
 years most of the performance improvements came from free, just from
 removing complications. When a thing is simple it is easy to make it
 fast. The battle for simplicity is never ending, so there are still
-several things in the engine that are more complex that they should:
+several things in the engine that are more complex than they should:
 we are working on that.
 
 After simplicity the second design goal has been *performance*: the
@@ -35,7 +35,7 @@ requirements is of paramount importance, since it makes the difference
 between being able to run a computation and being unable to do it.
 Being too slow to be usable should be considered as a bug.
 
-The third requirement is the one of *reproducibility*, which is the
+The third requirement is *reproducibility*, which is the
 same as testability: it is essential to have a suite of tests checking
 that the calculators are providing the expected outputs against a set
 of predefined inputs.  With respect to OpenQuake Engine 1.0 we have at
@@ -78,8 +78,8 @@ The OpenQuake Engine suite is composed of several components:
 - the engine can run on a cluster of machines: in that case
   you have to start the *rabbitmq* and *celery* components which
   are not required on a single machine installation. In that case a
-  minimal amount of configuration is needed, without in single machine
-  installations the engine works out of the box without configuring anything
+  minimal amount of configuration is needed, whereas in single machine
+  installations the engine works out of the box
 
 This is the full stack of internal libraries used by the engine: each of those
 is a Python package containing several modules or event
@@ -105,7 +105,7 @@ to be extensible, so that it is easy to add a new GMPE class or a new
 calculator. We routinely add several new GMPEs per release; adding new
 calculators is less common and it requires more expertise, but it is possible
 and it has been done several times in the past. In particular it is
-often easier to add specific calculator optimized for a given use case rather
+often easier to add a specific calculator optimized for a given use case rather
 than complicating the current calculators.
 
 The results of a computation are automatically saved in the datastore
@@ -113,8 +113,8 @@ and can be exported in a portable format, such as XML or CSV.  You can
 assume that the datastore of version X of the engine *will not work*
 with version X + 1: on the contrary, the exported files will likely be
 same across different versions. It is important to export all of the
-outputs you are interested it before doing an upgrade, otherwise you
-will be forced to downgrade in order to be able to export the previous
+outputs you are interested in before doing an upgrade, otherwise you
+would be forced to downgrade in order to be able to export the previous
 results.
 
 The WebUI provides a REST API that can be used in third party
