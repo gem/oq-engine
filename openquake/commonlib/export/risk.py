@@ -114,7 +114,7 @@ def export_avg_losses(ekey, dstore):
     writer = writers.CsvWriter(fmt=FIVEDIGITS)
     for rlz in rlzs:
         losses = avg_losses[:, rlz.ordinal]
-        dest = dstore.export_path('losses_by_asset-rlz%03d.csv' % rlz.ordinal)
+        dest = dstore.build_fname('losses_by_asset', rlz, 'csv')
         data = compose_arrays(assets, losses)
         writer.save(data, dest)
     return writer.getsaved()
@@ -152,7 +152,7 @@ def export_agg_losses(ekey, dstore):
     writer = writers.CsvWriter(fmt=FIVEDIGITS)
     for rlz in rlzs:
         losses = agg_losses[:, rlz.ordinal]
-        dest = dstore.export_path('agg_losses-rlz%03d.csv' % rlz.ordinal)
+        dest = dstore.build_fname('agg_losses', rlz, 'csv')
         data = compose_arrays(etags, losses)
         writer.save(data, dest)
     return writer.getsaved()
@@ -488,9 +488,6 @@ def export_dmg_xml(key, dstore, damage_states, dmg_data, suffix):
 
 # exports for scenario_risk
 
-AggLoss = collections.namedtuple(
-    'AggLoss', 'loss_type unit mean stddev')
-
 LossMap = collections.namedtuple('LossMap', 'location asset_ref value std_dev')
 LossCurve = collections.namedtuple(
     'LossCurve', 'location asset_ref poes losses loss_ratios '
@@ -628,48 +625,33 @@ def export_loss_map_xml_geojson(ekey, dstore):
                 fnames.append(fname)
     return sorted(fnames)
 
+agg_dt = numpy.dtype([('unit', (bytes, 6)), ('mean', F32), ('stddev', F32)])
+
 
 # this is used by scenario_risk
 @export.add(('agglosses-rlzs', 'csv'))
 def export_agglosses(ekey, dstore):
     unit_by_lt = {ct['name']: ct['unit'] for ct in dstore['cost_types']}
     unit_by_lt['occupants'] = 'people'
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     agglosses = dstore[ekey[0]]
-    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
-    L = len(loss_types)
-    R, = agglosses.shape
     fnames = []
-    for lt in loss_types:
-        for r in range(R):
-            rlz = rlzs[r]
-            unit = unit_by_lt[lt]
-            suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (
-                rlz.uid, lt)
-            loss = agglosses[r][lt]
-            losses = [AggLoss(lt, unit, loss['mean'], loss['stddev'])]
-            out = export_loss_csv(('agg', 'csv'), dstore, losses, suffix)
-            fnames.append(out)
+    for rlz in dstore['csm_info'].get_rlzs_assoc().realizations:
+        loss = agglosses[rlz.ordinal]
+        losses = numpy.zeros(
+            1, numpy.dtype([(lt, agg_dt) for lt in loss.dtype.names]))
+        header = []
+        for lt in loss.dtype.names:
+            losses[lt]['unit'] = unit_by_lt[lt]
+            header.append('%s-unit' % lt)
+            losses[lt]['mean'] = loss[lt]['mean']
+            header.append('%s-mean' % lt)
+            losses[lt]['stddev'] = loss[lt]['stddev']
+            header.append('%s-stddev' % lt)
+        dest = dstore.build_fname('agglosses', rlz, 'csv')
+        writers.write_csv(dest, losses, header=header)
+        fnames.append(dest)
     return sorted(fnames)
 
-
-def export_loss_csv(ekey, dstore, data, suffix):
-    """
-    Export (aggregate) losses in CSV.
-
-    :param key: per_asset_loss|asset-ins
-    :param dstore: the datastore
-    :param data: a list [(loss_type, unit, asset_ref, mean, stddev), ...]
-    :param suffix: a suffix specifying the GSIM realization
-    """
-    dest = dstore.export_path('%s%s.%s' % (ekey[0], suffix, ekey[1]))
-    if ekey[0] in ('agg', 'ins'):  # aggregate
-        header = ['LossType', 'Unit', 'Mean', 'Standard Deviation']
-    else:  # loss_map
-        header = ['LossType', 'Unit', 'Asset', 'Mean', 'Standard Deviation']
-        data.sort(key=operator.itemgetter(2))  # order by asset idx
-    writers.write_csv(dest, [header] + data, fmt='%11.7E')
-    return dest
 
 AggCurve = collections.namedtuple(
     'AggCurve', ['losses', 'poes', 'average_loss', 'stddev_loss'])

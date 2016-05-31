@@ -252,6 +252,19 @@ class DataStore(collections.MutableMapping):
             export_dir = self.export_dir
         return os.path.join(export_dir, newname)
 
+    def build_fname(self, prefix, rlz, fmt, export_dir=None):
+        """
+        Build a file name from a realization, by using prefix and extension.
+
+        :param rlz: a realization object
+        :param prefix: the prefix to use
+        :param fmt: the extension ('csv', 'xml', etc)
+        :param export_dir: export directory (if None use .export_dir)
+        :returns: relative pathname including the extension
+        """
+        fname = '%s-rlz-%03d.%s' % (prefix, rlz.ordinal, fmt)
+        return self.export_path(fname, export_dir)
+
     def export_csv(self, key):
         """
         Generic csv exporter
