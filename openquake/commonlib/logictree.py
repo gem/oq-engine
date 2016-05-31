@@ -1269,7 +1269,7 @@ class GsimLogicTree(object):
                                  nodes=[ltbranch])])])
         return cls(str(gsim), ['*'], ltnode=lt)
 
-    def __init__(self, fname, tectonic_region_types, ltnode=None):
+    def __init__(self, fname, tectonic_region_types=['*'], ltnode=None):
         self.fname = fname
         self.tectonic_region_types = trts = sorted(tectonic_region_types)
         if len(trts) > len(set(trts)):

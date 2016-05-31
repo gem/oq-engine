@@ -435,7 +435,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         logging.info('Processed source model %d/%d with %d gsim path(s)',
                      i + 1, num_source_models, num_gsim_paths)
         yield source.SourceModel(
-            sm, weight, smpath, trt_models, gsim_lt, i, num_samples)
+            sm, weight, smpath, trt_models, num_gsim_paths, i, num_samples)
 
     # log if some source file is being used more than once
     for fname, hits in parser.fname_hits.items():
@@ -517,7 +517,7 @@ def get_job_info(oqparam, source_models, sitecol):
                    for ls in imtls.values()) / float(n_imts)
 
     n_realizations = oqparam.number_of_logic_tree_samples or sum(
-        sm.gsim_lt.get_num_paths() for sm in source_models)
+        sm.num_gsim_paths for sm in source_models)
     # NB: in the event based case `n_realizations` can be over-estimated,
     # if the method is called in the pre_execute phase, because
     # some tectonic region types may have no occurrencies.
