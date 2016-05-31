@@ -30,7 +30,6 @@ import logging
 
 from openquake.baselib.general import humansize
 from openquake.commonlib import readinput, datastore, source, parallel
-from openquake.calculators import base
 
 
 def indent(text):
@@ -134,6 +133,7 @@ def build_report(job_ini, output_dir=None):
     """
     oq = readinput.get_oqparam(job_ini)
     output_dir = output_dir or os.path.dirname(job_ini)
+    from openquake.calculators import base  # ugly
     calc = base.calculators(oq)
     # some taken is care so that the real calculation is not run:
     # the goal is to extract information about the source management only
