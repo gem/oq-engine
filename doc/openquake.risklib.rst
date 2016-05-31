@@ -1,26 +1,51 @@
-risklib Package
-===============
+openquake.risklib package
+=========================
 
-:mod:`scientific` Module
-------------------------
+openquake.risklib.riskinput module
+----------------------------------
+
+.. automodule:: openquake.risklib.riskinput
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+openquake.risklib.riskmodels module
+-----------------------------------
+
+.. automodule:: openquake.risklib.riskmodels
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+openquake.risklib.scientific module
+-----------------------------------
 
 .. automodule:: openquake.risklib.scientific
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`utils` Module
--------------------
+openquake.risklib.utils module
+------------------------------
 
 .. automodule:: openquake.risklib.utils
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`riskmodels` Module
-------------------------
+openquake.risklib.valid module
+------------------------------
 
-.. automodule:: openquake.risklib.riskmodels
+.. automodule:: openquake.risklib.valid
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: openquake.risklib
     :members:
     :undoc-members:
     :show-inheritance:

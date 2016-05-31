@@ -24,20 +24,21 @@ import tempfile
 import unittest
 
 from openquake.baselib.general import writetmp
+from openquake import commonlib
 from openquake.calculators.tests import check_platform
-from openquake.commonlib.commands.info import info
-from openquake.commonlib.commands.tidy import tidy
-from openquake.commonlib.commands.show import show
-from openquake.commonlib.commands.show_attrs import show_attrs
-from openquake.commonlib.commands.export import export
-from openquake.commonlib.commands.reduce import reduce
-from openquake.commonlib.commands import run
+from openquake.commands.info import info
+from openquake.commands.tidy import tidy
+from openquake.commands.show import show
+from openquake.commands.show_attrs import show_attrs
+from openquake.commands.export import export
+from openquake.commands.reduce import reduce
+from openquake.commands import run
 from openquake.qa_tests_data.classical import case_1
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import case_5
 
-DATADIR = os.path.join(os.path.dirname(__file__), 'data')
+DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
 
 
 class Print(object):
@@ -61,7 +62,7 @@ class InfoTestCase(unittest.TestCase):
 b1, x15.xml, trt=[0], weight=1.00: 1 realization(s)>
 See https://github.com/gem/oq-risklib/blob/master/doc/effective-realizations.rst for an explanation
 <RlzsAssoc(size=1, rlzs=1)
-0,AkkarBommer2010(): ['<0,b1,@_AkkarBommer2010_@_@_@_@_@,w=1.0>']>
+0,AkkarBommer2010(): ['<0,b1~@_AkkarBommer2010_@_@_@_@_@,w=1.0>']>
 =============== ======
 attribute       nbytes
 =============== ======'''

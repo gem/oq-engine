@@ -28,7 +28,8 @@ import numpy
 
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip
-from openquake.commonlib import readinput, parallel, datastore, valid, source
+from openquake.risklib import valid
+from openquake.commonlib import readinput, parallel, datastore, source
 from openquake.calculators import base, event_based
 
 from openquake.hazardlib.geo.surface.multi import MultiSurface
@@ -44,7 +45,7 @@ from openquake.hazardlib.source.characteristic import CharacteristicFaultSource
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 
-from openquake.calculators.calc import MAX_INT
+from openquake.commonlib.calc import MAX_INT
 from openquake.commonlib.sourceconverter import SourceConverter
 
 
@@ -721,14 +722,15 @@ class UCERFEventBasedRuptureCalculator(
         branches = sorted(self.smlt.branches.items())
         min_mag, max_mag = self.source.min_mag, None
         source_models = []
+        num_gsim_paths = self.gsim_lt.get_num_paths()
         for ordinal, (name, branch) in enumerate(branches):
             tm = source.TrtModel(DEFAULT_TRT, [], min_mag, max_mag,
                                  ordinal, eff_ruptures=-1)
             sm = source.SourceModel(
-                name, branch.weight, [name], [tm], self.gsim_lt, ordinal, 1)
+                name, branch.weight, [name], [tm], num_gsim_paths, ordinal, 1)
             source_models.append(sm)
         self.csm = source.CompositeSourceModel(
-            self.smlt, source_models, set_weight=False)
+            self.gsim_lt, self.smlt, source_models, set_weight=False)
         self.rup_data = {}
         self.infos = []
 
