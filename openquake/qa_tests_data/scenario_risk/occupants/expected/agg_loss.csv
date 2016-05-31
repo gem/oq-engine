@@ -1,2 +1,2 @@
-LossType,Unit,Mean,Standard Deviation
-occupants,people,2.4428799E+00,4.0292203E-01
+occupants-unit,occupants-mean,occupants-stddev
+people,2.442880E+00,4.029220E-01
