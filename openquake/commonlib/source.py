@@ -691,6 +691,7 @@ class CompositeSourceModel(collections.Sequence):
     """
     def __init__(self, gsim_lt, source_model_lt, source_models,
                  set_weight=True):
+        self.gsim_lt = gsim_lt
         self.source_model_lt = source_model_lt
         self.source_models = source_models
         self.source_info = ()  # set by the SourceFilterSplitter
