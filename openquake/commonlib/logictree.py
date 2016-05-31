@@ -40,6 +40,7 @@ from openquake.baselib.general import groupby
 from openquake.baselib.python3compat import raise_
 import openquake.hazardlib
 from openquake.hazardlib.gsim.gsim_table import GMPETable
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo
 from openquake.risklib import valid
 from openquake.commonlib import writers
@@ -1297,7 +1298,11 @@ class GsimLogicTree(object):
                     continue
                 for imt in imts:
                     if imt.startswith('SA'):
-                        coeffs[imt]  # raise a KeyError if not defined
+                        try:
+                            coeffs[from_string(imt)]
+                        except KeyError:
+                            raise ValueError('%s is not defined for %s' %
+                                             (imt, gsim))
 
     def __str__(self):
         """
