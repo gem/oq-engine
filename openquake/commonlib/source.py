@@ -385,11 +385,10 @@ class RlzsAssoc(collections.Mapping):
         return {trt_id: sorted(rlzs)
                 for trt_id, rlzs in rlzs_by_trt_id.items()}
 
-    def _add_realizations(self, idx, lt_model, realizations):
-        gsim_lt = lt_model.gsim_lt
+    def _add_realizations(self, idx, lt_model, gsim_lt, gsim_rlzs):
         trts = gsim_lt.tectonic_region_types
         rlzs = []
-        for i, gsim_rlz in enumerate(realizations):
+        for i, gsim_rlz in enumerate(gsim_rlzs):
             weight = float(lt_model.weight) * float(gsim_rlz.weight)
             rlz = LtRealization(idx[i], lt_model.path, gsim_rlz, weight, i)
             self.gsim_by_trt.append(
@@ -416,9 +415,11 @@ class RlzsAssoc(collections.Mapping):
         rlzs_smpath = groupby(realizations, operator.attrgetter('sm_lt_path'))
         smodel_from = {sm.path: sm for sm in csm_info.source_models}
         for smpath, rlzs in rlzs_smpath.items():
+            sm = smodel_from[smpath]
+            trts = set(tm.trt for tm in sm.trt_models)
             assoc._add_realizations(
-                [r.ordinal for r in rlzs], smodel_from[smpath],
-                [rlz.gsim_rlz for rlz in rlzs])
+                [r.ordinal for r in rlzs], sm,
+                csm_info.gsim_lt.reduce(trts), [rlz.gsim_rlz for rlz in rlzs])
         assoc._init()
         return assoc
 
@@ -540,13 +541,14 @@ class CompositionInfo(object):
             object; if None, builds automatically a fake gsim logic tree
         """
         weight = 1
+        gsim_lt = gsimlt or logictree.GsimLogicTree.from_('FromFile')
         fakeSM = SourceModel(
             'fake', weight,  'b1', [TrtModel('*', eff_ruptures=1)],
-            gsimlt or logictree.GsimLogicTree.from_('FromFile'),
-            ordinal=0, samples=1)
-        return cls(seed=0, num_samples=0, source_models=[fakeSM])
+            gsim_lt, ordinal=0, samples=1)
+        return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM])
 
-    def __init__(self, seed, num_samples, source_models):
+    def __init__(self, gsim_lt, seed, num_samples, source_models):
+        self.gsim_lt = gsim_lt
         self.seed = seed
         self.num_samples = num_samples
         self.source_models = source_models
@@ -628,19 +630,21 @@ class CompositionInfo(object):
             # recompute the GSIM logic tree if needed
             if trts != set(smodel.gsim_lt.tectonic_region_types):
                 before = smodel.gsim_lt.get_num_paths()
-                smodel.gsim_lt.reduce(trts)
-                after = smodel.gsim_lt.get_num_paths()
+                gsim_lt = smodel.gsim_lt.reduce(trts)
+                after = gsim_lt.get_num_paths()
                 logging.warn('Reducing the logic tree of %s from %d to %d '
                              'realizations', smodel.name, before, after)
+            else:
+                gsim_lt = smodel.gsim_lt
             if self.num_samples:  # sampling
                 rnd = random.Random(random_seed + idx)
-                rlzs = logictree.sample(smodel.gsim_lt, smodel.samples, rnd)
+                rlzs = logictree.sample(gsim_lt, smodel.samples, rnd)
             else:  # full enumeration
-                rlzs = logictree.get_effective_rlzs(smodel.gsim_lt)
+                rlzs = logictree.get_effective_rlzs(gsim_lt)
             if rlzs:
                 indices = numpy.arange(idx, idx + len(rlzs))
                 idx += len(indices)
-                assoc._add_realizations(indices, smodel, rlzs)
+                assoc._add_realizations(indices, smodel, gsim_lt, rlzs)
             elif trts:
                 logging.warn('No realizations for %s, %s',
                              '_'.join(smodel.path), smodel.name)
@@ -686,7 +690,8 @@ class CompositeSourceModel(collections.Sequence):
     :param source_models:
         a list of :class:`openquake.commonlib.source.SourceModel` tuples
     """
-    def __init__(self, source_model_lt, source_models, set_weight=True):
+    def __init__(self, gsim_lt, source_model_lt, source_models,
+                 set_weight=True):
         self.source_model_lt = source_model_lt
         self.source_models = source_models
         self.source_info = ()  # set by the SourceFilterSplitter
@@ -695,7 +700,7 @@ class CompositeSourceModel(collections.Sequence):
             self.set_weights()
         # must go after set_weights to have the correct .num_ruptures
         self.info = CompositionInfo(
-            self.source_model_lt.seed,
+            gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples,
             [sm.get_skeleton() for sm in self.source_models])
 
