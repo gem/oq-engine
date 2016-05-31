@@ -351,12 +351,6 @@ class HazardCalculator(BaseCalculator):
             job_info.require_epsilons = bool(self.riskmodel.covs)
         self.job_info = job_info
         self.datastore.flush()
-        try:
-            gsim_lt = self.datastore['csm_info'].gsim_lt
-        except KeyError:
-            pass
-        else:
-            gsim_lt.check_imts(self.oqparam.imtls)
 
     def init(self):
         """
