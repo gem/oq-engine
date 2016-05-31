@@ -22,6 +22,7 @@ import collections
 from functools import partial
 import numpy
 
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -30,10 +31,8 @@ from openquake.hazardlib.calc.hazard_curve import (
     hazard_curves_per_trt, zero_curves, zero_maps,
     array_of_curves, ProbabilityMap)
 from openquake.risklib import scientific
-from openquake.commonlib import parallel, datastore, source
-from openquake.baselib.general import AccumDict
-
-from openquake.calculators import base, calc
+from openquake.commonlib import parallel, datastore, source, calc
+from openquake.calculators import base
 
 
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
@@ -222,8 +221,8 @@ class ClassicalCalculator(base.HazardCalculator):
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()  # trt_id -> eff_ruptures
         zd.bb_dict = {
-            (smodel.ordinal, site.id): BoundingBox(smodel.ordinal, site.id)
-            for site in self.sitecol
+            (smodel.ordinal, sid): BoundingBox(smodel.ordinal, sid)
+            for sid in self.sitecol.sids
             for smodel in self.csm.source_models
         } if self.oqparam.poes_disagg else {}
         return zd

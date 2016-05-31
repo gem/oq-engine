@@ -1,84 +1,131 @@
-calculators Package
-===================
+openquake.calculators package
+=============================
 
-:mod:`calculators` Package
---------------------------
+openquake.calculators.base module
+---------------------------------
 
-.. automodule:: openquake.calculators
+.. automodule:: openquake.calculators.base
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`calc` Module
-------------------
+openquake.calculators.calc module
+---------------------------------
 
 .. automodule:: openquake.calculators.calc
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`event_based` Module
-------------------------------
-
-.. automodule:: openquake.calculators.event_based
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-:mod:`event_based_risk` Module
--------------------------------
-
-.. automodule:: openquake.calculators.event_based_risk
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-:mod:`scenario` Module
-------------------------
-
-.. automodule:: openquake.calculators.scenario
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-:mod:`scenario_damage` Module
--------------------------------
-
-.. automodule:: openquake.calculators.scenario_damage
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-:mod:`scenario_risk` Module
------------------------------
-
-.. automodule:: openquake.calculators.scenario_risk
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-:mod:`classical` Module
---------------------------
+openquake.calculators.classical module
+--------------------------------------
 
 .. automodule:: openquake.calculators.classical
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`classical_damage` Module
--------------------------------
+openquake.calculators.classical_bcr module
+------------------------------------------
+
+.. automodule:: openquake.calculators.classical_bcr
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+openquake.calculators.classical_damage module
+---------------------------------------------
 
 .. automodule:: openquake.calculators.classical_damage
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`classical_risk` Module
------------------------------
+openquake.calculators.classical_risk module
+-------------------------------------------
 
 .. automodule:: openquake.calculators.classical_risk
     :members:
     :undoc-members:
     :show-inheritance:
 
+openquake.calculators.disaggregation module
+-------------------------------------------
+
+.. automodule:: openquake.calculators.disaggregation
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+openquake.calculators.event_based module
+----------------------------------------
+
+.. automodule:: openquake.calculators.event_based
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+openquake.calculators.event_based_risk module
+---------------------------------------------
+
+.. automodule:: openquake.calculators.event_based_risk
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+openquake.calculators.risk module
+---------------------------------
+
+.. automodule:: openquake.calculators.risk
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+openquake.calculators.scenario module
+-------------------------------------
+
+.. automodule:: openquake.calculators.scenario
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+openquake.calculators.scenario_damage module
+--------------------------------------------
+
+.. automodule:: openquake.calculators.scenario_damage
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+openquake.calculators.scenario_risk module
+------------------------------------------
+
+.. automodule:: openquake.calculators.scenario_risk
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+openquake.calculators.ucerf_event_based module
+----------------------------------------------
+
+.. automodule:: openquake.calculators.ucerf_event_based
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+openquake.calculators.views module
+----------------------------------
+
+.. automodule:: openquake.calculators.views
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: openquake.calculators
+    :members:
+    :undoc-members:
+    :show-inheritance:

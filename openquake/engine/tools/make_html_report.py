@@ -24,7 +24,7 @@ import itertools
 from docutils.examples import html_parts
 
 from openquake.commonlib.datastore import read
-from openquake.calculators.views import view_fullreport
+from openquake.commonlib.views import view_fullreport
 from openquake.engine.logs import dbcmd
 
 tablecounter = itertools.count(0)
@@ -90,12 +90,12 @@ class HtmlTable(object):
 
 
 JOB_STATS = '''
-SELECT id, user_name, start_time, stop_time, status FROM job WHERE id=?;
+SELECT id, user_name, start_time, stop_time, status FROM job WHERE id=%s;
 '''
 
 ALL_JOBS = '''
 SELECT id, user_name, status, ds_calc_dir FROM job
-WHERE start_time >= ? AND start_time < ? ORDER BY stop_time
+WHERE start_time >= %s AND start_time < %s ORDER BY stop_time
 '''
 
 PAGE_TEMPLATE = '''\
