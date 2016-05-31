@@ -88,23 +88,19 @@ class SourceModel(object):
     A container of TrtModel instances with some additional attributes
     describing the source model in the logic tree.
     """
-    def __init__(self, name, weight, path, trt_models, gsim_lt, ordinal,
+    def __init__(self, name, weight, path, trt_models, num_gsim_paths, ordinal,
                  samples):
         self.name = name
         self.weight = weight
         self.path = path
         self.trt_models = trt_models
-        self.gsim_lt = gsim_lt
+        self.num_gsim_paths = num_gsim_paths
         self.ordinal = ordinal
         self.samples = samples
 
     @property
     def num_sources(self):
         return sum(len(tm) for tm in self.trt_models)
-
-    def num_gsim_paths(self, number_of_logic_tree_samples=0):
-        return (self.samples if number_of_logic_tree_samples
-                else self.gsim_lt.get_num_paths())
 
     def get_skeleton(self):
         """
@@ -114,7 +110,7 @@ class SourceModel(object):
         trt_models = [TrtModel(tm.trt, [], tm.min_mag, tm.max_mag, tm.id)
                       for tm in self.trt_models]
         return self.__class__(self.name, self.weight, self.path, trt_models,
-                              self.gsim_lt, self.ordinal, self.samples)
+                              self.num_gsim_paths, self.ordinal, self.samples)
 
 
 def capitalize(words):
@@ -544,7 +540,7 @@ class CompositionInfo(object):
         gsim_lt = gsimlt or logictree.GsimLogicTree.from_('FromFile')
         fakeSM = SourceModel(
             'fake', weight,  'b1', [TrtModel('*', eff_ruptures=1)],
-            gsim_lt, ordinal=0, samples=1)
+            gsim_lt.get_num_paths(), ordinal=0, samples=1)
         return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM])
 
     def __init__(self, gsim_lt, seed, num_samples, source_models):
@@ -568,20 +564,23 @@ class CompositionInfo(object):
                 data.append((trt_model.id, trti[trt_model.trt],
                              trt_model.eff_ruptures, sm.ordinal))
         lst = [(sm.name, sm.weight, '_'.join(sm.path),
-                sm.gsim_lt.get_num_paths(), sm.samples)
+                sm.num_gsim_paths, sm.samples)
                for i, sm in enumerate(self.source_models)]
-        gsim_lt = self.source_models[0].gsim_lt
         return (dict(
             tm_data=numpy.array(data, trt_model_dt),
             sm_data=numpy.array(lst, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
-                     trts=trts, gsim_lt_xml=str(gsim_lt),
-                     gsim_fname=gsim_lt.fname))
+                     trts=trts, gsim_lt_xml=str(self.gsim_lt),
+                     gsim_fname=self.gsim_lt.fname))
 
     def __fromh5__(self, dic, attrs):
         tm_data = group_array(dic['tm_data'], 'sm_id')
         sm_data = dic['sm_data']
         vars(self).update(attrs)
+        if self.gsim_fname.endswith('.xml'):
+            self.gsim_lt = logictree.GsimLogicTree(self.gsim_fname)
+        else:  # fake file with the name of the GSIM
+            self.gsim_lt = logictree.GsimLogicTree.from_(self.gsim_fname)
         self.source_models = []
         for sm_id, rec in enumerate(sm_data):
             tdata = tm_data[sm_id]
@@ -590,12 +589,9 @@ class CompositionInfo(object):
                 for trt_id, trti, effrup, sm_id in tdata if effrup > 0]
             path = tuple(rec['path'].split('_'))
             trts = set(tm.trt for tm in trtmodels)
-            if self.gsim_fname.endswith('.xml'):
-                gsim_lt = logictree.GsimLogicTree(self.gsim_fname, trts)
-            else:  # fake file with the name of the GSIM
-                gsim_lt = logictree.GsimLogicTree.from_(self.gsim_fname)
+            num_gsim_paths = self.gsim_lt.reduce(trts).get_num_paths()
             sm = SourceModel(rec['name'], rec['weight'], path, trtmodels,
-                             gsim_lt, sm_id, rec['samples'])
+                             num_gsim_paths, sm_id, rec['samples'])
             self.source_models.append(sm)
 
     def get_num_rlzs(self, source_model=None):
@@ -628,14 +624,14 @@ class CompositionInfo(object):
                 if tm.eff_ruptures:
                     trts.add(tm.trt)
             # recompute the GSIM logic tree if needed
-            if trts != set(smodel.gsim_lt.tectonic_region_types):
-                before = smodel.gsim_lt.get_num_paths()
-                gsim_lt = smodel.gsim_lt.reduce(trts)
+            if trts != set(self.gsim_lt.tectonic_region_types):
+                before = self.gsim_lt.get_num_paths()
+                gsim_lt = self.gsim_lt.reduce(trts)
                 after = gsim_lt.get_num_paths()
                 logging.warn('Reducing the logic tree of %s from %d to %d '
                              'realizations', smodel.name, before, after)
             else:
-                gsim_lt = smodel.gsim_lt
+                gsim_lt = self.gsim_lt
             if self.num_samples:  # sampling
                 rnd = random.Random(random_seed + idx)
                 rlzs = logictree.sample(gsim_lt, smodel.samples, rnd)
