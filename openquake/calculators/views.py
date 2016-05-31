@@ -198,10 +198,11 @@ def view_csm_info(token, dstore):
     rows = []
     for sm in csm_info.source_models:
         num_rlzs = len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
-        num_paths = sm.num_gsim_paths(csm_info.num_samples)
+        num_paths = sm.num_gsim_paths
         link = "`%s <%s>`_" % (sm.name, sm.name)
         row = ('_'.join(sm.path), sm.weight, link,
-               classify_gsim_lt(sm.gsim_lt), '%d/%d' % (num_rlzs, num_paths))
+               classify_gsim_lt(csm_info.gsim_lt), '%d/%d' %
+               (num_rlzs, num_paths))
         rows.append(row)
     return rst_table(rows, header)
 
