@@ -28,7 +28,6 @@ import collections
 import numpy
 import h5py
 
-from openquake.calculators import base
 from openquake.baselib.general import humansize, groupby, AccumDict
 from openquake.baselib.performance import perf_dt
 from openquake.hazardlib.gsim.base import ContextMaker
@@ -555,25 +554,6 @@ def stats(name, array, *extras):
     """
     return (name, numpy.mean(array), numpy.std(array, ddof=1),
             numpy.min(array), numpy.max(array), len(array)) + extras
-
-
-@view.add('task_info')
-def view_task_info(token, dstore):
-    """
-    Display statistical information about the tasks performance
-    """
-    pdata = dstore['performance_data'].value
-    tasks = [calc.core_task.__name__ for calc in base.calculators.values()]
-    data = ['measurement mean stddev min max num_tasks'.split()]
-    for task in set(tasks):  # strip duplicates
-        records = pdata[pdata['operation'] == 'total ' + task]
-        if len(records):
-            for stat in ('time_sec', 'memory_mb'):
-                val = records[stat]
-                data.append(stats(task + '.' + stat, val))
-    if len(data) == 1:
-        return 'Not available'
-    return rst_table(data)
 
 
 @view.add('assets_by_site')

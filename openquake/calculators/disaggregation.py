@@ -32,7 +32,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import parallel
-from openquake.calculators.calc import gen_ruptures_for_site
+from openquake.commonlib.calc import gen_ruptures_for_site
 from openquake.calculators import base, classical
 
 DISAGG_RES_FMT = 'disagg/poe-%(poe)s-rlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
