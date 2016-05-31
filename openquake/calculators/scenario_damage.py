@@ -19,7 +19,7 @@
 import itertools
 import numpy
 
-from openquake.commonlib import parallel, riskmodels
+from openquake.commonlib import parallel, riskmodels, calc
 from openquake.risklib import scientific
 from openquake.calculators import base
 
@@ -144,7 +144,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         base.RiskCalculator.pre_execute(self)
         self.monitor.consequence_models = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
-        self.etags, gmfs = base.get_gmfs(self.datastore)
+        self.etags, gmfs = calc.get_gmfs(self.datastore)
         self.riskinputs = self.build_riskinputs(gmfs)
         self.monitor.taxonomies = sorted(self.taxonomies)
 
