@@ -1296,7 +1296,8 @@ class GsimLogicTree(object):
                 except AttributeError:
                     continue
                 for imt in imts:
-                    coeffs[imt]  # raise a KeyError if not defined
+                    if imt.startswith('SA'):
+                        coeffs[imt]  # raise a KeyError if not defined
 
     def __str__(self):
         """
