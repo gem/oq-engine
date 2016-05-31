@@ -424,15 +424,11 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
 
         gsim_file = oqparam.inputs.get('gsim_logic_tree')
         if gsim_file:  # check TRTs
-            gsim_lt = get_gsim_lt(oqparam, trts)
             for trt_model in trt_models:
                 if trt_model.trt not in gsim_lt.values:
                     raise ValueError(
                         "Found in %r a tectonic region type %r inconsistent "
                         "with the ones in %r" % (sm, trt_model.trt, gsim_file))
-                trt_model.gsims = gsim_lt.values[trt_model.trt]
-        else:
-            gsim_lt = logictree.DummyGsimLogicTree()
         weight = rlz.weight / num_samples
         num_gsim_paths = (num_samples if oqparam.number_of_logic_tree_samples
                           else gsim_lt.get_num_paths())
