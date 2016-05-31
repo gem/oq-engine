@@ -31,8 +31,9 @@ import numpy
 from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
+from openquake.risklib import riskinput, __version__
 from openquake.commonlib import readinput, riskmodels, datastore, source
-from openquake.commonlib.oqvalidation import OqParam, __version__
+from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import starmap, executor
 from openquake.commonlib.views import view, rst_table, stats
 from openquake.baselib.python3compat import with_metaclass
