@@ -45,7 +45,7 @@ from openquake.hazardlib.source.characteristic import CharacteristicFaultSource
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 
-from openquake.calculators.calc import MAX_INT
+from openquake.commonlib.calc import MAX_INT
 from openquake.commonlib.sourceconverter import SourceConverter
 
 
