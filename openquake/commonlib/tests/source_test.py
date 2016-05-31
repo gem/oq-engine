@@ -769,7 +769,7 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         # the example has number_of_logic_tree_samples = 1
         sitecol = readinput.get_site_collection(oqparam)
         csm = readinput.get_composite_source_model(oqparam, sitecol)
-        self.assertEqual(repr(csm[0].gsim_lt), '''\
+        self.assertEqual(repr(csm.gsim_lt), '''\
 <GsimLogicTree
 Active Shallow Crust,b1,SadighEtAl1997(),w=0.5
 Active Shallow Crust,b2,ChiouYoungs2008(),w=0.5
