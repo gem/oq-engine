@@ -676,7 +676,7 @@ def _gen_writers(dstore, writercls, root):
                 if root.endswith('-rlzs'):
                     for rlz in rlzs:
                         dest = dstore.build_fname(
-                            '%s-%s-%s%s' %
+                            '%s-%s%s%s' %
                             (root[:-5],  # strip -rlzs
                              loss_type, poe_str, '_ins' if ins else ''),
                             rlz, 'xml')
