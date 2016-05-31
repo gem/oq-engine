@@ -1291,12 +1291,12 @@ class GsimLogicTree(object):
         """
         for trt in self.values:
             for gsim in self.values[trt]:
-                imtset = gsim.get_imts()
-                if imtset:
-                    missing = sorted(set(imts) - imtset)
-                    if missing:
-                        raise ValueError(
-                            '%s not defined for %s' % (missing, gsim))
+                try:
+                    coeffs = gsim.COEFFS
+                except AttributeError:
+                    continue
+                for imt in imts:
+                    coeffs[imt]  # raise a KeyError if not defined
 
     def __str__(self):
         """
