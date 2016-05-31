@@ -603,7 +603,8 @@ class CompositionInfo(object):
             return sum(self.get_num_rlzs(sm) for sm in self.source_models)
         if self.num_samples:
             return source_model.samples
-        return source_model.gsim_lt.get_num_paths()
+        trts = set(tm.trt for tm in source_model.trt_models)
+        return self.gsim_lt.reduce(trts).get_num_paths()
 
     def get_rlzs_assoc(self, count_ruptures=None):
         """
@@ -615,6 +616,7 @@ class CompositionInfo(object):
         assoc = RlzsAssoc(self)
         random_seed = self.seed
         idx = 0
+        trtset = set(self.gsim_lt.tectonic_region_types)
         for i, smodel in enumerate(self.source_models):
             # collect the effective tectonic region types and ruptures
             trts = set()
@@ -624,12 +626,13 @@ class CompositionInfo(object):
                 if tm.eff_ruptures:
                     trts.add(tm.trt)
             # recompute the GSIM logic tree if needed
-            if trts != set(self.gsim_lt.tectonic_region_types):
+            if trtset != trts:
                 before = self.gsim_lt.get_num_paths()
                 gsim_lt = self.gsim_lt.reduce(trts)
                 after = gsim_lt.get_num_paths()
-                logging.warn('Reducing the logic tree of %s from %d to %d '
-                             'realizations', smodel.name, before, after)
+                if before > after:
+                    logging.warn('Reducing the logic tree of %s from %d to %d '
+                                 'realizations', smodel.name, before, after)
             else:
                 gsim_lt = self.gsim_lt
             if self.num_samples:  # sampling
