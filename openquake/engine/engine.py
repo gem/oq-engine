@@ -25,10 +25,11 @@ import signal
 import traceback
 
 from openquake.baselib.performance import Monitor
-from openquake.commonlib import valid, parallel, readinput
+from openquake.risklib import valid
+from openquake.commonlib import parallel, readinput
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import export, datastore
-from openquake.calculators import base, views
+from openquake.commonlib import export, datastore, views
+from openquake.calculators import base
 from openquake.engine import logs, config
 
 TERMINATE = valid.boolean(

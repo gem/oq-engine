@@ -24,10 +24,11 @@ import pstats
 import io
 
 from openquake.baselib import performance, general
-from openquake.commonlib import sap, readinput, valid, datastore, oqvalidation
+from openquake.risklib import valid
+from openquake.commonlib import sap, readinput, datastore, oqvalidation, views
 from openquake.commonlib.concurrent_futures_process_mpatch import (
     concurrent_futures_process_monkeypatch)
-from openquake.calculators import base, views
+from openquake.calculators import base
 CT = oqvalidation.OqParam.concurrent_tasks.default
 
 calc_path = None  # set only when the flag --slowest is given
@@ -61,7 +62,7 @@ def get_pstats(pstatfile, n):
     # ====== ======= ========================================================
     # ncalls cumtime path
     # ====== ======= ========================================================
-    # 1      33.502  commonlib/commands/run.py:77(_run)
+    # 1      33.502  commands/run.py:77(_run)
     # 1      33.483  calculators/base.py:110(run)
     # 1      25.166  calculators/classical.py:115(execute)
     # 1      25.104  commonlib/parallel.py:249(apply_reduce)
