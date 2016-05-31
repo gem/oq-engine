@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a document about the architecture of the engine
   * The realizations are now exported as a CSV file
   * Escaped taxonomies in the datastore
   * The Web UI log tool is now escaping the HTML
