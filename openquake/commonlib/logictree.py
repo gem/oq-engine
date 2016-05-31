@@ -1296,10 +1296,9 @@ class GsimLogicTree(object):
         Reduce the GsimLogicTree.
 
         :param trts: a subset of tectonic region types
+        :returns: a reduced GsimLogicTree instance
         """
-        self.tectonic_region_types = sorted(trts)
-        self.values = collections.defaultdict(list)
-        self.all_trts, self.branches = self._build_trts_branches()
+        return self.__class__(self.fname, sorted(trts), ltnode=self._ltnode)
 
     def get_num_branches(self):
         """
