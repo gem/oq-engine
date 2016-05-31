@@ -26,6 +26,12 @@
         }
     };
 
+    var htmlEscape = function (record) {
+        // record[3] is the log message
+        record[3] = record[3].replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        return record
+    };
+ 
     var dialog = (function ()
                   {
                       var pleaseWaitDiv = $('<div class="modal hide" id="pleaseWaitDialog" data-backdrop="static" data-keyboard="false"><div class="modal-header"><h1>Processing...</h1></div><div class="modal-body"><div class="progress progress-striped active"><div class="bar" style="width: 0%;"></div></div></div></div>');
@@ -261,7 +267,7 @@
                                                   obj.logLinesAll++;
                                                   continue;
                                               }
-                                              out += '<p ' + (obj.logLines % 2 == 1 ? 'style="background-color: #ffffff;"' : '') + '>' + data[s] + '</p>';
+                                              out += '<p ' + (obj.logLines % 2 == 1 ? 'style="background-color: #ffffff;"' : '') + '>' + htmlEscape(data[s]) + '</p>';
                                               obj.logLines++;
                                               obj.logLinesAll++;
                                           }
