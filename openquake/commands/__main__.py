@@ -20,11 +20,12 @@
 import os
 import importlib
 
-from openquake.commonlib import commands, sap, __version__
+from openquake.commonlib import sap, __version__
+from openquake import commands
 
 
 def oq_lite():
-    modnames = ['openquake.commonlib.commands.%s' % mod[:-3]
+    modnames = ['openquake.commands.%s' % mod[:-3]
                 for mod in os.listdir(commands.__path__[0])
                 if mod.endswith('.py') and not mod.startswith('_')]
     parsers = [importlib.import_module(modname).parser for modname in modnames]

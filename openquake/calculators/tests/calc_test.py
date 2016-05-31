@@ -18,7 +18,7 @@
 
 import unittest
 import numpy
-from openquake.calculators import calc
+from openquake.commonlib import calc
 
 aaae = numpy.testing.assert_array_almost_equal
 
