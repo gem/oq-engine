@@ -16,4 +16,5 @@ Internal structure
    tom
    calc
    site
+   probability_map           
    other
