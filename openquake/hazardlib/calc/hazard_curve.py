@@ -56,7 +56,7 @@ def zero_maps(num_sites, imts, poes=()):
     """
     # numpy dtype for the hazard maps
     if poes:
-        imt_dt = numpy.dtype([('%s~%s' % (imt, poe), numpy.float32)
+        imt_dt = numpy.dtype([('%s-%s' % (imt, poe), numpy.float32)
                               for imt in imts for poe in poes])
     else:
         imt_dt = numpy.dtype([(imt, numpy.float32) for imt in imts])
