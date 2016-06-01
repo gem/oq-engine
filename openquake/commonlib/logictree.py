@@ -39,6 +39,7 @@ from xml.etree import ElementTree as etree
 from openquake.baselib.general import groupby
 from openquake.baselib.python3compat import raise_
 import openquake.hazardlib
+from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.gsim_table import GMPETable
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo
@@ -1292,17 +1293,17 @@ class GsimLogicTree(object):
         """
         for trt in self.values:
             for gsim in self.values[trt]:
-                try:
-                    coeffs = gsim.COEFFS
-                except AttributeError:
-                    continue
-                for imt in imts:
-                    if imt.startswith('SA'):
-                        try:
-                            coeffs[from_string(imt)]
-                        except KeyError:
-                            raise ValueError('%s is not defined for %s' %
-                                             (imt, gsim))
+                for attr in dir(gsim):
+                    coeffs = getattr(gsim, attr)
+                    if not isinstance(coeffs, CoeffsTable):
+                        continue
+                    for imt in imts:
+                        if imt.startswith('SA'):
+                            try:
+                                coeffs[from_string(imt)]
+                            except KeyError:
+                                raise ValueError('%s is not defined for %s' %
+                                                 (imt, gsim))
 
     def __str__(self):
         """
