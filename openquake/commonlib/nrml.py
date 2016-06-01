@@ -648,6 +648,8 @@ class DisaggNode(LiteralNode):
         magBinEdges=valid.integers,
         distBinEdges=valid.integers,
         epsBinEdges=valid.integers,
+        lonBinEdges=valid.longitudes,
+        latBinEdges=valid.latitudes,
         type=valid.namelist,
         dims=valid.positiveints,
         poE=valid.probability,
