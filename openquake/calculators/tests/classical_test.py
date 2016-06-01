@@ -43,6 +43,16 @@ class ClassicalTestCase(CalculatorTestCase):
             case_1.__file__)
 
     @attr('qa', 'hazard', 'classical')
+    def test_sa_period_too_big(self):
+        imtls = '{"SA(4.1)": [0.1, 0.4, 0.6]}'
+        with self.assertRaises(ValueError) as ctx:
+            self.run_calc(
+                case_1.__file__, 'job.ini',
+                intensity_measure_types_and_levels=imtls)
+        self.assertEqual('SA(4.1) is not defined for SadighEtAl1997()',
+                         str(ctx.exception))
+
+    @attr('qa', 'hazard', 'classical')
     def test_case_2(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
