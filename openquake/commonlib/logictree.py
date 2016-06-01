@@ -1302,8 +1302,9 @@ class GsimLogicTree(object):
                             try:
                                 coeffs[from_string(imt)]
                             except KeyError:
-                                raise ValueError('%s is not defined for %s' %
-                                                 (imt, gsim))
+                                raise ValueError(
+                                    '%s is out of the period range defined '
+                                    'for %s' % (imt, gsim))
 
     def __str__(self):
         """
