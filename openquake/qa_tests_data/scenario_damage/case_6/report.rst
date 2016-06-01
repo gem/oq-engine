@@ -1,27 +1,27 @@
 oq-test03, depth=15km
 =====================
 
-gem-tstation:/home/michele/ssd/calc_19620.hdf5 updated Wed May 25 08:32:47 2016
+gem-tstation:/home/michele/ssd/calc_22545.hdf5 updated Tue May 31 15:36:57 2016
 
 num_sites = 1, sitecol = 739 B
 
 Parameters
 ----------
-============================ ===================
-calculation_mode             'scenario_damage'  
-number_of_logic_tree_samples 0                  
-maximum_distance             {'default': 300}   
-investigation_time           None               
-ses_per_logic_tree_path      1                  
-truncation_level             3.0                
-rupture_mesh_spacing         0.1                
-complex_fault_mesh_spacing   0.1                
-width_of_mfd_bin             None               
-area_source_discretization   None               
-random_seed                  3                  
-master_seed                  0                  
-oqlite_version               '0.13.0-git1cc9966'
-============================ ===================
+============================ ==================
+calculation_mode             'scenario_damage' 
+number_of_logic_tree_samples 0                 
+maximum_distance             {'default': 300}  
+investigation_time           None              
+ses_per_logic_tree_path      1                 
+truncation_level             3.0               
+rupture_mesh_spacing         0.1               
+complex_fault_mesh_spacing   0.1               
+width_of_mfd_bin             None              
+area_source_discretization   None              
+random_seed                  3                 
+master_seed                  0                 
+engine_version               '2.0.0-git4fb4450'
+============================ ==================
 
 Input files
 -----------
@@ -40,7 +40,7 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,SadighEtAl1997(): ['<0,b_1,b1,w=1.0>']>
+  0,SadighEtAl1997(): ['<0,b_1~b1,w=1.0>']>
 
 Exposure model
 --------------
@@ -49,15 +49,15 @@ Exposure model
 #taxonomies 5
 =========== =
 
-============== ===== ====== === === ========= ==========
-taxonomy       mean  stddev min max num_sites num_assets
-MUR/LWAL/HEX:1 1.000 NaN    1   1   1         1         
-MUR/LWAL/HEX:2 1.000 NaN    1   1   1         1         
-MUR/LWAL/HEX:3 1.000 NaN    1   1   1         1         
-MUR/LWAL/HEX:4 1.000 NaN    1   1   1         1         
-MUR/LWAL/HEX:5 1.000 NaN    1   1   1         1         
-*ALL*          5.000 NaN    5   5   1         5         
-============== ===== ====== === === ========= ==========
+========================== ===== ====== === === ========= ==========
+taxonomy                   mean  stddev min max num_sites num_assets
+MUR%252FLWAL%252FHEX%253A1 1.000 NaN    1   1   1         1         
+MUR%252FLWAL%252FHEX%253A2 1.000 NaN    1   1   1         1         
+MUR%252FLWAL%252FHEX%253A3 1.000 NaN    1   1   1         1         
+MUR%252FLWAL%252FHEX%253A4 1.000 NaN    1   1   1         1         
+MUR%252FLWAL%252FHEX%253A5 1.000 NaN    1   1   1         1         
+*ALL*                      5.000 NaN    5   5   1         5         
+========================== ===== ====== === === ========= ==========
 
 Information about the tasks
 ---------------------------
@@ -71,5 +71,5 @@ operation               time_sec  memory_mb counts
 reading exposure        0.004     0.0       1     
 filtering sites         0.001     0.0       1     
 computing gmfs          0.001     0.0       1     
-reading site collection 7.153E-06 0.0       1     
+reading site collection 6.914E-06 0.0       1     
 ======================= ========= ========= ======

@@ -33,16 +33,15 @@ from openquake.hazardlib.calc.hazard_curve import (
     array_of_curves, ProbabilityMap)
 from openquake.hazardlib import geo
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import readinput, parallel, datastore, oqvalidation
+from openquake.commonlib import readinput, parallel, datastore, calc
 from openquake.commonlib.util import max_rel_diff_index, Rupture
 from openquake.risklib.riskinput import create
 from openquake.calculators import base
-from openquake.calculators.calc import gmvs_to_poe_map
+from openquake.commonlib.calc import gmvs_to_poe_map
 from openquake.calculators.classical import ClassicalCalculator
 
 # ######################## rupture calculator ############################ #
 
-U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -50,7 +49,6 @@ POEMAP = 1
 
 event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
-gmv_dt = numpy.dtype([('sid', U16), ('eid', U32), ('imti', U8), ('gmv', F32)])
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface):
@@ -341,35 +339,6 @@ def build_eb_ruptures(
                             src.source_id, src.trt_model_id, serial)
 
 
-def fix_minimum_intensity(min_iml, imts):
-    """
-    :param min_iml: a dictionary, possibly with a 'default' key
-    :param imts: an ordered list of IMTs
-    :returns: a numpy array of intensities, one per IMT
-
-    Make sure the dictionary minimum_intensity (provided by the user in the
-    job.ini file) is filled for all intensity measure types and has no key
-    named 'default'. Here is how it works:
-
-    >>> min_iml = {'PGA': 0.1, 'default': 0.05}
-    >>> fix_minimum_intensity(min_iml, ['PGA', 'PGV'])
-    array([ 0.1 ,  0.05], dtype=float32)
-    >>> sorted(min_iml.items())
-    [('PGA', 0.1), ('PGV', 0.05)]
-    """
-    if min_iml:
-        for imt in imts:
-            try:
-                min_iml[imt] = oqvalidation.getdefault(min_iml, imt)
-            except KeyError:
-                raise ValueError(
-                    'The parameter `minimum_intensity` in the job.ini '
-                    'file is missing the IMT %r' % imt)
-    if 'default' in min_iml:
-        del min_iml['default']
-    return F32([min_iml.get(imt, 0) for imt in imts])
-
-
 @base.calculators.add('event_based_rupture')
 class EventBasedRuptureCalculator(ClassicalCalculator):
     """
@@ -387,7 +356,8 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         oq = self.oqparam
         self.random_seed = oq.random_seed
         self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
-        self.min_iml = fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
+        self.min_iml = calc.fix_minimum_intensity(
+            oq.minimum_intensity, oq.imtls)
         self.rup_data = {}
 
     def count_eff_ruptures(self, ruptures_by_trt_id, trt_model):
@@ -474,25 +444,6 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
 
 # ######################## GMF calculator ############################ #
 
-
-class GmfColl(object):
-    """
-    A class to collect GMFs in memory, with methods .save and .by_rlzi
-    returning a dictionary rlzi -> gmv_dt
-    """
-    def __init__(self, imts, rlzs):
-        self.data = collections.defaultdict(list)  # rlzi -> data
-
-    def save(self, eid, imti, rlz, gmf, sids):
-        rlzi = rlz.ordinal
-        for gmv, sid in zip(gmf, sids):
-            self.data[rlzi].append((sid, eid, imti, gmv))
-
-    def by_rlzi(self):
-        return {rlzi: numpy.array(self.data[rlzi], gmv_dt)
-                for rlzi in self.data}
-
-
 @parallel.litetask
 def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc,
                             min_iml, monitor):
@@ -516,7 +467,7 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc,
     trunc_level = oq.truncation_level
     correl_model = readinput.get_correl_model(oq)
     gmfadict = create(
-        GmfColl, eb_ruptures, sitecol, imts, rlzs_assoc, trunc_level,
+        calc.GmfColl, eb_ruptures, sitecol, imts, rlzs_assoc, trunc_level,
         correl_model, min_iml, monitor).by_rlzi()
     result = {rlzi: [gmfadict[rlzi], None]
               if oq.ground_motion_fields else [None, None]
@@ -560,7 +511,7 @@ class EventBasedCalculator(ClassicalCalculator):
         if self.oqparam.ground_motion_fields:
             for rlz in self.rlzs_assoc.realizations:
                 self.datastore.create_dset(
-                    'gmf_data/%04d' % rlz.ordinal, gmv_dt)
+                    'gmf_data/%04d' % rlz.ordinal, calc.gmv_dt)
 
     def combine_curves_and_save_gmfs(self, acc, res):
         """
@@ -598,7 +549,8 @@ class EventBasedCalculator(ClassicalCalculator):
             return
         monitor = self.monitor(self.core_task.__name__)
         monitor.oqparam = oq
-        min_iml = fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
+        min_iml = calc.fix_minimum_intensity(
+            oq.minimum_intensity, oq.imtls)
         acc = parallel.apply_reduce(
             self.core_task.__func__,
             (self.sesruptures, self.sitecol, oq.imtls, self.rlzs_assoc,
