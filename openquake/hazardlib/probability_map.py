@@ -130,9 +130,9 @@ class ProbabilityMap(dict):
 
     ~p = 1 - p
 
-    and the inclusive or on the underlying curves:
+    and the "inclusive or" `|` on the underlying curves:
 
-    m = m1 + m2 = {sid: m1[sid] | m2[sid] for sid in all_sids}
+    m = m1 | m2 = {sid: m1[sid] | m2[sid] for sid in all_sids}
 
     Such operators are implemented efficiently at the numpy level, by
     dispatching on the underlying array. Moreover there is a classmethod
