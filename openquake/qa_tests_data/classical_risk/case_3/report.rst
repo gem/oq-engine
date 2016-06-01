@@ -1,29 +1,29 @@
 Classical PSHA - Loss fractions QA test
 =======================================
 
-gem-tstation:/home/michele/ssd/calc_19614.hdf5 updated Wed May 25 08:31:47 2016
+gem-tstation:/home/michele/ssd/calc_22539.hdf5 updated Tue May 31 15:35:56 2016
 
 num_sites = 13, sitecol = 1.26 KB
 
 Parameters
 ----------
-============================ ===================
-calculation_mode             'classical_risk'   
-number_of_logic_tree_samples 1                  
-maximum_distance             {'default': 200.0} 
-investigation_time           50.0               
-ses_per_logic_tree_path      1                  
-truncation_level             3.0                
-rupture_mesh_spacing         5.0                
-complex_fault_mesh_spacing   5.0                
-width_of_mfd_bin             0.2                
-area_source_discretization   10.0               
-random_seed                  23                 
-master_seed                  0                  
-avg_losses                   False              
-sites_per_tile               10000              
-oqlite_version               '0.13.0-git1cc9966'
-============================ ===================
+============================ ===============================
+calculation_mode             'classical_risk'               
+number_of_logic_tree_samples 1                              
+maximum_distance             {'Active Shallow Crust': 200.0}
+investigation_time           50.0                           
+ses_per_logic_tree_path      1                              
+truncation_level             3.0                            
+rupture_mesh_spacing         5.0                            
+complex_fault_mesh_spacing   5.0                            
+width_of_mfd_bin             0.2                            
+area_source_discretization   10.0                           
+random_seed                  23                             
+master_seed                  0                              
+avg_losses                   False                          
+sites_per_tile               10000                          
+engine_version               '2.0.0-git4fb4450'             
+============================ ===============================
 
 Input files
 -----------
@@ -60,7 +60,7 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,ChiouYoungs2008(): ['<0,b1,b1,w=1.0>']>
+  0,ChiouYoungs2008(): ['<0,b1~b1,w=1.0>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -72,10 +72,10 @@ source_model.xml 0      Active Shallow Crust 2           1613         53
 
 Informational data
 ------------------
-================ ==============
-hostname         'gem-tstation'
-require_epsilons True          
-================ ==============
+================ ============
+hostname         gem-tstation
+require_epsilons 1           
+================ ============
 
 Exposure model
 --------------
@@ -98,8 +98,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            232       AreaSource   40     1         6.640E-04   0.0        1.817    
-0            225       AreaSource   13     1         6.959E-04   0.0        0.312    
+0            232       AreaSource   40     1         7.231E-04   0.0        2.049    
+0            225       AreaSource   13     1         7.942E-04   0.0        0.240    
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -107,17 +107,17 @@ Computation times by source typology
 ============ =========== ========== ========= ======
 source_class filter_time split_time calc_time counts
 ============ =========== ========== ========= ======
-AreaSource   0.001       0.0        2.129     2     
+AreaSource   0.002       0.0        2.288     2     
 ============ =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
 ======================== ===== ====== ===== ===== =========
 measurement              mean  stddev min   max   num_tasks
-classical.time_sec       1.068 1.063  0.316 1.820 2        
-classical.memory_mb      4.189 0.312  3.969 4.410 2        
-classical_risk.time_sec  0.415 0.024  0.377 0.470 13       
-classical_risk.memory_mb 0.696 0.550  0.0   1.160 13       
+classical.time_sec       1.149 1.280  0.243 2.054 2        
+classical.memory_mb      3.846 0.367  3.586 4.105 2        
+classical_risk.time_sec  0.354 0.041  0.310 0.424 13       
+classical_risk.memory_mb 0.729 0.348  0.055 1.039 13       
 ======================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -125,22 +125,22 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total classical_risk           5.393     1.160     13    
-computing riskmodel            5.376     0.0       13    
-total classical                2.136     4.410     2     
-making contexts                0.954     0.0       2,132 
-reading composite source model 0.921     0.0       1     
-get closest points             0.362     0.0       1,613 
-computing poes                 0.279     0.0       1,613 
-managing sources               0.036     0.0       1     
-filtering sources              0.016     0.0       15    
-store source_info              0.012     0.0       1     
+total classical_risk           4.605     1.039     13    
+computing riskmodel            4.591     0.0       13    
+total classical                2.297     4.105     2     
+making contexts                1.011     0.0       2,132 
+reading composite source model 0.923     0.0       1     
+get closest points             0.408     0.0       1,613 
+computing poes                 0.315     0.0       1,613 
+managing sources               0.030     0.0       1     
+filtering sources              0.012     0.0       15    
 reading exposure               0.007     0.0       1     
-saving probability maps        0.003     0.0       1     
+store source_info              0.005     0.0       1     
 building hazard                0.002     0.0       13    
-save curves_by_rlz             0.002     0.0       1     
-building riskinputs            0.001     0.0       1     
-aggregate curves               7.300E-04 0.0       2     
-combine curves_by_rlz          9.203E-05 0.0       1     
+saving probability maps        0.001     0.0       1     
+save curves_by_rlz             8.738E-04 0.0       1     
+building riskinputs            7.119E-04 0.0       1     
+aggregate curves               3.681E-04 0.0       2     
+combine curves_by_rlz          5.102E-05 0.0       1     
 reading site collection        2.098E-05 0.0       1     
 ============================== ========= ========= ======

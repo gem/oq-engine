@@ -33,7 +33,7 @@ from openquake.commonlib.writers import (
     scientificformat, floatformat, write_csv)
 from openquake.commonlib import writers, hazard_writers, util, readinput
 from openquake.risklib.riskinput import create
-from openquake.calculators import calc, base, event_based
+from openquake.commonlib import calc
 
 F32 = numpy.float32
 
@@ -481,7 +481,7 @@ def export_gmf_spec(ekey, dstore, spec):
     writer = writers.CsvWriter(fmt='%.5f')
     etags = dstore['etags']
     if 'scenario' in oq.calculation_mode:
-        _, gmfs_by_trt_gsim = base.get_gmfs(dstore)
+        _, gmfs_by_trt_gsim = calc.get_gmfs(dstore)
         gsims = sorted(gsim for trt, gsim in gmfs_by_trt_gsim)
         imts = gmfs_by_trt_gsim[0, gsims[0]].dtype.names
         gmf_dt = numpy.dtype([(str(gsim), F32) for gsim in gsims])
@@ -561,7 +561,7 @@ def get_rup_idx(ebrup, etag):
 
 def _get_gmfs(dstore, serial, eid):
     oq = dstore['oqparam']
-    min_iml = event_based.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
+    min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     sitecol = dstore['sitecol'].complete
     N = len(sitecol.complete)
@@ -571,7 +571,7 @@ def _get_gmfs(dstore, serial, eid):
     rlzs = [rlz for gsim in map(str, gsims)
             for rlz in rlzs_assoc[rup.trt_id, gsim]]
     gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F32) for rlz in rlzs])
-    gmfadict = create(event_based.GmfColl,
+    gmfadict = create(calc.GmfColl,
                       [rup], sitecol, oq.imtls, rlzs_assoc,
                       oq.truncation_level, correl_model, min_iml).by_rlzi()
     for imti, imt in enumerate(oq.imtls):
@@ -589,7 +589,7 @@ def export_gmf_scenario(ekey, dstore):
     if 'scenario' in oq.calculation_mode:
         fields = ['%03d' % i for i in range(len(dstore['etags']))]
         dt = numpy.dtype([(f, F32) for f in fields])
-        etags, gmfs_by_trt_gsim = base.get_gmfs(dstore)
+        etags, gmfs_by_trt_gsim = calc.get_gmfs(dstore)
         sitemesh = dstore['sitemesh']
         writer = writers.CsvWriter(fmt='%.5f')
         for (trt, gsim), gmfs_ in gmfs_by_trt_gsim.items():
