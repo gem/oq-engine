@@ -1,27 +1,27 @@
 Calculation of the ground motion fields for a scenario
 ======================================================
 
-gem-tstation:/home/michele/ssd/calc_19624.hdf5 updated Wed May 25 08:32:47 2016
+gem-tstation:/home/michele/ssd/calc_22549.hdf5 updated Tue May 31 15:36:58 2016
 
-num_sites = 11, sitecol = 834 B
+num_sites = 11, sitecol = 825 B
 
 Parameters
 ----------
-============================ ===================
-calculation_mode             'scenario'         
-number_of_logic_tree_samples 0                  
-maximum_distance             {'default': 200}   
-investigation_time           None               
-ses_per_logic_tree_path      1                  
-truncation_level             3.0                
-rupture_mesh_spacing         15.0               
-complex_fault_mesh_spacing   15.0               
-width_of_mfd_bin             None               
-area_source_discretization   None               
-random_seed                  3                  
-master_seed                  0                  
-oqlite_version               '0.13.0-git1cc9966'
-============================ ===================
+============================ ==================
+calculation_mode             'scenario'        
+number_of_logic_tree_samples 0                 
+maximum_distance             {'default': 200}  
+investigation_time           None              
+ses_per_logic_tree_path      1                 
+truncation_level             3.0               
+rupture_mesh_spacing         15.0              
+complex_fault_mesh_spacing   15.0              
+width_of_mfd_bin             None              
+area_source_discretization   None              
+random_seed                  3                 
+master_seed                  0                 
+engine_version               '2.0.0-git4fb4450'
+============================ ==================
 
 Input files
 -----------
@@ -39,7 +39,7 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,ChiouYoungs2008(): ['<0,b_1,b1,w=1.0>']>
+  0,ChiouYoungs2008(): ['<0,b_1~b1,w=1.0>']>
 
 Exposure model
 --------------
@@ -69,5 +69,5 @@ operation               time_sec  memory_mb counts
 reading exposure        0.007     0.0       1     
 filtering sites         0.003     0.0       1     
 computing gmfs          0.001     0.0       1     
-reading site collection 6.914E-06 0.0       1     
+reading site collection 6.199E-06 0.0       1     
 ======================= ========= ========= ======
