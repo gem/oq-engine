@@ -336,14 +336,13 @@ def export_uhs_xml(ekey, dstore):
         _, periods = calc.get_imts_periods(oq.imtls)
         uhs = calc.make_uhs(hmaps, oq.imtls, oq.poes)
         for poe in oq.poes:
-            poe_str = 'poe~%s' % poe
             fname = hazard_curve_name(
                 dstore, ekey, kind + '-%s' % poe, rlzs_assoc)
             writer = hazard_writers.UHSXMLWriter(
                 fname, periods=periods, poe=poe,
                 investigation_time=oq.investigation_time, **metadata)
             data = []
-            for site, curve in zip(sitemesh, uhs[poe_str]):
+            for site, curve in zip(sitemesh, uhs[str(poe)]):
                 data.append(UHS(curve, Location(site)))
             writer.serialize(data)
             fnames.append(fname)
