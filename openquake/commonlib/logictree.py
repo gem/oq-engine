@@ -39,7 +39,9 @@ from xml.etree import ElementTree as etree
 from openquake.baselib.general import groupby
 from openquake.baselib.python3compat import raise_
 import openquake.hazardlib
+from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.gsim_table import GMPETable
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo
 from openquake.risklib import valid
 from openquake.commonlib import writers
@@ -1285,6 +1287,25 @@ class GsimLogicTree(object):
                 "'applyToTectonicRegionType' in %s" %
                 set(tectonic_region_types))
 
+    def check_imts(self, imts):
+        """
+        Make sure the IMTs are recognized by all GSIMs in the logic tree
+        """
+        for trt in self.values:
+            for gsim in self.values[trt]:
+                for attr in dir(gsim):
+                    coeffs = getattr(gsim, attr)
+                    if not isinstance(coeffs, CoeffsTable):
+                        continue
+                    for imt in imts:
+                        if imt.startswith('SA'):
+                            try:
+                                coeffs[from_string(imt)]
+                            except KeyError:
+                                raise ValueError(
+                                    '%s is out of the period range defined '
+                                    'for %s' % (imt, gsim))
+
     def __str__(self):
         """
         :returns: an XML string representing the logic tree
@@ -1420,15 +1441,3 @@ class GsimLogicTree(object):
                                     b.id, b.uncertainty, b.weight)
                  for b in self.branches if b.effective]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
-
-
-class DummyGsimLogicTree(object):
-    """
-    A dummy GSIM logic tree object containing a single realization
-    """
-    def get_num_paths(self):
-        """Return 1"""
-        return 1
-
-    def __iter__(self):
-        yield Realization({}, 1, (), 0, ())
