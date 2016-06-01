@@ -538,7 +538,7 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
                         root, suffix, poe, ins, ekey[1])
                     fname = dstore.export_path(name)
                     data = []
-                    poe_str = 'poe~%s' % poe + ins
+                    poe_str = 'poe-%s' % poe + ins
                     for ass, stat in zip(assetcol, lmaps[poe_str]):
                         loc = Location(ass['lon'], ass['lat'])
                         lm = LossMap(loc, aref[ass['idx']], stat, None)
@@ -572,7 +572,7 @@ def export_loss_maps_stats_xml_geojson(ekey, dstore):
             continue
         array = loss_maps[ltype][:, s]
         curves = []
-        poe_str = 'poe~%s' % poe + ins
+        poe_str = 'poe-%s' % poe + ins
         for ass, val in zip(assetcol, array[poe_str]):
             loc = Location(ass['lon'], ass['lat'])
             curve = LossMap(loc, aref[ass['idx']], val, None)

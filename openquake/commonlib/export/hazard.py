@@ -360,7 +360,7 @@ def export_uhs_xml(ekey, dstore):
         _, periods = calc.get_imts_periods(oq.imtls)
         uhs = calc.make_uhs(hmaps, oq.imtls, oq.poes)
         for poe in oq.poes:
-            poe_str = 'poe~%s' % poe
+            poe_str = 'poe-%s' % poe
             fname = hazard_curve_name(
                 dstore, ekey, kind + '-%s' % poe, rlzs_assoc,
                 oq.number_of_logic_tree_samples)
@@ -450,7 +450,7 @@ def export_hmaps_xml_json(ekey, dstore):
                 fname = hazard_curve_name(
                     dstore, ekey, kind + suffix, rlzs_assoc,
                     oq.number_of_logic_tree_samples)
-                data = [HazardMap(site[0], site[1], hmap['%s~%s' % (imt, poe)])
+                data = [HazardMap(site[0], site[1], hmap['%s-%s' % (imt, poe)])
                         for site, hmap in zip(sitemesh, maps)]
                 writer = writercls(
                     fname, investigation_time=oq.investigation_time,
