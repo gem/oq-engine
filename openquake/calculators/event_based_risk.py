@@ -229,8 +229,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.execute = lambda: None
             self.post_execute = lambda result: None
             return
-        # check the IMTs before running the calculation
-        self.datastore['csm_info'].gsim_lt.check_imts(self.oqparam.imtls)
 
     def execute(self):
         """

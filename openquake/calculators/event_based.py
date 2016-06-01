@@ -500,7 +500,6 @@ class EventBasedCalculator(ClassicalCalculator):
         (if any). If there were pre-existing files, they will be erased.
         """
         super(EventBasedCalculator, self).pre_execute()
-        self.datastore['csm_info'].gsim_lt.check_imts(self.oqparam.imtls)
         rlzs_by_tr_id = self.rlzs_assoc.get_rlzs_by_trt_id()
         num_rlzs = {t: len(rlzs) for t, rlzs in rlzs_by_tr_id.items()}
         self.sesruptures = []
