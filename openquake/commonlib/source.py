@@ -578,7 +578,8 @@ class CompositionInfo(object):
         sm_data = dic['sm_data']
         vars(self).update(attrs)
         if self.gsim_fname.endswith('.xml'):
-            self.gsim_lt = logictree.GsimLogicTree(self.gsim_fname)
+            self.gsim_lt = logictree.GsimLogicTree(
+                self.gsim_fname, sorted(self.trts))
         else:  # fake file with the name of the GSIM
             self.gsim_lt = logictree.GsimLogicTree.from_(self.gsim_fname)
         self.source_models = []
