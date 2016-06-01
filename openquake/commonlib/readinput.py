@@ -429,6 +429,8 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
                     raise ValueError(
                         "Found in %r a tectonic region type %r inconsistent "
                         "with the ones in %r" % (sm, trt_model.trt, gsim_file))
+        else:
+            gsim_lt = logictree.GsimLogicTree.from_(oqparam.gsim)
         weight = rlz.weight / num_samples
         num_gsim_paths = (num_samples if oqparam.number_of_logic_tree_samples
                           else gsim_lt.get_num_paths())
