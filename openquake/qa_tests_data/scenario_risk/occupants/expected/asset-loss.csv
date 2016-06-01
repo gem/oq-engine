@@ -1,4 +1,4 @@
-asset_ref,taxonomy,lon,lat,occupants-mean,occupants-stddev
+asset_ref,taxonomy,lon,lat,occupants~mean,occupants~stddev
 a1,RM,8.12985E+01,2.91098E+01,3.99457E-01,1.43061E-01
 a2,RC,8.30823E+01,2.79006E+01,9.88255E-01,2.16218E-01
 a3,W,8.57477E+01,2.79015E+01,1.05517E+00,5.29275E-01
