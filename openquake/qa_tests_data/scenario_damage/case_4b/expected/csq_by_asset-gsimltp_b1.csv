@@ -1,4 +1,4 @@
-asset_ref,taxonomy,lon,lat,contents-mean,contents-stddev,nonstructural-mean,nonstructural-stddev,structural-mean,structural-stddev
+asset_ref,taxonomy,lon,lat,contents~mean,contents~stddev,nonstructural~mean,nonstructural~stddev,structural~mean,structural~stddev
 a3,tax1,-1.225700E+02,3.811300E+01,4.774857E+02,2.910559E+02,4.259505E+02,2.717368E+02,1.482565E+01,3.130554E+01
 a2,tax2,-1.221140E+02,3.811300E+01,3.270259E+02,3.179719E+02,1.151759E+03,8.996089E+02,6.626953E+01,8.775994E+01
 a5,tax1,-1.220000E+02,3.791000E+01,1.379158E+03,5.378987E+02,1.434313E+03,6.972246E+02,2.735416E+02,2.963808E+02

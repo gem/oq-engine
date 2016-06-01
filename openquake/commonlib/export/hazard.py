@@ -237,7 +237,7 @@ def export_hazard_curves_csv(key, dest, sitecol, curves_by_imt,
     lst = [('lon', F32), ('lat', F32)]
     for imt, imls in imtls.items():
         for iml in imls:
-            lst.append(('%s~%s' % (imt, iml), F32))
+            lst.append(('%s-%s' % (imt, iml), F32))
     hcurves = numpy.zeros(nsites, numpy.dtype(lst))
     for sid, lon, lat in zip(range(nsites), sitecol.lons, sitecol.lats):
         values = numpy.concatenate([curves_by_imt[sid][imt] for imt in imtls])
@@ -421,7 +421,7 @@ def export_hmaps_xml_json(ekey, dstore):
                 suffix = '-%s-%s' % (poe, imt)
                 fname = hazard_curve_name(
                     dstore, ekey, kind + suffix, rlzs_assoc)
-                data = [HazardMap(site[0], site[1], hmap['%s~%s' % (imt, poe)])
+                data = [HazardMap(site[0], site[1], hmap['%s-%s' % (imt, poe)])
                         for site, hmap in zip(sitemesh, maps)]
                 writer = writercls(
                     fname, investigation_time=oq.investigation_time,
