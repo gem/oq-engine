@@ -234,15 +234,15 @@ def export_hazard_curves_csv(key, dest, sitecol, curves_by_imt,
     :param investigation_time: investigation time
     """
     nsites = len(sitecol)
-    # build a matrix of strings with size nsites * (num_imts + 1)
-    # the + 1 is needed since the 0-th column contains lon lat
-    rows = numpy.empty((nsites, len(imtls) + 1), dtype=object)
+    lst = [('lon', F32), ('lat', F32)]
+    for imt, imls in imtls.items():
+        for iml in imls:
+            lst.append(('%s~%s' % (imt, iml), F32))
+    hcurves = numpy.zeros(nsites, numpy.dtype(lst))
     for sid, lon, lat in zip(range(nsites), sitecol.lons, sitecol.lats):
-        rows[sid, 0] = '%.5f %.5f' % (lon, lat)
-    for i, imt in enumerate(curves_by_imt.dtype.names, 1):
-        for sid, curve in zip(range(nsites), curves_by_imt[imt]):
-            rows[sid, i] = scientificformat(curve, fmt='%11.7E')
-    write_csv(dest, rows, header=('lon lat',) + curves_by_imt.dtype.names)
+        values = numpy.concatenate([curves_by_imt[sid][imt] for imt in imtls])
+        hcurves[sid] = (lon, lat) + tuple(values)
+    write_csv(dest, hcurves)
     return {dest: dest}
 
 
