@@ -285,7 +285,7 @@ def make_uhs(maps, imtls, poes):
     uhs = numpy.zeros(N, uhs_dt)
     for poe in poes:
         for imt in imts:
-            uhs[str(poe)][imt] = maps['%s~%s' % (imt, poe)]
+            uhs[str(poe)][imt] = maps['%s-%s' % (imt, poe)]
     return uhs
 
 
