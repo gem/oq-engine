@@ -280,12 +280,12 @@ def make_uhs(maps, imtls, poes):
     """
     imts, _ = get_imts_periods(imtls)
     imts_dt = numpy.dtype([(imt, F32) for imt in imts])
-    uhs_dt = numpy.dtype([('poe~%s' % poe, imts_dt) for poe in poes])
+    uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in poes])
     N = len(maps)
     uhs = numpy.zeros(N, uhs_dt)
     for poe in poes:
         for imt in imts:
-            uhs['poe~%s' % poe][imt] = maps['%s~%s' % (imt, poe)]
+            uhs[str(poe)][imt] = maps['%s~%s' % (imt, poe)]
     return uhs
 
 
