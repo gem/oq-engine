@@ -22,6 +22,7 @@ import collections
 from functools import partial
 import numpy
 
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -30,10 +31,8 @@ from openquake.hazardlib.calc.hazard_curve import (
     hazard_curves_per_trt, zero_curves, zero_maps,
     array_of_curves, ProbabilityMap)
 from openquake.risklib import scientific
-from openquake.commonlib import parallel, datastore, source
-from openquake.baselib.general import AccumDict
-
-from openquake.calculators import base, calc
+from openquake.commonlib import parallel, datastore, source, calc
+from openquake.calculators import base
 
 
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
@@ -349,7 +348,7 @@ class ClassicalCalculator(base.HazardCalculator):
             data = calc.compute_hazard_maps(
                 curves[imt], self.oqparam.imtls[imt], self.oqparam.poes)
             for poe, hmap in zip(self.oqparam.poes, data.T):
-                maps['%s~%s' % (imt, poe)] = hmap
+                maps['%s-%s' % (imt, poe)] = hmap
         return maps
 
     def store_curves(self, kind, curves, rlz=None):

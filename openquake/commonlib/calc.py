@@ -20,15 +20,17 @@ from __future__ import division
 import collections
 import itertools
 import operator
+import logging
 
 import numpy
 
-from openquake.baselib.general import get_array
+from openquake.baselib.general import get_array, group_array
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import gmf, filters
 from openquake.hazardlib.probability_map import (
     ProbabilityCurve, ProbabilityMap)
 from openquake.hazardlib.site import SiteCollection
+from openquake.commonlib import readinput, oqvalidation
 from openquake.commonlib.readinput import \
     get_gsims, get_rupture, get_correl_model, get_imts
 
@@ -37,6 +39,9 @@ MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
 # in this way even on 32 bit machines Python will not have to convert
 # the generated seed into a long integer
 
+U8 = numpy.uint8
+U16 = numpy.uint16
+U32 = numpy.uint32
 F32 = numpy.float32
 
 
@@ -275,10 +280,107 @@ def make_uhs(maps, imtls, poes):
     """
     imts, _ = get_imts_periods(imtls)
     imts_dt = numpy.dtype([(imt, F32) for imt in imts])
-    uhs_dt = numpy.dtype([('poe~%s' % poe, imts_dt) for poe in poes])
+    uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in poes])
     N = len(maps)
     uhs = numpy.zeros(N, uhs_dt)
     for poe in poes:
         for imt in imts:
-            uhs['poe~%s' % poe][imt] = maps['%s~%s' % (imt, poe)]
+            uhs[str(poe)][imt] = maps['%s-%s' % (imt, poe)]
     return uhs
+
+
+def get_gmfs(dstore):
+    """
+    :param dstore: a datastore
+    :returns: a dictionary trt_id, gsid -> gmfa
+    """
+    oq = dstore['oqparam']
+    if 'gmfs' in oq.inputs:  # from file
+        logging.info('Reading gmfs from file')
+        sitecol, etags, gmfs_by_imt = readinput.get_gmfs(oq)
+
+        # reduce the gmfs matrices to the filtered sites
+        for imt in oq.imtls:
+            gmfs_by_imt[imt] = gmfs_by_imt[imt][sitecol.indices]
+
+        logging.info('Preparing the risk input')
+        return etags, {(0, 'FromFile'): gmfs_by_imt}
+
+    # else from datastore
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    rlzs = rlzs_assoc.realizations
+    sitecol = dstore['sitecol']
+    # NB: if the hazard site collection has N sites, the hazard
+    # filtered site collection for the nonzero GMFs has N' <= N sites
+    # whereas the risk site collection associated to the assets
+    # has N'' <= N' sites
+    if dstore.parent:
+        haz_sitecol = dstore.parent['sitecol']  # N' values
+    else:
+        haz_sitecol = sitecol
+    risk_indices = set(sitecol.indices)  # N'' values
+    N = len(haz_sitecol.complete)
+    imt_dt = numpy.dtype([(bytes(imt), F32) for imt in oq.imtls])
+    E = oq.number_of_ground_motion_fields
+    # build a matrix N x E for each GSIM realization
+    gmfs = {(trt_id, gsim): numpy.zeros((N, E), imt_dt)
+            for trt_id, gsim in rlzs_assoc}
+    for i, rlz in enumerate(rlzs):
+        data = group_array(dstore['gmf_data/%04d' % i], 'sid')
+        for sid, array in data.items():
+            if sid in risk_indices:
+                for imti, imt in enumerate(oq.imtls):
+                    a = get_array(array, imti=imti)
+                    gs = str(rlz.gsim_rlz)
+                    gmfs[0, gs][imt][sid, a['eid']] = a['gmv']
+    return dstore['etags'].value, gmfs
+
+
+def fix_minimum_intensity(min_iml, imts):
+    """
+    :param min_iml: a dictionary, possibly with a 'default' key
+    :param imts: an ordered list of IMTs
+    :returns: a numpy array of intensities, one per IMT
+
+    Make sure the dictionary minimum_intensity (provided by the user in the
+    job.ini file) is filled for all intensity measure types and has no key
+    named 'default'. Here is how it works:
+
+    >>> min_iml = {'PGA': 0.1, 'default': 0.05}
+    >>> fix_minimum_intensity(min_iml, ['PGA', 'PGV'])
+    array([ 0.1 ,  0.05], dtype=float32)
+    >>> sorted(min_iml.items())
+    [('PGA', 0.1), ('PGV', 0.05)]
+    """
+    if min_iml:
+        for imt in imts:
+            try:
+                min_iml[imt] = oqvalidation.getdefault(min_iml, imt)
+            except KeyError:
+                raise ValueError(
+                    'The parameter `minimum_intensity` in the job.ini '
+                    'file is missing the IMT %r' % imt)
+    if 'default' in min_iml:
+        del min_iml['default']
+    return F32([min_iml.get(imt, 0) for imt in imts])
+
+
+class GmfColl(object):
+    """
+    A class to collect GMFs in memory, with methods .save and .by_rlzi
+    returning a dictionary rlzi -> gmv_dt
+    """
+    def __init__(self, imts, rlzs):
+        self.data = collections.defaultdict(list)  # rlzi -> data
+
+    def save(self, eid, imti, rlz, gmf, sids):
+        rlzi = rlz.ordinal
+        for gmv, sid in zip(gmf, sids):
+            self.data[rlzi].append((sid, eid, imti, gmv))
+
+    def by_rlzi(self):
+        return {rlzi: numpy.array(self.data[rlzi], gmv_dt)
+                for rlzi in self.data}
+
+
+gmv_dt = numpy.dtype([('sid', U16), ('eid', U32), ('imti', U8), ('gmv', F32)])

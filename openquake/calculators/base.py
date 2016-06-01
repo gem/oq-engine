@@ -31,11 +31,11 @@ import numpy
 from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
-from openquake.commonlib import (
-    readinput, riskmodels, datastore, source, __version__)
+from openquake.risklib import riskinput, __version__
+from openquake.commonlib import readinput, riskmodels, datastore, source
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import starmap, executor
-from openquake.risklib import riskinput
+from openquake.commonlib.views import view, rst_table, stats
 from openquake.baselib.python3compat import with_metaclass
 
 get_taxonomy = operator.attrgetter('taxonomy')
@@ -121,6 +121,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         self.close = close
         self.set_log_format()
+        logging.info('Using engine version %s', __version__)
         if (concurrent_tasks is not None and concurrent_tasks !=
                 OqParam.concurrent_tasks.default):
             self.oqparam.concurrent_tasks = concurrent_tasks
@@ -350,6 +351,12 @@ class HazardCalculator(BaseCalculator):
             job_info.require_epsilons = bool(self.riskmodel.covs)
         self.job_info = job_info
         self.datastore.flush()
+        try:
+            csm_info = self.datastore['csm_info']
+        except KeyError:
+            pass
+        else:
+            csm_info.gsim_lt.check_imts(self.oqparam.imtls)
 
     def init(self):
         """
@@ -631,50 +638,20 @@ class RiskCalculator(HazardCalculator):
         return res
 
 
-# functions useful for the calculators ScenarioDamage and ScenarioRisk
-
-def get_gmfs(dstore):
+@view.add('task_info')
+def view_task_info(token, dstore):
     """
-    :param dstore: a datastore
-    :returns: a dictionary trt_id, gsid -> gmfa
+    Display statistical information about the tasks performance
     """
-    oq = dstore['oqparam']
-    if 'gmfs' in oq.inputs:  # from file
-        logging.info('Reading gmfs from file')
-        sitecol, etags, gmfs_by_imt = readinput.get_gmfs(oq)
-
-        # reduce the gmfs matrices to the filtered sites
-        for imt in oq.imtls:
-            gmfs_by_imt[imt] = gmfs_by_imt[imt][sitecol.indices]
-
-        logging.info('Preparing the risk input')
-        return etags, {(0, 'FromFile'): gmfs_by_imt}
-
-    # else from datastore
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    rlzs = rlzs_assoc.realizations
-    sitecol = dstore['sitecol']
-    # NB: if the hazard site collection has N sites, the hazard
-    # filtered site collection for the nonzero GMFs has N' <= N sites
-    # whereas the risk site collection associated to the assets
-    # has N'' <= N' sites
-    if dstore.parent:
-        haz_sitecol = dstore.parent['sitecol']  # N' values
-    else:
-        haz_sitecol = sitecol
-    risk_indices = set(sitecol.indices)  # N'' values
-    N = len(haz_sitecol.complete)
-    imt_dt = numpy.dtype([(bytes(imt), F32) for imt in oq.imtls])
-    E = oq.number_of_ground_motion_fields
-    # build a matrix N x E for each GSIM realization
-    gmfs = {(trt_id, gsim): numpy.zeros((N, E), imt_dt)
-            for trt_id, gsim in rlzs_assoc}
-    for i, rlz in enumerate(rlzs):
-        data = general.group_array(dstore['gmf_data/%04d' % i], 'sid')
-        for sid, array in data.items():
-            if sid in risk_indices:
-                for imti, imt in enumerate(oq.imtls):
-                    a = general.get_array(array, imti=imti)
-                    gs = str(rlz.gsim_rlz)
-                    gmfs[0, gs][imt][sid, a['eid']] = a['gmv']
-    return dstore['etags'].value, gmfs
+    pdata = dstore['performance_data'].value
+    tasks = [calc.core_task.__name__ for calc in calculators.values()]
+    data = ['measurement mean stddev min max num_tasks'.split()]
+    for task in set(tasks):  # strip duplicates
+        records = pdata[pdata['operation'] == 'total ' + task]
+        if len(records):
+            for stat in ('time_sec', 'memory_mb'):
+                val = records[stat]
+                data.append(stats(task + '.' + stat, val))
+    if len(data) == 1:
+        return 'Not available'
+    return rst_table(data)

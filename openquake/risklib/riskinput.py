@@ -31,13 +31,13 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 FIELDS = ('site_id', 'lon', 'lat', 'idx', 'taxonomy', 'area', 'number',
-          'occupants', 'deductible~', 'insurance_limit~', 'retrofitted~')
+          'occupants', 'deductible-', 'insurance_limit-', 'retrofitted-')
 
 by_taxonomy = operator.attrgetter('taxonomy')
 
 
 class AssetCollection(object):
-    D, I, R = len('deductible~'), len('insurance_limit~'), len('retrofitted~')
+    D, I, R = len('deductible-'), len('insurance_limit-'), len('retrofitted-')
 
     def __init__(self, assets_by_site, cost_calculator, time_event,
                  time_events=''):
@@ -49,9 +49,9 @@ class AssetCollection(object):
         fields = self.array.dtype.names
         self.loss_types = sorted(f for f in fields
                                  if not f.startswith(FIELDS))
-        self.deduc = [n for n in fields if n.startswith('deductible~')]
-        self.i_lim = [n for n in fields if n.startswith('insurance_limit~')]
-        self.retro = [n for n in fields if n.startswith('retrofitted~')]
+        self.deduc = [n for n in fields if n.startswith('deductible-')]
+        self.i_lim = [n for n in fields if n.startswith('insurance_limit-')]
+        self.retro = [n for n in fields if n.startswith('retrofitted-')]
 
     def assets_by_site(self):
         """
@@ -136,9 +136,9 @@ class AssetCollection(object):
         deductible_d = first_asset.deductibles or {}
         limit_d = first_asset.insurance_limits or {}
         retrofitting_d = first_asset.retrofitteds or {}
-        deductibles = ['deductible~%s' % name for name in deductible_d]
-        limits = ['insurance_limit~%s' % name for name in limit_d]
-        retrofittings = ['retrofitted~%s' % n for n in retrofitting_d]
+        deductibles = ['deductible-%s' % name for name in deductible_d]
+        limits = ['insurance_limit-%s' % name for name in limit_d]
+        retrofittings = ['retrofitted-%s' % n for n in retrofitting_d]
         float_fields = loss_types + deductibles + limits + retrofittings
         taxonomies = set()
         for assets in assets_by_site:
@@ -177,8 +177,8 @@ class AssetCollection(object):
                         value = asset.values[the_occupants]
                     else:
                         try:
-                            name, lt = field.split('~')
-                        except ValueError:  # no ~ in field
+                            name, lt = field.split('-')
+                        except ValueError:  # no - in field
                             name, lt = 'value', field
                         # the line below retrieve one of `deductibles`,
                         # `insured_limits` or `retrofitteds` ("s" suffix)
@@ -229,7 +229,7 @@ class CompositeRiskModel(collections.Mapping):
         :returns:
            loss_curve_dt and loss_maps_dt
         """
-        lst = [('poe~%s' % poe, F32) for poe in conditional_loss_poes]
+        lst = [('poe-%s' % poe, F32) for poe in conditional_loss_poes]
         if insured_losses:
             lst += [(name + '_ins', pair) for name, pair in lst]
         lm_dt = numpy.dtype(lst)
@@ -259,7 +259,7 @@ class CompositeRiskModel(collections.Mapping):
         :returns:
            loss_curve_dt and loss_maps_dt
         """
-        lst = [('poe~%s' % poe, F32) for poe in conditional_loss_poes]
+        lst = [('poe-%s' % poe, F32) for poe in conditional_loss_poes]
         if insured_losses:
             lst += [(name + '_ins', pair) for name, pair in lst]
         lm_dt = numpy.dtype(lst)
