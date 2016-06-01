@@ -284,6 +284,10 @@ def main():
     if args.no_distribute:
         os.environ['OQ_DISTRIBUTE'] = 'no'
 
+    # check if the datadir exists
+    if not os.path.exists(datastore.DATADIR):
+        os.makedirs(datastore.DATADIR)
+
     # check if the DbServer is up
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
