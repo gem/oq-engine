@@ -1,13 +1,15 @@
-List of official CSV outputs
+Engine 2.0: enter CSV outputs
 ============================================
 
 One of the most important features of the engine version 2.0 is that
-finally the CSV output format has become officially supported.
+the CSV output format has become officially supported at last.
 For several releases the engine was able to export CSV files,
 but the feature was always considered experimental and not
-documented.
+documented. With engine 2.0 the CSV outputs have become official:
+there are still some rought edges (outputs for which there is no
+CSV exporter, or output for which the CSV exporter will change
+in the future) but most CSV exports are now stable.
 
-With engine 2.0 several CSV outputs have become official.
 This changes simplifies the workflow. Before engine 2.0 an user
 had to
 
@@ -21,18 +23,71 @@ If you want to export all of the results you can simply run
 
   `$ oq-engine --run job.ini --exports csv`
 
-hazard-curve
-lon lat,PGA,SA(0.1)
-0.00000 0.00000,4.5701349E-01 5.8626788E-02 6.8661644E-03,6.0867476E-01 3.3083046E-01 2.0147122E-01
+and that's all. There are certain conversions on the names of the exported
+files and on the headers that the user should be aware of.
 
-hazard-map
-lon,lat,PGA~0.1,SA(0.2)~0.1
--1.223400E+02,3.772000E+01,2.840000E-01,2.840000E-01
 
-uhs
-lon,lat,poe~0.01-PGA,poe~0.01-SA(0.1),poe~0.1-PGA,poe~0.1-SA(0.1),poe~0.2-PGA,poe~0.2-SA(0.1)
--1.000000E-01,0.000000E+00,2.000000E-01,8.000000E-01,2.000000E-01,8.000000E-01,2.000000E-01,8.000000E-01
+Names of the CSV files
+------------------------
 
-gmf one file per IMT
-lon,lat,000,001,002,003,004,005,006,007,008,009
-0.00000,0.00000,0.44089,0.55028,0.30690,0.41737,0.73927,0.74373,0.23636,0.27041,0.20602,0.37917
+When you run a computation you will see an output like the following:
+
+Calculation 24589 finished correctly in 15 seconds
+  id | name
+   2 | hcurves
+   3 | uhs
+
+The first column (the `id` column) contains the output ID, which is used
+to export the output with the command
+
+`$ oq-engine --eo <output_id> <output_dir>` --exports csv
+
+The second column (the `name` column) contains the name of the output in
+the datastore. This is usually very similar to the name of the exported file.
+For instance you could get something like this::
+
+ $ oq-engine --eo 2 /tmp/ --exports csv
+ Files exported:
+ /tmp/hazard_curve-mean_24589.csv
+ /tmp/hazard_curve-rlz-000_24589.csv
+ /tmp/hazard_curve-rlz-001_24589.csv
+ /tmp/hazard_curve-rlz-002_24589.csv
+ /tmp/hazard_curve-rlz-003_24589.csv
+ /tmp/hazard_curve-rlz-004_24589.csv
+ /tmp/hazard_curve-rlz-005_24589.csv
+ /tmp/hazard_curve-rlz-006_24589.csv
+ /tmp/hazard_curve-rlz-007_24589.csv
+
+In this example there were 8 realizations. There is one file per realization
+and the filename ends with the suffix
+
+`-rlz-<ordinal>_<calc_id>.csv`
+
+The header of the files has a format like the following::
+
+lon,lat,IMT11, ... , IMT1N, ..., IMTN1, ... IMTNN
+lon,lat,PGA-0.0001,PGA-0.001,PGA-0.01,PGA-0.05,PGA-0.1,PGA-0.15,PGA-0.2,SA(0.1)-0.0001,SA(0.1)-0.001,SA(0.1)-0.01,SA(0.1)-0.05,SA(0.1)-0.1,SA(0.1)-0.15,SA(0.1)-0.2,SA(0.1)-0.3,SA(0.1)-0.5,SA(0.1)-0.8
+
+/tmp/hazard_uhs-mean_24589.csv
+/tmp/hazard_uhs-rlz-000_24589.csv
+/tmp/hazard_uhs-rlz-001_24589.csv
+/tmp/hazard_uhs-rlz-002_24589.csv
+/tmp/hazard_uhs-rlz-003_24589.csv
+/tmp/hazard_uhs-rlz-004_24589.csv
+/tmp/hazard_uhs-rlz-005_24589.csv
+/tmp/hazard_uhs-rlz-006_24589.csv
+/tmp/hazard_uhs-rlz-007_24589.csv
+
+- here is an example hazard curve:
+
+lon          |lat         |PGA-0.0001  |PGA-0.001   |PGA-0.01   |PGA-0.05     |SA(0.1)-0.0001|SA(0.1)-0.001|SA(0.1)-0.01|SA(0.1)-0.05|SA(0.1)-0.1 |SA(0.1)-0.15
+-------------|------------|------------|------------|-----------|-------------|--------------|-------------|------------|------------|------------|------------
+-1.000000E-01|0.000000E+00|6.559523E-01|6.559523E-01|6.556640E-01|6.135122E-01|5.289103E-01  |4.375274E-01 |3.509940E-01|6.559523E-01|6.559523E-01|6.559503E-01
+
+
+- here is an example of UHS:
+
+lon          |lat         |0.01~PGA    |0.01~SA(0.1)|0.1~PGA     |0.1~SA(0.1) |0.2~PGA     |0.2~SA(0.1)
+-1.000000E-01|0.000000E+00|2.000000E-01|8.000000E-01|2.000000E-01|8.000000E-01|2.000000E-01|6.835696E-01
+ 0.000000E+00|0.000000E+00|2.000000E-01|8.000000E-01|2.000000E-01|6.670024E-01|2.000000E-01|4.285911E-01
+ 1.000000E-01|0.000000E+00|2.000000E-01|8.000000E-01|2.000000E-01|8.000000E-01|2.000000E-01|6.735378E-01
