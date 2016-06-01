@@ -351,6 +351,22 @@ def latitude(value):
     return lat
 
 
+def longitudes(value):
+    """
+    :param value: a comma separated string of longitudes
+    :returns: a list of longitudes
+    """
+    return [longitude(v) for v in value.split(',')]
+
+
+def latitudes(value):
+    """
+    :param value: a comma separated string of latitudes
+    :returns: a list of latitudes
+    """
+    return [latitude(v) for v in value.split(',')]
+
+
 def depth(value):
     """
     :param value: input string
@@ -851,7 +867,7 @@ def integers(value):
     if not values:
         raise ValueError('Not a list of integers: %r' % value)
     try:
-        ints = map(int, values)
+        ints = [int(float(v)) for v in values]
     except:
         raise ValueError('Not a list of integers: %r' % value)
     return ints
