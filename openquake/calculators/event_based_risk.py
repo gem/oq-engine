@@ -26,8 +26,8 @@ import numpy
 
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, humansize
-from openquake.calculators import base, event_based
-from openquake.commonlib import readinput, parallel
+from openquake.calculators import base
+from openquake.commonlib import readinput, parallel, calc
 from openquake.risklib import riskinput, scientific
 from openquake.commonlib.parallel import starmap
 
@@ -306,7 +306,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if not oq.minimum_intensity:
             # infer it from the risk models if not directly set in job.ini
             oq.minimum_intensity = self.riskmodel.get_min_iml()
-        min_iml = event_based.fix_minimum_intensity(
+        min_iml = calc.fix_minimum_intensity(
             oq.minimum_intensity, oq.imtls)
         if min_iml.sum() == 0:
             logging.warn('The GMFs are not filtered: '

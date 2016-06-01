@@ -33,7 +33,7 @@ from openquake.commonlib.writers import (
     scientificformat, floatformat, write_csv)
 from openquake.commonlib import writers, hazard_writers, util, readinput
 from openquake.risklib.riskinput import create
-from openquake.calculators import calc, base, event_based
+from openquake.commonlib import calc
 
 F32 = numpy.float32
 
@@ -234,15 +234,15 @@ def export_hazard_curves_csv(key, dest, sitecol, curves_by_imt,
     :param investigation_time: investigation time
     """
     nsites = len(sitecol)
-    # build a matrix of strings with size nsites * (num_imts + 1)
-    # the + 1 is needed since the 0-th column contains lon lat
-    rows = numpy.empty((nsites, len(imtls) + 1), dtype=object)
+    lst = [('lon', F32), ('lat', F32)]
+    for imt, imls in imtls.items():
+        for iml in imls:
+            lst.append(('%s-%s' % (imt, iml), F32))
+    hcurves = numpy.zeros(nsites, numpy.dtype(lst))
     for sid, lon, lat in zip(range(nsites), sitecol.lons, sitecol.lats):
-        rows[sid, 0] = '%.5f %.5f' % (lon, lat)
-    for i, imt in enumerate(curves_by_imt.dtype.names, 1):
-        for sid, curve in zip(range(nsites), curves_by_imt[imt]):
-            rows[sid, i] = scientificformat(curve, fmt='%11.7E')
-    write_csv(dest, rows, header=('lon lat',) + curves_by_imt.dtype.names)
+        values = numpy.concatenate([curves_by_imt[sid][imt] for imt in imtls])
+        hcurves[sid] = (lon, lat) + tuple(values)
+    write_csv(dest, hcurves)
     return {dest: dest}
 
 
@@ -336,14 +336,13 @@ def export_uhs_xml(ekey, dstore):
         _, periods = calc.get_imts_periods(oq.imtls)
         uhs = calc.make_uhs(hmaps, oq.imtls, oq.poes)
         for poe in oq.poes:
-            poe_str = 'poe~%s' % poe
             fname = hazard_curve_name(
                 dstore, ekey, kind + '-%s' % poe, rlzs_assoc)
             writer = hazard_writers.UHSXMLWriter(
                 fname, periods=periods, poe=poe,
                 investigation_time=oq.investigation_time, **metadata)
             data = []
-            for site, curve in zip(sitemesh, uhs[poe_str]):
+            for site, curve in zip(sitemesh, uhs[str(poe)]):
                 data.append(UHS(curve, Location(site)))
             writer.serialize(data)
             fnames.append(fname)
@@ -422,7 +421,7 @@ def export_hmaps_xml_json(ekey, dstore):
                 suffix = '-%s-%s' % (poe, imt)
                 fname = hazard_curve_name(
                     dstore, ekey, kind + suffix, rlzs_assoc)
-                data = [HazardMap(site[0], site[1], hmap['%s~%s' % (imt, poe)])
+                data = [HazardMap(site[0], site[1], hmap['%s-%s' % (imt, poe)])
                         for site, hmap in zip(sitemesh, maps)]
                 writer = writercls(
                     fname, investigation_time=oq.investigation_time,
@@ -481,7 +480,7 @@ def export_gmf_spec(ekey, dstore, spec):
     writer = writers.CsvWriter(fmt='%.5f')
     etags = dstore['etags']
     if 'scenario' in oq.calculation_mode:
-        _, gmfs_by_trt_gsim = base.get_gmfs(dstore)
+        _, gmfs_by_trt_gsim = calc.get_gmfs(dstore)
         gsims = sorted(gsim for trt, gsim in gmfs_by_trt_gsim)
         imts = gmfs_by_trt_gsim[0, gsims[0]].dtype.names
         gmf_dt = numpy.dtype([(str(gsim), F32) for gsim in gsims])
@@ -561,7 +560,7 @@ def get_rup_idx(ebrup, etag):
 
 def _get_gmfs(dstore, serial, eid):
     oq = dstore['oqparam']
-    min_iml = event_based.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
+    min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     sitecol = dstore['sitecol'].complete
     N = len(sitecol.complete)
@@ -571,7 +570,7 @@ def _get_gmfs(dstore, serial, eid):
     rlzs = [rlz for gsim in map(str, gsims)
             for rlz in rlzs_assoc[rup.trt_id, gsim]]
     gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F32) for rlz in rlzs])
-    gmfadict = create(event_based.GmfColl,
+    gmfadict = create(calc.GmfColl,
                       [rup], sitecol, oq.imtls, rlzs_assoc,
                       oq.truncation_level, correl_model, min_iml).by_rlzi()
     for imti, imt in enumerate(oq.imtls):
@@ -589,7 +588,7 @@ def export_gmf_scenario(ekey, dstore):
     if 'scenario' in oq.calculation_mode:
         fields = ['%03d' % i for i in range(len(dstore['etags']))]
         dt = numpy.dtype([(f, F32) for f in fields])
-        etags, gmfs_by_trt_gsim = base.get_gmfs(dstore)
+        etags, gmfs_by_trt_gsim = calc.get_gmfs(dstore)
         sitemesh = dstore['sitemesh']
         writer = writers.CsvWriter(fmt='%.5f')
         for (trt, gsim), gmfs_ in gmfs_by_trt_gsim.items():

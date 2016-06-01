@@ -27,7 +27,7 @@ from openquake.risklib import scientific
 from openquake.commonlib.export import export
 from openquake.commonlib import writers, risk_writers
 from openquake.commonlib.util import get_assets, compose_arrays
-from openquake.calculators.views import FIVEDIGITS
+from openquake.commonlib.views import FIVEDIGITS
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
     ExposureData, Site)
@@ -526,7 +526,7 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
                     name = '%s-%s-poe-%s%s' % (root, lt, poe, ins)
                     fname = dstore.build_fname(name, rlz, ekey[1])
                     data = []
-                    poe_str = 'poe~%s' % poe + ins
+                    poe_str = 'poe-%s' % poe + ins
                     for ass, stat in zip(assetcol, lmaps[poe_str]):
                         loc = Location(ass['lon'], ass['lat'])
                         lm = LossMap(loc, aref[ass['idx']], stat, None)
@@ -560,7 +560,7 @@ def export_loss_maps_stats_xml_geojson(ekey, dstore):
             continue
         array = loss_maps[ltype][:, s]
         curves = []
-        poe_str = 'poe~%s' % poe + ins
+        poe_str = 'poe-%s' % poe + ins
         for ass, val in zip(assetcol, array[poe_str]):
             loc = Location(ass['lon'], ass['lat'])
             curve = LossMap(loc, aref[ass['idx']], val, None)
