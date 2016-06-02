@@ -125,12 +125,11 @@ class ProbabilityCurve(object):
 class ProbabilityMap(dict):
     """
     A dictionary site_id -> ProbabilityCurve. It defines the complement
-    operator `~`, performing the complement on each curve, the addition
-    operator `+`. performing the
+    operator `~`, performing the complement on each curve
 
     ~p = 1 - p
 
-    and the "inclusive or" `|` on the underlying curves:
+    and the "inclusive or" operator `|`:
 
     m = m1 | m2 = {sid: m1[sid] | m2[sid] for sid in all_sids}
 
@@ -146,6 +145,7 @@ class ProbabilityMap(dict):
         :param num_gsims: the number of GSIMs
         :param sids: a set of site indices
         :param initvalue: the initial value of the probability (default 0)
+        :returns: a ProbabilityMap dictionary
         """
         dic = cls()
         for sid in sids:
