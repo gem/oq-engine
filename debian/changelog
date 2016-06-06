@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a default location `~/oqdata/dbserver.log` for the DbServer log
   * Added an early check on the SA periods supported by the GSIMs
   * Now the gsim_logic_tree file is parsed only once
   * Added a document about the architecture of the engine
