@@ -256,8 +256,8 @@ class DataStore(collections.MutableMapping):
         """
         Build a file name from a realization, by using prefix and extension.
 
-        :param rlz: a realization object
         :param prefix: the prefix to use
+        :param rlz: a realization object
         :param fmt: the extension ('csv', 'xml', etc)
         :param export_dir: export directory (if None use .export_dir)
         :returns: relative pathname including the extension
