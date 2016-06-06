@@ -27,7 +27,7 @@ from openquake.risklib import scientific
 from openquake.commonlib.export import export
 from openquake.commonlib import writers, risk_writers
 from openquake.commonlib.util import get_assets, compose_arrays
-from openquake.calculators.views import FIVEDIGITS
+from openquake.commonlib.views import FIVEDIGITS
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
     ExposureData, Site)
@@ -887,5 +887,5 @@ def export_realizations(ekey, dstore):
     for i, rlz in enumerate(rlzs):
         data.append([i, rlz['uid'], rlz['weight']])
     path = dstore.export_path('realizations.csv')
-    writers.write_csv(path, data, fmt='%s', sep='\t')
+    writers.write_csv(path, data, fmt='%s')
     return [path]

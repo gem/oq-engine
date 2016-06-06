@@ -37,7 +37,8 @@ from mock import Mock
 import openquake.hazardlib
 from openquake.hazardlib import geo
 from openquake.baselib.general import writetmp
-from openquake.commonlib import logictree, readinput, tests, source, valid
+from openquake.risklib import valid
+from openquake.commonlib import logictree, readinput, tests, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
