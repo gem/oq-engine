@@ -234,25 +234,24 @@ def export_hazard_curves_csv(key, dest, sitecol, curves_by_imt,
     :param investigation_time: investigation time
     """
     nsites = len(sitecol)
-    # build a matrix of strings with size nsites * (num_imts + 1)
-    # the + 1 is needed since the 0-th column contains lon lat
-    rows = numpy.empty((nsites, len(imtls) + 1), dtype=object)
+    lst = [('lon', F32), ('lat', F32)]
+    for imt, imls in imtls.items():
+        for iml in imls:
+            lst.append(('%s-%s' % (imt, iml), F32))
+    hcurves = numpy.zeros(nsites, numpy.dtype(lst))
     for sid, lon, lat in zip(range(nsites), sitecol.lons, sitecol.lats):
-        rows[sid, 0] = '%.5f %.5f' % (lon, lat)
-    for i, imt in enumerate(curves_by_imt.dtype.names, 1):
-        for sid, curve in zip(range(nsites), curves_by_imt[imt]):
-            rows[sid, i] = scientificformat(curve, fmt='%11.7E')
-    write_csv(dest, rows, header=('lon lat',) + curves_by_imt.dtype.names)
+        values = numpy.concatenate([curves_by_imt[sid][imt] for imt in imtls])
+        hcurves[sid] = (lon, lat) + tuple(values)
+    write_csv(dest, hcurves)
     return {dest: dest}
 
 
-def hazard_curve_name(dstore, ekey, kind, rlzs_assoc, sampling):
+def hazard_curve_name(dstore, ekey, kind, rlzs_assoc):
     """
     :param calc_id: the calculation ID
     :param ekey: the export key
     :param kind: the kind of key
     :param rlzs_assoc: a RlzsAssoc instance
-    :param sampling: if sampling is enabled or not
     """
     key, fmt = ekey
     prefix = {'hcurves': 'hazard_curve', 'hmaps': 'hazard_map',
@@ -260,7 +259,7 @@ def hazard_curve_name(dstore, ekey, kind, rlzs_assoc, sampling):
     if kind.startswith('rlz-'):
         rlz_no, suffix = re.match('rlz-(\d+)(.*)', kind).groups()
         rlz = rlzs_assoc.realizations[int(rlz_no)]
-        fname = build_name(dstore, rlz, prefix + suffix, fmt, sampling)
+        fname = dstore.build_fname(prefix + suffix, rlz, fmt)
     elif kind.startswith('mean'):
         fname = dstore.export_path('%s-%s.%s' % (prefix, kind, ekey[1]))
     elif kind.startswith('quantile-'):
@@ -270,28 +269,6 @@ def hazard_curve_name(dstore, ekey, kind, rlzs_assoc, sampling):
     else:
         raise ValueError('Unknown kind of hazard curve: %s' % kind)
     return fname
-
-
-def build_name(dstore, rlz, prefix, fmt, sampling):
-    """
-    Build a file name from a realization, by using prefix and extension.
-
-    :param dstore: a DataStore instance
-    :param rlz: a realization object
-    :param prefix: the prefix to use
-    :param fmt: the extension
-    :param bool sampling: if sampling is enabled or not
-
-    :returns: relative pathname including the extension
-    """
-    if hasattr(rlz, 'sm_lt_path'):  # full realization
-        smlt_path = '_'.join(rlz.sm_lt_path)
-        suffix = '-ltr_%d' % rlz.ordinal if sampling else ''
-        fname = '%s-smltp_%s-gsimltp_%s%s.%s' % (
-            prefix, smlt_path, rlz.gsim_rlz.uid, suffix, fmt)
-    else:  # GSIM logic tree realization used in scenario calculators
-        fname = '%s_%s.%s' % (prefix, rlz.uid, fmt)
-    return dstore.export_path(fname)
 
 
 @export.add(('hcurves', 'csv'), ('hmaps', 'csv'), ('uhs', 'csv'))
@@ -310,8 +287,7 @@ def export_hcurves_csv(ekey, dstore):
     fnames = []
     items = dstore['hmaps' if key == 'uhs' else key].items()
     for kind, hcurves in sorted(items):
-        fname = hazard_curve_name(
-            dstore, ekey, kind, rlzs_assoc, oq.number_of_logic_tree_samples)
+        fname = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
         if key == 'uhs':
             uhs_curves = calc.make_uhs(hcurves, oq.imtls, oq.poes)
             write_csv(fname, util.compose_arrays(sitemesh, uhs_curves))
@@ -360,15 +336,13 @@ def export_uhs_xml(ekey, dstore):
         _, periods = calc.get_imts_periods(oq.imtls)
         uhs = calc.make_uhs(hmaps, oq.imtls, oq.poes)
         for poe in oq.poes:
-            poe_str = 'poe~%s' % poe
             fname = hazard_curve_name(
-                dstore, ekey, kind + '-%s' % poe, rlzs_assoc,
-                oq.number_of_logic_tree_samples)
+                dstore, ekey, kind + '-%s' % poe, rlzs_assoc)
             writer = hazard_writers.UHSXMLWriter(
                 fname, periods=periods, poe=poe,
                 investigation_time=oq.investigation_time, **metadata)
             data = []
-            for site, curve in zip(sitemesh, uhs[poe_str]):
+            for site, curve in zip(sitemesh, uhs[str(poe)]):
                 data.append(UHS(curve, Location(site)))
             writer.serialize(data)
             fnames.append(fname)
@@ -406,9 +380,7 @@ def export_hcurves_xml_json(ekey, dstore):
             smlt_path = ''
             gsimlt_path = ''
         curves = hcurves[kind]
-        name = hazard_curve_name(
-            dstore, ekey, kind, rlzs_assoc,
-            oq.number_of_logic_tree_samples)
+        name = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
         for imt in oq.imtls:
             imtype, sa_period, sa_damping = from_string(imt)
             fname = name[:-len_ext] + '-' + imt + '.' + export_type
@@ -448,9 +420,8 @@ def export_hmaps_xml_json(ekey, dstore):
             for poe in oq.poes:
                 suffix = '-%s-%s' % (poe, imt)
                 fname = hazard_curve_name(
-                    dstore, ekey, kind + suffix, rlzs_assoc,
-                    oq.number_of_logic_tree_samples)
-                data = [HazardMap(site[0], site[1], hmap['%s~%s' % (imt, poe)])
+                    dstore, ekey, kind + suffix, rlzs_assoc)
+                data = [HazardMap(site[0], site[1], hmap['%s-%s' % (imt, poe)])
                         for site, hmap in zip(sitemesh, maps)]
                 writer = writercls(
                     fname, investigation_time=oq.investigation_time,
@@ -472,7 +443,6 @@ def export_gmf(ekey, dstore):
     oq = dstore['oqparam']
     investigation_time = (None if oq.calculation_mode == 'scenario'
                           else oq.investigation_time)
-    samples = oq.number_of_logic_tree_samples
     fmt = ekey[-1]
     etags = dstore['etags'].value
     gmf_data = dstore['gmf_data']
@@ -489,7 +459,7 @@ def export_gmf(ekey, dstore):
             rup.gmfa = gmfa
             ruptures.append(rup)
         ruptures.sort(key=operator.attrgetter('etag'))
-        fname = build_name(dstore, rlz, 'gmf', fmt, samples)
+        fname = dstore.build_fname('gmf', rlz, fmt)
         fnames.append(fname)
         globals()['export_gmf_%s' % fmt](
             ('gmf', fmt), fname, sitecol, oq.imtls, ruptures, rlz,
