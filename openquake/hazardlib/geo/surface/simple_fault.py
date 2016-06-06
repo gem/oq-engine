@@ -45,9 +45,8 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
     def __init__(self, mesh):
         super(SimpleFaultSurface, self).__init__()
         self.mesh = mesh
-        assert not 1 in self.mesh.shape, (
-            "Mesh must have at least 2 nodes along both length and width."
-        )
+        assert 1 not in self.mesh.shape, (
+            "Mesh must have at least 2 nodes along both length and width.")
         self.strike = self.dip = None
 
     def _create_mesh(self):

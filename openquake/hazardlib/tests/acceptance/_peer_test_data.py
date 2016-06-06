@@ -117,19 +117,19 @@ SET1_CASE10_SOURCE_POLYGON = SET1_CASE11_SOURCE_POLYGON = Polygon([
 # page A-3
 SET1_CASE10_SITE1 = SET1_CASE11_SITE1 = Site(
     location=Point(-122.0, 38.0), vs30=800.0, vs30measured=True,
-    z1pt0=1.0, z2pt5=2.0, id=0
+    z1pt0=1.0, z2pt5=2.0
 )
 SET1_CASE10_SITE2 = SET1_CASE11_SITE2 = Site(
     location=Point(-122.0, 37.550), vs30=800.0, vs30measured=True,
-    z1pt0=1.0, z2pt5=2.0, id=1
+    z1pt0=1.0, z2pt5=2.0
 )
 SET1_CASE10_SITE3 = SET1_CASE11_SITE3 = Site(
     location=Point(-122.0, 37.099), vs30=800.0, vs30measured=True,
-    z1pt0=1.0, z2pt5=2.0, id=2
+    z1pt0=1.0, z2pt5=2.0
 )
 SET1_CASE10_SITE4 = SET1_CASE11_SITE4 = Site(
     location=Point(-122.0, 36.874), vs30=800.0, vs30measured=True,
-    z1pt0=1.0, z2pt5=2.0, id=3
+    z1pt0=1.0, z2pt5=2.0
 )
 
 
@@ -222,31 +222,31 @@ SET1_CASE1TO9_DIP = 90
 # page A-3
 SET1_CASE1TO9_SITE1 = Site(
     location=Point(-122.000, 38.113), vs30=800.0, vs30measured=True,
-    z1pt0=1.0, z2pt5=2.0, id=0
+    z1pt0=1.0, z2pt5=2.0
 )
 SET1_CASE1TO9_SITE2 = Site(
     location=Point(-122.114, 38.113), vs30=800.0, vs30measured=True,
-    z1pt0=1.0, z2pt5=2.0, id=1
+    z1pt0=1.0, z2pt5=2.0
 )
 SET1_CASE1TO9_SITE3 = Site(
     location=Point(-122.570, 38.111), vs30=800.0, vs30measured=True,
-    z1pt0=1.0, z2pt5=2.0, id=2
+    z1pt0=1.0, z2pt5=2.0
 )
 SET1_CASE1TO9_SITE4 = Site(
     location=Point(-122.000, 38.000), vs30=800.0, vs30measured=True,
-    z1pt0=1.0, z2pt5=2.0, id=3
+    z1pt0=1.0, z2pt5=2.0
 )
 SET1_CASE1TO9_SITE5 = Site(
     location=Point(-122.000, 37.910), vs30=800.0, vs30measured=True,
-    z1pt0=1.0, z2pt5=2.0, id=4
+    z1pt0=1.0, z2pt5=2.0
 )
 SET1_CASE1TO9_SITE6 = Site(
     location=Point(-122.000, 38.225), vs30=800.0, vs30measured=True,
-    z1pt0=1.0, z2pt5=2.0, id=5
+    z1pt0=1.0, z2pt5=2.0
 )
 SET1_CASE1TO9_SITE7 = Site(
     location=Point(-121.886, 38.113), vs30=800.0, vs30measured=True,
-    z1pt0=1.0, z2pt5=2.0, id=6
+    z1pt0=1.0, z2pt5=2.0
 )
 
 # page A-8
