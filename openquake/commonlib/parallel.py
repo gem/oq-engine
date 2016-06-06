@@ -355,9 +355,6 @@ class TaskManager(object):
 
         if distribute == 'celery':
 
-            backend = app.backend
-            import pdb; pdb.set_trace()
-            amqp_backend = backend.__class__.__name__.startswith('AMQP')
             rset = ResultSet(self.results)
             for task_id, result_dict in rset.iter_native():
                 idx = self.task_ids.index(task_id)
@@ -368,9 +365,8 @@ class TaskManager(object):
                     raise result
                 self.received.append(len(result))
                 acc = agg(acc, result.unpickle())
-                if amqp_backend:
-                    # work around a celery bug
-                    del backend._cache[task_id]
+                # work around a celery bug
+                del app.backend._cache[task_id]
             return acc
 
         elif distribute == 'futures':
