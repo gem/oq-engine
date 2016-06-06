@@ -36,7 +36,6 @@ from openquake.hazardlib import imt as imt_module
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__),
                               "data",
                               "gsimtables")
-TEMP_DIR = tempfile.gettempdir() + os.sep
 
 
 def midpoint(low, high, point=0.5):
@@ -52,8 +51,10 @@ class HDFArraysToDictTestCase(unittest.TestCase):
     a dictionary
     """
     def setUp(self):
-        self.fle = h5py.File(TEMP_DIR + "foo.hdf5")
-        self.group = self.fle.create_group("TestGroup")
+        fd, self.fname = tempfile.mkstemp(suffix='.hdf5')
+        os.close(fd)
+        self.hdf5 = h5py.File(self.fname)
+        self.group = self.hdf5.create_group("TestGroup")
         dset1 = self.group.create_dataset("DSET1", (3, 3), dtype="f")
         dset1[:] = np.zeros([3, 3])
         dset2 = self.group.create_dataset("DSET2", (3, 3), dtype="f")
@@ -79,8 +80,8 @@ class HDFArraysToDictTestCase(unittest.TestCase):
         """
         Close and delete the hdf5 file
         """
-        self.fle.close()
-        os.remove(TEMP_DIR + "foo.hdf5")
+        self.hdf5.close()
+        os.remove(self.fname)
 
 
 class AmplificationTableSiteTestCase(unittest.TestCase):
@@ -94,10 +95,10 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
         """
         Open the hdf5 file
         """
-        self.fle = h5py.File(self.TABLE_FILE)
-        self.amp_table = AmplificationTable(self.fle["Amplification"],
-                                            self.fle["Mw"][:],
-                                            self.fle["Distances"][:])
+        self.hdf5 = h5py.File(self.TABLE_FILE)
+        self.amp_table = AmplificationTable(self.hdf5["Amplification"],
+                                            self.hdf5["Mw"][:],
+                                            self.hdf5["Distances"][:])
 
     def test_instantiation(self):
         """
@@ -254,7 +255,7 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
         """
         Close the hdf5 file
         """
-        self.fle.close()
+        self.hdf5.close()
 
 
 class AmplificationTableRuptureTestCase(AmplificationTableSiteTestCase):
@@ -354,14 +355,14 @@ class AmplificationTableBadTestCase(unittest.TestCase):
         """
         Open the hdf5 file
         """
-        self.fle = h5py.File(self.TABLE_FILE)
+        self.hdf5 = h5py.File(self.TABLE_FILE)
 
     def test_unsupported_parameter(self):
         """
         Tests instantiation with a bad input
         """
         with self.assertRaises(ValueError) as ve:
-            AmplificationTable(self.fle["Amplification"], None, None)
+            AmplificationTable(self.hdf5["Amplification"], None, None)
         self.assertEqual(str(ve.exception),
                          "Amplification parameter Bad Value not recognised!")
 
@@ -369,7 +370,7 @@ class AmplificationTableBadTestCase(unittest.TestCase):
         """
         Close the file
         """
-        self.fle.close()
+        self.hdf5.close()
 
 
 class GSIMTableGoodTestCase(unittest.TestCase):
@@ -382,7 +383,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         """
         Opens the hdf5 file
         """
-        self.fle = h5py.File(self.TABLE_FILE)
+        self.hdf5 = h5py.File(self.TABLE_FILE)
 
     def test_correct_instantiation(self):
         """
@@ -390,9 +391,9 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
         np.testing.assert_array_almost_equal(gsim.distances,
-                                             self.fle["Distances"][:])
+                                             self.hdf5["Distances"][:])
         np.testing.assert_array_almost_equal(gsim.m_w,
-                                             self.fle["Mw"][:])
+                                             self.hdf5["Mw"][:])
         self.assertEqual(gsim.distance_type, "rjb")
         self.assertSetEqual(gsim.REQUIRES_SITES_PARAMETERS, set(("vs30",)))
         self.assertSetEqual(gsim.REQUIRES_DISTANCES, set(("rjb",)))
@@ -405,10 +406,10 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         for iml in ["PGA", "PGV", "SA", "T"]:
             np.testing.assert_array_almost_equal(
                 gsim.imls[iml],
-                self.fle["IMLs/" + iml][:])
+                self.hdf5["IMLs/" + iml][:])
             np.testing.assert_array_almost_equal(
                 gsim.stddevs["Total"][iml],
-                self.fle["Total/" + iml][:])
+                self.hdf5["Total/" + iml][:])
 
     def test_instantiation_without_file(self):
         """
@@ -584,7 +585,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         """
         Close the hdf5 file
         """
-        self.fle.close()
+        self.hdf5.close()
 
 
 class GSIMTableTestCaseMultiStdDev(unittest.TestCase):
