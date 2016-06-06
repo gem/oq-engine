@@ -22,7 +22,20 @@ BOLD=`tput bold`
 NORMAL=`tput sgr0`
 OQ_CREATE_DB='oq_create_db'
 OQ_USER='openquake'
-OQ_DB=$(eval echo "~${OQ_USER}/db.sqlite3")
+OQ_CFG_FILES=('/etc/openquake/openquake.cfg' '../openquake.cfg' '../../../openquake.cfg')
+
+for c in ${OQ_CFG_FILES[@]}; do
+    if [ -f $c ]; then
+        OQ_DB=$(grep file $c)
+        OQ_DB=${OQ_DB#*=}
+        break
+    fi
+done
+
+# Fallback: create the database in the user's home folder
+if [ -z $OQ_DB ]; then
+    OQ_DB=$(eval echo "~${OQ_USER}/oqdata/db.sqlite3")
+fi
 
 command -v oq_create_db &> /dev/null || {
     if [ -x "./${OQ_CREATE_DB}" ]; then
