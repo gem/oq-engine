@@ -244,7 +244,8 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     cmaker = ContextMaker(rlzs_assoc.gsims_by_trt_id[trt_model_id])
     params = cmaker.REQUIRES_RUPTURE_PARAMETERS
     rup_data_dt = numpy.dtype(
-        [('rupserial', U32), ('multiplicity', U16), ('numsites', U32)] + [
+        [('rupserial', U32), ('multiplicity', U16),
+         ('numsites', U32), ('occurrence_rate', F32)] + [
             (param, F32) for param in params])
     eb_ruptures = []
     rup_data = []
@@ -270,9 +271,14 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
         for ebr in build_eb_ruptures(
                 src, num_occ_by_rup, rupture_filter, oq.random_seed, rup_mon):
             nsites = len(ebr.indices)
+            try:
+                rate = ebr.rupture.occurrence_rate
+            except AttributeError:  # for nonparametric sources
+                rate = numpy.nan
             rc = cmaker.make_rupture_context(ebr.rupture)
             ruptparams = tuple(getattr(rc, param) for param in params)
-            rup_data.append((ebr.serial, len(ebr.etags), nsites) + ruptparams)
+            rup_data.append((ebr.serial, len(ebr.etags), nsites, rate) +
+                            ruptparams)
             eb_ruptures.append(ebr)
         dt = time.time() - t0
         calc_times.append((src.id, dt))
