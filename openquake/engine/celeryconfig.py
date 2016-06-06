@@ -27,7 +27,6 @@ import os
 import sys
 
 os.environ["OQ_DISTRIBUTE"] = "celery"
-os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.server.settings"
 
 # just in the case that are you using oq-engine from sources
 # with the rest of oq libraries installed into the system (or a
@@ -39,8 +38,6 @@ if os.environ.get("OQ_ENGINE_USE_SRCDIR"):
 from openquake.engine import config
 
 config.abort_if_no_config_available()
-
-sys.path.insert(0, os.path.dirname(__file__))
 
 amqp = config.get_section("amqp")
 
@@ -85,6 +82,7 @@ CELERY_IMPORTS = [
     "openquake.calculators.classical_bcr",
     "openquake.calculators.event_based",
     "openquake.calculators.event_based_risk",
+    "openquake.calculators.ucerf_event_based",
     "openquake.calculators.scenario",
     "openquake.calculators.scenario_risk",
     "openquake.calculators.scenario_damage",
