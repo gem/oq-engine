@@ -43,16 +43,6 @@ if os.environ.get("OQ_ENGINE_USE_SRCDIR") is not None:
 
 from openquake.engine import utils, config
 
-# Please note: the /usr/bin/oq-engine script requires a celeryconfig.py
-# file in the PYTHONPATH; when using binary packages, if a celeryconfig.py
-# is not available the OpenQuake Engine default celeryconfig.py, located
-# in /usr/share/openquake/engine, is used.
-if utils.USE_CELERY:
-    try:
-        import celeryconfig
-    except ImportError:
-        sys.path.append('/usr/share/openquake/engine')
-
 from openquake.engine.utils import confirm, config
 import openquake.engine
 from openquake.engine import engine, logs
@@ -284,6 +274,10 @@ def main():
     if args.no_distribute:
         os.environ['OQ_DISTRIBUTE'] = 'no'
 
+    # check if the datadir exists
+    if not os.path.exists(datastore.DATADIR):
+        os.makedirs(datastore.DATADIR)
+
     # check if the DbServer is up
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -296,9 +290,8 @@ def main():
             sys.exit('Please start the DbServer: '
                      'see the documentation for details')
         # otherwise start the DbServer automatically
-        dblog = os.path.expanduser('~/oq-dbserver.log')
         subprocess.Popen([sys.executable, '-m', 'openquake.server.dbserver',
-                          '-l', 'INFO'], stderr=open(dblog, 'w'))
+                          '-l', 'INFO'])
     if args.upgrade_db:
         logs.set_level('info')
         msg = logs.dbcmd('what_if_I_upgrade', 'read_scripts')

@@ -149,6 +149,9 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
+        [fname] = out['rup_data', 'csv']
+        self.assertEqualFiles('expected/rup_data.csv', fname)
+
     @attr('qa', 'hazard', 'event_based')
     def test_case_2bis(self):  # oversampling
         out = self.run_calc(case_2.__file__, 'job_2.ini',
