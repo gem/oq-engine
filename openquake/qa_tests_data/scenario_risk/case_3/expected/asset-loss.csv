@@ -1,4 +1,4 @@
-asset_ref,taxonomy,lon,lat,structural-mean,structural-stddev
+asset_ref,taxonomy,lon,lat,structural~mean,structural~stddev
 a1,RM,8.12985E+01,2.91098E+01,1.39581E+02,5.71861E+01
 a2,RC,8.30823E+01,2.79006E+01,2.02863E+02,2.39137E+02
 a4,W,8.57470E+01,2.79000E+01,0.00000E+00,0.00000E+00
