@@ -48,8 +48,8 @@ import openquake.engine
 from openquake.engine import engine, logs
 from openquake.engine.tools.make_html_report import make_report
 from openquake.engine.export import core
-from openquake.commonlib import datastore, valid
-from openquake.calculators import views
+from openquake.risklib import valid
+from openquake.commonlib import datastore, views
 
 from openquake.commonlib.concurrent_futures_process_mpatch import (
     concurrent_futures_process_monkeypatch)
@@ -274,6 +274,10 @@ def main():
     if args.no_distribute:
         os.environ['OQ_DISTRIBUTE'] = 'no'
 
+    # check if the datadir exists
+    if not os.path.exists(datastore.DATADIR):
+        os.makedirs(datastore.DATADIR)
+
     # check if the DbServer is up
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -286,9 +290,8 @@ def main():
             sys.exit('Please start the DbServer: '
                      'see the documentation for details')
         # otherwise start the DbServer automatically
-        dblog = os.path.expanduser('~/oq-dbserver.log')
         subprocess.Popen([sys.executable, '-m', 'openquake.server.dbserver',
-                          '-l', 'INFO'], stderr=open(dblog, 'w'))
+                          '-l', 'INFO'])
     if args.upgrade_db:
         logs.set_level('info')
         msg = logs.dbcmd('what_if_I_upgrade', 'read_scripts')
