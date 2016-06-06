@@ -7,14 +7,27 @@ if [ $GEM_SET_DEBUG ]; then
 fi
 set -e
 
-OQ_USER='openquake'
-OQ_DB_SCRIPT='-m openquake.server.db.upgrade_manager'
-OQ_DB=$(eval echo "~${OQ_USER}/db.sqlite3")
-
 help() {
     echo "Syntax: $(basename "$0") [-u user] [-s /custom/python/script.py] [-d /custom/db/path/to/db.sqlite3]"
     exit 0
 }
+
+OQ_USER='openquake'
+OQ_DB_SCRIPT='-m openquake.server.db.upgrade_manager'
+OQ_CFG_FILES=('/etc/openquake/openquake.cfg' '../openquake.cfg' '../../../openquake.cfg')
+
+for c in ${OQ_CFG_FILES[@]}; do
+    if [ -f $c ]; then
+        OQ_DB=$(grep file $c)
+        OQ_DB=${OQ_DB#*=}
+        break
+    fi
+done
+
+# Fallback: create the database in the user's home folder
+if [ -z $OQ_DB ]; then
+    OQ_DB=$(eval echo "~${OQ_USER}/oqdata/db.sqlite3")
+fi
 
 while (( "$#" )); do
     case "$1" in
