@@ -27,7 +27,6 @@ import os
 import sys
 
 os.environ["OQ_DISTRIBUTE"] = "celery"
-#os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.server.settings"
 
 # just in the case that are you using oq-engine from sources
 # with the rest of oq libraries installed into the system (or a
