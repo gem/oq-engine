@@ -466,7 +466,7 @@ class HazardCalculator(BaseCalculator):
             parent = self.datastore.parent
             if 'assetcol' in parent:
                 check_time_event(oq, parent['assetcol'].time_events)
-            if oq_hazard.time_event != oq.time_event:
+            if oq_hazard.time_event and oq_hazard.time_event != oq.time_event:
                 raise ValueError(
                     'The risk configuration file has time_event=%s but the '
                     'hazard was computed with time_event=%s' % (
