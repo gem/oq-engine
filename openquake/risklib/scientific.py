@@ -47,7 +47,7 @@ def build_dtypes(curve_resolution, conditional_loss_poes, insured=False):
     if insured:
         pairs += [(name + '_ins', pair) for name, pair in pairs]
     loss_curve_dt = numpy.dtype(pairs)
-    lst = [('poe~%s' % poe, F32) for poe in conditional_loss_poes]
+    lst = [('poe-%s' % poe, F32) for poe in conditional_loss_poes]
     if insured:
         lst += [(name + '_ins', pair) for name, pair in lst]
     loss_maps_dt = numpy.dtype(lst) if lst else None
@@ -56,9 +56,9 @@ def build_dtypes(curve_resolution, conditional_loss_poes, insured=False):
 
 def extract_poe_ins(name):
     """
-    >>> extract_poe_ins('poe~0.1')
+    >>> extract_poe_ins('poe-0.1')
     (0.1, False)
-    >>> extract_poe_ins('poe~0.2_ins')
+    >>> extract_poe_ins('poe-0.2_ins')
     (0.2, True)
     """
     ins = False
@@ -406,7 +406,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         (self._probs_i1d, self.distribution) = None, None
         self.init()
 
-        ls = [('iml', F32)] + [('prob~%s' % lr, F32) for lr in loss_ratios]
+        ls = [('iml', F32)] + [('prob-%s' % lr, F32) for lr in loss_ratios]
         self.dtype = numpy.dtype(ls)
 
     def init(self):
@@ -491,12 +491,12 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         array = numpy.zeros(len(self.imls), self.dtype)
         array['iml'] = self.imls
         for i, lr in enumerate(self.loss_ratios):
-            array['prob~%s' % lr] = self.probs[i]
+            array['prob-%s' % lr] = self.probs[i]
         return array, {'id': self.id, 'imt': self.imt,
                        'distribution_name': self.distribution_name}
 
     def __fromh5__(self, array, attrs):
-        lrs = [n.split('~')[1] for n in array.dtype.names if '~' in n]
+        lrs = [n.split('-')[1] for n in array.dtype.names if '-' in n]
         self.loss_ratios = map(float, lrs)
         self.imls = array['iml']
         self.probs = array

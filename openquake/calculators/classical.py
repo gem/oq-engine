@@ -348,7 +348,7 @@ class ClassicalCalculator(base.HazardCalculator):
             data = calc.compute_hazard_maps(
                 curves[imt], self.oqparam.imtls[imt], self.oqparam.poes)
             for poe, hmap in zip(self.oqparam.poes, data.T):
-                maps['%s~%s' % (imt, poe)] = hmap
+                maps['%s-%s' % (imt, poe)] = hmap
         return maps
 
     def store_curves(self, kind, curves, rlz=None):
