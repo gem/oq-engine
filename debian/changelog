@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Refactored the CSV exporters
+  * Moved celeryconfig.py; now celery must be started with
+    `celery worker --config openquake.engine.celeryconfig`
   * Added a default location `~/oqdata/dbserver.log` for the DbServer log
   * Added an early check on the SA periods supported by the GSIMs
   * Now the gsim_logic_tree file is parsed only once
