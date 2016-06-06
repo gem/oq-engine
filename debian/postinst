@@ -52,17 +52,17 @@ if [ $(cat /etc/passwd | grep ^openquake: | wc -l) -eq 0 ]; then
     adduser --system --home /var/lib/$USER --group --shell /bin/bash $USER
 fi
 
-DIRS=('/var/lib/openquake' '/usr/share/openquake/engine' '/var/log/openquake')
+DIR=/var/lib/openquake
+mkdir -p $DIR
+chown -R $USER.$USER $DIR
 
-for d in ${DIRS[@]}; do
-    if [ ! -d $d ]; then
-        mkdir -p $d
-    fi
-    # make sure that permissions are fine
-    chown -R $USER.$USER $d
-done
-# custom permissions
-chgrp adm /var/log/openquake
+DIR=/usr/share/openquake/engine
+mkdir -p $DIR
+chown -R $USER.$USER $DIR
+
+DIR=/var/log/openquake
+mkdir -p $DIR
+chown -R $USER.adm $DIR
 
 # create the database. This is run as "openquake" by default
 /usr/bin/oq_create_db
