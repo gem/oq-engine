@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added an exporter for the rupture data, including the occurrence rate
   * Added a default location `~/oqdata/dbserver.log` for the DbServer log
   * Added an early check on the SA periods supported by the GSIMs
   * Now the gsim_logic_tree file is parsed only once
