@@ -681,3 +681,14 @@ def export_disagg_xml(ekey, dstore):
         writer.serialize(data)
         fnames.append(fname)
     return sorted(fnames)
+
+
+@export.add(('rup_data', 'csv'))
+def export_rup_data(ekey, dstore):
+    rupture_data = dstore[ekey[0]]
+    fname = dstore.export_path('rup_data.csv')
+    rdata = []
+    for trt in sorted(rupture_data):
+        rdata.append(rupture_data[trt].value)
+    write_csv(fname, numpy.concatenate(rdata))
+    return [fname]
