@@ -18,12 +18,12 @@
 
 from __future__ import division
 import inspect
+import urllib
 import functools
 import numpy
 
 from openquake.baselib.general import CallableDict, AccumDict
-from openquake.commonlib import valid
-from openquake.risklib import utils, scientific
+from openquake.risklib import utils, scientific, valid
 
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -150,7 +150,7 @@ class Asset(object):
             asset collection ordinal
         """
         self.id = asset_id
-        self.taxonomy = taxonomy
+        self.taxonomy = urllib.quote_plus(taxonomy)
         self.number = number
         self.location = location
         self.values = values
