@@ -11,7 +11,8 @@ Contents:
 .. toctree::
    :maxdepth: 4
 
-   effective-realizations.rst
+   architecture
+   effective-realizations
 
    openquake.baselib
    openquake.risklib

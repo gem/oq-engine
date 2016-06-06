@@ -20,12 +20,14 @@
 Reading risk models for risk calculators
 """
 import re
+import urllib
 import collections
 
 import numpy
 
+from openquake.risklib import valid
 from openquake.commonlib.node import LiteralNode
-from openquake.commonlib import nrml, valid
+from openquake.commonlib import nrml
 from openquake.commonlib.sourcewriter import obj_to_node
 
 F64 = numpy.float64
@@ -132,7 +134,7 @@ def get_risk_models(oqparam, kind=None):
                 # limit states; this may change in the future
                 assert limit_states == fm.limitStates, (
                     limit_states, fm.limitStates)
-                rdict[taxo][loss_type] = ffl
+                rdict[urllib.quote_plus(taxo)][loss_type] = ffl
                 # TODO: see if it is possible to remove the attribute
                 # below, used in classical_damage
                 ffl.steps_per_interval = oqparam.steps_per_interval
@@ -145,6 +147,6 @@ def get_risk_models(oqparam, kind=None):
         # to make sure they are strictly increasing
         for loss_type, rm in rmodels.items():
             for (imt, taxo), rf in rm.items():
-                rdict[taxo][loss_type] = (
+                rdict[urllib.quote_plus(taxo)][loss_type] = (
                     rf.strictly_increasing() if cl_risk else rf)
     return rdict

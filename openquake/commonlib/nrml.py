@@ -85,11 +85,11 @@ import numpy
 
 from openquake.baselib.general import CallableDict
 from openquake.baselib.python3compat import unicode, raise_
-from openquake.commonlib import valid, writers
+from openquake.commonlib import writers
 from openquake.commonlib.node import (
     node_to_xml, Node, LiteralNode, node_from_elem, striptag,
     parse as xmlparse, iterparse, context)
-from openquake.risklib import scientific
+from openquake.risklib import scientific, valid
 from openquake.commonlib import InvalidFile
 
 F64 = numpy.float64
@@ -615,7 +615,7 @@ class CurveNode(LiteralNode):
         losses=valid.positivefloats,
         averageLoss=valid.positivefloat,
         stdDevLoss=valid.positivefloat,
-        poE=valid.positivefloat,
+        poE=valid.probability,
         IMLs=valid.positivefloats,
         pos=valid.lon_lat,
         IMT=str,
@@ -624,6 +624,38 @@ class CurveNode(LiteralNode):
         node=valid.lon_lat_iml,
         quantileValue=valid.positivefloat,
     )
+
+
+@nodefactory.add('uniformHazardSpectra')
+class UHSNode(LiteralNode):
+    validators = dict(
+        investigationTime=valid.positivefloat,
+        poE=valid.probability,
+        periods=valid.positivefloats,
+        pos=valid.lon_lat,
+        IMLs=valid.positivefloats)
+
+
+@nodefactory.add('disaggMatrices')
+class DisaggNode(LiteralNode):
+    validators = dict(
+        IMT=str,
+        saPeriod=valid.positivefloat,
+        saDamping=valid.positivefloat,
+        investigationTime=valid.positivefloat,
+        lon=valid.longitude,
+        lat=valid.latitude,
+        magBinEdges=valid.integers,
+        distBinEdges=valid.integers,
+        epsBinEdges=valid.integers,
+        lonBinEdges=valid.longitudes,
+        latBinEdges=valid.latitudes,
+        type=valid.namelist,
+        dims=valid.positiveints,
+        poE=valid.probability,
+        iml=valid.positivefloat,
+        index=valid.positiveints,
+        value=valid.positivefloat)
 
 
 @nodefactory.add('bcrMap')
@@ -688,14 +720,12 @@ class GmfNode(LiteralNode):
 # TODO: extend the validation to the following nodes
 # see https://bugs.launchpad.net/oq-engine/+bug/1381066
 nodefactory.add(
-    'disaggMatrices',
     'logicTree',
     'lossCurves',
     'lossFraction',
     'lossMap',
     'stochasticEventSet',
     'stochasticEventSetCollection',
-    'uniformHazardSpectra',
     )(LiteralNode)
 
 
