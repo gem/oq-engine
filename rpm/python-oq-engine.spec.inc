@@ -45,11 +45,6 @@ Provides: python-oq-risklib
 OpenQuake is an open source application that allows users to
 compute seismic hazard and seismic risk of earthquakes on a global scale.
 
-Please note: the /usr/bin/oq-engine script requires a celeryconfig.py file in
-the PYTHONPATH; when using binary packages, if a celeryconfig.py is not
-available the OpenQuake Engine default celeryconfig.py, located in
-/usr/share/openquake/engine, is used.
-
 Copyright (C) 2010-2016 GEM Foundation
 
 %pre
@@ -76,7 +71,6 @@ python setup.py install --single-version-externally-managed -O1 --root=%{buildro
 mkdir -p %{buildroot}%{_sysconfdir}/openquake
 mkdir -p %{buildroot}%{_datadir}/openquake/engine
 mkdir -p %{buildroot}%{_unitdir}
-install -m 644 celeryconfig.py %{buildroot}/%{_datadir}/openquake/engine
 install -m 644 openquake.cfg %{buildroot}/%{_sysconfdir}/openquake
 install -m 644 rpm/systemd/openquake-dbserver.service %{buildroot}%{_unitdir}/openquake-dbserver.service
 install -m 644 rpm/systemd/openquake-webui.service %{buildroot}%{_unitdir}/openquake-webui.service
