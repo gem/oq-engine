@@ -114,7 +114,7 @@ def export_avg_losses(ekey, dstore):
     writer = writers.CsvWriter(fmt=FIVEDIGITS)
     for rlz in rlzs:
         losses = avg_losses[:, rlz.ordinal]
-        dest = dstore.export_path('losses_by_asset-rlz%03d.csv' % rlz.ordinal)
+        dest = dstore.build_fname('losses_by_asset', rlz, 'csv')
         data = compose_arrays(assets, losses)
         writer.save(data, dest)
     return writer.getsaved()
@@ -152,7 +152,7 @@ def export_agg_losses(ekey, dstore):
     writer = writers.CsvWriter(fmt=FIVEDIGITS)
     for rlz in rlzs:
         losses = agg_losses[:, rlz.ordinal]
-        dest = dstore.export_path('agg_losses-rlz%03d.csv' % rlz.ordinal)
+        dest = dstore.build_fname('agg_losses', rlz, 'csv')
         data = compose_arrays(etags, losses)
         writer.save(data, dest)
     return writer.getsaved()
@@ -174,8 +174,7 @@ def export_agg_losses_ebr(ekey, dstore):
         for loss_type in loss_types:
             data = agg_losses['rlz-%03d/%s' % (rlz.ordinal, loss_type)].value
             data.sort(order='loss')
-            dest = dstore.export_path(
-                'agg_losses-rlz%03d-%s.csv' % (rlz.ordinal, loss_type))
+            dest = dstore.build_fname('agg_losses-' + loss_type, rlz, 'csv')
             tags = etags[data['rup_id']]
             if data.dtype['loss'].shape == (2,):  # insured losses
                 losses = data['loss'][:, 0]
@@ -216,7 +215,7 @@ def export_rcurves(ekey, dstore):
     assets = get_assets(dstore)
     curves = compactify(dstore[ekey[0]].value)
     name = ekey[0].split('-')[0]
-    writer = writers.CsvWriter(fmt='%9.7E')
+    writer = writers.CsvWriter(fmt=FIVEDIGITS)
     for rlz in rlzs:
         array = compose_arrays(assets, curves[:, rlz.ordinal])
         path = dstore.export_path('%s-%s.csv' % (name, rlz.uid))
@@ -258,8 +257,6 @@ def export_damage(ekey, dstore):
     for l, r in itertools.product(range(L), range(R)):
         lt = loss_types[l]
         rlz = rlzs[r]
-        suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (rlz.uid, lt)
-
         dd_asset = []
         for n, ass in enumerate(assetcol):
             assref = aref[ass['idx']]
@@ -272,13 +269,13 @@ def export_damage(ekey, dstore):
                         dist['mean'][ds], dist['stddev'][ds]))
 
         f1 = export_dmg_xml(('dmg_dist_per_asset', 'xml'), dstore,
-                            dmg_states, dd_asset, suffix)
+                            dmg_states, dd_asset, lt, rlz)
         max_damage = dmg_states[-1]
         # the collapse map is extracted from the damage distribution per asset
         # (dda) by taking the value corresponding to the maximum damage
         collapse_map = [dda for dda in dd_asset if dda.dmg_state == max_damage]
         f2 = export_dmg_xml(('collapse_map', 'xml'), dstore,
-                            dmg_states, collapse_map, suffix)
+                            dmg_states, collapse_map, lt, rlz)
         fnames.extend(sum((f1 + f2).values(), []))
     return sorted(fnames)
 
@@ -299,8 +296,6 @@ def export_damage_taxon(ekey, dstore):
     for l, r in itertools.product(range(L), range(R)):
         lt = loss_types[l]
         rlz = rlzs[r]
-        suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (rlz.uid, lt)
-
         dd_taxo = []
         for t in range(T):
             dist = dmg_by_taxon[t, r][lt]
@@ -311,7 +306,7 @@ def export_damage_taxon(ekey, dstore):
                         dist['mean'][ds], dist['stddev'][ds]))
 
         f = export_dmg_xml(('dmg_dist_per_taxonomy', 'xml'),
-                           dstore, dmg_states, dd_taxo, suffix)
+                           dstore, dmg_states, dd_taxo, lt, rlz)
         fnames.extend(sum(f.values(), []))
     return sorted(fnames)
 
@@ -330,8 +325,6 @@ def export_damage_total(ekey, dstore):
     for l, r in itertools.product(range(L), range(R)):
         lt = loss_types[l]
         rlz = rlzs[r]
-        suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (rlz.uid, lt)
-
         dd_total = []
         for ds in range(D):
             dist = dmg_total[r][lt]
@@ -339,7 +332,7 @@ def export_damage_total(ekey, dstore):
                 dmg_states[ds], dist['mean'][ds], dist['stddev'][ds]))
 
         f = export_dmg_xml(('dmg_dist_total', 'xml'), dstore,
-                           dmg_states, dd_total, suffix)
+                           dmg_states, dd_total, lt, rlz)
         fnames.extend(sum(f.values(), []))
     return sorted(fnames)
 
@@ -466,7 +459,7 @@ def export_dmg_totalcsv(ekey, dstore):
     return writer.getsaved()
 
 
-def export_dmg_xml(key, dstore, damage_states, dmg_data, suffix):
+def export_dmg_xml(key, dstore, damage_states, dmg_data, lt, rlz):
     """
     Export damage outputs in XML format.
 
@@ -478,18 +471,17 @@ def export_dmg_xml(key, dstore, damage_states, dmg_data, suffix):
         the list of damage states
     :param dmg_data:
         a list [(loss_type, unit, asset_ref, mean, stddev), ...]
-    :param suffix:
-        a suffix specifying the GSIM realization
+    :param lt:
+        loss type string
+    :param rlz:
+        a realization object
     """
-    dest = dstore.export_path('%s%s.%s' % (key[0], suffix, key[1]))
+    dest = dstore.build_fname('%s-%s' % (key[0], lt), rlz, key[1])
     risk_writers.DamageWriter(damage_states).to_nrml(key[0], dmg_data, dest)
     return AccumDict({key: [dest]})
 
 
 # exports for scenario_risk
-
-AggLoss = collections.namedtuple(
-    'AggLoss', 'loss_type unit mean stddev')
 
 LossMap = collections.namedtuple('LossMap', 'location asset_ref value std_dev')
 LossCurve = collections.namedtuple(
@@ -521,7 +513,6 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
                  if export_type == 'geojson' else
                  risk_writers.LossMapXMLWriter)
     loss_types = loss_maps.dtype.names
-    L = len(loss_types)
     for lt in loss_types:
         loss_maps_lt = loss_maps[lt]
         for r in range(R):
@@ -531,14 +522,11 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
                     ins = '_ins' if insflag else ''
                     rlz = rlzs[r]
                     unit = unit_by_lt[lt]
-                    suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (
-                        rlz.uid, lt)
                     root = ekey[0][:-5]  # strip -rlzs
-                    name = '%s%s-poe-%s%s.%s' % (
-                        root, suffix, poe, ins, ekey[1])
-                    fname = dstore.export_path(name)
+                    name = '%s-%s-poe-%s%s' % (root, lt, poe, ins)
+                    fname = dstore.build_fname(name, rlz, ekey[1])
                     data = []
-                    poe_str = 'poe~%s' % poe + ins
+                    poe_str = 'poe-%s' % poe + ins
                     for ass, stat in zip(assetcol, lmaps[poe_str]):
                         loc = Location(ass['lon'], ass['lat'])
                         lm = LossMap(loc, aref[ass['idx']], stat, None)
@@ -572,7 +560,7 @@ def export_loss_maps_stats_xml_geojson(ekey, dstore):
             continue
         array = loss_maps[ltype][:, s]
         curves = []
-        poe_str = 'poe~%s' % poe + ins
+        poe_str = 'poe-%s' % poe + ins
         for ass, val in zip(assetcol, array[poe_str]):
             loc = Location(ass['lon'], ass['lat'])
             curve = LossMap(loc, aref[ass['idx']], val, None)
@@ -608,12 +596,9 @@ def export_loss_map_xml_geojson(ekey, dstore):
             for r in range(R):
                 rlz = rlzs[r]
                 unit = unit_by_lt[lt]
-                suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (
-                    rlz.uid, lt)
                 root = ekey[0][:-5]  # strip -rlzs
-                name = '%s%s%s.%s' % (
-                    root, suffix, '_ins' if ins else '', ekey[1])
-                fname = dstore.export_path(name)
+                name = '%s-%s%s' % (root, lt, '_ins' if ins else '')
+                fname = dstore.build_fname(name, rlz, ekey[1])
                 data = []
                 for ass, mean, stddev in zip(
                         assetcol, means[:, r], stddevs[:, r]):
@@ -628,48 +613,33 @@ def export_loss_map_xml_geojson(ekey, dstore):
                 fnames.append(fname)
     return sorted(fnames)
 
+agg_dt = numpy.dtype([('unit', (bytes, 6)), ('mean', F32), ('stddev', F32)])
+
 
 # this is used by scenario_risk
 @export.add(('agglosses-rlzs', 'csv'))
 def export_agglosses(ekey, dstore):
     unit_by_lt = {ct['name']: ct['unit'] for ct in dstore['cost_types']}
     unit_by_lt['occupants'] = 'people'
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     agglosses = dstore[ekey[0]]
-    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
-    L = len(loss_types)
-    R, = agglosses.shape
     fnames = []
-    for lt in loss_types:
-        for r in range(R):
-            rlz = rlzs[r]
-            unit = unit_by_lt[lt]
-            suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (
-                rlz.uid, lt)
-            loss = agglosses[r][lt]
-            losses = [AggLoss(lt, unit, loss['mean'], loss['stddev'])]
-            out = export_loss_csv(('agg', 'csv'), dstore, losses, suffix)
-            fnames.append(out)
+    for rlz in dstore['csm_info'].get_rlzs_assoc().realizations:
+        loss = agglosses[rlz.ordinal]
+        losses = numpy.zeros(
+            1, numpy.dtype([(lt, agg_dt) for lt in loss.dtype.names]))
+        header = []
+        for lt in loss.dtype.names:
+            losses[lt]['unit'] = unit_by_lt[lt]
+            header.append('%s-unit' % lt)
+            losses[lt]['mean'] = loss[lt]['mean']
+            header.append('%s-mean' % lt)
+            losses[lt]['stddev'] = loss[lt]['stddev']
+            header.append('%s-stddev' % lt)
+        dest = dstore.build_fname('agglosses', rlz, 'csv')
+        writers.write_csv(dest, losses, header=header)
+        fnames.append(dest)
     return sorted(fnames)
 
-
-def export_loss_csv(ekey, dstore, data, suffix):
-    """
-    Export (aggregate) losses in CSV.
-
-    :param key: per_asset_loss|asset-ins
-    :param dstore: the datastore
-    :param data: a list [(loss_type, unit, asset_ref, mean, stddev), ...]
-    :param suffix: a suffix specifying the GSIM realization
-    """
-    dest = dstore.export_path('%s%s.%s' % (ekey[0], suffix, ekey[1]))
-    if ekey[0] in ('agg', 'ins'):  # aggregate
-        header = ['LossType', 'Unit', 'Mean', 'Standard Deviation']
-    else:  # loss_map
-        header = ['LossType', 'Unit', 'Asset', 'Mean', 'Standard Deviation']
-        data.sort(key=operator.itemgetter(2))  # order by asset idx
-    writers.write_csv(dest, [header] + data, fmt='%11.7E')
-    return dest
 
 AggCurve = collections.namedtuple(
     'AggCurve', ['losses', 'poes', 'average_loss', 'stddev_loss'])
@@ -697,7 +667,6 @@ def _gen_writers(dstore, writercls, root):
     oq = dstore['oqparam']
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     cost_types = dstore['cost_types']
-    L, R = len(cost_types), len(rlzs)
     poes = oq.conditional_loss_poes if 'maps' in root else [None]
     for poe in poes:
         poe_str = '-%s' % poe if poe is not None else ''
@@ -706,11 +675,11 @@ def _gen_writers(dstore, writercls, root):
             for ins in range(oq.insured_losses + 1):
                 if root.endswith('-rlzs'):
                     for rlz in rlzs:
-                        suffix = ('' if L == 1 and R == 1
-                                  else '-gsimltp_%s_%s' % (rlz.uid, loss_type))
-                        dest = dstore.export_path('%s%s%s%s.xml' % (
-                            root[:-5],  # strip -rlzs
-                            suffix, poe_str, '_ins' if ins else ''))
+                        dest = dstore.build_fname(
+                            '%s-%s%s%s' %
+                            (root[:-5],  # strip -rlzs
+                             loss_type, poe_str, '_ins' if ins else ''),
+                            rlz, 'xml')
                         yield writercls(
                             dest, oq.investigation_time, poe=poe,
                             loss_type=loss_type, unit=ct['unit'],
@@ -859,10 +828,9 @@ def export_bcr_map_rlzs(ekey, dstore):
     writercls = risk_writers.BCRMapXMLWriter
     fnames = []
     for rlz in realizations:
-        suffix = '.xml' if R == 1 else '-gsimltp_%s.xml' % rlz.uid
         for l, loss_type in enumerate(loss_types):
             rlz_data = bcr_data[loss_type][:, rlz.ordinal]
-            path = dstore.export_path('bcr-%s%s' % (loss_type, suffix))
+            path = dstore.build_fname('bcr-%s' + loss_type, rlz, 'xml')
             writer = writercls(
                 path, oq.interest_rate, oq.asset_life_expectancy, loss_type,
                 **get_paths(rlz))

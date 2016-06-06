@@ -265,12 +265,12 @@ def build_header(dtype):
     >>> gmf_dt = numpy.dtype([('A', imt_dt), ('B', imt_dt),
     ...                       ('idx', numpy.uint32)])
     >>> build_header(gmf_dt)
-    ['A-PGA:float64:3', 'A-PGV:float64:4', 'B-PGA:float64:3', 'B-PGV:float64:4', 'idx:uint32']
+    ['A~PGA:float64:3', 'A~PGV:float64:4', 'B~PGA:float64:3', 'B~PGV:float64:4', 'idx:uint32']
     """
     header = _build_header(dtype, ())
     h = []
     for col in header:
-        name = '-'.join(col[:-2])
+        name = '~'.join(col[:-2])
         numpytype = col[-2]
         shape = col[-1]
         coldescr = name
@@ -333,7 +333,7 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None):
         dest.write(sep.join(htranslator.write(someheader)) + u'\n')
 
     if autoheader:
-        all_fields = [col.split(':', 1)[0].split('-')
+        all_fields = [col.split(':', 1)[0].split('~')
                       for col in autoheader]
         for record in data:
             row = []

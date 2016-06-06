@@ -130,5 +130,5 @@ class WriteCsvTestCase(unittest.TestCase):
         a = numpy.array([(([1, 2, 3], [4, 5, 6, 7]),
                           ([1, 2, 4], [3, 5, 6, 7]), 8)], gmf_dt)
         self.assert_export(
-            a, 'A-PGA:int32:3,A-PGV:int32:4,B-PGA:int32:3,B-PGV:int32:4,'
+            a, 'A~PGA:int32:3,A~PGV:int32:4,B~PGA:int32:3,B~PGV:int32:4,'
             'idx:int32\n1 2 3,4 5 6 7,1 2 4,3 5 6 7,8\n')
