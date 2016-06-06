@@ -83,7 +83,7 @@ CELERY_IMPORTS = [
     "openquake.calculators.classical_bcr",
     "openquake.calculators.event_based",
     "openquake.calculators.event_based_risk",
-    "openquake.calculators.event_based_ucerf",
+    "openquake.calculators.ucerf_event_based",
     "openquake.calculators.scenario",
     "openquake.calculators.scenario_risk",
     "openquake.calculators.scenario_damage",
