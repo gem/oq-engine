@@ -43,12 +43,12 @@ executor.num_tasks_hint = executor._max_workers * 2
 
 OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
 
-
 if OQ_DISTRIBUTE == 'celery':
-
     from celery.result import ResultSet
-    from celery.app import current_app
+    from celery import Celery
     from celery.task import task
+    from openquake.engine.celeryconfig import BROKER_URL
+    app = Celery('openquake', backend='amqp://', broker=BROKER_URL)
 
 
 def oq_distribute():
@@ -355,7 +355,8 @@ class TaskManager(object):
 
         if distribute == 'celery':
 
-            backend = current_app().backend
+            backend = app.backend
+            import pdb; pdb.set_trace()
             amqp_backend = backend.__class__.__name__.startswith('AMQP')
             rset = ResultSet(self.results)
             for task_id, result_dict in rset.iter_native():
