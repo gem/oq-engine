@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added an exporter for the rupture data, including the occurrence rate
   * Refactored the CSV exporters
   * Moved celeryconfig.py; now celery must be started with
     `celery worker --config openquake.engine.celeryconfig`
