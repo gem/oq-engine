@@ -52,14 +52,17 @@ if [ $(cat /etc/passwd | grep ^openquake: | wc -l) -eq 0 ]; then
     adduser --system --home /var/lib/$USER --group --shell /bin/bash $USER
 fi
 
-HDIR=/usr/share/openquake/engine
-mkdir -p $HDIR
-chown -R $USER.$USER $HDIR
+DIR=/var/lib/openquake
+mkdir -p $DIR
+chown -R $USER.$USER $DIR
 
-# create logs directory
-LDIR=/var/log/openquake
-mkdir -p $LDIR
-chown -R $USER.adm $LDIR
+DIR=/usr/share/openquake/engine
+mkdir -p $DIR
+chown -R $USER.$USER $DIR
+
+DIR=/var/log/openquake
+mkdir -p $DIR
+chown -R $USER.adm $DIR
 
 # create the database. This is run as "openquake" by default
 /usr/bin/oq_create_db
