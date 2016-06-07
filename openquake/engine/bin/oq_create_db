@@ -27,11 +27,11 @@ for c in ${OQ_CFG_FILES[@]}; do
     fi
 done
 
-# Fallback: create the database in the user's home folder
-if [ -z "$OQ_DB" ]; then
-    OQ_DB=$(eval echo "~${OQ_USER}/oqdata/db.sqlite3")
-else
+if [ -n "$OQ_DB" ]; then
     OQ_DB=${OQ_DB#*=}
+else
+    # Fallback: create the database in the user's home folder
+    OQ_DB=$(eval echo "~${OQ_USER}/oqdata/db.sqlite3")
 fi
 
 while (( "$#" )); do
