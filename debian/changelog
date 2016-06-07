@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Having time_event=None in the hazard part of a calculation is now valid
   * Added an exporter for the rupture data, including the occurrence rate
   * Refactored the CSV exporters
   * Moved celeryconfig.py; now celery must be started with
