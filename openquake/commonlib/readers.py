@@ -26,7 +26,12 @@ F32 = numpy.float32
 
 class CurveReader(object):
     """
-    A reader for hazard curves stored in a CSV file.
+    A reader for hazard curves stored in a CSV file. The usage is as follows:
+
+    >> cr = CurveReader('/path/to/hcurves.csv')
+    >> for curve in cr.read():
+    ..     for imt in cr.imtls:
+    ..         print imt, cr.imtls[imt], curve
     """
     def __init__(self, fname):
         self.fname = fname
