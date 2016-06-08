@@ -928,7 +928,8 @@ class SourceManager(object):
 
     def gen_args(self, tiles):
         """
-        Yield the arguments for the calculator
+        Yield (sources, sitecol, siteidx, rlzs_assoc, monitor) by
+        looping on the tiles and on the source blocks.
         """
         siteidx = 0
         for i, sitecol in enumerate(tiles, 1):
