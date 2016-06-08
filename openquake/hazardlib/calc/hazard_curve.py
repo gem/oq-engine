@@ -28,8 +28,8 @@ import numpy
 
 from openquake.baselib.python3compat import raise_, zip
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import groupby
-from openquake.hazardlib.probability_map import ProbabilityMap, Imtls
+from openquake.baselib.general import groupby, DictArray
+from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
@@ -150,7 +150,7 @@ def calc_hazard_curves(
         are records with fields given by the intensity measure types; the
         size of each field is given by the number of levels in ``imtls``.
     """
-    imtls = Imtls(imtls)
+    imtls = DictArray(imtls)
     sources_by_trt = groupby(
         sources, operator.attrgetter('tectonic_region_type'))
     pmap = ProbabilityMap()
@@ -245,7 +245,7 @@ def hazard_curves_per_trt(
 
     :returns: a ProbabilityMap instance
     """
-    imtls = Imtls(imtls)
+    imtls = DictArray(imtls)
     cmaker = ContextMaker(gsims, maximum_distance)
     sources_sites = ((source, sites) for source in sources)
     ctx_mon = monitor('making contexts', measuremem=False)
