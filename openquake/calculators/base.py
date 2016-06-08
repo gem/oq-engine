@@ -513,16 +513,11 @@ class HazardCalculator(BaseCalculator):
             logging.info('Generating %d tiles of %d sites each',
                          num_tiles, len(tiles[0]))
         self.manager = source.SourceManager(
-            self.csm, self.core_task.__func__,
-            oq.maximum_distance, self.datastore,
-            self.monitor.new(oqparam=oq),
-            self.random_seed, oq.filter_sources, num_tiles=num_tiles)
-        siteidx = 0
-        for i, tile in enumerate(tiles, 1):
-            if num_tiles > 1:
-                logging.info('Processing tile %d', i)
-            self.manager.submit_sources(tile, siteidx)
-            siteidx += len(tile)
+            self.csm, oq.maximum_distance, self.datastore,
+            self.monitor.new(oqparam=oq), self.random_seed,
+            oq.filter_sources, num_tiles=num_tiles)
+        self.tm = starmap(self.core_task.__func__,
+                          self.manager.gen_args(tiles))
 
     def save_data_transfer(self, taskmanager):
         """
