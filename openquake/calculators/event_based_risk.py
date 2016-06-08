@@ -325,7 +325,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 ((riskinput, self.riskmodel, self.rlzs_assoc,
                   self.assetcol, self.monitor.new('task'))
                  for riskinput in riskinputs))
-        return tm.reduce(agg=self.agg, posthook=self.save_data_transfer)
+        res = tm.reduce(agg=self.agg)
+        self.save_data_transfer(tm)
+        return res
 
     def agg(self, acc, result):
         """

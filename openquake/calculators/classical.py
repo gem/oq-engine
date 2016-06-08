@@ -235,8 +235,8 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         monitor = self.monitor.new(self.core_task.__name__)
         monitor.oqparam = self.oqparam
-        curves_by_trt_id = self.tm.reduce(
-            self.agg_dicts, self.zerodict(), posthook=self.save_data_transfer)
+        curves_by_trt_id = self.tm.reduce(self.agg_dicts, self.zerodict())
+        self.save_data_transfer(self.tm)
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(curves_by_trt_id)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
