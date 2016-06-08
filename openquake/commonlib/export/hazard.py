@@ -689,5 +689,6 @@ def export_rup_data(ekey, dstore):
     for trt in sorted(rupture_data):
         fname = 'rup_data_%s.csv' % trt.lower().replace(' ', '_')
         data = rupture_data[trt].value
-        paths.append(write_csv(dstore.export_path(fname), data))
+        if len(data):
+            paths.append(write_csv(dstore.export_path(fname), data))
     return paths
