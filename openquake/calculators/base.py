@@ -627,9 +627,9 @@ class RiskCalculator(HazardCalculator):
         rlz_ids = getattr(self.oqparam, 'rlz_ids', ())
         if rlz_ids:
             self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
-        all_args = [(riskinput, self.riskmodel, self.rlzs_assoc) +
+        all_args = ((riskinput, self.riskmodel, self.rlzs_assoc) +
                     self.extra_args + (self.monitor,)
-                    for riskinput in self.riskinputs]
+                    for riskinput in self.riskinputs)
         res = starmap(self.core_task.__func__, all_args).reduce()
         return res
 
