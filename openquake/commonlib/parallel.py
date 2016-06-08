@@ -20,6 +20,7 @@
 TODO: write documentation.
 """
 from __future__ import print_function
+from functools import reduce
 import os
 import sys
 import socket
@@ -486,9 +487,13 @@ def litetask_futures(func):
         with monitor('total ' + func.__name__, measuremem=True), \
                 GroundShakingIntensityModel.forbid_instantiation():
             result = func(*args)
+        # NB: flush must not be called in the workers - they must not
+        # have access to the datastore - so we remove it
         rec_delattr(monitor, 'flush')
         return result
-    # NB: we need pickle=True because celery is using the worst possible
+
+    # NB: the returned function must have the same signature of func;
+    # we need pickle=True because celery is using the worst possible
     # protocol; once we remove celery we can try to remove pickle=True
     return FunctionMaker.create(
         func, 'return _s_(_w_, (%(shortsignature)s,), pickle=True)',
