@@ -235,7 +235,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         monitor = self.monitor.new(self.core_task.__name__)
         monitor.oqparam = self.oqparam
-        curves_by_trt_id = self.manager.tm.reduce(
+        curves_by_trt_id = self.tm.reduce(
             self.agg_dicts, self.zerodict(), posthook=self.save_data_transfer)
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(curves_by_trt_id)
@@ -246,9 +246,9 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def store_source_info(self, curves_by_trt_id):
         # store the information about received data
-        received = self.manager.tm.received
+        received = self.tm.received
         if received:
-            tname = self.manager.tm.name
+            tname = self.tm.name
             self.datastore.save('job_info', {
                 tname + '_max_received_per_task': max(received),
                 tname + '_tot_received': sum(received),
