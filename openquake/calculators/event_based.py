@@ -515,6 +515,7 @@ class EventBasedCalculator(ClassicalCalculator):
             self.sesruptures.append(sr)
         self.sesruptures.sort(key=operator.attrgetter('serial'))
         if self.oqparam.ground_motion_fields:
+            calc.check_overflow(self)
             for rlz in self.rlzs_assoc.realizations:
                 self.datastore.create_dset(
                     'gmf_data/%04d' % rlz.ordinal, calc.gmv_dt)
