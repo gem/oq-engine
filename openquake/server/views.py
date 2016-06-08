@@ -246,7 +246,7 @@ def calc(request, id=None):
     user = utils.get_user_data(request)
 
     calc_data = logs.dbcmd('get_calcs', request.GET,
-                           user['name'], user['is_super'], id)
+                           user['name'], user['acls'], id)
 
     response_data = []
     for hc_id, owner, status, job_type, is_running, desc in calc_data:
@@ -389,7 +389,7 @@ def calc_results(request, calc_id):
     # throw back a 404.
     try:
         info = logs.dbcmd('calc_info', calc_id)
-        if not user['is_super'] and info['user_name'] != user['name']:
+        if user['acls'] and info['user_name'] != user['name']:
             return HttpResponseNotFound()
     except models.NotFound:
         return HttpResponseNotFound()

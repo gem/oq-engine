@@ -391,7 +391,7 @@ def calc_info(calc_id):
     return response_data
 
 
-def get_calcs(request_get_dict, user_name, user_is_super=False, id=None):
+def get_calcs(request_get_dict, user_name, user_acls=False, id=None):
     """
     :returns:
         list of tuples (job_id, user_name, job_status, job_type,
@@ -399,7 +399,7 @@ def get_calcs(request_get_dict, user_name, user_is_super=False, id=None):
     """
     # helper to get job+calculation data from the oq-engine database
     jobs = models.OqJob.objects.filter()
-    if not user_is_super:
+    if user_acls:
         jobs = jobs.filter(user_name=user_name)
 
     if id is not None:
