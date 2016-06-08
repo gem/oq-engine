@@ -972,6 +972,7 @@ class SourceManager(object):
             attrs['maxweight'] = self.csm.maxweight
             self.infos.clear()
 
+
 @parallel.litetask
 def count_eff_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     """
