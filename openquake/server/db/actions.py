@@ -399,6 +399,9 @@ def get_calcs(request_get_dict, user_name, user_acl_on=False, id=None):
     """
     # helper to get job+calculation data from the oq-engine database
     jobs = models.OqJob.objects.filter()
+
+    # user_acl_on is true if settings.ACL_ON = True or when the user is a
+    # Django super user
     if user_acl_on:
         jobs = jobs.filter(user_name=user_name)
 
