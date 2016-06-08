@@ -314,8 +314,7 @@ class HazardCalculator(BaseCalculator):
         if 'source' in self.oqparam.inputs:
             with self.monitor(
                     'reading composite source model', autoflush=True):
-                self.csm = readinput.get_composite_source_model(
-                    self.oqparam)
+                self.csm = readinput.get_composite_source_model(self.oqparam)
                 self.datastore['csm_info'] = self.csm.info
                 self.rup_data = {}
         self.init()
