@@ -210,8 +210,7 @@ class ClassicalCalculator(base.HazardCalculator):
         :param result_dict: a dictionary with keys (trt_id, gsim)
         :param trt_model: a TrtModel instance
         """
-        return (result_dict.eff_ruptures.get(trt_model.id, 0) /
-                self.manager.num_tiles)
+        return (result_dict.eff_ruptures.get(trt_model.id, 0) / self.num_tiles)
 
     def zerodict(self):
         """
