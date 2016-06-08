@@ -30,17 +30,17 @@ def get_user_data(request):
     Returns also if the user is 'superuser' or not.
     """
 
-    acls = settings.ACLS
+    acl_on = settings.ACL_ON
     if settings.LOCKDOWN and hasattr(request, 'user'):
         if request.user.is_authenticated():
             name = request.user.username
         if request.user.is_superuser:
-            acls = False
+            acl_on = False
     else:
         name = (settings.DEFAULT_USER if
                 hasattr(settings, 'DEFAULT_USER') else getpass.getuser())
 
-    return {'name': name, 'acls': acls}
+    return {'name': name, 'acl_on': acl_on}
 
 
 def oq_server_context_processor(request):
