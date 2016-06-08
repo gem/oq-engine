@@ -339,7 +339,7 @@ class HazardCalculator(BaseCalculator):
             self.init()
             if 'source' in self.oqparam.inputs:
                 with self.monitor('managing sources', autoflush=True):
-                    self.tm = self.send_sources()
+                    self.taskman = self.send_sources()
                 attrs = self.datastore.hdf5['composite_source_model'].attrs
                 attrs['weight'] = self.csm.weight
                 attrs['filtered_weight'] = self.csm.filtered_weight
