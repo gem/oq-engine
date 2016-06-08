@@ -31,7 +31,7 @@ if [ "$LSB_RELEASE" != "precise" -a "$LSB_RELEASE" != "trusty" -a "$LSB_RELEASE"
     db_go
 fi
 
-if [ -f /usr/sbin/rabbitmqctl ]; then
+if [ -f /usr/sbin/rabbitmqctl -a -f /run/rabbitmq/pid ]; then
     # create rabbitmq configuration for python-celery
     celeryuser_count=`rabbitmqctl list_users | grep celeryuser | wc -l`
     if [ $celeryuser_count -eq 0 ]; then
