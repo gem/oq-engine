@@ -18,8 +18,7 @@
 
 import operator
 import numpy
-from openquake.baselib.general import groupby
-from openquake.hazardlib.probability_map import Imtls
+from openquake.baselib.general import groupby, DictArray
 
 F32 = numpy.float32
 
@@ -53,7 +52,7 @@ class CurveReader(object):
                 lambda g: [F32(r[1]) for r in g]).items():
             fields.append((imt, (F32, len(imls))))
             imtls[imt] = imls
-        return Imtls(imtls), fields
+        return DictArray(imtls), fields
 
     def read(self):
         """
