@@ -309,8 +309,7 @@ class HazardCalculator(BaseCalculator):
         self.save_params(**params)
         self.read_risk_data()
 
-    def base_pre_execute(self):
-        info = {}
+    def basic_pre_execute(self):
         self.read_risk_data()
         if 'source' in self.oqparam.inputs:
             with self.monitor(
@@ -319,14 +318,6 @@ class HazardCalculator(BaseCalculator):
                     self.oqparam)
                 self.datastore['csm_info'] = self.csm.info
                 self.rup_data = {}
-
-                # we could manage limits here
-                info.update(readinput.get_job_info(
-                    self.oqparam, self.csm, self.sitecol))
-                logging.info('Expected output size=%s',
-                             info['hazard']['output_weight'])
-                logging.info('Total weight of the sources=%s',
-                             info['hazard']['input_weight'])
         self.init()
         if 'source' in self.oqparam.inputs:
             with self.monitor('managing sources', autoflush=True):
@@ -336,7 +327,6 @@ class HazardCalculator(BaseCalculator):
             attrs['weight'] = self.csm.weight
             attrs['filtered_weight'] = self.csm.filtered_weight
             attrs['maxweight'] = self.csm.maxweight
-        return info
 
     def pre_execute(self):
         """
@@ -355,7 +345,10 @@ class HazardCalculator(BaseCalculator):
                 self.read_previous(precalc_id)
             self.init()
         else:  # we are in a basic calculator
-            vars(job_info).update(self.base_pre_execute())
+            self.basic_pre_execute()
+            if 'source' in self.oqparam.inputs:
+                vars(job_info).update(readinput.get_job_info(
+                    self.oqparam, self.csm, self.sitecol))
 
         job_info.hostname = socket.gethostname()
         if hasattr(self, 'riskmodel'):
