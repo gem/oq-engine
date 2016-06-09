@@ -240,6 +240,9 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     elif delete_uncompleted_calculations:
         logs.dbcmd('delete_uncompleted_calculations', getpass.getuser())
 
+    else:
+        parser.parentparser.prog = 'oq engine'
+        parser.parentparser.print_usage()
 
 parser = sap.Parser(engine)
 parser._add('log_file', '--log-file', '-L', help='''\
