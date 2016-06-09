@@ -93,6 +93,7 @@ MIDDLEWARE_CLASSES = (
 )
 
 LOCKDOWN = False
+ACL_ON = False
 
 # Add additional paths (as regular expressions) that don't require
 # authentication.
@@ -157,6 +158,8 @@ except ImportError:
     pass
 
 if LOCKDOWN:
+
+    ACL_ON = True
 
     AUTHENTICATION_BACKENDS += (
         'django.contrib.auth.backends.ModelBackend',

@@ -29,8 +29,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg
 from openquake.commonlib.export import export
-from openquake.commonlib.writers import (
-    scientificformat, floatformat, write_csv)
+from openquake.commonlib.writers import floatformat, write_csv
 from openquake.commonlib import writers, hazard_writers, util, readinput
 from openquake.risklib.riskinput import create
 from openquake.commonlib import calc
@@ -686,9 +685,10 @@ def export_disagg_xml(ekey, dstore):
 @export.add(('rup_data', 'csv'))
 def export_rup_data(ekey, dstore):
     rupture_data = dstore[ekey[0]]
-    fname = dstore.export_path('rup_data.csv')
-    rdata = []
+    paths = []
     for trt in sorted(rupture_data):
-        rdata.append(rupture_data[trt].value)
-    write_csv(fname, numpy.concatenate(rdata))
-    return [fname]
+        fname = 'rup_data_%s.csv' % trt.lower().replace(' ', '_')
+        data = rupture_data[trt].value
+        if len(data):
+            paths.append(write_csv(dstore.export_path(fname), data))
+    return paths
