@@ -91,7 +91,7 @@ rm -rf %{buildroot}
 %systemd_preun openquake-celery.service
 
 %postun
-%systemd_postun_with_restar openquake-dbserver.service
+%systemd_postun_with_restart openquake-dbserver.service
 %systemd_postun openquake-webui.service
 %systemd_postun openquake-celery.service
 
