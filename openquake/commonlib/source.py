@@ -631,7 +631,7 @@ class CompositionInfo(object):
                 before = self.gsim_lt.get_num_paths()
                 gsim_lt = self.gsim_lt.reduce(trts)
                 after = gsim_lt.get_num_paths()
-                if before > after:
+                if count_ruptures and before > after:
                     logging.warn('Reducing the logic tree of %s from %d to %d '
                                  'realizations', smodel.name, before, after)
             else:
