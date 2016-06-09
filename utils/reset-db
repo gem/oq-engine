@@ -25,10 +25,10 @@ startstop() {
     local ACTION=$1
     local SERVICE=${2:-openquake-dbserver}
 
-    if [ -f /etc/supervisor/conf.d/${OQ_SERVICE}.conf ]; then
-        supervisorctl $ACTION $OQ_SERVICE
-    elif [ -f /lib/systemd/system/${OQ_SERVICE}.service ]; then
-        systemctl $ACTION ${OQ_SERVICE}.service
+    if [ -f /etc/supervisor/conf.d/${SERVICE}.conf ]; then
+        supervisorctl $ACTION $SERVICE
+    elif [ -f /lib/systemd/system/${SERVICE}.service ]; then
+        systemctl $ACTION ${SERVICE}.service
     else
         echo -e "!! Service $SERVICE not found. Aborting." >&2
         exit 1
