@@ -37,7 +37,6 @@ from openquake.commonlib import readinput, parallel, datastore, calc
 from openquake.commonlib.util import max_rel_diff_index, Rupture
 from openquake.risklib.riskinput import create
 from openquake.calculators import base
-from openquake.commonlib.calc import gmvs_to_poe_map
 from openquake.calculators.classical import ClassicalCalculator
 
 # ######################## rupture calculator ############################ #
@@ -483,7 +482,7 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc,
             duration = oq.investigation_time * oq.ses_per_logic_tree_path
             for rlzi in gmfadict:
                 gmvs_by_sid = group_array(gmfadict[rlzi], 'sid')
-                result[rlzi][POEMAP] = gmvs_to_poe_map(
+                result[rlzi][POEMAP] = calc.gmvs_to_poe_map(
                     gmvs_by_sid, oq.imtls, oq.investigation_time, duration)
     return result
 
