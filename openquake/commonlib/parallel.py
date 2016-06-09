@@ -20,6 +20,7 @@
 TODO: write documentation.
 """
 from __future__ import print_function
+from functools import reduce
 import os
 import sys
 import socket
@@ -257,7 +258,7 @@ class TaskManager(object):
                      concurrent_tasks=executor._max_workers,
                      weight=lambda item: 1,
                      key=lambda item: 'Unspecified',
-                     name=None, posthook=None):
+                     name=None):
         """
         Apply a task to a tuple of the form (sequence, \*other_args)
         by first splitting the sequence in chunks, according to the weight
@@ -295,7 +296,7 @@ class TaskManager(object):
             return acc
         logging.info('Starting %d tasks', len(chunks))
         self = cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
-        return self.reduce(agg, acc, posthook)
+        return self.reduce(agg, acc)
 
     def __init__(self, oqtask, name=None):
         self.oqtask = oqtask
@@ -381,7 +382,7 @@ class TaskManager(object):
                 acc = agg(acc, result.unpickle())
             return acc
 
-    def reduce(self, agg=operator.add, acc=None, posthook=None):
+    def reduce(self, agg=operator.add, acc=None):
         """
         Loop on a set of results and update the accumulator
         by using the aggregation function.
@@ -418,8 +419,6 @@ class TaskManager(object):
             self.progress('Received %s of data, maximum per task %s',
                           humansize(sum(self.received)),
                           humansize(max(self.received)))
-        if posthook:
-            posthook(self)
         self.results = []
         return agg_result
 
@@ -488,9 +487,13 @@ def litetask_futures(func):
         with monitor('total ' + func.__name__, measuremem=True), \
                 GroundShakingIntensityModel.forbid_instantiation():
             result = func(*args)
+        # NB: flush must not be called in the workers - they must not
+        # have access to the datastore - so we remove it
         rec_delattr(monitor, 'flush')
         return result
-    # NB: we need pickle=True because celery is using the worst possible
+
+    # NB: the returned function must have the same signature of func;
+    # we need pickle=True because celery is using the worst possible
     # protocol; once we remove celery we can try to remove pickle=True
     return FunctionMaker.create(
         func, 'return _s_(_w_, (%(shortsignature)s,), pickle=True)',
