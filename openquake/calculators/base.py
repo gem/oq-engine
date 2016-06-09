@@ -55,6 +55,8 @@ class AssetSiteAssociationError(Exception):
 
 rlz_dt = numpy.dtype([('uid', (bytes, 200)), ('weight', F32)])
 
+logversion = {True}
+
 
 def set_array(longarray, shortarray):
     """
@@ -121,7 +123,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         self.close = close
         self.set_log_format()
-        logging.info('Using engine version %s', __version__)
+        if logversion:  # make sure this is logged only once
+            logging.info('Using engine version %s', __version__)
+            logversion.pop()
         if (concurrent_tasks is not None and concurrent_tasks !=
                 OqParam.concurrent_tasks.default):
             self.oqparam.concurrent_tasks = concurrent_tasks
