@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Renamed oq-lite -> oq and added a subcommand `oq engine`
   * Added a CSV reader for the hazard curves
   * Having time_event=None in the hazard part of a calculation is now valid
   * Added an exporter for the rupture data, including the occurrence rate
