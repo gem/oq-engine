@@ -39,12 +39,12 @@ class CurveReader(object):
         self.imtls, self.fields = self._parse_header(header)
 
     def _parse_header(self, header):
-        fields = []
-        cols = []
+        fields = []  # pairs (name, dtype), for instance ('PGA', F32)
+        cols = []  # pairs (name, float), for instance ('PGA', 0.1)
         for col in header:
-            if '-' in col:
+            if '-' in col:  # for instance PGA-0.1
                 cols.append(col.split('-', 1))
-            else:
+            else:  # for lon and lat
                 fields.append((col, F32))
         imtls = {}
         for imt, imls in groupby(
