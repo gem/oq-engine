@@ -210,8 +210,7 @@ class ClassicalCalculator(base.HazardCalculator):
         :param result_dict: a dictionary with keys (trt_id, gsim)
         :param trt_model: a TrtModel instance
         """
-        return (result_dict.eff_ruptures.get(trt_model.id, 0) /
-                self.manager.num_tiles)
+        return (result_dict.eff_ruptures.get(trt_model.id, 0) / self.num_tiles)
 
     def zerodict(self):
         """
@@ -235,8 +234,8 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         monitor = self.monitor.new(self.core_task.__name__)
         monitor.oqparam = self.oqparam
-        curves_by_trt_id = self.manager.tm.reduce(
-            self.agg_dicts, self.zerodict(), posthook=self.save_data_transfer)
+        curves_by_trt_id = self.taskman.reduce(self.agg_dicts, self.zerodict())
+        self.save_data_transfer(self.taskman)
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(curves_by_trt_id)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
@@ -246,9 +245,9 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def store_source_info(self, curves_by_trt_id):
         # store the information about received data
-        received = self.manager.tm.received
+        received = self.taskman.received
         if received:
-            tname = self.manager.tm.name
+            tname = self.taskman.name
             self.datastore.save('job_info', {
                 tname + '_max_received_per_task': max(received),
                 tname + '_tot_received': sum(received),
