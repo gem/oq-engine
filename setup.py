@@ -47,13 +47,11 @@ compute seismic hazard and seismic risk of earthquakes on a global scale.
 Copyright (C) 2010-2016 GEM Foundation
 """
 
-PY_MODULES = ['openquake.engine.bin.openquake_cli']
+PY_MODULES = ['openquake.commands.__main__']
 
 setup(
     entry_points={
-        "console_scripts": [
-            "oq-engine = openquake.engine.bin.openquake_cli:main"
-        ]
+        "console_scripts": ["oq = openquake.commands.__main__:oq"]
     },
     name="openquake.engine",
     version=version,
@@ -94,7 +92,8 @@ setup(
         'psutil >= 0.4.1',
     ],
     scripts=["openquake/engine/bin/oq_create_db",
-             "openquake/engine/bin/oq_reset_db"],
+             "openquake/engine/bin/oq_reset_db",
+             "openquake/engine/bin/oq-engine"],
     test_loader='openquake.baselib.runtests:TestLoader',
     test_suite='openquake.risklib,openquake.commonlib,openquake.calculators',
     zip_safe=False,
