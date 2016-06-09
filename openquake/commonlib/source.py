@@ -827,21 +827,14 @@ source_info_dt = numpy.dtype([
 ])
 
 
-source_chunk_dt = numpy.dtype([
-    ('num_sources', numpy.uint32),
-    ('weight', numpy.float32),
-    ('sent', numpy.int32)])
-
-
 class SourceManager(object):
     """
     Manager associated to a CompositeSourceModel instance.
     Filter and split sources and send them to the worker tasks.
     """
-    def __init__(self, csm, taskfunc, maximum_distance,
+    def __init__(self, csm, maximum_distance,
                  dstore, monitor, random_seed=None,
                  filter_sources=True, num_tiles=1):
-        self.tm = parallel.TaskManager(taskfunc)
         self.csm = csm
         self.maximum_distance = maximum_distance
         self.random_seed = random_seed
@@ -851,7 +844,6 @@ class SourceManager(object):
         self.num_tiles = num_tiles
         self.rlzs_assoc = csm.info.get_rlzs_assoc()
         self.split_map = {}  # trt_model_id, source_id -> split sources
-        self.source_chunks = []
         self.infos = {}  # trt_model_id, source_id -> SourceInfo tuple
         if random_seed is not None:
             # generate unique seeds for each rupture with numpy.arange
@@ -934,32 +926,35 @@ class SourceManager(object):
                     ss.serial = src.serial[start:start + nr]
                     start += nr
 
-    def submit_sources(self, sitecol, siteidx=0):
+    def gen_args(self, tiles):
         """
-        Submit the light sources and then the (split) heavy sources.
-        Only the sources affecting the sitecol as considered.
+        Yield (sources, sitecol, siteidx, rlzs_assoc, monitor) by
+        looping on the tiles and on the source blocks.
         """
-        tile = Tile(sitecol, self.maximum_distance)
-        for kind in ('light', 'heavy'):
-            if self.filter_sources:
-                logging.info('Filtering %s sources', kind)
-            sources = list(self.get_sources(kind, tile))
-            if not sources:
-                continue
-            for src in sources:
-                self.csm.filtered_weight += src.weight
-            nblocks = 0
-            for block in block_splitter(
-                    sources, self.maxweight,
-                    operator.attrgetter('weight'),
-                    operator.attrgetter('trt_model_id')):
-                sent = self.tm.submit(block, sitecol, siteidx,
-                                      self.rlzs_assoc, self.monitor.new())
-                self.source_chunks.append(
-                    (len(block), block.weight, sum(sent.values())))
-                nblocks += 1
-            logging.info('Sent %d sources in %d block(s)',
-                         len(sources), nblocks)
+        siteidx = 0
+        for i, sitecol in enumerate(tiles, 1):
+            if len(tiles) > 1:
+                logging.info('Processing tile %d', i)
+            tile = Tile(sitecol, self.maximum_distance)
+            for kind in ('light', 'heavy'):
+                if self.filter_sources:
+                    logging.info('Filtering %s sources', kind)
+                sources = list(self.get_sources(kind, tile))
+                if not sources:
+                    continue
+                for src in sources:
+                    self.csm.filtered_weight += src.weight
+                nblocks = 0
+                for block in block_splitter(
+                        sources, self.maxweight,
+                        operator.attrgetter('weight'),
+                        operator.attrgetter('trt_model_id')):
+                    yield (block, sitecol, siteidx,
+                           self.rlzs_assoc, self.monitor.new())
+                    nblocks += 1
+                logging.info('Sent %d sources in %d block(s)',
+                             len(sources), nblocks)
+            siteidx += len(sitecol)
 
     def store_source_info(self, dstore):
         """
@@ -976,14 +971,6 @@ class SourceManager(object):
             attrs = dstore['source_info'].attrs
             attrs['maxweight'] = self.csm.maxweight
             self.infos.clear()
-        if self.source_chunks:
-            dstore['source_chunks'] = sc = numpy.array(
-                self.source_chunks, source_chunk_dt)
-            attrs = dstore['source_chunks'].attrs
-            attrs['nbytes'] = sc.nbytes
-            attrs['sent'] = sc['sent'].sum()
-            attrs['task_name'] = self.tm.name
-            del self.source_chunks
 
 
 @parallel.litetask
