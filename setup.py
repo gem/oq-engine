@@ -51,7 +51,7 @@ PY_MODULES = ['openquake.commands.__main__']
 
 setup(
     entry_points={
-        "console_scripts": ["oq-engine = openquake.commands.__main__:oq"]
+        "console_scripts": ["oq = openquake.commands.__main__:oq"]
     },
     name="openquake.engine",
     version=version,
@@ -92,7 +92,8 @@ setup(
         'psutil >= 0.4.1',
     ],
     scripts=["openquake/engine/bin/oq_create_db",
-             "openquake/engine/bin/oq_reset_db"],
+             "openquake/engine/bin/oq_reset_db",
+             "openquake/engine/bin/oq-engine"],
     test_loader='openquake.baselib.runtests:TestLoader',
     test_suite='openquake.risklib,openquake.commonlib,openquake.calculators',
     zip_safe=False,
