@@ -92,8 +92,8 @@ rm -rf %{buildroot}
 
 %postun
 %systemd_postun_with_restart openquake-dbserver.service
-%systemd_postun openquake-webui.service
-%systemd_postun openquake-celery.service
+%systemd_postun_with_restart openquake-webui.service
+%systemd_postun_with_restart openquake-celery.service
 
 %files -f INSTALLED_FILES
 %defattr(-,root,root)
