@@ -16,59 +16,9 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.baselib.python3compat import zip
-import collections
 import numpy
 
 F64 = numpy.float64
-
-
-# return a dict imt -> slice and the total number of levels
-def _slicedict_n(imt_dt):
-    n = 0
-    slicedic = {}
-    for imt in imt_dt.names:
-        shp = imt_dt[imt].shape
-        n1 = n + shp[0] if shp else 1
-        slicedic[imt] = slice(n, n1)
-        n = n1
-    return slicedic, n
-
-
-class Imtls(collections.Mapping):
-    """
-    A small wrapper over an ordered dictionary of intensity measure types
-    and levels.
-
-    >>> Imtls({'PGA': [0.01, 0.02, 0.04], 'PGV': [0.1, 0.2]})
-    <Imtls
-    PGA: [ 0.01  0.02  0.04]
-    PGV: [ 0.1  0.2]>
-    """
-    def __init__(self, imtls):
-        self.imt_dt = dt = numpy.dtype(
-            [(imt, F64, len(imls) if hasattr(imls, '__len__') else 1)
-             for imt, imls in sorted(imtls.items())])
-        self.slicedic, num_levels = _slicedict_n(dt)
-        self.array = numpy.zeros(num_levels, F64)
-        for imt, imls in imtls.items():
-            self[imt] = imls
-
-    def __getitem__(self, imt):
-        return self.array[self.slicedic[imt]]
-
-    def __setitem__(self, imt, array):
-        self.array[self.slicedic[imt]] = array
-
-    def __iter__(self):
-        for imt in self.imt_dt.names:
-            yield imt
-
-    def __len__(self):
-        return len(self.imt_dt.names)
-
-    def __repr__(self):
-        data = ['%s: %s' % (imt, self[imt]) for imt in self]
-        return '<Imtls\n%s>' % '\n'.join(data)
 
 
 class ProbabilityCurve(object):
