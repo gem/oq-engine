@@ -34,12 +34,6 @@ sudo diff -urN /etc/openquake/openquake.cfg /etc/openquake/openquake.cfg.new_in_
 ```
 See an [example](openquake.cfg-diff-example.md).
 
-Finally upgrade your database:
-
-```bash
-oq engine --upgrade-db
-```
-
 ## Run OQ Engine
 You are now ready to run the OQ Engine. First, try running one of the demos included with the package. There are several demo calculations located in `/usr/share/openquake/engine/demos`. Example:
 <pre>
