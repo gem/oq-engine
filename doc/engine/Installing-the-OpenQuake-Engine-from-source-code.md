@@ -70,7 +70,7 @@ To build the Hazardlib speedups see: https://github.com/gem/oq-hazardlib/wiki/In
 ## Run OQ Engine
 You are now ready to run the OQ Engine. First, try running one of the demos included with the source code:
 ```bash
-./bin/oq-engine --run-hazard=../oq-risklib/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini
+./bin/oq-engine --run=../oq-risklib/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini
 ```
 
 The output should look something like this:

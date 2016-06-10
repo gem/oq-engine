@@ -608,9 +608,9 @@ celeryd_wait $GEM_MAXLOOP"
             if [ -f \$demo_dir/job_hazard.ini ]; then
             cd \$demo_dir
             echo \"Running \$demo_dir/job_hazard.ini\"
-            oq-engine --run-hazard job_hazard.ini
+            oq-engine --run job_hazard.ini
             echo \"Running \$demo_dir/job_risk.ini\"
-            oq-engine --run-risk job_risk.ini --exports csv,xml --hazard-calculation-id -1
+            oq-engine --run job_risk.ini --exports csv,xml --hazard-calculation-id -1
             cd -
             fi
         done

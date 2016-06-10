@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import print_function
 import os
 import sys
 import socket
@@ -188,6 +188,8 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
                 'list_calculations', 'hazard', getpass.getuser()):
             print(line)
     elif run_hazard is not None:
+        print('WARN: --rh/--run-hazard are deprecated, use --run instead',
+              file=sys.stderr)
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         run_job(os.path.expanduser(run_hazard), log_level,
@@ -199,6 +201,8 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         for line in logs.dbcmd('list_calculations', 'risk', getpass.getuser()):
             print(line)
     elif run_risk is not None:
+        print('WARN: --rr/--run-risk are deprecated, use --run instead',
+              file=sys.stderr)
         if hazard_calculation_id is None:
             sys.exit(MISSING_HAZARD_MSG)
         log_file = os.path.expanduser(log_file) \
