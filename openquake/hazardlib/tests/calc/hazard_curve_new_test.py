@@ -18,6 +18,7 @@ import unittest
 import numpy
 import numpy.testing as npt
 
+from openquake.baselib.general import DictArray
 from openquake.hazardlib.source import NonParametricSeismicSource
 from openquake.hazardlib.source.rupture import Rupture
 from openquake.hazardlib.const import TRT
@@ -26,7 +27,7 @@ from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.geodetic import point_at
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves_ext
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
-from openquake.hazardlib.calc.hazard_curve import hazard_curves_per_group
+from openquake.hazardlib.calc.hazard_curve import hazard_curves_per_trt
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.pmf import PMF
@@ -90,7 +91,7 @@ class HazardCurvesTestCase01(unittest.TestCase):
         site = Site(Point(0.0, 0.0), 800, True, z1pt0=100., z2pt5=1.)
         site = Site(Point(0.0, 0.0), 800, True, z1pt0=100., z2pt5=1.)
         self.sites = SiteCollection([site])
-        self.imtls = {'PGA': [0.01, 0.1, 0.3]}
+        self.imtls = DictArray({'PGA': [0.01, 0.1, 0.3]})
         self.gsim_by_trt = {TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
 
     def test_hazard_curve_X(self):
@@ -142,21 +143,17 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
         src = NonParametricSeismicSource('0', 'test', TRT.ACTIVE_SHALLOW_CRUST,
                                          data)
         group = SourceGroup([src], 'test', 'indep', 'mutex')
-        curves = hazard_curves_per_group(group, self.sites, self.imtls,
-                                         gsim_by_trt,
-                                         truncation_level=None)
-        crv = curves[0][0]
+        crv = hazard_curves_per_trt(group, self.sites, self.imtls,
+                                    gsim_by_trt, truncation_level=None)[0]
         npt.assert_almost_equal(numpy.array([0.35000, 0.32497, 0.10398]),
-                                numpy.array(crv[0]), decimal=4
-                                )
-
+                                crv.array[:, 0], decimal=4)
 
     def test_raise_error_non_uniform_group(self):
         # Test that the uniformity of a group (in terms of tectonic region)
         # is correctly checked
         gsim_by_trt = [SadighEtAl1997()]
         group = SourceGroup([self.src1, self.src3], 'test', 'indep', 'indep')
-        self.assertRaises(AssertionError, hazard_curves_per_group, group,
+        self.assertRaises(AssertionError, hazard_curves_per_trt, group,
                           self.sites, self.imtls, gsim_by_trt,
                           truncation_level=None)
 

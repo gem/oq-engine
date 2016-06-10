@@ -24,6 +24,7 @@ from openquake.hazardlib.geo import Point
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.source.base import BaseSeismicSource
 
 
 class FakeSiteContext(object):
@@ -51,6 +52,11 @@ class HazardCurvesTestCase(unittest.TestCase):
 
         def iter_ruptures(self):
             return iter(self.ruptures)
+
+        def count_ruptures(self):
+            return len(self.ruptures)
+
+    BaseSeismicSource.register(FakeSource)
 
     class FailSource(FakeSource):
         def iter_ruptures(self):
