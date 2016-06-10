@@ -607,6 +607,7 @@ class CompositionInfo(object):
         trts = set(tm.trt for tm in source_model.trt_models)
         return self.gsim_lt.reduce(trts).get_num_paths()
 
+    # FIXME: this is called several times, both in .init and in .send_sources
     def get_rlzs_assoc(self, count_ruptures=None):
         """
         Return a RlzsAssoc with fields realizations, gsim_by_trt,
