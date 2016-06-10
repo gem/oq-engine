@@ -2,12 +2,12 @@ There is no support to upgrade an OpenQuake 1.0 database to an OpenQuake 1.2 dat
 since the migration procedure would be too complex and too slow to make it practical. However there
 is a mechanism to keep in sync an OpenQuake 1.2 database with future versions of the code.
 
-oq-engine --what-if-I-upgrade
+oq engine --what-if-I-upgrade
 ---------------------------------------
 
 To help the users wondering if they should migrate to a newer version
 of OpenQuake or not, a command-line switch ``--what-if-I-upgrade``
-has been be added to the ``oq-engine`` script: when invoked, this
+has been be added to the ``oq engine`` command: when invoked, this
 command will look at the [directory containing the upgrade scripts]
 (https://github.com/gem/oq-engine/tree/master/openquake/server/db/schema/upgrades) on GitHub and figure out which migrations are missing in your version
 of OpenQuake. The name of the upgrade scripts follow the following
@@ -19,7 +19,7 @@ where the extension can be `.sql` or `.py` and the `optional-flag` can
 be `-danger` or `-slow`; the flag `-danger` identifies the
 scripts that can potentially destroy data, whereas the flag `-slow`
 identifies the scripts that can potentially be slow. When running
-the `oq-engine --what-if-I-upgrade` command, the user will get
+the `oq engine --what-if-I-upgrade` command, the user will get
 something like that:
 
 ```
@@ -71,7 +71,7 @@ The user will go back to a versions that worked, and will tell
 us about the problem she had, so that we can help with a solution
 to make the migration possible. We also added a command
 
-  `$ oq-engine --version-db`
+  `$ oq engine --version-db`
 
 which prints out the current version of the database.
 

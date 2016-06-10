@@ -81,7 +81,7 @@ port = 5432
 
 ## Running calculations
 
-Jobs can be submitted through the master node using the `oq-engine` command line interface.
+Jobs can be submitted through the master node using the `oq engine` command line interface.
 
 ### Starting Celery
 
