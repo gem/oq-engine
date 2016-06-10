@@ -20,11 +20,6 @@
 BOLD=`tput bold`
 NORMAL=`tput sgr0`
 
-command -v oq &> /dev/null || {
-    echo -e "!! Can't find 'oq' in your path. Aborting." >&2
-    exit 1
-}
-
 echo "${BOLD}The command 'oq-engine' is deprecated and will be removed. Please use 'oq engine' instead${NORMAL}"
 
 oq engine $@
