@@ -23,6 +23,7 @@
 import sys
 import time
 import operator
+import collections
 
 import numpy
 
@@ -285,7 +286,6 @@ def hazard_curves_per_trt(
     return pmap
 
 
-
 def hazard_curves_per_group(
         group, sites, imtls, gsims, truncation_level=None,
         source_site_filter=filters.source_site_noop_filter,
@@ -435,7 +435,6 @@ def calc_hazard_curves_ext(
     curves_fin = init_curves(len(sites), imtls)
     # Processing groups
     for group in groups.grp_list:
-        print 'Group:', group.name
         # Prepare a dictionary
         sources_by_trt = collections.defaultdict(list)
         weights_by_trt = collections.defaultdict(dict)
@@ -456,7 +455,6 @@ def calc_hazard_curves_ext(
         # Aggregate results. Note that for now we assume that source groups
         # are independent.
         for trt in sources_by_trt:
-            print '    TRT:', trt
             # Create a temporary group
             tmp_group = SourceGroup(sources_by_trt[trt],
                                     'temp',
@@ -466,7 +464,6 @@ def calc_hazard_curves_ext(
                                     False)
             # Compute curves
             if group.src_interdep is 'indep':
-                print '      src indep'
                 curves = agg_curves(curves, hazard_curves_per_group(
                     tmp_group, sites, imtls, [gsim_by_trt[trt]],
                     truncation_level, source_site_filter,
@@ -474,7 +471,6 @@ def calc_hazard_curves_ext(
             else:
                 # Since in this case the probability for each source have
                 # been already accounted we use a weight equal to unity
-                print '      src mutex'
                 curves = agg_curves_mutex(curves, hazard_curves_per_group(
                     tmp_group, sites, imtls, [gsim_by_trt[trt]],
                     truncation_level, source_site_filter,
