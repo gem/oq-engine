@@ -61,7 +61,6 @@ def run_commands():
     """
     Execute the received commands in a queue.
     """
-    connection.cursor()  # bind the db
     while True:
         conn, cmd, args = queue.get()
         if cmd == 'stop':
@@ -120,6 +119,12 @@ def runserver(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
         DATABASE['PORT'] = int(port)
     else:
         addr = config.DBS_ADDRESS
+
+    # create and upgrade the db if needed
+    connection.cursor()  # bind the db
+    actions.upgrade_db()
+
+    # start the server
     DbServer(addr, config.DBS_AUTHKEY).loop()
 
 parser = sap.Parser(runserver)

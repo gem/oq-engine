@@ -18,7 +18,6 @@
 
 import os
 import getpass
-import subprocess
 import unittest
 import tempfile
 import mock
