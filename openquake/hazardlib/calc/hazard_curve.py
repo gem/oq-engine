@@ -243,11 +243,7 @@ def poe_map(src, s_sites, imtls, cmaker, trunclevel, bbs,
                     # protecting against possible refactoring errors
                     assert len(bs) == len(jb_dists) == len(closest_points)
                     for bb, dist, p in zip(bs, jb_dists, closest_points):
-                        # FIXME: perhaps this is not needed since there is
-                        # the FarAwayRupture check before
-                        if dist < cmaker.maximum_distance:
-                            # ruptures too far away are ignored
-                            bb.update([dist], [p.longitude], [p.latitude])
+                        bb.update([dist], [p.longitude], [p.latitude])
     except Exception as err:
         etype, err, tb = sys.exc_info()
         msg = 'An error occurred with source id=%s. Error: %s'
