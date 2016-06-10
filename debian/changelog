@@ -1,3 +1,7 @@
+  [Daniele Viganò]
+  * Remove oq_create_db script, db is created by the DbServer
+  * Move oq_reset_db into utils and clean old code
+
   [Michele Simionato]
   * Now the DbServer automatically upgrades the database if needed
   * Renamed oq-lite -> oq and added a subcommand `oq engine`
