@@ -282,3 +282,15 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         fnames = out['gmf_data', 'txt']
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got, sorted)
+
+    @attr('qa', 'hazard', 'event_based')
+    def test_overflow(self):
+        too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]
+                         for period in numpy.arange(0.1,  1, 0.001)}
+        with self.assertRaises(ValueError) as ctx:
+            self.run_calc(
+                case_1.__file__, 'job.ini',
+                intensity_measure_types_and_levels=str(too_many_imts))
+        self.assertEqual(str(ctx.exception),
+                         'The event based calculator is restricted '
+                         'to 256 imts, got 900')
