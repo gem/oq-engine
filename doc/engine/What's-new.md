@@ -23,9 +23,9 @@ still positive. Also, now it is possible to set different integration
 distances for different tectonic region types: this may have a very positive
 effect on the performance.
 
-4. We have introduced a command `oq-engine2` with a lot of new functionalities;
-we deprecated the old command `oq-engine`, which it will be removed in the
-next release. We added a command `oq-engine --show-log <job_id>`
+4. We have introduced a command `oq` with a lot of new functionalities;
+we deprecated the old command `oq-engine`, which has been replaced by `oq engine`.
+We added a command `oq engine --show-log <job_id>`
 
 5. As usual there were a lot of bug fixes, including a very
 significant one in the event based risk calculator in presence of a
@@ -60,4 +60,4 @@ this platform is officially deprecated and it has been deprecated for
 a long time.
 
 12. A lot more was done and interested people should look at the
-changelogs: https://github.com/gem/oq-hazardlib/blob/engine-2.0/debian/changelog and https://github.com/gem/oq-engine/blob/engine-2.0/debian/changelog
+changelogs: https://github.com/gem/oq-hazardlib/blob/engine-2.0/debian/changelog and https://github.com/gem/oq engine/blob/engine-2.0/debian/changelog

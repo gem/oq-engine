@@ -579,7 +579,7 @@ celeryd_wait $GEM_MAXLOOP"
             echo \"Running \$ini\"
             for loop in \$(seq 1 $GEM_MAXLOOP); do
                 set +e
-                oq-engine --run \$ini --exports xml
+                oq engine --run \$ini --exports xml
                 oq_ret=\$?
                 set -e
                 if [ \$oq_ret -eq 0 ]; then
@@ -595,29 +595,29 @@ celeryd_wait $GEM_MAXLOOP"
         done
 
         # print the log of the last calculation
-        oq-engine --show-log -1
+        oq engine --show-log -1
 
         # Try to export a set of results AFTER the calculation
         # automatically creates a directory called out
         echo \"Exporting output #1\"
-        oq-engine --eo 1 /tmp/output
+        oq engine --eo 1 /tmp/output
         echo \"Exporting calculation #2\"
-        oq-engine --eos 2 /tmp/out/eos_2
+        oq engine --eos 2 /tmp/out/eos_2
 
         for demo_dir in \$(find . -type d | sort); do
             if [ -f \$demo_dir/job_hazard.ini ]; then
             cd \$demo_dir
             echo \"Running \$demo_dir/job_hazard.ini\"
-            oq-engine --run job_hazard.ini
+            oq engine --run job_hazard.ini
             echo \"Running \$demo_dir/job_risk.ini\"
-            oq-engine --run job_risk.ini --exports csv,xml --hazard-calculation-id -1
+            oq engine --run job_risk.ini --exports csv,xml --hazard-calculation-id -1
             cd -
             fi
         done
         python -m openquake.server.stop"
     fi
 
-    ssh $lxc_ip "sudo -u openquake python -m openquake.server.dbserver & sleep 1 ; oq-engine --make-html-report today ; python -m openquake.server.stop"
+    ssh $lxc_ip "sudo -u openquake python -m openquake.server.dbserver & sleep 1 ; oq engine --make-html-report today ; python -m openquake.server.stop"
     scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
 
     scp -r "${lxc_ip}:/usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" "out_${BUILD_UBUVER}/"
