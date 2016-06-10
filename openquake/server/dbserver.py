@@ -121,7 +121,7 @@ def runserver(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
     else:
         addr = config.DBS_ADDRESS
 
-    # upgrade the db if needed
+    # create and upgrade the db if needed
     connection.cursor()  # bind the db
     actions.upgrade_db()
 
