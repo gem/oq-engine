@@ -26,12 +26,12 @@ from openquake.baselib.python3compat import with_metaclass
 
 class SourceGroupCollection(object):
     """
-    :parameter list grp_list:
+    :param grp_list:
         A list of :class:`openquake.hazardlib.source.base.SourceGroup`
         instances
-    :parameter str name:
+    :param name:
         The name of the group
-    :parameter str grp_interdep:
+    :param grp_interdep:
         Interdependence between groups of sources can be either 'indep' or
         'mutex'.
     """
@@ -58,20 +58,20 @@ class SourceGroupCollection(object):
 
 class SourceGroup(object):
     """
-    :parameter src_list:
+    :param src_list:
         A list containing seismic sources
-    :parameter str name:
+    :param name:
         The name of the group
-    :parameter src_interdep:
+    :param src_interdep:
         A string specifying if the sources in this cluster are independent or
         mutually exclusive
-    :parameter rup_indep:
+    :param rup_indep:
         A string specifying if the ruptures within each source of the cluster
         are independent or mutually exclusive
-    :parameter weights:
+    :param weights:
         A dictionary whose keys are the source IDs of the cluster and the
         values are the weights associated with each source
-    :parameter checkw:
+    :param checkw:
         Flag controlling the verification of weights assigned to the sources
         in the group
     """
