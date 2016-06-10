@@ -68,6 +68,17 @@ class PMF(object):
         :returns:
             Samples from PMF as a list
         """
+        return [pair[1] for pair in self.sample_pairs(number_samples)]
+
+    def sample_pairs(self, number_samples):
+        """
+        Produces a list of samples from the probability mass function.
+
+        :param int data:
+            Number of samples
+        :returns:
+            Samples from PMF as a list of pairs
+        """
         probs = np.cumsum([val[0] for val in self.data])
         sampler = np.random.uniform(0., 1., number_samples)
-        return [self.data[ival][1] for ival in np.searchsorted(probs, sampler)]
+        return [self.data[ival] for ival in np.searchsorted(probs, sampler)]

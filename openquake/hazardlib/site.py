@@ -25,6 +25,7 @@ from openquake.baselib.python3compat import range
 from openquake.baselib.slots import with_slots
 from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.utils import cross_idl
 
 
 @with_slots
@@ -50,9 +51,6 @@ class Site(object):
     :param backarc":
         Boolean value, ``True`` if the site is in the subduction backarc and
         ``False`` if it is in the subduction forearc or is unknown
-    :param id:
-        Optional parameter with default 0. If given, it should be an
-        integer identifying the site univocally.
 
     :raises ValueError:
         If any of ``vs30``, ``z1pt0`` or ``z2pt5`` is zero or negative.
@@ -61,10 +59,10 @@ class Site(object):
 
         :class:`Sites <Site>` are pickleable
     """
-    _slots_ = 'location vs30 vs30measured z1pt0 z2pt5 backarc id'.split()
+    _slots_ = 'location vs30 vs30measured z1pt0 z2pt5 backarc'.split()
 
     def __init__(self, location, vs30, vs30measured, z1pt0, z2pt5,
-                 backarc=False, id=0):
+                 backarc=False):
         if not vs30 > 0:
             raise ValueError('vs30 must be positive')
         if not z1pt0 > 0:
@@ -77,7 +75,6 @@ class Site(object):
         self.z1pt0 = z1pt0
         self.z2pt5 = z2pt5
         self.backarc = backarc
-        self.id = id
 
     def __str__(self):
         """
@@ -145,7 +142,7 @@ class SiteCollection(object):
     _slots_ = dtype.names
 
     @classmethod
-    def from_points(cls, lons, lats, site_ids, sitemodel):
+    def from_points(cls, lons, lats, sitemodel):
         """
         Build the site collection from
 
@@ -153,8 +150,6 @@ class SiteCollection(object):
             a sequence of longitudes
         :param lats:
             a sequence of latitudes
-        :param site_ids:
-            a sequence of distinct integers
         :param sitemodel:
             an object containing the attributes
             reference_vs30_value,
@@ -163,12 +158,11 @@ class SiteCollection(object):
             reference_depth_to_2pt5km_per_sec,
             reference_backarc
         """
-        assert len(lons) == len(lats) == len(site_ids), (
-            len(lons), len(lats), len(site_ids))
+        assert len(lons) == len(lats), (len(lons), len(lats))
         self = cls.__new__(cls)
         self.complete = self
         self.total_sites = len(lons)
-        self.sids = numpy.array(site_ids, int)
+        self.sids = numpy.arange(len(lons), dtype=numpy.uint32)
         self.lons = numpy.array(lons)
         self.lats = numpy.array(lats)
         self._vs30 = sitemodel.reference_vs30_value
@@ -191,7 +185,7 @@ class SiteCollection(object):
         self._backarc = numpy.zeros(n, dtype=bool)
 
         for i in range(n):
-            self.sids[i] = sites[i].id
+            self.sids[i] = i
             self.lons[i] = sites[i].location.longitude
             self.lats[i] = sites[i].location.latitude
             self._vs30[i] = sites[i].vs30
@@ -264,13 +258,11 @@ class SiteCollection(object):
         if isinstance(self.vs30, float):  # from points
             for i, location in enumerate(self.mesh):
                 yield Site(location, self._vs30, self._vs30measured,
-                           self._z1pt0, self._z2pt5, self._backarc,
-                           self.sids[i])
+                           self._z1pt0, self._z2pt5, self._backarc)
         else:  # from sites
             for i, location in enumerate(self.mesh):
                 yield Site(location, self.vs30[i], self.vs30measured[i],
-                           self.z1pt0[i], self.z2pt5[i], self.backarc[i],
-                           self.sids[i])
+                           self.z1pt0[i], self.z2pt5[i], self.backarc[i])
 
     def filter(self, mask):
         """
@@ -463,8 +455,7 @@ class FilteredSiteCollection(object):
         """
         for i, location in enumerate(self.mesh):
             yield Site(location, self.vs30[i], self.vs30measured[i],
-                       self.z1pt0[i], self.z2pt5[i],
-                       self.backarc[i], self.sids[i])
+                       self.z1pt0[i], self.z2pt5[i], self.backarc[i])
 
     def __len__(self):
         """Return the number of filtered sites"""
@@ -486,3 +477,87 @@ for name in 'vs30 vs30measured z1pt0 z2pt5 backarc lons lats sids'.split():
         lambda fsc, name=name: _extract_site_param(fsc, name),
         doc='Extract %s array from FilteredSiteCollection' % name)
     setattr(FilteredSiteCollection, name, prop)
+
+
+class Tile(object):
+    """
+    Consider a site collection, find its bounding box and check if a source
+    is contained inside it, by taking into consideration the integration
+    distance and the maximum rupture projection radius.
+
+    :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :param maximum_distance: a dictionary TRT -> integration distance in km
+    """
+    KM_ONE_DEGREE = 111.32  # km per 1 degree
+
+    def __init__(self, sitecol, maximum_distance):
+        self.sitecol = sitecol
+        self.maximum_distance = maximum_distance
+        trts = set(maximum_distance)
+
+        # determine the bounding box by taking into account the IDL
+        self.cross_idl = cross_idl(sitecol.lons.min(), sitecol.lons.max())
+        lons = self.fix_lons(sitecol.lons)
+        min_lon, max_lon = lons.min(), lons.max()
+        min_lat, max_lat = self.sitecol.lats.min(), self.sitecol.lats.max()
+
+        self.min_lon = {trt: min_lon for trt in trts}
+        self.max_lon = {trt: max_lon for trt in trts}
+        self.min_lat = {trt: min_lat for trt in trts}
+        self.max_lat = {trt: max_lat for trt in trts}
+
+    def fix_lons(self, lons):
+        """
+        Make sure the longitudes are in the range [0, 360] degrees.
+        :returns: fixed longitudes
+        """
+        if self.cross_idl:
+            new = numpy.array(lons)
+            new[new < 0] += 360
+            return new
+        return lons
+
+    def get_rectangle(self):
+        """
+        :returns: ((min_lon, min_lat), width, height) useful for plotting
+        """
+        min_lon = min(self.min_lon.values())
+        min_lat = min(self.min_lat.values())
+        max_lon = max(self.max_lon.values())
+        max_lat = max(self.max_lat.values())
+        return (min_lon, min_lat), max_lon - min_lon, max_lat - min_lat
+
+    def contains(self, lon, lat, trt, max_radius):
+        """
+        Check if `lon` and `lat` are within the Tile for the given `trt`
+        by taking into account the maximum distance and maximum radius.
+        """
+        # angular distance per TRT
+        delta = (self.maximum_distance[trt] + max_radius) / self.KM_ONE_DEGREE
+        min_lon = self.min_lon[trt] - delta
+        max_lon = self.max_lon[trt] + delta
+        min_lat = self.min_lat[trt] - delta
+        max_lat = self.max_lat[trt] + delta
+        if self.cross_idl and lon < 0:  # special case
+            within_lon = min_lon <= lon + 360 <= max_lon
+        else:  # regular case
+            within_lon = min_lon <= lon <= max_lon
+        within_lat = min_lat <= lat <= max_lat
+        return within_lon and within_lat
+
+    def __contains__(self, src):
+        trt = src.tectonic_region_type
+        if src.__class__.__name__ == 'PointSource':
+            maxrpr = src._get_max_rupture_projection_radius()
+            return self.contains(src.location.x, src.location.y, trt, maxrpr)
+        else:
+            return src.filter_sites_by_distance_to_source(
+                self.maximum_distance[trt], self.sitecol) is not None
+
+    def __repr__(self):
+        boundaries = [
+            '%s: %d <= lon <= %d, %d <= lat <= %d' % (
+                trt, self.min_lon[trt], self.max_lon[trt],
+                self.min_lat[trt], self.max_lat[trt])
+            for trt in self.maximum_distance]
+        return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(boundaries))

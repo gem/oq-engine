@@ -22,8 +22,9 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.hazardlib.site import \
-    Site, SiteCollection, FilteredSiteCollection
+    Site, SiteCollection, FilteredSiteCollection, Tile
 from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.tests.source.point_test import make_point_source
 
 assert_eq = numpy.testing.assert_equal
 
@@ -117,7 +118,7 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
     def test_from_points(self):
         lons = [10, -1.2]
         lats = [20, -3.4]
-        cll = SiteCollection.from_points(lons, lats, [1, 2], SiteModelParam())
+        cll = SiteCollection.from_points(lons, lats, SiteModelParam())
         assert_eq(cll.vs30, [1.2, 1.2])
         assert_eq(cll.vs30measured, [True, True])
         assert_eq(cll.z1pt0, [3.4, 3.4])
@@ -150,13 +151,13 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
 class SiteCollectionFilterTestCase(unittest.TestCase):
     SITES = [
         Site(location=Point(10, 20, 30), vs30=1.2, vs30measured=True,
-             z1pt0=3, z2pt5=5, id=0),
+             z1pt0=3, z2pt5=5),
         Site(location=Point(11, 12, 13), vs30=55.4, vs30measured=False,
-             z1pt0=6, z2pt5=8, id=1),
+             z1pt0=6, z2pt5=8),
         Site(location=Point(0, 2, 0), vs30=2, vs30measured=True,
-             z1pt0=9, z2pt5=17, id=2),
+             z1pt0=9, z2pt5=17),
         Site(location=Point(1, 1, 3), vs30=4, vs30measured=False,
-             z1pt0=22, z2pt5=11, id=3)
+             z1pt0=22, z2pt5=11)
     ]
 
     def test_filter(self):
@@ -171,7 +172,6 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         arreq(filtered.mesh.lons, [10, 0])
         arreq(filtered.mesh.lats, [20, 2])
         arreq(filtered.sids, [0, 2])
-        arreq([site.id for site in filtered], [0, 2])
         self.assertIs(filtered.mesh.depths, None)
 
         filtered = col.filter(numpy.array([False, True, True, True]))
@@ -297,5 +297,32 @@ class SitePickleTestCase(unittest.TestCase):
         point = Point(1, 2, 3)
         site1 = Site(point, 760.0, True, 100.0, 5.0)
         site2 = pickle.loads(pickle.dumps(site1))
-
         self.assertEqual(site1, site2)
+
+
+class TileTestCase(unittest.TestCase):
+    def test_normal(self):
+        lons = [10, -1.2]
+        lats = [20, -3.4]
+        maximum_distance = {'Subduction IntraSlab': 200}
+        sitecol = SiteCollection.from_points(lons, lats, SiteModelParam())
+        tile = Tile(sitecol, maximum_distance)
+        self.assertEqual(
+            repr(tile), '<Tile\nSubduction IntraSlab: '
+            '-1 <= lon <= 10, -3 <= lat <= 20>')
+        src = make_point_source(1, 10)
+        self.assertTrue(src in tile)
+
+    def test_cross_idl(self):
+        lons = [-179.2, 178.0]
+        lats = [3.0, 4.0]
+        maximum_distance = {'Subduction IntraSlab': 200}
+        sitecol = SiteCollection.from_points(lons, lats, SiteModelParam())
+        tile = Tile(sitecol, maximum_distance)
+        self.assertEqual(
+            repr(tile), '<Tile\nSubduction IntraSlab: '
+            '178 <= lon <= 180, 3 <= lat <= 4>')
+        src = make_point_source(-179.3, 3.5)
+        self.assertTrue(src in tile)
+        src = make_point_source(178.2, 3.5)
+        self.assertTrue(src in tile)

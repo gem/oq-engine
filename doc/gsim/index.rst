@@ -67,7 +67,7 @@ Built-in GSIMs
     lin_2009
     mcverry_2006
     megawati_pan_2010
-    montalva_2015
+    montalva_2016
     nath_2012
     nshmp_2014
     pezeshk_2011
