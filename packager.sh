@@ -613,6 +613,10 @@ celeryd_wait $GEM_MAXLOOP"
             cd -
             fi
         done
+        echo 'Listing hazard calculations'
+        oq engine --lhc
+        echo 'Listing risk calculations'
+        oq engine --lrc
         python -m openquake.server.stop"
     fi
 
@@ -1181,7 +1185,7 @@ fi
 
 cd "$GEM_BUILD_SRC"
 
-# version info from openquake/engine/__init__.py
+# version info from openquake/risklib/__init__.py
 ini_vers="$(cat openquake/risklib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
 ini_maj="$(echo "$ini_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
 ini_min="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.\([0-9]\+\).*/\1/gp')"
