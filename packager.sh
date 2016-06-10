@@ -614,6 +614,10 @@ celeryd_wait $GEM_MAXLOOP"
             cd -
             fi
         done
+        echo 'Listing hazard calculations'
+        oq engine --lhc
+        echo 'Listing risk calculations'
+        oq engine --lrc
         python -m openquake.server.stop"
     fi
 
