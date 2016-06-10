@@ -43,37 +43,6 @@ Now it's possible to install the OpenQuake Engine using YUM:
 $ sudo yum install python-oq-engine
 ```
 
-### Post-installation tasks
-
-## PostgreSQL initialization
-```bash
-$ sudo postgresql-setup initdb
-```
-
-Open `/var/lib/pgsql/data/pg_hba.conf` file and add on top of the file these lines
-```
-## localhost in IPv4
-host   openquake2   oq_admin        127.0.0.1/32     md5
-host   openquake2   oq_job_init     127.0.0.1/32     md5
-## localhost in IPv6
-host   openquake2   oq_admin        ::1/128       md5
-host   openquake2   oq_job_init     ::1/128       md5
-```
-Then restart PostgreSQL
-```bash
-$ sudo service postgresql restart
-```
-
-## Bootstrap the DB
-```bash
-$ sudo -u postgres oq_create_db
-$ oq-engine --upgrade-db
-```
-A previously installed database can be removed running the `dropdb` tool
-```bash
-sudo -u postgres dropdb openquake2
-```
-
 ## Run a demo
 ```bash
 $ oq-engine --rh=/usr/share/openquake/engine/demos/hazard/AreaSourceClassicalPSHA/job.ini
