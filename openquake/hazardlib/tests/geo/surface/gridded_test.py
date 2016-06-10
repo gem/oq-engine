@@ -43,7 +43,6 @@ class GriddedSurfaceTestCase(unittest.TestCase):
 
     def test_get_joyner_boore_distance(self):
         dists = self.surf.get_joyner_boore_distance(self.mesh)
-        print dists
         expected = np.array([111.19493])
         np.testing.assert_allclose(dists, expected, rtol=1e-5, atol=0)
 
