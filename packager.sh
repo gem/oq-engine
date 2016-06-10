@@ -336,7 +336,7 @@ _devtest_innervm_run () {
                      set -x
                  fi
                  export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine\" ;
-                 cd oq-engine; bin/oq engine --upgrade-db --yes
+                 cd oq-engine
                  nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
                  nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
 
@@ -561,7 +561,6 @@ celeryd_wait $GEM_MAXLOOP"
             echo \"There's no 'openquake' user on this system. Installation may have failed.\"
             exit 1
         fi
-        sudo -u openquake python -m openquake.server.db.upgrade_manager ~openquake/db.sqlite3
         
         # dbserver should be already started by supervisord. Let's have a check
         # FIXME instead of using a 'sleep' we should use a better way to check that
@@ -614,6 +613,10 @@ celeryd_wait $GEM_MAXLOOP"
             cd -
             fi
         done
+        echo 'Listing hazard calculations'
+        oq engine --lhc
+        echo 'Listing risk calculations'
+        oq engine --lrc
         python -m openquake.server.stop"
     fi
 
@@ -1182,7 +1185,7 @@ fi
 
 cd "$GEM_BUILD_SRC"
 
-# version info from openquake/engine/__init__.py
+# version info from openquake/risklib/__init__.py
 ini_vers="$(cat openquake/risklib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
 ini_maj="$(echo "$ini_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
 ini_min="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.\([0-9]\+\).*/\1/gp')"

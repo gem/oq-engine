@@ -57,12 +57,6 @@ cd /path/to/oq-engine  # this is the source clone folder
 sudo -u postgres ./bin/oq_create_db --db-name=openquake2
 ```
 
-Finally upgrade the DB.
-
-```bash
-./bin/oq engine --upgrade-db
-```
-
 ## Hazardlib speedups
 
 To build the Hazardlib speedups see: https://github.com/gem/oq-hazardlib/wiki/Installing-C-extensions-from-git-repository
