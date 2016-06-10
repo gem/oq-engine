@@ -195,7 +195,7 @@ def print_outputs_summary(outputs, full=True):
             yield '%4d | %s' % (o.id, o.display_name)
         if truncated:
             yield ('Some outputs where not shown. You can see the full list '
-                   'with the command\n`oq-engine --list-outputs`')
+                   'with the command\n`oq engine --list-outputs`')
 
 
 def get_outputs(job_id):

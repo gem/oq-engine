@@ -64,6 +64,6 @@ export PATH=$HOME/oq-engine/bin:$PATH
 ## Configure the Engine and bootstrap the DB
 ```bash
 $ sudo -u postgres oq-engine/bin/oq_create_db
-$ oq-engine/bin/oq-engine --upgrade-db
+$ oq-engine/bin/oq engine --upgrade-db
 ```
 

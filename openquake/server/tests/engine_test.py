@@ -267,4 +267,4 @@ class PrintSummaryTestCase(unittest.TestCase):
   10 | gmf
  ... | 1 additional output(s)
 Some outputs where not shown. You can see the full list with the command
-`oq-engine --list-outputs`''')
+`oq engine --list-outputs`''')
