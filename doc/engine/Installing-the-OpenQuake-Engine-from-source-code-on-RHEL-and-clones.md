@@ -60,10 +60,3 @@ You'll need to add to your `PYTHONPATH` environment variable the path to each so
 export PYTHONPATH=$HOME/oq-engine:$HOME/oq-hazardlib:$HOME/oq-risklib
 export PATH=$HOME/oq-engine/bin:$PATH
 ```
-
-## Configure the Engine and bootstrap the DB
-```bash
-$ sudo -u postgres oq-engine/bin/oq_create_db
-$ oq-engine/bin/oq engine --upgrade-db
-```
-

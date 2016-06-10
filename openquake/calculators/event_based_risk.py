@@ -225,6 +225,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Read the precomputed ruptures (or compute them on the fly)
         """
         super(EventBasedRiskCalculator, self).pre_execute()
+        calc.check_overflow(self)
         if not self.riskmodel:  # there is no riskmodel, exit early
             self.execute = lambda: None
             self.post_execute = lambda result: None
