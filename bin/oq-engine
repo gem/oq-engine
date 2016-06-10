@@ -22,8 +22,11 @@ if [ $GEM_SET_DEBUG ]; then
 fi
 set -e
 
-BOLD=`tput bold`
-NORMAL=`tput sgr0`
+if [ -t 1 ]; then
+    # set bold only if running in a terminal
+    BOLD=$(tput bold)
+    NORMAL=$(tput sgr0)
+fi
 OQ_PATH=$(cd $(dirname $0); pwd -P)
 OQ_ENTRY=oq
 
