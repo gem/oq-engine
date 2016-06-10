@@ -53,6 +53,10 @@ def init_curves(num_sites, imtls, interdep='indep'):
     return zero
 
 
+def zero_curves(num_sites, imtls):
+    return init_curves(num_sites, imtls)
+
+
 def zero_maps(num_sites, imts, poes=()):
     """
     :param num_sites: the number of sites
@@ -459,7 +463,7 @@ def calc_hazard_curves_ext(
                                     weights_by_trt[trt],
                                     False)
             # Compute curves
-            if group.src_interdep is 'indep':
+            if group.src_interdep == 'indep':
                 curves = agg_curves(curves, hazard_curves_per_group(
                     tmp_group, sites, imtls, [gsim_by_trt[trt]],
                     truncation_level, source_site_filter)[0])
