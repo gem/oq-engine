@@ -28,6 +28,7 @@ from openquake.engine import config
 from openquake.server.db import actions
 from openquake.server.settings import DATABASE
 from django.db import connection
+
 import django
 if hasattr(django, 'setup'):  # >= 1.7
     django.setup()
@@ -61,7 +62,6 @@ def run_commands():
     """
     Execute the received commands in a queue.
     """
-    connection.cursor()  # bind the db
     while True:
         conn, cmd, args = queue.get()
         if cmd == 'stop':
@@ -120,6 +120,12 @@ def runserver(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
         DATABASE['PORT'] = int(port)
     else:
         addr = config.DBS_ADDRESS
+
+    # upgrade the db if needed
+    connection.cursor()  # bind the db
+    actions.upgrade_db()
+
+    # start the server
     DbServer(addr, config.DBS_AUTHKEY).loop()
 
 parser = sap.Parser(runserver)

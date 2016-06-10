@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Now the DbServer automatically upgrades the database if needed
   * Renamed oq-lite -> oq and added a subcommand `oq engine`
   * Added a CSV reader for the hazard curves
   * Having time_event=None in the hazard part of a calculation is now valid
