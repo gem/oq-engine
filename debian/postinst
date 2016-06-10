@@ -64,9 +64,6 @@ DIR=/var/log/openquake
 mkdir -p $DIR
 chown -R $USER.adm $DIR
 
-# create the database. This is run as "openquake" by default
-/usr/bin/oq_create_db
-
 # delete obsolete .pyc files in /usr/share/openquake
 find /usr/share/openquake -type f -name \*.pyc -exec rm -f {} \;
 
