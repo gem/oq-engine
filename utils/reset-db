@@ -95,8 +95,6 @@ if [[ "$answer" == "y" ]]; then
     find /home -maxdepth 2 -type d -name "oqdata" -exec rm -Rf '{}' \; || true
     if [ -z $skipnew ]; then
         startstop start
-        sleep 5s
-        oq engine --upgrade-db
         echo " * Database created"
     fi
     echo ''
