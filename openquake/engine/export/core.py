@@ -97,7 +97,7 @@ def makedirs(path):
 
 
 def export_outputs(job_id, target_dir, export_types):
-    # make it possible commands like `oq-engine --eos -1 /tmp`
+    # make it possible commands like `oq engine --eos -1 /tmp`
     datadir, dskeys = logs.dbcmd('get_results', job_id)
     if not dskeys:
         yield('Found nothing to export for job %s' % job_id)
