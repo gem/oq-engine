@@ -289,7 +289,6 @@ def hazard_curves_per_trt(
 def hazard_curves_per_group(
         group, sites, imtls, gsims, truncation_level=None,
         source_site_filter=filters.source_site_noop_filter,
-        rupture_site_filter=filters.rupture_site_noop_filter,
         maximum_distance=None, bbs=(), monitor=Monitor()):
     """
     Compute the hazard curves for a set of sources belonging to the same
@@ -347,13 +346,11 @@ def hazard_curves_per_group(
             weights = source.weights
         # Processing ruptures
         try:
-            rupture_sites = rupture_site_filter(
-                (rupture, s_sites) for rupture in source.iter_ruptures())
-            for cnt, (rupture, r_sites) in enumerate(rupture_sites):
+            for cnt, rupture in enumerate(source.iter_ruptures()):
                 with ctx_mon:
                     try:
-                        sctx, rctx, dctx = cmaker.make_contexts(r_sites,
-                                                                rupture)
+                        sctx, rctx, dctx = cmaker.make_contexts(
+                            s_sites, rupture)
                     except FarAwayRupture:
                         continue
                     # add optional disaggregation information (bounding boxes)
@@ -422,7 +419,6 @@ def hazard_curves_per_group(
 def calc_hazard_curves_ext(
         groups, sites, imtls, gsim_by_trt, truncation_level=None,
         source_site_filter=filters.source_site_noop_filter,
-        rupture_site_filter=filters.rupture_site_noop_filter,
         maximum_distance=None):
     """
     """
@@ -466,15 +462,13 @@ def calc_hazard_curves_ext(
             if group.src_interdep is 'indep':
                 curves = agg_curves(curves, hazard_curves_per_group(
                     tmp_group, sites, imtls, [gsim_by_trt[trt]],
-                    truncation_level, source_site_filter,
-                    rupture_site_filter)[0])
+                    truncation_level, source_site_filter)[0])
             else:
                 # Since in this case the probability for each source have
                 # been already accounted we use a weight equal to unity
                 curves = agg_curves_mutex(curves, hazard_curves_per_group(
                     tmp_group, sites, imtls, [gsim_by_trt[trt]],
-                    truncation_level, source_site_filter,
-                    rupture_site_filter)[0], 1.0)
+                    truncation_level, source_site_filter)[0], 1.0)
         # Final aggregation
         curves_fin = agg_curves(curves_fin, curves)
     return curves_fin
