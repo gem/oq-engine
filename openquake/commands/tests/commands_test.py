@@ -190,9 +190,7 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             show('sitecol', self.calc_id)
-        self.assertEqual(str(p), '''\
-lon,lat
-0.000000E+00,0.000000E+00''')
+        self.assertEqual(str(p), '<SiteCollection with 1 sites>')
 
     def test_show_attrs(self):
         with Print.patch() as p:
