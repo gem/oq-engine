@@ -95,11 +95,9 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
            exports, export_output, export_outputs,
            log_level='info'):
     """
-    Run a calculation using the legacy command line API
+    Run a calculation using the traditional command line API
     """
     config.abort_if_no_config_available()
-
-    exports = exports or 'xml,csv'
 
     if run or run_hazard or run_risk:
         # the logging will be configured in engine.py
