@@ -43,9 +43,10 @@ Consider canceling the operation and accessing directly %s.'''
 
 
 def get_mesh(sitecol):
-    mesh = numpy.zeros(len(sitecol), [('lon', F32), ('lat', F32)])
-    mesh['lon'] = sitecol.lons
-    mesh['lat'] = sitecol.lats
+    sc = sitecol.complete
+    mesh = numpy.zeros(len(sc), [('lon', F32), ('lat', F32)])
+    mesh['lon'] = sc.lons
+    mesh['lat'] = sc.lats
     return mesh
 
 
