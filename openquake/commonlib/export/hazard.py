@@ -87,11 +87,11 @@ def export_ses_xml(ekey, dstore):
     """
     fmt = ekey[-1]
     oq = dstore['oqparam']
-    sitecol = dstore['sitecol'].value
+    mesh = get_mesh(dstore['sitecol'])
     ruptures = []
     for serial in dstore['sescollection']:
         sr = dstore['sescollection/' + serial]
-        ruptures.extend(sr.export(get_mesh(sitecol)))
+        ruptures.extend(sr.export(mesh))
     ses_coll = SESCollection(
         groupby(ruptures, operator.attrgetter('ses_idx')),
         oq.investigation_time)
