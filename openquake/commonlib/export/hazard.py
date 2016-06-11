@@ -42,6 +42,13 @@ There are a lot of ground motion fields; the export will be slow.
 Consider canceling the operation and accessing directly %s.'''
 
 
+def get_mesh(sitecol):
+    mesh = numpy.zeros(len(sitecol), [('lon', F32), ('lat', F32)])
+    mesh['lon'] = sitecol.lons
+    mesh['lat'] = sitecol.lats
+    return mesh
+
+
 class SES(object):
     """
     Stochastic Event Set: A container for 1 or more ruptures associated with a
@@ -80,11 +87,11 @@ def export_ses_xml(ekey, dstore):
     """
     fmt = ekey[-1]
     oq = dstore['oqparam']
-    mesh = dstore['sitemesh'].value
+    sitecol = dstore['sitecol'].value
     ruptures = []
     for serial in dstore['sescollection']:
         sr = dstore['sescollection/' + serial]
-        ruptures.extend(sr.export(mesh))
+        ruptures.extend(sr.export(get_mesh(sitecol)))
     ses_coll = SESCollection(
         groupby(ruptures, operator.attrgetter('ses_idx')),
         oq.investigation_time)
@@ -281,7 +288,7 @@ def export_hcurves_csv(ekey, dstore):
     oq = dstore['oqparam']
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     sitecol = dstore['sitecol']
-    sitemesh = dstore['sitemesh']
+    sitemesh = get_mesh(sitecol)
     key, fmt = ekey
     fnames = []
     items = dstore['hmaps' if key == 'uhs' else key].items()
@@ -326,7 +333,7 @@ def get_metadata(realizations, kind):
 def export_uhs_xml(ekey, dstore):
     oq = dstore['oqparam']
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    sitemesh = dstore['sitemesh'].value
+    sitemesh = get_mesh(dstore['sitecol'])
     key, fmt = ekey
     fnames = []
     periods = [imt for imt in oq.imtls if imt.startswith('SA') or imt == 'PGA']
@@ -363,7 +370,7 @@ def export_hcurves_xml_json(ekey, dstore):
     export_type = ekey[1]
     len_ext = len(export_type) + 1
     oq = dstore['oqparam']
-    sitemesh = dstore['sitemesh'].value
+    sitemesh = get_mesh(dstore['sitecol'])
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     hcurves = dstore[ekey[0]]
     fnames = []
@@ -399,7 +406,7 @@ def export_hcurves_xml_json(ekey, dstore):
 def export_hmaps_xml_json(ekey, dstore):
     export_type = ekey[1]
     oq = dstore['oqparam']
-    sitemesh = dstore['sitemesh'].value
+    sitemesh = get_mesh(dstore['sitecol'])
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     hmaps = dstore[ekey[0]]
     fnames = []
@@ -475,7 +482,7 @@ def export_gmf_spec(ekey, dstore, spec):
     """
     oq = dstore['oqparam']
     eids = numpy.array([int(rid) for rid in spec.split(',')])
-    sitemesh = dstore['sitemesh']
+    sitemesh = get_mesh(dstore['sitecol'])
     writer = writers.CsvWriter(fmt='%.5f')
     etags = dstore['etags']
     if 'scenario' in oq.calculation_mode:
@@ -588,7 +595,7 @@ def export_gmf_scenario(ekey, dstore):
         fields = ['%03d' % i for i in range(len(dstore['etags']))]
         dt = numpy.dtype([(f, F32) for f in fields])
         etags, gmfs_by_trt_gsim = calc.get_gmfs(dstore)
-        sitemesh = dstore['sitemesh']
+        sitemesh = get_mesh(dstore['sitecol'])
         writer = writers.CsvWriter(fmt='%.5f')
         for (trt, gsim), gmfs_ in gmfs_by_trt_gsim.items():
             for imt in gmfs_.dtype.names:

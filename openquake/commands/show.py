@@ -40,7 +40,7 @@ def get_hcurves_and_means(dstore):
     weights = [rlz.weight for rlz in realizations]
     curves_by_rlz = {rlz: hcurves['rlz-%03d' % rlz.ordinal]
                      for rlz in realizations}
-    N = len(dstore['sitemesh'])
+    N = len(dstore['sitecol'])
     mean_curves = zero_curves(N, oq.imtls)
     for imt in oq.imtls:
         mean_curves[imt] = scientific.mean_curve(
