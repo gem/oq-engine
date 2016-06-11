@@ -180,7 +180,7 @@ def compose(parsers, name='main', description=None, prog=None,
             version=None):
     """
     Collects together different arguments parsers and builds a single
-    Parser dispatching on the subparsers depending on
+    Parser dispatching to the subparsers depending on
     the first argument, i.e. the name of the subparser to invoke.
 
     :param parsers: a list of Parser instances
