@@ -377,4 +377,4 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         attrs['lon_bin_edges'] = lons
         attrs['lat_bin_edges'] = lats
         attrs['eps_bin_edges'] = eps
-        attrs['location'] = self.sitemesh[site_id]
+        attrs['location'] = (lon, lat)
