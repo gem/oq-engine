@@ -92,7 +92,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
            list_hazard_calculations, list_risk_calculations,
            delete_calculation, delete_uncompleted_calculations,
            hazard_calculation_id, list_outputs, show_log,
-           exports, export_output, export_outputs,
+           export_output, export_outputs, exports='',
            log_level='info'):
     """
     Run a calculation using the traditional command line API
@@ -289,8 +289,6 @@ parser._add('list_outputs', '--list-outputs', '--lo',
 parser._add('show_log', '--show-log', '--sl',
             help='Show the log of the specified calculation',
             metavar='CALCULATION_ID')
-parser.opt('exports', 'Comma-separated string specifing the export formats, '
-           'in order of priority')
 parser._add('export_output', '--export-output', '--eo',
             nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'),
             help='Export the desired output to the specified directory')
@@ -298,5 +296,7 @@ parser._add('export_outputs', '--export-outputs', '--eos',
             nargs=2, metavar=('CALCULATION_ID', 'TARGET_DIR'),
             help='Export all of the calculation outputs to the '
             'specified directory')
+parser.opt('exports', 'Comma-separated string specifing the export formats, '
+           'in order of priority')
 parser.opt('log_level', 'Defaults to "info"',
            choices=['debug', 'info', 'warn', 'error', 'critical'])
