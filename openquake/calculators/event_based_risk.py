@@ -225,6 +225,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Read the precomputed ruptures (or compute them on the fly)
         """
         super(EventBasedRiskCalculator, self).pre_execute()
+        calc.check_overflow(self)
         if not self.riskmodel:  # there is no riskmodel, exit early
             self.execute = lambda: None
             self.post_execute = lambda result: None
@@ -325,7 +326,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 ((riskinput, self.riskmodel, self.rlzs_assoc,
                   self.assetcol, self.monitor.new('task'))
                  for riskinput in riskinputs))
-        return tm.reduce(agg=self.agg, posthook=self.save_data_transfer)
+        res = tm.reduce(agg=self.agg)
+        self.save_data_transfer(tm)
+        return res
 
     def agg(self, acc, result):
         """

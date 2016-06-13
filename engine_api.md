@@ -2,7 +2,7 @@
 
 ## Introduction
 
-oq-engine-server provides a series of REST API methods for running calculations, checking calculation status, and browsing and downloading results.
+oq engine server provides a series of REST API methods for running calculations, checking calculation status, and browsing and downloading results.
 
 All responses are JSON, unless otherwise noted.
 
@@ -154,7 +154,7 @@ Run a new calculation with the specified job config file, input models, and othe
 
 Files:
 
-    * job_config: an oq-engine job config INI-style file
+    * job_config: an oq engine job config INI-style file
     * input_model_1 - input_model_N: any number (including zero) of input model files
 
 Parameters:

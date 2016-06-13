@@ -1,6 +1,6 @@
 ## guidelines for debian/changelog file
 
-Starting from `oq-engine 1.4`, `hazardlib 0.14.0` and `risklib 0.7.0` it is possible to add new items with description of new functionalities and/or bug fixes to `debian/changelog` file without breaking the continuous integration and including these items in the nightly-build packages changelog when merged.
+Starting from `oq-engine 1.4`, `hazardlib 0.14.0` it is possible to add new items with the description of new functionalities and/or bug fixes to the `debian/changelog` file without breaking the continuous integration and including these items in the nightly-build packages changelog when merged.
 
 ### keep debian/changelog updated
 

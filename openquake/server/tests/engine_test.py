@@ -18,7 +18,6 @@
 
 import os
 import getpass
-import subprocess
 import unittest
 import tempfile
 import mock
@@ -101,18 +100,6 @@ class CheckHazardRiskConsistencyTestCase(unittest.TestCase):
             "'classical_risk', you need to provide a "
             "calculation of kind ['classical', 'classical_risk'], "
             "but you provided a 'scenario' instead")
-
-
-class OpenquakeCliTestCase(unittest.TestCase):
-    """
-    Run "oq-engine --version" as a separate process using `subprocess`.
-    """
-
-    def test_run_version(self):
-        args = [helpers.RUNNER, "--version"]
-
-        print 'Running:', ' '.join(args)  # this is useful for debugging
-        return subprocess.check_call(args)
 
 
 class DeleteHazCalcTestCase(unittest.TestCase):
@@ -279,4 +266,4 @@ class PrintSummaryTestCase(unittest.TestCase):
   10 | gmf
  ... | 1 additional output(s)
 Some outputs where not shown. You can see the full list with the command
-`oq-engine --list-outputs`''')
+`oq engine --list-outputs`''')

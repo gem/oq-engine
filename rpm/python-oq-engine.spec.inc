@@ -76,6 +76,7 @@ install -m 644 rpm/systemd/openquake-dbserver.service %{buildroot}%{_unitdir}/op
 install -m 644 rpm/systemd/openquake-webui.service %{buildroot}%{_unitdir}/openquake-webui.service
 install -m 644 rpm/systemd/openquake-celery.service %{buildroot}%{_unitdir}/openquake-celery.service
 cp -R demos %{buildroot}/%{_datadir}/openquake/engine
+cp -R utils %{buildroot}/%{_datadir}/openquake/engine
 
 %post
 %systemd_post openquake-dbserver.service
@@ -84,6 +85,16 @@ cp -R demos %{buildroot}/%{_datadir}/openquake/engine
 
 %clean
 rm -rf %{buildroot}
+
+%preun
+%systemd_preun openquake-dbserver.service
+%systemd_preun openquake-webui.service
+%systemd_preun openquake-celery.service
+
+%postun
+%systemd_postun_with_restart openquake-dbserver.service
+%systemd_postun_with_restart openquake-webui.service
+%systemd_postun_with_restart openquake-celery.service
 
 %files -f INSTALLED_FILES
 %defattr(-,root,root)
