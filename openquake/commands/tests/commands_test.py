@@ -186,13 +186,11 @@ class RunShowExportTestCase(unittest.TestCase):
             show('all')
         with Print.patch() as p:
             show('contents', self.calc_id)
-        self.assertIn('sitemesh', str(p))
+        self.assertIn('sitecol', str(p))
 
         with Print.patch() as p:
-            show('sitemesh', self.calc_id)
-        self.assertEqual(str(p), '''\
-lon,lat
-0.000000E+00,0.000000E+00''')
+            show('sitecol', self.calc_id)
+        self.assertEqual(str(p), '<SiteCollection with 1 sites>')
 
     def test_show_attrs(self):
         with Print.patch() as p:

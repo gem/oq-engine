@@ -204,8 +204,8 @@ def get_mesh(oqparam):
     elif 'gmfs' in oqparam.inputs:
         return get_gmfs(oqparam)[0].mesh
     elif oqparam.hazard_calculation_id:
-        sitemesh = datastore.read(oqparam.hazard_calculation_id)['sitemesh']
-        return geo.Mesh(sitemesh['lon'], sitemesh['lat'])
+        sitecol = datastore.read(oqparam.hazard_calculation_id)['sitecol']
+        return geo.Mesh(sitecol.lons, sitecol.lats)
     elif 'exposure' in oqparam.inputs:
         # the mesh is extracted from get_sitecol_assets
         return
