@@ -26,6 +26,7 @@ import numpy
 
 from openquake.baselib.general import (
     groupby, humansize, get_array, group_array)
+from openquake.baselib import hdf5
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg
 from openquake.commonlib.export import export
@@ -429,6 +430,15 @@ def export_hmaps_xml_json(ekey, dstore):
                 writer.serialize(data)
                 fnames.append(fname)
     return sorted(fnames)
+
+
+@export.add(('hcurves', 'hdf5'), ('hmaps', 'hdf5'), ('uhs', 'hdf5'))
+def export_hazard_hdf5(ekey, dstore):
+    fname = dstore.export_path('%s.%s' % ekey)
+    with hdf5.File(fname, 'w') as f:
+        for dskey, ds in dstore[ekey[0]].items():
+            f['%s/%s' % (ekey[0], dskey)] = ds.value
+    return [fname]
 
 
 @export.add(('gmf_data', 'xml'), ('gmf_data', 'txt'))
