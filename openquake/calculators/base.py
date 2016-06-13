@@ -79,7 +79,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     :param monitor: monitor object
     :param calc_id: numeric calculation ID
     """
-    sitemesh = datastore.persistent_attribute('sitemesh')
     sitecol = datastore.persistent_attribute('sitecol')
     etags = datastore.persistent_attribute('etags')
     assetcol = datastore.persistent_attribute('assetcol')
@@ -478,24 +477,13 @@ class HazardCalculator(BaseCalculator):
                     'hazard was computed with time_event=%s' % (
                         oq.time_event, oq_hazard.time_event))
 
-        # save mesh and asset collection
-        self.save_mesh()
+        # asset collection
         if hasattr(self, 'assets_by_site'):
             self.assetcol = riskinput.AssetCollection(
                 self.assets_by_site, self.cost_calculator, oq.time_event,
                 time_events=sorted(self.exposure.time_events) or '')
         elif hasattr(self, 'assetcol'):
             self.assets_by_site = self.assetcol.assets_by_site()
-
-    def save_mesh(self):
-        """
-        Save the mesh associated to the complete sitecol in the HDF5 file
-        """
-        if ('sitemesh' not in self.datastore and
-                'sitemesh' not in self.datastore.parent):
-            col = self.sitecol.complete
-            mesh_dt = numpy.dtype([('lon', F32), ('lat', F32)])
-            self.sitemesh = numpy.array(list(zip(col.lons, col.lats)), mesh_dt)
 
     def is_tiling(self):
         """
