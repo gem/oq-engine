@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
+import os
 import logging
 import operator
 from openquake.baselib.general import groupby
@@ -45,9 +46,23 @@ def print_csm_info(fname):
     print(views.rst_table(pairs, ['attribute', 'nbytes']))
 
 
+def do_build_reports(directory):
+    """
+    Walk the directory and builds pre-calculation reports for all the
+    job.ini files found.
+    """
+    for cwd, dirs, files in os.walk(directory):
+        for f in files:
+            if f in ('job.ini', 'job_h.ini', 'job_haz.ini', 'job_hazard.ini'):
+                job_ini = os.path.join(cwd, f)
+                print(job_ini)
+                reportwriter.build_report(job_ini, cwd)
+
+
 # the documentation about how to use this feature can be found
 # in the file effective-realizations.rst
-def info(calculators, gsims, views, exports, report, input_file=''):
+def info(calculators, gsims, views, exports, build_reports, report,
+         input_file=''):
     """
     Give information. You can pass the name of an available calculator,
     a job.ini file, or a zip archive with the input files.
@@ -70,6 +85,8 @@ def info(calculators, gsims, views, exports, report, input_file=''):
             print(exporter, formats)
             n += len(formats)
         print('There are %d exporters defined.' % n)
+    if build_reports:
+        do_build_reports(input_file or '.')
     if input_file.endswith('.xml'):
         print(nrml.read(input_file).to_str())
     elif input_file.endswith(('.ini', '.zip')):
@@ -88,5 +105,6 @@ parser.flg('calculators', 'list available calculators')
 parser.flg('gsims', 'list available GSIMs')
 parser.flg('views', 'list available views')
 parser.flg('exports', 'list available exports')
+parser.flg('build_reports', 'build reports in rst format')
 parser.flg('report', 'build a report in rst format')
 parser.arg('input_file', 'job.ini file or zip archive')
