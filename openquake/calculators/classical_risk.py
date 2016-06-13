@@ -119,7 +119,6 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             curves_by_trt_gsim = {(0, 'FromFile'): haz_curves}
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
-            self.save_mesh()
         else:  # compute hazard or read it from the datastore
             super(ClassicalRiskCalculator, self).pre_execute()
             logging.info('Preparing the risk input')

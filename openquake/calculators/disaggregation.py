@@ -359,7 +359,8 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         :param float poe:
             Disaggregation probability of exceedance value for this result.
         """
-        lon, lat = self.sitemesh[site_id]
+        lon = self.sitecol.lons[site_id]
+        lat = self.sitecol.lats[site_id]
         mag, dist, lons, lats, eps = bin_edges
         disp_name = DISAGG_RES_FMT % dict(
             poe=poe, rlz=rlz_id, imt=imt_str, lon=lon, lat=lat)
@@ -376,4 +377,4 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         attrs['lon_bin_edges'] = lons
         attrs['lat_bin_edges'] = lats
         attrs['eps_bin_edges'] = eps
-        attrs['location'] = self.sitemesh[site_id]
+        attrs['location'] = (lon, lat)

@@ -711,7 +711,6 @@ class UCERFEventBasedRuptureCalculator(
         parse the logic tree and source model input
         """
         self.sitecol = readinput.get_site_collection(self.oqparam)
-        self.save_mesh()
         self.gsim_lt = readinput.get_gsim_lt(self.oqparam, [DEFAULT_TRT])
         self.smlt = readinput.get_source_model_lt(self.oqparam)
         parser = source.SourceModelParser(
