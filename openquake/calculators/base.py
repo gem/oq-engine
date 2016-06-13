@@ -55,6 +55,8 @@ class AssetSiteAssociationError(Exception):
 
 rlz_dt = numpy.dtype([('uid', (bytes, 200)), ('weight', F32)])
 
+logversion = {True}
+
 
 def set_array(longarray, shortarray):
     """
@@ -121,7 +123,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         self.close = close
         self.set_log_format()
-        logging.info('Using engine version %s', __version__)
+        if logversion:  # make sure this is logged only once
+            logging.info('Using engine version %s', __version__)
+            logversion.pop()
         if (concurrent_tasks is not None and concurrent_tasks !=
                 OqParam.concurrent_tasks.default):
             self.oqparam.concurrent_tasks = concurrent_tasks
@@ -287,6 +291,45 @@ class HazardCalculator(BaseCalculator):
         """
         return sum(len(assets) for assets in self.assets_by_site)
 
+    def compute_previous(self):
+        precalc = calculators[self.pre_calculator](
+            self.oqparam, self.monitor('precalculator'),
+            self.datastore.calc_id)
+        precalc.run()
+        if 'scenario' not in self.oqparam.calculation_mode:
+            self.csm = precalc.csm
+        pre_attrs = vars(precalc)
+        for name in ('riskmodel', 'assets_by_site'):
+            if name in pre_attrs:
+                setattr(self, name, getattr(precalc, name))
+
+    def read_previous(self, precalc_id):
+        parent = datastore.read(precalc_id)
+        self.datastore.set_parent(parent)
+        # copy missing parameters from the parent
+        params = {name: value for name, value in
+                  vars(parent['oqparam']).items()
+                  if name not in vars(self.oqparam)}
+        self.save_params(**params)
+        self.read_risk_data()
+
+    def basic_pre_execute(self):
+        self.read_risk_data()
+        if 'source' in self.oqparam.inputs:
+            with self.monitor(
+                    'reading composite source model', autoflush=True):
+                self.csm = readinput.get_composite_source_model(self.oqparam)
+                self.datastore['csm_info'] = self.csm.info
+                self.rup_data = {}
+        self.init()
+        if 'source' in self.oqparam.inputs:
+            with self.monitor('managing sources', autoflush=True):
+                self.taskman = self.send_sources()
+            attrs = self.datastore.hdf5['composite_source_model'].attrs
+            attrs['weight'] = self.csm.weight
+            attrs['filtered_weight'] = self.csm.filtered_weight
+            attrs['maxweight'] = self.csm.maxweight
+
     def pre_execute(self):
         """
         Check if there is a pre_calculator or a previous calculation ID.
@@ -299,52 +342,15 @@ class HazardCalculator(BaseCalculator):
             # there is a precalculator
             precalc_id = self.oqparam.hazard_calculation_id
             if precalc_id is None:  # recompute everything
-                precalc = calculators[self.pre_calculator](
-                    self.oqparam, self.monitor('precalculator'),
-                    self.datastore.calc_id)
-                precalc.run()
-                if 'scenario' not in self.oqparam.calculation_mode:
-                    self.csm = precalc.csm
-                pre_attrs = vars(precalc)
-                for name in ('riskmodel', 'assets_by_site'):
-                    if name in pre_attrs:
-                        setattr(self, name, getattr(precalc, name))
+                self.compute_previous()
             else:  # read previously computed data
-                parent = datastore.read(precalc_id)
-                self.datastore.set_parent(parent)
-                # copy missing parameters from the parent
-                params = {name: value for name, value in
-                          vars(parent['oqparam']).items()
-                          if name not in vars(self.oqparam)}
-                self.save_params(**params)
-                self.read_risk_data()
+                self.read_previous(precalc_id)
             self.init()
         else:  # we are in a basic calculator
-            self.read_risk_data()
+            self.basic_pre_execute()
             if 'source' in self.oqparam.inputs:
-                with self.monitor(
-                        'reading composite source model', autoflush=True):
-                    self.csm = readinput.get_composite_source_model(
-                        self.oqparam)
-                    self.datastore['csm_info'] = self.csm.info
-                    self.rup_data = {}
-
-                    # we could manage limits here
-                    vars(job_info).update(readinput.get_job_info(
-                        self.oqparam, self.csm, self.sitecol))
-                    logging.info('Expected output size=%s',
-                                 job_info.hazard['output_weight'])
-                    logging.info('Total weight of the sources=%s',
-                                 job_info.hazard['input_weight'])
-            self.init()
-            if 'source' in self.oqparam.inputs:
-                with self.monitor('managing sources', autoflush=True):
-                    self.send_sources()
-                self.manager.store_source_info(self.datastore)
-                attrs = self.datastore.hdf5['composite_source_model'].attrs
-                attrs['weight'] = self.csm.weight
-                attrs['filtered_weight'] = self.csm.filtered_weight
-                attrs['maxweight'] = self.csm.maxweight
+                vars(job_info).update(readinput.get_job_info(
+                    self.oqparam, self.csm, self.sitecol))
 
         job_info.hostname = socket.gethostname()
         if hasattr(self, 'riskmodel'):
@@ -466,7 +472,7 @@ class HazardCalculator(BaseCalculator):
             parent = self.datastore.parent
             if 'assetcol' in parent:
                 check_time_event(oq, parent['assetcol'].time_events)
-            if oq_hazard.time_event != oq.time_event:
+            if oq_hazard.time_event and oq_hazard.time_event != oq.time_event:
                 raise ValueError(
                     'The risk configuration file has time_event=%s but the '
                     'hazard was computed with time_event=%s' % (
@@ -501,28 +507,25 @@ class HazardCalculator(BaseCalculator):
 
     def send_sources(self):
         """
-        Filter/split and send the sources to the worker tasks.
+        Filter/split and send the sources to the workers.
+        :returns: a :class:`openquake.commonlib.parallel.TaskManager`
         """
         oq = self.oqparam
         tiles = [self.sitecol]
-        num_tiles = 1
+        self.num_tiles = 1
         if self.is_tiling():
             hint = math.ceil(len(self.sitecol) / oq.sites_per_tile)
             tiles = self.sitecol.split_in_tiles(hint)
-            num_tiles = len(tiles)
+            self.num_tiles = len(tiles)
             logging.info('Generating %d tiles of %d sites each',
-                         num_tiles, len(tiles[0]))
-        self.manager = source.SourceManager(
-            self.csm, self.core_task.__func__,
-            oq.maximum_distance, self.datastore,
-            self.monitor.new(oqparam=oq),
-            self.random_seed, oq.filter_sources, num_tiles=num_tiles)
-        siteidx = 0
-        for i, tile in enumerate(tiles, 1):
-            if num_tiles > 1:
-                logging.info('Processing tile %d', i)
-            self.manager.submit_sources(tile, siteidx)
-            siteidx += len(tile)
+                         self.num_tiles, len(tiles[0]))
+        manager = source.SourceManager(
+            self.csm, oq.maximum_distance, self.datastore,
+            self.monitor.new(oqparam=oq), self.random_seed,
+            oq.filter_sources, num_tiles=self.num_tiles)
+        tm = starmap(self.core_task.__func__, manager.gen_args(tiles))
+        manager.store_source_info(self.datastore)
+        return tm
 
     def save_data_transfer(self, taskmanager):
         """
@@ -631,9 +634,9 @@ class RiskCalculator(HazardCalculator):
         rlz_ids = getattr(self.oqparam, 'rlz_ids', ())
         if rlz_ids:
             self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
-        all_args = [(riskinput, self.riskmodel, self.rlzs_assoc) +
+        all_args = ((riskinput, self.riskmodel, self.rlzs_assoc) +
                     self.extra_args + (self.monitor,)
-                    for riskinput in self.riskinputs]
+                    for riskinput in self.riskinputs)
         res = starmap(self.core_task.__func__, all_args).reduce()
         return res
 

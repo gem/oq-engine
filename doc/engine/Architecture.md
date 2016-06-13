@@ -72,7 +72,7 @@ The OpenQuake Engine suite is composed of several components:
   between the calculators and the database
 - the *Web UI* is a web applications that allows to run and monitor
   computations via a browser; multiple calculations can be run in parallel
-- the *oq-engine2* command-line tool; it allows to run computations
+- the *oq* command-line tool; it allows to run computations
   and provides an interface to the underlying
   database and datastores so that it is possible to list and export the results
 - the engine can run on a cluster of machines: in that case
@@ -86,7 +86,7 @@ is a Python package containing several modules or event
 subpackages. The stack is a dependency tower where the higher levels
 depend on the lower levels but not viceversa:
 
-- level 8: commands (commands for oq-engine2)
+- level 8: commands (commands for oq script)
 - level 7: server (database and Web UI)
 - level 6: engine (configuration, command-line tool, export, logs)
 - level 5: calculators (hazard and risk calculators)

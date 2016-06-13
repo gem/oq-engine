@@ -34,16 +34,10 @@ sudo diff -urN /etc/openquake/openquake.cfg /etc/openquake/openquake.cfg.new_in_
 ```
 See an [example](openquake.cfg-diff-example.md).
 
-Finally upgrade your database:
-
-```bash
-oq-engine --upgrade-db
-```
-
 ## Run OQ Engine
 You are now ready to run the OQ Engine. First, try running one of the demos included with the package. There are several demo calculations located in `/usr/share/openquake/engine/demos`. Example:
 <pre>
-oq-engine --run-hazard=/usr/share/openquake/engine/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini
+oq engine --run=/usr/share/openquake/engine/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini
 </pre>
 
 The output should look something like this:
@@ -119,11 +113,11 @@ Calculation 114 completed in 44 seconds. Results:
 1367 | Uniform Hazard Spectra | UHS (0.02) rlz-102
 1366 | Uniform Hazard Spectra | UHS (0.1) rlz-102
 Some outputs where not shown. You can see the full list with the command
-`oq-engine --list-outputs`
+`oq engine --list-outputs`
 ```
 
 ## More commands
-For a list of additional commands, type `oq-engine --help`.
+For a list of additional commands, type `oq engine --help`.
 
 ## Reset the database and drop the datastore
 You can reset the OpenQuake Engine to start from a fresh installation:

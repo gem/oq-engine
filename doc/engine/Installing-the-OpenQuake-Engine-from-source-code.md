@@ -57,12 +57,6 @@ cd /path/to/oq-engine  # this is the source clone folder
 sudo -u postgres ./bin/oq_create_db --db-name=openquake2
 ```
 
-Finally upgrade the DB.
-
-```bash
-./bin/oq-engine --upgrade-db
-```
-
 ## Hazardlib speedups
 
 To build the Hazardlib speedups see: https://github.com/gem/oq-hazardlib/wiki/Installing-C-extensions-from-git-repository
@@ -70,7 +64,7 @@ To build the Hazardlib speedups see: https://github.com/gem/oq-hazardlib/wiki/In
 ## Run OQ Engine
 You are now ready to run the OQ Engine. First, try running one of the demos included with the source code:
 ```bash
-./bin/oq-engine --run-hazard=../oq-risklib/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini
+./bin/oq engine --run=../oq-risklib/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini
 ```
 
 The output should look something like this:
@@ -146,11 +140,11 @@ Calculation 114 completed in 44 seconds. Results:
 1367 | Uniform Hazard Spectra | UHS (0.02) rlz-102
 1366 | Uniform Hazard Spectra | UHS (0.1) rlz-102
 Some outputs where not shown. You can see the full list with the command
-`oq-engine --list-outputs`
+`oq engine --list-outputs`
 ```
 
 ## More commands
-For a list of additional commands, type `./bin/oq-engine --help`.
+For a list of additional commands, type `./bin/oq engine --help`.
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:

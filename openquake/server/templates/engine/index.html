@@ -35,9 +35,7 @@
       <thead>
         <tr>
           <th style="width: 50px;">ID</th>
-          {% if user.is_superuser %}
           <th style="width: 50px;">User</th>
-          {% endif %}
           <th style="width: 50px;">Type</th>
           <th style="width: 380px;">Description</th>
           <th style="width: 120px;">Status</th>
@@ -48,9 +46,7 @@
         <% _.each(calculations, function(calc) { %>
         <tr class="<%= (calc.get('is_running') == true || ! calc.get('id') ) ? 'warning' : (calc.get('status') == 'complete' ? 'success' : 'error') %>">
           <td><%= calc.get('id') || 'New' %></td>
-          {% if user.is_superuser %}
           <td><%= calc.get('owner') %></td>
-          {% endif %}
           <td><%= calc.get('job_type') %></td>
           <td><%= calc.get('description') %></td>
           <td>

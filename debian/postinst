@@ -31,7 +31,7 @@ if [ "$LSB_RELEASE" != "precise" -a "$LSB_RELEASE" != "trusty" -a "$LSB_RELEASE"
     db_go
 fi
 
-if [ -f /usr/sbin/rabbitmqctl ]; then
+if [ -f /usr/sbin/rabbitmqctl -a -f /run/rabbitmq/pid ]; then
     # create rabbitmq configuration for python-celery
     celeryuser_count=`rabbitmqctl list_users | grep celeryuser | wc -l`
     if [ $celeryuser_count -eq 0 ]; then
@@ -52,17 +52,17 @@ if [ $(cat /etc/passwd | grep ^openquake: | wc -l) -eq 0 ]; then
     adduser --system --home /var/lib/$USER --group --shell /bin/bash $USER
 fi
 
-HDIR=/usr/share/openquake/engine
-mkdir -p $HDIR
-chown -R $USER.$USER $HDIR
+DIR=/var/lib/openquake
+mkdir -p $DIR
+chown -R $USER.$USER $DIR
 
-# create logs directory
-LDIR=/var/log/openquake
-mkdir -p $LDIR
-chown -R $USER.adm $LDIR
+DIR=/usr/share/openquake/engine
+mkdir -p $DIR
+chown -R $USER.$USER $DIR
 
-# create the database. This is run as "openquake" by default
-/usr/bin/oq_create_db
+DIR=/var/log/openquake
+mkdir -p $DIR
+chown -R $USER.adm $DIR
 
 # delete obsolete .pyc files in /usr/share/openquake
 find /usr/share/openquake -type f -name \*.pyc -exec rm -f {} \;

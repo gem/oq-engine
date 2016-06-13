@@ -195,7 +195,7 @@ def print_outputs_summary(outputs, full=True):
             yield '%4d | %s' % (o.id, o.display_name)
         if truncated:
             yield ('Some outputs where not shown. You can see the full list '
-                   'with the command\n`oq-engine --list-outputs`')
+                   'with the command\n`oq engine --list-outputs`')
 
 
 def get_outputs(job_id):
@@ -391,7 +391,7 @@ def calc_info(calc_id):
     return response_data
 
 
-def get_calcs(request_get_dict, user_name, user_is_super=False, id=None):
+def get_calcs(request_get_dict, user_name, user_acl_on=False, id=None):
     """
     :returns:
         list of tuples (job_id, user_name, job_status, job_type,
@@ -399,7 +399,10 @@ def get_calcs(request_get_dict, user_name, user_is_super=False, id=None):
     """
     # helper to get job+calculation data from the oq-engine database
     jobs = models.OqJob.objects.filter()
-    if not user_is_super:
+
+    # user_acl_on is true if settings.ACL_ON = True or when the user is a
+    # Django super user
+    if user_acl_on:
         jobs = jobs.filter(user_name=user_name)
 
     if id is not None:
