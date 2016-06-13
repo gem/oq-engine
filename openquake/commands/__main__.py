@@ -23,6 +23,14 @@ import importlib
 from openquake.commonlib import sap, __version__
 from openquake import commands
 
+from openquake.risklib import valid
+from openquake.engine import config
+
+USE_CELERY = valid.boolean(config.get('celery', 'use_celery') or 'false')
+
+if USE_CELERY:
+    os.environ['OQ_DISTRIBUTE'] = 'celery'
+
 
 def oq():
     modnames = ['openquake.commands.%s' % mod[:-3]
