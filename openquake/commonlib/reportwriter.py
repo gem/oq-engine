@@ -74,7 +74,7 @@ class ReportWriter(object):
         # data to transfer is given by the usual pickle
         sitecol_size = humansize(len(parallel.Pickled(dstore['sitecol'])))
         self.text += '\n\nnum_sites = %d, sitecol = %s' % (
-            len(dstore['sitemesh']), sitecol_size)
+            len(dstore['sitecol']), sitecol_size)
 
     def add(self, name, obj=None):
         """Add the view named `name` to the report text"""

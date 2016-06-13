@@ -61,7 +61,7 @@ def plot(calc_id, other_id=None, sites='0'):
     other = datastore.read(other_id) if other_id else None
     oq = haz['oqparam']
     indices = list(map(int, sites.split(',')))
-    n_sites = len(haz['sitemesh'])
+    n_sites = len(haz['sitecol'])
     if not set(indices) <= set(range(n_sites)):
         invalid = sorted(set(indices) - set(range(n_sites)))
         print('The indices %s are invalid: no graph for them' % invalid)
