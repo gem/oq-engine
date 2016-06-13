@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os.path
 import logging
 from Queue import Queue
 from threading import Thread
@@ -119,6 +120,11 @@ def runserver(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
         DATABASE['PORT'] = int(port)
     else:
         addr = config.DBS_ADDRESS
+
+    # create the db directory if needed
+    dirname = os.path.dirname(DATABASE['NAME'])
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
 
     # create and upgrade the db if needed
     connection.cursor()  # bind the db
