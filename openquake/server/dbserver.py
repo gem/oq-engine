@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os.path
 import logging
 from Queue import Queue
 from threading import Thread
@@ -111,7 +112,6 @@ class DbServer(object):
 
 
 def runserver(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
-    logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
     if dbpathport:  # assume a string of the form "dbpath:port"
         dbpath, port = dbpathport.split(':')
         addr = (DATABASE['HOST'], int(port))
@@ -120,11 +120,17 @@ def runserver(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
     else:
         addr = config.DBS_ADDRESS
 
+    # create the db directory if needed
+    dirname = os.path.dirname(DATABASE['NAME'])
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
+
     # create and upgrade the db if needed
     connection.cursor()  # bind the db
     actions.upgrade_db()
 
-    # start the server
+    # configure logging and start the server
+    logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
     DbServer(addr, config.DBS_AUTHKEY).loop()
 
 parser = sap.Parser(runserver)
