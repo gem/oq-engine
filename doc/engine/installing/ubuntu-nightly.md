@@ -1,0 +1,28 @@
+# Installing the OpenQuake Engine nightly builds on Ubuntu Linux
+
+The OpenQuake Engine **nighlty builds** are available in the form of *deb* binary packages for the following Ubuntu releases:
+- Ubuntu 14.04 LTS (Trusty) 
+
+Packages *may* work on Ubuntu derivates (i.e. Mint Linux) and Debian, but this setup in not supported by GEM. See [//]: # FIXME/FAQ
+
+## Install packages from the OpenQuake nigthly repository
+
+The following commands add the nighlty builds package repository:
+```
+sudo add-apt-repository -ry ppa:openquake/ppa
+sudo add-apt-repository -y ppa:openquake-automatic-team/latest-master
+sudo apt-get update
+```
+
+Then to install the OpenQuake Engine and its libraries first remove stable packages and then install nightly build packages
+```bash
+sudo apt-get remove --purge python-oq-.*
+sudo apt-get install python-oq-engine
+```
+
+Now you can follow the [standard installing procedures](./ubuntu.md)
+
+## Getting help
+If you need help or have questions/comments/feedback for us, you can:
+  * Subscribe to the developer mailing list: https://groups.google.com/forum/?fromgroups#!forum/openquake-dev
+  * Contact us on IRC: irc.freenode.net, channel #openquake
