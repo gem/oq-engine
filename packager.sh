@@ -561,7 +561,6 @@ celeryd_wait $GEM_MAXLOOP"
             echo \"There's no 'openquake' user on this system. Installation may have failed.\"
             exit 1
         fi
-        sudo -u openquake python -m openquake.server.db.upgrade_manager ~openquake/db.sqlite3
         
         # dbserver should be already started by supervisord. Let's have a check
         # FIXME instead of using a 'sleep' we should use a better way to check that
@@ -579,7 +578,7 @@ celeryd_wait $GEM_MAXLOOP"
             echo \"Running \$ini\"
             for loop in \$(seq 1 $GEM_MAXLOOP); do
                 set +e
-                oq-engine --run \$ini --exports xml
+                oq engine --run \$ini --exports xml
                 oq_ret=\$?
                 set -e
                 if [ \$oq_ret -eq 0 ]; then
@@ -595,29 +594,33 @@ celeryd_wait $GEM_MAXLOOP"
         done
 
         # print the log of the last calculation
-        oq-engine --show-log -1
+        oq engine --show-log -1
 
         # Try to export a set of results AFTER the calculation
         # automatically creates a directory called out
         echo \"Exporting output #1\"
-        oq-engine --eo 1 /tmp/output
+        oq engine --eo 1 /tmp/output
         echo \"Exporting calculation #2\"
-        oq-engine --eos 2 /tmp/out/eos_2
+        oq engine --eos 2 /tmp/out/eos_2
 
         for demo_dir in \$(find . -type d | sort); do
             if [ -f \$demo_dir/job_hazard.ini ]; then
             cd \$demo_dir
             echo \"Running \$demo_dir/job_hazard.ini\"
-            oq-engine --run-hazard job_hazard.ini
+            oq engine --run job_hazard.ini
             echo \"Running \$demo_dir/job_risk.ini\"
-            oq-engine --run-risk job_risk.ini --exports csv,xml --hazard-calculation-id -1
+            oq engine --run job_risk.ini --exports csv,xml --hazard-calculation-id -1
             cd -
             fi
         done
+        echo 'Listing hazard calculations'
+        oq engine --lhc
+        echo 'Listing risk calculations'
+        oq engine --lrc
         python -m openquake.server.stop"
     fi
 
-    ssh $lxc_ip "sudo -u openquake python -m openquake.server.dbserver & sleep 1 ; oq-engine --make-html-report today ; python -m openquake.server.stop"
+    ssh $lxc_ip "sudo -u openquake python -m openquake.server.dbserver & sleep 1 ; oq engine --make-html-report today ; python -m openquake.server.stop"
     scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
 
     scp -r "${lxc_ip}:/usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" "out_${BUILD_UBUVER}/"
@@ -1182,7 +1185,7 @@ fi
 
 cd "$GEM_BUILD_SRC"
 
-# version info from openquake/engine/__init__.py
+# version info from openquake/risklib/__init__.py
 ini_vers="$(cat openquake/risklib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
 ini_maj="$(echo "$ini_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
 ini_min="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.\([0-9]\+\).*/\1/gp')"

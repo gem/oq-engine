@@ -222,7 +222,7 @@ class UpgradeManager(object):
         versions = [s['version'] for s in scripts]
         if versions:
             return ('Your database is not updated. You can update it by '
-                    'running oq-engine --upgrade-db which will process the '
+                    'running oq engine --upgrade-db which will process the '
                     'following new versions: %s' % versions)
 
     def get_db_versions(self, conn):
@@ -237,7 +237,7 @@ class UpgradeManager(object):
             curs.execute(query)
             return set(version for version, in curs.fetchall())
         except:
-            raise VersioningNotInstalled('Run oq-engine --upgrade-db')
+            raise VersioningNotInstalled('Run oq engine --upgrade-db')
 
     def parse_script_name(self, script_name):
         '''

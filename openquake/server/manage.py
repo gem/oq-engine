@@ -25,16 +25,11 @@ from openquake.engine import logs
 
 
 def use_tmp_db(tmpfile_port):
-    from django.db import connection
     from openquake.engine import config
     from openquake.server.settings import DATABASE
-    from openquake.server.db import upgrade_manager
     tmpfile, port_str = tmpfile_port.rsplit(':', 1)
     DATABASE['NAME'] = tmpfile
     DATABASE['PORT'] = port = int(port_str)
-    connection.cursor()  # connect to the db
-    upgrade_manager.upgrade_db(connection.connection)
-    connection.close()
     # make sure we use the server on the temporary db
     config.DBS_ADDRESS = ('localhost', port)
 
