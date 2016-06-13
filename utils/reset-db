@@ -7,6 +7,34 @@ if [ $GEM_SET_DEBUG ]; then
 fi
 set -e
 
+if [ $(id -u) -gt 0 ]; then
+    echo -e "!! This script requires sudo.\nPlease run 'sudo $0'." >&2
+    exit 1
+fi
+
+check_dep() {
+    for i in $*; do
+        command -v $i &> /dev/null || {
+            echo -e "!! $i not found. Aborting." >&2
+            exit 1
+        }
+    done
+}
+
+startstop() {
+    local ACTION=$1
+    local SERVICE=${2:-openquake-dbserver}
+
+    if [ -f /etc/supervisor/conf.d/${SERVICE}.conf ]; then
+        supervisorctl $ACTION $SERVICE
+    elif [ -f /lib/systemd/system/${SERVICE}.service ]; then
+        systemctl $ACTION ${SERVICE}.service
+    else
+        echo -e "!! Service $SERVICE not found. Aborting." >&2
+        exit 1
+    fi
+}
+
 help() {
     cat <<HSD
 The command line arguments are as follows:
@@ -20,24 +48,8 @@ HSD
 
 BOLD=`tput bold`
 NORMAL=`tput sgr0`
-OQ_CREATE_DB='oq_create_db'
-OQ_USER='openquake'
-OQ_DB=$(eval echo "~${OQ_USER}/db.sqlite3")
 
-command -v oq_create_db &> /dev/null || {
-    if [ -x "./${OQ_CREATE_DB}" ]; then
-        oq_create_db="./${OQ_CREATE_DB}"
-    else
-        echo -e "!! Can't find oq_create_db. Aborting." >&2
-        exit 1
-    fi
-}
-
-# Check if the user exists
-if [ $(cat /etc/passwd | grep ^${OQ_USER}: | wc -l) -eq 0 ]; then
-    echo -e "!! User '${OQ_USER}' does not exists. Aborting." >&2
-    exit 1
-fi
+check_dep oq find
 
 while (( "$#" )); do
     case "$1" in
@@ -54,7 +66,7 @@ echo ''
 echo "!! ${BOLD}This script is going to remove the OpenQuake Engine data${NORMAL}"
 echo '!!'
 echo -e "!! \t*  Make sure no calculations are running"
-echo -e "!! \t*  Make sure Celery is stopped if used"
+echo -e "!! \t*  Make sure Celery is stopped, if used"
 echo -e "!! \t*  The OpenQuake Engine datastores located in /home/[user]/oqdata will be removed"
 echo -e "!! \t*  The OpenQuake Engine database will be dropped"
 echo -e "!! \t   All the old data contained will be lost"
@@ -76,14 +88,14 @@ echo ''
 echo ''
 
 if [[ "$answer" == "y" ]]; then
-    sudo -u $OQ_USER rm -f $OQ_DB
+    echo " * OpenQuake Engine DbServer stopped"
+    startstop stop
+    rm -f $OQ_DB
     echo " * Database dropped"
-    # FIXME: this requires root and should be optional
-    sudo find /home -maxdepth 2 -type d -name "oqdata" -exec rm -Rf '{}' \; || true
-    echo " * Datastores cleaned"
+    find /home -maxdepth 2 -type d -name "oqdata" -exec rm -Rf '{}' \; || true
     if [ -z $skipnew ]; then
-        $OQ_CREATE_DB -u $OQ_USER -d $OQ_DB
-        echo " * Database created in ${OQ_DB}"
+        startstop start
+        echo " * Database created"
     fi
     echo ''
     echo "!!"

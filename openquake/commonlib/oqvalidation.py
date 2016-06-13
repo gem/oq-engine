@@ -20,8 +20,8 @@ import os
 import logging
 import numpy
 
+from openquake.baselib.general import DictArray
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.probability_map import Imtls
 from openquake.risklib import valid
 from openquake.commonlib import parallel, logictree
 from openquake.commonlib.riskmodels import get_risk_files
@@ -252,7 +252,7 @@ class OqParam(valid.ParamSet):
         levels, if given, or the hazard ones.
         """
         imtls = getattr(self, 'hazard_imtls', None) or self.risk_imtls
-        return Imtls(imtls)
+        return DictArray(imtls)
 
     @property
     def all_cost_types(self):

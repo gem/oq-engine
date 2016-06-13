@@ -17,6 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
+import os
+import re
 import math
 from nose.plugins.attrib import attr
 
@@ -32,6 +34,11 @@ from openquake.qa_tests_data.event_based import (
     case_13, case_17, case_18)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
+
+
+def strip_calc_id(fname):
+    name = os.path.basename(fname)
+    return re.sub('_\d+\.', '.', name)
 
 
 def joint_prob_of_occurrence(gmvs_site_1, gmvs_site_2, gmv, time_span,
@@ -149,9 +156,6 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
-        [fname] = out['rup_data', 'csv']
-        self.assertEqualFiles('expected/rup_data.csv', fname)
-
     @attr('qa', 'hazard', 'event_based')
     def test_case_2bis(self):  # oversampling
         out = self.run_calc(case_2.__file__, 'job_2.ini',
@@ -188,10 +192,14 @@ gmf-smltp_b2-gsimltp_@_b2_3_@_@.txt
 gmf-smltp_b2-gsimltp_@_b2_4_@_@.txt
 gmf-smltp_b2-gsimltp_@_b2_5_@_@.txt
 gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
-        out = self.run_calc(case_5.__file__, 'job.ini', exports='txt')
+        out = self.run_calc(case_5.__file__, 'job.ini', exports='txt,csv')
         fnames = out['gmf_data', 'txt']
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got, sorted)
+
+        # this is a case with two different TRTs + 1 empty
+        for fname in out['rup_data', 'csv']:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_6(self):
@@ -274,3 +282,15 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         fnames = out['gmf_data', 'txt']
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got, sorted)
+
+    @attr('qa', 'hazard', 'event_based')
+    def test_overflow(self):
+        too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]
+                         for period in numpy.arange(0.1,  1, 0.001)}
+        with self.assertRaises(ValueError) as ctx:
+            self.run_calc(
+                case_1.__file__, 'job.ini',
+                intensity_measure_types_and_levels=str(too_many_imts))
+        self.assertEqual(str(ctx.exception),
+                         'The event based calculator is restricted '
+                         'to 256 imts, got 900')
