@@ -1,10 +1,10 @@
 ### Unsupported operating systems
 
-Binary packages *may* work on Ubuntu derivates and Debian if the dependencies are satsfied; these configurations are known to work:
+Binary packages *may* work on Ubuntu derivates and Debian if the dependencies are satisfied; these configurations are known to work:
 - **Ubuntu 14.04** (Trusty) packages work on **Mint Linux 17** and on **Debian 8.0** (Jessie)
 - **Ubuntu 16.04** (Trusty) packages work on **Mint Linux 18** and on **Debian unstable**
 
-These configurations however are not tested by our [countinuos integration system](https://ci.openquake.org) and we cannot guarantee on the quality of the results. Use at your own risk.
+These configurations however are not tested by our [continuous integration system](https://ci.openquake.org) and we cannot guarantee on the quality of the results. Use at your own risk.
 
 ***
 
