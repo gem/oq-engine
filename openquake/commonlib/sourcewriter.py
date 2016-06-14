@@ -466,6 +466,27 @@ def build_complex_fault_source_node(fault_source):
                        nodes=source_nodes)
 
 
+@obj_to_node.add('SourceGroup')
+def build_source_group(source_group):
+    source_nodes = [obj_to_node(src) for src in source_group.src_list]
+    attrs = dict(name=source_group.name,
+                 src_interdep=source_group.src_interdep,
+                 rup_interdep=source_group.rup_interdep,
+                 srcs_weights=' '.join(source_group.srcs_weights))
+    return LiteralNode('sourceGroup', attrs, nodes=source_nodes)
+
+
+@obj_to_node.add('SourceGroupCollection')
+def build_source_group_collection(source_group_collection):
+    group_nodes = [obj_to_node(sg) for sg in source_group_collection.grp_list]
+    attrs = dict(name=source_group_collection.name,
+                 grp_interdep=source_group_collection.grp_interdep)
+    return LiteralNode(
+        'sourceGroup', attrs, nodes=group_nodes)
+
+
+# ##################### generic source model writer ####################### #
+
 def write_source_model(dest, sources, name=None):
     """
     Writes a source model to XML.
@@ -479,8 +500,8 @@ def write_source_model(dest, sources, name=None):
         Name of the source model (if missing, extracted from the filename)
     """
     name = name or os.path.splitext(os.path.basename(dest))[0]
-    nodes = list(
-        map(obj_to_node, sorted(sources, key=lambda src: src.source_id)))
+    nodes = [obj_to_node(src)
+             for src in sorted(sources, key=lambda src: src.source_id)]
     source_model = LiteralNode("sourceModel", {"name": name}, nodes=nodes)
     with open(dest, 'w') as f:
         nrml.write([source_model], f, '%s')
