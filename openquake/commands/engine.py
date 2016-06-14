@@ -229,14 +229,14 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         dskey, calc_id, datadir = logs.dbcmd('get_output', int(output_id))
         for line in core.export_output(
                 dskey, calc_id, datadir, os.path.expanduser(target_dir),
-                exports):
+                exports or 'xml,csv'):
             print(line)
 
     elif export_outputs is not None:
         job_id, target_dir = export_outputs
         hc_id = get_job_id(job_id)
         for line in core.export_outputs(
-                hc_id, os.path.expanduser(target_dir), exports):
+                hc_id, os.path.expanduser(target_dir), exports or 'xml,csv'):
             print(line)
 
     elif delete_uncompleted_calculations:
