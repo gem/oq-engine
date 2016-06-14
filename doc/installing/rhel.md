@@ -29,7 +29,7 @@ sudo yum install python-oq-engine
 ## Configure the system services
 
 The package installs three [systemd](https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/System_Administrators_Guide/chap-Managing_Services_with_systemd.html) services:
-- `openquake-dbserver.service`: provides the database for the OpenQuake Engine and must be started before running any `oq enfine` command
+- `openquake-dbserver.service`: provides the database for the OpenQuake Engine and must be started before running any `oq engine` command
 - `openquake-webui.service`: provides the WebUI and is optional
 - `openquake-celery.service`: used only on a multi-node setup, not used in a default setup
 
