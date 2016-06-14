@@ -197,10 +197,6 @@ class SeismicSourceGroupTestCase(unittest.TestCase):
                                         Decimal(0.3334),
                                         Decimal(0.3333)])
 
-    def test_wrong_instance(self):
-        self.assertRaises(AssertionError, SourceGroup, [1], 'name', 'indep',
-                          'indep', None)
-
     def test_wrong_label(self):
         self.assertRaises(ValueError, SourceGroup, [self.source], 'name',
                           'aaaa', 'indep', None)
@@ -218,16 +214,12 @@ class SeismicSourceGroupCollectionTestCase(unittest.TestCase):
                             magnitude_scaling_relationship=PeerMSR(),
                             rupture_aspect_ratio=1,
                             temporal_occurrence_model=PoissonTOM(50.))
-        self.source_group = SourceGroup([source])
+        self.source_group = SourceGroup([source], 'sourcegroup')
 
     def test_init(self):
         coll = SourceGroupCollection([self.source_group])
         assert(len(coll.grp_list) == 1)
 
-    def test_wrong_instance(self):
-        self.assertRaises(AssertionError, SourceGroupCollection, [1],
-                          'name', 'indep')
-
     def test_wrong_label(self):
-        self.assertRaises(AssertionError, SourceGroup, [self.source_group],
+        self.assertRaises(ValueError, SourceGroup, [self.source_group],
                           'name', 'aaaa')
