@@ -15,8 +15,7 @@ There are several demo calculations included with the package. They are usually 
 An example of running the `AreaSourceClassicalPSHA` demo:
 ```
 OpenQuake environment loaded
-The command 'oq-engine' is deprecated and will be removed. Please use 'oq engine
-' instead
+The command 'oq-engine' is deprecated and will be removed. Please use 'oq engine' instead
 C:\Program Files(x86)\OpenQuake Engine>oq engine --run demos\hazard\AreaSourceClassicalPSHA\job.ini
 
 ```
