@@ -10,6 +10,8 @@ Packages *may* work on Ubuntu derivates (i.e. Mint Linux) and Debian, but this s
 
 ## Install packages from the OpenQuake repository
 
+If you want to upgrade an existing installation see [Upgrading](../upgrading/ubuntu.md).
+
 The following commands add the official stable builds package repository:
 ```
 sudo add-apt-repository -y ppa:openquake/ppa
