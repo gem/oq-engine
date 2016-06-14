@@ -20,17 +20,25 @@ This distribution has some differences with the packages we provide for Ubuntu a
 
 Requirements are:
 
-- GNU/Linux
-- glibc version at least 
-[//]: # FIXME/requirements
+- GNU/Linux with bash
+- glibc version at least # FIXME/requirements
+- 4 GB of RAM (8 GB recommended)
+- 1.2 GB of free disk space
 
 ## Install packages from the OpenQuake repository
 
+Download the installer from http://www.globalquakemodel.org/pkgs/linux/oq-engine/openquake-setup-linux64-2.0.0-1.run using any browser
+
 [//]: # FIXME
-- Download run
-- chmod +x file.run
-- ./file.run
-- Follow wizard
+
+From a terminal run
+
+```bash
+cd Downloads
+chmod +x openquake-setup-linux64-2.0.0-1.run
+./openquake-setup-linux64-2.0.0-1.run
+```
+then follow the wizard on screen. By default the code is installed in `~/openquake`
 
 
 ## Run the OpenQuake Engine
