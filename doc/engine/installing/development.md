@@ -65,7 +65,7 @@ pip install -e oq-hazardlib/
 pip install -e oq-engine/
 ```
 
-Now it is possible to run the OpenQuake Engine with `oq engine`. Any change made to the `oq-engine` or `oq-hazardlib` code will be reflected in the environemnt.
+Now it is possible to run the OpenQuake Engine with `oq engine`. Any change made to the `oq-engine` or `oq-hazardlib` code will be reflected in the environment.
 
 Continue on [How to run the OpenQuake Engine](../running/unix.md)
 
