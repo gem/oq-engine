@@ -34,7 +34,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.site import Tile
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import valid
-from openquake.commonlib.node import read_nodes
+from openquake.commonlib.node import iterparse, node_from_elem
 from openquake.commonlib import logictree, sourceconverter, parallel
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 
@@ -275,10 +275,12 @@ class SourceModelParser(object):
         sources = []
         source_ids = set()
         self.converter.fname = fname
-        src_nodes = read_nodes(fname, lambda elem: 'Source' in elem.tag,
-                               nodefactory['sourceModel'])
-        for no, src_node in enumerate(src_nodes, 1):
-            src = self.converter.convert_node(src_node)
+        for no, (event, elem) in enumerate(iterparse(fname), 1):
+            if 'Source' in elem.tag and event == 'end':
+                src = self.converter.convert_node(
+                    node_from_elem(elem, nodefactory['sourceModel']))
+            else:
+                continue
             if src.source_id in source_ids:
                 raise DuplicatedID(
                     'The source ID %s is duplicated!' % src.source_id)
