@@ -1,6 +1,6 @@
 # Installing the OpenQuake Engine for development
 
-To develop with the OpenQuake Engine, Hazardlib and Risklib an installation from sources must be performed.
+To develop with the OpenQuake Engine and Hazardlib an installation from sources must be performed.
 The official supported distributions to develop the OpenQuake Engine and its libraries are
 - Ubuntu 14.04 LTS (Trusty) 
 - Ubuntu 16.04 LTS (Xenial)
