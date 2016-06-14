@@ -35,6 +35,12 @@ class SourceGroupCollection(object):
         Interdependence between groups of sources can be either 'indep' or
         'mutex'.
     """
+    @property
+    def source_id(self):
+        """Name of the source group"""
+        # alias useful for the write_source_model function
+        return self.name
+
     def __init__(self, grp_list, name='', grp_interdep='indep'):
         # checks
         assert isinstance(grp_list, list), grp_list
