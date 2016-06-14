@@ -37,23 +37,17 @@ class SourceGroupCollection(object):
     """
     def __init__(self, grp_list, name='', grp_interdep='indep'):
         # checks
-        self._check_init_variables(grp_list, name, grp_interdep)
-        # set instance parameters
-        self.name = name
-        self.grp_list = grp_list
-        self.grp_interdep = grp_interdep
-
-    def _check_init_variables(self, grp_list, name, grp_interdep):
-        assert isinstance(grp_list, list)
-        assert issubclass(type(grp_list[0]), SourceGroup)
-        try:
-            assert set(['indep', 'mutex']) & set([grp_interdep])
-        except:
+        assert isinstance(grp_list, list), grp_list
+        if grp_interdep not in ['indep', 'mutex']:
             raise ValueError('group interdependence incorrect %s ' %
                              grp_interdep)
+        # set instance parameters
+        self.grp_list = grp_list
+        self.name = name
+        self.grp_interdep = grp_interdep
 
     def __iter__(self):
-        return iter(self.src_list)
+        return iter(self.grp_list)
 
 
 class SourceGroup(object):
@@ -76,7 +70,13 @@ class SourceGroup(object):
         in the group
     """
 
-    def __init__(self, src_list, name='', src_interdep='indep',
+    @property
+    def source_id(self):
+        """Name of the source group"""
+        # alias useful for the write_source_model function
+        return self.name
+
+    def __init__(self, src_list, name, src_interdep='indep',
                  rup_interdep='indep', srcs_weights=None, checkw=True):
         # checks
         self._check_init_variables(src_list, name, src_interdep, rup_interdep,
@@ -89,14 +89,13 @@ class SourceGroup(object):
         if srcs_weights is None:
             self.srcs_weights = numpy.ones([len(src_list)])
             self.srcs_weights[0:-2] = Decimal(1./len(src_list))
-            self.srcs_weights[-1] = 1-numpy.sum(self.srcs_weights[0:-2])
+            self.srcs_weights[-1] = 1 - numpy.sum(self.srcs_weights[0:-2])
         else:
             self.srcs_weights = srcs_weights
 
     def _check_init_variables(self, src_list, name, src_interdep, rup_interdep,
                               srcs_weights, checkw):
         assert isinstance(src_list, list)
-        assert issubclass(type(src_list[0]), BaseSeismicSource)
         # check source interdependence
         try:
             assert set(['indep', 'mutex']) & set([src_interdep])
