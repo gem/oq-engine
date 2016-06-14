@@ -229,7 +229,7 @@ class GetTestCase(unittest.TestCase):
             self.assertEqual([("hmmm",), {}], mock.call_args)
 
     def test_get_with_unknown_key(self):
-        """config.get() returns `None` if the `key` is not known."""
+        # config.get() returns `None` if the `key` is not known
         with patch('openquake.engine.config.get_section') as mock:
             mock.return_value = dict(b=1)
             self.assertTrue(config.get("arghh", "c") is None)
@@ -261,23 +261,17 @@ class FlagSetTestCase(ConfigTestCase, unittest.TestCase):
         self.assertFalse(config.flag_set("b", "y"))
 
     def test_flag_set_with_text_but_not_true(self):
-        """
-        flag_set() returns False if the setting is present but
-        not equal to 'true'.
-        """
+        # flag_set() returns False if the setting is present but
+        # not equal to 'true'
         self.prepare_config("c", {"x": "blah"})
         self.assertFalse(config.flag_set("c", "x"))
 
     def test_flag_set_with_true(self):
-        """
-        flag_set() returns True if the setting is present and equal to 'true'.
-        """
+        # flag_set() returns True if the setting is present and equal to True
         self.prepare_config("d", {"w": "true"})
         self.assertTrue(config.flag_set("d", "w"))
 
     def test_flag_set_with_True(self):
-        """
-        flag_set() returns True if the setting is present and equal to 'true'.
-        """
+        # flag_set() returns True if the setting is present and equal to True
         self.prepare_config("e", {"v": " True 	 "})
         self.assertTrue(config.flag_set("e", "v"))
