@@ -440,12 +440,14 @@ def export_hmaps_xml_json(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(('hcurves', 'hdf5'), ('hmaps', 'hdf5'), ('uhs', 'hdf5'))
+# FIXME: uhs not working yet
+@export.add(('hcurves', 'hdf5'), ('hmaps', 'hdf5'))
 def export_hazard_hdf5(ekey, dstore):
+    mesh = get_mesh(dstore['sitecol'])
     fname = dstore.export_path('%s.%s' % ekey)
     with hdf5.File(fname, 'w') as f:
         for dskey, ds in dstore[ekey[0]].items():
-            f['%s/%s' % (ekey[0], dskey)] = ds.value
+            f['%s/%s' % (ekey[0], dskey)] = util.compose_arrays(mesh, ds.value)
     return [fname]
 
 
