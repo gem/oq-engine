@@ -25,7 +25,7 @@ sudo apt-get install python-oq-engine
 ## Configure the system services
 
 The package installs three system service managed through [supervisord](http://supervisord.org/):
-- `openquake-dbserver`: provides the database for the OpenQuake Engine and must be started before running any `oq enfine` command
+- `openquake-dbserver`: provides the database for the OpenQuake Engine and must be started before running any `oq engine` command
 - `openquake-webui`: provides the WebUI and is optional
 - `openquake-celery`: used only on a multi-node setup, not used in a default setup
 

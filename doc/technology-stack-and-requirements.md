@@ -1,10 +1,16 @@
-### Technology Stack
+## Technology Stack
+
+### Main dependencies
 
 * Python - Implementation language
+* Django - Used by the API server and the WebUI
+* HDF5 - Used for storing and managing data
+* numpy and scipy - Fundamental packages for scientific computing with Python
+
+### Optional dependencies
+
 * Celery - Distributed task queue library, usisng the `iterator_native()`
-* Django - Used mostly just for its ORM
 * RabbitMQ - Message broker for Celery tasks, logging channels, and other signalling
-* PostgreSQL - Persistent storage of calculation inputs/outputs
 
 ### Binary dependencies
 
@@ -12,19 +18,9 @@ Software  | Version(s)
 --------- | ----------
 Python | 2.7
 RabbitMQ | 2.6 to 3.2
-PostgreSQL | 9.1 to 9.4
 libgeos | >= 3.2.2
-
+HDF5 | 1.8
 
 ### Python dependencies
 
-Software  | Version(s)
---------- | -----------
-Celery | 2.4.6 to 3.1
-Django | 1.6
-Numpy | 1.6 to 1.8
-Scipy | 0.9 to 0.13
-h5py | >= 2.2.1
-docutils |
-futures | >= 2.1.6
-psutil | < 3.0
+See the [requirements](../requirements-dev.txt) file for a complete list of the Python dependencies

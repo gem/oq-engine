@@ -16,6 +16,13 @@ or [RedHat/CentOS/SL](FIXME).
 
 ***
 
+### MPI support
+
+MPI is not supported by the OpenQuake Engine. Task distribution across network interconnected nodes is made via *Celery* and *RabbitMQ* as broker. No filesystem sharing is needed between the nodes and data transfer is made on plain TCP/IP connection.
+
+***
+
+
 ### error: [Errno 111] Connection refused
 
 A more detailed stack trace:
