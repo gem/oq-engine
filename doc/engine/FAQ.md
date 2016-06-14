@@ -11,7 +11,7 @@ These configurations however are not tested by our [countinuos integration syste
 ### Celery support
 
 In the OpenQuake Engine 2.0 Celery isn't needed (and not recommended) on a single machine setup; the OpenQuake Engine is able to use all the available CPU cores even without Celery.
-Celery can still be enabled on a cluster / multi node setup. To enable it please refer to the multiple nodes installation guidelines for [Ubuntu](FIXME)
+Celery must be enabled on a cluster / multi node setup. To enable it please refer to the multiple nodes installation guidelines for [Ubuntu](FIXME)
 or [RedHat/CentOS/SL](FIXME).
 
 ***
@@ -37,7 +37,7 @@ File "", line 1, in connect
 error: [Errno 111] Connection refused
 ```
 
-This happens when the Celery support is enabled but RabbitMQ server is not running. You can start it running
+This happens when the **Celery support is enabled but RabbitMQ server is not running**. You can start it running
 ```bash
 $ sudo service rabbitmq-server start
 ``` 

@@ -14,6 +14,7 @@ sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noa
 ```
 
 ## Install packages from the OpenQuake repository
+If you want to upgrade an existing installation see [Upgrading](../upgrading/rhel.md).
 
 The following command adds the official stable builds package repository:
 ```
