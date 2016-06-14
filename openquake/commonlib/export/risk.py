@@ -344,7 +344,7 @@ def export_rlzs_by_asset_csv(ekey, dstore):
     assets = get_assets(dstore)
     R = len(rlzs)
     value = dstore[ekey[0]].value  # matrix N x R or T x R
-    writer = writers.CsvWriter(fmt='%9.6E')
+    writer = writers.CsvWriter(fmt=FIVEDIGITS)
     for rlz, values in zip(rlzs, value.T):
         suffix = '.csv' if R == 1 else '-gsimltp_%s.csv' % rlz.uid
         fname = dstore.export_path(ekey[0] + suffix)
@@ -358,7 +358,7 @@ def export_csq_by_taxon_csv(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     R = len(rlzs)
     value = dstore[ekey[0]].value  # matrix T x R
-    writer = writers.CsvWriter(fmt='%9.6E')
+    writer = writers.CsvWriter(fmt=FIVEDIGITS)
     for rlz, values in zip(rlzs, value.T):
         suffix = '.csv' if R == 1 else '-gsimltp_%s.csv' % rlz.uid
         fname = dstore.export_path(ekey[0] + suffix)
@@ -372,7 +372,7 @@ def export_csq_total_csv(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     R = len(rlzs)
     value = dstore[ekey[0]].value
-    writer = writers.CsvWriter(fmt='%9.6E')
+    writer = writers.CsvWriter(fmt=FIVEDIGITS)
     for rlz, values in zip(rlzs, value):
         suffix = '.csv' if R == 1 else '-gsimltp_%s.csv' % rlz.uid
         fname = dstore.export_path(ekey[0] + suffix)
@@ -581,7 +581,6 @@ def export_loss_map_xml_geojson(ekey, dstore):
     assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
     R = len(rlzs)
-    L = len(loss_types)
     fnames = []
     export_type = ekey[1]
     writercls = (risk_writers.LossMapGeoJSONWriter
