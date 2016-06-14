@@ -1,13 +1,18 @@
-# The OpenQuake Engine WebUI
+# The OpenQuake Engine server and WebUI
 
-The OpenQuake Engine provides an optional web gui built on top of [Django](https://www.djangoproject.com/), [jQuery](https://jquery.com/) and [BACKBONE.js](http://backbonejs.org/). The OpenQuake Engine WebUI is used to submit new jobs, watch calculation progress, retrive results and more. The OpenQuake Engine WebUI does not require any special software on the client side except for a browser. Supported browsers are:
+The OpenQuake Engine Server provides an [HTTP RESTful API](https://en.wikipedia.org/wiki/Representational_state_transfer) and a web GUI, the *WebUI*. It's built on top of [Django](https://www.djangoproject.com/), [jQuery](https://jquery.com/) and [BACKBONE.js](http://backbonejs.org/).
+
+The OpenQuake Engine Server is used to submit new jobs, watch calculation progress, retrive results and more.
+
+The [API document](api.md) provides the full list of available endpoints. Several authentication mechanisms are supported and can be enabled with a [custom configuration](FIXME).
+
+The OpenQuake Engine WebUI does not require any special software on the client side except for a browser. Supported browsers are:
 
 - Mozilla Firefox >= 38
 - Google Chrome
 - Microsoft Internet Explorer >= 10
 - Microsoft Edge
 - Apple Safari >= 6
-
 
 ## Using the OpenQuake Engine WebUI
 
@@ -58,54 +63,6 @@ A calculation can be in the following statuses: `executing`, `complete`, `failed
 ![WebUI calculations status](../img/WebUI-status.png)
 
 The reason behind a `failed` calculation can be inspected by using the `Traceback` button.
-
-## Advanced use
-### Authentication support
-To `local_settings.py` add:
-```python
-LOCKDOWN = True
-```
-#### Sessions and users DB bootstrap
-```bash
-python manage.py syncdb
-```
-
-and add a a new local superuser
-
-#### PAM
-Authentication can rely on system users through `PAM`, the [Pluggable Authentication Module](https://en.wikipedia.org/wiki/Pluggable_authentication_module). To use this feature the [django-pam](https://github.com/tehmaze/django-pam) extension must be installed and activated
-
-To `local_settings.py` add:
-
-```python
-AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend',
-    'dpam.backends.PAMBackend',
-)
-```
-The WebUI process owner must be member of the `shadow` group.
-
-### Running with supervisord
-
-On a production system [nginx](http://nginx.org/en/) + [supervisord](http://supervisord.org/) + [gunicorn](http://gunicorn.org/) is the reccomended software stack to run the WebUI.
-
-#### Supervisord
-[OpenQuake Engine WebUI supervisord configuration](supervisord.md)
-
-#### Nginx
-To `local_settings.py` add:
-
-```python
-STATIC_ROOT = '/var/www/webui'
-```
-
-Collect static files:
-
-```bash
-DJANGO_SETTINGS_MODULE="openquake.server.settings" python manage.py collectstatic
-```
-
-[OpenQuake Engine WebUI nginx configuration](nginx.md)
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
