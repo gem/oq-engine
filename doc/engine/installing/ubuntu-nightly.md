@@ -3,7 +3,7 @@
 The OpenQuake Engine **nighlty builds** are available in the form of *deb* binary packages for the following Ubuntu releases:
 - Ubuntu 14.04 LTS (Trusty) 
 
-Packages *may* work on Ubuntu derivates (i.e. Mint Linux) and Debian, but this setup in not supported by GEM. See [//]: # FIXME/FAQ
+Packages *may* work on Ubuntu derivates (i.e. Mint Linux) and Debian, but this setup in not supported by GEM. See the [FAQ](../faq.md#unsupported-operating-systems)
 
 ## Install packages from the OpenQuake nigthly repository
 
@@ -20,7 +20,7 @@ sudo apt-get remove --purge python-oq-.*
 sudo apt-get install python-oq-engine
 ```
 
-Now you can follow the [standard installing procedures](./ubuntu.md)
+Now you can follow the [standard installing procedures](./ubuntu.md#configure-the-system-services)
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
