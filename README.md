@@ -84,7 +84,6 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 ![](https://www.globalquakemodel.org/media/sponsor/Air_JlQh6Ke.jpg)
 ![](https://www.globalquakemodel.org/media/sponsor/sur_170x104.jpg)
 ![](https://www.globalquakemodel.org/media/sponsor/EUCENTRE_BRAw8x4.jpg)
-![](
 ![](https://www.globalquakemodel.org/media/sponsor/GiroJ.jpg)
 ![](https://www.globalquakemodel.org/media/sponsor/arup.jpg)
 ![](https://www.globalquakemodel.org/media/sponsor/OYO_1.jpg)
