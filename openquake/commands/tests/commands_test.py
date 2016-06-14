@@ -70,7 +70,7 @@ attribute       nbytes
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
-            info(None, None, None, None, None, path)
+            info(None, None, None, None, None, None, path)
         self.assertEqual(self.EXPECTED, str(p)[:len(self.EXPECTED)])
 
     # poor man tests: checking that the flags produce a few characters

@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a command `oq info --build-reports`
   * Introduced experimental support for exporting .hdf5 files
 
   [Daniele Viganò]
