@@ -1,22 +1,25 @@
 # Installing the OpenQuake Engine on Ubuntu Linux
 
-The OpenQuake Engine is available in the form of *deb* binary packages for the following Ubuntu releases:
-- Ubuntu 14.04 LTS (Trusty) 
-- Ubuntu 16.04 LTS (Xenial)
+The OpenQuake Engine stable and "nigthly" trees are available in the form of *deb* binary packages for the following Ubuntu releases:
+- **Ubuntu 14.04** LTS (Trusty) 
+- **Ubuntu 16.04** LTS (Xenial)
 
 Support for **Ubuntu 12.04** LTS (Precise) is still available but has been deprecated and the use is discouraged.
 
-Packages *may* work on Ubuntu derivates (i.e. Mint Linux) and Debian, but this setup in not supported by GEM. See the [FAQ](../faq.md#unsupported-operating-systems)
+Packages *may* work on Ubuntu derivates (i.e. Mint Linux) and Debian, but this setup in not supported by GEM. See the **[FAQ](../faq.md#unsupported-operating-systems)**.
 
 ## Install packages from the OpenQuake repository
 
 If you want to upgrade an existing installation see **[upgrading](../upgrading/ubuntu.md)**.
 
-The following commands add the official stable builds package repository:
+The following commands add the **official stable builds** package repository:
 ```
 sudo add-apt-repository -y ppa:openquake/ppa
 sudo apt-get update
 ```
+
+If you want to install the **nighlt build** please read the guide about installing the **[nigtly build packages on Ubuntu](ubuntu-nightly.md)**.
+
 
 Then to install the OpenQuake Engine and its libraries run
 ```bash
