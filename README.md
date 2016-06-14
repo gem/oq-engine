@@ -1,45 +1,58 @@
-OpenQuake Engine
-================
+# OpenQuake Engine
 
-OpenQuake is an open source application that allows users to
-compute seismic hazard and seismic risk of earthquakes on a global scale.
+![OpenQuake Logo](https://github.com/gem/oq-engine/tree/master/doc/img/oq-logo.png)
 
-### Running Tests ###
+The OpenQuake Engine is an open source application that allows users to compute seismic hazard and seismic risk of earthquakes on a global scale, it runs on Linux, macOS and Windows.
 
-#### Short-running test suite ####
+## Documentation
 
-These tests should complete in about 5 minutes:
+### General overview
 
-    $ nosetests --with-doctest tests/
+* [About](https://github.com/gem/oq-engine/tree/master/doc/about.md)
+* [FAQ](https://github.com/gem/oq-engine/tree/master/doc/faq.md)
+* [Manuals](http://www.globalquakemodel.org/openquake/support/documentation/engine/#manual-latest-stable)
+* [Source Code/API Documentation](http://docs.openquake.org/oq-engine/)
+* [Development Philosophy and Coding Guidelines](https://github.com/gem/oq-engine/tree/master/doc/development-guidelines.md)
+* [Developers Notes](https://github.com/gem/oq-engine/tree/master/doc/development-notes.md)
+* [Calculation Workflow](https://github.com/gem/oq-engine/tree/master/doc/calculation-workflow.md)
+* [Hardware Suggestions](https://github.com/gem/oq-engine/tree/master/doc/hardware-suggestions.md)
+* [Continuous integration and testing](https://github.com/gem/oq-engine/tree/master/doc/testing.md)
+* [Glossary of Terms](https://github.com/gem/oq-engine/tree/master/doc/glossary.md)
 
-#### Shorter-running test suite ####
+### Installation
+#### Linux
 
-These tests should complete in about 1 minute:
+* [Installing on Ubuntu](https://github.com/gem/oq-engine/tree/master/doc/installing/ubuntu.md)
+* [Installing on RedHat and derivates](https://github.com/gem/oq-engine/tree/master/doc/installing/rhel.md)
+* [Installing on other flavors](https://github.com/gem/oq-engine/tree/master/doc/installing/linux-generic.md)
+* [Installing from sources](https://github.com/gem/oq-engine/tree/master/doc/installing/development.md)
+* [Installing on a cluster](https://github.com/gem/oq-engine/tree/master/doc/installing/cluster.md)
 
-    $ nosetests --with-doctest -a '!slow' tests/
+#### macOS
 
-#### Full test suite ####
+* [Installing on macOS](https://github.com/gem/oq-engine/tree/master/doc/installing/macos.md)
 
-These tests including many long-running QA tests and can take ~1 hour to run:
+#### Windows
 
-    $ nosetests --with-doctest
+* [Installing on Windows](https://github.com/gem/oq-engine/tree/master/doc/installing/windows.md)
+* [Starting the software](https://github.com/gem/oq-engine/tree/master/doc/running/windows.md)
+
+### Running the OpenQuake Engine
+
+* [Using the command line](https://github.com/gem/oq-engine/tree/master/doc/running/unix.md)
+* [Using the WebUI](https://github.com/gem/oq-engine/tree/master/doc/running/server.md)
 
 
-OpenQuake Engine Server
-=======================
+## License
 
-### Running Tests ###
+The OpenQuake Engine is released under the **[GNU Affero Public License 3](https://github.com/gem/oq-engine/blob/master/LICENSE)**.
 
-Here are some examples for how to run tests. Both methods must be run from the
-`openquake/server/` directory.
+## Contacts
 
-Using Django's manage.py:
+Support forum: https://groups.google.com/forum/#!forum/openquake-users
+Email: info@openquake.org
+Twitter: [@gem_devs](https://twitter.com/gem_devs)
 
-    $ python manage.py test --settings=test_db_settings
+## Credits
 
-    Note: You need to install Django South for this to work.
-
-Using nosetests:
-
-    $ (export DJANGO_SETTINGS_MODULE="openquake.server.settings"; nosetests -v --with-coverage --cover-package=openquake.server)
-
+The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (GEM)](http://gem.foundation)*** with the support of FIXME
