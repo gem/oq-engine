@@ -143,11 +143,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self.assertEqual(0, self.vulnerability_function1([], []).size)
 
     def test_sampling_lr_gmf_inside_range_vulnimls(self):
-        """
-        Sampling loss ratios (covs greater than zero), Ground Motion Fields
-        IMLs inside range defined by Vulnerability function's imls.
-        """
-
+        # Sampling loss ratios (covs greater than zero), Ground Motion Fields
+        # IMLs inside range defined by Vulnerability function's imls
         vf = scientific.VulnerabilityFunction(
             'VF', 'PGA',
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
@@ -168,12 +165,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                                       ratios, atol=0.0, rtol=0.01)
 
     def test_sampling_lr_gmf_less_than_first_vulnimls(self):
-        """
-        Sampling loss ratios (covs greater than zero), Ground Motion Fields
-        IMLs outside range defined by Vulnerability function's imls, some
-        values are less than the lower bound.
-        """
-
+        # Sampling loss ratios (covs greater than zero), Ground Motion Fields
+        # IMLs outside range defined by Vulnerability function's imls, some
+        # values are less than the lower bound.
         vuln_function = scientific.VulnerabilityFunction(
             'VF', 'PGA',
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
@@ -188,12 +182,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             vuln_function(gmfs, EPSILONS), atol=0.0, rtol=0.01)
 
     def test_sampling_lr_gmfs_greater_than_last_vulnimls(self):
-        """
-        Sampling loss ratios (covs greater than zero), Ground Motion Fields
-        IMLs outside range defined by Vulnerability function's imls, some
-        values are greater than the upper bound.
-        """
-
+        # Sampling loss ratios (covs greater than zero), Ground Motion Fields
+        # IMLs outside range defined by Vulnerability function's imls, some
+        # values are greater than the upper bound.
         imls = [0.10, 0.30, 0.50, 1.00]
         loss_ratios = [0.05, 0.10, 0.15, 0.30]
         covs = [0.30, 0.30, 0.20, 0.20]
@@ -209,19 +200,19 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             vuln_function(gmfs, EPSILONS), atol=0.0, rtol=0.01)
 
     def test_loss_ratios_boundaries(self):
-        """Loss ratios generation given a GMFs and a vulnerability function.
+        # Loss ratios generation given a GMFs and a vulnerability function
 
-        The vulnerability function used in this test has all covs equal
-        to zero, so the mean based algorithm is used. This test checks
-        the boundary conditions.
+        # The vulnerability function used in this test has all covs equal
+        # to zero, so the mean based algorithm is used. This test checks
+        # the boundary conditions.
 
-        The resulting loss ratio is zero if the GMF is below the minimum IML
-        defined the vulnerability function.
+        # The resulting loss ratio is zero if the GMF is below the minimum IML
+        # defined the vulnerability function.
 
-        The resulting loss ratio is equal to the maximum loss ratio
-        defined by the function if the GMF is greater than the maximum
-        IML defined.
-        """
+        # The resulting loss ratio is equal to the maximum loss ratio
+        # defined by the function if the GMF is greater than the maximum
+        # IML defined.
+
         # min IML in this case is 0.01
         numpy.testing.assert_allclose(
             numpy.array([0.0, 0.0, 0.0]),
@@ -234,14 +225,11 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             self.vulnerability_function1([0.525, 0.530], EPSILONS[:2]))
 
     def test_loss_ratios_computation_using_gmfs(self):
-        """Loss ratios generation given a GMFs and a vulnerability function.
-
-        The vulnerability function used in this test has all covs equal
-        to zero, so the mean based algorithm is used. It basically
-        takes each IML defined in the GMFs and interpolates them using
-        the given vulnerability function.
-        """
-
+        # Loss ratios generation given a GMFs and a vulnerability function
+        # The vulnerability function used in this test has all covs equal
+        # to zero, so the mean based algorithm is used. It basically
+        # takes each IML defined in the GMFs and interpolates them using
+        # the given vulnerability function.
         # manually computed values by Vitor Silva
         expected_loss_ratios = numpy.array([
             0.0605584000000000,
