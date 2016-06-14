@@ -18,7 +18,7 @@ sudo add-apt-repository -y ppa:openquake/ppa
 sudo apt-get update
 ```
 
-If you want to install the **nighlt build** please read the guide about installing the **[nigtly build packages on Ubuntu](ubuntu-nightly.md)**.
+If you want to install a **nighlt build** please read the guide about installing the **[nigtly build packages on Ubuntu](ubuntu-nightly.md)**.
 
 
 Then to install the OpenQuake Engine and its libraries run
