@@ -1,3 +1,11 @@
+# FAQ
+
+### Different installation methods
+
+The OpenQuake Engine has at least three installation methods. To choose the one that best fits your needs take a look at the **[installation overview](installing/overview.md)**.
+
+***
+
 ### Unsupported operating systems
 
 Binary packages *may* work on Ubuntu derivates and Debian if the dependencies are satisfied; these configurations are known to work:
@@ -21,7 +29,6 @@ or [RedHat/CentOS/SL](FIXME).
 MPI is not supported by the OpenQuake Engine. Task distribution across network interconnected nodes is made via *Celery* and *RabbitMQ* as broker. No filesystem sharing is needed between the nodes and data transfer is made on plain TCP/IP connection.
 
 ***
-
 
 ### error: [Errno 111] Connection refused
 
