@@ -1,4 +1,4 @@
-# Installing the OpenQuake Engine on a generic Linux distrbution
+# Installing the OpenQuake Engine on a generic Linux distribution
 
 The OpenQuake Engine is also available in the form of **self-installable binary distribution**.
 
@@ -28,8 +28,6 @@ Requirements are:
 ## Install packages from the OpenQuake repository
 
 Download the installer from http://www.globalquakemodel.org/pkgs/linux/oq-engine/openquake-setup-linux64-2.0.0-1.run using any browser
-
-[//]: # FIXME
 
 From a terminal run
 
