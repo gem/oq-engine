@@ -751,8 +751,26 @@ def check_weights(nodes_with_a_weight):
     """
     weights = [n['weight'] for n in nodes_with_a_weight]
     if abs(sum(weights) - 1.) > 1E-12:
-        raise ValueError('The weights do not sum up to 1!', weights)
+        raise ValueError('The weights do not sum up to 1: %s' % weights)
     return nodes_with_a_weight
+
+
+def weights(value):
+    """
+    Space-separated list of weights:
+
+    >>> weights('0.1 0.2 0.7')
+    [0.1, 0.2, 0.7]
+
+    >>> weights('0.1 0.2 0.8')
+    Traceback (most recent call last):
+      ...
+    ValueError: The weights do not sum up to 1: [0.1, 0.2, 0.8]
+    """
+    probs = probabilities(value)
+    if abs(sum(probs) - 1.) > 1E-12:
+        raise ValueError('The weights do not sum up to 1: %s' % probs)
+    return probs
 
 
 def hypo_list(nodes):
