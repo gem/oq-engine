@@ -2,7 +2,7 @@
 
 ![OpenQuake Logo](https://github.com/gem/oq-engine/tree/master/doc/img/oq-logo.png)
 
-The OpenQuake Engine is an open source application that allows users to compute seismic hazard and seismic risk of earthquakes on a global scale, it runs on Linux, macOS and Windows.
+The **OpenQuake Engine** is an open source application that allows users to compute **seismic hazard** and **seismic risk** of earthquakes on a global scale, it runs on Linux, macOS and Windows.
 
 ## Documentation
 
@@ -51,10 +51,10 @@ The OpenQuake Engine is released under the **[GNU Affero Public License 3](https
 
 ## Contacts
 
-Support forum: https://groups.google.com/forum/#!forum/openquake-users
-Email: info@openquake.org
-Twitter: [@gem_devs](https://twitter.com/gem_devs)
+* Support forum: https://groups.google.com/forum/#!forum/openquake-users
+* Twitter: [@gem_devs](https://twitter.com/gem_devs)
+* Email: info@openquake.org
 
 ## Credits
 
-The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (GEM)](http://gem.foundation)*** with the support of FIXME
+The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (GEM)](http://gem.foundation)** with the support of FIXME
