@@ -6,6 +6,8 @@ The OpenQuake Engine is an open source application that allows users to compute 
 
 ## Documentation
 
+* [What's new](https://github.com/gem/oq-engine/tree/master/doc/whats-new.md)
+
 ### General overview
 
 * [About](https://github.com/gem/oq-engine/tree/master/doc/about.md)
