@@ -338,9 +338,12 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None):
         for record in data:
             row = []
             for fields in all_fields:
-                row.append(extract_from(record, fields))
-            dest.write(sep.join(scientificformat(col, fmt)
-                                for col in row) + u'\n')
+                val = extract_from(record, fields)
+                if fields == ['lon'] or fields == ['lat']:
+                    row.append('%.5f' % val)
+                else:
+                    row.append(scientificformat(val, fmt))
+            dest.write(sep.join(row) + u'\n')
     else:
         for row in data:
             dest.write(sep.join(scientificformat(col, fmt)
