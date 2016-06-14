@@ -124,8 +124,8 @@ def export_output(dskey, calc_id, datadir, target_dir, export_types):
     a summary of files exported, if any.
     """
     outkey = get_outkey(dskey, export_types.split(','))
-    if not outkey:
-        yield 'There is not exporter for %s, %s' % (dskey, export_types)
+    if export_types and not outkey:
+        yield 'There is no exporter for %s, %s' % (dskey, export_types)
         return
     the_file = export_from_datastore(outkey, calc_id, datadir, target_dir)
     if the_file.endswith('.zip'):
