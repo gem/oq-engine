@@ -69,6 +69,8 @@ sudo yum install yum-plugin-remove-with-leaves
 sudo yum erase --remove-leaves python-oq-*
 ```
 
+***
+
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
   * Subscribe to the OpenQuake users mailing list: https://groups.google.com/forum/?fromgroups#!forum/openquake-users
