@@ -33,3 +33,5 @@ if path:
     sys.exit('Found an obsolete version of commonlib; '
              'please remove %s and/or fix your PYTHONPATH'
              % os.path.dirname(path))
+
+__codename__ = 'Keiiti Aki'
