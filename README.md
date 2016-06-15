@@ -1,45 +1,110 @@
-OpenQuake Engine
-================
+# OpenQuake Engine
 
-OpenQuake is an open source application that allows users to
-compute seismic hazard and seismic risk of earthquakes on a global scale.
+![OpenQuake Logo](https://www.globalquakemodel.org/media/storage/oq-logo.png)
 
-### Running Tests ###
+The **OpenQuake Engine** is an open source application that allows users to compute **seismic hazard** and **seismic risk** of earthquakes on a global scale. It runs on Linux, macOS and Windows, on laptops, workstations, standalone servers and multi-node clusters.
 
-#### Short-running test suite ####
+[![Build Status](https://ci.openquake.org/job/master_oq-engine/badge/icon)](https://ci.openquake.org/job/master_oq-engine/)
 
-These tests should complete in about 5 minutes:
+## Documentation
 
-    $ nosetests --with-doctest tests/
+* [What's new](https://github.com/gem/oq-engine/tree/master/doc/whats-new.md)
 
-#### Shorter-running test suite ####
+### General overview
 
-These tests should complete in about 1 minute:
+* [About](https://github.com/gem/oq-engine/tree/master/doc/about.md)
+* [FAQ](https://github.com/gem/oq-engine/tree/master/doc/faq.md)
+* [Manuals](http://www.globalquakemodel.org/openquake/support/documentation/engine/#manual-latest-stable)
+* [Source Code/API Documentation](http://docs.openquake.org/oq-engine/)
+* [Development Philosophy and Coding Guidelines](https://github.com/gem/oq-engine/tree/master/doc/development-guidelines.md)
+* [Developers Notes](https://github.com/gem/oq-engine/tree/master/doc/development-notes.md)
+* [Calculation Workflow](https://github.com/gem/oq-engine/tree/master/doc/calculation-workflow.md)
+* [Hardware Suggestions](https://github.com/gem/oq-engine/tree/master/doc/hardware-suggestions.md)
+* [Continuous integration and testing](https://github.com/gem/oq-engine/tree/master/doc/testing.md)
+* [Glossary of Terms](https://github.com/gem/oq-engine/tree/master/doc/glossary.md)
 
-    $ nosetests --with-doctest -a '!slow' tests/
+### Installation
 
-#### Full test suite ####
+* [Which installation method should I use?](https://github.com/gem/oq-engine/tree/master/doc/installing/overview.md)
 
-These tests including many long-running QA tests and can take ~1 hour to run:
+#### Linux
 
-    $ nosetests --with-doctest
+* [Installing on Ubuntu](https://github.com/gem/oq-engine/tree/master/doc/installing/ubuntu.md)
+* [Installing on RedHat and derivates](https://github.com/gem/oq-engine/tree/master/doc/installing/rhel.md)
+* [Installing on other flavors](https://github.com/gem/oq-engine/tree/master/doc/installing/linux-generic.md)
+* [Installing from sources](https://github.com/gem/oq-engine/tree/master/doc/installing/development.md)
+* [Installing on a cluster](https://github.com/gem/oq-engine/tree/master/doc/installing/cluster.md)
+
+#### macOS
+
+* [Installing on macOS](https://github.com/gem/oq-engine/tree/master/doc/installing/macos.md)
+
+#### Windows
+
+* [Installing on Windows](https://github.com/gem/oq-engine/tree/master/doc/installing/windows.md)
+* [Starting the software](https://github.com/gem/oq-engine/tree/master/doc/running/windows.md)
+
+### Running the OpenQuake Engine
+
+* [Using the command line](https://github.com/gem/oq-engine/tree/master/doc/running/unix.md)
+* [Using the WebUI](https://github.com/gem/oq-engine/tree/master/doc/running/server.md)
 
 
-OpenQuake Engine Server
-=======================
+## License
 
-### Running Tests ###
+The OpenQuake Engine is released under the **[GNU Affero Public License 3](https://github.com/gem/oq-engine/blob/master/LICENSE)**.
 
-Here are some examples for how to run tests. Both methods must be run from the
-`openquake/server/` directory.
+## Contacts
 
-Using Django's manage.py:
+* Support forum: https://groups.google.com/forum/#!forum/openquake-users
+* Twitter: [@gem_devs](https://twitter.com/gem_devs)
+* Email: info@openquake.org
+* IRC: [irc.freenode.net](https://webchat.freenode.net/), channel #openquake
 
-    $ python manage.py test --settings=test_db_settings
+## Credits
 
-    Note: You need to install Django South for this to work.
+The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (GEM)](http://gem.foundation)** with the support of
+![](https://www.globalquakemodel.org/media/sponsor/aus.png)
+![](https://www.globalquakemodel.org/media/sponsor/cidigen.png)
+![](https://www.globalquakemodel.org/media/sponsor/sg_170x104.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/gfz.png)
+![](https://www.globalquakemodel.org/media/sponsor/pcn.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/nied.png)
+![](https://www.globalquakemodel.org/media/sponsor/nset.png)
+![](https://www.globalquakemodel.org/media/sponsor/morst.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/RCN.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/swiss_1.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/tem.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/TCIP-01.png)
+![](https://www.globalquakemodel.org/media/sponsor/nerc.png)
+![](https://www.globalquakemodel.org/media/sponsor/usaid_BsOsE8Z_QZnaG6c.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/FUNVISIS_GEM_logo.png)
 
-Using nosetests:
+***
 
-    $ (export DJANGO_SETTINGS_MODULE="openquake.server.settings"; nosetests -v --with-coverage --cover-package=openquake.server)
+![](https://www.globalquakemodel.org/media/sponsor/FMGlobal.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/hannoverRe.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/Nephila.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/munichre_HwOCwR4.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/zurich_3eh504q.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/Air_JlQh6Ke.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/sur_170x104.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/EUCENTRE_BRAw8x4.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/GiroJ.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/arup.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/OYO_1.jpg)
 
+***
+
+![](https://www.globalquakemodel.org/media/sponsor/OECD.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/worldbank_2.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/ISDR.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/Unesco.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/iaspei.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/iaee.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/istructe.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/cssc.jpg)
+![](https://www.globalquakemodel.org/media/sponsor/IRDRICSU.png)
+![](https://www.globalquakemodel.org/media/sponsor/EERI_GEM.png)
+
+For more info visit the GEM website at https://www.globalquakemodel.org/gem/organisation/partners/
