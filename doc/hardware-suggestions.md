@@ -2,7 +2,7 @@ We are often asked to recommend hardware configurations for servers and clusters
 
 **All product and company names are trademarks™ or registered trademarks© of their respective holders. GEM is is not affiliated with and does not endorse any of the products or companies mentioned on this page.**
 
-A general rule is more GB of RAM and more GHz you have better is. The OpenQuake Engine is designed with an amount of 2GB of RAM per core in mind.
+A general rule is more GB of RAM and more GHz you have better is. The OpenQuake Engine is designed with an amount of 2GB of RAM per worker core in mind. In the controller it is best to have more RAM.
 
 ### Single node configuration
 
