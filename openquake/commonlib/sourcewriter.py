@@ -472,7 +472,8 @@ def build_source_group(source_group):
     attrs = dict(name=source_group.name,
                  src_interdep=source_group.src_interdep,
                  rup_interdep=source_group.rup_interdep,
-                 srcs_weights=' '.join(source_group.srcs_weights))
+                 srcs_weights=' '.join(map(str, source_group.srcs_weights)),
+                 tectonicRegion=source_group.tectonic_region_type)
     return LiteralNode('sourceGroup', attrs, nodes=source_nodes)
 
 
