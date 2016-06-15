@@ -474,7 +474,7 @@ def get_result(request, result_id):
 
     tmpdir = tempfile.mkdtemp()
     try:
-        exported = core.export_from_datastore(
+        exported = core.export_from_db(
             (ds_key, export_type), job_id, datadir, tmpdir)
     except DataStoreExportError as exc:
         # TODO: there should be a better error page
