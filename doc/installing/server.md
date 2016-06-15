@@ -57,7 +57,7 @@ where `N` is the number of workers, which is usually equal to `(CPU threads)*2`.
 
 *gunicorn* does not serve static content itself thus a frontend like *nginx* is needed.
 
-To the previous created `opeqnuake/server/local_settings.py` add:
+To the previous created `openquake/server/local_settings.py` add:
 
 ```python
 STATIC_ROOT = '/var/www/webui'

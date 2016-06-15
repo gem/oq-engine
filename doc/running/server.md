@@ -2,7 +2,7 @@
 
 The OpenQuake Engine Server provides an [HTTP RESTful API](https://en.wikipedia.org/wiki/Representational_state_transfer) and a web GUI, the *WebUI*. It's built on top of [Django](https://www.djangoproject.com/), [jQuery](https://jquery.com/) and [BACKBONE.js](http://backbonejs.org/).
 
-The OpenQuake Engine Server is used to submit new jobs, watch calculation progress, retrive results and more.
+The OpenQuake Engine Server is used to submit new jobs, watch calculation progress, retrieve results and more.
 
 The [API document](../api.md) provides the full list of available endpoints. Several authentication mechanisms are supported and can be enabled with a [custom configuration](FIXME).
 

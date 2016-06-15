@@ -8,7 +8,7 @@ The OpenQuake Engine has at least three installation methods. To choose the one 
 
 ### Unsupported operating systems
 
-Binary packages *may* work on Ubuntu derivates and Debian if the dependencies are satisfied; these configurations are known to work:
+Binary packages *may* work on Ubuntu derivatives and Debian if the dependencies are satisfied; these configurations are known to work:
 - **Ubuntu 14.04** (Trusty) packages work on **Mint Linux 17** and on **Debian 8.0** (Jessie)
 - **Ubuntu 16.04** (Trusty) packages work on **Mint Linux 18** and on **Debian unstable**
 
