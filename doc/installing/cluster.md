@@ -68,6 +68,20 @@ sudo service openquake-celery start
 The *Celery* daemon is not started at boot by default on the workers node and the *DbServer*, *WebUI* can be disabled on the workers. Have a look at the documentation for [Ubuntu]() or [RedHat] to see how to enable or disable services.
 
 
+## Network and security considerations
+
+The worker nodes should be isolated from the external network using either a dedicated internal network or a firewall.
+Additionally, access to the RabbitMQ, and DbServer ports should be limited (again by internal LAN or firewall) so that external traffic is excluded.
+
+The following ports must be open on the **master node**:
+
+* 5672 for RabbitMQ
+* 1999 for DbServer
+* 8800 for the API/WebUI (optional)
+
+The **worker nodes** must be able to connect to the master on port 5672, and port 1999.
+
+
 ## Storage requirements
 
 Storage requirements depend a lot on the type of calculations run. On a worker node you will need just the space for the operating system, the logs and the OpenQuake installation: less than 20GB are usually enough. Workers can be also diskless (using iSCSI or NFS for example).
