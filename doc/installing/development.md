@@ -71,7 +71,7 @@ Continue on [How to run the OpenQuake Engine](../running/unix.md)
 
 ## Loading and unloading the development environment
 
-To exit from the OpenQuake development environment type `deactivate`. Before using again the OpenQuake software the environment must be loaded back running `source openquake/bin/activate`(assuming that it has been installed under 'openquake').
+To exit from the OpenQuake development environment type `deactivate`. Before using again the OpenQuake software the environment must be loaded back running `source openquake/bin/activate`(assuming that it has been installed under 'openquake'). For more information about *virtualenv* and its you see http://docs.python-guide.org/en/latest/dev/virtualenvs/
 
 ## Running the tests
 
