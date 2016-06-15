@@ -76,7 +76,7 @@ On the master node you will also need space for:
 - the users' **home** directory (usually located under `/home`): it contains the calculations datastore (`hdf5` files located in the `oqdata` folder)
 - *RabbitMQ* mnesia dir (on RHEL usually located under `/var/lib/rabbitmq`)
 
-On large installation we strongly suggest to create separate partition for `/home`, `/var` and *RabbitMQ* (`/var/lib/rabbitmq`).
+On large installations we strongly suggest to create separate partition for `/home`, `/var` and *RabbitMQ* (`/var/lib/rabbitmq`).
 
 ## Running calculations
 
