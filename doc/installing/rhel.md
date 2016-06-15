@@ -53,6 +53,10 @@ sudo systemctl status openquake-dbserver.service
 
 Continue on [How to run the OpenQuake Engine](../running/unix.md)
 
+## Test the installation
+
+To run the OpenQuake Engine tests see the **[testing](../testing.md)** page.
+
 ## Uninstall the OpenQuake Engine
 
 To uninstall the OpenQuake Engine and all its components run

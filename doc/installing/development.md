@@ -38,7 +38,7 @@ source openquake/bin/activate
 
 ## Install the OpenQuake dependencies
 
-Inside the *virtualenv* (the propmt shows something like `(openquake)user@myhost:~$`) upgrade `pip` first
+Inside the *virtualenv* (the prompt shows something like `(openquake)user@myhost:~$`) upgrade `pip` first
 
 ```bash
 pip install -U pip
@@ -71,12 +71,15 @@ Continue on [How to run the OpenQuake Engine](../running/unix.md)
 
 ## Loading and unloading the development environment
 
-To exit from the OpenQuake development enviroment type `deactivate`. Before using again the OpenQuake software the environment must be loaded back running `source openquake/bin/activate`(assuming that it has been installed under 'openquake').
+To exit from the OpenQuake development environment type `deactivate`. Before using again the OpenQuake software the environment must be loaded back running `source openquake/bin/activate`(assuming that it has been installed under 'openquake').
 
+## Running the tests
+
+To run the OpenQuake Engine tests see the **[testing](../testing.md)** page.
 
 ## Uninstall the OpenQuake Engine
 
-To uninstall the OpenQuake development make sure that its enviroment is not loaded typing `deactivate` and the remove teh folder where it has been installed: `rm -Rf openquake`.
+To uninstall the OpenQuake development make sure that its environment is not loaded typing `deactivate` and the remove the folder where it has been installed: `rm -Rf openquake`.
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
