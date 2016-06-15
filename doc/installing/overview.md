@@ -30,11 +30,11 @@ For a multi-user multi-node setup see also the page about [clusters](cluster.md)
 
 ### macOS
 
-Multi-user is not supported on macOS yet.
+Multi-user is not supported on macOS.
 
 ### Windows
 
-Multi-user is not supported on Windows yet.
+Multi-user is not supported on Windows.
 
 ***
 
