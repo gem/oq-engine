@@ -66,6 +66,8 @@ If you want to remove all the dependencies installed by the OpenQuake Engine you
 sudo apt-get autoremove
 ```
 
+***
+
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
   * Subscribe to the OpenQuake users mailing list: https://groups.google.com/forum/?fromgroups#!forum/openquake-users

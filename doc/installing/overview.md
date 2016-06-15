@@ -6,8 +6,6 @@ The OpenQuake Engine can be installed in several different ways. This page will 
 
 See the **[Installing the OpenQuake Engine for development](development.md)** guide.
 
-***
-
 ## Single user
 
 ### Linux
@@ -22,8 +20,6 @@ Use the **[self-installable binary distribution for macOS](macos.md)**. No root 
 ### Windows
 
 Use the **[self-installable binary distribution for Windows](windows.md)**. Administrator level access may be required.
-
-***
 
 ## Multi users
 
@@ -40,6 +36,7 @@ Multi-user is not supported on macOS yet.
 
 Multi-user is not supported on Windows yet.
 
+***
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
