@@ -13,12 +13,12 @@ The OpenQuake Engine command line tool is `oq`. To run a calculation the command
 There are several demo calculations included with the package. They are usually located in `C:\Program Files(x86)\OpenQuake Engine\demos\\`. The real path may actually vary based on where the Engine has been installed.
 
 An example of running the `AreaSourceClassicalPSHA` demo:
-```
+```bat
 OpenQuake environment loaded
 The command 'oq-engine' is deprecated and will be removed. Please use 'oq engine' instead
 C:\Program Files(x86)\OpenQuake Engine>oq engine --run demos\hazard\AreaSourceClassicalPSHA\job.ini
-
 ```
+
 The output should look something like this:
 
 ```

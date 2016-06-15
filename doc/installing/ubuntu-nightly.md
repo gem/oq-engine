@@ -8,7 +8,7 @@ Packages *may* work on Ubuntu derivates (i.e. Mint Linux) and Debian, but this s
 ## Install packages from the OpenQuake nigthly repository
 
 The following commands add the nighlty builds package repository:
-```
+```bash
 sudo add-apt-repository -ry ppa:openquake/ppa
 sudo add-apt-repository -y ppa:openquake-automatic-team/latest-master
 sudo apt-get update

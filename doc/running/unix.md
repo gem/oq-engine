@@ -9,7 +9,7 @@ The OpenQuake Engine command line tool is `oq`. To run a calculation the command
 There are several demo calculations included with the package. Depending on the installation they are located in `/usr/share/openquake/engine/demos`. or `~/openquake/share/engine/demos/`or just `oq-engine/demos` in the source repository.
 
 An example of running the `AreaSourceClassicalPSHA` demo:
-```
+```bash
 [user@centos7 ~]$ oq engine --run /usr/share/openquake/engine/demos/hazard/AreaSourceClassicalPSHA/job.ini
 ```
 The output should look something like this:
