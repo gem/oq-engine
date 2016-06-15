@@ -2,7 +2,7 @@
 
 ## Overall architecture
 The nodes must all be able to communicate with the OpenQuake Engine *DbServer* and a *RabbitMQ* server.
-Both services run on a single "master" node. It is not necessary and not normally recommended to run *RabbitMQ* on a worker node and *Celery* on master node.
+Both services run on a single "master" node. It is not necessary and not recommended to run *RabbitMQ* on a worker node and *Celery* on master node.
 
 ## Initial install
 On all nodes, install the `python-oq-engine package` as described in OpenQuake Engine installation for [Ubuntu](ubuntu.md) or [RedHat](rhel.md).
