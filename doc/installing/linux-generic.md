@@ -21,7 +21,7 @@ This distribution has some differences with the packages we provide for Ubuntu a
 Requirements are:
 
 - GNU/Linux with bash
-- glibc version at least # FIXME/requirements
+- libc version at least 2.15
 - 4 GB of RAM (8 GB recommended)
 - 1.2 GB of free disk space
 

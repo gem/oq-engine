@@ -4,7 +4,7 @@ The OpenQuake Engine Server provides an [HTTP RESTful API](https://en.wikipedia.
 
 The OpenQuake Engine Server is used to submit new jobs, watch calculation progress, retrieve results and more.
 
-The [API document](../api.md) provides the full list of available endpoints. Several authentication mechanisms are supported and can be enabled with a [custom configuration](FIXME).
+The [API document](../api.md) provides the full list of available endpoints. Several authentication mechanisms are supported and can be enabled with a [custom configuration](../installing/server.md).
 
 The OpenQuake Engine WebUI does not require any special software on the client side except for a browser. Supported browsers are:
 

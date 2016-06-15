@@ -19,8 +19,7 @@ These configurations however are not tested by our [continuous integration syste
 ### Celery support
 
 In the OpenQuake Engine 2.0 Celery isn't needed (and not recommended) on a single machine setup; the OpenQuake Engine is able to use all the available CPU cores even without Celery.
-Celery must be enabled on a cluster / multi node setup. To enable it please refer to the multiple nodes installation guidelines for [Ubuntu](FIXME)
-or [RedHat/CentOS/SL](FIXME).
+Celery must be enabled on a cluster / multi node setup. To enable it please refer to the [multiple nodes installation guidelines](installing/cluster.md).
 
 ***
 
