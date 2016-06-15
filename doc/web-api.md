@@ -159,8 +159,6 @@ Files:
 
 Parameters:
 
-    * migration_callback_url: optional; post to this URL to initiate post-calculation migration of results; see documentation for the oq-platform Icebox (TODO: link) for more information
-    * foreign_calculation_id: optional, required with migration_callback_url; specifies the id of the calculation on the icebox side
     * hazard_calc: the hazard calculation ID upon which to run the risk calculation; specify this or hazard_result (only for risk calculations)
     * hazard_result: the hazard results ID upon which to run the risk calculation; specify this or hazard_calc (only for risk calculations)
 

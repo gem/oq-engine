@@ -8,7 +8,7 @@ the engine installable with zero configuration effort on non-cluster
 platforms. As a consequence, now the engine runs natively on Windows,
 Mac and Linux. We provide official packages for Ubuntu (14.04, 16.04),
 Red Had (7.0) and a Windows installer (from XP to Windows 10). There
-is a guide to install the engine on Mac OS X.
+is a guide to install the engine on macOS.
 
 2. We have improved tremendously the performance of the event based
 calculators, both hazard and risk. In large calculations the
