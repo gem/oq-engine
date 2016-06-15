@@ -83,5 +83,5 @@ To uninstall the OpenQuake development make sure that its environment is not loa
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
-  * Subscribe to the developer mailing list: https://groups.google.com/forum/?fromgroups#!forum/openquake-dev
+  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/forum/?fromgroups#!forum/openquake-users
   * Contact us on IRC: irc.freenode.net, channel #openquake
