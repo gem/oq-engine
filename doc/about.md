@@ -6,4 +6,4 @@ Both libraries were built by the OpenQuake team to serve as a fast, stable, and 
 
 To get involved in OpenQuake, join us on IRC (irc.freenode.net) in the #openquake channel by using an IRC client or via web at http://webchat.freenode.net. You can also submit questions, comments, or support requests to our developer mailing list: http://groups.google.com/group/openquake-dev.
 
-You can find more infrormation about the project at **<a href="http://www.globalquakemodel.org/openquake/about/" target="_blank">http://www.globalquakemodel.org/openquake/about</a>**
+You can find more information about the project at **<a href="http://www.globalquakemodel.org/openquake/about/" target="_blank">http://www.globalquakemodel.org/openquake/about</a>**
