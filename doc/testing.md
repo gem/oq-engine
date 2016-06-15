@@ -4,6 +4,8 @@
 
 The OpenQuake code is automatically tested by a [Continuous integration](https://ci.openquake.org) system at every merge and every night. This system uses [Jenkins](http://jenkins-ci.org/).
 
+Current build status is  [![Build Status](https://ci.openquake.org/job/master_oq-engine/badge/icon)](https://ci.openquake.org/job/master_oq-engine/)
+
 ### Manual testing
 
 The full suite of tests for the OpenQuake Engine can be run using `nose`
