@@ -64,5 +64,6 @@ def dispatch_on_colon(ekey, dstore):
 
 
 export = CallableDict(keymissing=dispatch_on_colon)
+export.from_db = False  # overridden when exporting from db
 
 import_all('openquake.commonlib.export')

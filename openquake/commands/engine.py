@@ -56,7 +56,6 @@ def run_job(cfg_file, log_level, log_file, exports='',
         Path to log file.
     :param exports:
         A comma-separated string of export types requested by the user.
-        Currently only 'xml' is supported.
     :param hazard_calculation_id:
         ID of the previous calculation or None
     """
