@@ -14,6 +14,8 @@ Binary packages *may* work on Ubuntu derivatives and Debian if the dependencies 
 
 These configurations however are not tested by our [continuous integration system](https://ci.openquake.org) and we cannot guarantee on the quality of the results. Use at your own risk.
 
+Another installation option for unsupported Linux systems is provided by the **[self-installable binary distribution for generic Linux](installing/linux-generic.md)**.
+
 ***
 
 ### Celery support
