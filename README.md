@@ -8,51 +8,51 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 
 ## Documentation
 
-* [What's new](https://github.com/gem/oq-engine/tree/new-doc/doc/whats-new.md)
+* [What's new](https://github.com/gem/oq-engine/tree/master/doc/whats-new.md)
 
 ### General overview
 
-* [About](https://github.com/gem/oq-engine/tree/new-doc/doc/about.md)
-* [FAQ](https://github.com/gem/oq-engine/tree/new-doc/doc/faq.md)
+* [About](https://github.com/gem/oq-engine/tree/master/doc/about.md)
+* [FAQ](https://github.com/gem/oq-engine/tree/master/doc/faq.md)
 * [Manuals](http://www.globalquakemodel.org/openquake/support/documentation/engine/#manual-latest-stable)
 * [Source Code/API Documentation](http://docs.openquake.org/oq-engine/)
-* [Development Philosophy and Coding Guidelines](https://github.com/gem/oq-engine/tree/new-doc/doc/development-guidelines.md)
-* [Developers Notes](https://github.com/gem/oq-engine/tree/new-doc/doc/development-notes.md)
-* [Calculation Workflow](https://github.com/gem/oq-engine/tree/new-doc/doc/calculation-workflow.md)
-* [Hardware Suggestions](https://github.com/gem/oq-engine/tree/new-doc/doc/hardware-suggestions.md)
-* [Continuous integration and testing](https://github.com/gem/oq-engine/tree/new-doc/doc/testing.md)
-* [Glossary of Terms](https://github.com/gem/oq-engine/tree/new-doc/doc/glossary.md)
+* [Development Philosophy and Coding Guidelines](https://github.com/gem/oq-engine/tree/master/doc/development-guidelines.md)
+* [Developers Notes](https://github.com/gem/oq-engine/tree/master/doc/development-notes.md)
+* [Calculation Workflow](https://github.com/gem/oq-engine/tree/master/doc/calculation-workflow.md)
+* [Hardware Suggestions](https://github.com/gem/oq-engine/tree/master/doc/hardware-suggestions.md)
+* [Continuous integration and testing](https://github.com/gem/oq-engine/tree/master/doc/testing.md)
+* [Glossary of Terms](https://github.com/gem/oq-engine/tree/master/doc/glossary.md)
 
 ### Installation
 
-* [Which installation method should I use?](https://github.com/gem/oq-engine/tree/new-doc/doc/installing/overview.md)
+* [Which installation method should I use?](https://github.com/gem/oq-engine/tree/master/doc/installing/overview.md)
 
 #### Linux
 
-* [Installing on Ubuntu](https://github.com/gem/oq-engine/tree/new-doc/doc/installing/ubuntu.md)
-* [Installing on RedHat and derivates](https://github.com/gem/oq-engine/tree/new-doc/doc/installing/rhel.md)
-* [Installing on other flavors](https://github.com/gem/oq-engine/tree/new-doc/doc/installing/linux-generic.md)
-* [Installing from sources](https://github.com/gem/oq-engine/tree/new-doc/doc/installing/development.md)
-* [Installing on a cluster](https://github.com/gem/oq-engine/tree/new-doc/doc/installing/cluster.md)
+* [Installing on Ubuntu](https://github.com/gem/oq-engine/tree/master/doc/installing/ubuntu.md)
+* [Installing on RedHat and derivates](https://github.com/gem/oq-engine/tree/master/doc/installing/rhel.md)
+* [Installing on other flavors](https://github.com/gem/oq-engine/tree/master/doc/installing/linux-generic.md)
+* [Installing from sources](https://github.com/gem/oq-engine/tree/master/doc/installing/development.md)
+* [Installing on a cluster](https://github.com/gem/oq-engine/tree/master/doc/installing/cluster.md)
 
 #### macOS
 
-* [Installing on macOS](https://github.com/gem/oq-engine/tree/new-doc/doc/installing/macos.md)
+* [Installing on macOS](https://github.com/gem/oq-engine/tree/master/doc/installing/macos.md)
 
 #### Windows
 
-* [Installing on Windows](https://github.com/gem/oq-engine/tree/new-doc/doc/installing/windows.md)
-* [Starting the software](https://github.com/gem/oq-engine/tree/new-doc/doc/running/windows.md)
+* [Installing on Windows](https://github.com/gem/oq-engine/tree/master/doc/installing/windows.md)
+* [Starting the software](https://github.com/gem/oq-engine/tree/master/doc/running/windows.md)
 
 ### Running the OpenQuake Engine
 
-* [Using the command line](https://github.com/gem/oq-engine/tree/new-doc/doc/running/unix.md)
-* [Using the WebUI](https://github.com/gem/oq-engine/tree/new-doc/doc/running/server.md)
+* [Using the command line](https://github.com/gem/oq-engine/tree/master/doc/running/unix.md)
+* [Using the WebUI](https://github.com/gem/oq-engine/tree/master/doc/running/server.md)
 
 
 ## License
 
-The OpenQuake Engine is released under the **[GNU Affero Public License 3](https://github.com/gem/oq-engine/blob/new-doc/LICENSE)**.
+The OpenQuake Engine is released under the **[GNU Affero Public License 3](https://github.com/gem/oq-engine/blob/master/LICENSE)**.
 
 ## Contacts
 
