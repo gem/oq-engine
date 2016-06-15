@@ -35,12 +35,6 @@ class SourceGroupCollection(object):
         Interdependence between groups of sources can be either 'indep' or
         'mutex'.
     """
-    @property
-    def source_id(self):
-        """Name of the source group"""
-        # alias useful for the write_source_model function
-        return self.name
-
     def __init__(self, grp_list, name='', grp_interdep='indep'):
         # checks
         assert isinstance(grp_list, list), grp_list
@@ -83,7 +77,7 @@ class SourceGroup(object):
         return self.name
 
     def __init__(self, src_list, name, src_interdep='indep',
-                 rup_interdep='indep', srcs_weights=None, checkw=True):
+                 rup_interdep='indep', srcs_weights=None, trt='', checkw=True):
         # checks
         self._check_init_variables(src_list, name, src_interdep, rup_interdep,
                                    srcs_weights, checkw)
@@ -98,6 +92,7 @@ class SourceGroup(object):
             self.srcs_weights[-1] = 1 - numpy.sum(self.srcs_weights[0:-2])
         else:
             self.srcs_weights = srcs_weights
+        self.tectonic_region_type = trt
 
     def _check_init_variables(self, src_list, name, src_interdep, rup_interdep,
                               srcs_weights, checkw):
