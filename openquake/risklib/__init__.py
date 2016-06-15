@@ -34,4 +34,4 @@ if path:
              'please remove %s and/or fix your PYTHONPATH'
              % os.path.dirname(path))
 
-__codename__ = 'Keiiti Aki'
+__codename__ = ''  # will be replace when generating the packages
