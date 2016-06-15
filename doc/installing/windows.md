@@ -34,6 +34,8 @@ Download the installer from http://www.globalquakemodel.org/pkgs/windows/oq-engi
 
 Continue on [How to run the OpenQuake Engine](../running/windows.md)
 
+***
+
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
   * Subscribe to the OpenQuake users mailing list: https://groups.google.com/forum/?fromgroups#!forum/openquake-users

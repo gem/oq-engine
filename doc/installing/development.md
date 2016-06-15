@@ -81,6 +81,8 @@ To run the OpenQuake Engine tests see the **[testing](../testing.md)** page.
 
 To uninstall the OpenQuake development make sure that its environment is not loaded typing `deactivate` and the remove the folder where it has been installed: `rm -Rf openquake`.
 
+***
+
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
   * Subscribe to the OpenQuake users mailing list: https://groups.google.com/forum/?fromgroups#!forum/openquake-users
