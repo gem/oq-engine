@@ -233,7 +233,7 @@ HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 def export_hazard_curves_csv(key, dest, sitecol, curves_by_imt,
                              imtls, investigation_time=None):
     """
-    Export the curves of the given realization into XML.
+    Export the curves of the given realization into CSV.
 
     :param key: output_type and export_type
     :param dest: name of the exported file
@@ -268,7 +268,7 @@ def add_imt(fname, imt):
 def export_hcurves_by_imt_csv(key, dest, sitecol, curves_by_imt,
                               imtls, investigation_time=None):
     """
-    Export the curves of the given realization into XML.
+    Export the curves of the given realization into CSV.
 
     :param key: output_type and export_type
     :param dest: name of the exported file
