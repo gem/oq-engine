@@ -276,12 +276,14 @@ class SourceModelParser(object):
         source_ids = set()
         self.converter.fname = fname
         for no, (event, elem) in enumerate(iterparse(fname), 1):
-            if 'Source' in elem.tag and event == 'end':
+            if 'ource' in elem.tag and event == 'end':
                 src = self.converter.convert_node(
                     node_from_elem(elem, nodefactory['sourceModel']))
             else:
                 continue
-            if src.source_id in source_ids:
+            if not hasattr(src, 'source_id'):  # not a source
+                continue
+            elif src.source_id in source_ids:
                 raise DuplicatedID(
                     'The source ID %s is duplicated!' % src.source_id)
             sources.append(src)
