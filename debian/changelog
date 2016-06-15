@@ -1,9 +1,12 @@
   [Michele Simionato]
+  * The engine exports the hazard curves one file per IMT
   * Exported lon and lat with 5 digits after the decimal point
   * Added a command `oq info --build-reports`
   * Introduced experimental support for exporting .hdf5 files
 
   [Daniele Viganò]
+  * Reworked substantially the engine documentation: removed obsolete pages,
+    updated to engine 2.0 and added instructions for Windows and Mac OS X
   * Remove oq_create_db script, db is created by the DbServer
   * Move oq_reset_db into utils and clean old code
 
