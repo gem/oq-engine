@@ -66,9 +66,3 @@
   The OpenQuake Hazard Library (`oq-hazardlib`) is the Python library the OpenQuake team has developed to function as the core scientific library behind the OpenQuake Engine for Seismic Hazard.
 
   See https://github.com/gem/oq-hazardlib for more information.
-
-* **OpenQuake Risk Library**
-
-  The OpenQuake Risk Library (`oq-risklib`) is the Python library the OpenQuake team has developed to function as the core scientific library behind the OpenQuake Engine for Seismic Risk.
-
-  See https://github.com/gem/oq-risklib for more information.
