@@ -62,7 +62,7 @@ For a list of additional commands, type `oq engine --help`.
 
 ## Running via web interface (WebUI)
 
-To activate and load the OpenQuake Engine WebUI double click on the `OpenQuake Engine (webui)` icon on the desktop or in the 'Start' menu. A command prompt will appear. After few seconds a browse window is opened pointing to the WebUI at http://localhost:8800.
+To activate and load the OpenQuake Engine WebUI double click on the `OpenQuake Engine (webui)` icon on the desktop or in the 'Start' menu. A command prompt will appear. After few seconds a browser window will be opened pointing to the WebUI at http://localhost:8800.
 
 ![Windows WebUI](../img/win-webui.png)
 
