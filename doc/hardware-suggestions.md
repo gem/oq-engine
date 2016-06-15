@@ -6,7 +6,7 @@ A general rule is more GB of RAM and more GHz you have better is. The OpenQuake 
 
 ### Single node configuration
 
-Small to medium hazard calculations and small risk calculations can run on a laptop or an equivalent cloud server: 8GB of RAM and 4 cores with several GB of disk space. Using >= 7.2k RPM disks or solid-state drives (SSD) will improve overall performance.
+Small to medium hazard calculations and small risk calculations can run on a laptop or an equivalent cloud server: 8GB of RAM and 4 cores with several GB of disk space. Using >= 7.2k RPM disks or solid-state drives (SSD) will improve the overall performance.
 
 More serious calculations would be better handled by a single server with a hardware RAID support: our "hope" server is a Dell® PowerEdge™ R420 with 12 cores (2 x Intel® Xeon™ E5-2430) 64GB of RAM and 4x2TB disks in a RAID 10 configuration and a hardware RAID controller (Dell® PERC H710).  It is used now primarily to host databases but for a little while it was the best machine we had in Pavia and was used to run calculations too.
 

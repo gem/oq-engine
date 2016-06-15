@@ -84,7 +84,7 @@ The **worker nodes** must be able to connect to the master on port 5672, and por
 
 ## Storage requirements
 
-Storage requirements depend a lot on the type of calculations run. On a worker node you will need just the space for the operating system, the logs and the OpenQuake installation: less than 20GB are usually enough. Workers can be also diskless (using iSCSI or NFS for example).
+Storage requirements depend a lot on the type of calculations you want to run. On a worker node you will need just the space for the operating system, the logs and the OpenQuake installation: less than 20GB are usually enough. Workers can be also diskless (using iSCSI or NFS for example).
 
 On the master node you will also need space for:
 - the users' **home** directory (usually located under `/home`): it contains the calculations datastore (`hdf5` files located in the `oqdata` folder)
