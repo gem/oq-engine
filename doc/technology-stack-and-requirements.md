@@ -9,7 +9,7 @@
 
 ### Optional dependencies
 
-* Celery - Distributed task queue library, usisng the `iterator_native()`
+* Celery - Distributed task queue library, using the `iterator_native()`
 * RabbitMQ - Message broker for Celery tasks, logging channels, and other signalling
 
 ### Binary dependencies
