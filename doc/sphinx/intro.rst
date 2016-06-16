@@ -19,11 +19,6 @@ the development of the  library by adding the most recent methodologies
 adopted by the seismological/seismic hazard communities. Comments,
 suggestions and criticisms from the community are always very welcome.
 
-Requirements
-------------
-hazardlib depends on numpy and scipy for fast numerical calculations and on
-shapely for geometric primitives routines.
-
 Development and support
 -----------------------
 
@@ -37,30 +32,8 @@ support on IRC channel #openquake on freenode.
 
 Installation
 ------------
-To install type as usual::
 
- python setup.py install
-
-Running Tests (in a development environment)
---------------------------------------------
-
-1. Install dependencies::
-
-    # Ubuntu 14.04 LTS:
-    apt-get install python-numpy python-scipy python-shapely
-    # Other platforms, or if you are using a virtualenv:
-    pip install numpy scipy shapely
-
-2. Install test dependencies::
-
-    # Ubuntu 14.04 LTS:
-    apt-get install python-nose python-coverage python-mock
-    # Other platforms, or if you are using a virtualenv:
-    pip install nose coverage mock
-
-3. Run tests::
-
-    nosetests --with-doctest --with-coverage --cover-package=openquake.hazardlib
+See https://github.com/gem/oq-hazardlib/blob/master/README.md#installation
 
 License
 -------

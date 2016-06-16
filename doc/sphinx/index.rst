@@ -1,6 +1,6 @@
 .. module:: hazardlib
 
-.. include:: ../README.rst
+.. include:: intro.rst
 
 ==================
 Internal structure

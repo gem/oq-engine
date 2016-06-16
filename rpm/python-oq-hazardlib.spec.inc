@@ -65,7 +65,7 @@ rm -rf %{buildroot}
 
 %files -f INSTALLED_FILES
 %defattr(-,root,root)
-%doc CONTRIBUTORS.txt LICENSE README.rst doc
+%doc CONTRIBUTORS.txt LICENSE README.md doc
 
 %changelog
 * %(date -d @%{oqtimestamp} '+%a %b %d %Y') GEM Automatic Packager <gem-autopack@openquake.org> %{oqversion}-%{oqtimestamp}_%{oqrelease}
