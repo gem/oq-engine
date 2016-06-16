@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a command `oq dbserver` to start/stop the database server
   * The engine exports the hazard curves one file per IMT
   * Exported lon and lat with 5 digits after the decimal point
   * Added a command `oq info --build-reports`
