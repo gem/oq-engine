@@ -18,6 +18,7 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 * [Source Code/API Documentation](http://docs.openquake.org/oq-engine/)
 * [Development Philosophy and Coding Guidelines](https://github.com/gem/oq-engine/tree/master/doc/development-guidelines.md)
 * [Developers Notes](https://github.com/gem/oq-engine/tree/master/doc/development-notes.md)
+* [Architecture](https://github.com/gem/oq-engine/tree/master/doc/architecture.md)
 * [Calculation Workflow](https://github.com/gem/oq-engine/tree/master/doc/calculation-workflow.md)
 * [Hardware Suggestions](https://github.com/gem/oq-engine/tree/master/doc/hardware-suggestions.md)
 * [Continuous integration and testing](https://github.com/gem/oq-engine/tree/master/doc/testing.md)
