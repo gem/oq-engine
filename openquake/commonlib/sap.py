@@ -75,7 +75,7 @@ def get_parentparser(parser, description=None, help=True):
 
 
 def str_choices(choices):
-    """Returns {choice1, ..., choiceN} or the empty string
+    """Returns {choice1, ..., choiceN} or the empty string"""
     if choices:
         return '{%s}' % ', '.join(choices)
     return ''
