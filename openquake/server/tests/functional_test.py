@@ -20,7 +20,7 @@
 Here there are some real functional tests starting an engine server and
 running computations.
 """
-
+from __future__ import print_function
 import os
 import sys
 import json
@@ -116,6 +116,7 @@ class EngineServerTestCase(unittest.TestCase):
         os.close(fh)
         tmpdb = '%s:%s' % (cls.tmpdb, cls.dbserverport)
         cls.fd, cls.errfname = tempfile.mkstemp()
+        print('Errors saved in %s' % cls.errfname, file=sys.stderr)
         cls.dbs = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.dbserver',
              tmpdb, cls.errfname], env=env, stderr=cls.fd)
