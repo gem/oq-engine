@@ -297,5 +297,5 @@ parser._add('export_outputs', '--export-outputs', '--eos',
             'specified directory')
 parser.opt('exports', 'Comma-separated string specifing the export formats, '
            'in order of priority')
-parser.opt('log_level', 'debug|info|warn|error|critical, default "info"',
+parser.opt('log_level', 'Defaults to "info"',
            choices=['debug', 'info', 'warn', 'error', 'critical'])
