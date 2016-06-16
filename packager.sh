@@ -618,10 +618,10 @@ celeryd_wait $GEM_MAXLOOP"
         oq engine --lhc
         echo 'Listing risk calculations'
         oq engine --lrc
-        python -m openquake.server.stop"
+        oq dbserver stop"
     fi
 
-    ssh $lxc_ip "sudo -u openquake python -m openquake.server.dbserver & sleep 1 ; oq engine --make-html-report today ; python -m openquake.server.stop"
+    ssh $lxc_ip "oq dbserver start ; oq engine --make-html-report today ; oq dbserver stop"
     scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
 
     scp -r "${lxc_ip}:/usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" "out_${BUILD_UBUVER}/"
