@@ -16,10 +16,10 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import sys
-import socket
 import subprocess
 from openquake.commonlib import sap
 from openquake.engine import logs, config
+from openquake.server.dbserver import get_status
 
 
 def runserver():
@@ -33,13 +33,7 @@ def dbserver(cmd):
     if config.get('dserver', 'multi_user'):
         sys.exit('oq dbserver only works in single user mode')
 
-    # check if the DbServer is up
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        err = sock.connect_ex(config.DBS_ADDRESS)
-    finally:
-        sock.close()
-    status = 'not-running' if err else 'running'
+    status = get_status()
     if cmd == 'status':
         print(status)
     elif cmd == 'stop':
