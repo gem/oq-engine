@@ -15,14 +15,24 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+import sys
 import socket
-import multiprocessing
+import subprocess
 from openquake.commonlib import sap
 from openquake.engine import logs, config
-from openquake.server.dbserver import runserver
+
+
+def runserver():
+    subprocess.Popen([sys.executable, '-m', 'openquake.server.dbserver'])
 
 
 def dbserver(cmd):
+    """
+    start/stop/restart the database server, or return its status
+    """
+    if config.get('dserver', 'multi_user'):
+        sys.exit('oq dbserver only works in single user mode')
+
     # check if the DbServer is up
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -32,16 +42,23 @@ def dbserver(cmd):
     status = 'not-running' if err else 'running'
     if cmd == 'status':
         print(status)
-    elif cmd == 'stop' and status == 'running':
-        logs.dbcmd('stop')
-        print('stopped')
-    elif cmd == 'start' and status == 'not-running':
-        multiprocessing.Process(target=runserver).start()
-        print('started')
-    elif cmd == 'restart' and status == 'running':
-        logs.dbcmd('stop')
-        print('stopped')
-        multiprocessing.Process(target=runserver).start()
+    elif cmd == 'stop':
+        if status == 'running':
+            logs.dbcmd('stop')
+            print('stopped')
+        else:
+            print('already stopped')
+    elif cmd == 'start':
+        if status == 'not-running':
+            runserver()
+            print('started')
+        else:
+            print('already running')
+    elif cmd == 'restart':
+        if status == 'running':
+            logs.dbcmd('stop')
+            print('stopped')
+        runserver()
         print('started')
 
 parser = sap.Parser(dbserver)
