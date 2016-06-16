@@ -26,6 +26,7 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 
 ### Installation
 
+* [Technology stack and requirements](https://github.com/gem/oq-engine/tree/master/doc/requirements.md)
 * [Which installation method should I use?](https://github.com/gem/oq-engine/tree/master/doc/installing/overview.md)
 
 #### Linux
