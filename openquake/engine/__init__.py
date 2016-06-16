@@ -57,3 +57,4 @@ from openquake.risklib import __version__
 
 # The path to the OpenQuake root directory
 OPENQUAKE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
