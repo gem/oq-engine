@@ -68,7 +68,7 @@ The OpenQuake Engine is released under the **[GNU Affero Public License 3](https
 * Email: info@openquake.org
 * IRC: [irc.freenode.net](https://webchat.freenode.net/), channel #openquake
 
-## Credits
+## Thanks
 
 The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (GEM)](http://gem.foundation)** with the support of
 ![](https://www.globalquakemodel.org/media/sponsor/aus.png)
