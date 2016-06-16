@@ -4,13 +4,13 @@
 
 The **OpenQuake Engine** is an open source application that allows users to compute **seismic hazard** and **seismic risk** of earthquakes on a global scale. It runs on Linux, macOS and Windows, on laptops, workstations, standalone servers and multi-node clusters.
 
+[![Build Status](https://ci.openquake.org/job/master_oq-engine/badge/icon)](https://ci.openquake.org/job/master_oq-engine/)
+
 ## Codename
 
 Starting from OpenQuake version 2.0 we have introduced a "code name" to honour earthquake scientists...
 
 The code name for version 2.0 is **'Aki'**, in memory of [Keiiti Aki](https://en.wikipedia.org/wiki/Keiiti_Aki).
-
-[![Build Status](https://ci.openquake.org/job/master_oq-engine/badge/icon)](https://ci.openquake.org/job/master_oq-engine/)
 
 ## Documentation
 
