@@ -359,17 +359,20 @@ def get_dbpath():
 # ########################## upgrade operations ########################## #
 
 def what_if_I_upgrade(extract_scripts):
+    db.connection.cursor()  # bind the connection
     conn = db.connection.connection
     return upgrade_manager.what_if_I_upgrade(
         conn, extract_scripts=extract_scripts)
 
 
 def version_db():
+    db.connection.cursor()  # bind the connection
     conn = db.connection.connection
     return upgrade_manager.version_db(conn)
 
 
 def upgrade_db():
+    db.connection.cursor()  # bind the connection
     conn = db.connection.connection
     return upgrade_manager.upgrade_db(conn)
 
