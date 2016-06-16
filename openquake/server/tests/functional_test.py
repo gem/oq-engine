@@ -30,6 +30,9 @@ import subprocess
 import tempfile
 import requests
 import django
+from openquake.engine import logs, config
+from openquake.server import dbserver
+
 if requests.__version__ < '1.0.0':
     requests.Response.text = property(lambda self: self.content)
 if hasattr(django, 'setup'):
@@ -117,6 +120,11 @@ class EngineServerTestCase(unittest.TestCase):
         tmpdb = '%s:%s' % (cls.tmpdb, cls.dbserverport)
         cls.fd, cls.errfname = tempfile.mkstemp()
         print('Errors saved in %s' % cls.errfname, file=sys.stderr)
+        config.DBS_ADDRESS = ('localhost', int(cls.dbserverport))
+        dbstatus = dbserver.get_status()
+        if dbstatus == 'running':
+            # some test broke before without stopping the dbserver
+            logs.dbcmd('stop')
         cls.dbs = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.dbserver',
              tmpdb, cls.errfname], env=env, stderr=cls.fd)
@@ -147,13 +155,13 @@ class EngineServerTestCase(unittest.TestCase):
         log = self.get('%s/log/:' % job_id)
         self.assertGreater(len(log), 0)
         results = self.get('%s/results' % job_id)
+        self.assertGreater(len(results), 0)
         for res in results:
             if res['type'] == 'gmfs':
                 continue  # exporting the GMFs would be too slow
             etype = res['outtypes'][0]  # get the first export type
             text = self.get_text('result/%s' % res['id'], export_type=etype)
             self.assertGreater(len(text), 0)
-        self.assertGreater(len(results), 0)
 
     def test_err_1(self):
         # the rupture XML file has a syntax error
