@@ -262,7 +262,10 @@ class DataStore(collections.MutableMapping):
         :param export_dir: export directory (if None use .export_dir)
         :returns: relative pathname including the extension
         """
-        fname = '%s-rlz-%03d.%s' % (prefix, rlz.ordinal, fmt)
+        if hasattr(rlz, 'ordinal'):
+            fname = '%s-rlz-%03d.%s' % (prefix, rlz.ordinal, fmt)
+        else:  # the gsim instance
+            fname = '%s-%s.%s' % (prefix, rlz, fmt)
         return self.export_path(fname, export_dir)
 
     def export_csv(self, key):
