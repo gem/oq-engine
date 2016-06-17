@@ -56,28 +56,28 @@ def export_from_db(output_key, calc_id, datadir, target):
     makedirs(target)
     export.from_db = True
     ds_key, fmt = output_key
-    dstore = datastore.read(calc_id, datadir=datadir)
-    dstore.export_dir = target
-    try:
-        exported = export(output_key, dstore)
-    except KeyError:
-        raise DataStoreExportError(
-            'Could not export %s in %s' % output_key)
-    if not exported:
-        raise DataStoreExportError(
-            'Nothing to export for %s' % ds_key)
-    elif len(exported) > 1:
-        # NB: I am hiding the archive by starting its name with a '.',
-        # to avoid confusing the users, since the unzip files are
-        # already in the target directory; the archive is used internally
-        # by the WebUI, so it must be there; it would be nice not to
-        # generate it when not using the Web UI, but I will leave that
-        # feature for after the removal of the old calculators
-        archname = '.' + ds_key + '-' + fmt + '.zip'
-        zipfiles(exported, os.path.join(target, archname))
-        return os.path.join(target, archname)
-    else:  # single file
-        return exported[0]
+    with datastore.read(calc_id, datadir=datadir) as dstore:
+        dstore.export_dir = target
+        try:
+            exported = export(output_key, dstore)
+        except KeyError:
+            raise DataStoreExportError(
+                'Could not export %s in %s' % output_key)
+        if not exported:
+            raise DataStoreExportError(
+                'Nothing to export for %s' % ds_key)
+        elif len(exported) > 1:
+            # NB: I am hiding the archive by starting its name with a '.',
+            # to avoid confusing the users, since the unzip files are
+            # already in the target directory; the archive is used internally
+            # by the WebUI, so it must be there; it would be nice not to
+            # generate it when not using the Web UI, but I will leave that
+            # feature for after the removal of the old calculators
+            archname = '.' + ds_key + '-' + fmt + '.zip'
+            zipfiles(exported, os.path.join(target, archname))
+            return os.path.join(target, archname)
+        else:  # single file
+            return exported[0]
 
 #: Used to separate node labels in a logic tree path
 LT_PATH_JOIN_TOKEN = '_'
