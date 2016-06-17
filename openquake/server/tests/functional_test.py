@@ -160,12 +160,6 @@ class EngineServerTestCase(unittest.TestCase):
             if res['type'] == 'gmfs':
                 continue  # exporting the GMFs would be too slow
             etype = res['outtypes'][0]  # get the first export type
-            if res['type'] == 'sescollection':
-                # it does not work for XML for mysterious reasons
-                # this happens only in Ubuntu 16.04
-                # perhaps the file is too big? is it an error with
-                # the version of request??
-                continue
             text = self.get_text(
                 'result/%s' % res['id'], export_type=etype)
             self.assertGreater(len(text), 0)
