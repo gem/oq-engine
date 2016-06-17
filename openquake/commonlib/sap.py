@@ -198,7 +198,9 @@ def compose(parsers, name='main', description=None, prog=None,
     """
     assert len(parsers) >= 1, parsers
     parentparser = argparse.ArgumentParser(
-        description=description, version=version, add_help=False)
+        description=description, add_help=False)
+    parentparser.add_argument(
+        '--version', '-v', action='version', version=version)
     subparsers = parentparser.add_subparsers(
         help='available subcommands; use %s help <cmd>' % prog,
         prog=prog)
