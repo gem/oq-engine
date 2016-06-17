@@ -27,6 +27,10 @@ suggestions and criticisms from the community are always very welcome.
 
 The OpenQuake Hazardlib is also distributed in the form of **binary package** for Linux, macOS and Windows as part of the [OpenQuake Engine](https://github.com/gem/oq-engine/) suite. See the [OpenQuake Engine README](https://github.com/gem/oq-engine/blob/master/README.md) for more information.
 
+### Development
+
+* [Implementing a new GSIM](https://github.com/gem/oq-engine/tree/master/doc/implementing-new-gsim.md)
+
 ## License
 
 The OpenQuake Hazardlib is released under the **[GNU Affero Public License 3](https://github.com/gem/oq-engine/blob/master/LICENSE)**.
