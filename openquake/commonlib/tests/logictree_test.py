@@ -2341,7 +2341,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         self.assertEqual(str(gsim), 'AkkarBommer2010()')
         # this test was broken in release 1.4, a wrong ordering
         # of the value gave back LinLee2008SSlab instead of AkkarBommer2010
-        self.assertEqual(map(str, rlz.value), [
+        self.assertEqual([str(v) for v in rlz.value], [
             'AkkarBommer2010()', 'AkkarBommer2010()', 'ToroEtAl2002SHARE()',
             'ZhaoEtAl2006SInter()', 'ZhaoEtAl2006SSlab()',
             'FaccioliEtAl2010()', 'LinLee2008SSlab()'])
