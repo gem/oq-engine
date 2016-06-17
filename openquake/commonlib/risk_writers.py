@@ -162,7 +162,7 @@ class LossCurveXMLWriter(object):
 
         _assert_valid_input(data)
 
-        with open(self._dest, 'w') as output:
+        with open(self._dest, 'wb') as output:
             root = et.Element("nrml")
 
             for curve in data:
@@ -457,7 +457,7 @@ class LossMapXMLWriter(LossMapWriter):
         """
         _assert_valid_input(data)
 
-        with open(self._dest, 'w') as output:
+        with open(self._dest, 'wb') as output:
             root = et.Element("nrml")
 
             loss_map_el = self._create_loss_map_elem(root)
@@ -659,7 +659,7 @@ class LossFractionsWriter(object):
                 bin_element.set("absoluteLoss", FIVEDIGITS % absolute_loss)
                 bin_element.set("fraction", FIVEDIGITS % fraction)
 
-        with open(self.dest, 'w') as output:
+        with open(self.dest, 'wb') as output:
             root = et.Element("nrml")
 
             # container element
@@ -1073,6 +1073,6 @@ class DamageWriter(object):
         """
         fname = fname or writetmp()
         node = getattr(self, key + '_node')(data)
-        with open(fname, 'w') as out:
+        with open(fname, 'wb') as out:
             nrml.write([node], out, fmt)
         return fname

@@ -70,7 +70,7 @@ class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
 
 
 def _make_nrml(content):
-    return (u"""\
+    return (u"""<?xml version="1.0" encoding="UTF-8"?>
     <nrml xmlns:gml="http://www.opengis.net/gml"\
           xmlns="http://openquake.org/xmlns/nrml/0.5">\
         %s
@@ -218,7 +218,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             'logictree', {'logictree': source}, 'base',
             logictree.ValidationError
         )
-        self.assertEqual(exc.lineno, 3)
+        self.assertEqual(exc.lineno, 4)
         error = 'first branchset must define an uncertainty ' \
                 'of type "sourceModel"'
         self.assertTrue(error in str(exc),
@@ -252,7 +252,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             'lt', {'lt': lt, 'sm1': sm, 'sm2': sm}, 'base',
             logictree.ValidationError
         )
-        self.assertEqual(exc.lineno, 12)
+        self.assertEqual(exc.lineno, 13)
         error = 'uncertainty of type "sourceModel" can be defined ' \
                 'on first branchset only'
         self.assertEqual(exc.message, error,
@@ -284,7 +284,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             'lt', {'lt': lt, 'sm1': sm, 'sm2': sm}, 'base',
             logictree.ValidationError
         )
-        self.assertEqual(exc.lineno, 10)
+        self.assertEqual(exc.lineno, 11)
         error = 'there must be only one branch set on first branching level'
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)
@@ -312,7 +312,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             'lt', {'lt': lt, 'sm1': sm, 'sm2': sm}, '/bz',
             logictree.ValidationError
         )
-        self.assertEqual(exc.lineno, 9)
+        self.assertEqual(exc.lineno, 10)
         self.assertEqual(exc.message, "branchID 'b1' is not unique",
                          "wrong exception message: %s" % exc.message)
 
@@ -339,7 +339,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             'lo', {'lo': lt, 'sm1': sm, 'sm2': sm}, 'base',
             logictree.ValidationError
         )
-        self.assertEqual(exc.lineno, 3)
+        self.assertEqual(exc.lineno, 4)
         self.assertEqual(exc.message, "branchset weights don't sum up to 1.0",
                          "wrong exception message: %s" % exc.message)
 
@@ -370,7 +370,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.ValidationError)
-        self.assertEqual(exc.lineno, 12)
+        self.assertEqual(exc.lineno, 13)
         self.assertEqual(exc.message, "branch 'mssng' is not yet defined",
                          "wrong exception message: %s" % exc.message)
 
@@ -409,7 +409,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.ValidationError)
-        self.assertEqual(exc.lineno, 20)
+        self.assertEqual(exc.lineno, 21)
         error = "branch 'b1' already has child branchset"
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)
@@ -444,7 +444,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm},
                                             'base',
                                             logictree.ValidationError)
-        self.assertEqual(exc.lineno, 16)
+        self.assertEqual(exc.lineno, 17)
         error = "expected a pair of floats separated by space"
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)
@@ -475,7 +475,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.ValidationError)
-        self.assertEqual(exc.lineno, 15)
+        self.assertEqual(exc.lineno, 16)
         self.assertEqual(exc.message, 'expected single float value',
                          "wrong exception message: %s" % exc.message)
 
@@ -904,7 +904,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             'lt', {'lt': lt, 'sm1': sm, 'sm2': sm}, 'base',
             logictree.ValidationError
         )
-        self.assertEqual(exc.lineno, 26)
+        self.assertEqual(exc.lineno, 27)
         error = 'applyToBranches must reference only branches ' \
                 'from previous branching level'
         self.assertEqual(exc.message, error,
@@ -936,7 +936,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.ValidationError)
-        self.assertEqual(exc.lineno, 12)
+        self.assertEqual(exc.lineno, 13)
         error = 'uncertainty of type "gmpeModel" is not allowed ' \
                 'in source model logic tree'
         self.assertEqual(exc.message, error,
@@ -964,7 +964,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             exc = self._assert_logic_tree_error(
                 'lt', {'lt': lt, 'sm': sm}, 'base', logictree.ValidationError
             )
-            self.assertEqual(exc.lineno, 3)
+            self.assertEqual(exc.lineno, 4)
             error = 'filters are not allowed on source model uncertainty'
             self.assertEqual(exc.message, error,
                              "wrong exception message: %s" % exc.message)
@@ -996,7 +996,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.ValidationError)
-        self.assertEqual(exc.lineno, 12)
+        self.assertEqual(exc.lineno, 13)
         error = "source with id 'bzzz' is not defined in source models"
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)
@@ -1028,7 +1028,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.ValidationError)
-        self.assertEqual(exc.lineno, 12)
+        self.assertEqual(exc.lineno, 13)
         error = "source models don't define sources of " \
                 "tectonic region type 'Volcanic'"
         self.assertEqual(exc.message, error,
@@ -1061,7 +1061,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.ValidationError)
-        self.assertEqual(exc.lineno, 12)
+        self.assertEqual(exc.lineno, 13)
         error = "source models don't define sources of type 'complexFault'"
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)
@@ -1095,7 +1095,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.ValidationError)
-        self.assertEqual(exc.lineno, 12)
+        self.assertEqual(exc.lineno, 13)
         error = 'only one filter is allowed per branchset'
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)
@@ -1134,7 +1134,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                 exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm},
                                                     'base',
                                                     logictree.ValidationError)
-                self.assertEqual(exc.lineno, 12)
+                self.assertEqual(exc.lineno, 13)
                 error = "uncertainty of type %r must define 'applyToSources'" \
                         " with only one source id" % uncertainty
                 self.assertEqual(exc.message, error,
