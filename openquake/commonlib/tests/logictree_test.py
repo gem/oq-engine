@@ -27,7 +27,6 @@ import unittest
 import collections
 
 import numpy
-from xml.etree import ElementTree as etree
 from copy import deepcopy
 
 from io import BytesIO
@@ -63,18 +62,18 @@ class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
         super(_TestableSourceModelLogicTree, self).__init__(f, validate)
 
     def _get_source_model(self, filename):
-        return StringIO(self.files[filename])
+        return StringIO(self.files[filename].encode('utf-8'))
 
     def __fail(self, *args, **kwargs):
         raise AssertionError("this method shouldn't be called")
 
 
 def _make_nrml(content):
-    return (u"""<?xml version="1.0" encoding="UTF-8"?>
+    return ("""<?xml version="1.0" encoding="UTF-8"?>
     <nrml xmlns:gml="http://www.opengis.net/gml"\
           xmlns="http://openquake.org/xmlns/nrml/0.5">\
         %s
-    </nrml>""" % content).encode('utf8')
+    </nrml>""" % content)
 
 
 def _whatever_sourcemodel():
@@ -2031,11 +2030,13 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             self.assertEqual(errormessage, str(exc.exception))
 
     def parse_valid(self, xml, tectonic_region_types=('Shield',)):
-        return logictree.GsimLogicTree(StringIO(xml), tectonic_region_types)
+        xmlbytes = xml.encode('utf-8') if hasattr(xml, 'encode') else xml
+        return logictree.GsimLogicTree(
+            StringIO(xmlbytes), tectonic_region_types)
 
     def test_not_xml(self):
-        self.parse_invalid('xxx', etree.ParseError)
-        self.parse_invalid('<?xml foo bar baz', etree.ParseError)
+        self.parse_invalid('xxx', Exception)
+        self.parse_invalid('<?xml foo bar baz', Exception)
 
     def test_invalid_schema(self):
         xml = _make_nrml("""\

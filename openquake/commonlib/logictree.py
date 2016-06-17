@@ -455,7 +455,7 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
         self.open_ends = set()
         try:
             tree = parse(filename)
-        except etree.ParseError as exc:
+        except Exception as exc:
             # Wrap etree parsing exception to :exc:`ParsingError`.
             raise ParsingError(self.filename, str(exc))
         # {http://openquake.org/xmlns/nrml/VERSION}
@@ -1068,7 +1068,7 @@ class SourceModelLogicTree(BaseLogicTree):
         if uncertainty_type in ('abGRAbsolute', 'maxMagGRAbsolute',
                                 'simpleFaultGeometryAbsolute',
                                 'complexFaultGeometryAbsolute'):
-            if not filters or not filters.keys() == ['applyToSources'] \
+            if not filters or not list(filters) == ['applyToSources'] \
                     or not len(filters['applyToSources'].split()) == 1:
                 raise ValidationError(
                     branchset_node, self.filename,
@@ -1183,7 +1183,7 @@ class SourceModelLogicTree(BaseLogicTree):
                 _, node = next(eventstream)
             except StopIteration:
                 break
-            except etree.ParseError as exc:
+            except Exception as exc:
                 raise ParsingError(source_model, str(exc))
             if node.tag not in all_source_types:
                 continue

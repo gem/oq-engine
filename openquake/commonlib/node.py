@@ -149,7 +149,10 @@ import pprint as pp
 from contextlib import contextmanager
 from openquake.baselib.python3compat import raise_, exec_
 from openquake.commonlib.writers import StreamingXMLWriter
-from xml.etree import ElementTree
+if sys.version < '3':
+    from xml.etree import ElementTree
+else:  # the version taken from Python 3.3
+    from openquake.commonlib import ElementTree
 
 
 class SourceLineParser(ElementTree.XMLParser):
