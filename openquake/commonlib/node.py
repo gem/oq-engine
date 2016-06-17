@@ -201,13 +201,18 @@ def _displayattrs(attrib, expandattrs):
     return '{%s}' % ', '.join(alist)
 
 
+def decode(text):
+    if hasattr(text, 'decode'):
+        return text.decode('utf-8')
+    return text
+
+
 def _display(node, indent, expandattrs, expandvals, output):
     """Core function to display a Node object"""
     attrs = _displayattrs(node.attrib, expandattrs)
     val = ' %s' % repr(node.text) \
         if expandvals and node.text is not None else ''
-    output.write(
-        (indent + striptag(node.tag) + attrs + val + '\n').decode('utf8'))
+    output.write(decode((indent + striptag(node.tag) + attrs + val + '\n')))
     for sub_node in node:
         _display(sub_node, indent + '  ', expandattrs, expandvals, output)
 
@@ -397,7 +402,7 @@ class MetaLiteralNode(type):
     def __new__(meta, name, bases, dic):
         doc = "Known validators:\n%s" % '\n'.join(
             '    %s: `%s`' % (n, v.__name__)
-            for n, v in dic['validators'].items())
+            for n, v in sorted(dic['validators'].items()))
         dic['__doc__'] = dic.get('__doc__', '') + doc
         dic['__slots__'] = dic.get('__slots__', [])
         return super(MetaLiteralNode, meta).__new__(meta, name, bases, dic)

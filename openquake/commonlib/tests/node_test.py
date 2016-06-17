@@ -119,7 +119,7 @@ param=yyy
         node = n.node_from_xml(xmlfile)
         outfile = io.BytesIO()
         n.node_to_xml(node, outfile)
-        self.assertEqual(outfile.getvalue(), """\
+        self.assertEqual(outfile.getvalue(), b"""\
 <?xml version="1.0" encoding="utf-8"?>
 <root>
     <general>
@@ -172,7 +172,6 @@ param=yyy
         class ValidNode(n.LiteralNode):
             "ValidNode test implementation. "
             validators = dict(a=float, b=int)
-
         self.assertEqual(ValidNode.__doc__, '''\
 ValidNode test implementation. Known validators:
     a: `float`
