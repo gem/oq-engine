@@ -619,6 +619,7 @@ def export_agglosses(ekey, dstore):
     agglosses = dstore[ekey[0]]
     fnames = []
     for rlz in dstore['csm_info'].get_rlzs_assoc().realizations:
+        gsim, = rlz.gsim_rlz.value
         loss = agglosses[rlz.ordinal]
         losses = numpy.zeros(
             1, numpy.dtype([(lt, agg_dt) for lt in loss.dtype.names]))
@@ -630,7 +631,7 @@ def export_agglosses(ekey, dstore):
             header.append('%s-mean' % lt)
             losses[lt]['stddev'] = loss[lt]['stddev']
             header.append('%s-stddev' % lt)
-        dest = dstore.build_fname('agglosses', rlz, 'csv')
+        dest = dstore.build_fname('agglosses', gsim, 'csv')
         writers.write_csv(dest, losses, header=header)
         fnames.append(dest)
     return sorted(fnames)
