@@ -10,7 +10,7 @@
 
 Software  | Version(s)
 --------- | ----------
-Python | 2.7, 3
+Python | 2.7
 libgeos | >= 3.2.2
 HDF5 | 1.8
 
