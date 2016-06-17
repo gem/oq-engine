@@ -1120,7 +1120,8 @@ def classical_damage(
         an array of M probabilities of occurrence where M is the numbers
         of damage states.
     """
-    if fragility_functions.steps_per_interval > 1:  # interpolate
+    spi = fragility_functions.steps_per_interval
+    if spi and spi > 1:  # interpolate
         imls = numpy.array(fragility_functions.interp_imls)
         min_val, max_val = hazard_imls[0], hazard_imls[-1]
         numpy.putmask(imls, imls < min_val, min_val)
