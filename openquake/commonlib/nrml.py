@@ -100,31 +100,6 @@ SERIALIZE_NS_MAP = {None: NAMESPACE, 'gml': GML_NAMESPACE}
 PARSE_NS_MAP = {'nrml': NAMESPACE, 'gml': GML_NAMESPACE}
 
 
-class NRMLFile(object):
-    """
-    Context-managed output object which accepts either a path or a file-like
-    object.
-
-    Behaves like a file.
-    """
-
-    def __init__(self, dest, mode='r'):
-        self._dest = dest
-        self._mode = mode
-        self._file = None
-
-    def __enter__(self):
-        if isinstance(self._dest, (unicode, bytes)):
-            self._file = open(self._dest, self._mode)
-        else:
-            # assume it is a file-like; don't change anything
-            self._file = self._dest
-        return self._file
-
-    def __exit__(self, *args):
-        self._file.close()
-
-
 def get_tag_version(nrml_node):
     """
     Extract from a node of kind NRML the tag and the version. For instance
