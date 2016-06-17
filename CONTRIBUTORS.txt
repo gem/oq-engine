@@ -27,7 +27,7 @@ Anton Gritsay           August 2011
 Luigi Panzeri           August 2012
 Matteo Nastasi          November 2012
 Michele Simionato       December 2012
-Daniele Vigano          April 2013
+Daniele Viganò          April 2013
 Paolo Tormene           October 2013
 
 Project management
