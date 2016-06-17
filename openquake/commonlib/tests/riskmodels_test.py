@@ -109,7 +109,7 @@ class ParseCompositeRiskModelTestCase(unittest.TestCase):
         with self.assertRaises(InvalidFile) as ar:
             nrml.parse(vuln_content)
         self.assertIn('Duplicated vulnerabilityFunctionID: A',
-                      ar.exception.message)
+                      str(ar.exception))
 
     def test_lr_eq_0_cov_gt_0(self):
         # If a vulnerability function loss ratio is 0 and its corresponding CoV
@@ -137,7 +137,7 @@ class ParseCompositeRiskModelTestCase(unittest.TestCase):
             nrml.parse(vuln_content)
         self.assertIn('It is not valid to define a loss ratio = 0.0 with a '
                       'corresponding coeff. of variation > 0.0',
-                      ar.exception.message)
+                      str(ar.exception))
 
     def test_missing_minIML(self):
         vuln_content = writetmp(u"""\
