@@ -305,11 +305,10 @@ def hazard_curve_name(dstore, ekey, kind, rlzs_assoc):
         rlz = rlzs_assoc.realizations[int(rlz_no)]
         fname = dstore.build_fname(prefix + suffix, rlz, fmt)
     elif kind.startswith('mean'):
-        fname = dstore.export_path('%s-%s.%s' % (prefix, kind, ekey[1]))
+        fname = dstore.build_fname(prefix, kind, ekey[1])
     elif kind.startswith('quantile-'):
         # strip the 7 characters 'hazard_'
-        fname = dstore.export_path(
-            'quantile_%s-%s.%s' % (prefix[7:], kind[9:], fmt))
+        fname = dstore.build_fname('quantile_' + prefix[7:], kind[9:], fmt)
     else:
         raise ValueError('Unknown kind of hazard curve: %s' % kind)
     return fname
@@ -660,7 +659,7 @@ def export_gmf_scenario(ekey, dstore):
                 gmfs = numpy.zeros(len(gmfs_), dt)
                 for i in range(len(gmfs)):
                     gmfs[i] = tuple(gmfs_[imt][i])
-                dest = dstore.export_path('gmf-%s-%s.csv' % (gsim, imt))
+                dest = dstore.build_fname('gmf', '%s-%s' % (gsim, imt), 'csv')
                 data = util.compose_arrays(sitemesh, gmfs)
                 writer.save(data, dest)
     else:  # event based
