@@ -20,7 +20,6 @@
 Module containing writers for risk output artifacts.
 """
 import json
-import urllib
 import operator
 import collections
 import numpy
@@ -990,7 +989,7 @@ class DamageWriter(object):
         :param stddevs: array of stddevs, one per damage state
         :returns: a `DDNode` node
         """
-        taxonomy = Node('taxonomy', text=urllib.unquote_plus(taxonomy))
+        taxonomy = Node('taxonomy', text=taxonomy)
         dd = Node('DDNode', nodes=[taxonomy] +
                   self.damage_nodes(means, stddevs))
         return dd
