@@ -243,7 +243,11 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         if self.close:  # in the engine we close later
             try:
                 self.datastore.close()
-            except RuntimeError:  # there could be a mysterious HDF5 error
+            except (RuntimeError, ValueError):
+                # there could be a mysterious HDF5 error
+                # the ValueError: Unrecognized type code -1
+                # happens with the command
+                # $ oq run event_based_risk/case_master/job.ini --exports csv
                 logging.warn('', exc_info=True)
 
 
