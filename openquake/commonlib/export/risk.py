@@ -841,9 +841,9 @@ def export_bcr_map_rlzs(ekey, dstore):
 @export.add(('realizations', 'csv'))
 def export_realizations(ekey, dstore):
     rlzs = dstore[ekey[0]]
-    data = [['ordinal', 'uid', 'weight']]
+    data = [['ordinal', 'uid', 'gsims', 'weight']]
     for i, rlz in enumerate(rlzs):
-        data.append([i, rlz['uid'], rlz['weight']])
+        data.append([i, rlz['uid'], rlz['gsims'], rlz['weight']])
     path = dstore.export_path('realizations.csv')
     writers.write_csv(path, data, fmt='%s')
     return [path]
