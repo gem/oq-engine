@@ -8,7 +8,7 @@ Current build status is  [![Build Status](https://ci.openquake.org/job/master_oq
 
 ### Manual testing
 
-The full suite of tests for the OpenQuake Hazardlib can be run using `nose`
+The suite of tests for the OpenQuake Hazardlib can be run using `nose`
 
 ```
 nosetests -v -a '!slow'
