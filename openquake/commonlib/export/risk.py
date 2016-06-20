@@ -336,9 +336,19 @@ def export_damage_total(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(
-    ('loss_maps-rlzs', 'csv'), ('damages-rlzs', 'csv'),
-    ('csq_by_asset', 'csv'))
+@export.add(('loss_maps-rlzs', 'csv'))
+def export_loss_maps_csv(ekey, dstore):
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    assets = get_assets(dstore)
+    value = dstore[ekey[0]].value  # matrix N x R or T x R
+    writer = writers.CsvWriter(fmt=FIVEDIGITS)
+    for rlz, values in zip(rlzs, value.T):
+        fname = dstore.build_fname('loss_maps', rlz, ekey[1])
+        writer.save(compose_arrays(assets, values), fname)
+    return writer.getsaved()
+
+
+@export.add(('damages-rlzs', 'csv'), ('csq_by_asset', 'csv'))
 def export_rlzs_by_asset_csv(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = get_assets(dstore)
