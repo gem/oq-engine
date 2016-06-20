@@ -64,8 +64,8 @@ def extract_outputs(dkey, dstore, loss_type=None, ext=''):
         for key in subgroup:
             for i in 0, 1:
                 ins = '_ins' if i else ''
-                path = dstore.export_path(
-                    '%s-%s-%s%s%s' % (dashkey, ltype, key, ins, ext))
+                path = dstore.build_fname(
+                    dashkey, '%s%s%s' % (ltype, key, ins), ext)
                 if loss_type:
                     data = subgroup[key][loss_type][:, i]
                 else:
@@ -132,7 +132,7 @@ def export_avg_losses_stats(ekey, dstore):
     writer = writers.CsvWriter(fmt=FIVEDIGITS)
     for i, quantile in enumerate(quantiles):
         losses = avg_losses[:, i]
-        dest = dstore.export_path('avg_losses-%s.csv' % quantile)
+        dest = dstore.build_fname('avg_losses', quantile, 'csv')
         data = compose_arrays(assets, losses)
         writer.save(data, dest)
     return writer.getsaved()
@@ -217,7 +217,7 @@ def export_rcurves(ekey, dstore):
     writer = writers.CsvWriter(fmt=FIVEDIGITS)
     for rlz in rlzs:
         array = compose_arrays(assets, curves[:, rlz.ordinal])
-        path = dstore.export_path('%s-%s.csv' % (name, rlz.uid))
+        path = dstore.build_fname(name, rlz, 'csv')
         writer.save(array, path)
     return writer.getsaved()
 
@@ -234,7 +234,7 @@ def export_loss_curves(ekey, dstore):
     for rlz in rlzs:
         for ltype in loss_types:
             array = compose_arrays(assets, curves[ltype][:, rlz.ordinal])
-            path = dstore.export_path('%s-%s-%s.csv' % (name, ltype, rlz.uid))
+            path = dstore.build_fname('%s-%s' % (name, ltype), rlz, 'csv')
             writer.save(array, path)
     return writer.getsaved()
 
@@ -336,18 +336,26 @@ def export_damage_total(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(
-    ('loss_maps-rlzs', 'csv'), ('damages-rlzs', 'csv'),
-    ('csq_by_asset', 'csv'))
-def export_rlzs_by_asset_csv(ekey, dstore):
+@export.add(('loss_maps-rlzs', 'csv'))
+def export_loss_maps_csv(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = get_assets(dstore)
-    R = len(rlzs)
     value = dstore[ekey[0]].value  # matrix N x R or T x R
     writer = writers.CsvWriter(fmt=FIVEDIGITS)
     for rlz, values in zip(rlzs, value.T):
-        suffix = '.csv' if R == 1 else '-gsimltp_%s.csv' % rlz.uid
-        fname = dstore.export_path(ekey[0] + suffix)
+        fname = dstore.build_fname('loss_maps', rlz, ekey[1])
+        writer.save(compose_arrays(assets, values), fname)
+    return writer.getsaved()
+
+
+@export.add(('damages-rlzs', 'csv'), ('csq_by_asset', 'csv'))
+def export_rlzs_by_asset_csv(ekey, dstore):
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    assets = get_assets(dstore)
+    value = dstore[ekey[0]].value  # matrix N x R or T x R
+    writer = writers.CsvWriter(fmt=FIVEDIGITS)
+    for rlz, values in zip(rlzs, value.T):
+        fname = dstore.build_fname(ekey[0], rlz.gsim_rlz, ekey[1])
         writer.save(compose_arrays(assets, values), fname)
     return writer.getsaved()
 
@@ -356,12 +364,10 @@ def export_rlzs_by_asset_csv(ekey, dstore):
 def export_csq_by_taxon_csv(ekey, dstore):
     taxonomies = dstore['assetcol/taxonomies'].value
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    R = len(rlzs)
     value = dstore[ekey[0]].value  # matrix T x R
     writer = writers.CsvWriter(fmt=FIVEDIGITS)
     for rlz, values in zip(rlzs, value.T):
-        suffix = '.csv' if R == 1 else '-gsimltp_%s.csv' % rlz.uid
-        fname = dstore.export_path(ekey[0] + suffix)
+        fname = dstore.build_fname(ekey[0], rlz.gsim_rlz, ekey[1])
         writer.save(compose_arrays(taxonomies, values, 'taxonomy'), fname)
     return writer.getsaved()
 
@@ -370,12 +376,10 @@ def export_csq_by_taxon_csv(ekey, dstore):
 @export.add(('csq_total', 'csv'))
 def export_csq_total_csv(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    R = len(rlzs)
     value = dstore[ekey[0]].value
     writer = writers.CsvWriter(fmt=FIVEDIGITS)
     for rlz, values in zip(rlzs, value):
-        suffix = '.csv' if R == 1 else '-gsimltp_%s.csv' % rlz.uid
-        fname = dstore.export_path(ekey[0] + suffix)
+        fname = dstore.build_fname(ekey[0], rlz.gsim_rlz, ekey[1])
         writer.save(numpy.array([values], value.dtype), fname)
     return writer.getsaved()
 
@@ -421,9 +425,8 @@ def export_dmg_by_asset_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt='%.6E')
     assets = get_assets(dstore)
     for rlz in rlzs:
-        gsim, = rlz.gsim_rlz.value
         dmg_by_asset = build_damage_array(data[:, rlz.ordinal], damage_dt)
-        fname = dstore.export_path('%s-%s.%s' % (ekey[0], gsim, ekey[1]))
+        fname = dstore.build_fname(ekey[0], rlz.gsim_rlz, ekey[1])
         writer.save(compose_arrays(assets, dmg_by_asset), fname)
     return writer.getsaved()
 
@@ -436,9 +439,8 @@ def export_dmg_by_taxon_csv(ekey, dstore):
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
     for rlz in rlzs:
-        gsim, = rlz.gsim_rlz.value
         dmg_by_taxon = build_damage_array(data[:, rlz.ordinal], damage_dt)
-        fname = dstore.export_path('%s-%s.%s' % (ekey[0], gsim, ekey[1]))
+        fname = dstore.build_fname(ekey[0], rlz.gsim_rlz, ekey[1])
         array = compose_arrays(taxonomies, dmg_by_taxon, 'taxonomy')
         writer.save(array, fname)
     return writer.getsaved()
@@ -451,9 +453,8 @@ def export_dmg_totalcsv(ekey, dstore):
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
     for rlz in rlzs:
-        gsim, = rlz.gsim_rlz.value
         dmg_total = build_damage_array(data[rlz.ordinal], damage_dt)
-        fname = dstore.export_path('%s-%s.%s' % (ekey[0], gsim, ekey[1]))
+        fname = dstore.build_fname(ekey[0], rlz.gsim_rlz, ekey[1])
         writer.save(dmg_total, fname)
     return writer.getsaved()
 
@@ -622,6 +623,7 @@ def export_agglosses(ekey, dstore):
     agglosses = dstore[ekey[0]]
     fnames = []
     for rlz in dstore['csm_info'].get_rlzs_assoc().realizations:
+        gsim, = rlz.gsim_rlz.value
         loss = agglosses[rlz.ordinal]
         losses = numpy.zeros(
             1, numpy.dtype([(lt, agg_dt) for lt in loss.dtype.names]))
@@ -633,7 +635,7 @@ def export_agglosses(ekey, dstore):
             header.append('%s-mean' % lt)
             losses[lt]['stddev'] = loss[lt]['stddev']
             header.append('%s-stddev' % lt)
-        dest = dstore.build_fname('agglosses', rlz, 'csv')
+        dest = dstore.build_fname('agglosses', gsim, 'csv')
         writers.write_csv(dest, losses, header=header)
         fnames.append(dest)
     return sorted(fnames)
@@ -689,10 +691,10 @@ def _gen_writers(dstore, writercls, root):
                         ('quantile-%s' % q, q)
                         for q in oq.quantile_loss_curves]
                     for ordinal, (statname, statvalue) in enumerate(pairs):
-                        dest = dstore.export_path('%s-%s-%s%s%s.xml' % (
-                            root[:-6],  # strip -stats
-                            statname, loss_type, poe_str,
-                            '_ins' if ins else ''))
+                        prefix = root[:-6]  # strip -stats
+                        key = '%s-%s%s%s' % (statname, loss_type, poe_str,
+                                             '_ins' if ins else '')
+                        dest = dstore.build_fname(prefix, key, 'xml')
                         yield writercls(
                             dest, oq.investigation_time,
                             poe=poe, loss_type=loss_type,
@@ -849,9 +851,9 @@ def export_bcr_map_rlzs(ekey, dstore):
 @export.add(('realizations', 'csv'))
 def export_realizations(ekey, dstore):
     rlzs = dstore[ekey[0]]
-    data = [['ordinal', 'uid', 'weight']]
+    data = [['ordinal', 'uid', 'gsims', 'weight']]
     for i, rlz in enumerate(rlzs):
-        data.append([i, rlz['uid'], rlz['weight']])
+        data.append([i, rlz['uid'], rlz['gsims'], rlz['weight']])
     path = dstore.export_path('realizations.csv')
     writers.write_csv(path, data, fmt='%s')
     return [path]
