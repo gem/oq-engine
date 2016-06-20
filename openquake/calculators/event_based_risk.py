@@ -280,8 +280,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.E = len(self.datastore['etags'])
 
         # average losses, stored in a composite array of shape N, R
-        multi_avg_dt = self.riskmodel.loss_type_dt(insured=self.I)
-        self.avg_losses = numpy.zeros((N, R), multi_avg_dt)
+        self.avg_losses = numpy.zeros((N, R), oq.loss_dt())
 
         self.ass_loss_table = square(L, R, lambda: None)
         self.agg_loss_table = square(L, R, lambda: None)
