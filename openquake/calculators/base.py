@@ -194,7 +194,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         elif exports:  # is a string
             fmts = exports.split(',')
         else:  # use passed values
-            fmts = self.oqparam.exports
+            fmts = self.oqparam.exports.split(',')
         for fmt in fmts:
             if not fmt:
                 continue
