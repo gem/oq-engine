@@ -53,7 +53,8 @@ F32 = numpy.float32
 class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 
-rlz_dt = numpy.dtype([('uid', (bytes, 200)), ('weight', F32)])
+rlz_dt = numpy.dtype([('uid', (bytes, 200)), ('gsims', (bytes, 200)),
+                      ('weight', F32)])
 
 logversion = {True}
 
@@ -69,6 +70,13 @@ def set_array(longarray, shortarray):
     """
     longarray[:len(shortarray)] = shortarray
     longarray[len(shortarray):] = numpy.nan
+
+
+def gsim_names(rlz):
+    """
+    Names of the underlying GSIMs separated by spaces
+    """
+    return ' '.join(str(v) for v in rlz.gsim_rlz.value)
 
 
 class BaseCalculator(with_metaclass(abc.ABCMeta)):
@@ -189,12 +197,14 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         from openquake.commonlib.export import export as exp
         exported = {}
         individual_curves = self.oqparam.individual_curves
-        if exports and isinstance(exports, tuple):
+        if isinstance(exports, tuple):
             fmts = exports
         elif exports:  # is a string
             fmts = exports.split(',')
-        else:  # use passed values
+        elif isinstance(self.oqparam.exports, tuple):
             fmts = self.oqparam.exports
+        else:  # is a string
+            fmts = self.oqparam.exports.split(',')
         for fmt in fmts:
             if not fmt:
                 continue
@@ -374,7 +384,8 @@ class HazardCalculator(BaseCalculator):
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
         self.datastore['realizations'] = numpy.array(
-            [(r.uid, r.weight) for r in self.rlzs_assoc.realizations], rlz_dt)
+            [(r.uid, gsim_names(r), r.weight)
+             for r in self.rlzs_assoc.realizations], rlz_dt)
 
     def read_exposure(self):
         """
