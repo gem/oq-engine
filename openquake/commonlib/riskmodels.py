@@ -96,7 +96,7 @@ def get_risk_models(oqparam, kind=None):
     """
     kind = kind or oqparam.file_type
     rmodels = {}
-    for key in oqparam.inputs:
+    for key in sorted(oqparam.inputs):
         mo = re.match('(occupants|%s)_%s$' % (COST_TYPE_REGEX, kind), key)
         if mo:
             key_type = mo.group(1)  # the cost_type in the key

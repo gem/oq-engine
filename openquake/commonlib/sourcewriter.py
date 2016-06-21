@@ -482,6 +482,6 @@ def write_source_model(dest, sources, name=None):
     nodes = list(
         map(obj_to_node, sorted(sources, key=lambda src: src.source_id)))
     source_model = LiteralNode("sourceModel", {"name": name}, nodes=nodes)
-    with open(dest, 'w') as f:
+    with open(dest, 'wb') as f:
         nrml.write([source_model], f, '%s')
     return dest
