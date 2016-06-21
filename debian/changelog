@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Quoted the taxonomies in the CSV exports
+  * Fixed a bug in classical_damage and added a master test for it
   * Fixed the escaping of the taxonomies in the datastore
   * Fixed the names of the exported risk files
   * Fixed a segfault in the WebUI when exporting files with h5py >= 2.4
