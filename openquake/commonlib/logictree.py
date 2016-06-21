@@ -34,7 +34,6 @@ import collections
 import operator
 from collections import namedtuple
 from decimal import Decimal
-from xml.etree import ElementTree as etree
 
 from openquake.baselib.general import groupby
 from openquake.baselib.python3compat import raise_
@@ -1310,7 +1309,7 @@ class GsimLogicTree(object):
         """
         :returns: an XML string representing the logic tree
         """
-        return writers.tostring(self._ltnode)
+        return writers.tostring(self._ltnode).decode('utf-8')
 
     def reduce(self, trts):
         """
