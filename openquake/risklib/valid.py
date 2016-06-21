@@ -203,10 +203,14 @@ class SimpleId(object):
         self.__name__ = 'SimpleId(%d, %s)' % (length, regex)
 
     def __call__(self, value):
-        if len(value) > self.length:
+        if max(map(ord, value)) > 127:
+            raise ValueError(
+                'Invalid ID %r: the only accepted chars are a-zA-Z0-9_-'
+                % value)
+        elif len(value) > self.length:
             raise ValueError('The ID %r is longer than %d character' %
                              (value, self.length))
-        if re.match(self.regex, value):
+        elif re.match(self.regex, value):
             return value
         raise ValueError(
             'Invalid ID %r: the only accepted chars are a-zA-Z0-9_-' % value)

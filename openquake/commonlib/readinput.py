@@ -1061,7 +1061,7 @@ def get_scenario_from_nrml(oqparam, fname):
             sid = site_idx[node['lon'], node['lat']]
             gmf_by_imt[imt][i % num_events, sid] = node['gmv']
 
-    for etag, count in counts.items():
+    for etag, count in sorted(counts.items()):
         if count < num_imts:
             raise InvalidFile('Found a missing etag %r in %s' %
                               (etag, fname))
