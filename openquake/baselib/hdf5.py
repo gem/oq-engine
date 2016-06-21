@@ -18,6 +18,10 @@
 
 import ast
 import pydoc
+try:  # with Python 3
+    from urllib.parse import quote_plus, unquote_plus
+except ImportError:  # with Python 2
+    from urllib import quote_plus, unquote_plus
 import collections
 import numpy
 import h5py
@@ -214,7 +218,7 @@ class File(h5py.File):
             pyclass = ''
         if isinstance(obj, dict):
             for k, v in sorted(obj.items()):
-                key = '%s/%s' % (path, k)
+                key = '%s/%s' % (path, quote_plus(k))
                 self[key] = v
         else:
             super(File, self).__setitem__(path, obj)
@@ -231,7 +235,7 @@ class File(h5py.File):
             cls = pydoc.locate(h5attrs['__pyclass__'])
             obj = cls.__new__(cls)
             if not hasattr(h5obj, 'shape'):  # is group
-                h5obj = {k: self['%s/%s' % (path, k)]
+                h5obj = {unquote_plus(k): self['%s/%s' % (path, k)]
                          for k, v in h5obj.items()}
             obj.__fromh5__(h5obj, h5attrs)
             return obj

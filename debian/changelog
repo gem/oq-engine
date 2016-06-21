@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed the serialization on HDF5 of dictionaries with keys containing slashes
   * Renamed Imtls -> DictArray
   * Removed the .id attribute from the Site class
 
