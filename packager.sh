@@ -617,11 +617,10 @@ celeryd_wait $GEM_MAXLOOP"
         echo 'Listing hazard calculations'
         oq engine --lhc
         echo 'Listing risk calculations'
-        oq engine --lrc
-        oq dbserver stop"
+        oq engine --lrc"
     fi
 
-    ssh $lxc_ip "oq dbserver start ; oq engine --make-html-report today ; oq dbserver stop"
+    ssh $lxc_ip "oq engine --make-html-report today"
     scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
 
     scp -r "${lxc_ip}:/usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" "out_${BUILD_UBUVER}/"
