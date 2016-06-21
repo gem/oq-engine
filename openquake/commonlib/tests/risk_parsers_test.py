@@ -21,7 +21,6 @@ import unittest
 import io
 
 from openquake.commonlib import risk_parsers as parsers
-from openquake.commonlib import InvalidFile
 from openquake.commonlib import nrml_examples
 
 EXAMPLES_DIR = os.path.dirname(nrml_examples.__file__)
@@ -34,7 +33,7 @@ def get_example(fname):
 class ExposureModelParserTestCase(unittest.TestCase):
 
     def test_parsing(self):
-        exposure = """\
+        exposure = b"""\
 <?xml version='1.0' encoding='utf-8'?>
   <nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
 
