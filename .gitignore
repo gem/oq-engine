@@ -11,3 +11,4 @@ build-deb
 build-rpm
 dist
 *.swp
+*.egg-info
