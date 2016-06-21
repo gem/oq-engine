@@ -78,8 +78,8 @@ def rmsep(array_ref, array, min_value=0.01):
     ... [0.01, 0.02, 0.04, 0.06]])
     >>> curve = numpy.array([[0.011, 0.021, 0.031, 0.051],
     ... [0.012, 0.022, 0.032, 0.051]])
-    >>> round(rmsep(curve_ref, curve), 5)
-    0.11292
+    >>> str(round(rmsep(curve_ref, curve), 5))
+    '0.11292'
     """
     bigvalues = array_ref > min_value
     reldiffsquare = (1. - array[bigvalues] / array_ref[bigvalues]) ** 2
