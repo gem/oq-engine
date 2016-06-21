@@ -371,7 +371,7 @@ def calc_hazard_curves_ext(
                                     'temp',
                                     group.src_interdep,
                                     group.rup_interdep,
-                                    weights_by_trt[trt],
+                                    weights_by_trt[trt].values(),
                                     False)
             if indep:
                 pmap |= hazard_curves_per_trt(

@@ -107,9 +107,11 @@ class SourceGroup(object):
         assert set(['indep', 'mutex']) & set([rup_interdep])
         # check srcs weights defined by the user
         if srcs_weights is not None:
+            if isinstance(srcs_weights, dict):
+                import pdb; pdb.set_trace()
             # Check weights
             if checkw:
-                assert abs(1. - sum(srcs_weights.values())) < 1e-6
+                assert abs(1. - sum(map(float, srcs_weights))) < 1e-6
 
     def __iter__(self):
         return iter(self.src_list)
