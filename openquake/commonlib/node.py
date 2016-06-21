@@ -109,7 +109,7 @@ Node objects can be easily converted into ElementTree objects:
 Then is trivial to generate the XML representation of a node:
 
 >>> from xml.etree import ElementTree
->>> print(ElementTree.tostring(node_to_elem(root)))
+>>> print(ElementTree.tostring(node_to_elem(root)).decode('utf-8'))
 <root><a>A1</a><b attrb="B">B1</b></root>
 
 Generating XML files larger than the available memory requires some

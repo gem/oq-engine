@@ -953,7 +953,7 @@ class CurveBuilder(object):
         """
         counts = numpy.zeros((N, self.curve_resolution), U32)
         for count_dict in count_dicts:
-            counts[list(count_dict)] += U32(count_dict.values())
+            counts[list(count_dict)] += [U32(v) for v in count_dict.values()]
         return counts
 
     def build_counts(self, loss_matrix):
