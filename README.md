@@ -4,8 +4,6 @@
 
 The OpenQuake Hazard Library is open-source software for performing seismic hazard analysis.
 
-[![Build Status](https://ci.openquake.org/job/master_oq-hazardlib/badge/icon)](https://ci.openquake.org/job/master_oq-hazardlib/)
-
 ## About
 
 hazardlib includes modules for modeling seismic sources (point, area and fault), earthquake ruptures, temporal (e.g. Poissonian) and magnitude occurrence models (e.g. Gutenberg-Richter), magnitude/area scaling relationships, ground motion and intensity prediction equations (i.e. GMPEs and IPEs).
@@ -19,19 +17,19 @@ suggestions and criticisms from the community are always very welcome.
 ## Documentation
 
 * [Source Code/API Documentation](http://docs.openquake.org/oq-hazardlib/)
-* [Continuous integration and testing](https://github.com/gem/oq-hazardlib/tree/master/doc/testing.md)
+* [Continuous integration and testing](https://github.com/gem/oq-hazardlib/tree/engine-2.0/doc/testing.md)
 
 ### Installation
 
-* [Technology stack and requirements](https://github.com/gem/oq-hazardlib/tree/master/doc/requirements.md)
-* [Installing from sources](https://github.com/gem/oq-engine/tree/master/doc/development.md)
-* [Speedups manual compilation](https://github.com/gem/oq-engine/tree/master/doc/speedups.md)
+* [Technology stack and requirements](https://github.com/gem/oq-hazardlib/tree/engine-2.0/doc/requirements.md)
+* [Installing from sources](https://github.com/gem/oq-engine/tree/engine-2.0/doc/development.md)
+* [Speedups manual compilation](https://github.com/gem/oq-engine/tree/engine-2.0/doc/speedups.md)
 
 The OpenQuake Hazardlib is also distributed in the form of **binary package** for Linux, macOS and Windows as part of the [OpenQuake Engine](https://github.com/gem/oq-engine/) suite. See the [OpenQuake Engine README](https://github.com/gem/oq-engine/blob/master/README.md) for more information.
 
 ### Development
 
-* [Implementing a new GSIM](https://github.com/gem/oq-engine/tree/master/doc/implementing-new-gsim.md)
+* [Implementing a new GSIM](https://github.com/gem/oq-engine/tree/engine-2.0/doc/implementing-new-gsim.md)
 
 ## License
 
