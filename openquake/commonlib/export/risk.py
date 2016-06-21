@@ -38,7 +38,7 @@ U32 = numpy.uint32
 
 def add_quotes(values):
     # used to escape taxonomies in CSV files
-    return numpy.array(['"%s"' % val for val in values])
+    return numpy.array(['"%s"' % val for val in values], (bytes, 100))
 
 
 def extract_outputs(dkey, dstore, loss_type=None, ext=''):
