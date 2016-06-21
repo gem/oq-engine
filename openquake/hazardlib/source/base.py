@@ -109,10 +109,7 @@ class SourceGroup(object):
         if srcs_weights is not None:
             # Check weights
             if checkw:
-                smm = 0.0
-                for weight in srcs_weights:
-                    smm += float(weight)
-                assert abs(1. - smm) < 1e-6
+                assert abs(1. - sum(srcs_weights.values())) < 1e-6
 
     def __iter__(self):
         return iter(self.src_list)
