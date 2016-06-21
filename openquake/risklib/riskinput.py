@@ -210,16 +210,6 @@ class CompositeRiskModel(collections.Mapping):
                 iml[rf.imt].append(rf.imls[0])
         return {imt: min(iml[imt]) for imt in iml}
 
-    def loss_type_dt(self, dtype=F32, insured=False):
-        """
-        Return a composite dtype based on the loss types
-        """
-        dts = [(lt, dtype) for lt in self.loss_types]
-        if insured:
-            for lt in self.loss_types:
-                dts.append((lt + '_ins', dtype))
-        return numpy.dtype(dts)
-
     def build_loss_dtypes(self, conditional_loss_poes, insured_losses=False):
         """
         :param conditional_loss_poes:
