@@ -30,7 +30,7 @@ def dbserver(cmd):
     """
     start/stop/restart the database server, or return its status
     """
-    if config.get('dserver', 'multi_user'):
+    if config.get('dbserver', 'multi_user'):
         sys.exit('oq dbserver only works in single user mode')
 
     status = get_status()
