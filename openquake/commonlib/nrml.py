@@ -501,7 +501,6 @@ class ValidNode(LiteralNode):
         minMag=valid.positivefloat,
         binWidth=valid.positivefloat,
         probability=valid.probability,
-        hypoDepth=valid.probability_depth,
         occurRates=valid.positivefloats,
         probs_occur=valid.pmf,
         weight=valid.probability,
@@ -519,17 +518,6 @@ class ValidNode(LiteralNode):
 nodefactory.add('siteModel')(LiteralNode)
 
 
-# insuranceLimit and deductible can be either tags or attributes!
-def float_or_flag(value, isAbsolute=None):
-    """
-    Validate the attributes/tags insuranceLimit and deductible
-    """
-    if isAbsolute is None:  # considering the insuranceLimit attribute
-        return valid.positivefloat(value)
-    else:
-        return valid.boolean(isAbsolute)
-
-
 @nodefactory.add('exposureModel')
 class ExposureDataNode(LiteralNode):
     validators = dict(
@@ -537,8 +525,9 @@ class ExposureDataNode(LiteralNode):
         description=valid.utf8_not_empty,
         name=valid.cost_type,
         type=valid.name,
-        insuranceLimit=float_or_flag,
-        deductible=float_or_flag,
+        isAbsolute=valid.boolean,
+        insuranceLimit=valid.positivefloat,
+        deductible=valid.positivefloat,
         occupants=valid.positivefloat,
         value=valid.positivefloat,
         retrofitted=valid.positivefloat,
@@ -621,7 +610,6 @@ class CurveNode(LiteralNode):
         IMT=str,
         saPeriod=valid.positivefloat,
         saDamping=valid.positivefloat,
-        node=valid.lon_lat_iml,
         quantileValue=valid.positivefloat,
     )
 
