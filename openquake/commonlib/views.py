@@ -76,6 +76,8 @@ def form(value):
             return str(int(value))
     elif isinstance(value, bytes):
         return value.decode('utf-8')
+    elif isinstance(value, str):
+        return value
     elif hasattr(value, '__len__') and len(value) > 1:
         return ' '.join(map(form, value))
     return str(value)
