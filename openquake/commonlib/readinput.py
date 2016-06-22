@@ -670,8 +670,8 @@ def get_exposure_lazy(fname, ok_cost_types):
     exp = Exposure(
         exposure['id'], exposure['category'],
         ~description, numpy.array(cost_types, cost_type_dt), time_events,
-        inslimit.attrib.get('isAbsolute', False),
-        deductible.attrib.get('isAbsolute', False),
+        inslimit.attrib.get('isAbsolute', True),
+        deductible.attrib.get('isAbsolute', True),
         area.attrib, [], set(), [])
     cc = riskmodels.CostCalculator(
         {}, {}, exp.deductible_is_absolute, exp.insurance_limit_is_absolute)
