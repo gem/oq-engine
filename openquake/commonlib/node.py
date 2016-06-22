@@ -414,7 +414,7 @@ class LiteralNode(with_metaclass(MetaLiteralNode, Node)):
             # try to cast the node, if the tag is known
             assert not nodes, 'You cannot cast a composite node: %s' % nodes
             try:
-                text = validators[tag](text, **attrib)
+                text = validators[tag](text)
             except Exception as exc:
                 raise ValueError('Could not convert %s->%s: %s, line %s' %
                                  (tag, validators[tag].__name__, exc, lineno))
