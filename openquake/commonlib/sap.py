@@ -24,8 +24,8 @@ Here is a minimal example of usage:
     >>> from openquake.commonlib import sap
     >>> def fun(input, inplace, output=None, out='/tmp'):
     ...     'Example'
-    ...     for argname, argvalue in sorted(locals().items()):
-    ...         print(argname, '=', argvalue)
+    ...     for item in sorted(locals().items()):
+    ...         print('%s = %s' % item)
 
     >>> p = sap.Parser(fun)
     >>> p.arg('input', 'input file or archive')
