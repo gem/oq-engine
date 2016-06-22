@@ -74,6 +74,8 @@ def form(value):
             return 'NaN'
         else:  # in the range 10-1000
             return str(int(value))
+    elif isinstance(value, bytes):
+        return value.decode('utf-8')
     elif hasattr(value, '__len__') and len(value) > 1:
         return ' '.join(map(form, value))
     return str(value)
