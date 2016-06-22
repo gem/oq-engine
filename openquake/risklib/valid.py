@@ -390,13 +390,6 @@ def lon_lat(value):
     return longitude(lon), latitude(lat)
 
 
-def lon_lat_iml(value, lon, lat, iml):
-    """
-    Used to convert nodes of the form <node lon="LON" lat="LAT" iml="IML" />
-    """
-    return longitude(lon), latitude(lat), positivefloat(iml)
-
-
 def coordinates(value):
     """
     Convert a non-empty string into a list of lon-lat coordinates
@@ -532,29 +525,6 @@ def decreasing_probabilities(value):
         raise ValueError('The probabilities %s are not in decreasing order'
                          % value)
     return probs
-
-
-def IML(value, IMT, minIML=None, maxIML=None, imlUnit=None):
-    """
-    Convert a node of the form
-
-    <IML IMT="PGA" imlUnit="g" minIML="0.02" maxIML="1.5"/>
-
-    into ("PGA", None, 0.02, 1.5) and a node
-
-    <IML IMT="MMI" imlUnit="g">7 8 9 10 11</IML>
-
-    into ("MMI", [7., 8., 9., 10., 11.], None, None)
-    """
-    imt_str = str(imt.from_string(IMT))
-    if value:
-        imls = positivefloats(value)
-        check_levels(imls, imt_str)
-    else:
-        imls = None
-    min_iml = positivefloat(minIML) if minIML else None
-    max_iml = positivefloat(maxIML) if maxIML else None
-    return (imt_str, imls, min_iml, max_iml, imlUnit)
 
 
 def intensity_measure_type(value):

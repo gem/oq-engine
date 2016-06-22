@@ -176,7 +176,8 @@ def get_vulnerability_functions_04(node, fname):
     # imt, taxonomy -> vulnerability function
     vmodel = scientific.VulnerabilityModel(**node.attrib)
     for vset in node:
-        imt_str, imls, min_iml, max_iml, imlUnit = ~vset.IML
+        imt_str = vset.IML['IMT']
+        imls = ~vset.IML
         imts.add(imt_str)
         for vfun in vset.getnodes('discreteVulnerability'):
             taxonomy = vfun['vulnerabilityFunctionID']
@@ -549,7 +550,7 @@ class VulnerabilityNode(LiteralNode):
         # the assetCategory here has nothing to do with the category
         # in the exposure model and it is not used by the engine
         lossCategory=valid.utf8,  # a description field
-        IML=valid.IML,
+        IML=valid.positivefloats,  # used in NRML 0.4
         imt=valid.intensity_measure_type,
         imls=valid.positivefloats,
         lr=valid.probability,
@@ -576,9 +577,8 @@ class FragilityNode(LiteralNode):
         mean=valid.positivefloat,
         stddev=valid.positivefloat,
         lossCategory=valid.name,
-        poes=lambda text, **kw: valid.positivefloats(text),
+        poes=valid.positivefloats,
         imt=valid.intensity_measure_type,
-        IML=valid.IML,
         minIML=valid.positivefloat,
         maxIML=valid.positivefloat,
         limitStates=valid.namelist,
