@@ -16,16 +16,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 <costType name="nonstructural" type="per_asset" unit="USD"/>
                 <costType name="contents" type="per_asset" unit="USD"/>
             </costTypes>
-            <insuranceLimit
-            isAbsolute="false"
-            >
-                False
-            </insuranceLimit>
-            <deductible
-            isAbsolute="false"
-            >
-                False
-            </deductible>
+            <insuranceLimit isAbsolute="false" />
+            <deductible isAbsolute="false" />
         </conversions>
         <assets>
             <asset
