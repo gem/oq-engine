@@ -551,7 +551,7 @@ class VulnerabilityNode(LiteralNode):
         lossCategory=valid.utf8,  # a description field
         IML=valid.IML,
         imt=valid.intensity_measure_type,
-        imls=lambda text, imt: valid.positivefloats(text),
+        imls=valid.positivefloats,
         lr=valid.probability,
         lossRatio=valid.positivefloats,
         coefficientsVariation=valid.positivefloats,
