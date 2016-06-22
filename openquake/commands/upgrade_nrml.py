@@ -53,7 +53,9 @@ def get_vulnerability_functions_04(fname):
         categories['assetCategory'].add(vset['assetCategory'])
         categories['lossCategory'].add(vset['lossCategory'])
         categories['vulnerabilitySetID'].add(vset['vulnerabilitySetID'])
-        imt_str, imls, min_iml, max_iml, imlUnit = ~vset.IML
+        IML = vset.IML
+        imt_str = IML['IMT']
+        imls = ~IML
         imts.add(imt_str)
         for vfun in vset.getnodes('discreteVulnerability'):
             taxonomy = vfun['vulnerabilityFunctionID']
