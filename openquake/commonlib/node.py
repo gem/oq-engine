@@ -150,6 +150,7 @@ from contextlib import contextmanager
 from openquake.baselib.python3compat import raise_, exec_
 from openquake.commonlib.writers import StreamingXMLWriter
 from xml.etree import ElementTree
+from xml.parsers.expat import ParserCreate, ExpatError, errors
 
 
 class SourceLineParser(ElementTree.XMLParser):
@@ -625,3 +626,89 @@ def context(fname, node):
         msg = 'node %s: %s, line %s of %s' % (
             striptag(node.tag), exc, node.lineno, fname)
         raise_(etype, msg, tb)
+
+
+class ValidatingXmlParser(object):
+    """
+    Validating XML Parser based on Expat. It has two methods `.parse_file`
+    and `.parse_bytes` returning a validated :class:`Node` object.
+
+    :param validators: a dictionary of validation functions
+    """
+    def __init__(self, validators):
+        self.validators = validators
+        self.p = ParserCreate(namespace_separator='}')
+        self.p.StartElementHandler = self._start_element
+        self.p.EndElementHandler = self._end_element
+        self.p.CharacterDataHandler = self._char_data
+        self.ancestors = []
+        self.root = None
+
+    def parse_bytes(self, bytestr, isfinal=True):
+        """
+        Parse a byte string. If the string is very large, split it in chuncks
+        and parse each chunk with isfinal=False, then parse an empty chunk
+        with isfinal=True.
+        """
+        try:
+            self.p.Parse(bytestr, isfinal)
+        except ExpatError as err:
+            raise ExpatError(errors.messages[err.code])
+        return self.root
+
+    def parse_file(self, file_or_fname):
+        """
+        Parse a file or a filename
+        """
+        try:
+            if hasattr(file_or_fname, 'read'):
+                self.p.ParseFile(file_or_fname)
+            else:
+                with open(file_or_fname, 'rb') as f:
+                    self.p.ParseFile(f)
+        except ExpatError as err:
+            raise ExpatError(errors.messages[err.code])
+        return self.root
+
+    def _start_element(self, name, attrs):
+        self.ancestors.append(
+            Node('{' + name, attrs, lineno=self.p.CurrentLineNumber))
+
+    def _end_element(self, name):
+        self.root = self._literalnode(self.ancestors[-1])
+        del self.ancestors[-1]
+        if self.ancestors:
+            self.ancestors[-1].append(self.root)
+
+    def _char_data(self, data):
+        if data.strip():
+            self.ancestors[-1].text = data
+
+    def _set_text(self, node, text):
+        if text is None:
+            return
+        tag = striptag(node.tag)
+        try:
+            val = self.validators[tag]
+        except KeyError:
+            return
+        try:
+            node.text = val(text)
+        except Exception as exc:
+            raise ValueError('Could not convert %s->%s: %s, line %s' %
+                             (tag, val.__name__, exc, node.lineno))
+
+    def _literalnode(self, node):
+        # cast the text
+        self._set_text(node, node.text)
+
+        # cast the attributes
+        for n, v in node.attrib.items():
+            if n in self.validators:
+                try:
+                    node.attrib[n] = self.validators[n](v)
+                except Exception as exc:
+                    raise ValueError(
+                        'Could not convert %s->%s: %s, line %s' %
+                        (n, self.validators[n].__name__, exc, node.lineno))
+        return node
