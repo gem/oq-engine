@@ -36,6 +36,11 @@ F32 = numpy.float32
 U32 = numpy.uint32
 
 
+def add_quotes(values):
+    # used to escape taxonomies in CSV files
+    return numpy.array(['"%s"' % val for val in values], (bytes, 100))
+
+
 def extract_outputs(dkey, dstore, loss_type=None, ext=''):
     """
     An utility to extract outputs ordered by loss types from a datastore
@@ -362,7 +367,7 @@ def export_rlzs_by_asset_csv(ekey, dstore):
 
 @export.add(('csq_by_taxon', 'csv'))
 def export_csq_by_taxon_csv(ekey, dstore):
-    taxonomies = dstore['assetcol/taxonomies'].value
+    taxonomies = add_quotes(dstore['assetcol/taxonomies'].value)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     value = dstore[ekey[0]].value  # matrix T x R
     writer = writers.CsvWriter(fmt=FIVEDIGITS)
@@ -434,7 +439,7 @@ def export_dmg_by_asset_csv(ekey, dstore):
 @export.add(('dmg_by_taxon', 'csv'))
 def export_dmg_by_taxon_csv(ekey, dstore):
     damage_dt = build_damage_dt(dstore)
-    taxonomies = dstore['assetcol/taxonomies'].value
+    taxonomies = add_quotes(dstore['assetcol/taxonomies'].value)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
