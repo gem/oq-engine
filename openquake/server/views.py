@@ -24,7 +24,7 @@ import tempfile
 import urlparse
 import re
 
-from xml.etree import ElementTree as etree
+from xml.parsers.expat import ExpatError
 from django.http import (HttpResponse,
                          HttpResponseNotFound,
                          HttpResponseBadRequest,
@@ -186,9 +186,9 @@ def validate_nrml(request):
     xml_file = writetmp(xml_text, suffix='.xml')
     try:
         nrml.parse(xml_file)
-    except etree.ParseError as exc:
-        return _make_response(error_msg=exc.message.message,
-                              error_line=exc.message.lineno,
+    except ExpatError as exc:
+        return _make_response(error_msg=str(exc),
+                              error_line=exc.lineno,
                               valid=False)
     except Exception as exc:
         # get the exception message
