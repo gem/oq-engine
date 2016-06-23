@@ -151,7 +151,8 @@ def get_vulnerability_functions_04(node, fname):
     # imt, taxonomy -> vulnerability function
     vmodel = scientific.VulnerabilityModel(**node.attrib)
     for vset in node:
-        imt_str, imls, min_iml, max_iml, imlUnit = ~vset.IML
+        imt_str = vset.IML['IMT']
+        imls = ~vset.IML
         imts.add(imt_str)
         for vfun in vset.getnodes('discreteVulnerability'):
             taxonomy = vfun['vulnerabilityFunctionID']
@@ -476,7 +477,6 @@ class ValidNode(LiteralNode):
         minMag=valid.positivefloat,
         binWidth=valid.positivefloat,
         probability=valid.probability,
-        hypoDepth=valid.probability_depth,
         occurRates=valid.positivefloats,
         probs_occur=valid.pmf,
         weight=valid.probability,
@@ -494,17 +494,6 @@ class ValidNode(LiteralNode):
 nodefactory.add('siteModel')(LiteralNode)
 
 
-# insuranceLimit and deductible can be either tags or attributes!
-def float_or_flag(value, isAbsolute=None):
-    """
-    Validate the attributes/tags insuranceLimit and deductible
-    """
-    if isAbsolute is None:  # considering the insuranceLimit attribute
-        return valid.positivefloat(value)
-    else:
-        return valid.boolean(isAbsolute)
-
-
 @nodefactory.add('exposureModel')
 class ExposureDataNode(LiteralNode):
     validators = dict(
@@ -512,8 +501,9 @@ class ExposureDataNode(LiteralNode):
         description=valid.utf8_not_empty,
         name=valid.cost_type,
         type=valid.name,
-        insuranceLimit=float_or_flag,
-        deductible=float_or_flag,
+        isAbsolute=valid.boolean,
+        insuranceLimit=valid.positivefloat,
+        deductible=valid.positivefloat,
         occupants=valid.positivefloat,
         value=valid.positivefloat,
         retrofitted=valid.positivefloat,
@@ -535,9 +525,9 @@ class VulnerabilityNode(LiteralNode):
         # the assetCategory here has nothing to do with the category
         # in the exposure model and it is not used by the engine
         lossCategory=valid.utf8,  # a description field
-        IML=valid.IML,
+        IML=valid.positivefloats,  # used in NRML 0.4
         imt=valid.intensity_measure_type,
-        imls=lambda text, imt: valid.positivefloats(text),
+        imls=valid.positivefloats,
         lr=valid.probability,
         lossRatio=valid.positivefloats,
         coefficientsVariation=valid.positivefloats,
@@ -562,9 +552,8 @@ class FragilityNode(LiteralNode):
         mean=valid.positivefloat,
         stddev=valid.positivefloat,
         lossCategory=valid.name,
-        poes=lambda text, **kw: valid.positivefloats(text),
+        poes=valid.positivefloats,
         imt=valid.intensity_measure_type,
-        IML=valid.IML,
         minIML=valid.positivefloat,
         maxIML=valid.positivefloat,
         limitStates=valid.namelist,
@@ -596,7 +585,6 @@ class CurveNode(LiteralNode):
         IMT=str,
         saPeriod=valid.positivefloat,
         saDamping=valid.positivefloat,
-        node=valid.lon_lat_iml,
         quantileValue=valid.positivefloat,
     )
 
