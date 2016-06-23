@@ -146,17 +146,8 @@ def parse(fname, *args):
 
 # ######################### build definitions ############################ #
 
-build = CallableDict(keyfunc=get_tag_version)
+build = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
 # dictionary of functions with at least two arguments, node and fname
-
-
-# TODO: add proper validation for exposureModel; this requires knowledge
-# of the job.ini files
-@build.add(('exposureModel', 'nrml/0.4'), ('exposureModel', 'nrml/0.5'),
-           ('siteModel', 'nrml/0.4'), ('siteModel', 'nrml/0.5'),
-           ('sourceModel', 'nrml/0.4'))
-def build_exposure(node, fname):
-    return node
 
 
 @build.add(('vulnerabilityModel', 'nrml/0.4'))
