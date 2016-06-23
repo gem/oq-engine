@@ -231,9 +231,7 @@ def get_site_model(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    for node in read_nodes(oqparam.inputs['site_model'],
-                           lambda el: el.tag.endswith('site'),
-                           source.nodefactory['siteModel']):
+    for node in nrml.read(oqparam.inputs['site_model']).siteModel:
         yield valid.site_param(**node.attrib)
 
 
@@ -632,7 +630,7 @@ def get_exposure_lazy(fname, ok_cost_types):
     :returns:
         a pair (Exposure instance, list of asset nodes)
     """
-    [exposure] = nrml.read_lazy(fname, ['assets'])
+    [exposure] = nrml.read(fname, stop='assets')
     description = exposure.description
     try:
         conversions = exposure.conversions
@@ -662,7 +660,7 @@ def get_exposure_lazy(fname, ok_cost_types):
         if ct['name'] in ok_cost_types:
             with context(fname, ct):
                 cost_types.append(
-                    (ct['name'], valid_cost_type(ct['type']), ct['unit']))
+                    (ct['name'], valid.cost_type_type(ct['type']), ct['unit']))
     if 'occupants' in ok_cost_types:
         cost_types.append(('occupants', 'per_area', 'people'))
     cost_types.sort(key=operator.itemgetter(0))
@@ -680,9 +678,6 @@ def get_exposure_lazy(fname, ok_cost_types):
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
         cc.area_types[name] = exp.area['type']
     return exp, exposure.assets, cc
-
-
-valid_cost_type = valid.Choice('aggregated', 'per_area', 'per_asset')
 
 
 def get_exposure(oqparam):
@@ -1070,10 +1065,10 @@ def get_scenario_from_nrml(oqparam, fname):
 
     for etag, count in counts.items():
         if count < num_imts:
-            raise InvalidFile('Found a missing etag %r in %s' %
+            raise InvalidFile("Found a missing etag '%s' in %s" %
                               (etag, fname))
         elif count > num_imts:
-            raise InvalidFile('Found a duplicated etag %r in %s' %
+            raise InvalidFile("Found a duplicated etag '%s' in %s" %
                               (etag, fname))
     expected_gmvs_per_site = num_imts * len(etags)
     for lonlat, counts in sitecounts.items():

@@ -104,7 +104,7 @@ class Choice(object):
 
     def __call__(self, value):
         if value not in self.choices:
-            raise ValueError('Got %r, expected %s' % (
+            raise ValueError("Got '%s', expected %s" % (
                              value, '|'.join(self.choices)))
         return value
 
@@ -209,7 +209,7 @@ class SimpleId(object):
         if re.match(self.regex, value):
             return value
         raise ValueError(
-            'Invalid ID %r: the only accepted chars are a-zA-Z0-9_-' % value)
+            "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-" % value)
 
 MAX_ID_LENGTH = 100
 ASSET_ID_LENGTH = 100
@@ -315,7 +315,7 @@ def nonzero(value):
     ValueError: '0' is zero
     """
     if float_(value) == 0:
-        raise ValueError('%r is zero' % value)
+        raise ValueError("'%s' is zero" % value)
     return value
 
 
@@ -856,6 +856,8 @@ def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat, backarc="false"):
 # used for the exposure validation
 cost_type = Choice('structural', 'nonstructural', 'contents',
                    'business_interruption')
+
+cost_type_type = Choice('aggregated', 'per_area', 'per_asset')
 
 
 ###########################################################################
