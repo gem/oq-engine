@@ -59,6 +59,21 @@ rlz_dt = numpy.dtype([('uid', (bytes, 200)), ('gsims', (bytes, 200)),
 logversion = {True}
 
 
+def strings(lst):
+    """
+    :param lst: a list of strings
+    :returns: an array of sorted byte strings
+    """
+    ls = []
+    for el in lst:
+        try:
+            ls.append(el.encode('utf-8'))
+        except AttributeError:
+            ls.append(el)
+    ls.sort()
+    return numpy.array(ls, bytes)
+
+
 def set_array(longarray, shortarray):
     """
     :param longarray: a numpy array of floats of length L >= l
@@ -496,7 +511,7 @@ class HazardCalculator(BaseCalculator):
         if hasattr(self, 'assets_by_site'):
             self.assetcol = riskinput.AssetCollection(
                 self.assets_by_site, self.cost_calculator, oq.time_event,
-                time_events=sorted(self.exposure.time_events) or '')
+                time_events=strings(self.exposure.time_events))
         elif hasattr(self, 'assetcol'):
             self.assets_by_site = self.assetcol.assets_by_site()
 
