@@ -84,11 +84,11 @@ import itertools
 import numpy
 
 from openquake.baselib.general import CallableDict
-from openquake.baselib.python3compat import unicode, raise_
+from openquake.baselib.python3compat import unicode
 from openquake.commonlib import writers
 from openquake.commonlib.node import (
-    node_to_xml, Node, LiteralNode, node_from_elem, striptag,
-    parse as xmlparse, iterparse, context)
+    node_to_xml, Node, LiteralNode, striptag,
+    ValidatingXmlParser, context)
 from openquake.risklib import scientific, valid
 from openquake.commonlib import InvalidFile
 
@@ -153,7 +153,8 @@ build = CallableDict(keyfunc=get_tag_version)
 # TODO: add proper validation for exposureModel; this requires knowledge
 # of the job.ini files
 @build.add(('exposureModel', 'nrml/0.4'), ('exposureModel', 'nrml/0.5'),
-           ('siteModel', 'nrml/0.4'), ('siteModel', 'nrml/0.5'),)
+           ('siteModel', 'nrml/0.4'), ('siteModel', 'nrml/0.5'),
+           ('sourceModel', 'nrml/0.4'))
 def build_exposure(node, fname):
     return node
 
@@ -469,252 +470,145 @@ def get_fragility_model_04(fmodel, fname):
     node05.limitStates.text = node05.limitStates.text.split()
     return get_fragility_model(node05, fname)
 
-# ######################## nodefactory definitions ######################## #
+# ######################## validators ######################## #
 
-nodefactory = CallableDict(keyfunc=striptag)
-
-
-@nodefactory.add('sourceModel', 'simpleFaultRupture', 'complexFaultRupture',
-                 'singlePlaneRupture', 'multiPlanesRupture')
-class ValidNode(LiteralNode):
-    """
-    A subclass of :class:`LiteralNode` to be used when parsing sources
-    and ruptures from NRML files.
-    """
-    validators = dict(
-        strike=valid.strike_range,
-        dip=valid.dip_range,
-        rake=valid.rake_range,
-        magnitude=valid.positivefloat,
-        lon=valid.longitude,
-        lat=valid.latitude,
-        depth=valid.positivefloat,
-        upperSeismoDepth=valid.positivefloat,
-        lowerSeismoDepth=valid.positivefloat,
-        posList=valid.posList,
-        pos=valid.lon_lat,
-        aValue=float,
-        bValue=valid.positivefloat,
-        magScaleRel=valid.mag_scale_rel,
-        tectonicRegion=str,
-        ruptAspectRatio=valid.positivefloat,
-        maxMag=valid.positivefloat,
-        minMag=valid.positivefloat,
-        binWidth=valid.positivefloat,
-        probability=valid.probability,
-        occurRates=valid.positivefloats,
-        probs_occur=valid.pmf,
-        weight=valid.probability,
-        alongStrike=valid.probability,
-        downDip=valid.probability,
-        totalMomentRate=valid.positivefloat,
-        characteristicRate=valid.positivefloat,
-        characteristicMag=valid.positivefloat,
-        magnitudes=valid.positivefloats,
-        id=valid.simple_id,
-        discretization=valid.compose(valid.positivefloat, valid.nonzero),
-        )
-
-
-nodefactory.add('siteModel')(LiteralNode)
-
-
-@nodefactory.add('exposureModel')
-class ExposureDataNode(LiteralNode):
-    validators = dict(
-        id=valid.asset_id,
-        description=valid.utf8_not_empty,
-        name=valid.cost_type,
-        type=valid.name,
-        isAbsolute=valid.boolean,
-        insuranceLimit=valid.positivefloat,
-        deductible=valid.positivefloat,
-        occupants=valid.positivefloat,
-        value=valid.positivefloat,
-        retrofitted=valid.positivefloat,
-        number=valid.compose(valid.positivefloat, valid.nonzero),
-        lon=valid.longitude,
-        lat=valid.latitude,
-    )
-
-
-@nodefactory.add('vulnerabilityModel')
-class VulnerabilityNode(LiteralNode):
-    """
-    Literal Node class used to validate discrete vulnerability functions
-    """
-    validators = dict(
-        vulnerabilitySetID=str,  # any ASCII string is fine
-        vulnerabilityFunctionID=str,  # any ASCII string is fine
-        assetCategory=str,  # any ASCII string is fine
-        # the assetCategory here has nothing to do with the category
-        # in the exposure model and it is not used by the engine
-        lossCategory=valid.utf8,  # a description field
-        IML=valid.positivefloats,  # used in NRML 0.4
-        imt=valid.intensity_measure_type,
-        imls=valid.positivefloats,
-        lr=valid.probability,
-        lossRatio=valid.positivefloats,
-        coefficientsVariation=valid.positivefloats,
-        probabilisticDistribution=valid.Choice('LN', 'BT'),
-        dist=valid.Choice('LN', 'BT', 'PM'),
-        meanLRs=valid.positivefloats,
-        covLRs=valid.positivefloats,
-    )
-
-
-@nodefactory.add('fragilityModel', 'consequenceModel')
-class FragilityNode(LiteralNode):
-    """
-    Literal Node class used to validate fragility functions and consequence
-    functions.
-    """
-    validators = dict(
-        id=valid.utf8,  # no constraints on the taxonomy
-        format=valid.ChoiceCI('discrete', 'continuous'),
-        assetCategory=valid.utf8,
-        dist=valid.Choice('LN'),
-        mean=valid.positivefloat,
-        stddev=valid.positivefloat,
-        lossCategory=valid.name,
-        poes=valid.positivefloats,
-        imt=valid.intensity_measure_type,
-        minIML=valid.positivefloat,
-        maxIML=valid.positivefloat,
-        limitStates=valid.namelist,
-        description=valid.utf8_not_empty,
-        type=valid.ChoiceCI('lognormal'),
-        poEs=valid.probabilities,
-        noDamageLimit=valid.NoneOr(valid.positivefloat),
-    )
 
 valid_loss_types = valid.Choice('structural', 'nonstructural', 'contents',
                                 'business_interruption', 'occupants')
-
-
-@nodefactory.add('aggregateLossCurve', 'hazardCurves', 'hazardMap')
-class CurveNode(LiteralNode):
-    validators = dict(
-        investigationTime=valid.positivefloat,
-        loss_type=valid_loss_types,
-        unit=str,
-        poEs=valid.probabilities,
-        gsimTreePath=lambda v: v.split('_'),
-        sourceModelTreePath=lambda v: v.split('_'),
-        losses=valid.positivefloats,
-        averageLoss=valid.positivefloat,
-        stdDevLoss=valid.positivefloat,
-        poE=valid.probability,
-        IMLs=valid.positivefloats,
-        pos=valid.lon_lat,
-        IMT=str,
-        saPeriod=valid.positivefloat,
-        saDamping=valid.positivefloat,
-        quantileValue=valid.positivefloat,
-    )
-
-
-@nodefactory.add('uniformHazardSpectra')
-class UHSNode(LiteralNode):
-    validators = dict(
-        investigationTime=valid.positivefloat,
-        poE=valid.probability,
-        periods=valid.positivefloats,
-        pos=valid.lon_lat,
-        IMLs=valid.positivefloats)
-
-
-@nodefactory.add('disaggMatrices')
-class DisaggNode(LiteralNode):
-    validators = dict(
-        IMT=str,
-        saPeriod=valid.positivefloat,
-        saDamping=valid.positivefloat,
-        investigationTime=valid.positivefloat,
-        lon=valid.longitude,
-        lat=valid.latitude,
-        magBinEdges=valid.integers,
-        distBinEdges=valid.integers,
-        epsBinEdges=valid.integers,
-        lonBinEdges=valid.longitudes,
-        latBinEdges=valid.latitudes,
-        type=valid.namelist,
-        dims=valid.positiveints,
-        poE=valid.probability,
-        iml=valid.positivefloat,
-        index=valid.positiveints,
-        value=valid.positivefloat)
-
-
-@nodefactory.add('bcrMap')
-class BcrNode(LiteralNode):
-    validators = dict(
-        assetLifeExpectancy=valid.positivefloat,
-        interestRate=valid.positivefloat,
-        lossCategory=str,
-        lossType=valid_loss_types,
-        quantileValue=valid.positivefloat,
-        statistics=valid.Choice('quantile'),
-        unit=str,
-        pos=valid.lon_lat,
-        aalOrig=valid.positivefloat,
-        aalRetr=valid.positivefloat,
-        ratio=valid.positivefloat)
 
 
 def asset_mean_stddev(value, assetRef, mean, stdDev):
     return assetRef, valid.positivefloat(mean), valid.positivefloat(stdDev)
 
 
-@nodefactory.add('collapseMap')
-class CollapseNode(LiteralNode):
-    validators = dict(
-        pos=valid.lon_lat,
-        cf=asset_mean_stddev,
-    )
-
-
 def damage_triple(value, ds, mean, stddev):
     return ds, valid.positivefloat(mean), valid.positivefloat(stddev)
 
+validators = {
+    'strike': valid.strike_range,
+    'dip': valid.dip_range,
+    'rake': valid.rake_range,
+    'magnitude': valid.positivefloat,
+    'lon': valid.longitude,
+    'lat': valid.latitude,
+    'depth': valid.positivefloat,
+    'upperSeismoDepth': valid.positivefloat,
+    'lowerSeismoDepth': valid.positivefloat,
+    'posList': valid.posList,
+    'pos': valid.lon_lat,
+    'aValue': float,
+    'bValue': valid.positivefloat,
+    'magScaleRel': valid.mag_scale_rel,
+    'tectonicRegion': str,
+    'ruptAspectRatio': valid.positivefloat,
+    'maxMag': valid.positivefloat,
+    'minMag': valid.positivefloat,
+    'binWidth': valid.positivefloat,
+    'probability': valid.probability,
+    'occurRates': valid.positivefloats,
+    'probs': valid.probabilities,
+    'occur': valid.pmf,
+    'weight': valid.probability,
+    'alongStrike': valid.probability,
+    'downDip': valid.probability,
+    'totalMomentRate': valid.positivefloat,
+    'characteristicRate': valid.positivefloat,
+    'characteristicMag': valid.positivefloat,
+    'magnitudes': valid.positivefloats,
+    'id': valid.simple_id,
+    'discretization': valid.compose(valid.positivefloat, valid.nonzero),
+    'asset.id': valid.asset_id,
+    'costType.name': valid.cost_type,
+    'type': valid.name,
+    'isAbsolute': valid.boolean,
+    'insuranceLimit': valid.positivefloat,
+    'deductible': valid.positivefloat,
+    'occupants': valid.positivefloat,
+    'value': valid.positivefloat,
+    'retrofitted': valid.positivefloat,
+    'number': valid.compose(valid.positivefloat, valid.nonzero),
+    'vulnerabilitySetID': str,  # any ASCII string is fine
+    'vulnerabilityFunctionID': str,  # any ASCII string is fine
+    'lossCategory': valid.utf8,  # a description field
+    'IML': valid.positivefloats,  # used in NRML 0.4
+    'imt': valid.intensity_measure_type,
+    'imls': valid.positivefloats,
+    'lr': valid.probability,
+    'lossRatio': valid.positivefloats,
+    'coefficientsVariation': valid.positivefloats,
+    'probabilisticDistribution': valid.Choice('LN', 'BT'),
+    'dist': valid.Choice('LN', 'BT', 'PM'),
+    'meanLRs': valid.positivefloats,
+    'covLRs': valid.positivefloats,
+    'format': valid.ChoiceCI('discrete', 'continuous'),
+    'mean': valid.positivefloat,
+    'stddev': valid.positivefloat,
+    'poes': valid.positivefloats,
+    'minIML': valid.positivefloat,
+    'maxIML': valid.positivefloat,
+    'limitStates': valid.namelist,
+    'description': valid.utf8_not_empty,
+    'poEs': valid.probabilities,
+    'noDamageLimit': valid.NoneOr(valid.positivefloat),
+    'investigationTime': valid.positivefloat,
+    'loss': valid.positivefloat,
+    'type': valid_loss_types,
+    'unit': str,
+    'poEs': valid.probabilities,
+    'gsimTreePath': lambda v: v.split('_'),
+    'sourceModelTreePath': lambda v: v.split('_'),
+    'losses': valid.positivefloats,
+    'averageLoss': valid.positivefloat,
+    'stdDevLoss': valid.positivefloat,
+    'poE': valid.probability,
+    'IMLs': valid.positivefloats,
+    'pos': valid.lon_lat,
+    'IMT': str,
+    'saPeriod': valid.positivefloat,
+    'saDamping': valid.positivefloat,
+    'quantileValue': valid.positivefloat,
+    'investigationTime': valid.positivefloat,
+    'poE': valid.probability,
+    'periods': valid.positivefloats,
+    'pos': valid.lon_lat,
+    'IMLs': valid.positivefloats,
+    'saPeriod': valid.positivefloat,
+    'saDamping': valid.positivefloat,
+    'investigationTime': valid.positivefloat,
+    'lon': valid.longitude,
+    'lat': valid.latitude,
+    'magBinEdges': valid.integers,
+    'distBinEdges': valid.integers,
+    'epsBinEdges': valid.integers,
+    'lonBinEdges': valid.longitudes,
+    'latBinEdges': valid.latitudes,
+    'type': valid.namelist,
+    'dims': valid.positiveints,
+    'poE': valid.probability,
+    'iml': valid.positivefloat,
+    'index': valid.positiveints,
+    'value': valid.positivefloat,
+    'assetLifeExpectancy': valid.positivefloat,
+    'interestRate': valid.positivefloat,
+    'lossCategory': valid.utf8,
+    'lossType': valid_loss_types,
+    'quantileValue': valid.positivefloat,
+    'statistics': valid.Choice('quantile'),
+    'unit': str,
+    'pos': valid.lon_lat,
+    'aalOrig': valid.positivefloat,
+    'aalRetr': valid.positivefloat,
+    'ratio': valid.positivefloat,
+    'pos': valid.lon_lat,
+    'cf': asset_mean_stddev,
+    'damage': damage_triple,
+    'pos': valid.lon_lat,
+    'damageStates': valid.namelist,
+    'gmv': valid.positivefloat,
+    'lon': valid.longitude,
+    'lat': valid.latitude}
 
-@nodefactory.add('totalDmgDist', 'dmgDistPerAsset', 'dmgDistPerTaxonomy')
-class DamageNode(LiteralNode):
-    validators = dict(
-        damage=damage_triple,
-        pos=valid.lon_lat,
-        damageStates=valid.namelist,
-    )
-
-
-@nodefactory.add('gmfCollection')
-class GmfNode(LiteralNode):
-    """
-    Class used to convert nodes such as::
-
-     <gmf IMT="PGA" ruptureId="scenario-0000000001" >
-        <node gmv="0.365662734506" lat="0.0" lon="0.0"/>
-        <node gmv="0.256181251586" lat="0.1" lon="0.0"/>
-        <node gmv="0.110685275111" lat="0.2" lon="0.0"/>
-     </gmf>
-
-    into LiteralNode objects.
-    """
-    validators = dict(
-        gmv=valid.positivefloat,
-        lon=valid.longitude,
-        lat=valid.latitude)
-
-# TODO: extend the validation to the following nodes
-# see https://bugs.launchpad.net/oq-engine/+bug/1381066
-nodefactory.add(
-    'logicTree',
-    'lossCurves',
-    'lossFraction',
-    'lossMap',
-    'stochasticEventSet',
-    'stochasticEventSetCollection',
-    )(LiteralNode)
+vparser = ValidatingXmlParser(validators)
 
 
 def read(source, chatty=True):
@@ -725,52 +619,16 @@ def read(source, chatty=True):
     :param source:
         a file name or file object open for reading
     """
-    nrml = xmlparse(source).getroot()
+    nrml = vparser.parse_file(source)
     assert striptag(nrml.tag) == 'nrml', nrml.tag
     # extract the XML namespace URL ('http://openquake.org/xmlns/nrml/0.5')
     xmlns = nrml.tag.split('}')[0][1:]
     if xmlns != NRML05 and chatty:
         # for the moment NRML04 is still supported, so we hide the warning
         logging.debug('%s is at an outdated version: %s', source, xmlns)
-    subnodes = []
-    for elem in nrml:
-        nodecls = nodefactory[striptag(elem.tag)]
-        try:
-            subnodes.append(node_from_elem(elem, nodecls))
-        except ValueError as exc:
-            raise ValueError('%s of %s' % (exc, source))
-    return LiteralNode(
-        'nrml', {'xmlns': xmlns, 'xmlns:gml': GML_NAMESPACE},
-        nodes=subnodes)
-
-
-def read_lazy(source, lazytags):
-    """
-    Convert a NRML file into a validated LiteralNode object. The
-    tree is lazy, i.e. you access nodes by iterating on them.
-
-    :param source:
-        a file name or file object open for reading
-    :param lazytags:
-       the name of nodes which subnodes must be read lazily
-    :returns:
-       a list of nodes; some of them will contain lazy subnodes
-    """
-    nodes = []
-    try:
-        for _, el in iterparse(source, remove_comments=True):
-            tag = striptag(el.tag)
-            if tag in nodefactory:  # NRML tag
-                nodes.append(
-                    node_from_elem(el, nodefactory[tag], lazy=lazytags))
-                el.clear()  # save memory
-    except:
-        etype, exc, tb = sys.exc_info()
-        msg = str(exc)
-        if str(source) not in msg:
-            msg = '%s in %s' % (msg, source)
-        raise_(etype, msg, tb)
-    return nodes
+    nrml['xmlns'] = xmlns
+    nrml['xmlns:gml'] = GML_NAMESPACE
+    return nrml
 
 
 def write(nodes, output=sys.stdout, fmt='%10.7E', gml=True):
