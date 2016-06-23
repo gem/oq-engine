@@ -509,7 +509,9 @@ validators = {
     'discretization': valid.compose(valid.positivefloat, valid.nonzero),
     'asset.id': valid.asset_id,
     'costType.name': valid.cost_type,
-    'type': valid.name,
+    'costType.type': valid.cost_type_type,
+    'cost.type': valid.cost_type,
+    'area.type': valid.name,
     'isAbsolute': valid.boolean,
     'insuranceLimit': valid.positivefloat,
     'deductible': valid.positivefloat,
@@ -542,7 +544,6 @@ validators = {
     'noDamageLimit': valid.NoneOr(valid.positivefloat),
     'investigationTime': valid.positivefloat,
     'loss_type': valid_loss_types,
-    'unit': str,
     'poEs': valid.probabilities,
     'gsimTreePath': lambda v: v.split('_'),
     'sourceModelTreePath': lambda v: v.split('_'),
@@ -583,7 +584,6 @@ validators = {
     'lossType': valid_loss_types,
     'quantileValue': valid.positivefloat,
     'statistics': valid.Choice('quantile'),
-    'unit': str,
     'pos': valid.lon_lat,
     'aalOrig': valid.positivefloat,
     'aalRetr': valid.positivefloat,
@@ -597,10 +597,8 @@ validators = {
     'lon': valid.longitude,
     'lat': valid.latitude}
 
-vparser = ValidatingXmlParser(validators)
 
-
-def read(source, chatty=True):
+def read(source, chatty=True, stop=None):
     """
     Convert a NRML file into a validated LiteralNode object. Keeps
     the entire tree in memory.
@@ -608,6 +606,7 @@ def read(source, chatty=True):
     :param source:
         a file name or file object open for reading
     """
+    vparser = ValidatingXmlParser(validators, stop)
     nrml = vparser.parse_file(source)
     assert striptag(nrml.tag) == 'nrml', nrml.tag
     # extract the XML namespace URL ('http://openquake.org/xmlns/nrml/0.5')
