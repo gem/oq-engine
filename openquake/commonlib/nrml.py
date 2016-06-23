@@ -304,7 +304,7 @@ def ffconvert(fname, limit_states, ff, min_iml=1E-10):
             array['mean'][i] = node['mean']
             array['stddev'][i] = node['stddev']
     elif ff['format'] == 'discrete':
-        attrs['imls'] = valid.positivefloats(~imls)
+        attrs['imls'] = ~imls
         valid.check_levels(attrs['imls'], attrs['imt'])
         num_poes = len(attrs['imls'])
         array = numpy.zeros((LS, num_poes))
@@ -584,7 +584,7 @@ validators = {
     'lossCategory': valid.utf8,
     'lossType': valid_loss_types,
     'quantileValue': valid.positivefloat,
-    'statistics': valid.Choice('quantile'),
+    'statistics': valid.Choice('mean', 'quantile'),
     'pos': valid.lon_lat,
     'aalOrig': valid.positivefloat,
     'aalRetr': valid.positivefloat,
