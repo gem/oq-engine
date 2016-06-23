@@ -124,25 +124,6 @@ def _prepare_job(request, hazard_job_id, candidates):
     return readinput.extract_from_zip(arch, candidates)
 
 
-def _is_source_model(tempfile):
-    """
-    Return true if an uploaded NRML file is a seismic source model.
-    """
-    tree = etree.iterparse(tempfile, events=('start', 'end'))
-    # pop off the first elements, which should be a <nrml> element
-    # and something else
-    _, nrml_elem = tree.next()
-    _, model_elem = tree.next()
-
-    assert nrml_elem.tag == '{%s}nrml' % nrml.NAMESPACE, (
-        "Input file is not a NRML artifact"
-    )
-
-    if model_elem.tag == '{%s}sourceModel' % nrml.NAMESPACE:
-        return True
-    return False
-
-
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def get_engine_version(request):

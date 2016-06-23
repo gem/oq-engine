@@ -1163,7 +1163,7 @@ class SourceModelLogicTree(BaseLogicTree):
                                                               branchset)
 
     def _get_source_model(self, source_model_file):
-        return file(os.path.join(self.basepath, source_model_file))
+        return open(os.path.join(self.basepath, source_model_file))
 
     def collect_source_model_data(self, source_model):
         """
