@@ -50,7 +50,7 @@ from openquake.commonlib.sourceconverter import (
 
 from openquake.commonlib.node import (
     node_from_xml, parse, iterparse,
-    node_from_elem, LiteralNode as N, context)
+    node_from_elem, Node as N, context)
 from openquake.baselib.python3compat import with_metaclass
 
 #: Minimum value for a seed number

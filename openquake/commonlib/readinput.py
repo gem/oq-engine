@@ -34,7 +34,7 @@ from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.risklib import riskmodels, riskinput, valid
 from openquake.commonlib import datastore
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.node import read_nodes, LiteralNode, context
+from openquake.commonlib.node import read_nodes, Node, context
 from openquake.commonlib import nrml, logictree, InvalidFile
 from openquake.commonlib.riskmodels import get_risk_models
 from openquake.baselib.general import groupby, AccumDict, writetmp
@@ -633,16 +633,16 @@ def get_exposure_lazy(fname, ok_cost_types):
     try:
         conversions = exposure.conversions
     except NameError:
-        conversions = LiteralNode('conversions',
-                                  nodes=[LiteralNode('costTypes', [])])
+        conversions = Node('conversions',
+                                  nodes=[Node('costTypes', [])])
     try:
         inslimit = conversions.insuranceLimit
     except NameError:
-        inslimit = LiteralNode('insuranceLimit', text=True)
+        inslimit = Node('insuranceLimit', text=True)
     try:
         deductible = conversions.deductible
     except NameError:
-        deductible = LiteralNode('deductible', text=True)
+        deductible = Node('deductible', text=True)
     try:
         area = conversions.area
     except NameError:
@@ -650,7 +650,7 @@ def get_exposure_lazy(fname, ok_cost_types):
         # around the CostCalculator object one runs into this numpy bug on
         # pickling dictionaries with empty strings:
         # https://github.com/numpy/numpy/pull/5475
-        area = LiteralNode('area', dict(type='?'))
+        area = Node('area', dict(type='?'))
 
     # read the cost types and make some check
     cost_types = []
@@ -736,11 +736,11 @@ def get_exposure(oqparam):
         try:
             costs = asset.costs
         except NameError:
-            costs = LiteralNode('costs', [])
+            costs = Node('costs', [])
         try:
             occupancies = asset.occupancies
         except NameError:
-            occupancies = LiteralNode('occupancies', [])
+            occupancies = Node('occupancies', [])
         for cost in costs:
             with context(fname, cost):
                 cost_type = cost['type']

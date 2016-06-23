@@ -72,7 +72,7 @@ Then subnodes and attributes can be conveniently accessed:
 '45.16667'
 
 The Node class provides no facility to cast strings into Python types;
-this is a job for the LiteralNode class which can be subclassed and
+this is a job for the Node class which can be subclassed and
 supplemented by a dictionary of validators.
 """
 from __future__ import print_function
@@ -87,7 +87,7 @@ from openquake.baselib.general import CallableDict
 from openquake.baselib.python3compat import unicode
 from openquake.commonlib import writers
 from openquake.commonlib.node import (
-    node_to_xml, Node, LiteralNode, striptag,
+    node_to_xml, Node, Node, striptag,
     ValidatingXmlParser, context)
 from openquake.risklib import scientific, valid
 from openquake.commonlib import InvalidFile
@@ -390,14 +390,14 @@ def get_consequence_model(node, fname):
 def convert_fragility_model_04(node, fname, fmcounter=itertools.count(1)):
     """
     :param node:
-        an :class:`openquake.commonib.node.LiteralNode` in NRML 0.4
+        an :class:`openquake.commonib.node.Node` in NRML 0.4
     :param fname:
         path of the fragility file
     :returns:
-        an :class:`openquake.commonib.node.LiteralNode` in NRML 0.5
+        an :class:`openquake.commonib.node.Node` in NRML 0.5
     """
     convert_type = {"lognormal": "logncdf"}
-    new = LiteralNode('fragilityModel',
+    new = Node('fragilityModel',
                       dict(assetCategory='building',
                            lossCategory='structural',
                            id='fm_%d_converted_from_NRML_04' %
@@ -406,13 +406,13 @@ def convert_fragility_model_04(node, fname, fmcounter=itertools.count(1)):
         fmt = node['format']
         descr = ~node.description
         limit_states = ~node.limitStates
-    new.append(LiteralNode('description', {}, descr))
-    new.append((LiteralNode('limitStates', {}, ' '.join(limit_states))))
+    new.append(Node('description', {}, descr))
+    new.append((Node('limitStates', {}, ' '.join(limit_states))))
     for ffs in node[2:]:
         IML = ffs.IML
         # NB: noDamageLimit = None is different than zero
         nodamage = ffs.attrib.get('noDamageLimit')
-        ff = LiteralNode('fragilityFunction', {'format': fmt})
+        ff = Node('fragilityFunction', {'format': fmt})
         ff['id'] = ~ffs.taxonomy
         ff['shape'] = convert_type[ffs.attrib.get('type', 'lognormal')]
         if fmt == 'continuous':
@@ -422,26 +422,26 @@ def convert_fragility_model_04(node, fname, fmcounter=itertools.count(1)):
                             maxIML=IML['maxIML'])
                 if nodamage is not None:
                     attr['noDamageLimit'] = nodamage
-                ff.append(LiteralNode('imls', attr))
+                ff.append(Node('imls', attr))
             for ffc in ffs[2:]:
                 with context(fname, ffc):
                     ls = ffc['ls']
                     param = ffc.params
                 with context(fname, param):
                     m, s = param['mean'], param['stddev']
-                ff.append(LiteralNode('params', dict(ls=ls, mean=m, stddev=s)))
+                ff.append(Node('params', dict(ls=ls, mean=m, stddev=s)))
         else:  # discrete
             with context(fname, IML):
                 imls = ' '.join(map(str, (~IML)[1]))
                 attr = dict(imt=IML['IMT'])
             if nodamage is not None:
                 attr['noDamageLimit'] = nodamage
-            ff.append(LiteralNode('imls', attr, imls))
+            ff.append(Node('imls', attr, imls))
             for ffd in ffs[2:]:
                 ls = ffd['ls']
                 with context(fname, ffd):
                     poes = ' '.join(map(str, ~ffd.poEs))
-                ff.append(LiteralNode('poes', dict(ls=ls), poes))
+                ff.append(Node('poes', dict(ls=ls), poes))
         new.append(ff)
     return new
 
@@ -602,7 +602,7 @@ validators = {
 
 def read(source, chatty=True, stop=None):
     """
-    Convert a NRML file into a validated LiteralNode object. Keeps
+    Convert a NRML file into a validated Node object. Keeps
     the entire tree in memory.
 
     :param source:

@@ -167,36 +167,3 @@ param=yyy
     def test_can_pickle(self):
         node = n.Node('tag')
         self.assertEqual(pickle.loads(pickle.dumps(node)), node)
-
-    def test_node_factory(self):
-        class ValidNode(n.LiteralNode):
-            "ValidNode test implementation. "
-            validators = dict(a=float, b=int)
-
-        self.assertEqual(ValidNode.__doc__, '''\
-ValidNode test implementation. Known validators:
-    a: `float`
-    b: `int`''')
-        xmlfile = io.StringIO(u"""\
-<root>
-<general>
-<a>1</a>
-<b>2</b>
-</general>
-<section1 param="xxx" />
-<section2 param="yyy" />
-</root>
-""")
-        node = n.node_from_xml(xmlfile, ValidNode)
-        self.assertEqual(~node.general.a, 1.0)
-        self.assertEqual(~node.general.b, 2)
-        self.assertEqual(node.section1['param'], 'xxx')
-        self.assertEqual(
-            n.to_literal(node), (
-                'root',
-                {},
-                None,
-                [('general', {}, None, [('a', {}, 1.0, []), ('b', {}, 2, [])]),
-                 ('section1', {'param': 'xxx'}, None, []),
-                 ('section2', {'param': 'yyy'}, None, [])])
-            )

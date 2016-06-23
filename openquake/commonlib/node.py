@@ -387,52 +387,6 @@ class Node(object):
         return not self.__eq__(other)
 
 
-class MetaLiteralNode(type):
-    """
-    Metaclass adding __slots__ and extending the docstring with a note
-    about the known validators. Moreover it checks for the attribute
-    `.validators`.
-    """
-    def __new__(meta, name, bases, dic):
-        doc = "Known validators:\n%s" % '\n'.join(
-            '    %s: `%s`' % (n, v.__name__)
-            for n, v in dic['validators'].items())
-        dic['__doc__'] = dic.get('__doc__', '') + doc
-        dic['__slots__'] = dic.get('__slots__', [])
-        return super(MetaLiteralNode, meta).__new__(meta, name, bases, dic)
-
-
-class LiteralNode(with_metaclass(MetaLiteralNode, Node)):
-    """
-    Subclasses should define a non-empty dictionary of validators.
-    """
-    validators = {}  # to be overridden in subclasses
-
-    def __init__(self, fulltag, attrib=None, text=None,
-                 nodes=None, lineno=None):
-        validators = self.__class__.validators
-        tag = striptag(fulltag)
-        if tag in validators and text is not None:
-            # try to cast the node, if the tag is known
-            assert not nodes, 'You cannot cast a composite node: %s' % nodes
-            try:
-                text = validators[tag](text)
-            except Exception as exc:
-                raise ValueError('Could not convert %s->%s: %s, line %s' %
-                                 (tag, validators[tag].__name__, exc, lineno))
-        elif attrib:
-            # cast the attributes
-            for n, v in attrib.items():
-                if n in validators:
-                    try:
-                        attrib[n] = validators[n](v)
-                    except Exception as exc:
-                        raise ValueError(
-                            'Could not convert %s->%s: %s, line %s' %
-                            (n, validators[n].__name__, exc, lineno))
-        super(LiteralNode, self).__init__(fulltag, attrib, text, nodes, lineno)
-
-
 def to_literal(self):
     """
     Convert the node into a literal Python object
