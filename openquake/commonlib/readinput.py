@@ -619,22 +619,23 @@ class DuplicatedID(Exception):
     """
 
 
-def get_exposure_lazy(fname, ok_cost_types):
+def _get_exposure(fname, ok_cost_types, stop=None):
     """
     :param fname:
         path of the XML file containing the exposure
     :param ok_cost_types:
         a set of cost types (as strings)
+    :param stop:
+        node at which to stop parsing (or None)
     :returns:
         a pair (Exposure instance, list of asset nodes)
     """
-    [exposure] = nrml.read(fname, stop='assets')
+    [exposure] = nrml.read(fname, stop=stop)
     description = exposure.description
     try:
         conversions = exposure.conversions
     except NameError:
-        conversions = Node('conversions',
-                                  nodes=[Node('costTypes', [])])
+        conversions = Node('conversions', nodes=[Node('costTypes', [])])
     try:
         inslimit = conversions.insuranceLimit
     except NameError:
@@ -678,6 +679,15 @@ def get_exposure_lazy(fname, ok_cost_types):
     return exp, exposure.assets, cc
 
 
+def get_cost_calculator(oqparam):
+    """
+    Read the first lines of the exposure file and infers the cost calculator
+    """
+    return _get_exposure(oqparam.inputs['exposure'],
+                         set(oqparam.all_cost_types),
+                         stop='assets')[-1]
+
+
 def get_exposure(oqparam):
     """
     Read the full exposure in memory and build a list of
@@ -697,7 +707,7 @@ def get_exposure(oqparam):
         region = None
     all_cost_types = set(oqparam.all_cost_types)
     fname = oqparam.inputs['exposure']
-    exposure, assets_node, cc = get_exposure_lazy(fname, all_cost_types)
+    exposure, assets_node, cc = _get_exposure(fname, all_cost_types)
     relevant_cost_types = all_cost_types - set(['occupants'])
     asset_refs = set()
     ignore_missing_costs = set(oqparam.ignore_missing_costs)
