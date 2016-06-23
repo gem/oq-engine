@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import sys
 import subprocess
+from openquake.risklib import valid
 from openquake.commonlib import sap
 from openquake.engine import logs, config
 from openquake.server.dbserver import get_status
@@ -30,7 +31,7 @@ def dbserver(cmd):
     """
     start/stop/restart the database server, or return its status
     """
-    if config.get('dserver', 'multi_user'):
+    if valid.boolean(config.get('dbserver', 'multi_user')):
         sys.exit('oq dbserver only works in single user mode')
 
     status = get_status()
