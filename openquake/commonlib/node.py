@@ -140,14 +140,12 @@ subnodes, since the generator will be exhausted. Notice that even
 accessing a subnode with the dot notation will avance the
 generator. Finally, nodes containing lazy nodes will not be pickleable.
 """
-from openquake.baselib.python3compat import configparser, with_metaclass
-
 import io
 import sys
 import copy
 import pprint as pp
 from contextlib import contextmanager
-from openquake.baselib.python3compat import raise_, exec_
+from openquake.baselib.python3compat import raise_, exec_, configparser
 from openquake.commonlib.writers import StreamingXMLWriter
 from xml.etree import ElementTree
 from xml.parsers.expat import ParserCreate, ExpatError, ErrorString
@@ -591,6 +589,9 @@ class ValidatingXmlParser(object):
     :param validators: a dictionary of validation functions
     :param stop: the tag where to stop the parsing (if any)
     """
+    class Exit(Exception):
+        pass
+
     def __init__(self, validators, stop=None):
         self.validators = validators
         self.stop = stop
@@ -603,6 +604,18 @@ class ValidatingXmlParser(object):
         self.ancestors = []
         self.root = None
 
+    @contextmanager
+    def managing_errors(self):
+        self.init()
+        try:
+            yield
+        except self.Exit:
+            pass
+        except ExpatError as err:
+            e = ExpatError(ErrorString(err.code))
+            e.lineno = self.p.CurrentLineNumber
+            raise e
+
     def parse_bytes(self, bytestr, isfinal=True):
         """
         Parse a byte string. If the string is very large, split it in chuncks
@@ -610,37 +623,29 @@ class ValidatingXmlParser(object):
         with isfinal=True.
         """
         self.init()
-        try:
+        with self.managing_errors():
             self.p.Parse(bytestr, isfinal)
-        except ExpatError as err:
-            e = ExpatError(ErrorString(err.code))
-            e.lineno = self.p.CurrentLineNumber
-            raise e
         return self.root
 
     def parse_file(self, file_or_fname):
         """
         Parse a file or a filename
         """
-        self.init()
-        try:
+        with self.managing_errors():
             if hasattr(file_or_fname, 'read'):
                 self.p.ParseFile(file_or_fname)
             else:
                 with open(file_or_fname, 'rb') as f:
                     self.p.ParseFile(f)
-        except ExpatError as err:
-            e = ExpatError(ErrorString(err.code))
-            e.lineno = self.p.CurrentLineNumber
-            raise e
         return self.root
 
     def _start_element(self, name, attrs):
-        if self.stop and name == self.stop[1:]:
-            self.p.close()
-            return
         self.ancestors.append(
             Node('{' + name, attrs, lineno=self.p.CurrentLineNumber))
+        if self.stop and name.split('}')[1] == self.stop:
+            for anc in reversed(self.ancestors):
+                self._end_element(anc.tag)
+            raise self.Exit
 
     def _end_element(self, name):
         self.root = self._literalnode(self.ancestors[-1])
