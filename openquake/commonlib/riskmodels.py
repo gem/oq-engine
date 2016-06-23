@@ -137,7 +137,7 @@ def get_risk_models(oqparam, kind=None):
                 # TODO: see if it is possible to remove the attribute
                 # below, used in classical_damage
                 ffl.steps_per_interval = oqparam.steps_per_interval
-        oqparam.limit_states = limit_states
+        oqparam.limit_states = [str(ls) for ls in limit_states]
     elif kind == 'consequence':
         rdict = rmodels
     else:  # vulnerability
