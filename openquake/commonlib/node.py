@@ -635,9 +635,11 @@ class ValidatingXmlParser(object):
     and `.parse_bytes` returning a validated :class:`Node` object.
 
     :param validators: a dictionary of validation functions
+    :param stop: the tag where to stop the parsing (if any)
     """
-    def __init__(self, validators):
+    def __init__(self, validators, stop=None):
         self.validators = validators
+        self.stop = stop
 
     def init(self):
         self.p = ParserCreate(namespace_separator='}')
@@ -676,6 +678,9 @@ class ValidatingXmlParser(object):
         return self.root
 
     def _start_element(self, name, attrs):
+        if self.stop and name == self.stop[1:]:
+            self.p.close()
+            return
         self.ancestors.append(
             Node('{' + name, attrs, lineno=self.p.CurrentLineNumber))
 
