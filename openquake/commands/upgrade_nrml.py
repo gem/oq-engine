@@ -24,9 +24,8 @@ from xml.etree.ElementTree import iterparse
 
 from openquake.commonlib.nrml import NRML05
 from openquake.commonlib import sap, nrml
-from openquake.commonlib.node import read_nodes, context, striptag, LiteralNode
+from openquake.commonlib.node import context, striptag, LiteralNode
 from openquake.commonlib import InvalidFile, riskmodels
-from openquake.commonlib.nrml import nodefactory
 from openquake.risklib import scientific
 
 
@@ -48,8 +47,7 @@ def get_vulnerability_functions_04(fname):
     imts = set()
     taxonomies = set()
     vf_dict = {}  # imt, taxonomy -> vulnerability function
-    for vset in read_nodes(fname, filter_vset,
-                           nodefactory['vulnerabilityModel']):
+    for vset in nrml.read(fname):
         categories['assetCategory'].add(vset['assetCategory'])
         categories['lossCategory'].add(vset['lossCategory'])
         categories['vulnerabilitySetID'].add(vset['vulnerabilitySetID'])

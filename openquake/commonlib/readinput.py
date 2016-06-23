@@ -328,8 +328,7 @@ def get_rupture(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     rup_model = oqparam.inputs['rupture_model']
-    rup_node, = read_nodes(rup_model, lambda el: 'Rupture' in el.tag,
-                           source.nodefactory['sourceModel'])
+    [rup_node] = nrml.read(rup_model)
     conv = sourceconverter.RuptureConverter(
         oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
     return conv.convert_node(rup_node)
@@ -414,8 +413,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
                 else:
                     raise
         else:  # just collect the TRT models
-            smodel = next(read_nodes(fname, lambda el: 'sourceModel' in el.tag,
-                                     source.nodefactory['sourceModel']))
+            smodel = nrml.read(fname).sourceModel
             trt_models = source.TrtModel.collect(smodel)
         trts = [mod.trt for mod in trt_models]
         source_model_lt.tectonic_region_types.update(trts)
