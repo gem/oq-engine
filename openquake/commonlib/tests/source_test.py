@@ -36,7 +36,6 @@ from openquake.commonlib import sourceconverter as s
 from openquake.commonlib.source import (
     SourceModelParser, DuplicatedID, CompositionInfo)
 from openquake.commonlib import nrml
-from openquake.commonlib.node import read_nodes
 from openquake.baselib.general import assert_close
 
 # directory where the example files are
@@ -366,7 +365,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         assert_close(self._expected_char_complex, self.char_complex)
 
     def test_characteristic_multi(self):
-        self._expected_char_multi.surface_node = None
+        self.char_multi.surface_node = None
         assert_close(self._expected_char_multi, self.char_multi)
 
     def test_duplicate_id(self):
@@ -426,7 +425,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         msg = ('Could not convert occurRates->positivefloats: '
                'float -0.0010614989 < 0, line 25')
         with self.assertRaises(ValueError) as ctx:
-            next(nrml.read_nodes(area_file))
+            next(nrml.read(area_file))
         self.assertIn(msg, str(ctx.exception))
 
     def test_raises_useful_error_2(self):
@@ -477,7 +476,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             self.parser.converter.convert_node(area)
         self.assertIn(
             "node areaSource: No subnode named 'nodalPlaneDist'"
-            " found in 'areaSource', line 5 of", str(ctx.exception))
+            " found in u'areaSource', line 5 of", str(ctx.exception))
 
     def test_hypolist_but_not_sliplist(self):
         simple_file = BytesIO(b"""\
@@ -723,7 +722,7 @@ class RuptureConverterTestCase(unittest.TestCase):
                                        complex_fault_mesh_spacing=1.5)
         for fname in (SIMPLE_FAULT_RUPTURE, COMPLEX_FAULT_RUPTURE,
                       SINGLE_PLANE_RUPTURE, MULTI_PLANES_RUPTURE):
-            node, = read_nodes(fname, filter_ruptures, ValidNode)
+            [node] = nrml.read(fname)
             converter.convert_node(node)
 
     def test_ill_formed_rupture(self):
@@ -753,7 +752,7 @@ class RuptureConverterTestCase(unittest.TestCase):
 
         # at line 7 there is an invalid depth="-5.0"
         with self.assertRaises(ValueError) as ctx:
-            next(read_nodes(rup_file, filter_ruptures, ValidNode))
+            nrml.read(rup_file)
         self.assertIn('line 7', str(ctx.exception))
 
 

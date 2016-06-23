@@ -379,6 +379,7 @@ class Node(object):
             setattr(self, slot, state[slot])
 
     def __eq__(self, other):
+        assert other is not None
         return all(getattr(self, slot) == getattr(other, slot)
                    for slot in self.__class__.__slots__)
 
