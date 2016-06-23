@@ -81,14 +81,6 @@ openquake.commonlib.reportwriter module
     :undoc-members:
     :show-inheritance:
 
-openquake.commonlib.risk_parsers module
----------------------------------------
-
-.. automodule:: openquake.commonlib.risk_parsers
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 openquake.commonlib.risk_writers module
 ---------------------------------------
 
