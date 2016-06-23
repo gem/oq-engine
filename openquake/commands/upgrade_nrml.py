@@ -47,7 +47,7 @@ def get_vulnerability_functions_04(fname):
     imts = set()
     taxonomies = set()
     vf_dict = {}  # imt, taxonomy -> vulnerability function
-    for vset in nrml.read(fname):
+    for vset in nrml.read(fname).vulnerabilityModel:
         categories['assetCategory'].add(vset['assetCategory'])
         categories['lossCategory'].add(vset['lossCategory'])
         categories['vulnerabilitySetID'].add(vset['vulnerabilitySetID'])
