@@ -150,7 +150,7 @@ from contextlib import contextmanager
 from openquake.baselib.python3compat import raise_, exec_
 from openquake.commonlib.writers import StreamingXMLWriter
 from xml.etree import ElementTree
-from xml.parsers.expat import ParserCreate, ExpatError, errors
+from xml.parsers.expat import ParserCreate, ExpatError, ErrorString
 
 
 class SourceLineParser(ElementTree.XMLParser):
@@ -653,7 +653,7 @@ class ValidatingXmlParser(object):
         try:
             self.p.Parse(bytestr, isfinal)
         except ExpatError as err:
-            raise ExpatError(errors.messages[err.code])
+            raise ExpatError(ErrorString(err.code))
         return self.root
 
     def parse_file(self, file_or_fname):
@@ -667,7 +667,7 @@ class ValidatingXmlParser(object):
                 with open(file_or_fname, 'rb') as f:
                     self.p.ParseFile(f)
         except ExpatError as err:
-            raise ExpatError(errors.messages[err.code])
+            raise ExpatError(ErrorString(err.code))
         return self.root
 
     def _start_element(self, name, attrs):
@@ -682,33 +682,45 @@ class ValidatingXmlParser(object):
 
     def _char_data(self, data):
         if data.strip():
-            self.ancestors[-1].text = data
+            parent = self.ancestors[-1]
+            if parent.text is None:
+                parent.text = data
+            else:
+                parent.text += data
 
-    def _set_text(self, node, text):
+    def _set_text(self, node, text, tag):
         if text is None:
             return
-        tag = striptag(node.tag)
         try:
             val = self.validators[tag]
         except KeyError:
             return
         try:
-            node.text = val(text)
+            node.text = val(text.strip())
         except Exception as exc:
             raise ValueError('Could not convert %s->%s: %s, line %s' %
                              (tag, val.__name__, exc, node.lineno))
 
+    def _set_attrib(self, node, n, tn, v):
+        val = self.validators[tn]
+        try:
+            node.attrib[n] = val(v)
+        except Exception as exc:
+            raise ValueError(
+                'Could not convert %s->%s: %s, line %s' %
+                (tn, val.__name__, exc, node.lineno))
+
     def _literalnode(self, node):
+        tag = striptag(node.tag)
+
         # cast the text
-        self._set_text(node, node.text)
+        self._set_text(node, node.text, tag)
 
         # cast the attributes
         for n, v in node.attrib.items():
-            if n in self.validators:
-                try:
-                    node.attrib[n] = self.validators[n](v)
-                except Exception as exc:
-                    raise ValueError(
-                        'Could not convert %s->%s: %s, line %s' %
-                        (n, self.validators[n].__name__, exc, node.lineno))
+            tn = '%s.%s' % (tag, n)
+            if tn in self.validators:
+                self._set_attrib(node, n, tn, v)
+            elif n in self.validators:
+                self._set_attrib(node, n, n, v)
         return node

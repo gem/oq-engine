@@ -35,7 +35,7 @@ from openquake.commonlib import tests, nrml_examples, readinput
 from openquake.commonlib import sourceconverter as s
 from openquake.commonlib.source import (
     SourceModelParser, DuplicatedID, CompositionInfo)
-from openquake.commonlib.nrml import nodefactory
+from openquake.commonlib import nrml
 from openquake.commonlib.node import read_nodes
 from openquake.baselib.general import assert_close
 
@@ -65,11 +65,6 @@ MULTI_PLANES_RUPTURE = os.path.join(
 NONPARAMETRIC_SOURCE = os.path.join(
     os.path.dirname(__file__), 'data', 'nonparametric-source.xml')
 
-filter_sources = lambda el: 'Source' in el.tag
-filter_ruptures = lambda el: 'Rupture' in el.tag
-
-ValidNode = nodefactory['sourceModel']
-
 
 class NrmlSourceToHazardlibTestCase(unittest.TestCase):
     """Tests for converting NRML source model objects to the hazardlib
@@ -85,7 +80,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.,  # km
         ))
-        source_nodes = read_nodes(MIXED_SRC_MODEL, filter_sources, ValidNode)
+        source_nodes = nrml.parse(MIXED_SRC_MODEL).nodes
         (cls.area, cls.point, cls.simple, cls.cmplx, cls.char_simple,
          cls.char_complex, cls.char_multi) = map(
             cls.parser.converter.convert_node, source_nodes)
