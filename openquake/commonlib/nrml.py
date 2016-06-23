@@ -572,6 +572,7 @@ validators = {
     'epsBinEdges': valid.integers,
     'lonBinEdges': valid.longitudes,
     'latBinEdges': valid.latitudes,
+    'ffs.type': valid.ChoiceCI('lognormal'),
     'type': valid.namelist,
     'dims': valid.positiveints,
     'poE': valid.probability,
