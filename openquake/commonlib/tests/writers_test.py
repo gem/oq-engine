@@ -22,7 +22,7 @@ import tempfile
 from io import BytesIO
 from openquake.baselib.performance import memory_info
 from openquake.commonlib.writers import tostring, StreamingXMLWriter, write_csv
-from openquake.commonlib.node import LiteralNode
+from openquake.commonlib.node import Node
 from xml.etree import ElementTree as etree
 
 import numpy
@@ -89,7 +89,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
 
     def test_zero_node(self):
         s = BytesIO()
-        node = LiteralNode('zero', {}, 0)
+        node = Node('zero', {}, 0)
         with StreamingXMLWriter(s) as writer:
             writer.serialize(node)
         self.assertEqual(s.getvalue(), '''\
