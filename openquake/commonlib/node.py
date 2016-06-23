@@ -659,7 +659,9 @@ class ValidatingXmlParser(object):
         try:
             self.p.Parse(bytestr, isfinal)
         except ExpatError as err:
-            raise ExpatError(ErrorString(err.code))
+            e = ExpatError(ErrorString(err.code))
+            e.lineno = self.p.CurrentLineNumber
+            raise e
         return self.root
 
     def parse_file(self, file_or_fname):
@@ -674,7 +676,9 @@ class ValidatingXmlParser(object):
                 with open(file_or_fname, 'rb') as f:
                     self.p.ParseFile(f)
         except ExpatError as err:
-            raise ExpatError(ErrorString(err.code))
+            e = ExpatError(ErrorString(err.code))
+            e.lineno = self.p.CurrentLineNumber
+            raise e
         return self.root
 
     def _start_element(self, name, attrs):
