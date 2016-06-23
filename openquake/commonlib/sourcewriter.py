@@ -22,7 +22,7 @@ Source model XML Writer
 
 import os
 from openquake.baselib.general import CallableDict
-from openquake.commonlib.node import LiteralNode
+from openquake.commonlib.node import Node
 from openquake.commonlib import nrml
 
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
@@ -39,15 +39,15 @@ def build_area_source_geometry(area_source):
     """
     geom_str = ["%s %s" % lonlat for lonlat in
                 zip(area_source.polygon.lons, area_source.polygon.lats)]
-    poslist_node = LiteralNode("gml:posList", text=geom_str)
-    linear_ring_node = LiteralNode("gml:LinearRing", nodes=[poslist_node])
-    exterior_node = LiteralNode("gml:exterior", nodes=[linear_ring_node])
-    polygon_node = LiteralNode("gml:Polygon", nodes=[exterior_node])
-    upper_depth_node = LiteralNode(
+    poslist_node = Node("gml:posList", text=geom_str)
+    linear_ring_node = Node("gml:LinearRing", nodes=[poslist_node])
+    exterior_node = Node("gml:exterior", nodes=[linear_ring_node])
+    polygon_node = Node("gml:Polygon", nodes=[exterior_node])
+    upper_depth_node = Node(
         "upperSeismoDepth", text=area_source.upper_seismogenic_depth)
-    lower_depth_node = LiteralNode(
+    lower_depth_node = Node(
         "lowerSeismoDepth", text=area_source.lower_seismogenic_depth)
-    return LiteralNode(
+    return Node(
         "areaGeometry", {'discretization': area_source.area_discretization},
         nodes=[polygon_node, upper_depth_node, lower_depth_node])
 
@@ -62,13 +62,13 @@ def build_point_source_geometry(point_source):
         Instance of :class: openquake.commonlib.node.Node
     """
     xy = point_source.location.x, point_source.location.y
-    pos_node = LiteralNode("gml:pos", text=xy)
-    point_node = LiteralNode("gml:Point", nodes=[pos_node])
-    upper_depth_node = LiteralNode(
+    pos_node = Node("gml:pos", text=xy)
+    point_node = Node("gml:Point", nodes=[pos_node])
+    upper_depth_node = Node(
         "upperSeismoDepth", text=point_source.upper_seismogenic_depth)
-    lower_depth_node = LiteralNode(
+    lower_depth_node = Node(
         "lowerSeismoDepth", text=point_source.lower_seismogenic_depth)
-    return LiteralNode(
+    return Node(
         "pointGeometry",
         nodes=[point_node, upper_depth_node, lower_depth_node])
 
@@ -87,8 +87,8 @@ def build_linestring_node(line, with_depth=False):
         geom_str = ["%s %s %s" % (p.x, p.y, p.z) for p in line.points]
     else:
         geom_str = ["%s %s" % (p.x, p.y) for p in line.points]
-    poslist_node = LiteralNode("gml:posList", text=geom_str)
-    return LiteralNode("gml:LineString", nodes=[poslist_node])
+    poslist_node = Node("gml:posList", text=geom_str)
+    return Node("gml:LineString", nodes=[poslist_node])
 
 
 def build_simple_fault_geometry(fault_source):
@@ -102,12 +102,12 @@ def build_simple_fault_geometry(fault_source):
     """
     linestring_node = build_linestring_node(fault_source.fault_trace,
                                             with_depth=False)
-    dip_node = LiteralNode("dip", text=fault_source.dip)
-    upper_depth_node = LiteralNode(
+    dip_node = Node("dip", text=fault_source.dip)
+    upper_depth_node = Node(
         "upperSeismoDepth", text=fault_source.upper_seismogenic_depth)
-    lower_depth_node = LiteralNode(
+    lower_depth_node = Node(
         "lowerSeismoDepth", text=fault_source.lower_seismogenic_depth)
-    return LiteralNode("simpleFaultGeometry",
+    return Node("simpleFaultGeometry",
                        nodes=[linestring_node, dip_node, upper_depth_node,
                               lower_depth_node])
 
@@ -135,10 +135,10 @@ def build_complex_fault_geometry(fault_source):
             # Intermediate edge
             node_name = "intermediateEdge"
         edge_nodes.append(
-            LiteralNode(node_name,
+            Node(node_name,
                         nodes=[build_linestring_node(edge, with_depth=True)])
             )
-    return LiteralNode("complexFaultGeometry", nodes=edge_nodes)
+    return Node("complexFaultGeometry", nodes=edge_nodes)
 
 
 @obj_to_node.add('EvenlyDiscretizedMFD')
@@ -151,8 +151,8 @@ def build_evenly_discretised_mfd(mfd):
     :returns:
         Instance of :class: openquake.commonlib.node.Node
     """
-    occur_rates = LiteralNode("occurRates", text=mfd.occurrence_rates)
-    return LiteralNode("incrementalMFD",
+    occur_rates = Node("occurRates", text=mfd.occurrence_rates)
+    return Node("incrementalMFD",
                        {"binWidth": mfd.bin_width, "minMag": mfd.min_mag},
                        nodes=[occur_rates])
 
@@ -167,7 +167,7 @@ def build_truncated_gr_mfd(mfd):
     :returns:
         Instance of :class: openquake.commonlib.node.Node
     """
-    return LiteralNode("truncGutenbergRichterMFD",
+    return Node("truncGutenbergRichterMFD",
                        {"aValue": mfd.a_val, "bValue": mfd.b_val,
                         "minMag": mfd.min_mag, "maxMag": mfd.max_mag})
 
@@ -182,9 +182,9 @@ def build_arbitrary_mfd(mfd):
     :returns:
         Instance of :class: openquake.commonlib.node.Node
     """
-    magnitudes = LiteralNode("magnitudes", text=mfd.magnitudes)
-    occur_rates = LiteralNode("occurRates", text=mfd.occurrence_rates)
-    return LiteralNode("arbitraryMFD",
+    magnitudes = Node("magnitudes", text=mfd.magnitudes)
+    occur_rates = Node("occurRates", text=mfd.occurrence_rates)
+    return Node("arbitraryMFD",
                        nodes=[magnitudes, occur_rates])
 
 
@@ -202,7 +202,7 @@ def build_youngs_coppersmith_mfd(mfd):
     :returns:
         Instance of :class: openquake.commonlib.node.Node
     """
-    return LiteralNode("YoungsCoppersmithMFD",
+    return Node("YoungsCoppersmithMFD",
                        {"minMag": mfd.min_mag, "bValue": mfd.b_val,
                         "characteristicMag": mfd.char_mag,
                         "characteristicRate": mfd.char_rate,
@@ -220,11 +220,11 @@ def build_nodal_plane_dist(npd):
     """
     npds = []
     for prob, npd in npd.data:
-        nodal_plane = LiteralNode(
+        nodal_plane = Node(
             "nodalPlane", {"dip": npd.dip, "probability": prob,
                            "strike": npd.strike, "rake": npd.rake})
         npds.append(nodal_plane)
-    return LiteralNode("nodalPlaneDist", nodes=npds)
+    return Node("nodalPlaneDist", nodes=npds)
 
 
 def build_hypo_depth_dist(hdd):
@@ -239,8 +239,8 @@ def build_hypo_depth_dist(hdd):
     hdds = []
     for (prob, depth) in hdd.data:
         hdds.append(
-            LiteralNode("hypoDepth", {"depth": depth, "probability": prob}))
-    return LiteralNode("hypoDepthDist", nodes=hdds)
+            Node("hypoDepth", {"depth": depth, "probability": prob}))
+    return Node("hypoDepthDist", nodes=hdds)
 
 
 def get_distributed_seismicity_source_nodes(source):
@@ -257,11 +257,11 @@ def get_distributed_seismicity_source_nodes(source):
     source_nodes = []
     #  parse msr
     source_nodes.append(
-        LiteralNode("magScaleRel", text=
+        Node("magScaleRel", text=
                     source.magnitude_scaling_relationship.__class__.__name__))
     # Parse aspect ratio
     source_nodes.append(
-        LiteralNode("ruptAspectRatio", text=source.rupture_aspect_ratio))
+        Node("ruptAspectRatio", text=source.rupture_aspect_ratio))
     # Parse MFD
     source_nodes.append(obj_to_node(source.mfd))
     # Parse nodal plane distribution
@@ -280,9 +280,9 @@ def build_hypo_list_node(hypo_list):
     :returns:
         a hypoList node containing N hypo nodes
     """
-    hypolist = LiteralNode('hypoList', {})
+    hypolist = Node('hypoList', {})
     for row in hypo_list:
-        n = LiteralNode(
+        n = Node(
             'hypo', dict(alongStrike=row[0], downDip=row[1], weight=row[2]))
         hypolist.append(n)
     return hypolist
@@ -295,10 +295,10 @@ def build_slip_list_node(slip_list):
     :returns:
         a hypoList node containing N slip nodes
     """
-    sliplist = LiteralNode('slipList', {})
+    sliplist = Node('slipList', {})
     for row in slip_list:
         sliplist.append(
-            LiteralNode('slip', dict(weight=row[1]), row[0]))
+            Node('slip', dict(weight=row[1]), row[0]))
     return sliplist
 
 
@@ -315,16 +315,16 @@ def get_fault_source_nodes(source):
     source_nodes = []
     #  parse msr
     source_nodes.append(
-        LiteralNode(
+        Node(
             "magScaleRel",
             text=source.magnitude_scaling_relationship.__class__.__name__))
     # Parse aspect ratio
     source_nodes.append(
-        LiteralNode("ruptAspectRatio", text=source.rupture_aspect_ratio))
+        Node("ruptAspectRatio", text=source.rupture_aspect_ratio))
     # Parse MFD
     source_nodes.append(obj_to_node(source.mfd))
     # Parse Rake
-    source_nodes.append(LiteralNode("rake", text=source.rake))
+    source_nodes.append(Node("rake", text=source.rake))
     if len(getattr(source, 'hypo_list', [])):
         source_nodes.append(build_hypo_list_node(source.hypo_list))
     if len(getattr(source, 'slip_list', [])):
@@ -361,16 +361,16 @@ def build_area_source_node(area_source):
     source_nodes = [build_area_source_geometry(area_source)]
     # parse common distributed attributes
     source_nodes.extend(get_distributed_seismicity_source_nodes(area_source))
-    return LiteralNode(
+    return Node(
         "areaSource", get_source_attributes(area_source), nodes=source_nodes)
 
 
 @obj_to_node.add('CharacteristicFaultSource')
 def build_characteristic_fault_source_node(source):
     source_nodes = [obj_to_node(source.mfd)]
-    source_nodes.append(LiteralNode("rake", text=source.rake))
+    source_nodes.append(Node("rake", text=source.rake))
     source_nodes.append(source.surface_node)
-    return LiteralNode('characteristicFaultSource',
+    return Node('characteristicFaultSource',
                        get_source_attributes(source),
                        nodes=source_nodes)
 
@@ -381,7 +381,7 @@ def build_nonparametric_source_node(source):
     for rup, pmf in source.data:
         probs = [prob for (prob, no) in pmf.data]
         rup_nodes.append(build_rupture_node(rup, probs))
-    return LiteralNode('nonParametricSeismicSource',
+    return Node('nonParametricSeismicSource',
                        get_source_attributes(source), nodes=rup_nodes)
 
 
@@ -392,9 +392,9 @@ def build_rupture_node(rupt, probs_occur):
     """
     h = rupt.hypocenter
     hp_dict = dict(lon=h.longitude, lat=h.latitude, depth=h.depth)
-    rupt_nodes = [LiteralNode('magnitude', {}, rupt.mag),
-                  LiteralNode('rake', {}, rupt.rake),
-                  LiteralNode('hypocenter', hp_dict)]
+    rupt_nodes = [Node('magnitude', {}, rupt.mag),
+                  Node('rake', {}, rupt.rake),
+                  Node('hypocenter', hp_dict)]
     rupt_nodes.extend(rupt.surface_nodes)
     geom = rupt.surface_nodes[0].tag.split('}')[1]
     if len(rupt.surface_nodes) > 1:
@@ -405,7 +405,7 @@ def build_rupture_node(rupt, probs_occur):
         name = 'simpleFaultRupture'
     elif geom == 'complexFaultGeometry':
         name = 'complexFaultRupture'
-    return LiteralNode(name, {'probs_occur': probs_occur}, nodes=rupt_nodes)
+    return Node(name, {'probs_occur': probs_occur}, nodes=rupt_nodes)
 
 
 @obj_to_node.add('PointSource')
@@ -423,7 +423,7 @@ def build_point_source_node(point_source):
     source_nodes = [build_point_source_geometry(point_source)]
     # parse common distributed attributes
     source_nodes.extend(get_distributed_seismicity_source_nodes(point_source))
-    return LiteralNode("pointSource",
+    return Node("pointSource",
                        get_source_attributes(point_source),
                        nodes=source_nodes)
 
@@ -442,7 +442,7 @@ def build_simple_fault_source_node(fault_source):
     source_nodes = [build_simple_fault_geometry(fault_source)]
     # Parse common fault source attributes
     source_nodes.extend(get_fault_source_nodes(fault_source))
-    return LiteralNode("simpleFaultSource",
+    return Node("simpleFaultSource",
                        get_source_attributes(fault_source),
                        nodes=source_nodes)
 
@@ -461,7 +461,7 @@ def build_complex_fault_source_node(fault_source):
     source_nodes = [build_complex_fault_geometry(fault_source)]
     # Parse common fault source attributes
     source_nodes.extend(get_fault_source_nodes(fault_source))
-    return LiteralNode("complexFaultSource",
+    return Node("complexFaultSource",
                        get_source_attributes(fault_source),
                        nodes=source_nodes)
 
@@ -481,7 +481,7 @@ def write_source_model(dest, sources, name=None):
     name = name or os.path.splitext(os.path.basename(dest))[0]
     nodes = list(
         map(obj_to_node, sorted(sources, key=lambda src: src.source_id)))
-    source_model = LiteralNode("sourceModel", {"name": name}, nodes=nodes)
+    source_model = Node("sourceModel", {"name": name}, nodes=nodes)
     with open(dest, 'w') as f:
         nrml.write([source_model], f, '%s')
     return dest

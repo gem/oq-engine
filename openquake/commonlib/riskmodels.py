@@ -25,7 +25,7 @@ import collections
 import numpy
 
 from openquake.risklib import valid
-from openquake.commonlib.node import LiteralNode
+from openquake.commonlib.node import Node
 from openquake.commonlib import nrml
 from openquake.commonlib.sourcewriter import obj_to_node
 
@@ -73,13 +73,13 @@ def filter_vset(elem):
 @obj_to_node.add('VulnerabilityFunction')
 def build_vf_node(vf):
     """
-    Convert a VulnerabilityFunction object into a LiteralNode suitable
+    Convert a VulnerabilityFunction object into a Node suitable
     for XML conversion.
     """
-    nodes = [LiteralNode('imls', {'imt': vf.imt}, vf.imls),
-             LiteralNode('meanLRs', {}, vf.mean_loss_ratios),
-             LiteralNode('covLRs', {}, vf.covs)]
-    return LiteralNode(
+    nodes = [Node('imls', {'imt': vf.imt}, vf.imls),
+             Node('meanLRs', {}, vf.mean_loss_ratios),
+             Node('covLRs', {}, vf.covs)]
+    return Node(
         'vulnerabilityFunction',
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
