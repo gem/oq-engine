@@ -637,6 +637,8 @@ class ValidatingXmlParser(object):
     """
     def __init__(self, validators):
         self.validators = validators
+
+    def init(self):
         self.p = ParserCreate(namespace_separator='}')
         self.p.StartElementHandler = self._start_element
         self.p.EndElementHandler = self._end_element
@@ -650,6 +652,7 @@ class ValidatingXmlParser(object):
         and parse each chunk with isfinal=False, then parse an empty chunk
         with isfinal=True.
         """
+        self.init()
         try:
             self.p.Parse(bytestr, isfinal)
         except ExpatError as err:
@@ -660,6 +663,7 @@ class ValidatingXmlParser(object):
         """
         Parse a file or a filename
         """
+        self.init()
         try:
             if hasattr(file_or_fname, 'read'):
                 self.p.ParseFile(file_or_fname)

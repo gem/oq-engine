@@ -425,7 +425,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         msg = ('Could not convert occurRates->positivefloats: '
                'float -0.0010614989 < 0, line 25')
         with self.assertRaises(ValueError) as ctx:
-            next(read_nodes(area_file, filter_sources, ValidNode))
+            next(nrml.read_nodes(area_file))
         self.assertIn(msg, str(ctx.exception))
 
     def test_raises_useful_error_2(self):
@@ -471,7 +471,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
     </sourceModel>
 </nrml>
 """)
-        [area] = read_nodes(area_file, filter_sources, ValidNode)
+        [area] = nrml.read(area_file).sourceModel
         with self.assertRaises(NameError) as ctx:
             self.parser.converter.convert_node(area)
         self.assertIn(
@@ -544,7 +544,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             complex_fault_mesh_spacing=1,  # km
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.)
-        np, = read_nodes(NONPARAMETRIC_SOURCE, filter_sources, ValidNode)
+        [np] = nrml.read(NONPARAMETRIC_SOURCE).sourceModel
         converter.convert_node(np)
 
     def test_alternative_mfds(self):
@@ -554,9 +554,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             complex_fault_mesh_spacing=5,  # km
             width_of_mfd_bin=0.1,  # for Truncated GR MFDs
             area_source_discretization=1.)
-        source_nodes = read_nodes(ALT_MFDS_SRC_MODEL,
-                                  filter_sources,
-                                  ValidNode)
+        source_nodes = nrml.read(ALT_MFDS_SRC_MODEL).sourceModel
         [cplx1, sflt1, sflt2] = map(converter.convert_node, source_nodes)
         # Check the values
         # Arbitrary MFD
