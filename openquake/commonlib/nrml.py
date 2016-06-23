@@ -505,6 +505,7 @@ validators = {
     'characteristicRate': valid.positivefloat,
     'characteristicMag': valid.positivefloat,
     'magnitudes': valid.positivefloats,
+    'fragilityFunction.id': valid.utf8,  # taxonomy
     'id': valid.simple_id,
     'discretization': valid.compose(valid.positivefloat, valid.nonzero),
     'asset.id': valid.asset_id,
