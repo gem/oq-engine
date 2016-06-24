@@ -680,11 +680,10 @@ class TrtModelTestCase(unittest.TestCase):
         self.assertEqual(getattr(sc, attr), value)
 
     def test_content(self):
-        trts = [sc.trt for sc in self.source_collector.values()]
+        trts = sorted(sc.trt for sc in self.source_collector.values())
         self.assertEqual(
-            trts,
-            ['Volcanic', 'Subduction Interface', 'Stable Continental Crust',
-             'Active Shallow Crust'])
+            trts, ['Active Shallow Crust', 'Stable Continental Crust',
+                   'Subduction Interface', 'Volcanic'])
 
         self.check('Volcanic', 'max_mag', 6.5)
         self.check('Subduction Interface', 'max_mag', 6.5)
