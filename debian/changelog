@@ -1,5 +1,9 @@
+python-oq-engine (2.0.0-0~precise01) precise; urgency=low
+
   [Michele Simionato]
-  * Fixed the escaping of the taxonomies
+  * Quoted the taxonomies in the CSV exports
+  * Fixed a bug in classical_damage and added a master test for it
+  * Fixed the escaping of the taxonomies in the datastore
   * Fixed the names of the exported risk files
   * Fixed a segfault in the WebUI when exporting files with h5py >= 2.4
   * Added a command `oq dbserver` to start/stop the database server
@@ -154,6 +158,8 @@
     tectonic region types
   * Optimized the aggregation by asset in the event based risk calculator
   * Reporting the source_id when the filtering fails
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 21 Jun 2016 14:17:03 +0200
 
 python-oq-engine (1.9.1-0~precise01) precise; urgency=low
 
