@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed a bug with the `realizations` array, which in hazard calculations
+    was empty in the datastore
+
 python-oq-engine (2.0.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
