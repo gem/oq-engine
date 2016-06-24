@@ -32,6 +32,21 @@ PY3 = sys.version_info[0] == 3
 PY2 = sys.version_info[0] == 2
 
 
+def encode(val):
+    """
+    Encode a string assuming the encoding is UTF-8.
+
+    :param: a unicode or bytes object
+    :returns: bytes
+    """
+    try:
+        # assume it is an unicode string
+        return val.encode('utf-8')
+    except AttributeError:
+        # it was an already encoded object
+        return val
+
+
 def decode(val):
     """
     Decode an object assuming the encoding is UTF-8.
