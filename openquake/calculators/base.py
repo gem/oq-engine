@@ -403,10 +403,7 @@ class HazardCalculator(BaseCalculator):
             arefs = numpy.array(self.exposure.asset_refs)
             self.datastore['asset_refs'] = arefs
             self.datastore.set_attrs('asset_refs', nbytes=arefs.nbytes)
-            all_cost_types = set(self.oqparam.all_cost_types)
-            fname = self.oqparam.inputs['exposure']
-            self.cost_calculator = readinput.get_exposure_lazy(
-                fname, all_cost_types)[-1]
+            self.cost_calculator = readinput.get_cost_calculator(self.oqparam)
             self.sitecol, self.assets_by_site = (
                 readinput.get_sitecol_assets(self.oqparam, self.exposure))
             if len(self.exposure.cost_types):
@@ -497,7 +494,8 @@ class HazardCalculator(BaseCalculator):
         if hasattr(self, 'assets_by_site'):
             self.assetcol = riskinput.AssetCollection(
                 self.assets_by_site, self.cost_calculator, oq.time_event,
-                time_events=sorted(self.exposure.time_events) or '')
+                time_events=hdf5.array_of_bytes(
+                    sorted(self.exposure.time_events)))
         elif hasattr(self, 'assetcol'):
             self.assets_by_site = self.assetcol.assets_by_site()
 

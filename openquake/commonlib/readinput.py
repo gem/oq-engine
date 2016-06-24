@@ -34,7 +34,7 @@ from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.risklib import riskmodels, riskinput, valid
 from openquake.commonlib import datastore
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.node import read_nodes, LiteralNode, context
+from openquake.commonlib.node import read_nodes, Node, context
 from openquake.commonlib import nrml, logictree, InvalidFile
 from openquake.commonlib.riskmodels import get_risk_models
 from openquake.baselib.general import groupby, AccumDict, writetmp
@@ -231,9 +231,7 @@ def get_site_model(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    for node in read_nodes(oqparam.inputs['site_model'],
-                           lambda el: el.tag.endswith('site'),
-                           source.nodefactory['siteModel']):
+    for node in nrml.read(oqparam.inputs['site_model']).siteModel:
         yield valid.site_param(**node.attrib)
 
 
@@ -330,8 +328,7 @@ def get_rupture(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     rup_model = oqparam.inputs['rupture_model']
-    rup_node, = read_nodes(rup_model, lambda el: 'Rupture' in el.tag,
-                           source.nodefactory['sourceModel'])
+    [rup_node] = nrml.read(rup_model)
     conv = sourceconverter.RuptureConverter(
         oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
     return conv.convert_node(rup_node)
@@ -416,8 +413,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
                 else:
                     raise
         else:  # just collect the TRT models
-            smodel = next(read_nodes(fname, lambda el: 'sourceModel' in el.tag,
-                                     source.nodefactory['sourceModel']))
+            smodel = nrml.read(fname).sourceModel
             trt_models = source.TrtModel.collect(smodel)
         trts = [mod.trt for mod in trt_models]
         source_model_lt.tectonic_region_types.update(trts)
@@ -623,30 +619,31 @@ class DuplicatedID(Exception):
     """
 
 
-def get_exposure_lazy(fname, ok_cost_types):
+def _get_exposure(fname, ok_cost_types, stop=None):
     """
     :param fname:
         path of the XML file containing the exposure
     :param ok_cost_types:
         a set of cost types (as strings)
+    :param stop:
+        node at which to stop parsing (or None)
     :returns:
         a pair (Exposure instance, list of asset nodes)
     """
-    [exposure] = nrml.read_lazy(fname, ['assets'])
+    [exposure] = nrml.read(fname, stop=stop)
     description = exposure.description
     try:
         conversions = exposure.conversions
     except NameError:
-        conversions = LiteralNode('conversions',
-                                  nodes=[LiteralNode('costTypes', [])])
+        conversions = Node('conversions', nodes=[Node('costTypes', [])])
     try:
         inslimit = conversions.insuranceLimit
     except NameError:
-        inslimit = LiteralNode('insuranceLimit', text=True)
+        inslimit = Node('insuranceLimit', text=True)
     try:
         deductible = conversions.deductible
     except NameError:
-        deductible = LiteralNode('deductible', text=True)
+        deductible = Node('deductible', text=True)
     try:
         area = conversions.area
     except NameError:
@@ -654,7 +651,7 @@ def get_exposure_lazy(fname, ok_cost_types):
         # around the CostCalculator object one runs into this numpy bug on
         # pickling dictionaries with empty strings:
         # https://github.com/numpy/numpy/pull/5475
-        area = LiteralNode('area', dict(type='?'))
+        area = Node('area', dict(type='?'))
 
     # read the cost types and make some check
     cost_types = []
@@ -662,7 +659,7 @@ def get_exposure_lazy(fname, ok_cost_types):
         if ct['name'] in ok_cost_types:
             with context(fname, ct):
                 cost_types.append(
-                    (ct['name'], valid_cost_type(ct['type']), ct['unit']))
+                    (ct['name'], valid.cost_type_type(ct['type']), ct['unit']))
     if 'occupants' in ok_cost_types:
         cost_types.append(('occupants', 'per_area', 'people'))
     cost_types.sort(key=operator.itemgetter(0))
@@ -682,7 +679,13 @@ def get_exposure_lazy(fname, ok_cost_types):
     return exp, exposure.assets, cc
 
 
-valid_cost_type = valid.Choice('aggregated', 'per_area', 'per_asset')
+def get_cost_calculator(oqparam):
+    """
+    Read the first lines of the exposure file and infers the cost calculator
+    """
+    return _get_exposure(oqparam.inputs['exposure'],
+                         set(oqparam.all_cost_types),
+                         stop='assets')[-1]
 
 
 def get_exposure(oqparam):
@@ -704,7 +707,7 @@ def get_exposure(oqparam):
         region = None
     all_cost_types = set(oqparam.all_cost_types)
     fname = oqparam.inputs['exposure']
-    exposure, assets_node, cc = get_exposure_lazy(fname, all_cost_types)
+    exposure, assets_node, cc = _get_exposure(fname, all_cost_types)
     relevant_cost_types = all_cost_types - set(['occupants'])
     asset_refs = set()
     ignore_missing_costs = set(oqparam.ignore_missing_costs)
@@ -743,11 +746,11 @@ def get_exposure(oqparam):
         try:
             costs = asset.costs
         except NameError:
-            costs = LiteralNode('costs', [])
+            costs = Node('costs', [])
         try:
             occupancies = asset.occupancies
         except NameError:
-            occupancies = LiteralNode('occupancies', [])
+            occupancies = Node('occupancies', [])
         for cost in costs:
             with context(fname, cost):
                 cost_type = cost['type']
@@ -1070,10 +1073,10 @@ def get_scenario_from_nrml(oqparam, fname):
 
     for etag, count in counts.items():
         if count < num_imts:
-            raise InvalidFile('Found a missing etag %r in %s' %
+            raise InvalidFile("Found a missing etag '%s' in %s" %
                               (etag, fname))
         elif count > num_imts:
-            raise InvalidFile('Found a duplicated etag %r in %s' %
+            raise InvalidFile("Found a duplicated etag '%s' in %s" %
                               (etag, fname))
     expected_gmvs_per_site = num_imts * len(etags)
     for lonlat, counts in sitecounts.items():
