@@ -241,3 +241,17 @@ class File(h5py.File):
             return obj
         else:
             return h5obj
+
+
+def array_of_bytes(lst):
+    """
+    :param lst: a list of unicode strings or bytes
+    :returns: an array of byte strings encode in UTF8
+    """
+    ls = []
+    for el in lst:
+        try:
+            ls.append(el.encode('utf-8'))
+        except AttributeError:
+            ls.append(el)
+    return numpy.array(ls, bytes)
