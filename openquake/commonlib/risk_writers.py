@@ -26,7 +26,7 @@ import numpy
 
 from xml.etree import ElementTree as et
 
-from openquake.commonlib.nrml import NRMLFile, SERIALIZE_NS_MAP
+from openquake.commonlib.nrml import SERIALIZE_NS_MAP
 from openquake.baselib.general import groupby, writetmp
 from openquake.commonlib.node import Node
 from openquake.commonlib import nrml
@@ -161,7 +161,7 @@ class LossCurveXMLWriter(object):
 
         _assert_valid_input(data)
 
-        with NRMLFile(self._dest, 'w') as output:
+        with open(self._dest, 'wb') as output:
             root = et.Element("nrml")
 
             for curve in data:
@@ -309,7 +309,7 @@ class AggregateLossCurveXMLWriter(object):
         if data is None:
             raise ValueError("You can not serialize an empty document")
 
-        with NRMLFile(self._dest, 'wb') as output:
+        with open(self._dest, 'wb') as output:
             root = et.Element("nrml")
 
             aggregate_loss_curve = et.SubElement(root, "aggregateLossCurve")
@@ -456,7 +456,7 @@ class LossMapXMLWriter(LossMapWriter):
         """
         _assert_valid_input(data)
 
-        with NRMLFile(self._dest, 'w') as output:
+        with open(self._dest, 'wb') as output:
             root = et.Element("nrml")
 
             loss_map_el = self._create_loss_map_elem(root)
@@ -559,7 +559,7 @@ class LossMapGeoJSONWriter(LossMapWriter):
             if loss.std_dev is not None:
                 loss_node['properties']['std_dev'] = float(loss.std_dev)
 
-        with NRMLFile(self._dest, 'w') as fh:
+        with open(self._dest, 'w') as fh:
             json.dump(feature_coll, fh, sort_keys=True, indent=4,
                       separators=(',', ': '))
 
@@ -658,7 +658,7 @@ class LossFractionsWriter(object):
                 bin_element.set("absoluteLoss", FIVEDIGITS % absolute_loss)
                 bin_element.set("fraction", FIVEDIGITS % fraction)
 
-        with NRMLFile(self.dest, 'w') as output:
+        with open(self.dest, 'wb') as output:
             root = et.Element("nrml")
 
             # container element
@@ -1072,6 +1072,6 @@ class DamageWriter(object):
         """
         fname = fname or writetmp()
         node = getattr(self, key + '_node')(data)
-        with open(fname, 'w') as out:
+        with open(fname, 'wb') as out:
             nrml.write([node], out, fmt)
         return fname

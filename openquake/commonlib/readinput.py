@@ -941,19 +941,14 @@ def get_hcurves_from_nrml(oqparam, fname):
         sitecol, curve array
     """
     hcurves_by_imt = {}
-    oqparam.hazard_imtls = imtls = {}
+    oqparam.hazard_imtls = imtls = collections.OrderedDict()
     for hcurves in nrml.read(fname):
         imt = hcurves['IMT']
         oqparam.investigation_time = hcurves['investigationTime']
         if imt == 'SA':
             imt += '(%s)' % hcurves['saPeriod']
         imtls[imt] = ~hcurves.IMLs
-        data = []
-        for node in hcurves[1:]:
-            xy = ~node.Point.pos
-            poes = ~node.poEs
-            data.append((xy, poes))
-        data.sort()
+        data = sorted((~node.Point.pos, ~node.poEs) for node in hcurves[1:])
         hcurves_by_imt[imt] = numpy.array([d[1] for d in data])
     n = len(hcurves_by_imt[imt])
     curves = zero_curves(n, imtls)
@@ -990,7 +985,7 @@ def get_gmfs_from_txt(oqparam, fname):
         if not oqparam.imtls:
             oqparam.set_risk_imtls(get_risk_models(oqparam))
         imts = list(oqparam.imtls)
-        imt_dt = numpy.dtype([(bytes(imt), F32) for imt in imts])
+        imt_dt = numpy.dtype([(imt, F32) for imt in imts])
         num_gmfs = oqparam.number_of_ground_motion_fields
         gmf_by_imt = numpy.zeros((num_gmfs, len(sitecol)), imt_dt)
         etags = []
@@ -1047,9 +1042,9 @@ def get_scenario_from_nrml(oqparam, fname):
     """
     if not oqparam.imtls:
         oqparam.set_risk_imtls(get_risk_models(oqparam))
-    imts = list(oqparam.imtls)
+    imts = sorted(oqparam.imtls)
     num_imts = len(imts)
-    imt_dt = numpy.dtype([(bytes(imt), F32) for imt in imts])
+    imt_dt = numpy.dtype([(imt, F32) for imt in imts])
     gmfset = nrml.read(fname).gmfCollection.gmfSet
     etags, sitecounts = _extract_etags_sitecounts(gmfset)
     oqparam.sites = sorted(sitecounts)
@@ -1071,7 +1066,7 @@ def get_scenario_from_nrml(oqparam, fname):
             sid = site_idx[node['lon'], node['lat']]
             gmf_by_imt[imt][i % num_events, sid] = node['gmv']
 
-    for etag, count in counts.items():
+    for etag, count in sorted(counts.items()):
         if count < num_imts:
             raise InvalidFile("Found a missing etag '%s' in %s" %
                               (etag, fname))
