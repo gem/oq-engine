@@ -398,10 +398,10 @@ def convert_fragility_model_04(node, fname, fmcounter=itertools.count(1)):
     """
     convert_type = {"lognormal": "logncdf"}
     new = Node('fragilityModel',
-                      dict(assetCategory='building',
-                           lossCategory='structural',
-                           id='fm_%d_converted_from_NRML_04' %
-                           next(fmcounter)))
+               dict(assetCategory='building',
+                    lossCategory='structural',
+                    id='fm_%d_converted_from_NRML_04' %
+                    next(fmcounter)))
     with context(fname, node):
         fmt = node['format']
         descr = ~node.description
@@ -499,6 +499,7 @@ validators = {
     'occurRates': valid.positivefloats,
     'probs_occur': valid.pmf,
     'weight': valid.probability,
+    'uncertaintyWeight': valid.probability,
     'alongStrike': valid.probability,
     'downDip': valid.probability,
     'totalMomentRate': valid.positivefloat,
