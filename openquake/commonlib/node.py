@@ -590,30 +590,28 @@ class ValidatingXmlParser(object):
     :param stop: the tag where to stop the parsing (if any)
     """
     class Exit(Exception):
-        pass
+        """Raised when the parsing is stopped before the end on purpose"""
 
     def __init__(self, validators, stop=None):
         self.validators = validators
         self.stop = stop
 
-    def init(self):
+    @contextmanager
+    def _context(self):
         self.p = ParserCreate(namespace_separator='}')
         self.p.StartElementHandler = self._start_element
         self.p.EndElementHandler = self._end_element
         self.p.CharacterDataHandler = self._char_data
-        self.ancestors = []
-        self.root = None
-
-    @contextmanager
-    def managing_errors(self):
-        self.init()
+        self._ancestors = []
+        self._root = None
         try:
             yield
         except self.Exit:
             pass
         except ExpatError as err:
             e = ExpatError(ErrorString(err.code))
-            e.lineno = self.p.CurrentLineNumber
+            e.lineno = err.lineno
+            e.offset = err.offset
             raise e
 
     def parse_bytes(self, bytestr, isfinal=True):
@@ -622,40 +620,39 @@ class ValidatingXmlParser(object):
         and parse each chunk with isfinal=False, then parse an empty chunk
         with isfinal=True.
         """
-        self.init()
-        with self.managing_errors():
+        with self._context():
             self.p.Parse(bytestr, isfinal)
-        return self.root
+        return self._root
 
     def parse_file(self, file_or_fname):
         """
         Parse a file or a filename
         """
-        with self.managing_errors():
+        with self._context():
             if hasattr(file_or_fname, 'read'):
                 self.p.ParseFile(file_or_fname)
             else:
                 with open(file_or_fname, 'rb') as f:
                     self.p.ParseFile(f)
-        return self.root
+        return self._root
 
     def _start_element(self, name, attrs):
-        self.ancestors.append(
+        self._ancestors.append(
             Node('{' + name, attrs, lineno=self.p.CurrentLineNumber))
         if self.stop and name.split('}')[1] == self.stop:
-            for anc in reversed(self.ancestors):
+            for anc in reversed(self._ancestors):
                 self._end_element(anc.tag)
             raise self.Exit
 
     def _end_element(self, name):
-        self.root = self._literalnode(self.ancestors[-1])
-        del self.ancestors[-1]
-        if self.ancestors:
-            self.ancestors[-1].append(self.root)
+        self._root = self._literalnode(self._ancestors[-1])
+        del self._ancestors[-1]
+        if self._ancestors:
+            self._ancestors[-1].append(self._root)
 
     def _char_data(self, data):
         if data.strip():
-            parent = self.ancestors[-1]
+            parent = self._ancestors[-1]
             if parent.text is None:
                 parent.text = data
             else:
