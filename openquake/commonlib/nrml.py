@@ -374,7 +374,7 @@ def get_consequence_model(node, fname):
             for ls, param in zip(limitStates, cf):
                 with context(fname, param):
                     if param['ls'] != ls:
-                        raise ValueError('Expected %r, got %r' %
+                        raise ValueError("Expected '%s', got '%s'" %
                                          (ls, param['ls']))
                     params.append((param['mean'], param['stddev']))
             functions[cf['id']] = scientific.ConsequenceFunction(
@@ -599,7 +599,9 @@ validators = {
     'damageStates': valid.namelist,
     'gmv': valid.positivefloat,
     'lon': valid.longitude,
-    'lat': valid.latitude}
+    'lat': valid.latitude,
+    'spacing': valid.positivefloat,
+}
 
 
 def read(source, chatty=True, stop=None):
