@@ -507,6 +507,7 @@ validators = {
     'magnitudes': valid.positivefloats,
     'fragilityFunction.id': valid.utf8,  # taxonomy
     'id': valid.simple_id,
+    'rupture.id': valid.utf8,  # event tag
     'discretization': valid.compose(valid.positivefloat, valid.nonzero),
     'asset.id': valid.asset_id,
     'costType.name': valid.cost_type,
