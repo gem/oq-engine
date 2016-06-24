@@ -34,7 +34,6 @@ import collections
 import operator
 from collections import namedtuple
 from decimal import Decimal
-from xml.etree import ElementTree as etree
 
 from openquake.baselib.general import groupby
 from openquake.baselib.python3compat import raise_
@@ -44,13 +43,12 @@ from openquake.hazardlib.gsim.gsim_table import GMPETable
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo
 from openquake.risklib import valid
-from openquake.commonlib import writers
+from openquake.commonlib import nrml, writers
 from openquake.commonlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 
 from openquake.commonlib.node import (
-    node_from_xml, parse, iterparse,
-    node_from_elem, Node as N, context)
+    node_from_xml, striptag, node_from_elem, Node as N, context)
 from openquake.baselib.python3compat import with_metaclass
 
 #: Minimum value for a seed number
@@ -99,7 +97,7 @@ class LogicTreeError(Exception):
         self.message = message
 
     def __str__(self):
-        return 'filename %r: %s' % (self.filename, self.message)
+        return "filename '%s': %s" % (self.filename, self.message)
 
 
 class ParsingError(LogicTreeError):
@@ -124,7 +122,7 @@ class ValidationError(LogicTreeError):
         self.lineno = getattr(node, 'lineno', '?')
 
     def __str__(self):
-        return 'filename %r, line %s: %s' % (
+        return "filename '%s', line %s: %s" % (
             self.filename, self.lineno, self.message)
 
 
@@ -307,7 +305,7 @@ class BranchSet(object):
         for branch in self.branches:
             if branch.branch_id == branch_id:
                 return branch
-        raise AssertionError("couldn't find branch %r" % branch_id)
+        raise AssertionError("couldn't find branch '%s'" % branch_id)
 
     def filter_source(self, source):
         # pylint: disable=R0911,R0912
@@ -339,12 +337,12 @@ class BranchSet(object):
                     if not isinstance(source, ohs.CharacteristicFaultSource):
                         return False
                 else:
-                    raise AssertionError('unknown source type %r' % value)
+                    raise AssertionError("unknown source type '%s'" % value)
             elif key == 'applyToSources':
                 if source.source_id not in value:
                     return False
             else:
-                raise AssertionError('unknown filter %r' % key)
+                raise AssertionError("unknown filter '%s'" % key)
         # All filters pass, return True.
         return True
 
@@ -374,7 +372,7 @@ class BranchSet(object):
         elif self.uncertainty_type in GEOMETRY_UNCERTAINTY_TYPES:
             self._apply_uncertainty_to_geometry(source, value)
         else:
-            raise AssertionError('unknown uncertainty type %r'
+            raise AssertionError("unknown uncertainty type '%s'"
                                  % self.uncertainty_type)
 
     def _apply_uncertainty_to_geometry(self, source, value):
@@ -453,15 +451,8 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
         self.num_samples = num_samples
         self.branches = {}
         self.open_ends = set()
-        try:
-            tree = parse(filename)
-        except etree.ParseError as exc:
-            # Wrap etree parsing exception to :exc:`ParsingError`.
-            raise ParsingError(self.filename, str(exc))
-        # {http://openquake.org/xmlns/nrml/VERSION}
-        self.NRML = tree.getroot().tag[:-4]
-        [tree] = tree.findall('%slogicTree' % self.NRML)
         self.root_branchset = None
+        tree = nrml.read(filename).logicTree
         self.parse_tree(tree, validate)
 
     def parse_tree(self, tree_node, validate):
@@ -471,8 +462,7 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
         :meth:`validate_tree` when done. Also passes that value
         to :meth:`parse_branchinglevel`.
         """
-        levels = tree_node.findall('%slogicTreeBranchingLevel' % self.NRML)
-        for depth, branchinglevel_node in enumerate(levels):
+        for depth, branchinglevel_node in enumerate(tree_node.nodes):
             self.parse_branchinglevel(branchinglevel_node, depth, validate)
         if validate:
             self.validate_tree(tree_node, self.root_branchset)
@@ -499,8 +489,7 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
         can have child branchsets (if there is one on the next level).
         """
         new_open_ends = set()
-        branchsets = branchinglevel_node.findall('%slogicTreeBranchSet' %
-                                                 self.NRML)
+        branchsets = branchinglevel_node.nodes
         for number, branchset_node in enumerate(branchsets):
             branchset = self.parse_branchset(branchset_node, depth, number,
                                              validate)
@@ -531,8 +520,8 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
             An instance of :class:`BranchSet` with filters applied but with
             no branches (they're attached in :meth:`parse_branches`).
         """
-        uncertainty_type = branchset_node.get('uncertaintyType')
-        filters = dict((filtername, branchset_node.get(filtername))
+        uncertainty_type = branchset_node.attrib.get('uncertaintyType')
+        filters = dict((filtername, branchset_node.attrib.get(filtername))
                        for filtername in self.FILTERS
                        if filtername in branchset_node.attrib)
         if validate:
@@ -561,23 +550,20 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
             ``None``, all branches are attached to provided branchset.
         """
         weight_sum = 0
-        branches = branchset_node.findall('%slogicTreeBranch' % self.NRML)
+        branches = branchset_node.nodes
         for branchnode in branches:
-            weight = branchnode.find('%suncertaintyWeight' % self.NRML).text
-            weight = Decimal(weight.strip())
+            weight = ~branchnode.uncertaintyWeight
             weight_sum += weight
-            value_node = node_from_elem(
-                branchnode.find('%suncertaintyModel' % self.NRML),
-                nodefactory=N)
+            value_node = node_from_elem(branchnode.uncertaintyModel)
             if validate:
                 self.validate_uncertainty_value(value_node, branchset)
             value = self.parse_uncertainty_value(value_node, branchset)
-            branch_id = branchnode.get('branchID')
+            branch_id = branchnode.attrib.get('branchID')
             branch = Branch(branch_id, weight, value)
             if branch_id in self.branches:
                 raise ValidationError(
                     branchnode, self.filename,
-                    "branchID %r is not unique" % branch_id
+                    "branchID '%s' is not unique" % branch_id
                 )
             self.branches[branch_id] = branch
             branchset.branches.append(branch)
@@ -677,7 +663,7 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
         Abstract method, must be overridden by subclasses.
 
         :param node:
-            ``etree.Element`` object with tag "uncertaintyModel" (the one
+            `Node` object with tag "uncertaintyModel" (the one
             that contains the subject value).
         :param branchset:
             An instance of :class:`BranchSet` which will have the branch
@@ -708,7 +694,7 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
         Abstract method, must be overriden by subclasses.
 
         :param node:
-            ``etree.Element`` object with tag "logicTreeBranchSet".
+            `Node` object with tag "logicTreeBranchSet".
         :param uncertainty_type:
             String specifying the uncertainty type.
             See the list in :class:`BranchSet`.
@@ -724,7 +710,7 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
         Abstract method, must be overriden by subclasses.
 
         :param branchset_node:
-            ``etree.Element`` object with tag "logicTreeBranchSet".
+            `Node` object with tag "logicTreeBranchSet".
         :param depth:
             The number of branching level that contains the branchset,
             based on 0.
@@ -1035,24 +1021,8 @@ class SourceModelLogicTree(BaseLogicTree):
                 raise ValidationError(
                     branchset_node, self.filename,
                     "source models don't define sources of tectonic region "
-                    "type %r" % filters['applyToTectonicRegionType']
+                    "type '%s'" % filters['applyToTectonicRegionType']
                 )
-        if 'applyToSourceType' in filters:
-            if not filters['applyToSourceType'] in self.source_types:
-                raise ValidationError(
-                    branchset_node, self.filename,
-                    "source models don't define sources of type %r" %
-                    filters['applyToSourceType']
-                )
-
-        if 'applyToSources' in filters:
-            for source_id in filters['applyToSources'].split():
-                if source_id not in self.source_ids:
-                    raise ValidationError(
-                        branchset_node, self.filename,
-                        "source with id %r is not defined in source models"
-                        % source_id
-                    )
 
         if uncertainty_type in ('abGRAbsolute', 'maxMagGRAbsolute',
                                 'simpleFaultGeometryAbsolute',
@@ -1061,7 +1031,7 @@ class SourceModelLogicTree(BaseLogicTree):
                     or not len(filters['applyToSources'].split()) == 1:
                 raise ValidationError(
                     branchset_node, self.filename,
-                    "uncertainty of type %r must define 'applyToSources' "
+                    "uncertainty of type '%s' must define 'applyToSources' "
                     "with only one source id" % uncertainty_type
                 )
         if uncertainty_type in ('simpleFaultDipRelative',
@@ -1070,10 +1040,27 @@ class SourceModelLogicTree(BaseLogicTree):
                                ('applyToSourceType' in filters.keys())):
                 raise ValidationError(
                     branchset_node, self.filename,
-                    "uncertainty of type %r must define either"
+                    "uncertainty of type '%s' must define either"
                     "'applyToSources' or 'applyToSourceType'"
                     % uncertainty_type
                 )
+
+        if 'applyToSourceType' in filters:
+            if not filters['applyToSourceType'] in self.source_types:
+                raise ValidationError(
+                    branchset_node, self.filename,
+                    "source models don't define sources of type '%s'" %
+                    filters['applyToSourceType']
+                )
+
+        if 'applyToSources' in filters:
+            for source_id in filters['applyToSources'].split():
+                if source_id not in self.source_ids:
+                    raise ValidationError(
+                        branchset_node, self.filename,
+                        "source with id '%s' is not defined in source models"
+                        % source_id
+                    )
 
     def validate_branchset(self, branchset_node, depth, number, branchset):
         """
@@ -1125,20 +1112,20 @@ class SourceModelLogicTree(BaseLogicTree):
         Checks that branchset tries to be applied only to branches on previous
         branching level which do not have a child branchset yet.
         """
-        apply_to_branches = branchset_node.get('applyToBranches')
+        apply_to_branches = branchset_node.attrib.get('applyToBranches')
         if apply_to_branches:
             apply_to_branches = apply_to_branches.split()
             for branch_id in apply_to_branches:
                 if branch_id not in self.branches:
                     raise ValidationError(
                         branchset_node, self.filename,
-                        'branch %r is not yet defined' % branch_id
+                        "branch '%s' is not yet defined" % branch_id
                     )
                 branch = self.branches[branch_id]
                 if branch.child_branchset is not None:
                     raise ValidationError(
                         branchset_node, self.filename,
-                        'branch %r already has child branchset' % branch_id
+                        "branch '%s' already has child branchset" % branch_id
                     )
                 if branch not in self.open_ends:
                     raise ValidationError(
@@ -1161,27 +1148,14 @@ class SourceModelLogicTree(BaseLogicTree):
         information is used then for :meth:`validate_filters` and
         :meth:`validate_uncertainty_value`.
         """
-        all_source_types = set('%s%sSource' % (self.NRML, tagname)
-                               for tagname in self.SOURCE_TYPES)
-        sourcetype_slice = slice(len('%s' % self.NRML), - len('Source'))
-
-        fh = self._get_source_model(source_model)
-        eventstream = iterparse(fh)
-        while True:
-            try:
-                _, node = next(eventstream)
-            except StopIteration:
-                break
-            except etree.ParseError as exc:
-                raise ParsingError(source_model, str(exc))
-            if node.tag not in all_source_types:
-                continue
-            self.tectonic_region_types.add(node.attrib['tectonicRegion'])
-            source_id = node.attrib['id']
-            source_type = node.tag[sourcetype_slice]
+        smodel = nrml.read(self._get_source_model(source_model)).sourceModel
+        n = len('Source')
+        for node in smodel:
+            self.tectonic_region_types.add(node['tectonicRegion'])
+            source_id = node['id']
+            source_type = striptag(node.tag)[n:]
             self.source_ids.add(source_id)
             self.source_types.add(source_type)
-            node.clear()
 
     def make_apply_uncertainties(self, branch_ids):
         """
@@ -1379,7 +1353,7 @@ class GsimLogicTree(object):
                         gsim = valid.gsim(gsim_name, **uncertainty.attrib)
                     except:
                         etype, exc, tb = sys.exc_info()
-                        raise_(etype, '%s in file %r' % (exc, self.fname), tb)
+                        raise_(etype, "%s in file %s" % (exc, self.fname), tb)
                     self.values[trt].append(gsim)
                     bt = BranchTuple(
                         branchset, branch_id, gsim, weight, effective)
