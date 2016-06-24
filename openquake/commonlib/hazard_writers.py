@@ -190,7 +190,7 @@ class HazardCurveXMLWriter(BaseCurveWriter):
             * location: An object representing the location of the curve; must
               have `x` and `y` to represent lon and lat, respectively.
         """
-        with nrml.NRMLFile(self.dest, 'w') as fh:
+        with open(self.dest, 'wb') as fh:
             root = et.Element('nrml')
             self.add_hazard_curves(root, self.metadata, data)
             nrml.write(list(root), fh)
@@ -265,7 +265,7 @@ class HazardCurveGeoJSONWriter(BaseCurveWriter):
             }
             features.append(feature)
 
-        with nrml.NRMLFile(self.dest, 'w') as fh:
+        with open(self.dest, 'w') as fh:
             json.dump(feature_coll, fh, sort_keys=True, indent=4,
                       separators=(',', ': '))
 
@@ -299,7 +299,7 @@ class MultiHazardCurveXMLWriter(object):
            :meth:`serialize` of the class
            :class:`openquake.commonlib.hazard_writers.HazardCurveXMLWriter`
         """
-        with nrml.NRMLFile(self.dest, 'w') as fh:
+        with open(self.dest, 'wb') as fh:
             root = et.Element('nrml')
             for metadata, curve_data in zip(self.metadata_set, curve_set):
                 writer = HazardCurveXMLWriter(self.dest, **metadata)
@@ -394,7 +394,7 @@ class EventBasedGMFXMLWriter(object):
         gmf_container[GSIM_TREE_PATH] = self.gsim_lt_path
         gmf_container.nodes = gmf_set_nodes
 
-        with open(self.dest, 'w') as dest:
+        with open(self.dest, 'wb') as dest:
             nrml.write([gmf_container], dest, fmt)
 
 
@@ -576,7 +576,7 @@ class SESXMLWriter(object):
 
             Each of these should be a triple of `lon`, `lat`, `depth`.
         """
-        with nrml.NRMLFile(self.dest, 'w') as fh:
+        with open(self.dest, 'wb') as fh:
             root = et.Element('nrml')
             ses_container = et.SubElement(
                 root, 'stochasticEventSetCollection')
@@ -650,7 +650,7 @@ class HazardMapXMLWriter(HazardMapWriter):
         See :meth:`HazardMapWriter.serialize` for details about the expected
         input.
         """
-        with nrml.NRMLFile(self.dest, 'w') as fh:
+        with open(self.dest, 'wb') as fh:
             root = et.Element('nrml')
             hazard_map = et.SubElement(root, 'hazardMap')
             _set_metadata(hazard_map, self.metadata, _ATTR_MAP)
@@ -704,7 +704,7 @@ class HazardMapGeoJSONWriter(HazardMapWriter):
             }
             features.append(feature)
 
-        with nrml.NRMLFile(self.dest, 'w') as fh:
+        with open(self.dest, 'w') as fh:
             json.dump(feature_coll, fh, sort_keys=True, indent=4,
                       separators=(',', ': '))
 
@@ -787,7 +787,7 @@ class DisaggXMLWriter(object):
               curve at the given ``poe``.
         """
 
-        with nrml.NRMLFile(self.dest, 'w') as fh, floatformat('%.6E'):
+        with open(self.dest, 'wb') as fh, floatformat('%.6E'):
             root = et.Element('nrml')
 
             diss_matrices = et.SubElement(root, 'disaggMatrices')
@@ -872,7 +872,7 @@ class UHSXMLWriter(BaseCurveWriter):
         """
         gml_ns = nrml.SERIALIZE_NS_MAP['gml']
 
-        with nrml.NRMLFile(self.dest, 'w') as fh:
+        with open(self.dest, 'wb') as fh:
             root = et.Element('nrml')
 
             uh_spectra = et.SubElement(root, 'uniformHazardSpectra')
