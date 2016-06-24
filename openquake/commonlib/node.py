@@ -147,7 +147,7 @@ import sys
 import copy
 import pprint as pp
 from contextlib import contextmanager
-from openquake.baselib.python3compat import raise_, exec_
+from openquake.baselib.python3compat import raise_, exec_, decode
 from openquake.commonlib.writers import StreamingXMLWriter
 if sys.version < '3':
     from xml.etree import ElementTree
@@ -199,12 +199,6 @@ def _displayattrs(attrib, expandattrs):
     else:
         alist = list(attrib)
     return '{%s}' % ', '.join(alist)
-
-
-def decode(text):
-    if hasattr(text, 'decode'):
-        return text.decode('utf-8')
-    return text
 
 
 def _display(node, indent, expandattrs, expandvals, output):
