@@ -34,9 +34,8 @@ from openquake.baselib.general import (
 from openquake.hazardlib.site import Tile
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import valid
-from openquake.commonlib.node import read_nodes
 from openquake.commonlib import logictree, sourceconverter, parallel
-from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
+from openquake.commonlib import nrml
 
 MAX_INT = 2 ** 31 - 1
 U16 = numpy.uint16
@@ -275,8 +274,7 @@ class SourceModelParser(object):
         sources = []
         source_ids = set()
         self.converter.fname = fname
-        src_nodes = read_nodes(fname, lambda elem: 'Source' in elem.tag,
-                               nodefactory['sourceModel'])
+        src_nodes = nrml.parse(fname).nodes
         for no, src_node in enumerate(src_nodes, 1):
             src = self.converter.convert_node(src_node)
             if src.source_id in source_ids:
@@ -789,12 +787,12 @@ def collect_source_model_paths(smlt):
     try:
         tree = etree.parse(smlt)
         for branch_set in tree.findall('.//nrml:logicTreeBranchSet',
-                                       namespaces=PARSE_NS_MAP):
+                                       namespaces=nrml.PARSE_NS_MAP):
 
             if branch_set.get('uncertaintyType') == 'sourceModel':
                 for branch in branch_set.findall(
                         './nrml:logicTreeBranch/nrml:uncertaintyModel',
-                        namespaces=PARSE_NS_MAP):
+                        namespaces=nrml.PARSE_NS_MAP):
                     src_paths.append(branch.text)
     except Exception as exc:
         raise Exception('%s: %s in %s' % (exc.__class__.__name__, exc, smlt))

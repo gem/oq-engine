@@ -59,7 +59,7 @@ class NrmlTestCase(unittest.TestCase):
 
         outfile = io.BytesIO()
         node_to_xml(root, outfile, {})
-        self.assertEqual(outfile.getvalue(), """\
+        expected = """\
 <?xml version="1.0" encoding="utf-8"?>
 <nrml
 xmlns="http://openquake.org/xmlns/nrml/0.4"
@@ -91,7 +91,8 @@ xmlns:gml="http://www.opengis.net/gml"
         </assets>
     </exposureModel>
 </nrml>
-""")
+"""
+        self.assertEqual(outfile.getvalue(), expected)
 
     def test_invalid(self):
         fname = writetmp('''\
@@ -113,4 +114,4 @@ xmlns:gml="http://www.opengis.net/gml"
         with self.assertRaises(ValueError) as ctx:
             read(fname)
         self.assertIn('Could not convert imt->intensity_measure_type: '
-                      "Invalid IMT: 'SA', line 8 of", str(ctx.exception))
+                      "Invalid IMT: u'SA', line 8", str(ctx.exception))
