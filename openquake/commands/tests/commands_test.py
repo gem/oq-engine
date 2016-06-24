@@ -160,7 +160,7 @@ xmlns:gml="http://www.opengis.net/gml"
         with Print.patch() as p:
             tidy([fname])
         self.assertIn('Could not convert gmv->positivefloat: '
-                      'float -0.012492 < 0, line 8 of', str(p))
+                      'float -0.012492 < 0, line 8', str(p))
 
 
 class RunShowExportTestCase(unittest.TestCase):

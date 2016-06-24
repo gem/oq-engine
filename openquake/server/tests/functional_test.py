@@ -228,7 +228,7 @@ class EngineServerTestCase(unittest.TestCase):
         resp_text_dict = json.loads(resp.text)
         self.assertFalse(resp_text_dict['valid'])
         expected_error_line = 9
-        expected_error_msg = u'mismatched tag: line 9, column 10'
+        expected_error_msg = u'mismatched tag'
         self.assertEqual(resp_text_dict['error_msg'], expected_error_msg)
         self.assertEqual(resp_text_dict['error_line'], expected_error_line)
 
