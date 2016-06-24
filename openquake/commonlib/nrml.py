@@ -138,19 +138,19 @@ def get_tag_version(nrml_node):
 def parse(fname, *args):
     """
     Parse a NRML file and return an associated Python object. It works by
-    calling nrml.read() and build() in sequence.
+    calling nrml.read() and node_to_obj() in sequence.
     """
     [node] = read(fname)
-    return build(node, fname, *args)
+    return node_to_obj(node, fname, *args)
 
 
-# ######################### build definitions ############################ #
+# ######################### node_to_obj definitions ############################ #
 
-build = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
+node_to_obj = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
 # dictionary of functions with at least two arguments, node and fname
 
 
-@build.add(('vulnerabilityModel', 'nrml/0.4'))
+@node_to_obj.add(('vulnerabilityModel', 'nrml/0.4'))
 def get_vulnerability_functions_04(node, fname):
     """
     :param node:
@@ -198,7 +198,7 @@ def get_vulnerability_functions_04(node, fname):
     return vmodel
 
 
-@build.add(('vulnerabilityModel', 'nrml/0.5'))
+@node_to_obj.add(('vulnerabilityModel', 'nrml/0.5'))
 def get_vulnerability_functions_05(node, fname):
     """
     :param node:
@@ -324,7 +324,7 @@ def ffconvert(fname, limit_states, ff, min_iml=1E-10):
     return array, attrs
 
 
-@build.add(('fragilityModel', 'nrml/0.5'))
+@node_to_obj.add(('fragilityModel', 'nrml/0.5'))
 def get_fragility_model(node, fname):
     """
     :param node:
@@ -354,7 +354,7 @@ def get_fragility_model(node, fname):
 
 # ################################## consequences ########################## #
 
-@build.add(('consequenceModel', 'nrml/0.5'))
+@node_to_obj.add(('consequenceModel', 'nrml/0.5'))
 def get_consequence_model(node, fname):
     with context(fname, node):
         description = ~node.description  # make sure it is there
@@ -446,7 +446,7 @@ def convert_fragility_model_04(node, fname, fmcounter=itertools.count(1)):
     return new
 
 
-@build.add(('fragilityModel', 'nrml/0.4'))
+@node_to_obj.add(('fragilityModel', 'nrml/0.4'))
 def get_fragility_model_04(fmodel, fname):
     """
     :param fmodel:
