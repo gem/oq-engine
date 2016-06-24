@@ -313,7 +313,7 @@ class ExposureTestCase(unittest.TestCase):
         self.assertTrue(exp.insurance_limit_is_absolute)
         self.assertTrue(exp.deductible_is_absolute)
         self.assertEqual([tuple(ct) for ct in exp.cost_types],
-                         [('structural', 'per_asset', 'USD')])
+                         [(b'structural', b'per_asset', b'USD')])
 
     def test_exposure_missing_number(self):
         oqparam = mock.Mock()
@@ -650,12 +650,12 @@ class TestReadGmfXmlTestCase(unittest.TestCase):
         fname = os.path.join(DATADIR,  'gmfdata.xml')
         sitecol, etags, gmfa = readinput.get_scenario_from_nrml(
             self.oqparam, fname)
-        coords = zip(sitecol.mesh.lons, sitecol.mesh.lats)
+        coords = list(zip(sitecol.mesh.lons, sitecol.mesh.lats))
         self.assertEqual(writers.write_csv(StringIO(), coords), '''\
 0.000000E+00,0.000000E+00
 0.000000E+00,1.000000E-01
 0.000000E+00,2.000000E-01''')
-        self.assertEqual('\n'.join(etags), '''\
+        self.assertEqual(b'\n'.join(etags), b'''\
 scenario-0000000000
 scenario-0000000001
 scenario-0000000002
@@ -663,7 +663,7 @@ scenario-0000000003
 scenario-0000000004''')
         self.assertEqual(
             writers.write_csv(StringIO(), gmfa), '''\
-PGV,PGA
+PGA,PGV
 6.824957E-01 3.656627E-01 8.700833E-01 3.279292E-01 6.968687E-01,6.824957E-01 3.656627E-01 8.700833E-01 3.279292E-01 6.968687E-01
 1.270898E-01 2.561812E-01 2.106384E-01 2.357551E-01 2.581405E-01,1.270898E-01 2.561812E-01 2.106384E-01 2.357551E-01 2.581405E-01
 1.603097E-01 1.106853E-01 2.232175E-01 1.781143E-01 1.351649E-01,1.603097E-01 1.106853E-01 2.232175E-01 1.781143E-01 1.351649E-01''')
@@ -701,7 +701,7 @@ PGV,PGA
 </nrml>''')
         self.oqparam.imtls = {'PGA': None}
         sitecol, _, _ = readinput.get_scenario_from_nrml(self.oqparam, fname)
-        self.assertEqual(zip(sitecol.lons, sitecol.lats),
+        self.assertEqual(list(zip(sitecol.lons, sitecol.lats)),
                          [(12.12442, 43.58248),
                           (12.12478, 43.5812),
                           (12.12478, 43.58218)])
@@ -783,6 +783,7 @@ class TestLoadCurvesTestCase(unittest.TestCase):
         self.assertEqual(sorted(oqparam.hazard_imtls.items()),
                          [('PGA', [0.005, 0.007, 0.0137, 0.0337]),
                           ('SA(0.025)', [0.005, 0.007, 0.0137])])
+        print(sitecol.mesh.lons, sitecol.mesh.lats)
         self.assertEqual(str(hcurves), '''\
 [([0.098727, 0.098265, 0.094956], [0.098728, 0.098216, 0.094945, 0.092947])
  ([0.98728, 0.98266, 0.94957], [0.98728, 0.98226, 0.94947, 0.92947])]''')

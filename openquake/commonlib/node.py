@@ -109,7 +109,7 @@ Node objects can be easily converted into ElementTree objects:
 Then is trivial to generate the XML representation of a node:
 
 >>> from xml.etree import ElementTree
->>> print(ElementTree.tostring(node_to_elem(root)))
+>>> print(ElementTree.tostring(node_to_elem(root)).decode('utf-8'))
 <root><a>A1</a><b attrb="B">B1</b></root>
 
 Generating XML files larger than the available memory requires some
@@ -145,7 +145,7 @@ import sys
 import copy
 import pprint as pp
 from contextlib import contextmanager
-from openquake.baselib.python3compat import raise_, exec_, configparser
+from openquake.baselib.python3compat import raise_, exec_, configparser, decode
 from openquake.commonlib.writers import StreamingXMLWriter
 from xml.etree import ElementTree
 from xml.parsers.expat import ParserCreate, ExpatError, ErrorString
@@ -202,8 +202,7 @@ def _display(node, indent, expandattrs, expandvals, output):
     attrs = _displayattrs(node.attrib, expandattrs)
     val = ' %s' % repr(node.text) \
         if expandvals and node.text is not None else ''
-    output.write(
-        (indent + striptag(node.tag) + attrs + val + '\n').decode('utf8'))
+    output.write(decode((indent + striptag(node.tag) + attrs + val + '\n')))
     for sub_node in node:
         _display(sub_node, indent + '  ', expandattrs, expandvals, output)
 
