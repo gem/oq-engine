@@ -49,7 +49,6 @@ from openquake.commonlib.sourceconverter import (
 
 from openquake.commonlib.node import (
     node_from_xml, striptag, node_from_elem, Node as N, context)
-from openquake.baselib.python3compat import with_metaclass
 
 #: Minimum value for a seed number
 MIN_SINT_32 = -(2 ** 31)
@@ -98,12 +97,6 @@ class LogicTreeError(Exception):
 
     def __str__(self):
         return "filename '%s': %s" % (self.filename, self.message)
-
-
-class ParsingError(LogicTreeError):
-    """
-    XML file failed to load: it is not readable or contains invalid xml.
-    """
 
 
 class ValidationError(LogicTreeError):
@@ -418,10 +411,9 @@ class BranchSet(object):
                                        occurrence_rates=occur_rates))
 
 
-class BaseLogicTree(with_metaclass(abc.ABCMeta)):
+class SourceModelLogicTree(object):
     """
-    Common code for logic tree readers, parsers and verifiers --
-    :class:`GMPELogicTree` and :class:`SourceModelLogicTree`.
+    Source model logic tree parser.
 
     :param filename:
         Full pathname of logic tree file
@@ -430,42 +422,45 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
         while parsed. This should be set to ``True`` on initial load
         of the logic tree (before importing it to the database) and
         to ``False`` on workers side (when loaded from the database).
-    :raises ParsingError:
-        If logic tree file or any of the referenced files is unable to read
-        or parse.
     :raises ValidationError:
         If logic tree file has a logic error, which can not be prevented
         by xml schema rules (like referencing sources with missing id).
     """
+    _xmlschema = None
+
     FILTERS = ('applyToTectonicRegionType',
                'applyToSources',
                'applyToSourceType')
 
-    _xmlschema = None
+    SOURCE_TYPES = ('point', 'area', 'complexFault', 'simpleFault',
+                    'characteristicFault')
 
-    def __init__(self, filename, validate=True,
-                 seed=0, num_samples=0):
+    def __init__(self, filename, validate=True, seed=0, num_samples=0):
         self.filename = filename
         self.basepath = os.path.dirname(filename)
         self.seed = seed
         self.num_samples = num_samples
         self.branches = {}
         self.open_ends = set()
+        self.source_ids = set()
+        self.tectonic_region_types = set()
+        self.source_types = set()
         self.root_branchset = None
-        tree = nrml.read(filename).logicTree
+        root = nrml.read(filename)
+        try:
+            tree = root.logicTree
+        except NameError:
+            raise ValidationError(
+                root, self.filename, "missing logicTree node")
         self.parse_tree(tree, validate)
 
     def parse_tree(self, tree_node, validate):
         """
         Parse the whole tree and point ``root_branchset`` attribute
-        to the tree's root. If ``validate`` is set to ``True``, calls
-        :meth:`validate_tree` when done. Also passes that value
-        to :meth:`parse_branchinglevel`.
+        to the tree's root.
         """
         for depth, branchinglevel_node in enumerate(tree_node.nodes):
             self.parse_branchinglevel(branchinglevel_node, depth, validate)
-        if validate:
-            self.validate_tree(tree_node, self.root_branchset)
 
     def parse_branchinglevel(self, branchinglevel_node, depth, validate):
         """
@@ -573,37 +568,6 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
                 "branchset weights don't sum up to 1.0"
             )
 
-    def apply_branchset(self, branchset_node, branchset):
-        # pylint: disable=W0613
-        """
-        Apply ``branchset`` to all "open end" branches.
-        See :meth:`parse_branchinglevel`.
-
-        :param branchset_node:
-            Same as for :meth:`parse_branchset`.
-        :param branchset:
-            An instance of :class:`BranchSet` to make it child
-            for "open-end" branches.
-
-        Can be overridden by subclasses if they want to apply branchests
-        to branches selectively.
-        """
-        for branch in self.open_ends:
-            branch.child_branchset = branchset
-
-    def validate_tree(self, tree_node, root_branchset):
-        """
-        Check the whole parsed tree for consistency and sanity.
-
-        Can be overriden by subclasses. Base class implementation does nothing.
-
-        :param tree_node:
-            ``etree.Element`` object with etag "logicTree".
-        :param root_branchset:
-            An instance of :class:`BranchSet` which is about to become
-            the root branchset for this tree.
-        """
-
     def sample_path(self, rnd):
         """
         Return the model name and a list of branch ids.
@@ -640,100 +604,6 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
                 smlt_branch_ids = [branch.branch_id for branch in smlt_path]
                 yield Realization(name, weight, tuple(smlt_branch_ids), None,
                                   tuple(smlt_branch_ids))
-
-    @abc.abstractmethod
-    def parse_uncertainty_value(self, node, branchset):
-        """
-        Do any kind of type conversion or adaptation on the uncertainty value.
-
-        Abstract method, must be overridden by subclasses.
-
-        Parameters are the same as for :meth:`validate_uncertainty_value`.
-
-        :return:
-            Something to replace ``value`` as the uncertainty value.
-        """
-
-    @abc.abstractmethod
-    def validate_uncertainty_value(self, node, branchset):
-        """
-        Check the value ``value`` for correctness to be set for one
-        of branchset's branches.
-
-        Abstract method, must be overridden by subclasses.
-
-        :param node:
-            `Node` object with tag "uncertaintyModel" (the one
-            that contains the subject value).
-        :param branchset:
-            An instance of :class:`BranchSet` which will have the branch
-            with provided value attached once it's validated.
-        :param value:
-            The actual value to be checked. Type depends on branchset's
-            uncertainty type.
-        """
-
-    @abc.abstractmethod
-    def parse_filters(self, branchset_node, uncertainty_type, filters):
-        """
-        Do any kind of type conversion or adaptation on the filters.
-
-        Abstract method, must be overriden by subclasses.
-
-        Parameters are the same as for :meth:`validate_filters`.
-
-        :return:
-            The filters dictionary to replace the original.
-        """
-
-    @abc.abstractmethod
-    def validate_filters(self, node, uncertainty_type, filters):
-        """
-        Check that filters ``filters`` are valid for given uncertainty type.
-
-        Abstract method, must be overriden by subclasses.
-
-        :param node:
-            `Node` object with tag "logicTreeBranchSet".
-        :param uncertainty_type:
-            String specifying the uncertainty type.
-            See the list in :class:`BranchSet`.
-        :param filters:
-            Filters dictionary.
-        """
-
-    @abc.abstractmethod
-    def validate_branchset(self, branchset_node, depth, number, branchset):
-        """
-        Check that branchset is valid.
-
-        Abstract method, must be overriden by subclasses.
-
-        :param branchset_node:
-            `Node` object with tag "logicTreeBranchSet".
-        :param depth:
-            The number of branching level that contains the branchset,
-            based on 0.
-        :param number:
-            The number of branchset inside the branching level,
-            based on 0.
-        :param branchset:
-            An instance of :class:`BranchSet`.
-        """
-
-
-class SourceModelLogicTree(BaseLogicTree):
-    """
-    Source model logic tree parser.
-    """
-    SOURCE_TYPES = ('point', 'area', 'complexFault', 'simpleFault',
-                    'characteristicFault')
-
-    def __init__(self, *args, **kwargs):
-        self.source_ids = set()
-        self.tectonic_region_types = set()
-        self.source_types = set()
-        super(SourceModelLogicTree, self).__init__(*args, **kwargs)
 
     def parse_uncertainty_value(self, node, branchset):
         """
@@ -848,7 +718,11 @@ class SourceModelLogicTree(BaseLogicTree):
         _float_re = re.compile(r'^(\+|\-)?(\d+|\d*\.\d+)$')
 
         if branchset.uncertainty_type == 'sourceModel':
-            self.collect_source_model_data(node.text.strip())
+            smfname = node.text.strip()
+            try:
+                self.collect_source_model_data(smfname)
+            except Exception as exc:
+                raise ValidationError(node, self.filename, str(exc))
 
         elif branchset.uncertainty_type == 'abGRAbsolute':
             ab = (node.text.strip()).split()
@@ -1135,8 +1009,8 @@ class SourceModelLogicTree(BaseLogicTree):
                     )
                 branch.child_branchset = branchset
         else:
-            super(SourceModelLogicTree, self).apply_branchset(branchset_node,
-                                                              branchset)
+            for branch in self.open_ends:
+                branch.child_branchset = branchset
 
     def _get_source_model(self, source_model_file):
         return open(os.path.join(self.basepath, source_model_file))
@@ -1151,11 +1025,12 @@ class SourceModelLogicTree(BaseLogicTree):
         smodel = nrml.read(self._get_source_model(source_model)).sourceModel
         n = len('Source')
         for node in smodel:
-            self.tectonic_region_types.add(node['tectonicRegion'])
-            source_id = node['id']
-            source_type = striptag(node.tag)[n:]
-            self.source_ids.add(source_id)
-            self.source_types.add(source_type)
+            with context(source_model, node):
+                self.tectonic_region_types.add(node['tectonicRegion'])
+                source_id = node['id']
+                source_type = striptag(node.tag)[n:]
+                self.source_ids.add(source_id)
+                self.source_types.add(source_type)
 
     def make_apply_uncertainties(self, branch_ids):
         """

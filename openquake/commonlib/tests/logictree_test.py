@@ -182,10 +182,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             'broken_xml', {'broken_xml': "<?xml foo bar baz"}, 'basepath',
             ExpatError)
 
-    # FIXME: the logic tree validation must be rewritten
-    # see https://bugs.launchpad.net/oq-engine/+bug/1323916
     def test_logictree_schema_violation(self):
-        raise unittest.SkipTest
         source = _make_nrml("""\
             <logicTreeSet>
                 <logicTree logicTreeID="lt1"/>
@@ -193,12 +190,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         """)
         exc = self._assert_logic_tree_error(
             'screwed_schema', {'screwed_schema': source}, 'base',
-            logictree.ParsingError
-        )
-        error = "'{http://openquake.org/xmlns/nrml/0.5}logicTreeSet': " \
-                "This element is not expected."
-        self.assertTrue(error in str(exc),
-                        "wrong exception message: %s" % exc.message)
+            logictree.ValidationError)
+        self.assertIn('missing logicTree node', exc.message)
 
     def test_wrong_uncert_type_on_first_branching_level(self):
         source = _make_nrml("""\
@@ -801,12 +794,10 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         sm = """ololo"""
 
         self._assert_logic_tree_error(
-            'lt', {'lt': lt, 'sm': sm}, 'base', ExpatError, exc_filename='sm')
+            'sm', {'lt': lt, 'sm': sm}, 'base',
+            ExpatError, exc_filename='sm')
 
-    # FIXME: the logic tree validation must be rewritten
-    # see https://bugs.launchpad.net/oq-engine/+bug/1323916
     def test_source_model_schema_violation(self):
-        raise unittest.SkipTest
         lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
               <logicTreeBranchingLevel branchingLevelID="bl1">
@@ -847,9 +838,10 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             </simpleFaultSource>
         </sourceModel>
         """)
-        self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, '/x',
-                                      logictree.ParsingError,
-                                      exc_filename='sm')
+        error = self._assert_logic_tree_error(
+            'lt', {'lt': lt, 'sm': sm}, '/x',
+            logictree.ValidationError, exc_filename='lt')
+        self.assertIn("node config", str(error.message))
 
     def test_referencing_over_level_boundaries(self):
         lt = _make_nrml("""\
