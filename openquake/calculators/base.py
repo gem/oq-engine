@@ -142,7 +142,8 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             if pre_execute:
                 self.pre_execute()
             result = self.execute()
-            self.post_execute(result)
+            if result:
+                self.post_execute(result)
             exported = self.export(kw.get('exports', ''))
         except KeyboardInterrupt:
             pids = ' '.join(str(p.pid) for p in executor._processes)
