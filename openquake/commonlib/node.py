@@ -140,16 +140,15 @@ subnodes, since the generator will be exhausted. Notice that even
 accessing a subnode with the dot notation will avance the
 generator. Finally, nodes containing lazy nodes will not be pickleable.
 """
-from openquake.baselib.python3compat import configparser, with_metaclass
-
 import io
 import sys
 import copy
 import pprint as pp
 from contextlib import contextmanager
-from openquake.baselib.python3compat import raise_, exec_
+from openquake.baselib.python3compat import raise_, exec_, configparser
 from openquake.commonlib.writers import StreamingXMLWriter
 from xml.etree import ElementTree
+from xml.parsers.expat import ParserCreate, ExpatError, ErrorString
 
 
 class SourceLineParser(ElementTree.XMLParser):
@@ -378,57 +377,12 @@ class Node(object):
             setattr(self, slot, state[slot])
 
     def __eq__(self, other):
+        assert other is not None
         return all(getattr(self, slot) == getattr(other, slot)
                    for slot in self.__class__.__slots__)
 
     def __ne__(self, other):
         return not self.__eq__(other)
-
-
-class MetaLiteralNode(type):
-    """
-    Metaclass adding __slots__ and extending the docstring with a note
-    about the known validators. Moreover it checks for the attribute
-    `.validators`.
-    """
-    def __new__(meta, name, bases, dic):
-        doc = "Known validators:\n%s" % '\n'.join(
-            '    %s: `%s`' % (n, v.__name__)
-            for n, v in dic['validators'].items())
-        dic['__doc__'] = dic.get('__doc__', '') + doc
-        dic['__slots__'] = dic.get('__slots__', [])
-        return super(MetaLiteralNode, meta).__new__(meta, name, bases, dic)
-
-
-class LiteralNode(with_metaclass(MetaLiteralNode, Node)):
-    """
-    Subclasses should define a non-empty dictionary of validators.
-    """
-    validators = {}  # to be overridden in subclasses
-
-    def __init__(self, fulltag, attrib=None, text=None,
-                 nodes=None, lineno=None):
-        validators = self.__class__.validators
-        tag = striptag(fulltag)
-        if tag in validators and text is not None:
-            # try to cast the node, if the tag is known
-            assert not nodes, 'You cannot cast a composite node: %s' % nodes
-            try:
-                text = validators[tag](text)
-            except Exception as exc:
-                raise ValueError('Could not convert %s->%s: %s, line %s' %
-                                 (tag, validators[tag].__name__, exc, lineno))
-        elif attrib:
-            # cast the attributes
-            for n, v in attrib.items():
-                if n in validators:
-                    try:
-                        attrib[n] = validators[n](v)
-                    except Exception as exc:
-                        raise ValueError(
-                            'Could not convert %s->%s: %s, line %s' %
-                            (n, validators[n].__name__, exc, lineno))
-        super(LiteralNode, self).__init__(fulltag, attrib, text, nodes, lineno)
 
 
 def to_literal(self):
@@ -625,3 +579,118 @@ def context(fname, node):
         msg = 'node %s: %s, line %s of %s' % (
             striptag(node.tag), exc, node.lineno, fname)
         raise_(etype, msg, tb)
+
+
+class ValidatingXmlParser(object):
+    """
+    Validating XML Parser based on Expat. It has two methods `.parse_file`
+    and `.parse_bytes` returning a validated :class:`Node` object.
+
+    :param validators: a dictionary of validation functions
+    :param stop: the tag where to stop the parsing (if any)
+    """
+    class Exit(Exception):
+        """Raised when the parsing is stopped before the end on purpose"""
+
+    def __init__(self, validators, stop=None):
+        self.validators = validators
+        self.stop = stop
+
+    @contextmanager
+    def _context(self):
+        self.p = ParserCreate(namespace_separator='}')
+        self.p.StartElementHandler = self._start_element
+        self.p.EndElementHandler = self._end_element
+        self.p.CharacterDataHandler = self._char_data
+        self._ancestors = []
+        self._root = None
+        try:
+            yield
+        except self.Exit:
+            pass
+        except ExpatError as err:
+            e = ExpatError(ErrorString(err.code))
+            e.lineno = err.lineno
+            e.offset = err.offset
+            raise e
+
+    def parse_bytes(self, bytestr, isfinal=True):
+        """
+        Parse a byte string. If the string is very large, split it in chuncks
+        and parse each chunk with isfinal=False, then parse an empty chunk
+        with isfinal=True.
+        """
+        with self._context():
+            self.p.Parse(bytestr, isfinal)
+        return self._root
+
+    def parse_file(self, file_or_fname):
+        """
+        Parse a file or a filename
+        """
+        with self._context():
+            if hasattr(file_or_fname, 'read'):
+                self.p.ParseFile(file_or_fname)
+            else:
+                with open(file_or_fname, 'rb') as f:
+                    self.p.ParseFile(f)
+        return self._root
+
+    def _start_element(self, name, attrs):
+        self._ancestors.append(
+            Node('{' + name, attrs, lineno=self.p.CurrentLineNumber))
+        if self.stop and name.split('}')[1] == self.stop:
+            for anc in reversed(self._ancestors):
+                self._end_element(anc.tag)
+            raise self.Exit
+
+    def _end_element(self, name):
+        self._root = self._literalnode(self._ancestors[-1])
+        del self._ancestors[-1]
+        if self._ancestors:
+            self._ancestors[-1].append(self._root)
+
+    def _char_data(self, data):
+        if data.strip():
+            parent = self._ancestors[-1]
+            if parent.text is None:
+                parent.text = data
+            else:
+                parent.text += data
+
+    def _set_text(self, node, text, tag):
+        if text is None:
+            return
+        try:
+            val = self.validators[tag]
+        except KeyError:
+            return
+        try:
+            node.text = val(text.strip())
+        except Exception as exc:
+            raise ValueError('Could not convert %s->%s: %s, line %s' %
+                             (tag, val.__name__, exc, node.lineno))
+
+    def _set_attrib(self, node, n, tn, v):
+        val = self.validators[tn]
+        try:
+            node.attrib[n] = val(v)
+        except Exception as exc:
+            raise ValueError(
+                'Could not convert %s->%s: %s, line %s' %
+                (tn, val.__name__, exc, node.lineno))
+
+    def _literalnode(self, node):
+        tag = striptag(node.tag)
+
+        # cast the text
+        self._set_text(node, node.text, tag)
+
+        # cast the attributes
+        for n, v in node.attrib.items():
+            tn = '%s.%s' % (tag, n)
+            if tn in self.validators:
+                self._set_attrib(node, n, tn, v)
+            elif n in self.validators:
+                self._set_attrib(node, n, n, v)
+        return node

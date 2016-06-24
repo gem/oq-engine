@@ -147,8 +147,8 @@ class AssetCollection(object):
         sorted_taxonomies = sorted(taxonomies)
         asset_dt = numpy.dtype(
             [('idx', U32), ('lon', F32), ('lat', F32), ('site_id', U32),
-             ('taxonomy', U32), ('number', F32), ('area', F32)] +
-            [(name, float) for name in float_fields])
+             ('taxonomy', U32), ('number', F32), ('area', F32)] + [
+                 (str(name), float) for name in float_fields])
         num_assets = sum(len(assets) for assets in assets_by_site)
         assetcol = numpy.zeros(num_assets, asset_dt)
         asset_ordinal = 0
