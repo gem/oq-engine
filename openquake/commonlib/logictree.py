@@ -464,15 +464,6 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
         self.root_branchset = None
         self.parse_tree(tree, validate)
 
-    def skip_branchset_condition(self, attrs):
-        """
-        Override in subclasses to skip a branchset depending on a
-        condition on its attributes.
-
-        :param attrs: a dictionary with the attributes of the branchset
-        """
-        return False
-
     def parse_tree(self, tree_node, validate):
         """
         Parse the whole tree and point ``root_branchset`` attribute
@@ -511,8 +502,6 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
         branchsets = branchinglevel_node.findall('%slogicTreeBranchSet' %
                                                  self.NRML)
         for number, branchset_node in enumerate(branchsets):
-            if self.skip_branchset_condition(branchset_node.attrib):
-                continue
             branchset = self.parse_branchset(branchset_node, depth, number,
                                              validate)
             self.parse_branches(branchset_node, branchset, validate)
