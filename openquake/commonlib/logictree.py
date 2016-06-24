@@ -618,11 +618,9 @@ class SourceModelLogicTree(object):
             [a, b] = node.text.strip().split()
             return float(a), float(b)
         elif branchset.uncertainty_type == 'incrementalMFDAbsolute':
-            min_mag, bin_width = (float(node.incrementalMFD["minMag"]),
-                                  float(node.incrementalMFD["binWidth"]))
-            rates = node.incrementalMFD.occurRates.text
-            return float(min_mag), float(bin_width),\
-                valid.positivefloats(rates)
+            min_mag, bin_width = (node.incrementalMFD["minMag"],
+                                  node.incrementalMFD["binWidth"])
+            return min_mag,  bin_width, ~node.incrementalMFD.occurRates
         elif branchset.uncertainty_type == 'simpleFaultGeometryAbsolute':
             return self._parse_simple_fault_geometry_surface(
                 node.simpleFaultGeometry)
@@ -645,8 +643,7 @@ class SourceModelLogicTree(object):
                         edges, spacing))
                 elif "planarSurface" in geom_node.tag:
                     surfaces.append(
-                        self._parse_planar_geometry_surface(geom_node)
-                        )
+                        self._parse_planar_geometry_surface(geom_node))
                 else:
                     pass
             if len(surfaces) > 1:
