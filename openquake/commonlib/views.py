@@ -30,6 +30,7 @@ import h5py
 
 from openquake.baselib.general import humansize, groupby, AccumDict
 from openquake.baselib.performance import perf_dt
+from openquake.baselib.python3compat import unicode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source
 from openquake.commonlib.datastore import view
@@ -76,7 +77,7 @@ def form(value):
             return str(int(value))
     elif isinstance(value, bytes):
         return value.decode('utf-8')
-    elif isinstance(value, str):
+    elif isinstance(value, unicode):
         return value
     elif hasattr(value, '__len__') and len(value) > 1:
         return ' '.join(map(form, value))
