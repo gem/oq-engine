@@ -142,7 +142,8 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             if pre_execute:
                 self.pre_execute()
             result = self.execute()
-            self.post_execute(result)
+            if result:
+                self.post_execute(result)
             exported = self.export(kw.get('exports', ''))
         except KeyboardInterrupt:
             pids = ' '.join(str(p.pid) for p in executor._processes)
@@ -235,6 +236,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         Collect the realizations and the monitoring information,
         then close the datastore.
         """
+        self.datastore['realizations'] = numpy.array(
+            [(r.uid, gsim_names(r), r.weight)
+             for r in self.rlzs_assoc.realizations], rlz_dt)
         if 'hcurves' in self.datastore:
             self.datastore.set_nbytes('hcurves')
         if 'hmaps' in self.datastore:
@@ -387,9 +391,6 @@ class HazardCalculator(BaseCalculator):
         else:  # build a fake; used by risk-from-file calculators
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
-        self.datastore['realizations'] = numpy.array(
-            [(r.uid, gsim_names(r), r.weight)
-             for r in self.rlzs_assoc.realizations], rlz_dt)
 
     def read_exposure(self):
         """
