@@ -660,13 +660,11 @@ class SourceModelLogicTree(object):
         """
         Parses a simple fault geometry surface
         """
-        spacing = float(node["spacing"].strip())
-        usd, lsd, dip = (float(node.upperSeismoDepth.text.strip()),
-                         float(node.lowerSeismoDepth.text.strip()),
-                         float(node.dip.text.strip()))
+        spacing = node["spacing"]
+        usd, lsd, dip = (~node.upperSeismoDepth, ~node.lowerSeismoDepth,
+                         ~node.dip)
         # Parse the geometry
-        coords = split_coords_2d(map(float,
-                                     node.LineString.posList.text.split()))
+        coords = split_coords_2d(~node.LineString.posList)
         trace = geo.Line([geo.Point(*p) for p in coords])
         return trace, usd, lsd, dip, spacing
 
@@ -674,12 +672,10 @@ class SourceModelLogicTree(object):
         """
         Parses a complex fault geometry surface
         """
-        spacing = float(node["spacing"].strip())
+        spacing = node["spacing"]
         edges = []
         for edge_node in node.nodes:
-            coords = split_coords_3d(map(
-                float,
-                edge_node.LineString.posList.text.split()))
+            coords = split_coords_3d(~edge_node.LineString.posList)
             edges.append(geo.Line([geo.Point(*p) for p in coords]))
         return edges, spacing
 
@@ -687,12 +683,12 @@ class SourceModelLogicTree(object):
         """
         Parses a planar geometry surface
         """
-        spacing = float(node["spacing"].strip())
+        spacing = node["spacing"]
         nodes = []
         for key in ["topLeft", "topRight", "bottomRight", "bottomLeft"]:
-            nodes.append(geo.Point(float(getattr(node, key)["lon"].strip()),
-                                   float(getattr(node, key)["lat"].strip()),
-                                   float(getattr(node, key)["depth"].strip())))
+            nodes.append(geo.Point(getattr(node, key)["lon"],
+                                   getattr(node, key)["lat"],
+                                   getattr(node, key)["depth"]))
         top_left, top_right, bottom_right, bottom_left = tuple(nodes)
         return geo.PlanarSurface.from_corner_points(spacing,
                                                     top_left,
@@ -777,14 +773,9 @@ class SourceModelLogicTree(object):
         """
         Validates a node representation of a simple fault geometry
         """
-        usd, lsd, dip = (node.upperSeismoDepth.text.strip(),
-                         node.lowerSeismoDepth.text.strip(),
-                         node.dip.text.strip())
-        spacing = node["spacing"].strip()
         try:
             # Parse the geometry
-            coords = split_coords_2d(map(float,
-                                         node.LineString.posList.text.split()))
+            coords = split_coords_2d(~node.LineString.posList)
             trace = geo.Line([geo.Point(*p) for p in coords])
         except ValueError:
             # If the geometry cannot be created then use the ValidationError
@@ -792,9 +783,7 @@ class SourceModelLogicTree(object):
             # compiled successfully then len(trace) is True, otherwise it is
             # False
             trace = []
-        if _float_re.match(usd) and _float_re.match(lsd) and\
-                _float_re.match(dip) and _float_re.match(spacing) and\
-                len(trace):
+        if len(trace):
             return
         raise ValidationError(
             node, self.filename,
