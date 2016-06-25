@@ -84,11 +84,9 @@ import itertools
 import numpy
 
 from openquake.baselib.general import CallableDict
-from openquake.baselib.python3compat import unicode
 from openquake.commonlib import writers
 from openquake.commonlib.node import (
-    node_to_xml, Node, Node, striptag,
-    ValidatingXmlParser, context)
+    node_to_xml, Node, striptag, ValidatingXmlParser, context)
 from openquake.risklib import scientific, valid
 from openquake.commonlib import InvalidFile
 
