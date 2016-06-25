@@ -290,5 +290,5 @@ lossCategory="contents">
         # inverted loss states
         with self.assertRaises(ValueError) as ctx:
             nrml.parse(self.wrong_csq_model_3)
-        self.assertIn("node params: Expected u'ds3', got u'ds4', line 12",
+        self.assertIn("node params: Expected 'ds3', got 'ds4', line 12",
                       str(ctx.exception))

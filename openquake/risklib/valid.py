@@ -120,7 +120,7 @@ class ChoiceCI(object):
     def __call__(self, value):
         value = value.lower()
         if value not in self.choices:
-            raise ValueError('%r is not a valid choice in %s' % (
+            raise ValueError("'%s' is not a valid choice in %s" % (
                              value, self.choices))
         return value
 
@@ -139,7 +139,7 @@ class Choices(Choice):
         values = value.lower().split(',')
         for val in values:
             if val not in self.choices:
-                raise ValueError('%r is not a valid choice in %s' % (
+                raise ValueError("'%s' is not a valid choice in %s" % (
                     val, self.choices))
         return tuple(values)
 
@@ -181,7 +181,7 @@ class Regex(object):
 
     def __call__(self, value):
         if self.rx.match(value) is None:
-            raise ValueError('%r does not match the regex %r' %
+            raise ValueError("'%s' does not match the regex '%s'" %
                              (value, self.rx.pattern))
         return value
 
@@ -208,7 +208,7 @@ class SimpleId(object):
                 'Invalid ID %r: the only accepted chars are a-zA-Z0-9_-'
                 % value)
         elif len(value) > self.length:
-            raise ValueError('The ID %r is longer than %d character' %
+            raise ValueError("The ID '%s' is longer than %d character" %
                              (value, self.length))
         elif re.match(self.regex, value):
             return value
@@ -232,10 +232,10 @@ class FloatRange(object):
     def __call__(self, value):
         f = float_(value)
         if f > self.maxrange:
-            raise ValueError('%r is bigger than the max, %r' %
+            raise ValueError("'%s' is bigger than the max, '%s'" %
                              (f, self.maxrange))
         if f < self.minrange:
-            raise ValueError('%r is smaller than the min, %r' %
+            raise ValueError("'%s' is smaller than the min, '%s'" %
                              (f, self.minrange))
         return f
 
@@ -303,7 +303,7 @@ def float_(value):
     try:
         return float(value)
     except:
-        raise ValueError('%r is not a float' % value)
+        raise ValueError("'%s' is not a float" % value)
 
 
 def nonzero(value):
@@ -546,7 +546,7 @@ def intensity_measure_type(value):
     try:
         return str(imt.from_string(value))
     except:
-        raise ValueError('Invalid IMT: %r' % value)
+        raise ValueError("Invalid IMT: '%s'" % value)
 
 
 def intensity_measure_types(value):
@@ -694,8 +694,8 @@ def mag_scale_rel(value):
     """
     value = value.strip()
     if value not in SCALEREL:
-        raise ValueError('%r is not a recognized magnitude-scale '
-                         'relationship' % value)
+        raise ValueError(
+            "'%s' is not a recognized magnitude-scale relationship" % value)
     return value
 
 
@@ -998,7 +998,7 @@ class ParamSet(with_metaclass(MetaParamSet, hdf5.LiteralAttrs)):
             try:
                 convert = getattr(self.__class__, name).validator
             except AttributeError:
-                logging.warn('The parameter %r is unknown, ignoring' % name)
+                logging.warn("The parameter '%s' is unknown, ignoring" % name)
                 continue
             try:
                 value = convert(val)

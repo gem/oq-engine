@@ -27,6 +27,8 @@ import unittest
 import collections
 
 import numpy
+from xml.parsers.expat import ExpatError
+from xml.etree import ElementTree as ET
 from copy import deepcopy
 
 from io import BytesIO
@@ -178,13 +180,9 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
     def test_logictree_invalid_xml(self):
         self._assert_logic_tree_error(
             'broken_xml', {'broken_xml': "<?xml foo bar baz"}, 'basepath',
-            logictree.ParsingError
-        )
+            ExpatError)
 
-    # FIXME: the logic tree validation must be rewritten
-    # see https://bugs.launchpad.net/oq-engine/+bug/1323916
     def test_logictree_schema_violation(self):
-        raise unittest.SkipTest
         source = _make_nrml("""\
             <logicTreeSet>
                 <logicTree logicTreeID="lt1"/>
@@ -192,12 +190,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         """)
         exc = self._assert_logic_tree_error(
             'screwed_schema', {'screwed_schema': source}, 'base',
-            logictree.ParsingError
-        )
-        error = "'{http://openquake.org/xmlns/nrml/0.5}logicTreeSet': " \
-                "This element is not expected."
-        self.assertTrue(error in str(exc),
-                        "wrong exception message: %s" % exc.message)
+            logictree.ValidationError)
+        self.assertIn('missing logicTree node', exc.message)
 
     def test_wrong_uncert_type_on_first_branching_level(self):
         source = _make_nrml("""\
@@ -508,8 +502,9 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         with self.assertRaises(ValueError) as arc:
             _TestableSourceModelLogicTree('lt', {'lt': lt, 'sm': sm}, 'base')
-        self.assertIn("node uncertaintyModel: float -0.01 < 0",
-                      str(arc.exception))
+        self.assertEqual(
+            "Could not convert occurRates->positivefloats: "
+            "float -0.01 < 0, line 18", str(arc.exception))
 
     def test_simple_fault_geometry_absolute_wrong_format(self):
         lt = _make_nrml("""\
@@ -554,11 +549,10 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
-                                            logictree.ValidationError)
-        self.assertEqual(
-            exc.message,
-            "'simpleFaultGeometry' node is not valid",
-            "wrong exception message: %s" % exc.message)
+                                            ValueError)
+        self.assertIn("Found a non-float in -121.8229 wrong "
+                      "-122.0388 37.8771: 'wrong' is not a float",
+                      str(exc))
 
     def test_complex_fault_geometry_absolute_wrong_format(self):
         lt = _make_nrml("""\
@@ -603,11 +597,9 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
-                                            logictree.ValidationError)
-        self.assertEqual(
-            exc.message,
-            "'complexFaultGeometry' node is not valid",
-            "wrong exception message: %s" % exc.message)
+                                            ValueError)
+        self.assertIn('Could not convert posList->posList: Found a non-float ',
+                      str(exc))
 
     def test_characteristic_fault_planar_geometry_wrong_format(self):
         lt = _make_nrml("""\
@@ -648,11 +640,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
-                                            logictree.ValidationError)
-        self.assertEqual(
-            exc.message,
-            "'planarFaultGeometry' node is not valid",
-            "wrong exception message: %s" % exc.message)
+                                            ValueError)
+        self.assertIn('Could not convert lat->latitude', str(exc))
 
     def test_characteristic_fault_simple_geometry_wrong_format(self):
         lt = _make_nrml("""\
@@ -699,11 +688,9 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
-                                            logictree.ValidationError)
-        self.assertEqual(
-            exc.message,
-            "'simpleFaultGeometry' node is not valid",
-            "wrong exception message: %s" % exc.message)
+                                            ValueError)
+        self.assertIn('Could not convert posList->posList: Found a non-float',
+                      str(exc))
 
     def test_characteristic_fault_complex_geometry_wrong_format(self):
         lt = _make_nrml("""\
@@ -750,11 +737,9 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
-                                            logictree.ValidationError)
-        self.assertEqual(
-            exc.message,
-            "'complexFaultGeometry' node is not valid",
-            "wrong exception message: %s" % exc.message)
+                                            ValueError)
+        self.assertIn('Could not convert posList->posList: Found a non-float',
+                      str(exc))
 
     def test_characteristic_fault_invalid_geometry(self):
         lt = _make_nrml("""\
@@ -809,13 +794,10 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         sm = """ololo"""
 
         self._assert_logic_tree_error(
-            'lt', {'lt': lt, 'sm': sm}, 'base',
-            logictree.ParsingError, exc_filename='sm')
+            'sm', {'lt': lt, 'sm': sm}, 'base',
+            ExpatError, exc_filename='sm')
 
-    # FIXME: the logic tree validation must be rewritten
-    # see https://bugs.launchpad.net/oq-engine/+bug/1323916
     def test_source_model_schema_violation(self):
-        raise unittest.SkipTest
         lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
               <logicTreeBranchingLevel branchingLevelID="bl1">
@@ -856,9 +838,10 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             </simpleFaultSource>
         </sourceModel>
         """)
-        self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, '/x',
-                                      logictree.ParsingError,
-                                      exc_filename='sm')
+        error = self._assert_logic_tree_error(
+            'lt', {'lt': lt, 'sm': sm}, '/x',
+            logictree.ValidationError, exc_filename='lt')
+        self.assertIn("node config", str(error.message))
 
     def test_referencing_over_level_boundaries(self):
         lt = _make_nrml("""\
@@ -1134,10 +1117,12 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                                                     'base',
                                                     logictree.ValidationError)
                 self.assertEqual(exc.lineno, 13)
-                error = "uncertainty of type %r must define 'applyToSources'" \
-                        " with only one source id" % uncertainty
-                self.assertEqual(exc.message, error,
-                                 "wrong exception message: %s" % exc.message)
+                error = (
+                    "uncertainty of type '%s' must define 'applyToSources'"
+                    " with only one source id" % uncertainty)
+                self.assertEqual(
+                    exc.message, error,
+                    "wrong exception message: %s" % exc.message)
 
 
 class SourceModelLogicTreeTestCase(unittest.TestCase):
@@ -2035,8 +2020,8 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             StringIO(xmlbytes), tectonic_region_types)
 
     def test_not_xml(self):
-        self.parse_invalid('xxx', Exception)
-        self.parse_invalid('<?xml foo bar baz', Exception)
+        self.parse_invalid('xxx', ET.ParseError)
+        self.parse_invalid('<?xml foo bar baz', ET.ParseError)
 
     def test_invalid_schema(self):
         xml = _make_nrml("""\
