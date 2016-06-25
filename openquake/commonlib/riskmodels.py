@@ -20,13 +20,12 @@
 Reading risk models for risk calculators
 """
 import re
-import urllib
 import collections
 
 import numpy
 
 from openquake.risklib import valid
-from openquake.commonlib.node import LiteralNode
+from openquake.commonlib.node import Node
 from openquake.commonlib import nrml
 from openquake.commonlib.sourcewriter import obj_to_node
 
@@ -74,13 +73,13 @@ def filter_vset(elem):
 @obj_to_node.add('VulnerabilityFunction')
 def build_vf_node(vf):
     """
-    Convert a VulnerabilityFunction object into a LiteralNode suitable
+    Convert a VulnerabilityFunction object into a Node suitable
     for XML conversion.
     """
-    nodes = [LiteralNode('imls', {'imt': vf.imt}, vf.imls),
-             LiteralNode('meanLRs', {}, vf.mean_loss_ratios),
-             LiteralNode('covLRs', {}, vf.covs)]
-    return LiteralNode(
+    nodes = [Node('imls', {'imt': vf.imt}, vf.imls),
+             Node('meanLRs', {}, vf.mean_loss_ratios),
+             Node('covLRs', {}, vf.covs)]
+    return Node(
         'vulnerabilityFunction',
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
@@ -134,11 +133,11 @@ def get_risk_models(oqparam, kind=None):
                 # limit states; this may change in the future
                 assert limit_states == fm.limitStates, (
                     limit_states, fm.limitStates)
-                rdict[urllib.quote_plus(taxo)][loss_type] = ffl
+                rdict[taxo][loss_type] = ffl
                 # TODO: see if it is possible to remove the attribute
                 # below, used in classical_damage
                 ffl.steps_per_interval = oqparam.steps_per_interval
-        oqparam.limit_states = limit_states
+        oqparam.limit_states = [str(ls) for ls in limit_states]
     elif kind == 'consequence':
         rdict = rmodels
     else:  # vulnerability
@@ -147,6 +146,6 @@ def get_risk_models(oqparam, kind=None):
         # to make sure they are strictly increasing
         for loss_type, rm in rmodels.items():
             for (imt, taxo), rf in rm.items():
-                rdict[urllib.quote_plus(taxo)][loss_type] = (
+                rdict[taxo][loss_type] = (
                     rf.strictly_increasing() if cl_risk else rf)
     return rdict

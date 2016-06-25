@@ -147,8 +147,8 @@ class AssetCollection(object):
         sorted_taxonomies = sorted(taxonomies)
         asset_dt = numpy.dtype(
             [('idx', U32), ('lon', F32), ('lat', F32), ('site_id', U32),
-             ('taxonomy', U32), ('number', F32), ('area', F32)] +
-            [(name, float) for name in float_fields])
+             ('taxonomy', U32), ('number', F32), ('area', F32)] + [
+                 (str(name), float) for name in float_fields])
         num_assets = sum(len(assets) for assets in assets_by_site)
         assetcol = numpy.zeros(num_assets, asset_dt)
         asset_ordinal = 0
@@ -209,16 +209,6 @@ class CompositeRiskModel(collections.Mapping):
             for lt, rf in rm.risk_functions.items():
                 iml[rf.imt].append(rf.imls[0])
         return {imt: min(iml[imt]) for imt in iml}
-
-    def loss_type_dt(self, dtype=F32, insured=False):
-        """
-        Return a composite dtype based on the loss types
-        """
-        dts = [(lt, dtype) for lt in self.loss_types]
-        if insured:
-            for lt in self.loss_types:
-                dts.append((lt + '_ins', dtype))
-        return numpy.dtype(dts)
 
     def build_loss_dtypes(self, conditional_loss_poes, insured_losses=False):
         """

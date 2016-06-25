@@ -76,7 +76,7 @@ class WrappedConnection(object):
         curs = self._conn.cursor()
         query = curs.mogrify(templ, args)
         if self.debug:
-            print query
+            print(query)
         curs.execute(query)
         return curs
 

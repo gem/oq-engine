@@ -307,8 +307,8 @@ class ExposureTestCase(unittest.TestCase):
 </nrml>''')  # wrong cost type "aggregate"
 
     def test_get_exposure_metadata(self):
-        exp, _assets, _cc = readinput.get_exposure_lazy(
-            self.exposure, ['structural'])
+        exp, _assets, _cc = readinput._get_exposure(
+            self.exposure, ['structural'], stop='assets')
         self.assertEqual(exp.description, 'Exposure model for buildings')
         self.assertTrue(exp.insurance_limit_is_absolute)
         self.assertTrue(exp.deductible_is_absolute)
@@ -407,7 +407,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
                           'structural_vulnerability': None}
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
-        self.assertIn("node costType: Got 'aggregate', expected "
+        self.assertIn("Got 'aggregate', expected "
                       "aggregated|per_area|per_asset, line 7",
                       str(ctx.exception))
 

@@ -26,7 +26,6 @@ Model representations of the OpenQuake DB tables.
 '''
 import os
 from datetime import datetime
-import openquake.engine.utils  # side effect setting OQ_DISTRIBUTE
 from openquake.commonlib import datastore
 from django.db import models as djm
 from django.core.exceptions import ObjectDoesNotExist
