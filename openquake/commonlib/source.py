@@ -786,7 +786,9 @@ def collect_source_model_paths(smlt):
         with node.context(smlt, blevel):
             for bset in blevel:
                 for br in bset:
-                    yield ~br.uncertaintyModel
+                    smfname = br.uncertaintyModel.text
+                    if smfname:
+                        yield smfname
 
 
 # ########################## SourceManager ########################### #
