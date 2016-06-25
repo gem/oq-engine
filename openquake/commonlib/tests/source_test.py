@@ -476,7 +476,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             self.parser.converter.convert_node(area)
         self.assertIn(
             "node areaSource: No subnode named 'nodalPlaneDist'"
-            " found in u'areaSource', line 5 of", str(ctx.exception))
+            " found in 'areaSource', line 5 of", str(ctx.exception))
 
     def test_hypolist_but_not_sliplist(self):
         simple_file = BytesIO(b"""\
