@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Improved the XML parsing utilities in speed, memory, portability and
+    easy of use
   * Fixed a bug with the `realizations` array, which in hazard calculations
     was empty in the datastore
 
