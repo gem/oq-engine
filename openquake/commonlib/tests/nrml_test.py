@@ -115,4 +115,4 @@ xmlns:gml="http://www.opengis.net/gml"
         with self.assertRaises(ValueError) as ctx:
             read(fname)
         self.assertIn('Could not convert imt->intensity_measure_type: '
-                      "Invalid IMT: u'SA', line 8", str(ctx.exception))
+                      "Invalid IMT: 'SA', line 8", str(ctx.exception))
