@@ -65,8 +65,7 @@ class ClassicalBCRCalculator(classical_risk.ClassicalRiskCalculator):
         self.extra_args = (bcr_dt,)
 
     def post_execute(self, result):
-        bcr_data = numpy.zeros(
-            (self.N, self.R), self.riskmodel.loss_type_dt(bcr_dt))
+        bcr_data = numpy.zeros((self.N, self.R), self.oqparam.loss_dt(bcr_dt))
         for (aid, lt, r), data in result.items():
             bcr_data[lt][aid, r] = data
         self.datastore['bcr-rlzs'] = bcr_data

@@ -152,15 +152,3 @@ def build_report(job_ini, output_dir=None):
     except IOError as exc:  # permission error
         sys.stderr.write(str(exc) + '\n')
     return report
-
-
-def main(directory):
-    for cwd, dirs, files in os.walk(directory):
-        for f in files:
-            if f in ('job.ini', 'job_h.ini', 'job_haz.ini', 'job_hazard.ini'):
-                job_ini = os.path.join(cwd, f)
-                print(job_ini)
-                build_report(job_ini, cwd)
-
-if __name__ == '__main__':
-    main(sys.argv[1])

@@ -35,8 +35,7 @@ from openquake.commonlib import tests, nrml_examples, readinput
 from openquake.commonlib import sourceconverter as s
 from openquake.commonlib.source import (
     SourceModelParser, DuplicatedID, CompositionInfo)
-from openquake.commonlib.nrml import nodefactory
-from openquake.commonlib.node import read_nodes
+from openquake.commonlib import nrml
 from openquake.baselib.general import assert_close
 
 # directory where the example files are
@@ -65,11 +64,6 @@ MULTI_PLANES_RUPTURE = os.path.join(
 NONPARAMETRIC_SOURCE = os.path.join(
     os.path.dirname(__file__), 'data', 'nonparametric-source.xml')
 
-filter_sources = lambda el: 'Source' in el.tag
-filter_ruptures = lambda el: 'Rupture' in el.tag
-
-ValidNode = nodefactory['sourceModel']
-
 
 class NrmlSourceToHazardlibTestCase(unittest.TestCase):
     """Tests for converting NRML source model objects to the hazardlib
@@ -85,7 +79,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.,  # km
         ))
-        source_nodes = read_nodes(MIXED_SRC_MODEL, filter_sources, ValidNode)
+        source_nodes = nrml.parse(MIXED_SRC_MODEL).nodes
         (cls.area, cls.point, cls.simple, cls.cmplx, cls.char_simple,
          cls.char_complex, cls.char_multi) = map(
             cls.parser.converter.convert_node, source_nodes)
@@ -371,6 +365,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         assert_close(self._expected_char_complex, self.char_complex)
 
     def test_characteristic_multi(self):
+        self.char_multi.surface_node = None
         assert_close(self._expected_char_multi, self.char_multi)
 
     def test_duplicate_id(self):
@@ -430,7 +425,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         msg = ('Could not convert occurRates->positivefloats: '
                'float -0.0010614989 < 0, line 25')
         with self.assertRaises(ValueError) as ctx:
-            next(read_nodes(area_file, filter_sources, ValidNode))
+            next(nrml.read(area_file))
         self.assertIn(msg, str(ctx.exception))
 
     def test_raises_useful_error_2(self):
@@ -476,12 +471,12 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
     </sourceModel>
 </nrml>
 """)
-        [area] = read_nodes(area_file, filter_sources, ValidNode)
+        [area] = nrml.read(area_file).sourceModel
         with self.assertRaises(NameError) as ctx:
             self.parser.converter.convert_node(area)
         self.assertIn(
             "node areaSource: No subnode named 'nodalPlaneDist'"
-            " found in 'areaSource', line 5 of", str(ctx.exception))
+            " found in u'areaSource', line 5 of", str(ctx.exception))
 
     def test_hypolist_but_not_sliplist(self):
         simple_file = BytesIO(b"""\
@@ -549,7 +544,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             complex_fault_mesh_spacing=1,  # km
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.)
-        np, = read_nodes(NONPARAMETRIC_SOURCE, filter_sources, ValidNode)
+        [np] = nrml.read(NONPARAMETRIC_SOURCE).sourceModel
         converter.convert_node(np)
 
     def test_alternative_mfds(self):
@@ -559,9 +554,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             complex_fault_mesh_spacing=5,  # km
             width_of_mfd_bin=0.1,  # for Truncated GR MFDs
             area_source_discretization=1.)
-        source_nodes = read_nodes(ALT_MFDS_SRC_MODEL,
-                                  filter_sources,
-                                  ValidNode)
+        source_nodes = nrml.read(ALT_MFDS_SRC_MODEL).sourceModel
         [cplx1, sflt1, sflt2] = map(converter.convert_node, source_nodes)
         # Check the values
         # Arbitrary MFD
@@ -729,7 +722,7 @@ class RuptureConverterTestCase(unittest.TestCase):
                                        complex_fault_mesh_spacing=1.5)
         for fname in (SIMPLE_FAULT_RUPTURE, COMPLEX_FAULT_RUPTURE,
                       SINGLE_PLANE_RUPTURE, MULTI_PLANES_RUPTURE):
-            node, = read_nodes(fname, filter_ruptures, ValidNode)
+            [node] = nrml.read(fname)
             converter.convert_node(node)
 
     def test_ill_formed_rupture(self):
@@ -759,7 +752,7 @@ class RuptureConverterTestCase(unittest.TestCase):
 
         # at line 7 there is an invalid depth="-5.0"
         with self.assertRaises(ValueError) as ctx:
-            next(read_nodes(rup_file, filter_ruptures, ValidNode))
+            nrml.read(rup_file)
         self.assertIn('line 7', str(ctx.exception))
 
 

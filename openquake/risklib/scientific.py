@@ -662,7 +662,7 @@ class ConsequenceModel(dict):
     def __repr__(self):
         return '<%s %s %s %s>' % (
             self.__class__.__name__, self.lossCategory,
-            self.limitStates, ' '.join(sorted(self)))
+            ', '.join(self.limitStates), ' '.join(sorted(self)))
 
 
 def build_imls(ff, continuous_fragility_discretization,
@@ -1127,7 +1127,8 @@ def classical_damage(
         numpy.putmask(imls, imls > max_val, max_val)
         poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
     else:
-        imls = fragility_functions.imls
+        imls = (hazard_imls if fragility_functions.format == 'continuous'
+                else fragility_functions.imls)
         poes = numpy.array(hazard_poes)
     afe = annual_frequency_of_exceedence(poes, investigation_time)
     annual_frequency_of_occurrence = pairwise_diff(
