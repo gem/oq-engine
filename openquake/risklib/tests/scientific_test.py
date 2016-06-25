@@ -634,7 +634,7 @@ class ClassicalDamageTestCase(unittest.TestCase):
     def test_discrete(self):
         hazard_imls = [0.05, 0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4]
         fragility_functions = scientific.FragilityFunctionList(
-            [], imls=hazard_imls, steps_per_interval=None)
+            [], imls=hazard_imls, steps_per_interval=None, format='discrete')
         fragility_functions.extend([
             scientific.FragilityFunctionDiscrete(
                 'slight', hazard_imls,
@@ -673,7 +673,7 @@ class ClassicalDamageTestCase(unittest.TestCase):
              0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1, 1.05, 1.1, 1.15, 1.2,
              1.25, 1.3, 1.35, 1.4])
         fragility_functions = scientific.FragilityFunctionList(
-            [], imls=hazard_imls, steps_per_interval=None)
+            [], imls=hazard_imls, steps_per_interval=None, format='continuous')
         fragility_functions.extend([
             scientific.FragilityFunctionContinuous(
                 'slight', 0.160, 0.104),

@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import re
+import os
 import pickle
 import logging
 import operator
@@ -26,6 +27,7 @@ import numpy
 
 from openquake.baselib.general import (
     groupby, humansize, get_array, group_array)
+from openquake.baselib import hdf5
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg
 from openquake.commonlib.export import export
@@ -231,7 +233,7 @@ HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 def export_hazard_curves_csv(key, dest, sitecol, curves_by_imt,
                              imtls, investigation_time=None):
     """
-    Export the curves of the given realization into XML.
+    Export the curves of the given realization into CSV.
 
     :param key: output_type and export_type
     :param dest: name of the exported file
@@ -250,7 +252,42 @@ def export_hazard_curves_csv(key, dest, sitecol, curves_by_imt,
         values = numpy.concatenate([curves_by_imt[sid][imt] for imt in imtls])
         hcurves[sid] = (lon, lat) + tuple(values)
     write_csv(dest, hcurves)
-    return {dest: dest}
+    return [dest]
+
+
+def add_imt(fname, imt):
+    """
+    >>> add_imt('/path/to/hcurve_23.csv', 'SA(0.1)')
+    '/path/to/hcurve-SA(0.1)_23.csv'
+    """
+    name = os.path.basename(fname)
+    newname = re.sub('(_\d+\.)', '-%s\\1' % imt, name)
+    return os.path.join(os.path.dirname(fname), newname)
+
+
+def export_hcurves_by_imt_csv(key, dest, sitecol, curves_by_imt,
+                              imtls, investigation_time=None):
+    """
+    Export the curves of the given realization into CSV.
+
+    :param key: output_type and export_type
+    :param dest: name of the exported file
+    :param sitecol: site collection
+    :param curves_by_imt: dictionary with the curves keyed by IMT
+    :param dict imtls: intensity measure types and levels
+    :param investigation_time: investigation time
+    """
+    nsites = len(sitecol)
+    fnames = []
+    for imt, imls in imtls.items():
+        lst = [('lon', F32), ('lat', F32)]
+        for iml in imls:
+            lst.append((str(iml), F32))
+        hcurves = numpy.zeros(nsites, lst)
+        for sid, lon, lat in zip(range(nsites), sitecol.lons, sitecol.lats):
+            hcurves[sid] = (lon, lat) + tuple(curves_by_imt[sid][imt])
+        fnames.append(write_csv(add_imt(dest, imt), hcurves))
+    return fnames
 
 
 def hazard_curve_name(dstore, ekey, kind, rlzs_assoc):
@@ -268,11 +305,10 @@ def hazard_curve_name(dstore, ekey, kind, rlzs_assoc):
         rlz = rlzs_assoc.realizations[int(rlz_no)]
         fname = dstore.build_fname(prefix + suffix, rlz, fmt)
     elif kind.startswith('mean'):
-        fname = dstore.export_path('%s-%s.%s' % (prefix, kind, ekey[1]))
+        fname = dstore.build_fname(prefix, kind, ekey[1])
     elif kind.startswith('quantile-'):
         # strip the 7 characters 'hazard_'
-        fname = dstore.export_path(
-            'quantile_%s-%s.%s' % (prefix[7:], kind[9:], fmt))
+        fname = dstore.build_fname('quantile_' + prefix[7:], kind[9:], fmt)
     else:
         raise ValueError('Unknown kind of hazard curve: %s' % kind)
     return fname
@@ -298,11 +334,20 @@ def export_hcurves_csv(ekey, dstore):
         if key == 'uhs':
             uhs_curves = calc.make_uhs(hcurves, oq.imtls, oq.poes)
             write_csv(fname, util.compose_arrays(sitemesh, uhs_curves))
+            fnames.append(fname)
         elif key == 'hmaps':
             write_csv(fname, util.compose_arrays(sitemesh, hcurves))
+            fnames.append(fname)
         else:
-            export_hazard_curves_csv(ekey, fname, sitecol, hcurves, oq.imtls)
-        fnames.append(fname)
+            if export.from_db:  # called by export_from_db
+                fnames.extend(
+                    export_hcurves_by_imt_csv(
+                        ekey, fname, sitecol, hcurves, oq.imtls))
+            else:  # when exporting directly from the datastore
+                fnames.extend(
+                    export_hazard_curves_csv(
+                        ekey, fname, sitecol, hcurves, oq.imtls))
+
     return sorted(fnames)
 
 UHS = collections.namedtuple('UHS', 'imls location')
@@ -437,6 +482,17 @@ def export_hmaps_xml_json(ekey, dstore):
                 writer.serialize(data)
                 fnames.append(fname)
     return sorted(fnames)
+
+
+# FIXME: uhs not working yet
+@export.add(('hcurves', 'hdf5'), ('hmaps', 'hdf5'))
+def export_hazard_hdf5(ekey, dstore):
+    mesh = get_mesh(dstore['sitecol'])
+    fname = dstore.export_path('%s.%s' % ekey)
+    with hdf5.File(fname, 'w') as f:
+        for dskey, ds in dstore[ekey[0]].items():
+            f['%s/%s' % (ekey[0], dskey)] = util.compose_arrays(mesh, ds.value)
+    return [fname]
 
 
 @export.add(('gmf_data', 'xml'), ('gmf_data', 'txt'))
@@ -603,7 +659,7 @@ def export_gmf_scenario(ekey, dstore):
                 gmfs = numpy.zeros(len(gmfs_), dt)
                 for i in range(len(gmfs)):
                     gmfs[i] = tuple(gmfs_[imt][i])
-                dest = dstore.export_path('gmf-%s-%s.csv' % (gsim, imt))
+                dest = dstore.build_fname('gmf', '%s-%s' % (gsim, imt), 'csv')
                 data = util.compose_arrays(sitemesh, gmfs)
                 writer.save(data, dest)
     else:  # event based

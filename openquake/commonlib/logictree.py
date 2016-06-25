@@ -50,7 +50,7 @@ from openquake.commonlib.sourceconverter import (
 
 from openquake.commonlib.node import (
     node_from_xml, parse, iterparse,
-    node_from_elem, LiteralNode as N, context)
+    node_from_elem, Node as N, context)
 from openquake.baselib.python3compat import with_metaclass
 
 #: Minimum value for a seed number
@@ -464,15 +464,6 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
         self.root_branchset = None
         self.parse_tree(tree, validate)
 
-    def skip_branchset_condition(self, attrs):
-        """
-        Override in subclasses to skip a branchset depending on a
-        condition on its attributes.
-
-        :param attrs: a dictionary with the attributes of the branchset
-        """
-        return False
-
     def parse_tree(self, tree_node, validate):
         """
         Parse the whole tree and point ``root_branchset`` attribute
@@ -511,8 +502,6 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
         branchsets = branchinglevel_node.findall('%slogicTreeBranchSet' %
                                                  self.NRML)
         for number, branchset_node in enumerate(branchsets):
-            if self.skip_branchset_condition(branchset_node.attrib):
-                continue
             branchset = self.parse_branchset(branchset_node, depth, number,
                                              validate)
             self.parse_branches(branchset_node, branchset, validate)
@@ -1163,7 +1152,7 @@ class SourceModelLogicTree(BaseLogicTree):
                                                               branchset)
 
     def _get_source_model(self, source_model_file):
-        return file(os.path.join(self.basepath, source_model_file))
+        return open(os.path.join(self.basepath, source_model_file))
 
     def collect_source_model_data(self, source_model):
         """

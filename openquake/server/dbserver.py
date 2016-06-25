@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import socket
 import os.path
 import logging
 from Queue import Queue
@@ -111,7 +112,26 @@ class DbServer(object):
             self.thread.join()
 
 
-def runserver(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
+def get_status(address=None):
+    """
+    Check if the DbServer is up.
+
+    :param address: pair (hostname, port)
+    :returns: 'running' or 'not-running'
+    """
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        err = sock.connect_ex(address or config.DBS_ADDRESS)
+    finally:
+        sock.close()
+    return 'not-running' if err else 'running'
+
+
+def run_server(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
+    """
+    Run the DbServer on the given database file and port. If not given,
+    use the settings in openquake.cfg.
+    """
     if dbpathport:  # assume a string of the form "dbpath:port"
         dbpath, port = dbpathport.split(':')
         addr = (DATABASE['HOST'], int(port))
@@ -133,7 +153,7 @@ def runserver(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
     DbServer(addr, config.DBS_AUTHKEY).loop()
 
-parser = sap.Parser(runserver)
+parser = sap.Parser(run_server)
 parser.arg('dbpathport', 'dbpath:port')
 parser.arg('logfile', 'log file')
 parser.opt('loglevel', 'WARN or INFO')

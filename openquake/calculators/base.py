@@ -53,7 +53,8 @@ F32 = numpy.float32
 class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 
-rlz_dt = numpy.dtype([('uid', (bytes, 200)), ('weight', F32)])
+rlz_dt = numpy.dtype([('uid', (bytes, 200)), ('gsims', (bytes, 200)),
+                      ('weight', F32)])
 
 logversion = {True}
 
@@ -69,6 +70,13 @@ def set_array(longarray, shortarray):
     """
     longarray[:len(shortarray)] = shortarray
     longarray[len(shortarray):] = numpy.nan
+
+
+def gsim_names(rlz):
+    """
+    Names of the underlying GSIMs separated by spaces
+    """
+    return ' '.join(str(v) for v in rlz.gsim_rlz.value)
 
 
 class BaseCalculator(with_metaclass(abc.ABCMeta)):
@@ -134,7 +142,8 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             if pre_execute:
                 self.pre_execute()
             result = self.execute()
-            self.post_execute(result)
+            if result:
+                self.post_execute(result)
             exported = self.export(kw.get('exports', ''))
         except KeyboardInterrupt:
             pids = ' '.join(str(p.pid) for p in executor._processes)
@@ -189,12 +198,14 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         from openquake.commonlib.export import export as exp
         exported = {}
         individual_curves = self.oqparam.individual_curves
-        if exports and isinstance(exports, tuple):
+        if isinstance(exports, tuple):
             fmts = exports
         elif exports:  # is a string
             fmts = exports.split(',')
-        else:  # use passed values
+        elif isinstance(self.oqparam.exports, tuple):
             fmts = self.oqparam.exports
+        else:  # is a string
+            fmts = self.oqparam.exports.split(',')
         for fmt in fmts:
             if not fmt:
                 continue
@@ -225,6 +236,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         Collect the realizations and the monitoring information,
         then close the datastore.
         """
+        self.datastore['realizations'] = numpy.array(
+            [(r.uid, gsim_names(r), r.weight)
+             for r in self.rlzs_assoc.realizations], rlz_dt)
         if 'hcurves' in self.datastore:
             self.datastore.set_nbytes('hcurves')
         if 'hmaps' in self.datastore:
@@ -233,7 +247,11 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         if self.close:  # in the engine we close later
             try:
                 self.datastore.close()
-            except RuntimeError:  # there could be a mysterious HDF5 error
+            except (RuntimeError, ValueError):
+                # there could be a mysterious HDF5 error
+                # the ValueError: Unrecognized type code -1
+                # happens with the command
+                # $ oq run event_based_risk/case_master/job.ini --exports csv
                 logging.warn('', exc_info=True)
 
 
@@ -373,8 +391,6 @@ class HazardCalculator(BaseCalculator):
         else:  # build a fake; used by risk-from-file calculators
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
-        self.datastore['realizations'] = numpy.array(
-            [(r.uid, r.weight) for r in self.rlzs_assoc.realizations], rlz_dt)
 
     def read_exposure(self):
         """
@@ -387,10 +403,7 @@ class HazardCalculator(BaseCalculator):
             arefs = numpy.array(self.exposure.asset_refs)
             self.datastore['asset_refs'] = arefs
             self.datastore.set_attrs('asset_refs', nbytes=arefs.nbytes)
-            all_cost_types = set(self.oqparam.all_cost_types)
-            fname = self.oqparam.inputs['exposure']
-            self.cost_calculator = readinput.get_exposure_lazy(
-                fname, all_cost_types)[-1]
+            self.cost_calculator = readinput.get_cost_calculator(self.oqparam)
             self.sitecol, self.assets_by_site = (
                 readinput.get_sitecol_assets(self.oqparam, self.exposure))
             if len(self.exposure.cost_types):
@@ -481,7 +494,8 @@ class HazardCalculator(BaseCalculator):
         if hasattr(self, 'assets_by_site'):
             self.assetcol = riskinput.AssetCollection(
                 self.assets_by_site, self.cost_calculator, oq.time_event,
-                time_events=sorted(self.exposure.time_events) or '')
+                time_events=hdf5.array_of_bytes(
+                    sorted(self.exposure.time_events)))
         elif hasattr(self, 'assetcol'):
             self.assets_by_site = self.assetcol.assets_by_site()
 

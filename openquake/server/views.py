@@ -24,7 +24,7 @@ import tempfile
 import urlparse
 import re
 
-from xml.etree import ElementTree as etree
+from xml.parsers.expat import ExpatError
 from django.http import (HttpResponse,
                          HttpResponseNotFound,
                          HttpResponseBadRequest,
@@ -124,25 +124,6 @@ def _prepare_job(request, hazard_job_id, candidates):
     return readinput.extract_from_zip(arch, candidates)
 
 
-def _is_source_model(tempfile):
-    """
-    Return true if an uploaded NRML file is a seismic source model.
-    """
-    tree = etree.iterparse(tempfile, events=('start', 'end'))
-    # pop off the first elements, which should be a <nrml> element
-    # and something else
-    _, nrml_elem = tree.next()
-    _, model_elem = tree.next()
-
-    assert nrml_elem.tag == '{%s}nrml' % nrml.NAMESPACE, (
-        "Input file is not a NRML artifact"
-    )
-
-    if model_elem.tag == '{%s}sourceModel' % nrml.NAMESPACE:
-        return True
-    return False
-
-
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def get_engine_version(request):
@@ -186,9 +167,9 @@ def validate_nrml(request):
     xml_file = writetmp(xml_text, suffix='.xml')
     try:
         nrml.parse(xml_file)
-    except etree.ParseError as exc:
-        return _make_response(error_msg=exc.message.message,
-                              error_line=exc.message.lineno,
+    except ExpatError as exc:
+        return _make_response(error_msg=str(exc),
+                              error_line=exc.lineno,
                               valid=False)
     except Exception as exc:
         # get the exception message
@@ -474,7 +455,7 @@ def get_result(request, result_id):
 
     tmpdir = tempfile.mkdtemp()
     try:
-        exported = core.export_from_datastore(
+        exported = core.export_from_db(
             (ds_key, export_type), job_id, datadir, tmpdir)
     except DataStoreExportError as exc:
         # TODO: there should be a better error page

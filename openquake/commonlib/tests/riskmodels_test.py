@@ -247,8 +247,7 @@ lossCategory="contents">
         cmodel = nrml.parse(fname)
         self.assertEqual(
             repr(cmodel),
-            "<ConsequenceModel structural "
-            "['ds1', 'ds2', 'ds3', 'ds4'] tax1>")
+            "<ConsequenceModel structural ds1, ds2, ds3, ds4 tax1>")
 
         # test pickleability
         pickle.loads(pickle.dumps(cmodel))
@@ -291,5 +290,5 @@ lossCategory="contents">
         # inverted loss states
         with self.assertRaises(ValueError) as ctx:
             nrml.parse(self.wrong_csq_model_3)
-        self.assertIn("node params: Expected 'ds3', got 'ds4', line 12",
+        self.assertIn("node params: Expected u'ds3', got u'ds4', line 12",
                       str(ctx.exception))
