@@ -733,6 +733,9 @@ class SourceConverter(RuptureConverter):
             sgc.grp_list.append(self.convert_sourceGroup(sg_node))
         return sgc
 
+    def convert_sourceModel(self, node):
+        return [self.convert_node(subnode) for subnode in node]
+
 
 def parse_ses_ruptures(fname):
     """
