@@ -103,7 +103,7 @@ setup(
     license="AGPL3",
     platforms=["any"],
     package_data={"openquake.hazardlib": [
-        "README.rst", "LICENSE", "CONTRIBUTORS.txt"]},
+        "README.md", "LICENSE", "CONTRIBUTORS.txt"]},
     namespace_packages=['openquake'],
     include_package_data=True,
     test_loader='openquake.baselib.runtests:TestLoader',

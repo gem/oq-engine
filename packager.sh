@@ -285,8 +285,8 @@ _builddoc_innervm_run () {
     ssh $lxc_ip "sudo apt-get -y install python-pip"
     ssh $lxc_ip "sudo pip install sphinx==1.3.4"
 
-    ssh $lxc_ip "cd ${GEM_GIT_PACKAGE} ; export PYTHONPATH=\$PWD ; cd doc ; make html"
-    scp -r "$lxc_ip:${GEM_GIT_PACKAGE}/doc/build/html" "out_${BUILD_UBUVER}/"
+    ssh $lxc_ip "cd ${GEM_GIT_PACKAGE} ; export PYTHONPATH=\$PWD ; cd doc/sphinx ; make html"
+    scp -r "$lxc_ip:${GEM_GIT_PACKAGE}/doc/sphinx/build/html" "out_${BUILD_UBUVER}/"
 
     trap ERR
 
@@ -734,7 +734,7 @@ if [ 0 -eq 1 ]; then
 
     # mods pre-packaging
     mv LICENSE         openquake
-    mv README.rst      openquake/README
+    mv README.md       openquake/README
     mv celeryconfig.py openquake
     mv openquake.cfg   openquake
 

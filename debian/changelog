@@ -1,4 +1,7 @@
+python-oq-hazardlib (0.20.0-0~precise01) precise; urgency=low
+
   [Michele Simionato]
+  * Fixed the serialization on HDF5 of dictionaries with keys containing slashes
   * Renamed Imtls -> DictArray
   * Removed the .id attribute from the Site class
 
@@ -37,6 +40,8 @@
     satisfying the HDF5 protocol used by the OpenQuake software
   * Added a LiteralAttrs class to serialize literal attributes on HDF5
   * Added to the Monitor the ability to send commands
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 21 Jun 2016 13:10:35 +0200
 
 python-oq-hazardlib (0.19.0-0~precise01) precise; urgency=low
 

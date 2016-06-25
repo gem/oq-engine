@@ -26,5 +26,5 @@ from openquake.hazardlib import (
     tom, near_fault)
 
 # the version is managed by packager.sh with a sed
-__version__ = '0.20.0'
+__version__ = '0.21.0'
 __version__ += git_suffix(__file__)

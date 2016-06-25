@@ -493,18 +493,13 @@ class Tile(object):
     def __init__(self, sitecol, maximum_distance):
         self.sitecol = sitecol
         self.maximum_distance = maximum_distance
-        trts = set(maximum_distance)
 
         # determine the bounding box by taking into account the IDL
         self.cross_idl = cross_idl(sitecol.lons.min(), sitecol.lons.max())
         lons = self.fix_lons(sitecol.lons)
-        min_lon, max_lon = lons.min(), lons.max()
-        min_lat, max_lat = self.sitecol.lats.min(), self.sitecol.lats.max()
-
-        self.min_lon = {trt: min_lon for trt in trts}
-        self.max_lon = {trt: max_lon for trt in trts}
-        self.min_lat = {trt: min_lat for trt in trts}
-        self.max_lat = {trt: max_lat for trt in trts}
+        self.min_lon, self.max_lon = lons.min(), lons.max()
+        self.min_lat, self.max_lat = (
+            self.sitecol.lats.min(), self.sitecol.lats.max())
 
     def fix_lons(self, lons):
         """
@@ -521,11 +516,8 @@ class Tile(object):
         """
         :returns: ((min_lon, min_lat), width, height) useful for plotting
         """
-        min_lon = min(self.min_lon.values())
-        min_lat = min(self.min_lat.values())
-        max_lon = max(self.max_lon.values())
-        max_lat = max(self.max_lat.values())
-        return (min_lon, min_lat), max_lon - min_lon, max_lat - min_lat
+        return ((self.min_lon, self.min_lat),
+                self.max_lon - self.min_lon, self.max_lat - self.min_lat)
 
     def contains(self, lon, lat, trt, max_radius):
         """
@@ -534,10 +526,10 @@ class Tile(object):
         """
         # angular distance per TRT
         delta = (self.maximum_distance[trt] + max_radius) / self.KM_ONE_DEGREE
-        min_lon = self.min_lon[trt] - delta
-        max_lon = self.max_lon[trt] + delta
-        min_lat = self.min_lat[trt] - delta
-        max_lat = self.max_lat[trt] + delta
+        min_lon = self.min_lon - delta
+        max_lon = self.max_lon + delta
+        min_lat = self.min_lat - delta
+        max_lat = self.max_lat + delta
         if self.cross_idl and lon < 0:  # special case
             within_lon = min_lon <= lon + 360 <= max_lon
         else:  # regular case
@@ -555,9 +547,6 @@ class Tile(object):
                 self.maximum_distance[trt], self.sitecol) is not None
 
     def __repr__(self):
-        boundaries = [
-            '%s: %d <= lon <= %d, %d <= lat <= %d' % (
-                trt, self.min_lon[trt], self.max_lon[trt],
-                self.min_lat[trt], self.max_lat[trt])
-            for trt in self.maximum_distance]
-        return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(boundaries))
+        boundaries = '%d <= lon <= %d, %d <= lat <= %d' % (
+            self.min_lon, self.max_lon, self.min_lat, self.max_lat)
+        return '<%s %s>' % (self.__class__.__name__, boundaries)

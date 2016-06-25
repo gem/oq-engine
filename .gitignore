@@ -9,3 +9,4 @@ build-rpm
 .coverage
 .DS_Store
 *.noseids
+*.egg-info

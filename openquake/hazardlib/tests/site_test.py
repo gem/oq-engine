@@ -307,9 +307,7 @@ class TileTestCase(unittest.TestCase):
         maximum_distance = {'Subduction IntraSlab': 200}
         sitecol = SiteCollection.from_points(lons, lats, SiteModelParam())
         tile = Tile(sitecol, maximum_distance)
-        self.assertEqual(
-            repr(tile), '<Tile\nSubduction IntraSlab: '
-            '-1 <= lon <= 10, -3 <= lat <= 20>')
+        self.assertEqual(repr(tile), '<Tile -1 <= lon <= 10, -3 <= lat <= 20>')
         src = make_point_source(1, 10)
         self.assertTrue(src in tile)
 
@@ -319,9 +317,7 @@ class TileTestCase(unittest.TestCase):
         maximum_distance = {'Subduction IntraSlab': 200}
         sitecol = SiteCollection.from_points(lons, lats, SiteModelParam())
         tile = Tile(sitecol, maximum_distance)
-        self.assertEqual(
-            repr(tile), '<Tile\nSubduction IntraSlab: '
-            '178 <= lon <= 180, 3 <= lat <= 4>')
+        self.assertEqual(repr(tile), '<Tile 178 <= lon <= 180, 3 <= lat <= 4>')
         src = make_point_source(-179.3, 3.5)
         self.assertTrue(src in tile)
         src = make_point_source(178.2, 3.5)
