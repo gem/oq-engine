@@ -28,5 +28,5 @@ class UcerfTestCase(CalculatorTestCase):
             raise unittest.SkipTest  # UCERF requires vlen arrays
         out = self.run_calc(ucerf.__file__, 'job.ini', exports='txt')
         num_exported = len(out['gmf_data', 'txt'])
-        # just check that two realizations are exported
-        self.assertEqual(num_exported, 2)
+        # just check that three realizations are exported
+        self.assertEqual(num_exported, 3)
