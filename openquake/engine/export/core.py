@@ -46,7 +46,7 @@ def zipfiles(fnames, archive):
     z.close()
 
 
-def export_from_datastore(output_key, calc_id, datadir, target):
+def export_from_db(output_key, calc_id, datadir, target):
     """
     :param output_key: a pair (ds_key, fmt)
     :param calc_id: calculation ID
@@ -54,29 +54,30 @@ def export_from_datastore(output_key, calc_id, datadir, target):
     :param target: directory, temporary when called from the engine server
     """
     makedirs(target)
+    export.from_db = True
     ds_key, fmt = output_key
-    dstore = datastore.read(calc_id, datadir=datadir)
-    dstore.export_dir = target
-    try:
-        exported = export(output_key, dstore)
-    except KeyError:
-        raise DataStoreExportError(
-            'Could not export %s in %s' % output_key)
-    if not exported:
-        raise DataStoreExportError(
-            'Nothing to export for %s' % ds_key)
-    elif len(exported) > 1:
-        # NB: I am hiding the archive by starting its name with a '.',
-        # to avoid confusing the users, since the unzip files are
-        # already in the target directory; the archive is used internally
-        # by the WebUI, so it must be there; it would be nice not to
-        # generate it when not using the Web UI, but I will leave that
-        # feature for after the removal of the old calculators
-        archname = '.' + ds_key + '-' + fmt + '.zip'
-        zipfiles(exported, os.path.join(target, archname))
-        return os.path.join(target, archname)
-    else:  # single file
-        return exported[0]
+    with datastore.read(calc_id, datadir=datadir) as dstore:
+        dstore.export_dir = target
+        try:
+            exported = export(output_key, dstore)
+        except KeyError:
+            raise DataStoreExportError(
+                'Could not export %s in %s' % output_key)
+        if not exported:
+            raise DataStoreExportError(
+                'Nothing to export for %s' % ds_key)
+        elif len(exported) > 1:
+            # NB: I am hiding the archive by starting its name with a '.',
+            # to avoid confusing the users, since the unzip files are
+            # already in the target directory; the archive is used internally
+            # by the WebUI, so it must be there; it would be nice not to
+            # generate it when not using the Web UI, but I will leave that
+            # feature for after the removal of the old calculators
+            archname = '.' + ds_key + '-' + fmt + '.zip'
+            zipfiles(exported, os.path.join(target, archname))
+            return os.path.join(target, archname)
+        else:  # single file
+            return exported[0]
 
 #: Used to separate node labels in a logic tree path
 LT_PATH_JOIN_TOKEN = '_'
@@ -120,14 +121,14 @@ def get_outkey(dskey, export_types):
 def export_output(dskey, calc_id, datadir, target_dir, export_types):
     """
     Simple UI wrapper around
-    :func:`openquake.engine.export.core.export_from_datastore` yielding
+    :func:`openquake.engine.export.core.export_from_db` yielding
     a summary of files exported, if any.
     """
     outkey = get_outkey(dskey, export_types.split(','))
-    if not outkey:
-        yield 'There is not exporter for %s, %s' % (dskey, export_types)
+    if export_types and not outkey:
+        yield 'There is no exporter for %s, %s' % (dskey, export_types)
         return
-    the_file = export_from_datastore(outkey, calc_id, datadir, target_dir)
+    the_file = export_from_db(outkey, calc_id, datadir, target_dir)
     if the_file.endswith('.zip'):
         dname = os.path.dirname(the_file)
         fnames = zipfile.ZipFile(the_file).namelist()

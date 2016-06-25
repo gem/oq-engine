@@ -400,8 +400,8 @@ _builddoc_innervm_run () {
     # install sources of this package
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
-    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine\" ; cd oq-engine/doc ; make html"
-    scp -r "${lxc_ip}:oq-engine/doc/build/html" "out_${BUILD_UBUVER}/" || true
+    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine\" ; cd oq-engine/doc/sphinx ; make html"
+    scp -r "${lxc_ip}:oq-engine/doc/sphinx/build/html" "out_${BUILD_UBUVER}/" || true
 
     # TODO: version check
     trap ERR
@@ -613,14 +613,14 @@ celeryd_wait $GEM_MAXLOOP"
             cd -
             fi
         done
+        oq info --build-reports risk
         echo 'Listing hazard calculations'
         oq engine --lhc
         echo 'Listing risk calculations'
-        oq engine --lrc
-        python -m openquake.server.stop"
+        oq engine --lrc"
     fi
 
-    ssh $lxc_ip "sudo -u openquake python -m openquake.server.dbserver & sleep 1 ; oq engine --make-html-report today ; python -m openquake.server.stop"
+    ssh $lxc_ip "oq engine --make-html-report today"
     scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
 
     scp -r "${lxc_ip}:/usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" "out_${BUILD_UBUVER}/"
@@ -1250,7 +1250,7 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     cat debian/changelog.orig | sed -n "/^$GEM_DEB_PACKAGE/,\$ p" >> debian/changelog
     rm debian/changelog.orig
 
-    sed -i "s/^__version__[  ]*=.*/__version__ = '${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}~dev${dt}-${hash}'/g" openquake/engine/__init__.py
+    sed -i "s/^__version__[  ]*=.*/__version__ = '${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}~dev${dt}-${hash}'/g" openquake/risklib/__init__.py
 else
     cp debian/changelog debian/changelog.orig
     cat debian/changelog.orig | sed "1 s/${BUILD_UBUVER_REFERENCE}/${BUILD_UBUVER}/g" > debian/changelog

@@ -104,7 +104,7 @@ class Choice(object):
 
     def __call__(self, value):
         if value not in self.choices:
-            raise ValueError('Got %r, expected %s' % (
+            raise ValueError("Got '%s', expected %s" % (
                              value, '|'.join(self.choices)))
         return value
 
@@ -143,7 +143,7 @@ class Choices(Choice):
                     val, self.choices))
         return tuple(values)
 
-export_formats = Choices('', 'xml', 'geojson', 'txt', 'csv')
+export_formats = Choices('', 'xml', 'geojson', 'txt', 'csv', 'hdf5')
 
 
 def hazard_id(value):
@@ -209,7 +209,7 @@ class SimpleId(object):
         if re.match(self.regex, value):
             return value
         raise ValueError(
-            'Invalid ID %r: the only accepted chars are a-zA-Z0-9_-' % value)
+            "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-" % value)
 
 MAX_ID_LENGTH = 100
 ASSET_ID_LENGTH = 100
@@ -315,7 +315,7 @@ def nonzero(value):
     ValueError: '0' is zero
     """
     if float_(value) == 0:
-        raise ValueError('%r is zero' % value)
+        raise ValueError("'%s' is zero" % value)
     return value
 
 
@@ -388,13 +388,6 @@ def lon_lat(value):
     """
     lon, lat = value.split()
     return longitude(lon), latitude(lat)
-
-
-def lon_lat_iml(value, lon, lat, iml):
-    """
-    Used to convert nodes of the form <node lon="LON" lat="LAT" iml="IML" />
-    """
-    return longitude(lon), latitude(lat), positivefloat(iml)
 
 
 def coordinates(value):
@@ -532,29 +525,6 @@ def decreasing_probabilities(value):
         raise ValueError('The probabilities %s are not in decreasing order'
                          % value)
     return probs
-
-
-def IML(value, IMT, minIML=None, maxIML=None, imlUnit=None):
-    """
-    Convert a node of the form
-
-    <IML IMT="PGA" imlUnit="g" minIML="0.02" maxIML="1.5"/>
-
-    into ("PGA", None, 0.02, 1.5) and a node
-
-    <IML IMT="MMI" imlUnit="g">7 8 9 10 11</IML>
-
-    into ("MMI", [7., 8., 9., 10., 11.], None, None)
-    """
-    imt_str = str(imt.from_string(IMT))
-    if value:
-        imls = positivefloats(value)
-        check_levels(imls, imt_str)
-    else:
-        imls = None
-    min_iml = positivefloat(minIML) if minIML else None
-    max_iml = positivefloat(maxIML) if maxIML else None
-    return (imt_str, imls, min_iml, max_iml, imlUnit)
 
 
 def intensity_measure_type(value):
@@ -815,19 +785,6 @@ def posList(value):
         raise ValueError('Found a non-float in %s: %s' % (value, exc))
 
 
-def point2d(value, lon, lat):
-    """
-    This is used to convert nodes of the form
-    <location lon="LON" lat="LAT" />
-
-    :param value: None
-    :param lon: longitude string
-    :param lat: latitude string
-    :returns: a validated pair (lon, lat)
-    """
-    return longitude(lon), latitude(lat)
-
-
 def point3d(value, lon, lat, depth):
     """
     This is used to convert nodes of the form
@@ -839,19 +796,6 @@ def point3d(value, lon, lat, depth):
     :returns: a validated triple (lon, lat, depth)
     """
     return longitude(lon), latitude(lat), positivefloat(depth)
-
-
-def probability_depth(value, probability, depth):
-    """
-    This is used to convert nodes of the form
-    <hypoDepth probability="PROB" depth="DEPTH" />
-
-    :param value: None
-    :param probability: a probability
-    :param depth: a depth
-    :returns: a validated pair (probability, depth)
-    """
-    return (range01(probability), positivefloat(depth))
 
 
 strike_range = FloatRange(0, 360)
@@ -930,6 +874,8 @@ def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat, backarc="false"):
 # used for the exposure validation
 cost_type = Choice('structural', 'nonstructural', 'contents',
                    'business_interruption')
+
+cost_type_type = Choice('aggregated', 'per_area', 'per_asset')
 
 
 ###########################################################################

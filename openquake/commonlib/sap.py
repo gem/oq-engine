@@ -74,6 +74,13 @@ def get_parentparser(parser, description=None, help=True):
         return parser
 
 
+def str_choices(choices):
+    """Returns {choice1, ..., choiceN} or the empty string"""
+    if choices:
+        return '{%s}' % ', '.join(choices)
+    return ''
+
+
 class Parser(object):
     """
     A simple way to define command processors based on argparse.
@@ -136,7 +143,7 @@ class Parser(object):
         default = self.argdict[name]
         if default is not NODEFAULT:
             kw['default'] = default
-            kw['metavar'] = metavar or str(default)
+            kw['metavar'] = metavar or str_choices(choices) or str(default)
         abbrev = abbrev or '-' + name[0]
         abbrevs = set(args[0] for args, kw in self.all_arguments)
         longname = '--' + name.replace('_', '-')
@@ -191,7 +198,9 @@ def compose(parsers, name='main', description=None, prog=None,
     """
     assert len(parsers) >= 1, parsers
     parentparser = argparse.ArgumentParser(
-        description=description, version=version, add_help=False)
+        description=description, add_help=False)
+    parentparser.add_argument(
+        '--version', '-v', action='version', version=version)
     subparsers = parentparser.add_subparsers(
         help='available subcommands; use %s help <cmd>' % prog,
         prog=prog)

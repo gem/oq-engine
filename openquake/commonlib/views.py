@@ -443,8 +443,13 @@ def view_exposure_info(token, dstore):
     """
     assetcol = dstore['assetcol/array'][:]
     taxonomies = dstore['assetcol/taxonomies'][:]
+    cc = dstore['assetcol/cost_calculator']
+    ra_flag = ['relative', 'absolute']
     data = [('#assets', len(assetcol)),
-            ('#taxonomies', len(taxonomies))]
+            ('#taxonomies', len(taxonomies)),
+            ('deductibile', ra_flag[cc.deduct_abs]),
+            ('insurance_limit', ra_flag[cc.limit_abs]),
+            ]
     return rst_table(data) + '\n\n' + view_assets_by_site(token, dstore)
 
 

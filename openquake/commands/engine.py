@@ -18,7 +18,6 @@
 from __future__ import print_function
 import os
 import sys
-import socket
 import getpass
 import logging
 import subprocess
@@ -30,6 +29,7 @@ from openquake.engine.utils import confirm
 from openquake.engine.tools.make_html_report import make_report
 from openquake.commonlib.concurrent_futures_process_mpatch import (
     concurrent_futures_process_monkeypatch)
+from openquake.server import dbserver
 
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
@@ -56,7 +56,6 @@ def run_job(cfg_file, log_level, log_file, exports='',
         Path to log file.
     :param exports:
         A comma-separated string of export types requested by the user.
-        Currently only 'xml' is supported.
     :param hazard_calculation_id:
         ID of the previous calculation or None
     """
@@ -119,14 +118,8 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         os.makedirs(datastore.DATADIR)
 
     # check if the DbServer is up
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        err = sock.connect_ex(config.DBS_ADDRESS)
-    finally:
-        sock.close()
-    if err:
-        multi_user = valid.boolean(config.get('dbserver', 'multi_user'))
-        if multi_user:
+    if dbserver.get_status() == 'not-running':
+        if valid.boolean(config.get('dbserver', 'multi_user')):
             sys.exit('Please start the DbServer: '
                      'see the documentation for details')
         # otherwise start the DbServer automatically
@@ -229,14 +222,14 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         dskey, calc_id, datadir = logs.dbcmd('get_output', int(output_id))
         for line in core.export_output(
                 dskey, calc_id, datadir, os.path.expanduser(target_dir),
-                exports):
+                exports or 'xml,csv'):
             print(line)
 
     elif export_outputs is not None:
         job_id, target_dir = export_outputs
         hc_id = get_job_id(job_id)
         for line in core.export_outputs(
-                hc_id, os.path.expanduser(target_dir), exports):
+                hc_id, os.path.expanduser(target_dir), exports or 'xml,csv'):
             print(line)
 
     elif delete_uncompleted_calculations:

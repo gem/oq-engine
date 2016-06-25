@@ -3,7 +3,6 @@
 \#*\#
 \.\#*
 .coverage
-*.png
 *~
 *_flymake.py
 TAGS
@@ -12,3 +11,4 @@ build-deb
 build-rpm
 dist
 *.swp
+*.egg-info

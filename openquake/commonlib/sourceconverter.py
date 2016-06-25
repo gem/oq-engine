@@ -548,7 +548,8 @@ class SourceConverter(RuptureConverter):
         :returns: a :class:`openquake.hazardlib.pmf.PMF` instance
         """
         with context(self.fname, node):
-            return pmf.PMF([~hd for hd in node.hypoDepthDist])
+            return pmf.PMF([(hd['probability'], hd['depth'])
+                            for hd in node.hypoDepthDist])
 
     def convert_areaSource(self, node):
         """
