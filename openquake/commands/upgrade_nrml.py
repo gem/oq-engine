@@ -29,10 +29,6 @@ from openquake.commonlib import InvalidFile, riskmodels
 from openquake.risklib import scientific
 
 
-def filter_vset(elem):
-    return elem.tag.endswith('discreteVulnerabilitySet')
-
-
 def get_vulnerability_functions_04(fname):
     """
     Parse the vulnerability model in NRML 0.4 format.
@@ -94,7 +90,7 @@ def upgrade_file(path):
         # below I am converting into a NRML 0.5 vulnerabilityModel
         node0 = Node(
             'vulnerabilityModel', cat_dict,
-            nodes=list(map(riskmodels.obj_to_node, list(vf_dict.values()))))
+            nodes=list(map(riskmodels.obj_to_node, vf_dict.values())))
         gml = False
     elif tag == 'fragilityModel':
         node0 = riskmodels.convert_fragility_model_04(
