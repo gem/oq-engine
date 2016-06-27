@@ -114,7 +114,7 @@ require_epsilons                         False
 Slowest sources
 ---------------
 ============ ============ ============ ====== ========= =========== ========== =========
-trt_model_id source_id    source_class weight split_num filter_time split_time calc_time
+src_group_id source_id    source_class weight split_num filter_time split_time calc_time
 ============ ============ ============ ====== ========= =========== ========== =========
 4            AS_GEAS343   AreaSource   96     1         0.012       0.0        0.0      
 9            FSBG_TRBG103 AreaSource   43     1         0.004       0.0        0.0      

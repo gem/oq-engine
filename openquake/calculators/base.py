@@ -40,7 +40,7 @@ from openquake.baselib.python3compat import with_metaclass
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
-get_trt = operator.attrgetter('trt_model_id')
+get_trt = operator.attrgetter('src_group_id')
 get_imt = operator.attrgetter('imt')
 
 calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
@@ -473,9 +473,9 @@ class HazardCalculator(BaseCalculator):
                 num_sites = len(self.sitecol)
                 logging.warn('Associated %d assets to %d sites, %d discarded',
                              ok_assets, num_sites, num_assets - ok_assets)
-        elif oq_hazard and 'exposure' in oq_hazard.inputs:
-            logging.info('Re-using the already imported exposure')
-            self.load_riskmodel()
+        elif oq.job_type == 'risk':
+            raise RuntimeError(
+                'Missing exposure_file in %(job_ini)s' % oq.inputs)
         else:  # no exposure
             self.load_riskmodel()
             self.sitecol = haz_sitecol
