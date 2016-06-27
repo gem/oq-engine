@@ -83,7 +83,7 @@ Rupture multiplicity     1.000
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
-trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+src_group_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
 0            1         AreaSource   175    1,170     7.520E-04   0.279      2.309    
 0            2         AreaSource   58     389       7.472E-04   0.090      0.698    
