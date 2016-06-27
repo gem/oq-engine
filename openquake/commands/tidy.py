@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
-from openquake.commonlib import sap, nrml
+from openquake.commonlib import sap, nrml, writers
 
 
 def tidy(fnames):
@@ -35,7 +35,7 @@ def tidy(fnames):
         with open(fname + '.bak', 'w') as f:
             f.write(open(fname).read())
         with open(fname, 'w') as f:
-            nrml.write(nodes, f)
+            nrml.write(nodes, f, writers.FIVEDIGITS)
         print('Reformatted %s, original left in %s.bak' % (fname, fname))
 
 parser = sap.Parser(tidy)
