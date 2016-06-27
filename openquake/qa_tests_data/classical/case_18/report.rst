@@ -94,7 +94,7 @@ hostname                                 gem-tstation
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
-trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+src_group_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
 0            VICM      AreaSource   60     30        0.001       0.008      0.0      
 ============ ========= ============ ====== ========= =========== ========== =========

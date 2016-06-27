@@ -610,7 +610,7 @@ def create(GmfColl, eb_ruptures, sitecol, imts, rlzs_assoc,
            trunc_level, correl_model, min_iml, monitor=Monitor()):
     """
     :param GmfColl: a GmfCollector class to be instantiated
-    :param eb_ruptures: a list of EBRuptures with the same trt_model_id
+    :param eb_ruptures: a list of EBRuptures with the same src_group_id
     :param sitecol: a SiteCollection instance
     :param imts: list of IMT strings
     :param rlzs_assoc: a RlzsAssoc instance
