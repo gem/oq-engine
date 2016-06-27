@@ -142,7 +142,7 @@ hostname                                 gem-tstation
 Slowest sources
 ---------------
 ============ ========= ========================= ====== ========= =========== ========== =========
-trt_model_id source_id source_class              weight split_num filter_time split_time calc_time
+src_group_id source_id source_class              weight split_num filter_time split_time calc_time
 ============ ========= ========================= ====== ========= =========== ========== =========
 2            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
 9            SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      

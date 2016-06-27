@@ -229,18 +229,18 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     :param monitor:
         monitor instance
     :returns:
-        a dictionary trt_model_id -> [Rupture instances]
+        a dictionary src_group_id -> [Rupture instances]
     """
     assert siteidx == 0, (
         'siteidx can be nonzero only for the classical_tiling calculations: '
         'tiling with the EventBasedRuptureCalculator is an error')
     # NB: by construction each block is a non-empty list with
-    # sources of the same trt_model_id
-    trt_model_id = sources[0].trt_model_id
+    # sources of the same src_group_id
+    src_group_id = sources[0].src_group_id
     oq = monitor.oqparam
     trt = sources[0].tectonic_region_type
     max_dist = oq.maximum_distance[trt]
-    cmaker = ContextMaker(rlzs_assoc.gsims_by_trt_id[trt_model_id])
+    cmaker = ContextMaker(rlzs_assoc.gsims_by_trt_id[src_group_id])
     params = cmaker.REQUIRES_RUPTURE_PARAMETERS
     rup_data_dt = numpy.dtype(
         [('rupserial', U32), ('multiplicity', U16),
@@ -250,7 +250,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     rup_data = []
     calc_times = []
     rup_mon = monitor('filtering ruptures', measuremem=False)
-    num_samples = rlzs_assoc.samples[trt_model_id]
+    num_samples = rlzs_assoc.samples[src_group_id]
 
     # Compute and save stochastic event sets
     for src in sources:
@@ -281,7 +281,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
             eb_ruptures.append(ebr)
         dt = time.time() - t0
         calc_times.append((src.id, dt))
-    res = AccumDict({trt_model_id: eb_ruptures})
+    res = AccumDict({src_group_id: eb_ruptures})
     res.calc_times = calc_times
     res.rup_data = numpy.array(rup_data, rup_data_dt)
     res.trt = trt
@@ -341,7 +341,7 @@ def build_eb_ruptures(
         if events:
             yield EBRupture(rup, r_sites.indices,
                             numpy.array(events, event_dt),
-                            src.source_id, src.trt_model_id, serial)
+                            src.source_id, src.src_group_id, serial)
 
 
 @base.calculators.add('event_based_rupture')
@@ -365,16 +365,16 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
             oq.minimum_intensity, oq.imtls)
         self.rup_data = {}
 
-    def count_eff_ruptures(self, ruptures_by_trt_id, trt_model):
+    def count_eff_ruptures(self, ruptures_by_trt_id, src_group):
         """
-        Returns the number of ruptures sampled in the given trt_model.
+        Returns the number of ruptures sampled in the given src_group.
 
         :param ruptures_by_trt_id: a dictionary with key trt_id
-        :param trt_model: a TrtModel instance
+        :param src_group: a SourceGroup instance
         """
         return sum(
             len(ruptures) for trt_id, ruptures in ruptures_by_trt_id.items()
-            if trt_model.id == trt_id)
+            if src_group.id == trt_id)
 
     def zerodict(self):
         """
@@ -468,7 +468,7 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc,
    """
     oq = monitor.oqparam
     # NB: by construction each block is a non-empty list with
-    # ruptures of the same trt_model_id
+    # ruptures of the same src_group_id
     trunc_level = oq.truncation_level
     correl_model = readinput.get_correl_model(oq)
     gmfadict = create(
@@ -573,7 +573,7 @@ class EventBasedCalculator(ClassicalCalculator):
     def post_execute(self, result):
         """
         :param result:
-            a dictionary (trt_model_id, gsim) -> haz_curves or an empty
+            a dictionary (src_group_id, gsim) -> haz_curves or an empty
             dictionary if hazard_curves_from_gmfs is false
         """
         oq = self.oqparam
