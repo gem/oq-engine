@@ -414,7 +414,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
                     raise
         else:  # just collect the TRT models
             smodel = nrml.read(fname).sourceModel
-            trt_models = source.TrtModel.collect(smodel)
+            trt_models = source.SourceGroup.collect(smodel)
         trts = [mod.trt for mod in trt_models]
         source_model_lt.tectonic_region_types.update(trts)
 
@@ -468,12 +468,12 @@ def get_composite_source_model(oqparam, in_memory=True):
             trt_model.id = trt_id
             for src in trt_model:
                 # there are two cases depending on the flag in_memory:
-                # 1) src is a hazardlib source and has a trt_model_id
+                # 1) src is a hazardlib source and has a src_group_id
                 #    attribute; in that case the source has to be numbered
                 # 2) src is a Node object, then nothing must be done
-                if hasattr(src, 'trt_model_id'):
-                    # .trt_model_id is missing for source nodes
-                    src.trt_model_id = trt_id
+                if hasattr(src, 'src_group_id'):
+                    # .src_group_id is missing for source nodes
+                    src.src_group_id = trt_id
                     src.id = idx
                     idx += 1
             trt_id += 1

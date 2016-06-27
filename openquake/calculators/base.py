@@ -40,7 +40,7 @@ from openquake.baselib.python3compat import with_metaclass
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
-get_trt = operator.attrgetter('trt_model_id')
+get_trt = operator.attrgetter('src_group_id')
 get_imt = operator.attrgetter('imt')
 
 calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
