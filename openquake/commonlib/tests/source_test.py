@@ -654,7 +654,7 @@ class AreaToPointsTestCase(unittest.TestCase):
              6.3627999999999995e-06, 5.292346875e-06])
 
 
-class TrtModelTestCase(unittest.TestCase):
+class SourceGroupTestCase(unittest.TestCase):
     SITES = [
         site.Site(geo.Point(-121.0, 37.0), 0.1, True, 3, 4),
         site.Site(geo.Point(-121.1, 37.0), 1, True, 3, 4),
@@ -699,19 +699,19 @@ class TrtModelTestCase(unittest.TestCase):
     def test_repr(self):
         self.assertEqual(
             repr(self.source_collector['Volcanic']),
-            '<TrtModel #0 Volcanic, 3 source(s), -1 effective rupture(s)>')
+            '<SourceGroup #0 Volcanic, 3 source(s), -1 effective rupture(s)>')
         self.assertEqual(
             repr(self.source_collector['Stable Continental Crust']),
-            '<TrtModel #0 Stable Continental Crust, 1 source(s), '
+            '<SourceGroup #0 Stable Continental Crust, 1 source(s), '
             '-1 effective rupture(s)>'
         )
         self.assertEqual(
             repr(self.source_collector['Subduction Interface']),
-            '<TrtModel #0 Subduction Interface, 1 source(s), '
+            '<SourceGroup #0 Subduction Interface, 1 source(s), '
             '-1 effective rupture(s)>')
         self.assertEqual(
             repr(self.source_collector['Active Shallow Crust']),
-            '<TrtModel #0 Active Shallow Crust, 2 source(s), -1'
+            '<SourceGroup #0 Active Shallow Crust, 2 source(s), -1'
             ' effective rupture(s)>')
 
 

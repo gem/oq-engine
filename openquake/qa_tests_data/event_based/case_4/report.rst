@@ -83,7 +83,7 @@ Rupture multiplicity     4.400
 Slowest sources
 ---------------
 ============ ========= ================= ====== ========= =========== ========== =========
-trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
+src_group_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
 0            1         SimpleFaultSource 10     1         0.002       0.002      0.029    
 ============ ========= ================= ====== ========= =========== ========== =========

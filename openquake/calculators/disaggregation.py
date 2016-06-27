@@ -43,7 +43,7 @@ DISAGG_RES_FMT = 'disagg/poe-%(poe)s-rlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
 BinData = namedtuple('BinData', 'mags, dists, lons, lats, trts, pnes')
 
 
-def _collect_bins_data(trt_num, source_ruptures, site, curves, trt_model_id,
+def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
                        rlzs_assoc, gsims, imtls, poes, truncation_level,
                        n_epsilons, mon):
     # returns a BinData instance
@@ -79,7 +79,7 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, trt_model_id,
                     for imt_str, imls in imtls.iteritems():
                         imt = from_string(imt_str)
                         imls = numpy.array(imls[::-1])
-                        for rlz in rlzs_assoc[trt_model_id, gs]:
+                        for rlz in rlzs_assoc[src_group_id, gs]:
                             rlzi = rlz.ordinal
                             curve_poes = curves[rlzi, imt_str][::-1]
                             for poe in poes:
@@ -113,7 +113,7 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, trt_model_id,
 
 
 @parallel.litetask
-def compute_disagg(sitecol, sources, trt_model_id, rlzs_assoc,
+def compute_disagg(sitecol, sources, src_group_id, rlzs_assoc,
                    trt_names, curves_dict, bin_edges, oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
@@ -122,8 +122,8 @@ def compute_disagg(sitecol, sources, trt_model_id, rlzs_assoc,
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param sources:
         list of hazardlib source objects
-    :param trt_model_id:
-        numeric ID of a TrtModel instance
+    :param src_group_id:
+        numeric ID of a SourceGroup instance
     :param rlzs_assoc:
         a :class:`openquake.commonlib.source.RlzsAssoc` instance
     :param dict trt_names:
@@ -146,7 +146,7 @@ def compute_disagg(sitecol, sources, trt_model_id, rlzs_assoc,
     except KeyError:
         max_dist = oqparam.maximum_distance['default']
     trt_num = dict((trt, i) for i, trt in enumerate(trt_names))
-    gsims = rlzs_assoc.gsims_by_trt_id[trt_model_id]
+    gsims = rlzs_assoc.gsims_by_trt_id[src_group_id]
     result = {}  # sid, rlz.id, poe, imt, iml, trt_names -> array
 
     collecting_mon = monitor('collecting bins')
@@ -168,7 +168,7 @@ def compute_disagg(sitecol, sources, trt_model_id, rlzs_assoc,
         with collecting_mon:
             bdata = _collect_bins_data(
                 trt_num, source_ruptures, site, curves_dict[sid],
-                trt_model_id, rlzs_assoc, gsims, oqparam.imtls,
+                src_group_id, rlzs_assoc, gsims, oqparam.imtls,
                 oqparam.poes_disagg, oqparam.truncation_level,
                 oqparam.num_epsilon_bins, monitor)
 
@@ -178,7 +178,7 @@ def compute_disagg(sitecol, sources, trt_model_id, rlzs_assoc,
         for poe in oqparam.poes_disagg:
             for imt in oqparam.imtls:
                 for gsim in gsims:
-                    for rlz in rlzs_assoc[trt_model_id, gsim]:
+                    for rlz in rlzs_assoc[src_group_id, gsim]:
                         rlzi = rlz.ordinal
                         # extract the probabilities of non-exceedance for the
                         # given realization, disaggregation PoE, and IMT

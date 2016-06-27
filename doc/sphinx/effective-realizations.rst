@@ -233,7 +233,7 @@ The `info` commands produces more output, which I have denoted simply as
 `<RlzsAssoc...>`. This output is the string representation of
 a Python object containing the associations between the pairs
 
-  `(trt_model_id, gsim) -> realizations`
+  `(src_group_id, gsim) -> realizations`
 
 In the case of the SHARE model there are simply too many realizations to make
 it possible to understand what it is in the association object. So, it is

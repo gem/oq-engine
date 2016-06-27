@@ -99,7 +99,7 @@ Wood     1.000 NaN    1   1   1         1
 Slowest sources
 ---------------
 ============ ========= ========================= ====== ========= =========== ========== =========
-trt_model_id source_id source_class              weight split_num filter_time split_time calc_time
+src_group_id source_id source_class              weight split_num filter_time split_time calc_time
 ============ ========= ========================= ====== ========= =========== ========== =========
 0            3         SimpleFaultSource         482    15        0.002       0.029      0.225    
 0            1         CharacteristicFaultSource 1.000  1         0.001       0.0        0.022    
