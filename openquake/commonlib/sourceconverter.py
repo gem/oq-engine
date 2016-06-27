@@ -117,7 +117,7 @@ def area_to_point_sources(area_src):
             nodal_plane_distribution=area_src.nodal_plane_distribution,
             hypocenter_distribution=area_src.hypocenter_distribution,
             temporal_occurrence_model=area_src.temporal_occurrence_model)
-        pt.trt_model_id = area_src.trt_model_id
+        pt.src_group_id = area_src.src_group_id
         pt.num_ruptures = pt.count_ruptures()
         yield pt
 
@@ -176,7 +176,7 @@ class MultiRuptureSource(object):
         an ID for the MultiRuptureSource
     :param tectonic_region_type:
         the tectonic region type
-    :param trt_model_id:
+    :param src_group_id:
         ID of the tectonic region model the source belongs to
     """
     @classmethod
@@ -188,14 +188,14 @@ class MultiRuptureSource(object):
         for i, ruptures in enumerate(
                 block_splitter(src.iter_ruptures(), block_size)):
             yield cls(ruptures, '%s-%s' % (src.source_id, i),
-                      src.tectonic_region_type, src.trt_model_id)
+                      src.tectonic_region_type, src.src_group_id)
 
     def __init__(self, ruptures, source_id, tectonic_region_type,
-                 trt_model_id):
+                 src_group_id):
         self.ruptures = ruptures
         self.source_id = source_id
         self.tectonic_region_type = tectonic_region_type
-        self.trt_model_id = trt_model_id
+        self.src_group_id = src_group_id
         self.weight = self.num_ruptures = len(ruptures)
 
     def iter_ruptures(self):

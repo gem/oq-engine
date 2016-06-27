@@ -83,7 +83,7 @@ Rupture multiplicity     2,037
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
-trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+src_group_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
 0            1         PointSource  0.025  1         3.004E-05   0.0        0.038    
 ============ ========= ============ ====== ========= =========== ========== =========
