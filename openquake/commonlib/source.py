@@ -153,7 +153,7 @@ class SourceGroup(collections.Sequence):
                 source_stats_dict[trt] = SourceGroup(trt)
             sg = source_stats_dict[trt]
             if not sg.sources:
-                # we append just one source per TRSGodel, so that
+                # we append just one source per SourceGroup, so that
                 # the memory occupation is insignificant
                 sg.sources.append(src)
 
@@ -163,12 +163,13 @@ class SourceGroup(collections.Sequence):
     def __init__(self, trt, sources=None,
                  min_mag=None, max_mag=None, id=0, eff_ruptures=-1):
         self.trt = trt
-        self.sources = sources or []
+        self.sources = []
         self.min_mag = min_mag
         self.max_mag = max_mag
         self.id = id
-        for src in self.sources:
-            self.update(src)
+        if sources:
+            for src in sources:
+                self.update(src)
         self.source_model = None  # to be set later, in CompositionInfo
         self.weight = 1
         self.eff_ruptures = eff_ruptures  # set later nby get_rlzs_assoc
@@ -232,7 +233,7 @@ class SourceModelParser(object):
     """
     def __init__(self, converter):
         self.converter = converter
-        self.sources = {}  # cache fname -> sources
+        self.groups = {}  # cache fname -> groups
         self.fname_hits = collections.Counter()  # fname -> number of calls
 
     def parse_src_groups(self, fname, apply_uncertainties=None):
@@ -243,29 +244,22 @@ class SourceModelParser(object):
             a function modifying the sources (or None)
         """
         try:
-            sources = self.sources[fname]
+            groups = self.groups[fname]
         except KeyError:
-            sources = self.sources[fname] = self.parse_sources(fname)
+            groups = self.groups[fname] = self.parse_groups(fname)
         # NB: deepcopy is *essential* here
-        sources = map(copy.deepcopy, sources)
-        for src in sources:
-            if apply_uncertainties:
-                apply_uncertainties(src)
-                src.num_ruptures = src.count_ruptures()
+        groups = map(copy.deepcopy, groups)
+        for group in groups:
+            for src in group:
+                if apply_uncertainties:
+                    apply_uncertainties(src)
+                    src.num_ruptures = src.count_ruptures()
         self.fname_hits[fname] += 1
+        return groups
 
-        # build ordered SourceGroups
-        trts = {}
-        for src in sources:
-            trt = src.tectonic_region_type
-            if trt not in trts:
-                trts[trt] = SourceGroup(trt)
-            trts[trt].update(src)
-        return sorted(trts.values())
-
-    def parse_sources(self, fname):
+    def parse_groups(self, fname):
         """
-        Parse all the sources and return them ordered by tectonic region type.
+        Parse all the groups and return them ordered by tectonic region type.
         It does not count the ruptures, so it is relatively fast.
 
         :param fname:
@@ -274,19 +268,30 @@ class SourceModelParser(object):
         sources = []
         source_ids = set()
         self.converter.fname = fname
-        src_nodes = nrml.parse(fname).nodes
-        for no, src_node in enumerate(src_nodes, 1):
-            src = self.converter.convert_node(src_node)
-            if src.source_id in source_ids:
-                raise DuplicatedID(
-                    'The source ID %s is duplicated!' % src.source_id)
-            sources.append(src)
-            source_ids.add(src.source_id)
-            if no % 10000 == 0:  # log every 10,000 sources parsed
+        smodel = nrml.read(fname)
+        if smodel['xmlns'].endswith('nrml/0.4'):
+            for no, src_node in enumerate(smodel.sourceModel, 1):
+                src = self.converter.convert_node(src_node)
+                if src.source_id in source_ids:
+                    raise DuplicatedID(
+                        'The source ID %s is duplicated!' % src.source_id)
+                sources.append(src)
+                source_ids.add(src.source_id)
+                if no % 10000 == 0:  # log every 10,000 sources parsed
+                    logging.info('Parsed %d sources from %s', no, fname)
+            if no % 10000 != 0:
                 logging.info('Parsed %d sources from %s', no, fname)
-        if no % 10000 != 0:
-            logging.info('Parsed %d sources from %s', no, fname)
-        return sorted(sources, key=operator.attrgetter('tectonic_region_type'))
+
+            groups = groupby(
+                sources, operator.attrgetter('tectonic_region_type'))
+            return [SourceGroup(trt, sources)
+                    for trt, sources in groups.items()]
+        if smodel['xmlns'].endswith('nrml/0.5'):
+            import pdb; pdb.set_trace()
+            for src_group in smodel.sourceModel:
+                sg = self.converter.convert_node(src_group)
+        else:
+            raise RuntimeError('Unknown NRML version %s' % smodel['xmlns'])
 
 
 def agg_prob(acc, prob):
