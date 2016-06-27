@@ -119,7 +119,7 @@ tax3     1.000 NaN    1   1   1         1
 Slowest sources
 ---------------
 ============ ========= ========================= ====== ========= =========== ========== =========
-trt_model_id source_id source_class              weight split_num filter_time split_time calc_time
+src_group_id source_id source_class              weight split_num filter_time split_time calc_time
 ============ ========= ========================= ====== ========= =========== ========== =========
 0            1         SimpleFaultSource         482    15        0.002       0.033      2.238    
 2            1         SimpleFaultSource         482    15        0.001       0.034      1.954    

@@ -44,7 +44,7 @@ DISAGG_RES_FMT = 'disagg/poe-%(poe)s-rlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
 BinData = namedtuple('BinData', 'mags, dists, lons, lats, trts, pnes')
 
 
-def _collect_bins_data(trt_num, source_ruptures, site, curves, trt_model_id,
+def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
                        rlzs_assoc, gsims, imtls, poes, truncation_level,
                        n_epsilons, mon):
     # returns a BinData instance
@@ -80,7 +80,7 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, trt_model_id,
                     for imt_str, imls in imtls.iteritems():
                         imt = from_string(imt_str)
                         imls = numpy.array(imls[::-1])
-                        for rlz in rlzs_assoc[trt_model_id, gs]:
+                        for rlz in rlzs_assoc[src_group_id, gs]:
                             rlzi = rlz.ordinal
                             curve_poes = curves[rlzi, imt_str][::-1]
                             for poe in poes:
@@ -114,7 +114,7 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, trt_model_id,
 
 
 @parallel.litetask
-def compute_disagg(sitecol, sources, trt_model_id, rlzs_assoc,
+def compute_disagg(sitecol, sources, src_group_id, rlzs_assoc,
                    trt_names, curves_dict, bin_edges, oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
@@ -123,8 +123,8 @@ def compute_disagg(sitecol, sources, trt_model_id, rlzs_assoc,
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param sources:
         list of hazardlib source objects
-    :param trt_model_id:
-        numeric ID of a TrtModel instance
+    :param src_group_id:
+        numeric ID of a SourceGroup instance
     :param rlzs_assoc:
         a :class:`openquake.commonlib.source.RlzsAssoc` instance
     :param dict trt_names:
@@ -147,7 +147,7 @@ def compute_disagg(sitecol, sources, trt_model_id, rlzs_assoc,
     except KeyError:
         max_dist = oqparam.maximum_distance['default']
     trt_num = dict((trt, i) for i, trt in enumerate(trt_names))
-    gsims = rlzs_assoc.gsims_by_trt_id[trt_model_id]
+    gsims = rlzs_assoc.gsims_by_trt_id[src_group_id]
     result = {}  # sid, rlz.id, poe, imt, iml, trt_names -> array
 
     collecting_mon = monitor('collecting bins')
@@ -169,7 +169,7 @@ def compute_disagg(sitecol, sources, trt_model_id, rlzs_assoc,
         with collecting_mon:
             bdata = _collect_bins_data(
                 trt_num, source_ruptures, site, curves_dict[sid],
-                trt_model_id, rlzs_assoc, gsims, oqparam.imtls,
+                src_group_id, rlzs_assoc, gsims, oqparam.imtls,
                 oqparam.poes_disagg, oqparam.truncation_level,
                 oqparam.num_epsilon_bins, monitor)
 
@@ -179,7 +179,7 @@ def compute_disagg(sitecol, sources, trt_model_id, rlzs_assoc,
         for poe in oqparam.poes_disagg:
             for imt in oqparam.imtls:
                 for gsim in gsims:
-                    for rlz in rlzs_assoc[trt_model_id, gsim]:
+                    for rlz in rlzs_assoc[src_group_id, gsim]:
                         rlzi = rlz.ordinal
                         # extract the probabilities of non-exceedance for the
                         # given realization, disaggregation PoE, and IMT
@@ -258,19 +258,19 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         self.bin_edges = {}
         curves_dict = {sid: self.get_curves(sid) for sid in sitecol.sids}
         all_args = []
-        num_trts = sum(len(sm.trt_models) for sm in self.csm.source_models)
+        num_trts = sum(len(sm.src_groups) for sm in self.csm.source_models)
         nblocks = math.ceil(oq.concurrent_tasks / num_trts)
         for smodel in self.csm.source_models:
             sm_id = smodel.ordinal
-            trt_names = tuple(mod.trt for mod in smodel.trt_models)
-            max_mag = max(mod.max_mag for mod in smodel.trt_models)
-            min_mag = min(mod.min_mag for mod in smodel.trt_models)
+            trt_names = tuple(mod.trt for mod in smodel.src_groups)
+            max_mag = max(mod.max_mag for mod in smodel.src_groups)
+            min_mag = min(mod.min_mag for mod in smodel.src_groups)
             mag_edges = mag_bin_width * numpy.arange(
                 int(numpy.floor(min_mag / mag_bin_width)),
                 int(numpy.ceil(max_mag / mag_bin_width) + 1))
             logging.info('%d mag bins from %s to %s', len(mag_edges) - 1,
                          min_mag, max_mag)
-            for trt_model in smodel.trt_models:
+            for src_group in smodel.src_groups:
                 for sid, site in zip(sitecol.sids, sitecol):
                     curves = curves_dict[sid]
                     if not curves:
@@ -302,9 +302,9 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                     if (sm_id, sid) in self.bin_edges:
                         bin_edges[sid] = self.bin_edges[sm_id, sid]
 
-                for srcs in split_in_blocks(trt_model, nblocks):
+                for srcs in split_in_blocks(src_group, nblocks):
                     all_args.append(
-                        (sitecol, srcs, trt_model.id, self.rlzs_assoc,
+                        (sitecol, srcs, src_group.id, self.rlzs_assoc,
                          trt_names, curves_dict, bin_edges, oq, self.monitor))
 
         results = parallel.starmap(compute_disagg, all_args).reduce(

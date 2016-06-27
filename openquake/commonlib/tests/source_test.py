@@ -654,7 +654,7 @@ class AreaToPointsTestCase(unittest.TestCase):
              6.3627999999999995e-06, 5.292346875e-06])
 
 
-class TrtModelTestCase(unittest.TestCase):
+class SourceGroupTestCase(unittest.TestCase):
     SITES = [
         site.Site(geo.Point(-121.0, 37.0), 0.1, True, 3, 4),
         site.Site(geo.Point(-121.1, 37.0), 1, True, 3, 4),
@@ -672,7 +672,7 @@ class TrtModelTestCase(unittest.TestCase):
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.))
         cls.source_collector = {
-            sc.trt: sc for sc in cls.parser.parse_trt_models(MIXED_SRC_MODEL)}
+            sc.trt: sc for sc in cls.parser.parse_src_groups(MIXED_SRC_MODEL)}
         cls.sitecol = site.SiteCollection(cls.SITES)
 
     def check(self, trt, attr, value):
@@ -698,19 +698,19 @@ class TrtModelTestCase(unittest.TestCase):
     def test_repr(self):
         self.assertEqual(
             repr(self.source_collector['Volcanic']),
-            '<TrtModel #0 Volcanic, 3 source(s), -1 effective rupture(s)>')
+            '<SourceGroup #0 Volcanic, 3 source(s), -1 effective rupture(s)>')
         self.assertEqual(
             repr(self.source_collector['Stable Continental Crust']),
-            '<TrtModel #0 Stable Continental Crust, 1 source(s), '
+            '<SourceGroup #0 Stable Continental Crust, 1 source(s), '
             '-1 effective rupture(s)>'
         )
         self.assertEqual(
             repr(self.source_collector['Subduction Interface']),
-            '<TrtModel #0 Subduction Interface, 1 source(s), '
+            '<SourceGroup #0 Subduction Interface, 1 source(s), '
             '-1 effective rupture(s)>')
         self.assertEqual(
             repr(self.source_collector['Active Shallow Crust']),
-            '<TrtModel #0 Active Shallow Crust, 2 source(s), -1'
+            '<SourceGroup #0 Active Shallow Crust, 2 source(s), -1'
             ' effective rupture(s)>')
 
 
@@ -788,8 +788,8 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         sitecol = readinput.get_site_collection(oqparam)
         csm = readinput.get_composite_source_model(oqparam, sitecol)
         self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths;
-        # there are 2 distinct tectonic region types, so 18 trt_models
-        self.assertEqual(sum(1 for tm in csm.trt_models), 18)
+        # there are 2 distinct tectonic region types, so 18 src_groups
+        self.assertEqual(sum(1 for tm in csm.src_groups), 18)
 
         rlzs_assoc = csm.info.get_rlzs_assoc()
         rlzs = rlzs_assoc.realizations
@@ -797,7 +797,7 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         # counting the sources in each TRT model (unsplit)
         self.assertEqual(
             [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2],
-            list(map(len, csm.trt_models)))
+            list(map(len, csm.src_groups)))
 
         # test the method extract
         assoc = rlzs_assoc.extract([1, 5], csm.info)
@@ -808,9 +808,9 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
 4,SadighEtAl1997(): ['<5,b1_b3_b8~b2_b3,w=0.5>']
 5,ChiouYoungs2008(): ['<5,b1_b3_b8~b2_b3,w=0.5>']>""")
 
-        # removing 9 trt_models out of 18
-        def count_ruptures(trt_model):
-            if trt_model.trt == 'Active Shallow Crust':  # no ruptures
+        # removing 9 src_groups out of 18
+        def count_ruptures(src_group):
+            if src_group.trt == 'Active Shallow Crust':  # no ruptures
                 return 0
             else:
                 return 1
@@ -829,7 +829,7 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         self.assertEqual(str(assoc), expected_assoc)
         self.assertEqual(len(assoc.realizations), 9)
 
-        # removing all trt_models
+        # removing all src_groups
         self.assertEqual(csm.info.get_rlzs_assoc(lambda t: 0).realizations, [])
 
     def test_oversampling(self):
