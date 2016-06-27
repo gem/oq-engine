@@ -257,19 +257,19 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         self.bin_edges = {}
         curves_dict = {sid: self.get_curves(sid) for sid in sitecol.sids}
         all_args = []
-        num_trts = sum(len(sm.trt_models) for sm in self.csm.source_models)
+        num_trts = sum(len(sm.src_groups) for sm in self.csm.source_models)
         nblocks = math.ceil(oq.concurrent_tasks / num_trts)
         for smodel in self.csm.source_models:
             sm_id = smodel.ordinal
-            trt_names = tuple(mod.trt for mod in smodel.trt_models)
-            max_mag = max(mod.max_mag for mod in smodel.trt_models)
-            min_mag = min(mod.min_mag for mod in smodel.trt_models)
+            trt_names = tuple(mod.trt for mod in smodel.src_groups)
+            max_mag = max(mod.max_mag for mod in smodel.src_groups)
+            min_mag = min(mod.min_mag for mod in smodel.src_groups)
             mag_edges = mag_bin_width * numpy.arange(
                 int(numpy.floor(min_mag / mag_bin_width)),
                 int(numpy.ceil(max_mag / mag_bin_width) + 1))
             logging.info('%d mag bins from %s to %s', len(mag_edges) - 1,
                          min_mag, max_mag)
-            for trt_model in smodel.trt_models:
+            for src_group in smodel.src_groups:
                 for sid, site in zip(sitecol.sids, sitecol):
                     curves = curves_dict[sid]
                     if not curves:
@@ -301,9 +301,9 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                     if (sm_id, sid) in self.bin_edges:
                         bin_edges[sid] = self.bin_edges[sm_id, sid]
 
-                for srcs in split_in_blocks(trt_model, nblocks):
+                for srcs in split_in_blocks(src_group, nblocks):
                     all_args.append(
-                        (sitecol, srcs, trt_model.id, self.rlzs_assoc,
+                        (sitecol, srcs, src_group.id, self.rlzs_assoc,
                          trt_names, curves_dict, bin_edges, oq, self.monitor))
 
         results = parallel.starmap(compute_disagg, all_args).reduce(

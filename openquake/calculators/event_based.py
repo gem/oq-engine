@@ -365,16 +365,16 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
             oq.minimum_intensity, oq.imtls)
         self.rup_data = {}
 
-    def count_eff_ruptures(self, ruptures_by_trt_id, trt_model):
+    def count_eff_ruptures(self, ruptures_by_trt_id, src_group):
         """
-        Returns the number of ruptures sampled in the given trt_model.
+        Returns the number of ruptures sampled in the given src_group.
 
         :param ruptures_by_trt_id: a dictionary with key trt_id
-        :param trt_model: a SourceGroup instance
+        :param src_group: a SourceGroup instance
         """
         return sum(
             len(ruptures) for trt_id, ruptures in ruptures_by_trt_id.items()
-            if trt_model.id == trt_id)
+            if src_group.id == trt_id)
 
     def zerodict(self):
         """
