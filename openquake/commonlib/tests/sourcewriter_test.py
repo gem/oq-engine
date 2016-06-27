@@ -39,10 +39,10 @@ class SourceWriterTestCase(unittest.TestCase):
 
     def check_round_trip(self, fname):
         parser = SourceModelParser(SourceConverter(50., 1., 10, 0.1, 10.))
-        sources = parser.parse_sources(fname)
+        groups = parser.parse_src_groups(fname)
         fd, name = tempfile.mkstemp(suffix='.xml')
         with os.fdopen(fd, 'w'):
-            write_source_model(name, sources, 'Test Source Model')
+            write_source_model(name, groups, 'Test Source Model')
         if open(name).read() != open(fname).read():
             raise Exception('Different files: %s %s' % (name, fname))
         os.remove(name)

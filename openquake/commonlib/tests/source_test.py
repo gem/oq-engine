@@ -377,7 +377,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             area_source_discretization=10,
         ))
         with self.assertRaises(DuplicatedID):
-            parser.parse_sources(DUPLICATE_ID_SRC_MODEL)
+            parser.parse_groups(DUPLICATE_ID_SRC_MODEL)
 
     def test_raises_useful_error_1(self):
         area_file = BytesIO(b"""\
@@ -534,7 +534,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         msg = ('node simpleFaultSource: hypo_list and slip_list have to be '
                'both given')
         with self.assertRaises(ValueError) as ctx:
-            self.parser.parse_sources(simple_file)
+            self.parser.parse_groups(simple_file)
         self.assertIn(msg, str(ctx.exception))
 
     def test_nonparametric_source_ok(self):
