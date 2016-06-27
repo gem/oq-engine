@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Forbidden the reuse of exposure because is was fragile and error prone
   * Fixed a bug with the `realizations` array, which in hazard calculations
     was empty in the datastore
 
