@@ -149,30 +149,30 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
     """
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.imtls
-    trt_model_id = sources[0].trt_model_id
-    # sanity check: the trt_model must be the same for all sources
+    src_group_id = sources[0].src_group_id
+    # sanity check: the src_group must be the same for all sources
     for src in sources[1:]:
-        assert src.trt_model_id == trt_model_id
-    gsims = rlzs_assoc.gsims_by_trt_id[trt_model_id]
+        assert src.src_group_id == src_group_id
+    gsims = rlzs_assoc.gsims_by_trt_id[src_group_id]
     trt = sources[0].tectonic_region_type
     max_dist = monitor.oqparam.maximum_distance[trt]
 
     dic = AccumDict()
     dic.siteslice = slice(siteidx, siteidx + len(sitecol))
     if monitor.oqparam.poes_disagg:
-        sm_id = rlzs_assoc.sm_ids[trt_model_id]
+        sm_id = rlzs_assoc.sm_ids[src_group_id]
         dic.bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
     else:
         dic.bbs = []
     # NB: the source_site_filter below is ESSENTIAL for performance inside
     # hazard_curves_per_trt, since it reduces the full site collection
     # to a filtered one *before* doing the rupture filtering
-    dic[trt_model_id] = hazard_curves_per_trt(
+    dic[src_group_id] = hazard_curves_per_trt(
         sources, sitecol, imtls, gsims, truncation_level,
         source_site_filter=source_site_distance_filter(max_dist),
         maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
     dic.calc_times = monitor.calc_times  # added by hazard_curves_per_trt
-    dic.eff_ruptures = {trt_model_id: monitor.eff_ruptures}  # idem
+    dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
     return dic
 
 
@@ -202,15 +202,15 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.flush()
         return acc
 
-    def count_eff_ruptures(self, result_dict, trt_model):
+    def count_eff_ruptures(self, result_dict, src_group):
         """
-        Returns the number of ruptures in the trt_model (after filtering)
-        or 0 if the trt_model has been filtered away.
+        Returns the number of ruptures in the src_group (after filtering)
+        or 0 if the src_group has been filtered away.
 
         :param result_dict: a dictionary with keys (trt_id, gsim)
-        :param trt_model: a TrtModel instance
+        :param src_group: a SourceGroup instance
         """
-        return (result_dict.eff_ruptures.get(trt_model.id, 0) / self.num_tiles)
+        return (result_dict.eff_ruptures.get(src_group.id, 0) / self.num_tiles)
 
     def zerodict(self):
         """
@@ -256,11 +256,11 @@ class ClassicalCalculator(base.HazardCalculator):
         calc_times = getattr(curves_by_trt_id, 'calc_times', [])
         if calc_times:
             sources = self.csm.get_sources()
-            info_dict = {(rec['trt_model_id'], rec['source_id']): rec
+            info_dict = {(rec['src_group_id'], rec['source_id']): rec
                          for rec in self.source_info}
             for src_idx, dt in calc_times:
                 src = sources[src_idx]
-                info = info_dict[src.trt_model_id, src.source_id]
+                info = info_dict[src.src_group_id, src.source_id]
                 info['calc_time'] += dt
             self.source_info = numpy.array(
                 sorted(info_dict.values(), key=operator.itemgetter(7),
