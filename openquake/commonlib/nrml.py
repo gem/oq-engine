@@ -144,7 +144,7 @@ def parse(fname, *args):
     return node_to_obj(node, fname, *args)
 
 
-# ######################### node_to_obj definitions ############################ #
+# ######################## node_to_obj definitions ######################### #
 
 node_to_obj = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
 # dictionary of functions with at least two arguments, node and fname
