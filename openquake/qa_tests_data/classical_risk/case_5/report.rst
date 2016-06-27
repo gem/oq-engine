@@ -104,7 +104,7 @@ hostname                                 gem-tstation
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
-trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+src_group_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
 0            A         PointSource  0.575  1         6.199E-05   0.0        0.0      
 1            B         PointSource  0.575  1         4.101E-05   0.0        0.0      

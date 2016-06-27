@@ -109,7 +109,7 @@ Wood     1.000 0.0    1   1   3         3
 Slowest sources
 ---------------
 ============ ========= ================= ====== ========= =========== ========== =========
-trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
+src_group_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
 0            1         SimpleFaultSource 1,694  15        0.002       0.076      0.0      
 ============ ========= ================= ====== ========= =========== ========== =========
