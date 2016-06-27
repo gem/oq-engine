@@ -306,6 +306,15 @@ class OqParam(valid.ParamSet):
         """
         return all(numpy.isnan(ls).any() for ls in self.imtls.values())
 
+    @property
+    def job_type(self):
+        """
+        'hazard' or 'risk'
+        """
+        return 'risk' if ('risk' in self.calculation_mode or
+                          'damage' in self.calculation_mode or
+                          'bcr' in self.calculation_mode) else 'hazard'
+
     def is_valid_truncation_level_disaggregation(self):
         """
         Truncation level must be set for disaggregation calculations
