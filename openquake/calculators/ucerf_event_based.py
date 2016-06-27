@@ -657,13 +657,13 @@ def compute_ruptures(branch_info, source, sitecol, oqparam, monitor):
     serial = 1
     filter_mon = monitor('update_background_site_filter', measuremem=False)
     event_mon = monitor('sampling ruptures', measuremem=False)
-    for trt_model_id, (ltbrid, branch_id, _) in enumerate(branch_info):
+    for src_group_id, (ltbrid, branch_id, _) in enumerate(branch_info):
         t0 = time.time()
         with filter_mon:
             source.update_background_site_filter(sitecol, integration_distance)
 
         # set the seed before calling generate_event_set
-        numpy.random.seed(oqparam.random_seed + trt_model_id)
+        numpy.random.seed(oqparam.random_seed + src_group_id)
         ses_ruptures = []
         for ses_idx in range(1, oqparam.ses_per_logic_tree_path + 1):
             with event_mon:
@@ -687,11 +687,11 @@ def compute_ruptures(branch_info, source, sitecol, oqparam, monitor):
                         event_based.EBRupture(
                             rup, indices,
                             numpy.array(events, event_based.event_dt),
-                            source.source_id, trt_model_id, serial))
+                            source.source_id, src_group_id, serial))
                     serial += 1
         dt = time.time() - t0
-        res.calc_times[trt_model_id] = (ltbrid, dt)
-        res[trt_model_id] = ses_ruptures
+        res.calc_times[src_group_id] = (ltbrid, dt)
+        res[src_group_id] = ses_ruptures
     res.trt = DEFAULT_TRT
     return res
 
@@ -723,8 +723,8 @@ class UCERFEventBasedRuptureCalculator(
         source_models = []
         num_gsim_paths = self.gsim_lt.get_num_paths()
         for ordinal, (name, branch) in enumerate(branches):
-            tm = source.TrtModel(DEFAULT_TRT, [], min_mag, max_mag,
-                                 ordinal, eff_ruptures=-1)
+            tm = source.SourceGroup(DEFAULT_TRT, [], min_mag, max_mag,
+                                    ordinal, eff_ruptures=-1)
             sm = source.SourceModel(
                 name, branch.weight, [name], [tm], num_gsim_paths, ordinal, 1)
             source_models.append(sm)
