@@ -400,7 +400,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         if in_memory:
             apply_unc = source_model_lt.make_apply_uncertainties(smpath)
             try:
-                trt_models = parser.parse_trt_models(fname, apply_unc)
+                src_groups = parser.parse_src_groups(fname, apply_unc)
             except ValueError as e:
                 if str(e) in ('Surface does not conform with Aki & '
                               'Richards convention',
@@ -414,17 +414,17 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
                     raise
         else:  # just collect the TRT models
             smodel = nrml.read(fname).sourceModel
-            trt_models = source.TrtModel.collect(smodel)
-        trts = [mod.trt for mod in trt_models]
+            src_groups = source.SourceGroup.collect(smodel)
+        trts = [mod.trt for mod in src_groups]
         source_model_lt.tectonic_region_types.update(trts)
 
         gsim_file = oqparam.inputs.get('gsim_logic_tree')
         if gsim_file:  # check TRTs
-            for trt_model in trt_models:
-                if trt_model.trt not in gsim_lt.values:
+            for src_group in src_groups:
+                if src_group.trt not in gsim_lt.values:
                     raise ValueError(
                         "Found in %r a tectonic region type %r inconsistent "
-                        "with the ones in %r" % (sm, trt_model.trt, gsim_file))
+                        "with the ones in %r" % (sm, src_group.trt, gsim_file))
         else:
             gsim_lt = logictree.GsimLogicTree.from_(oqparam.gsim)
         weight = rlz.weight / num_samples
@@ -433,7 +433,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         logging.info('Processed source model %d/%d with %d gsim path(s)',
                      i + 1, num_source_models, num_gsim_paths)
         yield source.SourceModel(
-            sm, weight, smpath, trt_models, num_gsim_paths, i, num_samples)
+            sm, weight, smpath, src_groups, num_gsim_paths, i, num_samples)
 
     # log if some source file is being used more than once
     for fname, hits in parser.fname_hits.items():
@@ -463,17 +463,17 @@ def get_composite_source_model(oqparam, in_memory=True):
     gsim_lt = get_gsim_lt(oqparam)
     for source_model in get_source_models(
             oqparam, gsim_lt, source_model_lt, in_memory=in_memory):
-        for trt_model in source_model.trt_models:
-            trt_model.sources = sorted(trt_model, key=getid)
-            trt_model.id = trt_id
-            for src in trt_model:
+        for src_group in source_model.src_groups:
+            src_group.sources = sorted(src_group, key=getid)
+            src_group.id = trt_id
+            for src in src_group:
                 # there are two cases depending on the flag in_memory:
-                # 1) src is a hazardlib source and has a trt_model_id
+                # 1) src is a hazardlib source and has a src_group_id
                 #    attribute; in that case the source has to be numbered
                 # 2) src is a Node object, then nothing must be done
-                if hasattr(src, 'trt_model_id'):
-                    # .trt_model_id is missing for source nodes
-                    src.trt_model_id = trt_id
+                if hasattr(src, 'src_group_id'):
+                    # .src_group_id is missing for source nodes
+                    src.src_group_id = trt_id
                     src.id = idx
                     idx += 1
             trt_id += 1
@@ -503,8 +503,8 @@ def get_job_info(oqparam, source_models, sitecol):
     # given by the parameter `point_source_weight` is applied
     input_weight = sum((src.weight or 0) * src_model.samples
                        for src_model in source_models
-                       for trt_model in src_model.trt_models
-                       for src in trt_model)
+                       for src_group in src_model.src_groups
+                       for src in src_group)
     imtls = oqparam.imtls
     n_sites = len(sitecol) if sitecol else 0
 

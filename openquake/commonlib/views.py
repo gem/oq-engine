@@ -217,22 +217,22 @@ def view_ruptures_per_trt(token, dstore):
     tot_weight = 0
     source_info = dstore['source_info'].value
     csm_info = dstore['csm_info']
-    w = groupby(source_info, operator.itemgetter('trt_model_id'),
+    w = groupby(source_info, operator.itemgetter('src_group_id'),
                 lambda rows: sum(r['weight'] for r in rows))
-    n = groupby(source_info, operator.itemgetter('trt_model_id'),
+    n = groupby(source_info, operator.itemgetter('src_group_id'),
                 lambda rows: sum(1 for r in rows))
     for i, sm in enumerate(csm_info.source_models):
-        for trt_model in sm.trt_models:
-            trt = source.capitalize(trt_model.trt)
-            er = trt_model.eff_ruptures
+        for src_group in sm.src_groups:
+            trt = source.capitalize(src_group.trt)
+            er = src_group.eff_ruptures
             if er:
                 num_trts += 1
-                num_sources = n.get(trt_model.id, 0)
+                num_sources = n.get(src_group.id, 0)
                 tot_sources += num_sources
                 eff_ruptures += er
-                weight = w.get(trt_model.id, 0)
+                weight = w.get(src_group.id, 0)
                 tot_weight += weight
-                tbl.append((sm.name, trt_model.id, trt,
+                tbl.append((sm.name, src_group.id, trt,
                             num_sources, er, weight))
     rows = [('#TRT models', num_trts),
             ('#sources', tot_sources),
@@ -497,7 +497,7 @@ def view_biggest_ebr_gmf(token, dstore):
     """
     Returns the size of the biggest GMF in an event based risk calculation
     """
-    msg = ('The largest GMF block is for trt_model_id=%(trt_id)d, '
+    msg = ('The largest GMF block is for src_group_id=%(trt_id)d, '
            'contains %(n_imts)d IMT(s), %(n_rlzs)d '
            'realization(s)\nand has a size of %(humansize)s / num_tasks')
     return msg % get_max_gmf_size(dstore)

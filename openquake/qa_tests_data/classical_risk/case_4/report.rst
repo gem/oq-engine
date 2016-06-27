@@ -109,7 +109,7 @@ W        1.000 0.0    1   1   5         5
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
-trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+src_group_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
 0            376       AreaSource   55     1         7.389E-04   0.0        0.0      
 0            231       AreaSource   104    1         7.000E-04   0.0        0.0      
