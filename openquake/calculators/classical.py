@@ -150,7 +150,7 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.imtls
     src_group_id = sources[0].src_group_id
-    # sanity check: the trt_model must be the same for all sources
+    # sanity check: the src_group must be the same for all sources
     for src in sources[1:]:
         assert src.src_group_id == src_group_id
     gsims = rlzs_assoc.gsims_by_trt_id[src_group_id]
@@ -202,15 +202,15 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.flush()
         return acc
 
-    def count_eff_ruptures(self, result_dict, trt_model):
+    def count_eff_ruptures(self, result_dict, src_group):
         """
-        Returns the number of ruptures in the trt_model (after filtering)
-        or 0 if the trt_model has been filtered away.
+        Returns the number of ruptures in the src_group (after filtering)
+        or 0 if the src_group has been filtered away.
 
         :param result_dict: a dictionary with keys (trt_id, gsim)
-        :param trt_model: a SourceGroup instance
+        :param src_group: a SourceGroup instance
         """
-        return (result_dict.eff_ruptures.get(trt_model.id, 0) / self.num_tiles)
+        return (result_dict.eff_ruptures.get(src_group.id, 0) / self.num_tiles)
 
     def zerodict(self):
         """
