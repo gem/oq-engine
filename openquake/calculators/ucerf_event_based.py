@@ -724,7 +724,7 @@ class UCERFEventBasedRuptureCalculator(
         num_gsim_paths = self.gsim_lt.get_num_paths()
         for ordinal, (name, branch) in enumerate(branches):
             tm = source.SourceGroup(DEFAULT_TRT, [], min_mag, max_mag,
-                                 ordinal, eff_ruptures=-1)
+                                    ordinal, eff_ruptures=-1)
             sm = source.SourceModel(
                 name, branch.weight, [name], [tm], num_gsim_paths, ordinal, 1)
             source_models.append(sm)
