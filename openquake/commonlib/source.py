@@ -27,7 +27,7 @@ import random
 
 import numpy
 
-from openquake.baselib.python3compat import raise_
+from openquake.baselib.python3compat import raise_, decode
 from openquake.baselib.general import (
     AccumDict, groupby, block_splitter, group_array)
 from openquake.hazardlib.site import Tile
@@ -246,7 +246,7 @@ class SourceModelParser(object):
         except KeyError:
             sources = self.sources[fname] = self.parse_sources(fname)
         # NB: deepcopy is *essential* here
-        sources = map(copy.deepcopy, sources)
+        sources = [copy.deepcopy(src) for src in sources]
         for src in sources:
             if apply_uncertainties:
                 apply_uncertainties(src)
@@ -587,7 +587,7 @@ class CompositionInfo(object):
             srcgroups = [
                 SourceGroup(self.trts[trti], id=trt_id, eff_ruptures=effrup)
                 for trt_id, trti, effrup, sm_id in tdata if effrup > 0]
-            path = tuple(rec['path'].split('_'))
+            path = tuple(rec['path'].split(b'_'))
             trts = set(sg.trt for sg in srcgroups)
             num_gsim_paths = self.gsim_lt.reduce(trts).get_num_paths()
             sm = SourceModel(rec['name'], rec['weight'], path, srcgroups,
@@ -672,11 +672,14 @@ class CompositionInfo(object):
                     return src_group.trt
 
     def __repr__(self):
-        info_by_model = collections.OrderedDict(
-            (sm.path, ('_'.join(sm.path), sm.name,
-                       [sg.id for sg in sm.src_groups],
-                       sm.weight, self.get_num_rlzs(sm)))
-            for sm in self.source_models)
+        info_by_model = collections.OrderedDict()
+        for sm in self.source_models:
+            info_by_model[sm.path] = (
+                '_'.join(map(decode, sm.path)),
+                decode(sm.name),
+                [sg.id for sg in sm.src_groups],
+                sm.weight,
+                self.get_num_rlzs(sm))
         summary = ['%s, %s, trt=%s, weight=%s: %d realization(s)' % ibm
                    for ibm in info_by_model.values()]
         return '<%s\n%s>' % (
