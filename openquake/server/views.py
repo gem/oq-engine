@@ -35,6 +35,7 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 
 from openquake.baselib.general import groupby, writetmp
+from openquake.baselib.python3compat import unicode
 from openquake.commonlib import nrml, readinput, oqvalidation
 from openquake.commonlib.parallel import safely_call
 from openquake.commonlib.export import export
@@ -325,11 +326,7 @@ def run_calc(request):
         job_id, _fut = submit_job(einfo[0], user['name'], hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
-        exc_msg = exc.args[0]
-        if isinstance(exc_msg, bytes):
-            exc_msg = exc_msg.decode('utf-8')   # make it a unicode object
-        else:
-            assert isinstance(exc_msg, unicode), exc_msg
+        exc_msg = unicode(exc)
         logging.error(exc_msg)
         response_data = exc_msg.splitlines()
         status = 500
