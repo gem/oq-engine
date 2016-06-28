@@ -68,7 +68,7 @@ idx:uint32,lon,lat,site_id:uint32,taxonomy:uint32:,number,area,occupants:float64
     def test_get_hazard(self):
         self.assertEqual(
             list(self.riskmodel.get_imt_taxonomies()),
-            [('PGA', set(['RM'])), ('SA(0.2)', set(['RC'])),
+            [('PGA', set(['RM'])), ('SA(0.2)', set(['RC+'])),
              ('SA(0.5)', set(['W']))])
         self.assertEqual(len(self.sitecol), 2)
         hazard_by_site = [{}] * 2
