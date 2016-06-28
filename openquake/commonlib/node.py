@@ -145,7 +145,7 @@ import sys
 import copy
 import pprint as pp
 from contextlib import contextmanager
-from openquake.baselib.python3compat import raise_, exec_, configparser
+from openquake.baselib.python3compat import raise_, exec_, configparser, encode
 from openquake.commonlib.writers import StreamingXMLWriter
 from xml.etree import ElementTree
 from xml.parsers.expat import ParserCreate, ExpatError, ErrorString
@@ -153,7 +153,7 @@ from xml.parsers.expat import ParserCreate, ExpatError, ErrorString
 
 class SourceLineParser(ElementTree.XMLParser):
     """
-    A custom parser managing line numbers
+    A custom parser managing line numbers: works for Python <= 3.3
     """
     def _start_list(self, tag, attrib_in):
         elem = super(SourceLineParser, self)._start_list(tag, attrib_in)
@@ -606,13 +606,19 @@ class ValidatingXmlParser(object):
         self._root = None
         try:
             yield
-        except self.Exit:
-            pass
         except ExpatError as err:
             e = ExpatError(ErrorString(err.code))
             e.lineno = err.lineno
             e.offset = err.offset
+            e.filename = self.filename
             raise e
+        except ValueError as err:
+            err.lineno = self.p.CurrentLineNumber
+            err.offset = self.p.CurrentColumnNumber
+            err.filename = self.filename
+            raise err
+        except self.Exit:
+            pass
 
     def parse_bytes(self, bytestr, isfinal=True):
         """
@@ -621,6 +627,7 @@ class ValidatingXmlParser(object):
         with isfinal=True.
         """
         with self._context():
+            self.filename = None
             self.p.Parse(bytestr, isfinal)
         return self._root
 
@@ -630,8 +637,11 @@ class ValidatingXmlParser(object):
         """
         with self._context():
             if hasattr(file_or_fname, 'read'):
+                self.filename = getattr(
+                    file_or_fname, 'name', file_or_fname.__class__.__name__)
                 self.p.ParseFile(file_or_fname)
             else:
+                self.filename = file_or_fname
                 with open(file_or_fname, 'rb') as f:
                     self.p.ParseFile(f)
         return self._root
@@ -645,7 +655,9 @@ class ValidatingXmlParser(object):
             raise self.Exit
 
     def _end_element(self, name):
-        self._root = self._literalnode(self._ancestors[-1])
+        node = self._ancestors[-1]
+        with context(self.filename, node):
+            self._root = self._literalnode(node)
         del self._ancestors[-1]
         if self._ancestors:
             self._ancestors[-1].append(self._root)
@@ -666,15 +678,15 @@ class ValidatingXmlParser(object):
         except KeyError:
             return
         try:
-            node.text = val(text.strip())
+            node.text = val(encode(text.strip()))
         except Exception as exc:
-            raise ValueError('Could not convert %s->%s: %s, line %s' %
-                             (tag, val.__name__, exc, node.lineno))
+            raise ValueError('Could not convert %s->%s: %s' %
+                             (tag, val.__name__, exc))
 
     def _set_attrib(self, node, n, tn, v):
         val = self.validators[tn]
         try:
-            node.attrib[n] = val(v)
+            node.attrib[n] = val(encode(v))
         except Exception as exc:
             raise ValueError(
                 'Could not convert %s->%s: %s, line %s' %
