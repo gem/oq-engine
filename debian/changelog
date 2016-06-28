@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed the array cost_types from the datastore
   * Improved the XML parsing utilities in speed, memory, portability and
     easy of use
   * Forbidden the reuse of exposure because is was fragile and error prone
