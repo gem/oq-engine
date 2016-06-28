@@ -26,6 +26,7 @@ import logging
 from collections import namedtuple
 import numpy
 
+from openquake.baselib.python3compat import raise_
 from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
@@ -102,7 +103,7 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
             msg %= (source.source_id, err)
-            raise etype, msg, tb
+            raise_(etype, msg, tb)
 
     return BinData(numpy.array(mags, float),
                    numpy.array(dists, float),
