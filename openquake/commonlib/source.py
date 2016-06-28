@@ -27,6 +27,7 @@ import random
 
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import raise_, decode
 from openquake.baselib.general import (
     AccumDict, groupby, block_splitter, group_array)
@@ -567,7 +568,8 @@ class CompositionInfo(object):
             sg_data=numpy.array(data, src_group_dt),
             sm_data=numpy.array(lst, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
-                     trts=trts, gsim_lt_xml=str(self.gsim_lt),
+                     trts=hdf5.array_of_bytes(trts),
+                     gsim_lt_xml=str(self.gsim_lt),
                      gsim_fname=self.gsim_lt.fname))
 
     def __fromh5__(self, dic, attrs):

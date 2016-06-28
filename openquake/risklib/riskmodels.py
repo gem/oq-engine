@@ -21,6 +21,7 @@ import inspect
 import functools
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict, AccumDict
 from openquake.risklib import utils, scientific, valid
 
@@ -79,7 +80,7 @@ class CostCalculator(object):
         raise RuntimeError('Unable to compute cost')
 
     def __toh5__(self):
-        loss_types = sorted(self.cost_types)
+        loss_types = hdf5.array_of_bytes(sorted(self.cost_types))
         dt = numpy.dtype([('cost_type', (bytes, 10)),
                           ('area_type', (bytes, 10)),
                           ('unit', (bytes, 10))])
