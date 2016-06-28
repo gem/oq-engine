@@ -655,7 +655,9 @@ class ValidatingXmlParser(object):
             raise self.Exit
 
     def _end_element(self, name):
-        self._root = self._literalnode(self._ancestors[-1])
+        node = self._ancestors[-1]
+        with context(self.filename, node):
+            self._root = self._literalnode(node)
         del self._ancestors[-1]
         if self._ancestors:
             self._ancestors[-1].append(self._root)
@@ -678,8 +680,8 @@ class ValidatingXmlParser(object):
         try:
             node.text = val(encode(text.strip()))
         except Exception as exc:
-            raise ValueError('Could not convert %s->%s: %s, line %s' %
-                             (tag, val.__name__, exc, node.lineno))
+            raise ValueError('Could not convert %s->%s: %s' %
+                             (tag, val.__name__, exc))
 
     def _set_attrib(self, node, n, tn, v):
         val = self.validators[tn]
