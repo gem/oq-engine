@@ -30,6 +30,7 @@ import h5py
 
 from openquake.baselib.general import humansize, groupby, AccumDict
 from openquake.baselib.performance import perf_dt
+from openquake.baselib.python3compat import unicode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source
 from openquake.commonlib.datastore import view
@@ -74,7 +75,11 @@ def form(value):
             return 'NaN'
         else:  # in the range 10-1000
             return str(int(value))
-    elif hasattr(value, '__iter__'):
+    elif isinstance(value, bytes):
+        return value.decode('utf-8')
+    elif isinstance(value, unicode):
+        return value
+    elif hasattr(value, '__len__') and len(value) > 1:
         return ' '.join(map(form, value))
     return str(value)
 
@@ -84,7 +89,7 @@ def rst_table(data, header=None, fmt=None):
     Build a .rst table from a matrix.
     
     >>> tbl = [['a', 1], ['b', 2]]
-    >>> print rst_table(tbl, header=['Name', 'Value'])
+    >>> print(rst_table(tbl, header=['Name', 'Value']))
     ==== =====
     Name Value
     ==== =====
@@ -131,8 +136,8 @@ def sum_tbl(tbl, kfield, vfields):
 
     >>> dt = numpy.dtype([('name', (bytes, 10)), ('value', int)])
     >>> tbl = numpy.array([('a', 1), ('a', 2), ('b', 3)], dt)
-    >>> print(sum_tbl(tbl, 'name', ['value']))
-    [('a', 3, 2) ('b', 3, 1)]
+    >>> sum_tbl(tbl, 'name', ['value'])['value']
+    array([3, 3])
     """
     pairs = [(n, tbl.dtype[n]) for n in [kfield] + vfields]
     dt = numpy.dtype(pairs + [('counts', int)])
@@ -146,7 +151,7 @@ def sum_tbl(tbl, kfield, vfields):
         vals[kfield] = rec[kfield]
         return vals
     rows = groupby(tbl, operator.itemgetter(kfield), sum_all).values()
-    return numpy.array(rows, dt)
+    return numpy.array(list(rows), dt)
 
 
 @view.add('times_by_source_class')

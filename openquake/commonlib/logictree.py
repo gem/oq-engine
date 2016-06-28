@@ -332,7 +332,7 @@ class BranchSet(object):
                 else:
                     raise AssertionError("unknown source type '%s'" % value)
             elif key == 'applyToSources':
-                if source.source_id not in value:
+                if source and source.source_id not in value:
                     return False
             else:
                 raise AssertionError("unknown filter '%s'" % key)
@@ -887,7 +887,7 @@ class SourceModelLogicTree(object):
         if uncertainty_type in ('abGRAbsolute', 'maxMagGRAbsolute',
                                 'simpleFaultGeometryAbsolute',
                                 'complexFaultGeometryAbsolute'):
-            if not filters or not filters.keys() == ['applyToSources'] \
+            if not filters or not list(filters) == ['applyToSources'] \
                     or not len(filters['applyToSources'].split()) == 1:
                 raise ValidationError(
                     branchset_node, self.filename,
@@ -1134,7 +1134,7 @@ class GsimLogicTree(object):
         """
         :returns: an XML string representing the logic tree
         """
-        return writers.tostring(self._ltnode)
+        return writers.tostring(self._ltnode).decode('utf-8')
 
     def reduce(self, trts):
         """
