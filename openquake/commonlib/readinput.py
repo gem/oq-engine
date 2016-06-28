@@ -34,7 +34,7 @@ from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.risklib import riskmodels, riskinput, valid
 from openquake.commonlib import datastore
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.node import read_nodes, Node, context
+from openquake.commonlib.node import Node, context
 from openquake.commonlib import nrml, logictree, InvalidFile
 from openquake.commonlib.riskmodels import get_risk_models
 from openquake.baselib.general import groupby, AccumDict, writetmp
@@ -648,8 +648,8 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         area = conversions.area
     except NameError:
         # NB: the area type cannot be an empty string because when sending
-        # around the CostCalculator object one runs into this numpy bug on
-        # pickling dictionaries with empty strings:
+        # around the CostCalculator object we would run into this numpy bug
+        # about pickling dictionaries with empty strings:
         # https://github.com/numpy/numpy/pull/5475
         area = Node('area', dict(type='?'))
 
@@ -671,11 +671,13 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         deductible.attrib.get('isAbsolute', True),
         area.attrib, [], set(), [])
     cc = riskmodels.CostCalculator(
-        {}, {}, exp.deductible_is_absolute, exp.insurance_limit_is_absolute)
+        {}, {}, {},
+        exp.deductible_is_absolute, exp.insurance_limit_is_absolute)
     for ct in exp.cost_types:
         name = ct['name']  # structural, nonstructural, ...
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
         cc.area_types[name] = exp.area['type']
+        cc.units[name] = ct['unit']
     return exp, exposure.assets, cc
 
 
@@ -941,19 +943,14 @@ def get_hcurves_from_nrml(oqparam, fname):
         sitecol, curve array
     """
     hcurves_by_imt = {}
-    oqparam.hazard_imtls = imtls = {}
+    oqparam.hazard_imtls = imtls = collections.OrderedDict()
     for hcurves in nrml.read(fname):
         imt = hcurves['IMT']
         oqparam.investigation_time = hcurves['investigationTime']
         if imt == 'SA':
             imt += '(%s)' % hcurves['saPeriod']
         imtls[imt] = ~hcurves.IMLs
-        data = []
-        for node in hcurves[1:]:
-            xy = ~node.Point.pos
-            poes = ~node.poEs
-            data.append((xy, poes))
-        data.sort()
+        data = sorted((~node.Point.pos, ~node.poEs) for node in hcurves[1:])
         hcurves_by_imt[imt] = numpy.array([d[1] for d in data])
     n = len(hcurves_by_imt[imt])
     curves = zero_curves(n, imtls)
@@ -990,7 +987,7 @@ def get_gmfs_from_txt(oqparam, fname):
         if not oqparam.imtls:
             oqparam.set_risk_imtls(get_risk_models(oqparam))
         imts = list(oqparam.imtls)
-        imt_dt = numpy.dtype([(bytes(imt), F32) for imt in imts])
+        imt_dt = numpy.dtype([(imt, F32) for imt in imts])
         num_gmfs = oqparam.number_of_ground_motion_fields
         gmf_by_imt = numpy.zeros((num_gmfs, len(sitecol)), imt_dt)
         etags = []
@@ -1047,9 +1044,9 @@ def get_scenario_from_nrml(oqparam, fname):
     """
     if not oqparam.imtls:
         oqparam.set_risk_imtls(get_risk_models(oqparam))
-    imts = list(oqparam.imtls)
+    imts = sorted(oqparam.imtls)
     num_imts = len(imts)
-    imt_dt = numpy.dtype([(bytes(imt), F32) for imt in imts])
+    imt_dt = numpy.dtype([(imt, F32) for imt in imts])
     gmfset = nrml.read(fname).gmfCollection.gmfSet
     etags, sitecounts = _extract_etags_sitecounts(gmfset)
     oqparam.sites = sorted(sitecounts)
@@ -1071,7 +1068,7 @@ def get_scenario_from_nrml(oqparam, fname):
             sid = site_idx[node['lon'], node['lat']]
             gmf_by_imt[imt][i % num_events, sid] = node['gmv']
 
-    for etag, count in counts.items():
+    for etag, count in sorted(counts.items()):
         if count < num_imts:
             raise InvalidFile("Found a missing etag '%s' in %s" %
                               (etag, fname))

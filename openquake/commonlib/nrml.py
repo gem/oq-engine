@@ -85,7 +85,7 @@ import itertools
 import numpy
 
 from openquake.baselib.general import CallableDict
-from openquake.baselib.python3compat import unicode
+from openquake.baselib.python3compat import decode
 from openquake.commonlib import writers
 from openquake.commonlib.node import (
     node_to_xml, Node, striptag, ValidatingXmlParser, context)
@@ -98,31 +98,6 @@ NRML05 = 'http://openquake.org/xmlns/nrml/0.5'
 GML_NAMESPACE = 'http://www.opengis.net/gml'
 SERIALIZE_NS_MAP = {None: NAMESPACE, 'gml': GML_NAMESPACE}
 PARSE_NS_MAP = {'nrml': NAMESPACE, 'gml': GML_NAMESPACE}
-
-
-class NRMLFile(object):
-    """
-    Context-managed output object which accepts either a path or a file-like
-    object.
-
-    Behaves like a file.
-    """
-
-    def __init__(self, dest, mode='r'):
-        self._dest = dest
-        self._mode = mode
-        self._file = None
-
-    def __enter__(self):
-        if isinstance(self._dest, (unicode, bytes)):
-            self._file = open(self._dest, self._mode)
-        else:
-            # assume it is a file-like; don't change anything
-            self._file = self._dest
-        return self._file
-
-    def __exit__(self, *args):
-        self._file.close()
 
 
 def get_tag_version(nrml_node):
@@ -507,6 +482,7 @@ validators = {
     'characteristicMag': valid.positivefloat,
     'magnitudes': valid.positivefloats,
     'fragilityFunction.id': valid.utf8,  # taxonomy
+    'vulnerabilityFunction.id': valid.utf8,  # taxonomy
     'id': valid.simple_id,
     'rupture.id': valid.utf8,  # event tag
     'discretization': valid.compose(valid.positivefloat, valid.nonzero),

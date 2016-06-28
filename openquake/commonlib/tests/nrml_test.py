@@ -59,7 +59,8 @@ class NrmlTestCase(unittest.TestCase):
 
         outfile = io.BytesIO()
         node_to_xml(root, outfile, {})
-        expected = """\
+
+        expected = b"""\
 <?xml version="1.0" encoding="utf-8"?>
 <nrml
 xmlns="http://openquake.org/xmlns/nrml/0.4"
