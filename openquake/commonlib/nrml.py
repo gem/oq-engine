@@ -78,6 +78,7 @@ supplemented by a dictionary of validators.
 from __future__ import print_function
 import re
 import sys
+import decimal
 import logging
 import itertools
 
@@ -87,8 +88,7 @@ from openquake.baselib.general import CallableDict
 from openquake.baselib.python3compat import unicode
 from openquake.commonlib import writers
 from openquake.commonlib.node import (
-    node_to_xml, Node, Node, striptag,
-    ValidatingXmlParser, context)
+    node_to_xml, Node, striptag, ValidatingXmlParser, context)
 from openquake.risklib import scientific, valid
 from openquake.commonlib import InvalidFile
 
@@ -374,7 +374,7 @@ def get_consequence_model(node, fname):
             for ls, param in zip(limitStates, cf):
                 with context(fname, param):
                     if param['ls'] != ls:
-                        raise ValueError('Expected %r, got %r' %
+                        raise ValueError("Expected '%s', got '%s'" %
                                          (ls, param['ls']))
                     params.append((param['mean'], param['stddev']))
             functions[cf['id']] = scientific.ConsequenceFunction(
@@ -499,7 +499,7 @@ validators = {
     'occurRates': valid.positivefloats,
     'probs_occur': valid.pmf,
     'weight': valid.probability,
-    'uncertaintyWeight': valid.probability,
+    'uncertaintyWeight': decimal.Decimal,
     'alongStrike': valid.probability,
     'downDip': valid.probability,
     'totalMomentRate': valid.positivefloat,
@@ -599,7 +599,9 @@ validators = {
     'damageStates': valid.namelist,
     'gmv': valid.positivefloat,
     'lon': valid.longitude,
-    'lat': valid.latitude}
+    'lat': valid.latitude,
+    'spacing': valid.positivefloat,
+}
 
 
 def read(source, chatty=True, stop=None):
