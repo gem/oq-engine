@@ -134,8 +134,8 @@ class DataStore(collections.MutableMapping):
 
     >>> ds = DataStore()
     >>> ds['example'] = 'hello world'
-    >>> ds.items()
-    [(u'example', 'hello world')]
+    >>> print(ds['example'])
+    hello world
     >>> ds.clear()
 
     When reading the items, the DataStore will return a generator. The
