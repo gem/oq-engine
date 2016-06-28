@@ -434,8 +434,9 @@ class HazardCalculator(BaseCalculator):
                     'composite_risk_model/%s-retrofitted' % taxonomy] = (
                         rmodel.retro_functions)
         attrs = self.datastore['composite_risk_model'].attrs
-        attrs['loss_types'] = rm.loss_types
-        attrs['min_iml'] = sorted(rm.get_min_iml().items())
+        attrs['loss_types'] = hdf5.array_of_bytes(rm.loss_types)
+        attrs['min_iml'] = hdf5.array_of_bytes(
+            sorted(rm.get_min_iml().items()))
         if rm.damage_states:
             attrs['damage_states'] = rm.damage_states
         self.datastore['loss_ratios'] = rm.get_loss_ratios()

@@ -21,6 +21,7 @@ import logging
 import collections
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import groupby, split_in_blocks
@@ -43,15 +44,18 @@ class AssetCollection(object):
                  time_events=''):
         self.cc = cost_calculator
         self.time_event = time_event
-        self.time_events = time_events
+        self.time_events = hdf5.array_of_bytes(time_events)
         self.array, self.taxonomies = self.build_asset_collection(
             assets_by_site, time_event)
         fields = self.array.dtype.names
-        self.loss_types = sorted(f for f in fields
-                                 if not f.startswith(FIELDS))
-        self.deduc = [n for n in fields if n.startswith('deductible-')]
-        self.i_lim = [n for n in fields if n.startswith('insurance_limit-')]
-        self.retro = [n for n in fields if n.startswith('retrofitted-')]
+        self.loss_types = hdf5.array_of_bytes(
+            sorted(f for f in fields if not f.startswith(FIELDS)))
+        self.deduc = hdf5.array_of_bytes(
+            n for n in fields if n.startswith('deductible-'))
+        self.i_lim = hdf5.array_of_bytes(
+            n for n in fields if n.startswith('insurance_limit-'))
+        self.retro = hdf5.array_of_bytes(
+            n for n in fields if n.startswith('retrofitted-'))
 
     def assets_by_site(self):
         """
