@@ -90,7 +90,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     sitecol = datastore.persistent_attribute('sitecol')
     etags = datastore.persistent_attribute('etags')
     assetcol = datastore.persistent_attribute('assetcol')
-    cost_types = datastore.persistent_attribute('cost_types')
     job_info = datastore.persistent_attribute('job_info')
     performance = datastore.persistent_attribute('performance')
     csm = datastore.persistent_attribute('composite_source_model')
@@ -394,7 +393,7 @@ class HazardCalculator(BaseCalculator):
     def read_exposure(self):
         """
         Read the exposure, the riskmodel and update the attributes .exposure,
-        .sitecol, .assets_by_site, .cost_types, .taxonomies.
+        .sitecol, .assets_by_site, .taxonomies.
         """
         logging.info('Reading the exposure')
         with self.monitor('reading exposure', autoflush=True):
@@ -405,8 +404,6 @@ class HazardCalculator(BaseCalculator):
             self.cost_calculator = readinput.get_cost_calculator(self.oqparam)
             self.sitecol, self.assets_by_site = (
                 readinput.get_sitecol_assets(self.oqparam, self.exposure))
-            if len(self.exposure.cost_types):
-                self.cost_types = self.exposure.cost_types
 
     def load_riskmodel(self):
         """
