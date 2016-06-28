@@ -45,7 +45,7 @@ class CostCalculator(object):
 
     The same "formula" applies to retrofitting cost.
     """
-    def __init__(self, cost_types, area_types,
+    def __init__(self, cost_types, area_types, units,
                  deduct_abs=True, limit_abs=True):
         if set(cost_types) != set(area_types):
             raise ValueError('cost_types has keys %s, area_types has keys %s'
@@ -56,6 +56,7 @@ class CostCalculator(object):
             assert at in ('aggregated', 'per_asset'), at
         self.cost_types = cost_types
         self.area_types = area_types
+        self.units = units
         self.deduct_abs = deduct_abs
         self.limit_abs = limit_abs
 
@@ -80,10 +81,12 @@ class CostCalculator(object):
     def __toh5__(self):
         loss_types = sorted(self.cost_types)
         dt = numpy.dtype([('cost_type', (bytes, 10)),
-                          ('area_type', (bytes, 10))])
+                          ('area_type', (bytes, 10)),
+                          ('unit', (bytes, 10))])
         array = numpy.zeros(len(loss_types), dt)
         array['cost_type'] = [self.cost_types[lt] for lt in loss_types]
         array['area_type'] = [self.area_types[lt] for lt in loss_types]
+        array['unit'] = [self.units[lt] for lt in loss_types]
         attrs = dict(deduct_abs=self.deduct_abs, limit_abs=self.limit_abs,
                      loss_types=loss_types)
         return array, attrs
@@ -92,13 +95,15 @@ class CostCalculator(object):
         vars(self).update(attrs)
         self.cost_types = dict(zip(self.loss_types, array['cost_type']))
         self.area_types = dict(zip(self.loss_types, array['area_type']))
+        self.units = dict(zip(self.loss_types, array['unit']))
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, vars(self))
 
 costcalculator = CostCalculator(
     cost_types=dict(structural='per_area'),
-    area_types=dict(structural='per_asset'))
+    area_types=dict(structural='per_asset'),
+    units=dict(structural='EUR'))
 
 
 class Asset(object):
