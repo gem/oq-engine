@@ -134,7 +134,7 @@ hostname                                 gem-tstation
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
-trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+src_group_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
 0            1         AreaSource   8.125  1         7.610E-04   0.0        0.0      
 7            4         AreaSource   10     1         7.451E-04   0.0        0.0      
