@@ -24,7 +24,6 @@ import logging
 import operator
 import collections
 import random
-from xml.etree import ElementTree as etree
 
 import numpy
 
@@ -35,7 +34,7 @@ from openquake.hazardlib.site import Tile
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import valid
 from openquake.commonlib import logictree, sourceconverter, parallel
-from openquake.commonlib import nrml
+from openquake.commonlib import nrml, node
 
 MAX_INT = 2 ** 31 - 1
 U16 = numpy.uint16
@@ -788,20 +787,13 @@ def collect_source_model_paths(smlt):
 
     :param smlt: source model logic tree file
     """
-    src_paths = []
-    try:
-        tree = etree.parse(smlt)
-        for branch_set in tree.findall('.//nrml:logicTreeBranchSet',
-                                       namespaces=nrml.PARSE_NS_MAP):
-
-            if branch_set.get('uncertaintyType') == 'sourceModel':
-                for branch in branch_set.findall(
-                        './nrml:logicTreeBranch/nrml:uncertaintyModel',
-                        namespaces=nrml.PARSE_NS_MAP):
-                    src_paths.append(branch.text)
-    except Exception as exc:
-        raise Exception('%s: %s in %s' % (exc.__class__.__name__, exc, smlt))
-    return sorted(set(src_paths))
+    for blevel in nrml.read(smlt).logicTree:
+        with node.context(smlt, blevel):
+            for bset in blevel:
+                for br in bset:
+                    smfname = br.uncertaintyModel.text
+                    if smfname:
+                        yield smfname
 
 
 # ########################## SourceManager ########################### #
