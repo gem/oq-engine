@@ -211,12 +211,10 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         resp_text_dict = json.loads(resp.text)
         self.assertFalse(resp_text_dict['valid'])
-        expected_error_line = 7
-        expected_error_msg = (
-            u'Could not convert lossRatio->positivefloats:'
-            ' float -0.018800826 < 0')
-        self.assertEqual(resp_text_dict['error_msg'], expected_error_msg)
-        self.assertEqual(resp_text_dict['error_line'], expected_error_line)
+        self.assertIn(u'Could not convert lossRatio->positivefloats:'
+                      ' float -0.018800826 < 0',
+                      resp_text_dict['error_msg'])
+        self.assertEqual(resp_text_dict['error_line'], 7)
 
     def test_validate_nrml_unclosed_tag(self):
         invalid_file = os.path.join(self.datadir,
@@ -228,10 +226,8 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         resp_text_dict = json.loads(resp.text)
         self.assertFalse(resp_text_dict['valid'])
-        expected_error_line = 9
-        expected_error_msg = u'mismatched tag: line 9, column 10'
-        self.assertEqual(resp_text_dict['error_msg'], expected_error_msg)
-        self.assertEqual(resp_text_dict['error_line'], expected_error_line)
+        self.assertIn(u'mismatched tag', resp_text_dict['error_msg'])
+        self.assertEqual(resp_text_dict['error_line'], 9)
 
     def test_validate_nrml_missing_parameter(self):
         # passing a wrong parameter, instead of the required 'xml_text'
