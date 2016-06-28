@@ -45,7 +45,7 @@ class SourceWriterTestCase(unittest.TestCase):
         parser = SourceModelParser(SourceConverter(50., 1., 10, 0.1, 10.))
         sources = parser.parse_sources(fname)
         fd, name = tempfile.mkstemp(suffix='.xml')
-        with os.fdopen(fd, 'w'):
+        with os.fdopen(fd, 'wb'):
             write_source_model(name, sources, 'Test Source Model')
         if open(name).read() != open(fname).read():
             raise Exception('Different files: %s %s' % (name, fname))
@@ -70,7 +70,7 @@ class DeepcopyTestCase(unittest.TestCase):
         [sf, cf] = map(copy.deepcopy, parser.parse_sources(ALT_MFDS))
         # there are a SimpleFaultSource and a CharacteristicFaultSource
         fd, fname = tempfile.mkstemp(suffix='.xml')
-        with os.fdopen(fd, 'w'):
+        with os.fdopen(fd, 'wb'):
             write_source_model(fname, [sf, cf], 'Test Source Model')
         # NB: without Node.__deepcopy__ the serialization would fail
         # with a RuntimeError: maximum recursion depth exceeded while
