@@ -505,7 +505,8 @@ class Location(object):
 @export.add(('loss_maps-rlzs', 'xml'), ('loss_maps-rlzs', 'geojson'))
 def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
     oq = dstore['oqparam']
-    unit_by_lt = {ct['name']: ct['unit'] for ct in dstore['cost_types']}
+    cc = dstore['assetcol/cost_calculator']
+    unit_by_lt = cc.units
     unit_by_lt['occupants'] = 'people'
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     loss_maps = dstore[ekey[0]]
@@ -579,7 +580,8 @@ def export_loss_maps_stats_xml_geojson(ekey, dstore):
 @export.add(('losses_by_asset', 'xml'), ('losses_by_asset', 'geojson'))
 def export_loss_map_xml_geojson(ekey, dstore):
     oq = dstore['oqparam']
-    unit_by_lt = {ct['name']: ct['unit'] for ct in dstore['cost_types']}
+    cc = dstore['assetcol/cost_calculator']
+    unit_by_lt = cc.units
     unit_by_lt['occupants'] = 'people'
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     loss_map = dstore[ekey[0]]
@@ -623,7 +625,8 @@ agg_dt = numpy.dtype([('unit', (bytes, 6)), ('mean', F32), ('stddev', F32)])
 # this is used by scenario_risk
 @export.add(('agglosses-rlzs', 'csv'))
 def export_agglosses(ekey, dstore):
-    unit_by_lt = {ct['name']: ct['unit'] for ct in dstore['cost_types']}
+    cc = dstore['assetcol/cost_calculator']
+    unit_by_lt = cc.units
     unit_by_lt['occupants'] = 'people'
     agglosses = dstore[ekey[0]]
     fnames = []
@@ -671,12 +674,11 @@ def _gen_writers(dstore, writercls, root):
     # build XMLWriter instances
     oq = dstore['oqparam']
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    cost_types = dstore['cost_types']
+    cc = dstore['assetcol/cost_calculator']
     poes = oq.conditional_loss_poes if 'maps' in root else [None]
     for poe in poes:
         poe_str = '-%s' % poe if poe is not None else ''
-        for l, ct in enumerate(cost_types):
-            loss_type = ct['name']
+        for l, loss_type in enumerate(cc.loss_types):
             for ins in range(oq.insured_losses + 1):
                 if root.endswith('-rlzs'):
                     for rlz in rlzs:
@@ -687,7 +689,7 @@ def _gen_writers(dstore, writercls, root):
                             rlz, 'xml')
                         yield writercls(
                             dest, oq.investigation_time, poe=poe,
-                            loss_type=loss_type, unit=ct['unit'],
+                            loss_type=loss_type, unit=cc.units[loss_type],
                             risk_investigation_time=oq.risk_investigation_time,
                             **get_paths(rlz)), (
                                 loss_type, poe, rlz.ordinal, ins)
@@ -705,7 +707,8 @@ def _gen_writers(dstore, writercls, root):
                             poe=poe, loss_type=loss_type,
                             risk_investigation_time=oq.risk_investigation_time,
                             statistics='mean' if ordinal == 0 else 'quantile',
-                            quantile_value=statvalue, unit=ct['unit']
+                            quantile_value=statvalue,
+                            unit=cc.units[loss_type],
                         ), (loss_type, poe, ordinal, ins)
 
 
