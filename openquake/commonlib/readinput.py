@@ -34,7 +34,7 @@ from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.risklib import riskmodels, riskinput, valid
 from openquake.commonlib import datastore
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.node import read_nodes, Node, context
+from openquake.commonlib.node import Node, context
 from openquake.commonlib import nrml, logictree, InvalidFile
 from openquake.commonlib.riskmodels import get_risk_models
 from openquake.baselib.general import groupby, AccumDict, writetmp
@@ -648,8 +648,8 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         area = conversions.area
     except NameError:
         # NB: the area type cannot be an empty string because when sending
-        # around the CostCalculator object one runs into this numpy bug on
-        # pickling dictionaries with empty strings:
+        # around the CostCalculator object we would run into this numpy bug
+        # about pickling dictionaries with empty strings:
         # https://github.com/numpy/numpy/pull/5475
         area = Node('area', dict(type='?'))
 
@@ -671,11 +671,13 @@ def _get_exposure(fname, ok_cost_types, stop=None):
         deductible.attrib.get('isAbsolute', True),
         area.attrib, [], set(), [])
     cc = riskmodels.CostCalculator(
-        {}, {}, exp.deductible_is_absolute, exp.insurance_limit_is_absolute)
+        {}, {}, {},
+        exp.deductible_is_absolute, exp.insurance_limit_is_absolute)
     for ct in exp.cost_types:
         name = ct['name']  # structural, nonstructural, ...
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
         cc.area_types[name] = exp.area['type']
+        cc.units[name] = ct['unit']
     return exp, exposure.assets, cc
 
 
