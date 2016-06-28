@@ -866,7 +866,7 @@ class UHSXMLWriter(BaseCurveWriter):
             Iterable of UHS data. Each datum must be an object with the
             following attributes:
 
-            * imls: A sequence of Itensity Measure Levels
+            * imls: A sequence of Intensity Measure Levels
             * location: An object representing the location of the curve; must
               have `x` and `y` to represent lon and lat, respectively.
         """
