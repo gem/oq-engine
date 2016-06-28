@@ -94,7 +94,7 @@ Rupture multiplicity     3.250
 
 Maximum memory allocated for the GMFs
 -------------------------------------
-The largest GMF block is for trt_model_id=0, contains 3 IMT(s), 1 realization(s)
+The largest GMF block is for src_group_id=0, contains 3 IMT(s), 1 realization(s)
 and has a size of 312 B / num_tasks
 
 Estimated data transfer for the avglosses
@@ -119,7 +119,7 @@ W        1.000 NaN    1   1   1         1
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
-trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+src_group_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
 0            2         PointSource  0.150  1         4.005E-05   0.0        0.006    
 0            3         PointSource  0.150  1         2.289E-05   0.0        0.006    
