@@ -98,7 +98,7 @@ class StreamingXMLWriter(object):
     """
     def __init__(self, bytestream, indent=4, encoding='utf-8', nsmap=None):
         """
-        :param stream: the stream or a file where to write the XML
+        :param bytestream: the stream or file where to write the XML
         :param int indent: the indentation to use in the XML (default 4 spaces)
         """
         assert not isinstance(bytestream, io.StringIO)  # common error
@@ -445,7 +445,7 @@ def read_composite_array(fname, sep=','):
     >>> from openquake.baselib.general import writetmp
     >>> fname = writetmp('PGA:float64:3,PGV:float64:2,avg:float64:1\n'
     ...                  '.1 .2 .3,.4 .5,.6\n')
-    >>> print read_composite_array(fname)  # array of shape (1,)
+    >>> print(read_composite_array(fname))  # array of shape (1,)
     [([0.1, 0.2, 0.3], [0.4, 0.5], [0.6])]
     """
     with open(fname) as f:
@@ -485,7 +485,7 @@ def read_array(fname, sep=','):
     Convert a CSV file without header into a numpy array of floats.
 
     >>> from openquake.baselib.general import writetmp
-    >>> print read_array(writetmp('.1 .2, .3 .4, .5 .6\n'))
+    >>> print(read_array(writetmp('.1 .2, .3 .4, .5 .6\n')))
     [[[ 0.1  0.2]
       [ 0.3  0.4]
       [ 0.5  0.6]]]
