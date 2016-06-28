@@ -98,7 +98,7 @@ class StreamingXMLWriter(object):
     """
     def __init__(self, bytestream, indent=4, encoding='utf-8', nsmap=None):
         """
-        :param bytestream: the stream or a file where to write the XML
+        :param bytestream: the stream or file where to write the XML
         :param int indent: the indentation to use in the XML (default 4 spaces)
         """
         assert not isinstance(bytestream, io.StringIO)  # common error
