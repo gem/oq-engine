@@ -23,7 +23,6 @@ import math
 import logging
 import operator
 import collections
-import random
 
 import numpy
 
@@ -635,7 +634,7 @@ class CompositionInfo(object):
             else:
                 gsim_lt = self.gsim_lt
             if self.num_samples:  # sampling
-                rnd = random.Random(random_seed + idx)
+                rnd = numpy.random.random(random_seed + idx)
                 rlzs = logictree.sample(gsim_lt, smodel.samples, rnd)
             else:  # full enumeration
                 rlzs = logictree.get_effective_rlzs(gsim_lt)
