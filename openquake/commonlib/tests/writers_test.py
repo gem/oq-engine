@@ -51,7 +51,7 @@ class StreamingXMLWriterTestCase(unittest.TestCase):
         descr = etree.SubElement(em, 'description')
         descr.text = 'Sample population'
         etree.SubElement(em, 'assets')
-        self.assertEqual(tostring(nrml), '''\
+        self.assertEqual(tostring(nrml), b'''\
 <nrml
 xmlns="http://openquake.org/xmlns/nrml/0.4"
 >
@@ -80,7 +80,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
             rss = memory_info(proc).rss
         except psutil.AccessDenied:
             raise unittest.SkipTest('Memory info not accessible')
-        devnull = open(os.devnull, 'w')
+        devnull = open(os.devnull, 'wb')
         with StreamingXMLWriter(devnull) as writer:
             for asset in assetgen(1000):
                 writer.serialize(asset)
@@ -92,7 +92,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
         node = Node('zero', {}, 0)
         with StreamingXMLWriter(s) as writer:
             writer.serialize(node)
-        self.assertEqual(s.getvalue(), '''\
+        self.assertEqual(s.getvalue(), b'''\
 <?xml version="1.0" encoding="utf-8"?>
 <zero>
     0
