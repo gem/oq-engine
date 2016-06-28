@@ -286,7 +286,6 @@ class SourceModelParser(object):
             return [SourceGroup(trt, sources)
                     for trt, sources in groups.items()]
         if smodel['xmlns'].endswith('nrml/0.5'):
-            import pdb; pdb.set_trace()
             for src_group in smodel.sourceModel:
                 sg = self.converter.convert_node(src_group)
         else:
