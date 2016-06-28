@@ -502,7 +502,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         with self.assertRaises(ValueError) as arc:
             _TestableSourceModelLogicTree('lt', {'lt': lt, 'sm': sm}, 'base')
-        self.assertEqual(
+        self.assertIn(
             "Could not convert occurRates->positivefloats: "
             "float -0.01 < 0, line 17", str(arc.exception))
 
