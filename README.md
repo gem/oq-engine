@@ -52,6 +52,10 @@ The code name for version 2.0 is **Aki**, in memory of [Keiiti Aki](https://en.w
 * [Installing on Windows](https://github.com/gem/oq-engine/blob/engine-2.0/doc/installing/windows.md)
 * [Starting the software](https://github.com/gem/oq-engine/blob/engine-2.0/doc/running/windows.md)
 
+#### VirtualBox VM
+
+* [OVA repository](https://www.globalquakemodel.org/ova/stable/)
+
 ### Running the OpenQuake Engine
 
 * [Using the command line](https://github.com/gem/oq-engine/blob/engine-2.0/doc/running/unix.md)
