@@ -493,7 +493,7 @@ class HazardCalculator(BaseCalculator):
                 self.assets_by_site, self.cost_calculator, oq.time_event,
                 time_events=hdf5.array_of_vstr(
                     sorted(self.exposure.time_events)))
-        elif hasattr(self, 'assetcol'):
+        elif hasattr(self, '_assetcol'):
             self.assets_by_site = self.assetcol.assets_by_site()
 
     def is_tiling(self):
