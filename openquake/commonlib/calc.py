@@ -334,7 +334,10 @@ def get_gmfs(dstore):
                     a = get_array(array, imti=imti)
                     gs = str(rlz.gsim_rlz)
                     gmfs[0, gs][imt][sid, a['eid']] = a['gmv']
-    return dstore['etags'].value, gmfs
+    etags = numpy.array(
+        sorted(['scenario-%010d~ses=1' % i
+                for i in range(oq.number_of_ground_motion_fields)]))
+    return etags, gmfs
 
 
 def fix_minimum_intensity(min_iml, imts):
