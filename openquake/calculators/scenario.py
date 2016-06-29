@@ -18,6 +18,7 @@
 import collections
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput, source
@@ -59,7 +60,7 @@ class ScenarioCalculator(base.HazardCalculator):
                 maxdist)
         self.etags = numpy.array(
             sorted(['scenario-%010d~ses=1' % i for i in range(n_gmfs)]),
-            (bytes, 100))
+            hdf5.vstr)
         self.computer = GmfComputer(
             rupture, self.sitecol, oq.imtls, self.gsims,
             trunc_level, correl_model)
