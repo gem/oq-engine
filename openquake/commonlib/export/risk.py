@@ -838,7 +838,7 @@ def export_bcr_map_rlzs(ekey, dstore):
     for rlz in realizations:
         for l, loss_type in enumerate(loss_types):
             rlz_data = bcr_data[loss_type][:, rlz.ordinal]
-            path = dstore.build_fname('bcr-%s' + loss_type, rlz, 'xml')
+            path = dstore.build_fname('bcr-%s' % loss_type, rlz, 'xml')
             writer = writercls(
                 path, oq.interest_rate, oq.asset_life_expectancy, loss_type,
                 **get_paths(rlz))
