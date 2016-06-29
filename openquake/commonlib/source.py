@@ -639,7 +639,8 @@ class CompositionInfo(object):
             else:
                 gsim_lt = self.gsim_lt
             if self.num_samples:  # sampling
-                rnd = random.Random(random_seed + idx)
+                # the int is needed on Windows to convert numpy.uint32 objects
+                rnd = random.Random(int(random_seed + idx))
                 rlzs = logictree.sample(gsim_lt, smodel.samples, rnd)
             else:  # full enumeration
                 rlzs = logictree.get_effective_rlzs(gsim_lt)
