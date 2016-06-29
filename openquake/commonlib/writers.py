@@ -230,6 +230,7 @@ htranslator = HeaderTranslator(
     asset_ref='asset_ref:object',
     rup_id='rup_id:uint32',
     taxonomy='taxonomy:object',
+    taxonom='taxonom:|S100',
     rupserial='rupserial:uint32',
     multiplicity='multiplicity:uint16',
     numsites='numsites:uint32',

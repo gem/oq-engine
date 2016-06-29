@@ -421,7 +421,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                     sescollection.append(ebr)
             sescollection.sort(key=operator.attrgetter('serial'))
             etags = numpy.concatenate([ebr.etags for ebr in sescollection])
-            self.etags = numpy.array(etags, (bytes, 100))
+            self.etags = numpy.array(etags, hdf5.vstr)
             nr = len(sescollection)
             logging.info('Saving SES collection with %d ruptures, %d events',
                          nr, len(etags))
