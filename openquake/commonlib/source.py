@@ -285,7 +285,9 @@ class SourceModelParser(object):
                 logging.info('Parsed %d sources from %s', no, fname)
         if no % 10000 != 0:
             logging.info('Parsed %d sources from %s', no, fname)
-        return sorted(sources, key=operator.attrgetter('tectonic_region_type'))
+        srcs = sorted(sources, key=operator.attrgetter(
+            'tectonic_region_type', 'source_id'))
+        return srcs
 
 
 def agg_prob(acc, prob):
