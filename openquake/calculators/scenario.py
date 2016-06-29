@@ -41,13 +41,12 @@ class ScenarioCalculator(base.HazardCalculator):
 
     def pre_execute(self):
         """
-        Read the site collection and initialize GmfComputer, etags and seeds
+        Read the site collection and initialize GmfComputer and seeds
         """
         super(ScenarioCalculator, self).pre_execute()
         oq = self.oqparam
         trunc_level = oq.truncation_level
         correl_model = readinput.get_correl_model(oq)
-        n_gmfs = oq.number_of_ground_motion_fields
         rupture = readinput.get_rupture(oq)
         self.gsims = readinput.get_gsims(oq)
         maxdist = oq.maximum_distance['default']
@@ -58,9 +57,6 @@ class ScenarioCalculator(base.HazardCalculator):
             raise RuntimeError(
                 'All sites were filtered out! maximum_distance=%s km' %
                 maxdist)
-        self.etags = numpy.array(
-            sorted(['scenario-%010d~ses=1' % i for i in range(n_gmfs)]),
-            hdf5.vstr)
         self.computer = GmfComputer(
             rupture, self.sitecol, oq.imtls, self.gsims,
             trunc_level, correl_model)
