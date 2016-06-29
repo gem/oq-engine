@@ -399,7 +399,7 @@ class HazardCalculator(BaseCalculator):
         logging.info('Reading the exposure')
         with self.monitor('reading exposure', autoflush=True):
             self.exposure = readinput.get_exposure(self.oqparam)
-            arefs = numpy.array(self.exposure.asset_refs)
+            arefs = numpy.array(self.exposure.asset_refs, hdf5.vstr)
             self.datastore['asset_refs'] = arefs
             self.datastore.set_attrs('asset_refs', nbytes=arefs.nbytes)
             self.cost_calculator = readinput.get_cost_calculator(self.oqparam)

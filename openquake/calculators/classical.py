@@ -86,7 +86,8 @@ class BoundingBox(object):
             an instance of :class:
             `openquake.engine.calculators.hazard.classical.core.BoundingBox`
         """
-        if bb:  # the given bounding box must be non-empty
+        if bb:
+            # the given bounding box must be non-empty
             self.update([bb.min_dist, bb.max_dist], [bb.west, bb.east],
                         [bb.south, bb.north])
 
@@ -124,12 +125,13 @@ class BoundingBox(object):
 
         return dist_edges, lon_edges, lat_edges
 
-    def __nonzero__(self):
+    def __bool__(self):
         """
         True if the bounding box is non empty.
         """
         return (self.min_dist is not None and self.west is not None and
                 self.south is not None)
+    __nonzero__ = __bool__
 
 
 @parallel.litetask
