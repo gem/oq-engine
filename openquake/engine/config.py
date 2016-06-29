@@ -21,7 +21,10 @@
 Various utility functions concerned with configuration.
 """
 
-import ConfigParser
+try:
+    import ConfigParser
+except ImportError:
+    import configparser as ConfigParser
 import os
 import sys
 from contextlib import contextmanager
@@ -137,7 +140,7 @@ def abort_if_no_config_available():
         msg = ('Could not find a configuration file in %s. '
                'Probably your are not in the right directory'
                % cfg._get_paths())
-        print msg
+        print(msg)
         sys.exit(2)
     if not cfg.is_readable():
         msg = (
@@ -145,7 +148,7 @@ def abort_if_no_config_available():
             "configuration files.\n"
             "Please check permissions on the configuration files in %s."
             % cfg._get_paths())
-        print msg
+        print(msg)
         sys.exit(2)
 
 

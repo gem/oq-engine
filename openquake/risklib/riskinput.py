@@ -44,17 +44,17 @@ class AssetCollection(object):
                  time_events=''):
         self.cc = cost_calculator
         self.time_event = time_event
-        self.time_events = hdf5.array_of_bytes(time_events)
+        self.time_events = hdf5.array_of_vstr(time_events)
         self.array, self.taxonomies = self.build_asset_collection(
             assets_by_site, time_event)
         fields = self.array.dtype.names
-        self.loss_types = hdf5.array_of_bytes(
+        self.loss_types = hdf5.array_of_vstr(
             sorted(f for f in fields if not f.startswith(FIELDS)))
-        self.deduc = hdf5.array_of_bytes(
+        self.deduc = hdf5.array_of_vstr(
             n for n in fields if n.startswith('deductible-'))
-        self.i_lim = hdf5.array_of_bytes(
+        self.i_lim = hdf5.array_of_vstr(
             n for n in fields if n.startswith('insurance_limit-'))
-        self.retro = hdf5.array_of_bytes(
+        self.retro = hdf5.array_of_vstr(
             n for n in fields if n.startswith('retrofitted-'))
 
     def assets_by_site(self):
@@ -188,7 +188,7 @@ class AssetCollection(object):
                         # `insured_limits` or `retrofitteds` ("s" suffix)
                         value = getattr(asset, name + 's')[lt]
                     record[field] = value
-        return assetcol, numpy.array(sorted_taxonomies, (bytes, 100))
+        return assetcol, numpy.array(sorted_taxonomies, hdf5.vstr)
 
 
 class CompositeRiskModel(collections.Mapping):
