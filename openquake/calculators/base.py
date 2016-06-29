@@ -88,7 +88,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     :param calc_id: numeric calculation ID
     """
     sitecol = datastore.persistent_attribute('sitecol')
-    etags = datastore.persistent_attribute('etags')
     assetcol = datastore.persistent_attribute('assetcol')
     job_info = datastore.persistent_attribute('job_info')
     performance = datastore.persistent_attribute('performance')
