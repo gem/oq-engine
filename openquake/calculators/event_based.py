@@ -143,7 +143,7 @@ class EBRupture(object):
             if sampleid > 0:
                 tag += '~sample=%d' % sampleid
             tags.append(tag)
-        return numpy.array(tags)
+        return hdf5.array_of_vstr(tags)
 
     @property
     def eids(self):
@@ -420,7 +420,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                     sescollection.append(ebr)
             sescollection.sort(key=operator.attrgetter('serial'))
             etags = numpy.concatenate([ebr.etags for ebr in sescollection])
-            self.datastore['etags'] = numpy.array(etags, hdf5.vstr)
+            self.datastore['etags'] = etags
             nr = len(sescollection)
             logging.info('Saving SES collection with %d ruptures, %d events',
                          nr, len(etags))
