@@ -20,16 +20,11 @@ import os
 import sys
 import re
 import time
+import runpy
 import urllib
 import logging
 import importlib
 import sqlite3
-
-
-def execf(fname):
-    with open(fname) as f:
-        code = compile(f.read(), fname, 'exec')
-        exec(code)
 
 
 class DuplicatedVersion(RuntimeError):
@@ -208,8 +203,8 @@ class UpgradeManager(object):
             fullname = os.path.join(self.upgrade_dir, script['fname'])
             logging.info('Executing %s', fullname)
             if script['ext'] == 'py':  # Python script with a upgrade(conn)
-                execf(fullname)  # define upgrade below
-                upgrade(conn)
+                globs = runpy.run_path(fullname)
+                globs['upgrade'](conn)
                 self._insert_script(script, conn)
             else:  # SQL script
                 # notice that this prints the file name in case of error
