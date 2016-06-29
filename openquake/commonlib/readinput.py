@@ -1018,7 +1018,7 @@ def get_gmfs_from_txt(oqparam, fname):
     if etags != sorted(etags):
         raise InvalidFile('The etags in %s are not ordered: %s'
                           % (fname, etags))
-    return sitecol, numpy.array(etags, '|S100'), gmf_by_imt.T
+    return sitecol, numpy.array(etags), gmf_by_imt.T
 
 
 # used in get_scenario_from_nrml

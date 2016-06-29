@@ -350,7 +350,6 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
     Event based PSHA calculator generating the ruptures only
     """
     core_task = compute_ruptures
-    etags = datastore.persistent_attribute('etags')
     is_stochastic = True
 
     def init(self):
@@ -421,7 +420,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                     sescollection.append(ebr)
             sescollection.sort(key=operator.attrgetter('serial'))
             etags = numpy.concatenate([ebr.etags for ebr in sescollection])
-            self.etags = numpy.array(etags, hdf5.vstr)
+            self.datastore['etags'] = numpy.array(etags, hdf5.vstr)
             nr = len(sescollection)
             logging.info('Saving SES collection with %d ruptures, %d events',
                          nr, len(etags))
