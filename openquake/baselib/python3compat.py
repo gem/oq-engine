@@ -157,11 +157,19 @@ def check_syntax(pkg):
 
 
 def dtype(arglist):
+    """
+    Version of numpy.dtype working both in Python 2 and 3.
+
+    :param arglist:
+         list of pairs (name, dtype) where name must be bytes in Python 2 and
+         str in Python 3
+    :returns: a numpy dtype
+    """
     lst = []
     for arg in arglist:
         if PY2:
             newarg = (encode(arg[0]),) + arg[1:]
-        else:
+        else:  # Python 3
             newarg = (decode(arg[0]),) + arg[1:]
         lst.append(newarg)
     return numpy.dtype(lst)
