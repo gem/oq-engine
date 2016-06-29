@@ -183,10 +183,10 @@ def export_agg_losses_ebr(ekey, dstore):
             if data.dtype['loss'].shape == (2,):  # insured losses
                 losses = data['loss'][:, 0]
                 inslosses = data['loss'][:, 1]
-                edata = [('event_tag', 'loss', 'loss_ins')] + zip(
-                    tags, losses, inslosses)
+                edata = [('event_tag', 'loss', 'loss_ins')] + list(
+                    zip(tags, losses, inslosses))
             else:
-                edata = [('event_tag', 'loss')] + zip(tags, data['loss'])
+                edata = [('event_tag', 'loss')] + list(zip(tags, data['loss']))
             writer.save(edata, dest)
     return writer.getsaved()
 
