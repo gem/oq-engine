@@ -19,7 +19,10 @@
 import socket
 import os.path
 import logging
-from Queue import Queue
+try:
+    from Queue import Queue
+except ImportError:
+    from queue import Queue
 from threading import Thread
 from multiprocessing import Process
 from multiprocessing.connection import Listener
