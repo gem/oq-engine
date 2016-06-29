@@ -25,7 +25,7 @@ except ImportError:  # with Python 2
 import collections
 import numpy
 import h5py
-from openquake.baselib.python3compat import pickle
+from openquake.baselib.python3compat import pickle, decode
 
 vbytes = h5py.special_dtype(vlen=bytes)
 vstr = h5py.special_dtype(vlen=str)
@@ -134,10 +134,9 @@ class LiteralAttrs(object):
 
     def __fromh5__(self, array, attrs):
         dd = collections.defaultdict(dict)
-        for (name, literal) in array:
-            if isinstance(literal, numpy.object_):
-                # needed for Python3 compatibility
-                literal = repr(literal)
+        for (name_, literal_) in array:
+            name = decode(name_)
+            literal = decode(literal_)
             if '.' in name:
                 k1, k2 = name.split('.', 1)
                 dd[k1][k2] = ast.literal_eval(literal)
