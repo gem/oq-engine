@@ -117,8 +117,8 @@ def timeit(method):
         result = method(*args, **kw)
         timeend = time.time()
 
-        print '%r (%r, %r) %2.2f sec' % (
-            method.__name__, args, kw, timeend - timestart)
+        print('%r (%r, %r) %2.2f sec' % (
+            method.__name__, args, kw, timeend - timestart))
         return result
     try:
         import nose

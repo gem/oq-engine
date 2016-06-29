@@ -53,7 +53,7 @@ F32 = numpy.float32
 class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 
-rlz_dt = numpy.dtype([('uid', (bytes, 200)), ('gsims', (bytes, 200)),
+rlz_dt = numpy.dtype([('uid', hdf5.vstr), ('gsims', hdf5.vstr),
                       ('weight', F32)])
 
 logversion = {True}
@@ -434,11 +434,10 @@ class HazardCalculator(BaseCalculator):
                     'composite_risk_model/%s-retrofitted' % taxonomy] = (
                         rmodel.retro_functions)
         attrs = self.datastore['composite_risk_model'].attrs
-        attrs['loss_types'] = hdf5.array_of_bytes(rm.loss_types)
-        attrs['min_iml'] = hdf5.array_of_bytes(
-            sorted(rm.get_min_iml().items()))
+        attrs['loss_types'] = hdf5.array_of_vstr(rm.loss_types)
+        attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.get_min_iml().items()))
         if rm.damage_states:
-            attrs['damage_states'] = rm.damage_states
+            attrs['damage_states'] = hdf5.array_of_vstr(rm.damage_states)
         self.datastore['loss_ratios'] = rm.get_loss_ratios()
         self.datastore.set_nbytes('composite_risk_model')
         self.datastore.set_nbytes('loss_ratios')
@@ -492,7 +491,7 @@ class HazardCalculator(BaseCalculator):
         if hasattr(self, 'assets_by_site'):
             self.assetcol = riskinput.AssetCollection(
                 self.assets_by_site, self.cost_calculator, oq.time_event,
-                time_events=hdf5.array_of_bytes(
+                time_events=hdf5.array_of_vstr(
                     sorted(self.exposure.time_events)))
         elif hasattr(self, 'assetcol'):
             self.assets_by_site = self.assetcol.assets_by_site()
