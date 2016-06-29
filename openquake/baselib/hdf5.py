@@ -28,6 +28,7 @@ import h5py
 from openquake.baselib.python3compat import pickle
 
 vbytes = h5py.special_dtype(vlen=bytes)
+vstr = h5py.special_dtype(vlen=str)
 
 
 class Hdf5Dataset(object):
@@ -243,10 +244,10 @@ class File(h5py.File):
             return h5obj
 
 
-def array_of_bytes(lst):
+def array_of_vstr(lst):
     """
-    :param lst: a list of unicode strings or bytes
-    :returns: an array of byte strings encode in UTF8
+    :param lst: a list of strings or bytes
+    :returns: an array of variable length ASCII strings
     """
     ls = []
     for el in lst:
@@ -254,4 +255,4 @@ def array_of_bytes(lst):
             ls.append(el.encode('utf-8'))
         except AttributeError:
             ls.append(el)
-    return numpy.array(ls, bytes)
+    return numpy.array(ls, vstr)
