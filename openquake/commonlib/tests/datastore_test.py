@@ -52,7 +52,7 @@ class DataStoreTestCase(unittest.TestCase):
     def test_hdf5(self):
         # store numpy arrays as hdf5 files
         self.assertEqual(len(self.dstore), 0)
-        self.dstore['/key1'] = value1 = numpy.array(['a', 'b'])
+        self.dstore['/key1'] = value1 = numpy.array(['a', 'b'], dtype=bytes)
         self.dstore['/key2'] = numpy.array([1, 2])
         self.assertEqual(list(self.dstore), ['key1', 'key2'])
         del self.dstore['/key2']
@@ -105,4 +105,4 @@ class DataStoreTestCase(unittest.TestCase):
         os.chmod(fname, 0)
         with self.assertRaises(IOError) as ctx:
             read(42, datadir=tmp)
-        self.assertIn('Permission denied:', unicode(ctx.exception))
+        self.assertIn('Permission denied:', str(ctx.exception))
