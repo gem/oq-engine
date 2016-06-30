@@ -227,10 +227,9 @@ class HeaderTranslator(object):
         return [self.name.get(d, d) for d in descr]
 
 htranslator = HeaderTranslator(
-    asset_ref='asset_ref:object',
+    asset_ref='asset_ref:|S100',
     rup_id='rup_id:uint32',
-    taxonomy='taxonomy:object',
-    taxonom='taxonom:|S100',
+    taxonomy='taxonomy:|S100',
     rupserial='rupserial:uint32',
     multiplicity='multiplicity:uint16',
     numsites='numsites:uint32',
