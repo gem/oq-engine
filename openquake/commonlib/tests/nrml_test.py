@@ -66,20 +66,24 @@ class NrmlTestCase(unittest.TestCase):
 xmlns="http://openquake.org/xmlns/nrml/0.4"
 xmlns:gml="http://www.opengis.net/gml"
 >
+    
     <exposureModel
     category="population"
     id="my_exposure_model_for_population"
     taxonomySource="fake population datasource"
     >
+        
         <description>
             Sample population
         </description>
         <assets>
+            
             <asset
             id="asset_01"
             number="7.000000000E+00"
             taxonomy="IT-PV"
             >
+                
                 <location lat="4.516667000E+01" lon="9.150000000E+00"/>
             </asset>
             <asset
@@ -87,6 +91,7 @@ xmlns:gml="http://www.opengis.net/gml"
             number="7.000000000E+00"
             taxonomy="IT-CE"
             >
+                
                 <location lat="4.512200000E+01" lon="9.153330000E+00"/>
             </asset>
         </assets>
