@@ -19,12 +19,13 @@
 from __future__ import division
 import logging
 import numpy
-from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 
 F32 = numpy.float32
-asset_dt = numpy.dtype([('asset_ref', hdf5.vstr),
-                        ('taxonomy', hdf5.vstr),
+
+# NB: using hdf5.vstr does not work with h5py <= 2.2.1
+asset_dt = numpy.dtype([('asset_ref', (bytes, 100)),
+                        ('taxonomy', (bytes, 100)),
                         ('lon', F32), ('lat', F32)])
 
 
