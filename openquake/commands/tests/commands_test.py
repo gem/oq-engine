@@ -22,10 +22,10 @@ import mock
 import shutil
 import tempfile
 import unittest
+import shapefile
 
 from openquake.baselib.general import writetmp
 from openquake import commonlib
-from openquake.calculators.tests import check_platform
 from openquake.commands.info import info
 from openquake.commands.tidy import tidy
 from openquake.commands.show import show
@@ -39,6 +39,7 @@ from openquake.qa_tests_data.classical import case_1
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import case_5
+from openquake.calculators.tests import check_platform
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
 
@@ -288,6 +289,10 @@ class SourceModelShapefileConverterTestCase(unittest.TestCase):
     OUTDIR = tempfile.mkdtemp()
 
     def test_roundtrip(self):
+        if not hasattr(shapefile, '__version__'):
+            # for versions < 1.2.3
+            raise unittest.SkipTest
+
         # test the conversion to shapefile and back
         build(os.path.join(self.OUTDIR, 'smc'), self.INPUT, None, False)
         shpfiles = [os.path.join(self.OUTDIR, f)
