@@ -33,6 +33,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.contrib.auth import authenticate, login, logout
 
 from openquake.baselib.general import groupby, writetmp
 from openquake.baselib.python3compat import unicode
@@ -123,6 +124,33 @@ def _prepare_job(request, hazard_job_id, candidates):
         return inifiles
     # else extract the files from the archive into temp_dir
     return readinput.extract_from_zip(arch, candidates)
+
+
+# @cross_domain_ajax
+@require_http_methods(['POST'])
+def ajax_login(request):
+    username = request.POST['username']
+    password = request.POST['password']
+    user = authenticate(username=username, password=password)
+    if user is not None:
+        if user.is_active:
+            login(request, user)
+            return HttpResponse(content='Successful login',
+                                content_type='text/plain', status=200)
+        else:
+            return HttpResponse(content='Disabled account',
+                                content_type='text/plain', status=403)
+    else:
+        return HttpResponse(content='Invalid login',
+                            content_type='text/plain', status=403)
+
+
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def ajax_logout(request):
+    logout(request)
+    return HttpResponse(content='Successful logout',
+                        content_type='text/plain', status=200)
 
 
 @cross_domain_ajax

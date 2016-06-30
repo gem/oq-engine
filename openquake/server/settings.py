@@ -89,7 +89,7 @@ SECRET_KEY = 'f_6=^^_0%ygcpgmemxcp0p^xq%47yqe%u9pu!ad*2ym^zt+xq$'
 
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',
 )
 
 LOCKDOWN = False
@@ -182,3 +182,5 @@ if LOCKDOWN:
         )
 
     LOGIN_REDIRECT_URL = '/engine'
+
+    AUTH_EXEMPT_URLS = ('/accounts/ajax_login/', )
