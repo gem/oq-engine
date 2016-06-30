@@ -26,6 +26,7 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5
+from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict, group_array
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
@@ -33,7 +34,7 @@ from openquake.hazardlib.calc.hazard_curve import (
     array_of_curves, ProbabilityMap)
 from openquake.hazardlib import geo
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import readinput, parallel, datastore, calc
+from openquake.commonlib import readinput, parallel, calc
 from openquake.commonlib.util import max_rel_diff_index, Rupture
 from openquake.risklib.riskinput import create
 from openquake.calculators import base
@@ -142,8 +143,8 @@ class EBRupture(object):
                 self.trt_id, ses, self.source_id, self.serial, occ)
             if sampleid > 0:
                 tag += '~sample=%d' % sampleid
-            tags.append(tag)
-        return hdf5.array_of_vstr(tags)
+            tags.append(encode(tag))
+        return numpy.array(tags)
 
     @property
     def eids(self):
