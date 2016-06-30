@@ -30,7 +30,7 @@ import h5py
 
 from openquake.baselib.general import humansize, groupby, AccumDict
 from openquake.baselib.performance import perf_dt
-from openquake.baselib.python3compat import unicode
+from openquake.baselib.python3compat import unicode, dtype
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source
 from openquake.commonlib.datastore import view
@@ -140,7 +140,7 @@ def sum_tbl(tbl, kfield, vfields):
     array([3, 3])
     """
     pairs = [(n, tbl.dtype[n]) for n in [kfield] + vfields]
-    dt = numpy.dtype(pairs + [('counts', int)])
+    dt = dtype(pairs + [('counts', int)])
 
     def sum_all(group):
         vals = numpy.zeros(1, dt)[0]
@@ -151,7 +151,11 @@ def sum_tbl(tbl, kfield, vfields):
         vals[kfield] = rec[kfield]
         return vals
     rows = groupby(tbl, operator.itemgetter(kfield), sum_all).values()
-    return numpy.array(list(rows), dt)
+    array = numpy.zeros(len(rows), dt)
+    for i, row in enumerate(rows):
+        for j, name in enumerate(dt.names):
+            array[i][name] = row[j]
+    return array
 
 
 @view.add('times_by_source_class')
