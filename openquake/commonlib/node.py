@@ -109,7 +109,7 @@ Node objects can be easily converted into ElementTree objects:
 Then is trivial to generate the XML representation of a node:
 
 >>> from xml.etree import ElementTree
->>> print(ElementTree.tostring(node_to_elem(root)))
+>>> print(ElementTree.tostring(node_to_elem(root)).decode('utf-8'))
 <root><a>A1</a><b attrb="B">B1</b></root>
 
 Generating XML files larger than the available memory requires some
@@ -145,7 +145,7 @@ import sys
 import copy
 import pprint as pp
 from contextlib import contextmanager
-from openquake.baselib.python3compat import raise_, exec_, configparser, encode
+from openquake.baselib.python3compat import raise_, exec_, configparser, decode
 from openquake.commonlib.writers import StreamingXMLWriter
 from xml.etree import ElementTree
 from xml.parsers.expat import ParserCreate, ExpatError, ErrorString
@@ -202,8 +202,7 @@ def _display(node, indent, expandattrs, expandvals, output):
     attrs = _displayattrs(node.attrib, expandattrs)
     val = ' %s' % repr(node.text) \
         if expandvals and node.text is not None else ''
-    output.write(
-        (indent + striptag(node.tag) + attrs + val + '\n').decode('utf8'))
+    output.write(decode((indent + striptag(node.tag) + attrs + val + '\n')))
     for sub_node in node:
         _display(sub_node, indent + '  ', expandattrs, expandvals, output)
 
@@ -269,7 +268,7 @@ class Node(object):
         for node in self.nodes:
             if striptag(node.tag) == name:
                 return node
-        raise NameError('No subnode named %r found in %r' %
+        raise NameError("No subnode named '%s' found in '%s'" %
                         (name, striptag(self.tag)))
 
     def getnodes(self, name):
@@ -678,7 +677,7 @@ class ValidatingXmlParser(object):
         except KeyError:
             return
         try:
-            node.text = val(encode(text.strip()))
+            node.text = val(decode(text.strip()))
         except Exception as exc:
             raise ValueError('Could not convert %s->%s: %s' %
                              (tag, val.__name__, exc))
@@ -686,7 +685,7 @@ class ValidatingXmlParser(object):
     def _set_attrib(self, node, n, tn, v):
         val = self.validators[tn]
         try:
-            node.attrib[n] = val(encode(v))
+            node.attrib[n] = val(decode(v))
         except Exception as exc:
             raise ValueError(
                 'Could not convert %s->%s: %s, line %s' %

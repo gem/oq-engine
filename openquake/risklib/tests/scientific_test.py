@@ -206,7 +206,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             'It is not valid to define a loss ratio = 0.0 with a corresponding'
             ' coeff. of variation > 0.0'
         )
-        self.assertEqual(expected_error, ar.exception.message)
+        self.assertEqual(expected_error, str(ar.exception))
 
     def test_lrem_lr_cov_special_cases(self):
         # Test LREM computation for points in a vuln curve where the loss ratio
