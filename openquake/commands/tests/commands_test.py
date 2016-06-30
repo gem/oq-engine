@@ -32,6 +32,7 @@ from openquake.commands.show import show
 from openquake.commands.show_attrs import show_attrs
 from openquake.commands.export import export
 from openquake.commands.reduce import reduce
+from openquake.commands.build import build
 from openquake.commands import run
 from openquake.commands.upgrade_nrml import get_vulnerability_functions_04
 from openquake.qa_tests_data.classical import case_1
@@ -272,3 +273,20 @@ class UpgradeNRMLTestCase(unittest.TestCase):
     def test(self):
         get_vulnerability_functions_04(self.vf)
         # NB: look also at nrml.get_vulnerability_functions_04
+
+
+class SourceModelShapefileConverterTestCase(unittest.TestCase):
+    """
+    Simple conversion test for the Source Model to shapefile converter
+    - more tests will follow
+    """
+    INPUT = os.path.join(os.path.dirname(__file__),
+                         "data", "source_model_complete.xml")
+    OUTDIR = tempfile.mkdtemp()
+
+    def test_roundtrip(self):
+        # test the conversion to shapefile and back
+        build(os.path.join(self.OUTDIR, 'smc'), self.INPUT, None, False)
+        shpfiles = [os.path.join(self.OUTDIR, f)
+                    for f in os.listdir(self.OUTDIR)]
+        build(os.path.join(self.OUTDIR, 'smc'), None, shpfiles, False)
