@@ -24,14 +24,14 @@ from openquake.server.dbserver import get_status
 from openquake.commands.dbserver import runserver
 
 
-def rundjango(subcmd, hostport='127.0.0.1:8800'):
+def rundjango(subcmd, hostport=None):
     args = [sys.executable, '-m', 'openquake.server.manage', subcmd]
     if hostport:
         args.append(hostport)
     subprocess.call(args)
 
 
-def webui(cmd):
+def webui(cmd, hostport='127.0.0.1:8800'):
     """
     start the webui server in foreground or perform other operation on the
     django application
@@ -41,14 +41,13 @@ def webui(cmd):
         if valid.boolean(config.get('dbserver', 'multi_user')):
             sys.exit('Please start the DbServer: '
                      'see the documentation for details')
-        runserver()
+        rundjango('runserver', hostport)
 
     if cmd == 'start':
-        rundjango('runserver')
+        rundjango('runserver', hostport)
     elif cmd == 'syncdb':
         rundjango('syncdb')
 
 parser = sap.Parser(webui)
-parser.arg('cmd', 'webui command',
-           choices='start syncdb'.split())
+parser.arg('cmd', 'webui command', choices='start syncdb'.split())
 parser.arg('hostport', 'a string of the form <hostname:port>')
