@@ -21,7 +21,7 @@ from openquake.risklib import valid
 from openquake.commonlib import sap
 from openquake.engine import config
 from openquake.server.dbserver import get_status
-from openquake.commands.dbserver import runserver
+from openquake.commands import dbserver
 
 
 def rundjango(subcmd, hostport=None):
@@ -41,7 +41,7 @@ def webui(cmd, hostport='127.0.0.1:8800'):
         if valid.boolean(config.get('dbserver', 'multi_user')):
             sys.exit('Please start the DbServer: '
                      'see the documentation for details')
-        rundjango('runserver', hostport)
+        dbserver.runserver()
 
     if cmd == 'start':
         rundjango('runserver', hostport)
