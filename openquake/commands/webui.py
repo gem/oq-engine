@@ -24,9 +24,9 @@ from openquake.server.dbserver import get_status
 from openquake.commands.dbserver import runserver
 
 
-def rundjango(subcmd='runserver', hostport='127.0.0.1:8800'):
+def rundjango(subcmd, hostport='127.0.0.1:8800'):
     args = [sys.executable, '-m', 'openquake.server.manage', subcmd]
-    if host:
+    if hostport:
         args.append(hostport)
     subprocess.call(args)
 
@@ -44,10 +44,11 @@ def webui(cmd):
         runserver()
 
     if cmd == 'start':
-        rundjango()
+        rundjango('runserver')
     elif cmd == 'syncdb':
-        rundjango(cmd)
+        rundjango('syncdb')
 
 parser = sap.Parser(webui)
 parser.arg('cmd', 'webui command',
            choices='start syncdb'.split())
+parser.arg('hostport', 'a string of the form <hostname:port>')
