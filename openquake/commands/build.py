@@ -1101,7 +1101,7 @@ class ShapefileParser(SourceModelParser):
             w_planar.save('%s_planar' % root)
 
 
-def build(output_file, input_nrml_file, input_shp_files, validate):
+def build(output, input_nrml_file, input_shp_files, validate):
     """
     Convert NRML source model file to ESRI Shapefile(s) and vice versa.
     For each type of source geometry defined in the NRML file (point, area,
@@ -1113,8 +1113,8 @@ def build(output_file, input_nrml_file, input_shp_files, validate):
     if input_nrml_file:
         input_parser = SourceModelParser()
         source_model = input_parser.read(input_nrml_file, validate)
-        print('Extracting %s_ files' % output_file)
-        ShapefileParser().write(output_file, source_model)
+        print('Extracting %s_ files' % output)
+        ShapefileParser().write(output, source_model)
     elif input_shp_files:
         input_parser = ShapefileParser()
         for iloc, filename in enumerate(input_shp_files):
@@ -1123,14 +1123,14 @@ def build(output_file, input_nrml_file, input_shp_files, validate):
             else:
                 next_sm = input_parser.read(filename, validate)
                 source_model.sources.extend(next_sm.sources)
-        print('Building %s.xml' % output_file)
-        SourceModelParser().write(output_file + '.xml', source_model)
+        print('Building %s.xml' % output)
+        SourceModelParser().write(output + '.xml', source_model)
     else:
         parser.parentparser.prog = 'oq build'
         parser.parentparser.print_usage()
 
 parser = sap.Parser(build)
-parser.arg('output_file', 'path to output file (root name only)')
+parser.arg('output', 'output path (no extension)')
 parser.opt('input_nrml_file', 'path to source model NRML file', abbrev='-n')
 parser.opt('input_shp_files', 'path(s) to source model ESRI shapefile(s)',
            nargs='+', abbrev='-s')
