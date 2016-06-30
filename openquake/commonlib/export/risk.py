@@ -373,7 +373,7 @@ def export_csq_by_taxon_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt=FIVEDIGITS)
     for rlz, values in zip(rlzs, value.T):
         fname = dstore.build_fname(ekey[0], rlz.gsim_rlz, ekey[1])
-        writer.save(compose_arrays(taxonomies, values, 'taxonom'), fname)
+        writer.save(compose_arrays(taxonomies, values, 'taxonomy'), fname)
     return writer.getsaved()
 
 
@@ -446,7 +446,7 @@ def export_dmg_by_taxon_csv(ekey, dstore):
     for rlz in rlzs:
         dmg_by_taxon = build_damage_array(data[:, rlz.ordinal], damage_dt)
         fname = dstore.build_fname(ekey[0], rlz.gsim_rlz, ekey[1])
-        array = compose_arrays(taxonomies, dmg_by_taxon, 'taxonom')
+        array = compose_arrays(taxonomies, dmg_by_taxon, 'taxonomy')
         writer.save(array, fname)
     return writer.getsaved()
 
