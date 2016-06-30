@@ -669,8 +669,8 @@ def simple_fault_geometry_from_shp(shape, record):
     lower_depth_node = Node("lowerSeismoDepth",
                             text=float(record["lsd"]))
     return Node("simpleFaultGeometry",
-                       nodes=[trace_node, dip_node, upper_depth_node,
-                              lower_depth_node])
+                nodes=[trace_node, dip_node, upper_depth_node,
+                       lower_depth_node])
 
 
 def complex_fault_geometry_from_shp(shape, record):
