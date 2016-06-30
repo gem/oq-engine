@@ -129,13 +129,16 @@ xmlns:gml="http://www.opengis.net/gml"
     gsimTreePath=""
     sourceModelTreePath=""
     >
+        
         <gmfSet
         stochasticEventSetId="1"
         >
+            
             <gmf
             IMT="PGA"
             ruptureId="scenario-0"
             >
+                
                 <node gmv="1.26515E-02" lat="4.35812E+01" lon="1.21248E+01"/>
                 <node gmv="1.24056E-02" lat="4.35812E+01" lon="1.21248E+01"/>
             </gmf>
