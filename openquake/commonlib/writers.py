@@ -208,7 +208,7 @@ class HeaderTranslator(object):
     into column names with the method .write. The usage is
 
     >>> htranslator = HeaderTranslator(
-    ...     asset_ref='asset_ref:object',
+    ...     asset_ref='asset_ref:|S20',
     ...     rup_id='rup_id:uint32',
     ...     taxonomy='taxonomy:object')
     >>> htranslator.read('asset_ref value:5'.split())
