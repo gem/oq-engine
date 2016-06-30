@@ -20,6 +20,7 @@ from __future__ import division
 import logging
 import numpy
 from openquake.baselib import hdf5
+from openquake.baselib.python3compat import decode
 
 F32 = numpy.float32
 asset_dt = numpy.dtype([('asset_ref', hdf5.vstr),
@@ -136,7 +137,7 @@ def get_ses_idx(etag):
     >>> get_ses_idx("trt=00~ses=0007~src=1-3~rup=018-01")
     7
     """
-    return int(etag.split('~')[1][4:])
+    return int(decode(etag).split('~')[1][4:])
 
 
 def get_serial(etag):
@@ -144,7 +145,7 @@ def get_serial(etag):
     >>> get_serial("trt=00~ses=0007~src=1-3~rup=018-01")
     '018'
     """
-    trt, ses, src, rup = etag.split('~')
+    trt, ses, src, rup = decode(etag).split('~')
     serial = rup.split('=')[1].split('-')[0]
     return serial
 
