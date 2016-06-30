@@ -20,6 +20,7 @@ import os
 import logging
 import numpy
 
+from openquake.baselib import python3compat
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.imt import from_string
 from openquake.risklib import valid
@@ -298,7 +299,7 @@ class OqParam(valid.ParamSet):
         if self.insured_losses:
             for lt in loss_types:
                 dts.append((lt + '_ins', dtype))
-        return numpy.dtype(dts)
+        return python3compat.dtype(dts)
 
     def no_imls(self):
         """
