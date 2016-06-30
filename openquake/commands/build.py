@@ -47,17 +47,17 @@ BASE_PARAMS = [
     ('tectonicRegion', 'trt', 'c'),
     ('magScaleRel', 'msr', 'c'),
     ('ruptAspectRatio', 'rar', 'f'),
-    ('rake', 'rake', 'f')
+    ('rake', 'rake', 'f'),
 ]
 GEOMETRY_PARAMS = [
     ('upperSeismoDepth', 'usd', 'f'),
     ('lowerSeismoDepth', 'lsd', 'f'),
-    ('dip', 'dip', 'f')
+    ('dip', 'dip', 'f'),
 ]
 MFD_PARAMS = [
     ('minMag', 'min_mag', 'f'), ('maxMag', 'max_mag', 'f'),
     ('aValue', 'a_val', 'f'), ('bValue', 'b_val', 'f'),
-    ('binWidth', 'bin_width', 'f')
+    ('binWidth', 'bin_width', 'f'),
 ]
 
 
@@ -92,8 +92,7 @@ def register_fields(w):
 
     PARAMS_LIST = [
         RATE_PARAMS, STRIKE_PARAMS, DIP_PARAMS, RAKE_PARAMS, NPW_PARAMS,
-        HDEPTH_PARAMS, HDW_PARAMS, PLANES_STRIKES_PARAM, PLANES_DIPS_PARAM
-    ]
+        HDEPTH_PARAMS, HDW_PARAMS, PLANES_STRIKES_PARAM, PLANES_DIPS_PARAM]
     for PARAMS in PARAMS_LIST:
         for param, dtype in PARAMS:
             w.field(param, fieldType=dtype, size=FIELD_SIZE)
@@ -113,8 +112,7 @@ def expand_src_param(values, shp_params):
         num_values = len(values)
         return OrderedDict(
             [(key, float(values[i]) if i < num_values else None)
-                for i, (key, _) in enumerate(shp_params)]
-        )
+                for i, (key, _) in enumerate(shp_params)])
 
 
 def extract_source_params(src):
@@ -606,9 +604,6 @@ def set_characteristic_geometry(w_simple, w_simple_3D, w_complex, w_planar,
 
 
 def record_to_dict(record, fields):
-    """
-
-    """
     data = []
     for name, attr in zip(fields, record):
         value = attr.strip()
@@ -654,9 +649,6 @@ def point_geometry_from_shp(shape, record):
 
 
 def simple_fault_geometry_from_shp(shape, record):
-    """
-
-    """
     assert record["sourcetype"] == "simpleFaultSource"
     geom = []
     for row in shape.points:
