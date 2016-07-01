@@ -471,11 +471,11 @@ def get_composite_source_model(oqparam, in_memory=True):
                 # 1) src is a hazardlib source and has a src_group_id
                 #    attribute; in that case the source has to be numbered
                 # 2) src is a Node object, then nothing must be done
-                if hasattr(src, 'src_group_id'):
-                    # .src_group_id is missing for source nodes
-                    src.src_group_id = trt_id
-                    src.id = idx
-                    idx += 1
+                if isinstance(src, Node):
+                    continue
+                src.src_group_id = trt_id
+                src.id = idx
+                idx += 1
             trt_id += 1
         smodels.append(source_model)
     csm = source.CompositeSourceModel(
