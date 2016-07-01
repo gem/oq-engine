@@ -262,7 +262,7 @@ class ConfigTestCase(object):
     def prepare_config(self, section, data=None):
         """Set up a configuration with the given `max_mem` value."""
         if data is not None:
-            data = '\n'.join(["%s=%s" % item for item in data.iteritems()])
+            data = '\n'.join(["%s=%s" % item for item in data.items()])
             content = """
                 [%s]
                 %s""" % (section, data)
@@ -278,5 +278,5 @@ def random_string(length=16):
     """Generate a random string of the given length."""
     result = ""
     while len(result) < length:
-        result += random.choice(string.letters + string.digits)
+        result += random.choice(string.ascii_letters + string.digits)
     return result
