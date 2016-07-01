@@ -3,23 +3,24 @@ sudo: false
 language: python
 
 python:
- - "2.7"
+ - "3.5"
 
 addons:
   apt:
     packages:
-    - parallel
+    - wget
+
+before_install:
+  - wget http://ftp.openquake.org/travis/openquake-env-setup-py3-linux64.run
+
+env:
+    LD_LIBRARY_PATH=$HOME/openquake/lib
+    PATH=$HOME/openquake/lib:$PATH
 
 install:
-  - pip install futures
-  - pip install http://ftp.openquake.org/python-wheels/numpy-1.8.2-cp27-none-linux_x86_64.whl
-  - pip install http://ftp.openquake.org/python-wheels/scipy-0.16.0-cp27-none-linux_x86_64.whl
-  - pip install http://ftp.openquake.org/python-wheels/Cython-0.22.1-cp27-none-linux_x86_64.whl
-  - pip install http://ftp.openquake.org/python-wheels/Shapely-1.5.9-py2-none-any.whl
-  - pip install http://ftp.openquake.org/python-wheels/h5py-2.2.1-cp27-none-linux_x86_64.whl
-  - pip install https://github.com/gem/oq-hazardlib/archive/master.zip
-  - python setup.py install
+  - ./openquake-env-setup-py3-linux64.run -- -d ~
+  - pip install https://github.com/gem/oq-hazardlib/archive/python3.zip
+  - pip install .
 
 script:
-  - PYTHONPATH=. nosetests -vsx -a'!slow' --with-xunit --nologcapture --with-doctest
-  - # cd bin; python slowtests ../nosetests.xml
+  - nosetests -vsx -a'!slow' --with-xunit --nologcapture --with-doctest
