@@ -242,7 +242,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     trt = sources[0].tectonic_region_type
     max_dist = oq.maximum_distance[trt]
     cmaker = ContextMaker(rlzs_assoc.gsims_by_trt_id[src_group_id])
-    params = cmaker.REQUIRES_RUPTURE_PARAMETERS
+    params = sorted(cmaker.REQUIRES_RUPTURE_PARAMETERS)
     rup_data_dt = numpy.dtype(
         [('rupserial', U32), ('multiplicity', U16),
          ('numsites', U32), ('occurrence_rate', F32)] + [
