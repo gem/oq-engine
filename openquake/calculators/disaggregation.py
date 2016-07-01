@@ -373,7 +373,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         attrs['imt'] = imt_str
         attrs['iml'] = iml
         attrs['poe'] = poe
-        attrs['trts'] = hdf5.vstr(trt_names)
+        attrs['trts'] = hdf5.array_of_vstr(trt_names)
         attrs['mag_bin_edges'] = mag
         attrs['dist_bin_edges'] = dist
         attrs['lon_bin_edges'] = lons
