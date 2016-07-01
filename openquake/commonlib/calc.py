@@ -336,7 +336,7 @@ def get_gmfs(dstore):
                     gs = str(rlz.gsim_rlz)
                     gmfs[0, gs][imt][sid, a['eid']] = a['gmv']
     etags = numpy.array(
-        sorted(['scenario-%010d~ses=1' % i
+        sorted([b'scenario-%010d~ses=1' % i
                 for i in range(oq.number_of_ground_motion_fields)]))
     return etags, gmfs
 
