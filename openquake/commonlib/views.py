@@ -79,6 +79,8 @@ def form(value):
         return value.decode('utf-8')
     elif isinstance(value, unicode):
         return value
+    elif isinstance(value, numpy.object_):
+        return str(value)
     elif hasattr(value, '__len__') and len(value) > 1:
         return ' '.join(map(form, value))
     return str(value)
