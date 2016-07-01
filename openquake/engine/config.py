@@ -21,10 +21,7 @@
 Various utility functions concerned with configuration.
 """
 
-try:
-    import ConfigParser
-except ImportError:
-    import configparser as ConfigParser
+from openquake.baselib.python3compat import configparser, encode
 import os
 import sys
 from contextlib import contextmanager
@@ -86,7 +83,7 @@ class _Config(object):
 
     def _load_from_file(self):
         """Load the config files, set up the section dictionaries."""
-        config = ConfigParser.SafeConfigParser()
+        config = configparser.SafeConfigParser()
         config.read(self._get_paths())
         for section in config.sections():
             self.cfg[section] = dict(config.items(section))
@@ -178,4 +175,4 @@ def refresh():
 
 port = int(get('dbserver', 'port'))
 DBS_ADDRESS = (get('dbserver', 'host'), port)
-DBS_AUTHKEY = get('dbserver', 'authkey')
+DBS_AUTHKEY = encode(get('dbserver', 'authkey'))
