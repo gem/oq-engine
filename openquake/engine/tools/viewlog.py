@@ -35,7 +35,7 @@ def main(calc_id, host='localhost', port=8000):
             url = base_url + '%d/log/%d:%d' % (calc_id, start, start + psize)
             rows = json.load(urllib.urlopen(url))
             for row in rows:
-                print ' '.join(row)
+                print(' '.join(row))
             start += len(rows)
             time.sleep(1)
     except:
