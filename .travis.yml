@@ -9,15 +9,15 @@ addons:
     - wget
 
 before_install:
-  - wget http://ftp.openquake.org/travis/openquake-env-setup-py3-linux64.run
-  - chmod +x openquake-env-setup-py3-linux64.run
+  - wget http://ftp.openquake.org/travis/openquake-env-setup-py3-precise64.run
+  - chmod +x openquake-env-setup-py3-precise64.run
 
 env:
     LD_LIBRARY_PATH=$HOME/openquake/lib
     PATH=$HOME/openquake/bin:$PATH
 
 install:
-  - ./openquake-env-setup-py3-linux64.run -- -d ~
+  - ./openquake-env-setup-py3-precise64.run -- -d ~
   - pip install https://github.com/gem/oq-hazardlib/archive/python3.zip
   - pip install .
 
