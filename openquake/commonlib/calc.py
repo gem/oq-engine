@@ -256,10 +256,11 @@ def get_imts_periods(imtls):
     :param imtls: a set of intensity measure type strings
     :returns: a list of IMT strings and a list of periods
     """
-    getperiod = operator.itemgetter(1)
+    def getperiod(imt):
+        return imt[1] or 0
     imts = sorted((from_string(imt) for imt in imtls
                    if imt.startswith('SA') or imt == 'PGA'), key=getperiod)
-    return map(str, imts), [imt[1] or 0.0 for imt in imts]
+    return [str(imt) for imt in imts], [imt[1] or 0.0 for imt in imts]
 
 
 def make_uhs(maps, imtls, poes):
