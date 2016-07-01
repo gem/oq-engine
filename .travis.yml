@@ -14,7 +14,7 @@ before_install:
 
 env:
     LD_LIBRARY_PATH=$HOME/openquake/lib
-    PATH=$HOME/openquake/lib:$PATH
+    PATH=$HOME/openquake/bin:$PATH
 
 install:
   - ./openquake-env-setup-py3-linux64.run -- -d ~
