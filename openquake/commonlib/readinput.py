@@ -30,7 +30,7 @@ import numpy
 from shapely import wkt, geometry
 
 from openquake.baselib.general import groupby, AccumDict, writetmp
-from openquake.baselib.python3compat import configparser
+from openquake.baselib.python3compat import configparser, encode
 from openquake.baselib import hdf5
 from openquake.hazardlib import geo, site, correlation, imt
 from openquake.hazardlib.calc.hazard_curve import zero_curves
@@ -1018,7 +1018,7 @@ def get_gmfs_from_txt(oqparam, fname):
     if etags != sorted(etags):
         raise InvalidFile('The etags in %s are not ordered: %s'
                           % (fname, etags))
-    return sitecol, numpy.array(etags), gmf_by_imt.T
+    return sitecol, numpy.array([encode(e) for e in etags]), gmf_by_imt.T
 
 
 # used in get_scenario_from_nrml
