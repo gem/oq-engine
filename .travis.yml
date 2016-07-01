@@ -23,4 +23,5 @@ install:
 # We must set the PYTHONPATH to the root oq-engine (insted of oq-engine/openquake) because otherwise
 # the full 'openquake' namespace is overwritten and then hazardlib and baselib are not found
 script:
-  - PYTHONPATH=. nosetests -vsx -a'!slow' --with-xunit --nologcapture --with-doctest
+  # FIXME --with-doctest does not work
+  - PYTHONPATH=. nosetests -vsx -a'!slow' --with-xunit --nologcapture
