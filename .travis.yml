@@ -10,7 +10,7 @@ addons:
 
 before_install:
   - wget http://ftp.openquake.org/travis/openquake-env-setup-py3-linux64.run
-  - chmox +x openquake-env-setup-py3-linux64.run
+  - chmod +x openquake-env-setup-py3-linux64.run
 
 env:
     LD_LIBRARY_PATH=$HOME/openquake/lib
