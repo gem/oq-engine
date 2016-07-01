@@ -24,4 +24,5 @@ install:
 # the full 'openquake' namespace is overwritten and then hazardlib and baselib are not found
 script:
   # FIXME --with-doctest does not work
-  - PYTHONPATH=. nosetests -vsx -a'!slow' --with-xunit --nologcapture
+  # - PYTHONPATH=. nosetests -vsx -a'!slow' --with-xunit --nologcapture
+  - PYTHONPATH=. nosetests -v -a'!slow'
