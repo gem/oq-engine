@@ -235,7 +235,7 @@ def calc(request, id=None):
 
     response_data = []
     for hc_id, owner, status, job_type, is_running, desc in calc_data:
-        url = urllib.parse.urljoin(base_url, 'v1/calc/%d' % hc_id)
+        url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
         response_data.append(
             dict(id=hc_id, owner=owner, status=status, job_type=job_type,
                  is_running=is_running, description=desc, url=url))
