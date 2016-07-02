@@ -510,7 +510,7 @@ def export_gmf(ekey, dstore):
     n_gmfs = getattr(oq, 'number_of_ground_motion_fields', None)
     if n_gmfs:
         etags = numpy.array(
-            sorted(['scenario-%010d~ses=1' % i for i in range(n_gmfs)]))
+            sorted([b'scenario-%010d~ses=1' % i for i in range(n_gmfs)]))
     else:
         etags = dstore['etags']
     gmf_data = dstore['gmf_data']
