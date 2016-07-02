@@ -7,6 +7,7 @@ addons:
   apt:
     packages:
     - wget
+    - git
 
 before_install:
   - wget http://ftp.openquake.org/travis/openquake-env-setup-py3-precise64.run
@@ -18,11 +19,11 @@ env:
 
 install:
   - ./openquake-env-setup-py3-precise64.run -- -d ~
-  - pip install https://github.com/gem/oq-hazardlib/archive/python3.zip
+  - git clone -b python3 --depth=1 https://github.com/gem/oq-hazardlib.git
 
 # We must set the PYTHONPATH to the root oq-engine (insted of oq-engine/openquake) because otherwise
 # the full 'openquake' namespace is overwritten and then hazardlib and baselib are not found
 script:
   # FIXME --with-doctest does not work
   # - PYTHONPATH=. nosetests -vsx -a'!slow' --with-xunit --nologcapture
-  - PYTHONPATH=. nosetests -v -a'!slow'
+  - PYTHONPATH=.:$HOME/oq-hazardlib nosetests -v -a'!slow'
