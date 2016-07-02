@@ -262,7 +262,7 @@ class ConfigTestCase(object):
     def prepare_config(self, section, data=None):
         """Set up a configuration with the given `max_mem` value."""
         if data is not None:
-            data = '\n'.join(["%s=%s" % item for item in data.items()])
+            data = '\n'.join("%s=%s" % item for item in data.items())
             content = """
                 [%s]
                 %s""" % (section, data)
