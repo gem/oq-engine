@@ -183,10 +183,10 @@ def export_agg_losses_ebr(ekey, dstore):
             if data.dtype['loss'].shape == (2,):  # insured losses
                 losses = data['loss'][:, 0]
                 inslosses = data['loss'][:, 1]
-                edata = [('event_tag', 'loss', 'loss_ins')] + zip(
-                    tags, losses, inslosses)
+                edata = [('event_tag', 'loss', 'loss_ins')] + list(
+                    zip(tags, losses, inslosses))
             else:
-                edata = [('event_tag', 'loss')] + zip(tags, data['loss'])
+                edata = [('event_tag', 'loss')] + list(zip(tags, data['loss']))
             writer.save(edata, dest)
     return writer.getsaved()
 
@@ -838,7 +838,7 @@ def export_bcr_map_rlzs(ekey, dstore):
     for rlz in realizations:
         for l, loss_type in enumerate(loss_types):
             rlz_data = bcr_data[loss_type][:, rlz.ordinal]
-            path = dstore.build_fname('bcr-%s' + loss_type, rlz, 'xml')
+            path = dstore.build_fname('bcr-%s' % loss_type, rlz, 'xml')
             writer = writercls(
                 path, oq.interest_rate, oq.asset_life_expectancy, loss_type,
                 **get_paths(rlz))

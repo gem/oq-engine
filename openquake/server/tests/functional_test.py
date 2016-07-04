@@ -30,6 +30,7 @@ import subprocess
 import tempfile
 import requests
 import django
+from openquake.baselib.general import writetmp
 from openquake.engine import logs, config
 from openquake.server import dbserver
 
@@ -67,7 +68,12 @@ class EngineServerTestCase(unittest.TestCase):
         resp = requests.get('http://%s/v1/calc/%s' % (cls.hostport, path),
                             params=params)
         cls.assert_ok(resp)
-        return json.loads(resp.text)
+        try:
+            return json.loads(resp.text)
+        except:
+            print('Invalid JSON, see %s' % writetmp(resp.text),
+                  file=sys.stderr)
+            return {}
 
     @classmethod
     def get_text(cls, path, **params):
