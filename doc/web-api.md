@@ -148,6 +148,11 @@ Response:
 The number of lines of log
 
 
+#### POST /v1/calc/:calc_id/remove
+
+Remove the calculation specified by the parameter `calc_id`, by setting the field oq_job.relevant to False.
+
+
 #### POST /v1/calc/run
 
 Run a new calculation with the specified job config file, input models, and other parameters.
@@ -179,3 +184,18 @@ a JSON object, containing:
     * valid: a boolean indicating if the provided text is a valid NRML
     * error_msg: the error message, if any error was found (None otherwise)
     * error_line: line of the given XML where the error was found (None if no error was found or if it was not a validation error)
+
+
+#### POST /v1/ajax_login/
+
+Attempt to login, given the parameters `username` and `password`
+
+#### POST /v1/ajax_logout/
+
+Logout
+
+
+#### GET /v1/version/
+
+Return a string with the openquake.engine version
+
