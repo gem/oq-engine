@@ -967,7 +967,11 @@ class SourceManager(object):
             values.sort(
                 key=lambda info: info.filter_time + info.split_time,
                 reverse=True)
-            dstore['source_info'] = numpy.array(values, source_info_dt)
+            array = numpy.zeros(len(values), source_info_dt)
+            for i, row in enumerate(values):
+                for j, name in enumerate(source_info_dt.names):
+                    array[i][name] = row[j]
+            dstore['source_info'] = array
             attrs = dstore['source_info'].attrs
             attrs['maxweight'] = self.csm.maxweight
             self.infos.clear()
