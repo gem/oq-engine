@@ -29,6 +29,7 @@ import numpy
 from numpy.testing import assert_equal
 from scipy import interpolate, stats, random
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict
 from openquake.risklib import utils
 from openquake.baselib.python3compat import with_metaclass
@@ -1592,7 +1593,7 @@ class SimpleStats(object):
                 new[:, i] = quantile_curve(data, q, weights)
         dstore[newname] = newarray
         dstore[newname].attrs['nbytes'] = newarray.nbytes
-        dstore[newname].attrs['statnames'] = self.names
+        dstore[newname].attrs['statnames'] = hdf5.array_of_vstr(self.names)
 
 
 class StatsBuilder(object):
