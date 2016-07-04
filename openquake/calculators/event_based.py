@@ -26,6 +26,7 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5
+from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict, group_array
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
@@ -33,7 +34,7 @@ from openquake.hazardlib.calc.hazard_curve import (
     array_of_curves, ProbabilityMap)
 from openquake.hazardlib import geo
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import readinput, parallel, datastore, calc
+from openquake.commonlib import readinput, parallel, calc
 from openquake.commonlib.util import max_rel_diff_index, Rupture
 from openquake.risklib.riskinput import create
 from openquake.calculators import base
@@ -142,7 +143,7 @@ class EBRupture(object):
                 self.trt_id, ses, self.source_id, self.serial, occ)
             if sampleid > 0:
                 tag += '~sample=%d' % sampleid
-            tags.append(tag)
+            tags.append(encode(tag))
         return numpy.array(tags)
 
     @property
@@ -241,7 +242,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     trt = sources[0].tectonic_region_type
     max_dist = oq.maximum_distance[trt]
     cmaker = ContextMaker(rlzs_assoc.gsims_by_trt_id[src_group_id])
-    params = cmaker.REQUIRES_RUPTURE_PARAMETERS
+    params = sorted(cmaker.REQUIRES_RUPTURE_PARAMETERS)
     rup_data_dt = numpy.dtype(
         [('rupserial', U32), ('multiplicity', U16),
          ('numsites', U32), ('occurrence_rate', F32)] + [
@@ -350,7 +351,6 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
     Event based PSHA calculator generating the ruptures only
     """
     core_task = compute_ruptures
-    etags = datastore.persistent_attribute('etags')
     is_stochastic = True
 
     def init(self):
@@ -421,7 +421,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                     sescollection.append(ebr)
             sescollection.sort(key=operator.attrgetter('serial'))
             etags = numpy.concatenate([ebr.etags for ebr in sescollection])
-            self.etags = numpy.array(etags, (bytes, 100))
+            self.datastore['etags'] = etags
             nr = len(sescollection)
             logging.info('Saving SES collection with %d ruptures, %d events',
                          nr, len(etags))
