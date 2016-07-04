@@ -110,8 +110,8 @@ class EngineServerTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        if django.get_version() < '1.5':
-            # the WebUI is unsupported
+        if django.get_version() < '1.5' or sys.version > '3':
+            # Django too old or Python too new
             raise unittest.SkipTest
 
         cls.job_ids = []
