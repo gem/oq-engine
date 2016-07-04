@@ -25,6 +25,7 @@ import operator
 
 import numpy
 
+from openquake.baselib.python3compat import range, round
 
 #: Earth radius in km.
 EARTH_RADIUS = 6371.0
