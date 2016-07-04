@@ -40,6 +40,9 @@ GST = {'gsim_logic_tree': writetmp('''\
     </logicTree>
 </nrml>''')}
 
+OqParam.calculation_mode.validator.choices = (
+    'classical', 'disaggregation', 'scenario', 'event_based', 'classical_risk')
+
 
 class OqParamTestCase(unittest.TestCase):
 
