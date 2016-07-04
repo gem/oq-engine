@@ -507,7 +507,12 @@ def export_gmf(ekey, dstore):
     investigation_time = (None if oq.calculation_mode == 'scenario'
                           else oq.investigation_time)
     fmt = ekey[-1]
-    etags = dstore['etags'].value
+    n_gmfs = getattr(oq, 'number_of_ground_motion_fields', None)
+    if n_gmfs:
+        etags = numpy.array(
+            sorted([b'scenario-%010d~ses=1' % i for i in range(n_gmfs)]))
+    else:
+        etags = dstore['etags']
     gmf_data = dstore['gmf_data']
     nbytes = gmf_data.attrs['nbytes']
     logging.info('Internal size of the GMFs: %s', humansize(nbytes))
@@ -649,7 +654,8 @@ def _get_gmfs(dstore, serial, eid):
 def export_gmf_scenario(ekey, dstore):
     oq = dstore['oqparam']
     if 'scenario' in oq.calculation_mode:
-        fields = ['%03d' % i for i in range(len(dstore['etags']))]
+        n_gmfs = oq.number_of_ground_motion_fields
+        fields = ['%03d' % i for i in range(n_gmfs)]
         dt = numpy.dtype([(f, F32) for f in fields])
         etags, gmfs_by_trt_gsim = calc.get_gmfs(dstore)
         sitemesh = get_mesh(dstore['sitecol'])
