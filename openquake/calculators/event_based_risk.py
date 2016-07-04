@@ -238,7 +238,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         oq = self.oqparam
         correl_model = readinput.get_correl_model(oq)
         self.N = len(self.assetcol)
-        self.E = len(self.etags)
+        self.E = len(self.datastore['etags'])
         logging.info('Populating the risk inputs')
         rlzs_by_tr_id = self.rlzs_assoc.get_rlzs_by_trt_id()
         num_rlzs = {t: len(rlzs) for t, rlzs in rlzs_by_tr_id.items()}

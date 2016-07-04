@@ -57,13 +57,13 @@ def fix_source_node(node):
             ComplexFaultSurface.from_fault_data(edges, mesh_spacing=4.)
         except ValueError as excp:
             if AKI_RICH_ERR_MSG in str(excp):
-                print str(excp)
-                print 'Reverting edges ...'
+                print(excp)
+                print('Reverting edges ...')
                 reverse(geom.faultTopEdge)
                 reverse(geom.faultBottomEdge)
             elif WRONG_ORDER_ERR_MSG in str(excp):
-                print str(excp)
-                print 'reverting bottom edge ...'
+                print(excp)
+                print('reverting bottom edge ...')
                 reverse(geom.faultBottomEdge)
             else:
                 raise
@@ -73,5 +73,5 @@ if __name__ == '__main__':
     src_model = node_from_xml(fname).sourceModel
     for node in src_model:
         fix_source_node(node)
-    with open(fname, 'w') as f:
+    with open(fname, 'wb') as f:
         nrml.write([src_model], f)

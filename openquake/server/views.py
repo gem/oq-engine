@@ -21,7 +21,10 @@ import json
 import logging
 import os
 import tempfile
-import urlparse
+try:
+    import urllib.parse as urlparse
+except ImportError:
+    import urlparse
 import re
 
 from xml.parsers.expat import ExpatError
@@ -80,7 +83,7 @@ def cross_domain_ajax(func):
             response = func(request, *args, **kwargs)
         else:
             response = HttpResponse()
-        for k, v in ACCESS_HEADERS.iteritems():
+        for k, v in list(ACCESS_HEADERS.items()):
             response[k] = v
         return response
     return wrap
@@ -326,7 +329,7 @@ def run_calc(request):
         job_id, _fut = submit_job(einfo[0], user['name'], hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
-        exc_msg = unicode(exc)
+        exc_msg = str(exc)
         logging.error(exc_msg)
         response_data = exc_msg.splitlines()
         status = 500
