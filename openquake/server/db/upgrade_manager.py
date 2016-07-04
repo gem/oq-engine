@@ -20,6 +20,7 @@ import os
 import sys
 import re
 import time
+import runpy
 import urllib
 import logging
 import importlib
@@ -202,8 +203,7 @@ class UpgradeManager(object):
             fullname = os.path.join(self.upgrade_dir, script['fname'])
             logging.info('Executing %s', fullname)
             if script['ext'] == 'py':  # Python script with a upgrade(conn)
-                globs = {}
-                execfile(fullname, globs)
+                globs = runpy.run_path(fullname)
                 globs['upgrade'](conn)
                 self._insert_script(script, conn)
             else:  # SQL script

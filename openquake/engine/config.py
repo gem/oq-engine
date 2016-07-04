@@ -21,7 +21,7 @@
 Various utility functions concerned with configuration.
 """
 
-import ConfigParser
+from openquake.baselib.python3compat import configparser, encode
 import os
 import sys
 from contextlib import contextmanager
@@ -83,7 +83,7 @@ class _Config(object):
 
     def _load_from_file(self):
         """Load the config files, set up the section dictionaries."""
-        config = ConfigParser.SafeConfigParser()
+        config = configparser.SafeConfigParser()
         config.read(self._get_paths())
         for section in config.sections():
             self.cfg[section] = dict(config.items(section))
@@ -137,7 +137,7 @@ def abort_if_no_config_available():
         msg = ('Could not find a configuration file in %s. '
                'Probably your are not in the right directory'
                % cfg._get_paths())
-        print msg
+        print(msg)
         sys.exit(2)
     if not cfg.is_readable():
         msg = (
@@ -145,7 +145,7 @@ def abort_if_no_config_available():
             "configuration files.\n"
             "Please check permissions on the configuration files in %s."
             % cfg._get_paths())
-        print msg
+        print(msg)
         sys.exit(2)
 
 
@@ -175,4 +175,4 @@ def refresh():
 
 port = int(get('dbserver', 'port'))
 DBS_ADDRESS = (get('dbserver', 'host'), port)
-DBS_AUTHKEY = get('dbserver', 'authkey')
+DBS_AUTHKEY = encode(get('dbserver', 'authkey'))

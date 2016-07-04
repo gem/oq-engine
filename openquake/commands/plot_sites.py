@@ -29,7 +29,7 @@ def plot_sites(calc_id):
     ax = fig.add_subplot(111)
     ax.grid(True)
     tiles = make_tiles(sitecol, oq.sites_per_tile, oq.maximum_distance)
-    print 'There are %d tiles' % len(tiles)
+    print('There are %d tiles' % len(tiles))
     for tile in tiles:
         xs = []
         ys = []
