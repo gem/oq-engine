@@ -71,8 +71,9 @@ class EngineServerTestCase(unittest.TestCase):
         try:
             return json.loads(resp.text)
         except:
-            print('Invalid JSON, see %s' % writetmp(resp.text))
-            return '{}'
+            print('Invalid JSON, see %s' % writetmp(resp.text),
+                  file=sys.stderr)
+            return {}
 
     @classmethod
     def get_text(cls, path, **params):
