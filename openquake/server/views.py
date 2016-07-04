@@ -129,6 +129,13 @@ def _prepare_job(request, hazard_job_id, candidates):
 # @cross_domain_ajax
 @require_http_methods(['POST'])
 def ajax_login(request):
+    """
+    Accept a POST request to login.
+
+    :param request:
+        `django.http.HttpRequest` object, containing mandatory parameters
+        username and password required.
+    """
     username = request.POST['username']
     password = request.POST['password']
     user = authenticate(username=username, password=password)
@@ -148,6 +155,9 @@ def ajax_login(request):
 @cross_domain_ajax
 @require_http_methods(['POST'])
 def ajax_logout(request):
+    """
+    Accept a POST request to logout.
+    """
     logout(request)
     return HttpResponse(content='Successful logout',
                         content_type='text/plain', status=200)
@@ -331,6 +341,12 @@ def run_calc(request):
 
     :param request:
         a `django.http.HttpRequest` object.
+        If the request has the attribute `hazard_job_id`, the results of the
+        specified hazard calculations will be re-used as input by the risk
+        calculation.
+        The request also needs to contain the files needed to perform the
+        calculation. They can be uploaded as separate files, or zipped
+        together.
     """
     hazard_job_id = request.POST.get('hazard_job_id')
 
