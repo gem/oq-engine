@@ -86,8 +86,7 @@ class BoundingBox(object):
             an instance of :class:
             `openquake.engine.calculators.hazard.classical.core.BoundingBox`
         """
-        if bb:
-            # the given bounding box must be non-empty
+        if bb:  # the given bounding box must be non-empty
             self.update([bb.min_dist, bb.max_dist], [bb.west, bb.east],
                         [bb.south, bb.north])
 
