@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added an header with metadata to the exported hazard curves and maps
   * Stored several strings as HDF5-variable-length strings
   * Fixed an export bug for the hazard curves in .geojson format
   * Removed the array cost_types from the datastore
