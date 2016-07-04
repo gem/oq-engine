@@ -144,7 +144,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         base.RiskCalculator.pre_execute(self)
         self.monitor.consequence_models = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
-        self.etags, gmfs = calc.get_gmfs(self.datastore)
+        self.datastore['etags'], gmfs = calc.get_gmfs(self.datastore)
         self.riskinputs = self.build_riskinputs(gmfs)
         self.monitor.taxonomies = sorted(self.taxonomies)
 

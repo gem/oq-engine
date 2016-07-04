@@ -29,6 +29,9 @@ import collections
 import numpy
 from shapely import wkt, geometry
 
+from openquake.baselib.general import groupby, AccumDict, writetmp
+from openquake.baselib.python3compat import configparser, encode
+from openquake.baselib import hdf5
 from openquake.hazardlib import geo, site, correlation, imt
 from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.risklib import riskmodels, riskinput, valid
@@ -37,9 +40,6 @@ from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.node import Node, context
 from openquake.commonlib import nrml, logictree, InvalidFile
 from openquake.commonlib.riskmodels import get_risk_models
-from openquake.baselib.general import groupby, AccumDict, writetmp
-from openquake.baselib.python3compat import configparser
-
 from openquake.commonlib import source, sourceconverter
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
@@ -471,11 +471,11 @@ def get_composite_source_model(oqparam, in_memory=True):
                 # 1) src is a hazardlib source and has a src_group_id
                 #    attribute; in that case the source has to be numbered
                 # 2) src is a Node object, then nothing must be done
-                if hasattr(src, 'src_group_id'):
-                    # .src_group_id is missing for source nodes
-                    src.src_group_id = trt_id
-                    src.id = idx
-                    idx += 1
+                if isinstance(src, Node):
+                    continue
+                src.src_group_id = trt_id
+                src.id = idx
+                idx += 1
             trt_id += 1
         smodels.append(source_model)
     csm = source.CompositeSourceModel(
@@ -607,10 +607,9 @@ def get_risk_model(oqparam, rmdict):
 
 # ########################### exposure ############################ #
 
-COST_TYPE_SIZE = 21  # using 21 chars since business_interruption has 21 chars
-cost_type_dt = numpy.dtype([('name', (bytes, COST_TYPE_SIZE)),
-                            ('type', (bytes, COST_TYPE_SIZE)),
-                            ('unit', (bytes, COST_TYPE_SIZE))])
+cost_type_dt = numpy.dtype([('name', hdf5.vstr),
+                            ('type', hdf5.vstr),
+                            ('unit', hdf5.vstr)])
 
 
 class DuplicatedID(Exception):
@@ -1019,7 +1018,7 @@ def get_gmfs_from_txt(oqparam, fname):
     if etags != sorted(etags):
         raise InvalidFile('The etags in %s are not ordered: %s'
                           % (fname, etags))
-    return sitecol, numpy.array(etags, '|S100'), gmf_by_imt.T
+    return sitecol, numpy.array([encode(e) for e in etags]), gmf_by_imt.T
 
 
 # used in get_scenario_from_nrml

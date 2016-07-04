@@ -1,6 +1,6 @@
 # Running the OpenQuake Engine
 
-The OpenQuake Engine can be run via a command line interface or a WebUI. For the WebUI have a look to [its documentation](webui.md).
+The OpenQuake Engine can be run via a command line interface or a WebUI. For the WebUI have a look to [its documentation](server.md).
 
 ## Running via command line interface (CLI)
 
