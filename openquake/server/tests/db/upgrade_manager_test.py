@@ -22,6 +22,7 @@ import sqlite3
 import unittest
 import tempfile
 import importlib
+import urllib
 from contextlib import contextmanager
 
 from openquake.server.db.upgrade_manager import (
@@ -128,10 +129,11 @@ class UpgradeManagerTestCase(unittest.TestCase):
         self.assertEqual(version_db(conn, pkg), '0000')
 
     def check_message(self, html, expected):
-        with mock.patch('urllib.urlopen') as urlopen:
-            urlopen().read.return_value = html
-            got = what_if_I_upgrade(conn, pkg)
-            self.assertEqual(got, expected)
+        if hasattr(urllib, 'urlopen'):  # Python 2
+            with mock.patch('urllib.urlopen') as urlopen:
+                urlopen().read.return_value = html
+                got = what_if_I_upgrade(conn, pkg)
+                self.assertEqual(got, expected)
 
     def test_safe_upgrade(self):
         expected = '''\

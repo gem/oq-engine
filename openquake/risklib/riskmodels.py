@@ -21,6 +21,7 @@ import inspect
 import functools
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict, AccumDict
 from openquake.risklib import utils, scientific, valid
 
@@ -80,15 +81,15 @@ class CostCalculator(object):
 
     def __toh5__(self):
         loss_types = sorted(self.cost_types)
-        dt = numpy.dtype([('cost_type', (bytes, 10)),
-                          ('area_type', (bytes, 10)),
-                          ('unit', (bytes, 10))])
+        dt = numpy.dtype([('cost_type', hdf5.vstr),
+                          ('area_type', hdf5.vstr),
+                          ('unit', hdf5.vstr)])
         array = numpy.zeros(len(loss_types), dt)
         array['cost_type'] = [self.cost_types[lt] for lt in loss_types]
         array['area_type'] = [self.area_types[lt] for lt in loss_types]
         array['unit'] = [self.units[lt] for lt in loss_types]
         attrs = dict(deduct_abs=self.deduct_abs, limit_abs=self.limit_abs,
-                     loss_types=loss_types)
+                     loss_types=hdf5.array_of_vstr(loss_types))
         return array, attrs
 
     def __fromh5__(self, array, attrs):
