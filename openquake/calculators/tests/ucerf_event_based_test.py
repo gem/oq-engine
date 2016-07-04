@@ -29,4 +29,4 @@ class UcerfTestCase(CalculatorTestCase):
         out = self.run_calc(ucerf.__file__, 'job.ini', exports='txt')
         num_exported = len(out['gmf_data', 'txt'])
         # just check that three realizations are exported
-        self.assertEqual(num_exported, 3)
+        self.assertEqual(num_exported, 2)

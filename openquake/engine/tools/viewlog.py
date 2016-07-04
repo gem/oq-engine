@@ -22,7 +22,10 @@ An extremely simple log viewer, suitable for debugging
 
 import time
 import json
-import urllib
+try:
+    from urllib import urlopen
+except ImportError:
+    from urllib.request import urlopen
 from openquake.commonlib import sap
 
 
@@ -33,9 +36,9 @@ def main(calc_id, host='localhost', port=8000):
     try:
         while True:
             url = base_url + '%d/log/%d:%d' % (calc_id, start, start + psize)
-            rows = json.load(urllib.urlopen(url))
+            rows = json.load(urlopen(url))
             for row in rows:
-                print ' '.join(row)
+                print(' '.join(row))
             start += len(rows)
             time.sleep(1)
     except:
