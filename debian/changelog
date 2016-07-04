@@ -1,6 +1,6 @@
   [Michele Simionato]
-  * Stored ASCII strings as loss types, asset references and taxonomies as
-    HDF5-variable-length strings
+  * Stored several strings as HDF5-variable-length strings
+  * Fixed an export bug for the hazard curves in .geojson format
   * Removed the array cost_types from the datastore
   * Taxonomies with chars not in the range a-z0-9 were incorrectly rejected
   * Improved the XML parsing utilities in speed, memory, portability and
