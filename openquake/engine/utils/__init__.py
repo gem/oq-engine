@@ -39,6 +39,6 @@ def confirm(prompt):
             return False
         answer = answer.strip().lower()
         if answer not in ('y', 'n'):
-            print 'Please enter y or n'
+            print('Please enter y or n')
             continue
         return answer == 'y'
