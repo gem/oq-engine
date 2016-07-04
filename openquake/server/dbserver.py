@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import socket
 import os.path
 import logging
@@ -86,7 +87,8 @@ class DbServer(object):
 
     def loop(self):
         listener = Listener(self.address, backlog=5, authkey=self.authkey)
-        logging.warn('DB server listening on %s:%d...' % self.address)
+        logging.warn('DB server started with %s, listening on %s:%d...',
+                     sys.executable, *self.address)
         self.thread.start()
         cmd = None
         try:
