@@ -17,3 +17,4 @@ six==1.10.0
 django==1.8.7
 docutils==0.12
 decorator==4.0.6
+requests==2.9.1
