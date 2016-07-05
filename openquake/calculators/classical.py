@@ -267,9 +267,9 @@ class ClassicalCalculator(base.HazardCalculator):
             rows = sorted(
                 info_dict.values(), key=operator.itemgetter(7), reverse=True)
             array = numpy.zeros(len(rows), source.source_info_dt)
-            for row in rows:
+            for i, row in enumerate(rows):
                 for name in array.dtype.names:
-                    array[name] = row[name]
+                    array[i][name] = row[name]
             self.source_info = array
         self.datastore.hdf5.flush()
 
