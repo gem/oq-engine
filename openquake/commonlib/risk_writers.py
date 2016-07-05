@@ -67,6 +67,9 @@ class Site(object):
         # without this the groupby in the ScenarioDamageWriter would not work
         return (self.x, self.y) == (other.x, other.y)
 
+    def __hash__(self):
+        return hash((self.x, self.y))
+
 
 class LossCurveXMLWriter(object):
     """
