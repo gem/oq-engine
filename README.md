@@ -4,7 +4,9 @@
 
 The **OpenQuake Engine** is an open source application that allows users to compute **seismic hazard** and **seismic risk** of earthquakes on a global scale. It runs on Linux, macOS and Windows, on laptops, workstations, standalone servers and multi-node clusters.
 
-[![Build Status](https://ci.openquake.org/job/master_oq-engine/badge/icon)](https://ci.openquake.org/job/master_oq-engine/)
+Jenkins (Python 2): [![Build Status](https://ci.openquake.org/job/master_oq-engine/badge/icon)](https://ci.openquake.org/job/master_oq-engine/)
+
+Travis CI (Python 3): [![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine)
 
 ### Current stable
 

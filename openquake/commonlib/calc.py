@@ -24,6 +24,7 @@ import logging
 
 import numpy
 
+from openquake.baselib.python3compat import dtype
 from openquake.baselib.general import get_array, group_array
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import gmf, filters
@@ -255,10 +256,11 @@ def get_imts_periods(imtls):
     :param imtls: a set of intensity measure type strings
     :returns: a list of IMT strings and a list of periods
     """
-    getperiod = operator.itemgetter(1)
+    def getperiod(imt):
+        return imt[1] or 0
     imts = sorted((from_string(imt) for imt in imtls
                    if imt.startswith('SA') or imt == 'PGA'), key=getperiod)
-    return map(str, imts), [imt[1] or 0.0 for imt in imts]
+    return [str(imt) for imt in imts], [imt[1] or 0.0 for imt in imts]
 
 
 def make_uhs(maps, imtls, poes):
@@ -320,7 +322,7 @@ def get_gmfs(dstore):
         haz_sitecol = sitecol
     risk_indices = set(sitecol.indices)  # N'' values
     N = len(haz_sitecol.complete)
-    imt_dt = numpy.dtype([(bytes(imt), F32) for imt in oq.imtls])
+    imt_dt = dtype((imt, F32) for imt in oq.imtls)
     E = oq.number_of_ground_motion_fields
     # build a matrix N x E for each GSIM realization
     gmfs = {(trt_id, gsim): numpy.zeros((N, E), imt_dt)
@@ -333,7 +335,10 @@ def get_gmfs(dstore):
                     a = get_array(array, imti=imti)
                     gs = str(rlz.gsim_rlz)
                     gmfs[0, gs][imt][sid, a['eid']] = a['gmv']
-    return dstore['etags'].value, gmfs
+    etags = numpy.array(
+        sorted([b'scenario-%010d~ses=1' % i
+                for i in range(oq.number_of_ground_motion_fields)]))
+    return etags, gmfs
 
 
 def fix_minimum_intensity(min_iml, imts):
