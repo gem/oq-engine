@@ -32,9 +32,9 @@ def tidy(fnames):
         except ValueError as err:
             print(err)
             return
-        with open(fname + '.bak', 'w') as f:
-            f.write(open(fname).read())
-        with open(fname, 'w') as f:
+        with open(fname + '.bak', 'wb') as f:
+            f.write(open(fname, 'rb').read())
+        with open(fname, 'wb') as f:
             nrml.write(nodes, f, writers.FIVEDIGITS)
         print('Reformatted %s, original left in %s.bak' % (fname, fname))
 
