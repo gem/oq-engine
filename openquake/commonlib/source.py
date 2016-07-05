@@ -262,7 +262,7 @@ class SourceModelParser(object):
 
     def parse_groups(self, fname):
         """
-        Parse all the groups and return them ordered by tectonic region type.
+        Parse all the groups and return them ordered by number of sources.
         It does not count the ruptures, so it is relatively fast.
 
         :param fname:
@@ -284,14 +284,15 @@ class SourceModelParser(object):
                     logging.info('Parsed %d sources from %s', no, fname)
             if no % 10000 != 0:
                 logging.info('Parsed %d sources from %s', no, fname)
-
             groups = groupby(
                 sources, operator.attrgetter('tectonic_region_type'))
             return sorted(SourceGroup(trt, srcs)
                           for trt, srcs in groups.items())
         if smodel['xmlns'].endswith('nrml/0.5'):
+            groups = []
             for src_group in smodel.sourceModel:
-                sg = self.converter.convert_node(src_group)
+                groups.append(self.converter.convert_node(src_group))
+            return sorted(groups)
         else:
             raise RuntimeError('Unknown NRML version %s' % smodel['xmlns'])
 
