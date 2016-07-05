@@ -80,9 +80,10 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             area_source_discretization=1.,  # km
         ))
         grp_nodes = nrml.parse(MIXED_SRC_MODEL).nodes
-        ([cls.area, cls.simple], [cls.point], [cls.cmplx],
-         [cls.char_simple, cls.char_complex, cls.char_multi]) = map(
-            cls.parser.converter.convert_node, grp_nodes)
+        groups = [
+            cls.parser.converter.convert_node(gnode) for gnode in grp_nodes]
+        ([cls.point], [cls.cmplx], [cls.area, cls.simple],
+         [cls.char_simple, cls.char_complex, cls.char_multi]) = groups
         # the parameters here would typically be specified in the job .ini
         cls.investigation_time = 50.
         cls.rupture_mesh_spacing = 1  # km
