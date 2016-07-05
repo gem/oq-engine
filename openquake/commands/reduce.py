@@ -21,6 +21,7 @@ from __future__ import print_function
 import random
 import shutil
 from openquake.risklib import valid
+from openquake.baselib.python3compat import encode
 from openquake.commonlib import nrml
 from openquake.commonlib import sap
 
@@ -53,9 +54,9 @@ def reduce(fname, reduction_factor):
         lines = random_filter(all_lines, reduction_factor)
         shutil.copy(fname, fname + '.bak')
         print('Copied the original file in %s.bak' % fname)
-        with open(fname, 'w') as f:
+        with open(fname, 'wb') as f:
             for line in lines:
-                f.write(line)
+                f.write(encode(line))
         print('Extracted %d lines out of %d' % (len(lines), len(all_lines)))
         return
     model, = nrml.read(fname)
@@ -75,7 +76,7 @@ def reduce(fname, reduction_factor):
         raise RuntimeError('Unknown model tag: %s' % model.tag)
     shutil.copy(fname, fname + '.bak')
     print('Copied the original file in %s.bak' % fname)
-    with open(fname, 'w') as f:
+    with open(fname, 'wb') as f:
         nrml.write([model], f)
     print('Extracted %d nodes out of %d' % (num_nodes, total))
 

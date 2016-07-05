@@ -72,7 +72,7 @@ def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
     '1.0E-01:2.0E-01 3.0E-01:4.0E-01'
     """
     if isinstance(value, bytes):
-        return value.encode('utf8')
+        return value.decode('utf8')
     elif isinstance(value, unicode):
         return value
     elif hasattr(value, '__len__'):
@@ -210,7 +210,7 @@ class HeaderTranslator(object):
     >>> htranslator = HeaderTranslator(
     ...     asset_ref='asset_ref:|S20',
     ...     rup_id='rup_id:uint32',
-    ...     taxonomy='taxonomy:|S100')
+    ...     taxonomy='taxonomy:object')
     >>> htranslator.read('asset_ref value:5'.split())
     ['asset_ref:|S20', 'value:5']
     >>> htranslator.write('asset_ref:|S20 value:5'.split())
@@ -227,7 +227,7 @@ class HeaderTranslator(object):
         return [self.name.get(d, d) for d in descr]
 
 htranslator = HeaderTranslator(
-    asset_ref='asset_ref:|S20',
+    asset_ref='asset_ref:|S100',
     rup_id='rup_id:uint32',
     taxonomy='taxonomy:|S100',
     rupserial='rupserial:uint32',

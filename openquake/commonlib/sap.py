@@ -224,7 +224,11 @@ def compose(parsers, name='main', description=None, prog=None,
         subp.set_defaults(_func=p.func)
 
     def main(**kw):
-        func = kw.pop('_func')
-        return func(**kw)
+        try:
+            func = kw.pop('_func')
+        except KeyError:
+            parentparser.print_usage()
+        else:
+            return func(**kw)
     main.__name__ = name
     return Parser(main, name, parentparser)
