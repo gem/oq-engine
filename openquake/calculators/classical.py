@@ -22,6 +22,7 @@ import collections
 from functools import partial
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
@@ -123,12 +124,13 @@ class BoundingBox(object):
 
         return dist_edges, lon_edges, lat_edges
 
-    def __nonzero__(self):
+    def __bool__(self):
         """
         True if the bounding box is non empty.
         """
         return (self.min_dist is not None and self.west is not None and
                 self.south is not None)
+    __nonzero__ = __bool__
 
 
 @parallel.litetask
@@ -262,9 +264,13 @@ class ClassicalCalculator(base.HazardCalculator):
                 src = sources[src_idx]
                 info = info_dict[src.src_group_id, src.source_id]
                 info['calc_time'] += dt
-            self.source_info = numpy.array(
-                sorted(info_dict.values(), key=operator.itemgetter(7),
-                       reverse=True), source.source_info_dt)
+            rows = sorted(
+                info_dict.values(), key=operator.itemgetter(7), reverse=True)
+            array = numpy.zeros(len(rows), source.source_info_dt)
+            for i, row in enumerate(rows):
+                for name in array.dtype.names:
+                    array[i][name] = row[name]
+            self.source_info = array
         self.datastore.hdf5.flush()
 
     def post_execute(self, curves_by_trt_id):
@@ -360,8 +366,8 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         self._store('hcurves/' + kind, curves, rlz, nbytes=curves.nbytes)
-        self.datastore['hcurves'].attrs['imtls'] = [
-            (imt, len(imls)) for imt, imls in self.oqparam.imtls.items()]
+        self.datastore['hcurves'].attrs['imtls'] = hdf5.array_of_vstr([
+            (imt, len(imls)) for imt, imls in self.oqparam.imtls.items()])
         if oq.hazard_maps or oq.uniform_hazard_spectra:
             # hmaps is a composite array of shape (N, P)
             hmaps = self.hazard_maps(curves)

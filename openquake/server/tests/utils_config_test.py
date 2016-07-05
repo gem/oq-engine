@@ -69,7 +69,7 @@ class ConfigTestCase(ConfigTestCase, unittest.TestCase):
         # In the absence of config files the `cfg` dict will be empty
         config.cfg.cfg.clear()
         config.cfg._load_from_file()
-        self.assertEqual([], config.cfg.cfg.keys())
+        self.assertEqual([], list(config.cfg.cfg))
 
     def test_load_from_file_with_global(self):
         # The config data in the global file is loaded correctly
