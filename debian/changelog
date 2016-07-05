@@ -1,3 +1,6 @@
+  [Trevor Allen/Graeme Weatherill]
+  * Adds Queen Charlotte strike slip magnitude scaling relation (WC1994_QCSS)
+
 python-oq-hazardlib (0.20.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
