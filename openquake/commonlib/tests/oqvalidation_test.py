@@ -40,6 +40,9 @@ GST = {'gsim_logic_tree': writetmp('''\
     </logicTree>
 </nrml>''')}
 
+OqParam.calculation_mode.validator.choices = (
+    'classical', 'disaggregation', 'scenario', 'event_based', 'classical_risk')
+
 
 class OqParamTestCase(unittest.TestCase):
 
@@ -201,7 +204,7 @@ class OqParamTestCase(unittest.TestCase):
             reference_vs30_value='200',
             maximum_distance='400')
         oq.validate()
-        self.assertEqual(oq.export_dir, os.path.expanduser('~'))
+        self.assertEqual(oq.export_dir, '.')
 
     def test_invalid_imt(self):
         with self.assertRaises(ValueError) as ctx:
