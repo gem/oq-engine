@@ -26,7 +26,7 @@ import zipfile
 
 from openquake.commonlib.export import export
 from openquake.commonlib import datastore
-from openquake.engine import logs
+from openquake.engine import logs, __version__
 
 
 class DataStoreExportError(Exception):
@@ -46,6 +46,20 @@ def zipfiles(fnames, archive):
     z.close()
 
 
+def check_version(dstore):
+    """
+    :param dstore: a DataStore instance
+    :returns:
+        a message if the stored version is different from the current version
+    """
+    ds_version = dstore['oqparam'].engine_version
+    if ds_version != __version__:
+        return (': the datastore is at version %s, but the exporter at '
+                'version %s' % (ds_version, __version__))
+    else:
+        return ''
+
+
 def export_from_db(output_key, calc_id, datadir, target):
     """
     :param output_key: a pair (ds_key, fmt)
@@ -61,8 +75,9 @@ def export_from_db(output_key, calc_id, datadir, target):
         try:
             exported = export(output_key, dstore)
         except KeyError:
+            version = check_version(dstore)
             raise DataStoreExportError(
-                'Could not export %s in %s' % output_key)
+                'Could not export %s in %s%s' % output_key + (version,))
         if not exported:
             raise DataStoreExportError(
                 'Nothing to export for %s' % ds_key)
