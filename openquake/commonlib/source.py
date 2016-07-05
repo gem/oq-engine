@@ -171,7 +171,7 @@ class SourceGroup(collections.Sequence):
         self.max_mag = max_mag
         self.id = id
         if sources:
-            for src in sources:
+            for src in sorted(sources, key=operator.attrgetter('source_id')):
                 self.update(src)
         self.source_model = None  # to be set later, in CompositionInfo
         self.weight = 1
@@ -287,8 +287,7 @@ class SourceModelParser(object):
 
             groups = groupby(
                 sources, operator.attrgetter('tectonic_region_type'))
-            return [SourceGroup(trt, sources)
-                    for trt, sources in groups.items()]
+            return [SourceGroup(trt, srcs) for trt, srcs in groups.items()]
         if smodel['xmlns'].endswith('nrml/0.5'):
             for src_group in smodel.sourceModel:
                 sg = self.converter.convert_node(src_group)
