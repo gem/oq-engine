@@ -91,6 +91,13 @@ Backarc=False>'
             self.location, self.vs30, self.vs30measured, self.z1pt0,
             self.z2pt5, self.backarc)
 
+    def __hash__(self):
+        return hash((self.location.x, self.location.y))
+
+    def __eq__(self, other):
+        return (self.location.x, self.location.y) == (
+            other.location.x, other.location.y)
+
     def __repr__(self):
         """
         >>> import openquake.hazardlib

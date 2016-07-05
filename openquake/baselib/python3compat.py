@@ -25,11 +25,27 @@ from __future__ import print_function
 import os
 import sys
 import math
+import numpy
 import importlib
 import subprocess
 
 PY3 = sys.version_info[0] == 3
 PY2 = sys.version_info[0] == 2
+
+
+def encode(val):
+    """
+    Encode a string assuming the encoding is UTF-8.
+
+    :param: a unicode or bytes object
+    :returns: bytes
+    """
+    try:
+        # assume it is an unicode string
+        return val.encode('utf-8')
+    except AttributeError:
+        # it was an already encoded object
+        return val
 
 
 def decode(val):
@@ -138,6 +154,25 @@ def check_syntax(pkg):
                 else:
                     ok += 1
     print('Checked %d ok, %d wrong modules' % (ok, err))
+
+
+def dtype(arglist):
+    """
+    Version of numpy.dtype working both in Python 2 and 3.
+
+    :param arglist:
+         list of pairs (name, dtype) where name must be bytes in Python 2 and
+         str in Python 3
+    :returns: a numpy dtype
+    """
+    lst = []
+    for arg in arglist:
+        if PY2:
+            newarg = (encode(arg[0]),) + arg[1:]
+        else:  # Python 3
+            newarg = (decode(arg[0]),) + arg[1:]
+        lst.append(newarg)
+    return numpy.dtype(lst)
 
 
 if __name__ == '__main__':

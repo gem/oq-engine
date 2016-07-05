@@ -19,7 +19,7 @@ Module :mod:`openquake.hazardlib.source.simple_fault` defines
 """
 from __future__ import division
 import math
-from openquake.baselib.python3compat import range
+from openquake.baselib.python3compat import range, round
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
