@@ -117,8 +117,8 @@ def timeit(method):
         result = method(*args, **kw)
         timeend = time.time()
 
-        print '%r (%r, %r) %2.2f sec' % (
-            method.__name__, args, kw, timeend - timestart)
+        print('%r (%r, %r) %2.2f sec' % (
+            method.__name__, args, kw, timeend - timestart))
         return result
     try:
         import nose
@@ -262,7 +262,7 @@ class ConfigTestCase(object):
     def prepare_config(self, section, data=None):
         """Set up a configuration with the given `max_mem` value."""
         if data is not None:
-            data = '\n'.join(["%s=%s" % item for item in data.iteritems()])
+            data = '\n'.join("%s=%s" % item for item in data.items())
             content = """
                 [%s]
                 %s""" % (section, data)
@@ -278,5 +278,5 @@ def random_string(length=16):
     """Generate a random string of the given length."""
     result = ""
     while len(result) < length:
-        result += random.choice(string.letters + string.digits)
+        result += random.choice(string.ascii_letters + string.digits)
     return result

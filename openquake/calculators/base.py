@@ -53,7 +53,7 @@ F32 = numpy.float32
 class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 
-rlz_dt = numpy.dtype([('uid', (bytes, 200)), ('gsims', (bytes, 200)),
+rlz_dt = numpy.dtype([('uid', hdf5.vstr), ('gsims', hdf5.vstr),
                       ('weight', F32)])
 
 logversion = {True}
@@ -88,7 +88,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     :param calc_id: numeric calculation ID
     """
     sitecol = datastore.persistent_attribute('sitecol')
-    etags = datastore.persistent_attribute('etags')
     assetcol = datastore.persistent_attribute('assetcol')
     job_info = datastore.persistent_attribute('job_info')
     performance = datastore.persistent_attribute('performance')
@@ -398,7 +397,7 @@ class HazardCalculator(BaseCalculator):
         logging.info('Reading the exposure')
         with self.monitor('reading exposure', autoflush=True):
             self.exposure = readinput.get_exposure(self.oqparam)
-            arefs = numpy.array(self.exposure.asset_refs)
+            arefs = numpy.array(self.exposure.asset_refs, hdf5.vstr)
             self.datastore['asset_refs'] = arefs
             self.datastore.set_attrs('asset_refs', nbytes=arefs.nbytes)
             self.cost_calculator = readinput.get_cost_calculator(self.oqparam)
@@ -433,10 +432,10 @@ class HazardCalculator(BaseCalculator):
                     'composite_risk_model/%s-retrofitted' % taxonomy] = (
                         rmodel.retro_functions)
         attrs = self.datastore['composite_risk_model'].attrs
-        attrs['loss_types'] = rm.loss_types
-        attrs['min_iml'] = sorted(rm.get_min_iml().items())
+        attrs['loss_types'] = hdf5.array_of_vstr(rm.loss_types)
+        attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.get_min_iml().items()))
         if rm.damage_states:
-            attrs['damage_states'] = rm.damage_states
+            attrs['damage_states'] = hdf5.array_of_vstr(rm.damage_states)
         self.datastore['loss_ratios'] = rm.get_loss_ratios()
         self.datastore.set_nbytes('composite_risk_model')
         self.datastore.set_nbytes('loss_ratios')
@@ -490,9 +489,9 @@ class HazardCalculator(BaseCalculator):
         if hasattr(self, 'assets_by_site'):
             self.assetcol = riskinput.AssetCollection(
                 self.assets_by_site, self.cost_calculator, oq.time_event,
-                time_events=hdf5.array_of_bytes(
+                time_events=hdf5.array_of_vstr(
                     sorted(self.exposure.time_events)))
-        elif hasattr(self, 'assetcol'):
+        elif hasattr(self, '_assetcol'):
             self.assets_by_site = self.assetcol.assets_by_site()
 
     def is_tiling(self):
