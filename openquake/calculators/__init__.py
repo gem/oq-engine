@@ -23,7 +23,7 @@ from openquake.baselib.general import import_all
 import_all('openquake.calculators')
 
 # import the development packages if any
-extras = os.environ.get('OQLITEIMPORT', '')
+extras = os.environ.get('OQ_IMPORT_PATH', '')
 for extra_pkg in extras.split(':'):
     if extra_pkg:
         import_all(extra_pkg)
