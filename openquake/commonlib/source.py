@@ -33,7 +33,6 @@ from openquake.baselib.general import (
     AccumDict, groupby, block_splitter, group_array)
 from openquake.hazardlib.site import Tile
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.risklib import valid
 from openquake.commonlib import logictree, sourceconverter, parallel
 from openquake.commonlib import nrml, node
 
@@ -109,7 +108,8 @@ class SourceModel(object):
         Return an empty copy of the source model, i.e. without sources,
         but with the proper attributes for each SourceGroup contained within.
         """
-        src_groups = [SourceGroup(sg.trt, [], sg.min_mag, sg.max_mag, sg.id)
+        src_groups = [sourceconverter.SourceGroup(
+            sg.trt, [], sg.min_mag, sg.max_mag, sg.id)
                       for sg in self.src_groups]
         return self.__class__(self.name, self.weight, self.path, src_groups,
                               self.num_gsim_paths, self.ordinal, self.samples)
@@ -123,108 +123,6 @@ def capitalize(words):
     'Active Shallow Crust'
     """
     return ' '.join(w.capitalize() for w in words.split(' '))
-
-
-class SourceGroup(collections.Sequence):
-    """
-    A container for the following parameters:
-
-    :param str trt:
-        the tectonic region type all the sources belong to
-    :param list sources:
-        a list of hazardlib source objects
-    :param min_mag:
-        the minimum magnitude among the given sources
-    :param max_mag:
-        the maximum magnitude among the given sources
-    :param gsims:
-        the GSIMs associated to tectonic region type
-    :param id:
-        an optional numeric ID (default None) useful to associate
-        the model to a database object
-    """
-    @classmethod
-    def collect(cls, sources):
-        """
-        :param sources: dictionaries with a key 'tectonicRegion'
-        :returns: an ordered list of SourceGroup instances
-        """
-        source_stats_dict = {}
-        for src in sources:
-            trt = src['tectonicRegion']
-            if trt not in source_stats_dict:
-                source_stats_dict[trt] = SourceGroup(trt)
-            sg = source_stats_dict[trt]
-            if not sg.sources:
-                # we append just one source per SourceGroup, so that
-                # the memory occupation is insignificant
-                sg.sources.append(src)
-
-        # return SourceGroups, ordered by TRT string
-        return sorted(source_stats_dict.values())
-
-    def __init__(self, trt, sources=None,
-                 min_mag=None, max_mag=None, id=0, eff_ruptures=-1):
-        self.trt = trt
-        self.sources = []
-        self.min_mag = min_mag
-        self.max_mag = max_mag
-        self.id = id
-        if sources:
-            for src in sorted(sources, key=operator.attrgetter('source_id')):
-                self.update(src)
-        self.source_model = None  # to be set later, in CompositionInfo
-        self.weight = 1
-        self.eff_ruptures = eff_ruptures  # set later nby get_rlzs_assoc
-
-    def tot_ruptures(self):
-        return sum(src.num_ruptures for src in self.sources)
-
-    def update(self, src):
-        """
-        Update the attributes sources, min_mag, max_mag
-        according to the given source.
-
-        :param src:
-            an instance of :class:
-            `openquake.hazardlib.source.base.BaseSeismicSource`
-        """
-        assert src.tectonic_region_type == self.trt, (
-            src.tectonic_region_type, self.trt)
-        self.sources.append(src)
-        min_mag, max_mag = src.get_min_max_mag()
-        prev_min_mag = self.min_mag
-        if prev_min_mag is None or min_mag < prev_min_mag:
-            self.min_mag = min_mag
-        prev_max_mag = self.max_mag
-        if prev_max_mag is None or max_mag > prev_max_mag:
-            self.max_mag = max_mag
-
-    def __repr__(self):
-        return '<%s #%d %s, %d source(s), %d effective rupture(s)>' % (
-            self.__class__.__name__, self.id, self.trt,
-            len(self.sources), self.eff_ruptures)
-
-    def __lt__(self, other):
-        """
-        Make sure there is a precise ordering of SourceGroup objects.
-        Objects with less sources are put first; in case the number
-        of sources is the same, use lexicographic ordering on the trts
-        """
-        num_sources = len(self.sources)
-        other_sources = len(other.sources)
-        if num_sources == other_sources:
-            return self.trt < other.trt
-        return num_sources < other_sources
-
-    def __getitem__(self, i):
-        return self.sources[i]
-
-    def __iter__(self):
-        return iter(self.sources)
-
-    def __len__(self):
-        return len(self.sources)
 
 
 class SourceModelParser(object):
@@ -286,11 +184,14 @@ class SourceModelParser(object):
                 logging.info('Parsed %d sources from %s', no, fname)
             groups = groupby(
                 sources, operator.attrgetter('tectonic_region_type'))
-            return sorted(SourceGroup(trt, srcs)
+            return sorted(sourceconverter.SourceGroup(trt, srcs)
                           for trt, srcs in groups.items())
         if smodel['xmlns'].endswith('nrml/0.5'):
-            groups = []
+            groups = []  # expect a sequence of sourceGroup nodes
             for src_group in smodel.sourceModel:
+                with node.context(fname, src_group):
+                    if 'sourceGroup' not in src_group.tag:
+                        raise ValueError('expected sourceGroup')
                 groups.append(self.converter.convert_node(src_group))
             return sorted(groups)
         else:
@@ -545,7 +446,8 @@ class CompositionInfo(object):
         weight = 1
         gsim_lt = gsimlt or logictree.GsimLogicTree.from_('FromFile')
         fakeSM = SourceModel(
-            'fake', weight,  'b1', [SourceGroup('*', eff_ruptures=1)],
+            'fake', weight,  'b1',
+            [sourceconverter.SourceGroup('*', eff_ruptures=1)],
             gsim_lt.get_num_paths(), ordinal=0, samples=1)
         return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM])
 
@@ -593,7 +495,8 @@ class CompositionInfo(object):
         for sm_id, rec in enumerate(sm_data):
             tdata = sg_data[sm_id]
             srcgroups = [
-                SourceGroup(self.trts[trti], id=trt_id, eff_ruptures=effrup)
+                sourceconverter.SourceGroup(
+                    self.trts[trti], id=trt_id, eff_ruptures=effrup)
                 for trt_id, trti, effrup, sm_id in tdata if effrup > 0]
             path = tuple(rec['path'].split('_'))
             trts = set(sg.trt for sg in srcgroups)
