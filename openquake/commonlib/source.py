@@ -287,7 +287,8 @@ class SourceModelParser(object):
 
             groups = groupby(
                 sources, operator.attrgetter('tectonic_region_type'))
-            return [SourceGroup(trt, srcs) for trt, srcs in groups.items()]
+            return sorted(SourceGroup(trt, srcs)
+                          for trt, srcs in groups.items())
         if smodel['xmlns'].endswith('nrml/0.5'):
             for src_group in smodel.sourceModel:
                 sg = self.converter.convert_node(src_group)
