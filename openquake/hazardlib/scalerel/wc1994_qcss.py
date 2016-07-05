@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-
 Module :mod:`openquake.hazardlib.scalerel.wc1994_qcss` implements
 :class:`WC1994_QCSS`.
 """
