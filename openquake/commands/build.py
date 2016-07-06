@@ -19,6 +19,7 @@
 """
 Convert NRML source model file to ESRI shapefile (and vice versa).
 """
+from __future__ import print_function
 import os
 import numpy
 import operator
@@ -1022,7 +1023,7 @@ class ShapefileParser(SourceModelParser):
             elif "complexFaultSource" in record["sourcetype"]:
                 src = build_complex_fault_source_from_shp(shape, record)
             elif "characteristicFaultSource" in record["sourcetype"]:
-                print "Characteristic Fault Source Not Yet Supported - Sorry!"
+                print("Characteristic Fault Source Not Yet Supported - Sorry!")
                 src = None
             if src and validate:
                 print("Validating Source %s" % src.attrib["id"])
