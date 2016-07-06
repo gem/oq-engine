@@ -21,8 +21,10 @@ Convert NRML source model file to ESRI shapefile (and vice versa).
 """
 import os
 import numpy
+import operator
 import shapefile
 from collections import OrderedDict
+from openquake.baselib.general import groupby
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.commonlib import nrml, sap
@@ -942,8 +944,14 @@ class SourceModelParser(object):
         self.destination = destination
         if name:
             source_model.name = name
-        output_source_model = Node("sourceModel", {"name": name},
-                                   nodes=source_model.sources)
+        output_source_model = Node("sourceModel", {"name": name})
+        dic = groupby(source_model.sources,
+                      operator.itemgetter('tectonicRegion'))
+        for i, (trt, srcs) in enumerate(dic.items(), 1):
+            output_source_model.append(
+                Node('sourceGroup',
+                     {'tectonicRegion': trt, 'name': 'group %d' % i},
+                     nodes=srcs))
         print("Exporting Source Model to %s" % self.destination)
         with open(self.destination, "wb") as f:
             nrml.write([output_source_model], f, "%s")
