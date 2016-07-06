@@ -42,6 +42,7 @@ def purge(calc_id):
             calc_id = datastore.get_calc_ids()[calc_id]
         hdf5path = os.path.join(datastore.DATADIR, 'calc_%s.hdf5' % calc_id)
         os.remove(hdf5path)
+        dbcmd('del_calc', calc_id, user)
         print('Removed %s' % hdf5path)
 
 
