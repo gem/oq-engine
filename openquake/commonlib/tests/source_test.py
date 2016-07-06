@@ -79,10 +79,11 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.,  # km
         ))
-        source_nodes = nrml.parse(MIXED_SRC_MODEL).nodes
-        (cls.area, cls.point, cls.simple, cls.cmplx, cls.char_simple,
-         cls.char_complex, cls.char_multi) = map(
-            cls.parser.converter.convert_node, source_nodes)
+        grp_nodes = nrml.parse(MIXED_SRC_MODEL).nodes
+        groups = [
+            cls.parser.converter.convert_node(gnode) for gnode in grp_nodes]
+        ([cls.point], [cls.cmplx], [cls.area, cls.simple],
+         [cls.char_simple, cls.char_complex, cls.char_multi]) = groups
         # the parameters here would typically be specified in the job .ini
         cls.investigation_time = 50.
         cls.rupture_mesh_spacing = 1  # km
@@ -377,7 +378,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             area_source_discretization=10,
         ))
         with self.assertRaises(DuplicatedID):
-            parser.parse_sources(DUPLICATE_ID_SRC_MODEL)
+            parser.parse_groups(DUPLICATE_ID_SRC_MODEL)
 
     def test_raises_useful_error_1(self):
         area_file = BytesIO(b"""\
@@ -534,7 +535,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         msg = ('node simpleFaultSource: hypo_list and slip_list have to be '
                'both given')
         with self.assertRaises(ValueError) as ctx:
-            self.parser.parse_sources(simple_file)
+            self.parser.parse_groups(simple_file)
         self.assertIn(msg, str(ctx.exception))
 
     def test_nonparametric_source_ok(self):
@@ -554,8 +555,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             complex_fault_mesh_spacing=5,  # km
             width_of_mfd_bin=0.1,  # for Truncated GR MFDs
             area_source_discretization=1.)
-        source_nodes = nrml.read(ALT_MFDS_SRC_MODEL).sourceModel
-        [cplx1, sflt1, sflt2] = map(converter.convert_node, source_nodes)
+        grp_nodes = nrml.read(ALT_MFDS_SRC_MODEL).sourceModel.nodes
+        [[sflt1, sflt2], [cplx1]] = map(converter.convert_node, grp_nodes)
         # Check the values
         # Arbitrary MFD
         assert_close(cplx1.mfd.magnitudes, [8.6, 8.8, 9.0])
@@ -572,7 +573,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         self.assertAlmostEqual(sflt2.mfd.char_mag, 7.0)
         self.assertAlmostEqual(sflt2.mfd.char_rate, 0.24615, 5)
         self.assertAlmostEqual(sflt2.mfd.min_mag, 5.0)
- 
+
 
 class AreaToPointsTestCase(unittest.TestCase):
     """
