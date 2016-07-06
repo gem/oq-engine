@@ -153,7 +153,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     else:
         hc_id = None
     if run:
-        job_inis = map(os.path.expanduser, run.split(','))
+        job_inis = [os.path.expanduser(ini) for ini in run.split(',')]
         if len(job_inis) not in (1, 2):
             sys.exit('%s should be a .ini filename or a pair of filenames '
                      'separated by a comma' % run)
