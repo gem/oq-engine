@@ -23,6 +23,7 @@ from functools import partial
 import numpy
 
 from openquake.baselib import hdf5
+from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
@@ -262,7 +263,7 @@ class ClassicalCalculator(base.HazardCalculator):
                          for rec in self.source_info}
             for src_idx, dt in calc_times:
                 src = sources[src_idx]
-                info = info_dict[src.src_group_id, src.source_id]
+                info = info_dict[src.src_group_id, encode(src.source_id)]
                 info['calc_time'] += dt
             rows = sorted(
                 info_dict.values(), key=operator.itemgetter(7), reverse=True)
