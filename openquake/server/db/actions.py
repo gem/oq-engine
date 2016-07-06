@@ -17,7 +17,6 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
 import os
-import sys
 import operator
 from datetime import datetime
 
@@ -273,9 +272,8 @@ def del_calc(job_id, user):
     try:
         job = models.get(models.OqJob, pk=job_id)
     except models.NotFound:
-        print('Unable to delete calculation from db: '
-              'ID=%s does not exist' % job_id, file=sys.stderr)
-        return
+        return ('Unable to delete calculation from db: '
+                'ID=%s does not exist' % job_id)
     if job.user_name == user:
         # we are allowed to delete this
 
