@@ -142,7 +142,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             result = self.execute()
             if result:
                 self.post_execute(result)
-            self.clean_up()
+            self.before_export()
             exported = self.export(kw.get('exports', ''))
         except KeyboardInterrupt:
             pids = ' '.join(str(p.pid) for p in executor._processes)
@@ -237,10 +237,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 logging.warn('', exc_info=True)
         return exported
 
-    def clean_up(self):
+    def before_export(self):
         """
-        Collect the realizations and the monitoring information,
-        then close the datastore.
+        Collect the realizations and set the attributes nbytes
         """
         self.datastore['realizations'] = numpy.array(
             [(r.uid, gsim_names(r), r.weight)
@@ -268,7 +267,6 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
-    SourceManager = source.SourceManager
     mean_curves = None  # to be overridden
 
     def assoc_assets_sites(self, sitecol):
