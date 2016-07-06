@@ -20,6 +20,7 @@ import os
 import logging
 import numpy
 
+from openquake.baselib import python3compat
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.imt import from_string
 from openquake.risklib import valid
@@ -83,7 +84,7 @@ class OqParam(valid.ParamSet):
     description = valid.Param(valid.utf8_not_empty)
     distance_bin_width = valid.Param(valid.positivefloat)
     mag_bin_width = valid.Param(valid.positivefloat)
-    export_dir = valid.Param(valid.utf8, None)
+    export_dir = valid.Param(valid.utf8, '.')
     export_multi_curves = valid.Param(valid.boolean, False)
     exports = valid.Param(valid.export_formats, ())
     filter_sources = valid.Param(valid.boolean, True)
@@ -298,7 +299,7 @@ class OqParam(valid.ParamSet):
         if self.insured_losses:
             for lt in loss_types:
                 dts.append((lt + '_ins', dtype))
-        return numpy.dtype(dts)
+        return python3compat.dtype(dts)
 
     def no_imls(self):
         """
