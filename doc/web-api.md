@@ -164,8 +164,8 @@ Files:
 
 Parameters:
 
-    * hazard_calc: the hazard calculation ID upon which to run the risk calculation; specify this or hazard_result (only for risk calculations)
-    * hazard_result: the hazard results ID upon which to run the risk calculation; specify this or hazard_calc (only for risk calculations)
+    * hazard_job_id: the hazard calculation ID upon which to run the risk calculation; specify this or hazard_result (only for risk calculations)
+    * hazard_result: the hazard results ID upon which to run the risk calculation; specify this or hazard_job_id (only for risk calculations)
 
 Response: Redirects to [/v1/calc/:calc_id](#get-v1calchazardcalc_id), where `calc_id` is the ID of the newly created calculation.
 
