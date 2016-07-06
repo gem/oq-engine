@@ -74,10 +74,11 @@ def export_from_db(output_key, calc_id, datadir, target):
         dstore.export_dir = target
         try:
             exported = export(output_key, dstore)
-        except KeyError:
+        except Exception as exc:
             version = check_version(dstore)
             raise DataStoreExportError(
-                'Could not export %s in %s%s' % output_key + (version,))
+                'Could not export %s in %s%s: %s' %
+                output_key + (version, exc))
         if not exported:
             raise DataStoreExportError(
                 'Nothing to export for %s' % ds_key)
