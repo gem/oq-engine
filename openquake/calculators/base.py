@@ -142,6 +142,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             result = self.execute()
             if result:
                 self.post_execute(result)
+            self.before_export()
             exported = self.export(kw.get('exports', ''))
         except KeyboardInterrupt:
             pids = ' '.join(str(p.pid) for p in executor._processes)
@@ -156,7 +157,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             else:
                 logging.critical('', exc_info=True)
                 raise
-        self.clean_up()
         return exported
 
     def core_task(*args):
@@ -227,12 +227,19 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 ekey = ('uhs', fmt)
                 exported[ekey] = exp(ekey, self.datastore)
                 logging.info('exported %s: %s', key, exported[ekey])
+
+        if self.close:  # in the engine we close later
+            try:
+                self.datastore.close()
+            except (RuntimeError, ValueError):
+                # sometimes produces errors but they are difficult to
+                # reproduce
+                logging.warn('', exc_info=True)
         return exported
 
-    def clean_up(self):
+    def before_export(self):
         """
-        Collect the realizations and the monitoring information,
-        then close the datastore.
+        Collect the realizations and set the attributes nbytes
         """
         self.datastore['realizations'] = numpy.array(
             [(r.uid, gsim_names(r), r.weight)
@@ -242,15 +249,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         if 'hmaps' in self.datastore:
             self.datastore.set_nbytes('hmaps')
         self.datastore.flush()
-        if self.close:  # in the engine we close later
-            try:
-                self.datastore.close()
-            except (RuntimeError, ValueError):
-                # there could be a mysterious HDF5 error
-                # the ValueError: Unrecognized type code -1
-                # happens with the command
-                # $ oq run event_based_risk/case_master/job.ini --exports csv
-                logging.warn('', exc_info=True)
 
 
 def check_time_event(oqparam, time_events):
