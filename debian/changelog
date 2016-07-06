@@ -1,5 +1,10 @@
   [Michele Simionato]
   * Added an header with metadata to the exported hazard curves and maps
+  * `oq engine --run job.ini --exports csv` now also exports the realizations
+  * Introduced the format NRML 0.5 for source models
+  * Added a check on the version in case of export errors
+  * Extended `oq purge` to remove calculations from the database too
+  * Fixed `--make-html-report`: the view task_info was not registered
   * Stored several strings as HDF5-variable-length strings
   * Fixed an export bug for the hazard curves in .geojson format
   * Removed the array cost_types from the datastore

@@ -26,7 +26,10 @@ eventually.
 import os
 import sys
 
-os.environ["OQ_DISTRIBUTE"] = "celery"
+if '--with-doctest' in sys.argv:  # horrible hack for nosetests
+    pass  # don't set OQ_DISTRIBUTE
+else:
+    os.environ["OQ_DISTRIBUTE"] = "celery"
 
 # just in the case that are you using oq-engine from sources
 # with the rest of oq libraries installed into the system (or a
