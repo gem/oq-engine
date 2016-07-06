@@ -517,6 +517,9 @@ class UCERFSESControl(object):
         self.background_idx = None
         self.num_ruptures = 0
 
+    def get_min_max_mag(self):
+        return self.min_mag, None
+
     def update_background_site_filter(self, sites, integration_distance=1000.):
         """
         We can apply the filtering of the background sites as a pre-processing
@@ -637,17 +640,19 @@ class UCERFSourceConverter(SourceConverter):
 
 
 @parallel.litetask
-def compute_ruptures(branch_info, source, sitecol, oqparam, monitor):
+def compute_ruptures(branch_info, ucerf, sitecol, oqparam, monitor):
     """
     Returns the ruptures as a TRT set
     :param str branch_info:
         Tuple of (ltbr, branch_id, branch_weight)
-    :param source:
+    :param ucerf:
         Instance of the UCERFSESControl object
     :param sitecol:
-        Site collection :class: openquake.hazardlib.site.SiteCollection
-    :param info:
-        Instance of the :class: openquake.commonlib.source.CompositionInfo
+        Site collection :class:`openquake.hazardlib.site.SiteCollection`
+    :param oqparam:
+        Instance of :class:`openquake.commonlib.oqvalidation.OqParam`
+    :param monitor:
+        Instance of :class:`openquake.baselib.performance.Monitor`
     :returns:
         Dictionary of rupture instances associated to a TRT ID
     """
@@ -660,14 +665,14 @@ def compute_ruptures(branch_info, source, sitecol, oqparam, monitor):
     for src_group_id, (ltbrid, branch_id, _) in enumerate(branch_info):
         t0 = time.time()
         with filter_mon:
-            source.update_background_site_filter(sitecol, integration_distance)
+            ucerf.update_background_site_filter(sitecol, integration_distance)
 
         # set the seed before calling generate_event_set
         numpy.random.seed(oqparam.random_seed + src_group_id)
         ses_ruptures = []
         for ses_idx in range(1, oqparam.ses_per_logic_tree_path + 1):
             with event_mon:
-                rups, n_occs = source.generate_event_set(
+                rups, n_occs = ucerf.generate_event_set(
                     branch_id, sitecol, integration_distance)
             for i, rup in enumerate(rups):
                 rup.seed = oqparam.random_seed  # to think
@@ -687,7 +692,7 @@ def compute_ruptures(branch_info, source, sitecol, oqparam, monitor):
                         event_based.EBRupture(
                             rup, indices,
                             numpy.array(events, event_based.event_dt),
-                            source.source_id, src_group_id, serial))
+                            ucerf.source_id, src_group_id, serial))
                     serial += 1
         dt = time.time() - t0
         res.calc_times[src_group_id] = (ltbrid, dt)
@@ -716,17 +721,15 @@ class UCERFEventBasedRuptureCalculator(
         parser = source.SourceModelParser(
             UCERFSourceConverter(self.oqparam.investigation_time,
                                  self.oqparam.rupture_mesh_spacing))
-        [self.source] = parser.parse_sources(
+        self.src_groups = parser.parse_src_groups(
             self.oqparam.inputs["source_model"])
         branches = sorted(self.smlt.branches.items())
-        min_mag, max_mag = self.source.min_mag, None
         source_models = []
         num_gsim_paths = self.gsim_lt.get_num_paths()
         for ordinal, (name, branch) in enumerate(branches):
-            tm = source.SourceGroup(DEFAULT_TRT, [], min_mag, max_mag,
-                                    ordinal, eff_ruptures=-1)
             sm = source.SourceModel(
-                name, branch.weight, [name], [tm], num_gsim_paths, ordinal, 1)
+                name, branch.weight, [name], self.src_groups,
+                num_gsim_paths, ordinal, 1)
             source_models.append(sm)
         self.csm = source.CompositeSourceModel(
             self.gsim_lt, self.smlt, source_models, set_weight=False)
@@ -740,9 +743,10 @@ class UCERFEventBasedRuptureCalculator(
         id_set = [(key, self.smlt.branches[key].value,
                   self.smlt.branches[key].weight)
                   for key in self.smlt.branches]
+        [[ucerf]] = self.src_groups
         ruptures_by_trt_id = parallel.apply_reduce(
             compute_ruptures,
-            (id_set, self.source, self.sitecol, self.oqparam, self.monitor),
+            (id_set, ucerf, self.sitecol, self.oqparam, self.monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks, agg=self.agg)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             functools.partial(self.count_eff_ruptures, ruptures_by_trt_id))
