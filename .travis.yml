@@ -18,6 +18,7 @@ env:
     PATH=$HOME/openquake/bin:$PATH
 
 install:
+  - pip install shapefile==1.2.3
   - ./openquake-env-setup-py3-precise64.run -- -d ~
   - git clone --depth=1 https://github.com/gem/oq-hazardlib.git
 
