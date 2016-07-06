@@ -29,10 +29,12 @@ def purge_one(calc_id, user):
     Remove one calculation ID from the database and remove its datastore
     """
     hdf5path = os.path.join(datastore.DATADIR, 'calc_%s.hdf5' % calc_id)
-    missing_id = dbcmd('del_calc', calc_id, user)
-    if missing_id:
+    err = dbcmd('del_calc', calc_id, user)
+    if err:
+        print(err)
+    if os.path.exists(hdf5path):
         os.remove(hdf5path)
-    print('Removed %s' % hdf5path)
+        print('Removed %s' % hdf5path)
 
 
 def purge(calc_id):
