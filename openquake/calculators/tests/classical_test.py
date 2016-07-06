@@ -35,6 +35,7 @@ class ClassicalTestCase(CalculatorTestCase):
         for fname, actual in zip(expected, got):
             self.assertEqualFiles('expected/%s' % fname, actual,
                                   delta=delta)
+        return out
 
     @attr('qa', 'hazard', 'classical')
     def test_case_1(self):
@@ -194,11 +195,13 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
 
     @attr('qa', 'hazard', 'classical')
     def test_case_18(self):  # GMPEtable
-        self.assert_curves_ok(
+        out = self.assert_curves_ok(
             ['hazard_curve-mean.csv', 'hazard_map-mean.csv',
              'hazard_uhs-mean.csv'],
             case_18.__file__, delta=1E-7)
         # this also tests that UHS curves are really exported
+        [fname] = out['realizations', 'csv']
+        self.assertEqualFiles('expected/realizations.csv', fname)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_19(self):
