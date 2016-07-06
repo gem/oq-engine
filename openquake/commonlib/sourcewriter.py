@@ -108,8 +108,8 @@ def build_simple_fault_geometry(fault_source):
     lower_depth_node = Node(
         "lowerSeismoDepth", text=fault_source.lower_seismogenic_depth)
     return Node("simpleFaultGeometry",
-                       nodes=[linestring_node, dip_node, upper_depth_node,
-                              lower_depth_node])
+                nodes=[linestring_node, dip_node, upper_depth_node,
+                       lower_depth_node])
 
 
 def build_complex_fault_geometry(fault_source):
@@ -136,8 +136,7 @@ def build_complex_fault_geometry(fault_source):
             node_name = "intermediateEdge"
         edge_nodes.append(
             Node(node_name,
-                        nodes=[build_linestring_node(edge, with_depth=True)])
-            )
+                 nodes=[build_linestring_node(edge, with_depth=True)]))
     return Node("complexFaultGeometry", nodes=edge_nodes)
 
 
@@ -153,8 +152,8 @@ def build_evenly_discretised_mfd(mfd):
     """
     occur_rates = Node("occurRates", text=mfd.occurrence_rates)
     return Node("incrementalMFD",
-                       {"binWidth": mfd.bin_width, "minMag": mfd.min_mag},
-                       nodes=[occur_rates])
+                {"binWidth": mfd.bin_width, "minMag": mfd.min_mag},
+                nodes=[occur_rates])
 
 
 @obj_to_node.add('TruncatedGRMFD')
@@ -168,8 +167,8 @@ def build_truncated_gr_mfd(mfd):
         Instance of :class: openquake.commonlib.node.Node
     """
     return Node("truncGutenbergRichterMFD",
-                       {"aValue": mfd.a_val, "bValue": mfd.b_val,
-                        "minMag": mfd.min_mag, "maxMag": mfd.max_mag})
+                {"aValue": mfd.a_val, "bValue": mfd.b_val,
+                 "minMag": mfd.min_mag, "maxMag": mfd.max_mag})
 
 
 @obj_to_node.add('ArbitraryMFD')
@@ -184,8 +183,7 @@ def build_arbitrary_mfd(mfd):
     """
     magnitudes = Node("magnitudes", text=mfd.magnitudes)
     occur_rates = Node("occurRates", text=mfd.occurrence_rates)
-    return Node("arbitraryMFD",
-                       nodes=[magnitudes, occur_rates])
+    return Node("arbitraryMFD", nodes=[magnitudes, occur_rates])
 
 
 @obj_to_node.add("YoungsCoppersmith1985MFD")
@@ -203,10 +201,10 @@ def build_youngs_coppersmith_mfd(mfd):
         Instance of :class: openquake.commonlib.node.Node
     """
     return Node("YoungsCoppersmithMFD",
-                       {"minMag": mfd.min_mag, "bValue": mfd.b_val,
-                        "characteristicMag": mfd.char_mag,
-                        "characteristicRate": mfd.char_rate,
-                        "binWidth": mfd.bin_width})
+                {"minMag": mfd.min_mag, "bValue": mfd.b_val,
+                 "characteristicMag": mfd.char_mag,
+                 "characteristicRate": mfd.char_rate,
+                 "binWidth": mfd.bin_width})
 
 
 def build_nodal_plane_dist(npd):
@@ -257,8 +255,8 @@ def get_distributed_seismicity_source_nodes(source):
     source_nodes = []
     #  parse msr
     source_nodes.append(
-        Node("magScaleRel", text=
-                    source.magnitude_scaling_relationship.__class__.__name__))
+        Node("magScaleRel",
+             text=source.magnitude_scaling_relationship.__class__.__name__))
     # Parse aspect ratio
     source_nodes.append(
         Node("ruptAspectRatio", text=source.rupture_aspect_ratio))
@@ -329,7 +327,6 @@ def get_fault_source_nodes(source):
         source_nodes.append(build_hypo_list_node(source.hypo_list))
     if len(getattr(source, 'slip_list', [])):
         source_nodes.append(build_slip_list_node(source.slip_list))
-
     return source_nodes
 
 
@@ -371,8 +368,8 @@ def build_characteristic_fault_source_node(source):
     source_nodes.append(Node("rake", text=source.rake))
     source_nodes.append(source.surface_node)
     return Node('characteristicFaultSource',
-                       get_source_attributes(source),
-                       nodes=source_nodes)
+                get_source_attributes(source),
+                nodes=source_nodes)
 
 
 @obj_to_node.add('NonParametricSeismicSource')
@@ -382,7 +379,7 @@ def build_nonparametric_source_node(source):
         probs = [prob for (prob, no) in pmf.data]
         rup_nodes.append(build_rupture_node(rup, probs))
     return Node('nonParametricSeismicSource',
-                       get_source_attributes(source), nodes=rup_nodes)
+                get_source_attributes(source), nodes=rup_nodes)
 
 
 def build_rupture_node(rupt, probs_occur):
@@ -424,8 +421,8 @@ def build_point_source_node(point_source):
     # parse common distributed attributes
     source_nodes.extend(get_distributed_seismicity_source_nodes(point_source))
     return Node("pointSource",
-                       get_source_attributes(point_source),
-                       nodes=source_nodes)
+                get_source_attributes(point_source),
+                nodes=source_nodes)
 
 
 @obj_to_node.add('SimpleFaultSource')
@@ -443,8 +440,8 @@ def build_simple_fault_source_node(fault_source):
     # Parse common fault source attributes
     source_nodes.extend(get_fault_source_nodes(fault_source))
     return Node("simpleFaultSource",
-                       get_source_attributes(fault_source),
-                       nodes=source_nodes)
+                get_source_attributes(fault_source),
+                nodes=source_nodes)
 
 
 @obj_to_node.add('ComplexFaultSource')
@@ -462,25 +459,36 @@ def build_complex_fault_source_node(fault_source):
     # Parse common fault source attributes
     source_nodes.extend(get_fault_source_nodes(fault_source))
     return Node("complexFaultSource",
-                       get_source_attributes(fault_source),
-                       nodes=source_nodes)
+                get_source_attributes(fault_source),
+                nodes=source_nodes)
 
 
-def write_source_model(dest, sources, name=None):
+@obj_to_node.add('SourceGroup')
+def build_source_group_node(source_group):
+    """
+    Parses a SourceGroup to a Node class
+    :param source_group:
+        Instance of :class:openquake.commonlib.source.SourceGroup
+    :returns:
+        Instance of :class: openquake.commonlib.node.Node
+    """
+    attrs = dict(tectonicRegion=source_group.trt)
+    return Node("sourceGroup", attrs, nodes=map(obj_to_node, source_group))
+
+
+def write_source_model(dest, groups, name=None):
     """
     Writes a source model to XML.
 
     :param str dest:
         Destination path
-    :param list sources:
-        Source model as list of instance of the
-        :class:`openquake.hazardlib.source.base.BaseSeismicSource`
+    :param list groups:
+        Source model as list of SourceGroups
     :param str name:
         Name of the source model (if missing, extracted from the filename)
     """
     name = name or os.path.splitext(os.path.basename(dest))[0]
-    nodes = list(
-        map(obj_to_node, sorted(sources, key=lambda src: src.source_id)))
+    nodes = list(map(obj_to_node, sorted(groups)))
     source_model = Node("sourceModel", {"name": name}, nodes=nodes)
     with open(dest, 'wb') as f:
         nrml.write([source_model], f, '%s')

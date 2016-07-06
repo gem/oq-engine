@@ -269,7 +269,6 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
-    SourceManager = source.SourceManager
     mean_curves = None  # to be overridden
 
     def assoc_assets_sites(self, sitecol):
