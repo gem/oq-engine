@@ -276,8 +276,10 @@ class RlzsAssoc(collections.Mapping):
         """
         Get a Realization instance for a string of the form 'rlz-\d+'
         """
-        rlz_no = re.match('rlz-(\d+)', rlzstr).group(1)
-        return self.realizations[int(rlz_no)]
+        mo = re.match('rlz-(\d+)', rlzstr)
+        if not mo:
+            return
+        return self.realizations[int(mo.group(1))]
 
     def get_rlzs_by_gsim(self, trt_id):
         """
