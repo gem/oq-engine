@@ -648,9 +648,11 @@ def compute_ruptures(branch_info, ucerf, sitecol, oqparam, monitor):
     :param ucerf:
         Instance of the UCERFSESControl object
     :param sitecol:
-        Site collection :class: openquake.hazardlib.site.SiteCollection
-    :param info:
-        Instance of the :class: openquake.commonlib.source.CompositionInfo
+        Site collection :class:`openquake.hazardlib.site.SiteCollection`
+    :param oqparam:
+        Instance of :class:`openquake.commonlib.oqvalidation.OqParam`
+    :param monitor:
+        Instance of :class:`openquake.baselib.performance.Monitor`
     :returns:
         Dictionary of rupture instances associated to a TRT ID
     """

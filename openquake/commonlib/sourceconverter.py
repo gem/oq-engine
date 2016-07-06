@@ -68,11 +68,13 @@ class SourceGroup(collections.Sequence):
         the minimum magnitude among the given sources
     :param max_mag:
         the maximum magnitude among the given sources
-    :param gsims:
-        the GSIMs associated to tectonic region type
     :param id:
         an optional numeric ID (default None) useful to associate
         the model to a database object
+    :param eff_ruptures:
+        the number of ruptures contained in the group; if -1,
+        the number is unknown and has to be computed by using
+        get_set_num_ruptures
     """
     @classmethod
     def collect(cls, sources):
