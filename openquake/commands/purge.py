@@ -19,20 +19,28 @@
 from __future__ import print_function
 import os
 import re
+import getpass
 from openquake.commonlib import sap, datastore
+from openquake.engine.logs import dbcmd
 
 
 def purge(calc_id):
     """
     Remove the given calculation. If calc_id is 0, remove all calculations.
     """
+    user = getpass.getuser()
     if not calc_id:
         for fname in os.listdir(datastore.DATADIR):
-            if re.match('calc_\d+\.hdf5', fname):
+            mo = re.match('calc_(\d+)\.hdf5', fname)
+            if mo is not None:
+                calc_id = int(mo.group(1))
                 os.remove(os.path.join(datastore.DATADIR, fname))
+                dbcmd('del_calc', calc_id, user)
                 print('Removed %s' % fname)
     else:
-        hdf5path = datastore.read(calc_id).hdf5path
+        if calc_id < 0:
+            calc_id = datastore.get_calc_ids()[calc_id]
+        hdf5path = os.path.join(datastore.DATADIR, 'calc_%s.hdf5' % calc_id)
         os.remove(hdf5path)
         print('Removed %s' % hdf5path)
 
