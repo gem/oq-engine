@@ -340,7 +340,17 @@ def export_hcurves_csv(ekey, dstore):
             write_csv(fname, util.compose_arrays(sitemesh, uhs_curves))
             fnames.append(fname)
         elif key == 'hmaps':
-            write_csv(fname, util.compose_arrays(sitemesh, hcurves))
+            rlz = rlzs_assoc.get_rlz(kind)
+            if not rlz:
+                comment = None
+            else:
+                comment = (
+                    'source_model_tree_path=%s,gsim_tree_path=%s,'
+                    'investigation_time=%s' % (
+                        rlz.sm_lt_path, rlz.gsim_lt_path,
+                        oq.investigation_time))
+            write_csv(fname, util.compose_arrays(sitemesh, hcurves),
+                      comment=comment)
             fnames.append(fname)
         else:
             if export.from_db:  # called by export_from_db
