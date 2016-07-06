@@ -24,6 +24,17 @@ from openquake.commonlib import sap, datastore
 from openquake.engine.logs import dbcmd
 
 
+def purge_one(calc_id, user):
+    """
+    Remove one calculation ID from the database and remove its datastore
+    """
+    hdf5path = os.path.join(datastore.DATADIR, 'calc_%s.hdf5' % calc_id)
+    missing_id = dbcmd('del_calc', calc_id, user)
+    if missing_id:
+        os.remove(hdf5path)
+    print('Removed %s' % hdf5path)
+
+
 def purge(calc_id):
     """
     Remove the given calculation. If calc_id is 0, remove all calculations.
@@ -34,16 +45,11 @@ def purge(calc_id):
             mo = re.match('calc_(\d+)\.hdf5', fname)
             if mo is not None:
                 calc_id = int(mo.group(1))
-                os.remove(os.path.join(datastore.DATADIR, fname))
-                dbcmd('del_calc', calc_id, user)
-                print('Removed %s' % fname)
+                purge_one(calc_id, user)
     else:
         if calc_id < 0:
             calc_id = datastore.get_calc_ids()[calc_id]
-        hdf5path = os.path.join(datastore.DATADIR, 'calc_%s.hdf5' % calc_id)
-        os.remove(hdf5path)
-        dbcmd('del_calc', calc_id, user)
-        print('Removed %s' % hdf5path)
+        purge_one(calc_id, user)
 
 
 parser = sap.Parser(purge)
