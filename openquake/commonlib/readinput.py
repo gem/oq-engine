@@ -414,7 +414,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
                     raise
         else:  # just collect the TRT models
             smodel = nrml.read(fname).sourceModel
-            src_groups = source.SourceGroup.collect(smodel)
+            src_groups = sourceconverter.SourceGroup.collect(smodel)
         trts = [mod.trt for mod in src_groups]
         source_model_lt.tectonic_region_types.update(trts)
 
