@@ -37,7 +37,7 @@ import copy
 import operator
 import collections
 
-from openquake.baselib.general import block_splitter
+from openquake.baselib.general import block_splitter, groupby
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
