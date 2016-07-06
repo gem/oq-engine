@@ -1,7 +1,7 @@
-ordinal,uid,gsims,weight
-0,b11~b11,BooreAtkinson2008(),0.3
-1,b11~b12,CampbellBozorgnia2008(),0.18
-2,b11~b13,ChiouYoungs2008(),0.12
-3,b12~b11,BooreAtkinson2008(),0.2
-4,b12~b12,CampbellBozorgnia2008(),0.12
-5,b12~b13,ChiouYoungs2008(),0.08
+ordinal,uid,model,gsim,weight
+0,b11~b11,source_model1.xml,BooreAtkinson2008(),0.3
+1,b11~b12,source_model1.xml,CampbellBozorgnia2008(),0.18
+2,b11~b13,source_model1.xml,ChiouYoungs2008(),0.12
+3,b12~b11,source_model2.xml,BooreAtkinson2008(),0.2
+4,b12~b12,source_model2.xml,CampbellBozorgnia2008(),0.12
+5,b12~b13,source_model2.xml,ChiouYoungs2008(),0.08

@@ -763,3 +763,14 @@ def export_rup_data(ekey, dstore):
         if len(data):
             paths.append(write_csv(dstore.export_path(fname), data))
     return paths
+
+
+@export.add(('realizations', 'csv'))
+def export_realizations(ekey, dstore):
+    rlzs = dstore[ekey[0]]
+    data = [['ordinal', 'uid', 'model', 'gsim', 'weight']]
+    for i, rlz in enumerate(rlzs):
+        data.append([i, rlz['uid'], rlz['model'], rlz['gsims'], rlz['weight']])
+    path = dstore.export_path('realizations.csv')
+    writers.write_csv(path, data, fmt='%s')
+    return [path]
