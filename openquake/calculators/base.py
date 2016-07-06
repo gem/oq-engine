@@ -53,8 +53,8 @@ F32 = numpy.float32
 class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 
-rlz_dt = numpy.dtype([('uid', hdf5.vstr), ('gsims', hdf5.vstr),
-                      ('weight', F32)])
+rlz_dt = numpy.dtype([('uid', hdf5.vstr), ('model', hdf5.vstr),
+                      ('gsims', hdf5.vstr), ('weight', F32)])
 
 logversion = {True}
 
@@ -241,8 +241,11 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         Collect the realizations and set the attributes nbytes
         """
+        sm_by_rlz = self.datastore['csm_info'].get_sm_by_rlz(
+            self.rlzs_assoc.realizations) or collections.defaultdict(
+                lambda: 'NA')
         self.datastore['realizations'] = numpy.array(
-            [(r.uid, gsim_names(r), r.weight)
+            [(r.uid, sm_by_rlz[r], gsim_names(r), r.weight)
              for r in self.rlzs_assoc.realizations], rlz_dt)
         if 'hcurves' in self.datastore:
             self.datastore.set_nbytes('hcurves')
