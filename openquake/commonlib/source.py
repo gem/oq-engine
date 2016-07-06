@@ -27,12 +27,12 @@ import random
 
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import raise_, decode
 from openquake.baselib.general import (
     AccumDict, groupby, block_splitter, group_array)
 from openquake.hazardlib.site import Tile
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.risklib import valid
 from openquake.commonlib import logictree, sourceconverter, parallel
 from openquake.commonlib import nrml, node
 
@@ -70,6 +70,9 @@ class LtRealization(object):
     def uid(self):
         """An unique identifier for effective realizations"""
         return '_'.join(self.sm_lt_path) + '~' + self.gsim_rlz.uid
+
+    def __lt__(self, other):
+        return self.ordinal < other.ordinal
 
     def __eq__(self, other):
         return repr(self) == repr(other)
@@ -285,7 +288,9 @@ class SourceModelParser(object):
                 logging.info('Parsed %d sources from %s', no, fname)
         if no % 10000 != 0:
             logging.info('Parsed %d sources from %s', no, fname)
-        return sorted(sources, key=operator.attrgetter('tectonic_region_type'))
+        srcs = sorted(sources, key=operator.attrgetter(
+            'tectonic_region_type', 'source_id'))
+        return srcs
 
 
 def agg_prob(acc, prob):
@@ -504,9 +509,9 @@ class RlzsAssoc(collections.Mapping):
 LENGTH = 256
 
 source_model_dt = numpy.dtype([
-    ('name', (bytes, LENGTH)),
+    ('name', hdf5.vstr),
     ('weight', F32),
-    ('path', (bytes, LENGTH)),
+    ('path', hdf5.vstr),
     ('num_rlzs', U32),
     ('samples', U32),
 ])
@@ -567,7 +572,8 @@ class CompositionInfo(object):
             sg_data=numpy.array(data, src_group_dt),
             sm_data=numpy.array(lst, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
-                     trts=trts, gsim_lt_xml=str(self.gsim_lt),
+                     trts=hdf5.array_of_vstr(trts),
+                     gsim_lt_xml=str(self.gsim_lt),
                      gsim_fname=self.gsim_lt.fname))
 
     def __fromh5__(self, dic, attrs):
@@ -585,7 +591,7 @@ class CompositionInfo(object):
             srcgroups = [
                 SourceGroup(self.trts[trti], id=trt_id, eff_ruptures=effrup)
                 for trt_id, trti, effrup, sm_id in tdata if effrup > 0]
-            path = tuple(rec['path'].split(b'_'))
+            path = tuple(rec['path'].split('_'))
             trts = set(sg.trt for sg in srcgroups)
             num_gsim_paths = self.gsim_lt.reduce(trts).get_num_paths()
             sm = SourceModel(rec['name'], rec['weight'], path, srcgroups,
@@ -812,7 +818,7 @@ SourceInfo.__iadd__ = source_info_iadd
 
 source_info_dt = numpy.dtype([
     ('src_group_id', numpy.uint32),  # 0
-    ('source_id', (bytes, valid.MAX_ID_LENGTH)),  # 1
+    ('source_id', (bytes, 100)),     # 1
     ('source_class', (bytes, 30)),   # 2
     ('weight', numpy.float32),       # 3
     ('split_num', numpy.uint32),     # 4
@@ -958,7 +964,7 @@ class SourceManager(object):
         :param dstore: the datastore
         """
         if self.infos:
-            values = self.infos.values()
+            values = list(self.infos.values())
             values.sort(
                 key=lambda info: info.filter_time + info.split_time,
                 reverse=True)

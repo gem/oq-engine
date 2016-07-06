@@ -1,4 +1,9 @@
   [Michele Simionato]
+  * Added a check on the version in case of export errors
+  * Extended `oq purge` to remove calculations from the database too
+  * Fixed `--make-html-report`: the view task_info was not registered
+  * Stored several strings as HDF5-variable-length strings
+  * Fixed an export bug for the hazard curves in .geojson format
   * Removed the array cost_types from the datastore
   * Taxonomies with chars not in the range a-z0-9 were incorrectly rejected
   * Improved the XML parsing utilities in speed, memory, portability and

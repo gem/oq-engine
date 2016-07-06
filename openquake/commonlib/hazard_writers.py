@@ -238,7 +238,7 @@ class HazardCurveGeoJSONWriter(BaseCurveWriter):
                 oqmetadata['IMLs'] = value
             if value is not None:
                 if key == 'imls':
-                    oqmetadata['IMLs'] = value
+                    oqmetadata['IMLs'] = list(value)
                 else:
                     oqmetadata[_ATTR_MAP.get(key)] = scientificformat(value)
 

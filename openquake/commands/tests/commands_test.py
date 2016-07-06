@@ -23,6 +23,7 @@ import shutil
 import tempfile
 import unittest
 
+from openquake.baselib.python3compat import encode
 from openquake.baselib.general import writetmp
 from openquake import commonlib
 from openquake.calculators.tests import check_platform
@@ -47,10 +48,10 @@ class Print(object):
         self.lst = []
 
     def __call__(self, *args):
-        self.lst.append(' '.join(map(bytes, args)))
+        self.lst.append(b' '.join(encode(str(a)) for a in args))
 
     def __str__(self):
-        return u'\n'.join(self.lst).decode('utf-8')
+        return b'\n'.join(self.lst).decode('utf-8')
 
     @classmethod
     def patch(cls):
