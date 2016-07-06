@@ -725,8 +725,8 @@ SourceInfo.__iadd__ = source_info_iadd
 
 source_info_dt = numpy.dtype([
     ('src_group_id', numpy.uint32),  # 0
-    ('source_id', hdf5.vstr),        # 1
-    ('source_class', hdf5.vstr),     # 2
+    ('source_id', (bytes, 100)),     # 1
+    ('source_class', (bytes, 30)),   # 2
     ('weight', numpy.float32),       # 3
     ('split_num', numpy.uint32),     # 4
     ('filter_time', numpy.float32),  # 5
