@@ -26,6 +26,7 @@ import logging
 from collections import namedtuple
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import raise_
 from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.calc import disagg
@@ -77,7 +78,7 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
                 # a dictionary rlz.id, poe, imt_str -> prob_no_exceed
                 for gsim in gsims:
                     gs = str(gsim)
-                    for imt_str, imls in imtls.iteritems():
+                    for imt_str, imls in imtls.items():
                         imt = from_string(imt_str)
                         imls = numpy.array(imls[::-1])
                         for rlz in rlzs_assoc[src_group_id, gs]:
@@ -221,7 +222,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         :param acc: dictionary accumulating the results
         :param result: dictionary with the result coming from a task
         """
-        for key, val in result.iteritems():
+        for key, val in result.items():
             acc[key] = 1. - (1. - acc.get(key, 0)) * (1. - val)
         return acc
 
@@ -327,7 +328,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
 
         # since an extremely small subset of the full disaggregation matrix
         # is saved this method can be run sequentially on the controller node
-        for key, probs in sorted(results.iteritems()):
+        for key, probs in sorted(results.items()):
             sid, rlz_id, poe, imt, iml, trt_names = key
             edges = self.bin_edges[sm_id[rlz_id], sid]
             self.save_disagg_result(
@@ -372,7 +373,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         attrs['imt'] = imt_str
         attrs['iml'] = iml
         attrs['poe'] = poe
-        attrs['trts'] = trt_names
+        attrs['trts'] = hdf5.array_of_vstr(trt_names)
         attrs['mag_bin_edges'] = mag
         attrs['dist_bin_edges'] = dist
         attrs['lon_bin_edges'] = lons

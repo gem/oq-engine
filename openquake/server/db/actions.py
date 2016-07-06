@@ -15,6 +15,7 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import print_function
 import os
 import operator
 from datetime import datetime
@@ -270,9 +271,9 @@ def del_calc(job_id, user):
     """
     try:
         job = models.get(models.OqJob, pk=job_id)
-    except exceptions.ObjectDoesNotExist:
-        raise RuntimeError('Unable to delete hazard calculation: '
-                           'ID=%s does not exist' % job_id)
+    except models.NotFound:
+        return ('Unable to delete calculation from db: '
+                'ID=%s does not exist' % job_id)
     if job.user_name == user:
         # we are allowed to delete this
 
