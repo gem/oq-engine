@@ -101,28 +101,6 @@ def gen_ruptures_for_site(site, sources, maximum_distance, monitor):
             source_rupture_sites, key=operator.attrgetter('source')):
         yield src, [row.rupture for row in rows]
 
-
-# ############## utilities for the scenario calculators ############### #
-
-def calc_gmfs_fast(oqparam, sitecol):
-    """
-    Build all the ground motion fields for the whole site collection in
-    a single step.
-    """
-    max_dist = oqparam.maximum_distance
-    correl_model = get_correl_model(oqparam)
-    seed = oqparam.random_seed
-    imts = get_imts(oqparam)
-    [gsim] = get_gsims(oqparam)
-    trunc_level = oqparam.truncation_level
-    n_gmfs = oqparam.number_of_ground_motion_fields
-    rupture = get_rupture(oqparam)
-    res = gmf.ground_motion_fields(
-        rupture, sitecol, imts, gsim,
-        trunc_level, n_gmfs, correl_model,
-        filters.rupture_site_distance_filter(max_dist), seed)
-    return {str(imt): matrix for imt, matrix in res.items()}
-
 # ######################### hazard maps ################################### #
 
 # cutoff value for the poe
