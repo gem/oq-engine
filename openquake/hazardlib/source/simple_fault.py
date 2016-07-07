@@ -236,7 +236,9 @@ class SimpleFaultSource(ParametricSeismicSource):
             num_rup_along_length = mesh_cols - rup_cols + 1
             num_rup_along_width = mesh_rows - rup_rows + 1
             counts += num_rup_along_length * num_rup_along_width
-        return counts
+            n_hypo = len(self.hypo_list) or 1
+            n_slip = len(self.slip_list) or 1
+        return counts * n_hypo * n_slip
 
     def _get_rupture_dimensions(self, fault_length, fault_width, mag):
         """
@@ -298,7 +300,6 @@ class SimpleFaultSource(ParametricSeismicSource):
         self.lower_seismogenic_depth = lower_seismogenic_depth
         self.dip = dip
         self.rupture_mesh_spacing = spacing
-
 
     def modify_adjust_dip(self, increment):
         """
