@@ -211,7 +211,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
     """
     def post_execute(self, result=None):
         super(DisaggregationCalculator, self).post_execute(result)
-        self.full_disaggregation(result)
+        self.full_disaggregation()
 
     def agg_result(self, acc, result):
         """
@@ -244,7 +244,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                 dic[rlz.ordinal, imt_str] = poes[imt_str]
         return dic
 
-    def full_disaggregation(self, curves_by_trt_gsim):
+    def full_disaggregation(self):
         """
         Run the disaggregation phase after hazard curve finalization.
         """
