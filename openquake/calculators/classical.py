@@ -40,6 +40,13 @@ from openquake.calculators import base
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
+def nonzero(val):
+    """
+    :returns: the sum of the composite array `val`
+    """
+    return sum(val[k].sum() for k in val.dtype.names)
+
+
 # this is needed for the disaggregation
 class BoundingBox(object):
     """
@@ -179,8 +186,8 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
     return dic
 
 
-@base.calculators.add('classical')
-class ClassicalCalculator(base.HazardCalculator):
+@base.calculators.add('psha')
+class PSHACalculator(base.HazardCalculator):
     """
     Classical PSHA calculator
     """
@@ -281,25 +288,45 @@ class ClassicalCalculator(base.HazardCalculator):
         :param curves_by_trt_id:
             a dictionary trt_id -> hazard curves
         """
-        nsites = len(self.sitecol)
-        imtls = self.oqparam.imtls
-        curves_by_trt_gsim = {}
-
         with self.monitor('saving probability maps', autoflush=True):
             for trt_id in curves_by_trt_id:
                 key = 'poes/%04d' % trt_id
                 self.datastore[key] = curves_by_trt_id[trt_id]
                 self.datastore.set_attrs(
                     key, trt=self.csm.info.get_trt(trt_id))
-                gsims = self.rlzs_assoc.gsims_by_trt_id[trt_id]
-                for i, gsim in enumerate(gsims):
-                    curves_by_trt_gsim[trt_id, gsim] = (
-                        curves_by_trt_id[trt_id].extract(i))
             self.datastore.set_nbytes('poes')
 
+
+@base.calculators.add('classical')
+class ClassicalCalculator(base.HazardCalculator):
+    """
+    Classical PSHA calculator
+    """
+    pre_calculator = 'psha'
+    core_task = classical
+
+    def execute(self):
+        """
+        Builds a dictionary curves_by_trt_gsim from the stored PoEs
+        """
+        curves_by_trt_gsim = {}
+        with self.monitor('read poes', autoflush=True):
+            for group_id in self.datastore['poes']:
+                trt_id = int(group_id)
+                poes = self.datastore['poes/' + group_id]
+                gsims = self.rlzs_assoc.gsims_by_trt_id[trt_id]
+                for i, gsim in enumerate(gsims):
+                    curves_by_trt_gsim[trt_id, gsim] = poes.extract(i)
+        return curves_by_trt_gsim
+
+    def post_execute(self, curves_by_trt_gsim):
+        """
+        Combine the curves and store them
+        """
+        nsites = len(self.sitecol)
+        imtls = self.oqparam.imtls
         with self.monitor('combine curves_by_rlz', autoflush=True):
             curves_by_rlz = self.rlzs_assoc.combine_curves(curves_by_trt_gsim)
-
         self.save_curves({rlz: array_of_curves(curves, nsites, imtls)
                           for rlz, curves in curves_by_rlz.items()})
 
@@ -382,10 +409,3 @@ class ClassicalCalculator(base.HazardCalculator):
             dset.attrs['uid'] = rlz.uid
         for k, v in kw.items():
             dset.attrs[k] = v
-
-
-def nonzero(val):
-    """
-    :returns: the sum of the composite array `val`
-    """
-    return sum(val[k].sum() for k in val.dtype.names)
