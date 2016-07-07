@@ -49,7 +49,7 @@ SM2_a3pt2b0pt8 0.250  `source_model_2.xml <source_model_2.xml>`_ complex(2,2)   
 Required parameters per tectonic region type
 --------------------------------------------
 ====== =========================================== ========= ========== =================
-trt_id gsims                                       distances siteparams ruptparams       
+grp_id gsims                                       distances siteparams ruptparams       
 ====== =========================================== ========= ========== =================
 0      BooreAtkinson2008() CampbellBozorgnia2008() rjb rrup  z2pt5 vs30 ztor mag rake dip
 1      Campbell2003() ToroEtAl2002()               rjb rrup             mag              
@@ -75,7 +75,7 @@ Realizations per (TRT, GSIM)
 Number of ruptures per tectonic region type
 -------------------------------------------
 ================== ====== ======================== =========== ============ ======
-source_model       trt_id trt                      num_sources eff_ruptures weight
+source_model       grp_id trt                      num_sources eff_ruptures weight
 ================== ====== ======================== =========== ============ ======
 source_model_1.xml 0      Active Shallow Crust     1           15           0.375 
 source_model_1.xml 1      Stable Continental Crust 1           15           0.375 

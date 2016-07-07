@@ -28,7 +28,7 @@ from openquake.qa_tests_data.event_based_risk import case_2
 
 class MockAssoc(object):
     csm_info = mock.Mock()
-    csm_info.get_trt_id.return_value = 0
+    csm_info.get_grp_id.return_value = 0
 
     def __iter__(self):
         return iter([])

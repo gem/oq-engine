@@ -53,7 +53,7 @@ SeiFaCrust               0.300  `models/src/ss_model.xml <models/src/ss_model.xm
 Required parameters per tectonic region type
 --------------------------------------------
 ====== ========================================================================== ================= ======================= ============================
-trt_id gsims                                                                      distances         siteparams              ruptparams                  
+grp_id gsims                                                                      distances         siteparams              ruptparams                  
 ====== ========================================================================== ================= ======================= ============================
 5      AkkarBommer2010() CauzziFaccioli2008() ChiouYoungs2008() ZhaoEtAl2006Asc() rhypo rx rjb rrup vs30measured z1pt0 vs30 ztor mag hypo_depth rake dip
 ====== ========================================================================== ================= ======================= ============================
@@ -72,7 +72,7 @@ Realizations per (TRT, GSIM)
 Number of ruptures per tectonic region type
 -------------------------------------------
 ======================= ====== ==================== =========== ============ ======
-source_model            trt_id trt                  num_sources eff_ruptures weight
+source_model            grp_id trt                  num_sources eff_ruptures weight
 ======================= ====== ==================== =========== ============ ======
 models/src/as_model.xml 5      Active Shallow Crust 7           30           977   
 ======================= ====== ==================== =========== ============ ======

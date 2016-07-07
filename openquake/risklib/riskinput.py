@@ -376,9 +376,9 @@ class CompositeRiskModel(collections.Mapping):
         Yield :class:`RiskInputFromRuptures` instances.
         """
         imt_taxonomies = self.get_imt_taxonomies()
-        by_trt_id = operator.attrgetter('trt_id')
+        by_grp_id = operator.attrgetter('grp_id')
         for ses_ruptures in split_in_blocks(
-                all_ruptures, hint or 1, key=by_trt_id,
+                all_ruptures, hint or 1, key=by_grp_id,
                 weight=operator.attrgetter('weight')):
             eids = []
             for sr in ses_ruptures:
@@ -567,7 +567,7 @@ class RiskInputFromRuptures(object):
         self.imt_taxonomies = imt_taxonomies
         self.sitecol = sitecol
         self.ses_ruptures = numpy.array(ses_ruptures)
-        self.trt_id = ses_ruptures[0].trt_id
+        self.grp_id = ses_ruptures[0].grp_id
         self.trunc_level = trunc_level
         self.correl_model = correl_model
         self.min_iml = min_iml
@@ -624,14 +624,14 @@ def create(GmfColl, eb_ruptures, sitecol, imts, rlzs_assoc,
     :param monitor: a monitor instance
     :returns: a GmfCollector instance
     """
-    trt_id = eb_ruptures[0].trt_id
-    gsims = rlzs_assoc.gsims_by_trt_id[trt_id]
-    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(trt_id)
+    grp_id = eb_ruptures[0].grp_id
+    gsims = rlzs_assoc.gsims_by_grp_id[grp_id]
+    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
     rlzs = rlzs_assoc.realizations
     ctx_mon = monitor('make contexts')
     gmf_mon = monitor('compute poes')
     sites = sitecol.complete
-    samples = rlzs_assoc.samples[trt_id]
+    samples = rlzs_assoc.samples[grp_id]
     gmfcoll = GmfColl(imts, rlzs)
     for ebr in eb_ruptures:
         rup = ebr.rupture
