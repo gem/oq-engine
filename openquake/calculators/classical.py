@@ -36,15 +36,40 @@ from openquake.risklib import scientific
 from openquake.commonlib import parallel, datastore, source, calc
 from openquake.calculators import base
 
-
+U16 = numpy.uint16
+F64 = numpy.float64
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-def nonzero(val):
+class BBdict(AccumDict):
     """
-    :returns: the sum of the composite array `val`
+    A serializable dictionary containing bounding box information
     """
-    return sum(val[k].sum() for k in val.dtype.names)
+    dt = numpy.dtype([('lt_model_id', U16), ('site_id', U16),
+                      ('min_dist', F64), ('max_dist', F64),
+                      ('east', F64), ('west', F64),
+                      ('south', F64), ('north', F64)])
+
+    def __toh5__(self):
+        rows = []
+        for lt_model_id, site_id in self:
+            bb = self[lt_model_id, site_id]
+            rows.append((lt_model_id, site_id, bb.min_dist, bb.max_dist,
+                         bb.east, bb.west, bb.south, bb.north))
+        return numpy.array(rows, self.dt), {}
+
+    def __fromh5__(self, array, attrs):
+        for row in array:
+            lt_model_id = row['lt_model_id']
+            site_id = row['site_id']
+            bb = BoundingBox(lt_model_id, site_id)
+            bb.min_dist = row['min_dist']
+            bb.max_dist = row['max_dist']
+            bb.east = row['east']
+            bb.west = row['west']
+            bb.north = row['north']
+            bb.south = row['south']
+            self[lt_model_id, site_id] = bb
 
 
 # this is needed for the disaggregation
@@ -60,8 +85,8 @@ class BoundingBox(object):
     def __init__(self, lt_model_id, site_id):
         self.lt_model_id = lt_model_id
         self.site_id = site_id
-        self.min_dist = self.max_dist = None
-        self.east = self.west = self.south = self.north = None
+        self.min_dist = self.max_dist = 0
+        self.east = self.west = self.south = self.north = 0
 
     def update(self, dists, lons, lats):
         """
@@ -75,11 +100,11 @@ class BoundingBox(object):
         :param lats:
             a sequence of latitudes
         """
-        if self.min_dist is not None:
+        if self.min_dist:
             dists = [self.min_dist, self.max_dist] + dists
-        if self.west is not None:
+        if self.west:
             lons = [self.west, self.east] + lons
-        if self.south is not None:
+        if self.south:
             lats = [self.south, self.north] + lats
         self.min_dist, self.max_dist = min(dists), max(dists)
         self.west, self.east, self.north, self.south = \
@@ -136,8 +161,7 @@ class BoundingBox(object):
         """
         True if the bounding box is non empty.
         """
-        return (self.min_dist is not None and self.west is not None and
-                self.south is not None)
+        return bool(self.min_dist and self.west and self.south)
     __nonzero__ = __bool__
 
 
@@ -229,11 +253,12 @@ class PSHACalculator(base.HazardCalculator):
         zd = ProbabilityMap()
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()  # trt_id -> eff_ruptures
-        zd.bb_dict = {
-            (smodel.ordinal, sid): BoundingBox(smodel.ordinal, sid)
-            for sid in self.sitecol.sids
-            for smodel in self.csm.source_models
-        } if self.oqparam.poes_disagg else {}
+        zd.bb_dict = BBdict()
+        if self.oqparam.poes_disagg:
+            for sid in self.sitecol.sids:
+                for smodel in self.csm.source_models:
+                    zd.bb_dict[smodel.ordinal, sid] = BoundingBox(
+                        smodel.ordinal, sid)
         return zd
 
     def execute(self):
@@ -288,6 +313,7 @@ class PSHACalculator(base.HazardCalculator):
         :param curves_by_trt_id:
             a dictionary trt_id -> hazard curves
         """
+        self.datastore['bb_dict'] = curves_by_trt_id.bb_dict
         with self.monitor('saving probability maps', autoflush=True):
             for trt_id in curves_by_trt_id:
                 key = 'poes/%04d' % trt_id
@@ -409,3 +435,10 @@ class ClassicalCalculator(PSHACalculator):
             dset.attrs['uid'] = rlz.uid
         for k, v in kw.items():
             dset.attrs[k] = v
+
+
+def nonzero(val):
+    """
+    :returns: the sum of the composite array `val`
+    """
+    return sum(val[k].sum() for k in val.dtype.names)
