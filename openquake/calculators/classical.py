@@ -36,8 +36,40 @@ from openquake.risklib import scientific
 from openquake.commonlib import parallel, datastore, source, calc
 from openquake.calculators import base
 
-
+U16 = numpy.uint16
+F32 = numpy.float32
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
+
+
+class BBdict(AccumDict):
+    """
+    A serializable dictionary containing bounding box information
+    """
+    dt = numpy.dtype([('lt_model_id', U16), ('site_id', U16),
+                      ('min_dist', F32), ('max_dist', F32),
+                      ('east', F32), ('west', F32),
+                      ('south', F32), ('north', F32)])
+
+    def __toh5__(self):
+        rows = []
+        for lt_model_id, site_id in self:
+            bb = self[lt_model_id, site_id]
+            rows.append((lt_model_id, site_id, bb.min_dist, bb.max_dist,
+                         bb.east, bb.west, bb.south, bb.north))
+        return numpy.array(rows, self.dt), {}
+
+    def __fromh5__(self, array, attrs):
+        for row in array:
+            lt_model_id = row['lt_model_id']
+            site_id = row['site_id']
+            bb = BoundingBox(lt_model_id, site_id)
+            bb.min_dist = row['min_dist']
+            bb.max_dist = row['max_dist']
+            bb.east = row['east']
+            bb.west = row['west']
+            bb.north = row['north']
+            bb.south = row['south']
+            self[lt_model_id, site_id] = bb
 
 
 # this is needed for the disaggregation
@@ -221,11 +253,12 @@ class ClassicalCalculator(base.HazardCalculator):
         zd = ProbabilityMap()
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()  # trt_id -> eff_ruptures
-        zd.bb_dict = {
-            (smodel.ordinal, sid): BoundingBox(smodel.ordinal, sid)
-            for sid in self.sitecol.sids
-            for smodel in self.csm.source_models
-        } if self.oqparam.poes_disagg else {}
+        zd.bb_dict = BBdict()
+        if self.oqparam.poes_disagg:
+            for sid in self.sitecol.sids:
+                for smodel in self.csm.source_models:
+                    zd.bb_dict[smodel.ordinal, sid] = BoundingBox(
+                        smodel.ordinal, sid)
         return zd
 
     def execute(self):
@@ -282,6 +315,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         nsites = len(self.sitecol)
         imtls = self.oqparam.imtls
+        self.datastore['bb_dict'] = curves_by_trt_id.bb_dict
         curves_by_trt_gsim = {}
 
         with self.monitor('saving probability maps', autoflush=True):
