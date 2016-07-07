@@ -45,7 +45,7 @@ b1        0.333  `source_model.xml <source_model.xml>`_ simple(3)       3/3
 Required parameters per tectonic region type
 --------------------------------------------
 ====== ====================================== ========= ========== ==========
-trt_id gsims                                  distances siteparams ruptparams
+grp_id gsims                                  distances siteparams ruptparams
 ====== ====================================== ========= ========== ==========
 0      AkkarBommer2010() CauzziFaccioli2008() rhypo rjb vs30       rake mag  
 ====== ====================================== ========= ========== ==========
@@ -62,7 +62,7 @@ Realizations per (TRT, GSIM)
 Number of ruptures per tectonic region type
 -------------------------------------------
 ================ ====== ==================== =========== ============ ======
-source_model     trt_id trt                  num_sources eff_ruptures weight
+source_model     grp_id trt                  num_sources eff_ruptures weight
 ================ ====== ==================== =========== ============ ======
 source_model.xml 0      Active Shallow Crust 1           6            75    
 ================ ====== ==================== =========== ============ ======
