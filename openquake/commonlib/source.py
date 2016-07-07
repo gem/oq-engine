@@ -584,6 +584,17 @@ class CompositionInfo(object):
                 if src_group.id == src_group_id:
                     return smodel
 
+    def get_sm_by_rlz(self, realizations):
+        """
+        :returns: a dictionary rlz -> source model name
+        """
+        dic = {}
+        for sm in self.source_models:
+            for rlz in realizations:
+                if rlz.sm_lt_path == sm.path:
+                    dic[rlz] = sm.name
+        return dic
+
     def get_trt(self, src_group_id):
         """
         Return the TRT string for the given src_group_id
