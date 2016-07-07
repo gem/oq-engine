@@ -53,8 +53,8 @@ class BoundingBox(object):
     def __init__(self, lt_model_id, site_id):
         self.lt_model_id = lt_model_id
         self.site_id = site_id
-        self.min_dist = self.max_dist = None
-        self.east = self.west = self.south = self.north = None
+        self.min_dist = self.max_dist = 0
+        self.east = self.west = self.south = self.north = 0
 
     def update(self, dists, lons, lats):
         """
@@ -68,11 +68,11 @@ class BoundingBox(object):
         :param lats:
             a sequence of latitudes
         """
-        if self.min_dist is not None:
+        if self.min_dist:
             dists = [self.min_dist, self.max_dist] + dists
-        if self.west is not None:
+        if self.west:
             lons = [self.west, self.east] + lons
-        if self.south is not None:
+        if self.south:
             lats = [self.south, self.north] + lats
         self.min_dist, self.max_dist = min(dists), max(dists)
         self.west, self.east, self.north, self.south = \
@@ -129,8 +129,7 @@ class BoundingBox(object):
         """
         True if the bounding box is non empty.
         """
-        return (self.min_dist is not None and self.west is not None and
-                self.south is not None)
+        return bool(self.min_dist and self.west and self.south)
     __nonzero__ = __bool__
 
 
