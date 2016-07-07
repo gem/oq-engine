@@ -298,7 +298,7 @@ class PSHACalculator(base.HazardCalculator):
 
 
 @base.calculators.add('classical')
-class ClassicalCalculator(base.HazardCalculator):
+class ClassicalCalculator(PSHACalculator):
     """
     Classical PSHA calculator
     """
