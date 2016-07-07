@@ -1,4 +1,7 @@
 python-oq-hazardlib (0.20.0-0~precise01) precise; urgency=low
+  [Yen-Shin Chen]
+  * Fixed the rupture count in simple fault while multiple hypocenter locations
+  or slip directions assigned.
 
   [Michele Simionato]
   * Fixed the serialization on HDF5 of dictionaries with keys containing slashes
