@@ -179,9 +179,9 @@ class SourceModelParser(object):
                 sources.append(src)
                 source_ids.add(src.source_id)
                 if no % 10000 == 0:  # log every 10,000 sources parsed
-                    logging.info('Parsed %d sources from %s', no, fname)
+                    logging.info('Instantiated %d sources from %s', no, fname)
             if no % 10000 != 0:
-                logging.info('Parsed %d sources from %s', no, fname)
+                logging.info('Instantiated %d sources from %s', no, fname)
             groups = groupby(
                 sources, operator.attrgetter('tectonic_region_type'))
             return sorted(sourceconverter.SourceGroup(trt, srcs)
