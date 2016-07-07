@@ -38,7 +38,7 @@ from openquake.commonlib import readinput, parallel, calc
 from openquake.commonlib.util import max_rel_diff_index, Rupture
 from openquake.risklib.riskinput import create
 from openquake.calculators import base
-from openquake.calculators.classical import ClassicalCalculator
+from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 
 # ######################## rupture calculator ############################ #
 
@@ -346,7 +346,7 @@ def build_eb_ruptures(
 
 
 @base.calculators.add('event_based_rupture')
-class EventBasedRuptureCalculator(ClassicalCalculator):
+class EventBasedRuptureCalculator(PSHACalculator):
     """
     Event based PSHA calculator generating the ruptures only
     """
