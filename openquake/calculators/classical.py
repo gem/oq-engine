@@ -37,7 +37,7 @@ from openquake.commonlib import parallel, datastore, source, calc
 from openquake.calculators import base
 
 U16 = numpy.uint16
-F32 = numpy.float32
+F64 = numpy.float64
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
@@ -46,9 +46,9 @@ class BBdict(AccumDict):
     A serializable dictionary containing bounding box information
     """
     dt = numpy.dtype([('lt_model_id', U16), ('site_id', U16),
-                      ('min_dist', F32), ('max_dist', F32),
-                      ('east', F32), ('west', F32),
-                      ('south', F32), ('north', F32)])
+                      ('min_dist', F64), ('max_dist', F64),
+                      ('east', F64), ('west', F64),
+                      ('south', F64), ('north', F64)])
 
     def __toh5__(self):
         rows = []
