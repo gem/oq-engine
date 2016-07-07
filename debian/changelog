@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Hazard curves/maps/uniform spectra can now be recomputed efficiently
+  * Added source model information in the file `realizations.csv`
   * `oq engine --run job.ini --exports csv` now also exports the realizations
   * Introduced the format NRML 0.5 for source models
   * Added a check on the version in case of export errors
