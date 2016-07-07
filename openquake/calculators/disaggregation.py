@@ -250,6 +250,9 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         """
         oq = self.oqparam
         tl = self.oqparam.truncation_level
+        bb_dict = self.datastore['bb_dict']
+        bbd = curves_by_trt_gsim.bb_dict
+        #import pdb; pdb.set_trace()
         sitecol = self.sitecol
         mag_bin_width = self.oqparam.mag_bin_width
         eps_edges = numpy.linspace(-tl, tl, self.oqparam.num_epsilon_bins + 1)
@@ -276,7 +279,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                     curves = curves_dict[sid]
                     if not curves:
                         continue  # skip zero-valued hazard curves
-                    bb = curves_by_trt_gsim.bb_dict[sm_id, sid]
+                    bb = bb_dict[sm_id, sid]
                     if not bb:
                         logging.info(
                             'location %s was too far, skipping disaggregation',
