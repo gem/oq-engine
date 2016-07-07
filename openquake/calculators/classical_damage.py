@@ -33,7 +33,7 @@ def classical_damage(riskinput, riskmodel, rlzs_assoc, monitor):
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param rlzs_assoc:
-        associations (trt_id, gsim) -> realizations
+        associations (grp_id, gsim) -> realizations
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     :returns:

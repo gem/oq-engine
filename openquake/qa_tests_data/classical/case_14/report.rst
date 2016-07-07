@@ -47,7 +47,7 @@ simple_fault 1.000  `simple_fault.xml <simple_fault.xml>`_ simple(2)       2/2
 Required parameters per tectonic region type
 --------------------------------------------
 ====== ============================================= =========== ============================= =======================
-trt_id gsims                                         distances   siteparams                    ruptparams             
+grp_id gsims                                         distances   siteparams                    ruptparams             
 ====== ============================================= =========== ============================= =======================
 0      AbrahamsonSilva2008() CampbellBozorgnia2008() rx rjb rrup vs30measured vs30 z2pt5 z1pt0 rake width ztor mag dip
 ====== ============================================= =========== ============================= =======================
@@ -64,7 +64,7 @@ Realizations per (TRT, GSIM)
 Number of ruptures per tectonic region type
 -------------------------------------------
 ================ ====== ==================== =========== ============ ======
-source_model     trt_id trt                  num_sources eff_ruptures weight
+source_model     grp_id trt                  num_sources eff_ruptures weight
 ================ ====== ==================== =========== ============ ======
 simple_fault.xml 0      Active Shallow Crust 1           447          447   
 ================ ====== ==================== =========== ============ ======

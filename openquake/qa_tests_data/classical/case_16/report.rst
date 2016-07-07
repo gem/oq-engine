@@ -55,7 +55,7 @@ b11_b24_b33_b40_b52_b62_b72_b81_b91_b102_b112 0.100  `source_model.xml <source_m
 Required parameters per tectonic region type
 --------------------------------------------
 ====== =================== ========= ========== ==========
-trt_id gsims               distances siteparams ruptparams
+grp_id gsims               distances siteparams ruptparams
 ====== =================== ========= ========== ==========
 0      BooreAtkinson2008() rjb       vs30       rake mag  
 1      BooreAtkinson2008() rjb       vs30       rake mag  
@@ -89,7 +89,7 @@ Realizations per (TRT, GSIM)
 Number of ruptures per tectonic region type
 -------------------------------------------
 ================ ====== ==================== =========== ============ ======
-source_model     trt_id trt                  num_sources eff_ruptures weight
+source_model     grp_id trt                  num_sources eff_ruptures weight
 ================ ====== ==================== =========== ============ ======
 source_model.xml 0      Active Shallow Crust 5           1925         48    
 source_model.xml 1      Active Shallow Crust 5           2025         50    

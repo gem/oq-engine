@@ -47,7 +47,7 @@ Alaska_asc_grid_NSHMP2007 1.000  `Alaska_asc_grid_NSHMP2007.xml <Alaska_asc_grid
 Required parameters per tectonic region type
 --------------------------------------------
 ====== ==================================================================================================== ========= ========== ============
-trt_id gsims                                                                                                distances siteparams ruptparams  
+grp_id gsims                                                                                                distances siteparams ruptparams  
 ====== ==================================================================================================== ========= ========== ============
 0      AbrahamsonSilva1997() BooreEtAl1997GeometricMean() CampbellBozorgnia2003NSHMP2007() SadighEtAl1997() rjb rrup  vs30       rake dip mag
 ====== ==================================================================================================== ========= ========== ============
@@ -66,7 +66,7 @@ Realizations per (TRT, GSIM)
 Number of ruptures per tectonic region type
 -------------------------------------------
 ============================= ====== ==================== =========== ============ ======
-source_model                  trt_id trt                  num_sources eff_ruptures weight
+source_model                  grp_id trt                  num_sources eff_ruptures weight
 ============================= ====== ==================== =========== ============ ======
 Alaska_asc_grid_NSHMP2007.xml 0      Active Shallow Crust 14          1264         31    
 ============================= ====== ==================== =========== ============ ======

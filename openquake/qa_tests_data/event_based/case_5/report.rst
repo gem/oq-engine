@@ -50,7 +50,7 @@ b3        0.300  `source_models/ss_model_final_250km_Buffer.xml <source_models/s
 Required parameters per tectonic region type
 --------------------------------------------
 ====== ================================================================================================ ================= ======================= =================
-trt_id gsims                                                                                            distances         siteparams              ruptparams       
+grp_id gsims                                                                                            distances         siteparams              ruptparams       
 ====== ================================================================================================ ================= ======================= =================
 1      FaccioliEtAl2010()                                                                               rrup              vs30                    rake mag         
 4      AkkarBommer2010() Campbell2003SHARE() CauzziFaccioli2008() ChiouYoungs2008() ToroEtAl2002SHARE() rhypo rjb rx rrup vs30measured z1pt0 vs30 ztor mag rake dip
@@ -72,7 +72,7 @@ Realizations per (TRT, GSIM)
 Number of ruptures per tectonic region type
 -------------------------------------------
 ==================================== ====== ==================== =========== ============ ======
-source_model                         trt_id trt                  num_sources eff_ruptures weight
+source_model                         grp_id trt                  num_sources eff_ruptures weight
 ==================================== ====== ==================== =========== ============ ======
 source_models/as_model.xml           1      Volcanic             2           2            2.100 
 source_models/fs_bg_source_model.xml 4      Stable Shallow Crust 39          3            7,896 
