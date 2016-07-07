@@ -46,7 +46,7 @@ b1        1.000  `simple_area_source_model.xml <simple_area_source_model.xml>`_ 
 Required parameters per tectonic region type
 --------------------------------------------
 ====== ==================================================================================== ========== ========== ==============
-trt_id gsims                                                                                distances  siteparams ruptparams    
+grp_id gsims                                                                                distances  siteparams ruptparams    
 ====== ==================================================================================== ========== ========== ==============
 4      AtkinsonBoore2003SSlab() LinLee2008SSlab() YoungsEtAl1997SSlab() ZhaoEtAl2006SSlab() rhypo rrup vs30       hypo_depth mag
 ====== ==================================================================================== ========== ========== ==============
@@ -65,7 +65,7 @@ Realizations per (TRT, GSIM)
 Number of ruptures per tectonic region type
 -------------------------------------------
 ============================ ====== ================= =========== ============ ======
-source_model                 trt_id trt               num_sources eff_ruptures weight
+source_model                 grp_id trt               num_sources eff_ruptures weight
 ============================ ====== ================= =========== ============ ======
 simple_area_source_model.xml 4      Subduction Inslab 1           7770         194   
 ============================ ====== ================= =========== ============ ======

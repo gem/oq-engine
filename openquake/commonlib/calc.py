@@ -272,7 +272,7 @@ def make_uhs(maps, imtls, poes):
 def get_gmfs(dstore):
     """
     :param dstore: a datastore
-    :returns: a dictionary trt_id, gsid -> gmfa
+    :returns: a dictionary grp_id, gsid -> gmfa
     """
     oq = dstore['oqparam']
     if 'gmfs' in oq.inputs:  # from file
@@ -303,8 +303,8 @@ def get_gmfs(dstore):
     imt_dt = dtype((imt, F32) for imt in oq.imtls)
     E = oq.number_of_ground_motion_fields
     # build a matrix N x E for each GSIM realization
-    gmfs = {(trt_id, gsim): numpy.zeros((N, E), imt_dt)
-            for trt_id, gsim in rlzs_assoc}
+    gmfs = {(grp_id, gsim): numpy.zeros((N, E), imt_dt)
+            for grp_id, gsim in rlzs_assoc}
     for i, rlz in enumerate(rlzs):
         data = group_array(dstore['gmf_data/%04d' % i], 'sid')
         for sid, array in data.items():

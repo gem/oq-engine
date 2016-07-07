@@ -148,7 +148,7 @@ def compute_disagg(sitecol, sources, src_group_id, rlzs_assoc,
     except KeyError:
         max_dist = oqparam.maximum_distance['default']
     trt_num = dict((trt, i) for i, trt in enumerate(trt_names))
-    gsims = rlzs_assoc.gsims_by_trt_id[src_group_id]
+    gsims = rlzs_assoc.gsims_by_grp_id[src_group_id]
     result = {}  # sid, rlz.id, poe, imt, iml, trt_names -> array
 
     collecting_mon = monitor('collecting bins')

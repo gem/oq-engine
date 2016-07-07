@@ -47,7 +47,7 @@ b1        1.000  `vancouver_area_source.xml <vancouver_area_source.xml>`_ simple
 Required parameters per tectonic region type
 --------------------------------------------
 ====== ========================================================================================================================================== ========= ========== ==========
-trt_id gsims                                                                                                                                      distances siteparams ruptparams
+grp_id gsims                                                                                                                                      distances siteparams ruptparams
 ====== ========================================================================================================================================== ========= ========== ==========
 0      GMPETable(gmpe_table='Wcrust_high_rhypo.hdf5') GMPETable(gmpe_table='Wcrust_low_rhypo.hdf5') GMPETable(gmpe_table='Wcrust_med_rhypo.hdf5') rhypo                mag       
 ====== ========================================================================================================================================== ========= ========== ==========
@@ -65,7 +65,7 @@ Realizations per (TRT, GSIM)
 Number of ruptures per tectonic region type
 -------------------------------------------
 ========================= ====== ==================== =========== ============ ======
-source_model              trt_id trt                  num_sources eff_ruptures weight
+source_model              grp_id trt                  num_sources eff_ruptures weight
 ========================= ====== ==================== =========== ============ ======
 vancouver_area_source.xml 0      Active Shallow Crust 1           2430         60    
 ========================= ====== ==================== =========== ============ ======
