@@ -342,9 +342,7 @@ def extract_mfd_params(src):
             data.append((param, None))
     if "incrementalMFD" in mfd_node.tag:
         # Extract Rates
-        assert "occurRates" in mfd_node.nodes[0].tag
-        rates = mfd_node.nodes[0].text
-
+        rates = ~mfd_node.occurRates
         n_r = len(rates)
         if n_r > MAX_RATES:
             raise ValueError("Number of rates in source %s too large "
@@ -698,7 +696,7 @@ def build_incremental_mfd_from_shp(record):
         key = "rate{:s}".format(str(i))
         if key in record:
             rates.append(record[key])
-    occur_rates = Node("occurRates", text=" ".join(rates))
+    occur_rates = Node("occurRates", text=[float(r) for r in rates])
     return Node("incrementalMFD",
                 {"binWidth": float(record["bin_width"]),
                  "minMag": float(record["min_mag"])},
