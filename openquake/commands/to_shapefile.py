@@ -20,7 +20,7 @@ import os.path
 from openquake.commonlib import sap, shapefileparser
 
 
-def toshapefile(output, input_nrml_file, validate):
+def to_shapefile(output, input_nrml_file, validate):
     """
     Convert a NRML source model file to ESRI Shapefile(s).
     For each type of source geometry defined in the NRML file (point, area,
@@ -36,7 +36,7 @@ def toshapefile(output, input_nrml_file, validate):
     shapefileparser.ShapefileParser().write(output, source_model)
 
 
-parser = sap.Parser(toshapefile)
+parser = sap.Parser(to_shapefile)
 parser.opt('output', 'output path (no extension)')
 parser.arg('input_nrml_file', 'path to source model NRML file')
 parser.flg('validate', 'Apply validation to input model (can be slow)')
