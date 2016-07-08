@@ -17,7 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Convert NRML source model file to ESRI shapefile (and vice versa).
+Support for converting NRML source models to ESRI shapefiles and vice versa
 """
 from __future__ import print_function
 import os
@@ -28,7 +28,7 @@ from collections import OrderedDict
 from openquake.baselib.general import groupby
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
-from openquake.commonlib import nrml, sap
+from openquake.commonlib import nrml
 from openquake.commonlib.node import Node, striptag
 from openquake.commonlib.sourceconverter import SourceConverter
 
@@ -635,9 +635,6 @@ def area_geometry_from_shp(shape, record):
 
 
 def point_geometry_from_shp(shape, record):
-    """
-    Retrieves a point geometry
-    """
     assert record["sourcetype"] == "pointSource"
     xy = shape.points[0][0], shape.points[0][1]
     pos_node = Node("pos", text=xy)
@@ -759,9 +756,6 @@ def build_hdd_from_shp(record):
 
 
 def build_point_source_from_shp(shape, record):
-    """
-    Builds the full point source from shapefile
-    """
     attribs = {"id": record["id"], "name": record["name"],
                "tectonicRegion": record["trt"]}
     nodes = [point_geometry_from_shp(shape, record)]
@@ -774,9 +768,6 @@ def build_point_source_from_shp(shape, record):
 
 
 def build_area_source_from_shp(shape, record):
-    """
-    Builds the full area source from shapefile
-    """
     attribs = {"id": record["id"], "name": record["name"],
                "tectonicRegion": record["trt"]}
     nodes = [area_geometry_from_shp(shape, record)]
@@ -815,9 +806,6 @@ class SourceModel(object):
     A collection of sources
     """
     def __init__(self, sources, name=None):
-        """
-
-        """
         self.sources = sources
         self.name = name
         self.has_area_source = False
@@ -914,6 +902,8 @@ class SourceModelParser(object):
     def __init__(self):
         self.source_file = None
         self.destination = None
+        if not hasattr(shapefile, '__version__'):
+            raise RuntimeError('pyshp >= 1.2.3 is required')
 
     def read(self, nrml_file, validate=False,
              simple_fault_spacing=1.0, complex_mesh_spacing=5.0,
@@ -1009,7 +999,6 @@ class ShapefileParser(SourceModelParser):
                                         complex_mesh_spacing,
                                         mfd_spacing,
                                         10.0)
-
         for iloc in range(0, reader.numRecords):
             # Build record dictionary
             record = record_to_dict(records[iloc], fields)
@@ -1108,39 +1097,3 @@ class ShapefileParser(SourceModelParser):
             w_simple3d.save('%s_simple3d' % root)
         if len(w_planar.shapes()) > 0:
             w_planar.save('%s_planar' % root)
-
-
-def build(output, input_nrml_file, input_shp_files, validate):
-    """
-    Convert NRML source model file to ESRI Shapefile(s) and vice versa.
-    For each type of source geometry defined in the NRML file (point, area,
-    simple fault, complex fault, planar) a separate shapefile is created. Each
-    shapefile is differentiated by a specific ending('_point', '_area',
-    '_simple', '_complex', '_planar').
-    Sources defined in different shapefile are saved into a single NRML file.
-    """
-    if input_nrml_file:
-        input_parser = SourceModelParser()
-        source_model = input_parser.read(input_nrml_file, validate)
-        print('Extracting %s_ files' % output)
-        ShapefileParser().write(output, source_model)
-    elif input_shp_files:
-        input_parser = ShapefileParser()
-        for iloc, filename in enumerate(input_shp_files):
-            if iloc == 0:
-                source_model = input_parser.read(filename, validate)
-            else:
-                next_sm = input_parser.read(filename, validate)
-                source_model.sources.extend(next_sm.sources)
-        print('Building %s.xml' % output)
-        SourceModelParser().write(output + '.xml', source_model)
-    else:
-        parser.parentparser.prog = 'oq build'
-        parser.parentparser.print_usage()
-
-parser = sap.Parser(build)
-parser.arg('output', 'output path (no extension)')
-parser.opt('input_nrml_file', 'path to source model NRML file', abbrev='-n')
-parser.opt('input_shp_files', 'path(s) to source model ESRI shapefile(s)',
-           nargs='+', abbrev='-s')
-parser.flg('validate', 'Apply validation to input model (can be slow)')
