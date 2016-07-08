@@ -125,7 +125,7 @@ class TidyTestCase(unittest.TestCase):
         self.assertEqual(open(fname).read(), '''\
 <?xml version="1.0" encoding="utf-8"?>
 <nrml
-xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns="http://openquake.org/xmlns/nrml/0.4"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <gmfCollection
@@ -300,3 +300,9 @@ class SourceModelShapefileConverterTestCase(unittest.TestCase):
         shpfiles = [os.path.join(self.OUTDIR, f)
                     for f in os.listdir(self.OUTDIR)]
         fromshapefile(os.path.join(self.OUTDIR, 'smc'), shpfiles, False)
+
+        # test invalid file
+        with self.assertRaises(Exception) as ctx:
+            toshapefile(os.path.join(self.OUTDIR, 'smc'), self.INPUT, True)
+        self.assertIn('Edges points are not in the right order',
+                      str(ctx.exception))
