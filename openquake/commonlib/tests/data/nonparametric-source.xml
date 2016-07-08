@@ -25,6 +25,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     </rake>
                     <hypocenter depth="26.101" lat="40.726" lon="143.0"/>
                     <planarSurface>
+                        
                         <topLeft depth="9.0" lat="41.6" lon="143.1"/>
                         <topRight depth="9.0" lat="40.2" lon="143.91"/>
                         <bottomLeft depth="43.202" lat="41.252" lon="142.07"/>
@@ -42,12 +43,14 @@ xmlns:gml="http://www.opengis.net/gml"
                     </rake>
                     <hypocenter depth="7.1423" lat="35.296" lon="139.31"/>
                     <planarSurface>
+                        
                         <topLeft depth="2.0" lat="35.363" lon="139.16"/>
                         <topRight depth="2.0" lat="35.394" lon="138.99"/>
                         <bottomLeft depth="14.728" lat="35.475" lon="139.19"/>
                         <bottomRight depth="14.728" lat="35.505" lon="139.02"/>
                     </planarSurface>
                     <planarSurface>
+                        
                         <topLeft depth="2.0" lat="35.169" lon="139.34"/>
                         <topRight depth="2.0" lat="35.358" lon="139.17"/>
                         <bottomLeft depth="12.285" lat="35.234" lon="139.45"/>
@@ -65,7 +68,9 @@ xmlns:gml="http://www.opengis.net/gml"
                     </rake>
                     <hypocenter depth="22.341" lat="43.624" lon="147.94"/>
                     <simpleFaultGeometry>
+                        
                         <gml:LineString>
+                            
                             <gml:posList>
                                 147.96 43.202 148.38 43.438 148.51 43.507 148.68 43.603 148.76 43.64
                             </gml:posList>
@@ -92,15 +97,20 @@ xmlns:gml="http://www.opengis.net/gml"
                     </rake>
                     <hypocenter depth="22.341" lat="43.624" lon="147.94"/>
                     <complexFaultGeometry>
+                        
                         <faultTopEdge>
+                            
                             <gml:LineString>
+                                
                                 <gml:posList>
                                     148.76 43.64 5.0 148.68 43.603 5.0 148.51 43.507 5.0 148.38 43.438 5.0 147.96 43.202 5.0
                                 </gml:posList>
                             </gml:LineString>
                         </faultTopEdge>
                         <faultBottomEdge>
+                            
                             <gml:LineString>
+                                
                                 <gml:posList>
                                     147.92 44.002 35.5 147.81 43.946 35.5 147.71 43.897 35.5 147.5 43.803 35.5 147.36 43.727 35.5
                                 </gml:posList>
