@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
+import os.path
 from openquake.commonlib import sap, shapefileparser
 
 
@@ -29,11 +30,13 @@ def toshapefile(output, input_nrml_file, validate):
     """
     input_parser = shapefileparser.SourceModelParser()
     source_model = input_parser.read(input_nrml_file, validate)
+    if not output:
+        output = os.path.splitext(input_nrml_file)[0]
     print('Extracting %s_ files' % output)
     shapefileparser.ShapefileParser().write(output, source_model)
 
 
 parser = sap.Parser(toshapefile)
-parser.arg('output', 'output path (no extension)')
+parser.opt('output', 'output path (no extension)')
 parser.arg('input_nrml_file', 'path to source model NRML file')
 parser.flg('validate', 'Apply validation to input model (can be slow)')
