@@ -662,7 +662,7 @@ class ValidatingXmlParser(object):
             self._ancestors[-1].append(self._root)
 
     def _char_data(self, data):
-        if data.strip():
+        if data:
             parent = self._ancestors[-1]
             if parent.text is None:
                 parent.text = data
