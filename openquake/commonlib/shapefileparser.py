@@ -917,6 +917,7 @@ class SourceModelParser(object):
                                         complex_mesh_spacing,
                                         mfd_spacing,
                                         10.0)
+            converter.fname = nrml_file
         src_nodes = nrml.read(nrml_file).sourceModel
         sources = []
         for no, src_node in enumerate(src_nodes, 1):

@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
+import os.path
 from openquake.commonlib import sap, shapefileparser
 
 
@@ -27,12 +28,13 @@ def fromshapefile(output, input_shp_files, validate):
     source_model = input_parser.read(input_shp_files[0], validate)
     for f in input_shp_files[1:]:
         source_model.sources.extend(input_parser.read(f, validate).sources)
-    print('Building %s.xml' % output)
+    if not output:
+        output = os.path.splitext(input_shp_files[0])[0]
     shapefileparser.SourceModelParser().write(output + '.xml', source_model)
 
 
 parser = sap.Parser(fromshapefile)
-parser.arg('output', 'output path (no extension)')
+parser.opt('output', 'output path (no extension)')
 parser.arg('input_shp_files', 'path(s) to source model ESRI shapefile(s)',
            nargs='+')
 parser.flg('validate', 'Apply validation to input model (can be slow)')
