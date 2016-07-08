@@ -23,10 +23,13 @@ from openquake.commonlib import sap, shapefileparser
 def to_shapefile(output, input_nrml_file, validate):
     """
     Convert a NRML source model file to ESRI Shapefile(s).
+
     For each type of source geometry defined in the NRML file (point, area,
     simple fault, complex fault, planar) a separate shapefile is created. Each
     shapefile is differentiated by a specific ending('_point', '_area',
     '_simple', '_complex', '_planar').
+
+    NB: nonparametric sources are not supported.
     """
     input_parser = shapefileparser.SourceModelParser()
     source_model = input_parser.read(input_nrml_file, validate)
