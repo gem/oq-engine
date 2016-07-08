@@ -286,23 +286,33 @@ class SourceModelShapefileConverterTestCase(unittest.TestCase):
     Simple conversion test for the Source Model to shapefile converter
     - more tests will follow
     """
-    INPUT = os.path.join(os.path.dirname(__file__),
-                         "data", "source_model_complete.xml")
-    OUTDIR = tempfile.mkdtemp()
-
-    def test_roundtrip(self):
+    def setUp(self):
         if not hasattr(shapefile, '__version__'):
             # for versions < 1.2.3
             raise unittest.SkipTest
+        self.OUTDIR = tempfile.mkdtemp()
 
-        # test the conversion to shapefile and back
-        toshapefile(os.path.join(self.OUTDIR, 'smc'), self.INPUT, False)
+    def test_roundtrip_invalid(self):
+        # test the conversion to shapefile and back for an invalid file
+        smc = os.path.join(os.path.dirname(__file__),
+                           "data", "source_model_complete.xml")
+        toshapefile(os.path.join(self.OUTDIR, 'smc'), smc, False)
         shpfiles = [os.path.join(self.OUTDIR, f)
                     for f in os.listdir(self.OUTDIR)]
         fromshapefile(os.path.join(self.OUTDIR, 'smc'), shpfiles, False)
 
         # test invalid file
         with self.assertRaises(Exception) as ctx:
-            toshapefile(os.path.join(self.OUTDIR, 'smc'), self.INPUT, True)
+            toshapefile(os.path.join(self.OUTDIR, 'smc'), smc, True)
         self.assertIn('Edges points are not in the right order',
                       str(ctx.exception))
+
+    def test_roundtrip_valid(self):
+        # test the conversion to shapefile and back for a valid file
+        ssm = os.path.join(os.path.dirname(__file__),
+                           "data", "sample_source_model.xml")
+        toshapefile(os.path.join(self.OUTDIR, 'smc'), ssm, True)
+        shpfiles = [os.path.join(self.OUTDIR, f)
+                    for f in os.listdir(self.OUTDIR)]
+        fromshapefile(os.path.join(self.OUTDIR, 'smc'), shpfiles, True)
+
