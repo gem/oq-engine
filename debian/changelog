@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a bug while deleting jobs from the db in Ubuntu 12.04
   * Added source model information in the file `realizations.csv`
   * `oq engine --run job.ini --exports csv` now also exports the realizations
   * Introduced the format NRML 0.5 for source models
