@@ -1,7 +1,7 @@
 """
 Module :mod:`openquake.hazardlib.scalerel.gsc_offshore_thrusts` implements :class:`GSCOffshoreThrusts`.
 """
-from openquake.hazardlib.scalerel.base import BaseMSR
+from openquake.hazardlib.scalerel.base import BaseMSRSigma
 from numpy import sin, radians
 
 
@@ -109,7 +109,7 @@ class GSCEISI(BaseMSRSigma):
         # thrust/reverse
         return 0.01
 
-class GSCOffshoreThrustsWIN(BaseMSR):
+class GSCOffshoreThrustsWIN(BaseMSRSigma):
     """
     Implements magnitude-area scaling relationship for the Winona segment of 
     the Jan de Fuca subduction zone that is approximately scaled to give a 
@@ -132,7 +132,7 @@ class GSCOffshoreThrustsWIN(BaseMSR):
         # thrust/reverse
         return 0.2
         
-class GSCOffshoreThrustsHGT(BaseMSR):
+class GSCOffshoreThrustsHGT(BaseMSRSigma):
     """
     Implements magnitude-area scaling relationship that is approximately scaled 
     to give a rupture length of 300 km for a MW 8 earthquake and fit the rupture 
