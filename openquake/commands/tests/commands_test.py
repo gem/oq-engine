@@ -33,7 +33,8 @@ from openquake.commands.show import show
 from openquake.commands.show_attrs import show_attrs
 from openquake.commands.export import export
 from openquake.commands.reduce import reduce
-from openquake.commands.build import build
+from openquake.commands.toshapefile import toshapefile
+from openquake.commands.fromshapefile import fromshapefile
 from openquake.commands import run
 from openquake.commands.upgrade_nrml import get_vulnerability_functions_04
 from openquake.qa_tests_data.classical import case_1
@@ -295,7 +296,7 @@ class SourceModelShapefileConverterTestCase(unittest.TestCase):
             raise unittest.SkipTest
 
         # test the conversion to shapefile and back
-        build(os.path.join(self.OUTDIR, 'smc'), self.INPUT, None, False)
+        toshapefile(os.path.join(self.OUTDIR, 'smc'), self.INPUT, False)
         shpfiles = [os.path.join(self.OUTDIR, f)
                     for f in os.listdir(self.OUTDIR)]
-        build(os.path.join(self.OUTDIR, 'smc'), None, shpfiles, False)
+        fromshapefile(os.path.join(self.OUTDIR, 'smc'), shpfiles, False)
