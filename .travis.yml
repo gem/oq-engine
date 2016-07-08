@@ -19,6 +19,7 @@ env:
 
 install:
   - ./openquake-env-setup-py3-precise64.run -- -d ~
+  - pip install pyshp==1.2.3
   - git clone --depth=1 https://github.com/gem/oq-hazardlib.git
 
 # We must set the PYTHONPATH to the root oq-engine (insted of oq-engine/openquake) because otherwise

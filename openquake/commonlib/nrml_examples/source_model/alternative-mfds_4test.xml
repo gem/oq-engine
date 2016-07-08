@@ -62,30 +62,40 @@ xmlns:gml="http://www.opengis.net/gml"
                     60.0
                 </rake>
                 <surface>
+                    
                     <complexFaultGeometry>
+                        
                         <faultTopEdge>
+                            
                             <gml:LineString>
+                                
                                 <gml:posList>
                                     -124.704 40.363 5.49326 -124.977 41.214 4.98856 -125.14 42.096 4.89734
                                 </gml:posList>
                             </gml:LineString>
                         </faultTopEdge>
                         <intermediateEdge>
+                            
                             <gml:LineString>
+                                
                                 <gml:posList>
                                     -124.704 40.363 5.59326 -124.977 41.214 5.08856 -125.14 42.096 4.99734
                                 </gml:posList>
                             </gml:LineString>
                         </intermediateEdge>
                         <intermediateEdge>
+                            
                             <gml:LineString>
+                                
                                 <gml:posList>
                                     -124.704 40.363 5.69326 -124.977 41.214 5.18856 -125.14 42.096 5.09734
                                 </gml:posList>
                             </gml:LineString>
                         </intermediateEdge>
                         <faultBottomEdge>
+                            
                             <gml:LineString>
+                                
                                 <gml:posList>
                                     -123.829 40.347 20.3849 -124.137 41.218 17.4139 -124.252 42.115 17.5274
                                 </gml:posList>
