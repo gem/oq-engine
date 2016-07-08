@@ -33,8 +33,8 @@ from openquake.commands.show import show
 from openquake.commands.show_attrs import show_attrs
 from openquake.commands.export import export
 from openquake.commands.reduce import reduce
-from openquake.commands.toshapefile import toshapefile
-from openquake.commands.fromshapefile import fromshapefile
+from openquake.commands.to_shapefile import to_shapefile
+from openquake.commands.from_shapefile import from_shapefile
 from openquake.commands import run
 from openquake.commands.upgrade_nrml import get_vulnerability_functions_04
 from openquake.qa_tests_data.classical import case_1
@@ -296,14 +296,14 @@ class SourceModelShapefileConverterTestCase(unittest.TestCase):
         # test the conversion to shapefile and back for an invalid file
         smc = os.path.join(os.path.dirname(__file__),
                            "data", "source_model_complete.xml")
-        toshapefile(os.path.join(self.OUTDIR, 'smc'), smc, False)
+        to_shapefile(os.path.join(self.OUTDIR, 'smc'), smc, False)
         shpfiles = [os.path.join(self.OUTDIR, f)
                     for f in os.listdir(self.OUTDIR)]
-        fromshapefile(os.path.join(self.OUTDIR, 'smc'), shpfiles, False)
+        from_shapefile(os.path.join(self.OUTDIR, 'smc'), shpfiles, False)
 
         # test invalid file
         with self.assertRaises(Exception) as ctx:
-            toshapefile(os.path.join(self.OUTDIR, 'smc'), smc, True)
+            to_shapefile(os.path.join(self.OUTDIR, 'smc'), smc, True)
         self.assertIn('Edges points are not in the right order',
                       str(ctx.exception))
 
@@ -311,8 +311,8 @@ class SourceModelShapefileConverterTestCase(unittest.TestCase):
         # test the conversion to shapefile and back for a valid file
         ssm = os.path.join(os.path.dirname(__file__),
                            "data", "sample_source_model.xml")
-        toshapefile(os.path.join(self.OUTDIR, 'smc'), ssm, True)
+        to_shapefile(os.path.join(self.OUTDIR, 'smc'), ssm, True)
         shpfiles = [os.path.join(self.OUTDIR, f)
                     for f in os.listdir(self.OUTDIR)]
-        fromshapefile(os.path.join(self.OUTDIR, 'smc'), shpfiles, True)
+        from_shapefile(os.path.join(self.OUTDIR, 'smc'), shpfiles, True)
 
