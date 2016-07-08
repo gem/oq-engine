@@ -152,7 +152,7 @@ def run_server(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
 
     # create and upgrade the db if needed
     curs = connection.cursor()  # bind the db
-    curs.execute('PRAGMA foreign_keys = ON')  # honor CASCADE
+    curs.execute('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
     actions.upgrade_db()
 
     # configure logging and start the server
