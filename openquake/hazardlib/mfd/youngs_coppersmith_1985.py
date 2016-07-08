@@ -20,6 +20,7 @@ Youngs and Coppersmith 1985 MFD.
 """
 import numpy
 
+from openquake.baselib.python3compat import range, round
 from openquake.hazardlib.mfd.base import BaseMFD
 
 # width of the boxcar function representing the characteristic

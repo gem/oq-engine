@@ -12,3 +12,4 @@ psutil==3.4.2
 scipy==0.17.0
 shapely==1.5.13
 docutils==0.12
+decorator==4.0.6
