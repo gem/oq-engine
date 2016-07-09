@@ -61,7 +61,7 @@ def do_build_reports(directory):
 
 # the documentation about how to use this feature can be found
 # in the file effective-realizations.rst
-@sap.Parser
+@sap.Script
 def info(calculators, gsims, views, exports, build_reports, report,
          input_file=''):
     """

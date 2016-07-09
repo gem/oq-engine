@@ -31,7 +31,7 @@ def rundjango(subcmd, hostport=None):
     subprocess.call(args)
 
 
-@sap.Parser
+@sap.Script
 def webui(cmd, hostport='127.0.0.1:8800'):
     """
     start the webui server in foreground or perform other operation on the

@@ -20,7 +20,7 @@ from __future__ import print_function
 from openquake.commonlib import sap, nrml, writers
 
 
-@sap.Parser
+@sap.Script
 def tidy(fnames):
     """
     Reformat a NRML file in a canonical form. That also means reducing the
