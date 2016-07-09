@@ -49,6 +49,7 @@ def get_hcurves_and_means(dstore):
     return curves_by_rlz, mean_curves
 
 
+@sap.Parser
 def show(what, calc_id=-1):
     """
     Show the content of a datastore (by default the last one).
@@ -99,6 +100,5 @@ def show(what, calc_id=-1):
 
     ds.close()
 
-parser = sap.Parser(show)
-parser.arg('what', 'key or view of the datastore')
-parser.arg('calc_id', 'calculation ID', type=int)
+show.arg('what', 'key or view of the datastore')
+show.arg('calc_id', 'calculation ID', type=int)

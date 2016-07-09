@@ -52,6 +52,7 @@ def make_figure(indices, imtls, spec_curves, curves=(), label=''):
     return plt
 
 
+@sap.Parser
 def plot(calc_id, other_id=None, sites='0'):
     """
     Hazard curves plotter.
@@ -79,8 +80,6 @@ def plot(calc_id, other_id=None, sites='0'):
         plt = make_figure(valid, oq.imtls, mean1, {'mean': mean2}, 'reference')
     plt.show()
 
-
-parser = sap.Parser(plot)
-parser.arg('calc_id', 'a computation id', type=int)
-parser.arg('other_id', 'optional id of another computation', type=int)
-parser.opt('sites', 'comma-separated string with the site indices')
+plot.arg('calc_id', 'a computation id', type=int)
+plot.arg('other_id', 'optional id of another computation', type=int)
+plot.opt('sites', 'comma-separated string with the site indices')

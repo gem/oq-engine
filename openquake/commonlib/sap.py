@@ -88,6 +88,8 @@ class Parser(object):
     composed together, by dispatching on a given name (if not given,
     the function name is used).
     """
+    registry = {}  # dotname -> parser
+
     def __init__(self, func, name=None, parentparser=None, help=True):
         self.func = func
         self.name = name or func.__name__
@@ -104,6 +106,10 @@ class Parser(object):
         self._group = self.parentparser
         self._argno = 0  # used in the NameError check in the _add method
         self.checked = False  # used in the check_arguments method
+        self.registry['%s.%s' % (func.__module__, func.__name__)] = self
+
+    def __call__(self, *args):
+        return self.func(*args)
 
     def group(self, descr):
         """Added a new group of arguments with the given description"""
@@ -202,7 +208,7 @@ def compose(parsers, name='main', description=None, prog=None,
     parentparser.add_argument(
         '--version', '-v', action='version', version=version)
     subparsers = parentparser.add_subparsers(
-        help='available subcommands; use %s help <cmd>' % prog,
+        help='available subcommands; use %s help <subcmd>' % prog,
         prog=prog)
 
     def gethelp(cmd=None):
