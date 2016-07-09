@@ -20,6 +20,7 @@ from __future__ import print_function
 from openquake.commonlib import sap, nrml, writers
 
 
+@sap.Parser
 def tidy(fnames):
     """
     Reformat a NRML file in a canonical form. That also means reducing the
@@ -39,5 +40,4 @@ def tidy(fnames):
             nrml.write(node.nodes, f, writers.FIVEDIGITS, xmlns=node['xmlns'])
         print('Reformatted %s, original left in %s.bak' % (fname, fname))
 
-parser = sap.Parser(tidy)
-parser.arg('fnames', 'NRML file name', nargs='+')
+tidy.arg('fnames', 'NRML file name', nargs='+')

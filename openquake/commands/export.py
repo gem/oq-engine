@@ -18,7 +18,6 @@
 
 from __future__ import print_function
 import os
-import ast
 import logging
 
 from openquake.baselib import general, performance
@@ -27,6 +26,7 @@ from openquake.commonlib.export import export as export_
 
 
 # the export is tested in the demos
+@sap.Parser
 def export(datastore_key, export_dir='.', calc_id=-1, exports='csv'):
     """
     Export an output from the datastore.
@@ -46,8 +46,7 @@ def export(datastore_key, export_dir='.', calc_id=-1, exports='csv'):
         print(mon)
 
 
-parser = sap.Parser(export)
-parser.arg('datastore_key', 'datastore key')
-parser.arg('export_dir', 'export directory')
-parser.arg('calc_id', 'number of the calculation', type=int)
-parser.opt('exports', 'export formats (comma separated)')
+export.arg('datastore_key', 'datastore key')
+export.arg('export_dir', 'export directory')
+export.arg('calc_id', 'number of the calculation', type=int)
+export.opt('exports', 'export formats (comma separated)')
