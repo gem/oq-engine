@@ -189,20 +189,20 @@ class Script(object):
         return self.parentparser.format_help()
 
 
-def compose(parsers, name='main', description=None, prog=None,
+def compose(scripts, name='main', description=None, prog=None,
             version=None):
     """
-    Collects together different arguments parsers and builds a single
+    Collects together different Scripts and builds a single
     Script dispatching to the subparsers depending on
     the first argument, i.e. the name of the subparser to invoke.
 
-    :param parsers: a list of Script instances
+    :param scripts: a list of Script instances
     :param name: the name of the composed parser
     :param description: description of the composed parser
     :param prog: name of the script printed in the usage message
     :param version: version of the script printed with --version
     """
-    assert len(parsers) >= 1, parsers
+    assert len(scripts) >= 1, scripts
     parentparser = argparse.ArgumentParser(
         description=description, add_help=False)
     parentparser.add_argument(
@@ -220,14 +220,14 @@ def compose(parsers, name='main', description=None, prog=None,
             print('No help for unknown command %r' % cmd)
         else:
             print(subp.format_help())
-    help_parser = Script(gethelp, 'help', help=False)
+    help_script = Script(gethelp, 'help', help=False)
     progname = '%s ' % prog if prog else ''
-    help_parser.arg('cmd', progname + 'subcommand')
-    for p in parsers + [help_parser]:
-        subp = subparsers.add_parser(p.name, description=p.description)
-        for args, kw in p.all_arguments:
+    help_script.arg('cmd', progname + 'subcommand')
+    for s in scripts + [help_script]:
+        subp = subparsers.add_parser(s.name, description=s.description)
+        for args, kw in s.all_arguments:
             subp.add_argument(*args, **kw)
-        subp.set_defaults(_func=p.func)
+        subp.set_defaults(_func=s.func)
 
     def main(**kw):
         try:
