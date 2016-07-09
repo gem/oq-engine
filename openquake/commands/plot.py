@@ -52,7 +52,7 @@ def make_figure(indices, imtls, spec_curves, curves=(), label=''):
     return plt
 
 
-@sap.Parser
+@sap.Script
 def plot(calc_id, other_id=None, sites='0'):
     """
     Hazard curves plotter.

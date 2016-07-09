@@ -41,7 +41,7 @@ def random_filter(objects, reduction_factor, seed=42):
     return out
 
 
-@sap.Parser
+@sap.Script
 def reduce(fname, reduction_factor):
     """
     Produce a submodel from `fname` by sampling the nodes randomly.

@@ -37,7 +37,7 @@ def purge_one(calc_id, user):
         print('Removed %s' % hdf5path)
 
 
-@sap.Parser
+@sap.Script
 def purge(calc_id):
     """
     Remove the given calculation. If calc_id is 0, remove all calculations.

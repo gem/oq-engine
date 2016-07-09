@@ -26,7 +26,7 @@ from openquake.commonlib.export import export as export_
 
 
 # the export is tested in the demos
-@sap.Parser
+@sap.Script
 def export(datastore_key, export_dir='.', calc_id=-1, exports='csv'):
     """
     Export an output from the datastore.
