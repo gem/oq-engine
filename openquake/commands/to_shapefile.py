@@ -20,7 +20,7 @@ import os.path
 from openquake.commonlib import sap, shapefileparser
 
 
-@sap.Parser
+@sap.Script
 def to_shapefile(output, input_nrml_file, validate):
     """
     Convert a NRML source model file to ESRI Shapefile(s).

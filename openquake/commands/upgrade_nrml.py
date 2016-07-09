@@ -113,7 +113,7 @@ def upgrade_file(path):
 # NB: this works only for migrations from NRML version 0.4 to 0.5
 # we will implement a more general solution when we will need to pass
 # to version 0.6
-@sap.Parser
+@sap.Script
 def upgrade_nrml(directory, dry_run):
     """
     Upgrade all the NRML files contained in the given directory to the latest

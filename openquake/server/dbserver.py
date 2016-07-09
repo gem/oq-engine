@@ -159,7 +159,7 @@ def run_server(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
     DbServer(addr, config.DBS_AUTHKEY).loop()
 
-parser = sap.Parser(run_server)
+parser = sap.Script(run_server)
 parser.arg('dbpathport', 'dbpath:port')
 parser.arg('logfile', 'log file')
 parser.opt('loglevel', 'WARN or INFO')

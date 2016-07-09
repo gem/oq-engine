@@ -129,7 +129,7 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
     return calc
 
 
-@sap.Parser
+@sap.Script
 def run(job_ini, slowest, hc, param, concurrent_tasks=CT, exports='',
         loglevel='info', pdb=None):
     """

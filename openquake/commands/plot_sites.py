@@ -13,7 +13,7 @@ def make_tiles(sitecol, sites_per_tile, maximum_distance):
     return tiles
 
 
-@sap.Parser
+@sap.Script
 def plot_sites(calc_id):
     """
     Plot the hazard sites of a calculations with one ore more a bounding boxes
