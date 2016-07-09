@@ -27,6 +27,7 @@ def runserver():
     subprocess.Popen([sys.executable, '-m', 'openquake.server.dbserver'])
 
 
+@sap.Parser
 def dbserver(cmd):
     """
     start/stop/restart the database server, or return its status
@@ -56,6 +57,5 @@ def dbserver(cmd):
         runserver()
         print('started')
 
-parser = sap.Parser(dbserver)
-parser.arg('cmd', 'dbserver command',
-           choices='start stop status restart'.split())
+dbserver.arg('cmd', 'dbserver command',
+             choices='start stop status restart'.split())

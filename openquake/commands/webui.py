@@ -31,6 +31,7 @@ def rundjango(subcmd, hostport=None):
     subprocess.call(args)
 
 
+@sap.Parser
 def webui(cmd, hostport='127.0.0.1:8800'):
     """
     start the webui server in foreground or perform other operation on the
@@ -48,6 +49,5 @@ def webui(cmd, hostport='127.0.0.1:8800'):
     elif cmd == 'syncdb':
         rundjango('syncdb')
 
-parser = sap.Parser(webui)
-parser.arg('cmd', 'webui command', choices='start syncdb'.split())
-parser.arg('hostport', 'a string of the form <hostname:port>')
+webui.arg('cmd', 'webui command', choices='start syncdb'.split())
+webui.arg('hostport', 'a string of the form <hostname:port>')

@@ -37,6 +37,7 @@ def purge_one(calc_id, user):
         print('Removed %s' % hdf5path)
 
 
+@sap.Parser
 def purge(calc_id):
     """
     Remove the given calculation. If calc_id is 0, remove all calculations.
@@ -53,6 +54,4 @@ def purge(calc_id):
             calc_id = datastore.get_calc_ids()[calc_id]
         purge_one(calc_id, user)
 
-
-parser = sap.Parser(purge)
-parser.arg('calc_id', 'calculation ID', type=int)
+purge.arg('calc_id', 'calculation ID', type=int)
