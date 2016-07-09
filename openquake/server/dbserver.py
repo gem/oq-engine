@@ -132,6 +132,7 @@ def get_status(address=None):
     return 'not-running' if err else 'running'
 
 
+@sap.Script
 def run_server(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
     """
     Run the DbServer on the given database file and port. If not given,
@@ -159,10 +160,9 @@ def run_server(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
     DbServer(addr, config.DBS_AUTHKEY).loop()
 
-parser = sap.Script(run_server)
-parser.arg('dbpathport', 'dbpath:port')
-parser.arg('logfile', 'log file')
-parser.opt('loglevel', 'WARN or INFO')
+run_server.arg('dbpathport', 'dbpath:port')
+run_server.arg('logfile', 'log file')
+run_server.opt('loglevel', 'WARN or INFO')
 
 if __name__ == '__main__':
-    parser.callfunc()
+    run_server.callfunc()
