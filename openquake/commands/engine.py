@@ -85,7 +85,7 @@ def delete_calculation(job_id, confirmed=False):
             print(err)
 
 
-@sap.Parser
+@sap.Script
 def engine(log_file, no_distribute, yes, config_file, make_html_report,
            upgrade_db, version_db, what_if_I_upgrade,
            run_hazard, run_risk, run,

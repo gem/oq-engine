@@ -20,7 +20,7 @@ import os.path
 from openquake.commonlib import sap, shapefileparser
 
 
-@sap.Parser
+@sap.Script
 def from_shapefile(output, input_shp_files, validate):
     """
     Convert multiple ESRI Shapefile(s) into a single NRML source model file.

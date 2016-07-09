@@ -17,7 +17,7 @@ def print_slowest(xunit_fname, numtests=20):
         print row[1], row[0]
 
 
-parser = sap.Parser(print_slowest)
+parser = sap.Script(print_slowest)
 parser.arg('xunit_fname', 'the file nosetests.xml')
 parser.arg('numtests', 'maximum number of times to print', type=int)
 

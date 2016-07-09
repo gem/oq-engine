@@ -21,7 +21,7 @@ from openquake.commonlib import sap, datastore
 import h5py
 
 
-@sap.Parser
+@sap.Script
 def show_attrs(key, calc_id=-1):
     """
     Show the attributes of a HDF5 dataset in the datastore.
