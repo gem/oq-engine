@@ -39,15 +39,11 @@ RISK_HAZARD_MAP = dict(
     classical_damage=['classical', 'classical_damage'],
     event_based_risk=['event_based', 'event_based_risk'])
 
-INPUT_TYPES = set(dict(models.INPUT_TYPE_CHOICES))
-UNABLE_TO_DEL_HC_FMT = 'Unable to delete hazard calculation: %s'
-UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
-
-
 JOB_TYPE = '''CASE
 WHEN calculation_mode LIKE '%risk'
-OR calculation_mode LIKE '%%bcr'
-OR calculation_mode LIKE '%%damage' THEN 'risk'
+OR calculation_mode LIKE '%bcr'
+OR calculation_mode LIKE '%damage'
+THEN 'risk'
 ELSE 'hazard'
 END AS job_type
 '''
