@@ -32,6 +32,7 @@ from openquake.commonlib import sap
 from openquake.commonlib.parallel import safely_call
 from openquake.engine import config
 from openquake.server.db import actions
+from openquake.server import dbapi
 from openquake.server.settings import DATABASE
 from django.db import connection
 import django
@@ -63,7 +64,7 @@ def run_command(cmd, args, conn):
         conn.close()
 
 
-def run_commands():
+def run_commands(db):
     """
     Execute the received commands in a queue.
     """
@@ -73,17 +74,17 @@ def run_commands():
             conn.send((None, None))
             conn.close()
             break
-        run_command(cmd, args, conn)
+        run_command(cmd, (db,) + args, conn)
 
 
 class DbServer(object):
     """
     A server collecting the received commands into a queue
     """
-    def __init__(self, address, authkey):
+    def __init__(self, db, address, authkey):
         self.address = address
         self.authkey = authkey
-        self.thread = Thread(target=run_commands)
+        self.thread = Thread(target=run_commands, args=(db,))
 
     def loop(self):
         listener = Listener(self.address, backlog=5, authkey=self.authkey)
@@ -151,13 +152,13 @@ def run_server(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
         os.makedirs(dirname)
 
     # create and upgrade the db if needed
-    curs = connection.cursor()  # bind the db
-    curs.execute('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
-    actions.upgrade_db()
+    db = dbapi.Db(connection)
+    db.run('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
+    actions.upgrade_db(db)
 
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
-    DbServer(addr, config.DBS_AUTHKEY).loop()
+    DbServer(db, addr, config.DBS_AUTHKEY).loop()
 
 parser = sap.Parser(run_server)
 parser.arg('dbpathport', 'dbpath:port')
