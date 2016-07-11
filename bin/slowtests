@@ -2,7 +2,7 @@
 from openquake.commonlib import sap
 from openquake.commonlib.node import node_from_xml
 
-
+@sap.Script
 def print_slowest(xunit_fname, numtests=20):
     """
     Print the names and times of the slowest tests
@@ -14,12 +14,10 @@ def print_slowest(xunit_fname, numtests=20):
         data.append((testtime, testname))
     data.sort(reverse=True)
     for row in data[:numtests]:
-        print row[1], row[0]
+        print(row[1], row[0])
 
-
-parser = sap.Parser(print_slowest)
-parser.arg('xunit_fname', 'the file nosetests.xml')
-parser.arg('numtests', 'maximum number of times to print', type=int)
+print_slowest.arg('xunit_fname', 'the file nosetests.xml')
+print_slowest.arg('numtests', 'maximum number of times to print', type=int)
 
 if __name__ == '__main__':
-    parser.callfunc()
+    print_slowest.callfunc()
