@@ -315,4 +315,3 @@ class SourceModelShapefileConverterTestCase(unittest.TestCase):
         shpfiles = [os.path.join(self.OUTDIR, f)
                     for f in os.listdir(self.OUTDIR)]
         from_shapefile(os.path.join(self.OUTDIR, 'smc'), shpfiles, True)
-
