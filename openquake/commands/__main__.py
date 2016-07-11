@@ -36,8 +36,10 @@ def oq():
     modnames = ['openquake.commands.%s' % mod[:-3]
                 for mod in os.listdir(commands.__path__[0])
                 if mod.endswith('.py') and not mod.startswith('_')]
-    parsers = [importlib.import_module(modname).parser for modname in modnames]
-    parser = sap.compose(parsers, prog='oq', version=__version__)
+    for modname in modnames:
+        importlib.import_module(modname)
+    parser = sap.compose(sap.Script.registry.values(),
+                         prog='oq', version=__version__)
     parser.callfunc()
 
 if __name__ == '__main__':

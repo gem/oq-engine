@@ -1,5 +1,10 @@
   [Michele Simionato]
   * Hazard curves/maps/uniform spectra can now be recomputed on the fly
+  * Restored the early check on missing taxonomies
+  * Raise an early error if an user forget the `rupture_mesh_spacing` parameter
+  * Fixed a bug while deleting jobs from the db in Ubuntu 12.04
+  * Ported the shapefile converter from the nrml_converters
+  * Added source model information in the file `realizations.csv`
   * `oq engine --run job.ini --exports csv` now also exports the realizations
   * Introduced the format NRML 0.5 for source models
   * Added a check on the version in case of export errors
