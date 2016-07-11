@@ -28,8 +28,6 @@ from contextlib import contextmanager
 from multiprocessing.connection import Client
 from openquake.engine import config
 
-DEBUG = False  # turn this on to debug database actions
-
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
           'warn': logging.WARNING,
@@ -41,35 +39,33 @@ LOG_FORMAT = ('[%(asctime)s job #%(job_id)s %(hostname)s '
 
 LOG = logging.getLogger()
 
-if DEBUG:
-    def dbcmd(action, *args):
-        """
-        Run the database action in process
-        """
+
+def dbcmd(action, *args):
+    """
+    A dispatcher to the database server.
+
+    :param action: database action to perform
+    :param args: arguments
+    """
+    if not dbcmd.DBSERVER:  # bypass the DbServer and run the action directly
         from openquake.server.db import actions
         from openquake.server.dbapi import Db
         from django.db import connection
         return getattr(actions, action)(Db(connection), *args)
-else:
-    def dbcmd(action, *args):
-        """
-        A dispatcher to the database server.
+    try:
+        client = Client(config.DBS_ADDRESS, authkey=config.DBS_AUTHKEY)
+    except:
+        raise RuntimeError('Cannot connect on %s:%s' % config.DBS_ADDRESS)
+    try:
+        client.send((action,) + args)
+        res, etype = client.recv()
+    finally:
+        client.close()
+    if etype:
+        raise etype(res)
+    return res
 
-        :param action: database action to perform
-        :param args: arguments
-        """
-        try:
-            client = Client(config.DBS_ADDRESS, authkey=config.DBS_AUTHKEY)
-        except:
-            raise RuntimeError('Cannot connect on %s:%s' % config.DBS_ADDRESS)
-        try:
-            client.send((action,) + args)
-            res, etype = client.recv()
-        finally:
-            client.close()
-        if etype:
-            raise etype(res)
-        return res
+dbcmd.DBSERVER = True  # turn this off to debug database actions
 
 
 def touch_log_file(log_file):
