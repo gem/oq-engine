@@ -151,17 +151,14 @@ def list_calculations(db, job_type, user_name):
                '        description')
         for job in jobs:
             descr = job.description
-            latest_job = job
-            if latest_job.is_running:
+            if job.is_running:
                 status = 'pending'
             else:
-                if latest_job.status == 'complete':
+                if job.status == 'complete':
                     status = 'successful'
                 else:
                     status = 'failed'
-            start_time = latest_job.start_time.strftime(
-                '%Y-%m-%d %H:%M:%S %Z'
-            )
+            start_time = job.start_time.strftime('%Y-%m-%d %H:%M:%S %Z')
             yield ('%6d | %10s | %s| %s' % (
                 job.id, status, start_time, descr)).encode('utf-8')
 
@@ -389,7 +386,6 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     if 'relevant' in request_get_dict:
         relevant = request_get_dict.get('relevant')
         filterdict['relevant'] = valid.boolean(relevant)
-
     jobs = db('SELECT *, %s FROM job WHERE %%A ORDER BY id DESC' % JOB_TYPE,
               filterdict)
     return [(job.id, job.user_name, job.status, job.job_type,
@@ -457,7 +453,6 @@ def get_results(db, job_id):
     """
     :returns: (datadir, datastore_keys)
     """
-    import pdb; pdb.set_trace()
     ds_calc_dir = db('SELECT ds_calc_dir FROM job WHERE id=%s', job_id,
                      scalar=True)
     datadir = os.path.dirname(ds_calc_dir)
