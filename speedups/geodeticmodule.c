@@ -211,9 +211,9 @@ static PyMethodDef GeodeticSpeedupsMethods[] = {
 static struct PyModuleDef geodetic_speedups =
 {
     PyModuleDef_HEAD_INIT,
-    "_geodetic_speedups", /* name of module */
-    "",                  /* module documentation, may be NULL */
-    -1,                  /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
+    "_geodetic_speedups",         /* name of module */
+    geodetic_min_distance__doc__, /* module documentation */
+    -1,                           /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
     GeodeticSpeedupsMethods
 };
 
