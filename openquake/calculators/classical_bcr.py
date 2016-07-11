@@ -37,7 +37,7 @@ def classical_bcr(riskinput, riskmodel, rlzs_assoc, bcr_dt, monitor):
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param rlzs_assoc:
-        associations (trt_id, gsim) -> realizations
+        associations (grp_id, gsim) -> realizations
     :param bcr_dt:
         data type with fields annual_loss_orig, annual_loss_retro, bcr
     :param monitor:
