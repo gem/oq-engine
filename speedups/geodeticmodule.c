@@ -207,9 +207,31 @@ static PyMethodDef GeodeticSpeedupsMethods[] = {
 /*
  * Module initialization function
  */
+#if PY_MAJOR_VERSION >= 3
+static struct PyModuleDef geodetic_speedups =
+{
+    PyModuleDef_HEAD_INIT,
+    "_geodetic_speedups", /* name of module */
+    "",                  /* module documentation, may be NULL */
+    -1,                  /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
+    GeodeticSpeedupsMethods
+};
+
+PyMODINIT_FUNC
+PyInit__geodetic_speedups(void)
+#else
 PyMODINIT_FUNC
 init_geodetic_speedups(void)
+#endif
 {
+#if PY_MAJOR_VERSION >= 3
+    PyObject *module = PyModule_Create(&geodetic_speedups);
+#else
     (void) Py_InitModule("_geodetic_speedups", GeodeticSpeedupsMethods);
+#endif
     import_array();
+
+#if PY_MAJOR_VERSION >= 3
+    return module;
+#endif
 }
