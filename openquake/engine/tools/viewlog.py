@@ -29,7 +29,11 @@ except ImportError:
 from openquake.commonlib import sap
 
 
-def main(calc_id, host='localhost', port=8000):
+@sap.Script
+def viewlog(calc_id, host='localhost', port=8000):
+    """
+    Extract the log of the given calculation ID from the WebUI
+    """
     base_url = 'http://%s:%s/v1/calc/' % (host, port)
     start = 0
     psize = 10  # page size
@@ -45,8 +49,7 @@ def main(calc_id, host='localhost', port=8000):
         pass
 
 if __name__ == '__main__':
-    parser = sap.Parser(main)
-    parser.arg('calc_id', 'calculation ID', type=int)
-    parser.arg('host', 'hostname of the engine server')
-    parser.arg('port', 'port of the engine server')
-    parser.callfunc()
+    viewlog.arg('calc_id', 'calculation ID', type=int)
+    viewlog.arg('host', 'hostname of the engine server')
+    viewlog.arg('port', 'port of the engine server')
+    viewlog.callfunc()
