@@ -123,12 +123,12 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the tags of the corresponding seismic events.
     """
-    def __init__(self, rupture, indices, events, source_id, trt_id, serial):
+    def __init__(self, rupture, indices, events, source_id, grp_id, serial):
         self.rupture = rupture
         self.indices = indices
         self.events = events
         self.source_id = source_id
-        self.trt_id = trt_id
+        self.grp_id = grp_id
         self.serial = serial
         self.weight = len(indices) * len(events)  # changed in set_weight
 
@@ -140,7 +140,7 @@ class EBRupture(object):
         tags = []
         for (eid, ses, occ, sampleid) in self.events:
             tag = 'trt=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
-                self.trt_id, ses, self.source_id, self.serial, occ)
+                self.grp_id, ses, self.source_id, self.serial, occ)
             if sampleid > 0:
                 tag += '~sample=%d' % sampleid
             tags.append(encode(tag))
@@ -160,18 +160,18 @@ class EBRupture(object):
         """
         return len(self.events)
 
-    def set_weight(self, num_rlzs_by_trt_id, num_assets_by_site_id):
+    def set_weight(self, num_rlzs_by_grp_id, num_assets_by_site_id):
         """
         Set the weight attribute of each rupture with the formula
         weight = multiplicity * affected_sites * realizations
 
-        :param num_rlzs_by_trt_id: dictionary, possibly empty
+        :param num_rlzs_by_grp_id: dictionary, possibly empty
         :param num_assets_by_site_id: dictionary, possibly empty
         """
         num_assets = sum(num_assets_by_site_id.get(sid, 1)
                          for sid in self.indices)
         self.weight = (len(self.events) * num_assets *
-                       num_rlzs_by_trt_id.get(self.trt_id, 1))
+                       num_rlzs_by_grp_id.get(self.grp_id, 1))
 
     def export(self, mesh):
         """
@@ -212,8 +212,8 @@ class EBRupture(object):
         return self.serial < other.serial
 
     def __repr__(self):
-        return '<%s #%d, trt_id=%d>' % (self.__class__.__name__,
-                                        self.serial, self.trt_id)
+        return '<%s #%d, grp_id=%d>' % (self.__class__.__name__,
+                                        self.serial, self.grp_id)
 
 
 @parallel.litetask
@@ -241,7 +241,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     oq = monitor.oqparam
     trt = sources[0].tectonic_region_type
     max_dist = oq.maximum_distance[trt]
-    cmaker = ContextMaker(rlzs_assoc.gsims_by_trt_id[src_group_id])
+    cmaker = ContextMaker(rlzs_assoc.gsims_by_grp_id[src_group_id])
     params = sorted(cmaker.REQUIRES_RUPTURE_PARAMETERS)
     rup_data_dt = numpy.dtype(
         [('rupserial', U32), ('multiplicity', U16),
@@ -365,47 +365,47 @@ class EventBasedRuptureCalculator(PSHACalculator):
             oq.minimum_intensity, oq.imtls)
         self.rup_data = {}
 
-    def count_eff_ruptures(self, ruptures_by_trt_id, src_group):
+    def count_eff_ruptures(self, ruptures_by_grp_id, src_group):
         """
         Returns the number of ruptures sampled in the given src_group.
 
-        :param ruptures_by_trt_id: a dictionary with key trt_id
+        :param ruptures_by_grp_id: a dictionary with key grp_id
         :param src_group: a SourceGroup instance
         """
         return sum(
-            len(ruptures) for trt_id, ruptures in ruptures_by_trt_id.items()
-            if src_group.id == trt_id)
+            len(ruptures) for grp_id, ruptures in ruptures_by_grp_id.items()
+            if src_group.id == grp_id)
 
     def zerodict(self):
         """
-        Initial accumulator, a dictionary (trt_id, gsim) -> curves
+        Initial accumulator, a dictionary (grp_id, gsim) -> curves
         """
         zd = AccumDict()
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()
         return zd
 
-    def agg_dicts(self, acc, ruptures_by_trt_id):
+    def agg_dicts(self, acc, ruptures_by_grp_id):
         """
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param ruptures_by_trt_id: a nested dictionary trt_id -> ProbabilityMap
+        :param ruptures_by_grp_id: a nested dictionary grp_id -> ProbabilityMap
         """
         with self.monitor('aggregate curves', autoflush=True):
-            if hasattr(ruptures_by_trt_id, 'calc_times'):
-                acc.calc_times.extend(ruptures_by_trt_id.calc_times)
-            if hasattr(ruptures_by_trt_id, 'eff_ruptures'):
-                acc.eff_ruptures += ruptures_by_trt_id.eff_ruptures
-            acc += ruptures_by_trt_id
-            if len(ruptures_by_trt_id):
-                trt = ruptures_by_trt_id.trt
+            if hasattr(ruptures_by_grp_id, 'calc_times'):
+                acc.calc_times.extend(ruptures_by_grp_id.calc_times)
+            if hasattr(ruptures_by_grp_id, 'eff_ruptures'):
+                acc.eff_ruptures += ruptures_by_grp_id.eff_ruptures
+            acc += ruptures_by_grp_id
+            if len(ruptures_by_grp_id):
+                trt = ruptures_by_grp_id.trt
                 try:
                     dset = self.rup_data[trt]
                 except KeyError:
                     dset = self.rup_data[trt] = self.datastore.create_dset(
-                        'rup_data/' + trt, ruptures_by_trt_id.rup_data.dtype)
-                dset.extend(ruptures_by_trt_id.rup_data)
+                        'rup_data/' + trt, ruptures_by_grp_id.rup_data.dtype)
+                dset.extend(ruptures_by_grp_id.rup_data)
         self.datastore.flush()
         return acc
 
@@ -416,8 +416,8 @@ class EventBasedRuptureCalculator(PSHACalculator):
         with self.monitor('saving ruptures', autoflush=True):
             # ordering ruptures
             sescollection = []
-            for trt_id in result:
-                for ebr in result[trt_id]:
+            for grp_id in result:
+                for ebr in result[grp_id]:
                     sescollection.append(ebr)
             sescollection.sort(key=operator.attrgetter('serial'))
             etags = numpy.concatenate([ebr.etags for ebr in sescollection])
@@ -505,7 +505,7 @@ class EventBasedCalculator(ClassicalCalculator):
         (if any). If there were pre-existing files, they will be erased.
         """
         super(EventBasedCalculator, self).pre_execute()
-        rlzs_by_tr_id = self.rlzs_assoc.get_rlzs_by_trt_id()
+        rlzs_by_tr_id = self.rlzs_assoc.get_rlzs_by_grp_id()
         num_rlzs = {t: len(rlzs) for t, rlzs in rlzs_by_tr_id.items()}
         self.sesruptures = []
         for serial in self.datastore['sescollection']:
@@ -564,7 +564,7 @@ class EventBasedCalculator(ClassicalCalculator):
             concurrent_tasks=self.oqparam.concurrent_tasks,
             agg=self.combine_curves_and_save_gmfs,
             acc=ProbabilityMap(),
-            key=operator.attrgetter('trt_id'),
+            key=operator.attrgetter('grp_id'),
             weight=operator.attrgetter('weight'))
         if oq.ground_motion_fields:
             self.datastore.set_nbytes('gmf_data')
@@ -596,7 +596,7 @@ class EventBasedCalculator(ClassicalCalculator):
             # TODO: perhaps it is possible to avoid reprocessing the source
             # model, however usually this is quite fast and do not dominate
             # the computation
-            self.cl.run(hazard_calculation_id=self.datastore.calc_id)
+            self.cl.run()
             for imt in self.mean_curves.dtype.fields:
                 rdiff, index = max_rel_diff_index(
                     self.cl.mean_curves[imt], self.mean_curves[imt])
