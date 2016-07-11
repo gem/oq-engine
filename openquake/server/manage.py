@@ -19,19 +19,11 @@
 from __future__ import print_function
 import os
 import sys
+import sqlite3
 from django.core.management import execute_from_command_line
+from openquake.server.db.upgrade_manager import upgrade_db
 from openquake.server import executor
 from openquake.engine import logs
-
-
-def use_tmp_db(tmpfile_port):
-    from openquake.engine import config
-    from openquake.server.settings import DATABASE
-    tmpfile, port_str = tmpfile_port.rsplit(':', 1)
-    DATABASE['NAME'] = tmpfile
-    DATABASE['PORT'] = port = int(port_str)
-    # make sure we use the server on the temporary db
-    config.DBS_ADDRESS = ('localhost', port)
 
 
 def parse_args(argv):
@@ -50,9 +42,13 @@ def parse_args(argv):
 if __name__ == "__main__":
     os.environ.setdefault(
         "DJANGO_SETTINGS_MODULE", "openquake.server.settings")
-    argv, tmpfile_port = parse_args(sys.argv)
-    if tmpfile_port:  # this is used in the functional tests
-        use_tmp_db(tmpfile_port)
+    argv, tmpfile = parse_args(sys.argv)
+    if tmpfile:  # this is used in the functional tests
+        from openquake.server.settings import DATABASE
+        DATABASE['NAME'] = tmpfile
+        logs.dbcmd.DBSERVER = False
+        conn = sqlite3.connect(tmpfile)
+        upgrade_db(conn)
     else:
         # check the database version
         logs.dbcmd('check_outdated')
