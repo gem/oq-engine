@@ -22,23 +22,26 @@ import mock
 import shutil
 import tempfile
 import unittest
+import shapefile
 
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import writetmp
 from openquake import commonlib
-from openquake.calculators.tests import check_platform
 from openquake.commands.info import info
 from openquake.commands.tidy import tidy
 from openquake.commands.show import show
 from openquake.commands.show_attrs import show_attrs
 from openquake.commands.export import export
 from openquake.commands.reduce import reduce
+from openquake.commands.to_shapefile import to_shapefile
+from openquake.commands.from_shapefile import from_shapefile
 from openquake.commands import run
 from openquake.commands.upgrade_nrml import get_vulnerability_functions_04
 from openquake.qa_tests_data.classical import case_1
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import case_5
+from openquake.calculators.tests import check_platform
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
 
@@ -122,20 +125,23 @@ class TidyTestCase(unittest.TestCase):
         self.assertEqual(open(fname).read(), '''\
 <?xml version="1.0" encoding="utf-8"?>
 <nrml
-xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns="http://openquake.org/xmlns/nrml/0.4"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <gmfCollection
     gsimTreePath=""
     sourceModelTreePath=""
     >
+        
         <gmfSet
         stochasticEventSetId="1"
         >
+            
             <gmf
             IMT="PGA"
             ruptureId="scenario-0"
             >
+                
                 <node gmv="1.26515E-02" lat="4.35812E+01" lon="1.21248E+01"/>
                 <node gmv="1.24056E-02" lat="4.35812E+01" lon="1.21248E+01"/>
             </gmf>
@@ -273,3 +279,39 @@ class UpgradeNRMLTestCase(unittest.TestCase):
     def test(self):
         get_vulnerability_functions_04(self.vf)
         # NB: look also at nrml.get_vulnerability_functions_04
+
+
+class SourceModelShapefileConverterTestCase(unittest.TestCase):
+    """
+    Simple conversion test for the Source Model to shapefile converter
+    - more tests will follow
+    """
+    def setUp(self):
+        if not hasattr(shapefile, '__version__'):
+            # for versions < 1.2.3
+            raise unittest.SkipTest
+        self.OUTDIR = tempfile.mkdtemp()
+
+    def test_roundtrip_invalid(self):
+        # test the conversion to shapefile and back for an invalid file
+        smc = os.path.join(os.path.dirname(__file__),
+                           "data", "source_model_complete.xml")
+        to_shapefile(os.path.join(self.OUTDIR, 'smc'), smc, False)
+        shpfiles = [os.path.join(self.OUTDIR, f)
+                    for f in os.listdir(self.OUTDIR)]
+        from_shapefile(os.path.join(self.OUTDIR, 'smc'), shpfiles, False)
+
+        # test invalid file
+        with self.assertRaises(Exception) as ctx:
+            to_shapefile(os.path.join(self.OUTDIR, 'smc'), smc, True)
+        self.assertIn('Edges points are not in the right order',
+                      str(ctx.exception))
+
+    def test_roundtrip_valid(self):
+        # test the conversion to shapefile and back for a valid file
+        ssm = os.path.join(os.path.dirname(__file__),
+                           "data", "sample_source_model.xml")
+        to_shapefile(os.path.join(self.OUTDIR, 'smc'), ssm, True)
+        shpfiles = [os.path.join(self.OUTDIR, f)
+                    for f in os.listdir(self.OUTDIR)]
+        from_shapefile(os.path.join(self.OUTDIR, 'smc'), shpfiles, True)
