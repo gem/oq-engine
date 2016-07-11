@@ -13,6 +13,7 @@ def make_tiles(sitecol, sites_per_tile, maximum_distance):
     return tiles
 
 
+@sap.Script
 def plot_sites(calc_id):
     """
     Plot the hazard sites of a calculations with one ore more a bounding boxes
@@ -48,6 +49,4 @@ def plot_sites(calc_id):
         p.scatter(tile.fix_lons(sitecol.lons), sitecol.lats, marker='+')
     p.show()
 
-
-parser = sap.Parser(plot_sites)
-parser.arg('calc_id', 'a computation id', type=int)
+plot_sites.arg('calc_id', 'a computation id', type=int)
