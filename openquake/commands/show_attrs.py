@@ -21,6 +21,7 @@ from openquake.commonlib import sap, datastore
 import h5py
 
 
+@sap.Script
 def show_attrs(key, calc_id=-1):
     """
     Show the attributes of a HDF5 dataset in the datastore.
@@ -38,6 +39,5 @@ def show_attrs(key, calc_id=-1):
     finally:
         ds.close()
 
-parser = sap.Parser(show_attrs)
-parser.arg('key', 'key of the datastore')
-parser.arg('calc_id', 'calculation ID', type=int)
+show_attrs.arg('key', 'key of the datastore')
+show_attrs.arg('calc_id', 'calculation ID', type=int)

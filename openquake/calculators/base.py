@@ -417,13 +417,6 @@ class HazardCalculator(BaseCalculator):
         self.oqparam.set_risk_imtls(rmdict)
         self.save_params()  # re-save oqparam
         self.riskmodel = rm = readinput.get_risk_model(self.oqparam, rmdict)
-        if 'taxonomies' in self.datastore:
-            # check that we are covering all the taxonomies in the exposure
-            missing = set(self.taxonomies) - set(rm.taxonomies)
-            if rm and missing:
-                raise RuntimeError('The exposure contains the taxonomies %s '
-                                   'which are not in the risk model' % missing)
-
         # save the risk models and loss_ratios in the datastore
         for taxonomy, rmodel in rm.items():
             self.datastore['composite_risk_model/' + taxonomy] = (
@@ -494,6 +487,13 @@ class HazardCalculator(BaseCalculator):
                     sorted(self.exposure.time_events)))
         elif hasattr(self, '_assetcol'):
             self.assets_by_site = self.assetcol.assets_by_site()
+
+        if self.oqparam.job_type == 'risk':
+            # check that we are covering all the taxonomies in the exposure
+            missing = set(self.taxonomies) - set(self.riskmodel.taxonomies)
+            if self.riskmodel and missing:
+                raise RuntimeError('The exposure contains the taxonomies %s '
+                                   'which are not in the risk model' % missing)
 
     def is_tiling(self):
         """
