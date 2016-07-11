@@ -88,7 +88,8 @@ class Script(object):
     composed together, by dispatching on a given name (if not given,
     the function name is used).
     """
-    registry = {}  # dotname -> parser
+    registry = {}  # dotname -> function
+    # for instance {'openquake.commands.run': run, ...}
 
     def __init__(self, func, name=None, parentparser=None, help=True):
         self.func = func
