@@ -744,25 +744,25 @@ class UCERFEventBasedRuptureCalculator(
                   self.smlt.branches[key].weight)
                   for key in self.smlt.branches]
         [[ucerf]] = self.src_groups
-        ruptures_by_trt_id = parallel.apply_reduce(
+        ruptures_by_grp_id = parallel.apply_reduce(
             compute_ruptures,
             (id_set, ucerf, self.sitecol, self.oqparam, self.monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks, agg=self.agg)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
-            functools.partial(self.count_eff_ruptures, ruptures_by_trt_id))
+            functools.partial(self.count_eff_ruptures, ruptures_by_grp_id))
         self.datastore['csm_info'] = self.csm.info
         self.datastore['source_info'] = numpy.array(
             self.infos, source.source_info_dt)
-        return ruptures_by_trt_id
+        return ruptures_by_grp_id
 
     def agg(self, acc, val):
         """
         Aggregated the ruptures and the calculation times
         """
-        for trt_id in val:
-            ltbrid, dt = val.calc_times[trt_id]
+        for grp_id in val:
+            ltbrid, dt = val.calc_times[grp_id]
             info = source.SourceInfo(
-                trt_id, ltbrid,
+                grp_id, ltbrid,
                 source_class=UCERFSESControl.__class__.__name__,
                 weight=1, sources=1, filter_time=0, split_time=0, calc_time=dt)
             self.infos.append(info)

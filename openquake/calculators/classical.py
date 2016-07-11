@@ -36,15 +36,40 @@ from openquake.risklib import scientific
 from openquake.commonlib import parallel, datastore, source, calc
 from openquake.calculators import base
 
-
+U16 = numpy.uint16
+F64 = numpy.float64
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-def nonzero(val):
+class BBdict(AccumDict):
     """
-    :returns: the sum of the composite array `val`
+    A serializable dictionary containing bounding box information
     """
-    return sum(val[k].sum() for k in val.dtype.names)
+    dt = numpy.dtype([('lt_model_id', U16), ('site_id', U16),
+                      ('min_dist', F64), ('max_dist', F64),
+                      ('east', F64), ('west', F64),
+                      ('south', F64), ('north', F64)])
+
+    def __toh5__(self):
+        rows = []
+        for lt_model_id, site_id in self:
+            bb = self[lt_model_id, site_id]
+            rows.append((lt_model_id, site_id, bb.min_dist, bb.max_dist,
+                         bb.east, bb.west, bb.south, bb.north))
+        return numpy.array(rows, self.dt), {}
+
+    def __fromh5__(self, array, attrs):
+        for row in array:
+            lt_model_id = row['lt_model_id']
+            site_id = row['site_id']
+            bb = BoundingBox(lt_model_id, site_id)
+            bb.min_dist = row['min_dist']
+            bb.max_dist = row['max_dist']
+            bb.east = row['east']
+            bb.west = row['west']
+            bb.north = row['north']
+            bb.south = row['south']
+            self[lt_model_id, site_id] = bb
 
 
 # this is needed for the disaggregation
@@ -60,8 +85,8 @@ class BoundingBox(object):
     def __init__(self, lt_model_id, site_id):
         self.lt_model_id = lt_model_id
         self.site_id = site_id
-        self.min_dist = self.max_dist = None
-        self.east = self.west = self.south = self.north = None
+        self.min_dist = self.max_dist = 0
+        self.east = self.west = self.south = self.north = 0
 
     def update(self, dists, lons, lats):
         """
@@ -75,11 +100,11 @@ class BoundingBox(object):
         :param lats:
             a sequence of latitudes
         """
-        if self.min_dist is not None:
+        if self.min_dist:
             dists = [self.min_dist, self.max_dist] + dists
-        if self.west is not None:
+        if self.west:
             lons = [self.west, self.east] + lons
-        if self.south is not None:
+        if self.south:
             lats = [self.south, self.north] + lats
         self.min_dist, self.max_dist = min(dists), max(dists)
         self.west, self.east, self.north, self.south = \
@@ -136,8 +161,7 @@ class BoundingBox(object):
         """
         True if the bounding box is non empty.
         """
-        return (self.min_dist is not None and self.west is not None and
-                self.south is not None)
+        return bool(self.min_dist and self.west and self.south)
     __nonzero__ = __bool__
 
 
@@ -163,7 +187,7 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
     # sanity check: the src_group must be the same for all sources
     for src in sources[1:]:
         assert src.src_group_id == src_group_id
-    gsims = rlzs_assoc.gsims_by_trt_id[src_group_id]
+    gsims = rlzs_assoc.gsims_by_grp_id[src_group_id]
     trt = sources[0].tectonic_region_type
     max_dist = monitor.oqparam.maximum_distance[trt]
 
@@ -199,7 +223,7 @@ class PSHACalculator(base.HazardCalculator):
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param val: a nested dictionary trt_id -> ProbabilityMap
+        :param val: a nested dictionary grp_id -> ProbabilityMap
         """
         with self.monitor('aggregate curves', autoflush=True):
             if hasattr(val, 'calc_times'):
@@ -217,7 +241,7 @@ class PSHACalculator(base.HazardCalculator):
         Returns the number of ruptures in the src_group (after filtering)
         or 0 if the src_group has been filtered away.
 
-        :param result_dict: a dictionary with keys (trt_id, gsim)
+        :param result_dict: a dictionary with keys (grp_id, gsim)
         :param src_group: a SourceGroup instance
         """
         return (result_dict.eff_ruptures.get(src_group.id, 0) / self.num_tiles)
@@ -228,12 +252,13 @@ class PSHACalculator(base.HazardCalculator):
         """
         zd = ProbabilityMap()
         zd.calc_times = []
-        zd.eff_ruptures = AccumDict()  # trt_id -> eff_ruptures
-        zd.bb_dict = {
-            (smodel.ordinal, sid): BoundingBox(smodel.ordinal, sid)
-            for sid in self.sitecol.sids
-            for smodel in self.csm.source_models
-        } if self.oqparam.poes_disagg else {}
+        zd.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
+        zd.bb_dict = BBdict()
+        if self.oqparam.poes_disagg:
+            for sid in self.sitecol.sids:
+                for smodel in self.csm.source_models:
+                    zd.bb_dict[smodel.ordinal, sid] = BoundingBox(
+                        smodel.ordinal, sid)
         return zd
 
     def execute(self):
@@ -244,16 +269,16 @@ class PSHACalculator(base.HazardCalculator):
         """
         monitor = self.monitor.new(self.core_task.__name__)
         monitor.oqparam = self.oqparam
-        curves_by_trt_id = self.taskman.reduce(self.agg_dicts, self.zerodict())
+        curves_by_grp_id = self.taskman.reduce(self.agg_dicts, self.zerodict())
         self.save_data_transfer(self.taskman)
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(curves_by_trt_id)
+            self.store_source_info(curves_by_grp_id)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
-            partial(self.count_eff_ruptures, curves_by_trt_id))
+            partial(self.count_eff_ruptures, curves_by_grp_id))
         self.datastore['csm_info'] = self.csm.info
-        return curves_by_trt_id
+        return curves_by_grp_id
 
-    def store_source_info(self, curves_by_trt_id):
+    def store_source_info(self, curves_by_grp_id):
         # store the information about received data
         received = self.taskman.received
         if received:
@@ -263,7 +288,7 @@ class PSHACalculator(base.HazardCalculator):
                 tname + '_tot_received': sum(received),
                 tname + '_num_tasks': len(received)})
         # then save the calculation times per each source
-        calc_times = getattr(curves_by_trt_id, 'calc_times', [])
+        calc_times = getattr(curves_by_grp_id, 'calc_times', [])
         if calc_times:
             sources = self.csm.get_sources()
             info_dict = {(rec['src_group_id'], rec['source_id']): rec
@@ -281,19 +306,20 @@ class PSHACalculator(base.HazardCalculator):
             self.source_info = array
         self.datastore.hdf5.flush()
 
-    def post_execute(self, curves_by_trt_id):
+    def post_execute(self, curves_by_grp_id):
         """
         Collect the hazard curves by realization and export them.
 
-        :param curves_by_trt_id:
-            a dictionary trt_id -> hazard curves
+        :param curves_by_grp_id:
+            a dictionary grp_id -> hazard curves
         """
+        self.datastore['bb_dict'] = curves_by_grp_id.bb_dict
         with self.monitor('saving probability maps', autoflush=True):
-            for trt_id in curves_by_trt_id:
-                key = 'poes/%04d' % trt_id
-                self.datastore[key] = curves_by_trt_id[trt_id]
+            for grp_id in curves_by_grp_id:
+                key = 'poes/%04d' % grp_id
+                self.datastore[key] = curves_by_grp_id[grp_id]
                 self.datastore.set_attrs(
-                    key, trt=self.csm.info.get_trt(trt_id))
+                    key, trt=self.csm.info.get_trt(grp_id))
             self.datastore.set_nbytes('poes')
 
 
@@ -312,11 +338,11 @@ class ClassicalCalculator(PSHACalculator):
         curves_by_trt_gsim = {}
         with self.monitor('read poes', autoflush=True):
             for group_id in self.datastore['poes']:
-                trt_id = int(group_id)
+                grp_id = int(group_id)
                 poes = self.datastore['poes/' + group_id]
-                gsims = self.rlzs_assoc.gsims_by_trt_id[trt_id]
+                gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
                 for i, gsim in enumerate(gsims):
-                    curves_by_trt_gsim[trt_id, gsim] = poes.extract(i)
+                    curves_by_trt_gsim[grp_id, gsim] = poes.extract(i)
         return curves_by_trt_gsim
 
     def post_execute(self, curves_by_trt_gsim):
@@ -409,3 +435,10 @@ class ClassicalCalculator(PSHACalculator):
             dset.attrs['uid'] = rlz.uid
         for k, v in kw.items():
             dset.attrs[k] = v
+
+
+def nonzero(val):
+    """
+    :returns: the sum of the composite array `val`
+    """
+    return sum(val[k].sum() for k in val.dtype.names)
