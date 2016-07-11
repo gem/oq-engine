@@ -153,7 +153,7 @@ def run_server(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
 
     # create and upgrade the db if needed
     db = dbapi.Db(connection)
-    db.run('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
+    db('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
     actions.upgrade_db(db)
 
     # configure logging and start the server

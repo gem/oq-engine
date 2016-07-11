@@ -59,7 +59,7 @@ class _Replacer(object):
         elif placeholder == '%D':
             self.targs.extend(arg.keys())
             self.xargs.extend(arg.values())
-            return self.join(', ', arg)
+            return ', '.join(['{}=' + self.ph] * len(arg))
         elif placeholder == '%A':
             self.targs.extend(arg.keys())
             self.xargs.extend(arg.values())
@@ -78,7 +78,7 @@ class _Replacer(object):
     def join(self, sep, args):
         ls = []
         for arg in args:
-            ls.append('{} IS NULL' if arg is None else '{}=%s' % self.ph)
+            ls.append('{} IS NULL' if arg is None else '{}=' + self.ph)
         return sep.join(ls)
 
 
@@ -104,6 +104,7 @@ class Db(object):
     """
     def __init__(self, conn):
         self.conn = conn
+        self.debug = False
 
     def __enter__(self):
         return self
@@ -114,19 +115,18 @@ class Db(object):
         else:
             self.conn.commit()
 
-    def run(self, m_templ, *m_args, **kw):
+    def __call__(self, m_templ, *m_args, **kw):
         cursor = self.conn.cursor()
         templ, args = match(m_templ, *m_args)
-        if kw.get('debug'):
+        if self.debug or kw.get('debug'):
             print(templ, args)
-            import pdb; pdb.set_trace()
         try:
             if args:
                 cursor.execute(templ, args)
             else:
                 cursor.execute(templ)
         except Exception as exc:
-            raise exc.__class__(templ, args)
+            raise exc.__class__('%s: %s %s' % (exc, templ, args))
         if templ.lower().startswith('select'):
             rows = cursor.fetchall()
 
@@ -143,11 +143,15 @@ class Db(object):
                     raise NotFound
                 elif len(rows) > 1:
                     raise TooManyRows(len(rows))
-                return rows[0]
 
             colnames = [r[0] for r in cursor.description]
             nt = collections.namedtuple('Row', colnames)
-            return [nt(*row) for row in rows]
+            if kw.get('one'):
+                return nt(*rows[0])
+            elif kw.get('header'):
+                return [nt(*colnames)] + [nt(*row) for row in rows]
+            else:
+                return [nt(*row) for row in rows]
         else:
             return cursor
 
