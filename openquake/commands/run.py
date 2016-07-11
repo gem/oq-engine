@@ -129,6 +129,7 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
     return calc
 
 
+@sap.Script
 def run(job_ini, slowest, hc, param, concurrent_tasks=CT, exports='',
         loglevel='info', pdb=None):
     """
@@ -149,17 +150,16 @@ def run(job_ini, slowest, hc, param, concurrent_tasks=CT, exports='',
     else:
         _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params)
 
-parser = sap.Parser(run)
-parser.arg('job_ini', 'calculation configuration file '
-           '(or files, comma-separated)')
-parser.opt('slowest', 'profile and show the slowest operations', type=int)
-parser.opt('hc', 'previous calculation ID', type=valid.hazard_id)
-parser.opt('param', 'override parameter with the syntax NAME=VALUE ...',
-           nargs='+')
-parser.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
-           type=int)
-parser.opt('exports', 'export formats as a comma-separated string',
-           type=valid.export_formats)
-parser.opt('loglevel', 'logging level',
-           choices='debug info warn error critical'.split())
-parser.flg('pdb', 'enable post mortem debugging', '-d')
+run.arg('job_ini', 'calculation configuration file '
+        '(or files, comma-separated)')
+run.opt('slowest', 'profile and show the slowest operations', type=int)
+run.opt('hc', 'previous calculation ID', type=valid.hazard_id)
+run.opt('param', 'override parameter with the syntax NAME=VALUE ...',
+        nargs='+')
+run.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
+        type=int)
+run.opt('exports', 'export formats as a comma-separated string',
+        type=valid.export_formats)
+run.opt('loglevel', 'logging level',
+        choices='debug info warn error critical'.split())
+run.flg('pdb', 'enable post mortem debugging', '-d')

@@ -85,6 +85,7 @@ def delete_calculation(job_id, confirmed=False):
             print(err)
 
 
+@sap.Script
 def engine(log_file, no_distribute, yes, config_file, make_html_report,
            upgrade_db, version_db, what_if_I_upgrade,
            run_hazard, run_risk, run,
@@ -236,60 +237,60 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         logs.dbcmd('delete_uncompleted_calculations', getpass.getuser())
 
     else:
-        parser.parentparser.prog = 'oq engine'
-        parser.parentparser.print_usage()
+        engine.parentparser.prog = 'oq engine'
+        engine.parentparser.print_usage()
 
-parser = sap.Parser(engine)
-parser._add('log_file', '--log-file', '-L', help='''\
+
+engine._add('log_file', '--log-file', '-L', help='''\
 Location where to store log messages; if not specified, log messages
 will be printed to the console (to stderr)''')
-parser._add('no_distribute', '--no-distribute', '--nd', help='''\
+engine._add('no_distribute', '--no-distribute', '--nd', help='''\
 Disable calculation task distribution and run the
 computation in a single process. This is intended for
 use in debugging and profiling.''', action='store_true')
-parser.flg('yes', 'Automatically answer "yes" when asked to confirm an action')
-parser.opt('config_file', 'Custom openquake.cfg file, to override default '
+engine.flg('yes', 'Automatically answer "yes" when asked to confirm an action')
+engine.opt('config_file', 'Custom openquake.cfg file, to override default '
            'configurations')
-parser._add('make_html_report', '--make-html-report', '-r',
+engine._add('make_html_report', '--make-html-report', '-r',
             help='Build an HTML report of the computation at the given date',
             metavar='YYYY-MM-DD|today')
-parser.flg('upgrade_db', 'Upgrade the openquake database')
-parser.flg('version_db', 'Show the current version of the openquake database')
-parser.flg('what_if_I_upgrade', 'Show what will happen to the openquake '
+engine.flg('upgrade_db', 'Upgrade the openquake database')
+engine.flg('version_db', 'Show the current version of the openquake database')
+engine.flg('what_if_I_upgrade', 'Show what will happen to the openquake '
            'database if you upgrade')
-parser._add('run_hazard', '--run-hazard', '--rh', help='Run a hazard job with '
+engine._add('run_hazard', '--run-hazard', '--rh', help='Run a hazard job with '
             'the specified config file', metavar='CONFIG_FILE')
-parser._add('run_risk', '--run-risk', '--rr', help='Run a risk job with the '
+engine._add('run_risk', '--run-risk', '--rr', help='Run a risk job with the '
             'specified config file', metavar='CONFIG_FILE')
-parser._add('run', '--run', help='Run a job with the specified config file',
+engine._add('run', '--run', help='Run a job with the specified config file',
             metavar='CONFIG_FILE')
-parser._add('list_hazard_calculations', '--list-hazard-calculations', '--lhc',
+engine._add('list_hazard_calculations', '--list-hazard-calculations', '--lhc',
             help='List risk calculation information', action='store_true')
-parser._add('list_risk_calculations', '--list-risk-calculations', '--lrc',
+engine._add('list_risk_calculations', '--list-risk-calculations', '--lrc',
             help='List hazard calculation information', action='store_true')
-parser._add('delete_calculation', '--delete-calculation', '--dc',
+engine._add('delete_calculation', '--delete-calculation', '--dc',
             help='Delete a calculation and all associated outputs',
             metavar='CALCULATION_ID')
-parser._add('delete_uncompleted_calculations',
+engine._add('delete_uncompleted_calculations',
             '--delete-uncompleted-calculations', '--duc',
             help='Delete all the uncompleted calculations',
             action='store_true')
-parser._add('hazard_calculation_id', '--hazard-calculation-id', '--hc',
+engine._add('hazard_calculation_id', '--hazard-calculation-id', '--hc',
             help='Use the given job as input for the next job')
-parser._add('list_outputs', '--list-outputs', '--lo',
+engine._add('list_outputs', '--list-outputs', '--lo',
             help='List outputs for the specified calculation',
             metavar='CALCULATION_ID')
-parser._add('show_log', '--show-log', '--sl',
+engine._add('show_log', '--show-log', '--sl',
             help='Show the log of the specified calculation',
             metavar='CALCULATION_ID')
-parser._add('export_output', '--export-output', '--eo',
+engine._add('export_output', '--export-output', '--eo',
             nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'),
             help='Export the desired output to the specified directory')
-parser._add('export_outputs', '--export-outputs', '--eos',
+engine._add('export_outputs', '--export-outputs', '--eos',
             nargs=2, metavar=('CALCULATION_ID', 'TARGET_DIR'),
             help='Export all of the calculation outputs to the '
             'specified directory')
-parser.opt('exports', 'Comma-separated string specifing the export formats, '
+engine.opt('exports', 'Comma-separated string specifing the export formats, '
            'in order of priority')
-parser.opt('log_level', 'Defaults to "info"',
+engine.opt('log_level', 'Defaults to "info"',
            choices=['debug', 'info', 'warn', 'error', 'critical'])
