@@ -41,6 +41,7 @@ def random_filter(objects, reduction_factor, seed=42):
     return out
 
 
+@sap.Script
 def reduce(fname, reduction_factor):
     """
     Produce a submodel from `fname` by sampling the nodes randomly.
@@ -80,8 +81,6 @@ def reduce(fname, reduction_factor):
         nrml.write([model], f)
     print('Extracted %d nodes out of %d' % (num_nodes, total))
 
-
-parser = sap.Parser(reduce)
-parser.arg('fname', 'path to the model file')
-parser.arg('reduction_factor', 'reduction factor in the range 0..1',
+reduce.arg('fname', 'path to the model file')
+reduce.arg('reduction_factor', 'reduction factor in the range 0..1',
            type=valid.probability)
