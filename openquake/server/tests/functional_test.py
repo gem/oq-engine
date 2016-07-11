@@ -46,11 +46,6 @@ class EngineServerTestCase(unittest.TestCase):
     # general utilities
 
     @classmethod
-    def assert_ok(cls, resp):
-        if not resp.text:
-            sys.stderr.write(open(cls.errfname).read())
-
-    @classmethod
     def post(cls, path, data=None, **params):
         return requests.post('http://%s/v1/calc/%s' % (cls.hostport, path),
                              data, **params)
@@ -65,7 +60,9 @@ class EngineServerTestCase(unittest.TestCase):
     def get(cls, path, **params):
         resp = requests.get('http://%s/v1/calc/%s' % (cls.hostport, path),
                             params=params)
-        cls.assert_ok(resp)
+        if not resp.text:
+            sys.stderr.write(open(cls.errfname).read())
+            return {}
         try:
             return json.loads(resp.text)
         except:
@@ -77,7 +74,6 @@ class EngineServerTestCase(unittest.TestCase):
     def get_text(cls, path, **params):
         resp = requests.get('http://%s/v1/calc/%s' % (cls.hostport, path),
                             params=params)
-        cls.assert_ok(resp)
         return resp.text
 
     @classmethod
