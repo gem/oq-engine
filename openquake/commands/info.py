@@ -61,6 +61,7 @@ def do_build_reports(directory):
 
 # the documentation about how to use this feature can be found
 # in the file effective-realizations.rst
+@sap.Script
 def info(calculators, gsims, views, exports, build_reports, report,
          input_file=''):
     """
@@ -100,11 +101,10 @@ def info(calculators, gsims, views, exports, build_reports, report,
     elif input_file:
         print("No info for '%s'" % input_file)
 
-parser = sap.Parser(info)
-parser.flg('calculators', 'list available calculators')
-parser.flg('gsims', 'list available GSIMs')
-parser.flg('views', 'list available views')
-parser.flg('exports', 'list available exports')
-parser.flg('build_reports', 'build reports in rst format')
-parser.flg('report', 'build a report in rst format')
-parser.arg('input_file', 'job.ini file or zip archive')
+info.flg('calculators', 'list available calculators')
+info.flg('gsims', 'list available GSIMs')
+info.flg('views', 'list available views')
+info.flg('exports', 'list available exports')
+info.flg('build_reports', 'build reports in rst format')
+info.flg('report', 'build a report in rst format')
+info.arg('input_file', 'job.ini file or zip archive')
