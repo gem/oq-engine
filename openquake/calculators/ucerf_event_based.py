@@ -115,7 +115,7 @@ def prefilter_ruptures(hdf5, ridx, idx_set, sites, integration_distance):
     centroids = centroids[1:, :]
     distance = min_geodetic_distance(centroids[:, 0], centroids[:, 1],
                                      sites.lons, sites.lats)
-    logging.info("%s  -  %s", str(ridx), str(numpy.min(distance)))
+    #logging.info("%s  -  %s", str(ridx), str(numpy.min(distance)))
     return numpy.any(distance <= integration_distance)
 
 
@@ -598,7 +598,6 @@ class UCERFSESControl(object):
                     self.tectonic_region_type)
 
                 if ucerf_rup:
-                    print ucerf_rup.tectonic_region_type
                     ruptures.append(ucerf_rup)
                     rupture_occ.append(n_occ)
 
@@ -613,7 +612,6 @@ class UCERFSESControl(object):
                 self.usd, self.lsd,
                 self.msr, self.aspect,
                 self.tectonic_region_type)
-            print [rup.tectonic_region_type for rup in background_ruptures]
             ruptures.extend(background_ruptures)
             rupture_occ.extend(background_n_occ)
         return ruptures, rupture_occ
