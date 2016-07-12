@@ -66,6 +66,8 @@ rlz_dt = numpy.dtype([('uid', hdf5.vstr), ('model', hdf5.vstr),
 logversion = {True}
 
 PRECALC_MAP = dict(
+    classical=['psha', 'classical'],
+    disaggregation=['psha', 'classical'],
     scenario_risk=['scenario', 'scenario_risk'],
     scenario_damage=['scenario', 'scenario_damage'],
     classical_risk=['classical', 'classical_risk'],
