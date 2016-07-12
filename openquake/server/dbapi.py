@@ -45,10 +45,7 @@ class _Replacer(object):
 
     def __call__(self, mo):
         arg = self.all_args[0]
-        try:
-            del self.all_args[0]
-        except:
-            import pdb; pdb.set_trace()
+        del self.all_args[0]
         placeholder = mo.group()
         if placeholder == '%S':
             self.xargs.extend(arg)
@@ -104,7 +101,12 @@ class Db(object):
     """
     def __init__(self, conn):
         # conn can be a Django connection or a raw connection
-        self.conn = conn.connection if hasattr(conn, 'connection') else conn
+        if hasattr(conn, 'connection'):
+            if conn.connection is None:
+                conn.cursor()  # binds the connection
+            self.conn = conn.connection
+        else:
+            self.conn = conn
 
     def __enter__(self):
         return self
