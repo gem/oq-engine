@@ -41,7 +41,7 @@ def classical_risk(riskinput, riskmodel, rlzs_assoc, monitor):
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param rlzs_assoc:
-        associations (trt_id, gsim) -> realizations
+        associations (grp_id, gsim) -> realizations
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
@@ -126,10 +126,10 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             nsites = len(self.sitecol.complete)
             for key in self.datastore['poes']:
                 pmap = self.datastore['poes/' + key]
-                trt_id = int(key)
-                gsims = self.rlzs_assoc.gsims_by_trt_id[trt_id]
+                grp_id = int(key)
+                gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
                 for i, gsim in enumerate(gsims):
-                    curves_by_trt_gsim[trt_id, gsim] = array_of_curves(
+                    curves_by_trt_gsim[grp_id, gsim] = array_of_curves(
                         pmap, nsites, self.oqparam.imtls, i)
         self.riskinputs = self.build_riskinputs(curves_by_trt_gsim)
         self.monitor.oqparam = self.oqparam
