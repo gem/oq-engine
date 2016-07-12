@@ -179,9 +179,9 @@ class SourceModelParser(object):
                 sources.append(src)
                 source_ids.add(src.source_id)
                 if no % 10000 == 0:  # log every 10,000 sources parsed
-                    logging.info('Parsed %d sources from %s', no, fname)
+                    logging.info('Instantiated %d sources from %s', no, fname)
             if no % 10000 != 0:
-                logging.info('Parsed %d sources from %s', no, fname)
+                logging.info('Instantiated %d sources from %s', no, fname)
             groups = groupby(
                 sources, operator.attrgetter('tectonic_region_type'))
             return sorted(sourceconverter.SourceGroup(trt, srcs)
@@ -234,7 +234,7 @@ class RlzsAssoc(collections.Mapping):
         self.rlzs_assoc = collections.defaultdict(list)
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
         self.rlzs_by_smodel = [[] for _ in range(len(csm_info.source_models))]
-        self.gsims_by_trt_id = {}
+        self.gsims_by_grp_id = {}
         self.sm_ids = {}
         self.samples = {}
         for sm in csm_info.source_models:
@@ -246,7 +246,7 @@ class RlzsAssoc(collections.Mapping):
         """
         Finalize the initialization of the RlzsAssoc object by setting
         the (reduced) weights of the realizations and the attribute
-        gsims_by_trt_id.
+        gsims_by_grp_id.
         """
         if self.num_samples:
             assert len(self.realizations) == self.num_samples
@@ -262,31 +262,31 @@ class RlzsAssoc(collections.Mapping):
             for rlz in self.realizations:
                 rlz.weight = rlz.weight / tot_weight
 
-        self.gsims_by_trt_id = groupby(
+        self.gsims_by_grp_id = groupby(
             self.rlzs_assoc, operator.itemgetter(0),
-            lambda group: sorted(gsim for trt_id, gsim in group))
+            lambda group: sorted(gsim for grp_id, gsim in group))
 
     @property
     def realizations(self):
         """Flat list with all the realizations"""
         return sum(self.rlzs_by_smodel, [])
 
-    def get_rlzs_by_gsim(self, trt_id):
+    def get_rlzs_by_gsim(self, grp_id):
         """
         Returns a dictionary gsim -> rlzs
         """
-        return {gsim: self[trt_id, str(gsim)]
-                for gsim in self.gsims_by_trt_id[trt_id]}
+        return {gsim: self[grp_id, str(gsim)]
+                for gsim in self.gsims_by_grp_id[grp_id]}
 
-    def get_rlzs_by_trt_id(self):
+    def get_rlzs_by_grp_id(self):
         """
-        Returns a dictionary trt_id > [sorted rlzs]
+        Returns a dictionary grp_id > [sorted rlzs]
         """
-        rlzs_by_trt_id = collections.defaultdict(set)
-        for (trt_id, gsim), rlzs in self.rlzs_assoc.items():
-            rlzs_by_trt_id[trt_id].update(rlzs)
-        return {trt_id: sorted(rlzs)
-                for trt_id, rlzs in rlzs_by_trt_id.items()}
+        rlzs_by_grp_id = collections.defaultdict(set)
+        for (grp_id, gsim), rlzs in self.rlzs_assoc.items():
+            rlzs_by_grp_id[grp_id].update(rlzs)
+        return {grp_id: sorted(rlzs)
+                for grp_id, rlzs in rlzs_by_grp_id.items()}
 
     def _add_realizations(self, idx, lt_model, gsim_lt, gsim_rlzs):
         trts = gsim_lt.tectonic_region_types
@@ -422,7 +422,7 @@ source_model_dt = numpy.dtype([
 ])
 
 src_group_dt = numpy.dtype(
-    [('trt_id', U32),
+    [('grp_id', U32),
      ('trti', U16),
      ('effrup', I32),
      ('sm_id', U32)])
@@ -496,8 +496,8 @@ class CompositionInfo(object):
             tdata = sg_data[sm_id]
             srcgroups = [
                 sourceconverter.SourceGroup(
-                    self.trts[trti], id=trt_id, eff_ruptures=effrup)
-                for trt_id, trti, effrup, sm_id in tdata if effrup > 0]
+                    self.trts[trti], id=grp_id, eff_ruptures=effrup)
+                for grp_id, trti, effrup, sm_id in tdata if effrup > 0]
             path = tuple(rec['path'].split('_'))
             trts = set(sg.trt for sg in srcgroups)
             num_gsim_paths = self.gsim_lt.reduce(trts).get_num_paths()
@@ -573,6 +573,17 @@ class CompositionInfo(object):
             for src_group in smodel.src_groups:
                 if src_group.id == src_group_id:
                     return smodel
+
+    def get_sm_by_rlz(self, realizations):
+        """
+        :returns: a dictionary rlz -> source model name
+        """
+        dic = {}
+        for sm in self.source_models:
+            for rlz in realizations:
+                if rlz.sm_lt_path == sm.path:
+                    dic[rlz] = sm.name
+        return dic
 
     def get_trt(self, src_group_id):
         """

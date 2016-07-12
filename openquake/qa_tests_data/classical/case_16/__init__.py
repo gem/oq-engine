@@ -19,7 +19,7 @@
 """
 This is an example with a nontrivial source model logic tree
 sampled 10 times (no path is sampled twice).
-The associations (trt_id, gsim) -> rlzs are:
+The associations (grp_id, gsim) -> rlzs are:
 {
 0,BooreAtkinson2008: ['<0,b11_b24_b33_b40_b52_b62_b72_b81_b91_b102_b112,b11,w=0.1>']
 1,BooreAtkinson2008: ['<1,b11_b20_b31_b43_b52_b62_b72_b82_b91_b103_b112,b11,w=0.1>']

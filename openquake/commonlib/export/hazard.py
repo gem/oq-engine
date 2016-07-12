@@ -634,9 +634,9 @@ def _get_gmfs(dstore, serial, eid):
     N = len(sitecol.complete)
     rup = dstore['sescollection/' + serial]
     correl_model = readinput.get_correl_model(oq)
-    gsims = rlzs_assoc.gsims_by_trt_id[rup.trt_id]
+    gsims = rlzs_assoc.gsims_by_grp_id[rup.grp_id]
     rlzs = [rlz for gsim in map(str, gsims)
-            for rlz in rlzs_assoc[rup.trt_id, gsim]]
+            for rlz in rlzs_assoc[rup.grp_id, gsim]]
     gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F32) for rlz in rlzs])
     gmfadict = create(calc.GmfColl,
                       [rup], sitecol, oq.imtls, rlzs_assoc,
@@ -763,3 +763,14 @@ def export_rup_data(ekey, dstore):
         if len(data):
             paths.append(write_csv(dstore.export_path(fname), data))
     return paths
+
+
+@export.add(('realizations', 'csv'))
+def export_realizations(ekey, dstore):
+    rlzs = dstore[ekey[0]]
+    data = [['ordinal', 'uid', 'model', 'gsim', 'weight']]
+    for i, rlz in enumerate(rlzs):
+        data.append([i, rlz['uid'], rlz['model'], rlz['gsims'], rlz['weight']])
+    path = dstore.export_path('realizations.csv')
+    writers.write_csv(path, data, fmt='%s')
+    return [path]
