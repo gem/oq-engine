@@ -15,26 +15,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
 from __future__ import division
-# Copyright (C) 2015-2016 GEM Foundation
-#
-# OpenQuake is free software: you can redistribute it and/or modify it
-# under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# OpenQuake is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
 import math
 import copy
 import operator
+import collections
 
 from openquake.baselib.general import block_splitter
 from openquake.baselib.performance import Monitor
@@ -53,6 +38,110 @@ MAGNITUDE_FOR_RUPTURE_SPLITTING = 6.5  # given by Marco Pagani
 # reason: the numbers in the event based calculators depend on the
 # splitting: different sources => different seeds => different numbers
 POINT_SOURCE_WEIGHT = 1 / 40.
+
+
+class SourceGroup(collections.Sequence):
+    """
+    A container for the following parameters:
+
+    :param str trt:
+        the tectonic region type all the sources belong to
+    :param list sources:
+        a list of hazardlib source objects
+    :param min_mag:
+        the minimum magnitude among the given sources
+    :param max_mag:
+        the maximum magnitude among the given sources
+    :param id:
+        an optional numeric ID (default None) useful to associate
+        the model to a database object
+    :param eff_ruptures:
+        the number of ruptures contained in the group; if -1,
+        the number is unknown and has to be computed by using
+        get_set_num_ruptures
+    """
+    @classmethod
+    def collect(cls, sources):
+        """
+        :param sources: dictionaries with a key 'tectonicRegion'
+        :returns: an ordered list of SourceGroup instances
+        """
+        source_stats_dict = {}
+        for src in sources:
+            trt = src['tectonicRegion']
+            if trt not in source_stats_dict:
+                source_stats_dict[trt] = SourceGroup(trt)
+            sg = source_stats_dict[trt]
+            if not sg.sources:
+                # we append just one source per SourceGroup, so that
+                # the memory occupation is insignificant
+                sg.sources.append(src)
+
+        # return SourceGroups, ordered by TRT string
+        return sorted(source_stats_dict.values())
+
+    def __init__(self, trt, sources=None,
+                 min_mag=None, max_mag=None, id=0, eff_ruptures=-1):
+        self.trt = trt
+        self.sources = []
+        self.min_mag = min_mag
+        self.max_mag = max_mag
+        self.id = id
+        if sources:
+            for src in sorted(sources, key=operator.attrgetter('source_id')):
+                self.update(src)
+        self.source_model = None  # to be set later, in CompositionInfo
+        self.weight = 1
+        self.eff_ruptures = eff_ruptures  # set later nby get_rlzs_assoc
+
+    def tot_ruptures(self):
+        return sum(src.num_ruptures for src in self.sources)
+
+    def update(self, src):
+        """
+        Update the attributes sources, min_mag, max_mag
+        according to the given source.
+
+        :param src:
+            an instance of :class:
+            `openquake.hazardlib.source.base.BaseSeismicSource`
+        """
+        assert src.tectonic_region_type == self.trt, (
+            src.tectonic_region_type, self.trt)
+        self.sources.append(src)
+        min_mag, max_mag = src.get_min_max_mag()
+        prev_min_mag = self.min_mag
+        if prev_min_mag is None or min_mag < prev_min_mag:
+            self.min_mag = min_mag
+        prev_max_mag = self.max_mag
+        if prev_max_mag is None or max_mag > prev_max_mag:
+            self.max_mag = max_mag
+
+    def __repr__(self):
+        return '<%s #%d %s, %d source(s), %d effective rupture(s)>' % (
+            self.__class__.__name__, self.id, self.trt,
+            len(self.sources), self.eff_ruptures)
+
+    def __lt__(self, other):
+        """
+        Make sure there is a precise ordering of SourceGroup objects.
+        Objects with less sources are put first; in case the number
+        of sources is the same, use lexicographic ordering on the trts
+        """
+        num_sources = len(self.sources)
+        other_sources = len(other.sources)
+        if num_sources == other_sources:
+            return self.trt < other.trt
+        return num_sources < other_sources
+
+    def __getitem__(self, i):
+        return self.sources[i]
+
+    def __iter__(self):
+        return iter(self.sources)
+
+    def __len__(self):
+        return len(self.sources)
 
 
 def get_set_num_ruptures(src):
@@ -715,6 +804,20 @@ class SourceConverter(RuptureConverter):
         nps = source.NonParametricSeismicSource(
             node['id'], node['name'], trt, rup_pmf_data)
         return nps
+
+    def convert_sourceGroup(self, node):
+        """
+        Convert the given node into a SourceGroup object.
+
+        :param node:
+            a node with tag sourceGroup
+        :returns:
+            a :class:`openquake.commonlib.source.SourceGroup`
+            instance
+        """
+        trt = node['tectonicRegion']
+        srcs = [self.convert_node(src_node) for src_node in node]
+        return SourceGroup(trt, srcs)
 
 
 def parse_ses_ruptures(fname):

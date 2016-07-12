@@ -220,7 +220,7 @@ def view_csm_info(token, dstore):
 @view.add('ruptures_per_trt')
 def view_ruptures_per_trt(token, dstore):
     tbl = []
-    header = ('source_model trt_id trt num_sources '
+    header = ('source_model grp_id trt num_sources '
               'eff_ruptures weight'.split())
     num_trts = 0
     tot_sources = 0
@@ -487,20 +487,20 @@ def get_max_gmf_size(dstore):
     """
     oq = dstore['oqparam']
     n_imts = len(oq.imtls)
-    rlzs_by_trt_id = dstore['csm_info'].get_rlzs_assoc().get_rlzs_by_trt_id()
+    rlzs_by_grp_id = dstore['csm_info'].get_rlzs_assoc().get_rlzs_by_grp_id()
     n_ruptures = collections.Counter()
-    size = collections.Counter()  # by trt_id
+    size = collections.Counter()  # by grp_id
     for serial in dstore['sescollection']:
         ebr = dstore['sescollection/' + serial]
-        trt_id = ebr.trt_id
-        n_ruptures[trt_id] += 1
+        grp_id = ebr.grp_id
+        n_ruptures[grp_id] += 1
         # there are 4 bytes per float
-        size[trt_id] += (len(ebr.indices) * ebr.multiplicity *
-                         len(rlzs_by_trt_id[trt_id]) * n_imts) * 4
-    [(trt_id, maxsize)] = size.most_common(1)
-    return dict(n_imts=n_imts, size=maxsize, n_ruptures=n_ruptures[trt_id],
-                n_rlzs=len(rlzs_by_trt_id[trt_id]),
-                trt_id=trt_id, humansize=humansize(maxsize))
+        size[grp_id] += (len(ebr.indices) * ebr.multiplicity *
+                         len(rlzs_by_grp_id[grp_id]) * n_imts) * 4
+    [(grp_id, maxsize)] = size.most_common(1)
+    return dict(n_imts=n_imts, size=maxsize, n_ruptures=n_ruptures[grp_id],
+                n_rlzs=len(rlzs_by_grp_id[grp_id]),
+                grp_id=grp_id, humansize=humansize(maxsize))
 
 
 @view.add('biggest_ebr_gmf')
@@ -508,7 +508,7 @@ def view_biggest_ebr_gmf(token, dstore):
     """
     Returns the size of the biggest GMF in an event based risk calculation
     """
-    msg = ('The largest GMF block is for src_group_id=%(trt_id)d, '
+    msg = ('The largest GMF block is for src_group_id=%(grp_id)d, '
            'contains %(n_imts)d IMT(s), %(n_rlzs)d '
            'realization(s)\nand has a size of %(humansize)s / num_tasks')
     return msg % get_max_gmf_size(dstore)
@@ -598,14 +598,14 @@ def view_required_params_per_trt(token, dstore):
     """
     Display the parameters needed by each tectonic region type
     """
-    gsims_per_trt_id = sorted(
-        dstore['csm_info'].get_rlzs_assoc().gsims_by_trt_id.items())
+    gsims_per_grp_id = sorted(
+        dstore['csm_info'].get_rlzs_assoc().gsims_by_grp_id.items())
     tbl = []
-    for trt_id, gsims in gsims_per_trt_id:
+    for grp_id, gsims in gsims_per_grp_id:
         maker = ContextMaker(gsims)
         distances = maker.REQUIRES_DISTANCES
         siteparams = maker.REQUIRES_SITES_PARAMETERS
         ruptparams = maker.REQUIRES_RUPTURE_PARAMETERS
-        tbl.append((trt_id, gsims, distances, siteparams, ruptparams))
+        tbl.append((grp_id, gsims, distances, siteparams, ruptparams))
     return rst_table(
-        tbl, header='trt_id gsims distances siteparams ruptparams'.split())
+        tbl, header='grp_id gsims distances siteparams ruptparams'.split())
