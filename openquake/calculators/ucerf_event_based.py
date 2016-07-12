@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import copy
 import time
 import os.path
 import logging
@@ -721,15 +722,16 @@ class UCERFEventBasedRuptureCalculator(
         parser = source.SourceModelParser(
             UCERFSourceConverter(self.oqparam.investigation_time,
                                  self.oqparam.rupture_mesh_spacing))
-        self.src_groups = parser.parse_src_groups(
+        [self.src_group] = parser.parse_src_groups(
             self.oqparam.inputs["source_model"])
         branches = sorted(self.smlt.branches.items())
         source_models = []
         num_gsim_paths = self.gsim_lt.get_num_paths()
         for ordinal, (name, branch) in enumerate(branches):
+            sg = copy.copy(self.src_group)
+            sg.id = ordinal
             sm = source.SourceModel(
-                name, branch.weight, [name], self.src_groups,
-                num_gsim_paths, ordinal, 1)
+                name, branch.weight, [name], [sg], num_gsim_paths, ordinal, 1)
             source_models.append(sm)
         self.csm = source.CompositeSourceModel(
             self.gsim_lt, self.smlt, source_models, set_weight=False)
@@ -743,7 +745,7 @@ class UCERFEventBasedRuptureCalculator(
         id_set = [(key, self.smlt.branches[key].value,
                   self.smlt.branches[key].weight)
                   for key in self.smlt.branches]
-        [[ucerf]] = self.src_groups
+        [ucerf] = self.src_group
         ruptures_by_grp_id = parallel.apply_reduce(
             compute_ruptures,
             (id_set, ucerf, self.sitecol, self.oqparam, self.monitor),
