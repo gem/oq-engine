@@ -96,13 +96,13 @@ def gsim_names(rlz):
 
 def check_precalc_consistency(calc_mode, precalc_mode):
     """
-    Make sure that the provided hazard job is the right one for the
-    current risk calculator.
+    Defensive programming against users providing an incorrect pre-calculation
+    ID (with ``--hazard-calculation-id``)
 
-    :param job:
-        an OqJob instance referring to the previous hazard calculation
-    :param risk_mode:
-        the `calculation_mode` string of the current risk calculation
+    :param calc_mode:
+        calculation_mode of the current calculation
+    :param precalc_mode:
+        calculation_mode of the previous calculation
     """
     # check for obsolete calculation_mode
     if calc_mode in ('classical', 'event_based', 'scenario'):
