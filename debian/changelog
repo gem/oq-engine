@@ -1,6 +1,7 @@
   [Michele Simionato]
   * Restored the precalculation consistency check that was disabled during the
     transition to engine 2.0
+  * Fixed a bug with `oq engine --delete-calculation`
   * Hazard curves/maps/uniform spectra can now be recomputed
   * Restored the early check on missing taxonomies
   * Raise an early error if an user forget the `rupture_mesh_spacing` parameter
