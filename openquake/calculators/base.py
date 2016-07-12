@@ -361,7 +361,7 @@ class HazardCalculator(BaseCalculator):
     def read_previous(self, precalc_id):
         parent = datastore.read(precalc_id)
         check_precalc_consistency(
-            self.oqparam.calculation_mode, parent.oqparam.calculation_mode)
+            self.oqparam.calculation_mode, parent['oqparam'].calculation_mode)
         self.datastore.set_parent(parent)
         # copy missing parameters from the parent
         params = {name: value for name, value in
