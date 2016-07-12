@@ -50,7 +50,7 @@ b2        0.400  `SA_RA_CATAL2_00.xml <SA_RA_CATAL2_00.xml>`_ complex(2,2)    4/
 Required parameters per tectonic region type
 --------------------------------------------
 ====== ===================================== ========= ========== ==========
-trt_id gsims                                 distances siteparams ruptparams
+grp_id gsims                                 distances siteparams ruptparams
 ====== ===================================== ========= ========== ==========
 0      AkkarBommer2010() AtkinsonBoore2006() rjb rrup  vs30       rake mag  
 2      AkkarBommer2010() AtkinsonBoore2006() rjb rrup  vs30       rake mag  
@@ -73,7 +73,7 @@ Realizations per (TRT, GSIM)
 Number of ruptures per tectonic region type
 -------------------------------------------
 =================== ====== ==================== =========== ============ ======
-source_model        trt_id trt                  num_sources eff_ruptures weight
+source_model        grp_id trt                  num_sources eff_ruptures weight
 =================== ====== ==================== =========== ============ ======
 SA_RA_CATAL1_00.xml 0      Active Shallow Crust 3           4            1,213 
 SA_RA_CATAL2_00.xml 2      Active Shallow Crust 3           6            1,213 

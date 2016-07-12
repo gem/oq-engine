@@ -69,7 +69,7 @@ ltbr1299  0.150  `ltbr1299 <ltbr1299>`_ trivial(1)      0/0
 Required parameters per tectonic region type
 --------------------------------------------
 ====== =============== ========= ========== ==========
-trt_id gsims           distances siteparams ruptparams
+grp_id gsims           distances siteparams ruptparams
 ====== =============== ========= ========== ==========
 0      BooreEtAl2014() rjb       vs30       rake mag  
 1      BooreEtAl2014() rjb       vs30       rake mag  
@@ -87,7 +87,7 @@ Realizations per (TRT, GSIM)
 Number of ruptures per tectonic region type
 -------------------------------------------
 ============ ====== ==================== =========== ============ ======
-source_model trt_id trt                  num_sources eff_ruptures weight
+source_model grp_id trt                  num_sources eff_ruptures weight
 ============ ====== ==================== =========== ============ ======
 ltbr0001     0      Active Shallow Crust 12          33646        12    
 ltbr0002     1      Active Shallow Crust 12          33686        12    
