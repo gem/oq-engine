@@ -270,7 +270,7 @@ engine._add('list_risk_calculations', '--list-risk-calculations', '--lrc',
             help='List hazard calculation information', action='store_true')
 engine._add('delete_calculation', '--delete-calculation', '--dc',
             help='Delete a calculation and all associated outputs',
-            metavar='CALCULATION_ID')
+            metavar='CALCULATION_ID', type=int)
 engine._add('delete_uncompleted_calculations',
             '--delete-uncompleted-calculations', '--duc',
             help='Delete all the uncompleted calculations',
