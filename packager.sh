@@ -621,7 +621,8 @@ celeryd_wait $GEM_MAXLOOP"
     fi
 
     ssh $lxc_ip "oq engine --make-html-report today
-    oq --dc 1
+    oq engine --delete-calculation 1 --yes
+    oq engine --dc 1 --yes
     oq purge -1; oq purge 0"
     scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
 
