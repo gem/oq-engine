@@ -106,12 +106,6 @@ def check_precalc_consistency(calc_mode, precalc_mode):
     :param precalc_mode:
         calculation_mode of the previous calculation
     """
-    # check for obsolete calculation_mode
-    if calc_mode in ('classical', 'event_based', 'scenario'):
-        raise ValueError('Please change calculation_mode=%s into %s_risk '
-                         'in the .ini file' % (calc_mode, calc_mode))
-
-    # check calculation_mode consistency
     ok_mode = PRECALC_MAP[calc_mode]
     if precalc_mode not in ok_mode:
         raise InvalidCalculationID(
