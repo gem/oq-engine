@@ -27,7 +27,7 @@ Here is a minimal example of usage:
     ...     for item in sorted(locals().items()):
     ...         print('%s = %s' % item)
 
-    >>> p = sap.Parser(fun)
+    >>> p = sap.Script(fun)
     >>> p.arg('input', 'input file or archive')
     >>> p.flg('inplace', 'convert inplace')
     >>> p.arg('output', 'output archive')
@@ -81,13 +81,16 @@ def str_choices(choices):
     return ''
 
 
-class Parser(object):
+class Script(object):
     """
     A simple way to define command processors based on argparse.
     Each parser is associated to a function and parsers can be
     composed together, by dispatching on a given name (if not given,
     the function name is used).
     """
+    registry = {}  # dotname -> function
+    # for instance {'openquake.commands.run': run, ...}
+
     def __init__(self, func, name=None, parentparser=None, help=True):
         self.func = func
         self.name = name or func.__name__
@@ -104,6 +107,10 @@ class Parser(object):
         self._group = self.parentparser
         self._argno = 0  # used in the NameError check in the _add method
         self.checked = False  # used in the check_arguments method
+        self.registry['%s.%s' % (func.__module__, func.__name__)] = self
+
+    def __call__(self, *args):
+        return self.func(*args)
 
     def group(self, descr):
         """Added a new group of arguments with the given description"""
@@ -168,7 +175,7 @@ class Parser(object):
     def callfunc(self, argv=None):
         """
         Parse the argv list and extract a dictionary of arguments which
-        is then passed to  the function underlying the Parser.
+        is then passed to  the function underlying the Script.
         """
         if not self.checked:
             self.check_arguments()
@@ -183,26 +190,26 @@ class Parser(object):
         return self.parentparser.format_help()
 
 
-def compose(parsers, name='main', description=None, prog=None,
+def compose(scripts, name='main', description=None, prog=None,
             version=None):
     """
-    Collects together different arguments parsers and builds a single
-    Parser dispatching to the subparsers depending on
+    Collects together different Scripts and builds a single
+    Script dispatching to the subparsers depending on
     the first argument, i.e. the name of the subparser to invoke.
 
-    :param parsers: a list of Parser instances
+    :param scripts: a list of Script instances
     :param name: the name of the composed parser
     :param description: description of the composed parser
     :param prog: name of the script printed in the usage message
     :param version: version of the script printed with --version
     """
-    assert len(parsers) >= 1, parsers
+    assert len(scripts) >= 1, scripts
     parentparser = argparse.ArgumentParser(
         description=description, add_help=False)
     parentparser.add_argument(
         '--version', '-v', action='version', version=version)
     subparsers = parentparser.add_subparsers(
-        help='available subcommands; use %s help <cmd>' % prog,
+        help='available subcommands; use %s help <subcmd>' % prog,
         prog=prog)
 
     def gethelp(cmd=None):
@@ -214,14 +221,14 @@ def compose(parsers, name='main', description=None, prog=None,
             print('No help for unknown command %r' % cmd)
         else:
             print(subp.format_help())
-    help_parser = Parser(gethelp, 'help', help=False)
+    help_script = Script(gethelp, 'help', help=False)
     progname = '%s ' % prog if prog else ''
-    help_parser.arg('cmd', progname + 'subcommand')
-    for p in parsers + [help_parser]:
-        subp = subparsers.add_parser(p.name, description=p.description)
-        for args, kw in p.all_arguments:
+    help_script.arg('cmd', progname + 'subcommand')
+    for s in list(scripts) + [help_script]:
+        subp = subparsers.add_parser(s.name, description=s.description)
+        for args, kw in s.all_arguments:
             subp.add_argument(*args, **kw)
-        subp.set_defaults(_func=p.func)
+        subp.set_defaults(_func=s.func)
 
     def main(**kw):
         try:
@@ -231,4 +238,4 @@ def compose(parsers, name='main', description=None, prog=None,
         else:
             return func(**kw)
     main.__name__ = name
-    return Parser(main, name, parentparser)
+    return Script(main, name, parentparser)
