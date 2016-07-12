@@ -53,8 +53,8 @@ F32 = numpy.float32
 class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 
-rlz_dt = numpy.dtype([('uid', hdf5.vstr), ('gsims', hdf5.vstr),
-                      ('weight', F32)])
+rlz_dt = numpy.dtype([('uid', hdf5.vstr), ('model', hdf5.vstr),
+                      ('gsims', hdf5.vstr), ('weight', F32)])
 
 logversion = {True}
 
@@ -209,7 +209,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 continue
             keys = set(self.datastore)
             if (self.oqparam.uniform_hazard_spectra and not
-                    self.oqparam.hazard_maps):
+                    self.oqparam.hazard_maps and 'hmaps' in keys):
                 # do not export the hazard maps, even if they are there
                 keys.remove('hmaps')
             for key in sorted(keys):  # top level keys
@@ -241,8 +241,11 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         Collect the realizations and set the attributes nbytes
         """
+        sm_by_rlz = self.datastore['csm_info'].get_sm_by_rlz(
+            self.rlzs_assoc.realizations) or collections.defaultdict(
+                lambda: 'NA')
         self.datastore['realizations'] = numpy.array(
-            [(r.uid, gsim_names(r), r.weight)
+            [(r.uid, sm_by_rlz[r], gsim_names(r), r.weight)
              for r in self.rlzs_assoc.realizations], rlz_dt)
         if 'hcurves' in self.datastore:
             self.datastore.set_nbytes('hcurves')
@@ -414,13 +417,6 @@ class HazardCalculator(BaseCalculator):
         self.oqparam.set_risk_imtls(rmdict)
         self.save_params()  # re-save oqparam
         self.riskmodel = rm = readinput.get_risk_model(self.oqparam, rmdict)
-        if 'taxonomies' in self.datastore:
-            # check that we are covering all the taxonomies in the exposure
-            missing = set(self.taxonomies) - set(rm.taxonomies)
-            if rm and missing:
-                raise RuntimeError('The exposure contains the taxonomies %s '
-                                   'which are not in the risk model' % missing)
-
         # save the risk models and loss_ratios in the datastore
         for taxonomy, rmodel in rm.items():
             self.datastore['composite_risk_model/' + taxonomy] = (
@@ -491,6 +487,13 @@ class HazardCalculator(BaseCalculator):
                     sorted(self.exposure.time_events)))
         elif hasattr(self, '_assetcol'):
             self.assets_by_site = self.assetcol.assets_by_site()
+
+        if self.oqparam.job_type == 'risk':
+            # check that we are covering all the taxonomies in the exposure
+            missing = set(self.taxonomies) - set(self.riskmodel.taxonomies)
+            if self.riskmodel and missing:
+                raise RuntimeError('The exposure contains the taxonomies %s '
+                                   'which are not in the risk model' % missing)
 
     def is_tiling(self):
         """

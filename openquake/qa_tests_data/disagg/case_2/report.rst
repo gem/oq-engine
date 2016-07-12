@@ -47,7 +47,7 @@ source_model_2 0.500  `source_model_2.xml <source_model_2.xml>`_ simple(2,1)    
 Required parameters per tectonic region type
 --------------------------------------------
 ====== ===================================== =========== ======================= =================
-trt_id gsims                                 distances   siteparams              ruptparams       
+grp_id gsims                                 distances   siteparams              ruptparams       
 ====== ===================================== =========== ======================= =================
 0      YoungsEtAl1997SSlab()                 rrup        vs30                    hypo_depth mag   
 1      BooreAtkinson2008() ChiouYoungs2008() rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
@@ -69,7 +69,7 @@ Realizations per (TRT, GSIM)
 Number of ruptures per tectonic region type
 -------------------------------------------
 ================== ====== ==================== =========== ============ ======
-source_model       trt_id trt                  num_sources eff_ruptures weight
+source_model       grp_id trt                  num_sources eff_ruptures weight
 ================== ====== ==================== =========== ============ ======
 source_model_1.xml 0      Subduction Intraslab 1           1815         45    
 source_model_1.xml 1      Active Shallow Crust 2           3630         90    
