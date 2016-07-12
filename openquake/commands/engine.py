@@ -72,7 +72,7 @@ def run_job(cfg_file, log_level, log_file, exports='',
     return job_id
 
 
-def delete_calculation(job_id, confirmed=False):
+def del_calculation(job_id, confirmed=False):
     """
     Delete a calculation and all associated outputs.
     """
@@ -187,7 +187,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         run_job(os.path.expanduser(run_hazard), log_level,
                 log_file, exports)
     elif delete_calculation is not None:
-        delete_calculation(delete_calculation, yes)
+        del_calculation(delete_calculation, yes)
     # risk
     elif list_risk_calculations:
         for line in logs.dbcmd('list_calculations', 'risk', getpass.getuser()):

@@ -620,7 +620,9 @@ celeryd_wait $GEM_MAXLOOP"
         oq engine --lrc"
     fi
 
-    ssh $lxc_ip "oq engine --make-html-report today; oq purge -1; oq purge 0"
+    ssh $lxc_ip "oq engine --make-html-report today
+    oq --dc 1
+    oq purge -1; oq purge 0"
     scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
 
     scp -r "${lxc_ip}:/usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" "out_${BUILD_UBUVER}/"
