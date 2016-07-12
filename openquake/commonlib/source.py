@@ -108,7 +108,8 @@ class SourceModel(object):
         Return an empty copy of the source model, i.e. without sources,
         but with the proper attributes for each SourceGroup contained within.
         """
-        src_groups = [SourceGroup(sg.trt, [], sg.min_mag, sg.max_mag, sg.id)
+        src_groups = [sourceconverter.SourceGroup(
+            sg.trt, [], sg.min_mag, sg.max_mag, sg.id)
                       for sg in self.src_groups]
         return self.__class__(self.name, self.weight, self.path, src_groups,
                               self.num_gsim_paths, self.ordinal, self.samples)
@@ -124,107 +125,6 @@ def capitalize(words):
     return ' '.join(w.capitalize() for w in words.split(' '))
 
 
-class SourceGroup(collections.Sequence):
-    """
-    A container for the following parameters:
-
-    :param str trt:
-        the tectonic region type all the sources belong to
-    :param list sources:
-        a list of hazardlib source objects
-    :param min_mag:
-        the minimum magnitude among the given sources
-    :param max_mag:
-        the maximum magnitude among the given sources
-    :param gsims:
-        the GSIMs associated to tectonic region type
-    :param id:
-        an optional numeric ID (default None) useful to associate
-        the model to a database object
-    """
-    @classmethod
-    def collect(cls, sources):
-        """
-        :param sources: dictionaries with a key 'tectonicRegion'
-        :returns: an ordered list of SourceGroup instances
-        """
-        source_stats_dict = {}
-        for src in sources:
-            trt = src['tectonicRegion']
-            if trt not in source_stats_dict:
-                source_stats_dict[trt] = SourceGroup(trt)
-            sg = source_stats_dict[trt]
-            if not sg.sources:
-                # we append just one source per TRSGodel, so that
-                # the memory occupation is insignificant
-                sg.sources.append(src)
-
-        # return SourceGroups, ordered by TRT string
-        return sorted(source_stats_dict.values())
-
-    def __init__(self, trt, sources=None,
-                 min_mag=None, max_mag=None, id=0, eff_ruptures=-1):
-        self.trt = trt
-        self.sources = sources or []
-        self.min_mag = min_mag
-        self.max_mag = max_mag
-        self.id = id
-        for src in self.sources:
-            self.update(src)
-        self.source_model = None  # to be set later, in CompositionInfo
-        self.weight = 1
-        self.eff_ruptures = eff_ruptures  # set later nby get_rlzs_assoc
-
-    def tot_ruptures(self):
-        return sum(src.num_ruptures for src in self.sources)
-
-    def update(self, src):
-        """
-        Update the attributes sources, min_mag, max_mag
-        according to the given source.
-
-        :param src:
-            an instance of :class:
-            `openquake.hazardlib.source.base.BaseSeismicSource`
-        """
-        assert src.tectonic_region_type == self.trt, (
-            src.tectonic_region_type, self.trt)
-        self.sources.append(src)
-        min_mag, max_mag = src.get_min_max_mag()
-        prev_min_mag = self.min_mag
-        if prev_min_mag is None or min_mag < prev_min_mag:
-            self.min_mag = min_mag
-        prev_max_mag = self.max_mag
-        if prev_max_mag is None or max_mag > prev_max_mag:
-            self.max_mag = max_mag
-
-    def __repr__(self):
-        return '<%s #%d %s, %d source(s), %d effective rupture(s)>' % (
-            self.__class__.__name__, self.id, self.trt,
-            len(self.sources), self.eff_ruptures)
-
-    def __lt__(self, other):
-        """
-        Make sure there is a precise ordering of SourceGroup objects.
-        Objects with less sources are put first; in case the number
-        of sources is the same, use lexicographic ordering on the trts
-        """
-        num_sources = len(self.sources)
-        other_sources = len(other.sources)
-        if num_sources == other_sources:
-            return self.trt < other.trt
-        return num_sources < other_sources
-
-    def __getitem__(self, i):
-        return self.sources[i]
-
-    def __iter__(self):
-        return iter(self.sources)
-
-    def __len__(self):
-        return len(self.sources)
-
-
 class SourceModelParser(object):
     """
     A source model parser featuring a cache.
@@ -234,7 +134,7 @@ class SourceModelParser(object):
     """
     def __init__(self, converter):
         self.converter = converter
-        self.sources = {}  # cache fname -> sources
+        self.groups = {}  # cache fname -> groups
         self.fname_hits = collections.Counter()  # fname -> number of calls
 
     def parse_src_groups(self, fname, apply_uncertainties=None):
@@ -245,29 +145,22 @@ class SourceModelParser(object):
             a function modifying the sources (or None)
         """
         try:
-            sources = self.sources[fname]
+            groups = self.groups[fname]
         except KeyError:
-            sources = self.sources[fname] = self.parse_sources(fname)
+            groups = self.groups[fname] = self.parse_groups(fname)
         # NB: deepcopy is *essential* here
-        sources = [copy.deepcopy(src) for src in sources]
-        for src in sources:
-            if apply_uncertainties:
-                apply_uncertainties(src)
-                src.num_ruptures = src.count_ruptures()
+        groups = [copy.deepcopy(g) for g in groups]
+        for group in groups:
+            for src in group:
+                if apply_uncertainties:
+                    apply_uncertainties(src)
+                    src.num_ruptures = src.count_ruptures()
         self.fname_hits[fname] += 1
+        return groups
 
-        # build ordered SourceGroups
-        trts = {}
-        for src in sources:
-            trt = src.tectonic_region_type
-            if trt not in trts:
-                trts[trt] = SourceGroup(trt)
-            trts[trt].update(src)
-        return sorted(trts.values())
-
-    def parse_sources(self, fname):
+    def parse_groups(self, fname):
         """
-        Parse all the sources and return them ordered by tectonic region type.
+        Parse all the groups and return them ordered by number of sources.
         It does not count the ruptures, so it is relatively fast.
 
         :param fname:
@@ -276,21 +169,33 @@ class SourceModelParser(object):
         sources = []
         source_ids = set()
         self.converter.fname = fname
-        src_nodes = nrml.parse(fname).nodes
-        for no, src_node in enumerate(src_nodes, 1):
-            src = self.converter.convert_node(src_node)
-            if src.source_id in source_ids:
-                raise DuplicatedID(
-                    'The source ID %s is duplicated!' % src.source_id)
-            sources.append(src)
-            source_ids.add(src.source_id)
-            if no % 10000 == 0:  # log every 10,000 sources parsed
-                logging.info('Parsed %d sources from %s', no, fname)
-        if no % 10000 != 0:
-            logging.info('Parsed %d sources from %s', no, fname)
-        srcs = sorted(sources, key=operator.attrgetter(
-            'tectonic_region_type', 'source_id'))
-        return srcs
+        smodel = nrml.read(fname)
+        if smodel['xmlns'].endswith('nrml/0.4'):
+            for no, src_node in enumerate(smodel.sourceModel, 1):
+                src = self.converter.convert_node(src_node)
+                if src.source_id in source_ids:
+                    raise DuplicatedID(
+                        'The source ID %s is duplicated!' % src.source_id)
+                sources.append(src)
+                source_ids.add(src.source_id)
+                if no % 10000 == 0:  # log every 10,000 sources parsed
+                    logging.info('Instantiated %d sources from %s', no, fname)
+            if no % 10000 != 0:
+                logging.info('Instantiated %d sources from %s', no, fname)
+            groups = groupby(
+                sources, operator.attrgetter('tectonic_region_type'))
+            return sorted(sourceconverter.SourceGroup(trt, srcs)
+                          for trt, srcs in groups.items())
+        if smodel['xmlns'].endswith('nrml/0.5'):
+            groups = []  # expect a sequence of sourceGroup nodes
+            for src_group in smodel.sourceModel:
+                with node.context(fname, src_group):
+                    if 'sourceGroup' not in src_group.tag:
+                        raise ValueError('expected sourceGroup')
+                groups.append(self.converter.convert_node(src_group))
+            return sorted(groups)
+        else:
+            raise RuntimeError('Unknown NRML version %s' % smodel['xmlns'])
 
 
 def agg_prob(acc, prob):
@@ -329,7 +234,7 @@ class RlzsAssoc(collections.Mapping):
         self.rlzs_assoc = collections.defaultdict(list)
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
         self.rlzs_by_smodel = [[] for _ in range(len(csm_info.source_models))]
-        self.gsims_by_trt_id = {}
+        self.gsims_by_grp_id = {}
         self.sm_ids = {}
         self.samples = {}
         for sm in csm_info.source_models:
@@ -341,7 +246,7 @@ class RlzsAssoc(collections.Mapping):
         """
         Finalize the initialization of the RlzsAssoc object by setting
         the (reduced) weights of the realizations and the attribute
-        gsims_by_trt_id.
+        gsims_by_grp_id.
         """
         if self.num_samples:
             assert len(self.realizations) == self.num_samples
@@ -357,31 +262,31 @@ class RlzsAssoc(collections.Mapping):
             for rlz in self.realizations:
                 rlz.weight = rlz.weight / tot_weight
 
-        self.gsims_by_trt_id = groupby(
+        self.gsims_by_grp_id = groupby(
             self.rlzs_assoc, operator.itemgetter(0),
-            lambda group: sorted(gsim for trt_id, gsim in group))
+            lambda group: sorted(gsim for grp_id, gsim in group))
 
     @property
     def realizations(self):
         """Flat list with all the realizations"""
         return sum(self.rlzs_by_smodel, [])
 
-    def get_rlzs_by_gsim(self, trt_id):
+    def get_rlzs_by_gsim(self, grp_id):
         """
         Returns a dictionary gsim -> rlzs
         """
-        return {gsim: self[trt_id, str(gsim)]
-                for gsim in self.gsims_by_trt_id[trt_id]}
+        return {gsim: self[grp_id, str(gsim)]
+                for gsim in self.gsims_by_grp_id[grp_id]}
 
-    def get_rlzs_by_trt_id(self):
+    def get_rlzs_by_grp_id(self):
         """
-        Returns a dictionary trt_id > [sorted rlzs]
+        Returns a dictionary grp_id > [sorted rlzs]
         """
-        rlzs_by_trt_id = collections.defaultdict(set)
-        for (trt_id, gsim), rlzs in self.rlzs_assoc.items():
-            rlzs_by_trt_id[trt_id].update(rlzs)
-        return {trt_id: sorted(rlzs)
-                for trt_id, rlzs in rlzs_by_trt_id.items()}
+        rlzs_by_grp_id = collections.defaultdict(set)
+        for (grp_id, gsim), rlzs in self.rlzs_assoc.items():
+            rlzs_by_grp_id[grp_id].update(rlzs)
+        return {grp_id: sorted(rlzs)
+                for grp_id, rlzs in rlzs_by_grp_id.items()}
 
     def _add_realizations(self, idx, lt_model, gsim_lt, gsim_rlzs):
         trts = gsim_lt.tectonic_region_types
@@ -517,7 +422,7 @@ source_model_dt = numpy.dtype([
 ])
 
 src_group_dt = numpy.dtype(
-    [('trt_id', U32),
+    [('grp_id', U32),
      ('trti', U16),
      ('effrup', I32),
      ('sm_id', U32)])
@@ -541,7 +446,8 @@ class CompositionInfo(object):
         weight = 1
         gsim_lt = gsimlt or logictree.GsimLogicTree.from_('FromFile')
         fakeSM = SourceModel(
-            'fake', weight,  'b1', [SourceGroup('*', eff_ruptures=1)],
+            'fake', weight,  'b1',
+            [sourceconverter.SourceGroup('*', eff_ruptures=1)],
             gsim_lt.get_num_paths(), ordinal=0, samples=1)
         return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM])
 
@@ -589,8 +495,9 @@ class CompositionInfo(object):
         for sm_id, rec in enumerate(sm_data):
             tdata = sg_data[sm_id]
             srcgroups = [
-                SourceGroup(self.trts[trti], id=trt_id, eff_ruptures=effrup)
-                for trt_id, trti, effrup, sm_id in tdata if effrup > 0]
+                sourceconverter.SourceGroup(
+                    self.trts[trti], id=grp_id, eff_ruptures=effrup)
+                for grp_id, trti, effrup, sm_id in tdata if effrup > 0]
             path = tuple(rec['path'].split('_'))
             trts = set(sg.trt for sg in srcgroups)
             num_gsim_paths = self.gsim_lt.reduce(trts).get_num_paths()
@@ -666,6 +573,17 @@ class CompositionInfo(object):
             for src_group in smodel.src_groups:
                 if src_group.id == src_group_id:
                     return smodel
+
+    def get_sm_by_rlz(self, realizations):
+        """
+        :returns: a dictionary rlz -> source model name
+        """
+        dic = {}
+        for sm in self.source_models:
+            for rlz in realizations:
+                if rlz.sm_lt_path == sm.path:
+                    dic[rlz] = sm.name
+        return dic
 
     def get_trt(self, src_group_id):
         """

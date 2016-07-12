@@ -287,7 +287,10 @@ def del_calc(job_id, user):
         if assoc_outputs.count() > 0:
             raise RuntimeError(
                 msg % ', '.join(str(x.id) for x in assoc_outputs))
-        job.delete()
+        # not using Django since we got strange errors on Ubuntu 12.04
+        # like https://ci.openquake.org/job/master_oq-engine/2581/console
+        db.connection.cursor().execute(
+            'DELETE FROM job WHERE id=%d' % job_id)
     else:
         # this doesn't belong to the current user
         raise RuntimeError(UNABLE_TO_DEL_HC_FMT % 'Access denied')

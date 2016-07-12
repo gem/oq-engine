@@ -96,6 +96,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             'expected/agg_losses-b1,b1-structural.csv', fname)
 
     @attr('qa', 'risk', 'event_based_risk')
+    def test_missing_taxonomy(self):
+        with self.assertRaises(RuntimeError) as ctx:
+            self.run_calc(case_2.__file__, 'job_err.ini')
+        self.assertIn('not in the risk model', str(ctx.exception))
+
+    @attr('qa', 'risk', 'event_based_risk')
     def test_case_3(self):
         # this is a test with statistics and without conditional_loss_poes
         out = self.run_calc(case_3.__file__, 'job.ini',
