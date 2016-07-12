@@ -161,7 +161,9 @@ class BoundingBox(object):
         """
         True if the bounding box is non empty.
         """
-        return bool(self.min_dist and self.west and self.south)
+        return bool(self.max_dist - self.min_dist or
+                    self.west - self.east or
+                    self.north - self.south)
     __nonzero__ = __bool__
 
 
@@ -333,26 +335,26 @@ class ClassicalCalculator(PSHACalculator):
 
     def execute(self):
         """
-        Builds a dictionary curves_by_trt_gsim from the stored PoEs
+        Builds a dictionary curves_by_grp_gsim from the stored PoEs
         """
-        curves_by_trt_gsim = {}
+        curves_by_grp_gsim = {}
         with self.monitor('read poes', autoflush=True):
             for group_id in self.datastore['poes']:
                 grp_id = int(group_id)
                 poes = self.datastore['poes/' + group_id]
                 gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
                 for i, gsim in enumerate(gsims):
-                    curves_by_trt_gsim[grp_id, gsim] = poes.extract(i)
-        return curves_by_trt_gsim
+                    curves_by_grp_gsim[grp_id, gsim] = poes.extract(i)
+        return curves_by_grp_gsim
 
-    def post_execute(self, curves_by_trt_gsim):
+    def post_execute(self, curves_by_grp_gsim):
         """
         Combine the curves and store them
         """
         nsites = len(self.sitecol)
         imtls = self.oqparam.imtls
         with self.monitor('combine curves_by_rlz', autoflush=True):
-            curves_by_rlz = self.rlzs_assoc.combine_curves(curves_by_trt_gsim)
+            curves_by_rlz = self.rlzs_assoc.combine_curves(curves_by_grp_gsim)
         self.save_curves({rlz: array_of_curves(curves, nsites, imtls)
                           for rlz, curves in curves_by_rlz.items()})
 

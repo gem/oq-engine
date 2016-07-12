@@ -140,7 +140,8 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # test recomputing the hazard maps
         out = self.run_calc(
-            case_13.__file__, 'job.ini', exports='csv', poes='0.2')
+            case_13.__file__, 'job.ini', exports='csv', poes='0.2',
+            hazard_calculation_id=str(self.calc.datastore.calc_id))
         [fname] = out['hmaps', 'csv']
         self.assertEqualFiles('expected/hazard_map-mean2.csv', fname)
 
