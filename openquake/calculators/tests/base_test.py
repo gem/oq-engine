@@ -54,13 +54,6 @@ class CheckHazardRiskConsistencyTestCase(unittest.TestCase):
     def test_ok(self):
         base.check_precalc_consistency('scenario_risk', 'scenario')
 
-    def test_obsolete_mode(self):
-        with self.assertRaises(ValueError) as ctx:
-            base.check_precalc_consistency('scenario', 'scenario')
-        msg = str(ctx.exception)
-        self.assertEqual(msg, 'Please change calculation_mode=scenario into '
-                         'scenario_risk in the .ini file')
-
     def test_inconsistent_mode(self):
         with self.assertRaises(base.InvalidCalculationID) as ctx:
             base.check_precalc_consistency('classical_risk', 'scenario')
