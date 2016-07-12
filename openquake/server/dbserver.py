@@ -153,6 +153,7 @@ def run_server(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
         os.makedirs(dirname)
 
     # create and upgrade the db if needed
+    connection.cursor()  # binds the connection
     db = dbapi.Db(connection)
     db('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
     actions.upgrade_db(db)

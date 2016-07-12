@@ -36,7 +36,7 @@ class TooManyColumns(Exception):
 class _Replacer(object):
     # helper for match
     rx = re.compile('%T|%S|%D|%A|%O|%t|%s')
-    ph = '%s'
+    ph = '?'
 
     def __init__(self, all_args):
         self.all_args = list(all_args)
@@ -103,8 +103,8 @@ class Db(object):
     A wrapper over a DB API 2 connection
     """
     def __init__(self, conn):
-        self.conn = conn
-        self.debug = False
+        # conn can be a Django connection or a raw connection
+        self.conn = conn.connection if hasattr(conn, 'connection') else conn
 
     def __enter__(self):
         return self
@@ -118,7 +118,7 @@ class Db(object):
     def __call__(self, m_templ, *m_args, **kw):
         cursor = self.conn.cursor()
         templ, args = match(m_templ, *m_args)
-        if self.debug or kw.get('debug'):
+        if kw.get('debug'):
             print(templ, args)
         try:
             if args:
