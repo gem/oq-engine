@@ -224,7 +224,7 @@ def compose(scripts, name='main', description=None, prog=None,
     help_script = Script(gethelp, 'help', help=False)
     progname = '%s ' % prog if prog else ''
     help_script.arg('cmd', progname + 'subcommand')
-    for s in scripts + [help_script]:
+    for s in list(scripts) + [help_script]:
         subp = subparsers.add_parser(s.name, description=s.description)
         for args, kw in s.all_arguments:
             subp.add_argument(*args, **kw)
