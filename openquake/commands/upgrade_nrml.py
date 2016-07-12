@@ -20,13 +20,15 @@ from __future__ import print_function
 
 import os
 import shutil
+import operator
 from xml.etree.ElementTree import iterparse
 
+from openquake.baselib.general import groupby
+from openquake.risklib import scientific
 from openquake.commonlib.nrml import NRML05
 from openquake.commonlib import sap, nrml
 from openquake.commonlib.node import context, striptag, Node
 from openquake.commonlib import InvalidFile, riskmodels
-from openquake.risklib import scientific
 
 
 def get_vulnerability_functions_04(fname):
@@ -85,6 +87,7 @@ def upgrade_file(path):
     node0 = nrml.read(path, chatty=False)[0]
     shutil.copy(path, path + '.bak')  # make a backup of the original file
     tag = striptag(node0.tag)
+    gml = True
     if tag == 'vulnerabilityModel':
         vf_dict, cat_dict = get_vulnerability_functions_04(path)
         # below I am converting into a NRML 0.5 vulnerabilityModel
@@ -96,8 +99,13 @@ def upgrade_file(path):
         node0 = riskmodels.convert_fragility_model_04(
             nrml.read(path)[0], path)
         gml = False
-    else:
-        gml = True
+    elif tag == 'sourceModel':
+        node0 = nrml.read(path)[0]
+        dic = groupby(node0.nodes, operator.itemgetter('tectonicRegion'))
+        node0.nodes = [Node('sourceGroup',
+                            dict(tectonicRegion=trt, name="group %s" % i),
+                            nodes=srcs)
+                       for i, (trt, srcs) in enumerate(dic.items(), 1)]
     with open(path, 'w') as f:
         nrml.write([node0], f, gml=gml)
 
@@ -105,6 +113,7 @@ def upgrade_file(path):
 # NB: this works only for migrations from NRML version 0.4 to 0.5
 # we will implement a more general solution when we will need to pass
 # to version 0.6
+@sap.Script
 def upgrade_nrml(directory, dry_run):
     """
     Upgrade all the NRML files contained in the given directory to the latest
@@ -125,7 +134,8 @@ def upgrade_nrml(directory, dry_run):
                 if xmlns[1:] == NRML05:  # already upgraded
                     pass
                 elif 'nrml/0.4' in xmlns and (
-                        'vulnerability' in tag or 'fragility' in tag):
+                        'vulnerability' in tag or 'fragility' in tag or
+                        'sourceModel' in tag):
                     if not dry_run:
                         print('Upgrading', path)
                         try:
@@ -138,6 +148,5 @@ def upgrade_nrml(directory, dry_run):
                 ip._file.close()
 
 
-parser = sap.Parser(upgrade_nrml)
-parser.arg('directory', 'directory to consider')
-parser.flg('dry_run', 'test the upgrade without replacing the files')
+upgrade_nrml.arg('directory', 'directory to consider')
+upgrade_nrml.flg('dry_run', 'test the upgrade without replacing the files')

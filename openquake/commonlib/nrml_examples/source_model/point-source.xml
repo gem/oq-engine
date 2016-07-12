@@ -1,36 +1,49 @@
-<?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4">
-
-    <sourceModel name="Some Source Model">
-
-        <pointSource id="1" name="point" tectonicRegion="Stable Continental Crust">
-
-            <pointGeometry>
-                <gml:Point>
-                    <gml:pos>-122.0 38.0</gml:pos>
-                </gml:Point>
-
-                <upperSeismoDepth>0.0</upperSeismoDepth>
-                <lowerSeismoDepth>10.0</lowerSeismoDepth>
-            </pointGeometry>
-
-            <magScaleRel>WC1994</magScaleRel>
-            <ruptAspectRatio>0.5</ruptAspectRatio>
-
-            <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0" minMag="5.0" maxMag="6.5" />
-
-            <nodalPlaneDist>
-                <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0" />
-                <nodalPlane probability="0.7" strike="90.0" dip="45.0" rake="90.0" />
-            </nodalPlaneDist>
-
-            <hypoDepthDist>
-                <hypoDepth probability="0.5" depth="4.0" />
-                <hypoDepth probability="0.5" depth="8.0" />
-            </hypoDepthDist>
-
-        </pointSource>
-
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Some Source Model"
+    >
+        <sourceGroup
+        name="group 1"
+        tectonicRegion="Stable Continental Crust"
+        >
+            <pointSource
+            id="1"
+            name="point"
+            tectonicRegion="Stable Continental Crust"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            -1.2200000E+02 3.8000000E+01
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        1.0000000E+01
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    5.0000000E-01
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="-3.5000000E+00" bValue="1.0000000E+00" maxMag="6.5000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="3.0000000E-01" rake="0.0000000E+00" strike="0.0000000E+00"/>
+                    <nodalPlane dip="4.5000000E+01" probability="7.0000000E-01" rake="9.0000000E+01" strike="9.0000000E+01"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="4.0000000E+00" probability="5.0000000E-01"/>
+                    <hypoDepth depth="8.0000000E+00" probability="5.0000000E-01"/>
+                </hypoDepthDist>
+            </pointSource>
+        </sourceGroup>
     </sourceModel>
 </nrml>

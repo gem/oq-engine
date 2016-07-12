@@ -85,7 +85,6 @@ import itertools
 import numpy
 
 from openquake.baselib.general import CallableDict
-from openquake.baselib.python3compat import decode
 from openquake.commonlib import writers
 from openquake.commonlib.node import (
     node_to_xml, Node, striptag, ValidatingXmlParser, context)
@@ -119,7 +118,7 @@ def parse(fname, *args):
     return node_to_obj(node, fname, *args)
 
 
-# ######################### node_to_obj definitions ############################ #
+# ######################## node_to_obj definitions ######################### #
 
 node_to_obj = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
 # dictionary of functions with at least two arguments, node and fname
@@ -601,7 +600,7 @@ def read(source, chatty=True, stop=None):
     return nrml
 
 
-def write(nodes, output=sys.stdout, fmt='%10.7E', gml=True):
+def write(nodes, output=sys.stdout, fmt='%10.7E', gml=True, xmlns=None):
     """
     Convert nodes into a NRML file. output must be a file
     object open in write mode. If you want to perform a
@@ -612,7 +611,7 @@ def write(nodes, output=sys.stdout, fmt='%10.7E', gml=True):
     :params output: a file-like object in write or read-write mode
     """
     root = Node('nrml', nodes=nodes)
-    namespaces = {NRML05: ''}
+    namespaces = {xmlns or NRML05: ''}
     if gml:
         namespaces[GML_NAMESPACE] = 'gml:'
     with writers.floatformat(fmt):
