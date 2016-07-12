@@ -249,7 +249,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 continue
             keys = set(self.datastore)
             if (self.oqparam.uniform_hazard_spectra and not
-                    self.oqparam.hazard_maps):
+                    self.oqparam.hazard_maps and 'hmaps' in keys):
                 # do not export the hazard maps, even if they are there
                 keys.remove('hmaps')
             for key in sorted(keys):  # top level keys
