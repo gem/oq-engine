@@ -372,9 +372,10 @@ class EventBasedRuptureCalculator(PSHACalculator):
         :param ruptures_by_grp_id: a dictionary with key grp_id
         :param src_group: a SourceGroup instance
         """
-        return sum(
+        nr = sum(
             len(ruptures) for grp_id, ruptures in ruptures_by_grp_id.items()
             if src_group.id == grp_id)
+        return nr
 
     def zerodict(self):
         """
