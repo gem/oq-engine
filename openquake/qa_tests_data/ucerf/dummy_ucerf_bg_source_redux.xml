@@ -7,7 +7,7 @@ xmlns:gml="http://www.opengis.net/gml"
     name="DUMMY UCERF MODEL"
     >
         <UCERFSource
-        filename="UCERF_REDUX_MODEL_v2.hdf5"
+        filename="UCERF_REDUX_MODEL_v4.hdf5"
         id="001"
         minMag="5.5"
         tectonicRegion="Active Shallow Crust"
