@@ -23,6 +23,7 @@ Set up some system-wide loggers
 
 import os.path
 import logging
+import sqlite3
 from datetime import datetime
 from contextlib import contextmanager
 from multiprocessing.connection import Client
@@ -52,9 +53,10 @@ def dbcmd(action, *args):
         # open a connection per query, this is fast anyway
         from openquake.server.db import actions
         from openquake.server.dbapi import Db
-        from django.db import connection
-        res = getattr(actions, action)(Db(connection), *args)
-        connection.close()
+        from openquake.server.settings import DATABASE
+        db = Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None)
+        res = getattr(actions, action)(db, *args)
+        db.conn.close()
         return res
     try:
         client = Client(config.DBS_ADDRESS, authkey=config.DBS_AUTHKEY)
