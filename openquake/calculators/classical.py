@@ -271,16 +271,16 @@ class PSHACalculator(base.HazardCalculator):
         """
         monitor = self.monitor.new(self.core_task.__name__)
         monitor.oqparam = self.oqparam
-        curves_by_grp_id = self.taskman.reduce(self.agg_dicts, self.zerodict())
+        pmap_by_grp_id = self.taskman.reduce(self.agg_dicts, self.zerodict())
         self.save_data_transfer(self.taskman)
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(curves_by_grp_id)
+            self.store_source_info(pmap_by_grp_id)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
-            partial(self.count_eff_ruptures, curves_by_grp_id))
+            partial(self.count_eff_ruptures, pmap_by_grp_id))
         self.datastore['csm_info'] = self.csm.info
-        return curves_by_grp_id
+        return pmap_by_grp_id
 
-    def store_source_info(self, curves_by_grp_id):
+    def store_source_info(self, pmap_by_grp_id):
         # store the information about received data
         received = self.taskman.received
         if received:
@@ -290,7 +290,7 @@ class PSHACalculator(base.HazardCalculator):
                 tname + '_tot_received': sum(received),
                 tname + '_num_tasks': len(received)})
         # then save the calculation times per each source
-        calc_times = getattr(curves_by_grp_id, 'calc_times', [])
+        calc_times = getattr(pmap_by_grp_id, 'calc_times', [])
         if calc_times:
             sources = self.csm.get_sources()
             info_dict = {(rec['src_group_id'], rec['source_id']): rec
@@ -308,20 +308,22 @@ class PSHACalculator(base.HazardCalculator):
             self.source_info = array
         self.datastore.hdf5.flush()
 
-    def post_execute(self, curves_by_grp_id):
+    def post_execute(self, pmap_by_grp_id):
         """
         Collect the hazard curves by realization and export them.
 
-        :param curves_by_grp_id:
+        :param pmap_by_grp_id:
             a dictionary grp_id -> hazard curves
         """
-        self.datastore['bb_dict'] = curves_by_grp_id.bb_dict
+        if pmap_by_grp_id.bb_dict:
+            self.datastore['bb_dict'] = pmap_by_grp_id.bb_dict
         with self.monitor('saving probability maps', autoflush=True):
-            for grp_id in curves_by_grp_id:
-                key = 'poes/%04d' % grp_id
-                self.datastore[key] = curves_by_grp_id[grp_id]
-                self.datastore.set_attrs(
-                    key, trt=self.csm.info.get_trt(grp_id))
+            for grp_id, pmap in pmap_by_grp_id.items():
+                if pmap:  # pmap can be missing if the group is filtered away
+                    key = 'poes/%04d' % grp_id
+                    self.datastore[key] = pmap
+                    self.datastore.set_attrs(
+                        key, trt=self.csm.info.get_trt(grp_id))
             self.datastore.set_nbytes('poes')
 
 
@@ -335,26 +337,26 @@ class ClassicalCalculator(PSHACalculator):
 
     def execute(self):
         """
-        Builds a dictionary curves_by_grp_gsim from the stored PoEs
+        Builds a dictionary pmap_by_grp_gsim from the stored PoEs
         """
-        curves_by_grp_gsim = {}
+        pmap_by_grp_gsim = {}
         with self.monitor('read poes', autoflush=True):
             for group_id in self.datastore['poes']:
                 grp_id = int(group_id)
                 poes = self.datastore['poes/' + group_id]
                 gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
                 for i, gsim in enumerate(gsims):
-                    curves_by_grp_gsim[grp_id, gsim] = poes.extract(i)
-        return curves_by_grp_gsim
+                    pmap_by_grp_gsim[grp_id, gsim] = poes.extract(i)
+        return pmap_by_grp_gsim
 
-    def post_execute(self, curves_by_grp_gsim):
+    def post_execute(self, pmap_by_grp_gsim):
         """
         Combine the curves and store them
         """
         nsites = len(self.sitecol)
         imtls = self.oqparam.imtls
         with self.monitor('combine curves_by_rlz', autoflush=True):
-            curves_by_rlz = self.rlzs_assoc.combine_curves(curves_by_grp_gsim)
+            curves_by_rlz = self.rlzs_assoc.combine_curves(pmap_by_grp_gsim)
         self.save_curves({rlz: array_of_curves(curves, nsites, imtls)
                           for rlz, curves in curves_by_rlz.items()})
 

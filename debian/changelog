@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Avoid storing filtered-away probability maps, thus fixing a bug
   * Fixed a bug with `oq engine --delete-calculation`
   * Hazard curves/maps/uniform spectra can now be recomputed
   * Restored the early check on missing taxonomies
