@@ -47,8 +47,9 @@ if __name__ == "__main__":
         from openquake.server.settings import DATABASE
         DATABASE['NAME'] = tmpfile
         logs.dbcmd.DBSERVER = False
-        conn = sqlite3.connect(tmpfile)
+        conn = sqlite3.connect(tmpfile, isolation_level=None)
         upgrade_db(conn)
+        conn.close()
     else:
         # check the database version
         logs.dbcmd('check_outdated')

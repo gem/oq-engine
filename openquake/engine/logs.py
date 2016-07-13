@@ -47,11 +47,15 @@ def dbcmd(action, *args):
     :param action: database action to perform
     :param args: arguments
     """
-    if not dbcmd.DBSERVER:  # bypass the DbServer and run the action directly
+    if not dbcmd.DBSERVER:  # development/testing mode
+        # bypass the DbServer and run the action directly
+        # open a connection per query, this is fast anyway
         from openquake.server.db import actions
         from openquake.server.dbapi import Db
         from django.db import connection
-        return getattr(actions, action)(Db(connection), *args)
+        res = getattr(actions, action)(Db(connection), *args)
+        connection.close()
+        return res
     try:
         client = Client(config.DBS_ADDRESS, authkey=config.DBS_AUTHKEY)
     except:
