@@ -1,0 +1,74 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <!--NZ Seismic Hazard Model (GNS Science)-->
+  <sourceModel name="Seismic Source Model">
+    <pointSource id="1" name="point1" tectonicRegion="Active Shallow Crust">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>173.0 -34.2</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>9.0</upperSeismoDepth>
+        <lowerSeismoDepth>11.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>PointMSR</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="1.38308998699" bValue="1.12" minMag="5.2" maxMag="7.2"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="1.0" strike="0" dip="90" rake="-90"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="2" name="point2" tectonicRegion="Active Shallow Crust">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>173.1 -34.2</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>9.0</upperSeismoDepth>
+        <lowerSeismoDepth>11.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>PointMSR</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="1.38308998699" bValue="1.12" minMag="5.2" maxMag="7.2"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="1.0" strike="0" dip="90" rake="-90"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <characteristicFaultSource id="21444" name="HikHBaymax" tectonicRegion="Subduction Interface">
+      <incrementalMFD minMag="8.3" binWidth="0.1">
+        <occurRates>0.000714285714286</occurRates>
+      </incrementalMFD>
+      <rake>90</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>178.910 -39.418 177.745 -40.980</gml:posList>
+          </gml:LineString>
+          <dip>8.5</dip>
+          <upperSeismoDepth>5.0</upperSeismoDepth>
+          <lowerSeismoDepth>20.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="21445" name="HikHBaymin" tectonicRegion="Subduction Interface">
+      <incrementalMFD minMag="8.1" binWidth="0.1">
+        <occurRates>0.000909090909091</occurRates>
+      </incrementalMFD>
+      <rake>90</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>178.910 -39.418 177.745 -40.980</gml:posList>
+          </gml:LineString>
+          <dip>8.5</dip>
+          <upperSeismoDepth>5.0</upperSeismoDepth>
+          <lowerSeismoDepth>15.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+  </sourceModel>
+</nrml>
