@@ -18,6 +18,7 @@
 
 import re
 import shlex
+import threading
 import collections
 
 
@@ -99,9 +100,19 @@ class Db(object):
     """
     A wrapper over a DB API 2 connection
     """
-    def __init__(self, conn):
-        # conn should be a connection proxy
-        self.conn = conn
+    def __init__(self, connect, *args, **kw):
+        self.connect = connect
+        self.args = args
+        self.kw = kw
+        self.local = threading.local()
+
+    @property
+    def conn(self):
+        try:
+            return self.local.conn
+        except AttributeError:
+            self.local.conn = self.connect(*self.args, **self.kw)
+            return self.local.conn
 
     def __enter__(self):
         return self

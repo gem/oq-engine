@@ -408,8 +408,8 @@ def get_log_slice(db, calc_id, start, stop):
     logs = db('SELECT * FROM log WHERE job_id=%s '
               'ORDER BY id LIMIT %t OFFSET %t',
               calc_id, limit, start)
-    return [[log.timestamp.isoformat()[:22],
-             log.level, log.process, log.message] for log in logs]
+    return [[log.timestamp[:22], log.level, log.process, log.message]
+            for log in logs]
 
 
 def get_log_size(db, calc_id):
