@@ -285,7 +285,6 @@ def get_log(db, job_id):
     Extract the logs as a big string
     """
     logs = db('SELECT * FROM log WHERE job_id=%s ORDER BY id', job_id)
-    import pdb; pdb.set_trace()
     for log in logs:
         time = str(log.timestamp)[:-4]  # strip decimals
         yield '[%s #%d %s] %s' % (time, job_id, log.level, log.message)
@@ -399,25 +398,18 @@ def set_relevant(db, calc_id, flag):
     db('UPDATE job SET relevant=%s WHERE id=%s', flag, calc_id)
 
 
-# this is not an action
-def log_to_json(log):
-    """
-    Convert a log record into a list of strings
-    """
-    return [log.timestamp.isoformat()[:22],
-            log.level, log.process, log.message]
-
-
 def get_log_slice(db, calc_id, start, stop):
     """
     Get a slice of the calculation log as a JSON list of rows
     """
-    start = start or 0
-    limit = -1 if stop is None else (stop - start)
-    rows = db('SELECT * FROM log WHERE job_id=%s '
+    start = int(start)
+    stop = int(stop)
+    limit = -1 if stop == 0 else stop - start
+    logs = db('SELECT * FROM log WHERE job_id=%s '
               'ORDER BY id LIMIT %t OFFSET %t',
               calc_id, limit, start)
-    return map(log_to_json, rows)
+    return [[log.timestamp.isoformat()[:22],
+             log.level, log.process, log.message] for log in logs]
 
 
 def get_log_size(db, calc_id):
