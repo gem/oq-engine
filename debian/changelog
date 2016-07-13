@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Avoid storing filtered-away probability maps, thus fixing a bug
   * Restored the precalculation consistency check that was disabled during the
     transition to engine 2.0
   * Fixed a bug with `oq engine --delete-calculation`
