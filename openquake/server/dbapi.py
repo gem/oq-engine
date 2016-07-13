@@ -100,13 +100,8 @@ class Db(object):
     A wrapper over a DB API 2 connection
     """
     def __init__(self, conn):
-        # conn can be a Django connection or a raw connection
-        if hasattr(conn, 'connection'):
-            if conn.connection is None:
-                conn.cursor()  # binds the connection
-            self.conn = conn.connection
-        else:
-            self.conn = conn
+        # conn should be a connection proxy
+        self.conn = conn
 
     def __enter__(self):
         return self
