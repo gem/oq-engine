@@ -18,6 +18,7 @@
 
 import sys
 import socket
+import sqlite3
 import os.path
 import logging
 try:
@@ -153,15 +154,14 @@ def run_server(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
         os.makedirs(dirname)
 
     # create and upgrade the db if needed
-    connection.cursor()
-    db = dbapi.Db(connection.connection)
+    db = dbapi.Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None)
     db('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
     actions.upgrade_db(db)
-    connection.close()
+    db.conn.close()
 
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
-    DbServer(dbapi.Db(connection), addr, config.DBS_AUTHKEY).loop()
+    DbServer(db, addr, config.DBS_AUTHKEY).loop()
 
 run_server.arg('dbpathport', 'dbpath:port')
 run_server.arg('logfile', 'log file')
