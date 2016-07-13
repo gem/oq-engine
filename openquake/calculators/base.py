@@ -50,6 +50,13 @@ Site = collections.namedtuple('Site', 'sid lon lat')
 F32 = numpy.float32
 
 
+class InvalidCalculationID(Exception):
+    """
+    Raised when running a post-calculation on top of an incompatible
+    pre-calculation
+    """
+
+
 class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 
@@ -57,6 +64,16 @@ rlz_dt = numpy.dtype([('uid', hdf5.vstr), ('model', hdf5.vstr),
                       ('gsims', hdf5.vstr), ('weight', F32)])
 
 logversion = {True}
+
+PRECALC_MAP = dict(
+    classical=['psha', 'classical'],
+    disaggregation=['psha', 'classical'],
+    scenario_risk=['scenario', 'scenario_risk'],
+    scenario_damage=['scenario', 'scenario_damage'],
+    classical_risk=['classical', 'classical_risk'],
+    classical_bcr=['classical', 'classical_bcr'],
+    classical_damage=['classical', 'classical_damage'],
+    event_based_risk=['event_based', 'event_based_risk'])
 
 
 def set_array(longarray, shortarray):
@@ -77,6 +94,25 @@ def gsim_names(rlz):
     Names of the underlying GSIMs separated by spaces
     """
     return ' '.join(str(v) for v in rlz.gsim_rlz.value)
+
+
+def check_precalc_consistency(calc_mode, precalc_mode):
+    """
+    Defensive programming against users providing an incorrect pre-calculation
+    ID (with ``--hazard-calculation-id``)
+
+    :param calc_mode:
+        calculation_mode of the current calculation
+    :param precalc_mode:
+        calculation_mode of the previous calculation
+    """
+    ok_mode = PRECALC_MAP[calc_mode]
+    if precalc_mode not in ok_mode:
+        raise InvalidCalculationID(
+            'In order to run a risk calculation of kind %r, '
+            'you need to provide a calculation of kind %r, '
+            'but you provided a %r instead' %
+            (calc_mode, ok_mode, precalc_mode))
 
 
 class BaseCalculator(with_metaclass(abc.ABCMeta)):
@@ -320,6 +356,8 @@ class HazardCalculator(BaseCalculator):
 
     def read_previous(self, precalc_id):
         parent = datastore.read(precalc_id)
+        check_precalc_consistency(
+            self.oqparam.calculation_mode, parent['oqparam'].calculation_mode)
         self.datastore.set_parent(parent)
         # copy missing parameters from the parent
         params = {name: value for name, value in
