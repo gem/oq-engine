@@ -173,7 +173,7 @@ def get_ucerf_rupture(hdf5, iloc, idx_set, tom, sites,
         hdf5[idx_set["mag_idx"]][iloc],  # Magnitude
         hdf5[idx_set["rake_idx"]][iloc],  # Rake
         trt,  # Tectonic Region Type
-        surface_set[len(surface_set)/2].get_middle_point(),  # Hypocentre
+        surface_set[len(surface_set) // 2].get_middle_point(),  # Hypocentre
         MultiSurface(surface_set),
         CharacteristicFaultSource,
         hdf5[idx_set["rate_idx"]][iloc],  # Rate of events
