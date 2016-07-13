@@ -275,7 +275,7 @@ def get_log_slice(request, calc_id, start, stop):
     Get a slice of the calculation log as a JSON list of rows
     """
     start = start or 0
-    stop = stop or None
+    stop = stop or 0
     try:
         response_data = logs.dbcmd('get_log_slice', calc_id, start, stop)
     except dbapi.NotFound:
