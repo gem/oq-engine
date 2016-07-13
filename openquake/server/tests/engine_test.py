@@ -62,45 +62,6 @@ def get_job(cfg, username, hazard_calculation_id=None):
     return models.OqJob.objects.get(pk=job_id)
 
 
-class FakeJob(object):
-    def __init__(self, job_type, calculation_mode):
-        self.job_type = job_type
-        self.calculation_mode = calculation_mode
-
-    def get_oqparam(self):
-        m = mock.Mock()
-        m.calculation_mode = self.calculation_mode
-        return m
-
-
-class CheckHazardRiskConsistencyTestCase(unittest.TestCase):
-    def test_ok(self):
-        haz_job = FakeJob('hazard', 'scenario')
-        actions.check_hazard_risk_consistency(
-            haz_job, 'scenario_risk')
-
-    def test_obsolete_mode(self):
-        haz_job = FakeJob('hazard', 'scenario')
-        with self.assertRaises(ValueError) as ctx:
-            actions.check_hazard_risk_consistency(
-                haz_job, 'scenario')
-        msg = str(ctx.exception)
-        self.assertEqual(msg, 'Please change calculation_mode=scenario into '
-                         'scenario_risk in the .ini file')
-
-    def test_inconsistent_mode(self):
-        haz_job = FakeJob('hazard', 'scenario')
-        with self.assertRaises(actions.InvalidCalculationID) as ctx:
-            actions.check_hazard_risk_consistency(
-                haz_job, 'classical_risk')
-        msg = str(ctx.exception)
-        self.assertEqual(
-            msg, "In order to run a risk calculation of kind "
-            "'classical_risk', you need to provide a "
-            "calculation of kind ['classical', 'classical_risk'], "
-            "but you provided a 'scenario' instead")
-
-
 class FakeOutput(object):
     def __init__(self, id, display_name):
         self.id = id
