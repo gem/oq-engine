@@ -153,13 +153,15 @@ def run_server(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
         os.makedirs(dirname)
 
     # create and upgrade the db if needed
-    db = dbapi.Db(connection)
+    connection.cursor()
+    db = dbapi.Db(connection.connection)
     db('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
     actions.upgrade_db(db)
+    connection.close()
 
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
-    DbServer(db, addr, config.DBS_AUTHKEY).loop()
+    DbServer(dbapi.Db(connection), addr, config.DBS_AUTHKEY).loop()
 
 run_server.arg('dbpathport', 'dbpath:port')
 run_server.arg('logfile', 'log file')
