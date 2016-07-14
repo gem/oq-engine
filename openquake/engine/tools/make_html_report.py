@@ -98,8 +98,7 @@ FROM job WHERE id=$s;
 
 ALL_JOBS = '''
 SELECT id, user_name, status, ds_calc_dir FROM job
-WHERE strftime('%s', start_time) >= $s
-AND strftime('%s',start_time) < $s ORDER BY stop_time
+WHERE start_time >= $s AND start_time < $s ORDER BY stop_time
 '''
 
 PAGE_TEMPLATE = '''\
@@ -173,7 +172,7 @@ def make_report(isodate='today'):
         (job_id, user, start_time, stop_time, status, duration) = stats
         try:
             ds = read(job_id, datadir=os.path.dirname(ds_calc))
-            txt = view_fullreport('fullreport', ds).decode('utf-8')
+            txt = view_fullreport('fullreport', ds)
             report = html_parts(txt)
         except Exception as exc:
             report = dict(
