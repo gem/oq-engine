@@ -174,8 +174,6 @@ class Db(object):
             row = Row(colnames)
             if kw.get('one'):
                 return row._new(rows[0])
-            elif kw.get('header'):
-                return [row] + [row._new(r) for r in rows]
             else:
                 return [row._new(r) for r in rows]
         else:

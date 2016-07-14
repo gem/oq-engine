@@ -275,9 +275,9 @@ def save_performance(db, job_id, records):
 # used in make_report
 def fetch(db, templ, *args):
     """
-    Run queries directly on the database. Return header + rows
+    Run queries directly on the database
     """
-    return db(templ, *args, header=True)
+    return db(templ, *args)
 
 
 def get_dbpath(db):
