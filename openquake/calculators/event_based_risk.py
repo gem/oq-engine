@@ -240,7 +240,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.N = len(self.assetcol)
         self.E = len(self.datastore['etags'])
         logging.info('Populating the risk inputs')
-        rlzs_by_tr_id = self.rlzs_assoc.get_rlzs_by_trt_id()
+        rlzs_by_tr_id = self.rlzs_assoc.get_rlzs_by_grp_id()
         num_rlzs = {t: len(rlzs) for t, rlzs in rlzs_by_tr_id.items()}
         num_assets = {sid: len(self.assets_by_site[sid])
                       for sid in self.sitecol.sids}

@@ -36,8 +36,40 @@ from openquake.risklib import scientific
 from openquake.commonlib import parallel, datastore, source, calc
 from openquake.calculators import base
 
-
+U16 = numpy.uint16
+F64 = numpy.float64
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
+
+
+class BBdict(AccumDict):
+    """
+    A serializable dictionary containing bounding box information
+    """
+    dt = numpy.dtype([('lt_model_id', U16), ('site_id', U16),
+                      ('min_dist', F64), ('max_dist', F64),
+                      ('east', F64), ('west', F64),
+                      ('south', F64), ('north', F64)])
+
+    def __toh5__(self):
+        rows = []
+        for lt_model_id, site_id in self:
+            bb = self[lt_model_id, site_id]
+            rows.append((lt_model_id, site_id, bb.min_dist, bb.max_dist,
+                         bb.east, bb.west, bb.south, bb.north))
+        return numpy.array(rows, self.dt), {}
+
+    def __fromh5__(self, array, attrs):
+        for row in array:
+            lt_model_id = row['lt_model_id']
+            site_id = row['site_id']
+            bb = BoundingBox(lt_model_id, site_id)
+            bb.min_dist = row['min_dist']
+            bb.max_dist = row['max_dist']
+            bb.east = row['east']
+            bb.west = row['west']
+            bb.north = row['north']
+            bb.south = row['south']
+            self[lt_model_id, site_id] = bb
 
 
 # this is needed for the disaggregation
@@ -53,8 +85,8 @@ class BoundingBox(object):
     def __init__(self, lt_model_id, site_id):
         self.lt_model_id = lt_model_id
         self.site_id = site_id
-        self.min_dist = self.max_dist = None
-        self.east = self.west = self.south = self.north = None
+        self.min_dist = self.max_dist = 0
+        self.east = self.west = self.south = self.north = 0
 
     def update(self, dists, lons, lats):
         """
@@ -68,11 +100,11 @@ class BoundingBox(object):
         :param lats:
             a sequence of latitudes
         """
-        if self.min_dist is not None:
+        if self.min_dist:
             dists = [self.min_dist, self.max_dist] + dists
-        if self.west is not None:
+        if self.west:
             lons = [self.west, self.east] + lons
-        if self.south is not None:
+        if self.south:
             lats = [self.south, self.north] + lats
         self.min_dist, self.max_dist = min(dists), max(dists)
         self.west, self.east, self.north, self.south = \
@@ -129,8 +161,9 @@ class BoundingBox(object):
         """
         True if the bounding box is non empty.
         """
-        return (self.min_dist is not None and self.west is not None and
-                self.south is not None)
+        return bool(self.max_dist - self.min_dist or
+                    self.west - self.east or
+                    self.north - self.south)
     __nonzero__ = __bool__
 
 
@@ -156,7 +189,7 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
     # sanity check: the src_group must be the same for all sources
     for src in sources[1:]:
         assert src.src_group_id == src_group_id
-    gsims = rlzs_assoc.gsims_by_trt_id[src_group_id]
+    gsims = rlzs_assoc.gsims_by_grp_id[src_group_id]
     trt = sources[0].tectonic_region_type
     max_dist = monitor.oqparam.maximum_distance[trt]
 
@@ -179,8 +212,8 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
     return dic
 
 
-@base.calculators.add('classical')
-class ClassicalCalculator(base.HazardCalculator):
+@base.calculators.add('psha')
+class PSHACalculator(base.HazardCalculator):
     """
     Classical PSHA calculator
     """
@@ -192,7 +225,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param val: a nested dictionary trt_id -> ProbabilityMap
+        :param val: a nested dictionary grp_id -> ProbabilityMap
         """
         with self.monitor('aggregate curves', autoflush=True):
             if hasattr(val, 'calc_times'):
@@ -210,7 +243,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Returns the number of ruptures in the src_group (after filtering)
         or 0 if the src_group has been filtered away.
 
-        :param result_dict: a dictionary with keys (trt_id, gsim)
+        :param result_dict: a dictionary with keys (grp_id, gsim)
         :param src_group: a SourceGroup instance
         """
         return (result_dict.eff_ruptures.get(src_group.id, 0) / self.num_tiles)
@@ -221,12 +254,13 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         zd = ProbabilityMap()
         zd.calc_times = []
-        zd.eff_ruptures = AccumDict()  # trt_id -> eff_ruptures
-        zd.bb_dict = {
-            (smodel.ordinal, sid): BoundingBox(smodel.ordinal, sid)
-            for sid in self.sitecol.sids
-            for smodel in self.csm.source_models
-        } if self.oqparam.poes_disagg else {}
+        zd.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
+        zd.bb_dict = BBdict()
+        if self.oqparam.poes_disagg:
+            for sid in self.sitecol.sids:
+                for smodel in self.csm.source_models:
+                    zd.bb_dict[smodel.ordinal, sid] = BoundingBox(
+                        smodel.ordinal, sid)
         return zd
 
     def execute(self):
@@ -237,16 +271,16 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         monitor = self.monitor.new(self.core_task.__name__)
         monitor.oqparam = self.oqparam
-        curves_by_trt_id = self.taskman.reduce(self.agg_dicts, self.zerodict())
+        pmap_by_grp_id = self.taskman.reduce(self.agg_dicts, self.zerodict())
         self.save_data_transfer(self.taskman)
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(curves_by_trt_id)
+            self.store_source_info(pmap_by_grp_id)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
-            partial(self.count_eff_ruptures, curves_by_trt_id))
+            partial(self.count_eff_ruptures, pmap_by_grp_id))
         self.datastore['csm_info'] = self.csm.info
-        return curves_by_trt_id
+        return pmap_by_grp_id
 
-    def store_source_info(self, curves_by_trt_id):
+    def store_source_info(self, pmap_by_grp_id):
         # store the information about received data
         received = self.taskman.received
         if received:
@@ -256,7 +290,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 tname + '_tot_received': sum(received),
                 tname + '_num_tasks': len(received)})
         # then save the calculation times per each source
-        calc_times = getattr(curves_by_trt_id, 'calc_times', [])
+        calc_times = getattr(pmap_by_grp_id, 'calc_times', [])
         if calc_times:
             sources = self.csm.get_sources()
             info_dict = {(rec['src_group_id'], rec['source_id']): rec
@@ -274,32 +308,55 @@ class ClassicalCalculator(base.HazardCalculator):
             self.source_info = array
         self.datastore.hdf5.flush()
 
-    def post_execute(self, curves_by_trt_id):
+    def post_execute(self, pmap_by_grp_id):
         """
         Collect the hazard curves by realization and export them.
 
-        :param curves_by_trt_id:
-            a dictionary trt_id -> hazard curves
+        :param pmap_by_grp_id:
+            a dictionary grp_id -> hazard curves
+        """
+        if pmap_by_grp_id.bb_dict:
+            self.datastore['bb_dict'] = pmap_by_grp_id.bb_dict
+        with self.monitor('saving probability maps', autoflush=True):
+            for grp_id, pmap in pmap_by_grp_id.items():
+                if pmap:  # pmap can be missing if the group is filtered away
+                    key = 'poes/%04d' % grp_id
+                    self.datastore[key] = pmap
+                    self.datastore.set_attrs(
+                        key, trt=self.csm.info.get_trt(grp_id))
+            self.datastore.set_nbytes('poes')
+
+
+@base.calculators.add('classical')
+class ClassicalCalculator(PSHACalculator):
+    """
+    Classical PSHA calculator
+    """
+    pre_calculator = 'psha'
+    core_task = classical
+
+    def execute(self):
+        """
+        Builds a dictionary pmap_by_grp_gsim from the stored PoEs
+        """
+        pmap_by_grp_gsim = {}
+        with self.monitor('read poes', autoflush=True):
+            for group_id in self.datastore['poes']:
+                grp_id = int(group_id)
+                poes = self.datastore['poes/' + group_id]
+                gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
+                for i, gsim in enumerate(gsims):
+                    pmap_by_grp_gsim[grp_id, gsim] = poes.extract(i)
+        return pmap_by_grp_gsim
+
+    def post_execute(self, pmap_by_grp_gsim):
+        """
+        Combine the curves and store them
         """
         nsites = len(self.sitecol)
         imtls = self.oqparam.imtls
-        curves_by_trt_gsim = {}
-
-        with self.monitor('saving probability maps', autoflush=True):
-            for trt_id in curves_by_trt_id:
-                key = 'poes/%04d' % trt_id
-                self.datastore[key] = curves_by_trt_id[trt_id]
-                self.datastore.set_attrs(
-                    key, trt=self.csm.info.get_trt(trt_id))
-                gsims = self.rlzs_assoc.gsims_by_trt_id[trt_id]
-                for i, gsim in enumerate(gsims):
-                    curves_by_trt_gsim[trt_id, gsim] = (
-                        curves_by_trt_id[trt_id].extract(i))
-            self.datastore.set_nbytes('poes')
-
         with self.monitor('combine curves_by_rlz', autoflush=True):
-            curves_by_rlz = self.rlzs_assoc.combine_curves(curves_by_trt_gsim)
-
+            curves_by_rlz = self.rlzs_assoc.combine_curves(pmap_by_grp_gsim)
         self.save_curves({rlz: array_of_curves(curves, nsites, imtls)
                           for rlz, curves in curves_by_rlz.items()})
 

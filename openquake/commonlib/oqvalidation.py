@@ -138,7 +138,7 @@ class OqParam(valid.ParamSet):
     region_grid_spacing = valid.Param(valid.positivefloat, None)
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     risk_investigation_time = valid.Param(valid.positivefloat, None)
-    rupture_mesh_spacing = valid.Param(valid.positivefloat, None)
+    rupture_mesh_spacing = valid.Param(valid.positivefloat)
     complex_fault_mesh_spacing = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     ses_per_logic_tree_path = valid.Param(valid.positiveint, 1)
