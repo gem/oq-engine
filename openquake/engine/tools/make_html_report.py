@@ -161,7 +161,7 @@ def make_report(isodate='today'):
 
     # the fetcher returns an header which is stripped with [1:]
     jobs = dbcmd(
-        'fetch', ALL_JOBS, isodate.isoformat(), isodate1.isoformat())[1:]
+        'fetch', ALL_JOBS, isodate.isoformat(), isodate1.isoformat())
     page = '<h2>%d job(s) finished before midnight of %s</h2>' % (
         len(jobs), isodate)
     for job_id, user, status, ds_calc in jobs:
