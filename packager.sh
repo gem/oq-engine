@@ -349,7 +349,7 @@ _devtest_innervm_run () {
                  nosetests -v --with-doctest --with-coverage --cover-package=openquake.commands openquake/commands
 
                  python-coverage xml --include=\"openquake/*\"
-        "
+        bin/oq dbserver stop"
         scp "${lxc_ip}:oq-engine/xunit-*.xml" "out_${BUILD_UBUVER}/" || true
         scp "${lxc_ip}:oq-engine/coverage.xml" "out_${BUILD_UBUVER}/" || true
     else
