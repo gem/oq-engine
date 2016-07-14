@@ -48,7 +48,7 @@ b1_b4     0.200  `source_model.xml <source_model.xml>`_ trivial(1)      1/1
 Required parameters per tectonic region type
 --------------------------------------------
 ====== ================ ========= ========== ==========
-trt_id gsims            distances siteparams ruptparams
+grp_id gsims            distances siteparams ruptparams
 ====== ================ ========= ========== ==========
 0      SadighEtAl1997() rrup      vs30       rake mag  
 1      SadighEtAl1997() rrup      vs30       rake mag  
@@ -68,7 +68,7 @@ Realizations per (TRT, GSIM)
 Number of ruptures per tectonic region type
 -------------------------------------------
 ================ ====== ==================== =========== ============ ======
-source_model     trt_id trt                  num_sources eff_ruptures weight
+source_model     grp_id trt                  num_sources eff_ruptures weight
 ================ ====== ==================== =========== ============ ======
 source_model.xml 0      Active Shallow Crust 1           3500         87    
 source_model.xml 1      Active Shallow Crust 1           3000         75    

@@ -452,7 +452,7 @@ def get_composite_source_model(oqparam, in_memory=True):
     """
     source_model_lt = get_source_model_lt(oqparam)
     smodels = []
-    trt_id = 0
+    grp_id = 0
     idx = 0
 
     def getid(src):
@@ -465,7 +465,7 @@ def get_composite_source_model(oqparam, in_memory=True):
             oqparam, gsim_lt, source_model_lt, in_memory=in_memory):
         for src_group in source_model.src_groups:
             src_group.sources = sorted(src_group, key=getid)
-            src_group.id = trt_id
+            src_group.id = grp_id
             for src in src_group:
                 # there are two cases depending on the flag in_memory:
                 # 1) src is a hazardlib source and has a src_group_id
@@ -473,10 +473,10 @@ def get_composite_source_model(oqparam, in_memory=True):
                 # 2) src is a Node object, then nothing must be done
                 if isinstance(src, Node):
                     continue
-                src.src_group_id = trt_id
+                src.src_group_id = grp_id
                 src.id = idx
                 idx += 1
-            trt_id += 1
+            grp_id += 1
         smodels.append(source_model)
     csm = source.CompositeSourceModel(
         gsim_lt, source_model_lt, smodels, in_memory)
