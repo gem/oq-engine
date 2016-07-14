@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  Fixed the encode/decode functions in baselib.python3compat
+
   [Daniele Viganò]
   * Added Python 3 compatibility to speedups
 
