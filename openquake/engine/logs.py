@@ -54,7 +54,8 @@ def dbcmd(action, *args):
         from openquake.server.db import actions
         from openquake.server.dbapi import Db
         from openquake.server.settings import DATABASE
-        db = Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None)
+        db = Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
+                detect_types=sqlite3.PARSE_DECLTYPES)
         res = getattr(actions, action)(db, *args)
         db.conn.close()
         return res
