@@ -101,6 +101,8 @@ class EngineServerTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        if sys.version > '3':
+            raise unittest.SkipTest('The tests do not run yet with Python 3')
         cls.job_ids = []
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
