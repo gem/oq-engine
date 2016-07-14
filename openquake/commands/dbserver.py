@@ -23,10 +23,6 @@ from openquake.engine import logs, config
 from openquake.server import dbserver as dbs
 
 
-def runserver():
-    runpy.run_path(dbs.__file__)
-
-
 @sap.Script
 def dbserver(cmd):
     """
@@ -46,16 +42,14 @@ def dbserver(cmd):
             print('dbserver already stopped')
     elif cmd == 'start':
         if status == 'not-running':
-            runserver()
-            print('dbserver started')
+            dbs.run_server()
         else:
             print('dbserver already running')
     elif cmd == 'restart':
         if status == 'running':
             logs.dbcmd('stop')
             print('dbserver stopped')
-        runserver()
-        print('dbserver started')
+        dbs.run_server()
 
 dbserver.arg('cmd', 'dbserver command',
              choices='start stop status restart'.split())
