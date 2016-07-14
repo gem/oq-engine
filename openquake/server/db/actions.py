@@ -29,18 +29,6 @@ from openquake.server.db import models
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
 
-
-class InvalidCalculationID(Exception):
-    pass
-
-RISK_HAZARD_MAP = dict(
-    scenario_risk=['scenario', 'scenario_risk'],
-    scenario_damage=['scenario', 'scenario_damage'],
-    classical_risk=['classical', 'classical_risk'],
-    classical_bcr=['classical', 'classical_bcr'],
-    classical_damage=['classical', 'classical_damage'],
-    event_based_risk=['event_based', 'event_based_risk'])
-
 INPUT_TYPES = set(dict(models.INPUT_TYPE_CHOICES))
 UNABLE_TO_DEL_HC_FMT = 'Unable to delete hazard calculation: %s'
 UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
@@ -225,32 +213,6 @@ def create_outputs(job_id, dskeys):
             job, DISPLAY_NAME.get(key, key), ds_key=key)
 
 
-def check_hazard_risk_consistency(haz_job, risk_mode):
-    """
-    Make sure that the provided hazard job is the right one for the
-    current risk calculator.
-
-    :param job:
-        an OqJob instance referring to the previous hazard calculation
-    :param risk_mode:
-        the `calculation_mode` string of the current risk calculation
-    """
-    # check for obsolete calculation_mode
-    if risk_mode in ('classical', 'event_based', 'scenario'):
-        raise ValueError('Please change calculation_mode=%s into %s_risk '
-                         'in the .ini file' % (risk_mode, risk_mode))
-
-    # check calculation_mode consistency
-    prev_mode = haz_job.calculation_mode
-    ok_mode = RISK_HAZARD_MAP[risk_mode]
-    if prev_mode not in ok_mode:
-        raise InvalidCalculationID(
-            'In order to run a risk calculation of kind %r, '
-            'you need to provide a calculation of kind %r, '
-            'but you provided a %r instead' %
-            (risk_mode, ok_mode, prev_mode))
-
-
 def finish(job_id, status):
     """
     Set the job columns `is_running`, `status`, and `stop_time`
@@ -287,7 +249,10 @@ def del_calc(job_id, user):
         if assoc_outputs.count() > 0:
             raise RuntimeError(
                 msg % ', '.join(str(x.id) for x in assoc_outputs))
-        job.delete()
+        # not using Django since we got strange errors on Ubuntu 12.04
+        # like https://ci.openquake.org/job/master_oq-engine/2581/console
+        db.connection.cursor().execute(
+            'DELETE FROM job WHERE id=%d' % job_id)
     else:
         # this doesn't belong to the current user
         raise RuntimeError(UNABLE_TO_DEL_HC_FMT % 'Access denied')

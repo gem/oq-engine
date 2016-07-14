@@ -148,7 +148,7 @@ def compute_disagg(sitecol, sources, src_group_id, rlzs_assoc,
     except KeyError:
         max_dist = oqparam.maximum_distance['default']
     trt_num = dict((trt, i) for i, trt in enumerate(trt_names))
-    gsims = rlzs_assoc.gsims_by_trt_id[src_group_id]
+    gsims = rlzs_assoc.gsims_by_grp_id[src_group_id]
     result = {}  # sid, rlz.id, poe, imt, iml, trt_names -> array
 
     collecting_mon = monitor('collecting bins')
@@ -211,7 +211,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
     """
     def post_execute(self, result=None):
         super(DisaggregationCalculator, self).post_execute(result)
-        self.full_disaggregation(result)
+        self.full_disaggregation()
 
     def agg_result(self, acc, result):
         """
@@ -244,12 +244,13 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                 dic[rlz.ordinal, imt_str] = poes[imt_str]
         return dic
 
-    def full_disaggregation(self, curves_by_trt_gsim):
+    def full_disaggregation(self):
         """
         Run the disaggregation phase after hazard curve finalization.
         """
         oq = self.oqparam
         tl = self.oqparam.truncation_level
+        bb_dict = self.datastore['bb_dict']
         sitecol = self.sitecol
         mag_bin_width = self.oqparam.mag_bin_width
         eps_edges = numpy.linspace(-tl, tl, self.oqparam.num_epsilon_bins + 1)
@@ -276,7 +277,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                     curves = curves_dict[sid]
                     if not curves:
                         continue  # skip zero-valued hazard curves
-                    bb = curves_by_trt_gsim.bb_dict[sm_id, sid]
+                    bb = bb_dict[sm_id, sid]
                     if not bb:
                         logging.info(
                             'location %s was too far, skipping disaggregation',
