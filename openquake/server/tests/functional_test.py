@@ -109,15 +109,11 @@ class EngineServerTestCase(unittest.TestCase):
         # let's impersonate the user openquake, the one running the WebUI:
         # we need to set LOGNAME on Linux and USERNAME on Windows
         env['LOGNAME'] = env['USERNAME'] = 'openquake'
-        fh, cls.tmpdb = tempfile.mkstemp()
-        sys.stderr.write('sqlite3 %s\n' % cls.tmpdb)
-        os.close(fh)
         cls.fd, cls.errfname = tempfile.mkstemp()
         print('Errors saved in %s' % cls.errfname, file=sys.stderr)
         cls.proc = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
-             cls.hostport, '--noreload', '--nothreading',
-             'tmpdb=' + cls.tmpdb],
+             cls.hostport, '--noreload', '--nothreading'],
             env=env, stderr=cls.fd)  # redirect the server logs
         time.sleep(5)
 
