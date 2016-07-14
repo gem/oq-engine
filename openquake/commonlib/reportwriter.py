@@ -84,7 +84,7 @@ class ReportWriter(object):
             text = '\n::\n\n' + indent(str(obj))
         else:
             text = datastore.view(name, self.dstore)
-        self.text + '\n'.join(['\n\n' + title, line, text])
+        self.text += '\n'.join(['\n\n' + title, line, text])
 
     def make_report(self):
         """Build the report and return a restructed text string"""
