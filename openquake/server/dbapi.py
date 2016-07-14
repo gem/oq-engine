@@ -36,7 +36,7 @@ class TooManyColumns(Exception):
 
 class _Replacer(object):
     # helper for match
-    rx = re.compile('%T|%S|%D|%A|%O|%t|%s')
+    rx = re.compile(r'\$T|\$S|\$D|\$A|\$O|\$t|\$s')
     ph = '?'
 
     def __init__(self, all_args):
@@ -48,28 +48,28 @@ class _Replacer(object):
         arg = self.all_args[0]
         del self.all_args[0]
         placeholder = mo.group()
-        if placeholder == '%S':
+        if placeholder == '$S':
             self.xargs.extend(arg)
             return ', '.join([self.ph] * len(arg))
-        elif placeholder == '%T':
+        elif placeholder == '$T':
             self.targs.extend(arg)
             return ', '.join(['{}'] * len(arg))
-        elif placeholder == '%D':
+        elif placeholder == '$D':
             self.targs.extend(arg.keys())
             self.xargs.extend(arg.values())
             return ', '.join(['{}=' + self.ph] * len(arg))
-        elif placeholder == '%A':
+        elif placeholder == '$A':
             self.targs.extend(arg.keys())
             self.xargs.extend(arg.values())
             return self.join(' AND ', arg)
-        elif placeholder == '%O':
+        elif placeholder == '$O':
             self.targs.extend(arg.keys())
             self.xargs.extend(arg.values())
             return self.join(' OR ', arg)
-        elif placeholder == '%s':
+        elif placeholder == '$s':
             self.xargs.append(arg)
             return self.ph
-        elif placeholder == '%t':
+        elif placeholder == '$t':
             self.targs.append(arg)
             return '{}'
 
@@ -85,13 +85,19 @@ def match(m_templ, *m_args):
     :param m_templ: a meta template string
     :param m_args: all arguments
     :returns: template, args
+
+    Here is an example of usage:
+
+    >>> match('SELECT * FROM job WHERE id=$s', 1)
+    ('SELECT * FROM job WHERE id=?', (1,))
     """
     if not m_args:
         return m_templ, ()
     repl = _Replacer(m_args)
     lst = []
     for token in shlex.split(m_templ, comments='#', posix=False):
-        lst.append(repl.rx.sub(repl, token))
+        if not token.startswith('\'"'):
+            lst.append(repl.rx.sub(repl, token))
     templ = ' '.join(lst)
     return templ.format(*repl.targs), tuple(repl.xargs)
 
@@ -153,20 +159,60 @@ class Db(object):
                     raise TooManyRows(len(rows))
 
             colnames = [r[0] for r in cursor.description]
-            nt = collections.namedtuple('Row', colnames)
+            row = Row(colnames)
             if kw.get('one'):
-                return nt(*rows[0])
+                return row._new(rows[0])
             elif kw.get('header'):
-                return [nt(*colnames)] + [nt(*row) for row in rows]
+                return [row] + [row._new(r) for r in rows]
             else:
-                return [nt(*row) for row in rows]
+                return [row._new(r) for r in rows]
         else:
             return cursor
 
-    def insertmany(self, table, columns, rows):
+    def insert(self, table, columns, rows):
         cursor = self.conn.cursor()
         if len(rows):
-            templ, _args = match('INSERT INTO %t (%T) VALUES (%S)',
+            templ, _args = match('INSERT INTO $t ($T) VALUES ($S)',
                                  table, columns, rows[0])
             cursor.executemany(templ, rows)
         return cursor
+
+
+# we cannot use a namedtuple here because one would get aPicklingError:
+# Can't pickle <class 'openquake.server.dbapi.Row'>: attribute lookup
+# openquake.server.dbapi.Row failed
+class Row(collections.Sequence):
+    """
+    A pickleable row. Here is an example of usage:
+
+    >>> row = Row('id value'.split())
+    >>> row._new((1, 42))
+    <Row(id=1, value=42)>
+    >>> row._fields
+    ['id', 'value']
+    """
+    def __init__(self, fields):
+        self._fields = self._tup = fields
+        for f in fields:
+            setattr(self, f, f)
+
+    def _new(self, values):
+        if len(values) != len(self._tup):
+            raise ValueError('Got %d fields, expected %d' %
+                             (len(values), len(self._tup)))
+        new = self.__new__(self.__class__)
+        new._fields = self._fields
+        new._tup = values
+        for f, v in zip(self._fields, values):
+            setattr(new, f, v)
+        return new
+
+    def __getitem__(self, i):
+        return self._tup[i]
+
+    def __len__(self):
+        return len(self._tup)
+
+    def __repr__(self):
+        items = ['%s=%s' % (f, getattr(self, f)) for f in self._fields]
+        return '<Row(%s)>' % ', '.join(items)
