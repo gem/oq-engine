@@ -167,6 +167,8 @@ class Db(object):
                     raise NotFound
                 elif len(rows) > 1:
                     raise TooManyRows(len(rows))
+            elif cursor.description is None:
+                return cursor
 
             colnames = [r[0] for r in cursor.description]
             row = Row(colnames)
