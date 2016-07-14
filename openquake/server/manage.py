@@ -21,39 +21,39 @@ import os
 import sys
 import sqlite3
 from django.core.management import execute_from_command_line
-from openquake.server.db.upgrade_manager import upgrade_db
+from openquake.server.settings import DATABASE
 from openquake.server import executor
+from openquake.server.db import actions
+from openquake.server.dbapi import Db
 from openquake.engine import logs
 
+db = Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
+        detect_types=sqlite3.PARSE_DECLTYPES)
 
-def parse_args(argv):
-    # manages the argument "tmpdb=XXX" used in the functional tests
-    args = []
-    dbname = None
-    for arg in argv:
-        if arg.startswith('tmpdb='):
-            dbname = arg[6:]
-        else:
-            args.append(arg)
-    return args, dbname
+
+# bypass the DbServer and run the action directly
+def dbcmd(action, *args):
+    """
+    A dispatcher to the database server.
+
+    :param action: database action to perform
+    :param args: arguments
+    """
+    return getattr(actions, action)(db, *args)
+
 
 # the code here is run in development mode; for instance
 # $ python manage.py runserver 0.0.0.0:8800
 if __name__ == "__main__":
     os.environ.setdefault(
         "DJANGO_SETTINGS_MODULE", "openquake.server.settings")
-    argv, tmpfile = parse_args(sys.argv)
-    if tmpfile:  # this is used in the functional tests
-        from openquake.server.settings import DATABASE
-        DATABASE['NAME'] = tmpfile
-        logs.dbcmd.DBSERVER = False
-        conn = sqlite3.connect(tmpfile, isolation_level=None)
-        upgrade_db(conn)
-        conn.close()
+    if '--nothreading' in sys.argv:  # this is used in the functional tests
+        logs.dbcmd = dbcmd
+        dbcmd('upgrade_db')
     else:
         # check the database version
         logs.dbcmd('check_outdated')
         # reset is_running
         logs.dbcmd('reset_is_running')
     with executor:
-        execute_from_command_line(argv)
+        execute_from_command_line(sys.argv)
