@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import shlex
 import threading
 import collections
 
@@ -35,7 +34,7 @@ class TooManyColumns(Exception):
 
 
 class _Replacer(object):
-    # helper for match
+    # helper class for the match function below
     rx = re.compile(r'\$T|\$S|\$D|\$A|\$O|\$t|\$s')
     ph = '?'
 
@@ -79,6 +78,10 @@ class _Replacer(object):
             ls.append('{} IS NULL' if arg is None else '{}=' + self.ph)
         return sep.join(ls)
 
+    def match(self, m_templ):
+        templ = self.rx.sub(self, m_templ)
+        return templ.format(*self.targs), tuple(self.xargs)
+
 
 def match(m_templ, *m_args):
     """
@@ -86,25 +89,32 @@ def match(m_templ, *m_args):
     :param m_args: all arguments
     :returns: template, args
 
-    Here is an example of usage:
+    Here are two examples of usage:
 
     >>> match('SELECT * FROM job WHERE id=$s', 1)
     ('SELECT * FROM job WHERE id=?', (1,))
+
+    >>> match('INSERT INTO job ($T) VALUES $S', ['id', 'value'], [1, 2])
+    ('INSERT INTO job (id, value) VALUES ?, ?', (1, 2))
     """
     if not m_args:
         return m_templ, ()
-    repl = _Replacer(m_args)
-    lst = []
-    for token in shlex.split(m_templ, comments='#', posix=False):
-        if not token.startswith('\'"'):
-            lst.append(repl.rx.sub(repl, token))
-    templ = ' '.join(lst)
-    return templ.format(*repl.targs), tuple(repl.xargs)
+    return _Replacer(m_args).match(m_templ)
 
 
 class Db(object):
     """
-    A wrapper over a DB API 2 connection
+    A wrapper over a DB API 2 connection. Here are a few examples of usage:
+
+    >>> import sqlite3
+    >>> db = Db(sqlite3.connect, ':memory:')
+    >>> curs = db('CREATE TABLE job (id SERIAL PRIMARY KEY, value INTEGER)')
+    >>> db.insert('job', ['value'], [(42,), (43,)]).rowcount
+    2
+    >>> db('SELECT * FROM job')
+    <RecordSet['id', 'value'], 2 records>
+    >>> db('SELECT sum(value) FROM job', scalar=True)
+    85
     """
     def __init__(self, connect, *args, **kw):
         self.connect = connect
@@ -141,7 +151,7 @@ class Db(object):
                 cursor.execute(templ)
         except Exception as exc:
             raise exc.__class__('%s: %s %s' % (exc, templ, args))
-        if templ.lower().startswith('select'):
+        if templ.lstrip().lower().startswith(('select', 'pragma')):
             rows = cursor.fetchall()
 
             if kw.get('scalar'):  # scalar query
