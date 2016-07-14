@@ -29,7 +29,7 @@ import numpy
 import importlib
 import subprocess
 
-PY3 = sys.version_info[0] == 3
+PY3 = sys.version_info[0] >= 3
 PY2 = sys.version_info[0] == 2
 
 
@@ -40,11 +40,10 @@ def encode(val):
     :param: a unicode or bytes object
     :returns: bytes
     """
-    try:
-        # assume it is an unicode string
+    if isinstance(val, unicode):
         return val.encode('utf-8')
-    except AttributeError:
-        # it was an already encoded object
+    else:
+        # assume it was an already encoded object
         return val
 
 
@@ -55,12 +54,12 @@ def decode(val):
     :param: a unicode or bytes object
     :returns: a unicode object
     """
-    try:
-        # assume it is an encoded bytes object
-        return val.decode('utf-8')
-    except AttributeError:
+    if isinstance(val, unicode):
         # it was an already decoded unicode object
         return val
+    else:
+        # assume it is an encoded bytes object
+        return val.decode('utf-8')
 
 if PY2:
     import cPickle as pickle
