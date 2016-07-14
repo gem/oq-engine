@@ -48,7 +48,7 @@ if __name__ == "__main__":
     os.environ.setdefault(
         "DJANGO_SETTINGS_MODULE", "openquake.server.settings")
     if '--nothreading' in sys.argv:  # this is used in the functional tests
-        logs.dbcmd = dbcmd
+        # logs.dbcmd = dbcmd  ## turn this on when debugging
         dbcmd('upgrade_db')
     else:
         # check the database version
