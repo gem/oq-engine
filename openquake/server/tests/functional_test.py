@@ -29,14 +29,11 @@ import unittest
 import subprocess
 import tempfile
 import requests
-import django
 from openquake.baselib.general import writetmp
 
 
 if requests.__version__ < '1.0.0':
     requests.Response.text = property(lambda self: self.content)
-if hasattr(django, 'setup'):
-    django.setup()  # for Django >= 1.7
 
 
 class EngineServerTestCase(unittest.TestCase):
@@ -104,10 +101,6 @@ class EngineServerTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        if django.get_version() < '1.5' or sys.version > '3':
-            # Django too old or Python too new
-            raise unittest.SkipTest
-
         cls.job_ids = []
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'

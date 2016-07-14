@@ -35,7 +35,6 @@ from openquake.engine import config
 from openquake.server.db import actions
 from openquake.server import dbapi
 from openquake.server.settings import DATABASE
-from django.db import connection
 import django
 if hasattr(django, 'setup'):  # >= 1.7
     django.setup()
@@ -154,7 +153,8 @@ def run_server(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
         os.makedirs(dirname)
 
     # create and upgrade the db if needed
-    db = dbapi.Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None)
+    db = dbapi.Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
+                  detect_types=sqlite3.PARSE_DECLTYPES)
     db('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
     actions.upgrade_db(db)
     db.conn.close()
