@@ -15,7 +15,152 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+"""
+One of the worst thing about Python is the DB API 2.0 specification
+https://www.python.org/dev/peps/pep-0249/. It was a good thing 15
+years ago, but only as a stepping stone for a DB API 3.0 that
+never happened. Instead, the ORM camp stepped in; since then, there has been
+a proliferation of Object Relational Mappers in the Python world,
+making life a lot harder for Python programmers. Fortunately,
+there has always been good Pythonistas in the anti-ORM camp.
 
+This module is heavily inspired by the dbapiext module
+(http://furius.ca/pubcode/pub/antiorm/lib/python/dbapiext.py.html) by
+Martin Blais, which is part of the antiorm package. The main
+difference is that I am using the dollar sign ($) for the placeholders
+instead of the percent sign (%) to avoid confusions with other usages
+of the %s, in particular in LIKE queries and in expressions like
+`strftime('%s', time)` used in SQLite.
+
+In less than 200 lines of code there is enough support
+to build dynamic SQL queries to make an ORM unneeded (notice that
+we do not need database independence).
+
+dbiapi tutorial
+--------------------------
+
+The only thing you must to know is the `Db` class, which is lazy wrapper
+over a database connection. You instantiate it by passing a connection
+function and its arguments:
+
+>>> import sqlite3
+>>> db = Db(sqlite3.connect, ':memory:')
+
+Now you have an interface to your database, the `db` object. This object
+is lazy, i.e. the connection is not yet instantiated, but it will be
+when you will access its `.conn` attribute. This attribute is automatically
+accessed when you call the interface to run a query, for instance to create
+an empty table:
+
+>>> curs = db('CREATE TABLE job ('
+...     'id INTEGER PRIMARY KEY AUTOINCREMENT, value INTEGER)')
+
+You can populate the table by using the `.insert` method:
+
+>>> db.insert('job', ['value'], [(42,), (43,)]).rowcount
+2
+
+Then you can run SELECT queries:
+
+>>> rows = db('SELECT * FROM job')
+
+The dbapi provides a `Row` class which is used to hold the results of
+SELECT queries and working as one would expect:
+
+>>> rows
+[<Row(id=1, value=42)>, <Row(id=2, value=43)>]
+>>> tuple(rows[0])
+(1, 42)
+>>> rows[0].id
+1
+>>> rows[0].value
+42
+
+The queries can have different kind of `$` parameters:
+
+- `$s` is for interpolated string parameters:
+
+  >>> db('SELECT * FROM $s', 'job')  # $s is replaced by 'job'
+  [<Row(id=1, value=42)>, <Row(id=2, value=43)>]
+
+- `$x` is for escaped parameters (the ones to use to avoid SQL injection):
+
+  >>> db('SELECT * FROM job WHERE id=$x', 1)  # $x is replaced by 1
+  [<Row(id=1, value=42)>]
+
+- `$s` and `$x` are for scalar parameters; `$S` and `$X` are for sequences:
+
+  >>> db('INSERT INTO job ($S) VALUES ($X)', ['id', 'value'], (3, 44)) # doctest: +ELLIPSIS
+  <sqlite3.Cursor object at ...>
+
+Notice that non-SELECT queries returns a standard DB API 2.0 cursor and
+you have access to all of its features (for instance here you could extract
+the lastrowid).
+
+You can see how the interpolation works by calling the `match` function
+that returns the interpolated template and the parameters that will be
+passed to the low level driver. In this case
+
+>>> match('INSERT INTO job ($S) VALUES ($X)', ['id', 'value'], [3, 44])
+('INSERT INTO job (id, value) VALUES (?, ?)', (3, 44))
+
+As you see, `$S` parameters work by replacing a list of strings with a comma
+separated string, where $X parameters are replaced by a comma separated
+sequence of question marks, i.e. the low level placeholder for SQLite.
+The interpolation performs a regular search and replace,
+so if you have a `$-` string in your template that must not be escaped,
+so you should take care. This is an error:
+
+>>> match("SELECT * FROM job WHERE id=$x AND description='Lots of $s'", 1)
+Traceback (most recent call last):
+   ...
+ValueError: Incorrect number of $-parameters in SELECT * FROM job WHERE id=$x AND description='Lots of $s', expected 1
+
+This is correct:
+
+>>> match("SELECT * FROM job WHERE id=$x AND description=$x", 1, 'Lots of $s')
+('SELECT * FROM job WHERE id=? AND description=?', (1, 'Lots of $s'))
+
+There are three other `$` parameters:
+
+- `$D` is for dictionaries and it is used mostly in UPDATE queries:
+
+  >>> match('UPDATE job SET $D WHERE id=$x', dict(value=33, other=5), 1)
+  ('UPDATE job SET other=?, value=? WHERE id=?', (5, 33, 1))
+
+- `$A` is for dictionaries and it is used in AND queries:
+
+  >>> match('SELECT * FROM job WHERE $A', dict(value=33, id=5))
+  ('SELECT * FROM job WHERE id=? AND value=?', (5, 33))
+
+- `$O` is for dictionaries and it is used in OR queries:
+
+  >>> match('SELECT * FROM job WHERE $O', dict(value=33, id=5))
+  ('SELECT * FROM job WHERE id=? OR value=?', (5, 33))
+
+The dictionary parameters are ordered per field name, just to make
+the templates reproducible. `$A` and `$O` are smart enough to
+treat specially `None` parameters, that are turned into `NULL`s:
+
+  >>> match('SELECT * FROM job WHERE $A', dict(value=None, id=5))
+  ('SELECT * FROM job WHERE id=? AND value IS NULL', (5,))
+
+The `$` parameters are matched positionally; it is also possible to
+pass to the `db` object a few keyword arguments to tune the standard
+behavior. In particular, if you know that a query must return a
+single row you can do the following:
+
+>>> db('SELECT * FROM job WHERE id=$x', 1, one=True)
+<Row(id=1, value=42)>
+
+Without the `one=True` the query would have returned a list with a single
+element. If you know that the query must return a scalar you can do the
+following:
+
+>>> db('SELECT value FROM job WHERE id=$x', 1, scalar=True)
+42
+
+"""
 import re
 import threading
 import collections
@@ -35,52 +180,55 @@ class TooManyColumns(Exception):
 
 class _Replacer(object):
     # helper class for the match function below
-    rx = re.compile(r'\$T|\$S|\$D|\$A|\$O|\$t|\$s')
+    rx = re.compile(r'\$S|\$X|\$D|\$A|\$O|\$s|\$x')
     ph = '?'
 
     def __init__(self, all_args):
         self.all_args = list(all_args)
         self.xargs = []
-        self.targs = []
+        self.sargs = []
 
     def __call__(self, mo):
-        arg = self.all_args[0]
+        arg = self.all_args[0]  # can raise an IndexError
         del self.all_args[0]
         placeholder = mo.group()
-        if placeholder == '$S':
+        if placeholder == '$X':
             self.xargs.extend(arg)
             return ', '.join([self.ph] * len(arg))
-        elif placeholder == '$T':
-            self.targs.extend(arg)
+        elif placeholder == '$S':
+            self.sargs.extend(arg)
             return ', '.join(['{}'] * len(arg))
         elif placeholder == '$D':
-            self.targs.extend(arg.keys())
-            self.xargs.extend(arg.values())
+            keys, values = zip(*sorted(arg.items()))
+            self.sargs.extend(keys)
+            self.xargs.extend(values)
             return ', '.join(['{}=' + self.ph] * len(arg))
         elif placeholder == '$A':
-            self.targs.extend(arg.keys())
-            self.xargs.extend(arg.values())
             return self.join(' AND ', arg)
         elif placeholder == '$O':
-            self.targs.extend(arg.keys())
-            self.xargs.extend(arg.values())
             return self.join(' OR ', arg)
-        elif placeholder == '$s':
+        elif placeholder == '$x':
             self.xargs.append(arg)
             return self.ph
-        elif placeholder == '$t':
-            self.targs.append(arg)
+        elif placeholder == '$s':
+            self.sargs.append(arg)
             return '{}'
 
-    def join(self, sep, args):
+    def join(self, sep, arg):
         ls = []
-        for arg in args:
-            ls.append('{} IS NULL' if arg is None else '{}=' + self.ph)
+        for name in sorted(arg):
+            self.sargs.append(name)
+            value = arg[name]
+            if value is None:
+                ls.append('{} IS NULL')
+            else:
+                self.xargs.append(value)
+                ls.append('{}=' + self.ph)
         return sep.join(ls)
 
     def match(self, m_templ):
         templ = self.rx.sub(self, m_templ)
-        return templ.format(*self.targs), tuple(self.xargs)
+        return templ.format(*self.sargs), tuple(self.xargs)
 
 
 def match(m_templ, *m_args):
@@ -89,32 +237,23 @@ def match(m_templ, *m_args):
     :param m_args: all arguments
     :returns: template, args
 
-    Here are two examples of usage:
+    Here is an example of usage:
 
-    >>> match('SELECT * FROM job WHERE id=$s', 1)
+    >>> match('SELECT * FROM job WHERE id=$x', 1)
     ('SELECT * FROM job WHERE id=?', (1,))
-
-    >>> match('INSERT INTO job ($T) VALUES $S', ['id', 'value'], [1, 2])
-    ('INSERT INTO job (id, value) VALUES ?, ?', (1, 2))
     """
     if not m_args:
         return m_templ, ()
-    return _Replacer(m_args).match(m_templ)
+    try:
+        return _Replacer(m_args).match(m_templ)
+    except IndexError:
+        raise ValueError('Incorrect number of $-parameters in %s, expected %s'
+                         % (m_templ, len(m_args)))
 
 
 class Db(object):
     """
-    A wrapper over a DB API 2 connection. Here are a few examples of usage:
-
-    >>> import sqlite3
-    >>> db = Db(sqlite3.connect, ':memory:')
-    >>> curs = db('CREATE TABLE job (id SERIAL PRIMARY KEY, value INTEGER)')
-    >>> db.insert('job', ['value'], [(42,), (43,)]).rowcount
-    2
-    >>> db('SELECT * FROM job')
-    <RecordSet['id', 'value'], 2 records>
-    >>> db('SELECT sum(value) FROM job', scalar=True)
-    85
+    A wrapper over a DB API 2 connection. See the tutorial.
     """
     def __init__(self, connect, *args, **kw):
         self.connect = connect
@@ -171,18 +310,20 @@ class Db(object):
                 return cursor
 
             colnames = [r[0] for r in cursor.description]
-            row = Row(colnames)
             if kw.get('one'):
-                return row._new(rows[0])
+                return Row(colnames, rows[0])
             else:
-                return [row._new(r) for r in rows]
+                return [Row(colnames, r) for r in rows]
         else:
             return cursor
 
     def insert(self, table, columns, rows):
+        """
+        Insert several rows with executemany. Return a cursor.
+        """
         cursor = self.conn.cursor()
         if len(rows):
-            templ, _args = match('INSERT INTO $t ($T) VALUES ($S)',
+            templ, _args = match('INSERT INTO $s ($S) VALUES ($X)',
                                  table, columns, rows[0])
             cursor.executemany(templ, rows)
         return cursor
@@ -193,35 +334,30 @@ class Db(object):
 # openquake.server.dbapi.Row failed
 class Row(collections.Sequence):
     """
-    A pickleable row. Here is an example of usage:
+    A pickleable row, working both as a tuple and an object:
 
-    >>> row = Row('id value'.split())
-    >>> row._new((1, 42))
-    <Row(id=1, value=42)>
-    >>> row._fields
-    ['id', 'value']
+    >>> row = Row(['id', 'value'], (1, 2))
+    >>> tuple(row)
+    (1, 2)
+    >>> assert row[0] == row.id and row[1] == row.value
+
+    :param fields: a sequence of field names
+    :param values: a sequence of values (one per field)
     """
-    def __init__(self, fields):
-        self._fields = self._tup = fields
-        for f in fields:
-            setattr(self, f, f)
-
-    def _new(self, values):
-        if len(values) != len(self._tup):
-            raise ValueError('Got %d fields, expected %d' %
-                             (len(values), len(self._tup)))
-        new = self.__new__(self.__class__)
-        new._fields = self._fields
-        new._tup = values
-        for f, v in zip(self._fields, values):
-            setattr(new, f, v)
-        return new
+    def __init__(self, fields, values):
+        if len(values) != len(fields):
+            raise ValueError('Got %d values, expected %d' %
+                             (len(values), len(fields)))
+        self._fields = fields
+        self._values = values
+        for f, v in zip(fields, values):
+            setattr(self, f, v)
 
     def __getitem__(self, i):
-        return self._tup[i]
+        return self._values[i]
 
     def __len__(self):
-        return len(self._tup)
+        return len(self._values)
 
     def __repr__(self):
         items = ['%s=%s' % (f, getattr(self, f)) for f in self._fields]

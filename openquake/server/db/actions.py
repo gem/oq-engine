@@ -76,7 +76,7 @@ def create_job(db, calc_mode, description, user_name, datadir, hc_id=None):
                user_name=user_name,
                hazard_calculation_id=hc_id,
                ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
-    db('INSERT INTO job ($T) VALUES ($S)', job.keys(), job.values())
+    db('INSERT INTO job ($S) VALUES ($X)', job.keys(), job.values())
     job_id = db('SELECT seq FROM sqlite_sequence WHERE name="job"',
                 scalar=True)
     return job_id
@@ -86,7 +86,7 @@ def delete_uncompleted_calculations(db, user):
     """
     Delete the uncompleted calculations of the given user
     """
-    db("DELETE FROM job WHERE user_name=$s AND status != 'complete'", user)
+    db("DELETE FROM job WHERE user_name=$x AND status != 'complete'", user)
 
 
 def get_job_id(db, job_id, username):
@@ -97,7 +97,7 @@ def get_job_id(db, job_id, username):
     job_id = int(job_id)
     if job_id > 0:
         return job_id
-    my_jobs = db('SELECT id FROM job WHERE user_name=$s ORDER BY id',
+    my_jobs = db('SELECT id FROM job WHERE user_name=$x ORDER BY id',
                  username)
     n = len(my_jobs)
     if n == 0:  # no jobs
@@ -128,8 +128,8 @@ def list_calculations(db, job_type, user_name):
 
     :param job_type: 'hazard' or 'risk'
     """
-    jobs = db('SELECT *, %s FROM job WHERE user_name=$s '
-              'AND job_type=$s ORDER BY start_time' % JOB_TYPE,
+    jobs = db('SELECT *, %s FROM job WHERE user_name=$x '
+              'AND job_type=$x ORDER BY start_time' % JOB_TYPE,
               user_name, job_type)
 
     if len(jobs) == 0:
@@ -184,7 +184,7 @@ def get_outputs(db, job_id):
     :returns:
         A sequence of :class:`openquake.server.db.models.Output` objects
     """
-    return db('SELECT * FROM output WHERE oq_job_id=$s', job_id)
+    return db('SELECT * FROM output WHERE oq_job_id=$x', job_id)
 
 DISPLAY_NAME = dict(dmg_by_asset='dmg_by_asset_and_collapse_map')
 
@@ -206,7 +206,7 @@ def finish(db, job_id, status):
     """
     Set the job columns `is_running`, `status`, and `stop_time`
     """
-    db('UPDATE job SET $D WHERE id=$s',
+    db('UPDATE job SET $D WHERE id=$x',
        dict(is_running=False, status=status, stop_time=datetime.utcnow()),
        job_id)
 
@@ -220,14 +220,14 @@ def del_calc(db, job_id, user):
     :returns: None if everything went fine or an error message
     """
     dependent = db(
-        'SELECT id FROM job WHERE hazard_calculation_id=$s', job_id)
+        'SELECT id FROM job WHERE hazard_calculation_id=$x', job_id)
     if dependent:
         return ('Cannot delete calculation %d: there are calculations '
                 'dependent from it: %s' % job_id, [j.id for j in dependent])
-    deleted = db('DELETE FROM job WHERE id=$s', job_id).rowcount
+    deleted = db('DELETE FROM job WHERE id=$x', job_id).rowcount
     if not deleted:
         return ('Cannot delete calculation %d: ID does not exist' % job_id)
-    deleted = db('DELETE FROM job WHERE id=$s AND user_name=$s',
+    deleted = db('DELETE FROM job WHERE id=$x AND user_name=$x',
                  job_id, user).rowcount
     if not deleted:
         return ('Cannot delete calculation %d: belongs to a different user'
@@ -239,14 +239,14 @@ def log(db, job_id, timestamp, level, process, message):
     Write a log record in the database
     """
     db('INSERT INTO log (job_id, timestamp, level, process, message) '
-       'VALUES ($S)', (job_id, timestamp, level, process, message))
+       'VALUES ($X)', (job_id, timestamp, level, process, message))
 
 
 def get_log(db, job_id):
     """
     Extract the logs as a big string
     """
-    logs = db('SELECT * FROM log WHERE job_id=$s ORDER BY id', job_id)
+    logs = db('SELECT * FROM log WHERE job_id=$x ORDER BY id', job_id)
     for log in logs:
         time = str(log.timestamp)[:-4]  # strip decimals
         yield '[%s #%d %s] %s' % (time, job_id, log.level, log.message)
@@ -258,7 +258,7 @@ def get_output(db, output_id):
     :returns: (ds_key, calc_id, dirname)
     """
     out = db('SELECT output.*, ds_calc_dir FROM output, job '
-             'WHERE oq_job_id=job.id AND output.id=$s', output_id, one=True)
+             'WHERE oq_job_id=job.id AND output.id=$x', output_id, one=True)
     return out.ds_key, out.oq_job_id, os.path.dirname(out.ds_calc_dir)
 
 
@@ -311,7 +311,7 @@ def calc_info(db, calc_id):
     :param calc_id: calculation ID
     :returns: dictionary of info about the given calculation
     """
-    job = db('SELECT * FROM job WHERE id=$s', calc_id, one=True)
+    job = db('SELECT * FROM job WHERE id=$x', calc_id, one=True)
     response_data = {}
     response_data['user_name'] = job.user_name
     response_data['status'] = job.status
@@ -358,7 +358,7 @@ def set_relevant(db, calc_id, flag):
     """
     Set the `relevant` field of the given calculation record
     """
-    db('UPDATE job SET relevant=$s WHERE id=$s', flag, calc_id)
+    db('UPDATE job SET relevant=$x WHERE id=$x', flag, calc_id)
 
 
 def get_log_slice(db, calc_id, start, stop):
@@ -368,8 +368,8 @@ def get_log_slice(db, calc_id, start, stop):
     start = int(start)
     stop = int(stop)
     limit = -1 if stop == 0 else stop - start
-    logs = db('SELECT * FROM log WHERE job_id=$s '
-              'ORDER BY id LIMIT $t OFFSET $t',
+    logs = db('SELECT * FROM log WHERE job_id=$x '
+              'ORDER BY id LIMIT $s OFFSET $s',
               calc_id, limit, start)
     return [[log.timestamp.isoformat()[:22], log.level,
              log.process, log.message] for log in logs]
@@ -379,7 +379,7 @@ def get_log_size(db, calc_id):
     """
     Get a slice of the calculation log as a JSON list of rows
     """
-    return db('SELECT count(id) FROM log WHERE job_id=$s', calc_id,
+    return db('SELECT count(id) FROM log WHERE job_id=$x', calc_id,
               scalar=True)
 
 
@@ -389,7 +389,7 @@ def get_traceback(db, calc_id):
     The list is empty if the calculation was successful.
     """
     # strange: understand why the filter returns two lines
-    log = db("SELECT * FROM log WHERE job_id=$s AND level='CRITICAL'",
+    log = db("SELECT * FROM log WHERE job_id=$x AND level='CRITICAL'",
              calc_id)[-1]
     response_data = log.message.splitlines()
     return response_data
@@ -400,7 +400,7 @@ def get_result(db, result_id):
     :returns: (job_id, job_status, datadir, datastore_key)
     """
     job = db('SELECT job.*, ds_key FROM job, output WHERE '
-             'oq_job_id=job.id AND output.id=$s', result_id, one=True)
+             'oq_job_id=job.id AND output.id=$x', result_id, one=True)
     return job.id, job.status, os.path.dirname(job.ds_calc_dir), job.ds_key
 
 
@@ -408,7 +408,7 @@ def get_results(db, job_id):
     """
     :returns: (datadir, datastore_keys)
     """
-    ds_calc_dir = db('SELECT ds_calc_dir FROM job WHERE id=$s', job_id,
+    ds_calc_dir = db('SELECT ds_calc_dir FROM job WHERE id=$x', job_id,
                      scalar=True)
     datadir = os.path.dirname(ds_calc_dir)
     return datadir, [output.ds_key for output in get_outputs(db, job_id)]
