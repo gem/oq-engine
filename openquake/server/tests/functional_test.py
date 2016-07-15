@@ -28,6 +28,7 @@ import time
 import unittest
 import subprocess
 import tempfile
+import django
 import requests
 from openquake.baselib.general import writetmp
 
@@ -102,7 +103,10 @@ class EngineServerTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if sys.version > '3':
-            raise unittest.SkipTest('The tests do not run yet with Python 3')
+            raise unittest.SkipTest('webui tests do not run with Python 3')
+        elif django.get_version() < '1.5':
+            raise unittest.SkipTest('webui tests do not run with Diango < 1.5')
+
         cls.job_ids = []
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
