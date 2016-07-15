@@ -47,13 +47,7 @@ def dbcmd(action, *args):
 if __name__ == "__main__":
     os.environ.setdefault(
         "DJANGO_SETTINGS_MODULE", "openquake.server.settings")
-    if '--nothreading' in sys.argv:  # this is used in the functional tests
-        # logs.dbcmd = dbcmd  ## turn this on when debugging
-        dbcmd('upgrade_db')
-    else:
-        # check the database version
-        logs.dbcmd('check_outdated')
-        # reset is_running
-        logs.dbcmd('reset_is_running')
+    # logs.dbcmd = dbcmd  ## turn this on when debugging
+    logs.dbcmd('reset_is_running')
     with executor:
         execute_from_command_line(sys.argv)
