@@ -24,7 +24,7 @@ Requirements are:
 
 ## Install packages from the OpenQuake website
 
-Download the installer from http://www.globalquakemodel.org/pkgs/windows/oq-engine/OpenQuake_Engine_2.0.0-1.exe using any browser and run the installer, then follow the wizard on screen.
+Download the installer from http://www.globalquakemodel.org/pkgs/windows/oq-engine/OpenQuake_Engine_2.0.1-1.exe using any browser and run the installer, then follow the wizard on screen.
 
 ![installer-screenshot-1](../img/win-installer-1.png)
 ![installer-screenshot-2](../img/win-installer-2.png)
