@@ -16,25 +16,27 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
-One of the worst thing about Python is the DB API 2.0 specification
-https://www.python.org/dev/peps/pep-0249/. It was a good thing 15
-years ago, but only as a stepping stone for a DB API 3.0 that
-never happened. Instead, the ORM camp stepped in; since then, there has been
-a proliferation of Object Relational Mappers in the Python world,
-making life a lot harder for Python programmers. Fortunately,
+One of the worst thing about Python is the DB API 3.0 specification
+that never happened: instead, we are stuck with the `DB API 2.0`_
+specification of 15 years ago, which is unasable. So, instead of a good
+low level API, we had a proliferation of Object Relational Mappers in
+the Python world making our lives a lot harder. Fortunately,
 there has always been good Pythonistas in the anti-ORM camp.
 
-This module is heavily inspired by the dbapiext module
-(http://furius.ca/pubcode/pub/antiorm/lib/python/dbapiext.py.html) by
-Martin Blais, which is part of the antiorm package. The main
+This module is heavily inspired by the dbapiext_ module by
+Martin Blais, which is part of the antiorm_ package. The main
 difference is that I am using the dollar sign ($) for the placeholders
 instead of the percent sign (%) to avoid confusions with other usages
 of the %s, in particular in LIKE queries and in expressions like
 `strftime('%s', time)` used in SQLite.
 
 In less than 200 lines of code there is enough support
-to build dynamic SQL queries to make an ORM unneeded (notice that
-we do not need database independence).
+to build dynamic SQL queries and to make an ORM unneeded, since
+we do not need database independence.
+
+.. _DB API 2.0: https://www.python.org/dev/peps/pep-0249
+.. _dbapiext: http://furius.ca/pubcode/pub/antiorm/lib/python/dbapiext.py.html
+.. _antiorm: https://bitbucket.org/blais/antiorm
 
 dbiapi tutorial
 --------------------------
@@ -57,15 +59,19 @@ an empty table:
 
 You can populate the table by using the `.insert` method:
 
->>> db.insert('job', ['value'], [(42,), (43,)]).rowcount
-2
+>>> db.insert('job', ['value'], [(42,), (43,)]) # doctest: +ELLIPSIS
+<sqlite3.Cursor object at ...>
+
+Notice that this method returns a standard DB API 2.0 cursor and
+you have access to all of its features: for instance here you could extract
+the lastrowid.
 
 Then you can run SELECT queries:
 
 >>> rows = db('SELECT * FROM job')
 
 The dbapi provides a `Row` class which is used to hold the results of
-SELECT queries and working as one would expect:
+SELECT queries and is working as one would expect:
 
 >>> rows
 [<Row(id=1, value=42)>, <Row(id=2, value=43)>]
@@ -75,6 +81,8 @@ SELECT queries and working as one would expect:
 1
 >>> rows[0].value
 42
+>>> rows[0]._fields
+['id', 'value']
 
 The queries can have different kind of `$` parameters:
 
@@ -83,7 +91,7 @@ The queries can have different kind of `$` parameters:
   >>> db('SELECT * FROM $s', 'job')  # $s is replaced by 'job'
   [<Row(id=1, value=42)>, <Row(id=2, value=43)>]
 
-- `$x` is for escaped parameters (the ones to use to avoid SQL injection):
+- `$x` is for escaped parameters (to avoid SQL injection):
 
   >>> db('SELECT * FROM job WHERE id=$x', 1)  # $x is replaced by 1
   [<Row(id=1, value=42)>]
@@ -92,10 +100,6 @@ The queries can have different kind of `$` parameters:
 
   >>> db('INSERT INTO job ($S) VALUES ($X)', ['id', 'value'], (3, 44)) # doctest: +ELLIPSIS
   <sqlite3.Cursor object at ...>
-
-Notice that non-SELECT queries returns a standard DB API 2.0 cursor and
-you have access to all of its features (for instance here you could extract
-the lastrowid).
 
 You can see how the interpolation works by calling the `match` function
 that returns the interpolated template and the parameters that will be
@@ -109,7 +113,7 @@ separated string, where $X parameters are replaced by a comma separated
 sequence of question marks, i.e. the low level placeholder for SQLite.
 The interpolation performs a regular search and replace,
 so if you have a `$-` string in your template that must not be escaped,
-so you should take care. This is an error:
+you can run into issues. This is an error:
 
 >>> match("SELECT * FROM job WHERE id=$x AND description='Lots of $s'", 1)
 Traceback (most recent call last):
@@ -125,8 +129,8 @@ There are three other `$` parameters:
 
 - `$D` is for dictionaries and it is used mostly in UPDATE queries:
 
-  >>> match('UPDATE job SET $D WHERE id=$x', dict(value=33, other=5), 1)
-  ('UPDATE job SET other=?, value=? WHERE id=?', (5, 33, 1))
+  >>> match('UPDATE mytable SET $D WHERE id=$x', dict(value=33, other=5), 1)
+  ('UPDATE mytable SET other=?, value=? WHERE id=?', (5, 33, 1))
 
 - `$A` is for dictionaries and it is used in AND queries:
 
@@ -160,6 +164,26 @@ following:
 >>> db('SELECT value FROM job WHERE id=$x', 1, scalar=True)
 42
 
+If a query that should return a scalar returns something else, or if a
+query that should return a row returns a different number of rows,
+appropriate errors are raised:
+
+>>> db('SELECT * FROM job WHERE id=$x', 1, scalar=True)
+Traceback (most recent call last):
+   ...
+TooManyColumns: 2, expected 1
+
+>>> db('SELECT * FROM job', None, one=True)
+Traceback (most recent call last):
+   ...
+TooManyRows: 3, expected 1
+
+If a row is expected but not found, a NotFound exception is raised:
+
+>>> db('SELECT * FROM job WHERE id=$x', None, one=True)
+Traceback (most recent call last):
+   ...
+NotFound
 """
 import re
 import threading
@@ -297,15 +321,15 @@ class Db(object):
                 if not rows:
                     raise NotFound
                 elif len(rows) > 1:
-                    raise TooManyRows(len(rows))
+                    raise TooManyRows('%s, expected 1' % len(rows))
                 elif len(rows[0]) > 1:
-                    raise TooManyColumns(len(rows[0]))
+                    raise TooManyColumns('%s, expected 1' % len(rows[0]))
                 return rows[0][0]
             elif kw.get('one'):  # query returning a single row
                 if not rows:
                     raise NotFound
                 elif len(rows) > 1:
-                    raise TooManyRows(len(rows))
+                    raise TooManyRows('%s, expected 1' % len(rows))
             elif cursor.description is None:
                 return cursor
 
