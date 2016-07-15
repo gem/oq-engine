@@ -271,7 +271,9 @@ def export_hcurves_by_imt_csv(key, kind, rlzs_assoc, fname, sitecol,
     Export the curves of the given realization into CSV.
 
     :param key: output_type and export_type
-    :param dest: name of the exported file
+    :param kind: a string with the kind of output (realization or statistics)
+    :param rlzs_assoc: a :class:`openquake.commonlib.source.RlzsAssoc` instance
+    :param fname: name of the exported file
     :param sitecol: site collection
     :param curves_by_imt: dictionary with the curves keyed by IMT
     :param oq: job.ini parameters
@@ -287,7 +289,7 @@ def export_hcurves_by_imt_csv(key, kind, rlzs_assoc, fname, sitecol,
         for sid, lon, lat in zip(range(nsites), sitecol.lons, sitecol.lats):
             hcurves[sid] = (lon, lat) + tuple(curves_by_imt[sid][imt])
         fnames.append(write_csv(dest, hcurves, comment=_comment(
-            rlzs_assoc, kind, oq.investigation_time) + ', imt=%s' % imt))
+            rlzs_assoc, kind, oq.investigation_time) + ',imt=%s' % imt))
     return fnames
 
 
