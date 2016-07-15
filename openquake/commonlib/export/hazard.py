@@ -286,7 +286,7 @@ def export_hcurves_by_imt_csv(key, kind, rlzs_assoc, fname, sitecol,
         hcurves = numpy.zeros(nsites, lst)
         for sid, lon, lat in zip(range(nsites), sitecol.lons, sitecol.lats):
             hcurves[sid] = (lon, lat) + tuple(curves_by_imt[sid][imt])
-        fnames.append(write_csv(dest, hcurves, comment=comment(
+        fnames.append(write_csv(dest, hcurves, comment=_comment(
             rlzs_assoc, kind, oq.investigation_time) + ', imt=%s' % imt))
     return fnames
 
@@ -314,7 +314,7 @@ def hazard_curve_name(dstore, ekey, kind, rlzs_assoc):
     return fname
 
 
-def comment(rlzs_assoc, kind, investigation_time):
+def _comment(rlzs_assoc, kind, investigation_time):
     rlz = rlzs_assoc.get_rlz(kind)
     if not rlz:
         return '%s, investigation_time=%s' % (kind, investigation_time)
@@ -344,12 +344,14 @@ def export_hcurves_csv(ekey, dstore):
         fname = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
         if key == 'uhs':
             uhs_curves = calc.make_uhs(hcurves, oq.imtls, oq.poes)
-            write_csv(fname, util.compose_arrays(sitemesh, uhs_curves),
-                      comment=comment(rlzs_assoc, kind, oq.investigation_time))
+            write_csv(
+                fname, util.compose_arrays(sitemesh, uhs_curves),
+                comment=_comment(rlzs_assoc, kind, oq.investigation_time))
             fnames.append(fname)
         elif key == 'hmaps':
-            write_csv(fname, util.compose_arrays(sitemesh, hcurves),
-                      comment=comment(rlzs_assoc, kind, oq.investigation_time))
+            write_csv(
+                fname, util.compose_arrays(sitemesh, hcurves),
+                comment=_comment(rlzs_assoc, kind, oq.investigation_time))
             fnames.append(fname)
         else:
             if export.from_db:  # called by export_from_db
