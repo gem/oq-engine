@@ -266,7 +266,7 @@ def add_imt(fname, imt):
 
 
 def export_hcurves_by_imt_csv(key, kind, rlzs_assoc, fname, sitecol,
-                              curves_by_imt, imtls, investigation_time=None):
+                              curves_by_imt, oq):
     """
     Export the curves of the given realization into CSV.
 
@@ -274,16 +274,11 @@ def export_hcurves_by_imt_csv(key, kind, rlzs_assoc, fname, sitecol,
     :param dest: name of the exported file
     :param sitecol: site collection
     :param curves_by_imt: dictionary with the curves keyed by IMT
-    :param dict imtls: intensity measure types and levels
-    :param investigation_time: investigation time
+    :param oq: job.ini parameters
     """
     nsites = len(sitecol)
     fnames = []
-    rlz = rlzs_assoc.get_rlz(kind)
-    for imt, imls in imtls.items():
-        comment = ('source_model_tree_path=%s,gsim_tree_path=%s,'
-                   'investigation_time=%s,imt=%s' %
-                   (rlz.sm_lt_path, rlz.gsim_lt_path, investigation_time, imt))
+    for imt, imls in oq.imtls.items():
         dest = add_imt(fname, imt)
         lst = [('lon', F32), ('lat', F32)]
         for iml in imls:
@@ -291,7 +286,8 @@ def export_hcurves_by_imt_csv(key, kind, rlzs_assoc, fname, sitecol,
         hcurves = numpy.zeros(nsites, lst)
         for sid, lon, lat in zip(range(nsites), sitecol.lons, sitecol.lats):
             hcurves[sid] = (lon, lat) + tuple(curves_by_imt[sid][imt])
-        fnames.append(write_csv(dest, hcurves, comment=comment))
+        fnames.append(write_csv(dest, hcurves, comment=comment(
+            rlzs_assoc, kind, oq.investigation_time) + ', imt=%s' % imt))
     return fnames
 
 
@@ -318,6 +314,17 @@ def hazard_curve_name(dstore, ekey, kind, rlzs_assoc):
     return fname
 
 
+def comment(rlzs_assoc, kind, investigation_time):
+    rlz = rlzs_assoc.get_rlz(kind)
+    if not rlz:
+        return '%s, investigation_time=%s' % (kind, investigation_time)
+    else:
+        return (
+            'source_model_tree_path=%s,gsim_tree_path=%s,'
+            'investigation_time=%s' % (
+                rlz.sm_lt_path, rlz.gsim_lt_path, investigation_time))
+
+
 @export.add(('hcurves', 'csv'), ('hmaps', 'csv'), ('uhs', 'csv'))
 def export_hcurves_csv(ekey, dstore):
     """
@@ -337,27 +344,18 @@ def export_hcurves_csv(ekey, dstore):
         fname = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
         if key == 'uhs':
             uhs_curves = calc.make_uhs(hcurves, oq.imtls, oq.poes)
-            write_csv(fname, util.compose_arrays(sitemesh, uhs_curves))
+            write_csv(fname, util.compose_arrays(sitemesh, uhs_curves),
+                      comment=comment(rlzs_assoc, kind, oq.investigation_time))
             fnames.append(fname)
         elif key == 'hmaps':
-            rlz = rlzs_assoc.get_rlz(kind)
-            if not rlz:
-                comment = None
-            else:
-                comment = (
-                    'source_model_tree_path=%s,gsim_tree_path=%s,'
-                    'investigation_time=%s' % (
-                        rlz.sm_lt_path, rlz.gsim_lt_path,
-                        oq.investigation_time))
             write_csv(fname, util.compose_arrays(sitemesh, hcurves),
-                      comment=comment)
+                      comment=comment(rlzs_assoc, kind, oq.investigation_time))
             fnames.append(fname)
         else:
             if export.from_db:  # called by export_from_db
                 fnames.extend(
                     export_hcurves_by_imt_csv(
-                        ekey, kind, rlzs_assoc, fname, sitecol, hcurves,
-                        oq.imtls))
+                        ekey, kind, rlzs_assoc, fname, sitecol, hcurves, oq))
             else:  # when exporting directly from the datastore
                 fnames.extend(
                     export_hazard_curves_csv(
