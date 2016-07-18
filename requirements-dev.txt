@@ -7,9 +7,9 @@ Cython==0.23.4
 mock==1.3.0
 h5py==2.6.0
 nose==1.3.7
-numpy==1.11.0
+numpy==1.11.1
 psutil==3.4.2
-scipy==0.17.0
+scipy==0.17.1
 shapely==1.5.13
 docutils==0.12
 decorator==4.0.6
