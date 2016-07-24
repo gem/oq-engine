@@ -496,7 +496,7 @@ def litetask_futures(func):
     # we need pickle=True because celery is using the worst possible
     # protocol; once we remove celery we can try to remove pickle=True
     return FunctionMaker.create(
-        func, 'return _s_(_w_, (%(shortsignature)s,), pickle=True)',
+        func, 'return _s_(_w_, (%(shortsignature)s,), pickle=False)',
         dict(_s_=safely_call, _w_=wrapper), task_func=func)
 
 
@@ -512,3 +512,33 @@ if OQ_DISTRIBUTE == 'celery':
     litetask = litetask_celery
 else:
     litetask = litetask_futures
+
+
+    
+import os
+import operator
+import multiprocess
+import collections
+
+
+class starmap(object):
+    pool = multiprocess.Pool()
+
+    def __init__(self, func, iterargs):
+        self.func = func
+        self.iterargs = iterargs
+
+        def call(x):
+            f, args = x
+            return safely_call(f, args)
+        self.imap = self.pool.imap_unordered(
+            call, ((func, args) for args in iterargs))
+
+    def reduce(self, agg=operator.add, acc=None):
+        acc = acc or AccumDict()
+        for result in self.imap:
+            if isinstance(result, BaseException):
+                raise result
+            acc = agg(result, acc)
+        return acc
+
