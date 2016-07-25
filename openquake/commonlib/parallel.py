@@ -117,14 +117,16 @@ def safely_call(func, args, pickle=False):
     return res
 
 
-class LogPercent(object):
+class Aggregator(object):
     """
-    Each time the object is called
-    log a message if the percentage is bigger than the last one.
+    Each time the aggregator is called aggregate the output of a task
+    and log a message if the percentage is bigger than the last one.
 
-    :param str taskname:
+    :param agg:
+        aggregation function (acc, val) -> new acc
+    :param taskname:
         the name of the task
-    :param int todo:
+    :param todo:
         the number of times the generator object will be called
     :param progress:
         a logging function for the progress report
@@ -415,7 +417,7 @@ class TaskManager(object):
             logging.warn('No tasks were submitted')
             return acc
 
-        agg_and_log = LogPercent(agg, self.name, num_tasks, self.progress)
+        agg_and_log = Aggregator(agg, self.name, num_tasks, self.progress)
         if self.no_distribute:
             agg_result = reduce(agg_and_log, self.results, acc)
         else:
@@ -537,7 +539,7 @@ if OQ_DISTRIBUTE == 'multiprocess':
         def reduce(self, agg=operator.add, acc=None):
             if acc is None:
                 acc = AccumDict()
-            agg_and_log = LogPercent(agg, self.func.__name__, self.todo)
+            agg_and_log = Aggregator(agg, self.func.__name__, self.todo)
             for triple in self.imap:
                 acc = agg_and_log(acc, triple)
             return acc
