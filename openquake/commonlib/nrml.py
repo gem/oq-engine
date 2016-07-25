@@ -576,6 +576,7 @@ validators = {
     'lon': valid.longitude,
     'lat': valid.latitude,
     'spacing': valid.positivefloat,
+    'srcs_weights': valid.weights,
 }
 
 
