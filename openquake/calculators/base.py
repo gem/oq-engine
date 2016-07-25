@@ -188,7 +188,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         except:
             if kw.get('pdb'):  # post-mortem debug
                 tb = sys.exc_info()[2]
-                traceback.print_exc(tb)
+                traceback.print_tb(tb)
                 pdb.post_mortem(tb)
             else:
                 logging.critical('', exc_info=True)
