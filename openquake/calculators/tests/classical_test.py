@@ -188,6 +188,22 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
         self.assertEqualFiles('expected/hazard_uhs-mean-0.1.xml', fnames[1])
         self.assertEqualFiles('expected/hazard_uhs-mean-0.2.xml', fnames[2])
 
+        # test hmaps geojson export
+        fnames = [f for f in export(('hmaps', 'geojson'), self.calc.datastore)
+                  if 'mean' in f]
+        self.assertEqualFiles(
+            'expected/hazard_map-mean-0.01-PGA.geojson', fnames[0])
+        self.assertEqualFiles(
+            'expected/hazard_map-mean-0.01-SA(0.1).geojson', fnames[1])
+        self.assertEqualFiles(
+            'expected/hazard_map-mean-0.1-PGA.geojson', fnames[2])
+        self.assertEqualFiles(
+            'expected/hazard_map-mean-0.1-SA(0.1).geojson', fnames[3])
+        self.assertEqualFiles(
+            'expected/hazard_map-mean-0.2-PGA.geojson', fnames[4])
+        self.assertEqualFiles(
+            'expected/hazard_map-mean-0.2-SA(0.1).geojson', fnames[5])
+
     @attr('qa', 'hazard', 'classical')
     def test_case_16(self):   # sampling
         self.assert_curves_ok(
