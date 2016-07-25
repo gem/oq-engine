@@ -43,7 +43,7 @@ class ClassicalTestCase(CalculatorTestCase):
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
             case_1.__file__)
 
-        # test we saved the data transfer informatio in job_info
+        # make sure we saved the data transfer information in job_info
         keys = set(self.calc.datastore['job_info'].__dict__)
         self.assertIn('classical_max_received_per_task', keys)
         self.assertIn('classical_tot_received', keys)
