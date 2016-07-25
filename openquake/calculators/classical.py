@@ -428,7 +428,8 @@ class ClassicalCalculator(PSHACalculator):
             (imt, len(imls)) for imt, imls in self.oqparam.imtls.items()])
         if oq.hazard_maps or oq.uniform_hazard_spectra:
             # hmaps is a composite array of shape (N, P)
-            hmaps = self.hazard_maps(curves)
+            with self.monitor('compute hazard maps', autoflush=True):
+                hmaps = self.hazard_maps(curves)
             self._store('hmaps/' + kind, hmaps, rlz,
                         poes=oq.poes, nbytes=hmaps.nbytes)
 

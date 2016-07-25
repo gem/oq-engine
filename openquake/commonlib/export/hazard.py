@@ -303,11 +303,8 @@ def hazard_curve_name(dstore, ekey, kind, rlzs_assoc):
     key, fmt = ekey
     prefix = {'hcurves': 'hazard_curve', 'hmaps': 'hazard_map',
               'uhs': 'hazard_uhs'}[key]
-    if kind.startswith('rlz-'):
-        rlz = rlzs_assoc.get_rlz(kind)
-        fname = dstore.build_fname(prefix, rlz, fmt)
-    elif kind.startswith('mean'):
-        fname = dstore.build_fname(prefix, kind, ekey[1])
+    if kind.startswith(('rlz-', 'mean')):
+        fname = dstore.build_fname(prefix, kind, fmt)
     elif kind.startswith('quantile-'):
         # strip the 7 characters 'hazard_'
         fname = dstore.build_fname('quantile_' + prefix[7:], kind[9:], fmt)
