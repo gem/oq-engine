@@ -725,7 +725,7 @@ def check_weights(nodes_with_a_weight):
     """
     weights = [n['weight'] for n in nodes_with_a_weight]
     if abs(sum(weights) - 1.) > 1E-12:
-        raise ValueError('The weights do not sum up to 1!', weights)
+        raise ValueError('The weights %s do not sum up to 1!' % weights)
     return nodes_with_a_weight
 
 
@@ -833,6 +833,18 @@ def positiveints(value):
         if val < 0:
             raise ValueError('%d is negative in %r' % (val, value))
     return ints
+
+
+def weights(value):
+    """
+    >>> weights('0.4 0.3')
+    Traceback (most recent call last):
+       ...
+    ValueError: the weights [0.4, 0.3] do not sum up to 1!
+    """
+    ws = probabilities(value)
+    if abs(sum(ws) - 1.) > 1E-12:
+        raise ValueError('the weights %s do not sum up to 1!' % ws)
 
 
 # ############################## site model ################################ #
