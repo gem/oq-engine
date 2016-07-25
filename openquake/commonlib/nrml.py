@@ -80,16 +80,17 @@ import re
 import sys
 import decimal
 import logging
+import operator
 import itertools
 
 import numpy
 
-from openquake.baselib.general import CallableDict
+from openquake.baselib.general import CallableDict, groupby
 from openquake.commonlib import writers
 from openquake.commonlib.node import (
     node_to_xml, Node, striptag, ValidatingXmlParser, context)
 from openquake.risklib import scientific, valid
-from openquake.commonlib import InvalidFile
+from openquake.commonlib import InvalidFile, sourceconverter
 
 F64 = numpy.float64
 NAMESPACE = 'http://openquake.org/xmlns/nrml/0.4'
@@ -97,6 +98,10 @@ NRML05 = 'http://openquake.org/xmlns/nrml/0.5'
 GML_NAMESPACE = 'http://www.opengis.net/gml'
 SERIALIZE_NS_MAP = {None: NAMESPACE, 'gml': GML_NAMESPACE}
 PARSE_NS_MAP = {'nrml': NAMESPACE, 'gml': GML_NAMESPACE}
+
+
+class DuplicatedID(Exception):
+    """Raised when two sources with the same ID are found in a source model"""
 
 
 def get_tag_version(nrml_node):
@@ -122,6 +127,40 @@ def parse(fname, *args):
 
 node_to_obj = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
 # dictionary of functions with at least two arguments, node and fname
+
+
+@node_to_obj.add(('sourceModel', 'nrml/0.4'))
+def get_source_model_04(node, fname, converter):
+    sources = []
+    source_ids = set()
+    converter.fname = fname
+    for no, src_node in enumerate(node, 1):
+        src = converter.convert_node(src_node)
+        if src.source_id in source_ids:
+            raise DuplicatedID(
+                'The source ID %s is duplicated!' % src.source_id)
+        sources.append(src)
+        source_ids.add(src.source_id)
+        if no % 10000 == 0:  # log every 10,000 sources parsed
+            logging.info('Instantiated %d sources from %s', no, fname)
+    if no % 10000 != 0:
+        logging.info('Instantiated %d sources from %s', no, fname)
+    groups = groupby(
+        sources, operator.attrgetter('tectonic_region_type'))
+    return sorted(sourceconverter.SourceGroup(trt, srcs)
+                  for trt, srcs in groups.items())
+
+
+@node_to_obj.add(('sourceModel', 'nrml/0.5'))
+def get_source_model_05(node, fname, converter):
+    converter.fname = fname
+    groups = []  # expect a sequence of sourceGroup nodes
+    for src_group in node:
+        with context(fname, src_group):
+            if 'sourceGroup' not in src_group.tag:
+                raise ValueError('expected sourceGroup')
+        groups.append(converter.convert_node(src_group))
+    return sorted(groups)
 
 
 @node_to_obj.add(('vulnerabilityModel', 'nrml/0.4'))
