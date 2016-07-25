@@ -845,7 +845,7 @@ def weights(value):
     ws = probabilities(value)
     if abs(sum(ws) - 1.) > 1E-12:
         raise ValueError('the weights %s do not sum up to 1!' % ws)
-
+    return ws
 
 # ############################## site model ################################ #
 
