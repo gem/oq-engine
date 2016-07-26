@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
+import re
 import sys
 import copy
 import math
@@ -270,6 +271,15 @@ class RlzsAssoc(collections.Mapping):
     def realizations(self):
         """Flat list with all the realizations"""
         return sum(self.rlzs_by_smodel, [])
+
+    def get_rlz(self, rlzstr):
+        """
+        Get a Realization instance for a string of the form 'rlz-\d+'
+        """
+        mo = re.match('rlz-(\d+)', rlzstr)
+        if not mo:
+            return
+        return self.realizations[int(mo.group(1))]
 
     def get_rlzs_by_gsim(self, grp_id):
         """
