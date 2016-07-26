@@ -832,8 +832,8 @@ class SourceConverter(RuptureConverter):
         sg = SourceGroup(trt, srcs)
         if srcs_weights is not None:
             if len(srcs_weights) != len(node):
-                raise ValueError('Expected %d sources, got %d' % (
-                    len(srcs_weights), len(node)))
+                raise ValueError('There are %d srcs_weights but %d source(s)'
+                                 % (len(srcs_weights), len(node)))
         sg.name = node.attrib.get('name')
         sg.src_interdep = node.attrib.get('src_interdep')
         sg.srcs_weights = srcs_weights

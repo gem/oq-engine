@@ -123,7 +123,7 @@ xmlns:gml="http://www.opengis.net/gml"
         self.assertIn('Could not convert imt->intensity_measure_type: '
                       "Invalid IMT: 'SA', line 8", str(ctx.exception))
 
-    def test_invalid_srcs_weights(self):
+    def test_invalid_srcs_weights_length(self):
         fname = writetmp('''\
 <?xml version="1.0" encoding="utf-8"?>
 <nrml
@@ -183,4 +183,5 @@ xmlns:gml="http://www.opengis.net/gml"
         converter = SourceConverter(50., 1., 10, 0.1, 10.)
         with self.assertRaises(ValueError) as ctx:
             parse(fname, converter)
-        self.assertEqual('Expected 2 sources, got 1', str(ctx.exception))
+        self.assertEqual('There are 2 srcs_weights but 1 source(s)',
+                         str(ctx.exception))
