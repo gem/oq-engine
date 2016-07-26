@@ -534,7 +534,7 @@ class UCERFSESControl(object):
         self.sites = None
         self.background_idx = None
         self.num_ruptures = 0
-        self.idx_set = None
+        self.idx_set = self.build_idx_set(self.source_id)
 
     def get_min_max_mag(self):
         return self.min_mag, None
