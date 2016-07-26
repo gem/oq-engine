@@ -614,6 +614,20 @@ class DictArray(collections.Mapping):
     def __len__(self):
         return len(self.imt_dt.names)
 
+    def __toh5__(self):
+        array = numpy.zeros(1, self.imt_dt)
+        for imt in self:
+            array[imt] = self[imt]
+        return array, {}
+
+    def __fromh5__(self, array, attrs):
+        self.imt_dt = dt = dtype(
+            [(imt, F64, len(array[0][imt])) for imt in array.dtype.names])
+        self.slicedic, num_levels = _slicedict_n(dt)
+        for imt in array.dtype.names:
+            self[imt] = array[0][imt]
+        self.array = array.view(F64)
+
     def __repr__(self):
         data = ['%s: %s' % (imt, self[imt]) for imt in self]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(data))
