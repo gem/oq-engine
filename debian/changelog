@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed the names of exported files for hazard maps in .geojson format
+  * Added an header with metadata to the exported hazard curves and maps
   * Avoid storing filtered-away probability maps, thus fixing a bug
   * Restored the precalculation consistency check that was disabled during the
     transition to engine 2.0
