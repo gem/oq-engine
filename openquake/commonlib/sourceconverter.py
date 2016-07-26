@@ -660,7 +660,7 @@ class SourceConverter(RuptureConverter):
         return source.AreaSource(
             source_id=node['id'],
             name=node['name'],
-            tectonic_region_type=node['tectonicRegion'],
+            tectonic_region_type=node.attrib.get('tectonicRegion'),
             mfd=self.convert_mfdist(node),
             rupture_mesh_spacing=self.rupture_mesh_spacing,
             magnitude_scaling_relationship=msr,
@@ -686,7 +686,7 @@ class SourceConverter(RuptureConverter):
         return source.PointSource(
             source_id=node['id'],
             name=node['name'],
-            tectonic_region_type=node['tectonicRegion'],
+            tectonic_region_type=node.attrib.get('tectonicRegion'),
             mfd=self.convert_mfdist(node),
             rupture_mesh_spacing=self.rupture_mesh_spacing,
             magnitude_scaling_relationship=msr,
@@ -722,7 +722,7 @@ class SourceConverter(RuptureConverter):
             simple = source.SimpleFaultSource(
                 source_id=node['id'],
                 name=node['name'],
-                tectonic_region_type=node['tectonicRegion'],
+                tectonic_region_type=node.attrib.get('tectonicRegion'),
                 mfd=mfd,
                 rupture_mesh_spacing=self.rupture_mesh_spacing,
                 magnitude_scaling_relationship=msr,
@@ -753,7 +753,7 @@ class SourceConverter(RuptureConverter):
             cmplx = source.ComplexFaultSource(
                 source_id=node['id'],
                 name=node['name'],
-                tectonic_region_type=node['tectonicRegion'],
+                tectonic_region_type=node.attrib.get('tectonicRegion'),
                 mfd=mfd,
                 rupture_mesh_spacing=self.complex_fault_mesh_spacing,
                 magnitude_scaling_relationship=msr,
@@ -776,7 +776,7 @@ class SourceConverter(RuptureConverter):
         char = source.CharacteristicFaultSource(
             source_id=node['id'],
             name=node['name'],
-            tectonic_region_type=node['tectonicRegion'],
+            tectonic_region_type=node.attrib.get('tectonicRegion'),
             mfd=self.convert_mfdist(node),
             surface=self.convert_surfaces(node.surface),
             rake=~node.rake,
@@ -794,7 +794,7 @@ class SourceConverter(RuptureConverter):
             a :class:`openquake.hazardlib.source.NonParametricSeismicSource`
             instance
         """
-        trt = node['tectonicRegion']
+        trt = node.attrib.get('tectonicRegion')
         rup_pmf_data = []
         for rupnode in node:
             probs = pmf.PMF(rupnode['probs_occur'])
@@ -816,8 +816,28 @@ class SourceConverter(RuptureConverter):
             instance
         """
         trt = node['tectonicRegion']
-        srcs = [self.convert_node(src_node) for src_node in node]
-        return SourceGroup(trt, srcs)
+        srcs_weights = node.attrib.get('srcs_weights')
+        grp_attrs = {k: v for k, v in node.attrib.items()
+                     if k not in ('name', 'src_interdep', 'srcs_weights')}
+        srcs = []
+        for src_node in node:
+            src = self.convert_node(src_node)
+            # transmit the group attributes to the underlying source
+            for attr, value in grp_attrs.items():
+                if attr == 'tectonicRegion':
+                    src.tectonic_region_type = value
+                else:  # transmit as it is
+                    setattr(src, attr, node[attr])
+            srcs.append(src)
+        sg = SourceGroup(trt, srcs)
+        if srcs_weights is not None:
+            if len(srcs_weights) != len(node):
+                raise ValueError('There are %d srcs_weights but %d source(s)'
+                                 % (len(srcs_weights), len(node)))
+        sg.name = node.attrib.get('name')
+        sg.src_interdep = node.attrib.get('src_interdep')
+        sg.srcs_weights = srcs_weights
+        return sg
 
 
 def parse_ses_ruptures(fname):
