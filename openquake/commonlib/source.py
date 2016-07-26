@@ -704,22 +704,22 @@ def source_info_iadd(self, other):
     return self.__class__(
         self.src_group_id, self.source_id, self.source_class, self.weight,
         self.sources, self.filter_time + other.filter_time,
-        self.split_time + other.split_time, self.calc_time + other.calc_time)
+        self.split_time + other.split_time, self.cum_calc_time + other.cum_calc_time)
 
 SourceInfo = collections.namedtuple(
     'SourceInfo', 'src_group_id source_id source_class weight sources '
-    'filter_time split_time calc_time')
+    'filter_time split_time cum_calc_time')
 SourceInfo.__iadd__ = source_info_iadd
 
 source_info_dt = numpy.dtype([
-    ('src_group_id', numpy.uint32),  # 0
-    ('source_id', (bytes, 100)),     # 1
-    ('source_class', (bytes, 30)),   # 2
-    ('weight', numpy.float32),       # 3
-    ('split_num', numpy.uint32),     # 4
-    ('filter_time', numpy.float32),  # 5
-    ('split_time', numpy.float32),   # 6
-    ('calc_time', numpy.float32),    # 7
+    ('src_group_id', numpy.uint32),    # 0
+    ('source_id', (bytes, 100)),       # 1
+    ('source_class', (bytes, 30)),     # 2
+    ('weight', numpy.float32),         # 3
+    ('split_num', numpy.uint32),       # 4
+    ('filter_time', numpy.float32),    # 5
+    ('split_time', numpy.float32),     # 6
+    ('cum_calc_time', numpy.float32),  # 7
 ])
 
 

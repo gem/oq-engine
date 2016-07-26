@@ -167,7 +167,7 @@ def view_times_by_source_class(token, dstore):
     """
     totals = sum_tbl(
         dstore['source_info'], 'source_class',
-        ['filter_time', 'split_time', 'calc_time'])
+        ['filter_time', 'split_time', 'cum_calc_time'])
     return rst_table(totals)
 
 
