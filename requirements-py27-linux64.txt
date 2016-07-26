@@ -1,0 +1,26 @@
+# Suggested versions for development based on
+# Ubuntu 16.04 stack
+# !! must update pip first! so wheels will be used !!
+
+# GEM Mirror
+# We also provide pre-compiled manylinux1 wheels for
+# h5py, Shapely and psutil
+
+http://ftp.openquake.org/python-new-wheels/pkgconfig-1.1.0-cp27-none-any.whl
+http://ftp.openquake.org/python-new-wheels/Cython-0.23.4-cp27-cp27mu-manylinux1_x86_64.whl
+http://ftp.openquake.org/python-new-wheels/mock-1.3.0-py2.py3-none-any.whl
+http://ftp.openquake.org/python-new-wheels/h5py-2.6.0-1-cp27-cp27mu-manylinux1_x86_64.whl
+http://ftp.openquake.org/python-new-wheels/nose-1.3.7-py2-none-any.whl
+http://ftp.openquake.org/python-new-wheels/numpy-1.11.1-cp27-cp27mu-manylinux1_x86_64.whl
+http://ftp.openquake.org/python-new-wheels/scipy-0.17.1-cp27-cp27mu-manylinux1_x86_64.whl
+http://ftp.openquake.org/python-new-wheels/psutil-3.4.2-cp27-cp27mu-manylinux1_x86_64.whl
+http://ftp.openquake.org/python-new-wheels/Shapely-1.5.13-cp27-cp27mu-manylinux1_x86_64.whl
+http://ftp.openquake.org/python-new-wheels/docutils-0.12-cp27-none-any.whl
+http://ftp.openquake.org/python-new-wheels/decorator-4.0.6-py2.py3-none-any.whl
+http://ftp.openquake.org/python-new-wheels/funcsigs-1.0.2-py2.py3-none-any.whl
+http://ftp.openquake.org/python-new-wheels/pbr-1.8.0-py2.py3-none-any.whl
+http://ftp.openquake.org/python-new-wheels/six-1.10.0-py2.py3-none-any.whl
+http://ftp.openquake.org/python-new-wheels/Django-1.8.7-py2.py3-none-any.whl
+http://ftp.openquake.org/python-new-wheels/futures-3.0.5-py2-none-any.whl
+http://ftp.openquake.org/python-new-wheels/pyshp-1.2.3-cp27-none-any.whl
+http://ftp.openquake.org/python-new-wheels/requests-2.9.1-py2.py3-none-any.whl
