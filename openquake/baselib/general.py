@@ -583,9 +583,13 @@ def _slicedict_n(imt_dt):
 
 class DictArray(collections.Mapping):
     """
-    A small wrapper over a dictionary of arrays:
+    A small wrapper over a dictionary of arrays serializable to HDF5:
 
-    >>> DictArray({'PGA': [0.01, 0.02, 0.04], 'PGV': [0.1, 0.2]})
+    >>> d = DictArray({'PGA': [0.01, 0.02, 0.04], 'PGV': [0.1, 0.2]})
+    >>> from openquake.baselib import hdf5
+    >>> with hdf5.File('/tmp/x.h5', 'w') as f:
+    ...      f['d'] = d
+    ...      f['d']
     <DictArray
     PGA: [ 0.01  0.02  0.04]
     PGV: [ 0.1  0.2]>
@@ -613,6 +617,20 @@ class DictArray(collections.Mapping):
 
     def __len__(self):
         return len(self.imt_dt.names)
+
+    def __toh5__(self):
+        carray = numpy.zeros(1, self.imt_dt)
+        for imt in self:
+            carray[imt] = self[imt]
+        return carray, {}
+
+    def __fromh5__(self, carray, attrs):
+        self.array = carray[:].view(F64)
+        self.imt_dt = dt = dtype(
+            [(imt, F64, len(carray[0][imt])) for imt in carray.dtype.names])
+        self.slicedic, num_levels = _slicedict_n(dt)
+        for imt in carray.dtype.names:
+            self[imt] = carray[0][imt]
 
     def __repr__(self):
         data = ['%s: %s' % (imt, self[imt]) for imt in self]
