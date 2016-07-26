@@ -11,12 +11,7 @@ addons:
     - git
 
 install:
-  - pip install http://ftp.openquake.org/python-new-wheels/Cython-0.23.4-cp35-cp35m-manylinux1_x86_64.whl
-  - pip install http://ftp.openquake.org/python-new-wheels/numpy-1.11.1-cp35-cp35m-manylinux1_x86_64.whl
-  - pip install http://ftp.openquake.org/python-new-wheels/scipy-0.17.1-cp35-cp35m-manylinux1_x86_64.whl
-  - pip install http://ftp.openquake.org/python-new-wheels/Shapely-1.5.13-cp35-cp35m-manylinux1_x86_64.whl
-  - pip install http://ftp.openquake.org/python-new-wheels/h5py-2.6.0-1-cp35-cp35m-manylinux1_x86_64.whl
-  - pip install -r requirements-dev.txt
+  - pip install -r requirements-py35-linux64.txt
   - python setup.py develop
   - git clone --depth=1 https://github.com/gem/oq-hazardlib.git
 
