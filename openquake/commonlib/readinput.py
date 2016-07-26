@@ -485,12 +485,12 @@ def get_composite_source_model(oqparam, in_memory=True):
     return csm
 
 
-def get_job_info(oqparam, source_models, sitecol):
+def get_job_info(oqparam, csm, sitecol):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param source_models:
-        a list of :class:`openquake.commonlib.source.SourceModel` tuples
+    :param csm:
+        a :class:`openquake.commonlib.source.CompositeSourceModel` instance
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :returns:
@@ -502,7 +502,7 @@ def get_job_info(oqparam, source_models, sitecol):
     # by the sources; for point sources however a corrective factor
     # given by the parameter `point_source_weight` is applied
     input_weight = sum((src.weight or 0) * src_model.samples
-                       for src_model in source_models
+                       for src_model in csm
                        for src_group in src_model.src_groups
                        for src in src_group)
     imtls = oqparam.imtls
@@ -515,7 +515,7 @@ def get_job_info(oqparam, source_models, sitecol):
                    for ls in imtls.values()) / float(n_imts)
 
     n_realizations = oqparam.number_of_logic_tree_samples or sum(
-        sm.num_gsim_paths for sm in source_models)
+        sm.num_gsim_paths for sm in csm)
     # NB: in the event based case `n_realizations` can be over-estimated,
     # if the method is called in the pre_execute phase, because
     # some tectonic region types may have no occurrencies.
@@ -534,7 +534,7 @@ def get_job_info(oqparam, source_models, sitecol):
     else:
         output_weight *= n_levels
 
-    n_sources = 0  # to be set later
+    n_sources = csm.get_num_sources()
     info['hazard'] = dict(input_weight=input_weight,
                           output_weight=output_weight,
                           n_imts=n_imts,
