@@ -125,7 +125,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     """
     sitecol = datastore.persistent_attribute('sitecol')
     assetcol = datastore.persistent_attribute('assetcol')
-    job_info = datastore.persistent_attribute('job_info')
     performance = datastore.persistent_attribute('performance')
     csm = datastore.persistent_attribute('composite_source_model')
     pre_calculator = None  # to be overridden
@@ -188,7 +187,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         except:
             if kw.get('pdb'):  # post-mortem debug
                 tb = sys.exc_info()[2]
-                traceback.print_exc(tb)
+                traceback.print_tb(tb)
                 pdb.post_mortem(tb)
             else:
                 logging.critical('', exc_info=True)
@@ -389,7 +388,7 @@ class HazardCalculator(BaseCalculator):
         If yes, read the inputs by invoking the precalculator or by retrieving
         the previous calculation; if not, read the inputs directly.
         """
-        job_info = hdf5.LiteralAttrs()
+        job_info = {}
         if self.pre_calculator is not None:
             # the parameter hazard_calculation_id is only meaningful if
             # there is a precalculator
@@ -402,13 +401,15 @@ class HazardCalculator(BaseCalculator):
         else:  # we are in a basic calculator
             self.basic_pre_execute()
             if 'source' in self.oqparam.inputs:
-                vars(job_info).update(readinput.get_job_info(
+                job_info.update(readinput.get_job_info(
                     self.oqparam, self.csm, self.sitecol))
 
-        job_info.hostname = socket.gethostname()
+        job_info['hostname'] = socket.gethostname()
         if hasattr(self, 'riskmodel'):
-            job_info.require_epsilons = bool(self.riskmodel.covs)
-        self.job_info = job_info
+            job_info['require_epsilons'] = bool(self.riskmodel.covs)
+        if 'job_info' not in self.datastore:
+            self.datastore['job_info'] = hdf5.LiteralAttrs()
+        self.datastore.save('job_info', job_info)
         self.datastore.flush()
         try:
             csm_info = self.datastore['csm_info']
