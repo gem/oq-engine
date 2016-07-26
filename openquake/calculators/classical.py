@@ -298,7 +298,7 @@ class PSHACalculator(base.HazardCalculator):
             for src_idx, dt in calc_times:
                 src = sources[src_idx]
                 info = info_dict[src.src_group_id, encode(src.source_id)]
-                info['calc_time'] += dt
+                info['cum_calc_time'] += dt
             rows = sorted(
                 info_dict.values(), key=operator.itemgetter(7), reverse=True)
             array = numpy.zeros(len(rows), source.source_info_dt)
