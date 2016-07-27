@@ -44,10 +44,6 @@ I32 = numpy.int32
 F32 = numpy.float32
 
 
-class DuplicatedID(Exception):
-    """Raised when two sources with the same ID are found in a source model"""
-
-
 class LtRealization(object):
     """
     Composite realization build on top of a source model realization and
@@ -167,36 +163,7 @@ class SourceModelParser(object):
         :param fname:
             the full pathname of the source model file
         """
-        sources = []
-        source_ids = set()
-        self.converter.fname = fname
-        smodel = nrml.read(fname)
-        if smodel['xmlns'].endswith('nrml/0.4'):
-            for no, src_node in enumerate(smodel.sourceModel, 1):
-                src = self.converter.convert_node(src_node)
-                if src.source_id in source_ids:
-                    raise DuplicatedID(
-                        'The source ID %s is duplicated!' % src.source_id)
-                sources.append(src)
-                source_ids.add(src.source_id)
-                if no % 10000 == 0:  # log every 10,000 sources parsed
-                    logging.info('Instantiated %d sources from %s', no, fname)
-            if no % 10000 != 0:
-                logging.info('Instantiated %d sources from %s', no, fname)
-            groups = groupby(
-                sources, operator.attrgetter('tectonic_region_type'))
-            return sorted(sourceconverter.SourceGroup(trt, srcs)
-                          for trt, srcs in groups.items())
-        if smodel['xmlns'].endswith('nrml/0.5'):
-            groups = []  # expect a sequence of sourceGroup nodes
-            for src_group in smodel.sourceModel:
-                with node.context(fname, src_group):
-                    if 'sourceGroup' not in src_group.tag:
-                        raise ValueError('expected sourceGroup')
-                groups.append(self.converter.convert_node(src_group))
-            return sorted(groups)
-        else:
-            raise RuntimeError('Unknown NRML version %s' % smodel['xmlns'])
+        return nrml.parse(fname, self.converter)
 
 
 def agg_prob(acc, prob):
