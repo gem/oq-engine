@@ -579,9 +579,12 @@ class EventBasedCalculator(ClassicalCalculator):
             rlzs = self.rlzs_assoc.realizations
             dic = {}
             for rlzi in result:
-                dic[rlzs[rlzi]] = array_of_curves(
+                rlz = rlzs[rlzi]
+                dic[rlz] = array_of_curves(
                     result[rlzi], len(self.sitecol), oq.imtls)
-            self.save_curves(dic)
+                if oq.individual_curves:
+                    self.store_curves('rlz-%03d' % rlz.ordinal, dic[rlz], rlz)
+            self.save_curve_stats(dic)
         if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
             if not os.path.exists(export_dir):
