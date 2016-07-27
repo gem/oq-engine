@@ -177,7 +177,7 @@ class RlzsAssoc(collections.Mapping):
     but only via the method :meth:
     `openquake.commonlib.source.CompositeSourceModel.get_rlzs_assoc`.
 
-    :attr realizations: list of LtRealization objects
+    :attr realizations: list of :class:`LtRealization` objects
     :attr gsim_by_trt: list of dictionaries {trt: gsim}
     :attr rlzs_assoc: dictionary {src_group_id, gsim: rlzs}
     :attr rlzs_by_smodel: list of lists of realizations
@@ -304,15 +304,16 @@ class RlzsAssoc(collections.Mapping):
         return assoc
 
     # used in classical and event_based calculators
-    def combine_curves(self, results):
+    def combine_curves(self, rlz, results):
         """
+        :param rlz: a :class:`LtRealization` object
         :param results: dictionary (src_group_id, gsim) -> curves
         :returns: a dictionary rlz -> aggregate curves
         """
-        acc = {rlz: ProbabilityMap() for rlz in self.realizations}
+        acc = ProbabilityMap()
         for key in results:
-            for rlz in self.rlzs_assoc[key]:
-                acc[rlz] |= results[key]
+            if rlz in self.rlzs_assoc[key]:
+                acc |= results[key]
         return acc
 
     # used in riskinput
@@ -830,10 +831,9 @@ class SourceManager(object):
 
     def gen_args(self, tiles):
         """
-        Yield (sources, sitecol, siteidx, rlzs_assoc, monitor) by
+        Yield (sources, sitecol, rlzs_assoc, monitor) by
         looping on the tiles and on the source blocks.
         """
-        siteidx = 0
         for i, sitecol in enumerate(tiles, 1):
             if len(tiles) > 1:
                 logging.info('Processing tile %d', i)
@@ -851,12 +851,10 @@ class SourceManager(object):
                         sources, self.maxweight,
                         operator.attrgetter('weight'),
                         operator.attrgetter('src_group_id')):
-                    yield (block, sitecol, siteidx,
-                           self.rlzs_assoc, self.monitor.new())
+                    yield block, sitecol, self.rlzs_assoc, self.monitor.new()
                     nblocks += 1
                 logging.info('Sent %d sources in %d block(s)',
                              len(sources), nblocks)
-            siteidx += len(sitecol)
 
     def store_source_info(self, dstore):
         """
@@ -876,7 +874,7 @@ class SourceManager(object):
 
 
 @parallel.litetask
-def count_eff_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
+def count_eff_ruptures(sources, sitecol, rlzs_assoc, monitor):
     """
     Count the number of ruptures contained in the given sources and return
     a dictionary src_group_id -> num_ruptures. All sources belong to the
