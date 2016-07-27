@@ -311,9 +311,11 @@ class RlzsAssoc(collections.Mapping):
         :returns: a dictionary rlz -> aggregate curves
         """
         acc = ProbabilityMap()
-        for key in results:
-            if rlz in self.rlzs_assoc[key]:
-                acc |= results[key]
+        for grp_id in results:
+            gsims = self.gsims_by_grp_id[grp_id]
+            for i, gsim in enumerate(gsims):
+                if rlz in self.rlzs_assoc[grp_id, gsim]:
+                    acc |= results[grp_id].extract(i)
         return acc
 
     # used in riskinput

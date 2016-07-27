@@ -341,16 +341,11 @@ class ClassicalCalculator(PSHACalculator):
         """
         Builds a dictionary pmap_by_grp_gsim from the stored PoEs
         """
-        pmap_by_grp_gsim = {}
         with self.monitor('read poes', autoflush=True):
-            for group_id in self.datastore['poes']:
-                grp_id = int(group_id)
-                poes = self.datastore['poes/' + group_id]
-                gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
-                for i, gsim in enumerate(gsims):
-                    pmap_by_grp_gsim[grp_id, gsim] = poes.extract(i)
-
-        return ((rlz, self.rlzs_assoc.combine_curves(rlz, pmap_by_grp_gsim))
+            pmap_by_grp = {
+                int(group_id): self.datastore['poes/' + group_id]
+                for group_id in self.datastore['poes']}
+        return ((rlz, self.rlzs_assoc.combine_curves(rlz, pmap_by_grp))
                 for rlz in self.rlzs_assoc.realizations)
 
     def post_execute(self, rlz_pmap):
