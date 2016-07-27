@@ -348,9 +348,10 @@ class ClassicalCalculator(PSHACalculator):
                 gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
                 for i, gsim in enumerate(gsims):
                     pmap_by_grp_gsim[grp_id, gsim] = poes.extract(i)
-        return pmap_by_grp_gsim
+        return {rlz: self.rlzs_assoc.combine_curves(rlz, pmap_by_grp_gsim)
+                for rlz in self.rlzs_assoc.realizations}
 
-    def post_execute(self, pmap_by_grp_gsim):
+    def post_execute(self, pmap_by_rlz):
         """
         Combine the curves and store them
         """
@@ -360,10 +361,8 @@ class ClassicalCalculator(PSHACalculator):
         nsites = len(self.sitecol)
         dic = {}
         with self.monitor('combine curves_by_rlz', autoflush=True):
-            for rlz in rlzs:
-                curves = array_of_curves(
-                    self.rlzs_assoc.combine_curves(rlz, pmap_by_grp_gsim),
-                    nsites, oq.imtls)
+            for rlz in sorted(pmap_by_rlz):
+                curves = array_of_curves(pmap_by_rlz[rlz], nsites, oq.imtls)
                 dic[rlz] = curves
                 if oq.individual_curves:
                     self.store_curves('rlz-%03d' % rlz.ordinal, curves, rlz)
@@ -371,9 +370,9 @@ class ClassicalCalculator(PSHACalculator):
         if len(rlzs) == 1:  # cannot compute statistics
             self.mean_curves = curves
         else:
-            self.save_curve_stats(dic)
+            self.compute_stats(dic)
 
-    def save_curve_stats(self, curves_by_rlz):
+    def compute_stats(self, curves_by_rlz):
         """
         Save the dictionary curves_by_rlz
         """
