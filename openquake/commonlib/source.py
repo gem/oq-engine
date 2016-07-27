@@ -704,11 +704,15 @@ def source_info_iadd(self, other):
     return self.__class__(
         self.src_group_id, self.source_id, self.source_class, self.weight,
         self.sources, self.filter_time + other.filter_time,
-        self.split_time + other.split_time, self.cum_calc_time + other.cum_calc_time)
+        self.split_time + other.split_time,
+        self.cum_calc_time + other.cum_calc_time,
+        max(self.max_calc_time, other.max_calc_time),
+        self.num_tasks + other.num_tasks,
+    )
 
 SourceInfo = collections.namedtuple(
     'SourceInfo', 'src_group_id source_id source_class weight sources '
-    'filter_time split_time cum_calc_time')
+    'filter_time split_time cum_calc_time max_calc_time num_tasks')
 SourceInfo.__iadd__ = source_info_iadd
 
 source_info_dt = numpy.dtype([
@@ -720,6 +724,8 @@ source_info_dt = numpy.dtype([
     ('filter_time', numpy.float32),    # 5
     ('split_time', numpy.float32),     # 6
     ('cum_calc_time', numpy.float32),  # 7
+    ('max_calc_time', numpy.float32),  # 8
+    ('num_tasks', numpy.uint32),       # 9
 ])
 
 
@@ -798,7 +804,7 @@ class SourceManager(object):
             info = SourceInfo(src.src_group_id, src.source_id,
                               src.__class__.__name__,
                               src.weight, len(split_sources),
-                              filter_time, split_time, 0)
+                              filter_time, split_time, 0, 0, 0)
             key = (src.src_group_id, src.source_id)
             if key in self.infos:
                 self.infos[key] += info
