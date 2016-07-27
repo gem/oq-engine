@@ -371,9 +371,9 @@ class ClassicalCalculator(PSHACalculator):
         if len(rlzs) == 1:  # cannot compute statistics
             self.mean_curves = curves
         else:
-            self.save_curves(dic)
+            self.save_curve_stats(dic)
 
-    def save_curves(self, curves_by_rlz):
+    def save_curve_stats(self, curves_by_rlz):
         """
         Save the dictionary curves_by_rlz
         """
@@ -399,7 +399,6 @@ class ClassicalCalculator(PSHACalculator):
                     curves = [curves_by_rlz[rlz][imt] for rlz in rlzs]
                     qc[imt] = scientific.quantile_curve(
                         curves, q, weights).reshape((nsites, -1))
-
             if oq.mean_hazard_curves:
                 self.store_curves('mean', self.mean_curves)
             for q in self.quantile:
