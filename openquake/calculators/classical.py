@@ -168,14 +168,12 @@ class BoundingBox(object):
 
 
 @parallel.litetask
-def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
+def classical(sources, sitecol, rlzs_assoc, monitor):
     """
     :param sources:
         a non-empty sequence of sources of homogeneous tectonic region type
     :param sitecol:
         a SiteCollection instance
-    :param siteidx:
-        index of the first site (0 if there is a single tile)
     :param rlzs_assoc:
         a RlzsAssoc instance
     :param monitor:
@@ -194,7 +192,6 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
     max_dist = monitor.oqparam.maximum_distance[trt]
 
     dic = AccumDict()
-    dic.siteslice = slice(siteidx, siteidx + len(sitecol))
     if monitor.oqparam.poes_disagg:
         sm_id = rlzs_assoc.sm_ids[src_group_id]
         dic.bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
