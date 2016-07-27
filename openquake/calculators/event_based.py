@@ -577,7 +577,7 @@ class EventBasedCalculator(ClassicalCalculator):
         elif oq.hazard_curves_from_gmfs:
             rlzs = self.rlzs_assoc.realizations
             ClassicalCalculator.post_execute(
-                self, ((rlzs[i], result[i]) for i in result))
+                self, {rlzs[i]: result[i] for i in result})
         if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
             if not os.path.exists(export_dir):
