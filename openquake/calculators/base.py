@@ -177,7 +177,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             result = self.execute()
             if result:
                 self.post_execute(result)
-            self.before_export()
+            self.before_export(result)
             exported = self.export(kw.get('exports', ''))
         except KeyboardInterrupt:
             pids = ' '.join(str(p.pid) for p in executor._processes)
@@ -272,7 +272,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 logging.warn('', exc_info=True)
         return exported
 
-    def before_export(self):
+    def before_export(self, result):
         """
         Collect the realizations and set the attributes nbytes
         """
@@ -287,6 +287,10 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         if 'hmaps' in self.datastore:
             self.datastore.set_nbytes('hmaps')
         self.datastore.flush()
+        if not result:
+            raise ValueError(
+                'No results from %s: all zeros?' %
+                self.__class__.core_task.__name__)
 
 
 def check_time_event(oqparam, time_events):
