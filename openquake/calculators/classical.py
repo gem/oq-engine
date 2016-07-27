@@ -329,13 +329,31 @@ class PSHACalculator(base.HazardCalculator):
             self.datastore.set_nbytes('poes')
 
 
+@parallel.litetask
+def build_stats(pmap_by_grp, stats, rlzs_assoc, monitor):
+    """
+    """
+    rlzs = rlzs_assoc.realizations
+    with monitor('combine curves'):
+        pmap_by_rlz = rlzs_assoc.combine_curves(pmap_by_grp)
+    if len(rlzs) > 1:
+        with monitor('compute_stats'):
+            pmap_by_rlz.stats = stats.compute(
+                [pmap_by_rlz[rlz].array for rlz in rlzs])
+    else:  # one realization
+        pmap_by_rlz.stats = pmap_by_rlz.values()[0]
+    if not monitor.individual_curves:
+        pmap_by_rlz.clear()
+    return pmap_by_rlz
+
+
 @base.calculators.add('classical')
 class ClassicalCalculator(PSHACalculator):
     """
     Classical PSHA calculator
     """
     pre_calculator = 'psha'
-    core_task = classical
+    core_task = build_stats
 
     def execute(self):
         """
@@ -345,10 +363,23 @@ class ClassicalCalculator(PSHACalculator):
             pmap_by_grp = {
                 int(group_id): self.datastore['poes/' + group_id]
                 for group_id in self.datastore['poes']}
-        return ((rlz, self.rlzs_assoc.combine_curves(rlz, pmap_by_grp))
-                for rlz in self.rlzs_assoc.realizations)
+        return pmap_by_grp
 
-    def post_execute(self, rlz_pmap):
+    def gen_args(self, pmap_by_grp):
+        monitor = self.monitor.new(
+            'build_stats', individual_curves=self.oqparam.individual_curves)
+        stats = scientific.HazardStats(
+            [rlz.weight for rlz in self.rlzs_assoc.realizations],
+            self.oqparam.quantiles)
+        for tile in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
+            pg = {grp_id: pmap_by_grp[grp_id].filter(tile.sids)
+                  for grp_id in pmap_by_grp}
+            yield pg, stats, self.rlzs_assoc, monitor
+
+    def agg_stats(self, acc, hstats):
+        acc[hstats.sids] = hstats
+
+    def post_execute(self, pmap_by_grp):
         """
         Combine the curves and store them.
 
@@ -358,9 +389,10 @@ class ClassicalCalculator(PSHACalculator):
         nsites = len(self.sitecol)
         rlzs = self.rlzs_assoc.realizations
         nsites = len(self.sitecol)
-        dic = {}
-        with self.monitor('combine curves_by_rlz', autoflush=True):
-            for rlz, pmap in rlz_pmap:
+        hstats = parallel.starmap(
+            build_stats, self.gen_args(pmap_by_grp)).reduce(
+                self.agg_stats)
+        
                 logging.info('building hazard curves for rlz %s', rlz)
                 curves = array_of_curves(pmap, nsites, oq.imtls)
                 dic[rlz] = curves
