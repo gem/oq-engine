@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Raised an error if the .execute method produces no results
   * Added a view for the slow sources
   * Transmitted the attributes of a SourceGroup to the underlying sources
   * Fixed the names of exported files for hazard maps in .geojson format
