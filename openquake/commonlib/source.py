@@ -830,10 +830,9 @@ class SourceManager(object):
 
     def gen_args(self, tiles):
         """
-        Yield (sources, sitecol, siteidx, rlzs_assoc, monitor) by
+        Yield (sources, sitecol, rlzs_assoc, monitor) by
         looping on the tiles and on the source blocks.
         """
-        siteidx = 0
         for i, sitecol in enumerate(tiles, 1):
             if len(tiles) > 1:
                 logging.info('Processing tile %d', i)
@@ -851,12 +850,10 @@ class SourceManager(object):
                         sources, self.maxweight,
                         operator.attrgetter('weight'),
                         operator.attrgetter('src_group_id')):
-                    yield (block, sitecol, siteidx,
-                           self.rlzs_assoc, self.monitor.new())
+                    yield block, sitecol, self.rlzs_assoc, self.monitor.new()
                     nblocks += 1
                 logging.info('Sent %d sources in %d block(s)',
                              len(sources), nblocks)
-            siteidx += len(sitecol)
 
     def store_source_info(self, dstore):
         """
@@ -876,7 +873,7 @@ class SourceManager(object):
 
 
 @parallel.litetask
-def count_eff_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
+def count_eff_ruptures(sources, sitecol, rlzs_assoc, monitor):
     """
     Count the number of ruptures contained in the given sources and return
     a dictionary src_group_id -> num_ruptures. All sources belong to the

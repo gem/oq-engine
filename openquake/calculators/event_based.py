@@ -217,14 +217,12 @@ class EBRupture(object):
 
 
 @parallel.litetask
-def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
+def compute_ruptures(sources, sitecol, rlzs_assoc, monitor):
     """
     :param sources:
         List of commonlib.source.Source tuples
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param siteidx:
-        always equal to 0
     :param rlzs_assoc:
         a :class:`openquake.commonlib.source.RlzsAssoc` instance
     :param monitor:
@@ -232,9 +230,6 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     :returns:
         a dictionary src_group_id -> [Rupture instances]
     """
-    assert siteidx == 0, (
-        'siteidx can be nonzero only for the classical_tiling calculations: '
-        'tiling with the EventBasedRuptureCalculator is an error')
     # NB: by construction each block is a non-empty list with
     # sources of the same src_group_id
     src_group_id = sources[0].src_group_id
