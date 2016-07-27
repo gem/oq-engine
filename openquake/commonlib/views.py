@@ -167,8 +167,19 @@ def view_times_by_source_class(token, dstore):
     """
     totals = sum_tbl(
         dstore['source_info'], 'source_class',
-        ['filter_time', 'split_time', 'cum_calc_time'])
+        ['filter_time', 'split_time', 'cum_calc_time',
+         'max_calc_time', 'num_tasks'])
     return rst_table(totals)
+
+
+@view.add('slow_sources')
+def view_slow_sources(token, dstore, maxrows=20):
+    """
+    Returns the slowest sources
+    """
+    info = dstore['source_info'].value
+    info.sort(order='max_calc_time')
+    return rst_table(info[::-1][:maxrows])
 
 
 def classify_gsim_lt(gsim_lt):
