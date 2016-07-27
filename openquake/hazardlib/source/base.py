@@ -42,7 +42,7 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
 
     MODIFICATIONS = abc.abstractproperty()
 
-    RUPTURE_WEIGHT = 1.  # overridden in PointSource and AreaSource
+    RUPTURE_WEIGHT = 1.  # overridden in PointSource
 
     @property
     def weight(self):
