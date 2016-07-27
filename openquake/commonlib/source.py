@@ -177,7 +177,7 @@ class RlzsAssoc(collections.Mapping):
     but only via the method :meth:
     `openquake.commonlib.source.CompositeSourceModel.get_rlzs_assoc`.
 
-    :attr realizations: list of LtRealization objects
+    :attr realizations: list of :class:`LtRealization` objects
     :attr gsim_by_trt: list of dictionaries {trt: gsim}
     :attr rlzs_assoc: dictionary {src_group_id, gsim: rlzs}
     :attr rlzs_by_smodel: list of lists of realizations
@@ -306,6 +306,7 @@ class RlzsAssoc(collections.Mapping):
     # used in classical and event_based calculators
     def combine_curves(self, rlz, results):
         """
+        :param rlz: a :class:`LtRealization` object
         :param results: dictionary (src_group_id, gsim) -> curves
         :returns: a dictionary rlz -> aggregate curves
         """
