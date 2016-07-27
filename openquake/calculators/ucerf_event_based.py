@@ -796,7 +796,7 @@ class UCERFEventBasedRuptureCalculator(
                 grp_id, ltbrid,
                 source_class=UCERFSESControl.__class__.__name__,
                 weight=1, sources=1, filter_time=0, split_time=0,
-                cum_calc_time=dt)
+                cum_calc_time=dt, max_calc_time=dt, num_tasks=1)
             self.infos.append(info)
         return acc + val
 
