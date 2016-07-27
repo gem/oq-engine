@@ -354,12 +354,24 @@ class ClassicalCalculator(PSHACalculator):
         """
         Combine the curves and store them
         """
+        oq = self.oqparam
         nsites = len(self.sitecol)
-        imtls = self.oqparam.imtls
+        rlzs = self.rlzs_assoc.realizations
+        nsites = len(self.sitecol)
+        dic = {}
         with self.monitor('combine curves_by_rlz', autoflush=True):
-            curves_by_rlz = self.rlzs_assoc.combine_curves(pmap_by_grp_gsim)
-        self.save_curves({rlz: array_of_curves(curves, nsites, imtls)
-                          for rlz, curves in curves_by_rlz.items()})
+            for rlz in rlzs:
+                curves = array_of_curves(
+                    self.rlzs_assoc.combine_curves(rlz, pmap_by_grp_gsim),
+                    nsites, oq.imtls)
+                dic[rlz] = curves
+                if oq.individual_curves:
+                    self.store_curves('rlz-%03d' % rlz.ordinal, curves, rlz)
+
+        if len(rlzs) == 1:  # cannot compute statistics
+            self.mean_curves = curves
+        else:
+            self.save_curves(dic)
 
     def save_curves(self, curves_by_rlz):
         """
@@ -368,14 +380,6 @@ class ClassicalCalculator(PSHACalculator):
         oq = self.oqparam
         rlzs = self.rlzs_assoc.realizations
         nsites = len(self.sitecol)
-        if oq.individual_curves:
-            with self.monitor('save curves_by_rlz', autoflush=True):
-                for rlz, curves in curves_by_rlz.items():
-                    self.store_curves('rlz-%03d' % rlz.ordinal, curves, rlz)
-
-            if len(rlzs) == 1:  # cannot compute statistics
-                [self.mean_curves] = curves_by_rlz.values()
-                return
 
         with self.monitor('compute and save statistics', autoflush=True):
             weights = (None if oq.number_of_logic_tree_samples
