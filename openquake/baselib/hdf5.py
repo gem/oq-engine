@@ -17,7 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import ast
-import pydoc
+import importlib
 try:  # with Python 3
     from urllib.parse import quote_plus, unquote_plus
 except ImportError:  # with Python 2
@@ -233,7 +233,8 @@ class File(h5py.File):
         h5attrs = h5obj.attrs
         if '__pyclass__' in h5attrs:
             # NB: the `decode` below is needed for Python 3
-            cls = pydoc.locate(decode(h5attrs['__pyclass__']))
+            modname, clsname = decode(h5attrs['__pyclass__']).rsplit('.', 1)
+            cls = getattr(importlib.import_module(modname), clsname)
             obj = cls.__new__(cls)
             if not hasattr(h5obj, 'shape'):  # is group
                 h5obj = {unquote_plus(k): self['%s/%s' % (path, k)]
