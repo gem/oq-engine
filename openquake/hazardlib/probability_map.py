@@ -104,6 +104,16 @@ class ProbabilityMap(dict):
             dic[sid] = ProbabilityCurve(array)
         return dic
 
+    def filter(self, sids):
+        """
+        Extracs a submap of self for the given sids; if a sid is missing,
+        returns 0.
+        """
+        dic = self.__class__()
+        for sid in sids:
+            dic[sid] = self.get(sid, 0)
+        return dic
+
     def extract(self, gsim_idx):
         """
         Extracts a component of the underlying ProbabilityCurves,
