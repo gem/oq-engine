@@ -43,6 +43,8 @@ class AreaSource(PointSource):
 
     MODIFICATIONS = set(())
 
+    RUPTURE_WEIGHT = 1.
+
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
                  magnitude_scaling_relationship, rupture_aspect_ratio,
