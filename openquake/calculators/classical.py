@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
+import logging
 import operator
 import collections
 from functools import partial
@@ -365,6 +366,7 @@ class ClassicalCalculator(PSHACalculator):
         dic = {}
         with self.monitor('combine curves_by_rlz', autoflush=True):
             for rlz, pmap in rlz_pmap:
+                logging.info('building hazard curves for rlz %s', rlz)
                 curves = array_of_curves(pmap, nsites, oq.imtls)
                 dic[rlz] = curves
                 if oq.individual_curves:
@@ -377,7 +379,7 @@ class ClassicalCalculator(PSHACalculator):
 
     def compute_stats(self, curves_by_rlz):
         """
-        Save the dictionary curves_by_rlz
+        :param curves_by_rlz: dictionary rlz -> hazard curves
         """
         oq = self.oqparam
         rlzs = self.rlzs_assoc.realizations
