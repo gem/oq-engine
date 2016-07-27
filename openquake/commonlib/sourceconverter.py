@@ -37,7 +37,6 @@ MAGNITUDE_FOR_RUPTURE_SPLITTING = 6.5  # given by Marco Pagani
 # configuration file, otherwise the tests will break by changing it;
 # reason: the numbers in the event based calculators depend on the
 # splitting: different sources => different seeds => different numbers
-POINT_SOURCE_WEIGHT = 1 / 40.
 
 
 class SourceGroup(collections.Sequence):
