@@ -312,8 +312,7 @@ class RlzsAssoc(collections.Mapping):
         """
         acc = ProbabilityMap()
         for grp_id in results:
-            gsims = self.gsims_by_grp_id[grp_id]
-            for i, gsim in enumerate(gsims):
+            for i, gsim in enumerate(self.gsims_by_grp_id[grp_id]):
                 if rlz in self.rlzs_assoc[grp_id, gsim]:
                     acc |= results[grp_id].extract(i)
         return acc
