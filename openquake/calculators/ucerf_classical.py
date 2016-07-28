@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
+import os
 import h5py
 import numpy as np
 
@@ -30,6 +30,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.calc.hazard_curve import get_probability_no_exceedance
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
+from openquake.risklib import valid
 from openquake.commonlib import parallel, datastore, source, calc
 from openquake.commonlib.sourceconverter import SourceConverter
 
@@ -98,17 +99,31 @@ class UCERFControl(UCERFSESControl):
                     self.npd,
                     self.hdd)
         
-    def __iter__(self):
+#    def __iter__(self):
+#        """
+#        A bit of trickery here! The __iter__ method will split a vector
+#        of rupture indices [0, 1, 2, ..., Nrup] into a number of subsets
+#        or rupture indices, the number given by the DEFAULT_SPLIT option
+#        """
+#        with h5py.File(self.source_file, "r") as hdf5:
+#            nrup = len(hdf5[self.idx_set["rate_idx"]][:])
+#            rup_indices = np.arange(0, nrup)
+#            for ridx in np.array_split(rup_indices, DEFAULT_SPLIT):
+#                yield ridx
+
+    def get_rupture_indices(self, branch_id, split=0):
         """
-        A bit of trickery here! The __iter__ method will split a vector
-        of rupture indices [0, 1, 2, ..., Nrup] into a number of subsets
-        or rupture indices, the number given by the DEFAULT_SPLIT option
+        Returns a set of rupture indices
         """
+        if not self.idx_set:
+            self.idx_set = self.build_idx_set(branch_id)
         with h5py.File(self.source_file, "r") as hdf5:
             nrup = len(hdf5[self.idx_set["rate_idx"]][:])
             rup_indices = np.arange(0, nrup)
-            for ridx in np.array_split(rup_indices, DEFAULT_SPLIT):
-                yield ridx
+            if split:
+                return [np.array_split(rup_indices, split)]
+            else:
+                return rup_indices
     
     def filter_sites_by_distance_from_rupture_set(self, ridx_sites, max_dist):
         """
@@ -139,7 +154,7 @@ class UCERFControl(UCERFSESControl):
                                                  sites.lons, sites.lats)
                 idx = distance <= max_dist
                 if np.any(idx):
-                    yield rupset_idx, sites.filter(idx)
+                    return rupset_idx, sites.filter(idx)
                 else:
                     continue
                 
@@ -229,8 +244,8 @@ class UCERFClassicalSourceConverter(SourceConverter):
             trt=node["tectonicRegion"])
 
 
-def hazard_curves_per_rupture_subset(ucerf_source, sites, imtls, gsims,
-                                     truncation_level=None,
+def hazard_curves_per_rupture_subset(rupset_idx, ucerf_source, sites, imtls,
+                                     gsims, truncation_level=None,
                                      maximum_distance=None, bbs=(),
                                      monitor=Monitor()):
     """
@@ -238,28 +253,28 @@ def hazard_curves_per_rupture_subset(ucerf_source, sites, imtls, gsims,
     """
     imtls = DictArray(imtls)
     cmaker = ContextMaker(gsims, maximum_distance)
-    indices_sites = ((rup_indices, sites) for rup_indices in ucerf_source)
+    #indices_sites = ((rup_indices, sites) for rup_indices in ucerf_source)
     ctx_mon = monitor('making contexts', measuremem=False)
     pne_mon = monitor('computing poes', measuremem=False)
     disagg_mon = monitor('get closest points', measuremem=False)
     monitor.calc_time = []
     pmap = ProbabilityMap()
     with h5py.File(ucerf_source.source_file, "r") as hdf5:
-        for i, (rupset_idx, s_sites) in enumerate(
-            ucerf_source.filter_sites_by_distance_from_rupture_set(indices_sites,
-                                                                   maximum_distance)):
-            t0 = time.time()
-            pmap |= ucerf_poe_map(ucerf_source, rupset_idx, s_sites,
-                                  imtls, cmaker, trunvation_level, bbs,
-                                  ctx_mon, pne_mon, disagg_mon)
-            monitor.calc_times.append((i, time.time(() - t0)))
+        #for i, (rupset_idx, s_sites) in enumerate(
+        #    ucerf_source.filter_sites_by_distance_from_rupture_set(indices_sites,
+        #                                                           maximum_distance)):
+        t0 = time.time()
+        pmap |= ucerf_poe_map(ucerf_source, rupset_idx, s_sites,
+                              imtls, cmaker, trunvation_level, bbs,
+                              ctx_mon, pne_mon, disagg_mon)
+        monitor.calc_times.append((i, time.time(() - t0)))
         monitor.eff_ruptures += pne_mon.counts
     return pmap
 
 
 @parallel.litetask
-def ucerf_classical_hazard(ucerf_source, sitecol, siteidx, rlzs_assoc,
-                           monitor):
+def ucerf_classical_hazard_by_rupture_set(rupset_idx, ucerf_source, sitecol,
+                                          siteidx, rlzs_assoc, monitor):
     """
     :param sources:
         a non-empty sequence of sources of homogeneous tectonic region type
@@ -298,9 +313,19 @@ def ucerf_classical_hazard(ucerf_source, sitecol, siteidx, rlzs_assoc,
     # Two step process here - the first generates the hazard curves from the
     # rupture sets
     monitor.eff_ruptures = 0
-    dic[src_group_id] = hazard_curves_per_rupture_subset(
-        ucerf_source, sitecol, imtls, gsims, truncation_level,
-        maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
+    # Apply the initial rupture to site filtering
+    rupset_idx, s_sites =\
+        ucerf_source.filter_sites_by_distance_from_rupture_set(
+            rupset_idx,
+            monitor.oqparam.maximum_distance[trt])
+
+    if len(s_sites):                                                       
+        dic[src_group_id] = hazard_curves_per_rupture_subset(
+            rupset_idx, ucerf_source, s_sites, imtls, gsims, truncation_level,
+            maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
+
+    else:
+        dic[src_group_id] = ProbabilityMap()
     dic.calc_times = monitor.calc_times  # added by hazard_curves_per_trt
     dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
 
@@ -316,12 +341,83 @@ def ucerf_classical_hazard(ucerf_source, sitecol, siteidx, rlzs_assoc,
     return dic
 
 
+@parallel.litetask
+def ucerf_classical_hazard_by_branch(branchname, ucerf_source, sitecol,
+                                     siteidx, rlzs_assoc, monitor):
+    """
+    :param sources:
+        a non-empty sequence of sources of homogeneous tectonic region type
+    :param sitecol:
+        a SiteCollection instance
+    :param siteidx:
+        index of the first site (0 if there is a single tile)
+    :param rlzs_assoc:
+        a RlzsAssoc instance
+    :param monitor:
+        a monitor instance
+    :returns:
+        an AccumDict rlz -> curves
+    """
+    truncation_level = monitor.oqparam.truncation_level
+    imtls = monitor.oqparam.imtls
+    src_group_id = sources[0].src_group_id
+    # sanity check: the src_group must be the same for all sources
+    for src in sources[1:]:
+        assert src.src_group_id == src_group_id
+    gsims = rlzs_assoc.gsims_by_grp_id[src_group_id]
+    trt = sources[0].tectonic_region_type
+    max_dist = monitor.oqparam.maximum_distance[trt]
+
+    dic = AccumDict()
+    dic.siteslice = slice(siteidx, siteidx + len(sitecol))
+    if monitor.oqparam.poes_disagg:
+        sm_id = rlzs_assoc.sm_ids[src_group_id]
+        dic.bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
+    else:
+        dic.bbs = []
+    # NB: the source_site_filter below is ESSENTIAL for performance inside
+    # hazard_curves_per_trt, since it reduces the full site collection
+    # to a filtered one *before* doing the rupture filtering
+
+    # Two step process here - the first generates the hazard curves from the
+    # rupture sets
+    monitor.eff_ruptures = 0
+    # Apply the initial rupture to site filtering
+    rupset_idx = ucerf_source.get_rupture_indices()
+    rupset_idx, s_sites =\
+        ucerf_source.filter_sites_by_distance_from_rupture_set(
+            rupset_idx,
+            monitor.oqparam.maximum_distance[trt])
+
+    if len(s_sites):                                                       
+        dic[src_group_id] = hazard_curves_per_rupture_subset(
+            rupset_idx, ucerf_source, s_sites, imtls, gsims, truncation_level,
+            maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
+
+    else:
+        dic[src_group_id] = ProbabilityMap()
+    dic.calc_times = monitor.calc_times  # added by hazard_curves_per_trt
+    dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
+
+    dic2 = AccumDict()
+    dic2[src_group_id] = hazard_curves_per_trt(
+        ucerf_source.get_background_sources(branchname, sitecol, max_dist),
+        sitecol, imtls, gsims, truncation_level,
+        source_site_filter=source_site_distance_filter(max_dist),
+        maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
+
+    dic[src_group_id] += dic2[src_group_id]
+    dic.eff_ruptures[src_group_id] += monitor.eff_ruptures
+    return dic
+
+
+
 @base.calculators.add('ucerf_classical')
 class UCERFClassicalCalculator(classical.ClassicalCalculator):
     """
     Event based PSHA calculator generating the ruptures only
     """
-    core_task = ucerf_classical_hazard
+    core_task = ucerf_classical_hazard_by_branch
     # TODO Do I need this?
     etags = datastore.persistent_attribute('etags')
     is_stochastic = False
@@ -344,6 +440,9 @@ class UCERFClassicalCalculator(classical.ClassicalCalculator):
         for ordinal, (name, branch) in enumerate(branches):
             sg = copy.copy(self.src_group)
             sg.id = ordinal
+            sg.sources[0].id = ordinal
+            # Update the event set 
+            sg.sources[0].idx_set = sg.source[0].build_idx_set(branch.value)
             sm = source.SourceModel(
                 name, branch.weight, [name], [sg], num_gsim_paths, ordinal, 1)
             source_models.append(sm)
@@ -352,8 +451,6 @@ class UCERFClassicalCalculator(classical.ClassicalCalculator):
         self.rup_data = {}
         self.infos = []
 
-    # Perhaps this isn't entirely needed - I can't see that anything is changed
-    # providing that the source model parser returns the UCERF source
     def execute(self):
         """
         Run in parallel `core_task(sources, sitecol, monitor)`, by
@@ -362,8 +459,27 @@ class UCERFClassicalCalculator(classical.ClassicalCalculator):
         """
         monitor = self.monitor.new(self.core_task.__name__)
         monitor.oqparam = self.oqparam
-        pmap_by_grp_id = self.taskman.reduce(self.agg_dicts, self.zerodict())
-        self.save_data_transfer(self.taskman)
+        if len(self.csm) > 1:
+            # Where mutiple branches are required - parallelise by branch
+            branches = [branch.value for branch in self.smlt.branches.items()]
+            # Run parallelizing by branch
+            pmap_by_grp_id = parallel.apply_reduce(
+                 ucerf_classical_hazard_by_branch,
+                 (branches, ucerf_source, self.src_group, self.sitecol, 0,
+                 self.rlzs_assoc, monitor),
+                 concurrent_tasks=self.oqparam.concurrent_tasks, agg=self.agg)
+        else:
+            rup_sets = self.csm.get_sources()[0].get_rupture_indices(
+                split=monitor.oqparam.rupture_split)
+            # Run parallelizing by rupture subsets
+            pmap_by_grp_id = parallel.apply_reduce(
+                ucerf_classical_hazard_by_rupture_set,
+                (rup_sets, ucerf_source, self.src_group, self.sitecol, 0,
+                self.rlzs_assoc, monitor),
+                concurrent_tasks=self.oqparam.concurrent_tasks, agg=self.agg)
+
+        #pmap_by_grp_id = self.taskman.reduce(self.agg_dicts, self.zerodict())
+        #self.save_data_transfer(self.taskman)
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(pmap_by_grp_id)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
