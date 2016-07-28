@@ -39,7 +39,7 @@ from openquake.commonlib import nrml, node
 
 
 MAX_INT = 2 ** 31 - 1
-MAXWEIGHT = 100
+MAXWEIGHT = 100  # tuned euristically by M. Simionato
 U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
