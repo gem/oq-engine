@@ -304,16 +304,15 @@ class RlzsAssoc(collections.Mapping):
         return assoc
 
     # used in classical and event_based calculators
-    def combine_curves(self, rlz, results):
+    def combine_curves(self, results):
         """
-        :param rlz: a :class:`LtRealization` object
         :param results: dictionary (src_group_id, gsim) -> curves
         :returns: a dictionary rlz -> aggregate curves
         """
-        acc = ProbabilityMap()
+        acc = {rlz: ProbabilityMap() for rlz in self.realizations}
         for key in results:
-            if rlz in self.rlzs_assoc[key]:
-                acc |= results[key]
+            for rlz in self.rlzs_assoc[key]:
+                acc[rlz] |= results[key]
         return acc
 
     # used in riskinput
