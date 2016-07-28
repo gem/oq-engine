@@ -30,8 +30,7 @@ from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict, group_array
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
-from openquake.hazardlib.calc.hazard_curve import (
-    array_of_curves, ProbabilityMap)
+from openquake.hazardlib.calc.hazard_curve import ProbabilityMap
 from openquake.hazardlib import geo
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import readinput, parallel, calc
@@ -217,14 +216,12 @@ class EBRupture(object):
 
 
 @parallel.litetask
-def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
+def compute_ruptures(sources, sitecol, rlzs_assoc, monitor):
     """
     :param sources:
         List of commonlib.source.Source tuples
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param siteidx:
-        always equal to 0
     :param rlzs_assoc:
         a :class:`openquake.commonlib.source.RlzsAssoc` instance
     :param monitor:
@@ -232,9 +229,6 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     :returns:
         a dictionary src_group_id -> [Rupture instances]
     """
-    assert siteidx == 0, (
-        'siteidx can be nonzero only for the classical_tiling calculations: '
-        'tiling with the EventBasedRuptureCalculator is an error')
     # NB: by construction each block is a non-empty list with
     # sources of the same src_group_id
     src_group_id = sources[0].src_group_id
@@ -582,11 +576,8 @@ class EventBasedCalculator(ClassicalCalculator):
             return
         elif oq.hazard_curves_from_gmfs:
             rlzs = self.rlzs_assoc.realizations
-            dic = {}
-            for rlzi in result:
-                dic[rlzs[rlzi]] = array_of_curves(
-                    result[rlzi], len(self.sitecol), oq.imtls)
-            self.save_curves(dic)
+            ClassicalCalculator.post_execute(
+                self, ((rlzs[i], result[i]) for i in result))
         if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
             if not os.path.exists(export_dir):

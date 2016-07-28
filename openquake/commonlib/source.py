@@ -177,7 +177,7 @@ class RlzsAssoc(collections.Mapping):
     but only via the method :meth:
     `openquake.commonlib.source.CompositeSourceModel.get_rlzs_assoc`.
 
-    :attr realizations: list of LtRealization objects
+    :attr realizations: list of :class:`LtRealization` objects
     :attr gsim_by_trt: list of dictionaries {trt: gsim}
     :attr rlzs_assoc: dictionary {src_group_id, gsim: rlzs}
     :attr rlzs_by_smodel: list of lists of realizations
@@ -704,22 +704,28 @@ def source_info_iadd(self, other):
     return self.__class__(
         self.src_group_id, self.source_id, self.source_class, self.weight,
         self.sources, self.filter_time + other.filter_time,
-        self.split_time + other.split_time, self.calc_time + other.calc_time)
+        self.split_time + other.split_time,
+        self.cum_calc_time + other.cum_calc_time,
+        max(self.max_calc_time, other.max_calc_time),
+        self.num_tasks + other.num_tasks,
+    )
 
 SourceInfo = collections.namedtuple(
     'SourceInfo', 'src_group_id source_id source_class weight sources '
-    'filter_time split_time calc_time')
+    'filter_time split_time cum_calc_time max_calc_time num_tasks')
 SourceInfo.__iadd__ = source_info_iadd
 
 source_info_dt = numpy.dtype([
-    ('src_group_id', numpy.uint32),  # 0
-    ('source_id', (bytes, 100)),     # 1
-    ('source_class', (bytes, 30)),   # 2
-    ('weight', numpy.float32),       # 3
-    ('split_num', numpy.uint32),     # 4
-    ('filter_time', numpy.float32),  # 5
-    ('split_time', numpy.float32),   # 6
-    ('calc_time', numpy.float32),    # 7
+    ('src_group_id', numpy.uint32),    # 0
+    ('source_id', (bytes, 100)),       # 1
+    ('source_class', (bytes, 30)),     # 2
+    ('weight', numpy.float32),         # 3
+    ('split_num', numpy.uint32),       # 4
+    ('filter_time', numpy.float32),    # 5
+    ('split_time', numpy.float32),     # 6
+    ('cum_calc_time', numpy.float32),  # 7
+    ('max_calc_time', numpy.float32),  # 8
+    ('num_tasks', numpy.uint32),       # 9
 ])
 
 
@@ -798,7 +804,7 @@ class SourceManager(object):
             info = SourceInfo(src.src_group_id, src.source_id,
                               src.__class__.__name__,
                               src.weight, len(split_sources),
-                              filter_time, split_time, 0)
+                              filter_time, split_time, 0, 0, 0)
             key = (src.src_group_id, src.source_id)
             if key in self.infos:
                 self.infos[key] += info
@@ -824,10 +830,9 @@ class SourceManager(object):
 
     def gen_args(self, tiles):
         """
-        Yield (sources, sitecol, siteidx, rlzs_assoc, monitor) by
+        Yield (sources, sitecol, rlzs_assoc, monitor) by
         looping on the tiles and on the source blocks.
         """
-        siteidx = 0
         for i, sitecol in enumerate(tiles, 1):
             if len(tiles) > 1:
                 logging.info('Processing tile %d', i)
@@ -845,12 +850,10 @@ class SourceManager(object):
                         sources, self.maxweight,
                         operator.attrgetter('weight'),
                         operator.attrgetter('src_group_id')):
-                    yield (block, sitecol, siteidx,
-                           self.rlzs_assoc, self.monitor.new())
+                    yield block, sitecol, self.rlzs_assoc, self.monitor.new()
                     nblocks += 1
                 logging.info('Sent %d sources in %d block(s)',
                              len(sources), nblocks)
-            siteidx += len(sitecol)
 
     def store_source_info(self, dstore):
         """
@@ -870,7 +873,7 @@ class SourceManager(object):
 
 
 @parallel.litetask
-def count_eff_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
+def count_eff_ruptures(sources, sitecol, rlzs_assoc, monitor):
     """
     Count the number of ruptures contained in the given sources and return
     a dictionary src_group_id -> num_ruptures. All sources belong to the
