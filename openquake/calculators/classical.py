@@ -350,7 +350,7 @@ class ClassicalCalculator(PSHACalculator):
                 for i, gsim in enumerate(gsims):
                     pmap_by_grp_gsim[grp_id, gsim] = poes.extract(i)
 
-        return self.rlzs_assoc.combine_curves(pmap_by_grp_gsim).items()
+        return sorted(self.rlzs_assoc.combine_curves(pmap_by_grp_gsim).items())
 
     def post_execute(self, rlz_pmap):
         """
