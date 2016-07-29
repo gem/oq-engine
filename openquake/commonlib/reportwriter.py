@@ -20,7 +20,7 @@
 """
 Utilities to build a report writer generating a .rst report for a calculation
 """
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
 import os
 import sys
 import mock
@@ -61,8 +61,7 @@ class ReportWriter(object):
     def __init__(self, dstore):
         self.dstore = dstore
         self.oq = oq = dstore['oqparam']
-        self.text = (oq.description.encode('utf8') + '\n' +
-                     '=' * len(oq.description))
+        self.text = (oq.description + '\n' + '=' * len(oq.description))
         info = dstore['job_info']
         dpath = dstore.hdf5path
         mtime = os.path.getmtime(dpath)
