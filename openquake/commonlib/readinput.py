@@ -480,8 +480,6 @@ def get_composite_source_model(oqparam, in_memory=True):
         smodels.append(source_model)
     csm = source.CompositeSourceModel(
         gsim_lt, source_model_lt, smodels, in_memory)
-    if hasattr(csm, 'weight'):
-        csm.maxweight = math.ceil(csm.weight / (oqparam.concurrent_tasks or 1))
     return csm
 
 
