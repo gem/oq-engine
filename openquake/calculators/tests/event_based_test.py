@@ -256,15 +256,15 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
     @attr('qa', 'hazard', 'event_based')
     def test_case_17(self):  # oversampling
         expected = [
-            'hazard_curve-smltp_b2-gsimltp_b1-ltr_1.csv',
-            'hazard_curve-smltp_b2-gsimltp_b1-ltr_2.csv',
-            'hazard_curve-smltp_b2-gsimltp_b1-ltr_3.csv',
-            'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv',
+            'hazard_curve-rlz-001.csv',
+            'hazard_curve-rlz-002.csv',
+            'hazard_curve-rlz-003.csv',
+            'hazard_curve-rlz-004.csv',
         ]
         out = self.run_calc(case_17.__file__, 'job.ini', exports='csv')
         fnames = out['hcurves', 'csv']
         for exp, got in zip(expected, fnames):
-            self.assertEqualFiles('expected/%s' % exp, got, sorted)
+            self.assertEqualFiles('expected/%s' % exp, got)
 
         # check that a single rupture file is exported even if there are
         # several collections
