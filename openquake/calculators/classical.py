@@ -350,8 +350,7 @@ class ClassicalCalculator(PSHACalculator):
                 for i, gsim in enumerate(gsims):
                     pmap_by_grp_gsim[grp_id, gsim] = poes.extract(i)
 
-        return ((rlz, self.rlzs_assoc.combine_curves(rlz, pmap_by_grp_gsim))
-                for rlz in self.rlzs_assoc.realizations)
+        return sorted(self.rlzs_assoc.combine_curves(pmap_by_grp_gsim).items())
 
     def post_execute(self, rlz_pmap):
         """
@@ -364,9 +363,11 @@ class ClassicalCalculator(PSHACalculator):
         rlzs = self.rlzs_assoc.realizations
         nsites = len(self.sitecol)
         dic = {}
+        logging.info('building hazard curves')
         with self.monitor('combine curves_by_rlz', autoflush=True):
             for rlz, pmap in rlz_pmap:
-                logging.info('building hazard curves for rlz %s', rlz)
+                if nsites >= 1000:
+                    logging.info('building hazard curves for rlz %s', rlz)
                 curves = array_of_curves(pmap, nsites, oq.imtls)
                 dic[rlz] = curves
                 if oq.individual_curves:
