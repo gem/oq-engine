@@ -380,7 +380,6 @@ class HazardCalculator(BaseCalculator):
             attrs = self.datastore.hdf5['composite_source_model'].attrs
             attrs['weight'] = self.csm.weight
             attrs['filtered_weight'] = self.csm.filtered_weight
-            attrs['maxweight'] = self.csm.maxweight
 
     def pre_execute(self):
         """
@@ -557,7 +556,7 @@ class HazardCalculator(BaseCalculator):
             logging.info('Generating %d tiles of %d sites each',
                          self.num_tiles, len(tiles[0]))
         manager = source.SourceManager(
-            self.csm, oq.maximum_distance, self.datastore,
+            self.csm, oq.maximum_distance, oq.concurrent_tasks, self.datastore,
             self.monitor.new(oqparam=oq), self.random_seed,
             oq.filter_sources, num_tiles=self.num_tiles)
         tm = starmap(self.core_task.__func__, manager.gen_args(tiles))
