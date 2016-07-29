@@ -502,8 +502,10 @@ def export_hmaps_xml_json(ekey, dstore):
 @export.add(('hcurves', 'hdf5'), ('hmaps', 'hdf5'))
 def export_hazard_hdf5(ekey, dstore):
     mesh = get_mesh(dstore['sitecol'])
+    imtls = dstore['oqparam'].imtls
     fname = dstore.export_path('%s.%s' % ekey)
     with hdf5.File(fname, 'w') as f:
+        f['imtls'] = imtls
         for dskey, ds in dstore[ekey[0]].items():
             f['%s/%s' % (ekey[0], dskey)] = util.compose_arrays(mesh, ds.value)
     return [fname]
