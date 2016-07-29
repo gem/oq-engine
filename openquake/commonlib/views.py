@@ -221,7 +221,7 @@ def view_csm_info(token, dstore):
         num_rlzs = len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
         num_paths = sm.num_gsim_paths
         link = "`%s <%s>`_" % (sm.name, sm.name)
-        row = ('_'.join(sm.path), sm.weight, link,
+        row = (b'_'.join(sm.path), sm.weight, link,
                classify_gsim_lt(csm_info.gsim_lt), '%d/%d' %
                (num_rlzs, num_paths))
         rows.append(row)

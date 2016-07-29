@@ -183,9 +183,10 @@ def make_report(isodate='today'):
         (job_id, user, start_time, stop_time, status) = stats[1]
         try:
             ds = read(job_id, datadir=os.path.dirname(ds_calc))
-            txt = view_fullreport('fullreport', ds).decode('utf-8')
+            txt = view_fullreport('fullreport', ds)
             report = html_parts(txt)
         except Exception as exc:
+            raise
             report = dict(
                 html_title='Could not generate report: %s' % cgi.escape(
                     unicode(exc), quote=True),
