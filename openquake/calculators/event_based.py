@@ -514,7 +514,7 @@ class EventBasedCalculator(ClassicalCalculator):
                 self.datastore.create_dset(
                     'gmf_data/%04d' % rlz.ordinal, calc.gmv_dt)
 
-    def combine_curves_and_save_gmfs(self, acc, res):
+    def combine_pmaps_and_save_gmfs(self, acc, res):
         """
         Combine the hazard curves (if any) and save the gmfs (if any)
         sequentially; notice that the gmfs may come from
@@ -557,7 +557,7 @@ class EventBasedCalculator(ClassicalCalculator):
             (self.sesruptures, self.sitecol, oq.imtls, self.rlzs_assoc,
              min_iml, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
-            agg=self.combine_curves_and_save_gmfs,
+            agg=self.combine_pmaps_and_save_gmfs,
             acc=ProbabilityMap(),
             key=operator.attrgetter('grp_id'),
             weight=operator.attrgetter('weight'))

@@ -25,15 +25,13 @@ import logging
 import numpy
 
 from openquake.baselib.python3compat import dtype
-from openquake.baselib.general import get_array, group_array
+from openquake.baselib.general import get_array, group_array, AccumDict
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc import gmf, filters
+from openquake.hazardlib.calc import filters
 from openquake.hazardlib.probability_map import (
     ProbabilityCurve, ProbabilityMap)
 from openquake.hazardlib.site import SiteCollection
 from openquake.commonlib import readinput, oqvalidation
-from openquake.commonlib.readinput import \
-    get_gsims, get_rupture, get_correl_model, get_imts
 
 
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
@@ -100,6 +98,20 @@ def gen_ruptures_for_site(site, sources, maximum_distance, monitor):
     for src, rows in itertools.groupby(
             source_rupture_sites, key=operator.attrgetter('source')):
         yield src, [row.rupture for row in rows]
+
+
+# used in classical and event_based calculators
+def combine_pmaps(rlzs_assoc, results):
+    """
+    :param results: dictionary (src_group_id, gsim) -> curves
+    :returns: a dictionary rlz -> aggregate curves
+    """
+    acc = AccumDict({rlz: ProbabilityMap() for rlz in rlzs_assoc.realizations})
+    for grp_id in results:
+        for i, gsim in enumerate(rlzs_assoc.gsims_by_grp_id[grp_id]):
+            for rlz in rlzs_assoc.rlzs_assoc[grp_id, gsim]:
+                acc[rlz] |= results[grp_id].extract(i)
+    return acc
 
 # ######################### hazard maps ################################### #
 

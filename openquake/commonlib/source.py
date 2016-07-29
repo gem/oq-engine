@@ -33,7 +33,6 @@ from openquake.baselib.python3compat import raise_, decode
 from openquake.baselib.general import (
     AccumDict, groupby, block_splitter, group_array)
 from openquake.hazardlib.site import Tile
-from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib import logictree, sourceconverter, parallel
 from openquake.commonlib import nrml, node
 
@@ -303,19 +302,6 @@ class RlzsAssoc(collections.Mapping):
         assoc._init()
         return assoc
 
-    # used in classical and event_based calculators
-    def combine_curves(self, results):
-        """
-        :param results: dictionary (src_group_id, gsim) -> curves
-        :returns: a dictionary rlz -> aggregate curves
-        """
-        acc = {rlz: ProbabilityMap() for rlz in self.realizations}
-        for grp_id in results:
-            for i, gsim in enumerate(self.gsims_by_grp_id[grp_id]):
-                for rlz in self.rlzs_assoc[grp_id, gsim]:
-                    acc[rlz] |= results[grp_id].extract(i)
-        return acc
-
     # used in riskinput
     def combine(self, results, agg=agg_prob):
         """
@@ -359,7 +345,7 @@ class RlzsAssoc(collections.Mapping):
         r4: 0.03 + 0.04 (T1C + T2D)
         r5: 0.03 + 0.05 (T1C + T2E)
 
-        In reality, the `combine_curves` method is used with hazard_curves and
+        In reality, the `combine_pmaps` method is used with hazard_curves and
         the aggregation function is the `agg_curves` function, a composition of
         probability, which however is close to the sum for small probabilities.
         """
@@ -787,10 +773,11 @@ class SourceManager(object):
                 filter_time = filter_mon.dt
             if kind == 'heavy':
                 if (src.src_group_id, src.id) not in self.split_map:
-                    logging.info('splitting %s of weight %s',
-                                 src, src.weight)
                     with split_mon:
                         sources = list(sourceconverter.split_source(src))
+                        if len(sources) > 1:
+                            logging.info('split %s of weight %s in %d',
+                                         src, src.weight, len(sources))
                         self.split_map[src.src_group_id, src.id] = sources
                     split_time = split_mon.dt
                     self.set_serial(src, sources)

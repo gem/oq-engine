@@ -1342,6 +1342,7 @@ def loss_map_matrix(poes, curves):
     ).reshape((len(poes), len(curves)))
 
 
+# TODO: use hazardlib.stats.mean_curve
 def mean_curve(values, weights=None):
     """
     Compute the mean by using numpy.average on the first axis.
@@ -1356,6 +1357,7 @@ def mean_curve(values, weights=None):
     return sum(value * weight for value, weight in zip(values, weights))
 
 
+# TODO: use hazardlib.stats.quantile_curve
 def quantile_curve(curves, quantile, weights=None):
     """
     Compute the weighted quantile aggregate of a set of curves
@@ -1594,29 +1596,6 @@ class SimpleStats(object):
         dstore[newname] = newarray
         dstore[newname].attrs['nbytes'] = newarray.nbytes
         dstore[newname].attrs['statnames'] = hdf5.array_of_vstr(self.names)
-
-
-class HazardStats(object):
-    """
-    A class to perform statistics on the average losses. The average losses
-    are stored as N x 2 arrays (non-insured and insured losses) where N is
-    the number of assets.
-
-    :param weights: a list of weights
-    :param quantiles: a list of floats in the range 0..1
-    """
-    def __init__(self, weights, quantiles=()):
-        self.weights = weights
-        self.quantiles = quantiles
-
-    def compute(self, data):
-        """
-        :returns: [mean, quantile...]
-        """
-        stats = [mean_curve(data, self.weights)]
-        for q in self.quantiles:
-            stats.append(quantile_curve(data, q, self.weights))
-        return stats
 
 
 class StatsBuilder(object):
