@@ -463,7 +463,7 @@ class CompositionInfo(object):
         sg_data = group_array(dic['sg_data'], 'sm_id')
         sm_data = dic['sm_data']
         vars(self).update(attrs)
-        if self.gsim_fname.endswith('.xml'):
+        if self.gsim_fname.endswith(b'.xml'):
             self.gsim_lt = logictree.GsimLogicTree(
                 self.gsim_fname, sorted(self.trts))
         else:  # fake file with the name of the GSIM
@@ -475,7 +475,7 @@ class CompositionInfo(object):
                 sourceconverter.SourceGroup(
                     self.trts[trti], id=grp_id, eff_ruptures=effrup)
                 for grp_id, trti, effrup, sm_id in tdata if effrup > 0]
-            path = tuple(rec['path'].split('_'))
+            path = tuple(rec['path'].split(b'_'))
             trts = set(sg.trt for sg in srcgroups)
             num_gsim_paths = self.gsim_lt.reduce(trts).get_num_paths()
             sm = SourceModel(rec['name'], rec['weight'], path, srcgroups,
@@ -536,7 +536,7 @@ class CompositionInfo(object):
                 assoc._add_realizations(indices, smodel, gsim_lt, rlzs)
             elif trts:
                 logging.warn('No realizations for %s, %s',
-                             '_'.join(smodel.path), smodel.name)
+                             b'_'.join(smodel.path), smodel.name)
         # NB: realizations could be filtered away by logic tree reduction
         if assoc.realizations:
             assoc._init()
