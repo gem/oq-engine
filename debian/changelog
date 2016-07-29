@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Raised an error if the .execute method produces no results
+  * Used a fixed MAXWEIGHT when there is more than one tile
   * Added a view for the slow sources
   * Transmitted the attributes of a SourceGroup to the underlying sources
   * Fixed the names of exported files for hazard maps in .geojson format
