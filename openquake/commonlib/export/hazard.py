@@ -29,7 +29,7 @@ from openquake.baselib.general import (
     groupby, humansize, get_array, group_array)
 from openquake.baselib import hdf5
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc import disagg
+from openquake.hazardlib.calc import disagg, hazard_curve
 from openquake.commonlib.export import export
 from openquake.commonlib.writers import floatformat, write_csv
 from openquake.commonlib import writers, hazard_writers, util, readinput
@@ -338,8 +338,10 @@ def export_hcurves_csv(ekey, dstore):
     sitemesh = get_mesh(sitecol)
     key, fmt = ekey
     fnames = []
-    items = dstore['hmaps' if key == 'uhs' else key].items()
-    for kind, hcurves in sorted(items):
+    group = dstore['hmaps' if key == 'uhs' else key]
+    for kind in sorted(group):
+        hcurves = hazard_curve.array_of_curves(
+            dstore[key + '/' + kind], len(sitecol), oq.imtls)
         fname = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
         if key == 'uhs':
             uhs_curves = calc.make_uhs(hcurves, oq.imtls, oq.poes)
