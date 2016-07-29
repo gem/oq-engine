@@ -421,6 +421,9 @@ class CompositeRiskModel(collections.Mapping):
                                 imt, assets, hazard[imt], epsgetter)
         if hasattr(hazard_by_site, 'close'):  # for event based risk
             monitor.gmfbytes = hazard_by_site.close()
+            if monitor.gmfbytes == 0:
+                raise RuntimeError('No GMFs were generated, perhaps they are '
+                                   'all below the minimum_intensity threshold')
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
