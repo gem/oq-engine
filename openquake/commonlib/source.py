@@ -36,7 +36,9 @@ from openquake.hazardlib.site import Tile
 from openquake.commonlib import logictree, sourceconverter, parallel
 from openquake.commonlib import nrml, node
 
+
 MAX_INT = 2 ** 31 - 1
+MAXWEIGHT = 200  # tuned euristically by M. Simionato
 U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
@@ -604,13 +606,12 @@ class CompositeSourceModel(collections.Sequence):
             for src_group in sm.src_groups:
                 yield src_group
 
-    def get_sources(self, kind='all'):
+    def get_sources(self, maxweight=MAXWEIGHT, kind='all'):
         """
         Extract the sources contained in the source models by optionally
         filtering and splitting them, depending on the passed parameters.
         """
         sources = []
-        maxweight = self.maxweight
         for src_group in self.src_groups:
             for src in src_group:
                 if kind == 'all':
@@ -721,11 +722,12 @@ class SourceManager(object):
     Manager associated to a CompositeSourceModel instance.
     Filter and split sources and send them to the worker tasks.
     """
-    def __init__(self, csm, maximum_distance,
+    def __init__(self, csm, maximum_distance, concurrent_tasks,
                  dstore, monitor, random_seed=None,
                  filter_sources=True, num_tiles=1):
         self.csm = csm
         self.maximum_distance = maximum_distance
+        self.concurrent_tasks = concurrent_tasks or 1
         self.random_seed = random_seed
         self.dstore = dstore
         self.monitor = monitor
@@ -744,9 +746,11 @@ class SourceManager(object):
                 nr = src.num_ruptures
                 self.src_serial[src.id] = rup_serial[start:start + nr]
                 start += nr
-        # decrease the weight with the number of tiles, to increase
-        # the number of generated tasks; this is an heuristic trick
-        self.maxweight = self.csm.maxweight * math.sqrt(num_tiles) / 2.
+        if num_tiles > 1:
+            self.maxweight = MAXWEIGHT  # use the default
+        else:
+            # hystorically, we try to produce 2 * concurrent_tasks tasks
+            self.maxweight = math.ceil(csm.weight / self.concurrent_tasks) / 2.
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.maxweight)
 
@@ -758,7 +762,7 @@ class SourceManager(object):
         """
         filter_mon = self.monitor('filtering sources')
         split_mon = self.monitor('splitting sources')
-        for src in self.csm.get_sources(kind):
+        for src in self.csm.get_sources(self.maxweight, kind):
             filter_time = split_time = 0
             if self.filter_sources:
                 with filter_mon:
@@ -856,7 +860,7 @@ class SourceManager(object):
                 reverse=True)
             dstore['source_info'] = numpy.array(values, source_info_dt)
             attrs = dstore['source_info'].attrs
-            attrs['maxweight'] = self.csm.maxweight
+            attrs['maxweight'] = self.maxweight
             self.infos.clear()
 
 
