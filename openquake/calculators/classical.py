@@ -33,6 +33,7 @@ from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
     hazard_curves_per_trt, zero_curves, zero_maps,
     array_of_curves, ProbabilityMap)
+from openquake.hazardlib.probability_map import PmapStats
 from openquake.risklib import scientific
 from openquake.commonlib import parallel, datastore, source, calc
 from openquake.calculators import base
@@ -330,18 +331,15 @@ class PSHACalculator(base.HazardCalculator):
 
 
 @parallel.litetask
-def build_stats(pmap_by_grp, stats, rlzs_assoc, monitor):
+def build_pstats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
     """
     """
     rlzs = rlzs_assoc.realizations
-    with monitor('combine curves'):
-        pmap_by_rlz = rlzs_assoc.combine_curves(pmap_by_grp)
-    if len(rlzs) > 1:
-        with monitor('compute_stats'):
-            pmap_by_rlz.stats = stats.compute(
-                [pmap_by_rlz[rlz].array for rlz in rlzs])
-    else:  # one realization
-        pmap_by_rlz.stats = pmap_by_rlz.values()[0]
+    with monitor('combine pmaps'):
+        pmap_by_rlz = calc.combine_pmaps(rlzs_assoc, pmap_by_grp)
+    with monitor('compute stats'):
+        pmap_by_rlz.mean_quantiles = pstats.mean_quantiles(
+            sids, [pmap_by_rlz[rlz] for rlz in rlzs])
     if not monitor.individual_curves:
         pmap_by_rlz.clear()
     return pmap_by_rlz
@@ -353,7 +351,7 @@ class ClassicalCalculator(PSHACalculator):
     Classical PSHA calculator
     """
     pre_calculator = 'psha'
-    core_task = build_stats
+    core_task = build_pstats
 
     def execute(self):
         """
@@ -367,17 +365,26 @@ class ClassicalCalculator(PSHACalculator):
 
     def gen_args(self, pmap_by_grp):
         monitor = self.monitor.new(
-            'build_stats', individual_curves=self.oqparam.individual_curves)
-        stats = scientific.HazardStats(
-            [rlz.weight for rlz in self.rlzs_assoc.realizations],
-            self.oqparam.quantiles)
+            'build_pstats', individual_curves=self.oqparam.individual_curves)
+        weights = (None if self.oqparam.number_of_logic_tree_samples
+                   else [rlz.weight for rlz in self.rlzs_assoc.realizations])
+        pstats = PmapStats(weights, self.oqparam.quantile_hazard_curves)
         for tile in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
             pg = {grp_id: pmap_by_grp[grp_id].filter(tile.sids)
                   for grp_id in pmap_by_grp}
-            yield pg, stats, self.rlzs_assoc, monitor
+            yield pg, tile.sids, pstats, self.rlzs_assoc, monitor
 
-    def agg_stats(self, acc, hstats):
-        acc[hstats.sids] = hstats
+    def save_hcurves(self, acc, pmap_by_rlz):
+        names = ['mean'] + ['quantile-%s' % q
+                            for q in self.oqparam.quantile_hazard_curves]
+        for rlz in pmap_by_rlz:
+            key = 'hcurves/rlz-%03d' % rlz.ordinal
+            self.datastore[key] = pmap_by_rlz[rlz]
+        for i, name in enumerate(names):
+            if name == 'mean' and not self.oqparam.mean_hazard_curves:
+                continue
+            self.datastore['hcurves/' + name] = (
+                pmap_by_rlz.mean_quantiles.extract(i))
 
     def post_execute(self, pmap_by_grp):
         """
@@ -386,55 +393,27 @@ class ClassicalCalculator(PSHACalculator):
         :param rlz_pmap: an iterable of pairs (rlz, pmap)
         """
         oq = self.oqparam
-        nsites = len(self.sitecol)
         rlzs = self.rlzs_assoc.realizations
         nsites = len(self.sitecol)
-        hstats = parallel.starmap(
-            build_stats, self.gen_args(pmap_by_grp)).reduce(
-                self.agg_stats)
-        
-                if nsites >= 1000:
-                    logging.info('building hazard curves for rlz %s', rlz)
-                curves = array_of_curves(pmap, nsites, oq.imtls)
-                dic[rlz] = curves
-                if oq.individual_curves:
-                    self.store_curves('rlz-%03d' % rlz.ordinal, curves, rlz)
+        nstats = len(oq.quantile_hazard_curves) + 1
 
-        if len(rlzs) == 1:  # cannot compute statistics
-            self.mean_curves = curves
-        else:
-            self.compute_stats(dic)
+        # initialize datasets
+        zc = zero_curves(nsites, oq.imtls)
+        if oq.individual_curves:
+            for rlz in rlzs:
+                self.datastore.create_dset(
+                    'hcurves/rlz-%03d' % rlz.ordinal, zc.dtype, zc.shape)
+        if oq.mean_hazard_curves:
+            self.datastore.create_dset('hcurves/mean', zc.dtype, zc.shape)
+        for q in oq.quantile_hazard_curves:
+            self.datastore.create_dset(
+                'hcurves/quantile-%s' % q, zc.dtype, zc.shape)
 
-    def compute_stats(self, curves_by_rlz):
-        """
-        :param curves_by_rlz: dictionary rlz -> hazard curves
-        """
-        oq = self.oqparam
-        rlzs = self.rlzs_assoc.realizations
-        nsites = len(self.sitecol)
-
-        with self.monitor('compute and save statistics', autoflush=True):
-            weights = (None if oq.number_of_logic_tree_samples
-                       else [rlz.weight for rlz in rlzs])
-
-            # mean curves are always computed but stored only on request
-            zc = zero_curves(nsites, oq.imtls)
-            self.mean_curves = numpy.array(zc)
-            for imt in oq.imtls:
-                self.mean_curves[imt] = scientific.mean_curve(
-                    [curves_by_rlz.get(rlz, zc)[imt] for rlz in rlzs], weights)
-
-            self.quantile = {}
-            for q in oq.quantile_hazard_curves:
-                self.quantile[q] = qc = numpy.array(zc)
-                for imt in oq.imtls:
-                    curves = [curves_by_rlz[rlz][imt] for rlz in rlzs]
-                    qc[imt] = scientific.quantile_curve(
-                        curves, q, weights).reshape((nsites, -1))
-            if oq.mean_hazard_curves:
-                self.store_curves('mean', self.mean_curves)
-            for q in self.quantile:
-                self.store_curves('quantile-%s' % q, self.quantile[q])
+        self.stats = ProbabilityMap.build(
+            len(oq.imtls.array), nstats, self.sitecol.sids)
+        sm = parallel.starmap(build_pstats, self.gen_args(pmap_by_grp))
+        with self.monitor('saving curves and stats', autoflush=True):
+            sm.reduce(self.save_hcurves, ProbabilityMap())
 
     def hazard_maps(self, curves):
         """
