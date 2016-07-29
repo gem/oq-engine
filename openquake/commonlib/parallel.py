@@ -119,8 +119,8 @@ def safely_call(func, args, pickle=False):
 
 class Aggregator(object):
     """
-    Each time the aggregator is called aggregate the output of a task
-    and log a message if the percentage is bigger than the last one.
+    Each time the aggregator is called it aggregates the output of a task
+    and logs a progress message.
 
     :param agg:
         aggregation function (acc, val) -> new acc
@@ -525,6 +525,9 @@ else:
 
 
 if OQ_DISTRIBUTE == 'multiprocess':
+    # experimental support for the multiprocess module
+    # WARNING: it can be removed at any time
+
     import multiprocess
 
     class starmap(object):
