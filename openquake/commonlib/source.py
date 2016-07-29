@@ -762,8 +762,8 @@ class SourceManager(object):
         if num_tiles > 1:
             self.maxweight = MAXWEIGHT  # use the default
         else:
-            self.maxweight = math.ceil(
-                csm.weight / self.concurrent_tasks) / 2.
+            # hystorically, we try to produce 2 * concurrent_tasks tasks
+            self.maxweight = math.ceil(csm.weight / self.concurrent_tasks) / 2.
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.maxweight)
 
