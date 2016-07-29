@@ -214,10 +214,11 @@ class PmapStats(object):
         self.weights = weights
         self.quantiles = quantiles
 
+    # the tests are in the engine
     def mean_quantiles(self, sids, pmaps):
         """
         :params sids: array of N site IDs
-        :param pmaps: array of R ProbabilityMaps
+        :param pmaps: array of R simple ProbabilityMaps
         :returns: a ProbabilityMap with arrays of size (num_levels, num_stats)
         """
         if len(pmaps) == 0:
@@ -229,8 +230,10 @@ class PmapStats(object):
         nstats = len(self.quantiles) + 1
         stats = ProbabilityMap.build(len(zero.array), nstats, sids)
         for sid in sids:
+            # the arrays in the entering ProbabilityMaps have shape
+            # (L, 1), where L is the number of IMT levels
             data = [pmap.get(sid, zero).array for pmap in pmaps]
             mq = mean_quantiles(data, self.quantiles, self.weights)
             for i, array in enumerate(mq):
-                stats[sid].array = array
+                stats[sid].array[:, i] = array[:, 0]
         return stats
