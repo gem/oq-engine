@@ -393,7 +393,8 @@ class ClassicalCalculator(PSHACalculator):
             build_stats, self.gen_args(pmap_by_grp)).reduce(
                 self.agg_stats)
         
-                logging.info('building hazard curves for rlz %s', rlz)
+                if nsites >= 1000:
+                    logging.info('building hazard curves for rlz %s', rlz)
                 curves = array_of_curves(pmap, nsites, oq.imtls)
                 dic[rlz] = curves
                 if oq.individual_curves:
