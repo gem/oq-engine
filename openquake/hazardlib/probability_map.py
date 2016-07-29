@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.baselib.python3compat import zip
+from openquake.hazardlib.stats import mean_quantiles
 import numpy
 
 F64 = numpy.float64
@@ -106,12 +107,14 @@ class ProbabilityMap(dict):
 
     def filter(self, sids):
         """
-        Extracs a submap of self for the given sids; if a sid is missing,
-        returns 0.
+        Extracs a submap of self for the given sids.
         """
         dic = self.__class__()
         for sid in sids:
-            dic[sid] = self.get(sid, 0)
+            try:
+                dic[sid] = self[sid]
+            except KeyError:
+                pass
         return dic
 
     def extract(self, gsim_idx):
@@ -171,3 +174,63 @@ class ProbabilityMap(dict):
         # rebuild the map from sids and probs arrays
         for sid, prob in zip(attrs['sids'], array):
             self[sid] = ProbabilityCurve(prob)
+
+
+def get_zero_pcurve(pmaps):
+    """
+    Return the zero ProbabilityCurve from a set of homogenous ProbabilityMaps
+    """
+    for pmap in pmaps:
+        if pmap:
+            sid = next(iter(pmap))
+            break
+    zero = numpy.zeros_like(pmap[sid].array)
+    return ProbabilityCurve(zero)
+
+
+class PmapStats(object):
+    """
+    A class to perform statistics on ProbabilityMaps.
+
+    :param weights: a list of weights
+    :param quantiles: a list of floats in the range 0..1
+
+    Here is an example:
+
+    >>> pm1 = ProbabilityMap.build(num_levels=3, num_gsims=1, sids=[0, 1],
+    ...                            initvalue=1.0)
+    >>> pm2 = ProbabilityMap.build(num_levels=3, num_gsims=1, sids=[0],
+    ...                            initvalue=0.8)
+    >>> PmapStats().mean_quantiles(sids=[0, 1], pmaps=[pm1, pm2])
+    {0: <ProbabilityCurve
+    [[ 0.9]
+     [ 0.9]
+     [ 0.9]]>, 1: <ProbabilityCurve
+    [[ 0.5]
+     [ 0.5]
+     [ 0.5]]>}
+    """
+    def __init__(self, weights=None, quantiles=()):
+        self.weights = weights
+        self.quantiles = quantiles
+
+    def mean_quantiles(self, sids, pmaps):
+        """
+        :params sids: array of N site IDs
+        :param pmaps: array of R ProbabilityMaps
+        :returns: a ProbabilityMap with arrays of size (num_levels, num_stats)
+        """
+        if len(pmaps) == 0:
+            raise ValueError('No probability maps!')
+        elif len(pmaps) == 1:  # the mean is the only pmap
+            assert not self.quantiles, self.quantiles
+            return pmaps[0]
+        zero = get_zero_pcurve(pmaps)
+        nstats = len(self.quantiles) + 1
+        stats = ProbabilityMap.build(len(zero.array), nstats, sids)
+        for sid in sids:
+            data = [pmap.get(sid, zero).array for pmap in pmaps]
+            mq = mean_quantiles(data, self.quantiles, self.weights)
+            for i, array in enumerate(mq):
+                stats[sid].array = array
+        return stats
