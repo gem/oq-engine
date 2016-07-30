@@ -526,21 +526,21 @@ else:
     litetask = litetask_futures
 
 
-class Threadmap(object):
-    """
-    MapReduce implementation based on threads. For instance
+class Starmap(object):
+    pool = None  # to be overridden
 
-    >>> from collections import Counter
-    >>> Threadmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
-    Counter({'l': 3, 'o': 2, 'e': 1, 'd': 1, 'h': 1, 'r': 1, 'w': 1})
-    """
-    pool = multiprocessing.dummy.Pool(executor._max_workers * 5)
+    @classmethod
+    def apply(cls, func, args, concurrent_tasks=executor._max_workers * 5,
+              weight=lambda item: 1, key=lambda item: 'Unspecified'):
+        chunks = split_in_blocks(args[0], concurrent_tasks, weight, key)
+        return cls(func, (((chunk,) + args[1:]) for chunk in chunks))
 
     def __init__(self, func, iterargs):
         self.func = func
         self.received = []
         allargs = list(iterargs)
         self.todo = len(allargs)
+        logging.info('Starting %d tasks', self.todo)
         self.imap = self.pool.imap_unordered(
             functools.partial(safely_call, func), allargs)
 
@@ -548,3 +548,26 @@ class Threadmap(object):
         agg_and_log = Aggregator(agg, self.func.__name__, self.todo, progress)
         return functools.reduce(
             agg_and_log, self.imap, AccumDict() if acc is None else acc)
+
+
+class Threadmap(Starmap):
+    """
+    MapReduce implementation based on threads. For instance
+
+    >>> from collections import Counter
+    >>> Threadmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
+    Counter({'l': 3, 'o': 2, 'e': 1, 'd': 1, 'h': 1, 'r': 1, 'w': 1})
+    """
+    # following the same convention of the standard library, num_proc * 5
+    pool = multiprocessing.dummy.Pool(executor._max_workers * 5)
+
+
+class Processmap(Starmap):
+    """
+    MapReduce implementation based on processes. For instance
+
+    >>> from collections import Counter
+    >>> Processmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
+    Counter({'l': 3, 'o': 2, 'e': 1, 'd': 1, 'h': 1, 'r': 1, 'w': 1})
+    """
+    pool = multiprocessing.Pool()
