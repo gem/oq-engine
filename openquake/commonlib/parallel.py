@@ -28,6 +28,8 @@ import inspect
 import logging
 import operator
 import traceback
+import functools
+import multiprocessing.dummy
 from concurrent.futures import as_completed, ProcessPoolExecutor
 from decorator import FunctionMaker
 
@@ -524,26 +526,25 @@ else:
     litetask = litetask_futures
 
 
-if OQ_DISTRIBUTE == 'multiprocess':
-    # experimental support for the multiprocess module
-    # WARNING: it can be removed at any time
+class Threadmap(object):
+    """
+    MapReduce implementation based on threads. For instance
 
-    import multiprocess
+    >>> from collections import Counter
+    >>> Threadmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
+    Counter({'l': 3, 'o': 2, 'e': 1, 'd': 1, 'h': 1, 'r': 1, 'w': 1})
+    """
+    pool = multiprocessing.dummy.Pool(executor._max_workers * 5)
 
-    class starmap(object):
-        pool = multiprocess.Pool()
+    def __init__(self, func, iterargs):
+        self.func = func
+        self.received = []
+        allargs = list(iterargs)
+        self.todo = len(allargs)
+        self.imap = self.pool.imap_unordered(
+            functools.partial(safely_call, func), allargs)
 
-        def __init__(self, func, iterargs):
-            self.func = func
-            self.received = []
-            allargs = list(iterargs)
-            self.todo = len(allargs)
-            self.imap = self.pool.imap_unordered(lambda a: func(*a), allargs)
-
-        def reduce(self, agg=operator.add, acc=None):
-            if acc is None:
-                acc = AccumDict()
-            agg_and_log = Aggregator(agg, self.func.__name__, self.todo)
-            for triple in self.imap:
-                acc = agg_and_log(acc, triple)
-            return acc
+    def reduce(self, agg=operator.add, acc=None, progress=logging.info):
+        agg_and_log = Aggregator(agg, self.func.__name__, self.todo, progress)
+        return functools.reduce(
+            agg_and_log, self.imap, AccumDict() if acc is None else acc)
