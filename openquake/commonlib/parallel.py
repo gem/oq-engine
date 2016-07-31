@@ -53,6 +53,9 @@ if OQ_DISTRIBUTE == 'celery':
     from openquake.engine.celeryconfig import BROKER_URL
     app = Celery('openquake', backend='amqp://', broker=BROKER_URL)
 
+elif OQ_DISTRIBUTE == 'ipython':
+    import ipyparallel as ipp
+
 
 def oq_distribute():
     """
@@ -330,6 +333,11 @@ class TaskManager(object):
         self.no_distribute = no_distribute()
         self.argnames = inspect.getargspec(self.task_func).args
 
+        if OQ_DISTRIBUTE == 'ipython' and isinstance(
+                self.executor, ProcessPoolExecutor):
+            client = ipp.Client()
+            self.__class__.executor = client.executor()
+
     def submit(self, *args):
         """
         Submit a function with the given arguments to the process pool
@@ -355,7 +363,8 @@ class TaskManager(object):
         if self.oqtask is self.task_func:
             return self.executor.submit(
                 safely_call, self.task_func, piks, True)
-        elif OQ_DISTRIBUTE == 'futures':  # call the decorated task
+        elif OQ_DISTRIBUTE in ('futures', 'ipython'):
+            # call the decorated task
             return self.executor.submit(self.oqtask, *piks)
         elif OQ_DISTRIBUTE == 'celery':
             res = self.oqtask.delay(*piks)
@@ -392,7 +401,7 @@ class TaskManager(object):
                 del app.backend._cache[task_id]
             return acc
 
-        elif distribute == 'futures':
+        elif distribute in ('futures', 'ipython'):
 
             for future in as_completed(self.results):
                 check_mem_usage()
@@ -508,7 +517,7 @@ def litetask_futures(func):
     # protocol; once we remove celery we can try to remove pickle=True
     return FunctionMaker.create(
         func, 'return _s_(_w_, (%(shortsignature)s,), pickle={})'.format(
-            OQ_DISTRIBUTE in ('celery', 'futures')),
+            OQ_DISTRIBUTE in ('celery', 'futures', 'ipython')),
         dict(_s_=safely_call, _w_=wrapper), task_func=func)
 
 
@@ -522,6 +531,10 @@ if OQ_DISTRIBUTE == 'celery':
         tsk.task_func = task_func
         return tsk
     litetask = litetask_celery
+elif OQ_DISTRIBUTE == 'ipython':
+    import functools
+    def litetask(func):
+        return func
 else:
     litetask = litetask_futures
 
