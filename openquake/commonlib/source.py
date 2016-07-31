@@ -39,7 +39,6 @@ from openquake.commonlib import nrml, node
 
 
 MAX_INT = 2 ** 31 - 1
-MAXWEIGHT = 200  # tuned euristically by M. Simionato
 U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
@@ -759,11 +758,10 @@ class SourceManager(object):
                 nr = src.num_ruptures
                 self.src_serial[src.id] = rup_serial[start:start + nr]
                 start += nr
-        if num_tiles > 1:
-            self.maxweight = MAXWEIGHT  # use the default
-        else:
-            # hystorically, we try to produce 2 * concurrent_tasks tasks
-            self.maxweight = math.ceil(csm.weight / self.concurrent_tasks) / 2.
+
+        # hystorically, we always tried to to produce 2 * concurrent_tasks
+        self.maxweight = math.ceil(
+            csm.weight / (self.concurrent_tasks * 2 * num_tiles))
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.maxweight)
 
