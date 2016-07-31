@@ -108,15 +108,23 @@ def safely_call(func, args, pickle=False):
         args = [a.unpickle() for a in args]
     ismon = args and isinstance(args[-1], Monitor)
     mon = args[-1] if ismon else Monitor()
+    check_mem_usage(mon)  # check if too much memory is used
+    mon.flush = NoFlush(mon, func.__name__)
     try:
-        got = func(*args)
-        if inspect.isgenerator(got):
-            got = list(got)
+        with mon('total ' + func.__name__, measuremem=True), \
+             GroundShakingIntensityModel.forbid_instantiation():
+            got = func(*args)
+            if inspect.isgenerator(got):
+                got = list(got)
         res = got, None, mon
     except:
         etype, exc, tb = sys.exc_info()
         tb_str = ''.join(traceback.format_tb(tb))
         res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc), etype, mon)
+
+    # NB: flush must not be called in the workers - they must not
+    # have access to the datastore - so we remove it
+    rec_delattr(mon, 'flush')
     if pickle:
         return Pickled(res)
     return res
@@ -359,7 +367,7 @@ class TaskManager(object):
         return sent
 
     def _submit(self, piks):
-        # submit tasks by using the ProcessPoolExecutor
+        # submit tasks by using the ProcessPoolExecutor or ipyparallel
         if self.oqtask is self.task_func:
             return self.executor.submit(
                 safely_call, self.task_func, piks, True)
@@ -500,25 +508,13 @@ def litetask_futures(func):
     Add monitoring support to the decorated function. The last argument
     must be a monitor object.
     """
-    def wrapper(*args):
-        monitor = args[-1]
-        check_mem_usage(monitor)  # check if too much memory is used
-        monitor.flush = NoFlush(monitor, func.__name__)
-        with monitor('total ' + func.__name__, measuremem=True), \
-                GroundShakingIntensityModel.forbid_instantiation():
-            result = func(*args)
-        # NB: flush must not be called in the workers - they must not
-        # have access to the datastore - so we remove it
-        rec_delattr(monitor, 'flush')
-        return result
-
     # NB: the returned function must have the same signature of func;
     # we need pickle=True because celery is using the worst possible
     # protocol; once we remove celery we can try to remove pickle=True
     return FunctionMaker.create(
-        func, 'return _s_(_w_, (%(shortsignature)s,), pickle={})'.format(
-            OQ_DISTRIBUTE in ('celery', 'futures', 'ipython')),
-        dict(_s_=safely_call, _w_=wrapper), task_func=func)
+        func, 'return _s_(_f_, (%(shortsignature)s,), pickle={})'.format(
+            OQ_DISTRIBUTE in ('celery', 'futures')),
+        dict(_s_=safely_call, _f_=func), task_func=func)
 
 
 if OQ_DISTRIBUTE == 'celery':
@@ -532,7 +528,6 @@ if OQ_DISTRIBUTE == 'celery':
         return tsk
     litetask = litetask_celery
 elif OQ_DISTRIBUTE == 'ipython':
-    import functools
     def litetask(func):
         return func
 else:
