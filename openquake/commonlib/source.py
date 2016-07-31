@@ -37,7 +37,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib import logictree, sourceconverter, parallel
 from openquake.commonlib import nrml, node
 
-
+MAXWEIGHT = 200  # tuned by M. Simionato
 MAX_INT = 2 ** 31 - 1
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -750,8 +750,8 @@ class SourceManager(object):
         self.infos = {}  # src_group_id, source_id -> SourceInfo tuple
 
         # hystorically, we always tried to to produce 2 * concurrent_tasks
-        self.maxweight = math.ceil(
-            csm.weight / (self.concurrent_tasks * 2 * num_tiles))
+        self.maxweight = max(MAXWEIGHT, math.ceil(
+            csm.weight / (self.concurrent_tasks * 2 * num_tiles)))
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.maxweight)
         if random_seed is not None:
