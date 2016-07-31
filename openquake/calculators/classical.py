@@ -290,7 +290,7 @@ class PSHACalculator(base.HazardCalculator):
         # then save the calculation times per each source
         calc_times = getattr(pmap_by_grp_id, 'calc_times', [])
         if calc_times:
-            sources = self.csm.get_sources()
+            sources = self.csm.get_sources(self.taskman.maxweight, 'all')
             info_dict = {(rec['src_group_id'], rec['source_id']): rec
                          for rec in self.source_info}
             for src_idx, dt in calc_times:
