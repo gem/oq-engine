@@ -618,7 +618,7 @@ class CompositeSourceModel(collections.Sequence):
             for src_group in sm.src_groups:
                 yield src_group
 
-    def get_sources(self, maxweight=MAXWEIGHT, kind='all'):
+    def get_sources(self, maxweight, kind):
         """
         Extract the sources contained in the source models by optionally
         filtering and splitting them, depending on the passed parameters.
@@ -748,22 +748,22 @@ class SourceManager(object):
         self.rlzs_assoc = csm.info.get_rlzs_assoc()
         self.split_map = {}  # src_group_id, source_id -> split sources
         self.infos = {}  # src_group_id, source_id -> SourceInfo tuple
-        if random_seed is not None:
-            # generate unique seeds for each rupture with numpy.arange
-            self.src_serial = {}
-            n = sum(sg.tot_ruptures() for sg in self.csm.src_groups)
-            rup_serial = numpy.arange(n, dtype=numpy.uint32)
-            start = 0
-            for src in self.csm.get_sources('all'):
-                nr = src.num_ruptures
-                self.src_serial[src.id] = rup_serial[start:start + nr]
-                start += nr
 
         # hystorically, we always tried to to produce 2 * concurrent_tasks
         self.maxweight = math.ceil(
             csm.weight / (self.concurrent_tasks * 2 * num_tiles))
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.maxweight)
+        if random_seed is not None:
+            # generate unique seeds for each rupture with numpy.arange
+            self.src_serial = {}
+            n = sum(sg.tot_ruptures() for sg in self.csm.src_groups)
+            rup_serial = numpy.arange(n, dtype=numpy.uint32)
+            start = 0
+            for src in self.csm.get_sources(self.maxweight, 'all'):
+                nr = src.num_ruptures
+                self.src_serial[src.id] = rup_serial[start:start + nr]
+                start += nr
 
     def get_sources(self, kind, tile):
         """
