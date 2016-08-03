@@ -495,10 +495,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         lr_data = [(l, r, dset.dset.value) for (l, r), dset in
                    numpy.ndenumerate(self.agg_loss_table)]
         ses_ratio = self.oqparam.ses_ratio
-        result = parallel.apply_reduce(
+        result = parallel.apply(
             build_agg_curve, (lr_data, self.I, ses_ratio, C, self.L,
                               self.monitor('')),
-            concurrent_tasks=self.oqparam.concurrent_tasks)
+            concurrent_tasks=self.oqparam.concurrent_tasks).reduce()
         agg_curve = numpy.zeros(self.R, loss_curve_dt)
         for l, r, name in result:
             agg_curve[lts[l]][name][r] = result[l, r, name]

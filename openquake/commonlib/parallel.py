@@ -287,11 +287,11 @@ class TaskManager(object):
         return self
 
     @classmethod
-    def apply_reduce(cls, task, task_args, agg=operator.add, acc=None,
-                     concurrent_tasks=executor._max_workers,
-                     weight=lambda item: 1,
-                     key=lambda item: 'Unspecified',
-                     name=None):
+    def apply(cls, task, task_args,
+              concurrent_tasks=executor._max_workers,
+              weight=lambda item: 1,
+              key=lambda item: 'Unspecified',
+              name=None):
         """
         Apply a task to a tuple of the form (sequence, \*other_args)
         by first splitting the sequence in chunks, according to the weight
@@ -312,24 +312,11 @@ class TaskManager(object):
         """
         arg0 = task_args[0]  # this is assumed to be a sequence
         args = task_args[1:]
-        task_func = getattr(task, 'task_func', task)
-        if acc is None:
-            acc = AccumDict()
-        if len(arg0) == 0:  # nothing to do
-            return acc
         chunks = list(split_in_blocks(
             arg0, concurrent_tasks or 1, weight, key))
-        cls.apply_reduce.__func__._chunks = chunks
-        if not concurrent_tasks or no_distribute() or len(chunks) == 1:
-            # apply the function in the master process
-            for i, chunk in enumerate(chunks):
-                if args and hasattr(args[-1], 'flush'):  # is monitor
-                    args[-1].task_no = i
-                acc = agg(acc, task_func(chunk, *args))
-            return acc
+        cls.apply.__func__._chunks = chunks
         logging.info('Starting %d tasks', len(chunks))
-        self = cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
-        return self.reduce(agg, acc)
+        return cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
 
     def __init__(self, oqtask, name=None):
         self.oqtask = oqtask
@@ -466,7 +453,7 @@ class TaskManager(object):
 
 # convenient aliases
 starmap = TaskManager.starmap
-apply_reduce = TaskManager.apply_reduce
+apply = TaskManager.apply
 
 
 def do_not_aggregate(acc, value):
