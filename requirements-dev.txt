@@ -20,3 +20,13 @@ futures==3.0.5
 django==1.8.7
 requests==2.9.1
 pyshp==1.2.3
+
+# Celery support
+# uncomment the following lines to install celery
+# and its dependencies
+#pytz
+#anyjson==0.3.3
+#amqp==1.4.9
+#kombu==3.0.33
+#billiard==3.3.0.22
+#celery==3.1.20
