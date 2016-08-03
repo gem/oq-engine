@@ -28,6 +28,8 @@ import inspect
 import logging
 import operator
 import traceback
+import functools
+import multiprocessing.dummy
 from concurrent.futures import as_completed, ProcessPoolExecutor
 from decorator import FunctionMaker
 
@@ -117,31 +119,50 @@ def safely_call(func, args, pickle=False):
     return res
 
 
-def log_percent_gen(taskname, todo, progress):
+class Aggregator(object):
     """
-    Generator factory. Each time the generator object is called
-    log a message if the percentage is bigger than the last one.
-    Yield the number of calls done at the current iteration.
+    Each time the aggregator is called it aggregates the output of a task
+    and logs a progress message.
 
-    :param str taskname:
+    :param agg:
+        aggregation function (acc, val) -> new acc
+    :param taskname:
         the name of the task
-    :param int todo:
+    :param todo:
         the number of times the generator object will be called
     :param progress:
         a logging function for the progress report
     """
-    yield 0
-    done = 1
-    prev_percent = 0
-    while done < todo:
-        percent = int(float(done) / todo * 100)
-        if percent > prev_percent:
-            progress('%s %3d%%', taskname, percent)
-            prev_percent = percent
+    def __init__(self, agg, taskname, todo, progress=logging.info):
+        self.agg = agg
+        self.taskname = taskname
+        self.todo = todo
+        self.progress = progress
+        self.log_percent = self._log_percent()
+        next(self.log_percent)
+
+    def _log_percent(self):
+        yield 0
+        done = 1
+        prev_percent = 0
+        while done < self.todo:
+            percent = int(float(done) / self.todo * 100)
+            if percent > prev_percent:
+                self.progress('%s %3d%%', self.taskname, percent)
+                prev_percent = percent
+            yield done
+            done += 1
+        self.progress('%s 100%%', self.taskname)
         yield done
-        done += 1
-    progress('%s 100%%', taskname)
-    yield done
+
+    def __call__(self, acc, triple):
+        (val, exc, mon) = triple
+        if exc:
+            raise RuntimeError(val)
+        res = self.agg(acc, val)
+        next(self.log_percent)
+        mon.flush()
+        return res
 
 
 class Pickled(object):
@@ -247,7 +268,8 @@ class TaskManager(object):
         """
         self = cls(task, name)
         for i, a in enumerate(task_args, 1):
-            cls.progress('Submitting task %s #%d', self.name, i)
+            if i == 1:  # first time
+                cls.progress('Submitting "%s" tasks', self.name)
             if isinstance(a[-1], Monitor):  # add incremental task number
                 a[-1].task_no = i
             self.submit(*a)
@@ -398,24 +420,13 @@ class TaskManager(object):
             logging.warn('No tasks were submitted')
             return acc
 
-        log_percent = log_percent_gen(self.name, num_tasks, self.progress)
-        next(log_percent)
-
-        def agg_and_percent(acc, triple):
-            (val, exc, mon) = triple
-            if exc:
-                raise RuntimeError(val)
-            res = agg(acc, val)
-            next(log_percent)
-            mon.flush()
-            return res
-
+        agg_and_log = Aggregator(agg, self.name, num_tasks, self.progress)
         if self.no_distribute:
-            agg_result = reduce(agg_and_percent, self.results, acc)
+            agg_result = reduce(agg_and_log, self.results, acc)
         else:
             self.progress('Sent %s of data in %d task(s)',
                           humansize(sum(self.sent.values())), num_tasks)
-            agg_result = self.aggregate_result_set(agg_and_percent, acc)
+            agg_result = self.aggregate_result_set(agg_and_log, acc)
             self.progress('Received %s of data, maximum per task %s',
                           humansize(sum(self.received)),
                           humansize(max(self.received)))
@@ -496,7 +507,8 @@ def litetask_futures(func):
     # we need pickle=True because celery is using the worst possible
     # protocol; once we remove celery we can try to remove pickle=True
     return FunctionMaker.create(
-        func, 'return _s_(_w_, (%(shortsignature)s,), pickle=True)',
+        func, 'return _s_(_w_, (%(shortsignature)s,), pickle={})'.format(
+            OQ_DISTRIBUTE in ('celery', 'futures')),
         dict(_s_=safely_call, _w_=wrapper), task_func=func)
 
 
@@ -512,3 +524,50 @@ if OQ_DISTRIBUTE == 'celery':
     litetask = litetask_celery
 else:
     litetask = litetask_futures
+
+
+class Starmap(object):
+    pool = None  # to be overridden
+
+    @classmethod
+    def apply(cls, func, args, concurrent_tasks=executor._max_workers * 5,
+              weight=lambda item: 1, key=lambda item: 'Unspecified'):
+        chunks = split_in_blocks(args[0], concurrent_tasks, weight, key)
+        return cls(func, (((chunk,) + args[1:]) for chunk in chunks))
+
+    def __init__(self, func, iterargs):
+        self.func = func
+        self.received = []
+        allargs = list(iterargs)
+        self.todo = len(allargs)
+        logging.info('Starting %d tasks', self.todo)
+        self.imap = self.pool.imap_unordered(
+            functools.partial(safely_call, func), allargs)
+
+    def reduce(self, agg=operator.add, acc=None, progress=logging.info):
+        agg_and_log = Aggregator(agg, self.func.__name__, self.todo, progress)
+        return functools.reduce(
+            agg_and_log, self.imap, AccumDict() if acc is None else acc)
+
+
+class Threadmap(Starmap):
+    """
+    MapReduce implementation based on threads. For instance
+
+    >>> from collections import Counter
+    >>> Threadmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
+    Counter({'l': 3, 'o': 2, 'e': 1, 'd': 1, 'h': 1, 'r': 1, 'w': 1})
+    """
+    # following the same convention of the standard library, num_proc * 5
+    pool = multiprocessing.dummy.Pool(executor._max_workers * 5)
+
+
+class Processmap(Starmap):
+    """
+    MapReduce implementation based on processes. For instance
+
+    >>> from collections import Counter
+    >>> Processmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
+    Counter({'l': 3, 'o': 2, 'e': 1, 'd': 1, 'h': 1, 'r': 1, 'w': 1})
+    """
+    pool = multiprocessing.Pool()
