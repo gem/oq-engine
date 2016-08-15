@@ -305,7 +305,7 @@ def extract_from(data, fields):
     return data
 
 
-def write_csv(dest, data, sep=',', fmt='%.6E', header=None):
+def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
     """
     :param dest: destination filename or io.StringIO instance
     :param data: array to save
@@ -313,6 +313,8 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None):
     :param fmt: formatting string (default '%12.8E')
     :param header:
        optional list with the names of the columns to display
+    :param comment:
+       optional first line starting with a # character
     """
     if len(data) == 0:
         logging.warn('%s is empty', dest)
@@ -327,6 +329,9 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None):
         autoheader = []
     else:
         autoheader = build_header(data.dtype)
+
+    if comment:
+        dest.write('# %s\n' % comment)
 
     someheader = header or autoheader
     if someheader:

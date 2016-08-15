@@ -33,8 +33,7 @@ from openquake.hazardlib.tom import PoissonTOM
 
 from openquake.commonlib import tests, nrml_examples, readinput
 from openquake.commonlib import sourceconverter as s
-from openquake.commonlib.source import (
-    SourceModelParser, DuplicatedID, CompositionInfo)
+from openquake.commonlib.source import SourceModelParser, CompositionInfo
 from openquake.commonlib import nrml
 from openquake.baselib.general import assert_close
 
@@ -79,9 +78,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.,  # km
         ))
-        grp_nodes = nrml.parse(MIXED_SRC_MODEL).nodes
-        groups = [
-            cls.parser.converter.convert_node(gnode) for gnode in grp_nodes]
+        groups = cls.parser.parse_groups(MIXED_SRC_MODEL)
         ([cls.point], [cls.cmplx], [cls.area, cls.simple],
          [cls.char_simple, cls.char_complex, cls.char_multi]) = groups
         # the parameters here would typically be specified in the job .ini
@@ -377,7 +374,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             width_of_mfd_bin=0.1,
             area_source_discretization=10,
         ))
-        with self.assertRaises(DuplicatedID):
+        with self.assertRaises(nrml.DuplicatedID):
             parser.parse_groups(DUPLICATE_ID_SRC_MODEL)
 
     def test_raises_useful_error_1(self):

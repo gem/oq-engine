@@ -43,6 +43,12 @@ class ClassicalTestCase(CalculatorTestCase):
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
             case_1.__file__)
 
+        # make sure we saved the data transfer information in job_info
+        keys = set(self.calc.datastore['job_info'].__dict__)
+        self.assertIn('classical_max_received_per_task', keys)
+        self.assertIn('classical_tot_received', keys)
+        self.assertIn('classical_sent', keys)
+
     @attr('qa', 'hazard', 'classical')
     def test_sa_period_too_big(self):
         imtls = '{"SA(4.1)": [0.1, 0.4, 0.6]}'
@@ -181,6 +187,22 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
         self.assertEqualFiles('expected/hazard_uhs-mean-0.01.xml', fnames[0])
         self.assertEqualFiles('expected/hazard_uhs-mean-0.1.xml', fnames[1])
         self.assertEqualFiles('expected/hazard_uhs-mean-0.2.xml', fnames[2])
+
+        # test hmaps geojson export
+        fnames = [f for f in export(('hmaps', 'geojson'), self.calc.datastore)
+                  if 'mean' in f]
+        self.assertEqualFiles(
+            'expected/hazard_map-mean-0.01-PGA.geojson', fnames[0])
+        self.assertEqualFiles(
+            'expected/hazard_map-mean-0.01-SA(0.1).geojson', fnames[1])
+        self.assertEqualFiles(
+            'expected/hazard_map-mean-0.1-PGA.geojson', fnames[2])
+        self.assertEqualFiles(
+            'expected/hazard_map-mean-0.1-SA(0.1).geojson', fnames[3])
+        self.assertEqualFiles(
+            'expected/hazard_map-mean-0.2-PGA.geojson', fnames[4])
+        self.assertEqualFiles(
+            'expected/hazard_map-mean-0.2-SA(0.1).geojson', fnames[5])
 
     @attr('qa', 'hazard', 'classical')
     def test_case_16(self):   # sampling
