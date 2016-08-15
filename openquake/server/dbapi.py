@@ -137,13 +137,13 @@ There are three other `?` parameters:
   >>> match('SELECT * FROM job WHERE ?A', dict(value=33, id=5))
   ('SELECT * FROM job WHERE id=? AND value=?', (5, 33))
 
-- `$O` is for dictionaries and it is used in OR queries:
+- `?O` is for dictionaries and it is used in OR queries:
 
-  >>> match('SELECT * FROM job WHERE $O', dict(value=33, id=5))
+  >>> match('SELECT * FROM job WHERE ?O', dict(value=33, id=5))
   ('SELECT * FROM job WHERE id=? OR value=?', (5, 33))
 
 The dictionary parameters are ordered per field name, just to make
-the templates reproducible. `?A` and `$O` are smart enough to
+the templates reproducible. `?A` and `?O` are smart enough to
 treat specially `None` parameters, that are turned into `NULL`s:
 
   >>> match('SELECT * FROM job WHERE ?A', dict(value=None, id=5))
@@ -204,7 +204,7 @@ class TooManyColumns(Exception):
 
 class _Replacer(object):
     # helper class for the match function below
-    rx = re.compile(r'\?S|\?X|\?D|\?A|\$O|\?s|\?x')
+    rx = re.compile(r'\?S|\?X|\?D|\?A|\?O|\?s|\?x')
     ph = '?'
 
     def __init__(self, all_args):
@@ -229,7 +229,7 @@ class _Replacer(object):
             return ', '.join(['{}=' + self.ph] * len(arg))
         elif placeholder == '?A':
             return self.join(' AND ', arg)
-        elif placeholder == '$O':
+        elif placeholder == '?O':
             return self.join(' OR ', arg)
         elif placeholder == '?x':
             self.xargs.append(arg)
