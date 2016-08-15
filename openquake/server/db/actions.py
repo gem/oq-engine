@@ -76,9 +76,8 @@ def create_job(db, calc_mode, description, user_name, datadir, hc_id=None):
                user_name=user_name,
                hazard_calculation_id=hc_id,
                ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
-    db('INSERT INTO job (?S) VALUES (?X)', job.keys(), job.values())
-    job_id = db('SELECT seq FROM sqlite_sequence WHERE name="job"',
-                scalar=True)
+    job_id = db('INSERT INTO job (?S) VALUES (?X)',
+                job.keys(), job.values()).lastrowid
     return job_id
 
 
@@ -201,7 +200,6 @@ def create_outputs(db, job_id, dskeys):
     db.insert('output', 'oq_job_id display_name ds_key'.split(), rows)
 
 
-# FIXME: this is not an action
 def finish(db, job_id, status):
     """
     Set the job columns `is_running`, `status`, and `stop_time`
