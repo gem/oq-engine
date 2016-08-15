@@ -93,12 +93,12 @@ class HtmlTable(object):
 JOB_STATS = '''
 SELECT id, user_name, start_time, stop_time, status,
 strftime('%s', stop_time) - strftime('%s', start_time) AS duration
-FROM job WHERE id=$x;
+FROM job WHERE id=?x;
 '''
 
 ALL_JOBS = '''
 SELECT id, user_name, status, ds_calc_dir FROM job
-WHERE start_time >= $x AND start_time < $x ORDER BY stop_time
+WHERE start_time >= ?x AND start_time < ?x ORDER BY stop_time
 '''
 
 PAGE_TEMPLATE = '''\
