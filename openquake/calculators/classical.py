@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
+import logging
 import operator
 import collections
 from functools import partial
@@ -168,14 +169,12 @@ class BoundingBox(object):
 
 
 @parallel.litetask
-def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
+def classical(sources, sitecol, rlzs_assoc, monitor):
     """
     :param sources:
         a non-empty sequence of sources of homogeneous tectonic region type
     :param sitecol:
         a SiteCollection instance
-    :param siteidx:
-        index of the first site (0 if there is a single tile)
     :param rlzs_assoc:
         a RlzsAssoc instance
     :param monitor:
@@ -194,7 +193,6 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
     max_dist = monitor.oqparam.maximum_distance[trt]
 
     dic = AccumDict()
-    dic.siteslice = slice(siteidx, siteidx + len(sitecol))
     if monitor.oqparam.poes_disagg:
         sm_id = rlzs_assoc.sm_ids[src_group_id]
         dic.bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
@@ -298,7 +296,11 @@ class PSHACalculator(base.HazardCalculator):
             for src_idx, dt in calc_times:
                 src = sources[src_idx]
                 info = info_dict[src.src_group_id, encode(src.source_id)]
-                info['calc_time'] += dt
+                info['cum_calc_time'] += dt
+                info['num_tasks'] += 1
+                if dt > info['max_calc_time']:
+                    info['max_calc_time'] = dt
+
             rows = sorted(
                 info_dict.values(), key=operator.itemgetter(7), reverse=True)
             array = numpy.zeros(len(rows), source.source_info_dt)
@@ -347,34 +349,42 @@ class ClassicalCalculator(PSHACalculator):
                 gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
                 for i, gsim in enumerate(gsims):
                     pmap_by_grp_gsim[grp_id, gsim] = poes.extract(i)
-        return pmap_by_grp_gsim
 
-    def post_execute(self, pmap_by_grp_gsim):
+        return sorted(self.rlzs_assoc.combine_curves(pmap_by_grp_gsim).items())
+
+    def post_execute(self, rlz_pmap):
         """
-        Combine the curves and store them
+        Combine the curves and store them.
+
+        :param rlz_pmap: an iterable of pairs (rlz, pmap)
         """
+        oq = self.oqparam
         nsites = len(self.sitecol)
-        imtls = self.oqparam.imtls
+        rlzs = self.rlzs_assoc.realizations
+        nsites = len(self.sitecol)
+        dic = {}
+        logging.info('building hazard curves')
         with self.monitor('combine curves_by_rlz', autoflush=True):
-            curves_by_rlz = self.rlzs_assoc.combine_curves(pmap_by_grp_gsim)
-        self.save_curves({rlz: array_of_curves(curves, nsites, imtls)
-                          for rlz, curves in curves_by_rlz.items()})
+            for rlz, pmap in rlz_pmap:
+                if nsites >= 1000:
+                    logging.info('building hazard curves for rlz %s', rlz)
+                curves = array_of_curves(pmap, nsites, oq.imtls)
+                dic[rlz] = curves
+                if oq.individual_curves:
+                    self.store_curves('rlz-%03d' % rlz.ordinal, curves, rlz)
 
-    def save_curves(self, curves_by_rlz):
+        if len(rlzs) == 1:  # cannot compute statistics
+            self.mean_curves = curves
+        else:
+            self.compute_stats(dic)
+
+    def compute_stats(self, curves_by_rlz):
         """
-        Save the dictionary curves_by_rlz
+        :param curves_by_rlz: dictionary rlz -> hazard curves
         """
         oq = self.oqparam
         rlzs = self.rlzs_assoc.realizations
         nsites = len(self.sitecol)
-        if oq.individual_curves:
-            with self.monitor('save curves_by_rlz', autoflush=True):
-                for rlz, curves in curves_by_rlz.items():
-                    self.store_curves('rlz-%03d' % rlz.ordinal, curves, rlz)
-
-            if len(rlzs) == 1:  # cannot compute statistics
-                [self.mean_curves] = curves_by_rlz.values()
-                return
 
         with self.monitor('compute and save statistics', autoflush=True):
             weights = (None if oq.number_of_logic_tree_samples
@@ -394,7 +404,6 @@ class ClassicalCalculator(PSHACalculator):
                     curves = [curves_by_rlz[rlz][imt] for rlz in rlzs]
                     qc[imt] = scientific.quantile_curve(
                         curves, q, weights).reshape((nsites, -1))
-
             if oq.mean_hazard_curves:
                 self.store_curves('mean', self.mean_curves)
             for q in self.quantile:
@@ -428,7 +437,8 @@ class ClassicalCalculator(PSHACalculator):
             (imt, len(imls)) for imt, imls in self.oqparam.imtls.items()])
         if oq.hazard_maps or oq.uniform_hazard_spectra:
             # hmaps is a composite array of shape (N, P)
-            hmaps = self.hazard_maps(curves)
+            with self.monitor('compute hazard maps', autoflush=True):
+                hmaps = self.hazard_maps(curves)
             self._store('hmaps/' + kind, hmaps, rlz,
                         poes=oq.poes, nbytes=hmaps.nbytes)
 
