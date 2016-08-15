@@ -25,7 +25,7 @@ there has always been good Pythonistas in the anti-ORM camp.
 
 This module is heavily inspired by the dbapiext_ module by
 Martin Blais, which is part of the antiorm_ package. The main
-difference is that I am using the dollar sign ($) for the placeholders
+difference is that I am using the question mark (?) for the placeholders
 instead of the percent sign (%) to avoid confusions with other usages
 of the %s, in particular in LIKE queries and in expressions like
 `strftime('%s', time)` used in SQLite.
@@ -84,57 +84,57 @@ SELECT queries and is working as one would expect:
 >>> rows[0]._fields
 ['id', 'value']
 
-The queries can have different kind of `$` parameters:
+The queries can have different kind of `?` parameters:
 
-- `$s` is for interpolated string parameters:
+- `?s` is for interpolated string parameters:
 
-  >>> db('SELECT * FROM $s', 'job')  # $s is replaced by 'job'
+  >>> db('SELECT * FROM ?s', 'job')  # ?s is replaced by 'job'
   [<Row(id=1, value=42)>, <Row(id=2, value=43)>]
 
-- `$x` is for escaped parameters (to avoid SQL injection):
+- `?x` is for escaped parameters (to avoid SQL injection):
 
-  >>> db('SELECT * FROM job WHERE id=$x', 1)  # $x is replaced by 1
+  >>> db('SELECT * FROM job WHERE id=?x', 1)  # ?x is replaced by 1
   [<Row(id=1, value=42)>]
 
-- `$s` and `$x` are for scalar parameters; `$S` and `$X` are for sequences:
+- `?s` and `?x` are for scalar parameters; `?S` and `?X` are for sequences:
 
-  >>> db('INSERT INTO job ($S) VALUES ($X)', ['id', 'value'], (3, 44)) # doctest: +ELLIPSIS
+  >>> db('INSERT INTO job (?S) VALUES (?X)', ['id', 'value'], (3, 44)) # doctest: +ELLIPSIS
   <sqlite3.Cursor object at ...>
 
 You can see how the interpolation works by calling the `match` function
 that returns the interpolated template and the parameters that will be
 passed to the low level driver. In this case
 
->>> match('INSERT INTO job ($S) VALUES ($X)', ['id', 'value'], [3, 44])
+>>> match('INSERT INTO job (?S) VALUES (?X)', ['id', 'value'], [3, 44])
 ('INSERT INTO job (id, value) VALUES (?, ?)', (3, 44))
 
-As you see, `$S` parameters work by replacing a list of strings with a comma
-separated string, where $X parameters are replaced by a comma separated
+As you see, `?S` parameters work by replacing a list of strings with a comma
+separated string, where ?X parameters are replaced by a comma separated
 sequence of question marks, i.e. the low level placeholder for SQLite.
 The interpolation performs a regular search and replace,
-so if you have a `$-` string in your template that must not be escaped,
+so if you have a `?-` string in your template that must not be escaped,
 you can run into issues. This is an error:
 
->>> match("SELECT * FROM job WHERE id=$x AND description='Lots of $s'", 1)
+>>> match("SELECT * FROM job WHERE id=?x AND description='Lots of ?s'", 1)
 Traceback (most recent call last):
    ...
-ValueError: Incorrect number of $-parameters in SELECT * FROM job WHERE id=$x AND description='Lots of $s', expected 1
+ValueError: Incorrect number of $-parameters in SELECT * FROM job WHERE id=?x AND description='Lots of ?s', expected 1
 
 This is correct:
 
->>> match("SELECT * FROM job WHERE id=$x AND description=$x", 1, 'Lots of $s')
-('SELECT * FROM job WHERE id=? AND description=?', (1, 'Lots of $s'))
+>>> match("SELECT * FROM job WHERE id=?x AND description=?x", 1, 'Lots of ?s')
+('SELECT * FROM job WHERE id=? AND description=?', (1, 'Lots of ?s'))
 
-There are three other `$` parameters:
+There are three other `?` parameters:
 
-- `$D` is for dictionaries and it is used mostly in UPDATE queries:
+- `?D` is for dictionaries and it is used mostly in UPDATE queries:
 
-  >>> match('UPDATE mytable SET $D WHERE id=$x', dict(value=33, other=5), 1)
+  >>> match('UPDATE mytable SET ?D WHERE id=?x', dict(value=33, other=5), 1)
   ('UPDATE mytable SET other=?, value=? WHERE id=?', (5, 33, 1))
 
-- `$A` is for dictionaries and it is used in AND queries:
+- `?A` is for dictionaries and it is used in AND queries:
 
-  >>> match('SELECT * FROM job WHERE $A', dict(value=33, id=5))
+  >>> match('SELECT * FROM job WHERE ?A', dict(value=33, id=5))
   ('SELECT * FROM job WHERE id=? AND value=?', (5, 33))
 
 - `$O` is for dictionaries and it is used in OR queries:
@@ -143,10 +143,10 @@ There are three other `$` parameters:
   ('SELECT * FROM job WHERE id=? OR value=?', (5, 33))
 
 The dictionary parameters are ordered per field name, just to make
-the templates reproducible. `$A` and `$O` are smart enough to
+the templates reproducible. `?A` and `$O` are smart enough to
 treat specially `None` parameters, that are turned into `NULL`s:
 
-  >>> match('SELECT * FROM job WHERE $A', dict(value=None, id=5))
+  >>> match('SELECT * FROM job WHERE ?A', dict(value=None, id=5))
   ('SELECT * FROM job WHERE id=? AND value IS NULL', (5,))
 
 The `$` parameters are matched positionally; it is also possible to
@@ -154,21 +154,21 @@ pass to the `db` object a few keyword arguments to tune the standard
 behavior. In particular, if you know that a query must return a
 single row you can do the following:
 
->>> db('SELECT * FROM job WHERE id=$x', 1, one=True)
+>>> db('SELECT * FROM job WHERE id=?x', 1, one=True)
 <Row(id=1, value=42)>
 
 Without the `one=True` the query would have returned a list with a single
 element. If you know that the query must return a scalar you can do the
 following:
 
->>> db('SELECT value FROM job WHERE id=$x', 1, scalar=True)
+>>> db('SELECT value FROM job WHERE id=?x', 1, scalar=True)
 42
 
 If a query that should return a scalar returns something else, or if a
 query that should return a row returns a different number of rows,
 appropriate errors are raised:
 
->>> db('SELECT * FROM job WHERE id=$x', 1, scalar=True)
+>>> db('SELECT * FROM job WHERE id=?x', 1, scalar=True)
 Traceback (most recent call last):
    ...
 TooManyColumns: 2, expected 1
@@ -180,7 +180,7 @@ TooManyRows: 3, expected 1
 
 If a row is expected but not found, a NotFound exception is raised:
 
->>> db('SELECT * FROM job WHERE id=$x', None, one=True)
+>>> db('SELECT * FROM job WHERE id=?x', None, one=True)
 Traceback (most recent call last):
    ...
 NotFound
@@ -204,7 +204,7 @@ class TooManyColumns(Exception):
 
 class _Replacer(object):
     # helper class for the match function below
-    rx = re.compile(r'\$S|\$X|\$D|\$A|\$O|\$s|\$x')
+    rx = re.compile(r'\?S|\?X|\?D|\?A|\$O|\?s|\?x')
     ph = '?'
 
     def __init__(self, all_args):
@@ -216,25 +216,25 @@ class _Replacer(object):
         arg = self.all_args[0]  # can raise an IndexError
         del self.all_args[0]
         placeholder = mo.group()
-        if placeholder == '$X':
+        if placeholder == '?X':
             self.xargs.extend(arg)
             return ', '.join([self.ph] * len(arg))
-        elif placeholder == '$S':
+        elif placeholder == '?S':
             self.sargs.extend(arg)
             return ', '.join(['{}'] * len(arg))
-        elif placeholder == '$D':
+        elif placeholder == '?D':
             keys, values = zip(*sorted(arg.items()))
             self.sargs.extend(keys)
             self.xargs.extend(values)
             return ', '.join(['{}=' + self.ph] * len(arg))
-        elif placeholder == '$A':
+        elif placeholder == '?A':
             return self.join(' AND ', arg)
         elif placeholder == '$O':
             return self.join(' OR ', arg)
-        elif placeholder == '$x':
+        elif placeholder == '?x':
             self.xargs.append(arg)
             return self.ph
-        elif placeholder == '$s':
+        elif placeholder == '?s':
             self.sargs.append(arg)
             return '{}'
 
@@ -263,7 +263,7 @@ def match(m_templ, *m_args):
 
     Here is an example of usage:
 
-    >>> match('SELECT * FROM job WHERE id=$x', 1)
+    >>> match('SELECT * FROM job WHERE id=?x', 1)
     ('SELECT * FROM job WHERE id=?', (1,))
     """
     if not m_args:
@@ -347,7 +347,7 @@ class Db(object):
         """
         cursor = self.conn.cursor()
         if len(rows):
-            templ, _args = match('INSERT INTO $s ($S) VALUES ($X)',
+            templ, _args = match('INSERT INTO ?s (?S) VALUES (?X)',
                                  table, columns, rows[0])
             cursor.executemany(templ, rows)
         return cursor
