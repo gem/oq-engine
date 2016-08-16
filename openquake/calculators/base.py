@@ -239,14 +239,13 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             fmts = self.oqparam.exports
         else:  # is a string
             fmts = self.oqparam.exports.split(',')
+        keys = set(self.datastore)
+        has_hcurves = 'hcurves' in self.datastore
+        # NB: this is False in the classical precalculator
+
         for fmt in fmts:
             if not fmt:
                 continue
-            keys = set(self.datastore)
-            if (self.oqparam.uniform_hazard_spectra and not
-                    self.oqparam.hazard_maps and 'hmaps' in keys):
-                # do not export the hazard maps, even if they are there
-                keys.remove('hmaps')
             for key in sorted(keys):  # top level keys
                 if 'rlzs' in key and not individual_curves:
                     continue  # skip individual curves
@@ -256,11 +255,17 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 with self.monitor('export'):
                     exported[ekey] = exp(ekey, self.datastore)
                 logging.info('exported %s: %s', key, exported[ekey])
-            # special case for uhs which is a view
-            if (self.oqparam.uniform_hazard_spectra and
-                    'hmaps' in self.datastore):
+
+            if has_hcurves and self.oqparam.hazard_maps:
+                ekey = ('hmaps', fmt)
+                with self.monitor('export'):
+                    exported[ekey] = exp(ekey, self.datastore)
+                logging.info('exported %s: %s', key, exported[ekey])
+
+            if has_hcurves and self.oqparam.uniform_hazard_spectra:
                 ekey = ('uhs', fmt)
-                exported[ekey] = exp(ekey, self.datastore)
+                with self.monitor('export'):
+                    exported[ekey] = exp(ekey, self.datastore)
                 logging.info('exported %s: %s', key, exported[ekey])
 
         if self.close:  # in the engine we close later

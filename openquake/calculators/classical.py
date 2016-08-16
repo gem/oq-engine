@@ -31,10 +31,9 @@ from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
-    hazard_curves_per_trt, zero_curves, zero_maps,
-    array_of_curves, ProbabilityMap)
+    hazard_curves_per_trt, zero_curves, array_of_curves, ProbabilityMap)
 from openquake.risklib import scientific
-from openquake.commonlib import parallel, datastore, source, calc
+from openquake.commonlib import parallel, datastore, source
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -409,20 +408,6 @@ class ClassicalCalculator(PSHACalculator):
             for q in self.quantile:
                 self.store_curves('quantile-%s' % q, self.quantile[q])
 
-    def hazard_maps(self, curves):
-        """
-        Compute the hazard maps associated to the curves
-        """
-        maps = zero_maps(
-            len(self.sitecol), self.oqparam.imtls, self.oqparam.poes)
-        for imt in curves.dtype.fields:
-            # build a matrix of size (N, P)
-            data = calc.compute_hazard_maps(
-                curves[imt], self.oqparam.imtls[imt], self.oqparam.poes)
-            for poe, hmap in zip(self.oqparam.poes, data.T):
-                maps['%s-%s' % (imt, poe)] = hmap
-        return maps
-
     def store_curves(self, kind, curves, rlz=None):
         """
         Store all kind of curves, optionally computing maps and uhs curves.
@@ -431,16 +416,9 @@ class ClassicalCalculator(PSHACalculator):
         :param curves: an array of N curves to store
         :param rlz: hazard realization, if any
         """
-        oq = self.oqparam
         self._store('hcurves/' + kind, curves, rlz, nbytes=curves.nbytes)
         self.datastore['hcurves'].attrs['imtls'] = hdf5.array_of_vstr([
             (imt, len(imls)) for imt, imls in self.oqparam.imtls.items()])
-        if oq.hazard_maps or oq.uniform_hazard_spectra:
-            # hmaps is a composite array of shape (N, P)
-            with self.monitor('compute hazard maps', autoflush=True):
-                hmaps = self.hazard_maps(curves)
-            self._store('hmaps/' + kind, hmaps, rlz,
-                        poes=oq.poes, nbytes=hmaps.nbytes)
 
     def _store(self, name, curves, rlz, **kw):
         self.datastore.hdf5[name] = curves
