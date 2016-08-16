@@ -214,8 +214,6 @@ class EBRupture(object):
         return '<%s #%d, grp_id=%d>' % (self.__class__.__name__,
                                         self.serial, self.grp_id)
 
-
-@parallel.litetask
 def compute_ruptures(sources, sitecol, rlzs_assoc, monitor):
     """
     :param sources:
@@ -444,7 +442,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
 
 # ######################## GMF calculator ############################ #
 
-@parallel.litetask
 def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc,
                             min_iml, monitor):
     """

@@ -847,7 +847,6 @@ def parse_ses_ruptures(fname):
     raise NotImplementedError('parse_ses_ruptures')
 
 
-@parallel.litetask
 def _filter_sources(sources, sitecol, maxdist, monitor):
     # called by filter_sources
     srcs = []
