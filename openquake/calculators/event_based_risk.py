@@ -49,7 +49,6 @@ def build_el_dtypes(insured_losses):
     return numpy.dtype(ela_list), numpy.dtype(elt_list)
 
 
-@parallel.litetask
 def build_agg_curve(lr_data, insured_losses, ses_ratio, curve_resolution, L,
                     monitor):
     """
@@ -158,7 +157,6 @@ def _aggregate_output(output, compositemodel, agg, ass, idx, result, monitor):
             agg[indices, l, r] += losses
 
 
-@parallel.litetask
 def event_based_risk(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     """
     :param riskinput:
