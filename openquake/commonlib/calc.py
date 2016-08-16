@@ -103,14 +103,15 @@ def gen_ruptures_for_site(site, sources, maximum_distance, monitor):
 # used in classical and event_based calculators
 def combine_pmaps(rlzs_assoc, results):
     """
-    :param results: dictionary (src_group_id, gsim) -> curves
-    :returns: a dictionary rlz -> aggregate curves
+    :param results: dictionary src_group_id -> probability map
+    :returns: a dictionary rlz -> aggregate probability map
     """
     acc = AccumDict({rlz: ProbabilityMap() for rlz in rlzs_assoc.realizations})
     for grp_id in results:
         for i, gsim in enumerate(rlzs_assoc.gsims_by_grp_id[grp_id]):
+            pmap = results[grp_id].extract(i)
             for rlz in rlzs_assoc.rlzs_assoc[grp_id, gsim]:
-                acc[rlz] |= results[grp_id].extract(i)
+                acc[rlz] |= pmap
     return acc
 
 # ######################### hazard maps ################################### #
