@@ -25,7 +25,6 @@ def get_length(data):
     return {'n': len(data)}
 
 
-@parallel.litetask
 def get_len(data, monitor):
     with monitor:
         result = {'n': len(data)}
@@ -62,16 +61,9 @@ class TaskManagerTestCase(unittest.TestCase):
         parallel.TaskManager.restart()
         self.assertEqual(res, {'a': {'n': 10}, 'c': {'n': 15}, 'b': {'n': 20}})
 
-    def test_litetask(self):
-        # signature preservation
-        self.assertEqual(get_len.__code__.co_varnames, ('data', 'monitor'))
-
-        # pickling/unpickling behavior
+    def test_no_flush(self):
         mon = parallel.Monitor('test')
-        pik_args = parallel.Pickled('ab'), parallel.Pickled(mon)
-        res = get_len(*pik_args).unpickle()
-
-        # flushing error
+        res = parallel.safely_call(get_len, ('ab', mon))
         self.assertIn('Monitor(\'test\').flush() must not be called'
                       ' by get_len!', res[0])
         self.assertEqual(res[1], RuntimeError)

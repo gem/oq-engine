@@ -18,7 +18,6 @@
 
 import numpy
 
-from openquake.commonlib import parallel
 from openquake.calculators import base, classical_risk
 
 F32 = numpy.float32
@@ -27,7 +26,6 @@ bcr_dt = numpy.dtype([('annual_loss_orig', F32), ('annual_loss_retro', F32),
                       ('bcr', F32)])
 
 
-@parallel.litetask
 def classical_bcr(riskinput, riskmodel, rlzs_assoc, bcr_dt, monitor):
     """
     Compute and return the average losses for each asset.

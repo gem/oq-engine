@@ -667,7 +667,6 @@ class UCERFSourceConverter(SourceConverter):
             trt=node["tectonicRegion"])
 
 
-@parallel.litetask
 def compute_ruptures(branch_info, ucerf, sitecol, oqparam, monitor):
     """
     Returns the ruptures as a TRT set

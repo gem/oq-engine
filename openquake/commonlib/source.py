@@ -34,7 +34,7 @@ from openquake.baselib.general import (
     AccumDict, groupby, block_splitter, group_array)
 from openquake.hazardlib.site import Tile
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.commonlib import logictree, sourceconverter, parallel
+from openquake.commonlib import logictree, sourceconverter
 from openquake.commonlib import nrml, node
 
 MAXWEIGHT = 200  # tuned by M. Simionato
@@ -874,7 +874,6 @@ class SourceManager(object):
             self.infos.clear()
 
 
-@parallel.litetask
 def count_eff_ruptures(sources, sitecol, rlzs_assoc, monitor):
     """
     Count the number of ruptures contained in the given sources and return
