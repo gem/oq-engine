@@ -139,7 +139,6 @@ def compute_hazard_maps(curves, imls, poes):
         An array of shape N x P, where N is the number of curves and P the
         number of poes.
     """
-    curves = numpy.array(curves)
     poes = numpy.array(poes)
 
     if len(poes.shape) == 0:
@@ -151,9 +150,12 @@ def compute_hazard_maps(curves, imls, poes):
         # `curves` was passed as 1 dimensional array, there is a single site
         curves = curves.reshape((1,) + curves.shape)  # 1 x L
 
+    L = curves.shape[1]  # number of levels
+    if L != len(imls):
+        raise ValueError('The curves have %d levels, %d were passed' %
+                         (L, len(imls)))
     result = []
     imls = numpy.log(numpy.array(imls[::-1]))
-
     for curve in curves:
         # the hazard curve, having replaced the too small poes with EPSILON
         curve_cutoff = [max(poe, EPSILON) for poe in curve[::-1]]
