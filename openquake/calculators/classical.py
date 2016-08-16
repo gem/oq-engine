@@ -17,13 +17,11 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-import logging
 import operator
 import collections
 from functools import partial
 import numpy
 
-from openquake.baselib import hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
@@ -34,7 +32,6 @@ from openquake.hazardlib.calc.hazard_curve import (
     hazard_curves_per_trt, zero_curves, zero_maps,
     array_of_curves, ProbabilityMap)
 from openquake.hazardlib.probability_map import PmapStats
-from openquake.risklib import scientific
 from openquake.commonlib import parallel, datastore, source, calc
 from openquake.calculators import base
 
@@ -375,16 +372,33 @@ class ClassicalCalculator(PSHACalculator):
             yield pg, tile.sids, pstats, self.rlzs_assoc, monitor
 
     def save_hcurves(self, acc, pmap_by_rlz):
+        oq = self.oqparam
         names = ['mean'] + ['quantile-%s' % q
                             for q in self.oqparam.quantile_hazard_curves]
         for rlz in pmap_by_rlz:
             key = 'hcurves/rlz-%03d' % rlz.ordinal
             self.datastore[key] = pmap_by_rlz[rlz]
         for i, name in enumerate(names):
-            if name == 'mean' and not self.oqparam.mean_hazard_curves:
+            if name == 'mean' and not oq.mean_hazard_curves:
                 continue
             self.datastore['hcurves/' + name] = (
                 pmap_by_rlz.mean_quantiles.extract(i))
+
+        if oq.hazard_maps or oq.uniform_hazard_spectra:
+            # hmaps is a composite array of shape (N, P)
+            with self.monitor('compute hazard maps', autoflush=True):
+
+                # individual hazard maps
+                for rlz, pmap in pmap_by_rlz.items():
+                    key = 'hmaps/rlz-%03d' % rlz.ordinal
+                    self.datastore[key] = self.hazard_maps(pmap)
+
+                # statistical hazard maps
+                for i, name in enumerate(names):
+                    if name == 'mean' and not oq.mean_hazard_curves:
+                        continue
+                    pmap = pmap_by_rlz.mean_quantiles.extract(i)
+                    self.datastore['hmaps/' + name] = self.hazard_maps(pmap)
 
     def post_execute(self, pmap_by_grp):
         """
@@ -415,46 +429,17 @@ class ClassicalCalculator(PSHACalculator):
         with self.monitor('saving curves and stats', autoflush=True):
             sm.reduce(self.save_hcurves, ProbabilityMap())
 
-    def hazard_maps(self, curves):
+    def hazard_maps(self, pmap):
         """
-        Compute the hazard maps associated to the curves
-        """
-        maps = zero_maps(
-            len(self.sitecol), self.oqparam.imtls, self.oqparam.poes)
-        for imt in curves.dtype.fields:
-            # build a matrix of size (N, P)
-            data = calc.compute_hazard_maps(
-                curves[imt], self.oqparam.imtls[imt], self.oqparam.poes)
-            for poe, hmap in zip(self.oqparam.poes, data.T):
-                maps['%s-%s' % (imt, poe)] = hmap
-        return maps
-
-    def store_curves(self, kind, curves, rlz=None):
-        """
-        Store all kind of curves, optionally computing maps and uhs curves.
-
-        :param kind: the kind of curves to store
-        :param curves: an array of N curves to store
-        :param rlz: hazard realization, if any
+        Compute the hazard maps associated to the passed probability map
         """
         oq = self.oqparam
-        self._store('hcurves/' + kind, curves, rlz, nbytes=curves.nbytes)
-        self.datastore['hcurves'].attrs['imtls'] = hdf5.array_of_vstr([
-            (imt, len(imls)) for imt, imls in self.oqparam.imtls.items()])
-        if oq.hazard_maps or oq.uniform_hazard_spectra:
-            # hmaps is a composite array of shape (N, P)
-            with self.monitor('compute hazard maps', autoflush=True):
-                hmaps = self.hazard_maps(curves)
-            self._store('hmaps/' + kind, hmaps, rlz,
-                        poes=oq.poes, nbytes=hmaps.nbytes)
-
-    def _store(self, name, curves, rlz, **kw):
-        self.datastore.hdf5[name] = curves
-        dset = self.datastore.hdf5[name]
-        if rlz is not None:
-            dset.attrs['uid'] = rlz.uid
-        for k, v in kw.items():
-            dset.attrs[k] = v
+        hmap = ProbabilityMap.build(len(oq.poes), 1, pmap)
+        poes = numpy.array([pmap[sid].array for sid in pmap.sids])  # N x L x 1
+        data = calc.compute_hazard_maps(poes[:, :, 0], oq.imtls.array, oq.poes)
+        for sid, value in zip(pmap.sids, data):
+            hmap[sid].array = value
+        return hmap
 
 
 def nonzero(val):
