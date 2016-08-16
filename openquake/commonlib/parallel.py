@@ -537,7 +537,6 @@ class Starmap(object):
 
     def __init__(self, func, iterargs):
         self.func = func
-        self.received = []
         allargs = list(iterargs)
         self.todo = len(allargs)
         logging.info('Starting %d tasks', self.todo)
@@ -548,6 +547,15 @@ class Starmap(object):
         agg_and_log = Aggregator(agg, self.func.__name__, self.todo, progress)
         return functools.reduce(
             agg_and_log, self.imap, AccumDict() if acc is None else acc)
+
+
+class Serialmap(Starmap):
+    def __init__(self, func, iterargs):
+        self.func = func
+        allargs = list(iterargs)
+        self.todo = len(allargs)
+        logging.info('Starting %d tasks', self.todo)
+        self.imap = [safely_call(func, args) for args in allargs]
 
 
 class Threadmap(Starmap):

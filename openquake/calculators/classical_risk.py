@@ -129,7 +129,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
                 for i, gsim in enumerate(gsims):
                     curves_by_trt_gsim[grp_id, gsim] = pmap.convert(
-                        nsites, self.oqparam.imtls, i)
+                        self.oqparam.imtls, nsites, i)
         self.riskinputs = self.build_riskinputs(curves_by_trt_gsim)
         self.monitor.oqparam = self.oqparam
 
