@@ -181,22 +181,6 @@ def compute_hazard_maps(curves, imls, poes):
     return numpy.array(result)
 
 
-def make_hmaps(hcurves, imtls, poes):
-    """
-    :param hcurves: N hazard curves
-    :param imtls: intensity measure and levels
-    :param poes: P values for the PoE used to compute the maps
-    :returns: composite array with N hazard maps
-    """
-    hmaps = hazard_curve.zero_maps(len(hcurves), imtls, poes)
-    for imt in imtls:
-        # build a matrix of size (N, P)
-        data = compute_hazard_maps(hcurves[imt], imtls[imt], poes)
-        for poe, hmap in zip(poes, data.T):
-            hmaps['%s-%s' % (imt, poe)] = hmap
-    return hmaps
-
-
 # #########################  GMF->curves #################################### #
 
 # NB (MS): the approach used here will not work for non-poissonian models
@@ -272,15 +256,29 @@ def get_imts_periods(imtls):
     return [str(imt) for imt in imts], [imt[1] or 0.0 for imt in imts]
 
 
-def make_uhs(hcurves, imtls, poes):
+def make_hmap(pmap, imtls, poes):
+    """
+    Compute the hazard maps associated to the passed probability map
+    """
+    hmap = ProbabilityMap.build(len(imtls), len(poes), pmap)  # I x P matrices
+    for i, imt in enumerate(imtls):
+        curves = numpy.array([pmap[sid].array[imtls.slicedic[imt], 0]
+                              for sid in pmap.sids])
+        data = compute_hazard_maps(curves, imtls[imt], poes)
+        for sid, value in zip(pmap.sids, data):
+            hmap[sid].array[i] = value
+    return hmap
+
+
+def make_uhs(pmap, imtls, poes):
     """
     Make Uniform Hazard Spectra curves for each location.
 
     It is assumed that the `lons` and `lats` for each of the `maps` are
     uniform.
 
-    :param hcurves:
-        a composite array of hazard curves
+    :param pmap:
+        a probability map of hazard curves
     :param imtls:
         a dictionary of intensity measure types and levels
     :param poes:
@@ -288,7 +286,7 @@ def make_uhs(hcurves, imtls, poes):
     :returns:
         an composite array containing N uniform hazard maps
     """
-    maps = make_hmaps(hcurves, imtls, poes)
+    maps = make_hmap(pmap, imtls, poes)
     imts, _ = get_imts_periods(imtls)
     imts_dt = numpy.dtype([(imt, F32) for imt in imts])
     uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in poes])
