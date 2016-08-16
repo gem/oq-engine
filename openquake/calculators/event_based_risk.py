@@ -358,7 +358,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         logging.info('Generated %s of GMFs', humansize(self.gmfbytes))
         self.datastore.save('job_info', {'gmfbytes': self.gmfbytes})
         if self.gmfbytes == 0:
-            raise RuntimeError('No GMFs were generated, perhaps they are '
+            raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')
 
         if self.oqparam.asset_loss_table:
