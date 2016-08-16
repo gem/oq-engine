@@ -20,7 +20,7 @@ import logging
 
 import numpy
 
-from openquake.commonlib import parallel, calc
+from openquake.commonlib import calc
 from openquake.risklib import scientific
 from openquake.calculators import base
 
@@ -29,7 +29,6 @@ F32 = numpy.float32
 F64 = numpy.float64  # higher precision to avoid task order dependency
 
 
-@parallel.litetask
 def scenario_risk(riskinput, riskmodel, rlzs_assoc, monitor):
     """
     Core function for a scenario computation.

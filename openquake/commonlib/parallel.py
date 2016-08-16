@@ -319,8 +319,7 @@ class TaskManager(object):
         return cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
 
     def __init__(self, oqtask, name=None):
-        self.oqtask = oqtask
-        self.task_func = getattr(oqtask, 'task_func', oqtask)
+        self.task_func = oqtask
         self.name = name or oqtask.__name__
         self.results = []
         self.sent = AccumDict()
@@ -354,17 +353,13 @@ class TaskManager(object):
         return sent
 
     def _submit(self, piks):
-        # submit tasks by using the ProcessPoolExecutor or ipyparallel
-        if self.oqtask is self.task_func:
-            return self.executor.submit(
-                safely_call, self.task_func, piks, True)
-        elif OQ_DISTRIBUTE in ('futures', 'ipython'):
-            # call the decorated task
-            return self.executor.submit(self.oqtask, *piks)
-        elif OQ_DISTRIBUTE == 'celery':
-            res = self.oqtask.delay(*piks)
+        if OQ_DISTRIBUTE == 'celery':
+            res = safe_task.delay(self.task_func, piks, True)
             self.task_ids.append(res.task_id)
             return res
+        else:  # submit tasks by using the ProcessPoolExecutor or ipyparallel
+            return self.executor.submit(
+                safely_call, self.task_func, piks, True)
 
     def aggregate_result_set(self, agg, acc):
         """
@@ -470,7 +465,7 @@ def do_not_aggregate(acc, value):
 
 
 class NoFlush(object):
-    # this is instantiated by the litetask decorator
+    # this is instantiated by safely_call
     def __init__(self, monitor, taskname):
         self.monitor = monitor
         self.taskname = taskname
@@ -490,35 +485,8 @@ def rec_delattr(mon, name):
         delattr(mon, name)
 
 
-def litetask_futures(func):
-    """
-    Add monitoring support to the decorated function. The last argument
-    must be a monitor object.
-    """
-    # NB: the returned function must have the same signature of func;
-    # we need pickle=True because celery is using the worst possible
-    # protocol; once we remove celery we can try to remove pickle=True
-    return FunctionMaker.create(
-        func, 'return _s_(_f_, (%(shortsignature)s,), pickle={})'.format(
-            OQ_DISTRIBUTE in ('celery', 'futures')),
-        dict(_s_=safely_call, _f_=func), task_func=func)
-
-
 if OQ_DISTRIBUTE == 'celery':
-    def litetask_celery(task_func):
-        """
-        Wrapper around celery.task
-        """
-        tsk = task(litetask_futures(task_func), queue='celery')
-        tsk.__func__ = tsk
-        tsk.task_func = task_func
-        return tsk
-    litetask = litetask_celery
-elif OQ_DISTRIBUTE == 'ipython':
-    def litetask(func):
-        return func
-else:
-    litetask = litetask_futures
+    safe_task = task(safely_call,  queue='celery')
 
 
 class Starmap(object):
