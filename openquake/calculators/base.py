@@ -287,10 +287,8 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.datastore['realizations'] = numpy.array(
             [(r.uid, sm_by_rlz[r], gsim_names(r), r.weight)
              for r in self.rlzs_assoc.realizations], rlz_dt)
-        if 'hcurves' in self.datastore:
+        if 'hcurves' in set(self.datastore):
             self.datastore.set_nbytes('hcurves')
-        if 'hmaps' in self.datastore:
-            self.datastore.set_nbytes('hmaps')
         self.datastore.flush()
 
 
