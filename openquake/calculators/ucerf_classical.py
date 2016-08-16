@@ -191,6 +191,11 @@ def ucerf_poe_map(hdf5, ucerf_source, rupset_idx, s_sites, imtls, cmaker,
     try:
         for ridx in rupset_idx:
             # Get the ucerf rupture
+            if not hdf5[ucerf_source.idx_set["rate_idx"]][ridx]:
+                # Ruptures seem to have a zero probability from time to time
+                # If this happens, skip it
+                continue
+
             rup, ridx_string = get_ucerf_rupture(
                 hdf5, ridx,
                 ucerf_source.idx_set,
@@ -361,6 +366,7 @@ def ucerf_classical_hazard_by_rupture_set(rupset_idx, branchname, ucerf_source,
 
         dic[src_group_id] += dic2[src_group_id]
         dic.eff_ruptures[src_group_id] += monitor.eff_ruptures
+        dic.calc_times += monitor.calc_times
     return dic
 
 
@@ -437,6 +443,7 @@ def ucerf_classical_hazard_by_branch(branchnames, ucerf_source, src_group_id,
 
             dic[src_group_id] |= dic2[src_group_id]
             dic.eff_ruptures[src_group_id] += monitor.eff_ruptures
+            dic.calc_times += monitor.calc_times
     return dic
 
 
