@@ -26,10 +26,10 @@ import collections
 import numpy
 
 from openquake.baselib.general import (
-    groupby, humansize, get_array, group_array)
+    groupby, humansize, get_array, group_array, DictArray)
 from openquake.baselib import hdf5
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc import disagg, hazard_curve
+from openquake.hazardlib.calc import disagg
 from openquake.commonlib.export import export
 from openquake.commonlib.writers import floatformat, write_csv
 from openquake.commonlib import writers, hazard_writers, util, readinput
@@ -230,7 +230,7 @@ class GmfCollection(object):
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-def export_hazard_curves_csv(key, dest, sitecol, curves_by_imt,
+def export_hazard_curves_csv(key, dest, sitecol, pmap,
                              imtls, investigation_time=None):
     """
     Export the curves of the given realization into CSV.
@@ -238,7 +238,7 @@ def export_hazard_curves_csv(key, dest, sitecol, curves_by_imt,
     :param key: output_type and export_type
     :param dest: name of the exported file
     :param sitecol: site collection
-    :param curves_by_imt: dictionary with the curves keyed by IMT
+    :param pmap: dictionary with the curves keyed by IMT
     :param dict imtls: intensity measure types and levels
     :param investigation_time: investigation time
     """
@@ -248,8 +248,9 @@ def export_hazard_curves_csv(key, dest, sitecol, curves_by_imt,
         for iml in imls:
             lst.append(('%s-%s' % (imt, iml), F32))
     hcurves = numpy.zeros(nsites, numpy.dtype(lst))
+    curves = pmap.convert(nsites, imtls)
     for sid, lon, lat in zip(range(nsites), sitecol.lons, sitecol.lats):
-        values = numpy.concatenate([curves_by_imt[sid][imt] for imt in imtls])
+        values = numpy.concatenate([curves[sid][imt] for imt in imtls])
         hcurves[sid] = (lon, lat) + tuple(values)
     write_csv(dest, hcurves)
     return [dest]
@@ -338,9 +339,10 @@ def export_hcurves_csv(ekey, dstore):
     sitemesh = get_mesh(sitecol)
     key, fmt = ekey
     fnames = []
+    if oq.poes:
+        poedic = DictArray({imt: oq.poes for imt in oq.imtls})
     for kind in sorted(dstore['hcurves']):
-        hcurves = hazard_curve.array_of_curves(
-            dstore['hcurves/' + kind], len(sitecol), oq.imtls)
+        hcurves = dstore['hcurves/' + kind]
         fname = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
         if key == 'uhs':
             uhs_curves = calc.make_uhs(hcurves, oq.imtls, oq.poes)
@@ -349,7 +351,8 @@ def export_hcurves_csv(ekey, dstore):
                 comment=_comment(rlzs_assoc, kind, oq.investigation_time))
             fnames.append(fname)
         elif key == 'hmaps':
-            hmaps = calc.make_hmaps(hcurves, oq.imtls, oq.poes)
+            hmaps = calc.make_hmap(hcurves, oq.imtls, oq.poes).convert(
+                len(sitecol), poedic, 0)  # FIXME: what's the 0?
             write_csv(
                 fname, util.compose_arrays(sitemesh, hmaps),
                 comment=_comment(rlzs_assoc, kind, oq.investigation_time))
@@ -447,8 +450,7 @@ def export_hcurves_xml_json(ekey, dstore):
         else:
             smlt_path = ''
             gsimlt_path = ''
-        curves = hazard_curve.array_of_curves(
-            dstore[ekey[0] + '/' + kind], len(sitemesh), oq.imtls)
+        curves = dstore[ekey[0] + '/' + kind].convert(len(sitemesh), oq.imtls)
         name = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
         for imt in oq.imtls:
             imtype, sa_period, sa_damping = from_string(imt)
