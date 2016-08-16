@@ -105,6 +105,11 @@ class ProbabilityMap(dict):
             dic[sid] = ProbabilityCurve(array)
         return dic
 
+    @property
+    def sids(self):
+        """The ordered keys of the map as a float32 array"""
+        return numpy.array(sorted(self), numpy.uint32)
+
     def filter(self, sids):
         """
         Extracs a submap of self for the given sids.
@@ -160,7 +165,7 @@ class ProbabilityMap(dict):
     def __toh5__(self):
         # converts to an array of shape (num_sids, num_levels, num_gsims)
         size = len(self)
-        sids = numpy.array(sorted(self), numpy.uint32)
+        sids = self.sids
         if size:
             shape = (size,) + self[sids[0]].array.shape
             array = numpy.zeros(shape)
