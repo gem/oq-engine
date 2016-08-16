@@ -29,8 +29,7 @@ from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
-    hazard_curves_per_trt, zero_curves, zero_maps,
-    array_of_curves, ProbabilityMap)
+    hazard_curves_per_trt, zero_curves, ProbabilityMap)
 from openquake.hazardlib.probability_map import PmapStats
 from openquake.commonlib import parallel, datastore, source, calc
 from openquake.calculators import base
@@ -384,22 +383,6 @@ class ClassicalCalculator(PSHACalculator):
             self.datastore['hcurves/' + name] = (
                 pmap_by_rlz.mean_quantiles.extract(i))
 
-        if oq.hazard_maps or oq.uniform_hazard_spectra:
-            # hmaps is a composite array of shape (N, P)
-            with self.monitor('compute hazard maps', autoflush=True):
-
-                # individual hazard maps
-                for rlz, pmap in pmap_by_rlz.items():
-                    key = 'hmaps/rlz-%03d' % rlz.ordinal
-                    self.datastore[key] = self.hazard_maps(pmap)
-
-                # statistical hazard maps
-                for i, name in enumerate(names):
-                    if name == 'mean' and not oq.mean_hazard_curves:
-                        continue
-                    pmap = pmap_by_rlz.mean_quantiles.extract(i)
-                    self.datastore['hmaps/' + name] = self.hazard_maps(pmap)
-
     def post_execute(self, pmap_by_grp):
         """
         Combine the curves and store them.
@@ -428,18 +411,6 @@ class ClassicalCalculator(PSHACalculator):
         sm = parallel.starmap(build_pstats, self.gen_args(pmap_by_grp))
         with self.monitor('saving curves and stats', autoflush=True):
             sm.reduce(self.save_hcurves, ProbabilityMap())
-
-    def hazard_maps(self, pmap):
-        """
-        Compute the hazard maps associated to the passed probability map
-        """
-        oq = self.oqparam
-        hmap = ProbabilityMap.build(len(oq.poes), 1, pmap)
-        poes = numpy.array([pmap[sid].array for sid in pmap.sids])  # N x L x 1
-        data = calc.compute_hazard_maps(poes[:, :, 0], oq.imtls.array, oq.poes)
-        for sid, value in zip(pmap.sids, data):
-            hmap[sid].array = value
-        return hmap
 
 
 def nonzero(val):
