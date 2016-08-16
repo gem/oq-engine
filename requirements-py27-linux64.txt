@@ -20,7 +20,17 @@ http://ftp.openquake.org/python-new-wheels/decorator-4.0.6-py2.py3-none-any.whl
 http://ftp.openquake.org/python-new-wheels/funcsigs-1.0.2-py2.py3-none-any.whl
 http://ftp.openquake.org/python-new-wheels/pbr-1.8.0-py2.py3-none-any.whl
 http://ftp.openquake.org/python-new-wheels/six-1.10.0-py2.py3-none-any.whl
-http://ftp.openquake.org/python-new-wheels/Django-1.8.7-py2.py3-none-any.whl
 http://ftp.openquake.org/python-new-wheels/futures-3.0.5-py2-none-any.whl
-http://ftp.openquake.org/python-new-wheels/pyshp-1.2.3-cp27-none-any.whl
+http://ftp.openquake.org/python-new-wheels/Django-1.8.7-py2.py3-none-any.whl
 http://ftp.openquake.org/python-new-wheels/requests-2.9.1-py2.py3-none-any.whl
+http://ftp.openquake.org/python-new-wheels/pyshp-1.2.3-cp27-none-any.whl
+
+# Celery support
+# uncomment the following lines to install celery
+# and its dependencies
+#pytz
+#http://ftp.openquake.org/python-new-wheels/anyjson-0.3.3-cp27-none-any.whl
+#http://ftp.openquake.org/python-new-wheels/amqp-1.4.9-py2.py3-none-any.whl
+#http://ftp.openquake.org/python-new-wheels/kombu-3.0.33-py2.py3-none-any.whl
+#http://ftp.openquake.org/python-new-wheels/billiard-3.3.0.22-cp27-cp27mu-linux_x86_64.whl
+#http://ftp.openquake.org/python-new-wheels/celery-3.1.20-py2.py3-none-any.whl
