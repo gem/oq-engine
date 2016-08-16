@@ -522,6 +522,7 @@ else:
 
 
 class Starmap(object):
+    poolfactory = None  # to be overridden
     pool = None  # to be overridden
 
     @classmethod
@@ -531,6 +532,9 @@ class Starmap(object):
         return cls(func, (((chunk,) + args[1:]) for chunk in chunks))
 
     def __init__(self, func, iterargs):
+        # build the pool at first instantiation only
+        if self.__class__.pool is None:
+            self.__class__.pool = self.poolfactory()
         self.func = func
         self.received = []
         allargs = list(iterargs)
@@ -553,8 +557,8 @@ class Threadmap(Starmap):
     >>> Threadmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
     Counter({'l': 3, 'o': 2, 'e': 1, 'd': 1, 'h': 1, 'r': 1, 'w': 1})
     """
-    # following the same convention of the standard library, num_proc * 5
-    pool = multiprocessing.dummy.Pool(executor._max_workers * 5)
+    poolfactory = multiprocessing.dummy.Pool
+    pool = None  # built at instantiation time
 
 
 class Processmap(Starmap):
@@ -565,4 +569,5 @@ class Processmap(Starmap):
     >>> Processmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
     Counter({'l': 3, 'o': 2, 'e': 1, 'd': 1, 'h': 1, 'r': 1, 'w': 1})
     """
-    pool = multiprocessing.Pool()
+    poolfactory = multiprocessing.Pool
+    pool = None  # built at instantiation time
