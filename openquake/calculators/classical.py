@@ -22,6 +22,7 @@ import collections
 from functools import partial
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
@@ -29,7 +30,7 @@ from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
-    hazard_curves_per_trt, zero_curves, ProbabilityMap)
+    hazard_curves_per_trt, ProbabilityMap)
 from openquake.hazardlib.probability_map import PmapStats
 from openquake.commonlib import parallel, datastore, source, calc
 from openquake.calculators import base
@@ -341,6 +342,16 @@ def build_pstats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
     return pmap_by_rlz
 
 
+def extend_pmap(dset, pmap):
+    hdf5.extend(dset, pmap.array)  # array N x L x 1
+    try:
+        pre_sids = dset.attrs['sids']
+    except KeyError:  # first time
+        dset.attrs['sids'] = pmap.sids
+    else:  # extend the existing sids
+        dset.attrs['sids'] = numpy.concatenate([pre_sids, pmap.sids])
+
+
 @base.calculators.add('classical')
 class ClassicalCalculator(PSHACalculator):
     """
@@ -376,12 +387,12 @@ class ClassicalCalculator(PSHACalculator):
                             for q in self.oqparam.quantile_hazard_curves]
         for rlz in pmap_by_rlz:
             key = 'hcurves/rlz-%03d' % rlz.ordinal
-            self.datastore[key] = pmap_by_rlz[rlz]
+            extend_pmap(self.datastore.getitem(key), pmap_by_rlz[rlz])
         for i, name in enumerate(names):
             if name == 'mean' and not oq.mean_hazard_curves:
                 continue
-            self.datastore['hcurves/' + name] = (
-                pmap_by_rlz.mean_quantiles.extract(i))
+            extend_pmap(self.datastore.getitem('hcurves/' + name),
+                        pmap_by_rlz.mean_quantiles.extract(i))
 
     def post_execute(self, pmap_by_grp):
         """
@@ -391,23 +402,28 @@ class ClassicalCalculator(PSHACalculator):
         """
         oq = self.oqparam
         rlzs = self.rlzs_assoc.realizations
-        nsites = len(self.sitecol)
         nstats = len(oq.quantile_hazard_curves) + 1
 
         # initialize datasets
-        zc = zero_curves(nsites, oq.imtls)
+        L = len(oq.imtls.array)
+        attrs = dict(
+            __pyclass__='openquake.hazardlib.probability_map.ProbabilityMap',
+            sids=numpy.zeros(0, numpy.uint32))
         if oq.individual_curves:
             for rlz in rlzs:
                 self.datastore.create_dset(
-                    'hcurves/rlz-%03d' % rlz.ordinal, zc.dtype, zc.shape)
+                    'hcurves/rlz-%03d' % rlz.ordinal, F64,
+                    (None, L, 1),  attrs=attrs)
         if oq.mean_hazard_curves:
-            self.datastore.create_dset('hcurves/mean', zc.dtype, zc.shape)
+            self.datastore.create_dset(
+                'hcurves/mean', F64, (None, L, 1), attrs=attrs)
         for q in oq.quantile_hazard_curves:
             self.datastore.create_dset(
-                'hcurves/quantile-%s' % q, zc.dtype, zc.shape)
+                'hcurves/quantile-%s' % q, F64, (None, L, 1), attrs=attrs)
 
         self.stats = ProbabilityMap.build(
             len(oq.imtls.array), nstats, self.sitecol.sids)
+
         sm = parallel.starmap(build_pstats, self.gen_args(pmap_by_grp))
         with self.monitor('saving curves and stats', autoflush=True):
             sm.reduce(self.save_hcurves, ProbabilityMap())
