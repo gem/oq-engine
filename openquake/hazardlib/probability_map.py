@@ -110,6 +110,22 @@ class ProbabilityMap(dict):
         """The ordered keys of the map as a float32 array"""
         return numpy.array(sorted(self), numpy.uint32)
 
+    def convert(self, nsites, imtls, idx=0):
+        """
+        Convert a probability map into a composite array of length `nsites`
+        and dtype `imtls.imt_dt`.
+
+        :param nsites: the number of sites in the full site collection
+        :param imtls: DictArray instance
+        :param idx: extract the data corresponding to the given inner index
+        """
+        curves = numpy.zeros(nsites, imtls.imt_dt)
+        for sid in self:
+            for imt in imtls:
+                curves[imt][sid] = self[sid].array[imtls.slicedic[imt], idx]
+                # NB: curves[sid][imt] does not work on h5py 2.2
+        return curves
+
     def filter(self, sids):
         """
         Extracs a submap of self for the given sids.
