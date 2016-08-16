@@ -110,13 +110,20 @@ class ProbabilityMap(dict):
         """The ordered keys of the map as a float32 array"""
         return numpy.array(sorted(self), numpy.uint32)
 
-    def convert(self, nsites, imtls, idx=0):
+    @property
+    def array(self):
+        """
+        The underlying array of shape (N, L, I)
+        """
+        return numpy.array([self[sid].array for sid in self.sids])
+
+    def convert(self, imtls, nsites, idx=0):
         """
         Convert a probability map into a composite array of length `nsites`
         and dtype `imtls.imt_dt`.
 
-        :param nsites: the number of sites in the full site collection
         :param imtls: DictArray instance
+        :param nsites: the total number of sites
         :param idx: extract the data corresponding to the given inner index
         """
         curves = numpy.zeros(nsites, imtls.imt_dt)

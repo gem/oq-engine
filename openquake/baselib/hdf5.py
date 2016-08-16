@@ -37,20 +37,29 @@ class Hdf5Dataset(object):
     are useful for logging information incrementally into an HDF5 file.
     """
     @classmethod
-    def create(cls, hdf5, name, dtype, shape=None, compression=None):
+    def create(cls, hdf5, name, dtype, shape=None, compression=None,
+               attrs=None):
         """
         :param hdf5: a h5py.File object
         :param name: an hdf5 key string
         :param dtype: dtype of the dataset (usually composite)
         :param shape: shape of the dataset (if None, the dataset is extendable)
         :param compression: None or 'gzip' are recommended
+        :param attrs: dictionary of attributes of the dataset
         """
-        if shape is None:  # extendable dataset
+        if shape is None:  # simple extendable dataset
             dset = hdf5.create_dataset(
                 name, (0,), dtype, chunks=True, maxshape=(None,))
+        elif shape[0] is None:  # complex extendable dataset
+            dset = hdf5.create_dataset(
+                name, (0,) + shape[1:], dtype, chunks=True, maxshape=shape)
         else:  # fixed-shape dataset
             dset = hdf5.create_dataset(name, shape, dtype)
-        return cls(dset)
+        if attrs:
+            for k, v in attrs.items():
+                dset.attrs[k] = v
+        self = cls(dset)
+        return self
 
     def __init__(self, dset):
         self.dset = dset
@@ -59,17 +68,6 @@ class Hdf5Dataset(object):
         self.dtype = dset.dtype
         self.attrs = dset.attrs
         self.length = len(dset)
-
-    def extend(self, array):
-        """
-        Extend the dataset with the given array, which must have
-        the expected dtype. This method will give an error if used
-        with a fixed-shape dataset.
-        """
-        newlength = self.length + len(array)
-        self.dset.resize((newlength,))
-        self.dset[self.length:newlength] = array
-        self.length = newlength
 
     def append(self, tup):
         """
@@ -84,7 +82,7 @@ def extend(dset, array):
     """
     length = len(dset)
     newlength = length + len(array)
-    dset.resize((newlength,))
+    dset.resize((newlength,) + array.shape[1:])
     dset[length:newlength] = array
 
 
