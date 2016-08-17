@@ -31,7 +31,6 @@ import traceback
 import functools
 import multiprocessing.dummy
 from concurrent.futures import as_completed, ProcessPoolExecutor
-from decorator import FunctionMaker
 
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
@@ -525,7 +524,8 @@ class Threadmap(Starmap):
     >>> Threadmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
     Counter({'l': 3, 'o': 2, 'e': 1, 'd': 1, 'h': 1, 'r': 1, 'w': 1})
     """
-    poolfactory = multiprocessing.dummy.Pool
+    poolfactory = staticmethod(
+        lambda: multiprocessing.dummy.Pool(executor._max_workers * 5))
     pool = None  # built at instantiation time
 
 
@@ -537,5 +537,5 @@ class Processmap(Starmap):
     >>> Processmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
     Counter({'l': 3, 'o': 2, 'e': 1, 'd': 1, 'h': 1, 'r': 1, 'w': 1})
     """
-    poolfactory = multiprocessing.Pool
+    poolfactory = staticmethod(multiprocessing.Pool)
     pool = None  # built at instantiation time
