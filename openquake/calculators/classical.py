@@ -167,7 +167,6 @@ class BoundingBox(object):
     __nonzero__ = __bool__
 
 
-@parallel.litetask
 def classical(sources, sitecol, rlzs_assoc, monitor):
     """
     :param sources:
