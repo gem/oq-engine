@@ -341,21 +341,23 @@ def build_hcurves_and_stats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
     with monitor('combine pmaps'):
         pmap_by_rlz = calc.combine_pmaps(rlzs_assoc, pmap_by_grp)
     with monitor('compute stats'):
-        pmap_by_rlz.mean_quantiles = pstats.mean_quantiles(
+        pmap_by_kind = pstats.mean_quantiles_asdict(
             sids, [pmap_by_rlz[rlz] for rlz in rlzs])
-    if not monitor.individual_curves:
-        pmap_by_rlz.clear()
-    return pmap_by_rlz
+    if monitor.individual_curves:
+        for rlz in rlzs:
+            pmap_by_kind['rlz-%03d' % rlz.ordinal] = pmap_by_rlz[rlz]
+    return pmap_by_kind
 
 
 def extend_pmap(dset, pmap):
-    hdf5.extend(dset, pmap.array)  # array N x L x 1
-    try:
-        pre_sids = dset.attrs['sids']
-    except KeyError:  # first time
-        dset.attrs['sids'] = pmap.sids
-    else:  # extend the existing sids
-        dset.attrs['sids'] = numpy.concatenate([pre_sids, pmap.sids])
+    if pmap:
+        hdf5.extend(dset, pmap.array)  # array N x L x 1
+        try:
+            pre_sids = dset.attrs['sids']
+        except KeyError:  # first time
+            dset.attrs['sids'] = pmap.sids
+        else:  # extend the existing sids
+            dset.attrs['sids'] = numpy.concatenate([pre_sids, pmap.sids])
 
 
 @base.calculators.add('classical')
@@ -388,24 +390,19 @@ class ClassicalCalculator(PSHACalculator):
                   for grp_id in pmap_by_grp}
             yield pg, tile.sids, pstats, self.rlzs_assoc, monitor
 
-    def save_hcurves(self, acc, pmap_by_rlz):
+    def save_hcurves(self, acc, pmap_by_kind):
         oq = self.oqparam
-        names = ['mean'] + ['quantile-%s' % q
-                            for q in self.oqparam.quantile_hazard_curves]
-        for rlz in pmap_by_rlz:
-            key = 'hcurves/rlz-%03d' % rlz.ordinal
-            extend_pmap(self.datastore.getitem(key), pmap_by_rlz[rlz])
-        for i, name in enumerate(names):
-            if name == 'mean' and not oq.mean_hazard_curves:
-                continue
-            extend_pmap(self.datastore.getitem('hcurves/' + name),
-                        pmap_by_rlz.mean_quantiles.extract(i))
+        for kind in pmap_by_kind:
+            if kind == 'mean' and not oq.mean_hazard_curves:
+                continue  # do not save the mean curves
+            extend_pmap(self.datastore.getitem('hcurves/' + kind),
+                        pmap_by_kind[kind])
 
     def post_execute(self, pmap_by_grp):
         """
         Combine the curves and store them.
 
-        :param rlz_pmap: an iterable of pairs (rlz, pmap)
+        :param pmap_by_grp: a dictionary grp_id -> pmap
         """
         oq = self.oqparam
         rlzs = self.rlzs_assoc.realizations
