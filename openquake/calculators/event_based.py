@@ -557,7 +557,8 @@ class EventBasedCalculator(ClassicalCalculator):
             key=operator.attrgetter('grp_id'),
             weight=operator.attrgetter('weight')).reduce(
                 agg=self.combine_curves_and_save_gmfs,
-                acc=ProbabilityMap())
+                acc={rlz.ordinal: ProbabilityMap()
+                     for rlz in self.rlzs_assoc.realizations})
         if oq.ground_motion_fields:
             self.datastore.set_nbytes('gmf_data')
         return acc
@@ -573,8 +574,8 @@ class EventBasedCalculator(ClassicalCalculator):
             return
         elif oq.hazard_curves_from_gmfs:
             rlzs = self.rlzs_assoc.realizations
-            ClassicalCalculator.post_execute(
-                self, ((rlzs[i], result[i]) for i in result))
+            poes_by_rlz = [(rlzs[i], result[i]) for i in result]
+            ClassicalCalculator.post_execute(self, poes_by_rlz)
         if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
             if not os.path.exists(export_dir):
