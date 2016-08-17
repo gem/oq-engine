@@ -664,7 +664,6 @@ class UCERFSourceConverter(SourceConverter):
             trt=node["tectonicRegion"])
 
 
-@parallel.litetask
 def compute_ruptures(branch_info, ucerf, sitecol, oqparam, monitor):
     """
     Returns the ruptures as a TRT set
@@ -772,10 +771,10 @@ class UCERFEventBasedRuptureCalculator(
                   self.smlt.branches[key].weight)
                   for key in self.smlt.branches]
         [ucerf] = self.src_group
-        ruptures_by_grp_id = parallel.apply_reduce(
+        ruptures_by_grp_id = parallel.apply(
             compute_ruptures,
             (id_set, ucerf, self.sitecol, self.oqparam, self.monitor),
-            concurrent_tasks=self.oqparam.concurrent_tasks, agg=self.agg)
+            concurrent_tasks=self.oqparam.concurrent_tasks).reduce(self.agg)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             functools.partial(self.count_eff_ruptures, ruptures_by_grp_id))
         self.datastore['csm_info'] = self.csm.info

@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Used a fixed MAXWEIGHT when there is more than one tile
+  * Made the number of produced tasks proportional to the number of tiles
+  * Raised an error for event_based_risk producing no GMFs
   * Added a view for the slow sources
   * Transmitted the attributes of a SourceGroup to the underlying sources
   * Fixed the names of exported files for hazard maps in .geojson format
