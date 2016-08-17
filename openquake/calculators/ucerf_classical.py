@@ -482,9 +482,7 @@ class UCERFClassicalCalculator(classical.PSHACalculator):
                 concurrent_tasks=self.oqparam.concurrent_tasks).reduce(
                     agg=self.agg, acc=acc)
 
-        with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(pmap_by_grp_id)
-        # TODO: save data transfer information
+        # TODO: save data transfer information and source_info
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             functools.partial(self.count_eff_ruptures, pmap_by_grp_id))
         self.datastore['csm_info'] = self.csm.info
