@@ -110,8 +110,8 @@ def safely_call(func, args, pickle=False):
     check_mem_usage(mon)  # check if too much memory is used
     mon.flush = NoFlush(mon, func.__name__)
     try:
-        with mon('total ' + func.__name__, measuremem=True), \
-             GroundShakingIntensityModel.forbid_instantiation():
+        with (mon('total ' + func.__name__, measuremem=True),
+              GroundShakingIntensityModel.forbid_instantiation()):
             got = func(*args)
             if inspect.isgenerator(got):
                 got = list(got)
