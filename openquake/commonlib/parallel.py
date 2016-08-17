@@ -31,7 +31,6 @@ import traceback
 import functools
 import multiprocessing.dummy
 from concurrent.futures import as_completed, ProcessPoolExecutor
-from decorator import FunctionMaker
 
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
@@ -52,6 +51,9 @@ if OQ_DISTRIBUTE == 'celery':
     from celery.task import task
     from openquake.engine.celeryconfig import BROKER_URL
     app = Celery('openquake', backend='amqp://', broker=BROKER_URL)
+
+elif OQ_DISTRIBUTE == 'ipython':
+    import ipyparallel as ipp
 
 
 def oq_distribute():
@@ -105,15 +107,23 @@ def safely_call(func, args, pickle=False):
         args = [a.unpickle() for a in args]
     ismon = args and isinstance(args[-1], Monitor)
     mon = args[-1] if ismon else Monitor()
+    check_mem_usage(mon)  # check if too much memory is used
+    mon.flush = NoFlush(mon, func.__name__)
     try:
-        got = func(*args)
-        if inspect.isgenerator(got):
-            got = list(got)
+        with mon('total ' + func.__name__, measuremem=True), \
+                GroundShakingIntensityModel.forbid_instantiation():
+            got = func(*args)
+            if inspect.isgenerator(got):
+                got = list(got)
         res = got, None, mon
     except:
         etype, exc, tb = sys.exc_info()
         tb_str = ''.join(traceback.format_tb(tb))
         res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc), etype, mon)
+
+    # NB: flush must not be called in the workers - they must not
+    # have access to the datastore - so we remove it
+    rec_delattr(mon, 'flush')
     if pickle:
         return Pickled(res)
     return res
@@ -276,11 +286,11 @@ class TaskManager(object):
         return self
 
     @classmethod
-    def apply_reduce(cls, task, task_args, agg=operator.add, acc=None,
-                     concurrent_tasks=executor._max_workers,
-                     weight=lambda item: 1,
-                     key=lambda item: 'Unspecified',
-                     name=None):
+    def apply(cls, task, task_args,
+              concurrent_tasks=executor._max_workers,
+              weight=lambda item: 1,
+              key=lambda item: 'Unspecified',
+              name=None):
         """
         Apply a task to a tuple of the form (sequence, \*other_args)
         by first splitting the sequence in chunks, according to the weight
@@ -301,34 +311,25 @@ class TaskManager(object):
         """
         arg0 = task_args[0]  # this is assumed to be a sequence
         args = task_args[1:]
-        task_func = getattr(task, 'task_func', task)
-        if acc is None:
-            acc = AccumDict()
-        if len(arg0) == 0:  # nothing to do
-            return acc
         chunks = list(split_in_blocks(
             arg0, concurrent_tasks or 1, weight, key))
-        cls.apply_reduce.__func__._chunks = chunks
-        if not concurrent_tasks or no_distribute() or len(chunks) == 1:
-            # apply the function in the master process
-            for i, chunk in enumerate(chunks):
-                if args and hasattr(args[-1], 'flush'):  # is monitor
-                    args[-1].task_no = i
-                acc = agg(acc, task_func(chunk, *args))
-            return acc
+        cls.apply.__func__._chunks = chunks
         logging.info('Starting %d tasks', len(chunks))
-        self = cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
-        return self.reduce(agg, acc)
+        return cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
 
     def __init__(self, oqtask, name=None):
-        self.oqtask = oqtask
-        self.task_func = getattr(oqtask, 'task_func', oqtask)
+        self.task_func = oqtask
         self.name = name or oqtask.__name__
         self.results = []
         self.sent = AccumDict()
         self.received = []
         self.no_distribute = no_distribute()
         self.argnames = inspect.getargspec(self.task_func).args
+
+        if OQ_DISTRIBUTE == 'ipython' and isinstance(
+                self.executor, ProcessPoolExecutor):
+            client = ipp.Client()
+            self.__class__.executor = client.executor()
 
     def submit(self, *args):
         """
@@ -351,16 +352,13 @@ class TaskManager(object):
         return sent
 
     def _submit(self, piks):
-        # submit tasks by using the ProcessPoolExecutor
-        if self.oqtask is self.task_func:
-            return self.executor.submit(
-                safely_call, self.task_func, piks, True)
-        elif OQ_DISTRIBUTE == 'futures':  # call the decorated task
-            return self.executor.submit(self.oqtask, *piks)
-        elif OQ_DISTRIBUTE == 'celery':
-            res = self.oqtask.delay(*piks)
+        if OQ_DISTRIBUTE == 'celery':
+            res = safe_task.delay(self.task_func, piks, True)
             self.task_ids.append(res.task_id)
             return res
+        else:  # submit tasks by using the ProcessPoolExecutor or ipyparallel
+            return self.executor.submit(
+                safely_call, self.task_func, piks, True)
 
     def aggregate_result_set(self, agg, acc):
         """
@@ -392,7 +390,7 @@ class TaskManager(object):
                 del app.backend._cache[task_id]
             return acc
 
-        elif distribute == 'futures':
+        elif distribute in ('futures', 'ipython'):
 
             for future in as_completed(self.results):
                 check_mem_usage()
@@ -449,7 +447,7 @@ class TaskManager(object):
 
 # convenient aliases
 starmap = TaskManager.starmap
-apply_reduce = TaskManager.apply_reduce
+apply = TaskManager.apply
 
 
 def do_not_aggregate(acc, value):
@@ -466,7 +464,7 @@ def do_not_aggregate(acc, value):
 
 
 class NoFlush(object):
-    # this is instantiated by the litetask decorator
+    # this is instantiated by safely_call
     def __init__(self, monitor, taskname):
         self.monitor = monitor
         self.taskname = taskname
@@ -486,47 +484,12 @@ def rec_delattr(mon, name):
         delattr(mon, name)
 
 
-def litetask_futures(func):
-    """
-    Add monitoring support to the decorated function. The last argument
-    must be a monitor object.
-    """
-    def wrapper(*args):
-        monitor = args[-1]
-        check_mem_usage(monitor)  # check if too much memory is used
-        monitor.flush = NoFlush(monitor, func.__name__)
-        with monitor('total ' + func.__name__, measuremem=True), \
-                GroundShakingIntensityModel.forbid_instantiation():
-            result = func(*args)
-        # NB: flush must not be called in the workers - they must not
-        # have access to the datastore - so we remove it
-        rec_delattr(monitor, 'flush')
-        return result
-
-    # NB: the returned function must have the same signature of func;
-    # we need pickle=True because celery is using the worst possible
-    # protocol; once we remove celery we can try to remove pickle=True
-    return FunctionMaker.create(
-        func, 'return _s_(_w_, (%(shortsignature)s,), pickle={})'.format(
-            OQ_DISTRIBUTE in ('celery', 'futures')),
-        dict(_s_=safely_call, _w_=wrapper), task_func=func)
-
-
 if OQ_DISTRIBUTE == 'celery':
-    def litetask_celery(task_func):
-        """
-        Wrapper around celery.task
-        """
-        tsk = task(litetask_futures(task_func), queue='celery')
-        tsk.__func__ = tsk
-        tsk.task_func = task_func
-        return tsk
-    litetask = litetask_celery
-else:
-    litetask = litetask_futures
+    safe_task = task(safely_call,  queue='celery')
 
 
 class Starmap(object):
+    poolfactory = None  # to be overridden
     pool = None  # to be overridden
 
     @classmethod
@@ -536,6 +499,9 @@ class Starmap(object):
         return cls(func, (((chunk,) + args[1:]) for chunk in chunks))
 
     def __init__(self, func, iterargs):
+        # build the pool at first instantiation only
+        if self.__class__.pool is None:
+            self.__class__.pool = self.poolfactory()
         self.func = func
         allargs = list(iterargs)
         self.todo = len(allargs)
@@ -566,8 +532,10 @@ class Threadmap(Starmap):
     >>> Threadmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
     Counter({'l': 3, 'o': 2, 'e': 1, 'd': 1, 'h': 1, 'r': 1, 'w': 1})
     """
-    # following the same convention of the standard library, num_proc * 5
-    pool = multiprocessing.dummy.Pool(executor._max_workers * 5)
+    poolfactory = staticmethod(
+        # following the same convention of the standard library, num_proc * 5
+        lambda: multiprocessing.dummy.Pool(executor._max_workers * 5))
+    pool = None  # built at instantiation time
 
 
 class Processmap(Starmap):
@@ -578,4 +546,5 @@ class Processmap(Starmap):
     >>> Processmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
     Counter({'l': 3, 'o': 2, 'e': 1, 'd': 1, 'h': 1, 'r': 1, 'w': 1})
     """
-    pool = multiprocessing.Pool()
+    poolfactory = staticmethod(multiprocessing.Pool)
+    pool = None  # built at instantiation time
