@@ -33,7 +33,7 @@ from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
     hazard_curves_per_trt, zero_curves, array_of_curves, ProbabilityMap)
 from openquake.risklib import scientific
-from openquake.commonlib import parallel, datastore, source
+from openquake.commonlib import datastore, source
 from openquake.calculators import base
 
 U16 = numpy.uint16
