@@ -459,6 +459,7 @@ class UCERFClassicalCalculator(classical.PSHACalculator):
                          for sg in self.csm.src_groups})
         acc.calc_times = []
         acc.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
+        acc.bb_dict = {}
 
         if len(self.csm) > 1:
             # when multiple branches, parallelise by branch
