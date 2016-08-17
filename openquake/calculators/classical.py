@@ -34,7 +34,7 @@ from openquake.hazardlib.calc.hazard_curve import (
     hazard_curves_per_trt, zero_curves, zero_maps,
     array_of_curves, ProbabilityMap)
 from openquake.risklib import scientific
-from openquake.commonlib import parallel, datastore, source, calc
+from openquake.commonlib import datastore, source, calc
 from openquake.calculators import base
 
 U16 = numpy.uint16
