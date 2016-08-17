@@ -89,11 +89,14 @@ def quantile_curve(curves, quantile, weights=None):
         return result_curve
 
 
-def mean_quantiles(curves, quantiles=(), weights=None):
+def mean_quantiles(curves_by_rlz, quantiles=(), weights=None):
     """
-    Returns [mean, quantile...]
+    :param curves_by_rlz: a list of R arrays of shape N x L
+    :param quantiles: a list of quantile PoEs (can be empty)
+    :param weights: a list of R weights (or None)
+    :returns: a list [mean, quantile...]
     """
-    # we may need to reshape the quantile curves
-    # with a .reshape((len(curves), -1))
-    return [mean_curve(curves, weights)] + [
-        quantile_curve(curves, q, weights) for q in quantiles]
+    nsites = len(curves_by_rlz[0])
+    return [mean_curve(curves_by_rlz, weights)] + [
+        quantile_curve(curves_by_rlz, q, weights).reshape((nsites, -1))
+        for q in quantiles]

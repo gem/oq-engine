@@ -212,6 +212,8 @@ def get_zero_pcurve(pmaps):
         if pmap:
             sid = next(iter(pmap))
             break
+    else:
+        raise ValueError('All probability maps where empty!')
     zero = numpy.zeros_like(pmap[sid].array)
     return ProbabilityCurve(zero)
 
@@ -243,6 +245,7 @@ class PmapStats(object):
         self.quantiles = quantiles
 
     # the tests are in the engine
+    # TODO: change the logic and compute the stats by site
     def mean_quantiles(self, sids, pmaps):
         """
         :params sids: array of N site IDs
@@ -254,14 +257,33 @@ class PmapStats(object):
         elif len(pmaps) == 1:  # the mean is the only pmap
             assert not self.quantiles, self.quantiles
             return pmaps[0]
+        elif sum(len(pmap) for pmap in pmaps) == 0:  # all empty pmaps
+            return ProbabilityMap()
         zero = get_zero_pcurve(pmaps)
         nstats = len(self.quantiles) + 1
         stats = ProbabilityMap.build(len(zero.array), nstats, sids)
-        for sid in sids:
-            # the arrays in the entering ProbabilityMaps have shape
-            # (L, 1), where L is the number of IMT levels
-            data = [pmap.get(sid, zero).array for pmap in pmaps]
-            mq = mean_quantiles(data, self.quantiles, self.weights)
-            for i, array in enumerate(mq):
-                stats[sid].array[:, i] = array[:, 0]
+        curves_by_rlz = numpy.zeros(
+            (len(pmaps), len(sids), len(zero.array)), numpy.float32)
+        for i, pmap in enumerate(pmaps):
+            for j, sid in enumerate(sids):
+                if sid in pmap:
+                    curves_by_rlz[i][j] = pmap[sid].array[:, 0]
+        mq = mean_quantiles(curves_by_rlz, self.quantiles, self.weights)
+        for i, array in enumerate(mq):
+            for j, sid in enumerate(sids):
+                stats[sid].array[:, i] = array[j]
         return stats
+
+    def mean_quantiles_asdict(self, sids, pmaps):
+        """
+        :params sids:
+            array of N site IDs
+        :param pmaps:
+            array of R simple ProbabilityMaps
+        :returns:
+            a dictionary of simple ProbabilityMaps of size keyed
+            by a string 'mean' or 'quantile-%s'.
+        """
+        stats = self.mean_quantiles(sids, pmaps)
+        names = ['mean'] + ['quantile-%s' % q for q in self.quantiles]
+        return {name: stats.extract(i) for i, name in enumerate(names)}
