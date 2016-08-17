@@ -36,6 +36,7 @@ from openquake.commonlib import parallel, datastore, source, calc
 from openquake.calculators import base
 
 U16 = numpy.uint16
+F32 = numpy.float32
 F64 = numpy.float64
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
@@ -328,8 +329,13 @@ class PSHACalculator(base.HazardCalculator):
 
 
 @parallel.litetask
-def build_pstats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
+def build_hcurves_and_stats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
     """
+    :param pmap_by_grp: dictionary of probability maps by source group ID
+    :param sids: array of site IDs
+    :param pstats: instance of PmapStats
+    :param rlzs_assoc: instance of RlzsAssoc
+    :param monitor: instance of Monitor
     """
     rlzs = rlzs_assoc.realizations
     with monitor('combine pmaps'):
@@ -358,7 +364,7 @@ class ClassicalCalculator(PSHACalculator):
     Classical PSHA calculator
     """
     pre_calculator = 'psha'
-    core_task = build_pstats
+    core_task = build_hcurves_and_stats
 
     def execute(self):
         """
@@ -372,7 +378,8 @@ class ClassicalCalculator(PSHACalculator):
 
     def gen_args(self, pmap_by_grp):
         monitor = self.monitor.new(
-            'build_pstats', individual_curves=self.oqparam.individual_curves)
+            'build_hcurves_and_stats',
+            individual_curves=self.oqparam.individual_curves)
         weights = (None if self.oqparam.number_of_logic_tree_samples
                    else [rlz.weight for rlz in self.rlzs_assoc.realizations])
         pstats = PmapStats(weights, self.oqparam.quantile_hazard_curves)
@@ -412,19 +419,20 @@ class ClassicalCalculator(PSHACalculator):
         if oq.individual_curves:
             for rlz in rlzs:
                 self.datastore.create_dset(
-                    'hcurves/rlz-%03d' % rlz.ordinal, F64,
+                    'hcurves/rlz-%03d' % rlz.ordinal, F32,
                     (None, L, 1),  attrs=attrs)
         if oq.mean_hazard_curves:
             self.datastore.create_dset(
-                'hcurves/mean', F64, (None, L, 1), attrs=attrs)
+                'hcurves/mean', F32, (None, L, 1), attrs=attrs)
         for q in oq.quantile_hazard_curves:
             self.datastore.create_dset(
-                'hcurves/quantile-%s' % q, F64, (None, L, 1), attrs=attrs)
+                'hcurves/quantile-%s' % q, F32, (None, L, 1), attrs=attrs)
 
         self.stats = ProbabilityMap.build(
             len(oq.imtls.array), nstats, self.sitecol.sids)
 
-        sm = parallel.starmap(build_pstats, self.gen_args(pmap_by_grp))
+        sm = parallel.starmap(build_hcurves_and_stats,
+                              self.gen_args(pmap_by_grp))
         with self.monitor('saving curves and stats', autoflush=True):
             sm.reduce(self.save_hcurves, ProbabilityMap())
 
