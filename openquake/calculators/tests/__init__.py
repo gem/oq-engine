@@ -53,7 +53,7 @@ def columns(line):
 
 
 class CalculatorTestCase(unittest.TestCase):
-    OVERWRITE_EXPECTED = False
+    OVERWRITE_EXPECTED = True
 
     def get_calc(self, testfile, job_ini, **kw):
         """

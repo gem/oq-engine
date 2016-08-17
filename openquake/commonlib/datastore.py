@@ -222,18 +222,17 @@ class DataStore(collections.MutableMapping):
                 raise
             return default
 
-    def create_dset(self, key, dtype, shape=None, compression=None,
+    def create_dset(self, key, dtype, shape=(None,), compression=None,
                     attrs=None):
         """
         Create a one-dimensional HDF5 dataset.
 
         :param key: name of the dataset
         :param dtype: dtype of the dataset (usually composite)
-        :param shape: shape of the dataset (if None, the dataset is extendable)
+        :param shape: shape of the dataset, possibly extendable
         :param attrs: dictionary of attributes of the dataset
         """
-        return hdf5.Hdf5Dataset.create(
-            self.hdf5, key, dtype, shape, compression, attrs)
+        return hdf5.create(self.hdf5, key, dtype, shape, compression, attrs)
 
     def save(self, key, kw):
         """
