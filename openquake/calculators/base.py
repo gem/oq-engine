@@ -288,7 +288,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             self.datastore.set_nbytes('hmaps')
         self.datastore.flush()
 
-
 def check_time_event(oqparam, time_events):
     """
     Check the `time_event` parameter in the datastore, by comparing
