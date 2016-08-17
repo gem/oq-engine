@@ -365,7 +365,7 @@ class DataStore(collections.MutableMapping):
             yield path
 
     def __contains__(self, key):
-        return key in self.hdf5
+        return key in self.hdf5 or self.parent and key in self.parent.hdf5
 
     def __len__(self):
         return sum(1 for f in self)

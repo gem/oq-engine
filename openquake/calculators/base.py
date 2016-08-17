@@ -239,14 +239,13 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             fmts = self.oqparam.exports
         else:  # is a string
             fmts = self.oqparam.exports.split(',')
+        keys = set(self.datastore)
+        has_hcurves = 'hcurves' in self.datastore
+        # NB: this is False in the classical precalculator
+
         for fmt in fmts:
             if not fmt:
                 continue
-            keys = set(self.datastore)
-            if (self.oqparam.uniform_hazard_spectra and not
-                    self.oqparam.hazard_maps and 'hmaps' in keys):
-                # do not export the hazard maps, even if they are there
-                keys.remove('hmaps')
             for key in sorted(keys):  # top level keys
                 if 'rlzs' in key and not individual_curves:
                     continue  # skip individual curves
@@ -256,11 +255,17 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 with self.monitor('export'):
                     exported[ekey] = exp(ekey, self.datastore)
                 logging.info('exported %s: %s', key, exported[ekey])
-            # special case for uhs which is a view
-            if (self.oqparam.uniform_hazard_spectra and
-                    'hmaps' in self.datastore):
+
+            if has_hcurves and self.oqparam.hazard_maps:
+                ekey = ('hmaps', fmt)
+                with self.monitor('export'):
+                    exported[ekey] = exp(ekey, self.datastore)
+                logging.info('exported %s: %s', key, exported[ekey])
+
+            if has_hcurves and self.oqparam.uniform_hazard_spectra:
                 ekey = ('uhs', fmt)
-                exported[ekey] = exp(ekey, self.datastore)
+                with self.monitor('export'):
+                    exported[ekey] = exp(ekey, self.datastore)
                 logging.info('exported %s: %s', key, exported[ekey])
 
         if self.close:  # in the engine we close later
@@ -282,12 +287,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.datastore['realizations'] = numpy.array(
             [(r.uid, sm_by_rlz[r], gsim_names(r), r.weight)
              for r in self.rlzs_assoc.realizations], rlz_dt)
-        if 'hcurves' in self.datastore:
+        if 'hcurves' in set(self.datastore):
             self.datastore.set_nbytes('hcurves')
-        if 'hmaps' in self.datastore:
-            self.datastore.set_nbytes('hmaps')
         self.datastore.flush()
-
 
 def check_time_event(oqparam, time_events):
     """
@@ -380,7 +382,6 @@ class HazardCalculator(BaseCalculator):
             attrs = self.datastore.hdf5['composite_source_model'].attrs
             attrs['weight'] = self.csm.weight
             attrs['filtered_weight'] = self.csm.filtered_weight
-            attrs['maxweight'] = self.csm.maxweight
 
     def pre_execute(self):
         """
@@ -557,10 +558,11 @@ class HazardCalculator(BaseCalculator):
             logging.info('Generating %d tiles of %d sites each',
                          self.num_tiles, len(tiles[0]))
         manager = source.SourceManager(
-            self.csm, oq.maximum_distance, self.datastore,
+            self.csm, oq.maximum_distance, oq.concurrent_tasks, self.datastore,
             self.monitor.new(oqparam=oq), self.random_seed,
             oq.filter_sources, num_tiles=self.num_tiles)
         tm = starmap(self.core_task.__func__, manager.gen_args(tiles))
+        tm.maxweight = manager.maxweight
         manager.store_source_info(self.datastore)
         return tm
 
