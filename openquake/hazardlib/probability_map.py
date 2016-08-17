@@ -19,7 +19,7 @@ from openquake.baselib.python3compat import zip
 from openquake.hazardlib.stats import mean_quantiles
 import numpy
 
-F64 = numpy.float64
+F32 = numpy.float32
 
 
 class ProbabilityCurve(object):
@@ -100,7 +100,7 @@ class ProbabilityMap(dict):
         """
         dic = cls()
         for sid in sids:
-            array = numpy.empty((num_levels, num_gsims), F64)
+            array = numpy.empty((num_levels, num_gsims), F32)
             array.fill(initvalue)
             dic[sid] = ProbabilityCurve(array)
         return dic

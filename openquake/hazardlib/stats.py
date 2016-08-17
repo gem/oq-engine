@@ -45,7 +45,7 @@ def quantile_curve(curves, quantile, weights=None):
         2D array-like of curve PoEs. Each row represents the PoEs for a single
         curve
     :param quantile:
-        Quantile value to calculate. Should in the range [0.0, 1.0].
+        Quantile value to calculate. Should be in the range [0.0, 1.0].
     :param weights:
         Array-like of weights, 1 for each input curve, or None
     :returns:
@@ -65,7 +65,8 @@ def quantile_curve(curves, quantile, weights=None):
         k = numpy.floor(aleph.clip(1, n - 1)).astype(int)
         gamma = (aleph - k).clip(0, 1)
         data = numpy.sort(arr, axis=0).transpose()
-        return (1.0 - gamma) * data[:, k - 1] + gamma * data[:, k]
+        qcurve = (1.0 - gamma) * data[:, k - 1] + gamma * data[:, k]
+        return qcurve
 
     # Each curve needs to be associated with a weight
     assert len(weights) == len(curves)

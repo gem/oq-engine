@@ -24,7 +24,7 @@ import numpy
 import h5py
 
 from openquake.baselib.general import humansize
-from openquake.baselib.hdf5 import Hdf5Dataset
+from openquake.baselib import hdf5
 
 
 import psutil
@@ -183,10 +183,10 @@ class Monitor(object):
         if self.hdf5path:
             h5 = h5py.File(self.hdf5path)
             try:
-                pdata = Hdf5Dataset(h5['performance_data'])
+                pdata = h5['performance_data']
             except KeyError:
-                pdata = Hdf5Dataset.create(h5, 'performance_data', perf_dt)
-            pdata.extend(data)
+                pdata = hdf5.create(h5, 'performance_data', perf_dt)
+            hdf5.extend(pdata, data)
             h5.close()
         else:  # print on stddout
             print(data[0])
