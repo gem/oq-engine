@@ -188,8 +188,7 @@ class Monitor(object):
                 pdata = hdf5.create(h5, 'performance_data', perf_dt)
             hdf5.extend(pdata, data)
             h5.close()
-        else:  # print on stddout
-            print(data[0])
+        # else print(data[0]) on stdout
 
         return data
 
