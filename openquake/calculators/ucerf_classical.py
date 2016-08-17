@@ -444,6 +444,7 @@ class UCERFClassicalCalculator(classical.PSHACalculator):
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
         self.rup_data = {}
         self.infos = []
+        self.num_tiles = 1
 
     def execute(self):
         """
