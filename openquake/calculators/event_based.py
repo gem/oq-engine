@@ -31,6 +31,7 @@ from openquake.baselib.general import AccumDict, group_array
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import ProbabilityMap
+from openquake.hazardlib.probability_map import PmapStats
 from openquake.hazardlib import geo
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import readinput, parallel, calc
@@ -400,7 +401,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
                 except KeyError:
                     dset = self.rup_data[trt] = self.datastore.create_dset(
                         'rup_data/' + trt, ruptures_by_grp_id.rup_data.dtype)
-                dset.extend(ruptures_by_grp_id.rup_data)
+                hdf5.extend(dset, ruptures_by_grp_id.rup_data)
         self.datastore.flush()
         return acc
 
@@ -431,9 +432,9 @@ class EventBasedRuptureCalculator(PSHACalculator):
             self.datastore.set_nbytes('sescollection')
 
         for dset in self.rup_data.values():
-            if len(dset.dset):
-                numsites = dset.dset['numsites']
-                multiplicity = dset.dset['multiplicity']
+            if len(dset):
+                numsites = dset['numsites']
+                multiplicity = dset['multiplicity']
                 spr = numpy.average(numsites, weights=multiplicity)
                 mul = numpy.average(multiplicity, weights=numsites)
                 self.datastore.set_attrs(dset.name, sites_per_rupture=spr,
@@ -576,8 +577,22 @@ class EventBasedCalculator(ClassicalCalculator):
             return
         elif oq.hazard_curves_from_gmfs:
             rlzs = self.rlzs_assoc.realizations
-            ClassicalCalculator.post_execute(
-                self, {rlzs[i]: result[i] for i in result})
+            # save individual curves
+            if self.oqparam.individual_curves:
+                for i in sorted(result):
+                    self.datastore['hcurves/rlz-%03d' % i] = result[i]
+            # compute and save statistics; this is done in process
+            # we don't need to parallelize, since event based calculations
+            # involves a "small" number of sites (<= 65,536)
+            weights = (None if self.oqparam.number_of_logic_tree_samples
+                       else [rlz.weight for rlz in rlzs])
+            pstats = PmapStats(weights, self.oqparam.quantile_hazard_curves)
+            for kind, stat in pstats.mean_quantiles_asdict(
+                    self.sitecol.sids, result.values()).items():
+                if kind == 'mean' and not self.oqparam.mean_hazard_curves:
+                    continue
+                self.datastore['hcurves/' + kind] = stat
+
         if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
             if not os.path.exists(export_dir):
