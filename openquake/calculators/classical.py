@@ -231,7 +231,8 @@ class PSHACalculator(base.HazardCalculator):
                 acc.eff_ruptures += val.eff_ruptures
             for bb in getattr(val, 'bbs', []):
                 acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
-            acc |= val
+            [(grp_id, pmap)] = val.items()  # val is a dict of len 1
+            acc[grp_id] |= pmap
         self.datastore.flush()
         return acc
 
@@ -247,9 +248,9 @@ class PSHACalculator(base.HazardCalculator):
 
     def zerodict(self):
         """
-        Initial accumulator, an empty ProbabilityMap
+        Initial accumulator, a dict grp_id -> ProbabilityMap()
         """
-        zd = ProbabilityMap()
+        zd = AccumDict({sg.id: ProbabilityMap() for sg in self.csm.src_groups})
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         zd.bb_dict = BBdict()
@@ -289,7 +290,7 @@ class PSHACalculator(base.HazardCalculator):
         # then save the calculation times per each source
         calc_times = getattr(pmap_by_grp_id, 'calc_times', [])
         if calc_times:
-            sources = self.csm.get_sources()
+            sources = self.csm.get_sources(self.taskman.maxweight, 'all')
             info_dict = {(rec['src_group_id'], rec['source_id']): rec
                          for rec in self.source_info}
             for src_idx, dt in calc_times:
