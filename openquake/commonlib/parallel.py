@@ -525,6 +525,7 @@ class Threadmap(Starmap):
     Counter({'l': 3, 'o': 2, 'e': 1, 'd': 1, 'h': 1, 'r': 1, 'w': 1})
     """
     poolfactory = staticmethod(
+        # following the same convention of the standard library, num_proc * 5
         lambda: multiprocessing.dummy.Pool(executor._max_workers * 5))
     pool = None  # built at instantiation time
 
