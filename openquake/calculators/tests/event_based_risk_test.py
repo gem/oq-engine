@@ -85,6 +85,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = writetmp(view('mean_avg_losses', self.calc.datastore))
         self.assertEqualFiles('expected/mean_avg_losses.txt', fname)
 
+        # test the case when all GMFs are filtered out
+        with self.assertRaises(RuntimeError) as ctx:
+            self.run_calc(case_2.__file__, 'job.ini', minimum_intensity='10.0')
+        self.assertEqual(
+            str(ctx.exception),
+            'No GMFs were generated, perhaps they were all below the '
+            'minimum_intensity threshold')
+
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2bis(self):
         # test for a single realization
