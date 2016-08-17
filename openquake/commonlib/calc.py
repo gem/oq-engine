@@ -258,19 +258,27 @@ def get_imts_periods(imtls):
 
 def make_hmap(pmap, imtls, poes):
     """
-    Compute the hazard maps associated to the passed probability map
+    Compute the hazard maps associated to the passed probability map.
+
+    :param pmap: hazard curves in the form of a ProbabilityMap
+    :param imtls: I intensity measure types and levels
+    :param poes: P PoEs where to compute the maps
+    :returns: a ProbabilityMap with size (N, I * P, 1)
     """
-    hmap = ProbabilityMap.build(len(imtls), len(poes), pmap)  # I x P matrices
+    I, P = len(imtls), len(poes)
+    hmap = ProbabilityMap.build(I * P, 1, pmap)
     for i, imt in enumerate(imtls):
         curves = numpy.array([pmap[sid].array[imtls.slicedic[imt], 0]
                               for sid in pmap.sids])
-        data = compute_hazard_maps(curves, imtls[imt], poes)
+        data = compute_hazard_maps(curves, imtls[imt], poes)  # array N x P
         for sid, value in zip(pmap.sids, data):
-            hmap[sid].array[i] = value
+            array = hmap[sid].array
+            for j, val in enumerate(value):
+                array[i * P + j] = val
     return hmap
 
 
-def make_uhs(pmap, imtls, poes):
+def make_uhs(pmap, imtls, poes, nsites):
     """
     Make Uniform Hazard Spectra curves for each location.
 
@@ -284,17 +292,17 @@ def make_uhs(pmap, imtls, poes):
     :param poes:
         a sequence of PoEs for the underlying hazard maps
     :returns:
-        an composite array containing N uniform hazard maps
+        an composite array containing nsites uniform hazard maps
     """
-    maps = make_hmap(pmap, imtls, poes)
+    P = len(poes)
+    array = make_hmap(pmap, imtls, poes).array  # size (N, I x P, 1)
     imts, _ = get_imts_periods(imtls)
     imts_dt = numpy.dtype([(imt, F32) for imt in imts])
     uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in poes])
-    N = len(maps)
-    uhs = numpy.zeros(N, uhs_dt)
-    for poe in poes:
-        for imt in imts:
-            uhs[str(poe)][imt] = maps['%s-%s' % (imt, poe)]
+    uhs = numpy.zeros(nsites, uhs_dt)
+    for j, poe in enumerate(map(str, poes)):
+        for i, imt in enumerate(imts):
+            uhs[poe][imt] = array[:, i * P + j, 0]
     return uhs
 
 
