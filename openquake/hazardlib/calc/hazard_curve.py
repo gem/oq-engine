@@ -139,7 +139,7 @@ def calc_hazard_curves(
         pmap |= hazard_curves_per_trt(
             sources_by_trt[trt], sites, imtls, [gsim_by_trt[trt]],
             truncation_level, source_site_filter)
-    return pmap.convert(len(sites), imtls)
+    return pmap.convert(imtls, len(sites))
 
 
 # NB: it is important for this to be fast since it is inside an inner loop
