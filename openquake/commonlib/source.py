@@ -857,12 +857,16 @@ class SourceManager(object):
                 logging.info('Sent %d sources in %d block(s)',
                              len(sources), nblocks)
 
-    def store_source_info(self, dstore):
+    def pre_store_source_info(self, dstore):
         """
         Save the `source_info` array and its attributes in the datastore.
 
         :param dstore: the datastore
         """
+        attrs = dstore.hdf5['composite_source_model'].attrs
+        attrs['weight'] = self.csm.weight
+        attrs['filtered_weight'] = self.csm.filtered_weight
+
         if self.infos:
             values = list(self.infos.values())
             values.sort(
