@@ -369,43 +369,15 @@ class ClassicalCalculator(PSHACalculator):
 
     def execute(self):
         """
-        Builds a dictionary pmap_by_grp_gsim from the stored PoEs
+        Builds hcurves and stats from the stored PoEs
         """
+        oq = self.oqparam
+        rlzs = self.rlzs_assoc.realizations
+
         with self.monitor('read poes', autoflush=True):
             pmap_by_grp = {
                 int(group_id): self.datastore['poes/' + group_id]
                 for group_id in self.datastore['poes']}
-        return pmap_by_grp
-
-    def gen_args(self, pmap_by_grp):
-        monitor = self.monitor.new(
-            'build_hcurves_and_stats',
-            individual_curves=self.oqparam.individual_curves)
-        weights = (None if self.oqparam.number_of_logic_tree_samples
-                   else [rlz.weight for rlz in self.rlzs_assoc.realizations])
-        pstats = PmapStats(weights, self.oqparam.quantile_hazard_curves)
-        for tile in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
-            pg = {grp_id: pmap_by_grp[grp_id].filter(tile.sids)
-                  for grp_id in pmap_by_grp}
-            yield pg, tile.sids, pstats, self.rlzs_assoc, monitor
-
-    def save_hcurves(self, acc, pmap_by_kind):
-        oq = self.oqparam
-        for kind in pmap_by_kind:
-            if kind == 'mean' and not oq.mean_hazard_curves:
-                continue  # do not save the mean curves
-            extend_pmap(self.datastore.getitem('hcurves/' + kind),
-                        pmap_by_kind[kind])
-
-    def post_execute(self, pmap_by_grp):
-        """
-        Combine the curves and store them.
-
-        :param pmap_by_grp: a dictionary grp_id -> pmap
-        """
-        oq = self.oqparam
-        rlzs = self.rlzs_assoc.realizations
-        nstats = len(oq.quantile_hazard_curves) + 1
 
         # initialize datasets
         L = len(oq.imtls.array)
@@ -424,13 +396,45 @@ class ClassicalCalculator(PSHACalculator):
             self.datastore.create_dset(
                 'hcurves/quantile-%s' % q, F32, (None, L, 1), attrs=attrs)
 
-        self.stats = ProbabilityMap.build(
-            len(oq.imtls.array), nstats, self.sitecol.sids)
-
+        # build hcurves and stats
         sm = parallel.starmap(build_hcurves_and_stats,
                               self.gen_args(pmap_by_grp))
         with self.monitor('saving curves and stats', autoflush=True):
-            sm.reduce(self.save_hcurves, ProbabilityMap())
+            sm.reduce(self.save_hcurves)
+
+    def gen_args(self, pmap_by_grp):
+        """
+        :param pmap_by_grp: dictionary of ProbabilityMaps keyed by src_grp_id
+        :yields: arguments for the function build_hcurves_and_stats
+        """
+        monitor = self.monitor.new(
+            'build_hcurves_and_stats',
+            individual_curves=self.oqparam.individual_curves)
+        weights = (None if self.oqparam.number_of_logic_tree_samples
+                   else [rlz.weight for rlz in self.rlzs_assoc.realizations])
+        pstats = PmapStats(weights, self.oqparam.quantile_hazard_curves)
+        for tile in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
+            pg = {grp_id: pmap_by_grp[grp_id].filter(tile.sids)
+                  for grp_id in pmap_by_grp}
+            yield pg, tile.sids, pstats, self.rlzs_assoc, monitor
+
+    def save_hcurves(self, acc, pmap_by_kind):
+        """
+        Works by side effect by saving hcurves and statistics on the
+        datastore; the accumulator is ignored.
+
+        :param acc: accumulator, ignored
+        :param pmap_by_kind: a dictionary of ProbabilityMaps
+        """
+        oq = self.oqparam
+        for kind in pmap_by_kind:
+            if kind == 'mean' and not oq.mean_hazard_curves:
+                continue  # do not save the mean curves
+            extend_pmap(self.datastore.getitem('hcurves/' + kind),
+                        pmap_by_kind[kind])
+
+    def post_execute(self, result=None):
+        """Do nothing, override the base class post_execute"""
 
 
 def nonzero(val):
