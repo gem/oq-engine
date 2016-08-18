@@ -37,7 +37,7 @@ import numpy
 from decorator import decorator
 from openquake.baselib.python3compat import dtype
 
-F32 = numpy.float32
+F64 = numpy.float64
 
 
 class WeightedSequence(collections.MutableSequence):
@@ -598,10 +598,10 @@ class DictArray(collections.Mapping):
     """
     def __init__(self, imtls):
         self.imt_dt = dt = dtype(
-            [(imt, F32, len(imls) if hasattr(imls, '__len__') else 1)
+            [(imt, F64, len(imls) if hasattr(imls, '__len__') else 1)
              for imt, imls in sorted(imtls.items())])
         self.slicedic, num_levels = _slicedict_n(dt)
-        self.array = numpy.zeros(num_levels, F32)
+        self.array = numpy.zeros(num_levels, F64)
         for imt, imls in imtls.items():
             self[imt] = imls
 
@@ -640,9 +640,9 @@ class DictArray(collections.Mapping):
         return carray, {}
 
     def __fromh5__(self, carray, attrs):
-        self.array = carray[:].view(F32)
+        self.array = carray[:].view(F64)
         self.imt_dt = dt = dtype(
-            [(imt, F32, len(carray[0][imt])) for imt in carray.dtype.names])
+            [(imt, F64, len(carray[0][imt])) for imt in carray.dtype.names])
         self.slicedic, num_levels = _slicedict_n(dt)
         for imt in carray.dtype.names:
             self[imt] = carray[0][imt]

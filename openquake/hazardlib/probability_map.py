@@ -19,7 +19,7 @@ from openquake.baselib.python3compat import zip
 from openquake.hazardlib.stats import mean_quantiles
 import numpy
 
-F32 = numpy.float32
+F64 = numpy.float64
 
 
 class ProbabilityCurve(object):
@@ -100,14 +100,14 @@ class ProbabilityMap(dict):
         """
         dic = cls()
         for sid in sids:
-            array = numpy.empty((num_levels, num_gsims), F32)
+            array = numpy.empty((num_levels, num_gsims), F64)
             array.fill(initvalue)
             dic[sid] = ProbabilityCurve(array)
         return dic
 
     @property
     def sids(self):
-        """The ordered keys of the map as a float32 array"""
+        """The ordered keys of the map as a uint32 array"""
         return numpy.array(sorted(self), numpy.uint32)
 
     @property
@@ -263,7 +263,7 @@ class PmapStats(object):
         nstats = len(self.quantiles) + 1
         stats = ProbabilityMap.build(len(zero.array), nstats, sids)
         curves_by_rlz = numpy.zeros(
-            (len(pmaps), len(sids), len(zero.array)), numpy.float32)
+            (len(pmaps), len(sids), len(zero.array)), numpy.float64)
         for i, pmap in enumerate(pmaps):
             for j, sid in enumerate(sids):
                 if sid in pmap:
