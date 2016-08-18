@@ -214,8 +214,6 @@ class EBRupture(object):
         return '<%s #%d, grp_id=%d>' % (self.__class__.__name__,
                                         self.serial, self.grp_id)
 
-
-@parallel.litetask
 def compute_ruptures(sources, sitecol, rlzs_assoc, monitor):
     """
     :param sources:
@@ -444,7 +442,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
 
 # ######################## GMF calculator ############################ #
 
-@parallel.litetask
 def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc,
                             min_iml, monitor):
     """
@@ -552,15 +549,16 @@ class EventBasedCalculator(ClassicalCalculator):
         monitor.oqparam = oq
         min_iml = calc.fix_minimum_intensity(
             oq.minimum_intensity, oq.imtls)
-        acc = parallel.apply_reduce(
+        acc = parallel.apply(
             self.core_task.__func__,
             (self.sesruptures, self.sitecol, oq.imtls, self.rlzs_assoc,
              min_iml, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
-            agg=self.combine_curves_and_save_gmfs,
-            acc=ProbabilityMap(),
             key=operator.attrgetter('grp_id'),
-            weight=operator.attrgetter('weight'))
+            weight=operator.attrgetter('weight')).reduce(
+                agg=self.combine_curves_and_save_gmfs,
+                acc={rlz.ordinal: ProbabilityMap()
+                     for rlz in self.rlzs_assoc.realizations})
         if oq.ground_motion_fields:
             self.datastore.set_nbytes('gmf_data')
         return acc
@@ -576,8 +574,8 @@ class EventBasedCalculator(ClassicalCalculator):
             return
         elif oq.hazard_curves_from_gmfs:
             rlzs = self.rlzs_assoc.realizations
-            ClassicalCalculator.post_execute(
-                self, ((rlzs[i], result[i]) for i in result))
+            poes_by_rlz = [(rlzs[i], result[i]) for i in result]
+            ClassicalCalculator.post_execute(self, poes_by_rlz)
         if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
             if not os.path.exists(export_dir):

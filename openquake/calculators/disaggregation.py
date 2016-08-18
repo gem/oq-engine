@@ -114,7 +114,6 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
                    pnes)
 
 
-@parallel.litetask
 def compute_disagg(sitecol, sources, src_group_id, rlzs_assoc,
                    trt_names, curves_dict, bin_edges, oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
