@@ -68,8 +68,8 @@ class ReportWriter(object):
         self.text += '\n\n%s:%s updated %s' % (
             info.hostname, dpath.encode('utf-8'), time.ctime(mtime))
         # NB: in the future, the sitecol could be transferred as
-        # an array by leveraging the HDF5 serialization protocol in
-        # litetask decorator; for the moment however the size of the
+        # an array by leveraging the HDF5 serialization protocol;
+        # for the moment however the size of the
         # data to transfer is given by the usual pickle
         sitecol_size = humansize(len(parallel.Pickled(dstore['sitecol'])))
         self.text += '\n\nnum_sites = %d, sitecol = %s' % (
