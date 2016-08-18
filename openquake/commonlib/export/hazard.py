@@ -490,7 +490,7 @@ def export_hmaps_xml_json(ekey, dstore):
                 suffix = '-%s-%s' % (poe, imt)
                 fname = hazard_curve_name(
                     dstore, ekey, kind + suffix, rlzs_assoc)
-                data = [HazardMap(site[0], site[1], hmap[imt][j])
+                data = [HazardMap(site[0], site[1], _extract(hmap, imt, j))
                         for site, hmap in zip(sitemesh, hmaps)]
                 writer = writercls(
                     fname, investigation_time=oq.investigation_time,
@@ -500,6 +500,14 @@ def export_hmaps_xml_json(ekey, dstore):
                 fnames.append(fname)
     return sorted(fnames)
 
+
+def _extract(hmap, imt, j):
+    # hmap[imt] can be a tuple or a scalar if j=0
+    tup = hmap[imt]
+    if hasattr(tup, '__iter__'):
+        return tup[j]
+    assert j == 0
+    return tup
 
 # FIXME: uhs not working yet
 @export.add(('hcurves', 'hdf5'), ('hmaps', 'hdf5'))
