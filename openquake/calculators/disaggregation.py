@@ -208,8 +208,8 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
     """
     Classical PSHA disaggregation calculator
     """
-    def post_execute(self, result=None):
-        super(DisaggregationCalculator, self).post_execute(result)
+    def post_execute(self, nbytes_by_kind):
+        """Performs the disaggregation"""
         self.full_disaggregation()
 
     def agg_result(self, acc, result):
@@ -232,7 +232,8 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         """
         dic = {}
         for rlz in self.rlzs_assoc.realizations:
-            poes = self.datastore['hcurves/rlz-%03d' % rlz.ordinal][sid]
+            pcurve = self.datastore['hcurves/rlz-%03d' % rlz.ordinal][sid]
+            poes = pcurve.convert(self.oqparam.imtls)
             for imt_str in self.oqparam.imtls:
                 if all(x == 0.0 for x in poes[imt_str]):
                     logging.info(
