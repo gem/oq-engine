@@ -19,11 +19,10 @@
 import numpy
 
 from openquake.baselib.general import AccumDict
-from openquake.commonlib import parallel, datastore
+from openquake.commonlib import datastore
 from openquake.calculators import base, classical_risk
 
 
-@parallel.litetask
 def classical_damage(riskinput, riskmodel, rlzs_assoc, monitor):
     """
     Core function for a classical damage computation.
