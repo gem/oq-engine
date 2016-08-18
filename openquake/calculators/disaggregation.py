@@ -231,10 +231,17 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         Returns a dictionary {(rlz_id, imt) -> curve}.
         """
         dic = {}
+        imtls = self.oqparam.imtls
         for rlz in self.rlzs_assoc.realizations:
-            pcurve = self.datastore['hcurves/rlz-%03d' % rlz.ordinal][sid]
-            poes = pcurve.convert(self.oqparam.imtls)
-            for imt_str in self.oqparam.imtls:
+            pmap = self.datastore['hcurves/rlz-%03d' % rlz.ordinal]
+            if sid in pmap:
+                poes = pmap[sid].convert(imtls)
+            else:
+                logging.info(
+                    'hazard curve contains all zero probabilities; '
+                    'skipping site %d, rlz=%d', sid, rlz.ordinal)
+                continue
+            for imt_str in imtls:
                 if all(x == 0.0 for x in poes[imt_str]):
                     logging.info(
                         'hazard curve contains all zero probabilities; '
