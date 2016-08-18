@@ -618,11 +618,14 @@ class CompositeSourceModel(collections.Sequence):
             for src_group in sm.src_groups:
                 yield src_group
 
-    def get_sources(self, maxweight, kind):
+    def get_sources(self, kind='all', maxweight=None):
         """
         Extract the sources contained in the source models by optionally
         filtering and splitting them, depending on the passed parameters.
         """
+        if kind != 'all':
+            assert kind in ('light', 'heavy') and maxweight is not None, (
+                kind, maxweight)
         sources = []
         for src_group in self.src_groups:
             for src in src_group:
@@ -760,7 +763,7 @@ class SourceManager(object):
             n = sum(sg.tot_ruptures() for sg in self.csm.src_groups)
             rup_serial = numpy.arange(n, dtype=numpy.uint32)
             start = 0
-            for src in self.csm.get_sources(self.maxweight, 'all'):
+            for src in self.csm.get_sources():
                 nr = src.num_ruptures
                 self.src_serial[src.id] = rup_serial[start:start + nr]
                 start += nr
@@ -773,7 +776,7 @@ class SourceManager(object):
         """
         filter_mon = self.monitor('filtering sources')
         split_mon = self.monitor('splitting sources')
-        for src in self.csm.get_sources(self.maxweight, kind):
+        for src in self.csm.get_sources(kind, self.maxweight):
             filter_time = split_time = 0
             if self.filter_sources:
                 with filter_mon:
