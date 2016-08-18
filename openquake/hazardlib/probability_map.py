@@ -107,7 +107,7 @@ class ProbabilityMap(dict):
 
     @property
     def sids(self):
-        """The ordered keys of the map as a uint32 array"""
+        """The ordered keys of the map as a numpy.uint32 array"""
         return numpy.array(sorted(self), numpy.uint32)
 
     @property
@@ -115,7 +115,7 @@ class ProbabilityMap(dict):
         """
         The underlying array of shape (N, L, I)
         """
-        return numpy.array([self[sid].array for sid in self.sids])
+        return numpy.array([self[sid].array for sid in sorted(self)])
 
     def convert(self, imtls, nsites, idx=0):
         """

@@ -607,8 +607,10 @@ class DictArray(collections.Mapping):
 
     def new(self, array):
         """
+        Convert an array of compatible length into a DictArray:
+
         >>> d = DictArray({'PGA': [0.01, 0.02, 0.04], 'PGV': [0.1, 0.2]})
-        >>> d.new(numpy.arange(0, 5, 1))
+        >>> d.new(numpy.arange(0, 5, 1))  # array of lenght 5 = 3 + 2
         <DictArray
         PGA: [0 1 2]
         PGV: [3 4]>
