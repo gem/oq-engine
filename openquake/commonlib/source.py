@@ -34,12 +34,11 @@ from openquake.baselib.general import (
     AccumDict, groupby, block_splitter, group_array)
 from openquake.hazardlib.site import Tile
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.commonlib import logictree, sourceconverter, parallel
+from openquake.commonlib import logictree, sourceconverter
 from openquake.commonlib import nrml, node
 
-
+MAXWEIGHT = 200  # tuned by M. Simionato
 MAX_INT = 2 ** 31 - 1
-MAXWEIGHT = 200  # tuned euristically by M. Simionato
 U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
@@ -619,11 +618,14 @@ class CompositeSourceModel(collections.Sequence):
             for src_group in sm.src_groups:
                 yield src_group
 
-    def get_sources(self, maxweight=MAXWEIGHT, kind='all'):
+    def get_sources(self, kind='all', maxweight=None):
         """
         Extract the sources contained in the source models by optionally
         filtering and splitting them, depending on the passed parameters.
         """
+        if kind != 'all':
+            assert kind in ('light', 'heavy') and maxweight is not None, (
+                kind, maxweight)
         sources = []
         for src_group in self.src_groups:
             for src in src_group:
@@ -749,23 +751,22 @@ class SourceManager(object):
         self.rlzs_assoc = csm.info.get_rlzs_assoc()
         self.split_map = {}  # src_group_id, source_id -> split sources
         self.infos = {}  # src_group_id, source_id -> SourceInfo tuple
+
+        # hystorically, we always tried to to produce 2 * concurrent_tasks
+        self.maxweight = max(MAXWEIGHT, math.ceil(
+            csm.weight / (self.concurrent_tasks * 2 * num_tiles)))
+        logging.info('Instantiated SourceManager with maxweight=%.1f',
+                     self.maxweight)
         if random_seed is not None:
             # generate unique seeds for each rupture with numpy.arange
             self.src_serial = {}
             n = sum(sg.tot_ruptures() for sg in self.csm.src_groups)
             rup_serial = numpy.arange(n, dtype=numpy.uint32)
             start = 0
-            for src in self.csm.get_sources('all'):
+            for src in self.csm.get_sources():
                 nr = src.num_ruptures
                 self.src_serial[src.id] = rup_serial[start:start + nr]
                 start += nr
-        if num_tiles > 1:
-            self.maxweight = MAXWEIGHT  # use the default
-        else:
-            # hystorically, we try to produce 2 * concurrent_tasks tasks
-            self.maxweight = math.ceil(csm.weight / self.concurrent_tasks) / 2.
-        logging.info('Instantiated SourceManager with maxweight=%.1f',
-                     self.maxweight)
 
     def get_sources(self, kind, tile):
         """
@@ -775,7 +776,7 @@ class SourceManager(object):
         """
         filter_mon = self.monitor('filtering sources')
         split_mon = self.monitor('splitting sources')
-        for src in self.csm.get_sources(self.maxweight, kind):
+        for src in self.csm.get_sources(kind, self.maxweight):
             filter_time = split_time = 0
             if self.filter_sources:
                 with filter_mon:
@@ -859,12 +860,16 @@ class SourceManager(object):
                 logging.info('Sent %d sources in %d block(s)',
                              len(sources), nblocks)
 
-    def store_source_info(self, dstore):
+    def pre_store_source_info(self, dstore):
         """
         Save the `source_info` array and its attributes in the datastore.
 
         :param dstore: the datastore
         """
+        attrs = dstore.hdf5['composite_source_model'].attrs
+        attrs['weight'] = self.csm.weight
+        attrs['filtered_weight'] = self.csm.filtered_weight
+
         if self.infos:
             values = list(self.infos.values())
             values.sort(
@@ -876,7 +881,6 @@ class SourceManager(object):
             self.infos.clear()
 
 
-@parallel.litetask
 def count_eff_ruptures(sources, sitecol, rlzs_assoc, monitor):
     """
     Count the number of ruptures contained in the given sources and return

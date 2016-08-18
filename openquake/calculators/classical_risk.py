@@ -24,14 +24,13 @@ import numpy
 from openquake.baselib.general import groupby
 from openquake.hazardlib.calc.hazard_curve import array_of_curves
 from openquake.risklib import scientific, riskinput
-from openquake.commonlib import readinput, parallel, datastore, source
+from openquake.commonlib import readinput, datastore, source
 from openquake.calculators import base
 
 
 F32 = numpy.float32
 
 
-@parallel.litetask
 def classical_risk(riskinput, riskmodel, rlzs_assoc, monitor):
     """
     Compute and return the average losses for each asset.
