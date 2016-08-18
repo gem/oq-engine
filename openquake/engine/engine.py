@@ -87,8 +87,8 @@ def expose_outputs(dstore):
     dskeys = set(dstore) & exportable  # exportable datastore keys
     if oq.uniform_hazard_spectra:
         dskeys.add('uhs')  # export them
-    if 'hmaps' in dskeys and not oq.hazard_maps:
-        dskeys.remove('hmaps')  # do not export
+    if oq.hazard_maps:
+        dskeys.add('hmaps')  # export them
     if 'realizations' in dskeys and len(dstore['realizations']) <= 1:
         dskeys.remove('realizations')  # do not export a single realization
     if 'sescollection' in dskeys and 'scenario' in calcmode:

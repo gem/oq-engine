@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
+import math
 import logging
 import operator
 import collections
@@ -31,10 +32,9 @@ from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
-    hazard_curves_per_trt, zero_curves, zero_maps,
-    array_of_curves, ProbabilityMap)
+    hazard_curves_per_trt, zero_curves, array_of_curves, ProbabilityMap)
 from openquake.risklib import scientific
-from openquake.commonlib import parallel, datastore, source, calc
+from openquake.commonlib import datastore, source, parallel
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -168,7 +168,6 @@ class BoundingBox(object):
     __nonzero__ = __bool__
 
 
-@parallel.litetask
 def classical(sources, sitecol, rlzs_assoc, monitor):
     """
     :param sources:
@@ -232,7 +231,8 @@ class PSHACalculator(base.HazardCalculator):
                 acc.eff_ruptures += val.eff_ruptures
             for bb in getattr(val, 'bbs', []):
                 acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
-            acc |= val
+            [(grp_id, pmap)] = val.items()  # val is a dict of len 1
+            acc[grp_id] |= pmap
         self.datastore.flush()
         return acc
 
@@ -248,9 +248,9 @@ class PSHACalculator(base.HazardCalculator):
 
     def zerodict(self):
         """
-        Initial accumulator, an empty ProbabilityMap
+        Initial accumulator, a dict grp_id -> ProbabilityMap()
         """
-        zd = ProbabilityMap()
+        zd = AccumDict({sg.id: ProbabilityMap() for sg in self.csm.src_groups})
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         zd.bb_dict = BBdict()
@@ -268,21 +268,37 @@ class PSHACalculator(base.HazardCalculator):
         tectonic region type.
         """
         monitor = self.monitor.new(self.core_task.__name__)
-        monitor.oqparam = self.oqparam
-        pmap_by_grp_id = self.taskman.reduce(self.agg_dicts, self.zerodict())
-        self.save_data_transfer(self.taskman)
+        monitor.oqparam = oq = self.oqparam
+        tiles = [self.sitecol]
+        self.num_tiles = 1
+        if self.is_tiling():
+            hint = math.ceil(len(self.sitecol) / oq.sites_per_tile)
+            tiles = self.sitecol.split_in_tiles(hint)
+            self.num_tiles = len(tiles)
+            logging.info('Generating %d tiles of %d sites each',
+                         self.num_tiles, len(tiles[0]))
+        with self.monitor('managing sources', autoflush=True):
+            srcman = source.SourceManager(
+                self.csm, oq.maximum_distance, oq.concurrent_tasks,
+                self.datastore, self.monitor.new(oqparam=oq),
+                self.random_seed, oq.filter_sources, num_tiles=self.num_tiles)
+            tm = parallel.starmap(
+                self.core_task.__func__, srcman.gen_args(tiles))
+            srcman.pre_store_source_info(self.datastore)
+        pmap_by_grp_id = tm.reduce(self.agg_dicts, self.zerodict())
+        self.save_data_transfer(tm)
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(pmap_by_grp_id)
+            self.store_source_info(tm, pmap_by_grp_id)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             partial(self.count_eff_ruptures, pmap_by_grp_id))
         self.datastore['csm_info'] = self.csm.info
         return pmap_by_grp_id
 
-    def store_source_info(self, pmap_by_grp_id):
+    def store_source_info(self, taskman, pmap_by_grp_id):
         # store the information about received data
-        received = self.taskman.received
+        received = taskman.received
         if received:
-            tname = self.taskman.name
+            tname = taskman.name
             self.datastore.save('job_info', {
                 tname + '_max_received_per_task': max(received),
                 tname + '_tot_received': sum(received),
@@ -409,20 +425,6 @@ class ClassicalCalculator(PSHACalculator):
             for q in self.quantile:
                 self.store_curves('quantile-%s' % q, self.quantile[q])
 
-    def hazard_maps(self, curves):
-        """
-        Compute the hazard maps associated to the curves
-        """
-        maps = zero_maps(
-            len(self.sitecol), self.oqparam.imtls, self.oqparam.poes)
-        for imt in curves.dtype.fields:
-            # build a matrix of size (N, P)
-            data = calc.compute_hazard_maps(
-                curves[imt], self.oqparam.imtls[imt], self.oqparam.poes)
-            for poe, hmap in zip(self.oqparam.poes, data.T):
-                maps['%s-%s' % (imt, poe)] = hmap
-        return maps
-
     def store_curves(self, kind, curves, rlz=None):
         """
         Store all kind of curves, optionally computing maps and uhs curves.
@@ -431,16 +433,9 @@ class ClassicalCalculator(PSHACalculator):
         :param curves: an array of N curves to store
         :param rlz: hazard realization, if any
         """
-        oq = self.oqparam
         self._store('hcurves/' + kind, curves, rlz, nbytes=curves.nbytes)
         self.datastore['hcurves'].attrs['imtls'] = hdf5.array_of_vstr([
             (imt, len(imls)) for imt, imls in self.oqparam.imtls.items()])
-        if oq.hazard_maps or oq.uniform_hazard_spectra:
-            # hmaps is a composite array of shape (N, P)
-            with self.monitor('compute hazard maps', autoflush=True):
-                hmaps = self.hazard_maps(curves)
-            self._store('hmaps/' + kind, hmaps, rlz,
-                        poes=oq.poes, nbytes=hmaps.nbytes)
 
     def _store(self, name, curves, rlz, **kw):
         self.datastore.hdf5[name] = curves
@@ -449,10 +444,3 @@ class ClassicalCalculator(PSHACalculator):
             dset.attrs['uid'] = rlz.uid
         for k, v in kw.items():
             dset.attrs[k] = v
-
-
-def nonzero(val):
-    """
-    :returns: the sum of the composite array `val`
-    """
-    return sum(val[k].sum() for k in val.dtype.names)
