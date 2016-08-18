@@ -288,13 +288,13 @@ class PSHACalculator(base.HazardCalculator):
         pmap_by_grp_id = tm.reduce(self.agg_dicts, self.zerodict())
         self.save_data_transfer(tm)
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(tm, srcman.maxweight, pmap_by_grp_id)
+            self.store_source_info(tm, pmap_by_grp_id)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             partial(self.count_eff_ruptures, pmap_by_grp_id))
         self.datastore['csm_info'] = self.csm.info
         return pmap_by_grp_id
 
-    def store_source_info(self, taskman, maxweight, pmap_by_grp_id):
+    def store_source_info(self, taskman, pmap_by_grp_id):
         # store the information about received data
         received = taskman.received
         if received:
@@ -306,7 +306,7 @@ class PSHACalculator(base.HazardCalculator):
         # then save the calculation times per each source
         calc_times = getattr(pmap_by_grp_id, 'calc_times', [])
         if calc_times:
-            sources = self.csm.get_sources(maxweight, 'all')
+            sources = self.csm.get_sources()
             info_dict = {(rec['src_group_id'], rec['source_id']): rec
                          for rec in self.source_info}
             for src_idx, dt in calc_times:
@@ -444,10 +444,3 @@ class ClassicalCalculator(PSHACalculator):
             dset.attrs['uid'] = rlz.uid
         for k, v in kw.items():
             dset.attrs[k] = v
-
-
-def nonzero(val):
-    """
-    :returns: the sum of the composite array `val`
-    """
-    return sum(val[k].sum() for k in val.dtype.names)
