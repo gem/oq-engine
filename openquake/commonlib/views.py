@@ -367,7 +367,7 @@ def view_totlosses(token, dstore):
     else:
         stats = ('mean',)
     avglosses = dstore['losses_by_asset'].value
-    dtlist = [('%s-%s' % (name, stat), numpy.float32)
+    dtlist = [(str('%s-%s' % (name, stat)), numpy.float32)
               for name in avglosses.dtype.names for stat in stats]
     zero = numpy.zeros(avglosses.shape[1:], numpy.dtype(dtlist))
     for name in avglosses.dtype.names:
