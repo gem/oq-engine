@@ -540,7 +540,7 @@ class HazardCalculator(BaseCalculator):
         :returns:
             True if the calculator produces more than one tile, False otherwise
         """
-        return (self.oqparam.calculation_mode == 'classical' and
+        return (self.oqparam.calculation_mode in ('psha', 'classical') and
                 len(self.sitecol) > self.oqparam.sites_per_tile)
 
     def send_sources(self):
