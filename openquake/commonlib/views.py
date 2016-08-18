@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from __future__ import division
+from __future__ import division, unicode_literals
 import io
 import ast
 import os.path
@@ -30,7 +30,7 @@ import h5py
 
 from openquake.baselib.general import humansize, groupby, AccumDict
 from openquake.baselib.performance import perf_dt
-from openquake.baselib.python3compat import unicode, dtype
+from openquake.baselib.python3compat import unicode, decode, dtype
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source
 from openquake.commonlib.datastore import view
@@ -76,7 +76,7 @@ def form(value):
         else:  # in the range 10-1000
             return str(int(value))
     elif isinstance(value, bytes):
-        return value.decode('utf-8')
+        return decode(value)
     elif isinstance(value, unicode):
         return value
     elif isinstance(value, numpy.object_):
@@ -221,7 +221,7 @@ def view_csm_info(token, dstore):
         num_rlzs = len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
         num_paths = sm.num_gsim_paths
         link = "`%s <%s>`_" % (sm.name, sm.name)
-        row = (b'_'.join(sm.path), sm.weight, link,
+        row = ('_'.join(sm.path), sm.weight, link,
                classify_gsim_lt(csm_info.gsim_lt), '%d/%d' %
                (num_rlzs, num_paths))
         rows.append(row)
@@ -319,7 +319,7 @@ def view_job_info(token, dstore):
     to the workers and back in a classical calculation.
     """
     job_info = h5py.File.__getitem__(dstore.hdf5, 'job_info')
-    rows = [(k, ast.literal_eval(v)) for k, v in job_info]
+    rows = [(k, ast.literal_eval(decode(v))) for k, v in job_info]
     return rst_table(rows)
 
 
