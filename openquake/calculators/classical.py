@@ -349,14 +349,14 @@ def build_hcurves_and_stats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
 
 
 def extend_pmap(dset, pmap):
-    if pmap:
-        hdf5.extend(dset, pmap.array)  # array N x L x 1
-        try:
-            pre_sids = dset.attrs['sids']
-        except KeyError:  # first time
-            dset.attrs['sids'] = pmap.sids
-        else:  # extend the existing sids
-            dset.attrs['sids'] = numpy.concatenate([pre_sids, pmap.sids])
+    assert pmap, 'The ProbabilityMap is empty!'
+    hdf5.extend(dset, pmap.array)  # array N x L x 1
+    try:
+        pre_sids = dset.attrs['sids']
+    except KeyError:  # first time
+        dset.attrs['sids'] = pmap.sids
+    else:  # extend the existing sids
+        dset.attrs['sids'] = numpy.concatenate([pre_sids, pmap.sids])
 
 
 @base.calculators.add('classical')
@@ -400,7 +400,7 @@ class ClassicalCalculator(PSHACalculator):
         sm = parallel.starmap(build_hcurves_and_stats,
                               self.gen_args(pmap_by_grp))
         with self.monitor('saving curves and stats', autoflush=True):
-            sm.reduce(self.save_hcurves)
+            return sm.reduce(self.save_hcurves)
 
     def gen_args(self, pmap_by_grp):
         """
@@ -421,20 +421,25 @@ class ClassicalCalculator(PSHACalculator):
     def save_hcurves(self, acc, pmap_by_kind):
         """
         Works by side effect by saving hcurves and statistics on the
-        datastore; the accumulator is ignored.
+        datastore; the accumulator stores the number of bytes saved.
 
-        :param acc: accumulator, ignored
+        :param acc: dictionary kind -> nbytes
         :param pmap_by_kind: a dictionary of ProbabilityMaps
         """
         oq = self.oqparam
         for kind in pmap_by_kind:
             if kind == 'mean' and not oq.mean_hazard_curves:
                 continue  # do not save the mean curves
-            extend_pmap(self.datastore.getitem('hcurves/' + kind),
-                        pmap_by_kind[kind])
+            pmap = pmap_by_kind[kind]
+            if pmap:
+                extend_pmap(self.datastore.getitem('hcurves/' + kind), pmap)
+                acc += {kind: pmap.nbytes}
+        return acc
 
-    def post_execute(self, result=None):
-        """Do nothing, override the base class post_execute"""
+    def post_execute(self, acc):
+        """Save the number of bytes per each dataset"""
+        for kind, nbytes in acc.items():
+            self.datastore.getitem('hcurves/' + kind).attrs['nbytes'] = nbytes
 
 
 def nonzero(val):
