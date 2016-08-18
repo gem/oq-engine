@@ -434,6 +434,7 @@ class ClassicalCalculator(PSHACalculator):
             if pmap:
                 extend_pmap(self.datastore.getitem('hcurves/' + kind), pmap)
                 acc += {kind: pmap.nbytes}
+        self.datastore.flush()
         return acc
 
     def post_execute(self, acc):
