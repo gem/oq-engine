@@ -36,7 +36,7 @@ from openquake.commonlib import readinput, riskmodels, datastore, source
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import starmap, executor
 from openquake.commonlib.views import view, rst_table, stats
-from openquake.baselib.python3compat import with_metaclass
+from openquake.baselib.python3compat import with_metaclass, encode
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -660,7 +660,7 @@ def view_task_info(token, dstore):
     tasks = [calc.core_task.__name__ for calc in calculators.values()]
     data = ['measurement mean stddev min max num_tasks'.split()]
     for task in set(tasks):  # strip duplicates
-        records = pdata[pdata['operation'] == 'total ' + task]
+        records = pdata[pdata['operation'] == encode('total ' + task)]
         if len(records):
             for stat in ('time_sec', 'memory_mb'):
                 val = records[stat]
