@@ -20,7 +20,7 @@ import io
 import types
 import logging
 import warnings
-from contextlib import contextmanager
+from decorator import contextmanager
 from xml.sax.saxutils import escape, quoteattr
 
 import numpy  # this is needed by the doctests, don't remove it
@@ -274,7 +274,7 @@ def build_header(dtype):
         numpytype = col[-2]
         shape = col[-1]
         coldescr = name
-        if numpytype != 'float32':
+        if numpytype != 'float64':
             coldescr += ':' + numpytype
         if shape:
             coldescr += ':' + ':'.join(map(str, shape))

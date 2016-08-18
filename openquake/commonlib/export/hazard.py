@@ -47,7 +47,7 @@ Consider canceling the operation and accessing directly %s.'''
 
 def get_mesh(sitecol):
     sc = sitecol.complete
-    mesh = numpy.zeros(len(sc), [('lon', F32), ('lat', F32)])
+    mesh = numpy.zeros(len(sc), [('lon', F64), ('lat', F64)])
     mesh['lon'] = sc.lons
     mesh['lat'] = sc.lats
     return mesh
@@ -247,7 +247,7 @@ def export_hazard_csv(key, dest, sitemesh, pmap,
     lst = []
     for imt, imls in imtls.items():
         for iml in imls:
-            lst.append(('%s-%s' % (imt, iml), F32))
+            lst.append(('%s-%s' % (imt, iml), F64))
     hcurves = pmap.convert(imtls, nsites).view(numpy.dtype(lst))
     write_csv(dest, util.compose_arrays(sitemesh, hcurves))
     return [dest]
