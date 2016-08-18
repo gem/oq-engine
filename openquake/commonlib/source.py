@@ -753,8 +753,9 @@ class SourceManager(object):
         self.infos = {}  # src_group_id, source_id -> SourceInfo tuple
 
         # hystorically, we always tried to to produce 2 * concurrent_tasks
-        self.maxweight = max(MAXWEIGHT, math.ceil(
-            csm.weight / (self.concurrent_tasks * 2 * num_tiles)))
+        self.maxweight = math.ceil(csm.weight / (2 * self.concurrent_tasks))
+        if num_tiles > 1:
+            self.maxweight = max(self.maxweight / num_tiles, MAXWEIGHT)
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.maxweight)
         if random_seed is not None:
