@@ -19,7 +19,7 @@
 import itertools
 import numpy
 
-from openquake.commonlib import parallel, riskmodels, calc
+from openquake.commonlib import riskmodels, calc
 from openquake.risklib import scientific
 from openquake.calculators import base
 
@@ -73,7 +73,6 @@ def dist_total(data, multi_stat_dt):
     return out
 
 
-@parallel.litetask
 def scenario_damage(riskinput, riskmodel, rlzs_assoc, monitor):
     """
     Core function for a damage computation.
