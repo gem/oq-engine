@@ -16,15 +16,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
-One of the worst thing about Python is the DB API 3.0 specification
-that never happened: instead, we are stuck with the `DB API 2.0`_
-specification of 15 years ago, which is unasable. So, instead of a good
-low level API, we had a proliferation of Object Relational Mappers in
-the Python world making our lives a lot harder. Fortunately,
-there has always been good Pythonistas in the anti-ORM camp.
+One of the worst thing about Python is the `DB API 2.0`_
+specification, which is unusable except for building frameworks. It
+should have been a stepping stone for an usable DB API 3.0 that never
+happened. So, instead of a good low level API, we had a proliferation
+of Object Relational Mappers making our lives a lot harder. Fortunately,
+ there has always been good Pythonistas in the anti-ORM camp.
 
 This module is heavily inspired by the dbapiext_ module by
-Martin Blais, which is part of the antiorm_ package. The main
+Martin Blais, which is part of the antiorm_ package. The main (only)
 difference is that I am using the question mark (?) for the placeholders
 instead of the percent sign (%) to avoid confusions with other usages
 of the %s, in particular in LIKE queries and in expressions like
@@ -184,6 +184,7 @@ If a row is expected but not found, a NotFound exception is raised:
 Traceback (most recent call last):
    ...
 NotFound
+
 """
 import re
 import threading
@@ -199,7 +200,7 @@ class TooManyRows(Exception):
 
 
 class TooManyColumns(Exception):
-    """Raised when a scalar query has more than one columns"""
+    """Raised when a scalar query has more than one column"""
 
 
 class _Replacer(object):
@@ -353,7 +354,7 @@ class Db(object):
         return cursor
 
 
-# we cannot use a namedtuple here because one would get aPicklingError:
+# we cannot use a namedtuple here because one would get a PicklingError:
 # Can't pickle <class 'openquake.server.dbapi.Row'>: attribute lookup
 # openquake.server.dbapi.Row failed
 class Row(collections.Sequence):
