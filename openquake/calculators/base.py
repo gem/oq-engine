@@ -376,12 +376,6 @@ class HazardCalculator(BaseCalculator):
                 self.datastore['csm_info'] = self.csm.info
                 self.rup_data = {}
         self.init()
-        if 'source' in self.oqparam.inputs:
-            with self.monitor('managing sources', autoflush=True):
-                self.taskman = self.send_sources()
-            attrs = self.datastore.hdf5['composite_source_model'].attrs
-            attrs['weight'] = self.csm.weight
-            attrs['filtered_weight'] = self.csm.filtered_weight
 
     def pre_execute(self):
         """
@@ -542,29 +536,6 @@ class HazardCalculator(BaseCalculator):
         """
         return (self.oqparam.calculation_mode in ('psha', 'classical') and
                 len(self.sitecol) > self.oqparam.sites_per_tile)
-
-    def send_sources(self):
-        """
-        Filter/split and send the sources to the workers.
-        :returns: a :class:`openquake.commonlib.parallel.TaskManager`
-        """
-        oq = self.oqparam
-        tiles = [self.sitecol]
-        self.num_tiles = 1
-        if self.is_tiling():
-            hint = math.ceil(len(self.sitecol) / oq.sites_per_tile)
-            tiles = self.sitecol.split_in_tiles(hint)
-            self.num_tiles = len(tiles)
-            logging.info('Generating %d tiles of %d sites each',
-                         self.num_tiles, len(tiles[0]))
-        manager = source.SourceManager(
-            self.csm, oq.maximum_distance, oq.concurrent_tasks, self.datastore,
-            self.monitor.new(oqparam=oq), self.random_seed,
-            oq.filter_sources, num_tiles=self.num_tiles)
-        tm = starmap(self.core_task.__func__, manager.gen_args(tiles))
-        tm.maxweight = manager.maxweight
-        manager.store_source_info(self.datastore)
-        return tm
 
     def save_data_transfer(self, taskmanager):
         """
