@@ -118,7 +118,7 @@ you can run into issues. This is an error:
 >>> match("SELECT * FROM job WHERE id=?x AND description='Lots of ?s'", 1)
 Traceback (most recent call last):
    ...
-ValueError: Incorrect number of $-parameters in SELECT * FROM job WHERE id=?x AND description='Lots of ?s', expected 1
+ValueError: Incorrect number of ?-parameters in SELECT * FROM job WHERE id=?x AND description='Lots of ?s', expected 1
 
 This is correct:
 
@@ -149,7 +149,7 @@ treat specially `None` parameters, that are turned into `NULL`s:
   >>> match('SELECT * FROM job WHERE ?A', dict(value=None, id=5))
   ('SELECT * FROM job WHERE id=? AND value IS NULL', (5,))
 
-The `$` parameters are matched positionally; it is also possible to
+The `?` parameters are matched positionally; it is also possible to
 pass to the `db` object a few keyword arguments to tune the standard
 behavior. In particular, if you know that a query must return a
 single row you can do the following:
@@ -271,7 +271,7 @@ def match(m_templ, *m_args):
     try:
         return _Replacer(m_args).match(m_templ)
     except IndexError:
-        raise ValueError('Incorrect number of $-parameters in %s, expected %s'
+        raise ValueError('Incorrect number of ?-parameters in %s, expected %s'
                          % (m_templ, len(m_args)))
 
 
