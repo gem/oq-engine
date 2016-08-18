@@ -72,6 +72,19 @@ class ProbabilityCurve(object):
     def __repr__(self):
         return '<ProbabilityCurve\n%s>' % self.array
 
+    # used when exporting to HDF5
+    def convert(self, imtls, idx=0):
+        """
+        Convert a probability curve into a record of dtype `imtls.imt_dt`.
+
+        :param imtls: DictArray instance
+        :param idx: extract the data corresponding to the given inner index
+        """
+        curve = numpy.zeros(1, imtls.imt_dt)[0]
+        for imt in imtls:
+            curve[imt] = self.array[imtls.slicedic[imt], idx]
+        return curve
+
 
 class ProbabilityMap(dict):
     """
@@ -117,6 +130,13 @@ class ProbabilityMap(dict):
         """
         return numpy.array([self[sid].array for sid in sorted(self)])
 
+    @property
+    def nbytes(self):
+        """The size of the underlying array"""
+        N, L, I = get_shape([self])
+        return 8 * N * L * I
+
+    # used when exporting to HDF5
     def convert(self, imtls, nsites, idx=0):
         """
         Convert a probability map into a composite array of length `nsites`
@@ -127,10 +147,8 @@ class ProbabilityMap(dict):
         :param idx: extract the data corresponding to the given inner index
         """
         curves = numpy.zeros(nsites, imtls.imt_dt)
-        for sid in self:
-            for imt in imtls:
-                curves[imt][sid] = self[sid].array[imtls.slicedic[imt], idx]
-                # NB: curves[sid][imt] does not work on h5py 2.2
+        for i, sid in enumerate(sorted(self)):
+            curves[i] = self[sid].convert(imtls, idx)
         return curves
 
     def filter(self, sids):
@@ -204,9 +222,10 @@ class ProbabilityMap(dict):
             self[sid] = ProbabilityCurve(prob)
 
 
-def get_zero_pcurve(pmaps):
+def get_shape(pmaps):
     """
-    Return the zero ProbabilityCurve from a set of homogenous ProbabilityMaps
+    :param pmaps: a set of homogenous ProbabilityMaps
+    :returns: the common shape (N, L, I)
     """
     for pmap in pmaps:
         if pmap:
@@ -214,8 +233,7 @@ def get_zero_pcurve(pmaps):
             break
     else:
         raise ValueError('All probability maps where empty!')
-    zero = numpy.zeros_like(pmap[sid].array)
-    return ProbabilityCurve(zero)
+    return (len(pmap),) + pmap[sid].array.shape
 
 
 class PmapStats(object):
@@ -259,11 +277,10 @@ class PmapStats(object):
             return pmaps[0]
         elif sum(len(pmap) for pmap in pmaps) == 0:  # all empty pmaps
             return ProbabilityMap()
-        zero = get_zero_pcurve(pmaps)
+        N, L, I = get_shape(pmaps)
         nstats = len(self.quantiles) + 1
-        stats = ProbabilityMap.build(len(zero.array), nstats, sids)
-        curves_by_rlz = numpy.zeros(
-            (len(pmaps), len(sids), len(zero.array)), numpy.float64)
+        stats = ProbabilityMap.build(L, nstats, sids)
+        curves_by_rlz = numpy.zeros((len(pmaps), len(sids), L), numpy.float64)
         for i, pmap in enumerate(pmaps):
             for j, sid in enumerate(sids):
                 if sid in pmap:
