@@ -392,7 +392,8 @@ def view_portfolio_loss(token, dstore):
         rlzi = int(rlz.split('-')[1])  # rlz-000 -> 0 etc
         rlzids.append(rlzi)
         for loss_type, losses in dset.items():
-            loss = losses['loss'].sum(axis=0)
+            # the [:] below is needed to work around a bug of h5py 2.2.1
+            loss = losses[:]['loss'].sum(axis=0)
             if loss.shape == (2,):
                 data[rlzi][loss_type] = loss[0]
                 data[rlzi][loss_type + '_ins'] = loss[1]
