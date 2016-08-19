@@ -458,11 +458,7 @@ class RiskInput(object):
         self.taxonomies = sorted(taxonomies_set)
         self.eids = None  # for API compatibility with RiskInputFromRuptures
         self.eps = eps_dict
-
-    @property
-    def weight(self):
-        """The number of underlying assets"""
-        return len(self.aids)
+        self.weight = len(self.aids)
 
     @property
     def imt_taxonomies(self):
