@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
+import math
 import operator
 import collections
 from functools import partial
@@ -413,10 +414,12 @@ class ClassicalCalculator(PSHACalculator):
         weights = (None if self.oqparam.number_of_logic_tree_samples
                    else [rlz.weight for rlz in self.rlzs_assoc.realizations])
         pstats = PmapStats(weights, self.oqparam.quantile_hazard_curves)
-        for tile in self.sitecol.split_in_tiles(self.oqparam.concurrent_tasks):
-            pg = {grp_id: pmap_by_grp[grp_id].filter(tile.sids)
+        num_tiles = math.ceil(len(self.sitecol) / self.oqparam.sites_per_tile)
+        num_blocks = int(self.oqparam.concurrent_tasks * num_tiles)
+        for block in self.sitecol.split_in_tiles(num_blocks):
+            pg = {grp_id: pmap_by_grp[grp_id].filter(block.sids)
                   for grp_id in pmap_by_grp}
-            yield pg, tile.sids, pstats, self.rlzs_assoc, monitor
+            yield pg, block.sids, pstats, self.rlzs_assoc, monitor
 
     def save_hcurves(self, acc, pmap_by_kind):
         """
