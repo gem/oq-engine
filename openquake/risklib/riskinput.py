@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import groupby, split_in_blocks
+from openquake.baselib.general import groupby, group_array, split_in_blocks
 from openquake.hazardlib import site, calc
 from openquake.risklib import scientific, riskmodels
 
@@ -407,8 +407,8 @@ class CompositeRiskModel(collections.Mapping):
                               else assetcol.assets_by_site())
             hazard_by_site = riskinput.get_hazard(
                 rlzs_assoc, mon_hazard(measuremem=False))
-        for sid, assets in enumerate(assets_by_site):
-            hazard = hazard_by_site[sid]
+        for i, assets in enumerate(assets_by_site):
+            hazard = hazard_by_site[i]
             the_assets = groupby(assets, by_taxonomy)
             for taxonomy, assets in the_assets.items():
                 riskmodel = self[taxonomy]
@@ -468,7 +468,9 @@ class RiskInput(object):
         :param asset_ordinals: list of ordinals of the assets
         :returns: a closure returning an array of epsilons from the event IDs
         """
-        return lambda: [self.eps[aid] for aid in asset_ordinals]
+        return lambda dummy1, dummy2: (
+            [self.eps[aid] for aid in asset_ordinals]
+            if self.eps else None)
 
     def get_hazard(self, rlzs_assoc, monitor=Monitor()):
         """
@@ -479,6 +481,8 @@ class RiskInput(object):
         :returns:
             list of hazard dictionaries imt -> rlz -> haz per each site
         """
+        if rlzs_assoc is None:  # case ebr_from_gmfs
+            return [{self.imt: hazard} for hazard in self.hazard_by_site]
         return [{self.imt: rlzs_assoc.combine(hazard)}
                 for hazard in self.hazard_by_site]
 
@@ -512,10 +516,36 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
     return eps
 
 
+# used in EventBasedRiskFromGmfsCalculator
+class GmvsBySidImtRlz(collections.Mapping):
+    # sid -> imt -> rlz -> (gmvs, eids)
+
+    def __init__(self, imts, rlz, dstore):
+        self.dic = collections.defaultdict(dict)
+        data = dstore['gmf_data/%04d' % rlz.ordinal].value
+        grpdic = group_array(data, 'sid', 'imti')
+        for sid, imti in grpdic:
+            array = grpdic[sid, imti]
+            self.dic[sid][imts[imti]] = {rlz: (array['gmv'], array['eid'])}
+
+    def __getitem__(self, sid):
+        return self.dic[sid]
+
+    def __iter__(self):
+        return iter(self.dic)
+
+    def __len__(self):
+        return len(self.dic)
+
+
 class GmfCollector(object):
     """
     An object storing the GMFs in memory.
     """
+    # NB: the data is stored in an internal dictionary called .dic
+    # of the form bytestring -> two arrays, {sid/imt/rlzi: (gmf, sids)}
+    # using a bytestring consumes a lot less memory than using a triple
+
     def __init__(self, imts, rlzs):
         self.imts = imts
         self.rlzs = rlzs
@@ -528,7 +558,7 @@ class GmfCollector(object):
 
     def save(self, eid, imti, rlz, gmf, sids):
         for gmv, sid in zip(gmf, sids):
-            key = '%s/%s/%s' % (sid, self.imts[imti], rlz.ordinal)
+            key = b'%s/%s/%s' % (sid, self.imts[imti], rlz.ordinal)
             glist, elist = self.dic[key]
             glist.append(gmv)
             elist.append(eid)
@@ -539,7 +569,7 @@ class GmfCollector(object):
         for imt in self.imts:
             hazard[imt] = {}
             for rlz in self.rlzs:
-                key = '%s/%s/%s' % (sid, imt, rlz.ordinal)
+                key = b'%s/%s/%s' % (sid, imt, rlz.ordinal)
                 data = self.dic[key]
                 if data[0]:
                     # a pairs of F32 arrays (gmvs, eids)
