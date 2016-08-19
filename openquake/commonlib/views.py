@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from __future__ import division, unicode_literals
+from __future__ import division
 import io
 import ast
 import os.path
@@ -367,7 +367,7 @@ def view_totlosses(token, dstore):
     else:
         stats = ('mean',)
     avglosses = dstore['losses_by_asset'].value
-    dtlist = [(str('%s-%s' % (name, stat)), numpy.float32)
+    dtlist = [('%s-%s' % (name, stat), numpy.float32)
               for name in avglosses.dtype.names for stat in stats]
     zero = numpy.zeros(avglosses.shape[1:], numpy.dtype(dtlist))
     for name in avglosses.dtype.names:
@@ -398,7 +398,7 @@ def view_portfolio_loss(token, dstore):
                 data[rlzi][loss_type + '_ins'] = loss[1]
             else:
                 data[rlzi][loss_type] = loss
-    array = util.compose_arrays(numpy.array(rlzids), data, str('rlz'))
+    array = util.compose_arrays(numpy.array(rlzids), data, 'rlz')
     # this is very sensitive to rounding errors, so I a using a low precision
     return rst_table(array, fmt='%.4E')
 
