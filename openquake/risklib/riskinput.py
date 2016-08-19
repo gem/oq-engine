@@ -526,15 +526,20 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
 class GmvsBySidImtRlz(collections.Mapping):
     # sid -> imt -> rlz -> (gmvs, eids)
 
-    def __init__(self, imts, rlzs, dstore):
+    def __init__(self, imts, rlzs, dstore, monitor=Monitor()):
         self.dic = collections.defaultdict(
             lambda: collections.defaultdict(dict))
+        grp_mon = monitor('grouping GMFs by sid, imti')
+        pop_mon = monitor('populating GmvsBySidImtRlz')
         for rlz in rlzs:
             data = dstore['gmf_data/%04d' % rlz.ordinal].value
-            grpdic = group_array(data, 'sid', 'imti')
-            for sid, imti in grpdic:
-                array = grpdic[sid, imti]
-                self.dic[sid][imts[imti]][rlz] = (array['gmv'], array['eid'])
+            with grp_mon:
+                grpdic = group_array(data, 'sid', 'imti')
+            with pop_mon:
+                for sid, imti in grpdic:
+                    array = grpdic[sid, imti]
+                    self.dic[sid][imts[imti]][rlz] = (
+                        array['gmv'], array['eid'])
 
     def __getitem__(self, sid):
         return self.dic[sid]
@@ -554,10 +559,13 @@ class GmfCollector(object):
     # of the form string -> two arrays, {sid/imt/rlzi: (gmf, sids)}
     # using a string consumes a lot less memory than using a triple
 
-    def __init__(self, imts, rlzs):
+    def __init__(self, imts, rlzs, dstore=None):
         self.imts = imts
         self.rlzs = rlzs
-        self.dic = collections.defaultdict(lambda: ([], []))
+        if dstore is None:
+            self.dic = collections.defaultdict(lambda: ([], []))
+        else:
+            self.dic = dstore
         self.nbytes = 0
 
     def close(self):
@@ -566,7 +574,7 @@ class GmfCollector(object):
 
     def save(self, eid, imti, rlz, gmf, sids):
         for gmv, sid in zip(gmf, sids):
-            key = '%s/%s/%s' % (sid, self.imts[imti], rlz.ordinal)
+            key = '%s/%s/%s' % (rlz.ordinal, sid, self.imts[imti])
             glist, elist = self.dic[key]
             glist.append(gmv)
             elist.append(eid)
@@ -577,12 +585,10 @@ class GmfCollector(object):
         for imt in self.imts:
             hazard[imt] = {}
             for rlz in self.rlzs:
-                key = '%s/%s/%s' % (sid, imt, rlz.ordinal)
-                data = self.dic[key]
+                key = '%s/%s/%s' % (rlz.ordinal, sid, imt)
+                data = self.dic[key]  # pair (gmvs, eids)
                 if data[0]:
-                    # a pairs of F32 arrays (gmvs, eids)
-                    hazard[imt][rlz] = (numpy.array(data[0], F32),
-                                        numpy.array(data[1], U32))
+                    hazard[imt][rlz] = data
         return hazard
 
 
