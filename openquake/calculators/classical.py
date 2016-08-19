@@ -375,7 +375,7 @@ class ClassicalCalculator(PSHACalculator):
         oq = self.oqparam
         rlzs = self.rlzs_assoc.realizations
 
-        with self.monitor('read poes', autoflush=True):
+        with self.monitor('reading poes', autoflush=True):
             pmap_by_grp = {
                 int(group_id): self.datastore['poes/' + group_id]
                 for group_id in self.datastore['poes']}
@@ -398,9 +398,10 @@ class ClassicalCalculator(PSHACalculator):
                 'hcurves/quantile-%s' % q, F32, (None, L, 1), attrs=attrs)
 
         # build hcurves and stats
-        sm = parallel.starmap(build_hcurves_and_stats,
-                              self.gen_args(pmap_by_grp))
-        with self.monitor('saving curves and stats', autoflush=True):
+        with self.monitor('submitting poes', autoflush=True):
+            sm = parallel.starmap(build_hcurves_and_stats,
+                                  self.gen_args(pmap_by_grp))
+        with self.monitor('saving hcurves and stats', autoflush=True):
             return sm.reduce(self.save_hcurves)
 
     def gen_args(self, pmap_by_grp):
