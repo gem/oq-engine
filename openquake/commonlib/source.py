@@ -537,7 +537,7 @@ class CompositionInfo(object):
                 assoc._add_realizations(indices, smodel, gsim_lt, rlzs)
             elif trts:
                 logging.warn('No realizations for %s, %s',
-                             '_'.join(smodel.path), smodel.name)
+                             b'_'.join(smodel.path), smodel.name)
         # NB: realizations could be filtered away by logic tree reduction
         if assoc.realizations:
             assoc._init()
@@ -752,9 +752,9 @@ class SourceManager(object):
         self.split_map = {}  # src_group_id, source_id -> split sources
         self.infos = {}  # src_group_id, source_id -> SourceInfo tuple
 
-        # hystorically, we always tried to to produce 2 * concurrent_tasks
-        self.maxweight = max(MAXWEIGHT, math.ceil(
-            csm.weight / (self.concurrent_tasks * 2 * num_tiles)))
+        self.maxweight = math.ceil(csm.weight / self.concurrent_tasks)
+        if num_tiles > 1:
+            self.maxweight = max(self.maxweight / num_tiles, MAXWEIGHT)
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.maxweight)
         if random_seed is not None:
