@@ -86,9 +86,11 @@ class EventBasedRiskFromGmfsCalculator(base.RiskCalculator):
         if self.riskmodel.covs:
             logging.warn('NB: asset correlation is ignored by %s',
                          self.__class__.__name__)
-        with self.monitor('reading GMFs'):
-            logging.info('Reading the GMFs')
-            gmvs_by_sid = riskinput.GmvsBySidImtRlz(imts, rlzs, self.datastore)
+        mon = self.monitor.new()
+        logging.info('Reading the GMFs')
+        gmvs_by_sid = riskinput.GmvsBySidImtRlz(
+            imts, rlzs, self.datastore, mon)
+        mon.flush()
         iterargs = ((ri, self.riskmodel, monitor)
                     for ri in self.build_riskinputs(gmvs_by_sid))
         return parallel.starmap(ebr_agg, iterargs).reduce()
