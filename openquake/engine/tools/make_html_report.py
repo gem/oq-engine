@@ -186,10 +186,9 @@ def make_report(isodate='today'):
             txt = view_fullreport('fullreport', ds)
             report = html_parts(txt)
         except Exception as exc:
-            raise
             report = dict(
                 html_title='Could not generate report: %s' % cgi.escape(
-                    unicode(exc), quote=True),
+                    exc, quote=True),
                 fragment='')
 
         page = report['html_title']
