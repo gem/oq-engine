@@ -449,14 +449,20 @@ class RiskInput(object):
             [a for a in assets if a.taxonomy in taxonomies]
             for assets in assets_by_site]
         taxonomies_set = set()
-        self.weight = 0
+        aids = []
         for assets in self.assets_by_site:
             for asset in assets:
                 taxonomies_set.add(asset.taxonomy)
-            self.weight += len(assets)
+                aids.append(asset.ordinal)
+        self.aids = numpy.array(aids, numpy.uint32)
         self.taxonomies = sorted(taxonomies_set)
         self.eids = None  # for API compatibility with RiskInputFromRuptures
         self.eps = eps_dict
+
+    @property
+    def weight(self):
+        """The number of underlying assets"""
+        return len(self.aids)
 
     @property
     def imt_taxonomies(self):
@@ -487,7 +493,7 @@ class RiskInput(object):
                 for hazard in self.hazard_by_site]
 
     def __repr__(self):
-        return '<%s IMT=%s, taxonomy=%s, weight=%d>' % (
+        return '<%s IMT=%s, taxonomy=%s, %d asset(s)>' % (
             self.__class__.__name__, self.imt, ', '.join(self.taxonomies),
             self.weight)
 
@@ -520,13 +526,15 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
 class GmvsBySidImtRlz(collections.Mapping):
     # sid -> imt -> rlz -> (gmvs, eids)
 
-    def __init__(self, imts, rlz, dstore):
-        self.dic = collections.defaultdict(dict)
-        data = dstore['gmf_data/%04d' % rlz.ordinal].value
-        grpdic = group_array(data, 'sid', 'imti')
-        for sid, imti in grpdic:
-            array = grpdic[sid, imti]
-            self.dic[sid][imts[imti]] = {rlz: (array['gmv'], array['eid'])}
+    def __init__(self, imts, rlzs, dstore):
+        self.dic = collections.defaultdict(
+            lambda: collections.defaultdict(dict))
+        for rlz in rlzs:
+            data = dstore['gmf_data/%04d' % rlz.ordinal].value
+            grpdic = group_array(data, 'sid', 'imti')
+            for sid, imti in grpdic:
+                array = grpdic[sid, imti]
+                self.dic[sid][imts[imti]][rlz] = (array['gmv'], array['eid'])
 
     def __getitem__(self, sid):
         return self.dic[sid]
@@ -543,8 +551,8 @@ class GmfCollector(object):
     An object storing the GMFs in memory.
     """
     # NB: the data is stored in an internal dictionary called .dic
-    # of the form bytestring -> two arrays, {sid/imt/rlzi: (gmf, sids)}
-    # using a bytestring consumes a lot less memory than using a triple
+    # of the form string -> two arrays, {sid/imt/rlzi: (gmf, sids)}
+    # using a string consumes a lot less memory than using a triple
 
     def __init__(self, imts, rlzs):
         self.imts = imts
@@ -558,7 +566,7 @@ class GmfCollector(object):
 
     def save(self, eid, imti, rlz, gmf, sids):
         for gmv, sid in zip(gmf, sids):
-            key = b'%s/%s/%s' % (sid, self.imts[imti], rlz.ordinal)
+            key = '%s/%s/%s' % (sid, self.imts[imti], rlz.ordinal)
             glist, elist = self.dic[key]
             glist.append(gmv)
             elist.append(eid)
@@ -569,7 +577,7 @@ class GmfCollector(object):
         for imt in self.imts:
             hazard[imt] = {}
             for rlz in self.rlzs:
-                key = b'%s/%s/%s' % (sid, imt, rlz.ordinal)
+                key = '%s/%s/%s' % (sid, imt, rlz.ordinal)
                 data = self.dic[key]
                 if data[0]:
                     # a pairs of F32 arrays (gmvs, eids)
