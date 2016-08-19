@@ -176,7 +176,7 @@ def make_report(isodate='today'):
         except Exception as exc:
             report = dict(
                 html_title='Could not generate report: %s' % cgi.escape(
-                    unicode(exc), quote=True),
+                    exc, quote=True),
                 fragment='')
         page = report['html_title']
         page += html([stats._fields, stats])
