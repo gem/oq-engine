@@ -403,7 +403,7 @@ class CompositeRiskModel(collections.Mapping):
         :param assetcol: not None only for event based risk
         """
         mon_hazard = monitor('building hazard')
-        mon_risk = monitor('computing riskmodel', measuremem=False)
+        mon_risk = monitor('riskmodel.out_by_lr', measuremem=False)
         with mon_hazard:
             assets_by_site = (riskinput.assets_by_site if assetcol is None
                               else assetcol.assets_by_site())
@@ -520,35 +520,6 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
     return eps
 
 
-# used in EventBasedRiskFromGmfsCalculator
-class GmvsBySidImtRlz(collections.Mapping):
-    # sid -> imt -> rlz -> (gmvs, eids)
-
-    def __init__(self, imts, rlzs, dstore, monitor=Monitor()):
-        self.dic = collections.defaultdict(
-            lambda: collections.defaultdict(dict))
-        grp_mon = monitor('grouping GMFs by sid, imti')
-        pop_mon = monitor('populating GmvsBySidImtRlz')
-        for rlz in rlzs:
-            data = dstore['gmf_data/%04d' % rlz.ordinal].value
-            with grp_mon:
-                grpdic = group_array(data, 'sid', 'imti')
-            with pop_mon:
-                for sid, imti in grpdic:
-                    array = grpdic[sid, imti]
-                    self.dic[sid][imts[imti]][rlz] = (
-                        array['gmv'], array['eid'])
-
-    def __getitem__(self, sid):
-        return self.dic[sid]
-
-    def __iter__(self):
-        return iter(self.dic)
-
-    def __len__(self):
-        return len(self.dic)
-
-
 class GmvEidDset(object):
     dt = numpy.dtype([('gmv', F32), ('eid', U32)])
 
@@ -618,15 +589,26 @@ class GmfCollector(object):
             self.dic[key].append(gmv, eid)
         self.nbytes += gmf.nbytes * 2
 
-    def __getitem__(self, sid):
+    def __getitem__(self, sid_imt):
         hazard = {}
-        for imt in self.imts:
-            hazard[imt] = {}
-            for rlz in self.rlzs:
-                key = rsi2str(rlz.ordinal, sid, imt)
-                data = self.dic[key].value
-                if len(data):
-                    hazard[imt][rlz] = data
+        if isinstance(sid_imt, int):
+            # return a dictionary with all IMTs
+            for imt in self.imts:
+                hazard[imt] = {}
+                for rlz in self.rlzs:
+                    key = rsi2str(rlz.ordinal, sid_imt, imt)
+                    data = self.dic[key].value
+                    if len(data):
+                        hazard[imt][rlz] = data
+            return hazard
+        # else assume a pair was passed, return the gmfs per realization
+        sid, imt = sid_imt
+        for rlz in self.rlzs:
+            key = 'gmf_data/' + rsi2str(rlz.ordinal, sid, imt)
+            try:
+                hazard[rlz] = self.dic[key].value
+            except KeyError:
+                pass
         return hazard
 
     def flush(self, dstore):
