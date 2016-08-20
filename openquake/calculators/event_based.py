@@ -214,14 +214,15 @@ class EBRupture(object):
         return '<%s #%d, grp_id=%d>' % (self.__class__.__name__,
                                         self.serial, self.grp_id)
 
-def compute_ruptures(sources, sitecol, rlzs_assoc, monitor):
+
+def compute_ruptures(sources, sitecol, rlzs_by_gsim, monitor):
     """
     :param sources:
         List of commonlib.source.Source tuples
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param rlzs_assoc:
-        a :class:`openquake.commonlib.source.RlzsAssoc` instance
+    :param rlzs_by_gsim:
+        a dictionary gsim -> realizations of that gsim
     :param monitor:
         monitor instance
     :returns:
@@ -233,7 +234,7 @@ def compute_ruptures(sources, sitecol, rlzs_assoc, monitor):
     oq = monitor.oqparam
     trt = sources[0].tectonic_region_type
     max_dist = oq.maximum_distance[trt]
-    cmaker = ContextMaker(rlzs_assoc.gsims_by_grp_id[src_group_id])
+    cmaker = ContextMaker(rlzs_by_gsim)
     params = sorted(cmaker.REQUIRES_RUPTURE_PARAMETERS)
     rup_data_dt = numpy.dtype(
         [('rupserial', U32), ('multiplicity', U16),
@@ -243,7 +244,7 @@ def compute_ruptures(sources, sitecol, rlzs_assoc, monitor):
     rup_data = []
     calc_times = []
     rup_mon = monitor('filtering ruptures', measuremem=False)
-    num_samples = rlzs_assoc.samples[src_group_id]
+    num_samples = rlzs_by_gsim.samples
 
     # Compute and save stochastic event sets
     for src in sources:
@@ -255,8 +256,7 @@ def compute_ruptures(sources, sitecol, rlzs_assoc, monitor):
             filter_sites_by_distance_to_rupture,
             integration_distance=max_dist, sites=s_sites)
         num_occ_by_rup = sample_ruptures(
-            src, oq.ses_per_logic_tree_path, num_samples,
-            rlzs_assoc.seed)
+            src, oq.ses_per_logic_tree_path, num_samples, rlzs_by_gsim.seed)
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
