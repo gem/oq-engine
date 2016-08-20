@@ -310,10 +310,13 @@ class RlzsAssoc(collections.Mapping):
         :param results: dictionary (src_group_id, gsim) -> curves
         :returns: a dictionary rlz -> aggregate curves
         """
-        acc = {rlz: ProbabilityMap() for rlz in self.realizations}
+        acc = {}
         for key in results:
             for rlz in self.rlzs_assoc[key]:
-                acc[rlz] |= results[key]
+                if rlz in acc:
+                    acc[rlz] |= results[key]
+                else:
+                    acc[rlz] = copy.copy(results[key])
         return acc
 
     # used in riskinput
@@ -475,7 +478,7 @@ class CompositionInfo(object):
             srcgroups = [
                 sourceconverter.SourceGroup(
                     self.trts[trti], id=grp_id, eff_ruptures=effrup)
-                for grp_id, trti, effrup, sm_id in tdata if effrup > 0]
+                for grp_id, trti, effrup, sm_id in tdata if effrup]
             path = tuple(rec['path'].split('_'))
             trts = set(sg.trt for sg in srcgroups)
             num_gsim_paths = self.gsim_lt.reduce(trts).get_num_paths()
