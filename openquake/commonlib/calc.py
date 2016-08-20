@@ -220,23 +220,6 @@ def _gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
     return poes
 
 
-def gmvs_to_poe_map(gmvs_by_sid, imtls, invest_time, duration):
-    """
-    Convert a dictionary sid -> gmva into a ProbabilityMap
-    """
-    pmap = ProbabilityMap()
-    for sid in gmvs_by_sid:
-        data = []
-        for imti, imt in enumerate(imtls):
-            gmvs = get_array(gmvs_by_sid[sid], imti=imti)['gmv']
-            data.append(
-                _gmvs_to_haz_curve(gmvs, imtls[imt], invest_time, duration))
-        # the array underlying the ProbabilityCurve has size (num_levels, 1)
-        array = numpy.concatenate(data).reshape(-1, 1)
-        pmap[sid] = ProbabilityCurve(array)
-    return pmap
-
-
 # ################## utilities for classical calculators ################ #
 
 def get_imts_periods(imtls):

@@ -25,9 +25,8 @@ import collections
 
 import numpy
 
-from openquake.baselib import hdf5
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict, group_array
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import ProbabilityMap
@@ -35,7 +34,7 @@ from openquake.hazardlib import geo
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import readinput, parallel, calc
 from openquake.commonlib.util import max_rel_diff_index, Rupture
-from openquake.risklib.riskinput import create
+from openquake.risklib.riskinput import create, GmfCollector, str2rsi
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 
@@ -44,7 +43,6 @@ from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
-POEMAP = 1
 
 event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
@@ -213,6 +211,7 @@ class EBRupture(object):
     def __repr__(self):
         return '<%s #%d, grp_id=%d>' % (self.__class__.__name__,
                                         self.serial, self.grp_id)
+
 
 def compute_ruptures(sources, sitecol, rlzs_assoc, monitor):
     """
@@ -463,19 +462,21 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc,
     # ruptures of the same src_group_id
     trunc_level = oq.truncation_level
     correl_model = readinput.get_correl_model(oq)
-    gmfadict = create(
-        calc.GmfColl, eb_ruptures, sitecol, imts, rlzs_assoc, trunc_level,
-        correl_model, min_iml, monitor).by_rlzi()
-    result = {rlzi: [gmfadict[rlzi], None]
-              if oq.ground_motion_fields else [None, None]
-              for rlzi in gmfadict}
+    gmfcoll = create(
+        GmfCollector, eb_ruptures, sitecol, imts, rlzs_assoc,
+        trunc_level, correl_model, min_iml, monitor)
+    result = dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
+                  hcurves={})
     if oq.hazard_curves_from_gmfs:
         with monitor('bulding hazard curves', measuremem=False):
             duration = oq.investigation_time * oq.ses_per_logic_tree_path
-            for rlzi in gmfadict:
-                gmvs_by_sid = group_array(gmfadict[rlzi], 'sid')
-                result[rlzi][POEMAP] = calc.gmvs_to_poe_map(
-                    gmvs_by_sid, oq.imtls, oq.investigation_time, duration)
+            for key, dset in gmfcoll.dic.items():
+                # key has the form rzli/sid/imt
+                imt = key.rsplit('/', 1)[-1]
+                poes = calc._gmvs_to_haz_curve(
+                    dset.value['gmv'], oq.imtls[imt], oq.investigation_time,
+                    duration)
+                result['hcurves'][key] = poes
     return result
 
 
@@ -507,9 +508,6 @@ class EventBasedCalculator(ClassicalCalculator):
         self.sesruptures.sort(key=operator.attrgetter('serial'))
         if self.oqparam.ground_motion_fields:
             calc.check_overflow(self)
-            for rlz in self.rlzs_assoc.realizations:
-                self.datastore.create_dset(
-                    'gmf_data/%04d' % rlz.ordinal, calc.gmv_dt)
 
     def combine_curves_and_save_gmfs(self, acc, res):
         """
@@ -523,14 +521,15 @@ class EventBasedCalculator(ClassicalCalculator):
         """
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
-        for rlzi in res:
-            gmfa, curves = res[rlzi]
-            if gmfa is not None:
-                with sav_mon:
-                    hdf5.extend(self.datastore['gmf_data/%04d' % rlzi], gmfa)
-            if curves is not None:  # aggregate hcurves
-                with agg_mon:
-                    self.agg_dicts(acc, {rlzi: curves})
+        if res['gmfcoll'] is not None:
+            with sav_mon:
+                res['gmfcoll'].flush(self.datastore)
+        slicedic = self.oqparam.imtls.slicedic
+        with agg_mon:
+            for key, poes in res['hcurves'].items():
+                rlzi, sid, imt = str2rsi(key)
+                array = acc[rlzi].setdefault(sid, 0).array[slicedic[imt], 0]
+                array[:] = 1. - (1. - array) * (1. - poes)
         sav_mon.flush()
         agg_mon.flush()
         self.datastore.flush()
@@ -549,17 +548,18 @@ class EventBasedCalculator(ClassicalCalculator):
         monitor.oqparam = oq
         min_iml = calc.fix_minimum_intensity(
             oq.minimum_intensity, oq.imtls)
+        L = len(oq.imtls.array)
         acc = parallel.apply(
             self.core_task.__func__,
-            (self.sesruptures, self.sitecol, oq.imtls, self.rlzs_assoc,
+            (self.sesruptures, self.sitecol, list(oq.imtls), self.rlzs_assoc,
              min_iml, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             key=operator.attrgetter('grp_id'),
             weight=operator.attrgetter('weight')).reduce(
                 agg=self.combine_curves_and_save_gmfs,
-                acc={rlz.ordinal: ProbabilityMap()
+                acc={rlz.ordinal: ProbabilityMap(L, 1)
                      for rlz in self.rlzs_assoc.realizations})
-        if oq.ground_motion_fields:
+        if oq.ground_motion_fields and 'gmf_data' in self.datastore:
             self.datastore.set_nbytes('gmf_data')
         return acc
 
