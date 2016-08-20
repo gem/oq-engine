@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
+import math
 import logging
 import operator
 import collections
@@ -33,7 +34,7 @@ from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
     hazard_curves_per_trt, zero_curves, array_of_curves, ProbabilityMap)
 from openquake.risklib import scientific
-from openquake.commonlib import parallel, datastore, source
+from openquake.commonlib import datastore, source, parallel
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -267,21 +268,37 @@ class PSHACalculator(base.HazardCalculator):
         tectonic region type.
         """
         monitor = self.monitor.new(self.core_task.__name__)
-        monitor.oqparam = self.oqparam
-        pmap_by_grp_id = self.taskman.reduce(self.agg_dicts, self.zerodict())
-        self.save_data_transfer(self.taskman)
+        monitor.oqparam = oq = self.oqparam
+        tiles = [self.sitecol]
+        self.num_tiles = 1
+        if self.is_tiling():
+            hint = math.ceil(len(self.sitecol) / oq.sites_per_tile)
+            tiles = self.sitecol.split_in_tiles(hint)
+            self.num_tiles = len(tiles)
+            logging.info('Generating %d tiles of %d sites each',
+                         self.num_tiles, len(tiles[0]))
+        with self.monitor('managing sources', autoflush=True):
+            srcman = source.SourceManager(
+                self.csm, oq.maximum_distance, oq.concurrent_tasks,
+                self.datastore, self.monitor.new(oqparam=oq),
+                self.random_seed, oq.filter_sources, num_tiles=self.num_tiles)
+            tm = parallel.starmap(
+                self.core_task.__func__, srcman.gen_args(tiles))
+            srcman.pre_store_source_info(self.datastore)
+        pmap_by_grp_id = tm.reduce(self.agg_dicts, self.zerodict())
+        self.save_data_transfer(tm)
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(pmap_by_grp_id)
+            self.store_source_info(tm, pmap_by_grp_id)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             partial(self.count_eff_ruptures, pmap_by_grp_id))
         self.datastore['csm_info'] = self.csm.info
         return pmap_by_grp_id
 
-    def store_source_info(self, pmap_by_grp_id):
+    def store_source_info(self, taskman, pmap_by_grp_id):
         # store the information about received data
-        received = self.taskman.received
+        received = taskman.received
         if received:
-            tname = self.taskman.name
+            tname = taskman.name
             self.datastore.save('job_info', {
                 tname + '_max_received_per_task': max(received),
                 tname + '_tot_received': sum(received),
@@ -289,7 +306,7 @@ class PSHACalculator(base.HazardCalculator):
         # then save the calculation times per each source
         calc_times = getattr(pmap_by_grp_id, 'calc_times', [])
         if calc_times:
-            sources = self.csm.get_sources(self.taskman.maxweight, 'all')
+            sources = self.csm.get_sources()
             info_dict = {(rec['src_group_id'], rec['source_id']): rec
                          for rec in self.source_info}
             for src_idx, dt in calc_times:
@@ -427,10 +444,3 @@ class ClassicalCalculator(PSHACalculator):
             dset.attrs['uid'] = rlz.uid
         for k, v in kw.items():
             dset.attrs[k] = v
-
-
-def nonzero(val):
-    """
-    :returns: the sum of the composite array `val`
-    """
-    return sum(val[k].sum() for k in val.dtype.names)

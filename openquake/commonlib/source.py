@@ -310,10 +310,13 @@ class RlzsAssoc(collections.Mapping):
         :param results: dictionary (src_group_id, gsim) -> curves
         :returns: a dictionary rlz -> aggregate curves
         """
-        acc = {rlz: ProbabilityMap() for rlz in self.realizations}
+        acc = {}
         for key in results:
             for rlz in self.rlzs_assoc[key]:
-                acc[rlz] |= results[key]
+                if rlz in acc:
+                    acc[rlz] |= results[key]
+                else:
+                    acc[rlz] = copy.copy(results[key])
         return acc
 
     # used in riskinput
@@ -475,7 +478,7 @@ class CompositionInfo(object):
             srcgroups = [
                 sourceconverter.SourceGroup(
                     self.trts[trti], id=grp_id, eff_ruptures=effrup)
-                for grp_id, trti, effrup, sm_id in tdata if effrup > 0]
+                for grp_id, trti, effrup, sm_id in tdata if effrup]
             path = tuple(rec['path'].split('_'))
             trts = set(sg.trt for sg in srcgroups)
             num_gsim_paths = self.gsim_lt.reduce(trts).get_num_paths()
@@ -537,7 +540,7 @@ class CompositionInfo(object):
                 assoc._add_realizations(indices, smodel, gsim_lt, rlzs)
             elif trts:
                 logging.warn('No realizations for %s, %s',
-                             '_'.join(smodel.path), smodel.name)
+                             b'_'.join(smodel.path), smodel.name)
         # NB: realizations could be filtered away by logic tree reduction
         if assoc.realizations:
             assoc._init()
@@ -618,11 +621,14 @@ class CompositeSourceModel(collections.Sequence):
             for src_group in sm.src_groups:
                 yield src_group
 
-    def get_sources(self, maxweight, kind):
+    def get_sources(self, kind='all', maxweight=None):
         """
         Extract the sources contained in the source models by optionally
         filtering and splitting them, depending on the passed parameters.
         """
+        if kind != 'all':
+            assert kind in ('light', 'heavy') and maxweight is not None, (
+                kind, maxweight)
         sources = []
         for src_group in self.src_groups:
             for src in src_group:
@@ -749,9 +755,9 @@ class SourceManager(object):
         self.split_map = {}  # src_group_id, source_id -> split sources
         self.infos = {}  # src_group_id, source_id -> SourceInfo tuple
 
-        # hystorically, we always tried to to produce 2 * concurrent_tasks
-        self.maxweight = max(MAXWEIGHT, math.ceil(
-            csm.weight / (self.concurrent_tasks * 2 * num_tiles)))
+        self.maxweight = math.ceil(csm.weight / self.concurrent_tasks)
+        if num_tiles > 1:
+            self.maxweight = max(self.maxweight / num_tiles, MAXWEIGHT)
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.maxweight)
         if random_seed is not None:
@@ -760,7 +766,7 @@ class SourceManager(object):
             n = sum(sg.tot_ruptures() for sg in self.csm.src_groups)
             rup_serial = numpy.arange(n, dtype=numpy.uint32)
             start = 0
-            for src in self.csm.get_sources(self.maxweight, 'all'):
+            for src in self.csm.get_sources():
                 nr = src.num_ruptures
                 self.src_serial[src.id] = rup_serial[start:start + nr]
                 start += nr
@@ -773,7 +779,7 @@ class SourceManager(object):
         """
         filter_mon = self.monitor('filtering sources')
         split_mon = self.monitor('splitting sources')
-        for src in self.csm.get_sources(self.maxweight, kind):
+        for src in self.csm.get_sources(kind, self.maxweight):
             filter_time = split_time = 0
             if self.filter_sources:
                 with filter_mon:
@@ -857,12 +863,16 @@ class SourceManager(object):
                 logging.info('Sent %d sources in %d block(s)',
                              len(sources), nblocks)
 
-    def store_source_info(self, dstore):
+    def pre_store_source_info(self, dstore):
         """
         Save the `source_info` array and its attributes in the datastore.
 
         :param dstore: the datastore
         """
+        attrs = dstore.hdf5['composite_source_model'].attrs
+        attrs['weight'] = self.csm.weight
+        attrs['filtered_weight'] = self.csm.filtered_weight
+
         if self.infos:
             values = list(self.infos.values())
             values.sort(
