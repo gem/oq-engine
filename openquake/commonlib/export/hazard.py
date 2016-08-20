@@ -33,7 +33,7 @@ from openquake.hazardlib.calc import disagg
 from openquake.commonlib.export import export
 from openquake.commonlib.writers import floatformat, write_csv
 from openquake.commonlib import writers, hazard_writers, util, readinput
-from openquake.risklib.riskinput import create
+from openquake.risklib.riskinput import create, gmf_array
 from openquake.commonlib import calc
 
 F32 = numpy.float32
@@ -537,7 +537,11 @@ def export_gmf(ekey, dstore):
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
     for rlz in rlzs_assoc.realizations:
-        gmf_arr = gmf_data['%04d' % rlz.ordinal].value
+        if n_gmfs:
+            # TODO: change to use the prefix rlz-
+            gmf_arr = gmf_data['%04d' % rlz.ordinal].value
+        else:
+            gmf_arr = gmf_array(gmf_data['rlz-%04d' % rlz.ordinal], oq.imtls)
         ruptures = []
         for eid, gmfa in group_array(gmf_arr, 'eid').items():
             rup = util.Rupture(etags[eid], sorted(set(gmfa['sid'])))

@@ -28,6 +28,8 @@ from openquake.baselib.general import groupby, group_array, split_in_blocks
 from openquake.hazardlib import site, calc
 from openquake.risklib import scientific, riskmodels
 
+U8 = numpy.uint8
+U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 
@@ -547,19 +549,61 @@ class GmvsBySidImtRlz(collections.Mapping):
         return len(self.dic)
 
 
+class GmvEidDset(object):
+    dt = numpy.dtype([('gmv', F32), ('eid', U32)])
+
+    def __init__(self):
+        self.pairs = []
+
+    def append(self, gmv, eid):
+        self.pairs.append((gmv, eid))
+
+    @property
+    def value(self):
+        return numpy.array(self.pairs, self.dt)
+
+    def __len__(self):
+        return len(self.pairs)
+
+
+def str2rsi(key):
+    rlzi, sid, imt = key.split('/')
+    return int(rlzi[4:]), int(sid[4:]), imt
+
+
+def rsi2str(rlzi, sid, imt):
+    return 'rlz-%04d/sid-%04d/%s' % (rlzi, sid, imt)
+
+
+def gmf_array(gmfs_by_sid_imt, imtls):
+    dt = numpy.dtype([('sid', U16), ('imti', U8), ('gmv', F32), ('eid', U32)])
+    rows = []
+    for key in gmfs_by_sid_imt:
+        sid = int(key[4:])  # has the form "sid-XXXX"
+        gmvs_by_imt = gmfs_by_sid_imt[key]
+        for imti, imt in enumerate(imtls):
+            try:
+                gmvs = gmvs_by_imt[imt]
+            except KeyError:
+                gmvs = []
+            for gmv, eid in gmvs:
+                rows.append((sid, imti, gmv, eid))
+    return numpy.array(sorted(rows), dt)
+
+
 class GmfCollector(object):
     """
     An object storing the GMFs in memory.
     """
     # NB: the data is stored in an internal dictionary called .dic
-    # of the form string -> two arrays, {sid/imt/rlzi: (gmf, sids)}
+    # of the form string -> gmv_eid array, {rlzi/sid/imt: [gmv_eid])}
     # using a string consumes a lot less memory than using a triple
 
     def __init__(self, imts, rlzs, dstore=None):
         self.imts = imts
         self.rlzs = rlzs
         if dstore is None:
-            self.dic = collections.defaultdict(lambda: ([], []))
+            self.dic = collections.defaultdict(GmvEidDset)
         else:
             self.dic = dstore
         self.nbytes = 0
@@ -570,10 +614,8 @@ class GmfCollector(object):
 
     def save(self, eid, imti, rlz, gmf, sids):
         for gmv, sid in zip(gmf, sids):
-            key = '%s/%s/%s' % (rlz.ordinal, sid, self.imts[imti])
-            glist, elist = self.dic[key]
-            glist.append(gmv)
-            elist.append(eid)
+            key = rsi2str(rlz.ordinal, sid, self.imts[imti])
+            self.dic[key].append(gmv, eid)
         self.nbytes += gmf.nbytes * 2
 
     def __getitem__(self, sid):
@@ -581,11 +623,21 @@ class GmfCollector(object):
         for imt in self.imts:
             hazard[imt] = {}
             for rlz in self.rlzs:
-                key = '%s/%s/%s' % (rlz.ordinal, sid, imt)
-                data = self.dic[key]  # pair (gmvs, eids)
-                if data[0]:
+                key = rsi2str(rlz.ordinal, sid, imt)
+                data = self.dic[key].value
+                if len(data):
                     hazard[imt][rlz] = data
         return hazard
+
+    def flush(self, dstore):
+        for key, data in self.dic.items():
+            fullkey = 'gmf_data/' + key
+            try:
+                dset = dstore.hdf5[fullkey]
+            except KeyError:
+                dset = hdf5.create(
+                    dstore.hdf5, fullkey, GmvEidDset.dt, (None,))
+            hdf5.extend(dset, data.value)
 
 
 class RiskInputFromRuptures(object):
