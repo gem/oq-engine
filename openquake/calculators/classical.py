@@ -248,9 +248,13 @@ class PSHACalculator(base.HazardCalculator):
 
     def zerodict(self):
         """
-        Initial accumulator, a dict grp_id -> ProbabilityMap()
+        Initial accumulator, a dict grp_id -> ProbabilityMap(L, G)
         """
-        zd = AccumDict({sg.id: ProbabilityMap() for sg in self.csm.src_groups})
+        zd = AccumDict()
+        num_levels = len(self.oqparam.imtls.array)
+        for grp in self.csm.src_groups:
+            num_gsims = len(self.rlzs_assoc.gsims_by_grp_id[grp.id])
+            zd[grp.id] = ProbabilityMap(num_levels, num_gsims)
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         zd.bb_dict = BBdict()
