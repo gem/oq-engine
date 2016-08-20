@@ -103,29 +103,32 @@ def safely_call(func, args, pickle=False):
         if set, the input arguments are unpickled and the return value
         is pickled; otherwise they are left unchanged
     """
-    if pickle:
-        args = [a.unpickle() for a in args]
-    ismon = args and isinstance(args[-1], Monitor)
-    mon = args[-1] if ismon else Monitor()
-    check_mem_usage(mon)  # check if too much memory is used
-    mon.flush = NoFlush(mon, func.__name__)
-    try:
-        with mon('total ' + func.__name__, measuremem=True), \
-                GroundShakingIntensityModel.forbid_instantiation():
-            got = func(*args)
-            if inspect.isgenerator(got):
-                got = list(got)
-        res = got, None, mon
-    except:
-        etype, exc, tb = sys.exc_info()
-        tb_str = ''.join(traceback.format_tb(tb))
-        res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc), etype, mon)
+    with Monitor(measuremem=True) as extmon:
+        if pickle:
+            args = [a.unpickle() for a in args]
+        ismon = args and isinstance(args[-1], Monitor)
+        mon = args[-1] if ismon else Monitor()
+        check_mem_usage(mon)  # check if too much memory is used
+        mon.flush = NoFlush(mon, func.__name__)
+        try:
+            with mon('total ' + func.__name__, measuremem=False), \
+                 GroundShakingIntensityModel.forbid_instantiation():
+                got = func(*args)
+                if inspect.isgenerator(got):
+                    got = list(got)
+            res = got, None, mon
+        except:
+            etype, exc, tb = sys.exc_info()
+            tb_str = ''.join(traceback.format_tb(tb))
+            res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc), etype, mon)
 
-    # NB: flush must not be called in the workers - they must not
-    # have access to the datastore - so we remove it
-    rec_delattr(mon, 'flush')
-    if pickle:
-        return Pickled(res)
+        # NB: flush must not be called in the workers - they must not
+        # have access to the datastore - so we remove it
+        rec_delattr(mon, 'flush')
+        if pickle:
+            res = Pickled(res)
+    mon.duration = extmon.duration
+    mon.mem = extmon.mem
     return res
 
 
