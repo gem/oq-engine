@@ -252,8 +252,9 @@ class RlzsAssoc(collections.Mapping):
         """
         Returns a dictionary gsim -> rlzs
         """
-        return {gsim: self[grp_id, str(gsim)]
-                for gsim in self.gsims_by_grp_id[grp_id]}
+        return collections.OrderedDict(
+            (gsim, self[grp_id, str(gsim)])
+            for gsim in self.gsims_by_grp_id[grp_id])
 
     def get_rlzs_by_grp_id(self):
         """
@@ -857,7 +858,12 @@ class SourceManager(object):
                         sources, self.maxweight,
                         operator.attrgetter('weight'),
                         operator.attrgetter('src_group_id')):
-                    yield block, sitecol, self.rlzs_assoc, self.monitor.new()
+                    grp_id = block[0].src_group_id
+                    rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
+                    rlzs_by_gsim.sm_id = self.rlzs_assoc.sm_ids[grp_id]
+                    rlzs_by_gsim.samples = self.rlzs_assoc.samples[grp_id]
+                    rlzs_by_gsim.seed = self.rlzs_assoc.seed
+                    yield block, sitecol, rlzs_by_gsim, self.monitor.new()
                     nblocks += 1
                 logging.info('Sent %d sources in %d block(s)',
                              len(sources), nblocks)
