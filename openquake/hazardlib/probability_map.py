@@ -85,34 +85,46 @@ class ProbabilityMap(dict):
 
     Such operators are implemented efficiently at the numpy level, by
     dispatching on the underlying array. Moreover there is a classmethod
-    .build(num_levels, num_gsims, sids, initvalue) to build initialized
+    .build(num_levels, inner_levels, sids, initvalue) to build initialized
     instances of ProbabilityMap.
     """
     @classmethod
-    def build(cls, num_levels, num_gsims, sids, initvalue=0.):
+    def build(cls, outer_levels, inner_levels, sids, initvalue=0.):
         """
-        :param num_levels: the total number of intensity measure levels
-        :param num_gsims: the number of GSIMs
+        :param outer_levels: the total number of intensity measure levels
+        :param inner_levels: the number of inner levels
         :param sids: a set of site indices
         :param initvalue: the initial value of the probability (default 0)
         :returns: a ProbabilityMap dictionary
         """
-        dic = cls()
+        dic = cls(outer_levels, inner_levels)
         for sid in sids:
-            array = numpy.empty((num_levels, num_gsims), F64)
-            array.fill(initvalue)
-            dic[sid] = ProbabilityCurve(array)
+            dic.setdefault(sid, initvalue)
         return dic
 
-    def extract(self, gsim_idx):
+    def __init__(self, outer_levels, inner_levels):
+        self.outer_levels = outer_levels
+        self.inner_levels = inner_levels
+
+    def setdefault(self, sid, value):
+        try:
+            return self[sid]
+        except KeyError:
+            array = numpy.empty((self.outer_levels, self.inner_levels), F64)
+            array.fill(value)
+            pc = ProbabilityCurve(array)
+            self[sid] = pc
+            return pc
+
+    def extract(self, inner_idx):
         """
         Extracts a component of the underlying ProbabilityCurves,
-        specified by the index `gsim_idx`.
+        specified by the index `inner_idx`.
         """
-        out = self.__class__()
+        out = self.__class__(self.outer_levels, self.inner_levels)
         for sid in self:
             curve = self[sid]
-            array = curve.array[:, gsim_idx].reshape(-1, 1)
+            array = curve.array[:, inner_idx].reshape(-1, 1)
             out[sid] = ProbabilityCurve(array)
         return out
 
@@ -126,7 +138,7 @@ class ProbabilityMap(dict):
         return self
 
     def __or__(self, other):
-        new = self.__class__(self)
+        new = self.__class__(self.outer_levels, self.inner_levels)
         new |= other
         return new
 
@@ -134,30 +146,31 @@ class ProbabilityMap(dict):
 
     def __mul__(self, other):
         sids = set(self) | set(other)
-        return self.__class__((sid, self.get(sid, 1) * other.get(sid, 1))
-                              for sid in sids)
+        new = self.__class__(self.outer_levels, self.inner_levels)
+        for sid in sids:
+            new[sid] = self.get(sid, 1) * other.get(sid, 1)
+        return new
 
     def __invert__(self):
-        new = self.__class__()
+        new = self.__class__(self.outer_levels, self.inner_levels)
         for sid in self:
             if (self[sid].array != 1.).any():
                 new[sid] = ~self[sid]  # store only nonzero probabilities
         return new
 
     def __toh5__(self):
-        # converts to an array of shape (num_sids, num_levels, num_gsims)
+        # converts to an array of shape (num_sids, outer_levels, inner_levels)
         size = len(self)
         sids = numpy.array(sorted(self), numpy.uint32)
-        if size:
-            shape = (size,) + self[sids[0]].array.shape
-            array = numpy.zeros(shape)
-            for i, sid in numpy.ndenumerate(sids):
-                array[i] = self[sid].array
-        else:
-            array = numpy.zeros(0)
+        shape = (size, self.outer_levels, self.inner_levels)
+        array = numpy.zeros(shape, F64)
+        for i, sid in numpy.ndenumerate(sids):
+            array[i] = self[sid].array
         return array, dict(sids=sids)
 
     def __fromh5__(self, array, attrs):
         # rebuild the map from sids and probs arrays
+        self.outer_levels = array.shape[1]
+        self.inner_levels = array.shape[2]
         for sid, prob in zip(attrs['sids'], array):
             self[sid] = ProbabilityCurve(prob)

@@ -78,13 +78,35 @@ class Hdf5Dataset(object):
         self.extend(numpy.array([tup], self.dtype))
 
 
+def create(hdf5, name, dtype, shape=(None,), compression=None,
+           attrs=None):
+    """
+    :param hdf5: a h5py.File object
+    :param name: an hdf5 key string
+    :param dtype: dtype of the dataset (usually composite)
+    :param shape: shape of the dataset (can be extendable)
+    :param compression: None or 'gzip' are recommended
+    :param attrs: dictionary of attributes of the dataset
+    :returns: a HDF5 dataset
+    """
+    if shape[0] is None:  # complex extendable dataset
+        dset = hdf5.create_dataset(
+            name, (0,) + shape[1:], dtype, chunks=True, maxshape=shape)
+    else:  # fixed-shape dataset
+        dset = hdf5.create_dataset(name, shape, dtype)
+    if attrs:
+        for k, v in attrs.items():
+            dset.attrs[k] = v
+    return dset
+
+
 def extend(dset, array):
     """
     Extend an extensible dataset with an array of a compatible dtype
     """
     length = len(dset)
     newlength = length + len(array)
-    dset.resize((newlength,))
+    dset.resize((newlength,) + array.shape[1:])
     dset[length:newlength] = array
 
 

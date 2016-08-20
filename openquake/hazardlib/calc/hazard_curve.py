@@ -153,7 +153,7 @@ def calc_hazard_curves(
     imtls = DictArray(imtls)
     sources_by_trt = groupby(
         sources, operator.attrgetter('tectonic_region_type'))
-    pmap = ProbabilityMap()
+    pmap = ProbabilityMap(len(imtls.array), 1)
     for trt in sources_by_trt:
         pmap |= hazard_curves_per_trt(
             sources_by_trt[trt], sites, imtls, [gsim_by_trt[trt]],
@@ -248,7 +248,7 @@ def hazard_curves_per_trt(
     pne_mon = monitor('computing poes', measuremem=False)
     disagg_mon = monitor('get closest points', measuremem=False)
     monitor.calc_times = []  # pairs (src_id, delta_t)
-    pmap = ProbabilityMap()
+    pmap = ProbabilityMap(len(imtls.array), len(gsims))
     for src, s_sites in source_site_filter(sources_sites):
         t0 = time.time()
         pmap |= poe_map(src, s_sites, imtls, cmaker, truncation_level, bbs,
