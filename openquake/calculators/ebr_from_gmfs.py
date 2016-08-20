@@ -43,7 +43,8 @@ class EventBasedRiskFromGmfsCalculator(base.RiskCalculator):
     pre_calculator = 'event_based'
     is_stochastic = True
 
-    def build_riskinputs(self, gmvs_by_sid, eps={}):
+    def build_riskinputs(self, gmfcoll, eps={}):
+        mon = self.monitor('reading gmfs')
         imtls = self.oqparam.imtls
         if not set(self.oqparam.risk_imtls) & set(imtls):
             rsk = ', '.join(self.oqparam.risk_imtls)
@@ -69,11 +70,12 @@ class EventBasedRiskFromGmfsCalculator(base.RiskCalculator):
                             reduced_eps[asset.ordinal] = eps[asset.ordinal]
                 # build the riskinputs
                 for imt in imtls:
+                    with mon:
+                        gmvs_by_site = [gmfcoll[sid, imt] for sid in sids]
                     ri = self.riskmodel.build_input(
-                        imt, [gmvs_by_sid[sid][imt] for sid in sids],
-                        reduced_assets, reduced_eps)
-                    if ri.weight > 0:
-                        yield ri
+                        imt, gmvs_by_site, reduced_assets, reduced_eps)
+                    logging.info(str(ri))
+                    yield ri
 
     def execute(self):
         monitor = self.monitor.new()
@@ -86,13 +88,10 @@ class EventBasedRiskFromGmfsCalculator(base.RiskCalculator):
         if self.riskmodel.covs:
             logging.warn('NB: asset correlation is ignored by %s',
                          self.__class__.__name__)
-        mon = self.monitor.new()
-        logging.info('Reading the GMFs')
-        gmvs_by_sid = riskinput.GmvsBySidImtRlz(
-            imts, rlzs, self.datastore, mon)
-        mon.flush()
+
+        gmfcoll = riskinput.GmfCollector(imts, rlzs, self.datastore)
         iterargs = ((ri, self.riskmodel, monitor)
-                    for ri in self.build_riskinputs(gmvs_by_sid))
+                    for ri in self.build_riskinputs(gmfcoll))
         return parallel.starmap(ebr_agg, iterargs).reduce()
 
     def post_execute(self, result):
