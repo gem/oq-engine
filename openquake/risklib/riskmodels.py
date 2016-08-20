@@ -507,7 +507,7 @@ class ProbabilisticEventBased(RiskModel):
         :param assets:
            a list of assets on the same site and with the same taxonomy
         :param gmvs_eids:
-           a pair of arrays of E elements
+           a composite array of E elements with fields 'gmv' and 'eid'
         :param epsgetter:
            a callable returning the correct epsilons for the given gmvs
         :returns:
@@ -515,7 +515,7 @@ class ProbabilisticEventBased(RiskModel):
             `openquake.risklib.scientific.ProbabilisticEventBased.Output`
             instance.
         """
-        gmvs, eids = gmvs_eids
+        gmvs, eids = gmvs_eids['gmv'], gmvs_eids['eid']
         E = len(gmvs)
         I = self.insured_losses + 1
         N = len(assets)
