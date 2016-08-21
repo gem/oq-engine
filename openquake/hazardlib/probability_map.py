@@ -20,6 +20,7 @@ from openquake.hazardlib.stats import mean_quantiles
 import numpy
 
 F64 = numpy.float64
+BYTES_PER_FLOAT = 8
 
 
 class ProbabilityCurve(object):
@@ -134,7 +135,7 @@ class ProbabilityMap(dict):
     def nbytes(self):
         """The size of the underlying array"""
         N, L, I = get_shape([self])
-        return 8 * N * L * I
+        return BYTES_PER_FLOAT * N * L * I
 
     # used when exporting to HDF5
     def convert(self, imtls, nsites, idx=0):
@@ -263,7 +264,6 @@ class PmapStats(object):
         self.quantiles = quantiles
 
     # the tests are in the engine
-    # TODO: change the logic and compute the stats by site
     def mean_quantiles(self, sids, pmaps):
         """
         :params sids: array of N site IDs
@@ -287,7 +287,7 @@ class PmapStats(object):
                     curves_by_rlz[i][j] = pmap[sid].array[:, 0]
         mq = mean_quantiles(curves_by_rlz, self.quantiles, self.weights)
         for i, array in enumerate(mq):
-            for j, sid in enumerate(sids):
+            for j, sid in numpy.ndenumerate(sids):
                 stats[sid].array[:, i] = array[j]
         return stats
 
@@ -298,8 +298,8 @@ class PmapStats(object):
         :param pmaps:
             array of R simple ProbabilityMaps
         :returns:
-            a dictionary of simple ProbabilityMaps of size keyed
-            by a string 'mean' or 'quantile-%s'.
+            a dictionary of simple ProbabilityMaps keyed by a string 'mean'
+            or 'quantile-%s'.
         """
         stats = self.mean_quantiles(sids, pmaps)
         names = ['mean'] + ['quantile-%s' % q for q in self.quantiles]

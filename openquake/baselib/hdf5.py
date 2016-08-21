@@ -42,7 +42,7 @@ def create(hdf5, name, dtype, shape=(None,), compression=None,
     :param attrs: dictionary of attributes of the dataset
     :returns: a HDF5 dataset
     """
-    if shape[0] is None:  # complex extendable dataset
+    if shape[0] is None:  # extendable dataset
         dset = hdf5.create_dataset(
             name, (0,) + shape[1:], dtype, chunks=True, maxshape=shape)
     else:  # fixed-shape dataset
