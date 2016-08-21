@@ -27,7 +27,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict, group_array
+from openquake.baselib.general import AccumDict, group_array, split_in_blocks
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import ProbabilityMap
@@ -442,7 +442,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
 
 # ######################## GMF calculator ############################ #
 
-def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc,
+def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_by_gsim,
                             min_iml, monitor):
     """
     :param eb_ruptures:
@@ -451,8 +451,8 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc,
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param imts:
         a list of IMT string
-    :param rlzs_assoc:
-        a RlzsAssoc instance
+    :param rlzs_by_gsim:
+        a dictionary gsim -> associated realizations
     :param monitor:
         a Monitor instance
     :returns:
@@ -464,7 +464,7 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc,
     trunc_level = oq.truncation_level
     correl_model = readinput.get_correl_model(oq)
     gmfadict = create(
-        calc.GmfColl, eb_ruptures, sitecol, imts, rlzs_assoc, trunc_level,
+        calc.GmfColl, eb_ruptures, sitecol, imts, rlzs_by_gsim, trunc_level,
         correl_model, min_iml, monitor).by_rlzi()
     result = {rlzi: [gmfadict[rlzi], None]
               if oq.ground_motion_fields else [None, None]
@@ -536,6 +536,23 @@ class EventBasedCalculator(ClassicalCalculator):
         self.datastore.flush()
         return acc
 
+    def gen_args(self, ebruptures):
+        oq = self.oqparam
+        monitor = self.monitor(self.core_task.__name__)
+        monitor.oqparam = oq
+        min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
+        for block in split_in_blocks(
+                ebruptures, oq.concurrent_tasks or 1,
+                key=operator.attrgetter('grp_id'),
+                weight=operator.attrgetter('weight')):
+            grp_id = block[0].grp_id
+            rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
+            rlzs_by_gsim.sm_id = self.rlzs_assoc.sm_ids[grp_id]
+            rlzs_by_gsim.samples = self.rlzs_assoc.samples[grp_id]
+            rlzs_by_gsim.seed = self.rlzs_assoc.seed
+            yield (block, self.sitecol, oq.imtls, rlzs_by_gsim,
+                   min_iml, monitor)
+
     def execute(self):
         """
         Run in parallel `core_task(sources, sitecol, monitor)`, by
@@ -545,17 +562,8 @@ class EventBasedCalculator(ClassicalCalculator):
         oq = self.oqparam
         if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
             return
-        monitor = self.monitor(self.core_task.__name__)
-        monitor.oqparam = oq
-        min_iml = calc.fix_minimum_intensity(
-            oq.minimum_intensity, oq.imtls)
-        acc = parallel.apply(
-            self.core_task.__func__,
-            (self.sesruptures, self.sitecol, oq.imtls, self.rlzs_assoc,
-             min_iml, monitor),
-            concurrent_tasks=self.oqparam.concurrent_tasks,
-            key=operator.attrgetter('grp_id'),
-            weight=operator.attrgetter('weight')).reduce(
+        acc = parallel.starmap(
+            self.core_task.__func__, self.gen_args(self.sesruptures)).reduce(
                 agg=self.combine_curves_and_save_gmfs,
                 acc={rlz.ordinal: ProbabilityMap()
                      for rlz in self.rlzs_assoc.realizations})
