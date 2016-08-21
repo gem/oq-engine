@@ -566,7 +566,7 @@ class EventBasedCalculator(ClassicalCalculator):
             return
         acc = parallel.starmap(
             self.core_task.__func__, self.gen_args(self.sesruptures)).reduce(
-                agg=self.combine_curves_and_save_gmfs,
+                agg=self.combine_pmaps_and_save_gmfs,
                 acc={rlz.ordinal: ProbabilityMap()
                      for rlz in self.rlzs_assoc.realizations})
         if oq.ground_motion_fields:
