@@ -66,24 +66,9 @@ idx:uint32,lon,lat,site_id:uint32,taxonomy:uint32:,number,area,occupants:float64
         pickle.loads(pickle.dumps(assetcol))
 
     def test_get_hazard(self):
-        self.assertEqual(
-            list(self.riskmodel.get_imt_taxonomies()),
-            [('PGA', set(['RM'])), ('SA(0.2)', set(['RC+'])),
-             ('SA(0.5)', set(['W']))])
         self.assertEqual(len(self.sitecol), 2)
         hazard_by_site = [{}] * 2
-
-        ri_PGA = self.riskmodel.build_input(
-            'PGA', hazard_by_site, self.assets_by_site, {})
-        haz = ri_PGA.get_hazard(rlzs_assoc)
-        self.assertEqual(len(haz), 2)
-
-        ri_SA_02 = self.riskmodel.build_input(
-            'SA(0.2)', hazard_by_site, self.assets_by_site, {})
-        haz = ri_SA_02.get_hazard(rlzs_assoc)
-        self.assertEqual(len(haz), 2)
-
-        ri_SA_05 = self.riskmodel.build_input(
-            'SA(0.5)', hazard_by_site, self.assets_by_site, {})
-        haz = ri_SA_05.get_hazard(rlzs_assoc)
+        ri = self.riskmodel.build_input(
+            hazard_by_site, self.assets_by_site, {})
+        haz = ri.get_hazard(rlzs_assoc)
         self.assertEqual(len(haz), 2)
