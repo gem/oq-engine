@@ -36,7 +36,7 @@ from openquake.commonlib import readinput, riskmodels, datastore, source
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import starmap, executor
 from openquake.commonlib.views import view, rst_table, stats
-from openquake.baselib.python3compat import with_metaclass
+from openquake.baselib.python3compat import with_metaclass, encode
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -611,29 +611,21 @@ class RiskCalculator(HazardCalculator):
                         for asset in assets:
                             reduced_eps[asset.ordinal] = eps[asset.ordinal]
 
-                # collect the hazards by key into hazards by imt
-                hdata = collections.defaultdict(lambda: [{} for _ in indices])
+                # collect the hazards by key into hazards by site
+                hdata = [{imt: {} for imt in imtls} for _ in indices]
                 for key, hazards_by_imt in hazards_by_key.items():
                     for imt in imtls:
                         hazards_by_site = hazards_by_imt[imt]
                         for i, haz in enumerate(hazards_by_site[indices]):
-                            hdata[imt][i][key] = haz
+                            hdata[i][imt][key] = haz
                 # build the riskinputs
-                for imt in hdata:
-                    ri = self.riskmodel.build_input(
-                        imt, hdata[imt], reduced_assets, reduced_eps)
-                    if ri.weight > 0:
-                        riskinputs.append(ri)
+                ri = self.riskmodel.build_input(
+                    hdata, reduced_assets, reduced_eps)
+                if ri.weight > 0:
+                    riskinputs.append(ri)
             assert riskinputs
             logging.info('Built %d risk inputs', len(riskinputs))
-            return sorted(riskinputs, key=self.riskinput_key)
-
-    def riskinput_key(self, ri):
-        """
-        :param ri: riskinput object
-        :returns: the IMT associated to it
-        """
-        return ri.imt
+            return riskinputs
 
     def execute(self):
         """
@@ -661,7 +653,7 @@ def view_task_info(token, dstore):
     tasks = [calc.core_task.__name__ for calc in calculators.values()]
     data = ['measurement mean stddev min max num_tasks'.split()]
     for task in set(tasks):  # strip duplicates
-        records = pdata[pdata['operation'] == 'total ' + task]
+        records = pdata[pdata['operation'] == encode('total ' + task)]
         if len(records):
             for stat in ('time_sec', 'memory_mb'):
                 val = records[stat]
