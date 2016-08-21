@@ -587,7 +587,7 @@ class GmfCollector(object):
                 pass
         return hazard
 
-    def flush(self, dstore):
+    def flush(self, dstore, offset=0):
         for key, data in self.dic.items():
             fullkey = 'gmf_data/' + key
             try:
@@ -595,7 +595,11 @@ class GmfCollector(object):
             except KeyError:
                 dset = hdf5.create(
                     dstore.hdf5, fullkey, GmvEidDset.dt, (None,))
-            hdf5.extend(dset, data.value)
+            gmfa = data.value
+            gmfa['eid'] += offset
+            offset += len(set(gmfa['eid']))
+            hdf5.extend(dset, gmfa)
+        return offset
 
 
 class RiskInputFromRuptures(object):
