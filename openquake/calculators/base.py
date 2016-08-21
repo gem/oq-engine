@@ -36,7 +36,7 @@ from openquake.commonlib import readinput, riskmodels, datastore, source
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import starmap, executor
 from openquake.commonlib.views import view, rst_table, stats
-from openquake.baselib.python3compat import with_metaclass
+from openquake.baselib.python3compat import with_metaclass, encode
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -376,12 +376,6 @@ class HazardCalculator(BaseCalculator):
                 self.datastore['csm_info'] = self.csm.info
                 self.rup_data = {}
         self.init()
-        if 'source' in self.oqparam.inputs:
-            with self.monitor('managing sources', autoflush=True):
-                self.taskman = self.send_sources()
-            attrs = self.datastore.hdf5['composite_source_model'].attrs
-            attrs['weight'] = self.csm.weight
-            attrs['filtered_weight'] = self.csm.filtered_weight
 
     def pre_execute(self):
         """
@@ -543,29 +537,6 @@ class HazardCalculator(BaseCalculator):
         return (self.oqparam.calculation_mode in ('psha', 'classical') and
                 len(self.sitecol) > self.oqparam.sites_per_tile)
 
-    def send_sources(self):
-        """
-        Filter/split and send the sources to the workers.
-        :returns: a :class:`openquake.commonlib.parallel.TaskManager`
-        """
-        oq = self.oqparam
-        tiles = [self.sitecol]
-        self.num_tiles = 1
-        if self.is_tiling():
-            hint = math.ceil(len(self.sitecol) / oq.sites_per_tile)
-            tiles = self.sitecol.split_in_tiles(hint)
-            self.num_tiles = len(tiles)
-            logging.info('Generating %d tiles of %d sites each',
-                         self.num_tiles, len(tiles[0]))
-        manager = source.SourceManager(
-            self.csm, oq.maximum_distance, oq.concurrent_tasks, self.datastore,
-            self.monitor.new(oqparam=oq), self.random_seed,
-            oq.filter_sources, num_tiles=self.num_tiles)
-        tm = starmap(self.core_task.__func__, manager.gen_args(tiles))
-        tm.maxweight = manager.maxweight
-        manager.store_source_info(self.datastore)
-        return tm
-
     def save_data_transfer(self, taskmanager):
         """
         Save information about the data transfer in the risk calculation
@@ -639,29 +610,21 @@ class RiskCalculator(HazardCalculator):
                         for asset in assets:
                             reduced_eps[asset.ordinal] = eps[asset.ordinal]
 
-                # collect the hazards by key into hazards by imt
-                hdata = collections.defaultdict(lambda: [{} for _ in indices])
+                # collect the hazards by key into hazards by site
+                hdata = [{imt: {} for imt in imtls} for _ in indices]
                 for key, hazards_by_imt in hazards_by_key.items():
                     for imt in imtls:
                         hazards_by_site = hazards_by_imt[imt]
                         for i, haz in enumerate(hazards_by_site[indices]):
-                            hdata[imt][i][key] = haz
+                            hdata[i][imt][key] = haz
                 # build the riskinputs
-                for imt in hdata:
-                    ri = self.riskmodel.build_input(
-                        imt, hdata[imt], reduced_assets, reduced_eps)
-                    if ri.weight > 0:
-                        riskinputs.append(ri)
+                ri = self.riskmodel.build_input(
+                    hdata, reduced_assets, reduced_eps)
+                if ri.weight > 0:
+                    riskinputs.append(ri)
             assert riskinputs
             logging.info('Built %d risk inputs', len(riskinputs))
-            return sorted(riskinputs, key=self.riskinput_key)
-
-    def riskinput_key(self, ri):
-        """
-        :param ri: riskinput object
-        :returns: the IMT associated to it
-        """
-        return ri.imt
+            return riskinputs
 
     def execute(self):
         """
@@ -689,7 +652,7 @@ def view_task_info(token, dstore):
     tasks = [calc.core_task.__name__ for calc in calculators.values()]
     data = ['measurement mean stddev min max num_tasks'.split()]
     for task in set(tasks):  # strip duplicates
-        records = pdata[pdata['operation'] == 'total ' + task]
+        records = pdata[pdata['operation'] == encode('total ' + task)]
         if len(records):
             for stat in ('time_sec', 'memory_mb'):
                 val = records[stat]

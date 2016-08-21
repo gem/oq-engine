@@ -9,7 +9,7 @@
                 "type": "Point"
             },
             "properties": {
-                "iml": 0.6348297250517607
+                "iml": 0.6348296756020209
             },
             "type": "Feature"
         },
@@ -22,7 +22,7 @@
                 "type": "Point"
             },
             "properties": {
-                "iml": 0.5942485740459559
+                "iml": 0.5942485185668946
             },
             "type": "Feature"
         },
@@ -35,7 +35,7 @@
                 "type": "Point"
             },
             "properties": {
-                "iml": 0.7474830305424772
+                "iml": 0.7474831125781735
             },
             "type": "Feature"
         }
