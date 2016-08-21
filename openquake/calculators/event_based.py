@@ -537,6 +537,10 @@ class EventBasedCalculator(ClassicalCalculator):
         return acc
 
     def gen_args(self, ebruptures):
+        """
+        :param ebruptures: a list of EBRupture objects to be split
+        :yields: the arguments for compute_gmfs_and_curves
+        """
         oq = self.oqparam
         monitor = self.monitor(self.core_task.__name__)
         monitor.oqparam = oq
@@ -547,9 +551,6 @@ class EventBasedCalculator(ClassicalCalculator):
                 weight=operator.attrgetter('weight')):
             grp_id = block[0].grp_id
             rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
-            rlzs_by_gsim.sm_id = self.rlzs_assoc.sm_ids[grp_id]
-            rlzs_by_gsim.samples = self.rlzs_assoc.samples[grp_id]
-            rlzs_by_gsim.seed = self.rlzs_assoc.seed
             yield (block, self.sitecol, oq.imtls, rlzs_by_gsim,
                    min_iml, monitor)
 
