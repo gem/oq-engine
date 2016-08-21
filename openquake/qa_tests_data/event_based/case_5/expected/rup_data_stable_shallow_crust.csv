@@ -1,4 +1,4 @@
-rupserial,multiplicity,numsites,occurrence_rate,dip,mag,rake,ztor
+rupserial,multiplicity,numsites,occurrence_rate:float32,dip:float32,mag:float32,rake:float32,ztor:float32
 81975,1,5,3.890308E-05,9.000000E+01,4.900000E+00,-9.000000E+01,7.125135E+00
 83116,1,4,1.563194E-04,9.000000E+01,4.700000E+00,-9.000000E+01,1.094772E+01
 124398,1,5,1.121607E-04,9.000000E+01,5.100000E+00,0.000000E+00,7.077041E+00

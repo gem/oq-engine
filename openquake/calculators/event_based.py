@@ -610,10 +610,27 @@ class EventBasedCalculator(ClassicalCalculator):
             # TODO: perhaps it is possible to avoid reprocessing the source
             # model, however usually this is quite fast and do not dominate
             # the computation
-            self.cl.run()
-            for imt in self.mean_curves.dtype.fields:
+            self.cl.run(close=False)
+            cl_mean_curves = get_mean_curves(self.cl.datastore)
+            eb_mean_curves = get_mean_curves(self.datastore)
+            for imt in eb_mean_curves.dtype.names:
                 rdiff, index = max_rel_diff_index(
-                    self.cl.mean_curves[imt], self.mean_curves[imt])
+                    cl_mean_curves[imt], eb_mean_curves[imt])
                 logging.warn('Relative difference with the classical '
                              'mean curves for IMT=%s: %d%% at site index %d',
                              imt, rdiff * 100, index)
+
+
+def get_mean_curves(dstore):
+    """
+    Extract the mean hazard curves from the datastore, as a composite
+    array of length nsites.
+    """
+    imtls = dstore['oqparam'].imtls
+    nsites = len(dstore['sitecol'])
+    hcurves = dstore['hcurves']
+    if 'mean' in hcurves:
+        mean = dstore['hcurves/mean']
+    elif len(hcurves) == 1:  # there is a single realization
+        mean = dstore['hcurves/rlz-0000']
+    return mean.convert(imtls, nsites)
