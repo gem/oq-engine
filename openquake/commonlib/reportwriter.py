@@ -20,7 +20,7 @@
 """
 Utilities to build a report writer generating a .rst report for a calculation
 """
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
 import os
 import sys
 import mock
@@ -29,6 +29,7 @@ import logging
 
 
 from openquake.baselib.general import humansize
+from openquake.baselib.python3compat import encode
 from openquake.commonlib import readinput, datastore, source, parallel
 
 
@@ -61,8 +62,7 @@ class ReportWriter(object):
     def __init__(self, dstore):
         self.dstore = dstore
         self.oq = oq = dstore['oqparam']
-        self.text = (oq.description.encode('utf8') + '\n' +
-                     '=' * len(oq.description))
+        self.text = (oq.description + '\n' + '=' * len(oq.description))
         info = dstore['job_info']
         dpath = dstore.hdf5path
         mtime = os.path.getmtime(dpath)
@@ -117,8 +117,8 @@ class ReportWriter(object):
 
     def save(self, fname):
         """Save the report"""
-        with open(fname, 'w') as f:
-            f.write(self.text)
+        with open(fname, 'wb') as f:
+            f.write(encode(self.text))
 
 
 def build_report(job_ini, output_dir=None):
