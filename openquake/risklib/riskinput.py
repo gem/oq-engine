@@ -339,32 +339,20 @@ class CompositeRiskModel(collections.Mapping):
     def __len__(self):
         return len(self._riskmodels)
 
-    def get_imt_taxonomies(self, imt=None):
+    def build_input(self, hazards_by_site, assetcol, eps_dict):
         """
-        :returns: sorted list of pairs (imt, taxonomies)
-        """
-        imt_taxonomies = collections.defaultdict(set)
-        for taxonomy, riskmodel in self.items():
-            for loss_type, rf in sorted(riskmodel.risk_functions.items()):
-                if imt is None or imt == rf.imt:
-                    imt_taxonomies[rf.imt].add(riskmodel.taxonomy)
-        return sorted(imt_taxonomies.items())
-
-    def build_input(self, imt, hazards_by_site, assetcol, eps_dict):
-        """
-        :param imt: an Intensity Measure Type
         :param hazards_by_site: an array of hazards per each site
         :param assetcol: AssetCollection instance
         :param eps_dict: a dictionary of epsilons
         :returns: a :class:`RiskInput` instance
         """
-        return RiskInput(self.get_imt_taxonomies(imt),
-                         hazards_by_site, assetcol, eps_dict)
+        return RiskInput(hazards_by_site, assetcol, eps_dict)
 
     def build_inputs_from_ruptures(
-            self, sitecol, all_ruptures, trunc_level, correl_model,
+            self, imts, sitecol, all_ruptures, trunc_level, correl_model,
             min_iml, eps, hint):
         """
+        :param imts: list of intensity measure type strings
         :param sitecol: a SiteCollection instance
         :param all_ruptures: the complete list of EBRupture instances
         :param trunc_level: the truncation level (or None)
@@ -375,7 +363,6 @@ class CompositeRiskModel(collections.Mapping):
 
         Yield :class:`RiskInputFromRuptures` instances.
         """
-        imt_taxonomies = self.get_imt_taxonomies()
         by_grp_id = operator.attrgetter('grp_id')
         for ses_ruptures in split_in_blocks(
                 all_ruptures, hint or 1, key=by_grp_id,
@@ -384,7 +371,7 @@ class CompositeRiskModel(collections.Mapping):
             for sr in ses_ruptures:
                 eids.extend(sr.events['eid'])
             yield RiskInputFromRuptures(
-                imt_taxonomies, sitecol, ses_ruptures,
+                imts, sitecol, ses_ruptures,
                 trunc_level, correl_model, min_iml,
                 eps[:, eids] if eps is not None else None, eids)
 
@@ -414,11 +401,8 @@ class CompositeRiskModel(collections.Mapping):
                 riskmodel = self[taxonomy]
                 epsgetter = riskinput.epsilon_getter(
                     [asset.ordinal for asset in assets])
-                for imt, taxonomies in riskinput.imt_taxonomies:
-                    if taxonomy in taxonomies:
-                        with mon_risk:
-                            yield riskmodel.out_by_lr(
-                                imt, assets, hazard[imt], epsgetter)
+                with mon_risk:
+                    yield riskmodel.out_by_lr(assets, hazard, epsgetter)
         if hasattr(hazard_by_site, 'close'):  # for event based risk
             monitor.gmfbytes = hazard_by_site.close()
 
@@ -438,16 +422,10 @@ class RiskInput(object):
     :param assets_by_site: array of assets, one per site
     :param eps_dict: dictionary of epsilons
     """
-    def __init__(self, imt_taxonomies, hazard_by_site, assets_by_site,
-                 eps_dict):
-        if not imt_taxonomies:
-            self.weight = 0
-            return
-        [(self.imt, taxonomies)] = imt_taxonomies
+    def __init__(self, hazard_by_site, assets_by_site, eps_dict):
         self.hazard_by_site = hazard_by_site
-        self.assets_by_site = [
-            [a for a in assets if a.taxonomy in taxonomies]
-            for assets in assets_by_site]
+        self.assets_by_site = assets_by_site
+        self.eps = eps_dict
         taxonomies_set = set()
         self.weight = 0
         for assets in self.assets_by_site:
@@ -456,7 +434,6 @@ class RiskInput(object):
             self.weight += len(assets)
         self.taxonomies = sorted(taxonomies_set)
         self.eids = None  # for API compatibility with RiskInputFromRuptures
-        self.eps = eps_dict
 
     @property
     def imt_taxonomies(self):
@@ -479,13 +456,12 @@ class RiskInput(object):
         :returns:
             list of hazard dictionaries imt -> rlz -> haz per each site
         """
-        return [{self.imt: rlzs_assoc.combine(hazard)}
-                for hazard in self.hazard_by_site]
+        return [{imt: rlzs_assoc.combine(haz[imt]) for imt in haz}
+                for haz in self.hazard_by_site]
 
     def __repr__(self):
-        return '<%s IMT=%s, taxonomy=%s, weight=%d>' % (
-            self.__class__.__name__, self.imt, ', '.join(self.taxonomies),
-            self.weight)
+        return '<%s taxonomies=%s, weight=%d>' % (
+            self.__class__.__name__, ', '.join(self.taxonomies), self.weight)
 
 
 def make_eps(assets_by_site, num_samples, seed, correlation):
@@ -562,9 +538,8 @@ class RiskInputFromRuptures(object):
     :param correl_model: correlation model for the GSIMs
     :params eps: a matrix of epsilons
     """
-    def __init__(self, imt_taxonomies, sitecol, ses_ruptures,
+    def __init__(self, imts, sitecol, ses_ruptures,
                  trunc_level, correl_model, min_iml, epsilons, eids):
-        self.imt_taxonomies = imt_taxonomies
         self.sitecol = sitecol
         self.ses_ruptures = numpy.array(ses_ruptures)
         self.grp_id = ses_ruptures[0].grp_id
@@ -572,7 +547,7 @@ class RiskInputFromRuptures(object):
         self.correl_model = correl_model
         self.min_iml = min_iml
         self.weight = sum(sr.weight for sr in ses_ruptures)
-        self.imts = sorted(set(imt for imt, _ in imt_taxonomies))
+        self.imts = imts
         self.eids = eids  # E events
         if epsilons is not None:
             self.eps = epsilons  # matrix N x E, events in this block
@@ -606,8 +581,8 @@ class RiskInputFromRuptures(object):
         return gmfcoll
 
     def __repr__(self):
-        return '<%s IMT_taxonomies=%s, weight=%d>' % (
-            self.__class__.__name__, self.imt_taxonomies, self.weight)
+        return '<%s imts=%s, weight=%d>' % (
+            self.__class__.__name__, self.imts, self.weight)
 
 
 def create(GmfColl, eb_ruptures, sitecol, imts, rlzs_assoc,
