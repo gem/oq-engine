@@ -27,7 +27,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict, group_array
+from openquake.baselib.general import AccumDict, group_array, split_in_blocks
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import ProbabilityMap
@@ -215,14 +215,15 @@ class EBRupture(object):
         return '<%s #%d, grp_id=%d>' % (self.__class__.__name__,
                                         self.serial, self.grp_id)
 
-def compute_ruptures(sources, sitecol, rlzs_assoc, monitor):
+
+def compute_ruptures(sources, sitecol, rlzs_by_gsim, monitor):
     """
     :param sources:
         List of commonlib.source.Source tuples
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param rlzs_assoc:
-        a :class:`openquake.commonlib.source.RlzsAssoc` instance
+    :param rlzs_by_gsim:
+        a dictionary gsim -> realizations of that gsim
     :param monitor:
         monitor instance
     :returns:
@@ -234,7 +235,7 @@ def compute_ruptures(sources, sitecol, rlzs_assoc, monitor):
     oq = monitor.oqparam
     trt = sources[0].tectonic_region_type
     max_dist = oq.maximum_distance[trt]
-    cmaker = ContextMaker(rlzs_assoc.gsims_by_grp_id[src_group_id])
+    cmaker = ContextMaker(rlzs_by_gsim)
     params = sorted(cmaker.REQUIRES_RUPTURE_PARAMETERS)
     rup_data_dt = numpy.dtype(
         [('rupserial', U32), ('multiplicity', U16),
@@ -244,7 +245,7 @@ def compute_ruptures(sources, sitecol, rlzs_assoc, monitor):
     rup_data = []
     calc_times = []
     rup_mon = monitor('filtering ruptures', measuremem=False)
-    num_samples = rlzs_assoc.samples[src_group_id]
+    num_samples = rlzs_by_gsim.samples
 
     # Compute and save stochastic event sets
     for src in sources:
@@ -256,8 +257,7 @@ def compute_ruptures(sources, sitecol, rlzs_assoc, monitor):
             filter_sites_by_distance_to_rupture,
             integration_distance=max_dist, sites=s_sites)
         num_occ_by_rup = sample_ruptures(
-            src, oq.ses_per_logic_tree_path, num_samples,
-            rlzs_assoc.seed)
+            src, oq.ses_per_logic_tree_path, num_samples, rlzs_by_gsim.seed)
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
@@ -443,7 +443,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
 
 # ######################## GMF calculator ############################ #
 
-def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc,
+def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_by_gsim,
                             min_iml, monitor):
     """
     :param eb_ruptures:
@@ -452,8 +452,8 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc,
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param imts:
         a list of IMT string
-    :param rlzs_assoc:
-        a RlzsAssoc instance
+    :param rlzs_by_gsim:
+        a dictionary gsim -> associated realizations
     :param monitor:
         a Monitor instance
     :returns:
@@ -465,7 +465,7 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc,
     trunc_level = oq.truncation_level
     correl_model = readinput.get_correl_model(oq)
     gmfadict = create(
-        calc.GmfColl, eb_ruptures, sitecol, imts, rlzs_assoc, trunc_level,
+        calc.GmfColl, eb_ruptures, sitecol, imts, rlzs_by_gsim, trunc_level,
         correl_model, min_iml, monitor).by_rlzi()
     result = {rlzi: [gmfadict[rlzi], None]
               if oq.ground_motion_fields else [None, None]
@@ -537,6 +537,24 @@ class EventBasedCalculator(ClassicalCalculator):
         self.datastore.flush()
         return acc
 
+    def gen_args(self, ebruptures):
+        """
+        :param ebruptures: a list of EBRupture objects to be split
+        :yields: the arguments for compute_gmfs_and_curves
+        """
+        oq = self.oqparam
+        monitor = self.monitor(self.core_task.__name__)
+        monitor.oqparam = oq
+        min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
+        for block in split_in_blocks(
+                ebruptures, oq.concurrent_tasks or 1,
+                key=operator.attrgetter('grp_id'),
+                weight=operator.attrgetter('weight')):
+            grp_id = block[0].grp_id
+            rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
+            yield (block, self.sitecol, oq.imtls, rlzs_by_gsim,
+                   min_iml, monitor)
+
     def execute(self):
         """
         Run in parallel `core_task(sources, sitecol, monitor)`, by
@@ -546,17 +564,8 @@ class EventBasedCalculator(ClassicalCalculator):
         oq = self.oqparam
         if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
             return
-        monitor = self.monitor(self.core_task.__name__)
-        monitor.oqparam = oq
-        min_iml = calc.fix_minimum_intensity(
-            oq.minimum_intensity, oq.imtls)
-        acc = parallel.apply(
-            self.core_task.__func__,
-            (self.sesruptures, self.sitecol, oq.imtls, self.rlzs_assoc,
-             min_iml, monitor),
-            concurrent_tasks=self.oqparam.concurrent_tasks,
-            key=operator.attrgetter('grp_id'),
-            weight=operator.attrgetter('weight')).reduce(
+        acc = parallel.starmap(
+            self.core_task.__func__, self.gen_args(self.sesruptures)).reduce(
                 agg=self.combine_curves_and_save_gmfs,
                 acc={rlz.ordinal: ProbabilityMap()
                      for rlz in self.rlzs_assoc.realizations})
