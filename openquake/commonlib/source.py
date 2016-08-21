@@ -311,10 +311,13 @@ class RlzsAssoc(collections.Mapping):
         :param results: dictionary (src_group_id, gsim) -> curves
         :returns: a dictionary rlz -> aggregate curves
         """
-        acc = {rlz: ProbabilityMap() for rlz in self.realizations}
+        acc = {}
         for key in results:
             for rlz in self.rlzs_assoc[key]:
-                acc[rlz] |= results[key]
+                if rlz in acc:
+                    acc[rlz] |= results[key]
+                else:
+                    acc[rlz] = copy.copy(results[key])
         return acc
 
     # used in riskinput
@@ -476,7 +479,7 @@ class CompositionInfo(object):
             srcgroups = [
                 sourceconverter.SourceGroup(
                     self.trts[trti], id=grp_id, eff_ruptures=effrup)
-                for grp_id, trti, effrup, sm_id in tdata if effrup > 0]
+                for grp_id, trti, effrup, sm_id in tdata if effrup]
             path = tuple(rec['path'].split('_'))
             trts = set(sg.trt for sg in srcgroups)
             num_gsim_paths = self.gsim_lt.reduce(trts).get_num_paths()
@@ -538,7 +541,7 @@ class CompositionInfo(object):
                 assoc._add_realizations(indices, smodel, gsim_lt, rlzs)
             elif trts:
                 logging.warn('No realizations for %s, %s',
-                             '_'.join(smodel.path), smodel.name)
+                             b'_'.join(smodel.path), smodel.name)
         # NB: realizations could be filtered away by logic tree reduction
         if assoc.realizations:
             assoc._init()
@@ -753,9 +756,9 @@ class SourceManager(object):
         self.split_map = {}  # src_group_id, source_id -> split sources
         self.infos = {}  # src_group_id, source_id -> SourceInfo tuple
 
-        # hystorically, we always tried to to produce 2 * concurrent_tasks
-        self.maxweight = max(MAXWEIGHT, math.ceil(
-            csm.weight / (self.concurrent_tasks * 2 * num_tiles)))
+        self.maxweight = math.ceil(csm.weight / self.concurrent_tasks)
+        if num_tiles > 1:
+            self.maxweight = max(self.maxweight / num_tiles, MAXWEIGHT)
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.maxweight)
         if random_seed is not None:
