@@ -454,7 +454,7 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_by_gsim,
     :param monitor:
         a Monitor instance
     :returns:
-        a dictionary (rlzi, imt) -> [gmfarray, haz_curves]
+        a dictionary with keys gmfcoll and hcurves
    """
     oq = monitor.oqparam
     # NB: by construction each block is a non-empty list with
@@ -466,16 +466,15 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_by_gsim,
         trunc_level, correl_model, min_iml, monitor)
     result = dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
                   hcurves={})
-    if oq.hazard_curves_from_gmfs:
-        with monitor('bulding hazard curves', measuremem=False):
-            duration = oq.investigation_time * oq.ses_per_logic_tree_path
-            for key, dset in gmfcoll.dic.items():
-                # key has the form rzli/sid/imt
-                imt = key.rsplit('/', 1)[-1]
-                poes = calc._gmvs_to_haz_curve(
-                    dset.value['gmv'], oq.imtls[imt], oq.investigation_time,
-                    duration)
-                result['hcurves'][key] = poes
+    with monitor('bulding hazard curves', measuremem=False):
+        duration = oq.investigation_time * oq.ses_per_logic_tree_path
+        for key, dset in gmfcoll.dic.items():
+            # key has the form rzli/sid/imt
+            imt = key.rsplit('/', 1)[-1]
+            poes = calc._gmvs_to_haz_curve(
+                dset.value['gmv'], oq.imtls[imt], oq.investigation_time,
+                duration)
+            result['hcurves'][key] = poes
     return result
 
 
