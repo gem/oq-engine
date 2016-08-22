@@ -222,7 +222,7 @@ def compute_ruptures(sources, sitecol, rlzs_by_gsim, monitor):
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param rlzs_by_gsim:
-        a dictionary gsim -> realizations of that gsim
+        a dictionary gsim -> realizations of that GSIM
     :param monitor:
         monitor instance
     :returns:
