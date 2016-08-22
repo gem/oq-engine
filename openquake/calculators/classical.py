@@ -175,7 +175,7 @@ def classical(sources, sitecol, rlzs_by_gsim, monitor):
     :param sitecol:
         a SiteCollection instance
     :param rlzs_by_gsim:
-        a RlzsAssoc instance
+        a dictionary of realizations by GSIM
     :param monitor:
         a monitor instance
     :returns:
