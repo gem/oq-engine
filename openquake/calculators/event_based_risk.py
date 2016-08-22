@@ -314,8 +314,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = self.riskmodel.build_inputs_from_ruptures(
-                self.sitecol.complete, all_ruptures, oq.truncation_level,
-                correl_model, min_iml, eps, oq.concurrent_tasks or 1)
+                list(oq.imtls), self.sitecol.complete, all_ruptures,
+                oq.truncation_level, correl_model, min_iml, eps,
+                oq.concurrent_tasks or 1)
             # NB: I am using generators so that the tasks are submitted one at
             # the time, without keeping all of the arguments in memory
             tm = starmap(
