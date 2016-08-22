@@ -649,7 +649,8 @@ def export_gmf_txt(key, dest, sitecol, imts, ruptures, rlz,
     rows = []
     for rupture in ruptures:
         indices = rupture.indices
-        gmvs = [a['gmv'] for a in group_array(rupture.gmfa, 'imti').values()]
+        gmvs = [F64(a['gmv'])
+                for a in group_array(rupture.gmfa, 'imti').values()]
         row = [rupture.etag, ' '.join(map(str, indices))] + gmvs
         rows.append(row)
     write_csv(dest, rows)
@@ -673,7 +674,7 @@ def _get_gmfs(dstore, serial, eid):
     rup = dstore['sescollection/' + serial]
     correl_model = readinput.get_correl_model(oq)
     rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(rup.grp_id)
-    gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F32)
+    gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F64)
                           for rlz in rlzs_by_gsim.realizations])
     gmfadict = create(calc.GmfColl,
                       [rup], sitecol, oq.imtls, rlzs_by_gsim,
