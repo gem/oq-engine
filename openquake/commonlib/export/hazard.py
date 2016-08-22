@@ -245,11 +245,19 @@ def export_hazard_csv(key, dest, sitemesh, pmap,
     """
     nsites = len(sitemesh)
     lst = []
+    # build the export dtype, of the form PGA-0.1, PGA-0.2 ...
     for imt, imls in imtls.items():
         for iml in imls:
             lst.append(('%s-%s' % (imt, iml), F64))
-    hcurves = pmap.convert(imtls, nsites).view(numpy.dtype(lst))
-    write_csv(dest, util.compose_arrays(sitemesh, hcurves), comment=comment)
+    curves = numpy.zeros(nsites, numpy.dtype(lst))
+    for sid, pcurve in pmap.items():
+        curve = curves[sid]
+        idx = 0
+        for imt, imls in imtls.items():
+            for iml in imls:
+                curve['%s-%s' % (imt, iml)] = pcurve.array[idx]
+                idx += 1
+    write_csv(dest, util.compose_arrays(sitemesh, curves), comment=comment)
     return [dest]
 
 
