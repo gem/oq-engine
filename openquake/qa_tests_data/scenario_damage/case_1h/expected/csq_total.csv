@@ -1,2 +1,2 @@
-structural~mean,structural~stddev
+structural~mean:float32,structural~stddev:float32
 2.26318E+03,1.43303E+03

@@ -1,2 +1,2 @@
-contents~mean,contents~stddev,nonstructural~mean,nonstructural~stddev,structural~mean,structural~stddev
+contents~mean:float32,contents~stddev:float32,nonstructural~mean:float32,nonstructural~stddev:float32,structural~mean:float32,structural~stddev:float32
 8.05071E+03,2.43223E+03,1.39286E+04,4.91693E+03,2.81581E+03,1.95011E+03
