@@ -77,25 +77,6 @@ def agg_curves(acc, curves):
     return new
 
 
-def array_of_curves(pmap, nsites, imtls, gsim_idx=0):
-    """
-    Convert a probability map into an array of length `nsites`
-    and dtype `imt_dt`.
-
-    :param pmap: a dictionary sid -> ProbabilityCurve
-    :param nsites: the number of sites in the full site collection
-    :param imtls: intensity measure types and levels
-    :param gsims_idx: extract the data corresponding to a specific GSIM
-    """
-    curves = numpy.zeros(nsites, imtls.imt_dt)
-    for sid in pmap:
-        array = pmap[sid].array[:, gsim_idx]
-        for imt in imtls:
-            curves[imt][sid] = array[imtls.slicedic[imt]]
-            # NB: curves[sid][imt] does not work on h5py 2.2
-    return curves
-
-
 def calc_hazard_curves(
         sources, sites, imtls, gsim_by_trt, truncation_level=None,
         source_site_filter=filters.source_site_noop_filter,
@@ -158,7 +139,7 @@ def calc_hazard_curves(
         pmap |= hazard_curves_per_trt(
             sources_by_trt[trt], sites, imtls, [gsim_by_trt[trt]],
             truncation_level, source_site_filter)
-    return array_of_curves(pmap, len(sites), imtls)
+    return pmap.convert(imtls, len(sites))
 
 
 # NB: it is important for this to be fast since it is inside an inner loop
