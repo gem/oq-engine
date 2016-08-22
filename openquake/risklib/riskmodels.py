@@ -255,9 +255,8 @@ class RiskModel(object):
 
     def out_by_lr(self, assets, hazard, epsgetter):
         """
-        :param imt: restrict the risk functions to this IMT
         :param assets: an array of assets of homogeneous taxonomy
-        :param hazard: a dictionary rlz -> hazard
+        :param hazard: a dictionary imt -> rlz -> hazard
         :param epsgetter: a callable returning epsilons for the given eids
         :returns: a dictionary (l, r) -> output
         """
