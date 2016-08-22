@@ -353,6 +353,10 @@ def build_hcurves_and_stats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
     :param pstats: instance of PmapStats
     :param rlzs_assoc: instance of RlzsAssoc
     :param monitor: instance of Monitor
+    :returns: a dictionary kind -> ProbabilityMap
+
+    The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
+    used to specify the kind of output.
     """
     rlzs = rlzs_assoc.realizations
     with monitor('combine pmaps'):
