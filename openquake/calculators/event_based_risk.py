@@ -495,7 +495,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         loss_curve_dt, _ = self.riskmodel.build_all_loss_dtypes(
             C, oq.conditional_loss_poes, oq.insured_losses)
         lts = self.riskmodel.loss_types
-        lr_data = [(l, r, dset.dset.value) for (l, r), dset in
+        lr_data = [(l, r, dset.value) for (l, r), dset in
                    numpy.ndenumerate(self.agg_loss_table)]
         ses_ratio = self.oqparam.ses_ratio
         result = parallel.apply(
