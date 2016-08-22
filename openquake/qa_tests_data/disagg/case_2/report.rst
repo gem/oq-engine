@@ -1,27 +1,27 @@
 QA test for disaggregation case_2
 =================================
 
-gem-tstation:/home/michele/ssd/calc_22628.hdf5 updated Tue May 31 15:39:17 2016
+gem-tstation:/home/michele/ssd/calc_40606.hdf5 updated Mon Aug 22 12:34:02 2016
 
 num_sites = 2, sitecol = 785 B
 
 Parameters
 ----------
-============================ ==============================================================
-calculation_mode             'disaggregation'                                              
-number_of_logic_tree_samples 0                                                             
-maximum_distance             {'Subduction IntraSlab': 200.0, 'Active Shallow Crust': 200.0}
-investigation_time           1.0                                                           
-ses_per_logic_tree_path      1                                                             
-truncation_level             3.0                                                           
-rupture_mesh_spacing         4.0                                                           
-complex_fault_mesh_spacing   4.0                                                           
-width_of_mfd_bin             0.1                                                           
-area_source_discretization   10.0                                                          
-random_seed                  23                                                            
-master_seed                  0                                                             
-engine_version               '2.0.0-git4fb4450'                                            
-============================ ==============================================================
+============================ ================================================================
+calculation_mode             'disaggregation'                                                
+number_of_logic_tree_samples 0                                                               
+maximum_distance             {u'Subduction IntraSlab': 200.0, u'Active Shallow Crust': 200.0}
+investigation_time           1.0                                                             
+ses_per_logic_tree_path      1                                                               
+truncation_level             3.0                                                             
+rupture_mesh_spacing         4.0                                                             
+complex_fault_mesh_spacing   4.0                                                             
+width_of_mfd_bin             0.1                                                             
+area_source_discretization   10.0                                                            
+random_seed                  23                                                              
+master_seed                  0                                                               
+engine_version               '2.1.0-git8cbb23e'                                              
+============================ ================================================================
 
 Input files
 -----------
@@ -46,13 +46,13 @@ source_model_2 0.500  `source_model_2.xml <source_model_2.xml>`_ simple(2,1)    
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ===================================== =========== ======================= =================
-grp_id gsims                                 distances   siteparams              ruptparams       
-====== ===================================== =========== ======================= =================
-0      YoungsEtAl1997SSlab()                 rrup        vs30                    hypo_depth mag   
-1      BooreAtkinson2008() ChiouYoungs2008() rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
-2      BooreAtkinson2008() ChiouYoungs2008() rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
-====== ===================================== =========== ======================= =================
+====== ===================================== ============= ======================= =================
+grp_id gsims                                 distances     siteparams              ruptparams       
+====== ===================================== ============= ======================= =================
+0      ['YoungsEtAl1997SSlab()']             set(['rrup']) set(['vs30'])           hypo_depth mag   
+1      BooreAtkinson2008() ChiouYoungs2008() rx rjb rrup   vs30measured z1pt0 vs30 ztor mag rake dip
+2      BooreAtkinson2008() ChiouYoungs2008() rx rjb rrup   vs30measured z1pt0 vs30 ztor mag rake dip
+====== ===================================== ============= ======================= =================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -85,60 +85,67 @@ filtered_weight 1,556
 
 Informational data
 ------------------
-======================================== ============
-count_eff_ruptures_max_received_per_task 3,135       
-count_eff_ruptures_num_tasks             18          
-count_eff_ruptures_sent.monitor          51,732      
-count_eff_ruptures_sent.rlzs_assoc       26,766      
-count_eff_ruptures_sent.sitecol          8,154       
-count_eff_ruptures_sent.siteidx          90          
-count_eff_ruptures_sent.sources          22,050      
-count_eff_ruptures_tot_received          56,415      
-hazard.input_weight                      1,556       
-hazard.n_imts                            1           
-hazard.n_levels                          19          
-hazard.n_realizations                    4           
-hazard.n_sites                           2           
-hazard.n_sources                         0           
-hazard.output_weight                     152         
-hostname                                 gem-tstation
-======================================== ============
+=============================== ============
+classical_max_received_per_task 7,449       
+classical_num_tasks             14          
+classical_sent.monitor          74,102      
+classical_sent.rlzs_by_gsim     11,913      
+classical_sent.sitecol          6,342       
+classical_sent.sources          18,288      
+classical_tot_received          97,212      
+hazard.input_weight             1,556       
+hazard.n_imts                   1           
+hazard.n_levels                 19          
+hazard.n_realizations           4           
+hazard.n_sites                  2           
+hazard.n_sources                4           
+hazard.output_weight            152         
+hostname                        gem-tstation
+=============================== ============
 
 Slowest sources
 ---------------
-============ ========= ================= ====== ========= =========== ========== =========
-src_group_id source_id source_class      weight split_num filter_time split_time calc_time
-============ ========= ================= ====== ========= =========== ========== =========
-2            1         SimpleFaultSource 1,420  15        0.002       0.074      0.0      
-0            2         AreaSource        45     1         8.121E-04   0.0        0.0      
-1            1         AreaSource        45     1         7.138E-04   0.0        0.0      
-1            3         AreaSource        45     1         7.119E-04   0.0        0.0      
-============ ========= ================= ====== ========= =========== ========== =========
+============ ========= ================= ====== ========= =========== ========== ============= ============= =========
+src_group_id source_id source_class      weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
+============ ========= ================= ====== ========= =========== ========== ============= ============= =========
+2            1         SimpleFaultSource 1,420  15        0.003       0.126      3.428         0.293         15       
+1            3         AreaSource        45     1         6.442E-04   0.0        2.262         2.262         1        
+1            1         AreaSource        45     1         7.138E-04   0.0        2.226         2.226         1        
+0            2         AreaSource        45     1         7.110E-04   0.0        1.781         1.781         1        
+============ ========= ================= ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
 ------------------------------------
-================= =========== ========== ========= ======
-source_class      filter_time split_time calc_time counts
-================= =========== ========== ========= ======
-AreaSource        0.002       0.0        0.0       3     
-SimpleFaultSource 0.002       0.074      0.0       1     
-================= =========== ========== ========= ======
+================= =========== ========== ============= ============= ========= ======
+source_class      filter_time split_time cum_calc_time max_calc_time num_tasks counts
+================= =========== ========== ============= ============= ========= ======
+AreaSource        0.002       0.0        6.269         6.269         3         3     
+SimpleFaultSource 0.003       0.126      3.428         0.293         15        1     
+================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
-Not available
+=================== ================ ====== ===== ===== =========
+measurement         mean             stddev min   max   num_tasks
+classical.time_sec  0.697            1.163  0.218 4.491 14       
+classical.memory_mb -0.0178571428571 0.067  -0.25 0.0   14       
+=================== ================ ====== ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.095     0.0       1     
-splitting sources              0.074     0.0       1     
-reading composite source model 0.047     0.0       1     
-total count_eff_ruptures       0.005     0.0       18    
-store source_info              0.004     0.0       1     
-filtering sources              0.004     0.0       4     
-aggregate curves               2.263E-04 0.0       18    
-reading site collection        3.004E-05 0.0       1     
+total classical                9.754     0.0       14    
+making contexts                5.092     0.0       6,865 
+computing poes                 1.978     0.0       6,865 
+get closest points             1.003     0.0       6,865 
+managing sources               0.202     0.0       1     
+splitting sources              0.126     0.0       1     
+reading composite source model 0.043     0.0       1     
+store source_info              0.012     0.0       1     
+saving probability maps        0.006     0.0       1     
+filtering sources              0.005     0.0       4     
+aggregate curves               0.002     0.0       14    
+reading site collection        2.599E-05 0.0       1     
 ============================== ========= ========= ======
