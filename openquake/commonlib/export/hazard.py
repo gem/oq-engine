@@ -232,7 +232,7 @@ HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
 def export_hazard_csv(key, dest, sitemesh, pmap,
-                      imtls, investigation_time=None):
+                      imtls, comment):
     """
     Export the curves of the given realization into CSV.
 
@@ -241,7 +241,7 @@ def export_hazard_csv(key, dest, sitemesh, pmap,
     :param sitecol: site collection
     :param pmap: a ProbabilityMap
     :param dict imtls: intensity measure types and levels
-    :param investigation_time: investigation time
+    :param comment: comment to use as header of the exported CSV file
     """
     nsites = len(sitemesh)
     lst = []
@@ -249,7 +249,7 @@ def export_hazard_csv(key, dest, sitemesh, pmap,
         for iml in imls:
             lst.append(('%s-%s' % (imt, iml), F64))
     hcurves = pmap.convert(imtls, nsites).view(numpy.dtype(lst))
-    write_csv(dest, util.compose_arrays(sitemesh, hcurves))
+    write_csv(dest, util.compose_arrays(sitemesh, hcurves), comment=comment)
     return [dest]
 
 
@@ -341,16 +341,18 @@ def export_hcurves_csv(ekey, dstore):
     for kind in sorted(dstore['hcurves']):
         hcurves = dstore['hcurves/' + kind]
         fname = hazard_curve_name(dstore, ekey, kind, rlzs_assoc)
+        comment = _comment(rlzs_assoc, kind, oq.investigation_time)
         if key == 'uhs':
             uhs_curves = calc.make_uhs(
                 hcurves, oq.imtls, oq.poes, len(sitemesh))
             write_csv(
                 fname, util.compose_arrays(sitemesh, uhs_curves),
-                comment=_comment(rlzs_assoc, kind, oq.investigation_time))
+                comment=comment)
             fnames.append(fname)
         elif key == 'hmaps':
             hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
-            fnames.extend(export_hazard_csv(ekey, fname, sitemesh, hmap, pdic))
+            fnames.extend(
+                export_hazard_csv(ekey, fname, sitemesh, hmap, pdic, comment))
         else:
             if export.from_db:  # called by export_from_db
                 fnames.extend(
@@ -359,7 +361,7 @@ def export_hcurves_csv(ekey, dstore):
             else:  # when exporting directly from the datastore
                 fnames.extend(
                     export_hazard_csv(
-                        ekey, fname, sitemesh, hcurves, oq.imtls))
+                        ekey, fname, sitemesh, hcurves, oq.imtls, comment))
 
     return sorted(fnames)
 
@@ -508,6 +510,7 @@ def _extract(hmap, imt, j):
         return tup[j]
     assert j == 0
     return tup
+
 
 # FIXME: uhs not working yet
 @export.add(('hcurves', 'hdf5'), ('hmaps', 'hdf5'))

@@ -42,7 +42,7 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
-
+F64 = numpy.float64
 
 # ############## utilities for the classical calculator ############### #
 
@@ -297,7 +297,7 @@ def make_uhs(pmap, imtls, poes, nsites):
     P = len(poes)
     array = make_hmap(pmap, imtls, poes).array  # size (N, I x P, 1)
     imts, _ = get_imts_periods(imtls)
-    imts_dt = numpy.dtype([(imt, F32) for imt in imts])
+    imts_dt = numpy.dtype([(imt, F64) for imt in imts])
     uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in poes])
     uhs = numpy.zeros(nsites, uhs_dt)
     for j, poe in enumerate(map(str, poes)):
