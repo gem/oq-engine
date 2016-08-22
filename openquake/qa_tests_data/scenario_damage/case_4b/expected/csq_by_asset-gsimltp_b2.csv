@@ -1,4 +1,4 @@
-asset_ref,taxonomy,lon,lat,contents~mean,contents~stddev,nonstructural~mean,nonstructural~stddev,structural~mean,structural~stddev
+asset_ref,taxonomy,lon:float32,lat:float32,contents~mean:float32,contents~stddev:float32,nonstructural~mean:float32,nonstructural~stddev:float32,structural~mean:float32,structural~stddev:float32
 a3,"tax1",-122.57000,38.11300,3.13017E+02,2.04098E+02,2.78852E+02,1.73490E+02,4.12982E+00,9.99584E+00
 a2,"tax2",-122.11400,38.11300,4.49670E+02,3.86893E+02,1.49545E+03,1.03688E+03,1.02641E+02,1.23478E+02
 a5,"tax1",-122.00000,37.91000,1.57124E+03,5.51672E+02,1.69543E+03,7.70127E+02,3.88034E+02,3.77658E+02
