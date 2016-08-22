@@ -514,6 +514,9 @@ class Starmap(object):
 
 
 class Serialmap(Starmap):
+    """
+    A sequential Starmap, useful for debugging purpose.
+    """
     def __init__(self, func, iterargs):
         self.func = func
         allargs = list(iterargs)
