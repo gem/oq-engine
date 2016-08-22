@@ -148,9 +148,12 @@ class ProbabilityMap(dict):
         :param nsites: the total number of sites
         :param idx: extract the data corresponding to the given inner index
         """
+        # NB: I am not using ProbabilityCurve.convert to work around a bug of numpy 1.8.1
         curves = numpy.zeros(nsites, imtls.imt_dt)
-        for i, sid in enumerate(sorted(self)):
-            curves[i] = self[sid].convert(imtls, idx)
+        for imt in curves.dtype.names:
+            curves_by_imt = curves[imt]
+            for i, sid in enumerate(sorted(self)):
+                curves_by_imt[i] = self[sid].array[imtls.slicedic[imt], idx]
         return curves
 
     def filter(self, sids):
