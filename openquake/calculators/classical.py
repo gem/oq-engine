@@ -176,7 +176,7 @@ def classical(sources, sitecol, rlzs_by_gsim, monitor):
     :param sitecol:
         a SiteCollection instance
     :param rlzs_by_gsim:
-        a RlzsAssoc instance
+        a dictionary of realizations by GSIM
     :param monitor:
         a monitor instance
     :returns:
@@ -358,8 +358,8 @@ def build_hcurves_and_stats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
     with monitor('combine pmaps'):
         pmap_by_rlz = calc.combine_pmaps(rlzs_assoc, pmap_by_grp)
     with monitor('compute stats'):
-        pmap_by_kind = pstats.mean_quantiles_asdict(
-            sids, [pmap_by_rlz[rlz] for rlz in rlzs])
+        pmap_by_kind = dict(
+            pstats.compute(sids, [pmap_by_rlz[rlz] for rlz in rlzs]))
     if monitor.individual_curves:
         for rlz in rlzs:
             pmap_by_kind['rlz-%03d' % rlz.ordinal] = pmap_by_rlz[rlz]
@@ -431,7 +431,7 @@ class ClassicalCalculator(PSHACalculator):
             individual_curves=self.oqparam.individual_curves)
         weights = (None if self.oqparam.number_of_logic_tree_samples
                    else [rlz.weight for rlz in self.rlzs_assoc.realizations])
-        pstats = PmapStats(weights, self.oqparam.quantile_hazard_curves)
+        pstats = PmapStats(self.oqparam.quantile_hazard_curves, weights)
         num_tiles = math.ceil(len(self.sitecol) / self.oqparam.sites_per_tile)
         num_blocks = int(self.oqparam.concurrent_tasks * num_tiles)
         for block in self.sitecol.split_in_tiles(num_blocks):
