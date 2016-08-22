@@ -593,7 +593,7 @@ class EventBasedCalculator(ClassicalCalculator):
             # involves a "small" number of sites (<= 65,536)
             weights = (None if self.oqparam.number_of_logic_tree_samples
                        else [rlz.weight for rlz in rlzs])
-            pstats = PmapStats(weights, self.oqparam.quantile_hazard_curves)
+            pstats = PmapStats(self.oqparam.quantile_hazard_curves, weights)
             for kind, stat in pstats.compute(
                     self.sitecol.sids, result.values()):
                 if kind == 'mean' and not self.oqparam.mean_hazard_curves:
