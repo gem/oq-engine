@@ -574,9 +574,11 @@ class RiskInputFromRuptures(object):
         :returns:
             lists of N hazard dictionaries imt -> rlz -> Gmvs
         """
+        grp_id = self.ses_ruptures[0].grp_id
+        rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
         gmfcoll = create(
             GmfCollector, self.ses_ruptures, self.sitecol, self.imts,
-            rlzs_assoc, self.trunc_level, self.correl_model, self.min_iml,
+            rlzs_by_gsim, self.trunc_level, self.correl_model, self.min_iml,
             monitor)
         return gmfcoll
 
@@ -585,29 +587,26 @@ class RiskInputFromRuptures(object):
             self.__class__.__name__, self.imts, self.weight)
 
 
-def create(GmfColl, eb_ruptures, sitecol, imts, rlzs_assoc,
+def create(GmfColl, eb_ruptures, sitecol, imts, rlzs_by_gsim,
            trunc_level, correl_model, min_iml, monitor=Monitor()):
     """
     :param GmfColl: a GmfCollector class to be instantiated
     :param eb_ruptures: a list of EBRuptures with the same src_group_id
     :param sitecol: a SiteCollection instance
     :param imts: list of IMT strings
-    :param rlzs_assoc: a RlzsAssoc instance
+    :param rlzs_by_gsim: a dictionary {gsim: realizations} of the current group
     :param trunc_level: truncation level
     :param correl_model: correlation model instance
     :param min_iml: a dictionary of minimum intensity measure levels
     :param monitor: a monitor instance
     :returns: a GmfCollector instance
     """
-    grp_id = eb_ruptures[0].grp_id
-    gsims = rlzs_assoc.gsims_by_grp_id[grp_id]
-    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
-    rlzs = rlzs_assoc.realizations
     ctx_mon = monitor('make contexts')
     gmf_mon = monitor('compute poes')
     sites = sitecol.complete
-    samples = rlzs_assoc.samples[grp_id]
-    gmfcoll = GmfColl(imts, rlzs)
+    samples = rlzs_by_gsim.samples
+    gsims = list(rlzs_by_gsim)
+    gmfcoll = GmfColl(imts, rlzs_by_gsim.realizations)
     for ebr in eb_ruptures:
         rup = ebr.rupture
         with ctx_mon:

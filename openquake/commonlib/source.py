@@ -251,10 +251,19 @@ class RlzsAssoc(collections.Mapping):
 
     def get_rlzs_by_gsim(self, grp_id):
         """
-        Returns a dictionary gsim -> rlzs
+        Returns an OrderedDict gsim -> rlzs with attributes .realizations,
+        .sm_id, .samples and .seed.
         """
-        return {gsim: self[grp_id, str(gsim)]
-                for gsim in self.gsims_by_grp_id[grp_id]}
+        rlzs = set()
+        rlzs_by_gsim = collections.OrderedDict()
+        for gsim in self.gsims_by_grp_id[grp_id]:
+            rlzs_by_gsim[gsim] = self[grp_id, str(gsim)]
+            rlzs.update(rlzs_by_gsim[gsim])
+        rlzs_by_gsim.realizations = sorted(rlzs)
+        rlzs_by_gsim.sm_id = self.sm_ids[grp_id]
+        rlzs_by_gsim.samples = self.samples[grp_id]
+        rlzs_by_gsim.seed = self.seed
+        return rlzs_by_gsim
 
     def get_rlzs_by_grp_id(self):
         """
@@ -858,7 +867,9 @@ class SourceManager(object):
                         sources, self.maxweight,
                         operator.attrgetter('weight'),
                         operator.attrgetter('src_group_id')):
-                    yield block, sitecol, self.rlzs_assoc, self.monitor.new()
+                    grp_id = block[0].src_group_id
+                    rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
+                    yield block, sitecol, rlzs_by_gsim, self.monitor.new()
                     nblocks += 1
                 logging.info('Sent %d sources in %d block(s)',
                              len(sources), nblocks)
