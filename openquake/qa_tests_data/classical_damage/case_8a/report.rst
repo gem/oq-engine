@@ -1,28 +1,28 @@
 Classical PSHA-Based Hazard
 ===========================
 
-gem-tstation:/home/michele/ssd/calc_22571.hdf5 updated Tue May 31 15:37:02 2016
+gem-tstation:/home/michele/ssd/calc_40548.hdf5 updated Mon Aug 22 12:15:27 2016
 
 num_sites = 1, sitecol = 739 B
 
 Parameters
 ----------
-============================ ===============================
-calculation_mode             'classical_damage'             
-number_of_logic_tree_samples 0                              
-maximum_distance             {'Active Shallow Crust': 200.0}
-investigation_time           1.0                            
-ses_per_logic_tree_path      1                              
-truncation_level             3.0                            
-rupture_mesh_spacing         1.0                            
-complex_fault_mesh_spacing   1.0                            
-width_of_mfd_bin             0.1                            
-area_source_discretization   20.0                           
-random_seed                  42                             
-master_seed                  0                              
-sites_per_tile               10000                          
-engine_version               '2.0.0-git4fb4450'             
-============================ ===============================
+============================ ================================
+calculation_mode             'classical_damage'              
+number_of_logic_tree_samples 0                               
+maximum_distance             {u'Active Shallow Crust': 200.0}
+investigation_time           1.0                             
+ses_per_logic_tree_path      1                               
+truncation_level             3.0                             
+rupture_mesh_spacing         1.0                             
+complex_fault_mesh_spacing   1.0                             
+width_of_mfd_bin             0.1                             
+area_source_discretization   20.0                            
+random_seed                  42                              
+master_seed                  0                               
+sites_per_tile               10000                           
+engine_version               '2.1.0-git8cbb23e'              
+============================ ================================
 
 Input files
 -----------
@@ -47,11 +47,11 @@ b1        1.000  `source_model.xml <source_model.xml>`_ simple(2)       2/2
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ================================== ========= ========== ==========
-grp_id gsims                              distances siteparams ruptparams
-====== ================================== ========= ========== ==========
-0      AkkarBommer2010() SadighEtAl1997() rjb rrup  vs30       rake mag  
-====== ================================== ========= ========== ==========
+====== ================================== ========= ============= ==========
+grp_id gsims                              distances siteparams    ruptparams
+====== ================================== ========= ============= ==========
+0      AkkarBommer2010() SadighEtAl1997() rjb rrup  set(['vs30']) rake mag  
+====== ================================== ========= ============= ==========
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -72,32 +72,33 @@ source_model.xml 0      Active Shallow Crust 1           1694         1,694
 
 Informational data
 ------------------
-======================================== ============
-count_eff_ruptures_max_received_per_task 2,575       
-count_eff_ruptures_num_tasks             14          
-count_eff_ruptures_sent.monitor          32,998      
-count_eff_ruptures_sent.rlzs_assoc       13,020      
-count_eff_ruptures_sent.sitecol          6,062       
-count_eff_ruptures_sent.siteidx          70          
-count_eff_ruptures_sent.sources          15,499      
-count_eff_ruptures_tot_received          36,050      
-hazard.input_weight                      1,694       
-hazard.n_imts                            1           
-hazard.n_levels                          8.000       
-hazard.n_realizations                    2           
-hazard.n_sites                           1           
-hazard.n_sources                         0           
-hazard.output_weight                     16          
-hostname                                 gem-tstation
-require_epsilons                         False       
-======================================== ============
+=============================== ============
+classical_max_received_per_task 6,262       
+classical_num_tasks             13          
+classical_sent.monitor          66,872      
+classical_sent.rlzs_by_gsim     9,022       
+classical_sent.sitecol          5,629       
+classical_sent.sources          14,667      
+classical_tot_received          81,250      
+hazard.input_weight             1,694       
+hazard.n_imts                   1           
+hazard.n_levels                 8.000       
+hazard.n_realizations           2           
+hazard.n_sites                  1           
+hazard.n_sources                1           
+hazard.output_weight            16          
+hostname                        gem-tstation
+require_epsilons                False       
+=============================== ============
 
 Exposure model
 --------------
-=========== =
-#assets     1
-#taxonomies 1
-=========== =
+=============== ========
+#assets         1       
+#taxonomies     1       
+deductibile     absolute
+insurance_limit absolute
+=============== ========
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
@@ -106,36 +107,43 @@ Wood     1.000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-============ ========= ================= ====== ========= =========== ========== =========
-src_group_id source_id source_class      weight split_num filter_time split_time calc_time
-============ ========= ================= ====== ========= =========== ========== =========
-0            1         SimpleFaultSource 1,694  15        0.002       0.070      0.0      
-============ ========= ================= ====== ========= =========== ========== =========
+============ ========= ================= ====== ========= =========== ========== ============= ============= =========
+src_group_id source_id source_class      weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
+============ ========= ================= ====== ========= =========== ========== ============= ============= =========
+0            1         SimpleFaultSource 1,694  15        0.002       0.087      6.319         0.591         15       
+============ ========= ================= ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
 ------------------------------------
-================= =========== ========== ========= ======
-source_class      filter_time split_time calc_time counts
-================= =========== ========== ========= ======
-SimpleFaultSource 0.002       0.070      0.0       1     
-================= =========== ========== ========= ======
+================= =========== ========== ============= ============= ========= ======
+source_class      filter_time split_time cum_calc_time max_calc_time num_tasks counts
+================= =========== ========== ============= ============= ========= ======
+SimpleFaultSource 0.002       0.087      6.319         0.591         15        1     
+================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
-Not available
+=================== ===== ====== ===== ===== =========
+measurement         mean  stddev min   max   num_tasks
+classical.time_sec  0.489 0.104  0.204 0.595 13       
+classical.memory_mb 0.154 0.292  0.0   0.676 13       
+=================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.086     0.0       1     
-splitting sources              0.070     0.0       1     
-reading composite source model 0.011     0.0       1     
-store source_info              0.008     0.0       1     
-total count_eff_ruptures       0.004     0.0       14    
+total classical                6.359     0.676     13    
+making contexts                5.453     0.0       1,694 
+computing poes                 0.395     0.0       1,694 
+managing sources               0.112     0.0       1     
+splitting sources              0.087     0.0       1     
+reading composite source model 0.016     0.0       1     
+store source_info              0.011     0.0       1     
 reading exposure               0.004     0.0       1     
 filtering sources              0.002     0.0       1     
-aggregate curves               3.040E-04 0.0       14    
-reading site collection        8.821E-06 0.0       1     
+saving probability maps        0.002     0.0       1     
+aggregate curves               3.881E-04 0.0       13    
+reading site collection        1.216E-05 0.0       1     
 ============================== ========= ========= ======

@@ -25,6 +25,7 @@ import os
 import sys
 import mock
 import time
+import inspect
 import logging
 
 
@@ -137,11 +138,16 @@ def build_report(job_ini, output_dir=None):
     calc = base.calculators(oq)
     # some taken is care so that the real calculation is not run:
     # the goal is to extract information about the source management only
-    with mock.patch.object(
-            calc.__class__, 'core_task', source.count_eff_ruptures):
-        calc.pre_execute()
     with mock.patch.object(logging.root, 'info'):  # reduce logging
-        calc.execute()
+        task_args = inspect.getargspec(calc.core_task).args
+        if task_args == inspect.getargspec(source.count_eff_ruptures).args:
+            with mock.patch.object(
+                    calc.__class__, 'core_task', source.count_eff_ruptures):
+                calc.pre_execute()
+                calc.execute()
+        else:
+            logging.info('Cannot produce report for %s', job_ini)
+            return 'no-report'
     calc.save_params()
     rw = ReportWriter(calc.datastore)
     rw.make_report()
