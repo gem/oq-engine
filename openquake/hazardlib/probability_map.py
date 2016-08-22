@@ -255,13 +255,13 @@ class PmapStats(object):
     >>> pm2 = ProbabilityMap.build(num_levels=3, num_gsims=1, sids=[0],
     ...                            initvalue=0.8)
     >>> PmapStats(quantiles=[]).compute(sids=[0, 1], pmaps=[pm1, pm2])
-    {0: <ProbabilityCurve
+    [('mean', {0: <ProbabilityCurve
     [[ 0.9]
      [ 0.9]
      [ 0.9]]>, 1: <ProbabilityCurve
     [[ 0.5]
      [ 0.5]
-     [ 0.5]]>}
+     [ 0.5]]>})]
     """
     def __init__(self, quantiles, weights=None):
         self.quantiles = quantiles
