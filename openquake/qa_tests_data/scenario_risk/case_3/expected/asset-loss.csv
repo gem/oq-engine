@@ -1,4 +1,4 @@
-asset_ref,taxonomy,lon,lat,structural~mean,structural~stddev
+asset_ref,taxonomy,lon:float32,lat:float32,structural~mean:float32,structural~stddev:float32
 a1,"RM",81.29850,29.10980,1.39581E+02,5.71861E+01
 a2,"RC",83.08230,27.90060,2.02863E+02,2.39137E+02
 a4,"W",85.74700,27.90000,0.00000E+00,0.00000E+00
