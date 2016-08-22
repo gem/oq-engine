@@ -67,5 +67,5 @@ this platform is officially deprecated and it has been deprecated for
 a long time.
 
 13. A lot more was done and interested people should look at the
-changelogs: https://github.com/gem/oq-hazardlib/blob/engine-2.0/debian/changelog and https://github.com/gem/oq engine/blob/engine-2.0/debian/changelog.
+changelogs: https://github.com/gem/oq-hazardlib/blob/engine-2.0/debian/changelog and https://github.com/gem/oq-engine/blob/engine-2.0/debian/changelog.
 Over two hundred pull requests were closed in the GEM repositories.
