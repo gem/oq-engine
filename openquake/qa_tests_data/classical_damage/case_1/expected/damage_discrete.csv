@@ -1,2 +1,2 @@
-asset_ref,taxonomy,lon,lat,no_damage,slight,moderate,extreme,complete
+asset_ref,taxonomy,lon:float32,lat:float32,no_damage:float32,slight:float32,moderate:float32,extreme:float32,complete:float32
 a1,"W",83.31382,29.46117,1.04137E-09,1.45759E-06,1.95850E-03,6.96764E-02,9.28364E-01

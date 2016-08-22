@@ -30,6 +30,7 @@ from openquake.baselib.general import AccumDict, split_in_blocks
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import ProbabilityMap
+from openquake.hazardlib.probability_map import PmapStats
 from openquake.hazardlib import geo
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import readinput, parallel, calc
@@ -220,7 +221,7 @@ def compute_ruptures(sources, sitecol, rlzs_by_gsim, monitor):
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param rlzs_by_gsim:
-        a dictionary gsim -> realizations of that gsim
+        a dictionary gsim -> realizations of that GSIM
     :param monitor:
         monitor instance
     :returns:
@@ -396,7 +397,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
                 except KeyError:
                     dset = self.rup_data[trt] = self.datastore.create_dset(
                         'rup_data/' + trt, ruptures_by_grp_id.rup_data.dtype)
-                dset.extend(ruptures_by_grp_id.rup_data)
+                hdf5.extend(dset, ruptures_by_grp_id.rup_data)
         self.datastore.flush()
         return acc
 
@@ -427,9 +428,9 @@ class EventBasedRuptureCalculator(PSHACalculator):
             self.datastore.set_nbytes('sescollection')
 
         for dset in self.rup_data.values():
-            if len(dset.dset):
-                numsites = dset.dset['numsites']
-                multiplicity = dset.dset['multiplicity']
+            if len(dset):
+                numsites = dset['numsites']
+                multiplicity = dset['multiplicity']
                 spr = numpy.average(numsites, weights=multiplicity)
                 mul = numpy.average(multiplicity, weights=numsites)
                 self.datastore.set_attrs(dset.name, sites_per_rupture=spr,
@@ -507,7 +508,7 @@ class EventBasedCalculator(ClassicalCalculator):
         if self.oqparam.ground_motion_fields:
             calc.check_overflow(self)
 
-    def combine_curves_and_save_gmfs(self, acc, res):
+    def combine_pmaps_and_save_gmfs(self, acc, res):
         """
         Combine the hazard curves (if any) and save the gmfs (if any)
         sequentially; notice that the gmfs may come from
@@ -563,7 +564,7 @@ class EventBasedCalculator(ClassicalCalculator):
         L = len(oq.imtls.array)
         acc = parallel.starmap(
             self.core_task.__func__, self.gen_args(self.sesruptures)).reduce(
-                agg=self.combine_curves_and_save_gmfs,
+                agg=self.combine_pmaps_and_save_gmfs,
                 acc={rlz.ordinal: ProbabilityMap(L, 1)
                      for rlz in self.rlzs_assoc.realizations})
         if oq.ground_motion_fields and 'gmf_data' in self.datastore:
@@ -581,8 +582,22 @@ class EventBasedCalculator(ClassicalCalculator):
             return
         elif oq.hazard_curves_from_gmfs:
             rlzs = self.rlzs_assoc.realizations
-            poes_by_rlz = [(rlzs[i], result[i]) for i in result]
-            ClassicalCalculator.post_execute(self, poes_by_rlz)
+            # save individual curves
+            if self.oqparam.individual_curves:
+                for i in sorted(result):
+                    self.datastore['hcurves/rlz-%03d' % i] = result[i]
+            # compute and save statistics; this is done in process
+            # we don't need to parallelize, since event based calculations
+            # involves a "small" number of sites (<= 65,536)
+            weights = (None if self.oqparam.number_of_logic_tree_samples
+                       else [rlz.weight for rlz in rlzs])
+            pstats = PmapStats(self.oqparam.quantile_hazard_curves, weights)
+            for kind, stat in pstats.compute(
+                    self.sitecol.sids, result.values()):
+                if kind == 'mean' and not self.oqparam.mean_hazard_curves:
+                    continue
+                self.datastore['hcurves/' + kind] = stat
+
         if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
             if not os.path.exists(export_dir):
@@ -593,10 +608,27 @@ class EventBasedCalculator(ClassicalCalculator):
             # TODO: perhaps it is possible to avoid reprocessing the source
             # model, however usually this is quite fast and do not dominate
             # the computation
-            self.cl.run()
-            for imt in self.mean_curves.dtype.fields:
+            self.cl.run(close=False)
+            cl_mean_curves = get_mean_curves(self.cl.datastore)
+            eb_mean_curves = get_mean_curves(self.datastore)
+            for imt in eb_mean_curves.dtype.names:
                 rdiff, index = max_rel_diff_index(
-                    self.cl.mean_curves[imt], self.mean_curves[imt])
+                    cl_mean_curves[imt], eb_mean_curves[imt])
                 logging.warn('Relative difference with the classical '
                              'mean curves for IMT=%s: %d%% at site index %d',
                              imt, rdiff * 100, index)
+
+
+def get_mean_curves(dstore):
+    """
+    Extract the mean hazard curves from the datastore, as a composite
+    array of length nsites.
+    """
+    imtls = dstore['oqparam'].imtls
+    nsites = len(dstore['sitecol'])
+    hcurves = dstore['hcurves']
+    if 'mean' in hcurves:
+        mean = dstore['hcurves/mean']
+    elif len(hcurves) == 1:  # there is a single realization
+        mean = dstore['hcurves/rlz-0000']
+    return mean.convert(imtls, nsites)

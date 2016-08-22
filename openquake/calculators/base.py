@@ -308,8 +308,6 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
-    mean_curves = None  # to be overridden
-
     def assoc_assets_sites(self, sitecol):
         """
         :param sitecol: a sequence of sites
