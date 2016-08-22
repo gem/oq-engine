@@ -265,7 +265,7 @@ class PmapStats(object):
         self.weights = weights
 
     # the tests are in the engine
-    def compute(self, sids, pmaps):
+    def compute_pmap(self, sids, pmaps):
         """
         :params sids: array of N site IDs
         :param pmaps: array of R simple ProbabilityMaps
@@ -292,16 +292,15 @@ class PmapStats(object):
                 stats[sid].array[:, i] = array[j]
         return stats
 
-    def compute_dict(self, sids, pmaps):
+    def compute(self, sids, pmaps):
         """
         :params sids:
             array of N site IDs
         :param pmaps:
             array of R simple ProbabilityMaps
         :returns:
-            a dictionary of simple ProbabilityMaps keyed by a string 'mean'
-            or 'quantile-%s'.
+            a list of pairs [('mean', ...), ('quantile-XXX', ...), ...]
         """
-        stats = self.compute(sids, pmaps)
+        stats = self.compute_pmap(sids, pmaps)
         names = ['mean'] + ['quantile-%s' % q for q in self.quantiles]
-        return {name: stats.extract(i) for i, name in enumerate(names)}
+        return [(name, stats.extract(i)) for i, name in enumerate(names)]
