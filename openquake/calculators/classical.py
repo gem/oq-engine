@@ -358,8 +358,8 @@ def build_hcurves_and_stats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
     with monitor('combine pmaps'):
         pmap_by_rlz = calc.combine_pmaps(rlzs_assoc, pmap_by_grp)
     with monitor('compute stats'):
-        pmap_by_kind = pstats.compute_dict(
-            sids, [pmap_by_rlz[rlz] for rlz in rlzs])
+        pmap_by_kind = dict(
+            pstats.compute(sids, [pmap_by_rlz[rlz] for rlz in rlzs]))
     if monitor.individual_curves:
         for rlz in rlzs:
             pmap_by_kind['rlz-%03d' % rlz.ordinal] = pmap_by_rlz[rlz]
