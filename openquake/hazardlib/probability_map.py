@@ -254,7 +254,7 @@ class PmapStats(object):
     ...                            initvalue=1.0)
     >>> pm2 = ProbabilityMap.build(num_levels=3, num_gsims=1, sids=[0],
     ...                            initvalue=0.8)
-    >>> PmapStats().mean_quantiles(sids=[0, 1], pmaps=[pm1, pm2])
+    >>> PmapStats(quantiles=[]).compute(sids=[0, 1], pmaps=[pm1, pm2])
     {0: <ProbabilityCurve
     [[ 0.9]
      [ 0.9]
@@ -263,12 +263,12 @@ class PmapStats(object):
      [ 0.5]
      [ 0.5]]>}
     """
-    def __init__(self, weights=None, quantiles=()):
-        self.weights = weights
+    def __init__(self, quantiles, weights=None):
         self.quantiles = quantiles
+        self.weights = weights
 
     # the tests are in the engine
-    def mean_quantiles(self, sids, pmaps):
+    def compute_pmap(self, sids, pmaps):
         """
         :params sids: array of N site IDs
         :param pmaps: array of R simple ProbabilityMaps
@@ -295,16 +295,15 @@ class PmapStats(object):
                 stats[sid].array[:, i] = array[j]
         return stats
 
-    def mean_quantiles_asdict(self, sids, pmaps):
+    def compute(self, sids, pmaps):
         """
         :params sids:
             array of N site IDs
         :param pmaps:
             array of R simple ProbabilityMaps
         :returns:
-            a dictionary of simple ProbabilityMaps keyed by a string 'mean'
-            or 'quantile-%s'.
+            a list of pairs [('mean', ...), ('quantile-XXX', ...), ...]
         """
-        stats = self.mean_quantiles(sids, pmaps)
+        stats = self.compute_pmap(sids, pmaps)
         names = ['mean'] + ['quantile-%s' % q for q in self.quantiles]
-        return {name: stats.extract(i) for i, name in enumerate(names)}
+        return [(name, stats.extract(i)) for i, name in enumerate(names)]
