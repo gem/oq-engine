@@ -24,6 +24,7 @@ import collections
 
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, humansize
 from openquake.calculators import base
@@ -339,10 +340,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         with self.monitor('saving event loss tables', autoflush=True):
             if self.oqparam.asset_loss_table:
                 for lr, array in sorted(result.pop('ASSLOSS').items()):
-                    self.ass_loss_table[lr].extend(array)
+                    hdf5.extend(self.ass_loss_table[lr], array)
                     self.ass_bytes += array.nbytes
             for lr, array in sorted(result.pop('AGGLOSS').items()):
-                self.agg_loss_table[lr].extend(array)
+                hdf5.extend(self.agg_loss_table[lr], array)
                 self.agg_bytes += array.nbytes
             self.datastore.hdf5.flush()
         return acc + result

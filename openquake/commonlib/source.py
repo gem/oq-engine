@@ -355,7 +355,7 @@ class RlzsAssoc(collections.Mapping):
         r4: 0.03 + 0.04 (T1C + T2D)
         r5: 0.03 + 0.05 (T1C + T2E)
 
-        In reality, the `combine_pmaps` method is used with hazard_curves and
+        In reality, the `.combine` method is used with hazard_curves and
         the aggregation function is the `agg_curves` function, a composition of
         probability, which however is close to the sum for small probabilities.
         """
