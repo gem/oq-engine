@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a bug in the disaggregation calculator when a source group has
+    been filtered away by the maximum distance criterium
   * Fixed an encoding error in the reports when the description contains a
     non-ASCII character
   * Changed the distribution framework: celery is supported in a way more
