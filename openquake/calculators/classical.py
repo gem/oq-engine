@@ -168,32 +168,32 @@ class BoundingBox(object):
     __nonzero__ = __bool__
 
 
-def classical(sources, sitecol, rlzs_assoc, monitor):
+def classical(sources, sitecol, rlzs_by_gsim, monitor):
     """
     :param sources:
         a non-empty sequence of sources of homogeneous tectonic region type
     :param sitecol:
         a SiteCollection instance
-    :param rlzs_assoc:
-        a RlzsAssoc instance
+    :param rlzs_by_gsim:
+        a dictionary of realizations by GSIM
     :param monitor:
         a monitor instance
     :returns:
         an AccumDict rlz -> curves
     """
-    truncation_level = monitor.oqparam.truncation_level
-    imtls = monitor.oqparam.imtls
+    truncation_level = monitor.truncation_level
+    imtls = monitor.imtls
     src_group_id = sources[0].src_group_id
     # sanity check: the src_group must be the same for all sources
     for src in sources[1:]:
         assert src.src_group_id == src_group_id
-    gsims = rlzs_assoc.gsims_by_grp_id[src_group_id]
+    gsims = list(rlzs_by_gsim)
     trt = sources[0].tectonic_region_type
-    max_dist = monitor.oqparam.maximum_distance[trt]
+    max_dist = monitor.maximum_distance[trt]
 
     dic = AccumDict()
-    if monitor.oqparam.poes_disagg:
-        sm_id = rlzs_assoc.sm_ids[src_group_id]
+    if monitor.poes_disagg:
+        sm_id = rlzs_by_gsim.sm_id
         dic.bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
     else:
         dic.bbs = []
@@ -267,8 +267,15 @@ class PSHACalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        monitor = self.monitor.new(self.core_task.__name__)
-        monitor.oqparam = oq = self.oqparam
+        oq = self.oqparam
+        monitor = self.monitor.new(
+            self.core_task.__name__,
+            truncation_level=oq.truncation_level,
+            imtls=oq.imtls,
+            maximum_distance=oq.maximum_distance,
+            poes_disagg=oq.poes_disagg,
+            ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
+            random_seed=oq.random_seed)
         tiles = [self.sitecol]
         self.num_tiles = 1
         if self.is_tiling():
@@ -280,8 +287,8 @@ class PSHACalculator(base.HazardCalculator):
         with self.monitor('managing sources', autoflush=True):
             srcman = source.SourceManager(
                 self.csm, oq.maximum_distance, oq.concurrent_tasks,
-                self.datastore, self.monitor.new(oqparam=oq),
-                self.random_seed, oq.filter_sources, num_tiles=self.num_tiles)
+                self.datastore, monitor, self.random_seed, oq.filter_sources,
+                num_tiles=self.num_tiles)
             tm = parallel.starmap(
                 self.core_task.__func__, srcman.gen_args(tiles))
             srcman.pre_store_source_info(self.datastore)
