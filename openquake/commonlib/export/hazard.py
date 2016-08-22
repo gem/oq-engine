@@ -238,7 +238,7 @@ def export_hazard_csv(key, dest, sitemesh, pmap,
 
     :param key: output_type and export_type
     :param dest: name of the exported file
-    :param sitecol: site collection
+    :param sitemesh: site collection
     :param pmap: a ProbabilityMap
     :param dict imtls: intensity measure types and levels
     :param comment: comment to use as header of the exported CSV file
