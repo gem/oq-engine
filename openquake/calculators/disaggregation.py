@@ -208,8 +208,8 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
     """
     Classical PSHA disaggregation calculator
     """
-    def post_execute(self, result=None):
-        super(DisaggregationCalculator, self).post_execute(result)
+    def post_execute(self, nbytes_by_kind):
+        """Performs the disaggregation"""
         self.full_disaggregation()
 
     def agg_result(self, acc, result):
@@ -231,9 +231,17 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         Returns a dictionary {(rlz_id, imt) -> curve}.
         """
         dic = {}
+        imtls = self.oqparam.imtls
         for rlz in self.rlzs_assoc.realizations:
-            poes = self.datastore['hcurves/rlz-%03d' % rlz.ordinal][sid]
-            for imt_str in self.oqparam.imtls:
+            pmap = self.datastore['hcurves/rlz-%03d' % rlz.ordinal]
+            if sid in pmap:
+                poes = pmap[sid].convert(imtls)
+            else:
+                logging.info(
+                    'hazard curve contains all zero probabilities; '
+                    'skipping site %d, rlz=%d', sid, rlz.ordinal)
+                continue
+            for imt_str in imtls:
                 if all(x == 0.0 for x in poes[imt_str]):
                     logging.info(
                         'hazard curve contains all zero probabilities; '

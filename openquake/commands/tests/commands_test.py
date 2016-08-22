@@ -207,8 +207,7 @@ class RunShowExportTestCase(unittest.TestCase):
                          self.calc_id, str(p))
         with Print.patch() as p:
             show_attrs('hcurves', self.calc_id)
-        self.assertEqual("imtls [['PGA' '3']\n ['SA(0.1)' '3']]\nnbytes 48",
-                         str(p))
+        self.assertEqual("nbytes 48", str(p))
 
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()

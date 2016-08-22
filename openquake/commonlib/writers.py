@@ -17,10 +17,11 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import re
 import types
 import logging
 import warnings
-from contextlib import contextmanager
+from decorator import contextmanager
 from xml.sax.saxutils import escape, quoteattr
 
 import numpy  # this is needed by the doctests, don't remove it
@@ -223,8 +224,18 @@ class HeaderTranslator(object):
     def read(self, names):
         return [self.descr.get(n, n) for n in names]
 
+    def replace(self, s):
+        # example: name='poe', regex='poe-[\d\.]+:float32'
+        for name, regex in self.descr.items():
+            if regex == s:
+                return name
+            mo = re.match(regex, s)
+            if mo:
+                return re.sub(regex, r'\1', s)
+        return s
+
     def write(self, descr):
-        return [self.name.get(d, d) for d in descr]
+        return map(self.replace, descr)
 
 htranslator = HeaderTranslator(
     asset_ref='asset_ref:|S100',
@@ -233,6 +244,16 @@ htranslator = HeaderTranslator(
     rupserial='rupserial:uint32',
     multiplicity='multiplicity:uint16',
     numsites='numsites:uint32',
+    losses='(losses):float32',
+    poes='(poes):float32',
+    avg='(avg):float32',
+    poe='(poe-[\d\.]+):float32',
+    lon='lon:float32',
+    lat='lat:float32',
+    structural_poe='(structural~poe-[\d\.]):float32',
+    nonstructural_poe='(nonstructural~poe-[\d\.]):float32',
+    business_interruption_poe='(business_interruption~poe-[\d\.]):float32',
+    contents_poe='(contents~poes-[\d\.]):float32',
 )
 
 
@@ -261,11 +282,11 @@ def build_header(dtype):
 
     >>> imt_dt = numpy.dtype([('PGA', float, 3), ('PGV', float, 4)])
     >>> build_header(imt_dt)
-    ['PGA:float64:3', 'PGV:float64:4']
+    ['PGA:3', 'PGV:4']
     >>> gmf_dt = numpy.dtype([('A', imt_dt), ('B', imt_dt),
     ...                       ('idx', numpy.uint32)])
     >>> build_header(gmf_dt)
-    ['A~PGA:float64:3', 'A~PGV:float64:4', 'B~PGA:float64:3', 'B~PGV:float64:4', 'idx:uint32']
+    ['A~PGA:3', 'A~PGV:4', 'B~PGA:3', 'B~PGV:4', 'idx:uint32']
     """
     header = _build_header(dtype, ())
     h = []
@@ -274,7 +295,7 @@ def build_header(dtype):
         numpytype = col[-2]
         shape = col[-1]
         coldescr = name
-        if numpytype != 'float32':
+        if numpytype != 'float64':
             coldescr += ':' + numpytype
         if shape:
             coldescr += ':' + ':'.join(map(str, shape))
@@ -406,7 +427,7 @@ def parse_header(header):
     by :func:`openquake.commonlib.writers.build_header`.
     Here is an example:
 
-    >>> parse_header(['PGA', 'PGV:float64', 'avg:2'])
+    >>> parse_header(['PGA:float32', 'PGV', 'avg:float32:2'])
     (['PGA', 'PGV', 'avg'], dtype([('PGA', '<f4'), ('PGV', '<f8'), ('avg', '<f4', (2,))]))
 
     :params header: a list of type descriptions
@@ -418,10 +439,10 @@ def parse_header(header):
         col = col_str.split(':')
         n = len(col)
         if n == 1:  # default dtype and no shape
-            col = [col[0], 'float32', '']
+            col = [col[0], 'float64', '']
         elif n == 2:
             if castable_to_int(col[1]):  # default dtype and shape
-                col = [col[0], 'float32', col[1]]
+                col = [col[0], 'float64', col[1]]
             else:  # dtype and no shape
                 col = [col[0], col[1], '']
         elif n > 3:
@@ -448,7 +469,7 @@ def read_composite_array(fname, sep=','):
     Convert a CSV file with header into a numpy array of records.
 
     >>> from openquake.baselib.general import writetmp
-    >>> fname = writetmp('PGA:float64:3,PGV:float64:2,avg:float64:1\n'
+    >>> fname = writetmp('PGA:3,PGV:2,avg:1\n'
     ...                  '.1 .2 .3,.4 .5,.6\n')
     >>> print(read_composite_array(fname))  # array of shape (1,)
     [([0.1, 0.2, 0.3], [0.4, 0.5], [0.6])]
