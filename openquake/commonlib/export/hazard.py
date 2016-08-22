@@ -239,7 +239,7 @@ def export_hazard_csv(key, dest, sitemesh, pmap,
     :param key: output_type and export_type
     :param dest: name of the exported file
     :param sitecol: site collection
-    :param pmap: dictionary with the curves keyed by IMT
+    :param pmap: a ProbabilityMap
     :param dict imtls: intensity measure types and levels
     :param investigation_time: investigation time
     """
