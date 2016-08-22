@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import re
 import types
 import logging
 import warnings
@@ -223,8 +224,18 @@ class HeaderTranslator(object):
     def read(self, names):
         return [self.descr.get(n, n) for n in names]
 
+    def replace(self, s):
+        # example: name='poe', regex='poe-[\d\.]+:float32'
+        for name, regex in self.descr.items():
+            if regex == s:
+                return name
+            mo = re.match(regex, s)
+            if mo:
+                return re.sub(regex, r'\1', s)
+        return s
+
     def write(self, descr):
-        return [self.name.get(d, d) for d in descr]
+        return map(self.replace, descr)
 
 htranslator = HeaderTranslator(
     asset_ref='asset_ref:|S100',
@@ -233,6 +244,10 @@ htranslator = HeaderTranslator(
     rupserial='rupserial:uint32',
     multiplicity='multiplicity:uint16',
     numsites='numsites:uint32',
+    losses='(losses):float32',
+    poes='(poes):float32',
+    avg='(avg):float32',
+    poe='(poe-[\d\.]+):float32',
 )
 
 
