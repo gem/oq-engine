@@ -1,7 +1,7 @@
 Classical PSHA with non-trivial logic tree (1 source model + 5 (a, b) pairs per source + 3 Mmax per source
 ==========================================================================================================
 
-gem-tstation:/home/michele/ssd/calc_41615.hdf5 updated Tue Aug 23 17:47:40 2016
+gem-tstation:/home/michele/ssd/calc_41664.hdf5 updated Tue Aug 23 18:24:14 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                              
 master_seed                  0                               
 sites_per_tile               10000                           
-engine_version               '2.1.0-git5b04a6e'              
+engine_version               '2.1.0-gitc83a72d'              
 ============================ ================================
 
 Input files
@@ -153,13 +153,13 @@ filtered_weight 506
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,188       
+count_eff_ruptures_max_received_per_task 1,129       
 count_eff_ruptures_num_tasks             22          
-count_eff_ruptures_sent.monitor          18,898      
+count_eff_ruptures_sent.monitor          17,776      
 count_eff_ruptures_sent.rlzs_by_gsim     13,838      
 count_eff_ruptures_sent.sitecol          9,526       
 count_eff_ruptures_sent.sources          64,946      
-count_eff_ruptures_tot_received          26,136      
+count_eff_ruptures_tot_received          24,838      
 hazard.input_weight                      506         
 hazard.n_imts                            1           
 hazard.n_levels                          3.000       
@@ -175,26 +175,26 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            1         AreaSource   8.125  1         7.939E-04   0.0        0.0           0.0           0        
-1            4         AreaSource   9.375  1         7.319E-04   0.0        0.0           0.0           0        
-2            5         AreaSource   10     1         7.160E-04   0.0        0.0           0.0           0        
-1            5         AreaSource   9.375  1         7.141E-04   0.0        0.0           0.0           0        
-3            5         AreaSource   9.375  1         7.119E-04   0.0        0.0           0.0           0        
-0            4         AreaSource   8.125  1         7.110E-04   0.0        0.0           0.0           0        
-5            1         AreaSource   9.375  1         7.110E-04   0.0        0.0           0.0           0        
-7            2         AreaSource   11     1         7.100E-04   0.0        0.0           0.0           0        
-9            3         AreaSource   11     1         7.091E-04   0.0        0.0           0.0           0        
-6            2         AreaSource   11     1         7.091E-04   0.0        0.0           0.0           0        
-0            2         AreaSource   11     1         7.069E-04   0.0        0.0           0.0           0        
-8            3         AreaSource   9.750  1         7.060E-04   0.0        0.0           0.0           0        
-0            3         AreaSource   11     1         7.050E-04   0.0        0.0           0.0           0        
-6            1         AreaSource   10     1         7.031E-04   0.0        0.0           0.0           0        
-0            5         AreaSource   9.375  1         7.021E-04   0.0        0.0           0.0           0        
-2            3         AreaSource   12     1         7.021E-04   0.0        0.0           0.0           0        
-7            3         AreaSource   12     1         7.019E-04   0.0        0.0           0.0           0        
-3            3         AreaSource   12     1         7.019E-04   0.0        0.0           0.0           0        
-4            1         AreaSource   9.375  1         7.012E-04   0.0        0.0           0.0           0        
-3            4         AreaSource   9.375  1         7.012E-04   0.0        0.0           0.0           0        
+0            1         AreaSource   8.125  1         7.501E-04   0.0        0.0           0.0           0        
+5            1         AreaSource   9.375  1         6.940E-04   0.0        0.0           0.0           0        
+1            3         AreaSource   11     1         6.881E-04   0.0        0.0           0.0           0        
+0            2         AreaSource   11     1         6.812E-04   0.0        0.0           0.0           0        
+7            3         AreaSource   12     1         6.700E-04   0.0        0.0           0.0           0        
+1            4         AreaSource   9.375  1         6.690E-04   0.0        0.0           0.0           0        
+3            5         AreaSource   9.375  1         6.680E-04   0.0        0.0           0.0           0        
+5            2         AreaSource   12     1         6.680E-04   0.0        0.0           0.0           0        
+8            4         AreaSource   10     1         6.671E-04   0.0        0.0           0.0           0        
+2            4         AreaSource   9.375  1         6.640E-04   0.0        0.0           0.0           0        
+6            2         AreaSource   11     1         6.640E-04   0.0        0.0           0.0           0        
+9            5         AreaSource   9.375  1         6.640E-04   0.0        0.0           0.0           0        
+0            3         AreaSource   11     1         6.618E-04   0.0        0.0           0.0           0        
+2            2         AreaSource   11     1         6.590E-04   0.0        0.0           0.0           0        
+4            2         AreaSource   9.750  1         6.578E-04   0.0        0.0           0.0           0        
+2            5         AreaSource   10     1         6.571E-04   0.0        0.0           0.0           0        
+2            3         AreaSource   12     1         6.571E-04   0.0        0.0           0.0           0        
+5            5         AreaSource   9.375  1         6.571E-04   0.0        0.0           0.0           0        
+3            3         AreaSource   12     1         6.568E-04   0.0        0.0           0.0           0        
+6            1         AreaSource   10     1         6.561E-04   0.0        0.0           0.0           0        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -202,7 +202,7 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-AreaSource   0.035       0.0        0.0           0.0           0         50    
+AreaSource   0.033       0.0        0.0           0.0           0         50    
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
@@ -214,12 +214,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.203     0.0       1     
-managing sources               0.063     0.0       1     
-filtering sources              0.035     0.0       50    
+reading composite source model 0.189     0.0       1     
+managing sources               0.074     0.0       1     
+filtering sources              0.033     0.0       50    
 total count_eff_ruptures       0.007     0.0       22    
 store source_info              0.006     0.0       1     
-aggregate curves               5.352E-04 0.0       22    
-saving probability maps        3.290E-05 0.0       1     
-reading site collection        2.980E-05 0.0       1     
+aggregate curves               4.969E-04 0.0       22    
+reading site collection        4.005E-05 0.0       1     
+saving probability maps        3.314E-05 0.0       1     
 ============================== ========= ========= ======

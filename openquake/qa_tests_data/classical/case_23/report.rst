@@ -1,7 +1,7 @@
 Classical PSHA with NZ NSHM
 ===========================
 
-gem-tstation:/home/michele/ssd/calc_41617.hdf5 updated Tue Aug 23 17:47:40 2016
+gem-tstation:/home/michele/ssd/calc_41666.hdf5 updated Tue Aug 23 18:24:14 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                                                                                                                  
 master_seed                  0                                                                                                                   
 sites_per_tile               10000                                                                                                               
-engine_version               '2.1.0-git5b04a6e'                                                                                                  
+engine_version               '2.1.0-gitc83a72d'                                                                                                  
 ============================ ====================================================================================================================
 
 Input files
@@ -80,13 +80,13 @@ filtered_weight 2.000
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,479       
+count_eff_ruptures_max_received_per_task 1,420       
 count_eff_ruptures_num_tasks             2           
-count_eff_ruptures_sent.monitor          2,314       
+count_eff_ruptures_sent.monitor          2,212       
 count_eff_ruptures_sent.rlzs_by_gsim     1,516       
 count_eff_ruptures_sent.sitecol          866         
 count_eff_ruptures_sent.sources          495,548     
-count_eff_ruptures_tot_received          2,958       
+count_eff_ruptures_tot_received          2,840       
 hazard.input_weight                      3.000       
 hazard.n_imts                            1           
 hazard.n_levels                          29          
@@ -103,8 +103,8 @@ Slowest sources
 src_group_id source_id source_class              weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 1            21444     CharacteristicFaultSource 1.000  1         0.002       0.0        0.0           0.0           0        
-0            1         PointSource               0.500  1         6.294E-05   0.0        0.0           0.0           0        
-0            2         PointSource               0.500  1         4.387E-05   0.0        0.0           0.0           0        
+0            1         PointSource               0.500  1         6.223E-05   0.0        0.0           0.0           0        
+0            2         PointSource               0.500  1         4.411E-05   0.0        0.0           0.0           0        
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -113,7 +113,7 @@ Computation times by source typology
 source_class              filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ========================= =========== ========== ============= ============= ========= ======
 CharacteristicFaultSource 0.002       0.0        0.0           0.0           0         1     
-PointSource               1.068E-04   0.0        0.0           0.0           0         2     
+PointSource               1.063E-04   0.0        0.0           0.0           0         2     
 ========================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
@@ -125,12 +125,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.210     0.0       1     
+reading composite source model 0.205     0.0       1     
 managing sources               0.008     0.0       1     
 store source_info              0.005     0.0       1     
-filtering sources              0.004     0.0       4     
-total count_eff_ruptures       7.088E-04 0.0       2     
-aggregate curves               3.672E-05 0.0       2     
-reading site collection        3.314E-05 0.0       1     
-saving probability maps        2.694E-05 0.0       1     
+filtering sources              0.003     0.0       4     
+total count_eff_ruptures       5.410E-04 0.0       2     
+aggregate curves               3.624E-05 0.0       2     
+reading site collection        3.505E-05 0.0       1     
+saving probability maps        2.503E-05 0.0       1     
 ============================== ========= ========= ======

@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 2
 ================================
 
-gem-tstation:/home/michele/ssd/calc_41597.hdf5 updated Tue Aug 23 17:46:47 2016
+gem-tstation:/home/michele/ssd/calc_41669.hdf5 updated Tue Aug 23 19:27:24 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   None
 random_seed                  1066                            
 master_seed                  0                               
 sites_per_tile               10000                           
-engine_version               '2.1.0-git5b04a6e'              
+engine_version               '2.1.0-gitc83a72d'              
 ============================ ================================
 
 Input files
@@ -70,13 +70,13 @@ source_model.xml 0      Active Shallow Crust 1           3000         75
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,198       
+count_eff_ruptures_max_received_per_task 1,139       
 count_eff_ruptures_num_tasks             1           
-count_eff_ruptures_sent.monitor          868         
+count_eff_ruptures_sent.monitor          817         
 count_eff_ruptures_sent.rlzs_by_gsim     516         
 count_eff_ruptures_sent.sitecol          433         
 count_eff_ruptures_sent.sources          1,200       
-count_eff_ruptures_tot_received          1,198       
+count_eff_ruptures_tot_received          1,139       
 hazard.input_weight                      75          
 hazard.n_imts                            1           
 hazard.n_levels                          4.000       
@@ -92,7 +92,7 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            1         PointSource  75     1         0.004       5.889E-05  0.0           0.0           0        
+0            1         PointSource  75     1         0.004       5.507E-05  0.0           0.0           0        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -100,7 +100,7 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-PointSource  0.004       5.889E-05  0.0           0.0           0         1     
+PointSource  0.004       5.507E-05  0.0           0.0           0         1     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
@@ -112,13 +112,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.010     0.0       1     
-managing sources               0.009     0.0       1     
-store source_info              0.005     0.0       1     
+managing sources               0.022     0.0       1     
+reading composite source model 0.008     0.0       1     
+store source_info              0.004     0.0       1     
 filtering sources              0.004     0.0       1     
-total count_eff_ruptures       3.569E-04 0.0       1     
-splitting sources              5.889E-05 0.0       1     
-reading site collection        3.791E-05 0.0       1     
-saving probability maps        2.599E-05 0.0       1     
-aggregate curves               1.884E-05 0.0       1     
+total count_eff_ruptures       9.570E-04 0.0       1     
+splitting sources              5.507E-05 0.0       1     
+reading site collection        3.910E-05 0.0       1     
+saving probability maps        2.480E-05 0.0       1     
+aggregate curves               2.003E-05 0.0       1     
 ============================== ========= ========= ======

@@ -365,7 +365,7 @@ class ClassicalCalculator(PSHACalculator):
         """
         Builds a dictionary pmap_by_grp_gsim from the stored PoEs
         """
-        if 'poes' not in self.datastore:
+        if 'poes' not in self.datastore:  # when building the short report
             return
 
         pmap_by_grp_gsim = {}
