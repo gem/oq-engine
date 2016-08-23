@@ -45,6 +45,7 @@ from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
+F64 = numpy.float64
 POEMAP = 1
 
 event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32),
@@ -239,8 +240,8 @@ def compute_ruptures(sources, sitecol, rlzs_by_gsim, monitor):
     params = sorted(cmaker.REQUIRES_RUPTURE_PARAMETERS)
     rup_data_dt = numpy.dtype(
         [('rupserial', U32), ('multiplicity', U16),
-         ('numsites', U32), ('occurrence_rate', F32)] + [
-            (param, F32) for param in params])
+         ('numsites', U32), ('occurrence_rate', F64)] + [
+            (param, F64) for param in params])
     eb_ruptures = []
     rup_data = []
     calc_times = []
