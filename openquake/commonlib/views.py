@@ -542,7 +542,7 @@ def view_fullreport(token, dstore):
     Display an .rst report about the computation
     """
     # avoid circular imports
-    from openquake.commonlib.reportwriter import ReportWriter
+    from openquake.calculators.reportwriter import ReportWriter
     return ReportWriter(dstore).make_report()
 
 

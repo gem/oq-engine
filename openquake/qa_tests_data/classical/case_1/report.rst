@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 1
 ================================
 
-gem-tstation:/home/michele/ssd/calc_41619.hdf5 updated Tue Aug 23 17:47:46 2016
+gem-tstation:/home/michele/ssd/calc_41668.hdf5 updated Tue Aug 23 18:24:20 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   None
 random_seed                  1066                            
 master_seed                  0                               
 sites_per_tile               10000                           
-engine_version               '2.1.0-git5b04a6e'              
+engine_version               '2.1.0-gitc83a72d'              
 ============================ ================================
 
 Input files
@@ -70,13 +70,13 @@ source_model.xml 0      Active Shallow Crust 1           1            0.025
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,283       
+count_eff_ruptures_max_received_per_task 1,224       
 count_eff_ruptures_num_tasks             1           
-count_eff_ruptures_sent.monitor          954         
+count_eff_ruptures_sent.monitor          903         
 count_eff_ruptures_sent.rlzs_by_gsim     516         
 count_eff_ruptures_sent.sitecol          433         
 count_eff_ruptures_sent.sources          1,188       
-count_eff_ruptures_tot_received          1,283       
+count_eff_ruptures_tot_received          1,224       
 hazard.input_weight                      0.025       
 hazard.n_imts                            2           
 hazard.n_levels                          3.000       
@@ -115,9 +115,9 @@ operation                      time_sec  memory_mb counts
 reading composite source model 0.004     0.0       1     
 store source_info              0.004     0.0       1     
 managing sources               0.003     0.0       1     
-total count_eff_ruptures       3.369E-04 0.0       1     
-reading site collection        3.910E-05 0.0       1     
+total count_eff_ruptures       3.440E-04 0.0       1     
+reading site collection        2.909E-05 0.0       1     
 filtering sources              2.098E-05 0.0       1     
-saving probability maps        2.003E-05 0.0       1     
-aggregate curves               1.407E-05 0.0       1     
+saving probability maps        1.812E-05 0.0       1     
+aggregate curves               1.383E-05 0.0       1     
 ============================== ========= ========= ======
