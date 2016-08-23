@@ -35,7 +35,6 @@ import collections
 
 import numpy
 from decorator import decorator
-from openquake.baselib.python3compat import dtype
 
 F64 = numpy.float64
 
@@ -597,8 +596,8 @@ class DictArray(collections.Mapping):
     The DictArray maintains the lexicographic order of the keys.
     """
     def __init__(self, imtls):
-        self.imt_dt = dt = dtype(
-            [(imt, F64, len(imls) if hasattr(imls, '__len__') else 1)
+        self.imt_dt = dt = numpy.dtype(
+            [(str(imt), F64, len(imls) if hasattr(imls, '__len__') else 1)
              for imt, imls in sorted(imtls.items())])
         self.slicedic, num_levels = _slicedict_n(dt)
         self.array = numpy.zeros(num_levels, F64)
@@ -626,7 +625,7 @@ class DictArray(collections.Mapping):
 
     def __fromh5__(self, carray, attrs):
         self.array = carray[:].view(F64)
-        self.imt_dt = dt = dtype(
+        self.imt_dt = dt = numpy.dtype(
             [(imt, F64, len(carray[0][imt])) for imt in carray.dtype.names])
         self.slicedic, num_levels = _slicedict_n(dt)
         for imt in carray.dtype.names:
