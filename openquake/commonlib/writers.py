@@ -209,51 +209,76 @@ class HeaderTranslator(object):
     into column names with the method .write. The usage is
 
     >>> htranslator = HeaderTranslator(
-    ...     asset_ref='asset_ref:|S20',
-    ...     rup_id='rup_id:uint32',
-    ...     taxonomy='taxonomy:object')
+    ...     '(asset_ref):|S20',
+    ...     '(rup_id):uint32',
+    ...     '(taxonomy):object')
     >>> htranslator.read('asset_ref value:5'.split())
     ['asset_ref:|S20', 'value:5']
     >>> htranslator.write('asset_ref:|S20 value:5'.split())
     ['asset_ref', 'value:5']
     """
-    def __init__(self, **descr):
-        self.descr = descr
-        self.name = {d: n for n, d in descr.items()}
+    def __init__(self, *regexps):
+        self.suffix = []
+        short_regexps = []
+        for regex in regexps:
+            prefix, suffix = regex.split(')')
+            short_regexps.append(prefix + ')')
+            self.suffix.append(suffix)
+        self.short_regex = '|'.join(short_regexps)
+        self.long_regex = '|'.join(regexps)
 
     def read(self, names):
-        return [self.descr.get(n, n) for n in names]
-
-    def replace(self, s):
-        # example: name='poe', regex='poe-[\d\.]+:float32'
-        for name, regex in self.descr.items():
-            if regex == s:
-                return name
-            mo = re.match(regex, s)
+        """
+        Convert names into descriptions
+        """
+        descrs = []
+        for name in names:
+            mo = re.match(self.short_regex, name)
             if mo:
-                return re.sub(regex, r'\1', s)
-        return s
+                idx = mo.lastindex  # matching group index, starting from 1
+                descrs.append(mo.group(mo.lastindex) + self.suffix[idx - 1] +
+                              name[mo.end():])
+            else:
+                descrs.append(name)
+        return descrs
 
-    def write(self, descr):
-        return map(self.replace, descr)
+    def write(self, descrs):
+        """
+        Convert descriptions into names
+        """
+        # example: '(poe-[\d\.]+):float32' -> 'poe-[\d\.]+'
+        names = []
+        for descr in descrs:
+            mo = re.match(self.long_regex, descr)
+            if mo:
+                names.append(mo.group(mo.lastindex) + descr[mo.end():])
+            else:
+                names.append(descr)
+        return names
 
 htranslator = HeaderTranslator(
-    asset_ref='asset_ref:|S100',
-    rup_id='rup_id:uint32',
-    taxonomy='taxonomy:|S100',
-    rupserial='rupserial:uint32',
-    multiplicity='multiplicity:uint16',
-    numsites='numsites:uint32',
-    losses='(losses):float32',
-    poes='(poes):float32',
-    avg='(avg):float32',
-    poe='(poe-[\d\.]+):float32',
-    lon='lon:float32',
-    lat='lat:float32',
-    structural_poe='(structural~poe-[\d\.]):float32',
-    nonstructural_poe='(nonstructural~poe-[\d\.]):float32',
-    business_interruption_poe='(business_interruption~poe-[\d\.]):float32',
-    contents_poe='(contents~poes-[\d\.]):float32',
+    '(asset_ref):\|S100',
+    '(rup_id):uint32',
+    '(taxonomy):\|S100',
+    '(rupserial):uint32',
+    '(multiplicity):uint16',
+    '(numsites):uint32',
+    '(losses):float32',
+    '(poes):float32',
+    '(avg):float32',
+    '(poe-[\d\.]+):float32',
+    '(lon):float32',
+    '(lat):float32',
+    '(structural.*):float32',
+    '(nonstructural.*):float32',
+    '(business_interruption.*):float32',
+    '(contents.*):float32',
+    '(occupants.*):float32',
+    '(no_damage):float32',
+    '(slight):float32',
+    '(moderate):float32',
+    '(extensive):float32',
+    '(complete):float32'
 )
 
 
@@ -472,7 +497,7 @@ def read_composite_array(fname, sep=','):
     >>> fname = writetmp('PGA:3,PGV:2,avg:1\n'
     ...                  '.1 .2 .3,.4 .5,.6\n')
     >>> print(read_composite_array(fname))  # array of shape (1,)
-    [([0.1, 0.2, 0.3], [0.4, 0.5], [0.6])]
+    [([0.1, 0.2, 0.3], [0.4, 0.5], [0.6000000238418579])]
     """
     with open(fname) as f:
         header = next(f)
