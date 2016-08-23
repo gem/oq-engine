@@ -222,7 +222,7 @@ class HeaderTranslator(object):
         short_regexps = []
         for regex in regexps:
             prefix, suffix = regex.split(')')
-            short_regexps.append(prefix + ')')
+            short_regexps.append(prefix + ')$')
             self.suffix.append(suffix)
         self.short_regex = '|'.join(short_regexps)
         self.long_regex = '|'.join(regexps)
@@ -270,17 +270,17 @@ htranslator = HeaderTranslator(
     '(poe-[\d\.]+):float32',
     '(lon):float32',
     '(lat):float32',
-    '(structural.*):float32',
-    '(nonstructural.*):float32',
-    '(business_interruption.*):float32',
-    '(contents.*):float32',
-    '(occupants.*):float32',
+    '(structural~.+):float32',
+    '(nonstructural~.+):float32',
+    '(business_interruption~.+):float32',
+    '(contents~.+):float32',
+    '(occupants~.+):float32',
     '(no_damage):float32',
     '(slight):float32',
     '(moderate):float32',
     '(extensive):float32',
     '(complete):float32',
-    '(\d+):float32',
+    '(\d+):float32',  # realization column, used in the GMF scenario exporter
 )
 
 
@@ -463,7 +463,7 @@ def parse_header(header):
     triples = []
     fields = []
     for col_str in header:
-        col = col_str.split(':')
+        col = col_str.strip().split(':')
         n = len(col)
         if n == 1:  # default dtype and no shape
             col = [col[0], 'float64', '']
@@ -499,7 +499,7 @@ def read_composite_array(fname, sep=','):
     >>> fname = writetmp('PGA:3,PGV:2,avg:1\n'
     ...                  '.1 .2 .3,.4 .5,.6\n')
     >>> print(read_composite_array(fname))  # array of shape (1,)
-    [([0.1, 0.2, 0.3], [0.4, 0.5], [0.6000000238418579])]
+    [([0.1, 0.2, 0.3], [0.4, 0.5], [0.6])]
     """
     with open(fname) as f:
         header = next(f)
