@@ -209,11 +209,13 @@ class HeaderTranslator(object):
     into column names with the method .write. The usage is
 
     >>> htranslator = HeaderTranslator(
-    ...     '(asset_ref):\|S20',
+    ...     '(asset_ref):\|S100',
     ...     '(rup_id):uint32',
     ...     '(taxonomy):object')
-    >>> htranslator.write('asset_ref:|S20 value:5'.split())
+    >>> htranslator.write('asset_ref:|S100 value:5'.split())
     ['asset_ref', 'value:5']
+    >>> htranslator.read('asset_ref value:5'.split())
+    ['asset_ref:|S100', 'value:5']
     """
     def __init__(self, *regexps):
         self.suffix = []
@@ -234,7 +236,8 @@ class HeaderTranslator(object):
             mo = re.match(self.short_regex, name)
             if mo:
                 idx = mo.lastindex  # matching group index, starting from 1
-                descrs.append(mo.group(mo.lastindex) + self.suffix[idx - 1] +
+                suffix = self.suffix[idx - 1].replace(r':\|', ':|')
+                descrs.append(mo.group(mo.lastindex) + suffix +
                               name[mo.end():])
             else:
                 descrs.append(name)
@@ -500,7 +503,8 @@ def read_composite_array(fname, sep=','):
     """
     with open(fname) as f:
         header = next(f)
-        fields, dtype = parse_header(htranslator.read(header.split(sep)))
+        transheader = htranslator.read(header.split(sep))
+        fields, dtype = parse_header(transheader)
         ts_pairs = []  # [(type, shape), ...]
         for name in fields:
             dt = dtype.fields[name][0]
