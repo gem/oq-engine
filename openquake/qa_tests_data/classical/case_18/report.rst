@@ -1,7 +1,7 @@
 Demo Classical PSHA for Vancouver Schools
 =========================================
 
-gem-tstation:/home/michele/ssd/calc_41612.hdf5 updated Tue Aug 23 17:47:16 2016
+gem-tstation:/home/michele/ssd/calc_41684.hdf5 updated Tue Aug 23 19:27:51 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -21,7 +21,7 @@ area_source_discretization   50.0
 random_seed                  23                              
 master_seed                  0                               
 sites_per_tile               10000                           
-engine_version               '2.1.0-git5b04a6e'              
+engine_version               '2.1.0-gitc83a72d'              
 ============================ ================================
 
 Input files
@@ -73,13 +73,13 @@ vancouver_area_source.xml 0      Active Shallow Crust 1           2430         6
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,594       
+count_eff_ruptures_max_received_per_task 1,535       
 count_eff_ruptures_num_tasks             30          
-count_eff_ruptures_sent.monitor          37,980      
+count_eff_ruptures_sent.monitor          36,450      
 count_eff_ruptures_sent.rlzs_by_gsim     4,817,850   
 count_eff_ruptures_sent.sitecol          14,190      
 count_eff_ruptures_sent.sources          41,140      
-count_eff_ruptures_tot_received          47,820      
+count_eff_ruptures_tot_received          46,050      
 hazard.input_weight                      60          
 hazard.n_imts                            3           
 hazard.n_levels                          12          
@@ -95,7 +95,7 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            VICM      AreaSource   60     30        0.001       0.009      0.0           0.0           0        
+0            VICM      AreaSource   60     30        0.001       0.008      0.0           0.0           0        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -103,7 +103,7 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-AreaSource   0.001       0.009      0.0           0.0           0         1     
+AreaSource   0.001       0.008      0.0           0.0           0         1     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
@@ -115,13 +115,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.071     0.0       1     
-reading composite source model 0.025     0.0       1     
-splitting sources              0.009     0.0       1     
+managing sources               0.066     0.0       1     
+reading composite source model 0.024     0.0       1     
 total count_eff_ruptures       0.009     0.0       30    
+splitting sources              0.008     0.0       1     
 store source_info              0.005     0.0       1     
 filtering sources              0.001     0.0       1     
-aggregate curves               4.983E-04 0.0       30    
-reading site collection        8.202E-05 0.0       1     
-saving probability maps        2.813E-05 0.0       1     
+aggregate curves               5.341E-04 0.0       30    
+reading site collection        8.607E-05 0.0       1     
+saving probability maps        2.718E-05 0.0       1     
 ============================== ========= ========= ======
