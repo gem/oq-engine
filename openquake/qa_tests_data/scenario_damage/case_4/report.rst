@@ -1,14 +1,14 @@
 Scenario Damage QA Test 4
 =========================
 
-gem-tstation:/home/michele/ssd/calc_40523.hdf5 updated Mon Aug 22 12:15:10 2016
+gem-tstation:/home/michele/ssd/calc_41559.hdf5 updated Tue Aug 23 17:46:16 2016
 
 num_sites = 3, sitecol = 831 B
 
 Parameters
 ----------
 ============================ ==================
-calculation_mode             'scenario_damage' 
+calculation_mode             'scenario'        
 number_of_logic_tree_samples 0                 
 maximum_distance             {u'default': 300} 
 investigation_time           None              
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None              
 random_seed                  3                 
 master_seed                  0                 
-engine_version               '2.1.0-git8cbb23e'
+engine_version               '2.1.0-git5b04a6e'
 ============================ ==================
 
 Input files
@@ -68,7 +68,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.004     0.0       1     
+filtering sites         0.005     0.0       1     
 reading exposure        0.002     0.0       1     
 reading site collection 5.007E-06 0.0       1     
 ======================= ========= ========= ======

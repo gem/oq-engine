@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 17
 =================================
 
-gem-tstation:/home/michele/ssd/calc_40694.hdf5 updated Mon Aug 22 12:45:45 2016
+gem-tstation:/home/michele/ssd/calc_41598.hdf5 updated Tue Aug 23 17:46:47 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  106                             
 master_seed                  0                               
 sites_per_tile               10000                           
-engine_version               '2.1.0-git8cbb23e'              
+engine_version               '2.1.0-git5b04a6e'              
 ============================ ================================
 
 Input files
@@ -47,12 +47,12 @@ b2        0.200  `source_model_2.xml <source_model_2.xml>`_ trivial(1)      4/1
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ==================== ============= ============= ==========
-grp_id gsims                distances     siteparams    ruptparams
-====== ==================== ============= ============= ==========
-0      ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-1      ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-====== ==================== ============= ============= ==========
+====== ================ ========= ========== ==========
+grp_id gsims            distances siteparams ruptparams
+====== ================ ========= ========== ==========
+0      SadighEtAl1997() rrup      vs30       rake mag  
+1      SadighEtAl1997() rrup      vs30       rake mag  
+====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -81,31 +81,31 @@ filtered_weight 1.150
 
 Informational data
 ------------------
-=============================== ============
-classical_max_received_per_task 1,798       
-classical_num_tasks             2           
-classical_sent.monitor          1,616       
-classical_sent.rlzs_by_gsim     1,302       
-classical_sent.sitecol          866         
-classical_sent.sources          2,661       
-classical_tot_received          3,596       
-hazard.input_weight             1.675       
-hazard.n_imts                   1           
-hazard.n_levels                 3.000       
-hazard.n_realizations           5           
-hazard.n_sites                  1           
-hazard.n_sources                2           
-hazard.output_weight            15          
-hostname                        gem-tstation
-=============================== ============
+======================================== ============
+count_eff_ruptures_max_received_per_task 1,187       
+count_eff_ruptures_num_tasks             2           
+count_eff_ruptures_sent.monitor          1,718       
+count_eff_ruptures_sent.rlzs_by_gsim     1,302       
+count_eff_ruptures_sent.sitecol          866         
+count_eff_ruptures_sent.sources          2,661       
+count_eff_ruptures_tot_received          2,374       
+hazard.input_weight                      1.675       
+hazard.n_imts                            1           
+hazard.n_levels                          3.000       
+hazard.n_realizations                    5           
+hazard.n_sites                           1           
+hazard.n_sources                         2           
+hazard.output_weight                     15          
+hostname                                 gem-tstation
+======================================== ============
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            1         PointSource  0.975  1         6.604E-05   0.0        0.059         0.059         1        
-1            2         PointSource  0.175  1         1.907E-05   0.0        0.013         0.013         1        
+0            1         PointSource  0.975  1         4.482E-05   0.0        0.0           0.0           0        
+1            2         PointSource  0.175  1         1.788E-05   0.0        0.0           0.0           0        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -113,31 +113,24 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-PointSource  8.512E-05   0.0        0.072         0.072         2         2     
+PointSource  6.270E-05   0.0        0.0           0.0           0         2     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
-=================== ===== ====== ===== ===== =========
-measurement         mean  stddev min   max   num_tasks
-classical.time_sec  0.038 0.032  0.016 0.061 2        
-classical.memory_mb 1.412 0.003  1.410 1.414 2        
-=================== ===== ====== ===== ===== =========
+Not available
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total classical                0.077     1.414     2     
-making contexts                0.036     0.0       46    
-computing poes                 0.009     0.0       46    
-reading composite source model 0.008     0.0       1     
-store source_info              0.006     0.0       1     
+store source_info              0.009     0.0       1     
+reading composite source model 0.007     0.0       1     
 managing sources               0.005     0.0       1     
-saving probability maps        0.002     0.0       1     
-read poes                      9.871E-04 0.0       1     
-filtering sources              8.512E-05 0.0       2     
-reading site collection        4.601E-05 0.0       1     
-aggregate curves               3.481E-05 0.0       2     
+total count_eff_ruptures       5.450E-04 0.0       2     
+aggregate curves               6.580E-05 0.0       2     
+filtering sources              6.270E-05 0.0       2     
+saving probability maps        4.387E-05 0.0       1     
+reading site collection        3.600E-05 0.0       1     
 ============================== ========= ========= ======

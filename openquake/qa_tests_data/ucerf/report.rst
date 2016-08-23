@@ -1,7 +1,7 @@
 Ucerf test
 ==========
 
-gem-tstation:/home/michele/ssd/calc_40519.hdf5 updated Mon Aug 22 12:15:09 2016
+gem-tstation:/home/michele/ssd/calc_41555.hdf5 updated Tue Aug 23 17:46:15 2016
 
 num_sites = 1588, sitecol = 72.04 KB
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             1.0
 area_source_discretization   None                            
 random_seed                  1066                            
 master_seed                  0                               
-engine_version               '2.1.0-git8cbb23e'              
+engine_version               '2.1.0-git5b04a6e'              
 ============================ ================================
 
 Input files
@@ -140,12 +140,12 @@ ltbr1299  0.150  `ltbr1299 <ltbr1299>`_ trivial(1)      0/0
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== =================== ============ ============= ==========
-grp_id gsims               distances    siteparams    ruptparams
-====== =================== ============ ============= ==========
-0      ['BooreEtAl2014()'] set(['rjb']) set(['vs30']) rake mag  
-1      ['BooreEtAl2014()'] set(['rjb']) set(['vs30']) rake mag  
-====== =================== ============ ============= ==========
+====== =============== ========= ========== ==========
+grp_id gsims           distances siteparams ruptparams
+====== =============== ========= ========== ==========
+0      BooreEtAl2014() rjb       vs30       rake mag  
+1      BooreEtAl2014() rjb       vs30       rake mag  
+====== =============== ========= ========== ==========
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -183,26 +183,26 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            ltbr0758  type         1.000  1         0.0         0.0        0.060         0.060         1        
-1            ltbr0759  type         1.000  1         0.0         0.0        0.042         0.042         1        
-0            ltbr0542  type         1.000  1         0.0         0.0        0.094         0.094         1        
+0            ltbr0758  type         1.000  1         0.0         0.0        0.045         0.045         1        
+1            ltbr0759  type         1.000  1         0.0         0.0        0.034         0.034         1        
+0            ltbr0542  type         1.000  1         0.0         0.0        0.097         0.097         1        
 1            ltbr0037  type         1.000  1         0.0         0.0        0.041         0.041         1        
-0            ltbr1299  type         1.000  1         0.0         0.0        0.078         0.078         1        
-1            ltbr0541  type         1.000  1         0.0         0.0        0.061         0.061         1        
-0            ltbr0723  type         1.000  1         0.0         0.0        0.096         0.096         1        
-1            ltbr0722  type         1.000  1         0.0         0.0        0.050         0.050         1        
-0            ltbr0577  type         1.000  1         0.0         0.0        0.084         0.084         1        
-1            ltbr0578  type         1.000  1         0.0         0.0        0.073         0.073         1        
-0            ltbr1297  type         1.000  1         0.0         0.0        0.077         0.077         1        
-1            ltbr0543  type         1.000  1         0.0         0.0        0.102         0.102         1        
-0            ltbr0579  type         1.000  1         0.0         0.0        0.129         0.129         1        
-1            ltbr0721  type         1.000  1         0.0         0.0        0.077         0.077         1        
-0            ltbr0001  type         1.000  1         0.0         0.0        0.137         0.137         1        
-1            ltbr0002  type         1.000  1         0.0         0.0        0.085         0.085         1        
-0            ltbr0003  type         1.000  1         0.0         0.0        0.146         0.146         1        
-1            ltbr1298  type         1.000  1         0.0         0.0        0.120         0.120         1        
-0            ltbr0038  type         1.000  1         0.0         0.0        0.179         0.179         1        
-1            ltbr1263  type         1.000  1         0.0         0.0        0.112         0.112         1        
+0            ltbr1299  type         1.000  1         0.0         0.0        0.076         0.076         1        
+1            ltbr0541  type         1.000  1         0.0         0.0        0.065         0.065         1        
+0            ltbr0723  type         1.000  1         0.0         0.0        0.104         0.104         1        
+1            ltbr0722  type         1.000  1         0.0         0.0        0.051         0.051         1        
+0            ltbr1297  type         1.000  1         0.0         0.0        0.063         0.063         1        
+1            ltbr0543  type         1.000  1         0.0         0.0        0.092         0.092         1        
+0            ltbr0579  type         1.000  1         0.0         0.0        0.090         0.090         1        
+1            ltbr0721  type         1.000  1         0.0         0.0        0.071         0.071         1        
+0            ltbr0003  type         1.000  1         0.0         0.0        0.081         0.081         1        
+1            ltbr1298  type         1.000  1         0.0         0.0        0.105         0.105         1        
+0            ltbr0577  type         1.000  1         0.0         0.0        0.126         0.126         1        
+1            ltbr0578  type         1.000  1         0.0         0.0        0.076         0.076         1        
+0            ltbr0001  type         1.000  1         0.0         0.0        0.141         0.141         1        
+1            ltbr0002  type         1.000  1         0.0         0.0        0.083         0.083         1        
+0            ltbr0757  type         1.000  1         0.0         0.0        0.322         0.322         1        
+1            ltbr0039  type         1.000  1         0.0         0.0        0.037         0.037         1        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -210,15 +210,15 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-type         0.0         0.0        2.632         2.632         24        24    
+type         0.0         0.0        2.456         2.456         24        24    
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ========================== ===== ====== ===== ===== =========
 measurement                mean  stddev min   max   num_tasks
-compute_ruptures.time_sec  0.220 0.099  0.103 0.410 12       
-compute_ruptures.memory_mb 4.847 1.725  1.492 8.551 12       
+compute_ruptures.time_sec  0.205 0.090  0.079 0.366 12       
+compute_ruptures.memory_mb 6.155 2.199  1.520 10    12       
 ========================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -226,8 +226,8 @@ Slowest operations
 ============================= ======== ========= ======
 operation                     time_sec memory_mb counts
 ============================= ======== ========= ======
-total compute_ruptures        2.636    8.551     12    
-sampling ruptures             1.627    0.0       24    
-saving ruptures               0.432    0.0       1     
-update_background_site_filter 0.124    0.0       24    
+total compute_ruptures        2.460    10        12    
+sampling ruptures             1.486    0.0       24    
+saving ruptures               0.436    0.0       1     
+update_background_site_filter 0.123    0.0       24    
 ============================= ======== ========= ======

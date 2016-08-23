@@ -1,7 +1,7 @@
 Classical Hazard-Risk QA test 4
 ===============================
 
-gem-tstation:/home/michele/ssd/calc_40516.hdf5 updated Mon Aug 22 12:15:07 2016
+gem-tstation:/home/michele/ssd/calc_41552.hdf5 updated Tue Aug 23 17:46:13 2016
 
 num_sites = 6, sitecol = 969 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                              
 master_seed                  0                               
 sites_per_tile               10000                           
-engine_version               '2.1.0-git8cbb23e'              
+engine_version               '2.1.0-git5b04a6e'              
 ============================ ================================
 
 Input files
@@ -67,29 +67,29 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ======
 source_model     grp_id trt                  num_sources eff_ruptures weight
 ================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 2           4187         160   
+source_model.xml 0      Active Shallow Crust 2           6405         160   
 ================ ====== ==================== =========== ============ ======
 
 Informational data
 ------------------
-=============================== ============
-classical_max_received_per_task 6,717       
-classical_num_tasks             2           
-classical_sent.monitor          7,296       
-classical_sent.rlzs_by_gsim     1,402       
-classical_sent.sitecol          1,066       
-classical_sent.sources          3,950       
-classical_tot_received          11,615      
-hazard.input_weight             2,276       
-hazard.n_imts                   1           
-hazard.n_levels                 19          
-hazard.n_realizations           2           
-hazard.n_sites                  6           
-hazard.n_sources                39          
-hazard.output_weight            228         
-hostname                        gem-tstation
-require_epsilons                1           
-=============================== ============
+======================================== ============
+count_eff_ruptures_max_received_per_task 1,259       
+count_eff_ruptures_num_tasks             2           
+count_eff_ruptures_sent.monitor          1,876       
+count_eff_ruptures_sent.rlzs_by_gsim     1,402       
+count_eff_ruptures_sent.sitecol          1,066       
+count_eff_ruptures_sent.sources          3,950       
+count_eff_ruptures_tot_received          2,518       
+hazard.input_weight                      2,276       
+hazard.n_imts                            1           
+hazard.n_levels                          19          
+hazard.n_realizations                    2           
+hazard.n_sites                           6           
+hazard.n_sources                         39          
+hazard.output_weight                     228         
+hostname                                 gem-tstation
+require_epsilons                         1           
+======================================== ============
 
 Exposure model
 --------------
@@ -112,8 +112,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            231       AreaSource   104    1         6.700E-04   0.0        4.294         4.294         1        
-0            376       AreaSource   55     1         6.750E-04   0.0        1.173         1.173         1        
+0            376       AreaSource   55     1         7.160E-04   0.0        0.0           0.0           0        
+0            231       AreaSource   104    1         7.079E-04   0.0        0.0           0.0           0        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -121,31 +121,25 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-AreaSource   0.001       0.0        5.467         5.467         2         2     
+AreaSource   0.001       0.0        0.0           0.0           0         2     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
-=================== ===== ====== ===== ===== =========
-measurement         mean  stddev min   max   num_tasks
-classical.time_sec  2.736 2.207  1.175 4.296 2        
-classical.memory_mb 2.490 0.003  2.488 2.492 2        
-=================== ===== ====== ===== ===== =========
+Not available
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total classical                5.472     2.492     2     
-making contexts                2.720     0.0       6,405 
-reading composite source model 2.076     0.0       1     
-computing poes                 1.143     0.0       4,187 
+reading composite source model 2.030     0.0       1     
 managing sources               0.033     0.0       1     
-filtering sources              0.028     0.0       39    
-store source_info              0.013     0.0       1     
-reading exposure               0.004     0.0       1     
-saving probability maps        0.002     0.0       1     
-aggregate curves               8.678E-05 0.0       2     
-reading site collection        8.106E-06 0.0       1     
+filtering sources              0.029     0.0       39    
+store source_info              0.009     0.0       1     
+total count_eff_ruptures       0.003     0.0       2     
+reading exposure               0.003     0.0       1     
+aggregate curves               2.789E-05 0.0       2     
+saving probability maps        2.193E-05 0.0       1     
+reading site collection        5.960E-06 0.0       1     
 ============================== ========= ========= ======

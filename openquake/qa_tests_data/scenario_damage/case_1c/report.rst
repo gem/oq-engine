@@ -1,7 +1,7 @@
 Scenario Damage
 ===============
 
-gem-tstation:/home/michele/ssd/calc_40520.hdf5 updated Mon Aug 22 12:15:10 2016
+gem-tstation:/home/michele/ssd/calc_41556.hdf5 updated Tue Aug 23 17:46:15 2016
 
 num_sites = 1, sitecol = 697 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  42                 
 master_seed                  0                  
-engine_version               '2.1.0-git8cbb23e' 
+engine_version               '2.1.0-git5b04a6e' 
 ============================ ===================
 
 Input files
@@ -66,10 +66,10 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.007     0.0       1     
+filtering sites         0.008     0.0       1     
 reading exposure        0.003     0.0       1     
 computing gmfs          0.002     0.0       1     
 saving gmfs             0.001     0.0       1     
-building riskinputs     1.159E-04 0.0       1     
-reading site collection 9.990E-05 0.0       1     
+building riskinputs     1.211E-04 0.0       1     
+reading site collection 1.040E-04 0.0       1     
 ======================= ========= ========= ======
