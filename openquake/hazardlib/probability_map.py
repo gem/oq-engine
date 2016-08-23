@@ -81,10 +81,10 @@ class ProbabilityCurve(object):
         :param imtls: DictArray instance
         :param idx: extract the data corresponding to the given inner index
         """
-        curve = numpy.zeros(1, imtls.imt_dt)[0]
+        curve = numpy.zeros(1, imtls.imt_dt)
         for imt in imtls:
             curve[imt] = self.array[imtls.slicedic[imt], idx]
-        return curve
+        return curve[0]
 
 
 class ProbabilityMap(dict):
