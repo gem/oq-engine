@@ -1,7 +1,7 @@
 Classical PSHA using Area Source
 ================================
 
-gem-tstation:/home/michele/ssd/calc_40609.hdf5 updated Mon Aug 22 12:34:15 2016
+gem-tstation:/home/michele/ssd/calc_41645.hdf5 updated Tue Aug 23 17:48:36 2016
 
 num_sites = 6, sitecol = 969 B
 
@@ -21,7 +21,7 @@ area_source_discretization   5.0
 random_seed                  23                              
 master_seed                  0                               
 sites_per_tile               1                               
-engine_version               '2.1.0-git8cbb23e'              
+engine_version               '2.1.0-git5b04a6e'              
 ============================ ================================
 
 Input files
@@ -70,30 +70,30 @@ source_model.xml 0      Active Shallow Crust 1           1640         41
 
 Informational data
 ------------------
-=============================== ============
-classical_max_received_per_task 7,584       
-classical_num_tasks             6           
-classical_sent.monitor          34,152      
-classical_sent.rlzs_by_gsim     4,230       
-classical_sent.sitecol          2,598       
-classical_sent.sources          11,670      
-classical_tot_received          45,504      
-hazard.input_weight             41          
-hazard.n_imts                   3           
-hazard.n_levels                 19          
-hazard.n_realizations           2           
-hazard.n_sites                  6           
-hazard.n_sources                1           
-hazard.output_weight            684         
-hostname                        gem-tstation
-=============================== ============
+======================================== ============
+count_eff_ruptures_max_received_per_task 1,771       
+count_eff_ruptures_num_tasks             6           
+count_eff_ruptures_sent.monitor          8,652       
+count_eff_ruptures_sent.rlzs_by_gsim     4,230       
+count_eff_ruptures_sent.sitecol          2,598       
+count_eff_ruptures_sent.sources          11,670      
+count_eff_ruptures_tot_received          10,626      
+hazard.input_weight                      41          
+hazard.n_imts                            3           
+hazard.n_levels                          19          
+hazard.n_realizations                    2           
+hazard.n_sites                           6           
+hazard.n_sources                         1           
+hazard.output_weight                     684         
+hostname                                 gem-tstation
+======================================== ============
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            1         AreaSource   41     1         0.010       0.0        16            2.882         6        
+0            1         AreaSource   41     1         0.006       0.0        0.0           0.0           0        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -101,30 +101,24 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-AreaSource   0.010       0.0        16            2.882         6         1     
+AreaSource   0.006       0.0        0.0           0.0           0         1     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
-=================== ===== ====== ===== ===== =========
-measurement         mean  stddev min   max   num_tasks
-classical.time_sec  2.794 0.048  2.752 2.885 6        
-classical.memory_mb 0.0   0.0    0.0   0.0   6        
-=================== ===== ====== ===== ===== =========
+Not available
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total classical                16        0.0       6     
-computing poes                 8.834     0.0       9,840 
-making contexts                5.130     0.0       9,840 
-reading composite source model 0.039     0.0       1     
-managing sources               0.033     0.0       1     
-filtering sources              0.010     0.0       6     
-store source_info              0.006     0.0       1     
+reading composite source model 0.042     0.0       1     
+managing sources               0.017     0.0       1     
+filtering sources              0.006     0.0       6     
+store source_info              0.004     0.0       1     
 reading site collection        0.002     0.0       1     
-saving probability maps        0.002     0.0       1     
-aggregate curves               1.192E-04 0.0       6     
+total count_eff_ruptures       0.002     0.0       6     
+aggregate curves               6.914E-05 0.0       6     
+saving probability maps        2.003E-05 0.0       1     
 ============================== ========= ========= ======

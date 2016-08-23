@@ -1,7 +1,7 @@
 Event Based Hazard
 ==================
 
-gem-tstation:/home/michele/ssd/calc_40556.hdf5 updated Mon Aug 22 12:15:39 2016
+gem-tstation:/home/michele/ssd/calc_41592.hdf5 updated Tue Aug 23 17:46:27 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0                            
 random_seed                  24                              
 master_seed                  0                               
-engine_version               '2.1.0-git8cbb23e'              
+engine_version               '2.1.0-git5b04a6e'              
 ============================ ================================
 
 Input files
@@ -47,11 +47,11 @@ b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ==================== ============= ============= ==========
-grp_id gsims                distances     siteparams    ruptparams
-====== ==================== ============= ============= ==========
-0      ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-====== ==================== ============= ============= ==========
+====== ================ ========= ========== ==========
+grp_id gsims            distances siteparams ruptparams
+====== ================ ========= ========== ==========
+0      SadighEtAl1997() rrup      vs30       rake mag  
+====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -72,13 +72,13 @@ source_model.xml 0      Active Shallow Crust 2           5            483
 Informational data
 ------------------
 ====================================== ============
-compute_ruptures_max_received_per_task 17,043      
+compute_ruptures_max_received_per_task 12,562      
 compute_ruptures_num_tasks             14          
-compute_ruptures_sent.monitor          72,352      
+compute_ruptures_sent.monitor          12,922      
 compute_ruptures_sent.rlzs_by_gsim     7,210       
 compute_ruptures_sent.sitecol          8,456       
 compute_ruptures_sent.sources          30,006      
-compute_ruptures_tot_received          103,023     
+compute_ruptures_tot_received          42,080      
 hazard.input_weight                    483         
 hazard.n_imts                          1           
 hazard.n_levels                        11          
@@ -117,8 +117,8 @@ Slowest sources
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class              weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
-0            3         SimpleFaultSource         482    15        0.002       0.034      0.224         0.036         15       
-0            1         CharacteristicFaultSource 1.000  1         0.001       0.0        0.014         0.014         1        
+0            3         SimpleFaultSource         482    15        0.002       0.033      0.249         0.034         15       
+0            1         CharacteristicFaultSource 1.000  1         0.002       0.0        0.022         0.022         1        
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -126,15 +126,15 @@ Computation times by source typology
 ========================= =========== ========== ============= ============= ========= ======
 source_class              filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ========================= =========== ========== ============= ============= ========= ======
-CharacteristicFaultSource 0.001       0.0        0.014         0.014         1         1     
-SimpleFaultSource         0.002       0.034      0.224         0.036         15        1     
+CharacteristicFaultSource 0.002       0.0        0.022         0.022         1         1     
+SimpleFaultSource         0.002       0.033      0.249         0.034         15        1     
 ========================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ========================== ===== ====== ===== ===== =========
 measurement                mean  stddev min   max   num_tasks
-compute_ruptures.time_sec  0.017 0.008  0.008 0.036 14       
+compute_ruptures.time_sec  0.020 0.007  0.009 0.034 14       
 compute_ruptures.memory_mb 0.0   0.0    0.0   0.0   14       
 ========================== ===== ====== ===== ===== =========
 
@@ -143,15 +143,15 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.243     0.0       14    
-managing sources               0.069     0.0       1     
-splitting sources              0.034     0.0       1     
-filtering ruptures             0.022     0.0       5     
+total compute_ruptures         0.277     0.0       14    
+managing sources               0.052     0.0       1     
+filtering ruptures             0.034     0.0       5     
+splitting sources              0.033     0.0       1     
 reading composite source model 0.014     0.0       1     
-store source_info              0.006     0.0       1     
-saving ruptures                0.004     0.0       1     
-filtering sources              0.003     0.0       2     
-aggregate curves               0.003     0.0       14    
+store source_info              0.009     0.0       1     
+saving ruptures                0.006     0.0       1     
+aggregate curves               0.004     0.0       14    
+filtering sources              0.004     0.0       2     
 reading exposure               0.003     0.0       1     
-reading site collection        6.914E-06 0.0       1     
+reading site collection        8.106E-06 0.0       1     
 ============================== ========= ========= ======

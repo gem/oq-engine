@@ -123,6 +123,8 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             logging.info('Preparing the risk input')
             curves_by_trt_gsim = {}
             nsites = len(self.sitecol.complete)
+            if 'poes' not in self.datastore:  # when building the short report
+                return
             for key in self.datastore['poes']:
                 pmap = self.datastore['poes/' + key]
                 grp_id = int(key)

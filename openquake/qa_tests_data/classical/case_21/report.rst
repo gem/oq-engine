@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 21
 =================================
 
-gem-tstation:/home/michele/ssd/calc_40707.hdf5 updated Mon Aug 22 12:50:53 2016
+gem-tstation:/home/michele/ssd/calc_41604.hdf5 updated Tue Aug 23 17:47:03 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  106                             
 master_seed                  0                               
 sites_per_tile               10000                           
-engine_version               '2.1.0-git8cbb23e'              
+engine_version               '2.1.0-git5b04a6e'              
 ============================ ================================
 
 Input files
@@ -92,37 +92,37 @@ b1_mfd3_mid_dip_dip60  0.040  `source_model.xml <source_model.xml>`_ trivial(1) 
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ==================== ============= ============= ==========
-grp_id gsims                distances     siteparams    ruptparams
-====== ==================== ============= ============= ==========
-0      ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-1      ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-2      ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-3      ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-4      ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-5      ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-6      ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-7      ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-8      ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-9      ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-10     ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-11     ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-12     ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-13     ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-14     ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-15     ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-16     ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-17     ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-18     ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-19     ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-20     ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-21     ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-22     ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-23     ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-24     ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-25     ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-26     ['SadighEtAl1997()'] set(['rrup']) set(['vs30']) rake mag  
-====== ==================== ============= ============= ==========
+====== ================ ========= ========== ==========
+grp_id gsims            distances siteparams ruptparams
+====== ================ ========= ========== ==========
+0      SadighEtAl1997() rrup      vs30       rake mag  
+1      SadighEtAl1997() rrup      vs30       rake mag  
+2      SadighEtAl1997() rrup      vs30       rake mag  
+3      SadighEtAl1997() rrup      vs30       rake mag  
+4      SadighEtAl1997() rrup      vs30       rake mag  
+5      SadighEtAl1997() rrup      vs30       rake mag  
+6      SadighEtAl1997() rrup      vs30       rake mag  
+7      SadighEtAl1997() rrup      vs30       rake mag  
+8      SadighEtAl1997() rrup      vs30       rake mag  
+9      SadighEtAl1997() rrup      vs30       rake mag  
+10     SadighEtAl1997() rrup      vs30       rake mag  
+11     SadighEtAl1997() rrup      vs30       rake mag  
+12     SadighEtAl1997() rrup      vs30       rake mag  
+13     SadighEtAl1997() rrup      vs30       rake mag  
+14     SadighEtAl1997() rrup      vs30       rake mag  
+15     SadighEtAl1997() rrup      vs30       rake mag  
+16     SadighEtAl1997() rrup      vs30       rake mag  
+17     SadighEtAl1997() rrup      vs30       rake mag  
+18     SadighEtAl1997() rrup      vs30       rake mag  
+19     SadighEtAl1997() rrup      vs30       rake mag  
+20     SadighEtAl1997() rrup      vs30       rake mag  
+21     SadighEtAl1997() rrup      vs30       rake mag  
+22     SadighEtAl1997() rrup      vs30       rake mag  
+23     SadighEtAl1997() rrup      vs30       rake mag  
+24     SadighEtAl1997() rrup      vs30       rake mag  
+25     SadighEtAl1997() rrup      vs30       rake mag  
+26     SadighEtAl1997() rrup      vs30       rake mag  
+====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -201,49 +201,49 @@ filtered_weight 8,175
 
 Informational data
 ------------------
-=============================== ============
-classical_max_received_per_task 1,833       
-classical_num_tasks             35          
-classical_sent.monitor          28,560      
-classical_sent.rlzs_by_gsim     19,541      
-classical_sent.sitecol          15,155      
-classical_sent.sources          45,375      
-classical_tot_received          63,761      
-hazard.input_weight             8,175       
-hazard.n_imts                   1           
-hazard.n_levels                 4.000       
-hazard.n_realizations           27          
-hazard.n_sites                  1           
-hazard.n_sources                54          
-hazard.output_weight            108         
-hostname                        gem-tstation
-=============================== ============
+======================================== ============
+count_eff_ruptures_max_received_per_task 1,196       
+count_eff_ruptures_num_tasks             35          
+count_eff_ruptures_sent.monitor          30,345      
+count_eff_ruptures_sent.rlzs_by_gsim     19,541      
+count_eff_ruptures_sent.sitecol          15,155      
+count_eff_ruptures_sent.sources          45,375      
+count_eff_ruptures_tot_received          41,838      
+hazard.input_weight                      8,175       
+hazard.n_imts                            1           
+hazard.n_levels                          4.000       
+hazard.n_realizations                    27          
+hazard.n_sites                           1           
+hazard.n_sources                         54          
+hazard.output_weight                     108         
+hostname                                 gem-tstation
+======================================== ============
 
 Slowest sources
 ---------------
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class      weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
-5            SFLT1     SimpleFaultSource 150    1         0.001       0.0        0.820         0.820         1        
-4            SFLT1     SimpleFaultSource 150    1         0.001       0.0        0.706         0.706         1        
-22           SFLT1     SimpleFaultSource 198    1         0.001       0.0        0.666         0.666         1        
-12           SFLT1     SimpleFaultSource 81     1         0.001       0.0        0.666         0.666         1        
-21           SFLT1     SimpleFaultSource 198    1         0.001       0.0        0.666         0.666         1        
-23           SFLT1     SimpleFaultSource 198    1         0.001       0.0        0.664         0.664         1        
-6            SFLT1     SimpleFaultSource 90     1         0.001       0.0        0.625         0.625         1        
-3            SFLT1     SimpleFaultSource 150    1         0.001       0.0        0.611         0.611         1        
-26           SFLT1     SimpleFaultSource 132    1         0.001       0.0        0.463         0.463         1        
-13           SFLT1     SimpleFaultSource 81     1         0.001       0.0        0.453         0.453         1        
-25           SFLT1     SimpleFaultSource 132    1         0.001       0.0        0.449         0.449         1        
-24           SFLT1     SimpleFaultSource 132    1         0.001       0.0        0.447         0.447         1        
-7            SFLT1     SimpleFaultSource 90     1         0.001       0.0        0.443         0.443         1        
-14           SFLT1     SimpleFaultSource 81     1         0.001       0.0        0.429         0.429         1        
-8            SFLT1     SimpleFaultSource 90     1         0.001       0.0        0.410         0.410         1        
-20           SFLT1     SimpleFaultSource 99     1         0.001       0.0        0.383         0.383         1        
-2            SFLT1     SimpleFaultSource 60     1         0.001       0.0        0.369         0.369         1        
-19           SFLT1     SimpleFaultSource 99     1         0.001       0.0        0.356         0.356         1        
-18           SFLT1     SimpleFaultSource 99     1         0.001       0.0        0.356         0.356         1        
-0            SFLT1     SimpleFaultSource 60     1         0.002       0.0        0.325         0.325         1        
+0            SFLT1     SimpleFaultSource 60     1         0.001       0.0        0.0           0.0           0        
+11           SFLT1     SimpleFaultSource 25     1         0.001       0.0        0.0           0.0           0        
+15           SFLT2     SimpleFaultSource 384    1         0.001       0.0        0.0           0.0           0        
+15           SFLT1     SimpleFaultSource 27     1         0.001       0.0        0.0           0.0           0        
+0            SFLT2     SimpleFaultSource 384    1         0.001       0.0        0.0           0.0           0        
+2            SFLT2     SimpleFaultSource 89     1         0.001       0.0        0.0           0.0           0        
+16           SFLT1     SimpleFaultSource 27     1         0.001       0.0        0.0           0.0           0        
+18           SFLT2     SimpleFaultSource 384    1         0.001       0.0        0.0           0.0           0        
+9            SFLT1     SimpleFaultSource 25     1         0.001       0.0        0.0           0.0           0        
+26           SFLT2     SimpleFaultSource 89     1         0.001       0.0        0.0           0.0           0        
+3            SFLT1     SimpleFaultSource 150    1         0.001       0.0        0.0           0.0           0        
+4            SFLT1     SimpleFaultSource 150    1         0.001       0.0        0.0           0.0           0        
+13           SFLT1     SimpleFaultSource 81     1         0.001       0.0        0.0           0.0           0        
+7            SFLT2     SimpleFaultSource 148    1         0.001       0.0        0.0           0.0           0        
+17           SFLT2     SimpleFaultSource 89     1         0.001       0.0        0.0           0.0           0        
+4            SFLT2     SimpleFaultSource 148    1         0.001       0.0        0.0           0.0           0        
+24           SFLT2     SimpleFaultSource 384    1         0.001       0.0        0.0           0.0           0        
+14           SFLT2     SimpleFaultSource 89     1         0.001       0.0        0.0           0.0           0        
+13           SFLT2     SimpleFaultSource 148    1         0.001       0.0        0.0           0.0           0        
+23           SFLT1     SimpleFaultSource 198    1         0.001       0.0        0.0           0.0           0        
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -251,31 +251,24 @@ Computation times by source typology
 ================= =========== ========== ============= ============= ========= ======
 source_class      filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ================= =========== ========== ============= ============= ========= ======
-SimpleFaultSource 0.071       0.0        14            14            54        54    
+SimpleFaultSource 0.062       0.0        0.0           0.0           0         54    
 ================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
-=================== ===== ====== ===== ===== =========
-measurement         mean  stddev min   max   num_tasks
-classical.time_sec  0.407 0.206  0.122 0.859 35       
-classical.memory_mb 1.188 1.888  0.0   5.867 35       
-=================== ===== ====== ===== ===== =========
+Not available
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total classical                14        5.867     35    
-making contexts                11        0.0       8,175 
-computing poes                 0.939     0.0       8,175 
-reading composite source model 0.467     0.0       1     
-managing sources               0.139     0.0       1     
-filtering sources              0.071     0.0       54    
-saving probability maps        0.029     0.0       1     
-store source_info              0.017     0.0       1     
-read poes                      0.011     0.0       1     
-aggregate curves               7.098E-04 0.0       35    
-reading site collection        4.911E-05 0.0       1     
+reading composite source model 0.314     0.0       1     
+managing sources               0.105     0.0       1     
+filtering sources              0.062     0.0       54    
+total count_eff_ruptures       0.009     0.0       35    
+store source_info              0.006     0.0       1     
+aggregate curves               7.827E-04 0.0       35    
+reading site collection        3.386E-05 0.0       1     
+saving probability maps        3.290E-05 0.0       1     
 ============================== ========= ========= ======
