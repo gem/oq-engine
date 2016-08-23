@@ -21,6 +21,7 @@ import collections
 import itertools
 import operator
 import logging
+import copy
 
 import numpy
 
@@ -28,8 +29,7 @@ from openquake.baselib.python3compat import dtype
 from openquake.baselib.general import get_array, group_array, AccumDict
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import filters
-from openquake.hazardlib.probability_map import (
-    ProbabilityCurve, ProbabilityMap)
+from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.site import SiteCollection
 from openquake.commonlib import readinput, oqvalidation
 
@@ -107,12 +107,15 @@ def combine_pmaps(rlzs_assoc, results):
     :param results: dictionary src_group_id -> probability map
     :returns: a dictionary rlz -> aggregate probability map
     """
-    acc = AccumDict({rlz: ProbabilityMap() for rlz in rlzs_assoc.realizations})
+    acc = AccumDict()
     for grp_id in results:
         for i, gsim in enumerate(rlzs_assoc.gsims_by_grp_id[grp_id]):
             pmap = results[grp_id].extract(i)
             for rlz in rlzs_assoc.rlzs_assoc[grp_id, gsim]:
-                acc[rlz] |= pmap
+                if rlz in acc:
+                    acc[rlz] |= pmap
+                else:
+                    acc[rlz] = copy.copy(pmap)
     return acc
 
 # ######################### hazard maps ################################### #
