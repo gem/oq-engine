@@ -172,7 +172,8 @@ def export_agg_losses_ebr(ekey, dstore):
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     agg_losses = dstore[ekey[0]]
     oq = dstore['oqparam']
-    elt_dt = numpy.dtype([('event_tag', '|S100')] + oq.loss_dt_list())
+    dtlist = [('event_tag', (numpy.string_, 100))] + oq.loss_dt_list()
+    elt_dt = numpy.dtype(dtlist)
     etags = dstore['etags'].value
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     writer = writers.CsvWriter(fmt=FIVEDIGITS)
