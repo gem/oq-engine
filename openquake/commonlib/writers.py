@@ -202,18 +202,16 @@ def tostring(node, indent=4, nsmap=None):
 
 
 class HeaderTranslator(object):
-    """
+    r"""
     An utility to convert the headers in CSV files. When reading,
     the column names are converted into column descriptions with the
     method .read, when writing column descriptions are converted
     into column names with the method .write. The usage is
 
     >>> htranslator = HeaderTranslator(
-    ...     '(asset_ref):|S20',
+    ...     '(asset_ref):\|S20',
     ...     '(rup_id):uint32',
     ...     '(taxonomy):object')
-    >>> htranslator.read('asset_ref value:5'.split())
-    ['asset_ref:|S20', 'value:5']
     >>> htranslator.write('asset_ref:|S20 value:5'.split())
     ['asset_ref', 'value:5']
     """
@@ -278,7 +276,8 @@ htranslator = HeaderTranslator(
     '(slight):float32',
     '(moderate):float32',
     '(extensive):float32',
-    '(complete):float32'
+    '(complete):float32',
+    '(\d+):float32',
 )
 
 
