@@ -1,4 +1,4 @@
-asset_ref,taxonomy,lon:float32,lat:float32,no_damage:float32,slight:float32,moderate:float32,extreme:float32,complete:float32
+asset_ref,taxonomy,lon,lat,no_damage,slight,moderate,extreme:float32,complete
 a3,"Concrete",-122.57000,38.11300,9.19033E-01,4.71033E-02,2.69629E-02,5.71892E-03,1.18185E-03
 a2,"Wood",-122.11400,38.11300,1.61307E-01,9.64504E-02,1.88133E-01,1.84156E-01,3.69954E-01
 a5,"Steel",-122.00000,37.91000,6.52434E-01,2.22092E-01,8.48270E-02,3.21750E-02,8.47204E-03
