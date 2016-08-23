@@ -29,7 +29,8 @@ from openquake.baselib.python3compat import dtype
 from openquake.baselib.general import get_array, group_array, AccumDict
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import filters
-from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.probability_map import (
+    ProbabilityMap, ProbabilityCurve)
 from openquake.hazardlib.site import SiteCollection
 from openquake.commonlib import readinput, oqvalidation
 
