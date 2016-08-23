@@ -173,7 +173,7 @@ class ProbabilityMap(dict):
         """
         Extracs a submap of self for the given sids.
         """
-        dic = self.__class__()
+        dic = self.__class__(self.outer_levels, self.inner_levels)
         for sid in sids:
             try:
                 dic[sid] = self[sid]
