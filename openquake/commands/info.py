@@ -88,7 +88,7 @@ def info(calculators, gsims, views, exports, build_reports, report,
         print('There are %d exporters defined.' % n)
     if build_reports:
         do_build_reports(input_file or '.')
-    if input_file.endswith('.xml'):
+    elif input_file.endswith('.xml'):
         print(nrml.read(input_file).to_str())
     elif input_file.endswith(('.ini', '.zip')):
         with Monitor('info', measuremem=True) as mon:

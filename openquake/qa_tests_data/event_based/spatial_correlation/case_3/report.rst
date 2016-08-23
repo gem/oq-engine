@@ -1,7 +1,7 @@
 Probabilistic Event-Based QA Test with No Spatial Correlation, case 3
 =====================================================================
 
-gem-tstation:/home/michele/ssd/calc_40589.hdf5 updated Mon Aug 22 12:33:22 2016
+gem-tstation:/home/michele/ssd/calc_41625.hdf5 updated Tue Aug 23 17:47:55 2016
 
 num_sites = 2, sitecol = 785 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0                            
 random_seed                  123456789                       
 master_seed                  0                               
-engine_version               '2.1.0-git8cbb23e'              
+engine_version               '2.1.0-git5b04a6e'              
 ============================ ================================
 
 Input files
@@ -44,11 +44,11 @@ b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ======================= ============ ============= ==========
-grp_id gsims                   distances    siteparams    ruptparams
-====== ======================= ============ ============= ==========
-0      ['BooreAtkinson2008()'] set(['rjb']) set(['vs30']) rake mag  
-====== ======================= ============ ============= ==========
+====== =================== ========= ========== ==========
+grp_id gsims               distances siteparams ruptparams
+====== =================== ========= ========== ==========
+0      BooreAtkinson2008() rjb       vs30       rake mag  
+====== =================== ========= ========== ==========
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -69,13 +69,13 @@ source_model.xml 0      Active Shallow Crust 1           1            0.025
 Informational data
 ------------------
 ====================================== ============
-compute_ruptures_max_received_per_task 732,820     
+compute_ruptures_max_received_per_task 728,315     
 compute_ruptures_num_tasks             1           
-compute_ruptures_sent.monitor          5,046       
+compute_ruptures_sent.monitor          801         
 compute_ruptures_sent.rlzs_by_gsim     529         
 compute_ruptures_sent.sitecol          453         
 compute_ruptures_sent.sources          1,324       
-compute_ruptures_tot_received          732,820     
+compute_ruptures_tot_received          728,315     
 hazard.input_weight                    0.025       
 hazard.n_imts                          1           
 hazard.n_levels                        1.000       
@@ -99,7 +99,7 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            1         PointSource  0.025  1         2.980E-05   0.0        0.464         0.464         1        
+0            1         PointSource  0.025  1         3.099E-05   0.0        0.508         0.508         1        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -107,15 +107,15 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-PointSource  2.980E-05   0.0        0.464         0.464         1         1     
+PointSource  3.099E-05   0.0        0.508         0.508         1         1     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ========================== ===== ====== ===== ===== =========
 measurement                mean  stddev min   max   num_tasks
-compute_ruptures.time_sec  0.465 NaN    0.465 0.465 1        
-compute_ruptures.memory_mb 0.363 NaN    0.363 0.363 1        
+compute_ruptures.time_sec  0.509 NaN    0.509 0.509 1        
+compute_ruptures.memory_mb 0.598 NaN    0.598 0.598 1        
 ========================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -123,13 +123,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.465     0.363     1     
-saving ruptures                0.456     0.0       1     
-store source_info              0.010     0.0       1     
+total compute_ruptures         0.509     0.598     1     
+saving ruptures                0.499     0.0       1     
+store source_info              0.011     0.0       1     
 reading composite source model 0.005     0.0       1     
-managing sources               0.004     0.0       1     
-aggregate curves               0.002     0.0       1     
-filtering ruptures             5.510E-04 0.0       1     
-reading site collection        3.791E-05 0.0       1     
-filtering sources              2.980E-05 0.0       1     
+managing sources               0.003     0.0       1     
+aggregate curves               0.001     0.0       1     
+filtering ruptures             5.760E-04 0.0       1     
+reading site collection        3.695E-05 0.0       1     
+filtering sources              3.099E-05 0.0       1     
 ============================== ========= ========= ======

@@ -1,7 +1,7 @@
 Classical Tiling for Turkey reduced
 ===================================
 
-gem-tstation:/home/michele/ssd/calc_40608.hdf5 updated Mon Aug 22 12:34:11 2016
+gem-tstation:/home/michele/ssd/calc_41644.hdf5 updated Tue Aug 23 17:48:35 2016
 
 num_sites = 83, sitecol = 4.42 KB
 
@@ -21,7 +21,7 @@ area_source_discretization   25.0
 random_seed                  323                                                                                                                                                                                              
 master_seed                  0                                                                                                                                                                                                
 sites_per_tile               10                                                                                                                                                                                               
-engine_version               '2.1.0-git8cbb23e'                                                                                                                                                                               
+engine_version               '2.1.0-git5b04a6e'                                                                                                                                                                               
 ============================ =================================================================================================================================================================================================
 
 Input files
@@ -78,46 +78,46 @@ Number of ruptures per tectonic region type
 ========================= ====== ==================== =========== ============ ======
 source_model              grp_id trt                  num_sources eff_ruptures weight
 ========================= ====== ==================== =========== ============ ======
-models/src/as_model.xml   4      Active Shallow Crust 1           517          96    
-models/src/fsbg_model.xml 9      Active Shallow Crust 2           303          51    
+models/src/as_model.xml   4      Active Shallow Crust 1           3876         96    
+models/src/fsbg_model.xml 9      Active Shallow Crust 2           848          51    
 ========================= ====== ==================== =========== ============ ======
 
-=============== ===
-#TRT models     2  
-#sources        3  
-#eff_ruptures   820
-filtered_weight 148
-=============== ===
+=============== =====
+#TRT models     2    
+#sources        3    
+#eff_ruptures   4,724
+filtered_weight 148  
+=============== =====
 
 Informational data
 ------------------
-=============================== ============
-classical_max_received_per_task 24,635      
-classical_num_tasks             15          
-classical_sent.monitor          90,735      
-classical_sent.rlzs_by_gsim     1,108,872   
-classical_sent.sitecol          15,110      
-classical_sent.sources          47,286      
-classical_tot_received          221,994     
-hazard.input_weight             3,360       
-hazard.n_imts                   2           
-hazard.n_levels                 45          
-hazard.n_realizations           3,840       
-hazard.n_sites                  83          
-hazard.n_sources                31          
-hazard.output_weight            28,684,800  
-hostname                        gem-tstation
-require_epsilons                False       
-=============================== ============
+======================================== ============
+count_eff_ruptures_max_received_per_task 2,122       
+count_eff_ruptures_num_tasks             15          
+count_eff_ruptures_sent.monitor          27,060      
+count_eff_ruptures_sent.rlzs_by_gsim     1,108,872   
+count_eff_ruptures_sent.sitecol          15,110      
+count_eff_ruptures_sent.sources          47,286      
+count_eff_ruptures_tot_received          31,830      
+hazard.input_weight                      3,360       
+hazard.n_imts                            2           
+hazard.n_levels                          45          
+hazard.n_realizations                    3,840       
+hazard.n_sites                           83          
+hazard.n_sources                         31          
+hazard.output_weight                     28,684,800  
+hostname                                 gem-tstation
+require_epsilons                         False       
+======================================== ============
 
 Slowest sources
 ---------------
 ============ ============ ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id    source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ============ ============ ====== ========= =========== ========== ============= ============= =========
-4            AS_GEAS343   AreaSource   96     1         0.016       0.0        23            3.411         9        
-9            FSBG_TRBG103 AreaSource   43     1         0.005       0.0        7.219         2.202         4        
-9            FSBG_ARAS462 AreaSource   7.650  1         0.002       0.0        0.319         0.164         2        
+4            AS_GEAS343   AreaSource   96     1         0.012       0.0        0.0           0.0           0        
+9            FSBG_TRBG103 AreaSource   43     1         0.004       0.0        0.0           0.0           0        
+9            FSBG_ARAS462 AreaSource   7.650  1         0.002       0.0        0.0           0.0           0        
 ============ ============ ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -125,30 +125,24 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-AreaSource   0.023       0.0        31            5.778         15        3     
+AreaSource   0.018       0.0        0.0           0.0           0         3     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
-=================== ===== ====== ===== ===== =========
-measurement         mean  stddev min   max   num_tasks
-classical.time_sec  2.070 0.973  0.157 3.414 15       
-classical.memory_mb 0.030 0.063  0.0   0.188 15       
-=================== ===== ====== ===== ===== =========
+Not available
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total classical                31        0.188     15    
-making contexts                13        0.0       42,516
-computing poes                 6.845     0.0       7,380 
-managing sources               0.811     0.0       1     
-reading composite source model 0.790     0.0       1     
-filtering sources              0.327     0.0       279   
-reading site collection        0.012     0.0       1     
-store source_info              0.006     0.0       1     
-saving probability maps        0.003     0.0       1     
-aggregate curves               3.159E-04 0.0       15    
+reading composite source model 0.745     0.0       1     
+managing sources               0.687     0.0       1     
+filtering sources              0.266     0.0       279   
+reading site collection        0.011     0.0       1     
+total count_eff_ruptures       0.005     0.0       15    
+store source_info              0.004     0.0       1     
+aggregate curves               1.905E-04 0.0       15    
+saving probability maps        2.813E-05 0.0       1     
 ============================== ========= ========= ======

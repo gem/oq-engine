@@ -1,7 +1,7 @@
 QA Scenario Risk for contents
 =============================
 
-gem-tstation:/home/michele/ssd/calc_40599.hdf5 updated Mon Aug 22 12:33:54 2016
+gem-tstation:/home/michele/ssd/calc_41635.hdf5 updated Tue Aug 23 17:48:28 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -21,7 +21,7 @@ area_source_discretization   None
 random_seed                  3                 
 master_seed                  0                 
 avg_losses                   False             
-engine_version               '2.1.0-git8cbb23e'
+engine_version               '2.1.0-git5b04a6e'
 ============================ ==================
 
 Input files
@@ -70,11 +70,11 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.005     0.0       1     
+filtering sites         0.006     0.0       1     
 reading exposure        0.003     0.0       1     
 computing gmfs          0.002     0.0       1     
 saving gmfs             0.001     0.0       1     
-building riskinputs     2.561E-04 0.0       1     
-building epsilons       1.721E-04 0.0       1     
-reading site collection 5.960E-06 0.0       1     
+building riskinputs     2.651E-04 0.0       1     
+building epsilons       1.731E-04 0.0       1     
+reading site collection 7.153E-06 0.0       1     
 ======================= ========= ========= ======

@@ -1,14 +1,14 @@
 oq-test03, depth=15km
 =====================
 
-gem-tstation:/home/michele/ssd/calc_40521.hdf5 updated Mon Aug 22 12:15:10 2016
+gem-tstation:/home/michele/ssd/calc_41557.hdf5 updated Tue Aug 23 17:46:15 2016
 
 num_sites = 1, sitecol = 739 B
 
 Parameters
 ----------
 ============================ ==================
-calculation_mode             'scenario_damage' 
+calculation_mode             'scenario'        
 number_of_logic_tree_samples 0                 
 maximum_distance             {u'default': 300} 
 investigation_time           None              
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None              
 random_seed                  3                 
 master_seed                  0                 
-engine_version               '2.1.0-git8cbb23e'
+engine_version               '2.1.0-git5b04a6e'
 ============================ ==================
 
 Input files
@@ -72,5 +72,5 @@ operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 reading exposure        0.003     0.0       1     
 filtering sites         0.001     0.0       1     
-reading site collection 6.914E-06 0.0       1     
+reading site collection 7.868E-06 0.0       1     
 ======================= ========= ========= ======
