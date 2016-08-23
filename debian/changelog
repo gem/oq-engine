@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the event loss table exporter: now a single file per realization
+    is exported, containing all the loss types
   * Reduced the data transfer due to the `rlzs_assoc` and `oqparam` objects
   * Fixed a bug in the disaggregation calculator when a source group has
     been filtered away by the maximum distance criterium

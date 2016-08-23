@@ -30,7 +30,7 @@ import h5py
 
 from openquake.baselib.general import humansize, groupby, AccumDict
 from openquake.baselib.performance import perf_dt
-from openquake.baselib.python3compat import unicode, decode, dtype
+from openquake.baselib.python3compat import unicode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source
 from openquake.commonlib.datastore import view
@@ -142,7 +142,7 @@ def sum_tbl(tbl, kfield, vfields):
     array([3, 3])
     """
     pairs = [(n, tbl.dtype[n]) for n in [kfield] + vfields]
-    dt = dtype(pairs + [('counts', int)])
+    dt = numpy.dtype(pairs + [('counts', int)])
 
     def sum_all(group):
         vals = numpy.zeros(1, dt)[0]
