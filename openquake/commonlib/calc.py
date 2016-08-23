@@ -24,7 +24,6 @@ import logging
 
 import numpy
 
-from openquake.baselib.python3compat import dtype
 from openquake.baselib.general import get_array, group_array
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import filters, hazard_curve
@@ -273,7 +272,7 @@ def make_uhs(hcurves, imtls, poes):
     """
     maps = make_hmaps(hcurves, imtls, poes)
     imts, _ = get_imts_periods(imtls)
-    imts_dt = numpy.dtype([(imt, F32) for imt in imts])
+    imts_dt = numpy.dtype([(str(imt), F32) for imt in imts])
     uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in poes])
     N = len(maps)
     uhs = numpy.zeros(N, uhs_dt)
@@ -314,7 +313,7 @@ def get_gmfs(dstore):
         haz_sitecol = sitecol
     risk_indices = set(sitecol.indices)  # N'' values
     N = len(haz_sitecol.complete)
-    imt_dt = dtype((imt, F32) for imt in oq.imtls)
+    imt_dt = numpy.dtype((str(imt), F32) for imt in oq.imtls)
     E = oq.number_of_ground_motion_fields
     # build a matrix N x E for each GSIM realization
     gmfs = {(grp_id, gsim): numpy.zeros((N, E), imt_dt)

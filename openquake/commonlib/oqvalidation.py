@@ -294,12 +294,18 @@ class OqParam(valid.ParamSet):
         """
         Return a composite dtype based on the loss types, including occupants
         """
+        return numpy.dtype(self.loss_dt_list(dtype))
+
+    def loss_dt_list(self, dtype=numpy.float32):
+        """
+        Return a data type list [(loss_name, dtype), ...]
+        """
         loss_types = self.all_cost_types
-        dts = [(lt, dtype) for lt in loss_types]
+        dts = [(str(lt), dtype) for lt in loss_types]
         if self.insured_losses:
             for lt in loss_types:
                 dts.append((lt + '_ins', dtype))
-        return python3compat.dtype(dts)
+        return dts
 
     def no_imls(self):
         """
