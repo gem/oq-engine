@@ -101,7 +101,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # this also tests that concurrent_tasks=0 does not give issues
         [fname] = out['agg_loss_table', 'csv']
         self.assertEqualFiles(
-            'expected/agg_losses-b1,b1-structural.csv', fname)
+            'expected/agg_losses-rlz-000.csv', fname)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_missing_taxonomy(self):
