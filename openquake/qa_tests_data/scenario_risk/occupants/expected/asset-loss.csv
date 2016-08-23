@@ -1,4 +1,4 @@
-asset_ref,taxonomy,lon:float32,lat:float32,occupants~mean:float32,occupants~stddev:float32
+asset_ref,taxonomy,lon,lat,occupants~mean,occupants~stddev
 a1,"RM",81.29850,29.10980,3.99457E-01,1.43061E-01
 a2,"RC",83.08230,27.90060,9.88255E-01,2.16218E-01
 a3,"W",85.74770,27.90150,1.05517E+00,5.29275E-01

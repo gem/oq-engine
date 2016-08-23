@@ -1,4 +1,4 @@
-asset_ref,taxonomy,lon:float32,lat:float32,business_interruption:float32,contents:float32,nonstructural:float32,occupants:float32,structural:float32,business_interruption_ins:float32,contents_ins:float32,nonstructural_ins:float32,occupants_ins:float32,structural_ins:float32
+asset_ref,taxonomy,lon,lat,business_interruption:float32,contents:float32,nonstructural:float32,occupants:float32,structural:float32,business_interruption_ins:float32,contents_ins:float32,nonstructural_ins:float32,occupants_ins:float32,structural_ins:float32
 a3,"tax1",-122.57000,38.11300,9.40465E+01,5.16592E+02,7.74888E+02,1.88093E-03,9.28790E+01,2.32313E+00,2.32313E+00,2.32313E+00,0.00000E+00,5.11875E-01
 a2,"tax2",-122.11400,38.11300,7.20282E+02,7.63771E+03,1.00958E+04,1.44056E-02,1.10447E+03,9.88750E+00,9.97500E+00,9.97500E+00,0.00000E+00,3.06688E+00
 a5,"tax1",-122.00000,37.91000,3.01209E+02,1.68611E+03,2.45068E+03,6.02418E-03,2.42266E+02,7.70437E+00,7.70437E+00,7.70437E+00,0.00000E+00,6.25625E-01
