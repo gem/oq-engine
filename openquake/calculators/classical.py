@@ -349,7 +349,8 @@ class PSHACalculator(base.HazardCalculator):
                     self.datastore[key] = pmap
                     self.datastore.set_attrs(
                         key, trt=self.csm.info.get_trt(grp_id))
-            self.datastore.set_nbytes('poes')
+            if 'poes' in self.datastore:
+                self.datastore.set_nbytes('poes')
 
 
 @base.calculators.add('classical')
@@ -364,6 +365,9 @@ class ClassicalCalculator(PSHACalculator):
         """
         Builds a dictionary pmap_by_grp_gsim from the stored PoEs
         """
+        if 'poes' not in self.datastore:
+            return
+
         pmap_by_grp_gsim = {}
         with self.monitor('read poes', autoflush=True):
             for group_id in self.datastore['poes']:

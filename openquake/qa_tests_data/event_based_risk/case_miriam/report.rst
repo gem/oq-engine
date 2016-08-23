@@ -1,7 +1,7 @@
 Virtual Island - City C, 2 SES, grid=0.1
 ========================================
 
-gem-tstation:/home/michele/ssd/calc_40559.hdf5 updated Mon Aug 22 12:15:58 2016
+gem-tstation:/home/michele/ssd/calc_41595.hdf5 updated Tue Aug 23 17:46:46 2016
 
 num_sites = 281, sitecol = 37.75 KB
 
@@ -21,7 +21,7 @@ area_source_discretization   None
 random_seed                  1024                                                            
 master_seed                  100                                                             
 avg_losses                   False                                                           
-engine_version               '2.1.0-git8cbb23e'                                              
+engine_version               '2.1.0-git5b04a6e'                                              
 ============================ ================================================================
 
 Input files
@@ -47,11 +47,11 @@ b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1,0)    1/1
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ===================== ============ ============= ==========
-grp_id gsims                 distances    siteparams    ruptparams
-====== ===================== ============ ============= ==========
-0      ['AkkarBommer2010()'] set(['rjb']) set(['vs30']) rake mag  
-====== ===================== ============ ============= ==========
+====== ================= ========= ========== ==========
+grp_id gsims             distances siteparams ruptparams
+====== ================= ========= ========== ==========
+0      AkkarBommer2010() rjb       vs30       rake mag  
+====== ================= ========= ========== ==========
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -72,13 +72,13 @@ source_model.xml 0      Active Shallow Crust 1           44           2,558
 Informational data
 ------------------
 ====================================== ============
-compute_ruptures_max_received_per_task 15,986      
+compute_ruptures_max_received_per_task 11,271      
 compute_ruptures_num_tasks             16          
-compute_ruptures_sent.monitor          88,432      
+compute_ruptures_sent.monitor          20,432      
 compute_ruptures_sent.rlzs_by_gsim     9,824       
 compute_ruptures_sent.sitecol          618,464     
 compute_ruptures_sent.sources          1,033,433   
-compute_ruptures_tot_received          188,400     
+compute_ruptures_tot_received          113,558     
 hazard.input_weight                    2,558       
 hazard.n_imts                          1           
 hazard.n_levels                        50          
@@ -137,7 +137,7 @@ Slowest sources
 ============ ========= ================== ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class       weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ================== ====== ========= =========== ========== ============= ============= =========
-0            F         ComplexFaultSource 2,558  1,119     0.002       1.868      1.889         0.279         1,119    
+0            F         ComplexFaultSource 2,558  1,119     0.002       1.906      1.909         0.280         1,119    
 ============ ========= ================== ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -145,15 +145,15 @@ Computation times by source typology
 ================== =========== ========== ============= ============= ========= ======
 source_class       filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ================== =========== ========== ============= ============= ========= ======
-ComplexFaultSource 0.002       1.868      1.889         0.279         1,119     1     
+ComplexFaultSource 0.002       1.906      1.909         0.280         1,119     1     
 ================== =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ========================== ===== ====== ===== ===== =========
 measurement                mean  stddev min   max   num_tasks
-compute_ruptures.time_sec  0.119 0.135  0.002 0.279 16       
-compute_ruptures.memory_mb 0.054 0.218  0.0   0.871 16       
+compute_ruptures.time_sec  0.120 0.136  0.002 0.280 16       
+compute_ruptures.memory_mb 0.049 0.194  0.0   0.777 16       
 ========================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -161,15 +161,15 @@ Slowest operations
 ============================== ======== ========= ======
 operation                      time_sec memory_mb counts
 ============================== ======== ========= ======
-managing sources               1.982    0.0       1     
-total compute_ruptures         1.896    0.871     16    
-splitting sources              1.868    0.0       1     
-reading site collection        0.203    0.0       1     
-reading exposure               0.090    0.0       1     
-reading composite source model 0.073    0.0       1     
-saving ruptures                0.046    0.0       1     
-store source_info              0.028    0.0       1     
+managing sources               2.038    0.0       1     
+total compute_ruptures         1.916    0.777     16    
+splitting sources              1.906    0.0       1     
+reading site collection        0.216    0.0       1     
+reading exposure               0.093    0.0       1     
+reading composite source model 0.072    0.0       1     
+saving ruptures                0.041    0.0       1     
+store source_info              0.026    0.0       1     
 filtering ruptures             0.013    0.0       57    
-aggregate curves               0.006    0.0       16    
+aggregate curves               0.005    0.0       16    
 filtering sources              0.002    0.0       1     
 ============================== ======== ========= ======

@@ -1,7 +1,7 @@
 QA test for blocksize independence (hazard)
 ===========================================
 
-gem-tstation:/home/michele/ssd/calc_40594.hdf5 updated Mon Aug 22 12:33:32 2016
+gem-tstation:/home/michele/ssd/calc_41630.hdf5 updated Tue Aug 23 17:48:04 2016
 
 num_sites = 2, sitecol = 785 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.5
 area_source_discretization   10.0                            
 random_seed                  1024                            
 master_seed                  0                               
-engine_version               '2.1.0-git8cbb23e'              
+engine_version               '2.1.0-git5b04a6e'              
 ============================ ================================
 
 Input files
@@ -44,11 +44,11 @@ b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ===================== =========== ======================= =================
-grp_id gsims                 distances   siteparams              ruptparams       
-====== ===================== =========== ======================= =================
-0      ['ChiouYoungs2008()'] rx rjb rrup vs30measured vs30 z1pt0 rake dip ztor mag
-====== ===================== =========== ======================= =================
+====== ================= =========== ======================= =================
+grp_id gsims             distances   siteparams              ruptparams       
+====== ================= =========== ======================= =================
+0      ChiouYoungs2008() rx rjb rrup vs30measured vs30 z1pt0 rake dip ztor mag
+====== ================= =========== ======================= =================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -69,13 +69,13 @@ source_model.xml 0      Active Shallow Crust 3           3            277
 Informational data
 ------------------
 ====================================== ============
-compute_ruptures_max_received_per_task 12,149      
+compute_ruptures_max_received_per_task 7,434       
 compute_ruptures_num_tasks             10          
-compute_ruptures_sent.monitor          51,180      
+compute_ruptures_sent.monitor          8,680       
 compute_ruptures_sent.rlzs_by_gsim     5,230       
 compute_ruptures_sent.sitecol          4,530       
 compute_ruptures_sent.sources          528,702     
-compute_ruptures_tot_received          97,867      
+compute_ruptures_tot_received          47,167      
 hazard.input_weight                    560         
 hazard.n_imts                          1           
 hazard.n_levels                        4.000       
@@ -99,9 +99,9 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            1         AreaSource   175    1,170     7.091E-04   0.257      2.389         0.004         1,170    
-0            2         AreaSource   58     389       7.699E-04   0.082      0.752         0.018         389      
-0            3         AreaSource   44     352       6.881E-04   0.068      0.392         0.018         209      
+0            1         AreaSource   175    1,170     7.992E-04   0.278      2.477         0.023         1,170    
+0            2         AreaSource   58     389       7.639E-04   0.089      0.743         0.019         389      
+0            3         AreaSource   44     352       7.451E-04   0.072      0.356         0.004         209      
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -109,14 +109,14 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-AreaSource   0.002       0.407      3.534         0.041         1,768     3     
+AreaSource   0.002       0.439      3.576         0.045         1,768     3     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ========================== ===== ====== ===== ===== =========
 measurement                mean  stddev min   max   num_tasks
-compute_ruptures.time_sec  0.357 0.062  0.221 0.396 10       
+compute_ruptures.time_sec  0.360 0.082  0.196 0.460 10       
 compute_ruptures.memory_mb 0.0   0.0    0.0   0.0   10       
 ========================== ===== ====== ===== ===== =========
 
@@ -125,14 +125,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         3.569     0.0       10    
-reading composite source model 1.420     0.0       1     
-managing sources               0.525     0.0       1     
-splitting sources              0.407     0.0       3     
-store source_info              0.021     0.0       1     
-filtering sources              0.006     0.0       9     
+total compute_ruptures         3.597     0.0       10    
+reading composite source model 1.546     0.0       1     
+managing sources               0.502     0.0       1     
+splitting sources              0.439     0.0       3     
+store source_info              0.026     0.0       1     
+filtering sources              0.007     0.0       9     
 saving ruptures                0.003     0.0       1     
 aggregate curves               0.002     0.0       10    
-filtering ruptures             7.510E-04 0.0       3     
-reading site collection        3.195E-05 0.0       1     
+filtering ruptures             7.873E-04 0.0       3     
+reading site collection        3.290E-05 0.0       1     
 ============================== ========= ========= ======
