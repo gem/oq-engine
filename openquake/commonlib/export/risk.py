@@ -171,23 +171,34 @@ def export_agg_losses_ebr(ekey, dstore):
     """
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     agg_losses = dstore[ekey[0]]
+    oq = dstore['oqparam']
+    elt_dt = numpy.dtype([('event_tag', '|S100')] + oq.loss_dt_list())
     etags = dstore['etags'].value
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     writer = writers.CsvWriter(fmt=FIVEDIGITS)
     for rlz in rlzs:
+        dest = dstore.build_fname('agg_losses', rlz, 'csv')
+        eids = set()
         for loss_type in loss_types:
+            dset = agg_losses['rlz-%03d/%s' % (rlz.ordinal, loss_type)]
+            eids.update(dset['rup_id'])
+        eids = sorted(eids)
+        eid2idx = dict(zip(eids, range(len(eids))))
+        elt = numpy.zeros(len(eids), elt_dt)
+        elt['event_tag'] = etags[eids]
+        for loss_type in loss_types:
+            elt_lt = elt[loss_type]
+            if oq.insured_losses:
+                elt_lt_ins = elt[loss_type + '_ins']
             data = agg_losses['rlz-%03d/%s' % (rlz.ordinal, loss_type)].value
-            data.sort(order='loss')
-            dest = dstore.build_fname('agg_losses-' + loss_type, rlz, 'csv')
-            tags = etags[data['rup_id']]
-            if data.dtype['loss'].shape == (2,):  # insured losses
-                losses = data['loss'][:, 0]
-                inslosses = data['loss'][:, 1]
-                edata = [('event_tag', 'loss', 'loss_ins')] + list(
-                    zip(tags, losses, inslosses))
-            else:
-                edata = [('event_tag', 'loss')] + list(zip(tags, data['loss']))
-            writer.save(edata, dest)
+            for i, eid in numpy.ndenumerate(data['rup_id']):
+                idx = eid2idx[eid]
+                if oq.insured_losses:
+                    elt_lt[idx] = data['loss'][i, 0]
+                    elt_lt_ins[idx] = data['loss'][i, 1]
+                else:
+                    elt_lt[idx] = data['loss'][i]
+        writer.save(elt, dest)
     return writer.getsaved()
 
 
