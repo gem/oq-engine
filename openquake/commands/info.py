@@ -62,8 +62,7 @@ def do_build_reports(directory):
 # the documentation about how to use this feature can be found
 # in the file effective-realizations.rst
 @sap.Script
-def info(calculators, gsims, views, exports, build_reports, report,
-         input_file=''):
+def info(calculators, gsims, views, exports, report, input_file=''):
     """
     Give information. You can pass the name of an available calculator,
     a job.ini file, or a zip archive with the input files.
@@ -86,8 +85,8 @@ def info(calculators, gsims, views, exports, build_reports, report,
             print(exporter, formats)
             n += len(formats)
         print('There are %d exporters defined.' % n)
-    if build_reports:
-        do_build_reports(input_file or '.')
+    if os.path.isdir(input_file) and report:
+        do_build_reports(input_file)
     elif input_file.endswith('.xml'):
         print(nrml.read(input_file).to_str())
     elif input_file.endswith(('.ini', '.zip')):
@@ -105,6 +104,5 @@ info.flg('calculators', 'list available calculators')
 info.flg('gsims', 'list available GSIMs')
 info.flg('views', 'list available views')
 info.flg('exports', 'list available exports')
-info.flg('build_reports', 'build reports in rst format')
-info.flg('report', 'build a report in rst format')
+info.flg('report', 'build short report(s) in rst format')
 info.arg('input_file', 'job.ini file or zip archive')
