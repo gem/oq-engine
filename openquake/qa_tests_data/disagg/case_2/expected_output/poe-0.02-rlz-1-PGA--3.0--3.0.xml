@@ -88,7 +88,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="2,0" value="4.099885E-04"/>
             <prob index="2,1" value="6.010414E-04"/>
             <prob index="2,2" value="6.841228E-04"/>
-            <prob index="2,3" value="2.300194E-04"/>
+            <prob index="2,3" value="2.300193E-04"/>
             <prob index="2,4" value="1.125258E-04"/>
             <prob index="2,5" value="3.924568E-05"/>
             <prob index="2,6" value="4.710580E-06"/>
@@ -578,7 +578,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="7,7,1" value="0.000000E+00"/>
             <prob index="7,7,2" value="0.000000E+00"/>
             <prob index="7,7,3" value="0.000000E+00"/>
-            <prob index="7,7,4" value="4.185187E-08"/>
+            <prob index="7,7,4" value="4.185186E-08"/>
             <prob index="7,7,5" value="3.288781E-06"/>
             <prob index="8,0,0" value="1.662561E-06"/>
             <prob index="8,0,1" value="1.468439E-05"/>
@@ -913,7 +913,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="14,7,0" value="0.000000E+00"/>
             <prob index="14,7,1" value="0.000000E+00"/>
             <prob index="14,7,2" value="0.000000E+00"/>
-            <prob index="14,7,3" value="6.817416E-07"/>
+            <prob index="14,7,3" value="6.817415E-07"/>
             <prob index="14,7,4" value="4.455968E-06"/>
             <prob index="14,7,5" value="7.260253E-07"/>
         </disaggMatrix>
@@ -1697,7 +1697,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="6,6,4" value="3.745153E-05"/>
             <prob index="6,6,5" value="3.705270E-05"/>
             <prob index="6,6,6" value="2.969792E-05"/>
-            <prob index="6,6,7" value="1.844679E-05"/>
+            <prob index="6,6,7" value="1.844678E-05"/>
             <prob index="6,6,8" value="9.493358E-06"/>
             <prob index="6,6,9" value="4.424743E-06"/>
             <prob index="6,7,0" value="1.616611E-06"/>

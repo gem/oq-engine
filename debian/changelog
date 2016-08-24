@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Optimized the computation of hazard curves and statistics, especially
+    for the memory consumption
   * Reduced the data transfer due to the `rlzs_assoc` and `oqparam` objects
   * Fixed a bug in the disaggregation calculator when a source group has
     been filtered away by the maximum distance criterium
