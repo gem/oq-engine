@@ -371,6 +371,10 @@ def build_hcurves_and_stats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
 
 
 def extend_pmap(dset, pmap):
+    """
+    :param dset: an HDF5 dataset corresponding to a ProbabilityMap
+    :param pmap: a ProbabilityMap to store
+    """
     assert pmap, 'The ProbabilityMap is empty!'
     hdf5.extend(dset, pmap.array)  # array N x L x 1
     try:
