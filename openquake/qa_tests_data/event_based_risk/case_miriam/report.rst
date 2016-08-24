@@ -1,7 +1,7 @@
 Virtual Island - City C, 2 SES, grid=0.1
 ========================================
 
-thinkpad:/home/michele/oqdata/calc_16964.hdf5 updated Wed Aug 24 04:52:17 2016
+gem-tstation:/home/michele/ssd/calc_41991.hdf5 updated Wed Aug 24 08:03:30 2016
 
 num_sites = 281, sitecol = 37.75 KB
 
@@ -21,7 +21,7 @@ area_source_discretization   None
 random_seed                  1024                                                            
 master_seed                  100                                                             
 avg_losses                   False                                                           
-engine_version               '2.1.0-git74bd74a'                                              
+engine_version               '2.1.0-git46eb8e0'                                              
 ============================ ================================================================
 
 Input files
@@ -71,24 +71,24 @@ source_model.xml 0      Active Shallow Crust 1           44           2,558
 
 Informational data
 ------------------
-====================================== =========
-compute_ruptures_max_received_per_task 13,010   
-compute_ruptures_num_tasks             11       
-compute_ruptures_sent.monitor          14,080   
-compute_ruptures_sent.rlzs_by_gsim     6,754    
-compute_ruptures_sent.sitecol          425,194  
-compute_ruptures_sent.sources          1,031,829
-compute_ruptures_tot_received          95,482   
-hazard.input_weight                    2,558    
-hazard.n_imts                          1        
-hazard.n_levels                        50       
-hazard.n_realizations                  1        
-hazard.n_sites                         281      
-hazard.n_sources                       1        
-hazard.output_weight                   14,050   
-hostname                               thinkpad 
-require_epsilons                       1        
-====================================== =========
+====================================== ============
+compute_ruptures_max_received_per_task 11,271      
+compute_ruptures_num_tasks             16          
+compute_ruptures_sent.monitor          20,432      
+compute_ruptures_sent.rlzs_by_gsim     9,824       
+compute_ruptures_sent.sitecol          618,464     
+compute_ruptures_sent.sources          1,033,433   
+compute_ruptures_tot_received          113,558     
+hazard.input_weight                    2,558       
+hazard.n_imts                          1           
+hazard.n_levels                        50          
+hazard.n_realizations                  1           
+hazard.n_sites                         281         
+hazard.n_sources                       1           
+hazard.output_weight                   14,050      
+hostname                               gem-tstation
+require_epsilons                       1           
+====================================== ============
 
 Specific information for event based
 ------------------------------------
@@ -105,7 +105,7 @@ and has a size of 49.39 KB / num_tasks
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-548 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 8 tasks = 34.25 KB
+548 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 20 tasks = 85.62 KB
 
 Exposure model
 --------------
@@ -137,7 +137,7 @@ Slowest sources
 ============ ========= ================== ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class       weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ================== ====== ========= =========== ========== ============= ============= =========
-0            F         ComplexFaultSource 2,558  1,119     0.003       3.094      3.461         0.633         1,119    
+0            F         ComplexFaultSource 2,558  1,119     0.001       1.890      1.854         0.273         1,119    
 ============ ========= ================== ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -145,15 +145,15 @@ Computation times by source typology
 ================== =========== ========== ============= ============= ========= ======
 source_class       filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ================== =========== ========== ============= ============= ========= ======
-ComplexFaultSource 0.003       3.094      3.461         0.633         1,119     1     
+ComplexFaultSource 0.001       1.890      1.854         0.273         1,119     1     
 ================== =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ========================== ===== ====== ===== ===== =========
 measurement                mean  stddev min   max   num_tasks
-compute_ruptures.time_sec  0.315 0.246  0.002 0.633 11       
-compute_ruptures.memory_mb 0.0   0.0    0.0   0.0   11       
+compute_ruptures.time_sec  0.116 0.132  0.002 0.273 16       
+compute_ruptures.memory_mb 0.047 0.188  0.0   0.754 16       
 ========================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -161,15 +161,15 @@ Slowest operations
 ============================== ======== ========= ======
 operation                      time_sec memory_mb counts
 ============================== ======== ========= ======
-managing sources               3.531    0.0       1     
-total compute_ruptures         3.470    0.0       11    
-splitting sources              3.094    0.0       1     
-reading site collection        0.267    0.0       1     
-reading exposure               0.190    0.0       1     
-reading composite source model 0.140    0.0       1     
-saving ruptures                0.038    0.0       1     
-store source_info              0.031    0.0       1     
-filtering ruptures             0.021    0.0       57    
-aggregate curves               0.007    0.0       11    
-filtering sources              0.003    0.0       1     
+managing sources               2.053    0.0       1     
+splitting sources              1.890    0.0       1     
+total compute_ruptures         1.861    0.754     16    
+reading site collection        0.212    0.0       1     
+reading exposure               0.091    0.0       1     
+reading composite source model 0.064    0.0       1     
+saving ruptures                0.034    0.0       1     
+store source_info              0.019    0.0       1     
+filtering ruptures             0.012    0.0       57    
+aggregate curves               0.005    0.0       16    
+filtering sources              0.001    0.0       1     
 ============================== ======== ========= ======

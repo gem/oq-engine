@@ -1,7 +1,7 @@
 Classical PSHA with GMPE logic tree with multiple tectonic region types
 =======================================================================
 
-thinkpad:/home/michele/oqdata/calc_16945.hdf5 updated Wed Aug 24 04:51:19 2016
+gem-tstation:/home/michele/ssd/calc_41995.hdf5 updated Wed Aug 24 08:03:31 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                                                                  
 master_seed                  0                                                                   
 sites_per_tile               10000                                                               
-engine_version               '2.1.0-git74bd74a'                                                  
+engine_version               '2.1.0-git46eb8e0'                                                  
 ============================ ====================================================================
 
 Input files
@@ -94,33 +94,33 @@ filtered_weight 12
 
 Informational data
 ------------------
-======================================== ========
-count_eff_ruptures_max_received_per_task 1,409   
-count_eff_ruptures_num_tasks             10      
-count_eff_ruptures_sent.monitor          10,830  
-count_eff_ruptures_sent.rlzs_by_gsim     8,776   
-count_eff_ruptures_sent.sitecol          4,730   
-count_eff_ruptures_sent.sources          17,190  
-count_eff_ruptures_tot_received          14,090  
-hazard.input_weight                      12      
-hazard.n_imts                            2       
-hazard.n_levels                          8.500   
-hazard.n_realizations                    12      
-hazard.n_sites                           3       
-hazard.n_sources                         4       
-hazard.output_weight                     612     
-hostname                                 thinkpad
-======================================== ========
+======================================== ============
+count_eff_ruptures_max_received_per_task 1,406       
+count_eff_ruptures_num_tasks             18          
+count_eff_ruptures_sent.monitor          19,440      
+count_eff_ruptures_sent.rlzs_by_gsim     15,400      
+count_eff_ruptures_sent.sitecol          8,514       
+count_eff_ruptures_sent.sources          25,984      
+count_eff_ruptures_tot_received          25,308      
+hazard.input_weight                      12          
+hazard.n_imts                            2           
+hazard.n_levels                          8.500       
+hazard.n_realizations                    12          
+hazard.n_sites                           3           
+hazard.n_sources                         4           
+hazard.output_weight                     612         
+hostname                                 gem-tstation
+======================================== ============
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-2            1         AreaSource   6.000  16        0.002       0.003      0.0           0.0           0        
-3            1         AreaSource   6.000  16        0.001       0.003      0.0           0.0           0        
-0            1         PointSource  0.375  1         7.796E-05   0.0        0.0           0.0           0        
-1            2         PointSource  0.375  1         4.101E-05   0.0        0.0           0.0           0        
+2            1         AreaSource   6.000  16        0.001       0.003      0.0           0.0           0        
+3            1         AreaSource   6.000  16        8.421E-04   0.003      0.0           0.0           0        
+0            1         PointSource  0.375  1         6.080E-05   0.0        0.0           0.0           0        
+1            2         PointSource  0.375  1         3.791E-05   0.0        0.0           0.0           0        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -128,8 +128,8 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-AreaSource   0.003       0.006      0.0           0.0           0         2     
-PointSource  1.190E-04   0.0        0.0           0.0           0         2     
+AreaSource   0.002       0.005      0.0           0.0           0         2     
+PointSource  9.871E-05   0.0        0.0           0.0           0         2     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
@@ -141,13 +141,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.026     0.0       1     
-reading composite source model 0.017     0.0       1     
-splitting sources              0.006     0.0       2     
+managing sources               0.029     0.0       1     
+reading composite source model 0.014     0.0       1     
+splitting sources              0.005     0.0       2     
+total count_eff_ruptures       0.005     0.0       18    
 store source_info              0.005     0.0       1     
-filtering sources              0.003     0.0       4     
-total count_eff_ruptures       0.003     0.0       10    
-aggregate curves               1.683E-04 0.0       10    
-reading site collection        4.315E-05 0.0       1     
-saving probability maps        3.386E-05 0.0       1     
+filtering sources              0.002     0.0       4     
+aggregate curves               2.599E-04 0.0       18    
+reading site collection        4.101E-05 0.0       1     
+saving probability maps        3.099E-05 0.0       1     
 ============================== ========= ========= ======
