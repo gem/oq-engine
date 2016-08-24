@@ -21,15 +21,14 @@ import mock
 import pickle
 
 import numpy
-from openquake.risklib import (
-    DegenerateDistribution, utils, scientific)
+from openquake.risklib import utils, scientific
 
 aaae = numpy.testing.assert_array_almost_equal
 
 
 class DegenerateDistributionTest(unittest.TestCase):
     def setUp(self):
-        self.distribution = DegenerateDistribution()
+        self.distribution = scientific.DegenerateDistribution()
 
     def test_survival_zero_mean(self):
         self.assertEqual(
