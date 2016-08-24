@@ -1,7 +1,7 @@
 Classical Tiling for Turkey reduced
 ===================================
 
-gem-tstation:/home/michele/ssd/calc_42040.hdf5 updated Wed Aug 24 08:05:19 2016
+gem-tstation:/home/michele/ssd/calc_42176.hdf5 updated Wed Aug 24 08:13:56 2016
 
 num_sites = 83, sitecol = 4.42 KB
 
@@ -21,7 +21,7 @@ area_source_discretization   25.0
 random_seed                  323                                                                                                                                                                                              
 master_seed                  0                                                                                                                                                                                                
 sites_per_tile               10                                                                                                                                                                                               
-engine_version               '2.1.0-git46eb8e0'                                                                                                                                                                               
+engine_version               '2.1.0-git81d4f3d'                                                                                                                                                                               
 ============================ =================================================================================================================================================================================================
 
 Input files
@@ -137,12 +137,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.733     0.0       1     
-managing sources               0.699     0.0       1     
-filtering sources              0.248     0.0       279   
-reading site collection        0.011     0.0       1     
+reading composite source model 0.700     0.0       1     
+managing sources               0.671     0.0       1     
+filtering sources              0.245     0.0       279   
+reading site collection        0.012     0.0       1     
 total count_eff_ruptures       0.005     0.0       15    
 store source_info              0.004     0.0       1     
-aggregate curves               1.760E-04 0.0       15    
-saving probability maps        2.694E-05 0.0       1     
+aggregate curves               1.731E-04 0.0       15    
+saving probability maps        2.909E-05 0.0       1     
 ============================== ========= ========= ======

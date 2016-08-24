@@ -1,7 +1,7 @@
 Event-based PSHA with logic tree sampling
 =========================================
 
-gem-tstation:/home/michele/ssd/calc_42025.hdf5 updated Wed Aug 24 08:04:45 2016
+gem-tstation:/home/michele/ssd/calc_42161.hdf5 updated Wed Aug 24 08:13:24 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.2
 area_source_discretization   20.0                            
 random_seed                  23                              
 master_seed                  0                               
-engine_version               '2.1.0-git46eb8e0'              
+engine_version               '2.1.0-git81d4f3d'              
 ============================ ================================
 
 Input files
@@ -114,8 +114,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            1         AreaSource   61     307       0.001       0.061      2.526         0.026         307      
-1            1         AreaSource   61     307       0.001       0.061      1.218         0.021         307      
+0            1         AreaSource   61     307       0.001       0.058      2.557         0.036         307      
+1            1         AreaSource   61     307       0.001       0.058      1.197         0.016         307      
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -123,14 +123,14 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-AreaSource   0.003       0.121      3.745         0.048         614       2     
+AreaSource   0.003       0.116      3.754         0.052         614       2     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ========================== ===== ====== ===== ===== =========
 measurement                mean  stddev min   max   num_tasks
-compute_ruptures.time_sec  0.188 0.095  0.004 0.322 20       
+compute_ruptures.time_sec  0.188 0.098  0.004 0.339 20       
 compute_ruptures.memory_mb 0.0   0.0    0.0   0.0   20       
 ========================== ===== ====== ===== ===== =========
 
@@ -139,14 +139,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         3.755     0.0       20    
-saving ruptures                1.707     0.0       1     
-filtering ruptures             0.736     0.0       2,598 
-managing sources               0.191     0.0       1     
-splitting sources              0.121     0.0       2     
-reading composite source model 0.121     0.0       1     
-store source_info              0.011     0.0       1     
-aggregate curves               0.008     0.0       20    
+total compute_ruptures         3.765     0.0       20    
+saving ruptures                1.961     0.0       1     
+filtering ruptures             0.778     0.0       2,598 
+managing sources               0.188     0.0       1     
+reading composite source model 0.116     0.0       1     
+splitting sources              0.116     0.0       2     
+store source_info              0.012     0.0       1     
+aggregate curves               0.007     0.0       20    
 filtering sources              0.003     0.0       2     
-reading site collection        4.101E-05 0.0       1     
+reading site collection        3.910E-05 0.0       1     
 ============================== ========= ========= ======

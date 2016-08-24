@@ -1,7 +1,7 @@
 Probabilistic Event-Based QA Test with Spatial Correlation, case 1
 ==================================================================
 
-gem-tstation:/home/michele/ssd/calc_42022.hdf5 updated Wed Aug 24 08:04:40 2016
+gem-tstation:/home/michele/ssd/calc_42158.hdf5 updated Wed Aug 24 08:13:18 2016
 
 num_sites = 2, sitecol = 785 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0                            
 random_seed                  123456789                       
 master_seed                  0                               
-engine_version               '2.1.0-git46eb8e0'              
+engine_version               '2.1.0-git81d4f3d'              
 ============================ ================================
 
 Input files
@@ -69,13 +69,13 @@ source_model.xml 0      Active Shallow Crust 1           1            0.025
 Informational data
 ------------------
 ====================================== ============
-compute_ruptures_max_received_per_task 303,572     
+compute_ruptures_max_received_per_task 303,574     
 compute_ruptures_num_tasks             1           
 compute_ruptures_sent.monitor          800         
 compute_ruptures_sent.rlzs_by_gsim     529         
 compute_ruptures_sent.sitecol          453         
 compute_ruptures_sent.sources          1,324       
-compute_ruptures_tot_received          303,572     
+compute_ruptures_tot_received          303,574     
 hazard.input_weight                    0.025       
 hazard.n_imts                          1           
 hazard.n_levels                        1.000       
@@ -99,7 +99,7 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            1         PointSource  0.025  1         3.195E-05   0.0        0.208         0.208         1        
+0            1         PointSource  0.025  1         3.099E-05   0.0        0.218         0.218         1        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -107,15 +107,15 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-PointSource  3.195E-05   0.0        0.208         0.208         1         1     
+PointSource  3.099E-05   0.0        0.218         0.218         1         1     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ========================== ===== ====== ===== ===== =========
 measurement                mean  stddev min   max   num_tasks
-compute_ruptures.time_sec  0.208 NaN    0.208 0.208 1        
-compute_ruptures.memory_mb 0.059 NaN    0.059 0.059 1        
+compute_ruptures.time_sec  0.218 NaN    0.218 0.218 1        
+compute_ruptures.memory_mb 0.148 NaN    0.148 0.148 1        
 ========================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -123,13 +123,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
+total compute_ruptures         0.218     0.148     1     
 saving ruptures                0.214     0.0       1     
-total compute_ruptures         0.208     0.059     1     
+reading composite source model 0.040     0.0       1     
 store source_info              0.011     0.0       1     
-reading composite source model 0.005     0.0       1     
 managing sources               0.003     0.0       1     
-aggregate curves               8.540E-04 0.0       1     
-filtering ruptures             5.238E-04 0.0       1     
+aggregate curves               8.399E-04 0.0       1     
+filtering ruptures             5.050E-04 0.0       1     
 reading site collection        3.695E-05 0.0       1     
-filtering sources              3.195E-05 0.0       1     
+filtering sources              3.099E-05 0.0       1     
 ============================== ========= ========= ======
