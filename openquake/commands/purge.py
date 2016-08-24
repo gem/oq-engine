@@ -20,7 +20,8 @@ from __future__ import print_function
 import os
 import re
 import getpass
-from openquake.commonlib import sap, datastore
+from openquake.baselib import sap
+from openquake.commonlib import datastore
 from openquake.engine.logs import dbcmd
 
 
