@@ -303,7 +303,7 @@ class OqParam(valid.ParamSet):
         dts = [(str(lt), dtype) for lt in loss_types]
         if self.insured_losses:
             for lt in loss_types:
-                dts.append((str(lt), dtype))
+                dts.append((str(lt) + '_ins', dtype))
         return dts
 
     def no_imls(self):

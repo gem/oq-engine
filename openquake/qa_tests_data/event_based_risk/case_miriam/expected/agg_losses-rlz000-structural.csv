@@ -1,4 +1,4 @@
-event_tag:|S100,structural
+event_tag:|S100,structural:float32
 trt=00~ses=0002~src=F-0~rup=1-01,2.57237E+01
 trt=00~ses=0002~src=F-0~rup=15-01,2.29639E+01
 trt=00~ses=0002~src=F-0~rup=44-01,2.41778E+01
