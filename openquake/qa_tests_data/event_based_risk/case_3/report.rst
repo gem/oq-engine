@@ -1,7 +1,7 @@
 Event Based Risk Lisbon
 =======================
 
-gem-tstation:/home/michele/ssd/calc_41987.hdf5 updated Wed Aug 24 08:03:11 2016
+gem-tstation:/home/michele/ssd/calc_42123.hdf5 updated Wed Aug 24 08:11:53 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                                                              
 master_seed                  42                                                              
 avg_losses                   False                                                           
-engine_version               '2.1.0-git46eb8e0'                                              
+engine_version               '2.1.0-git81d4f3d'                                              
 ============================ ================================================================
 
 Input files
@@ -96,7 +96,7 @@ compute_ruptures_sent.monitor          24,020
 compute_ruptures_sent.rlzs_by_gsim     18,940      
 compute_ruptures_sent.sitecol          8,660       
 compute_ruptures_sent.sources          1,193,222   
-compute_ruptures_tot_received          84,163      
+compute_ruptures_tot_received          84,160      
 hazard.input_weight                    3,495       
 hazard.n_imts                          1           
 hazard.n_levels                        40          
@@ -144,26 +144,26 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            0         AreaSource   610    543       0.001       0.140      7.113         0.052         543      
-2            0         AreaSource   610    543       9.429E-04   0.135      6.520         0.014         543      
-0            2         AreaSource   498    687       8.230E-04   0.127      2.253         0.016         262      
-2            2         AreaSource   498    687       8.459E-04   0.126      2.236         0.009         262      
-1            10        AreaSource   112    1         7.460E-04   0.0        1.239         1.239         1        
-3            10        AreaSource   112    1         6.580E-04   0.0        1.149         1.149         1        
-2            1         AreaSource   104    1         7.322E-04   0.0        1.028         1.028         1        
-0            1         AreaSource   104    1         8.540E-04   0.0        1.011         1.011         1        
-1            6         AreaSource   103    1         7.060E-04   0.0        0.929         0.929         1        
-3            6         AreaSource   103    1         6.831E-04   0.0        0.909         0.909         1        
-3            3         AreaSource   87     1         6.769E-04   0.0        0.856         0.856         1        
-1            3         AreaSource   87     1         6.840E-04   0.0        0.776         0.776         1        
-1            5         AreaSource   58     1         6.812E-04   0.0        0.642         0.642         1        
-3            9         AreaSource   62     1         6.568E-04   0.0        0.608         0.608         1        
-3            5         AreaSource   58     1         6.759E-04   0.0        0.580         0.580         1        
-1            9         AreaSource   62     1         6.599E-04   0.0        0.577         0.577         1        
-3            7         AreaSource   42     1         6.521E-04   0.0        0.486         0.486         1        
-3            8         AreaSource   36     1         6.580E-04   0.0        0.477         0.477         1        
-1            7         AreaSource   42     1         7.720E-04   0.0        0.470         0.470         1        
-3            4         AreaSource   32     1         6.719E-04   0.0        0.395         0.395         1        
+0            0         AreaSource   610    543       0.002       0.177      6.458         0.031         543      
+2            0         AreaSource   610    543       9.339E-04   0.141      6.125         0.013         543      
+2            2         AreaSource   498    687       8.879E-04   0.131      2.049         0.009         262      
+0            2         AreaSource   498    687       9.179E-04   0.131      2.045         0.027         262      
+1            10        AreaSource   112    1         6.721E-04   0.0        1.111         1.111         1        
+3            10        AreaSource   112    1         6.690E-04   0.0        1.007         1.007         1        
+2            1         AreaSource   104    1         6.499E-04   0.0        1.005         1.005         1        
+0            1         AreaSource   104    1         7.589E-04   0.0        0.980         0.980         1        
+1            6         AreaSource   103    1         7.579E-04   0.0        0.949         0.949         1        
+3            6         AreaSource   103    1         6.630E-04   0.0        0.886         0.886         1        
+1            3         AreaSource   87     1         6.599E-04   0.0        0.835         0.835         1        
+3            3         AreaSource   87     1         6.800E-04   0.0        0.769         0.769         1        
+3            9         AreaSource   62     1         6.521E-04   0.0        0.581         0.581         1        
+3            5         AreaSource   58     1         6.590E-04   0.0        0.564         0.564         1        
+1            9         AreaSource   62     1         6.390E-04   0.0        0.563         0.563         1        
+1            5         AreaSource   58     1         6.580E-04   0.0        0.560         0.560         1        
+1            7         AreaSource   42     1         6.330E-04   0.0        0.455         0.455         1        
+3            7         AreaSource   42     1         6.340E-04   0.0        0.438         0.438         1        
+3            4         AreaSource   32     1         6.399E-04   0.0        0.379         0.379         1        
+1            4         AreaSource   32     1         6.680E-04   0.0        0.373         0.373         1        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -171,17 +171,17 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-AreaSource   0.016       0.528      30            12            1,628     22    
+AreaSource   0.017       0.580      28            12            1,628     22    
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ================================= ===== ====== ===== ===== =========
 measurement                       mean  stddev min   max   num_tasks
-compute_ruptures.time_sec         1.554 0.807  0.002 2.624 20       
-compute_ruptures.memory_mb        0.032 0.115  0.0   0.504 20       
-compute_gmfs_and_curves.time_sec  0.009 0.003  0.004 0.013 13       
-compute_gmfs_and_curves.memory_mb 0.119 0.140  0.0   0.379 13       
+compute_ruptures.time_sec         1.446 0.743  0.002 2.353 20       
+compute_ruptures.memory_mb        0.008 0.038  0.0   0.168 20       
+compute_gmfs_and_curves.time_sec  0.007 0.002  0.005 0.011 13       
+compute_gmfs_and_curves.memory_mb 0.153 0.230  0.0   0.664 13       
 ================================= ===== ====== ===== ===== =========
 
 Slowest operations
@@ -189,19 +189,19 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         31        0.504     20    
-reading composite source model 0.885     0.0       1     
-managing sources               0.721     0.0       1     
-splitting sources              0.528     0.0       4     
-total compute_gmfs_and_curves  0.115     0.379     13    
-compute poes                   0.096     0.0       13    
-store source_info              0.050     0.0       1     
-saving gmfs                    0.028     0.0       44    
-filtering sources              0.016     0.0       22    
+total compute_ruptures         28        0.168     20    
+reading composite source model 0.860     0.0       1     
+managing sources               0.789     0.0       1     
+splitting sources              0.580     0.0       4     
+total compute_gmfs_and_curves  0.096     0.664     13    
+compute poes                   0.079     0.0       13    
+saving gmfs                    0.067     0.0       44    
+store source_info              0.044     0.0       1     
+filtering sources              0.017     0.0       22    
 saving ruptures                0.014     0.0       1     
-make contexts                  0.013     0.0       13    
+make contexts                  0.011     0.0       13    
 aggregate curves               0.007     0.0       20    
 filtering ruptures             0.003     0.0       14    
 reading exposure               0.003     0.0       1     
-reading site collection        9.060E-06 0.0       1     
+reading site collection        7.868E-06 0.0       1     
 ============================== ========= ========= ======

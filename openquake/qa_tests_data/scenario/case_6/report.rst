@@ -1,7 +1,7 @@
 Scenario QA Test with Spatial Correlation - Case 2
 ==================================================
 
-gem-tstation:/home/michele/ssd/calc_41960.hdf5 updated Wed Aug 24 08:03:00 2016
+gem-tstation:/home/michele/ssd/calc_42096.hdf5 updated Wed Aug 24 08:11:41 2016
 
 num_sites = 2, sitecol = 785 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None              
 random_seed                  3                 
 master_seed                  0                 
-engine_version               '2.1.0-git46eb8e0'
+engine_version               '2.1.0-git81d4f3d'
 ============================ ==================
 
 Input files
@@ -49,6 +49,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.007     0.0       1     
-reading site collection 3.600E-05 0.0       1     
+filtering sites         0.008     0.0       1     
+reading site collection 2.909E-05 0.0       1     
 ======================= ========= ========= ======

@@ -1,7 +1,7 @@
 Probabilistic Event-Based QA Test with Spatial Correlation, case 2
 ==================================================================
 
-gem-tstation:/home/michele/ssd/calc_42020.hdf5 updated Wed Aug 24 08:04:38 2016
+gem-tstation:/home/michele/ssd/calc_42156.hdf5 updated Wed Aug 24 08:13:17 2016
 
 num_sites = 2, sitecol = 785 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0                            
 random_seed                  123456789                       
 master_seed                  0                               
-engine_version               '2.1.0-git46eb8e0'              
+engine_version               '2.1.0-git81d4f3d'              
 ============================ ================================
 
 Input files
@@ -99,7 +99,7 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            1         PointSource  0.025  1         2.480E-05   0.0        0.168         0.168         1        
+0            1         PointSource  0.025  1         2.408E-05   0.0        0.251         0.251         1        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -107,15 +107,15 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-PointSource  2.480E-05   0.0        0.168         0.168         1         1     
+PointSource  2.408E-05   0.0        0.251         0.251         1         1     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ========================== ===== ====== ===== ===== =========
 measurement                mean  stddev min   max   num_tasks
-compute_ruptures.time_sec  0.168 NaN    0.168 0.168 1        
-compute_ruptures.memory_mb 0.531 NaN    0.531 0.531 1        
+compute_ruptures.time_sec  0.251 NaN    0.251 0.251 1        
+compute_ruptures.memory_mb 0.453 NaN    0.453 0.453 1        
 ========================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -123,13 +123,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-saving ruptures                0.174     0.0       1     
-total compute_ruptures         0.168     0.531     1     
-store source_info              0.005     0.0       1     
+total compute_ruptures         0.251     0.453     1     
+saving ruptures                0.248     0.0       1     
+store source_info              0.011     0.0       1     
 reading composite source model 0.004     0.0       1     
 managing sources               0.003     0.0       1     
-aggregate curves               6.769E-04 0.0       1     
-filtering ruptures             2.518E-04 0.0       1     
-reading site collection        3.099E-05 0.0       1     
-filtering sources              2.480E-05 0.0       1     
+aggregate curves               7.830E-04 0.0       1     
+filtering ruptures             5.388E-04 0.0       1     
+reading site collection        3.195E-05 0.0       1     
+filtering sources              2.408E-05 0.0       1     
 ============================== ========= ========= ======

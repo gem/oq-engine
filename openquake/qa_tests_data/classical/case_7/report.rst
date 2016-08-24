@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 7
 ================================
 
-gem-tstation:/home/michele/ssd/calc_42009.hdf5 updated Wed Aug 24 08:04:13 2016
+gem-tstation:/home/michele/ssd/calc_42145.hdf5 updated Wed Aug 24 08:12:52 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  1066                            
 master_seed                  0                               
 sites_per_tile               10000                           
-engine_version               '2.1.0-git46eb8e0'              
+engine_version               '2.1.0-git81d4f3d'              
 ============================ ================================
 
 Input files
@@ -104,9 +104,9 @@ Slowest sources
 ============ ========= ================== ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class       weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ================== ====== ========= =========== ========== ============= ============= =========
-0            2         ComplexFaultSource 485    1         0.001       5.775      0.0           0.0           0        
-1            1         SimpleFaultSource  901    1         0.001       0.498      0.0           0.0           0        
-0            1         SimpleFaultSource  901    1         0.001       0.489      0.0           0.0           0        
+0            2         ComplexFaultSource 485    1         0.001       5.309      0.0           0.0           0        
+1            1         SimpleFaultSource  901    1         0.001       0.484      0.0           0.0           0        
+0            1         SimpleFaultSource  901    1         0.001       0.481      0.0           0.0           0        
 ============ ========= ================== ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -114,8 +114,8 @@ Computation times by source typology
 ================== =========== ========== ============= ============= ========= ======
 source_class       filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ================== =========== ========== ============= ============= ========= ======
-ComplexFaultSource 0.001       5.775      0.0           0.0           0         1     
-SimpleFaultSource  0.003       0.987      0.0           0.0           0         2     
+ComplexFaultSource 0.001       5.309      0.0           0.0           0         1     
+SimpleFaultSource  0.003       0.965      0.0           0.0           0         2     
 ================== =========== ========== ============= ============= ========= ======
 
 Information about the tasks
@@ -127,13 +127,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 6.844     0.0       1     
-managing sources               6.771     0.0       1     
-splitting sources              6.762     0.0       3     
+reading composite source model 6.353     0.0       1     
+managing sources               6.283     0.0       1     
+splitting sources              6.273     0.0       3     
 filtering sources              0.004     0.0       3     
 store source_info              0.004     0.0       1     
 total count_eff_ruptures       0.001     0.0       3     
-aggregate curves               4.387E-05 0.0       3     
-reading site collection        3.791E-05 0.0       1     
-saving probability maps        2.217E-05 0.0       1     
+aggregate curves               4.101E-05 0.0       3     
+reading site collection        4.101E-05 0.0       1     
+saving probability maps        2.193E-05 0.0       1     
 ============================== ========= ========= ======
