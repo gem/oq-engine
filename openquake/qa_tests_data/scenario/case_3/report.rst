@@ -1,7 +1,7 @@
 Scenario QA Test, Case 3
 ========================
 
-gem-tstation:/home/michele/ssd/calc_41566.hdf5 updated Tue Aug 23 17:46:16 2016
+thinkpad:/home/michele/oqdata/calc_16895.hdf5 updated Wed Aug 24 04:48:32 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None              
 random_seed                  3                 
 master_seed                  0                 
-engine_version               '2.1.0-git5b04a6e'
+engine_version               '2.1.0-git74bd74a'
 ============================ ==================
 
 Input files
@@ -49,6 +49,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.011     0.0       1     
-reading site collection 3.004E-05 0.0       1     
+filtering sites         0.014     0.0       1     
+reading site collection 4.506E-05 0.0       1     
 ======================= ========= ========= ======
