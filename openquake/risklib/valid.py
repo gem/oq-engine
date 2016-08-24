@@ -680,7 +680,7 @@ def floatdict(value):
     value = ast.literal_eval(value)
     if isinstance(value, (int, float)):
         return {'default': value}
-    return {str(k): v for k, v in value.items()}
+    return value
 
 
 # ########################### SOURCES/RUPTURES ############################# #
