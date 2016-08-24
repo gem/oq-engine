@@ -103,16 +103,19 @@ def safely_call(func, args, pickle=False):
         if set, the input arguments are unpickled and the return value
         is pickled; otherwise they are left unchanged
     """
-    with Monitor(measuremem=True) as extmon:
-        if pickle:
+    with Monitor('total ' + func.__name__, measuremem=True) as child:
+        if pickle:  # measure the unpickling time too
             args = [a.unpickle() for a in args]
-        ismon = args and isinstance(args[-1], Monitor)
-        mon = args[-1] if ismon else Monitor()
+        if args and isinstance(args[-1], Monitor):
+            mon = args[-1]
+            mon.children.append(child)  # child is a child of mon
+            child.hdf5path = mon.hdf5path
+        else:
+            mon = child
         check_mem_usage(mon)  # check if too much memory is used
         mon.flush = NoFlush(mon, func.__name__)
         try:
-            with mon('total ' + func.__name__, measuremem=False), \
-                 GroundShakingIntensityModel.forbid_instantiation():
+            with GroundShakingIntensityModel.forbid_instantiation():
                 got = func(*args)
                 if inspect.isgenerator(got):
                     got = list(got)
@@ -125,10 +128,9 @@ def safely_call(func, args, pickle=False):
         # NB: flush must not be called in the workers - they must not
         # have access to the datastore - so we remove it
         rec_delattr(mon, 'flush')
-        if pickle:
-            res = Pickled(res)
-    mon.duration = extmon.duration
-    mon.mem = extmon.mem
+
+    if pickle:  # it is impossible to measure the pickling time :-(
+        res = Pickled(res)
     return res
 
 
