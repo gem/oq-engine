@@ -24,6 +24,7 @@ import collections
 
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, humansize
 from openquake.calculators import base
@@ -314,8 +315,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = self.riskmodel.build_inputs_from_ruptures(
-                self.sitecol.complete, all_ruptures, oq.truncation_level,
-                correl_model, min_iml, eps, oq.concurrent_tasks or 1)
+                list(oq.imtls), self.sitecol.complete, all_ruptures,
+                oq.truncation_level, correl_model, min_iml, eps,
+                oq.concurrent_tasks or 1)
             # NB: I am using generators so that the tasks are submitted one at
             # the time, without keeping all of the arguments in memory
             tm = starmap(
@@ -338,10 +340,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         with self.monitor('saving event loss tables', autoflush=True):
             if self.oqparam.asset_loss_table:
                 for lr, array in sorted(result.pop('ASSLOSS').items()):
-                    self.ass_loss_table[lr].extend(array)
+                    hdf5.extend(self.ass_loss_table[lr], array)
                     self.ass_bytes += array.nbytes
             for lr, array in sorted(result.pop('AGGLOSS').items()):
-                self.agg_loss_table[lr].extend(array)
+                hdf5.extend(self.agg_loss_table[lr], array)
                 self.agg_bytes += array.nbytes
             self.datastore.hdf5.flush()
         return acc + result
@@ -493,7 +495,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         loss_curve_dt, _ = self.riskmodel.build_all_loss_dtypes(
             C, oq.conditional_loss_poes, oq.insured_losses)
         lts = self.riskmodel.loss_types
-        lr_data = [(l, r, dset.dset.value) for (l, r), dset in
+        lr_data = [(l, r, dset.value) for (l, r), dset in
                    numpy.ndenumerate(self.agg_loss_table)]
         ses_ratio = self.oqparam.ses_ratio
         result = parallel.apply(
