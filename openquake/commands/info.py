@@ -20,10 +20,11 @@ from __future__ import print_function
 import os
 import logging
 import operator
+from openquake.baselib import sap
 from openquake.baselib.general import groupby
 from openquake.baselib.performance import Monitor
 from openquake.commonlib import (
-    sap, nrml, readinput, reportwriter, datastore, views)
+    nrml, readinput, reportwriter, datastore, views)
 from openquake.commonlib.parallel import get_pickled_sizes
 from openquake.commonlib.export import export
 from openquake.calculators import base
