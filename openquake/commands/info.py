@@ -21,9 +21,10 @@ import os
 import mock
 import logging
 import operator
+from openquake.baselib import sap
 from openquake.baselib.general import groupby
 from openquake.baselib.performance import Monitor
-from openquake.commonlib import sap, nrml, readinput, datastore
+from openquake.commonlib import nrml, readinput, datastore
 from openquake.commonlib.parallel import get_pickled_sizes
 from openquake.commonlib.export import export
 from openquake.calculators import base, reportwriter, views
