@@ -1,7 +1,7 @@
 oq-test03, depth=15km
 =====================
 
-gem-tstation:/home/michele/ssd/calc_42184.hdf5 updated Wed Aug 24 09:01:58 2016
+gem-tstation:/home/michele/ssd/calc_43271.hdf5 updated Wed Aug 24 20:17:16 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None              
 random_seed                  3                 
 master_seed                  0                 
-engine_version               '2.1.0-gite331d0b'
+engine_version               '2.1.0-git50eb989'
 ============================ ==================
 
 Input files

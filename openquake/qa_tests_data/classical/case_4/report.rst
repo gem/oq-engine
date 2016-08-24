@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 4
 ================================
 
-gem-tstation:/home/michele/ssd/calc_42140.hdf5 updated Wed Aug 24 08:12:38 2016
+gem-tstation:/home/michele/ssd/calc_43322.hdf5 updated Wed Aug 24 20:18:14 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  1066                            
 master_seed                  0                               
 sites_per_tile               10000                           
-engine_version               '2.1.0-git81d4f3d'              
+engine_version               '2.1.0-git50eb989'              
 ============================ ================================
 
 Input files
@@ -70,13 +70,13 @@ source_model.xml 0      Active Shallow Crust 1           901          901
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,190       
+count_eff_ruptures_max_received_per_task 1,155       
 count_eff_ruptures_num_tasks             1           
 count_eff_ruptures_sent.monitor          860         
 count_eff_ruptures_sent.rlzs_by_gsim     516         
 count_eff_ruptures_sent.sitecol          433         
 count_eff_ruptures_sent.sources          1,092       
-count_eff_ruptures_tot_received          1,190       
+count_eff_ruptures_tot_received          1,155       
 hazard.input_weight                      901         
 hazard.n_imts                            1           
 hazard.n_levels                          3.000       
@@ -92,7 +92,7 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class      weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
-0            1         SimpleFaultSource 901    1         0.001       0.478      0.0           0.0           0        
+0            1         SimpleFaultSource 901    1         0.002       0.527      0.0           0.0           0        
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -100,7 +100,7 @@ Computation times by source typology
 ================= =========== ========== ============= ============= ========= ======
 source_class      filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ================= =========== ========== ============= ============= ========= ======
-SimpleFaultSource 0.001       0.478      0.0           0.0           0         1     
+SimpleFaultSource 0.002       0.527      0.0           0.0           0         1     
 ================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
@@ -112,13 +112,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.485     0.0       1     
-managing sources               0.483     0.0       1     
-splitting sources              0.478     0.0       1     
+reading composite source model 0.620     0.0       1     
+managing sources               0.532     0.0       1     
+splitting sources              0.527     0.0       1     
 store source_info              0.004     0.0       1     
-filtering sources              0.001     0.0       1     
-total count_eff_ruptures       3.550E-04 0.0       1     
-reading site collection        2.599E-05 0.0       1     
-saving probability maps        2.003E-05 0.0       1     
-aggregate curves               1.717E-05 0.0       1     
+filtering sources              0.002     0.0       1     
+total count_eff_ruptures       6.485E-05 0.0       1     
+reading site collection        4.101E-05 0.0       1     
+saving probability maps        2.193E-05 0.0       1     
+aggregate curves               1.597E-05 0.0       1     
 ============================== ========= ========= ======
