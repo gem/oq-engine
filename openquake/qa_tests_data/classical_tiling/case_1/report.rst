@@ -1,7 +1,7 @@
 Classical PSHA using Area Source
 ================================
 
-gem-tstation:/home/michele/ssd/calc_41645.hdf5 updated Tue Aug 23 17:48:36 2016
+gem-tstation:/home/michele/ssd/calc_42041.hdf5 updated Wed Aug 24 08:05:20 2016
 
 num_sites = 6, sitecol = 969 B
 
@@ -21,7 +21,7 @@ area_source_discretization   5.0
 random_seed                  23                              
 master_seed                  0                               
 sites_per_tile               1                               
-engine_version               '2.1.0-git5b04a6e'              
+engine_version               '2.1.0-git46eb8e0'              
 ============================ ================================
 
 Input files
@@ -76,7 +76,7 @@ count_eff_ruptures_num_tasks             6
 count_eff_ruptures_sent.monitor          8,652       
 count_eff_ruptures_sent.rlzs_by_gsim     4,230       
 count_eff_ruptures_sent.sitecol          2,598       
-count_eff_ruptures_sent.sources          11,670      
+count_eff_ruptures_sent.sources          11,672      
 count_eff_ruptures_tot_received          10,626      
 hazard.input_weight                      41          
 hazard.n_imts                            3           
@@ -113,12 +113,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.042     0.0       1     
+reading composite source model 0.041     0.0       1     
 managing sources               0.017     0.0       1     
 filtering sources              0.006     0.0       6     
 store source_info              0.004     0.0       1     
 reading site collection        0.002     0.0       1     
 total count_eff_ruptures       0.002     0.0       6     
-aggregate curves               6.914E-05 0.0       6     
-saving probability maps        2.003E-05 0.0       1     
+aggregate curves               7.439E-05 0.0       6     
+saving probability maps        2.217E-05 0.0       1     
 ============================== ========= ========= ======

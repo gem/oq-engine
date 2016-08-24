@@ -25,7 +25,6 @@ import os
 import sys
 import mock
 import time
-import logging
 
 
 from openquake.baselib.general import humansize, AccumDict
@@ -149,7 +148,7 @@ def build_report(job_ini, output_dir=None):
     output_dir = output_dir or os.path.dirname(job_ini)
     from openquake.calculators import base  # ugly
     calc = base.calculators(oq)
-    calc.save_params()
+    calc.save_params()  # needed to save oqparam
 
     # some taken is care so that the real calculation is not run:
     # the goal is to extract information about the source management only

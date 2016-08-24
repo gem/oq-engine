@@ -1,7 +1,7 @@
 classical damage
 ================
 
-thinkpad:/home/michele/oqdata/calc_16998.hdf5 updated Wed Aug 24 04:58:16 2016
+gem-tstation:/home/michele/ssd/calc_41976.hdf5 updated Wed Aug 24 08:03:02 2016
 
 num_sites = 7, sitecol = 1015 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  24                                                              
 master_seed                  0                                                               
 sites_per_tile               10000                                                           
-engine_version               '2.1.0-git2b4c80d'                                              
+engine_version               '2.1.0-git46eb8e0'                                              
 ============================ ================================================================
 
 Input files
@@ -95,24 +95,24 @@ filtered_weight 969
 
 Informational data
 ------------------
-======================================== ========
-count_eff_ruptures_max_received_per_task 1,923   
-count_eff_ruptures_num_tasks             12      
-count_eff_ruptures_sent.monitor          19,224  
-count_eff_ruptures_sent.rlzs_by_gsim     12,228  
-count_eff_ruptures_sent.sitecol          6,636   
-count_eff_ruptures_sent.sources          27,088  
-count_eff_ruptures_tot_received          23,046  
-hazard.input_weight                      969     
-hazard.n_imts                            3       
-hazard.n_levels                          26      
-hazard.n_realizations                    8       
-hazard.n_sites                           7       
-hazard.n_sources                         4       
-hazard.output_weight                     4,424   
-hostname                                 thinkpad
-require_epsilons                         False   
-======================================== ========
+======================================== ============
+count_eff_ruptures_max_received_per_task 1,976       
+count_eff_ruptures_num_tasks             24          
+count_eff_ruptures_sent.monitor          39,600      
+count_eff_ruptures_sent.rlzs_by_gsim     24,456      
+count_eff_ruptures_sent.sitecol          13,272      
+count_eff_ruptures_sent.sources          38,110      
+count_eff_ruptures_tot_received          47,424      
+hazard.input_weight                      969         
+hazard.n_imts                            3           
+hazard.n_levels                          26          
+hazard.n_realizations                    8           
+hazard.n_sites                           7           
+hazard.n_sources                         4           
+hazard.output_weight                     4,424       
+hostname                                 gem-tstation
+require_epsilons                         False       
+======================================== ============
 
 Exposure model
 --------------
@@ -136,8 +136,8 @@ Slowest sources
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class              weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
-0            1         SimpleFaultSource         482    15        0.004       0.044      0.0           0.0           0        
-2            1         SimpleFaultSource         482    15        0.002       0.041      0.0           0.0           0        
+0            1         SimpleFaultSource         482    15        0.002       0.036      0.0           0.0           0        
+2            1         SimpleFaultSource         482    15        0.002       0.035      0.0           0.0           0        
 1            2         SimpleFaultSource         4.000  1         0.002       0.0        0.0           0.0           0        
 3            2         CharacteristicFaultSource 1.000  1         0.001       0.0        0.0           0.0           0        
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
@@ -148,7 +148,7 @@ Computation times by source typology
 source_class              filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ========================= =========== ========== ============= ============= ========= ======
 CharacteristicFaultSource 0.001       0.0        0.0           0.0           0         1     
-SimpleFaultSource         0.007       0.085      0.0           0.0           0         3     
+SimpleFaultSource         0.006       0.071      0.0           0.0           0         3     
 ========================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
@@ -160,14 +160,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.127     0.0       1     
-splitting sources              0.085     0.0       2     
-reading composite source model 0.026     0.0       1     
-filtering sources              0.009     0.0       4     
-total count_eff_ruptures       0.007     0.195     12    
-reading exposure               0.007     0.0       1     
+managing sources               0.106     0.0       1     
+splitting sources              0.071     0.0       2     
+reading composite source model 0.021     0.0       1     
+filtering sources              0.007     0.0       4     
+total count_eff_ruptures       0.006     0.0       24    
+reading exposure               0.006     0.0       1     
 store source_info              0.005     0.0       1     
-aggregate curves               1.919E-04 0.0       12    
-saving probability maps        3.409E-05 0.0       1     
-reading site collection        1.097E-05 0.0       1     
+aggregate curves               3.383E-04 0.0       24    
+saving probability maps        2.885E-05 0.0       1     
+reading site collection        9.060E-06 0.0       1     
 ============================== ========= ========= ======
