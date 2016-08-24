@@ -35,7 +35,7 @@ from openquake.risklib import riskinput, __version__
 from openquake.commonlib import readinput, riskmodels, datastore, source
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import starmap, executor
-from openquake.commonlib.views import view, rst_table, stats
+from openquake.calculators.views import view, rst_table, stats
 from openquake.baselib.python3compat import with_metaclass, encode
 
 get_taxonomy = operator.attrgetter('taxonomy')
@@ -307,8 +307,6 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
-    mean_curves = None  # to be overridden
-
     def assoc_assets_sites(self, sitecol):
         """
         :param sitecol: a sequence of sites
