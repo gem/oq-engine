@@ -597,7 +597,7 @@ class EventBasedCalculator(ClassicalCalculator):
                        else [rlz.weight for rlz in rlzs])
             pstats = PmapStats(self.oqparam.quantile_hazard_curves, weights)
             for kind, stat in pstats.compute(
-                    self.sitecol.sids, result.values()):
+                    self.sitecol.sids, list(result.values())):
                 if kind == 'mean' and not self.oqparam.mean_hazard_curves:
                     continue
                 self.datastore['hcurves/' + kind] = stat
