@@ -22,8 +22,8 @@ import random
 import shutil
 from openquake.risklib import valid
 from openquake.baselib.python3compat import encode
+from openquake.baselib import sap
 from openquake.commonlib import nrml
-from openquake.commonlib import sap
 
 
 def random_filter(objects, reduction_factor, seed=42):

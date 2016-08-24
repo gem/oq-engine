@@ -17,7 +17,8 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
 import os.path
-from openquake.commonlib import sap, shapefileparser
+from openquake.baselib import sap
+from openquake.commonlib import shapefileparser
 
 
 @sap.Script
