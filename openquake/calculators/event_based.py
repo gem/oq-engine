@@ -25,6 +25,7 @@ import collections
 
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict, split_in_blocks
 from openquake.hazardlib.calc.filters import \
