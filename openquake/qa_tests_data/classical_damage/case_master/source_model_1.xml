@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.5">
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
 
 <sourceModel name="source1">
   <simpleFaultSource id="1" name="simple fault, trunc gr mfd" tectonicRegion="Active Shallow Crust">
