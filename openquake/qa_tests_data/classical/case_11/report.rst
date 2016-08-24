@@ -1,28 +1,28 @@
 Classical Hazard QA Test, Case 11
 =================================
 
-gem-tstation:/home/michele/ssd/calc_22598.hdf5 updated Tue May 31 15:37:55 2016
+gem-tstation:/home/michele/ssd/calc_42143.hdf5 updated Wed Aug 24 08:12:39 2016
 
 num_sites = 1, sitecol = 739 B
 
 Parameters
 ----------
-============================ ===============================
-calculation_mode             'classical'                    
-number_of_logic_tree_samples 0                              
-maximum_distance             {'active shallow crust': 200.0}
-investigation_time           1.0                            
-ses_per_logic_tree_path      1                              
-truncation_level             0.0                            
-rupture_mesh_spacing         0.01                           
-complex_fault_mesh_spacing   0.01                           
-width_of_mfd_bin             0.001                          
-area_source_discretization   10.0                           
-random_seed                  1066                           
-master_seed                  0                              
-sites_per_tile               10000                          
-engine_version               '2.0.0-git4fb4450'             
-============================ ===============================
+============================ ================================
+calculation_mode             'classical'                     
+number_of_logic_tree_samples 0                               
+maximum_distance             {u'active shallow crust': 200.0}
+investigation_time           1.0                             
+ses_per_logic_tree_path      1                               
+truncation_level             0.0                             
+rupture_mesh_spacing         0.01                            
+complex_fault_mesh_spacing   0.01                            
+width_of_mfd_bin             0.001                           
+area_source_discretization   10.0                            
+random_seed                  1066                            
+master_seed                  0                               
+sites_per_tile               10000                           
+engine_version               '2.1.0-git81d4f3d'              
+============================ ================================
 
 Input files
 -----------
@@ -31,6 +31,9 @@ Name                    File
 ======================= ============================================================
 gsim_logic_tree         `gsim_logic_tree.xml <gsim_logic_tree.xml>`_                
 job_ini                 `job.ini <job.ini>`_                                        
+source                  `-0.5 <-0.5>`_                                              
+source                  `0.0 <0.0>`_                                                
+source                  `0.5 <0.5>`_                                                
 source                  `source_model.xml <source_model.xml>`_                      
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
@@ -85,41 +88,40 @@ filtered_weight 225
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 2,602       
+count_eff_ruptures_max_received_per_task 1,198       
 count_eff_ruptures_num_tasks             3           
-count_eff_ruptures_sent.monitor          7,023       
-count_eff_ruptures_sent.rlzs_assoc       3,186       
+count_eff_ruptures_sent.monitor          2,604       
+count_eff_ruptures_sent.rlzs_by_gsim     1,575       
 count_eff_ruptures_sent.sitecol          1,299       
-count_eff_ruptures_sent.siteidx          15          
-count_eff_ruptures_sent.sources          3,588       
-count_eff_ruptures_tot_received          7,806       
+count_eff_ruptures_sent.sources          3,606       
+count_eff_ruptures_tot_received          3,594       
 hazard.input_weight                      225         
 hazard.n_imts                            1           
 hazard.n_levels                          4.000       
 hazard.n_realizations                    3           
 hazard.n_sites                           1           
-hazard.n_sources                         0           
+hazard.n_sources                         3           
 hazard.output_weight                     12          
 hostname                                 gem-tstation
 ======================================== ============
 
 Slowest sources
 ---------------
-============ ========= ============ ====== ========= =========== ========== =========
-src_group_id source_id source_class weight split_num filter_time split_time calc_time
-============ ========= ============ ====== ========= =========== ========== =========
-0            1         PointSource  87     1         0.005       2.098E-05  0.0      
-1            1         PointSource  75     1         0.004       1.502E-05  0.0      
-2            1         PointSource  62     1         0.004       1.502E-05  0.0      
-============ ========= ============ ====== ========= =========== ========== =========
+============ ========= ============ ====== ========= =========== ========== ============= ============= =========
+src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
+============ ========= ============ ====== ========= =========== ========== ============= ============= =========
+0            1         PointSource  87     1         0.005       1.884E-05  0.0           0.0           0        
+1            1         PointSource  75     1         0.004       1.502E-05  0.0           0.0           0        
+2            1         PointSource  62     1         0.003       1.311E-05  0.0           0.0           0        
+============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
 ------------------------------------
-============ =========== ========== ========= ======
-source_class filter_time split_time calc_time counts
-============ =========== ========== ========= ======
-PointSource  0.013       5.102E-05  0.0       3     
-============ =========== ========== ========= ======
+============ =========== ========== ============= ============= ========= ======
+source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
+============ =========== ========== ============= ============= ========= ======
+PointSource  0.012       4.697E-05  0.0           0.0           0         3     
+============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
@@ -132,10 +134,11 @@ operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
 reading composite source model 0.019     0.0       1     
 managing sources               0.018     0.0       1     
-filtering sources              0.013     0.0       3     
-store source_info              0.005     0.0       1     
-total count_eff_ruptures       8.280E-04 0.0       3     
-aggregate curves               5.126E-05 0.0       3     
-splitting sources              5.102E-05 0.0       3     
+filtering sources              0.012     0.0       3     
+store source_info              0.004     0.0       1     
+total count_eff_ruptures       7.882E-04 0.0       3     
+aggregate curves               4.911E-05 0.0       3     
+splitting sources              4.697E-05 0.0       3     
 reading site collection        3.290E-05 0.0       1     
+saving probability maps        2.503E-05 0.0       1     
 ============================== ========= ========= ======

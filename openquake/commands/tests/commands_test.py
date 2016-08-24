@@ -75,7 +75,7 @@ attribute       nbytes
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
-            info(None, None, None, None, None, None, path)
+            info(None, None, None, None, None, path)
         self.assertEqual(self.EXPECTED, str(p)[:len(self.EXPECTED)])
 
     # poor man tests: checking that the flags produce a few characters
@@ -101,7 +101,7 @@ attribute       nbytes
             info(None, None, None, True, None, '')
         self.assertGreater(len(str(p)), 10)
 
-    # NB: info --report is tested manually once in a while
+    # NB: info --report is tested in the packager
 
 
 class TidyTestCase(unittest.TestCase):
@@ -207,8 +207,7 @@ class RunShowExportTestCase(unittest.TestCase):
                          self.calc_id, str(p))
         with Print.patch() as p:
             show_attrs('hcurves', self.calc_id)
-        self.assertEqual("imtls [['PGA' '3']\n ['SA(0.1)' '3']]\nnbytes 48",
-                         str(p))
+        self.assertEqual("nbytes 48", str(p))
 
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()

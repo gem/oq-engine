@@ -542,7 +542,7 @@ def view_fullreport(token, dstore):
     Display an .rst report about the computation
     """
     # avoid circular imports
-    from openquake.commonlib.reportwriter import ReportWriter
+    from openquake.calculators.reportwriter import ReportWriter
     return ReportWriter(dstore).make_report()
 
 
@@ -619,4 +619,5 @@ def view_required_params_per_trt(token, dstore):
         ruptparams = maker.REQUIRES_RUPTURE_PARAMETERS
         tbl.append((grp_id, gsims, distances, siteparams, ruptparams))
     return rst_table(
-        tbl, header='grp_id gsims distances siteparams ruptparams'.split())
+        tbl, header='grp_id gsims distances siteparams ruptparams'.split(),
+        fmt=scientificformat)

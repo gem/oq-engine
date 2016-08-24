@@ -299,7 +299,7 @@ class TaskManager(object):
         Then reduce the results with an aggregation function.
         The chunks which are generated internally can be seen directly (
         useful for debugging purposes) by looking at the attribute `._chunks`,
-        right after the `apply_reduce` function has been called.
+        right after the `apply` function has been called.
 
         :param task: a task to run in parallel
         :param task_args: the arguments to be passed to the task function
@@ -452,9 +452,7 @@ apply = TaskManager.apply
 
 def do_not_aggregate(acc, value):
     """
-    Do nothing aggregation function, use it in
-    :class:`openquake.commonlib.parallel.apply_reduce` calls
-    when no aggregation is required.
+    Do nothing aggregation function.
 
     :param acc: the accumulator
     :param value: the value to accumulate
@@ -503,7 +501,6 @@ class Starmap(object):
         if self.__class__.pool is None:
             self.__class__.pool = self.poolfactory()
         self.func = func
-        self.received = []
         allargs = list(iterargs)
         self.todo = len(allargs)
         logging.info('Starting %d tasks', self.todo)
@@ -514,6 +511,18 @@ class Starmap(object):
         agg_and_log = Aggregator(agg, self.func.__name__, self.todo, progress)
         return functools.reduce(
             agg_and_log, self.imap, AccumDict() if acc is None else acc)
+
+
+class Serialmap(Starmap):
+    """
+    A sequential Starmap, useful for debugging purpose.
+    """
+    def __init__(self, func, iterargs):
+        self.func = func
+        allargs = list(iterargs)
+        self.todo = len(allargs)
+        logging.info('Starting %d tasks', self.todo)
+        self.imap = [safely_call(func, args) for args in allargs]
 
 
 class Threadmap(Starmap):
