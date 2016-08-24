@@ -1,7 +1,7 @@
 Classical PSHA with NZ NSHM
 ===========================
 
-gem-tstation:/home/michele/ssd/calc_42013.hdf5 updated Wed Aug 24 08:04:25 2016
+gem-tstation:/home/michele/ssd/calc_42149.hdf5 updated Wed Aug 24 08:13:04 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                                                                                                                  
 master_seed                  0                                                                                                                   
 sites_per_tile               10000                                                                                                               
-engine_version               '2.1.0-git46eb8e0'                                                                                                  
+engine_version               '2.1.0-git81d4f3d'                                                                                                  
 ============================ ====================================================================================================================
 
 Input files
@@ -103,8 +103,8 @@ Slowest sources
 src_group_id source_id source_class              weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 1            21444     CharacteristicFaultSource 1.000  1         0.002       0.0        0.0           0.0           0        
-0            1         PointSource               0.500  1         6.413E-05   0.0        0.0           0.0           0        
-0            2         PointSource               0.500  1         4.315E-05   0.0        0.0           0.0           0        
+0            1         PointSource               0.500  1         6.390E-05   0.0        0.0           0.0           0        
+0            2         PointSource               0.500  1         4.292E-05   0.0        0.0           0.0           0        
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -113,7 +113,7 @@ Computation times by source typology
 source_class              filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ========================= =========== ========== ============= ============= ========= ======
 CharacteristicFaultSource 0.002       0.0        0.0           0.0           0         1     
-PointSource               1.073E-04   0.0        0.0           0.0           0         2     
+PointSource               1.068E-04   0.0        0.0           0.0           0         2     
 ========================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
@@ -125,12 +125,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.214     0.0       1     
+reading composite source model 0.209     0.0       1     
 managing sources               0.008     0.0       1     
 store source_info              0.005     0.0       1     
 filtering sources              0.003     0.0       4     
-total count_eff_ruptures       6.311E-04 0.0       2     
-aggregate curves               3.386E-05 0.0       2     
+total count_eff_ruptures       6.769E-04 0.0       2     
+aggregate curves               3.576E-05 0.0       2     
 reading site collection        3.290E-05 0.0       1     
-saving probability maps        2.503E-05 0.0       1     
+saving probability maps        2.599E-05 0.0       1     
 ============================== ========= ========= ======
