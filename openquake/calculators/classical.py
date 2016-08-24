@@ -370,6 +370,8 @@ def build_hcurves_and_stats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
     """
+    if sum(len(pmap) for pmap in pmap_by_grp.values()) == 0:  # all empty
+        return {}
     rlzs = rlzs_assoc.realizations
     with monitor('combine pmaps'):
         pmap_by_rlz = calc.combine_pmaps(rlzs_assoc, pmap_by_grp)
