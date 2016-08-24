@@ -1,7 +1,7 @@
 Classical PSHA-Based Hazard
 ===========================
 
-gem-tstation:/home/michele/ssd/calc_42110.hdf5 updated Wed Aug 24 08:11:44 2016
+gem-tstation:/home/michele/ssd/calc_42205.hdf5 updated Wed Aug 24 09:02:01 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   20.0
 random_seed                  42                              
 master_seed                  0                               
 sites_per_tile               10000                           
-engine_version               '2.1.0-git81d4f3d'              
+engine_version               '2.1.0-gite331d0b'              
 ============================ ================================
 
 Input files
@@ -129,14 +129,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.093     0.0       1     
+managing sources               0.086     0.0       1     
 splitting sources              0.071     0.0       1     
-reading composite source model 0.011     0.0       1     
-store source_info              0.008     0.0       1     
-total count_eff_ruptures       0.003     0.0       13    
+reading composite source model 0.010     0.0       1     
+store source_info              0.005     0.0       1     
+total count_eff_ruptures       0.004     0.0       13    
 reading exposure               0.003     0.0       1     
 filtering sources              0.002     0.0       1     
-aggregate curves               3.068E-04 0.0       13    
-saving probability maps        4.196E-05 0.0       1     
+aggregate curves               1.857E-04 0.0       13    
+saving probability maps        2.789E-05 0.0       1     
 reading site collection        8.106E-06 0.0       1     
 ============================== ========= ========= ======
