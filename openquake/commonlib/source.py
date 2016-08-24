@@ -855,9 +855,6 @@ class SourceManager(object):
                     grp_id = block[0].src_group_id
                     rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
                     yield block, sitecol, rlzs_by_gsim, self.monitor.new()
-                    rlzs_by_gsim.samples = self.rlzs_assoc.samples[grp_id]
-                    rlzs_by_gsim.seed = self.rlzs_assoc.seed
-                    yield block, sitecol, rlzs_by_gsim, self.monitor.new()
                     nblocks += 1
                 logging.info('Sent %d sources in %d block(s)',
                              len(sources), nblocks)
