@@ -1,7 +1,7 @@
 Probabilistic Event-Based QA Test with Spatial Correlation, case 1
 ==================================================================
 
-gem-tstation:/home/michele/ssd/calc_41626.hdf5 updated Tue Aug 23 17:47:55 2016
+thinkpad:/home/michele/oqdata/calc_16905.hdf5 updated Wed Aug 24 04:48:41 2016
 
 num_sites = 2, sitecol = 785 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0                            
 random_seed                  123456789                       
 master_seed                  0                               
-engine_version               '2.1.0-git5b04a6e'              
+engine_version               '2.1.0-git74bd74a'              
 ============================ ================================
 
 Input files
@@ -68,23 +68,23 @@ source_model.xml 0      Active Shallow Crust 1           1            0.025
 
 Informational data
 ------------------
-====================================== ============
-compute_ruptures_max_received_per_task 303,574     
-compute_ruptures_num_tasks             1           
-compute_ruptures_sent.monitor          800         
-compute_ruptures_sent.rlzs_by_gsim     529         
-compute_ruptures_sent.sitecol          453         
-compute_ruptures_sent.sources          1,322       
-compute_ruptures_tot_received          303,574     
-hazard.input_weight                    0.025       
-hazard.n_imts                          1           
-hazard.n_levels                        1.000       
-hazard.n_realizations                  1           
-hazard.n_sites                         2           
-hazard.n_sources                       1           
-hazard.output_weight                   125         
-hostname                               gem-tstation
-====================================== ============
+====================================== ========
+compute_ruptures_max_received_per_task 303,510 
+compute_ruptures_num_tasks             1       
+compute_ruptures_sent.monitor          752     
+compute_ruptures_sent.rlzs_by_gsim     529     
+compute_ruptures_sent.sitecol          453     
+compute_ruptures_sent.sources          1,324   
+compute_ruptures_tot_received          303,510 
+hazard.input_weight                    0.025   
+hazard.n_imts                          1       
+hazard.n_levels                        1.000   
+hazard.n_realizations                  1       
+hazard.n_sites                         2       
+hazard.n_sources                       1       
+hazard.output_weight                   125     
+hostname                               thinkpad
+====================================== ========
 
 Specific information for event based
 ------------------------------------
@@ -99,7 +99,7 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            1         PointSource  0.025  1         3.099E-05   0.0        0.192         0.192         1        
+0            1         PointSource  0.025  1         3.481E-05   0.0        0.381         0.381         1        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -107,15 +107,15 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-PointSource  3.099E-05   0.0        0.192         0.192         1         1     
+PointSource  3.481E-05   0.0        0.381         0.381         1         1     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ========================== ===== ====== ===== ===== =========
 measurement                mean  stddev min   max   num_tasks
-compute_ruptures.time_sec  0.193 NaN    0.193 0.193 1        
-compute_ruptures.memory_mb 0.152 NaN    0.152 0.152 1        
+compute_ruptures.time_sec  0.382 NaN    0.382 0.382 1        
+compute_ruptures.memory_mb 4.402 NaN    4.402 4.402 1        
 ========================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -123,13 +123,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.193     0.152     1     
-saving ruptures                0.171     0.0       1     
+total compute_ruptures         0.382     4.402     1     
+saving ruptures                0.272     0.0       1     
 store source_info              0.006     0.0       1     
 reading composite source model 0.005     0.0       1     
-managing sources               0.003     0.0       1     
-aggregate curves               8.709E-04 0.0       1     
-filtering ruptures             2.990E-04 0.0       1     
-reading site collection        3.815E-05 0.0       1     
-filtering sources              3.099E-05 0.0       1     
+managing sources               0.004     0.0       1     
+aggregate curves               0.001     0.0       1     
+filtering ruptures             7.329E-04 0.0       1     
+reading site collection        4.101E-05 0.0       1     
+filtering sources              3.481E-05 0.0       1     
 ============================== ========= ========= ======
