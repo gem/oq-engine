@@ -31,7 +31,7 @@ from openquake.risklib import scientific, riskmodels
 U32 = numpy.uint32
 F32 = numpy.float32
 
-FIELDS = ('site_id', 'lon', 'lat', 'idx', 'taxonomy', 'area', 'number',
+FIELDS = ('site_id', 'lon', 'lat', 'idx', 'taxonomy_id', 'area', 'number',
           'occupants', 'deductible-', 'insurance_limit-', 'retrofitted-')
 
 by_taxonomy = operator.attrgetter('taxonomy')
@@ -81,7 +81,7 @@ class AssetCollection(object):
                 values['occupants_' + str(self.time_event)] = a['occupants']
             return riskmodels.Asset(
                     a['idx'],
-                    self.taxonomies[a['taxonomy']],
+                    self.taxonomies[a['taxonomy_id']],
                     number=a['number'],
                     location=(a['lon'], a['lat']),
                     values=values,
@@ -151,7 +151,7 @@ class AssetCollection(object):
         sorted_taxonomies = sorted(taxonomies)
         asset_dt = numpy.dtype(
             [('idx', U32), ('lon', F32), ('lat', F32), ('site_id', U32),
-             ('taxonomy', U32), ('number', F32), ('area', F32)] + [
+             ('taxonomy_id', U32), ('number', F32), ('area', F32)] + [
                  (str(name), float) for name in float_fields])
         num_assets = sum(len(assets) for assets in assets_by_site)
         assetcol = numpy.zeros(num_assets, asset_dt)
@@ -163,7 +163,7 @@ class AssetCollection(object):
                 record = assetcol[asset_ordinal]
                 asset_ordinal += 1
                 for field in fields:
-                    if field == 'taxonomy':
+                    if field == 'taxonomy_id':
                         value = sorted_taxonomies.index(asset.taxonomy)
                     elif field == 'number':
                         value = asset.number
