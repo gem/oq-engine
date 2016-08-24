@@ -25,7 +25,8 @@ import io
 
 from openquake.baselib import performance, general
 from openquake.risklib import valid
-from openquake.commonlib import sap, readinput, datastore, oqvalidation, views
+from openquake.baselib import sap
+from openquake.commonlib import readinput, datastore, oqvalidation, views
 from openquake.commonlib.concurrent_futures_process_mpatch import (
     concurrent_futures_process_monkeypatch)
 from openquake.calculators import base
