@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Now the WebUI restarts the ProcessPoolExecutor at the end of each job,
+    to conserve resources
   * Optimized the computation of hazard curves and statistics, especially
     for the memory consumption
   * Reduced the data transfer due to the `rlzs_assoc` and `oqparam` objects
