@@ -18,6 +18,7 @@
 
 from __future__ import print_function
 import os
+import mock
 import logging
 import operator
 from openquake.baselib.general import groupby
@@ -85,7 +86,8 @@ def info(calculators, gsims, views, exports, report, input_file=''):
             n += len(formats)
         print('There are %d exporters defined.' % n)
     if os.path.isdir(input_file) and report:
-        do_build_reports(input_file)
+        with mock.patch.object(logging.root, 'info'):  # reduce logging
+            do_build_reports(input_file)
     elif input_file.endswith('.xml'):
         print(nrml.read(input_file).to_str())
     elif input_file.endswith(('.ini', '.zip')):
