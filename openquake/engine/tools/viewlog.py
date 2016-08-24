@@ -26,7 +26,7 @@ try:
     from urllib import urlopen
 except ImportError:
     from urllib.request import urlopen
-from openquake.commonlib import sap
+from openquake.baselib import sap
 
 
 @sap.Script

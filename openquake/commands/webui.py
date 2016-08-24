@@ -18,7 +18,7 @@
 import sys
 import subprocess
 from openquake.risklib import valid
-from openquake.commonlib import sap
+from openquake.baselib import sap
 from openquake.engine import config
 from openquake.server.dbserver import get_status
 from openquake.commands import dbserver
