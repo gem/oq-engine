@@ -18,15 +18,15 @@
 
 from __future__ import print_function
 import os
+import mock
 import logging
 import operator
 from openquake.baselib.general import groupby
 from openquake.baselib.performance import Monitor
-from openquake.commonlib import (
-    sap, nrml, readinput, reportwriter, datastore, views)
+from openquake.commonlib import sap, nrml, readinput, datastore
 from openquake.commonlib.parallel import get_pickled_sizes
 from openquake.commonlib.export import export
-from openquake.calculators import base
+from openquake.calculators import base, reportwriter, views
 from openquake.hazardlib import gsim
 
 
@@ -52,7 +52,7 @@ def do_build_reports(directory):
     job.ini files found.
     """
     for cwd, dirs, files in os.walk(directory):
-        for f in files:
+        for f in sorted(files):
             if f in ('job.ini', 'job_h.ini', 'job_haz.ini', 'job_hazard.ini'):
                 job_ini = os.path.join(cwd, f)
                 print(job_ini)
@@ -62,8 +62,7 @@ def do_build_reports(directory):
 # the documentation about how to use this feature can be found
 # in the file effective-realizations.rst
 @sap.Script
-def info(calculators, gsims, views, exports, build_reports, report,
-         input_file=''):
+def info(calculators, gsims, views, exports, report, input_file=''):
     """
     Give information. You can pass the name of an available calculator,
     a job.ini file, or a zip archive with the input files.
@@ -86,9 +85,12 @@ def info(calculators, gsims, views, exports, build_reports, report,
             print(exporter, formats)
             n += len(formats)
         print('There are %d exporters defined.' % n)
-    if build_reports:
-        do_build_reports(input_file or '.')
-    if input_file.endswith('.xml'):
+    if os.path.isdir(input_file) and report:
+        with Monitor('info', measuremem=True) as mon:
+            with mock.patch.object(logging.root, 'info'):  # reduce logging
+                do_build_reports(input_file)
+        print(mon)
+    elif input_file.endswith('.xml'):
         print(nrml.read(input_file).to_str())
     elif input_file.endswith(('.ini', '.zip')):
         with Monitor('info', measuremem=True) as mon:
@@ -105,6 +107,5 @@ info.flg('calculators', 'list available calculators')
 info.flg('gsims', 'list available GSIMs')
 info.flg('views', 'list available views')
 info.flg('exports', 'list available exports')
-info.flg('build_reports', 'build reports in rst format')
-info.flg('report', 'build a report in rst format')
+info.flg('report', 'build short report(s) in rst format')
 info.arg('input_file', 'job.ini file or zip archive')
