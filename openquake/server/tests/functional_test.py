@@ -92,7 +92,7 @@ class EngineServerTestCase(unittest.TestCase):
             time.sleep(1)
 
     def postzip(self, archive):
-        with open(os.path.join(self.datadir, archive)) as a:
+        with open(os.path.join(self.datadir, archive), 'rb') as a:
             resp = self.post('run', {}, files=dict(archive=a))
         try:
             js = json.loads(resp.text)
@@ -110,8 +110,8 @@ class EngineServerTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        if django.get_version() < '1.5' or sys.version > '3':
-            # Django too old or Python too new
+        if django.get_version() < '1.5':
+            # Django too old
             raise unittest.SkipTest
 
         cls.job_ids = []

@@ -1,28 +1,28 @@
 Classical PSHA with non-trivial logic tree (1 source model + 5 (a, b) pairs per source + 3 Mmax per source
 ==========================================================================================================
 
-gem-tstation:/home/michele/ssd/calc_22603.hdf5 updated Tue May 31 15:38:20 2016
+gem-tstation:/home/michele/ssd/calc_42147.hdf5 updated Wed Aug 24 08:13:03 2016
 
 num_sites = 1, sitecol = 739 B
 
 Parameters
 ----------
-============================ ===============================
-calculation_mode             'classical'                    
-number_of_logic_tree_samples 10                             
-maximum_distance             {'Active Shallow Crust': 200.0}
-investigation_time           50.0                           
-ses_per_logic_tree_path      1                              
-truncation_level             3.0                            
-rupture_mesh_spacing         2.0                            
-complex_fault_mesh_spacing   2.0                            
-width_of_mfd_bin             0.1                            
-area_source_discretization   10.0                           
-random_seed                  23                             
-master_seed                  0                              
-sites_per_tile               10000                          
-engine_version               '2.0.0-git4fb4450'             
-============================ ===============================
+============================ ================================
+calculation_mode             'classical'                     
+number_of_logic_tree_samples 10                              
+maximum_distance             {u'Active Shallow Crust': 200.0}
+investigation_time           50.0                            
+ses_per_logic_tree_path      1                               
+truncation_level             3.0                             
+rupture_mesh_spacing         2.0                             
+complex_fault_mesh_spacing   2.0                             
+width_of_mfd_bin             0.1                             
+area_source_discretization   10.0                            
+random_seed                  23                              
+master_seed                  0                               
+sites_per_tile               10000                           
+engine_version               '2.1.0-git81d4f3d'              
+============================ ================================
 
 Input files
 -----------
@@ -31,6 +31,46 @@ Name                    File
 ======================= ============================================================
 gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
 job_ini                 `job.ini <job.ini>`_                                        
+source                  `1.8 0.8 <1.8 0.8>`_                                        
+source                  `1.8 0.8 <1.8 0.8>`_                                        
+source                  `1.8 0.8 <1.8 0.8>`_                                        
+source                  `1.8 0.8 <1.8 0.8>`_                                        
+source                  `1.8 0.8 <1.8 0.8>`_                                        
+source                  `1.9 0.9 <1.9 0.9>`_                                        
+source                  `1.9 0.9 <1.9 0.9>`_                                        
+source                  `1.9 0.9 <1.9 0.9>`_                                        
+source                  `1.9 0.9 <1.9 0.9>`_                                        
+source                  `1.9 0.9 <1.9 0.9>`_                                        
+source                  `2.0 1.0 <2.0 1.0>`_                                        
+source                  `2.0 1.0 <2.0 1.0>`_                                        
+source                  `2.0 1.0 <2.0 1.0>`_                                        
+source                  `2.0 1.0 <2.0 1.0>`_                                        
+source                  `2.0 1.0 <2.0 1.0>`_                                        
+source                  `2.1 1.1 <2.1 1.1>`_                                        
+source                  `2.1 1.1 <2.1 1.1>`_                                        
+source                  `2.1 1.1 <2.1 1.1>`_                                        
+source                  `2.1 1.1 <2.1 1.1>`_                                        
+source                  `2.1 1.1 <2.1 1.1>`_                                        
+source                  `2.2 1.2 <2.2 1.2>`_                                        
+source                  `2.2 1.2 <2.2 1.2>`_                                        
+source                  `2.2 1.2 <2.2 1.2>`_                                        
+source                  `2.2 1.2 <2.2 1.2>`_                                        
+source                  `2.2 1.2 <2.2 1.2>`_                                        
+source                  `6.3 <6.3>`_                                                
+source                  `6.3 <6.3>`_                                                
+source                  `6.3 <6.3>`_                                                
+source                  `6.3 <6.3>`_                                                
+source                  `6.3 <6.3>`_                                                
+source                  `6.5 <6.5>`_                                                
+source                  `6.5 <6.5>`_                                                
+source                  `6.5 <6.5>`_                                                
+source                  `6.5 <6.5>`_                                                
+source                  `6.5 <6.5>`_                                                
+source                  `6.7 <6.7>`_                                                
+source                  `6.7 <6.7>`_                                                
+source                  `6.7 <6.7>`_                                                
+source                  `6.7 <6.7>`_                                                
+source                  `6.7 <6.7>`_                                                
 source                  `source_model.xml <source_model.xml>`_                      
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
@@ -113,58 +153,57 @@ filtered_weight 506
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 2,757       
-count_eff_ruptures_num_tasks             50          
-count_eff_ruptures_sent.monitor          124,800     
-count_eff_ruptures_sent.rlzs_assoc       123,850     
-count_eff_ruptures_sent.sitecol          21,650      
-count_eff_ruptures_sent.siteidx          250         
-count_eff_ruptures_sent.sources          97,050      
-count_eff_ruptures_tot_received          137,850     
+count_eff_ruptures_max_received_per_task 1,188       
+count_eff_ruptures_num_tasks             22          
+count_eff_ruptures_sent.monitor          18,898      
+count_eff_ruptures_sent.rlzs_by_gsim     13,838      
+count_eff_ruptures_sent.sitecol          9,526       
+count_eff_ruptures_sent.sources          64,946      
+count_eff_ruptures_tot_received          26,136      
 hazard.input_weight                      506         
 hazard.n_imts                            1           
 hazard.n_levels                          3.000       
 hazard.n_realizations                    10          
 hazard.n_sites                           1           
-hazard.n_sources                         0           
+hazard.n_sources                         50          
 hazard.output_weight                     30          
 hostname                                 gem-tstation
 ======================================== ============
 
 Slowest sources
 ---------------
-============ ========= ============ ====== ========= =========== ========== =========
-src_group_id source_id source_class weight split_num filter_time split_time calc_time
-============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   8.125  1         7.610E-04   0.0        0.0      
-7            4         AreaSource   10     1         7.451E-04   0.0        0.0      
-2            3         AreaSource   12     1         7.381E-04   0.0        0.0      
-6            3         AreaSource   11     1         7.298E-04   0.0        0.0      
-8            5         AreaSource   8.125  1         7.260E-04   0.0        0.0      
-3            1         AreaSource   8.125  1         7.219E-04   0.0        0.0      
-2            2         AreaSource   11     1         7.219E-04   0.0        0.0      
-2            1         AreaSource   9.375  1         7.210E-04   0.0        0.0      
-1            5         AreaSource   9.375  1         7.210E-04   0.0        0.0      
-4            1         AreaSource   9.375  1         7.141E-04   0.0        0.0      
-5            2         AreaSource   12     1         7.060E-04   0.0        0.0      
-0            5         AreaSource   9.375  1         7.060E-04   0.0        0.0      
-9            5         AreaSource   9.375  1         7.050E-04   0.0        0.0      
-4            2         AreaSource   9.750  1         7.041E-04   0.0        0.0      
-0            4         AreaSource   8.125  1         7.000E-04   0.0        0.0      
-5            3         AreaSource   11     1         6.979E-04   0.0        0.0      
-0            2         AreaSource   11     1         6.840E-04   0.0        0.0      
-9            1         AreaSource   10     1         6.790E-04   0.0        0.0      
-3            4         AreaSource   9.375  1         6.759E-04   0.0        0.0      
-0            3         AreaSource   11     1         6.740E-04   0.0        0.0      
-============ ========= ============ ====== ========= =========== ========== =========
+============ ========= ============ ====== ========= =========== ========== ============= ============= =========
+src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
+============ ========= ============ ====== ========= =========== ========== ============= ============= =========
+0            1         AreaSource   8.125  1         7.319E-04   0.0        0.0           0.0           0        
+2            5         AreaSource   10     1         6.580E-04   0.0        0.0           0.0           0        
+0            3         AreaSource   11     1         6.580E-04   0.0        0.0           0.0           0        
+7            5         AreaSource   10     1         6.561E-04   0.0        0.0           0.0           0        
+1            4         AreaSource   9.375  1         6.549E-04   0.0        0.0           0.0           0        
+5            3         AreaSource   11     1         6.530E-04   0.0        0.0           0.0           0        
+9            1         AreaSource   10     1         6.530E-04   0.0        0.0           0.0           0        
+4            2         AreaSource   9.750  1         6.511E-04   0.0        0.0           0.0           0        
+6            4         AreaSource   9.375  1         6.511E-04   0.0        0.0           0.0           0        
+0            2         AreaSource   11     1         6.480E-04   0.0        0.0           0.0           0        
+0            4         AreaSource   8.125  1         6.452E-04   0.0        0.0           0.0           0        
+5            2         AreaSource   12     1         6.440E-04   0.0        0.0           0.0           0        
+0            5         AreaSource   9.375  1         6.440E-04   0.0        0.0           0.0           0        
+8            4         AreaSource   10     1         6.440E-04   0.0        0.0           0.0           0        
+6            3         AreaSource   11     1         6.430E-04   0.0        0.0           0.0           0        
+9            2         AreaSource   11     1         6.430E-04   0.0        0.0           0.0           0        
+6            5         AreaSource   9.375  1         6.430E-04   0.0        0.0           0.0           0        
+6            1         AreaSource   10     1         6.430E-04   0.0        0.0           0.0           0        
+7            4         AreaSource   10     1         6.430E-04   0.0        0.0           0.0           0        
+2            3         AreaSource   12     1         6.430E-04   0.0        0.0           0.0           0        
+============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
 ------------------------------------
-============ =========== ========== ========= ======
-source_class filter_time split_time calc_time counts
-============ =========== ========== ========= ======
-AreaSource   0.034       0.0        0.0       50    
-============ =========== ========== ========= ======
+============ =========== ========== ============= ============= ========= ======
+source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
+============ =========== ========== ============= ============= ========= ======
+AreaSource   0.032       0.0        0.0           0.0           0         50    
+============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
@@ -175,11 +214,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.205     0.0       1     
-managing sources               0.124     0.0       1     
-filtering sources              0.034     0.0       50    
-total count_eff_ruptures       0.010     0.0       50    
-store source_info              0.005     0.0       1     
-aggregate curves               7.429E-04 0.0       50    
+reading composite source model 0.190     0.0       1     
+managing sources               0.065     0.0       1     
+filtering sources              0.032     0.0       50    
+total count_eff_ruptures       0.007     0.0       22    
+store source_info              0.006     0.0       1     
+aggregate curves               4.425E-04 0.0       22    
+saving probability maps        3.004E-05 0.0       1     
 reading site collection        2.909E-05 0.0       1     
 ============================== ========= ========= ======
