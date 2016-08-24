@@ -26,7 +26,7 @@ from openquake.risklib import scientific
 from openquake.commonlib.export import export
 from openquake.commonlib import writers, risk_writers
 from openquake.commonlib.util import get_assets, compose_arrays
-from openquake.commonlib.views import FIVEDIGITS
+from openquake.calculators.views import FIVEDIGITS
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
     ExposureData, Site)
