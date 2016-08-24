@@ -1,7 +1,7 @@
 Event-based PSHA producing hazard curves only
 =============================================
 
-thinkpad:/home/michele/oqdata/calc_16906.hdf5 updated Wed Aug 24 04:48:46 2016
+gem-tstation:/home/michele/ssd/calc_42018.hdf5 updated Wed Aug 24 08:04:36 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.2
 area_source_discretization   20.0                            
 random_seed                  23                              
 master_seed                  0                               
-engine_version               '2.1.0-git74bd74a'              
+engine_version               '2.1.0-git46eb8e0'              
 ============================ ================================
 
 Input files
@@ -84,23 +84,23 @@ filtered_weight 122
 
 Informational data
 ------------------
-====================================== =========
-compute_ruptures_max_received_per_task 545,946  
-compute_ruptures_num_tasks             8        
-compute_ruptures_sent.monitor          6,624    
-compute_ruptures_sent.rlzs_by_gsim     7,184    
-compute_ruptures_sent.sitecol          3,464    
-compute_ruptures_sent.sources          176,536  
-compute_ruptures_tot_received          2,910,602
-hazard.input_weight                    122      
-hazard.n_imts                          1        
-hazard.n_levels                        5.000    
-hazard.n_realizations                  6        
-hazard.n_sites                         1        
-hazard.n_sources                       2        
-hazard.output_weight                   900      
-hostname                               thinkpad 
-====================================== =========
+====================================== ============
+compute_ruptures_max_received_per_task 237,513     
+compute_ruptures_num_tasks             20          
+compute_ruptures_sent.monitor          17,520      
+compute_ruptures_sent.rlzs_by_gsim     17,960      
+compute_ruptures_sent.sitecol          8,660       
+compute_ruptures_sent.sources          185,198     
+compute_ruptures_tot_received          2,939,108   
+hazard.input_weight                    122         
+hazard.n_imts                          1           
+hazard.n_levels                        5.000       
+hazard.n_realizations                  6           
+hazard.n_sites                         1           
+hazard.n_sources                       2           
+hazard.output_weight                   900         
+hostname                               gem-tstation
+====================================== ============
 
 Specific information for event based
 ------------------------------------
@@ -115,8 +115,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            1         AreaSource   61     307       0.002       0.076      4.853         0.045         307      
-1            1         AreaSource   61     307       0.002       0.061      3.591         0.037         307      
+0            1         AreaSource   61     307       0.001       0.060      2.573         0.031         307      
+1            1         AreaSource   61     307       0.001       0.062      1.658         0.021         307      
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -124,15 +124,15 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-AreaSource   0.004       0.137      8.444         0.081         614       2     
+AreaSource   0.003       0.122      4.230         0.052         614       2     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ========================== ===== ====== ===== ===== =========
 measurement                mean  stddev min   max   num_tasks
-compute_ruptures.time_sec  1.057 0.204  0.757 1.347 8        
-compute_ruptures.memory_mb 1.248 1.987  0.0   6.000 8        
+compute_ruptures.time_sec  0.212 0.086  0.009 0.311 20       
+compute_ruptures.memory_mb 0.0   0.0    0.0   0.0   20       
 ========================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -140,14 +140,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         8.458     6.000     8     
-saving ruptures                2.452     0.0       1     
-filtering ruptures             1.575     0.0       3,081 
-managing sources               0.216     0.0       1     
-reading composite source model 0.153     0.0       1     
-splitting sources              0.137     0.0       2     
-store source_info              0.021     0.0       1     
-aggregate curves               0.007     0.0       8     
-filtering sources              0.004     0.0       2     
-reading site collection        4.101E-05 0.0       1     
+total compute_ruptures         4.241     0.0       20    
+saving ruptures                2.199     0.0       1     
+filtering ruptures             0.824     0.0       3,081 
+managing sources               0.189     0.0       1     
+splitting sources              0.122     0.0       2     
+reading composite source model 0.119     0.0       1     
+store source_info              0.011     0.0       1     
+aggregate curves               0.008     0.0       20    
+filtering sources              0.003     0.0       2     
+reading site collection        3.290E-05 0.0       1     
 ============================== ========= ========= ======
