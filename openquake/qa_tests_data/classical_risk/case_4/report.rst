@@ -1,7 +1,7 @@
 Classical Hazard-Risk QA test 4
 ===============================
 
-gem-tstation:/home/michele/ssd/calc_41948.hdf5 updated Wed Aug 24 08:02:57 2016
+gem-tstation:/home/michele/ssd/calc_42084.hdf5 updated Wed Aug 24 08:11:39 2016
 
 num_sites = 6, sitecol = 969 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                              
 master_seed                  0                               
 sites_per_tile               10000                           
-engine_version               '2.1.0-git46eb8e0'              
+engine_version               '2.1.0-git81d4f3d'              
 ============================ ================================
 
 Input files
@@ -112,8 +112,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            376       AreaSource   55     1         7.000E-04   0.0        0.0           0.0           0        
-0            231       AreaSource   104    1         6.931E-04   0.0        0.0           0.0           0        
+0            376       AreaSource   55     1         6.649E-04   0.0        0.0           0.0           0        
+0            231       AreaSource   104    1         6.561E-04   0.0        0.0           0.0           0        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -133,13 +133,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 1.988     0.0       1     
-managing sources               0.033     0.0       1     
-filtering sources              0.028     0.0       39    
+reading composite source model 2.100     0.0       1     
+managing sources               0.031     0.0       1     
+filtering sources              0.027     0.0       39    
 store source_info              0.009     0.0       1     
+reading exposure               0.005     0.0       1     
 total count_eff_ruptures       0.003     0.0       2     
-reading exposure               0.003     0.0       1     
-aggregate curves               2.599E-05 0.0       2     
-saving probability maps        2.193E-05 0.0       1     
-reading site collection        6.914E-06 0.0       1     
+aggregate curves               3.004E-05 0.0       2     
+saving probability maps        2.217E-05 0.0       1     
+reading site collection        1.121E-05 0.0       1     
 ============================== ========= ========= ======

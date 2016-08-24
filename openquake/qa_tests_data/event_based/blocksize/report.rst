@@ -1,7 +1,7 @@
 QA test for blocksize independence (hazard)
 ===========================================
 
-gem-tstation:/home/michele/ssd/calc_42026.hdf5 updated Wed Aug 24 08:04:49 2016
+gem-tstation:/home/michele/ssd/calc_42162.hdf5 updated Wed Aug 24 08:13:27 2016
 
 num_sites = 2, sitecol = 785 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.5
 area_source_discretization   10.0                            
 random_seed                  1024                            
 master_seed                  0                               
-engine_version               '2.1.0-git46eb8e0'              
+engine_version               '2.1.0-git81d4f3d'              
 ============================ ================================
 
 Input files
@@ -99,9 +99,9 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            1         AreaSource   175    1,170     7.250E-04   0.274      2.451         0.004         1,170    
-0            2         AreaSource   58     389       7.319E-04   0.088      0.797         0.023         389      
-0            3         AreaSource   44     352       6.950E-04   0.072      0.368         0.015         209      
+0            1         AreaSource   175    1,170     7.300E-04   0.259      2.292         0.004         1,170    
+0            2         AreaSource   58     389       6.971E-04   0.083      0.722         0.019         389      
+0            3         AreaSource   44     352       6.909E-04   0.069      0.431         0.019         209      
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -109,14 +109,14 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-AreaSource   0.002       0.434      3.616         0.042         1,768     3     
+AreaSource   0.002       0.411      3.446         0.042         1,768     3     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ========================== ===== ====== ===== ===== =========
 measurement                mean  stddev min   max   num_tasks
-compute_ruptures.time_sec  0.363 0.084  0.157 0.409 10       
+compute_ruptures.time_sec  0.347 0.052  0.245 0.387 10       
 compute_ruptures.memory_mb 0.0   0.0    0.0   0.0   10       
 ========================== ===== ====== ===== ===== =========
 
@@ -125,14 +125,14 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         3.634     0.0       10    
-reading composite source model 1.515     0.0       1     
-managing sources               0.492     0.0       1     
-splitting sources              0.434     0.0       3     
-store source_info              0.040     0.0       1     
+total compute_ruptures         3.471     0.0       10    
+reading composite source model 1.425     0.0       1     
+managing sources               0.480     0.0       1     
+splitting sources              0.411     0.0       3     
+store source_info              0.024     0.0       1     
 filtering sources              0.006     0.0       9     
-saving ruptures                0.004     0.0       1     
-aggregate curves               0.003     0.0       10    
-filtering ruptures             8.500E-04 0.0       3     
-reading site collection        3.386E-05 0.0       1     
+saving ruptures                0.003     0.0       1     
+aggregate curves               0.002     0.0       10    
+filtering ruptures             7.210E-04 0.0       3     
+reading site collection        3.290E-05 0.0       1     
 ============================== ========= ========= ======
