@@ -18,11 +18,7 @@
 
 import os
 import sys
-from openquake.risklib.scientific import (
-    VulnerabilityFunction, DegenerateDistribution, classical)
 from openquake.baselib.general import search_module, git_suffix
-
-__all__ = ["VulnerabilityFunction", "DegenerateDistribution", "classical"]
 
 # the version is managed by packager.sh with a sed
 __version__ = '2.1.0'
