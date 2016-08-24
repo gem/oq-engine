@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-from openquake.commonlib import sap
+from openquake.baselib import sap
 
 
 def f(a, b, c, d=1):

@@ -21,7 +21,7 @@ Here is a minimal example of usage:
 
 .. code-block:: python
 
-    >>> from openquake.commonlib import sap
+    >>> from openquake.baselib import sap
     >>> def fun(input, inplace, output=None, out='/tmp'):
     ...     'Example'
     ...     for item in sorted(locals().items()):
