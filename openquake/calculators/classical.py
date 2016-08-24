@@ -182,18 +182,18 @@ def classical(sources, sitecol, rlzs_by_gsim, monitor):
     :returns:
         an AccumDict rlz -> curves
     """
-    truncation_level = monitor.oqparam.truncation_level
-    imtls = monitor.oqparam.imtls
+    truncation_level = monitor.truncation_level
+    imtls = monitor.imtls
     src_group_id = sources[0].src_group_id
     # sanity check: the src_group must be the same for all sources
     for src in sources[1:]:
         assert src.src_group_id == src_group_id
     gsims = list(rlzs_by_gsim)
     trt = sources[0].tectonic_region_type
-    max_dist = monitor.oqparam.maximum_distance[trt]
+    max_dist = monitor.maximum_distance[trt]
 
     dic = AccumDict()
-    if monitor.oqparam.poes_disagg:
+    if monitor.poes_disagg:
         sm_id = rlzs_by_gsim.sm_id
         dic.bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
     else:
@@ -272,8 +272,15 @@ class PSHACalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        monitor = self.monitor.new(self.core_task.__name__)
-        monitor.oqparam = oq = self.oqparam
+        oq = self.oqparam
+        monitor = self.monitor.new(
+            self.core_task.__name__,
+            truncation_level=oq.truncation_level,
+            imtls=oq.imtls,
+            maximum_distance=oq.maximum_distance,
+            poes_disagg=oq.poes_disagg,
+            ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
+            random_seed=oq.random_seed)
         tiles = [self.sitecol]
         self.num_tiles = 1
         if self.is_tiling():
@@ -285,8 +292,8 @@ class PSHACalculator(base.HazardCalculator):
         with self.monitor('managing sources', autoflush=True):
             srcman = source.SourceManager(
                 self.csm, oq.maximum_distance, oq.concurrent_tasks,
-                self.datastore, self.monitor.new(oqparam=oq),
-                self.random_seed, oq.filter_sources, num_tiles=self.num_tiles)
+                self.datastore, monitor, self.random_seed, oq.filter_sources,
+                num_tiles=self.num_tiles)
             tm = parallel.starmap(
                 self.core_task.__func__, srcman.gen_args(tiles))
             srcman.pre_store_source_info(self.datastore)
@@ -347,7 +354,8 @@ class PSHACalculator(base.HazardCalculator):
                     self.datastore[key] = pmap
                     self.datastore.set_attrs(
                         key, trt=self.csm.info.get_trt(grp_id))
-            self.datastore.set_nbytes('poes')
+            if 'poes' in self.datastore:
+                self.datastore.set_nbytes('poes')
 
 
 def build_hcurves_and_stats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
@@ -375,6 +383,10 @@ def build_hcurves_and_stats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
 
 
 def extend_pmap(dset, pmap):
+    """
+    :param dset: an HDF5 dataset corresponding to a ProbabilityMap
+    :param pmap: a ProbabilityMap to store
+    """
     assert pmap, 'The ProbabilityMap is empty!'
     hdf5.extend(dset, pmap.array)  # array N x L x 1
     try:
