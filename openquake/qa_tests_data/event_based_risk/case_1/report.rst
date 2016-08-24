@@ -1,7 +1,7 @@
 Event Based Risk QA Test 1
 ==========================
 
-gem-tstation:/home/michele/ssd/calc_42128.hdf5 updated Wed Aug 24 08:12:12 2016
+gem-tstation:/home/michele/ssd/calc_42223.hdf5 updated Wed Aug 24 09:02:29 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                              
 master_seed                  42                              
 avg_losses                   True                            
-engine_version               '2.1.0-git81d4f3d'              
+engine_version               '2.1.0-gite331d0b'              
 ============================ ================================
 
 Input files
@@ -133,9 +133,9 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            2         PointSource  0.150  1         2.503E-05   0.0        0.006         0.006         1        
-0            3         PointSource  0.150  1         2.193E-05   0.0        0.006         0.006         1        
-0            1         PointSource  0.150  1         4.387E-05   0.0        0.006         0.006         1        
+0            2         PointSource  0.150  1         2.599E-05   0.0        0.006         0.006         1        
+0            3         PointSource  0.150  1         2.098E-05   0.0        0.006         0.006         1        
+0            1         PointSource  0.150  1         4.411E-05   0.0        0.005         0.005         1        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -143,17 +143,17 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-PointSource  9.084E-05   0.0        0.018         0.018         3         3     
+PointSource  9.108E-05   0.0        0.017         0.017         3         3     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ================================= ===== ====== ===== ===== =========
 measurement                       mean  stddev min   max   num_tasks
-compute_ruptures.time_sec         0.018 NaN    0.018 0.018 1        
+compute_ruptures.time_sec         0.017 NaN    0.017 0.017 1        
 compute_ruptures.memory_mb        0.0   NaN    0.0   0.0   1        
-compute_gmfs_and_curves.time_sec  0.010 0.001  0.007 0.011 8        
-compute_gmfs_and_curves.memory_mb 0.104 0.296  0.0   0.836 8        
+compute_gmfs_and_curves.time_sec  0.009 0.002  0.005 0.011 8        
+compute_gmfs_and_curves.memory_mb 0.0   0.0    0.0   0.0   8        
 ================================= ===== ====== ===== ===== =========
 
 Slowest operations
@@ -161,18 +161,18 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_gmfs_and_curves  0.079     0.836     8     
-compute poes                   0.066     0.0       8     
-total compute_ruptures         0.018     0.0       1     
-make contexts                  0.010     0.0       8     
-saving gmfs                    0.007     0.0       16    
+total compute_gmfs_and_curves  0.071     0.0       8     
+compute poes                   0.060     0.0       8     
+total compute_ruptures         0.017     0.0       1     
+saving gmfs                    0.009     0.0       16    
+make contexts                  0.008     0.0       8     
 saving ruptures                0.007     0.0       1     
-store source_info              0.006     0.0       1     
-reading composite source model 0.006     0.0       1     
+store source_info              0.007     0.0       1     
+reading composite source model 0.007     0.0       1     
 reading exposure               0.004     0.0       1     
-filtering ruptures             0.004     0.0       8     
 managing sources               0.004     0.0       1     
+filtering ruptures             0.004     0.0       8     
 aggregate curves               0.001     0.0       1     
-filtering sources              9.084E-05 0.0       3     
-reading site collection        3.815E-05 0.0       1     
+filtering sources              9.108E-05 0.0       3     
+reading site collection        3.886E-05 0.0       1     
 ============================== ========= ========= ======

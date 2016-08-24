@@ -1,7 +1,7 @@
 Event Based Risk for Turkey reduced
 ===================================
 
-gem-tstation:/home/michele/ssd/calc_42125.hdf5 updated Wed Aug 24 08:12:06 2016
+gem-tstation:/home/michele/ssd/calc_42220.hdf5 updated Wed Aug 24 09:02:24 2016
 
 num_sites = 14, sitecol = 1.31 KB
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  323                                                                                                                                                                                              
 master_seed                  42                                                                                                                                                                                               
 avg_losses                   True                                                                                                                                                                                             
-engine_version               '2.1.0-git81d4f3d'                                                                                                                                                                               
+engine_version               '2.1.0-gite331d0b'                                                                                                                                                                               
 ============================ =================================================================================================================================================================================================
 
 Input files
@@ -80,7 +80,7 @@ models/src/as_model.xml 5      Active Shallow Crust 7           30           977
 Informational data
 ------------------
 ====================================== ============
-compute_ruptures_max_received_per_task 18,624      
+compute_ruptures_max_received_per_task 18,621      
 compute_ruptures_num_tasks             8           
 compute_ruptures_sent.monitor          14,496      
 compute_ruptures_sent.rlzs_by_gsim     282,760     
@@ -143,23 +143,23 @@ Slowest sources
 ============ ============ ================= ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id    source_class      weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ============ ================= ====== ========= =========== ========== ============= ============= =========
-5            AS_TRAS334   AreaSource        244    1         9.151E-04   0.0        1.877         1.877         1        
-5            AS_TRAS360   AreaSource        182    1         6.771E-04   0.0        1.358         1.358         1        
-5            AS_TRAS346   AreaSource        154    1         8.061E-04   0.0        1.183         1.183         1        
-5            AS_TRAS395   AreaSource        122    1         6.979E-04   0.0        1.128         1.128         1        
-5            AS_TRAS458   AreaSource        121    1         6.599E-04   0.0        0.943         0.943         1        
-5            AS_GEAS479   AreaSource        72     1         0.001       0.0        0.749         0.749         1        
-5            AS_TRAS410   AreaSource        81     1         6.778E-04   0.0        0.622         0.622         1        
-9            FSBG_TRBG989 AreaSource        33     1         7.129E-04   0.0        0.354         0.354         1        
-9            FSBG_TRCS114 SimpleFaultSource 449    1         0.002       0.0        0.080         0.080         1        
-9            FSBG_TRCS003 SimpleFaultSource 1,020  934       0.005       0.397      0.044         0.025         934      
+5            AS_TRAS334   AreaSource        244    1         9.370E-04   0.0        1.852         1.852         1        
+5            AS_TRAS360   AreaSource        182    1         6.809E-04   0.0        1.346         1.346         1        
+5            AS_TRAS346   AreaSource        154    1         8.011E-04   0.0        1.167         1.167         1        
+5            AS_TRAS395   AreaSource        122    1         7.091E-04   0.0        1.143         1.143         1        
+5            AS_TRAS458   AreaSource        121    1         6.802E-04   0.0        0.952         0.952         1        
+5            AS_GEAS479   AreaSource        72     1         0.001       0.0        0.754         0.754         1        
+5            AS_TRAS410   AreaSource        81     1         6.931E-04   0.0        0.617         0.617         1        
+9            FSBG_TRBG989 AreaSource        33     1         7.100E-04   0.0        0.363         0.363         1        
+9            FSBG_TRCS003 SimpleFaultSource 1,020  934       0.005       0.401      0.107         0.086         934      
+9            FSBG_TRCS114 SimpleFaultSource 449    1         0.002       0.0        0.072         0.072         1        
 9            FSBG_TRCS439 SimpleFaultSource 233    1         0.002       0.0        0.042         0.042         1        
-9            FSBG_TRCS113 SimpleFaultSource 149    1         0.002       0.0        0.041         0.041         1        
-9            FSBG_TRCS141 SimpleFaultSource 116    1         0.002       0.0        0.034         0.034         1        
+9            FSBG_TRCS113 SimpleFaultSource 149    1         0.002       0.0        0.034         0.034         1        
+9            FSBG_TRCS141 SimpleFaultSource 116    1         0.002       0.0        0.033         0.033         1        
 9            FSBG_TRCS437 SimpleFaultSource 193    1         0.002       0.0        0.031         0.031         1        
 9            FSBG_TRCS082 SimpleFaultSource 197    1         0.002       0.0        0.027         0.027         1        
 9            FSBG_TRCS373 SimpleFaultSource 85     1         0.002       0.0        0.026         0.026         1        
-9            FSBG_TRCS322 SimpleFaultSource 194    1         0.002       0.0        0.023         0.023         1        
+9            FSBG_TRCS322 SimpleFaultSource 194    1         0.002       0.0        0.024         0.024         1        
 9            FSBG_TRCS068 SimpleFaultSource 149    1         0.002       0.0        0.021         0.021         1        
 9            FSBG_BGCS044 SimpleFaultSource 57     1         0.002       0.0        0.019         0.019         1        
 9            FSBG_TRCS239 SimpleFaultSource 113    1         0.002       0.0        0.019         0.019         1        
@@ -170,18 +170,18 @@ Computation times by source typology
 ================= =========== ========== ============= ============= ========= ======
 source_class      filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ================= =========== ========== ============= ============= ========= ======
-AreaSource        0.006       0.0        8.214         8.214         8         8     
-SimpleFaultSource 0.041       0.397      0.517         0.497         957       24    
+AreaSource        0.006       0.0        8.196         8.196         8         8     
+SimpleFaultSource 0.042       0.401      0.565         0.544         957       24    
 ================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ================================= ===== ====== ===== ===== =========
 measurement                       mean  stddev min   max   num_tasks
-compute_ruptures.time_sec         1.092 1.877  0.011 5.168 8        
-compute_ruptures.memory_mb        0.055 0.107  0.0   0.281 8        
-compute_gmfs_and_curves.time_sec  0.011 0.002  0.007 0.014 30       
-compute_gmfs_and_curves.memory_mb 0.004 0.016  0.0   0.062 30       
+compute_ruptures.time_sec         1.096 1.861  0.011 5.120 8        
+compute_ruptures.memory_mb        0.114 0.245  0.0   0.688 8        
+compute_gmfs_and_curves.time_sec  0.011 0.002  0.006 0.014 30       
+compute_gmfs_and_curves.memory_mb 0.012 0.027  0.0   0.098 30       
 ================================= ===== ====== ===== ===== =========
 
 Slowest operations
@@ -189,23 +189,23 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         8.736     0.281     8     
-reading composite source model 5.893     0.0       1     
-managing sources               0.975     0.0       1     
-splitting sources              0.397     0.0       1     
-total compute_gmfs_and_curves  0.327     0.062     30    
-compute poes                   0.235     0.0       30    
-filtering sources              0.193     0.0       148   
+total compute_ruptures         8.766     0.688     8     
+reading composite source model 6.092     0.0       1     
+managing sources               0.989     0.0       1     
+splitting sources              0.401     0.0       1     
+total compute_gmfs_and_curves  0.323     0.098     30    
+compute poes                   0.233     0.0       30    
+filtering sources              0.197     0.0       148   
 aggregating hcurves            0.093     0.0       120   
 saving gmfs                    0.058     0.0       120   
-bulding hazard curves          0.045     0.0       30    
-store source_info              0.040     0.0       1     
+bulding hazard curves          0.044     0.0       30    
+store source_info              0.041     0.0       1     
 make contexts                  0.033     0.0       30    
-saving ruptures                0.026     0.0       1     
+saving ruptures                0.024     0.0       1     
 reading exposure               0.010     0.0       1     
 filtering ruptures             0.007     0.0       33    
 aggregate curves               0.007     0.0       128   
 compute and save statistics    0.001     0.0       1     
-combine curves_by_rlz          3.679E-04 0.0       1     
-reading site collection        8.106E-06 0.0       1     
+combine curves_by_rlz          3.521E-04 0.0       1     
+reading site collection        8.821E-06 0.0       1     
 ============================== ========= ========= ======
