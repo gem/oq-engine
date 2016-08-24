@@ -1,7 +1,7 @@
 SHARE OpenQuake Computational Settings
 ======================================
 
-gem-tstation:/home/michele/ssd/calc_41667.hdf5 updated Tue Aug 23 18:24:19 2016
+thinkpad:/home/michele/oqdata/calc_16934.hdf5 updated Wed Aug 24 04:50:53 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                                                                                                                                                                                            
 master_seed                  0                                                                                                                                                                                             
 sites_per_tile               10000                                                                                                                                                                                         
-engine_version               '2.1.0-gitc83a72d'                                                                                                                                                                            
+engine_version               '2.1.0-git74bd74a'                                                                                                                                                                            
 ============================ ==============================================================================================================================================================================================
 
 Input files
@@ -72,30 +72,30 @@ simple_area_source_model.xml 4      Subduction Inslab 1           7770         1
 
 Informational data
 ------------------
-======================================== ============
-count_eff_ruptures_max_received_per_task 2,030       
-count_eff_ruptures_num_tasks             1           
-count_eff_ruptures_sent.monitor          1,721       
-count_eff_ruptures_sent.rlzs_by_gsim     29,506      
-count_eff_ruptures_sent.sitecol          433         
-count_eff_ruptures_sent.sources          2,816       
-count_eff_ruptures_tot_received          2,030       
-hazard.input_weight                      49,409      
-hazard.n_imts                            3           
-hazard.n_levels                          26          
-hazard.n_realizations                    1,280       
-hazard.n_sites                           1           
-hazard.n_sources                         18          
-hazard.output_weight                     99,840      
-hostname                                 gem-tstation
-======================================== ============
+======================================== ========
+count_eff_ruptures_max_received_per_task 2,092   
+count_eff_ruptures_num_tasks             1       
+count_eff_ruptures_sent.monitor          1,775   
+count_eff_ruptures_sent.rlzs_by_gsim     29,506  
+count_eff_ruptures_sent.sitecol          433     
+count_eff_ruptures_sent.sources          2,816   
+count_eff_ruptures_tot_received          2,092   
+hazard.input_weight                      49,409  
+hazard.n_imts                            3       
+hazard.n_levels                          26      
+hazard.n_realizations                    1,280   
+hazard.n_sites                           1       
+hazard.n_sources                         18      
+hazard.output_weight                     99,840  
+hostname                                 thinkpad
+======================================== ========
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-4            s46       AreaSource   194    1         9.570E-04   0.0        0.0           0.0           0        
+4            s46       AreaSource   194    1         0.003       0.0        0.0           0.0           0        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -103,7 +103,7 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-AreaSource   9.570E-04   0.0        0.0           0.0           0         1     
+AreaSource   0.003       0.0        0.0           0.0           0         1     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
@@ -115,12 +115,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 4.512     0.0       1     
-managing sources               0.111     0.0       1     
-filtering sources              0.022     0.0       18    
-store source_info              0.004     0.0       1     
-total count_eff_ruptures       3.700E-04 0.0       1     
-reading site collection        3.600E-05 0.0       1     
-saving probability maps        2.122E-05 0.0       1     
-aggregate curves               1.502E-05 0.0       1     
+reading composite source model 9.312     0.0       1     
+managing sources               0.248     0.0       1     
+filtering sources              0.040     0.0       18    
+store source_info              0.006     0.0       1     
+total count_eff_ruptures       2.601E-04 0.0       1     
+reading site collection        4.292E-05 0.0       1     
+saving probability maps        4.101E-05 0.0       1     
+aggregate curves               2.122E-05 0.0       1     
 ============================== ========= ========= ======

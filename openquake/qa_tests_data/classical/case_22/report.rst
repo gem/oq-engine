@@ -1,7 +1,7 @@
 Classical PSHA using Alaska 2007 active shallow crust grid model
 ================================================================
 
-gem-tstation:/home/michele/ssd/calc_41677.hdf5 updated Tue Aug 23 19:27:40 2016
+thinkpad:/home/michele/oqdata/calc_16940.hdf5 updated Wed Aug 24 04:50:56 2016
 
 num_sites = 21, sitecol = 1.62 KB
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                              
 master_seed                  0                               
 sites_per_tile               10000                           
-engine_version               '2.1.0-gitc83a72d'              
+engine_version               '2.1.0-git74bd74a'              
 ============================ ================================
 
 Input files
@@ -73,43 +73,43 @@ Alaska_asc_grid_NSHMP2007.xml 0      Active Shallow Crust 14          1264      
 
 Informational data
 ------------------
-======================================== ============
-count_eff_ruptures_max_received_per_task 2,374       
-count_eff_ruptures_num_tasks             14          
-count_eff_ruptures_sent.monitor          28,756      
-count_eff_ruptures_sent.rlzs_by_gsim     16,478      
-count_eff_ruptures_sent.sitecol          11,662      
-count_eff_ruptures_sent.sources          21,797      
-count_eff_ruptures_tot_received          33,236      
-hazard.input_weight                      31          
-hazard.n_imts                            6           
-hazard.n_levels                          19          
-hazard.n_realizations                    4           
-hazard.n_sites                           21          
-hazard.n_sources                         14          
-hazard.output_weight                     9,576       
-hostname                                 gem-tstation
-======================================== ============
+======================================== ========
+count_eff_ruptures_max_received_per_task 2,436   
+count_eff_ruptures_num_tasks             14      
+count_eff_ruptures_sent.monitor          29,512  
+count_eff_ruptures_sent.rlzs_by_gsim     16,478  
+count_eff_ruptures_sent.sitecol          11,662  
+count_eff_ruptures_sent.sources          21,797  
+count_eff_ruptures_tot_received          34,104  
+hazard.input_weight                      31      
+hazard.n_imts                            6       
+hazard.n_levels                          19      
+hazard.n_realizations                    4       
+hazard.n_sites                           21      
+hazard.n_sources                         14      
+hazard.output_weight                     9,576   
+hostname                                 thinkpad
+======================================== ========
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            106150    PointSource  2.300  1         1.841E-04   1.812E-05  0.0           0.0           0        
-0            102588    PointSource  2.300  1         1.240E-04   2.313E-05  0.0           0.0           0        
-0            44535     PointSource  2.300  1         1.140E-04   1.383E-05  0.0           0.0           0        
-0            15999     PointSource  2.300  1         8.011E-05   1.407E-05  0.0           0.0           0        
-0            22285     PointSource  2.300  1         4.005E-05   1.597E-05  0.0           0.0           0        
-0            41060     PointSource  2.300  1         4.005E-05   1.502E-05  0.0           0.0           0        
-0            6736      PointSource  2.300  1         4.101E-05   1.407E-05  0.0           0.0           0        
-0            23947     PointSource  2.300  1         4.005E-05   1.407E-05  0.0           0.0           0        
-0            98725     PointSource  2.300  1         4.101E-05   1.287E-05  0.0           0.0           0        
-0            70088     PointSource  2.300  1         3.886E-05   1.407E-05  0.0           0.0           0        
-0            98979     PointSource  2.300  1         3.695E-05   1.502E-05  0.0           0.0           0        
-0            3802      PointSource  2.000  1         5.102E-05   0.0        0.0           0.0           0        
-0            8878      PointSource  2.300  1         3.910E-05   1.192E-05  0.0           0.0           0        
-0            428       PointSource  2.000  1         2.885E-05   0.0        0.0           0.0           0        
+0            102588    PointSource  2.300  1         7.200E-05   0.0        0.0           0.0           0        
+0            98979     PointSource  2.300  1         6.795E-05   0.0        0.0           0.0           0        
+0            98725     PointSource  2.300  1         6.509E-05   0.0        0.0           0.0           0        
+0            8878      PointSource  2.300  1         6.294E-05   0.0        0.0           0.0           0        
+0            15999     PointSource  2.300  1         4.220E-05   0.0        0.0           0.0           0        
+0            106150    PointSource  2.300  1         4.220E-05   0.0        0.0           0.0           0        
+0            22285     PointSource  2.300  1         4.196E-05   0.0        0.0           0.0           0        
+0            70088     PointSource  2.300  1         4.005E-05   0.0        0.0           0.0           0        
+0            428       PointSource  2.000  1         4.005E-05   0.0        0.0           0.0           0        
+0            23947     PointSource  2.300  1         4.005E-05   0.0        0.0           0.0           0        
+0            6736      PointSource  2.300  1         4.005E-05   0.0        0.0           0.0           0        
+0            44535     PointSource  2.300  1         4.005E-05   0.0        0.0           0.0           0        
+0            41060     PointSource  2.300  1         3.982E-05   0.0        0.0           0.0           0        
+0            3802      PointSource  2.000  1         3.886E-05   0.0        0.0           0.0           0        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -117,7 +117,7 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-PointSource  8.991E-04   1.822E-04  0.0           0.0           0         14    
+PointSource  6.733E-04   0.0        0.0           0.0           0         14    
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
@@ -129,13 +129,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.020     0.0       1     
-reading composite source model 0.016     0.0       1     
-store source_info              0.005     0.0       1     
+managing sources               0.033     0.0       1     
+reading composite source model 0.026     0.0       1     
+store source_info              0.006     0.0       1     
 total count_eff_ruptures       0.004     0.0       14    
-filtering sources              8.991E-04 0.0       14    
-aggregate curves               1.884E-04 0.0       14    
-splitting sources              1.822E-04 0.0       12    
-reading site collection        1.528E-04 0.0       1     
-saving probability maps        2.480E-05 0.0       1     
+filtering sources              6.733E-04 0.0       14    
+aggregate curves               2.887E-04 0.0       14    
+reading site collection        2.389E-04 0.0       1     
+saving probability maps        5.293E-05 0.0       1     
 ============================== ========= ========= ======
