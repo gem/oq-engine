@@ -115,7 +115,7 @@ xmlns:gml="http://www.opengis.net/gml"
         type="Lon,Lat"
         >
             <prob index="0,0" value="1.931771E-02"/>
-            <prob index="1,0" value="4.704634E-06"/>
+            <prob index="1,0" value="4.704633E-06"/>
         </disaggMatrix>
         <disaggMatrix
         dims="3,2,1"
@@ -126,7 +126,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="0,0,0" value="8.957496E-03"/>
             <prob index="0,1,0" value="0.000000E+00"/>
             <prob index="1,0,0" value="7.172493E-03"/>
-            <prob index="1,1,0" value="4.704634E-06"/>
+            <prob index="1,1,0" value="4.704633E-06"/>
             <prob index="2,0,0" value="3.305069E-03"/>
             <prob index="2,1,0" value="0.000000E+00"/>
         </disaggMatrix>
@@ -137,7 +137,7 @@ xmlns:gml="http://www.opengis.net/gml"
         type="Lon,Lat,TRT"
         >
             <prob index="0,0,0" value="1.931771E-02"/>
-            <prob index="1,0,0" value="4.704634E-06"/>
+            <prob index="1,0,0" value="4.704633E-06"/>
         </disaggMatrix>
     </disaggMatrices>
 </nrml>

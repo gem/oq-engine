@@ -21,7 +21,7 @@ import re
 from nose.plugins.attrib import attr
 
 from openquake.baselib.general import writetmp
-from openquake.commonlib.views import view
+from openquake.calculators.views import view
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.commonlib.export import export
 from openquake.calculators.tests import check_platform

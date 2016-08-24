@@ -613,7 +613,7 @@ celeryd_wait $GEM_MAXLOOP"
             cd -
             fi
         done
-        oq info --build-reports risk
+        oq info --report risk
         echo 'Listing hazard calculations'
         oq engine --lhc
         echo 'Listing risk calculations'
