@@ -1,27 +1,27 @@
 Scenario Damage
 ===============
 
-gem-tstation:/home/michele/ssd/calc_22544.hdf5 updated Tue May 31 15:36:57 2016
+gem-tstation:/home/michele/ssd/calc_42183.hdf5 updated Wed Aug 24 09:01:58 2016
 
-num_sites = 7, sitecol = 697 B
+num_sites = 1, sitecol = 697 B
 
 Parameters
 ----------
-============================ ==================
-calculation_mode             'scenario_damage' 
-number_of_logic_tree_samples 0                 
-maximum_distance             {'default': 200.0}
-investigation_time           None              
-ses_per_logic_tree_path      1                 
-truncation_level             3.0               
-rupture_mesh_spacing         2.0               
-complex_fault_mesh_spacing   2.0               
-width_of_mfd_bin             None              
-area_source_discretization   None              
-random_seed                  42                
-master_seed                  0                 
-engine_version               '2.0.0-git4fb4450'
-============================ ==================
+============================ ===================
+calculation_mode             'scenario_damage'  
+number_of_logic_tree_samples 0                  
+maximum_distance             {u'default': 200.0}
+investigation_time           None               
+ses_per_logic_tree_path      1                  
+truncation_level             3.0                
+rupture_mesh_spacing         2.0                
+complex_fault_mesh_spacing   2.0                
+width_of_mfd_bin             None               
+area_source_discretization   None               
+random_seed                  42                 
+master_seed                  0                  
+engine_version               '2.1.0-gite331d0b' 
+============================ ===================
 
 Input files
 -----------
@@ -45,10 +45,12 @@ Realizations per (TRT, GSIM)
 
 Exposure model
 --------------
-=========== =
-#assets     1
-#taxonomies 1
-=========== =
+=============== ========
+#assets         1       
+#taxonomies     1       
+deductibile     absolute
+insurance_limit absolute
+=============== ========
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
@@ -57,25 +59,17 @@ Wood     1.000 NaN    1   1   1         1
 
 Information about the tasks
 ---------------------------
-========================= ===== ====== ===== ===== =========
-measurement               mean  stddev min   max   num_tasks
-scenario_damage.time_sec  0.011 NaN    0.011 0.011 1        
-scenario_damage.memory_mb 0.0   NaN    0.0   0.0   1        
-========================= ===== ====== ===== ===== =========
+Not available
 
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-total scenario_damage   0.011     0.0       1     
-computing riskmodel     0.011     0.0       1     
-filtering sites         0.007     0.0       1     
+filtering sites         0.008     0.0       1     
 reading exposure        0.003     0.0       1     
 computing gmfs          0.002     0.0       1     
 saving gmfs             0.001     0.0       1     
-assoc_assets_sites      6.092E-04 0.0       1     
-building riskinputs     1.152E-04 0.0       1     
-reading site collection 1.051E-04 0.0       1     
-building hazard         6.914E-05 0.0       1     
+building riskinputs     1.168E-04 0.0       1     
+reading site collection 9.990E-05 0.0       1     
 ======================= ========= ========= ======
