@@ -231,9 +231,8 @@ def compute_ruptures(sources, sitecol, rlzs_by_gsim, monitor):
     # NB: by construction each block is a non-empty list with
     # sources of the same src_group_id
     src_group_id = sources[0].src_group_id
-    oq = monitor.oqparam
     trt = sources[0].tectonic_region_type
-    max_dist = oq.maximum_distance[trt]
+    max_dist = monitor.maximum_distance[trt]
     cmaker = ContextMaker(rlzs_by_gsim)
     params = sorted(cmaker.REQUIRES_RUPTURE_PARAMETERS)
     rup_data_dt = numpy.dtype(
@@ -256,12 +255,14 @@ def compute_ruptures(sources, sitecol, rlzs_by_gsim, monitor):
             filter_sites_by_distance_to_rupture,
             integration_distance=max_dist, sites=s_sites)
         num_occ_by_rup = sample_ruptures(
-            src, oq.ses_per_logic_tree_path, num_samples, rlzs_by_gsim.seed)
+            src, monitor.ses_per_logic_tree_path, num_samples,
+            rlzs_by_gsim.seed)
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
         for ebr in build_eb_ruptures(
-                src, num_occ_by_rup, rupture_filter, oq.random_seed, rup_mon):
+                src, num_occ_by_rup, rupture_filter,
+                monitor.random_seed, rup_mon):
             nsites = len(ebr.indices)
             try:
                 rate = ebr.rupture.occurrence_rate
@@ -594,7 +595,7 @@ class EventBasedCalculator(ClassicalCalculator):
                        else [rlz.weight for rlz in rlzs])
             pstats = PmapStats(self.oqparam.quantile_hazard_curves, weights)
             for kind, stat in pstats.compute(
-                    self.sitecol.sids, result.values()):
+                    self.sitecol.sids, list(result.values())):
                 if kind == 'mean' and not self.oqparam.mean_hazard_curves:
                     continue
                 self.datastore['hcurves/' + kind] = stat

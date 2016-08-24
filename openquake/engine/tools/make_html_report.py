@@ -24,7 +24,7 @@ import itertools
 from docutils.examples import html_parts
 
 from openquake.commonlib.datastore import read
-from openquake.commonlib.views import view_fullreport
+from openquake.calculators.views import view_fullreport
 from openquake.calculators import base  # needed for registering task_info
 from openquake.engine.logs import dbcmd
 
