@@ -417,7 +417,7 @@ def get_log_slice(calc_id, start, stop):
     start = start or 0
     stop = stop or None
     rows = models.Log.objects.filter(job_id=calc_id)[start:stop]
-    return map(log_to_json, rows)
+    return [log_to_json(row) for row in rows]
 
 
 def get_log_size(calc_id):

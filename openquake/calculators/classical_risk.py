@@ -22,7 +22,6 @@ import operator
 import numpy
 
 from openquake.baselib.general import groupby
-from openquake.hazardlib.calc.hazard_curve import array_of_curves
 from openquake.risklib import scientific, riskinput
 from openquake.commonlib import readinput, datastore, source
 from openquake.calculators import base
@@ -123,13 +122,15 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             logging.info('Preparing the risk input')
             curves_by_trt_gsim = {}
             nsites = len(self.sitecol.complete)
+            if 'poes' not in self.datastore:  # when building the short report
+                return
             for key in self.datastore['poes']:
                 pmap = self.datastore['poes/' + key]
                 grp_id = int(key)
                 gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
                 for i, gsim in enumerate(gsims):
-                    curves_by_trt_gsim[grp_id, gsim] = array_of_curves(
-                        pmap, nsites, self.oqparam.imtls, i)
+                    curves_by_trt_gsim[grp_id, gsim] = pmap.convert(
+                        self.oqparam.imtls, nsites, i)
         self.riskinputs = self.build_riskinputs(curves_by_trt_gsim)
         self.monitor.oqparam = self.oqparam
 

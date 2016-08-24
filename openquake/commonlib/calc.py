@@ -21,15 +21,16 @@ import collections
 import itertools
 import operator
 import logging
+import copy
 
 import numpy
 
 from openquake.baselib.python3compat import dtype
-from openquake.baselib.general import get_array, group_array
+from openquake.baselib.general import get_array, group_array, AccumDict
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc import filters, hazard_curve
+from openquake.hazardlib.calc import filters
 from openquake.hazardlib.probability_map import (
-    ProbabilityCurve, ProbabilityMap)
+    ProbabilityMap, ProbabilityCurve)
 from openquake.hazardlib.site import SiteCollection
 from openquake.commonlib import readinput, oqvalidation
 
@@ -42,7 +43,7 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
-
+F64 = numpy.float64
 
 # ############## utilities for the classical calculator ############### #
 
@@ -99,6 +100,25 @@ def gen_ruptures_for_site(site, sources, maximum_distance, monitor):
             source_rupture_sites, key=operator.attrgetter('source')):
         yield src, [row.rupture for row in rows]
 
+
+# used in classical and event_based calculators
+def combine_pmaps(rlzs_assoc, results):
+    """
+    :param rlzs_assoc: a :class:`openquake.commonlib.source.RlzsAssoc` instance
+    :param results: dictionary src_group_id -> probability map
+    :returns: a dictionary rlz -> aggregate probability map
+    """
+    acc = AccumDict()
+    for grp_id in results:
+        for i, gsim in enumerate(rlzs_assoc.gsims_by_grp_id[grp_id]):
+            pmap = results[grp_id].extract(i)
+            for rlz in rlzs_assoc.rlzs_assoc[grp_id, gsim]:
+                if rlz in acc:
+                    acc[rlz] |= pmap
+                else:
+                    acc[rlz] = copy.copy(pmap)
+    return acc
+
 # ######################### hazard maps ################################### #
 
 # cutoff value for the poe
@@ -124,7 +144,6 @@ def compute_hazard_maps(curves, imls, poes):
         An array of shape N x P, where N is the number of curves and P the
         number of poes.
     """
-    curves = numpy.array(curves)
     poes = numpy.array(poes)
 
     if len(poes.shape) == 0:
@@ -136,9 +155,12 @@ def compute_hazard_maps(curves, imls, poes):
         # `curves` was passed as 1 dimensional array, there is a single site
         curves = curves.reshape((1,) + curves.shape)  # 1 x L
 
+    L = curves.shape[1]  # number of levels
+    if L != len(imls):
+        raise ValueError('The curves have %d levels, %d were passed' %
+                         (L, len(imls)))
     result = []
     imls = numpy.log(numpy.array(imls[::-1]))
-
     for curve in curves:
         # the hazard curve, having replaced the too small poes with EPSILON
         curve_cutoff = [max(poe, EPSILON) for poe in curve[::-1]]
@@ -162,22 +184,6 @@ def compute_hazard_maps(curves, imls, poes):
 
         result.append(hmap_val)
     return numpy.array(result)
-
-
-def make_hmaps(hcurves, imtls, poes):
-    """
-    :param hcurves: N hazard curves
-    :param imtls: intensity measure and levels
-    :param poes: P values for the PoE used to compute the maps
-    :returns: composite array with N hazard maps
-    """
-    hmaps = hazard_curve.zero_maps(len(hcurves), imtls, poes)
-    for imt in imtls:
-        # build a matrix of size (N, P)
-        data = compute_hazard_maps(hcurves[imt], imtls[imt], poes)
-        for poe, hmap in zip(poes, data.T):
-            hmaps['%s-%s' % (imt, poe)] = hmap
-    return hmaps
 
 
 # #########################  GMF->curves #################################### #
@@ -255,31 +261,53 @@ def get_imts_periods(imtls):
     return [str(imt) for imt in imts], [imt[1] or 0.0 for imt in imts]
 
 
-def make_uhs(hcurves, imtls, poes):
+def make_hmap(pmap, imtls, poes):
+    """
+    Compute the hazard maps associated to the passed probability map.
+
+    :param pmap: hazard curves in the form of a ProbabilityMap
+    :param imtls: I intensity measure types and levels
+    :param poes: P PoEs where to compute the maps
+    :returns: a ProbabilityMap with size (N, I * P, 1)
+    """
+    I, P = len(imtls), len(poes)
+    hmap = ProbabilityMap.build(I * P, 1, pmap)
+    for i, imt in enumerate(imtls):
+        curves = numpy.array([pmap[sid].array[imtls.slicedic[imt], 0]
+                              for sid in pmap.sids])
+        data = compute_hazard_maps(curves, imtls[imt], poes)  # array N x P
+        for sid, value in zip(pmap.sids, data):
+            array = hmap[sid].array
+            for j, val in enumerate(value):
+                array[i * P + j] = val
+    return hmap
+
+
+def make_uhs(pmap, imtls, poes, nsites):
     """
     Make Uniform Hazard Spectra curves for each location.
 
     It is assumed that the `lons` and `lats` for each of the `maps` are
     uniform.
 
-    :param hcurves:
-        a composite array of hazard curves
+    :param pmap:
+        a probability map of hazard curves
     :param imtls:
         a dictionary of intensity measure types and levels
     :param poes:
         a sequence of PoEs for the underlying hazard maps
     :returns:
-        an composite array containing N uniform hazard maps
+        an composite array containing nsites uniform hazard maps
     """
-    maps = make_hmaps(hcurves, imtls, poes)
+    P = len(poes)
+    array = make_hmap(pmap, imtls, poes).array  # size (N, I x P, 1)
     imts, _ = get_imts_periods(imtls)
-    imts_dt = numpy.dtype([(imt, F32) for imt in imts])
+    imts_dt = numpy.dtype([(imt, F64) for imt in imts])
     uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in poes])
-    N = len(maps)
-    uhs = numpy.zeros(N, uhs_dt)
-    for poe in poes:
-        for imt in imts:
-            uhs[str(poe)][imt] = maps['%s-%s' % (imt, poe)]
+    uhs = numpy.zeros(nsites, uhs_dt)
+    for j, poe in enumerate(map(str, poes)):
+        for i, imt in enumerate(imts):
+            uhs[poe][imt] = array[:, i * P + j, 0]
     return uhs
 
 
