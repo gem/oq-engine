@@ -40,7 +40,7 @@ from django.template import RequestContext
 from openquake.baselib.general import groupby, writetmp
 from openquake.baselib.python3compat import unicode
 from openquake.commonlib import nrml, readinput, oqvalidation
-from openquake.commonlib.parallel import safely_call
+from openquake.commonlib.parallel import TaskManager, safely_call
 from openquake.commonlib.export import export
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
@@ -325,7 +325,9 @@ def run_calc(request):
 
     user = utils.get_user_data(request)
     try:
-        job_id, _fut = submit_job(einfo[0], user['name'], hazard_job_id)
+        job_id, fut = submit_job(einfo[0], user['name'], hazard_job_id)
+        # restart the process pool at the end of each job
+        fut .add_done_callback(lambda f: TaskManager.restart())
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = str(exc)
