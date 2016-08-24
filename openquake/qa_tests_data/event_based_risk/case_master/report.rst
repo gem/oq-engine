@@ -1,7 +1,7 @@
 event based risk
 ================
 
-gem-tstation:/home/michele/ssd/calc_41594.hdf5 updated Tue Aug 23 17:46:43 2016
+thinkpad:/home/michele/oqdata/calc_16959.hdf5 updated Wed Aug 24 04:51:44 2016
 
 num_sites = 7, sitecol = 1015 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  24                                                              
 master_seed                  0                                                               
 avg_losses                   True                                                            
-engine_version               '2.1.0-git5b04a6e'                                              
+engine_version               '2.1.0-git74bd74a'                                              
 ============================ ================================================================
 
 Input files
@@ -93,24 +93,24 @@ filtered_weight 968
 
 Informational data
 ------------------
-====================================== ============
-compute_ruptures_max_received_per_task 7,190       
-compute_ruptures_num_tasks             24          
-compute_ruptures_sent.monitor          34,824      
-compute_ruptures_sent.rlzs_by_gsim     24,456      
-compute_ruptures_sent.sitecol          13,272      
-compute_ruptures_sent.sources          45,418      
-compute_ruptures_tot_received          66,236      
-hazard.input_weight                    969         
-hazard.n_imts                          4           
-hazard.n_levels                        11          
-hazard.n_realizations                  8           
-hazard.n_sites                         7           
-hazard.n_sources                       4           
-hazard.output_weight                   2,576       
-hostname                               gem-tstation
-require_epsilons                       1           
-====================================== ============
+====================================== ========
+compute_ruptures_max_received_per_task 7,193   
+compute_ruptures_num_tasks             12      
+compute_ruptures_sent.monitor          17,448  
+compute_ruptures_sent.rlzs_by_gsim     12,228  
+compute_ruptures_sent.sitecol          6,636   
+compute_ruptures_sent.sources          33,112  
+compute_ruptures_tot_received          39,827  
+hazard.input_weight                    969     
+hazard.n_imts                          4       
+hazard.n_levels                        11      
+hazard.n_realizations                  8       
+hazard.n_sites                         7       
+hazard.n_sources                       4       
+hazard.output_weight                   2,576   
+hostname                               thinkpad
+require_epsilons                       1       
+====================================== ========
 
 Specific information for event based
 ------------------------------------
@@ -127,7 +127,7 @@ and has a size of 44.19 KB / num_tasks
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-7 asset(s) x 6 realization(s) x 5 loss type(s) x 2 losses x 8 bytes x 20 tasks = 65.62 KB
+7 asset(s) x 6 realization(s) x 5 loss type(s) x 2 losses x 8 bytes x 8 tasks = 26.25 KB
 
 Exposure model
 --------------
@@ -151,10 +151,10 @@ Slowest sources
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class              weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
-0            1         SimpleFaultSource         482    15        0.002       0.029      0.238         0.078         15       
-2            1         SimpleFaultSource         482    15        0.001       0.026      0.159         0.024         15       
-1            2         SimpleFaultSource         4.000  1         0.002       0.0        0.020         0.020         1        
-3            2         CharacteristicFaultSource 1.000  1         0.001       0.0        0.003         0.003         1        
+2            1         SimpleFaultSource         482    15        0.002       0.042      0.260         0.047         15       
+0            1         SimpleFaultSource         482    15        0.003       0.054      0.244         0.032         15       
+1            2         SimpleFaultSource         4.000  1         0.002       0.0        0.021         0.021         1        
+3            2         CharacteristicFaultSource 1.000  1         0.001       0.0        0.002         0.002         1        
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -162,18 +162,18 @@ Computation times by source typology
 ========================= =========== ========== ============= ============= ========= ======
 source_class              filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ========================= =========== ========== ============= ============= ========= ======
-CharacteristicFaultSource 0.001       0.0        0.003         0.003         1         1     
-SimpleFaultSource         0.005       0.055      0.417         0.122         31        3     
+CharacteristicFaultSource 0.001       0.0        0.002         0.002         1         1     
+SimpleFaultSource         0.007       0.096      0.525         0.100         31        3     
 ========================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ================================= ===== ====== ===== ===== =========
 measurement                       mean  stddev min   max   num_tasks
-compute_ruptures.time_sec         0.018 0.015  0.004 0.078 24       
-compute_ruptures.memory_mb        0.030 0.147  0.0   0.719 24       
-compute_gmfs_and_curves.time_sec  0.041 0.012  0.024 0.055 6        
-compute_gmfs_and_curves.memory_mb 0.327 0.409  0.0   0.883 6        
+compute_ruptures.time_sec         0.044 0.021  0.002 0.075 12       
+compute_ruptures.memory_mb        0.0   0.0    0.0   0.0   12       
+compute_gmfs_and_curves.time_sec  0.059 0.016  0.034 0.076 6        
+compute_gmfs_and_curves.memory_mb 0.462 0.493  0.0   1.074 6        
 ================================= ===== ====== ===== ===== =========
 
 Slowest operations
@@ -181,23 +181,23 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.430     0.719     24    
-total compute_gmfs_and_curves  0.247     0.883     6     
-compute poes                   0.158     0.0       9     
-managing sources               0.111     0.0       1     
-bulding hazard curves          0.056     0.0       6     
-splitting sources              0.055     0.0       2     
-make contexts                  0.025     0.0       9     
-aggregating hcurves            0.025     0.0       22    
-filtering ruptures             0.019     0.0       9     
-reading composite source model 0.016     0.0       1     
-saving gmfs                    0.015     0.0       22    
+total compute_ruptures         0.532     0.0       12    
+total compute_gmfs_and_curves  0.356     1.074     6     
+compute poes                   0.234     0.0       9     
+managing sources               0.159     0.0       1     
+splitting sources              0.096     0.0       2     
+bulding hazard curves          0.084     0.0       6     
+aggregating hcurves            0.028     0.0       22    
+make contexts                  0.027     0.0       9     
+reading composite source model 0.024     0.0       1     
+filtering ruptures             0.017     0.0       9     
+saving gmfs                    0.016     0.0       22    
 compute and save statistics    0.013     0.0       1     
 combine curves_by_rlz          0.010     0.0       1     
-saving ruptures                0.009     0.0       1     
-store source_info              0.008     0.0       1     
-aggregate curves               0.008     0.0       46    
-filtering sources              0.006     0.0       4     
-reading exposure               0.004     0.0       1     
-reading site collection        6.914E-06 0.0       1     
+saving ruptures                0.010     0.0       1     
+store source_info              0.010     0.0       1     
+filtering sources              0.009     0.0       4     
+aggregate curves               0.008     0.0       34    
+reading exposure               0.007     0.0       1     
+reading site collection        8.821E-06 0.0       1     
 ============================== ========= ========= ======
