@@ -1,6 +1,9 @@
   [Michele Simionato]
   * Optimized the computation of hazard curves and statistics, especially
     for the memory consumption
+  * Reduced the data transfer due to the `rlzs_assoc` and `oqparam` objects
+  * Fixed a bug in the disaggregation calculator when a source group has
+    been filtered away by the maximum distance criterium
   * Fixed an encoding error in the reports when the description contains a
     non-ASCII character
   * Changed the distribution framework: celery is supported in a way more

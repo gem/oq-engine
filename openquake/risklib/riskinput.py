@@ -594,7 +594,7 @@ def create(GmfColl, eb_ruptures, sitecol, imts, rlzs_by_gsim,
     :param eb_ruptures: a list of EBRuptures with the same src_group_id
     :param sitecol: a SiteCollection instance
     :param imts: list of IMT strings
-    :param rlzs_assoc: a RlzsAssoc instance
+    :param rlzs_by_gsim: a dictionary {gsim: realizations} of the current group
     :param trunc_level: truncation level
     :param correl_model: correlation model instance
     :param min_iml: a dictionary of minimum intensity measure levels
