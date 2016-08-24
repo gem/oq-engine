@@ -197,8 +197,9 @@ class File(h5py.File):
                 self[key] = v
         else:
             super(File, self).__setitem__(path, obj)
-        a = super(File, self).__getitem__(path).attrs
         if pyclass:
+            self.flush()  # make sure it is fully saved
+            a = super(File, self).__getitem__(path).attrs
             a['__pyclass__'] = pyclass
             for k, v in sorted(attrs.items()):
                 a[k] = v
