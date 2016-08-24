@@ -574,7 +574,7 @@ def _slicedict_n(imt_dt):
     slicedic = {}
     for imt in imt_dt.names:
         shp = imt_dt[imt].shape
-        n1 = n + shp[0] if shp else 1
+        n1 = n + (shp[0] if shp else 1)
         slicedic[imt] = slice(n, n1)
         n = n1
     return slicedic, n
@@ -603,6 +603,23 @@ class DictArray(collections.Mapping):
         self.array = numpy.zeros(num_levels, F64)
         for imt, imls in imtls.items():
             self[imt] = imls
+
+    def new(self, array):
+        """
+        Convert an array of compatible length into a DictArray:
+
+        >>> d = DictArray({'PGA': [0.01, 0.02, 0.04], 'PGV': [0.1, 0.2]})
+        >>> d.new(numpy.arange(0, 5, 1))  # array of lenght 5 = 3 + 2
+        <DictArray
+        PGA: [0 1 2]
+        PGV: [3 4]>
+        """
+        assert len(self.array) == len(array)
+        arr = object.__new__(self.__class__)
+        arr.imt_dt = self.imt_dt
+        arr.slicedic = self.slicedic
+        arr.array = array
+        return arr
 
     def __getitem__(self, imt):
         return self.array[self.slicedic[imt]]
