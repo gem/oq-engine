@@ -1,4 +1,4 @@
-asset_ref,taxonomy,lon,lat,no_damage,slight,moderate,extreme,complete
+asset_ref,taxonomy,lon,lat,no_damage,slight,moderate,extreme:float32,complete
 a3,"Wood",-122.57000,38.11300,9.33186E-01,3.02926E-02,2.72806E-02,5.95485E-03,3.28582E-03
 a2,"Wood",-122.11400,38.11300,1.30248E-01,8.92589E-02,2.47212E-01,1.87144E-01,3.46136E-01
 a5,"Wood",-122.00000,37.91000,2.90034E-01,1.32735E-01,2.59316E-01,1.37646E-01,1.80268E-01

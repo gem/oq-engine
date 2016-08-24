@@ -26,16 +26,29 @@ import os
 import sys
 import mock
 import time
-import logging
 
 
-from openquake.baselib.general import humansize
+from openquake.baselib.general import humansize, AccumDict
 from openquake.baselib.python3compat import encode
-from openquake.commonlib import readinput, datastore, source, parallel
+from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.commonlib import readinput, datastore, parallel
+from openquake.calculators.classical import PSHACalculator
 
 
 def indent(text):
     return '  ' + '\n  '.join(text.splitlines())
+
+
+def count_eff_ruptures(sources, sitecol, rlzs_by_gsim, monitor):
+    """
+    Count the number of ruptures contained in the given sources and return
+    a dictionary src_group_id -> num_ruptures. All sources belong to the
+    same tectonic region type.
+    """
+    grp_id = sources[0].src_group_id
+    acc = AccumDict({grp_id: ProbabilityMap()})
+    acc.eff_ruptures = {grp_id: sum(src.num_ruptures for src in sources)}
+    return acc
 
 
 class ReportWriter(object):
@@ -136,14 +149,12 @@ def build_report(job_ini, output_dir=None):
     output_dir = output_dir or os.path.dirname(job_ini)
     from openquake.calculators import base  # ugly
     calc = base.calculators(oq)
+    calc.save_params()  # needed to save oqparam
+
     # some taken is care so that the real calculation is not run:
     # the goal is to extract information about the source management only
-    with mock.patch.object(
-            calc.__class__, 'core_task', source.count_eff_ruptures):
+    with mock.patch.object(PSHACalculator, 'core_task', count_eff_ruptures):
         calc.pre_execute()
-    with mock.patch.object(logging.root, 'info'):  # reduce logging
-        calc.execute()
-    calc.save_params()
     rw = ReportWriter(calc.datastore)
     rw.make_report()
     report = (os.path.join(output_dir, 'report.rst') if output_dir
