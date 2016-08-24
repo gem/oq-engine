@@ -75,7 +75,7 @@ attribute       nbytes
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
-            info(None, None, None, None, None, None, path)
+            info(None, None, None, None, None, path)
         self.assertEqual(self.EXPECTED, str(p)[:len(self.EXPECTED)])
 
     # poor man tests: checking that the flags produce a few characters
@@ -101,7 +101,7 @@ attribute       nbytes
             info(None, None, None, True, None, '')
         self.assertGreater(len(str(p)), 10)
 
-    # NB: info --report is tested manually once in a while
+    # NB: info --report is tested in the packager
 
 
 class TidyTestCase(unittest.TestCase):
