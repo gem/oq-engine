@@ -1,7 +1,7 @@
 Demo Classical PSHA for Vancouver Schools
 =========================================
 
-thinkpad:/home/michele/oqdata/calc_16949.hdf5 updated Wed Aug 24 04:51:38 2016
+gem-tstation:/home/michele/ssd/calc_42008.hdf5 updated Wed Aug 24 08:03:59 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -21,7 +21,7 @@ area_source_discretization   50.0
 random_seed                  23                              
 master_seed                  0                               
 sites_per_tile               10000                           
-engine_version               '2.1.0-git74bd74a'              
+engine_version               '2.1.0-git46eb8e0'              
 ============================ ================================
 
 Input files
@@ -72,23 +72,23 @@ vancouver_area_source.xml 0      Active Shallow Crust 1           2430         6
 
 Informational data
 ------------------
-======================================== =========
-count_eff_ruptures_max_received_per_task 1,597    
-count_eff_ruptures_num_tasks             10       
-count_eff_ruptures_sent.monitor          12,690   
-count_eff_ruptures_sent.rlzs_by_gsim     1,605,740
-count_eff_ruptures_sent.sitecol          4,730    
-count_eff_ruptures_sent.sources          18,310   
-count_eff_ruptures_tot_received          15,970   
-hazard.input_weight                      60       
-hazard.n_imts                            3        
-hazard.n_levels                          12       
-hazard.n_realizations                    3        
-hazard.n_sites                           3        
-hazard.n_sources                         1        
-hazard.output_weight                     324      
-hostname                                 thinkpad 
-======================================== =========
+======================================== ============
+count_eff_ruptures_max_received_per_task 1,597       
+count_eff_ruptures_num_tasks             30          
+count_eff_ruptures_sent.monitor          37,980      
+count_eff_ruptures_sent.rlzs_by_gsim     4,817,850   
+count_eff_ruptures_sent.sitecol          14,190      
+count_eff_ruptures_sent.sources          41,140      
+count_eff_ruptures_tot_received          47,823      
+hazard.input_weight                      60          
+hazard.n_imts                            3           
+hazard.n_levels                          12          
+hazard.n_realizations                    3           
+hazard.n_sites                           3           
+hazard.n_sources                         1           
+hazard.output_weight                     324         
+hostname                                 gem-tstation
+======================================== ============
 
 Slowest sources
 ---------------
@@ -115,13 +115,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.047     0.0       1     
-reading composite source model 0.027     0.0       1     
+managing sources               0.067     0.0       1     
+reading composite source model 0.034     0.0       1     
 splitting sources              0.010     0.0       1     
-store source_info              0.006     0.0       1     
-total count_eff_ruptures       0.003     0.0       10    
+total count_eff_ruptures       0.009     0.246     30    
+store source_info              0.005     0.0       1     
 filtering sources              0.001     0.0       1     
-aggregate curves               1.702E-04 0.0       10    
+aggregate curves               4.139E-04 0.0       30    
 reading site collection        1.218E-04 0.0       1     
-saving probability maps        3.695E-05 0.0       1     
+saving probability maps        2.694E-05 0.0       1     
 ============================== ========= ========= ======

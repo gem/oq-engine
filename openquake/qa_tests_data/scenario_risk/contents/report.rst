@@ -1,14 +1,14 @@
-QA Scenario Risk for contents
+Scenario QA Test for contents
 =============================
 
-thinkpad:/home/michele/oqdata/calc_16958.hdf5 updated Wed Aug 24 04:51:43 2016
+gem-tstation:/home/michele/ssd/calc_42031.hdf5 updated Wed Aug 24 08:05:12 2016
 
 num_sites = 3, sitecol = 831 B
 
 Parameters
 ----------
 ============================ ==================
-calculation_mode             'scenario_risk'   
+calculation_mode             'scenario'        
 number_of_logic_tree_samples 0                 
 maximum_distance             {u'default': 300} 
 investigation_time           None              
@@ -20,21 +20,19 @@ width_of_mfd_bin             None
 area_source_discretization   None              
 random_seed                  3                 
 master_seed                  0                 
-avg_losses                   False             
-engine_version               '2.1.0-git74bd74a'
+engine_version               '2.1.0-git46eb8e0'
 ============================ ==================
 
 Input files
 -----------
-======================== ========================================================================
-Name                     File                                                                    
-======================== ========================================================================
-contents_vulnerability   `vulnerability_model_contents.xml <vulnerability_model_contents.xml>`_  
-exposure                 `exposure_model.xml <exposure_model.xml>`_                              
-job_ini                  `job.ini <job.ini>`_                                                    
-rupture_model            `fault_rupture.xml <fault_rupture.xml>`_                                
-structural_vulnerability `vulnerability_model_structure.xml <vulnerability_model_structure.xml>`_
-======================== ========================================================================
+====================== ======================================================================
+Name                   File                                                                  
+====================== ======================================================================
+contents_vulnerability `vulnerability_model_contents.xml <vulnerability_model_contents.xml>`_
+exposure               `exposure_model.xml <exposure_model.xml>`_                            
+job_ini                `job_haz.ini <job_haz.ini>`_                                          
+rupture_model          `fault_rupture.xml <fault_rupture.xml>`_                              
+====================== ======================================================================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -70,11 +68,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.008     0.0       1     
-reading exposure        0.006     0.0       1     
-computing gmfs          0.002     0.0       1     
-saving gmfs             0.002     0.0       1     
-building riskinputs     3.269E-04 0.0       1     
-building epsilons       2.222E-04 0.0       1     
-reading site collection 1.407E-05 0.0       1     
+filtering sites         0.006     0.0       1     
+reading exposure        0.003     0.0       1     
+reading site collection 8.106E-06 0.0       1     
 ======================= ========= ========= ======

@@ -52,7 +52,7 @@ def do_build_reports(directory):
     job.ini files found.
     """
     for cwd, dirs, files in os.walk(directory):
-        for f in files:
+        for f in sorted(files):
             if f in ('job.ini', 'job_h.ini', 'job_haz.ini', 'job_hazard.ini'):
                 job_ini = os.path.join(cwd, f)
                 print(job_ini)
@@ -86,8 +86,10 @@ def info(calculators, gsims, views, exports, report, input_file=''):
             n += len(formats)
         print('There are %d exporters defined.' % n)
     if os.path.isdir(input_file) and report:
-        with mock.patch.object(logging.root, 'info'):  # reduce logging
-            do_build_reports(input_file)
+        with Monitor('info', measuremem=True) as mon:
+            with mock.patch.object(logging.root, 'info'):  # reduce logging
+                do_build_reports(input_file)
+        print(mon)
     elif input_file.endswith('.xml'):
         print(nrml.read(input_file).to_str())
     elif input_file.endswith(('.ini', '.zip')):
