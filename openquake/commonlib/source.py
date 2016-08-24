@@ -878,15 +878,3 @@ class SourceManager(object):
             attrs = dstore['source_info'].attrs
             attrs['maxweight'] = self.maxweight
             self.infos.clear()
-
-
-def count_eff_ruptures(sources, sitecol, rlzs_assoc, monitor):
-    """
-    Count the number of ruptures contained in the given sources and return
-    a dictionary src_group_id -> num_ruptures. All sources belong to the
-    same tectonic region type.
-    """
-    acc = AccumDict()
-    acc.eff_ruptures = {sources[0].src_group_id:
-                        sum(src.num_ruptures for src in sources)}
-    return acc

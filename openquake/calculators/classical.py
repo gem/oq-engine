@@ -350,7 +350,8 @@ class PSHACalculator(base.HazardCalculator):
                     self.datastore[key] = pmap
                     self.datastore.set_attrs(
                         key, trt=self.csm.info.get_trt(grp_id))
-            self.datastore.set_nbytes('poes')
+            if 'poes' in self.datastore:
+                self.datastore.set_nbytes('poes')
 
 
 def build_hcurves_and_stats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):

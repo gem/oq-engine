@@ -1,7 +1,7 @@
 Scenario Calculation with Simple Fault Rupture
 ==============================================
 
-gem-tstation:/home/michele/ssd/calc_22624.hdf5 updated Tue May 31 15:39:12 2016
+gem-tstation:/home/michele/ssd/calc_42169.hdf5 updated Wed Aug 24 08:13:50 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -10,7 +10,7 @@ Parameters
 ============================ ==================
 calculation_mode             'scenario'        
 number_of_logic_tree_samples 0                 
-maximum_distance             {'default': 200}  
+maximum_distance             {u'default': 200} 
 investigation_time           None              
 ses_per_logic_tree_path      1                 
 truncation_level             3.0               
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None              
 random_seed                  42                
 master_seed                  0                 
-engine_version               '2.0.0-git4fb4450'
+engine_version               '2.1.0-git81d4f3d'
 ============================ ==================
 
 Input files
@@ -52,6 +52,5 @@ Slowest operations
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 filtering sites         0.008     0.0       1     
-computing gmfs          0.002     0.0       1     
-reading site collection 3.314E-05 0.0       1     
+reading site collection 3.099E-05 0.0       1     
 ======================= ========= ========= ======
