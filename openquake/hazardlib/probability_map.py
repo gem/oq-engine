@@ -241,6 +241,7 @@ class ProbabilityMap(dict):
             self[sid] = ProbabilityCurve(prob)
 
 
+# TODO: simplify this
 def get_shape(pmaps):
     """
     :param pmaps: a set of homogenous ProbabilityMaps
@@ -294,7 +295,7 @@ class PmapStats(object):
             assert not self.quantiles, self.quantiles
             return pmaps[0]
         elif sum(len(pmap) for pmap in pmaps) == 0:  # all empty pmaps
-            return ProbabilityMap()
+            raise ValueError('All empty probability maps!')
         N, L, I = get_shape(pmaps)
         nstats = len(self.quantiles) + 1
         stats = ProbabilityMap.build(L, nstats, sids)
