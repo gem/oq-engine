@@ -28,7 +28,7 @@ from threading import Thread
 from multiprocessing import Process
 from multiprocessing.connection import Listener
 
-from openquake.commonlib import sap
+from openquake.baselib import sap
 from openquake.commonlib.parallel import safely_call
 from openquake.engine import config
 from openquake.server.db import actions
