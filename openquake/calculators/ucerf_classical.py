@@ -483,7 +483,7 @@ class UCERFClassicalCalculator(classical.PSHACalculator):
                 (rup_sets, branchname, ucerf_source, self.src_group.id,
                  self.sitecol, self.rlzs_assoc, monitor),
                 concurrent_tasks=self.oqparam.concurrent_tasks).reduce(
-                    agg=self.agg, acc=acc)
+                    agg=self.agg_dicts, acc=acc)
 
         # TODO: save data transfer information and source_info
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
