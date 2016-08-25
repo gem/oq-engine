@@ -24,7 +24,6 @@ import collections
 from functools import partial
 import numpy
 
-from openquake.baselib import hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
@@ -403,7 +402,7 @@ class ClassicalCalculator(PSHACalculator):
         L = len(oq.imtls.array)
         attrs = dict(
             __pyclass__='openquake.hazardlib.probability_map.ProbabilityMap',
-            sids=numpy.zeros(0, numpy.uint32))
+            sids=numpy.arange(N, dtype=numpy.uint32))
         if oq.individual_curves:
             for rlz in rlzs:
                 self.datastore.create_dset(
@@ -456,9 +455,10 @@ class ClassicalCalculator(PSHACalculator):
                 continue  # do not save the mean curves
             pmap = pmap_by_kind[kind]
             if pmap:
-                dset = self.datastore.getitem('hcurves/' + kind)
+                key = 'hcurves/' + kind
+                dset = self.datastore.getitem(key)
                 for sid in pmap:
-                    dset[sid, :, :] = pmap[sid].array
+                    dset[sid] = pmap[sid].array
                 acc += {kind: pmap.nbytes}
         self.datastore.flush()
         return acc
