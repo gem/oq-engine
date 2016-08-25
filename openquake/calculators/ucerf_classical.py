@@ -476,6 +476,7 @@ class UCERFClassicalCalculator(classical.PSHACalculator):
             # single branch, parallelize by rupture subsets
             branchname = self.smlt.branches.items()[0][1]
             rup_sets = self.csm.get_sources()[0].get_rupture_indices(
+                branchname,
                 split=monitor.oqparam.rupture_split)
             pmap_by_grp_id = parallel.apply(
                 ucerf_classical_hazard_by_rupture_set,
