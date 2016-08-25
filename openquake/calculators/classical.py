@@ -378,21 +378,6 @@ def build_hcurves_and_stats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
     return pmap_by_kind
 
 
-def extend_pmap(dset, pmap):
-    """
-    :param dset: an HDF5 dataset corresponding to a ProbabilityMap
-    :param pmap: a ProbabilityMap to store
-    """
-    assert pmap, 'The ProbabilityMap is empty!'
-    hdf5.extend(dset, pmap.array)  # array N x L x 1
-    try:
-        pre_sids = dset.attrs['sids']
-    except KeyError:  # first time
-        dset.attrs['sids'] = pmap.sids
-    else:  # extend the existing sids
-        dset.attrs['sids'] = numpy.concatenate([pre_sids, pmap.sids])
-
-
 @base.calculators.add('classical')
 class ClassicalCalculator(PSHACalculator):
     """
@@ -414,6 +399,7 @@ class ClassicalCalculator(PSHACalculator):
                 for group_id in self.datastore['poes']}
 
         # initialize datasets
+        N = len(self.sitecol)
         L = len(oq.imtls.array)
         attrs = dict(
             __pyclass__='openquake.hazardlib.probability_map.ProbabilityMap',
@@ -422,13 +408,14 @@ class ClassicalCalculator(PSHACalculator):
             for rlz in rlzs:
                 self.datastore.create_dset(
                     'hcurves/rlz-%03d' % rlz.ordinal, F32,
-                    (None, L, 1),  attrs=attrs)
+                    (N, L, 1),  attrs=attrs)
         if oq.mean_hazard_curves:
             self.datastore.create_dset(
-                'hcurves/mean', F32, (None, L, 1), attrs=attrs)
+                'hcurves/mean', F32, (N, L, 1), attrs=attrs)
         for q in oq.quantile_hazard_curves:
             self.datastore.create_dset(
-                'hcurves/quantile-%s' % q, F32, (None, L, 1), attrs=attrs)
+                'hcurves/quantile-%s' % q, F32, (N, L, 1), attrs=attrs)
+        self.datastore.flush()
 
         # build hcurves and stats
         with self.monitor('submitting poes', autoflush=True):
@@ -469,7 +456,9 @@ class ClassicalCalculator(PSHACalculator):
                 continue  # do not save the mean curves
             pmap = pmap_by_kind[kind]
             if pmap:
-                extend_pmap(self.datastore.getitem('hcurves/' + kind), pmap)
+                dset = self.datastore.getitem('hcurves/' + kind)
+                for sid in pmap:
+                    dset[sid, :, :] = pmap[sid].array
                 acc += {kind: pmap.nbytes}
         self.datastore.flush()
         return acc
