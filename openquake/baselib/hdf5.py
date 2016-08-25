@@ -32,7 +32,7 @@ vstr = h5py.special_dtype(vlen=str)
 
 
 def create(hdf5, name, dtype, shape=(None,), compression=None,
-           attrs=None):
+           fillvalue=0, attrs=None):
     """
     :param hdf5: a h5py.File object
     :param name: an hdf5 key string
@@ -46,7 +46,7 @@ def create(hdf5, name, dtype, shape=(None,), compression=None,
         dset = hdf5.create_dataset(
             name, (0,) + shape[1:], dtype, chunks=True, maxshape=shape)
     else:  # fixed-shape dataset
-        dset = hdf5.create_dataset(name, shape, dtype)
+        dset = hdf5.create_dataset(name, shape, dtype, fillvalue=fillvalue)
     if attrs:
         for k, v in attrs.items():
             dset.attrs[k] = v
@@ -219,8 +219,9 @@ class File(h5py.File):
                 self[key] = v
         else:
             super(File, self).__setitem__(path, obj)
-        a = super(File, self).__getitem__(path).attrs
         if pyclass:
+            self.flush()  # make sure it is fully saved
+            a = super(File, self).__getitem__(path).attrs
             a['__pyclass__'] = pyclass
             for k, v in sorted(attrs.items()):
                 a[k] = v
