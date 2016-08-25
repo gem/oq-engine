@@ -283,7 +283,7 @@ def hazard_curves_per_rupture_subset(rupset_idx, ucerf_source, sites, imtls,
 
 
 def ucerf_classical_hazard_by_rupture_set(
-        rupset_idx, branchname, ucerf_source, src_group_id, sitecol,
+        rupset_idxs, branchname, ucerf_source, src_group_id, sitecol,
         rlzs_assoc, monitor):
     """
 
@@ -303,40 +303,43 @@ def ucerf_classical_hazard_by_rupture_set(
 
     dic = AccumDict()
     dic.bbs = []
+    dic.calc_times = []
     # Two step process here - the first generates the hazard curves from the
     # rupture sets
     monitor.eff_ruptures = 0
     # Apply the initial rupture to site filtering
-    rupset_idx, s_sites = \
-        ucerf_source.filter_sites_by_distance_from_rupture_set(
-            rupset_idx, sitecol,
-            monitor.oqparam.maximum_distance[DEFAULT_TRT])
+    for rupset_idx in rupset_idxs:
+        rupset_idx, s_sites = \
+            ucerf_source.filter_sites_by_distance_from_rupture_set(
+                rupset_idx[0], sitecol,
+                monitor.oqparam.maximum_distance[DEFAULT_TRT])
 
-    if len(s_sites):
-        dic[src_group_id] = hazard_curves_per_rupture_subset(
-            rupset_idx, ucerf_source, s_sites, imtls, gsims, truncation_level,
-            maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
+        if len(s_sites):
+            dic[src_group_id] = hazard_curves_per_rupture_subset(
+                rupset_idx, ucerf_source, s_sites, imtls, gsims,
+                truncation_level, maximum_distance=max_dist, bbs=dic.bbs,
+                monitor=monitor)
 
-    else:
-        dic[src_group_id] = ProbabilityMap()
-    dic.calc_times = monitor.calc_times  # added by hazard_curves_per_trt
-    dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
+        else:
+            dic[src_group_id] = ProbabilityMap()
+        dic.calc_times += monitor.calc_times  # added by hazard_curves_per_trt
+        dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
 
-    logging.info('Branchname for Background %s', branchname)
-    # Get the background point sources
-    bckgnd_sources = ucerf_source.get_background_sources(
-        branchname, sitecol, max_dist)
-    if len(bckgnd_sources):
-        dic2 = AccumDict()
-        dic2[src_group_id] = hazard_curves_per_trt(
-            bckgnd_sources,
-            sitecol, imtls, gsims, truncation_level,
-            source_site_filter=source_site_distance_filter(max_dist),
-            maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
+        logging.info('Branchname for Background %s', branchname)
+        # Get the background point sources
+        bckgnd_sources = ucerf_source.get_background_sources(
+            branchname, sitecol, max_dist)
+        if len(bckgnd_sources):
+            dic2 = AccumDict()
+            dic2[src_group_id] = hazard_curves_per_trt(
+                bckgnd_sources,
+                sitecol, imtls, gsims, truncation_level,
+                source_site_filter=source_site_distance_filter(max_dist),
+                maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
 
-        dic[src_group_id] += dic2[src_group_id]
-        dic.eff_ruptures[src_group_id] += monitor.eff_ruptures
-        dic.calc_times += monitor.calc_times
+            dic[src_group_id] += dic2[src_group_id]
+            dic.eff_ruptures[src_group_id] += monitor.eff_ruptures
+            dic.calc_times += monitor.calc_times
     return dic
 
 
