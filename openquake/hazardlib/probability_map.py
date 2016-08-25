@@ -151,17 +151,17 @@ class ProbabilityMap(dict):
         return BYTES_PER_FLOAT * N * L * I
 
     # used when exporting to HDF5
-    def convert(self, imtls, nsites, idx=0):
+    def convert(self, imtls, nsites=None, idx=0):
         """
         Convert a probability map into a composite array of length `nsites`
         and dtype `imtls.imt_dt`.
 
         :param imtls: DictArray instance
-        :param nsites: the total number of sites
+        :param nsites: the total number of sites (or None)
         :param idx: extract the data corresponding to the given inner index
         """
-        # NB: I am not using ProbabilityCurve.convert to work around a bug
-        # of numpy 1.8.1
+        if nsites is None:
+            nsites = len(self)
         curves = numpy.zeros(nsites, imtls.imt_dt)
         for imt in curves.dtype.names:
             curves_by_imt = curves[imt]
