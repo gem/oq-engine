@@ -20,7 +20,8 @@
 import os
 import importlib
 
-from openquake.commonlib import sap, __version__
+from openquake.baselib import sap
+from openquake.commonlib import __version__
 from openquake import commands
 
 from openquake.risklib import valid
