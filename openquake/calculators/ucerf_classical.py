@@ -130,7 +130,7 @@ class UCERFControl(UCERFSESControl):
             nrup = len(hdf5[self.idx_set["rate_idx"]][:])
             rup_indices = np.arange(0, nrup)
             if split:
-                return [np.array_split(rup_indices, split)]
+                return np.array_split(rup_indices, split)
             else:
                 return rup_indices
     
@@ -311,7 +311,7 @@ def ucerf_classical_hazard_by_rupture_set(
     for rupset_idx in rupset_idxs:
         rupset_idx, s_sites = \
             ucerf_source.filter_sites_by_distance_from_rupture_set(
-                rupset_idx[0], sitecol,
+                rupset_idx, sitecol,
                 monitor.oqparam.maximum_distance[DEFAULT_TRT])
 
         if len(s_sites):
