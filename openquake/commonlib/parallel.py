@@ -580,8 +580,10 @@ def call_gen(gen, args, writer):
 def broadcast(gen, arglist, callback=lambda res: None):
     if len(arglist) == 0:
         raise ValueError('Passed empty arglist')
-    elif len(arglist) == 1:
-        return gen(*arglist[0])
+    # elif len(arglist) == 1:
+    #     for value in gen(*arglist[0]):
+    #         yield value
+    #     return
     from multiprocessing.connection import wait
     readers = []
     for args in arglist:

@@ -289,18 +289,18 @@ class PSHACalculator(base.HazardCalculator):
                 self.csm, oq.maximum_distance, oq.concurrent_tasks,
                 monitor, self.random_seed, oq.filter_sources,
                 num_tiles=self.num_tiles)
-            self.infos = {}
+            infos = {}
 
-            def incr(info):
+            def agg_infos(info):
                 for key in info:
-                    if key in self.infos:
-                        self.infos[key] += info[key]
+                    if key in infos:
+                        infos[key] += info[key]
                     else:
-                        self.infos[key] = info[key]
+                        infos[key] = info[key]
             iterargs = parallel.broadcast(
-                srcman, [(tile,) for tile in tiles], incr)
+                srcman, [(tile,) for tile in tiles], agg_infos)
             tm = parallel.starmap(self.core_task.__func__, iterargs)
-            self.pre_store_source_info(self.infos)
+            self.pre_store_source_info(infos)
         pmap_by_grp_id = tm.reduce(self.agg_dicts, self.zerodict())
         self.save_data_transfer(tm)
         with self.monitor('store source_info', autoflush=True):
