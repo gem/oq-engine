@@ -577,13 +577,24 @@ def call_gen(gen, args, writer):
     writer.close()
 
 
+def consume(genobj, callback):
+    while True:
+        try:
+            res = next(genobj)
+        except StopIteration as stop:
+            callback(stop.args[0])
+            break
+        else:
+            yield res
+
+
 def broadcast(gen, arglist, callback=lambda res: None):
     if len(arglist) == 0:
         raise ValueError('Passed empty arglist')
-    # elif len(arglist) == 1:
-    #     for value in gen(*arglist[0]):
-    #         yield value
-    #     return
+    elif len(arglist) == 1:
+        for value in consume(gen(*arglist[0]), callback):
+            yield value
+        return
     from multiprocessing.connection import wait
     readers = []
     for args in arglist:
