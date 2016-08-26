@@ -563,6 +563,9 @@ def call_gen(gen, args, writer):
     while True:
         try:
             res = (next(go), None)
+        except StopIteration as stop:
+            writer.send((stop.args[0], StopIteration))
+            break
         except Exception:
             etype, exc, tb = sys.exc_info()
             tb_str = ''.join(traceback.format_tb(tb))
@@ -574,10 +577,14 @@ def call_gen(gen, args, writer):
     writer.close()
 
 
-def broadcast(gen, iterargs):
+def broadcast(gen, arglist, callback=lambda res: None):
+    if len(arglist) == 0:
+        raise ValueError('Passed empty arglist')
+    elif len(arglist) == 1:
+        return gen(*arglist[0])
     from multiprocessing.connection import wait
     readers = []
-    for args in iterargs:
+    for args in arglist:
         r, w = multiprocessing.Pipe()
         readers.append(r)
         multiprocessing.Process(target=call_gen, args=(gen, args, w)).start()
@@ -587,6 +594,7 @@ def broadcast(gen, iterargs):
             if etype is None:
                 yield value
             elif etype is StopIteration:
+                callback(value)
                 reader.close()
                 readers.remove(reader)
             else:

@@ -216,7 +216,6 @@ class PSHACalculator(base.HazardCalculator):
     Classical PSHA calculator
     """
     core_task = classical
-    source_info = datastore.persistent_attribute('source_info')
 
     def agg_dicts(self, acc, val):
         """
@@ -288,15 +287,20 @@ class PSHACalculator(base.HazardCalculator):
         with self.monitor('managing sources', autoflush=True):
             srcman = source.SourceManager(
                 self.csm, oq.maximum_distance, oq.concurrent_tasks,
-                self.datastore.calc_dir, monitor, self.random_seed,
-                oq.filter_sources, num_tiles=self.num_tiles)
-            if self.num_tiles > 1:
-                iterargs = parallel.broadcast(
-                    srcman, [(tile,) for tile in tiles])
-            else:
-                iterargs = srcman(tiles[0])
+                monitor, self.random_seed, oq.filter_sources,
+                num_tiles=self.num_tiles)
+            self.infos = {}
+
+            def incr(info):
+                for key in info:
+                    if key in self.infos:
+                        self.infos[key] += info[key]
+                    else:
+                        self.infos[key] = info[key]
+            iterargs = parallel.broadcast(
+                srcman, [(tile,) for tile in tiles], incr)
             tm = parallel.starmap(self.core_task.__func__, iterargs)
-            srcman.pre_store_source_info(self.datastore)
+            self.pre_store_source_info(self.infos)
         pmap_by_grp_id = tm.reduce(self.agg_dicts, self.zerodict())
         self.save_data_transfer(tm)
         with self.monitor('store source_info', autoflush=True):
@@ -305,6 +309,24 @@ class PSHACalculator(base.HazardCalculator):
             partial(self.count_eff_ruptures, pmap_by_grp_id))
         self.datastore['csm_info'] = self.csm.info
         return pmap_by_grp_id
+
+    def pre_store_source_info(self, infos):
+        """
+        Save the `source_info` array and its attributes in the datastore.
+
+        :param dstore: the datastore
+        """
+        attrs = self.datastore.hdf5['composite_source_model'].attrs
+        attrs['weight'] = self.csm.weight
+        attrs['filtered_weight'] = self.csm.filtered_weight
+        if len(infos):
+            values = list(infos.values())
+            values.sort(key=lambda info: info.filter_time + info.split_time,
+                        reverse=True)
+            self.datastore['source_info'] = numpy.array(
+                values, source.source_info_dt)
+            # attrs = self.datastore['source_info'].attrs
+            # attrs['maxweight'] = self.csm.maxweight
 
     def store_source_info(self, taskman, pmap_by_grp_id):
         # store the information about received data
@@ -320,7 +342,7 @@ class PSHACalculator(base.HazardCalculator):
         if calc_times:
             sources = self.csm.get_sources()
             info_dict = {(rec['src_group_id'], rec['source_id']): rec
-                         for rec in self.source_info}
+                         for rec in self.datastore['source_info']}
             for src_idx, dt in calc_times:
                 src = sources[src_idx]
                 info = info_dict[src.src_group_id, encode(src.source_id)]

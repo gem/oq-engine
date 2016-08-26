@@ -733,22 +733,12 @@ class SourceManager(object):
     Manager associated to a CompositeSourceModel instance.
     Filter and split sources and send them to the worker tasks.
     """
-
-    @property
-    def dstore(self):
-        if self._dstore is None:
-            self._dstore = datastore.read(self.calc_id)
-        return self._dstore
-
     def __init__(self, csm, maximum_distance, concurrent_tasks,
-                 calc_id, monitor, random_seed=None,
-                 filter_sources=True, num_tiles=1):
+                 monitor, random_seed=None, filter_sources=True, num_tiles=1):
         self.csm = csm
         self.maximum_distance = maximum_distance
         self.concurrent_tasks = concurrent_tasks or 1
-        self.calc_id = calc_id
         self.random_seed = random_seed
-        self._dstore = None
         self.monitor = monitor
         self.filter_sources = filter_sources
         self.num_tiles = num_tiles
@@ -863,23 +853,4 @@ class SourceManager(object):
                 nblocks += 1
             logging.info('Sent %d sources in %d block(s)',
                          len(sources), nblocks)
-
-    def pre_store_source_info(self, dstore):
-        """
-        Save the `source_info` array and its attributes in the datastore.
-
-        :param dstore: the datastore
-        """
-        attrs = dstore.hdf5['composite_source_model'].attrs
-        attrs['weight'] = self.csm.weight
-        attrs['filtered_weight'] = self.csm.filtered_weight
-
-        if self.infos:
-            values = list(self.infos.values())
-            values.sort(
-                key=lambda info: info.filter_time + info.split_time,
-                reverse=True)
-            dstore['source_info'] = numpy.array(values, source_info_dt)
-            attrs = dstore['source_info'].attrs
-            attrs['maxweight'] = self.maxweight
-            self.infos.clear()
+        raise StopIteration(self.infos)
