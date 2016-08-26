@@ -37,6 +37,8 @@ from openquake.baselib.performance import Monitor, virtual_memory
 from openquake.baselib.general import split_in_blocks, AccumDict, humansize
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 
+queue = multiprocessing.Queue()
+
 executor = ProcessPoolExecutor()
 # the num_tasks_hint is chosen to be 2 times bigger than the name of
 # cores; it is a heuristic number to get a good distribution;
@@ -253,6 +255,24 @@ def pickle_sequence(objects):
     return out
 
 
+def call_gen(gen, taskno, arg):
+    go = gen(arg)
+    while True:
+        try:
+            res = (next(go), None)
+        except StopIteration:
+            queue.put((taskno, StopIteration))
+            break
+        except Exception:
+            etype, exc, tb = sys.exc_info()
+            tb_str = ''.join(traceback.format_tb(tb))
+            res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc), etype)
+            queue.put(res)
+            break
+        else:
+            queue.put(res)
+
+
 class TaskManager(object):
     """
     A manager to submit several tasks of the same type.
@@ -321,6 +341,20 @@ class TaskManager(object):
         cls.apply.__func__._chunks = chunks
         logging.info('Starting %d tasks', len(chunks))
         return cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
+
+    @classmethod
+    def broadcast(cls, gen, lst):
+        for taskno, arg in enumerate(lst):
+            cls.executor.submit(call_gen, taskno, arg)
+        tasks = range(taskno)
+        while tasks:
+            val, etype = queue.get()
+            if etype is StopIteration:
+                tasks.remove(val)
+            elif etype:
+                raise etype(val)
+            else:
+                yield val
 
     def __init__(self, oqtask, name=None):
         self.task_func = oqtask
@@ -453,6 +487,7 @@ class TaskManager(object):
 # convenient aliases
 starmap = TaskManager.starmap
 apply = TaskManager.apply
+broadcast = TaskManager.broadcast
 
 
 def do_not_aggregate(acc, value):

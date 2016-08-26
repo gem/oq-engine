@@ -31,7 +31,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import raise_, decode
 from openquake.baselib.general import (
-    AccumDict, groupby, block_splitter, group_array)
+    groupby, block_splitter, group_array)
 from openquake.hazardlib.site import Tile
 from openquake.commonlib import logictree, sourceconverter
 from openquake.commonlib import nrml, node
@@ -830,34 +830,31 @@ class SourceManager(object):
                     ss.serial = src.serial[start:start + nr]
                     start += nr
 
-    def gen_args(self, tiles):
+    def gen_args(self, sitecol):
         """
         Yield (sources, sitecol, rlzs_assoc, monitor) by
-        looping on the tiles and on the source blocks.
+        looping on the source blocks.
         """
-        for i, sitecol in enumerate(tiles, 1):
-            if len(tiles) > 1:
-                logging.info('Processing tile %d', i)
-            tile = Tile(sitecol, self.maximum_distance)
-            for kind in ('light', 'heavy'):
-                if self.filter_sources:
-                    logging.info('Filtering %s sources', kind)
-                sources = list(self.get_sources(kind, tile))
-                if not sources:
-                    continue
-                for src in sources:
-                    self.csm.filtered_weight += src.weight
-                nblocks = 0
-                for block in block_splitter(
-                        sources, self.maxweight,
-                        operator.attrgetter('weight'),
-                        operator.attrgetter('src_group_id')):
-                    grp_id = block[0].src_group_id
-                    rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
-                    yield block, sitecol, rlzs_by_gsim, self.monitor.new()
-                    nblocks += 1
-                logging.info('Sent %d sources in %d block(s)',
-                             len(sources), nblocks)
+        tile = Tile(sitecol, self.maximum_distance)
+        for kind in ('light', 'heavy'):
+            if self.filter_sources:
+                logging.info('Filtering %s sources', kind)
+            sources = list(self.get_sources(kind, tile))
+            if not sources:
+                continue
+            for src in sources:
+                self.csm.filtered_weight += src.weight
+            nblocks = 0
+            for block in block_splitter(
+                    sources, self.maxweight,
+                    operator.attrgetter('weight'),
+                    operator.attrgetter('src_group_id')):
+                grp_id = block[0].src_group_id
+                rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
+                yield block, sitecol, rlzs_by_gsim, self.monitor.new()
+                nblocks += 1
+            logging.info('Sent %d sources in %d block(s)',
+                         len(sources), nblocks)
 
     def pre_store_source_info(self, dstore):
         """

@@ -290,8 +290,8 @@ class PSHACalculator(base.HazardCalculator):
                 self.csm, oq.maximum_distance, oq.concurrent_tasks,
                 self.datastore, monitor, self.random_seed, oq.filter_sources,
                 num_tiles=self.num_tiles)
-            tm = parallel.starmap(
-                self.core_task.__func__, srcman.gen_args(tiles))
+            iterargs = parallel.broadcast(srcman.gen_args, tiles)
+            tm = parallel.starmap(self.core_task.__func__, iterargs)
             srcman.pre_store_source_info(self.datastore)
         pmap_by_grp_id = tm.reduce(self.agg_dicts, self.zerodict())
         self.save_data_transfer(tm)
