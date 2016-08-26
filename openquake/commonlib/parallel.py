@@ -255,24 +255,6 @@ def pickle_sequence(objects):
     return out
 
 
-def call_gen(gen, taskno, arg):
-    go = gen(arg)
-    while True:
-        try:
-            res = (next(go), None)
-        except StopIteration:
-            queue.put((taskno, StopIteration))
-            break
-        except Exception:
-            etype, exc, tb = sys.exc_info()
-            tb_str = ''.join(traceback.format_tb(tb))
-            res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc), etype)
-            queue.put(res)
-            break
-        else:
-            queue.put(res)
-
-
 class TaskManager(object):
     """
     A manager to submit several tasks of the same type.
@@ -341,20 +323,6 @@ class TaskManager(object):
         cls.apply.__func__._chunks = chunks
         logging.info('Starting %d tasks', len(chunks))
         return cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
-
-    @classmethod
-    def broadcast(cls, gen, lst):
-        for taskno, arg in enumerate(lst):
-            cls.executor.submit(call_gen, taskno, arg)
-        tasks = range(taskno)
-        while tasks:
-            val, etype = queue.get()
-            if etype is StopIteration:
-                tasks.remove(val)
-            elif etype:
-                raise etype(val)
-            else:
-                yield val
 
     def __init__(self, oqtask, name=None):
         self.task_func = oqtask
@@ -487,7 +455,6 @@ class TaskManager(object):
 # convenient aliases
 starmap = TaskManager.starmap
 apply = TaskManager.apply
-broadcast = TaskManager.broadcast
 
 
 def do_not_aggregate(acc, value):
@@ -589,3 +556,40 @@ class Processmap(Starmap):
     """
     poolfactory = staticmethod(multiprocessing.Pool)
     pool = None  # built at instantiation time
+
+
+def call_gen(gen, args, writer):
+    go = gen(*args)
+    while True:
+        try:
+            res = (next(go), None)
+        except Exception:
+            etype, exc, tb = sys.exc_info()
+            tb_str = ''.join(traceback.format_tb(tb))
+            res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc), etype)
+            writer.send(res)
+            break
+        else:
+            writer.send(res)
+    writer.close()
+
+
+def broadcast(gen, iterargs):
+    from multiprocessing.connection import wait
+    readers = []
+    for args in iterargs:
+        r, w = multiprocessing.Pipe()
+        readers.append(r)
+        multiprocessing.Process(target=call_gen, args=(gen, args, w)).start()
+    while readers:
+        for reader in wait(readers):
+            value, etype = reader.recv()
+            if etype is None:
+                yield value
+            elif etype is StopIteration:
+                reader.close()
+                readers.remove(reader)
+            else:
+                for reader in readers:
+                    reader.close()
+                raise etype(value)

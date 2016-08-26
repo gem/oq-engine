@@ -34,7 +34,7 @@ from openquake.baselib.general import (
     groupby, block_splitter, group_array)
 from openquake.hazardlib.site import Tile
 from openquake.commonlib import logictree, sourceconverter
-from openquake.commonlib import nrml, node
+from openquake.commonlib import nrml, node, datastore
 
 MAXWEIGHT = 200  # tuned by M. Simionato
 MAX_INT = 2 ** 31 - 1
@@ -733,14 +733,22 @@ class SourceManager(object):
     Manager associated to a CompositeSourceModel instance.
     Filter and split sources and send them to the worker tasks.
     """
+
+    @property
+    def dstore(self):
+        if self._dstore is None:
+            self._dstore = datastore.read(self.calc_id)
+        return self._dstore
+
     def __init__(self, csm, maximum_distance, concurrent_tasks,
-                 dstore, monitor, random_seed=None,
+                 calc_id, monitor, random_seed=None,
                  filter_sources=True, num_tiles=1):
         self.csm = csm
         self.maximum_distance = maximum_distance
         self.concurrent_tasks = concurrent_tasks or 1
+        self.calc_id = calc_id
         self.random_seed = random_seed
-        self.dstore = dstore
+        self._dstore = None
         self.monitor = monitor
         self.filter_sources = filter_sources
         self.num_tiles = num_tiles
@@ -830,7 +838,7 @@ class SourceManager(object):
                     ss.serial = src.serial[start:start + nr]
                     start += nr
 
-    def gen_args(self, sitecol):
+    def __call__(self, sitecol):
         """
         Yield (sources, sitecol, rlzs_assoc, monitor) by
         looping on the source blocks.
