@@ -1,7 +1,8 @@
 from __future__ import division
 import math
 import numpy
-from openquake.commonlib import sap, datastore
+from openquake.baselib import sap
+from openquake.commonlib import datastore
 from openquake.hazardlib.site import Tile
 
 
