@@ -35,7 +35,6 @@ from concurrent.futures import as_completed, ProcessPoolExecutor
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
 from openquake.baselib.general import split_in_blocks, AccumDict, humansize
-from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 
 executor = ProcessPoolExecutor()
 # the num_tasks_hint is chosen to be 2 times bigger than the name of
@@ -115,10 +114,9 @@ def safely_call(func, args, pickle=False):
         check_mem_usage(mon)  # check if too much memory is used
         mon.flush = NoFlush(mon, func.__name__)
         try:
-            with GroundShakingIntensityModel.forbid_instantiation():
-                got = func(*args)
-                if inspect.isgenerator(got):
-                    got = list(got)
+            got = func(*args)
+            if inspect.isgenerator(got):
+                got = list(got)
             res = got, None, mon
         except:
             etype, exc, tb = sys.exc_info()
