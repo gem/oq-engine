@@ -282,12 +282,7 @@ class TaskManager(object):
         :returns: a TaskManager object with a .result method.
         """
         self = cls(task, name)
-        for i, a in enumerate(task_args, 1):
-            if i == 1:  # first time
-                cls.progress('Submitting "%s" tasks', self.name)
-            if isinstance(a[-1], Monitor):  # add incremental task number
-                a[-1].task_no = i
-            self.submit(*a)
+        self.task_args = task_args
         return self
 
     @classmethod
@@ -418,14 +413,15 @@ class TaskManager(object):
         """
         if acc is None:
             acc = AccumDict()
-        num_tasks = len(self.results)
+        results = list(self)
+        num_tasks = len(results)
         if num_tasks == 0:
             logging.warn('No tasks were submitted')
             return acc
 
         agg_and_log = Aggregator(agg, self.name, num_tasks, self.progress)
         if self.no_distribute:
-            agg_result = reduce(agg_and_log, self.results, acc)
+            agg_result = reduce(agg_and_log, results, acc)
         else:
             self.progress('Sent %s of data in %d task(s)',
                           humansize(sum(self.sent.values())), num_tasks)
@@ -448,6 +444,12 @@ class TaskManager(object):
         """
         An iterator over the results
         """
+        for i, a in enumerate(self.task_args, 1):
+            if i == 1:  # first time
+                self.progress('Submitting "%s" tasks', self.name)
+            if isinstance(a[-1], Monitor):  # add incremental task number
+                a[-1].task_no = i
+            self.submit(*a)
         return iter(self.results)
 
 # convenient aliases
