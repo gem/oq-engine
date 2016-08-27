@@ -833,7 +833,7 @@ class SourceManager(object):
                 logging.info('Processing tile %d', i)
             tile = Tile(sitecol, self.maximum_distance)
             for kind in ('light', 'heavy'):
-                if self.filter_sources:
+                if self.filter_sources and self.num_tiles == 1:
                     logging.info('Filtering %s sources', kind)
                 sources = list(self.get_sources(kind, tile))
                 if not sources:
