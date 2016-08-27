@@ -18,7 +18,6 @@
 
 from __future__ import division
 import re
-import sys
 import copy
 import math
 import logging
@@ -29,11 +28,10 @@ import random
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import raise_, decode
-from openquake.baselib.general import (
-    AccumDict, groupby, block_splitter, group_array)
+from openquake.baselib.python3compat import decode
+from openquake.baselib.general import groupby, block_splitter, group_array
 from openquake.hazardlib.site import Tile
-from openquake.commonlib import logictree, sourceconverter
+from openquake.commonlib import logictree, sourceconverter, parallel
 from openquake.commonlib import nrml, node
 
 MAXWEIGHT = 200  # tuned by M. Simionato
@@ -728,6 +726,24 @@ source_info_dt = numpy.dtype([
 ])
 
 
+def split_filter(sources, tile, random_seed, monitor):
+    out = []
+    for src in sources:
+        with monitor:
+            start = 0
+            split_sources = []
+            for ss in sourceconverter.split_source(src):
+                if random_seed:
+                    nr = ss.num_ruptures
+                    ss.serial = src.serial[start:start + nr]
+                    start += nr
+                if ss in tile:
+                    ss.id = src.id
+                    split_sources.append(ss)
+        out.append((src, split_sources, 0, monitor.dt))
+    return out
+
+
 class SourceManager(object):
     """
     Manager associated to a CompositeSourceModel instance.
@@ -745,7 +761,6 @@ class SourceManager(object):
         self.filter_sources = filter_sources
         self.num_tiles = num_tiles
         self.rlzs_assoc = csm.info.get_rlzs_assoc()
-        self.split_map = {}  # src_group_id, source_id -> split sources
         self.infos = {}  # src_group_id, source_id -> SourceInfo tuple
 
         self.maxweight = math.ceil(csm.weight / self.concurrent_tasks)
@@ -755,13 +770,12 @@ class SourceManager(object):
                      self.maxweight)
         if random_seed is not None:
             # generate unique seeds for each rupture with numpy.arange
-            self.src_serial = {}
             n = sum(sg.tot_ruptures() for sg in self.csm.src_groups)
             rup_serial = numpy.arange(n, dtype=numpy.uint32)
             start = 0
             for src in self.csm.get_sources():
                 nr = src.num_ruptures
-                self.src_serial[src.id] = rup_serial[start:start + nr]
+                src.serial = rup_serial[start:start + nr]
                 start += nr
 
     def get_sources(self, kind, tile):
@@ -772,40 +786,33 @@ class SourceManager(object):
         """
         filter_mon = self.monitor('filtering sources')
         split_mon = self.monitor('splitting sources')
+        light, heavy = [], []
         for src in self.csm.get_sources(kind, self.maxweight):
-            filter_time = split_time = 0
             if self.filter_sources:
                 with filter_mon:
-                    try:
-                        if src not in tile:
-                            continue
-                    except:
-                        etype, err, tb = sys.exc_info()
-                        msg = 'An error occurred with source id=%s: %s'
-                        msg %= (src.source_id, err)
-                        raise_(etype, msg, tb)
+                    if src not in tile:
+                        continue
                 filter_time = filter_mon.dt
+            else:
+                filter_time = 0
             if kind == 'heavy':
-                if (src.src_group_id, src.id) not in self.split_map:
-                    with split_mon:
-                        sources = list(sourceconverter.split_source(src))
-                        if len(sources) > 1:
-                            logging.info('split %s of weight %s in %d',
-                                         src, src.weight, len(sources))
-                        self.split_map[src.src_group_id, src.id] = sources
-                    split_time = split_mon.dt
-                    self.set_serial(src, sources)
-                for ss in self.split_map[src.src_group_id, src.id]:
-                    ss.id = src.id
+                heavy.append(src)
+            else:
+                light.append((src, [], filter_time, 0))
+        if heavy:
+            heavy = parallel.apply(
+                split_filter, (heavy, tile, self.random_seed, split_mon),
+                self.concurrent_tasks, operator.attrgetter('weight')
+            ).reduce(acc=[])
+        for src, sources, filter_time, split_time in (light + heavy):
+            if sources:
+                for ss in sources:
                     yield ss
             else:
-                self.set_serial(src)
                 yield src
-            split_sources = self.split_map.get(
-                (src.src_group_id, src.id), [src])
             info = SourceInfo(src.src_group_id, src.source_id,
                               src.__class__.__name__,
-                              src.weight, len(split_sources),
+                              src.weight, len(sources),
                               filter_time, split_time, 0, 0, 0)
             key = (src.src_group_id, src.source_id)
             if key in self.infos:
@@ -815,20 +822,6 @@ class SourceManager(object):
 
         filter_mon.flush()
         split_mon.flush()
-
-    def set_serial(self, src, split_sources=()):
-        """
-        Set a serial number per each rupture in a source, managing also the
-        case of split sources, if any.
-        """
-        if self.random_seed is not None:
-            src.serial = self.src_serial[src.id]
-            if split_sources:
-                start = 0
-                for ss in split_sources:
-                    nr = ss.num_ruptures
-                    ss.serial = src.serial[start:start + nr]
-                    start += nr
 
     def gen_args(self, tiles):
         """
