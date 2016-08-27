@@ -292,6 +292,7 @@ class PSHACalculator(base.HazardCalculator):
                 num_tiles=self.num_tiles)
             tm = parallel.starmap(
                 self.core_task.__func__, srcman.gen_args(tiles))
+            list(tm)
             srcman.pre_store_source_info(self.datastore)
         pmap_by_grp_id = tm.reduce(self.agg_dicts, self.zerodict())
         self.save_data_transfer(tm)
