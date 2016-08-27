@@ -47,7 +47,8 @@ def dbcmd(action, *args):
 if __name__ == "__main__":
     os.environ.setdefault(
         "DJANGO_SETTINGS_MODULE", "openquake.server.settings")
-    # logs.dbcmd = dbcmd  ## turn this on when debugging
+    if '--nothreading' in sys.argv:
+        logs.dbcmd = dbcmd  # turn this on when debugging
     logs.dbcmd('reset_is_running')
     with executor:
         execute_from_command_line(sys.argv)
