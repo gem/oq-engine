@@ -35,9 +35,6 @@ from openquake.engine import config
 from openquake.server.db import actions
 from openquake.server import dbapi
 from openquake.server.settings import DATABASE
-import django
-if hasattr(django, 'setup'):  # >= 1.7
-    django.setup()
 
 queue = Queue()
 
