@@ -32,8 +32,9 @@ from openquake.baselib.general import groupby, DictArray
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
-from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 
+from openquake.hazardlib.imt import from_string
 
 def zero_curves(num_sites, imtls):
     """
@@ -173,39 +174,40 @@ def poe_map(src, s_sites, imtls, cmaker, trunclevel, bbs,
     store some information in the monitors and optionally in the
     bounding boxes.
     """
-    pmap = ProbabilityMap.build(
-        len(imtls.array), len(cmaker.gsims), s_sites.sids, initvalue=1.)
-    try:
-        for rup in src.iter_ruptures():
-            with ctx_mon:  # compute distances
-                try:
-                    sctx, rctx, dctx = cmaker.make_contexts(s_sites, rup)
-                except FarAwayRupture:
-                    continue
-            with pne_mon:  # compute probabilities and updates the pmap
-                pnes = get_probability_no_exceedance(
-                    rup, sctx, rctx, dctx, imtls, cmaker.gsims, trunclevel)
-                for sid, pne in zip(sctx.sites.sids, pnes):
-                    pmap[sid].array *= pne
+    with GroundShakingIntensityModel.forbid_instantiation():
+        pmap = ProbabilityMap.build(
+            len(imtls.array), len(cmaker.gsims), s_sites.sids, initvalue=1.)
+        try:
+            for rup in src.iter_ruptures():
+                with ctx_mon:  # compute distances
+                    try:
+                        sctx, rctx, dctx = cmaker.make_contexts(s_sites, rup)
+                    except FarAwayRupture:
+                        continue
+                with pne_mon:  # compute probabilities and updates the pmap
+                    pnes = get_probability_no_exceedance(
+                        rup, sctx, rctx, dctx, imtls, cmaker.gsims, trunclevel)
+                    for sid, pne in zip(sctx.sites.sids, pnes):
+                        pmap[sid].array *= pne
 
-            # add optional disaggregation information (bounding boxes)
-            if bbs:
-                with disagg_mon:
-                    sids = set(sctx.sites.sids)
-                    jb_dists = dctx.rjb
-                    closest_points = rup.surface.get_closest_points(
-                        sctx.sites.mesh)
-                    bs = [bb for bb in bbs if bb.site_id in sids]
-                    # NB: the assert below is always true; we are
-                    # protecting against possible refactoring errors
-                    assert len(bs) == len(jb_dists) == len(closest_points)
-                    for bb, dist, p in zip(bs, jb_dists, closest_points):
-                        bb.update([dist], [p.longitude], [p.latitude])
-    except Exception as err:
-        etype, err, tb = sys.exc_info()
-        msg = 'An error occurred with source id=%s. Error: %s'
-        msg %= (src.source_id, str(err))
-        raise_(etype, msg, tb)
+                # add optional disaggregation information (bounding boxes)
+                if bbs:
+                    with disagg_mon:
+                        sids = set(sctx.sites.sids)
+                        jb_dists = dctx.rjb
+                        closest_points = rup.surface.get_closest_points(
+                            sctx.sites.mesh)
+                        bs = [bb for bb in bbs if bb.site_id in sids]
+                        # NB: the assert below is always true; we are
+                        # protecting against possible refactoring errors
+                        assert len(bs) == len(jb_dists) == len(closest_points)
+                        for bb, dist, p in zip(bs, jb_dists, closest_points):
+                            bb.update([dist], [p.longitude], [p.latitude])
+        except Exception as err:
+            etype, err, tb = sys.exc_info()
+            msg = 'An error occurred with source id=%s. Error: %s'
+            msg %= (src.source_id, str(err))
+            raise_(etype, msg, tb)
     return ~pmap
 
 
