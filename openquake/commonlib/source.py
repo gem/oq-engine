@@ -785,7 +785,6 @@ class SourceManager(object):
         :returns: the sources of the given kind affecting the given tile
         """
         filter_mon = self.monitor('filtering sources')
-        split_mon = self.monitor('splitting sources')
         light, heavy = [], []
         for src in self.csm.get_sources(kind, self.maxweight):
             if self.filter_sources:
@@ -800,11 +799,21 @@ class SourceManager(object):
             else:
                 light.append((src, [], filter_time, 0))
         if heavy:
+            mon = self.monitor.new()
             heavy = parallel.apply(
-                split_filter, (heavy, tile, self.random_seed, split_mon),
+                split_filter, (heavy, tile, self.random_seed, mon),
                 self.concurrent_tasks, operator.attrgetter('weight')
             ).reduce(acc=[])
-        for src, sources, filter_time, split_time in (light + heavy):
+        for src in self.save_infos(heavy + light):
+            yield src
+        filter_mon.flush()
+
+    def save_infos(self, srcs_times):
+        """
+        :param srcs_times:
+            a quartet (src, split_sources, filter_time, split_time)
+        """
+        for src, sources, filter_time, split_time in srcs_times:
             if sources:
                 for ss in sources:
                     yield ss
@@ -819,9 +828,6 @@ class SourceManager(object):
                 self.infos[key] += info
             else:
                 self.infos[key] = info
-
-        filter_mon.flush()
-        split_mon.flush()
 
     def gen_args(self, tiles):
         """
