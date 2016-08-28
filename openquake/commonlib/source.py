@@ -770,6 +770,7 @@ class SourceManager(object):
             if sources:  # heavy
                 for block in block_splitter(sources, self.maxweight,
                                             operator.attrgetter('weight')):
+                    block.from_heavy = True
                     yield block, sites
             else:
                 light[sites].append(src)  # sites here is a tile index
@@ -788,6 +789,7 @@ class SourceManager(object):
                     srcs, self.maxweight,
                     operator.attrgetter('weight'),
                     operator.attrgetter('src_group_id')):
+                block.from_heavy = False
                 yield block, tile.sitecol
 
     def gen_args(self, sitecol, tiles):
@@ -855,7 +857,8 @@ class SourceManager(object):
                         start += nr
                     ss.id = src.id
                     split_sources.append(ss)
-            logging.info('Splitting %s in %d sources', src, len(split_sources))
+            logging.info('Splitting %s of weight %d in %d sources',
+                         src, src.weight, len(split_sources))
             srcs_times.append((src, sites, split_sources, 0, split_mon.dt))
         split_mon.flush()
         return self._gen_args(srcs_times, [sitecol])
