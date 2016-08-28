@@ -726,20 +726,20 @@ source_info_dt = numpy.dtype([
 ])
 
 
-def split_filter(sources, tile, random_seed, monitor):
+def split_filter(sources, tiles, random_seed, monitor):
     out = []
     for src in sources:
         with monitor:
-            start = 0
             split_sources = []
+            start = 0
             for ss in sourceconverter.split_source(src):
                 if random_seed:
                     nr = ss.num_ruptures
                     ss.serial = src.serial[start:start + nr]
                     start += nr
-                if ss in tile:
-                    ss.id = src.id
-                    split_sources.append(ss)
+                ss.id = src.id
+                ss.tile_mask = numpy.array(
+                    [ss in tile for tile in tiles], dtype=bool)
         out.append((src, split_sources, 0, monitor.dt))
     return out
 
@@ -778,33 +778,33 @@ class SourceManager(object):
                 src.serial = rup_serial[start:start + nr]
                 start += nr
 
-    def get_sources(self, kind, tile):
+    def get_sources(self, kind, tiles):
         """
         :param kind: a string 'light', 'heavy' or 'all'
         :param tile: a :class:`openquake.hazardlib.site.Tile` instance
         :returns: the sources of the given kind affecting the given tile
         """
         filter_mon = self.monitor('filtering sources')
-        light, heavy = [], []
+        sources = []
         for src in self.csm.get_sources(kind, self.maxweight):
             if self.filter_sources:
                 with filter_mon:
-                    if src not in tile:
-                        continue
+                    src.tile_mask = numpy.array(
+                        [src in tile for tile in tiles], dtype=bool)
                 filter_time = filter_mon.dt
             else:
                 filter_time = 0
             if kind == 'heavy':
-                heavy.append(src)
+                sources.append(src)
             else:
-                light.append((src, [], filter_time, 0))
-        if heavy:
+                sources.append((src, [], filter_time, 0))
+        if kind == 'heavy' and sources:
             mon = self.monitor.new()
-            heavy = parallel.apply(
-                split_filter, (heavy, tile, self.random_seed, mon),
+            sources = parallel.apply(
+                split_filter, (sources, tiles, self.random_seed, mon),
                 self.concurrent_tasks, operator.attrgetter('weight')
             ).reduce(acc=[])
-        for src in self.save_infos(heavy + light):
+        for src in self.save_infos(sources):
             yield src
         filter_mon.flush()
 
@@ -834,28 +834,30 @@ class SourceManager(object):
         Yield (sources, sitecol, rlzs_assoc, monitor) by
         looping on the tiles and on the source blocks.
         """
-        for i, sitecol in enumerate(tiles, 1):
-            if len(tiles) > 1:
-                logging.info('Processing tile %d', i)
-            tile = Tile(sitecol, self.maximum_distance)
-            for kind in ('light', 'heavy'):
-                if self.filter_sources and self.num_tiles == 1:
-                    logging.info('Filtering %s sources', kind)
-                sources = list(self.get_sources(kind, tile))
-                if not sources:
+        mon = self.monitor.new()
+        tiles = [Tile(tile, self.maximum_distance) for tile in tiles]
+        for kind in ('light', 'heavy'):
+            if self.filter_sources and self.num_tiles == 1:
+                logging.info('Filtering %s sources', kind)
+            sources = list(self.get_sources(kind, tiles))
+            for src in sources:
+                self.csm.filtered_weight += src.weight
+            for i, tile in enumerate(tiles):
+                if self.num_tiles > 1:
+                    logging.info('Processing tile %d', i + 1)
+                srcs = [src for src in sources if src.tile_mask[i]]
+                if not srcs:
                     continue
-                for src in sources:
-                    self.csm.filtered_weight += src.weight
                 nblocks = 0
                 for block in block_splitter(
-                        sources, self.maxweight,
+                        srcs, self.maxweight,
                         operator.attrgetter('weight'),
                         operator.attrgetter('src_group_id')):
                     grp_id = block[0].src_group_id
                     rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
-                    yield block, sitecol, rlzs_by_gsim, self.monitor.new()
+                    yield block, tile.sitecol, rlzs_by_gsim, mon
                     nblocks += 1
-                logging.info('Sent %d sources in %d block(s)',
+                logging.info('Sent %d sources in %d tasks(s)',
                              len(sources), nblocks)
 
     def pre_store_source_info(self, dstore):
