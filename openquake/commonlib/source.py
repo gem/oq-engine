@@ -804,9 +804,8 @@ class SourceManager(object):
                 split_filter, (sources, tiles, self.random_seed, mon),
                 self.concurrent_tasks, operator.attrgetter('weight')
             ).reduce(acc=[])
-        for src in self.save_infos(sources):
-            yield src
         filter_mon.flush()
+        return list(self.save_infos(sources))
 
     def save_infos(self, srcs_times):
         """
@@ -839,7 +838,7 @@ class SourceManager(object):
         for kind in ('light', 'heavy'):
             if self.filter_sources and self.num_tiles == 1:
                 logging.info('Filtering %s sources', kind)
-            sources = list(self.get_sources(kind, tiles))
+            sources = self.get_sources(kind, tiles)
             for src in sources:
                 self.csm.filtered_weight += src.weight
             for i, tile in enumerate(tiles):
