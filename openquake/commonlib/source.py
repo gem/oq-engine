@@ -782,6 +782,7 @@ class SourceManager(object):
                 self.infos[key] += info
             else:
                 self.infos[key] = info
+        # light
         for srcs, tile in zip(light, tiles):
             for block in block_splitter(
                     srcs, self.maxweight,
@@ -789,14 +790,14 @@ class SourceManager(object):
                     operator.attrgetter('src_group_id')):
                 yield block, tile.sitecol
 
-    def gen_args(self, tiles):
+    def gen_args(self, sitecol, tiles):
         """
         Yield (sources, sites, rlzs_assoc, monitor) by
         looping on the tiles and on the source blocks.
         """
         for args in self._gen_args_light(tiles):
             yield args
-        for args in self._gen_args_heavy(tiles):
+        for args in self._gen_args_heavy(sitecol):
             yield args
 
     def _gen_args(self, srcs_times, tiles):
@@ -834,9 +835,8 @@ class SourceManager(object):
                          len(data), i + 1)
         return self._gen_args(srcs_times, tiles)
 
-    def _gen_args_heavy(self, tiles):
+    def _gen_args_heavy(self, sitecol):
         split_mon = self.monitor('splitting sources')
-        sitecol = tiles[0].complete
         sources = self.csm.get_sources('heavy', self.maxweight)
         srcs_times = []
         for src in sources:
@@ -858,7 +858,7 @@ class SourceManager(object):
             logging.info('Splitting %s in %d sources', src, len(split_sources))
             srcs_times.append((src, sites, split_sources, 0, split_mon.dt))
         split_mon.flush()
-        return self._gen_args(srcs_times, tiles)
+        return self._gen_args(srcs_times, [sitecol])
 
     def pre_store_source_info(self, dstore):
         """
