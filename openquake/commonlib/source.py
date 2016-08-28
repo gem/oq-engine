@@ -760,19 +760,19 @@ class SourceManager(object):
                 src.serial = rup_serial[start:start + nr]
                 start += nr
 
-    def gen_blocks(self, srcs_times):
+    def gen_blocks(self, srcs_times, tiles):
         """
         :param srcs_times:
             a 5-uple (src, sites, split_sources, filter_time, split_time)
         """
-        light = []
+        light = [[] for tile in tiles]
         for src, sites, sources, filter_time, split_time in srcs_times:
             if sources:  # heavy
                 for block in block_splitter(sources, self.maxweight,
                                             operator.attrgetter('weight')):
                     yield block, sites
             else:
-                light.append(src)
+                light[sites].append(src)  # sites here is a tile index
             info = SourceInfo(src.src_group_id, src.source_id,
                               src.__class__.__name__,
                               src.weight, len(sources),
@@ -782,11 +782,12 @@ class SourceManager(object):
                 self.infos[key] += info
             else:
                 self.infos[key] = info
-        for block in block_splitter(
-                light, self.maxweight,
-                operator.attrgetter('weight'),
-                operator.attrgetter('src_group_id')):
-            yield block, sites
+        for srcs, tile in zip(light, tiles):
+            for block in block_splitter(
+                    srcs, self.maxweight,
+                    operator.attrgetter('weight'),
+                    operator.attrgetter('src_group_id')):
+                yield block, tile.sitecol
 
     def gen_args(self, tiles):
         """
@@ -798,13 +799,13 @@ class SourceManager(object):
         for args in self._gen_args_heavy(tiles):
             yield args
 
-    def _gen_args(self, srcs_times):
+    def _gen_args(self, srcs_times, tiles):
         if not srcs_times:
             return
         mon = self.monitor.new()
         nblocks = 0
         nsources = 0
-        for block, sites in self.gen_blocks(srcs_times):
+        for block, sites in self.gen_blocks(srcs_times, tiles):
             grp_id = block[0].src_group_id
             rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
             nsources += len(block)
@@ -819,18 +820,19 @@ class SourceManager(object):
             logging.info('Filtering light sources')
         sources = self.csm.get_sources('light', self.maxweight)
         srcs_times = []
-        for i, tile in enumerate(tiles, 1):
+        for i, tile in enumerate(tiles):
             for src in sources:
+                data = []
                 with filter_mon:
                     ok = src in tile
                 if ok:
-                    srcs_times.append(
-                        (src, tile.sitecol, [], filter_mon.dt, 0))
+                    data.append((src, i, [], filter_mon.dt, 0))
                 self.csm.filtered_weight += src.weight
+            srcs_times.extend(data)
             filter_mon.flush()
-            logging.info('Got %d light sources from tile %d',
-                         len(srcs_times), i)
-        return self._gen_args(srcs_times)
+            logging.info('Got %d light source(s) from tile %d',
+                         len(data), i + 1)
+        return self._gen_args(srcs_times, tiles)
 
     def _gen_args_heavy(self, tiles):
         split_mon = self.monitor('splitting sources')
@@ -856,7 +858,7 @@ class SourceManager(object):
             logging.info('Splitting %s in %d sources', src, len(split_sources))
             srcs_times.append((src, sites, split_sources, 0, split_mon.dt))
         split_mon.flush()
-        return self._gen_args(srcs_times)
+        return self._gen_args(srcs_times, tiles)
 
     def pre_store_source_info(self, dstore):
         """
