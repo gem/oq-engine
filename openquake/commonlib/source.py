@@ -821,8 +821,8 @@ class SourceManager(object):
         sources = self.csm.get_sources('light', self.maxweight)
         srcs_times = []
         for i, tile in enumerate(tiles):
+            data = []
             for src in sources:
-                data = []
                 with filter_mon:
                     ok = src in tile
                 if ok:
