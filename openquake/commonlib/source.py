@@ -20,6 +20,7 @@ from __future__ import division
 import re
 import copy
 import math
+import time
 import logging
 import operator
 import collections
@@ -726,26 +727,25 @@ source_info_dt = numpy.dtype([
 ])
 
 
-def split_filter(src, sites, max_dist, random_seed, monitor):
+def split_filter(src, sites, max_dist, random_seed):
     """
     :param src: an heavy source
     :param sites: the sites affected by the source
     :random_seed: used only for event based calculations
-    :parameter monitor: a Monitor instance
     """
-    with monitor:
-        split_sources = []
-        start = 0
-        for ss in sourceconverter.split_source(src):
-            if random_seed:
-                nr = ss.num_ruptures
-                ss.serial = src.serial[start:start + nr]
-                start += nr
-            ss.id = src.id
-            s = ss.filter_sites_by_distance_to_source(max_dist, sites)
-            if s is not None:
-                split_sources.append(ss)
-    return [(src, sites, split_sources, 0, monitor.dt)]
+    t0 = time.time()
+    split_sources = []
+    start = 0
+    for ss in sourceconverter.split_source(src):
+        if random_seed:
+            nr = ss.num_ruptures
+            ss.serial = src.serial[start:start + nr]
+            start += nr
+        ss.id = src.id
+        s = ss.filter_sites_by_distance_to_source(max_dist, sites)
+        if s is not None:
+            split_sources.append(ss)
+    return [(src, sites, split_sources, 0, time.time() - t0)]
 
 
 class SourceManager(object):
@@ -817,11 +817,11 @@ class SourceManager(object):
         Yield (sources, sites, rlzs_assoc, monitor) by
         looping on the tiles and on the source blocks.
         """
+        for args in self._gen_args_heavy(sitecol):
+            yield args
         for args_per_tile in self._gen_args_light(tiles):
             for args in args_per_tile:
                 yield args
-        for args in self._gen_args_heavy(sitecol):
-            yield args
 
     def _gen_args(self, srcs_times, tiles):
         if not srcs_times:
@@ -852,13 +852,12 @@ class SourceManager(object):
                     data.append((src, i, [], filter_mon.dt, 0))
                 self.csm.filtered_weight += src.weight
             filter_mon.flush()
-            logging.info('Got %d light source(s) from tile %d',
-                         len(data), i + 1)
+            if len(tiles) > 1:
+                logging.info('Got %d light source(s) from tile %d',
+                             len(data), i + 1)
             yield self._gen_args(data, tiles)
 
     def _gen_args_heavy(self, sitecol):
-        split_mon = self.monitor.new('splitting sources')
-        logging.info('Getting heavy sources')
         sources = self.csm.get_sources('heavy', self.maxweight)
 
         def gen_srcs():
@@ -868,7 +867,7 @@ class SourceManager(object):
                     self.maximum_distance[src.tectonic_region_type], sitecol)
                 if sites is not None:
                     max_dist = self.maximum_distance[src.tectonic_region_type]
-                    yield src, sites, max_dist, self.random_seed, split_mon
+                    yield src, sites, max_dist, self.random_seed
 
         srcs_times = parallel.starmap(split_filter, gen_srcs()).reduce(acc=[])
         return self._gen_args(srcs_times, [sitecol])
