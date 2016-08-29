@@ -32,7 +32,7 @@ from openquake.baselib.python3compat import decode
 from openquake.baselib.general import groupby, block_splitter, group_array
 from openquake.hazardlib.site import Tile
 from openquake.commonlib import logictree, sourceconverter
-from openquake.commonlib import nrml, node
+from openquake.commonlib import nrml, node, parallel
 
 MAXWEIGHT = 200  # tuned by M. Simionato
 MAX_INT = 2 ** 31 - 1
@@ -726,6 +726,28 @@ source_info_dt = numpy.dtype([
 ])
 
 
+def split_filter(src, sites, max_dist, random_seed, monitor):
+    """
+    :param src: an heavy source
+    :param sites: the sites affected by the source
+    :random_seed: used only for event based calculations
+    :parameter monitor: a Monitor instance
+    """
+    with monitor:
+        split_sources = []
+        start = 0
+        for ss in sourceconverter.split_source(src):
+            if random_seed:
+                nr = ss.num_ruptures
+                ss.serial = src.serial[start:start + nr]
+                start += nr
+            ss.id = src.id
+            s = ss.filter_sites_by_distance_to_source(max_dist, sites)
+            if s is not None:
+                split_sources.append(ss)
+    return [(src, sites, split_sources, 0, monitor.dt)]
+
+
 class SourceManager(object):
     """
     Manager associated to a CompositeSourceModel instance.
@@ -770,7 +792,6 @@ class SourceManager(object):
             if sources:  # heavy
                 for block in block_splitter(sources, self.maxweight,
                                             operator.attrgetter('weight')):
-                    block.from_heavy = True
                     yield block, sites
             else:
                 light[sites].append(src)  # sites here is a tile index
@@ -789,7 +810,6 @@ class SourceManager(object):
                     srcs, self.maxweight,
                     operator.attrgetter('weight'),
                     operator.attrgetter('src_group_id')):
-                block.from_heavy = False
                 yield block, tile.sitecol
 
     def gen_args(self, sitecol, tiles):
@@ -837,29 +857,20 @@ class SourceManager(object):
             yield self._gen_args(data, tiles)
 
     def _gen_args_heavy(self, sitecol):
-        split_mon = self.monitor('splitting sources')
+        split_mon = self.monitor.new('splitting sources')
+        logging.info('Getting heavy sources')
         sources = self.csm.get_sources('heavy', self.maxweight)
-        srcs_times = []
-        for src in sources:
-            self.csm.filtered_weight += src.weight
-            sites = src.filter_sites_by_distance_to_source(
-                self.maximum_distance[src.tectonic_region_type], sitecol)
-            if sites is None:
-                continue
-            with split_mon:
-                split_sources = []
-                start = 0
-                for ss in sourceconverter.split_source(src):
-                    if self.random_seed:
-                        nr = ss.num_ruptures
-                        ss.serial = src.serial[start:start + nr]
-                        start += nr
-                    ss.id = src.id
-                    split_sources.append(ss)
-            logging.info('Splitting %s of weight %d in %d sources',
-                         src, src.weight, len(split_sources))
-            srcs_times.append((src, sites, split_sources, 0, split_mon.dt))
-        split_mon.flush()
+
+        def gen_srcs():
+            for src in sources:
+                self.csm.filtered_weight += src.weight
+                sites = src.filter_sites_by_distance_to_source(
+                    self.maximum_distance[src.tectonic_region_type], sitecol)
+                if sites is not None:
+                    max_dist = self.maximum_distance[src.tectonic_region_type]
+                    yield src, sites, max_dist, self.random_seed, split_mon
+
+        srcs_times = parallel.starmap(split_filter, gen_srcs()).reduce(acc=[])
         return self._gen_args(srcs_times, [sitecol])
 
     def pre_store_source_info(self, dstore):
