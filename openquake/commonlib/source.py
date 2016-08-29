@@ -797,8 +797,9 @@ class SourceManager(object):
         Yield (sources, sites, rlzs_assoc, monitor) by
         looping on the tiles and on the source blocks.
         """
-        for args in self._gen_args_light(tiles):
-            yield args
+        for args_per_tile in self._gen_args_light(tiles):
+            for args in args_per_tile:
+                yield args
         for args in self._gen_args_heavy(sitecol):
             yield args
 
@@ -835,7 +836,7 @@ class SourceManager(object):
             filter_mon.flush()
             logging.info('Got %d light source(s) from tile %d',
                          len(data), i + 1)
-        return self._gen_args(srcs_times, tiles)
+            yield self._gen_args(srcs_times, tiles)
 
     def _gen_args_heavy(self, sitecol):
         split_mon = self.monitor('splitting sources')
