@@ -414,14 +414,11 @@ def ucerf_classical_hazard_by_branch(branchnames, ucerf_source, src_group_id,
     return dic
 
 
-@base.calculators.add('ucerf_classical')
-class UCERFClassicalCalculator(classical.PSHACalculator):
+@base.calculators.add('ucerf_psha')
+class UcerfPSHACalculator(classical.PSHACalculator):
     """
-    Event based PSHA calculator generating the ruptures only
     """
     core_task = ucerf_classical_hazard_by_branch
-    # TODO Do I need this?
-    etags = datastore.persistent_attribute('etags')
     is_stochastic = False
 
     def pre_execute(self):
@@ -499,3 +496,8 @@ class UCERFClassicalCalculator(classical.PSHACalculator):
             functools.partial(self.count_eff_ruptures, pmap_by_grp_id))
         self.datastore['csm_info'] = self.csm.info
         return pmap_by_grp_id
+
+
+@base.calculators.add('ucerf_classical')
+class UCERFClassicalCalculator(classical.ClassicalCalculator):
+    pre_calculator = 'ucerf_psha'
