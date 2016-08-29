@@ -21,7 +21,7 @@ import re
 import types
 import logging
 import warnings
-from decorator import contextmanager
+from contextlib import contextmanager
 from xml.sax.saxutils import escape, quoteattr
 
 import numpy  # this is needed by the doctests, don't remove it
