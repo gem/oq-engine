@@ -217,6 +217,7 @@ def create_outputs(db, job_id, dskeys):
     Build a correspondence between the outputs in the datastore and the
     ones in the database.
 
+    :param db: a :class:`openquake.server.dbapi.Db` instance
     :param job_id: ID of the current job
     :param dskeys: a list of datastore keys
     """
@@ -226,7 +227,14 @@ def create_outputs(db, job_id, dskeys):
 
 def finish(db, job_id, status):
     """
-    Set the job columns `is_running`, `status`, and `stop_time`
+    Set the job columns `is_running`, `status`, and `stop_time`.
+
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        ID of the current job
+    :param status:
+        a string such as 'successful' or 'failed'
     """
     db('UPDATE job SET ?D WHERE id=?x',
        dict(is_running=False, status=status, stop_time=datetime.utcnow()),
@@ -237,6 +245,7 @@ def del_calc(db, job_id, user):
     """
     Delete a calculation and all associated outputs, if possible.
 
+    :param db: a :class:`openquake.server.dbapi.Db` instance
     :param job_id: job ID
     :param user: username
     :returns: None if everything went fine or an error message
@@ -258,7 +267,20 @@ def del_calc(db, job_id, user):
 
 def log(db, job_id, timestamp, level, process, message):
     """
-    Write a log record in the database
+    Write a log record in the database.
+
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        a job ID
+    :param timestamp:
+        timestamp to store in the log record
+    :param level:
+        logging level to store in the log record
+    :param process:
+        process ID to store in the log record
+    :param message:
+        message to store in the log record
     """
     db('INSERT INTO log (job_id, timestamp, level, process, message) '
        'VALUES (?X)', (job_id, timestamp, level, process, message))
