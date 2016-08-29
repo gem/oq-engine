@@ -27,7 +27,6 @@ with attributes `value`, `weight`, `lt_path` and `ordinal`.
 import os
 import re
 import sys
-import abc
 import random
 import itertools
 import collections
@@ -440,7 +439,7 @@ class SourceModelLogicTree(object):
         self.basepath = os.path.dirname(filename)
         self.seed = seed
         self.num_samples = num_samples
-        self.branches = {}
+        self.branches = {}  # branch_id -> branch
         self.open_ends = set()
         self.source_ids = set()
         self.tectonic_region_types = set()

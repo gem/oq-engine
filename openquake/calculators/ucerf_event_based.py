@@ -513,7 +513,7 @@ class UCERFSESControl(object):
                  npd=NPD, hdd=HDD, aspect=1.5, upper_seismogenic_depth=0.0,
                  lower_seismogenic_depth=15.0, msr=WC1994(), mesh_spacing=1.0,
                  trt="Active Shallow Crust", integration_distance=1000):
-        assert os.path.exists(source_file)
+        assert os.path.exists(source_file), source_file 
         self.source_file = source_file
         self.source_id = id
         self.inv_time = investigation_time
