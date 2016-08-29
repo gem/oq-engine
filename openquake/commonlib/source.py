@@ -731,6 +731,7 @@ def split_filter(src, sites, max_dist, random_seed):
     """
     :param src: an heavy source
     :param sites: the sites affected by the source
+    :param max_dist: maximum distance for the current TRT
     :random_seed: used only for event based calculations
     """
     t0 = time.time()
