@@ -20,8 +20,8 @@ from __future__ import print_function
 import os
 import logging
 
-from openquake.baselib import general, performance
-from openquake.commonlib import sap, datastore
+from openquake.baselib import general, performance, sap
+from openquake.commonlib import datastore
 from openquake.commonlib.export import export as export_
 
 
