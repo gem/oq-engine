@@ -7,7 +7,7 @@ xmlns:gml="http://www.opengis.net/gml"
     name="UCERF TRUE MEAN MODEL"
     >
         <UCERFSource
-        filename="UCERF_TRUE_MEAN_v2.hdf5"
+        filename="UCERF_TRUE_MEAN_REDUX_v2.hdf5"
         id="001"
         minMag="5.0"
         tectonicRegion="Active Shallow Crust"

@@ -344,7 +344,7 @@ def ucerf_classical_hazard_by_rupture_set(
                 source_site_filter=source_site_distance_filter(max_dist),
                 maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
 
-            dic[src_group_id] += dic2[src_group_id]
+            dic[src_group_id] |= dic2[src_group_id]
             dic.eff_ruptures[src_group_id] += monitor.eff_ruptures
             dic.calc_times += monitor.calc_times
     return dic
