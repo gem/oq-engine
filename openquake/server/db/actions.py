@@ -327,7 +327,8 @@ def save_performance(db, job_id, records):
 # used in make_report
 def fetch(db, templ, *args):
     """
-    Run queries directly on the database
+    Run generic queries directly on the database. See the documentation
+    of the dbapi module.
 
     :param db: a :class:`openquake.server.dbapi.Db` instance
     :param templ: a SQL query template
@@ -465,6 +466,8 @@ def get_log_slice(db, job_id, start, stop):
     logs = db('SELECT * FROM log WHERE job_id=?x '
               'ORDER BY id LIMIT ?s OFFSET ?s',
               job_id, limit, start)
+    # NB: .isoformat() returns a string like '2016-08-29T15:42:34.984756'
+    # we consider only the first 22 characters, i.e. '2016-08-29T15:42:34.98'
     return [[log.timestamp.isoformat()[:22], log.level,
              log.process, log.message] for log in logs]
 

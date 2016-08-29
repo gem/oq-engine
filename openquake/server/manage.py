@@ -49,6 +49,7 @@ if __name__ == "__main__":
         "DJANGO_SETTINGS_MODULE", "openquake.server.settings")
     if '--nothreading' in sys.argv:
         logs.dbcmd = dbcmd  # turn this on when debugging
-    logs.dbcmd('reset_is_running')
+    logs.dbcmd('upgrade_db')  # make sure the DB exists
+    logs.dbcmd('reset_is_running')  # reset the flag is_running
     with executor:
         execute_from_command_line(sys.argv)
