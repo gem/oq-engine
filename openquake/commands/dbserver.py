@@ -17,7 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import sys
 from openquake.risklib import valid
-from openquake.commonlib import sap
+from openquake.baselib import sap
 from openquake.engine import logs, config
 from openquake.server import dbserver as dbs
 
