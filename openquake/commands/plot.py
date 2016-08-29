@@ -17,7 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
-from openquake.commonlib import sap, datastore
+from openquake.baselib import sap
+from openquake.commonlib import datastore
 from openquake.commands.show import get_hcurves_and_means
 
 
