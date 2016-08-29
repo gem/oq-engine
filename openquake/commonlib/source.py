@@ -817,11 +817,11 @@ class SourceManager(object):
         Yield (sources, sites, rlzs_assoc, monitor) by
         looping on the tiles and on the source blocks.
         """
-        for args in self._gen_args_heavy(sitecol):
-            yield args
         for args_per_tile in self._gen_args_light(tiles):
             for args in args_per_tile:
                 yield args
+        for args in self._gen_args_heavy(sitecol):
+            yield args
 
     def _gen_args(self, srcs_times, tiles):
         if not srcs_times:
