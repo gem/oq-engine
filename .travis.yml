@@ -3,7 +3,7 @@ sudo: false
 language: python
 
 python:
- - "3.4"
+ - "3.5"
 
 addons:
   apt:
@@ -11,10 +11,7 @@ addons:
     - parallel
 
 install:
-  - pip install http://ftp.openquake.org/python-wheels/Cython-0.22.1-cp34-cp34m-linux_x86_64.whl
-  - pip install http://ftp.openquake.org/python-wheels/Shapely-1.5.9-py3-none-any.whl
-  - pip install http://ftp.openquake.org/python-wheels/scipy-0.16.0-cp34-cp34m-linux_x86_64.whl
-  - pip install http://ftp.openquake.org/python-wheels/h5py-2.5.0-cp34-cp34m-linux_x86_64.whl
+  - pip install -r requirements-py35-linux64.txt
   - python setup.py develop
 
 script:

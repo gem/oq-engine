@@ -17,7 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import ast
-import pydoc
+import importlib
 try:  # with Python 3
     from urllib.parse import quote_plus, unquote_plus
 except ImportError:  # with Python 2
@@ -25,56 +25,32 @@ except ImportError:  # with Python 2
 import collections
 import numpy
 import h5py
-from openquake.baselib.python3compat import pickle
+from openquake.baselib.python3compat import pickle, decode
 
 vbytes = h5py.special_dtype(vlen=bytes)
+vstr = h5py.special_dtype(vlen=str)
 
 
-class Hdf5Dataset(object):
+def create(hdf5, name, dtype, shape=(None,), compression=None,
+           fillvalue=0, attrs=None):
     """
-    Little wrapper around an (extendable) HDF5 dataset. Extendable datasets
-    are useful for logging information incrementally into an HDF5 file.
+    :param hdf5: a h5py.File object
+    :param name: an hdf5 key string
+    :param dtype: dtype of the dataset (usually composite)
+    :param shape: shape of the dataset (can be extendable)
+    :param compression: None or 'gzip' are recommended
+    :param attrs: dictionary of attributes of the dataset
+    :returns: a HDF5 dataset
     """
-    @classmethod
-    def create(cls, hdf5, name, dtype, shape=None, compression=None):
-        """
-        :param hdf5: a h5py.File object
-        :param name: an hdf5 key string
-        :param dtype: dtype of the dataset (usually composite)
-        :param shape: shape of the dataset (if None, the dataset is extendable)
-        :param compression: None or 'gzip' are recommended
-        """
-        if shape is None:  # extendable dataset
-            dset = hdf5.create_dataset(
-                name, (0,), dtype, chunks=True, maxshape=(None,))
-        else:  # fixed-shape dataset
-            dset = hdf5.create_dataset(name, shape, dtype)
-        return cls(dset)
-
-    def __init__(self, dset):
-        self.dset = dset
-        self.file = dset.file
-        self.name = dset.name
-        self.dtype = dset.dtype
-        self.attrs = dset.attrs
-        self.length = len(dset)
-
-    def extend(self, array):
-        """
-        Extend the dataset with the given array, which must have
-        the expected dtype. This method will give an error if used
-        with a fixed-shape dataset.
-        """
-        newlength = self.length + len(array)
-        self.dset.resize((newlength,))
-        self.dset[self.length:newlength] = array
-        self.length = newlength
-
-    def append(self, tup):
-        """
-        Append a compatible tuple of data to the underlying dataset
-        """
-        self.extend(numpy.array([tup], self.dtype))
+    if shape[0] is None:  # extendable dataset
+        dset = hdf5.create_dataset(
+            name, (0,) + shape[1:], dtype, chunks=True, maxshape=shape)
+    else:  # fixed-shape dataset
+        dset = hdf5.create_dataset(name, shape, dtype, fillvalue=fillvalue)
+    if attrs:
+        for k, v in attrs.items():
+            dset.attrs[k] = v
+    return dset
 
 
 def extend(dset, array):
@@ -83,7 +59,7 @@ def extend(dset, array):
     """
     length = len(dset)
     newlength = length + len(array)
-    dset.resize((newlength,))
+    dset.resize((newlength,) + array.shape[1:])
     dset[length:newlength] = array
 
 
@@ -133,10 +109,9 @@ class LiteralAttrs(object):
 
     def __fromh5__(self, array, attrs):
         dd = collections.defaultdict(dict)
-        for (name, literal) in array:
-            if isinstance(literal, numpy.object_):
-                # needed for Python3 compatibility
-                literal = repr(literal)
+        for (name_, literal_) in array:
+            name = decode(name_)
+            literal = decode(literal_)
             if '.' in name:
                 k1, k2 = name.split('.', 1)
                 dd[k1][k2] = ast.literal_eval(literal)
@@ -222,8 +197,9 @@ class File(h5py.File):
                 self[key] = v
         else:
             super(File, self).__setitem__(path, obj)
-        a = super(File, self).__getitem__(path).attrs
         if pyclass:
+            self.flush()  # make sure it is fully saved
+            a = super(File, self).__getitem__(path).attrs
             a['__pyclass__'] = pyclass
             for k, v in sorted(attrs.items()):
                 a[k] = v
@@ -232,7 +208,9 @@ class File(h5py.File):
         h5obj = super(File, self).__getitem__(path)
         h5attrs = h5obj.attrs
         if '__pyclass__' in h5attrs:
-            cls = pydoc.locate(h5attrs['__pyclass__'])
+            # NB: the `decode` below is needed for Python 3
+            modname, clsname = decode(h5attrs['__pyclass__']).rsplit('.', 1)
+            cls = getattr(importlib.import_module(modname), clsname)
             obj = cls.__new__(cls)
             if not hasattr(h5obj, 'shape'):  # is group
                 h5obj = {unquote_plus(k): self['%s/%s' % (path, k)]
@@ -243,10 +221,10 @@ class File(h5py.File):
             return h5obj
 
 
-def array_of_bytes(lst):
+def array_of_vstr(lst):
     """
-    :param lst: a list of unicode strings or bytes
-    :returns: an array of byte strings encode in UTF8
+    :param lst: a list of strings or bytes
+    :returns: an array of variable length ASCII strings
     """
     ls = []
     for el in lst:
@@ -254,4 +232,4 @@ def array_of_bytes(lst):
             ls.append(el.encode('utf-8'))
         except AttributeError:
             ls.append(el)
-    return numpy.array(ls, bytes)
+    return numpy.array(ls, vstr)
