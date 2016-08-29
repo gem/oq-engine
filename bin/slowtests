@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from openquake.commonlib import sap
+from openquake.baselib import sap
 from openquake.commonlib.node import node_from_xml
 
 @sap.Script
