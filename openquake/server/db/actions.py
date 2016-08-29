@@ -39,6 +39,8 @@ END AS job_type
 def check_outdated(db):
     """
     Check if the db is outdated, called before starting anything
+
+    :param db: a :class:`openquake.server.dbapi.Db` instance
     """
     return upgrader.check_versions(db.conn)
 
@@ -48,6 +50,8 @@ def reset_is_running(db):
     Reset the flag job.is_running to False. This is called when the
     Web UI is re-started: the idea is that it is restarted only when
     all computations are completed.
+
+    :param db: a :class:`openquake.server.dbapi.Db` instance
     """
     db('UPDATE job SET is_running=0 WHERE is_running=1')
 
@@ -56,6 +60,8 @@ def create_job(db, calc_mode, description, user_name, datadir, hc_id=None):
     """
     Create job for the given user, return it.
 
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
     :param str calc_mode:
         Calculation mode, such as classical, event_based, etc
     :param user_name:
@@ -83,7 +89,10 @@ def create_job(db, calc_mode, description, user_name, datadir, hc_id=None):
 
 def delete_uncompleted_calculations(db, user):
     """
-    Delete the uncompleted calculations of the given user
+    Delete the uncompleted calculations of the given user.
+
+    :param db: a :class:`openquake.server.dbapi.Db` instance
+    :param user: user name
     """
     db("DELETE FROM job WHERE user_name=?x AND status != 'complete'", user)
 
@@ -92,6 +101,11 @@ def get_job_id(db, job_id, username):
     """
     If job_id is negative, return the last calculation of the current
     user, otherwise returns the job_id unchanged.
+
+    :param db: a :class:`openquake.server.dbapi.Db` instance
+    :param job_id: a job ID (can be negative and can be nonexisting)
+    :param username: an user name
+    :returns: a valid job ID or None if the original job ID was invalid
     """
     job_id = int(job_id)
     if job_id > 0:
@@ -109,6 +123,10 @@ def get_calc_id(db, datadir, job_id=None):
     """
     Return the latest calc_id by looking both at the datastore
     and the database.
+
+    :param db: a :class:`openquake.server.dbapi.Db` instance
+    :param datadir: the directory containing the datastores
+    :param job_id: a job ID; if None, returns the latest job ID
     """
     calcs = datastore.get_calc_ids(datadir)
     calc_id = 0 if not calcs else calcs[-1]
@@ -125,7 +143,9 @@ def list_calculations(db, job_type, user_name):
     """
     Yield a summary of past calculations.
 
+    :param db: a :class:`openquake.server.dbapi.Db` instance
     :param job_type: 'hazard' or 'risk'
+    :param user_name: an user name
     """
     jobs = db('SELECT *, %s FROM job WHERE user_name=?x '
               'AND job_type=?x ORDER BY start_time' % JOB_TYPE,
@@ -155,6 +175,8 @@ def list_outputs(db, job_id, full=True):
     List the outputs for a given
     :class:`~openquake.server.db.models.OqJob`.
 
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
     :param job_id:
         ID of a calculation.
     :param bool full:
@@ -178,6 +200,8 @@ def list_outputs(db, job_id, full=True):
 
 def get_outputs(db, job_id):
     """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
     :param job_id:
         ID of a calculation.
     :returns:
@@ -243,6 +267,9 @@ def log(db, job_id, timestamp, level, process, message):
 def get_log(db, job_id):
     """
     Extract the logs as a big string
+
+    :param db: a :class:`openquake.server.dbapi.Db` instance
+    :param job_id: a job ID
     """
     logs = db('SELECT * FROM log WHERE job_id=?x ORDER BY id', job_id)
     for log in logs:
@@ -252,6 +279,7 @@ def get_log(db, job_id):
 
 def get_output(db, output_id):
     """
+    :param db: a :class:`openquake.server.dbapi.Db` instance
     :param output_id: ID of an Output object
     :returns: (ds_key, calc_id, dirname)
     """
@@ -262,7 +290,11 @@ def get_output(db, output_id):
 
 def save_performance(db, job_id, records):
     """
-    Save in the database the performance information about the given job
+    Save in the database the performance information about the given job.
+
+    :param db: a :class:`openquake.server.dbapi.Db` instance
+    :param job_id: a job ID
+    :param records: a list of performance records
     """
     rows = [(job_id, rec['operation'], rec['time_sec'], rec['memory_mb'],
              rec['counts']) for rec in records]
@@ -274,13 +306,18 @@ def save_performance(db, job_id, records):
 def fetch(db, templ, *args):
     """
     Run queries directly on the database
+
+    :param db: a :class:`openquake.server.dbapi.Db` instance
+    :param templ: a SQL query template
+    :param args: arguments to pass to the template
     """
     return db(templ, *args)
 
 
 def get_dbpath(db):
     """
-    Returns the path to the database file
+    :param db: a :class:`openquake.server.dbapi.Db` instance
+    :returns: the path to the database file.
     """
     curs = db('PRAGMA database_list')
     # return a row with fields (id, dbname, dbpath)
@@ -290,15 +327,25 @@ def get_dbpath(db):
 # ########################## upgrade operations ########################## #
 
 def what_if_I_upgrade(db, extract_scripts):
+    """
+    :param db: a :class:`openquake.server.dbapi.Db` instance
+    :param extract_scripts: scripts to extract
+    """
     return upgrade_manager.what_if_I_upgrade(
         db.conn, extract_scripts=extract_scripts)
 
 
 def version_db(db):
+    """
+    :param db: a :class:`openquake.server.dbapi.Db` instance
+    """
     return upgrade_manager.version_db(db.conn)
 
 
 def upgrade_db(db):
+    """
+    :param db: a :class:`openquake.server.dbapi.Db` instance
+    """
     return upgrade_manager.upgrade_db(db.conn)
 
 
@@ -306,6 +353,7 @@ def upgrade_db(db):
 
 def calc_info(db, calc_id):
     """
+    :param db: a :class:`openquake.server.dbapi.Db` instance
     :param calc_id: calculation ID
     :returns: dictionary of info about the given calculation
     """
@@ -321,6 +369,16 @@ def calc_info(db, calc_id):
 
 def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param request_get_dict:
+        a dictionary
+    :param user_name:
+        user name
+    :param user_acl_on:
+        if True, returns only the calculations owned by the user
+    :param id:
+        if given, extract only the specified calculation
     :returns:
         list of tuples (job_id, user_name, job_status, job_type,
                         job_is_running, job_description)
@@ -352,49 +410,79 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
              job.is_running, job.description) for job in jobs]
 
 
-def set_relevant(db, calc_id, flag):
+def set_relevant(db, job_id, flag):
     """
-    Set the `relevant` field of the given calculation record
+    Set the `relevant` field of the given calculation record.
+
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        a job ID
+    :param flag:
+        flag for the field job.relevant
     """
-    db('UPDATE job SET relevant=?x WHERE id=?x', flag, calc_id)
+    db('UPDATE job SET relevant=?x WHERE id=?x', flag, job_id)
 
 
-def get_log_slice(db, calc_id, start, stop):
+def get_log_slice(db, job_id, start, stop):
     """
     Get a slice of the calculation log as a JSON list of rows
+
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        a job ID
+    :param start:
+        start of the slice
+    :param stop:
+        end of the slice (the last element is excluded)
     """
     start = int(start)
     stop = int(stop)
     limit = -1 if stop == 0 else stop - start
     logs = db('SELECT * FROM log WHERE job_id=?x '
               'ORDER BY id LIMIT ?s OFFSET ?s',
-              calc_id, limit, start)
+              job_id, limit, start)
     return [[log.timestamp.isoformat()[:22], log.level,
              log.process, log.message] for log in logs]
 
 
-def get_log_size(db, calc_id):
+def get_log_size(db, job_id):
     """
-    Get a slice of the calculation log as a JSON list of rows
+    Get a slice of the calculation log as a JSON list of rows.
+
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        a job ID
     """
-    return db('SELECT count(id) FROM log WHERE job_id=?x', calc_id,
+    return db('SELECT count(id) FROM log WHERE job_id=?x', job_id,
               scalar=True)
 
 
-def get_traceback(db, calc_id):
+def get_traceback(db, job_id):
     """
     Return the traceback of the given calculation as a list of lines.
     The list is empty if the calculation was successful.
+
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        a job ID
     """
     # strange: understand why the filter returns two lines
     log = db("SELECT * FROM log WHERE job_id=?x AND level='CRITICAL'",
-             calc_id)[-1]
+             job_id)[-1]
     response_data = log.message.splitlines()
     return response_data
 
 
 def get_result(db, result_id):
     """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param result_id:
+        a result ID
     :returns: (job_id, job_status, datadir, datastore_key)
     """
     job = db('SELECT job.*, ds_key FROM job, output WHERE '
@@ -404,6 +492,10 @@ def get_result(db, result_id):
 
 def get_results(db, job_id):
     """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        a job ID
     :returns: (datadir, datastore_keys)
     """
     ds_calc_dir = db('SELECT ds_calc_dir FROM job WHERE id=?x', job_id,
