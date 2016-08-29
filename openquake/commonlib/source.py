@@ -823,7 +823,6 @@ class SourceManager(object):
         if self.filter_sources and self.num_tiles == 1:
             logging.info('Filtering light sources')
         sources = self.csm.get_sources('light', self.maxweight)
-        srcs_times = []
         for i, tile in enumerate(tiles):
             data = []
             for src in sources:
@@ -832,11 +831,10 @@ class SourceManager(object):
                 if ok:
                     data.append((src, i, [], filter_mon.dt, 0))
                 self.csm.filtered_weight += src.weight
-            srcs_times.extend(data)
             filter_mon.flush()
             logging.info('Got %d light source(s) from tile %d',
                          len(data), i + 1)
-            yield self._gen_args(srcs_times, tiles)
+            yield self._gen_args(data, tiles)
 
     def _gen_args_heavy(self, sitecol):
         split_mon = self.monitor('splitting sources')
