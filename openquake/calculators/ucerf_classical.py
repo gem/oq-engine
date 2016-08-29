@@ -286,7 +286,14 @@ def ucerf_classical_hazard_by_rupture_set(
         rupset_idxs, branchname, ucerf_source, src_group_id, sitecol,
         rlzs_assoc, monitor):
     """
-
+    :param rupset_idxs:
+        indices of the rupture sets
+    :param branchname:
+        name of the branch
+    :param ucerf_source:
+        an object taking the place of a source for UCERF
+    :param src_group_id:
+        source group index
     :param sitecol:
         a SiteCollection instance
     :param rlzs_assoc:
@@ -463,11 +470,10 @@ class UCERFClassicalCalculator(classical.PSHACalculator):
         acc.calc_times = []
         acc.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         acc.bb_dict = {}
-
         if len(self.csm) > 1:
             # when multiple branches, parallelise by branch
             branches = [branch.value
-                        for _, branch in self.smlt.branches.items()]
+                        for branch in self.smlt.branches.values()]
             # Run parallelizing by branch
             pmap_by_grp_id = parallel.apply(
                  ucerf_classical_hazard_by_branch,
@@ -477,10 +483,10 @@ class UCERFClassicalCalculator(classical.PSHACalculator):
                      agg=self.agg_dicts, acc=acc)
         else:
             # single branch, parallelize by rupture subsets
-            branchname = self.smlt.branches.items()[0][1]
+            [(branch_id, branch)] = self.smlt.branches.items()
+            branchname = branch.value
             rup_sets = self.csm.get_sources()[0].get_rupture_indices(
-                branchname,
-                split=monitor.oqparam.rupture_split)
+                branchname, split=monitor.oqparam.rupture_split)
             pmap_by_grp_id = parallel.apply(
                 ucerf_classical_hazard_by_rupture_set,
                 (rup_sets, branchname, ucerf_source, self.src_group.id,
