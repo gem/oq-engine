@@ -859,17 +859,18 @@ class SourceManager(object):
 
     def _gen_args_heavy(self, sitecol):
         sources = self.csm.get_sources('heavy', self.maxweight)
-
-        def gen_srcs():
-            for src in sources:
-                self.csm.filtered_weight += src.weight
-                sites = src.filter_sites_by_distance_to_source(
-                    self.maximum_distance[src.tectonic_region_type], sitecol)
-                if sites is not None:
-                    max_dist = self.maximum_distance[src.tectonic_region_type]
-                    yield src, sites, max_dist, self.random_seed
-
-        srcs_times = parallel.starmap(split_filter, gen_srcs()).reduce(acc=[])
+        data = []
+        for src in sources:
+            self.csm.filtered_weight += src.weight
+            sites = src.filter_sites_by_distance_to_source(
+                self.maximum_distance[src.tectonic_region_type], sitecol)
+            if sites is not None:
+                max_dist = self.maximum_distance[src.tectonic_region_type]
+                data.append((src, sites, max_dist, self.random_seed))
+        if len(data) == 1:
+            srcs_times = split_filter(*data[0])
+        else:
+            srcs_times = parallel.starmap(split_filter, data).reduce(acc=[])
         return self._gen_args(srcs_times, [sitecol])
 
     def pre_store_source_info(self, dstore):
