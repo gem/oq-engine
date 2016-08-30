@@ -259,6 +259,7 @@ class HeaderTranslator(object):
 
 htranslator = HeaderTranslator(
     '(asset_ref):\|S100',
+    '(event_tag):\|S100',
     '(rup_id):uint32',
     '(taxonomy):\|S100',
     '(rupserial):uint32',
