@@ -174,7 +174,8 @@ class Aggregator(object):
             raise RuntimeError(val)
         res = self.agg(acc, val)
         next(self.log_percent)
-        mon.flush()
+        if isinstance(mon, Monitor):
+            mon.flush()
         return res
 
 
