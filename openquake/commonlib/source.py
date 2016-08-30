@@ -785,7 +785,7 @@ class SourceManager(object):
                 src.serial = rup_serial[start:start + nr]
                 start += nr
 
-    def gen_blocks(self, srcs_times, tiles):
+    def _sources_sites(self, srcs_times, tiles):
         """
         :param srcs_times:
             a 5-uple (src, sites, split_sources, filter_time, split_time)
@@ -797,9 +797,7 @@ class SourceManager(object):
         light = [[] for tile in tiles]
         for src, sites, sources, filter_time, split_time in srcs_times:
             if sources:  # heavy
-                for block in block_splitter(sources, self.maxweight,
-                                            operator.attrgetter('weight')):
-                    yield block, sites
+                yield sources, sites
             else:
                 light[sites].append(src)  # sites here is a tile index
             info = SourceInfo(src.src_group_id, src.source_id,
@@ -812,23 +810,21 @@ class SourceManager(object):
             else:
                 self.infos[key] = info
         # light
-        for srcs, tile in zip(light, tiles):
-            for block in block_splitter(
-                    srcs, self.maxweight,
-                    operator.attrgetter('weight'),
-                    operator.attrgetter('src_group_id')):
-                yield block, tile.sitecol
+        for sources, sites in zip(light, tiles):
+            yield sources, sites
 
     def gen_args(self, sitecol, tiles):
         """
         Yield (sources, sites, rlzs_assoc, monitor) by
         looping on the tiles and on the source blocks.
         """
-        for args_per_tile in self._gen_args_light(tiles):
-            for args in args_per_tile:
+        for srcs_times in self._gen_args_light(tiles):
+            for args in self._gen_args(srcs_times, tiles):
                 yield args
-        for args in self._gen_args_heavy(sitecol):
-            yield args
+        tile = Tile(sitecol, self.maximum_distance)
+        for srcs_times in self._gen_args_heavy(sitecol):
+            for args in self._gen_args(srcs_times, [tile]):
+                yield args
 
     def _gen_args(self, srcs_times, tiles):
         if not srcs_times:
@@ -836,12 +832,16 @@ class SourceManager(object):
         mon = self.monitor.new()
         nblocks = 0
         nsources = 0
-        for block, sites in self.gen_blocks(srcs_times, tiles):
-            grp_id = block[0].src_group_id
-            rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
-            nsources += len(block)
-            nblocks += 1
-            yield block, sites, rlzs_by_gsim, mon
+        for sources, sites in self._sources_sites(srcs_times, tiles):
+            for block in block_splitter(
+                    sources, self.maxweight,
+                    operator.attrgetter('weight'),
+                    operator.attrgetter('src_group_id')):
+                grp_id = block[0].src_group_id
+                rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
+                nsources += len(block)
+                nblocks += 1
+                yield block, sites, rlzs_by_gsim, mon
         logging.info('Sent %d sources in %d tasks(s)', nsources, nblocks)
 
     def _gen_args_light(self, tiles):
@@ -862,7 +862,7 @@ class SourceManager(object):
             if len(tiles) > 1:
                 logging.info('Got %d light source(s) from tile %d',
                              len(data), i + 1)
-            yield self._gen_args(data, tiles)
+            yield data
 
     def _gen_args_heavy(self, sitecol):
         sources = self.csm.get_sources('heavy', self.maxweight)
@@ -874,8 +874,7 @@ class SourceManager(object):
             if sites is not None:
                 max_dist = self.maximum_distance[src.tectonic_region_type]
                 data.append((src, sites, max_dist, self.random_seed))
-        srcs_times = parallel.starmap(split_filter, data).reduce(acc=[])
-        return self._gen_args(srcs_times, [sitecol])
+        return parallel.starmap(split_filter, data)
 
     def pre_store_source_info(self, dstore):
         """
