@@ -830,8 +830,6 @@ class SourceManager(object):
         if not srcs_times:
             return
         mon = self.monitor.new()
-        nblocks = 0
-        nsources = 0
         for sources, sites in self._sources_sites(srcs_times, tiles):
             for block in block_splitter(
                     sources, self.maxweight,
@@ -839,10 +837,7 @@ class SourceManager(object):
                     operator.attrgetter('src_group_id')):
                 grp_id = block[0].src_group_id
                 rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
-                nsources += len(block)
-                nblocks += 1
                 yield block, sites, rlzs_by_gsim, mon
-        logging.info('Sent %d sources in %d tasks(s)', nsources, nblocks)
 
     def _gen_args_light(self, tiles):
         filter_mon = self.monitor('filtering sources')
