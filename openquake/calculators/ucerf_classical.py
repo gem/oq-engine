@@ -116,6 +116,7 @@ class UCERFControl(UCERFSESControl):
             self.idx_set = self.build_idx_set(branch_id)
         with h5py.File(self.source_file, "r") as hdf5:
             idxs = np.arange(len(hdf5[self.idx_set["rate_idx"]]))
+        logging.info('Found %d ruptures in branch %s', len(idxs), branch_id)
         return np.array_split(idxs, split) if split else idxs
 
     def filter_sites_by_distance_from_rupture_set(
