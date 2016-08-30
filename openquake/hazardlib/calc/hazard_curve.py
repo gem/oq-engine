@@ -32,6 +32,8 @@ from openquake.baselib.general import groupby, DictArray
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
+from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
+
 from openquake.hazardlib.imt import from_string
 
 
@@ -46,21 +48,6 @@ def zero_curves(num_sites, imtls):
                           for imt, imls in imtls.items()])
     zero = numpy.zeros(num_sites, imt_dt)
     return zero
-
-
-def zero_maps(num_sites, imts, poes=()):
-    """
-    :param num_sites: the number of sites
-    :param imts: the intensity measure types
-    :returns: an array of zero curves with length num_sites
-    """
-    # numpy dtype for the hazard maps
-    if poes:
-        imt_dt = numpy.dtype([('%s-%s' % (imt, poe), numpy.float32)
-                              for imt in imts for poe in poes])
-    else:
-        imt_dt = numpy.dtype([(imt, numpy.float32) for imt in imts])
-    return numpy.zeros(num_sites, imt_dt)
 
 
 def agg_curves(acc, curves):
@@ -222,22 +209,23 @@ def hazard_curves_per_trt(
 
     :returns: a ProbabilityMap instance
     """
-    imtls = DictArray(imtls)
-    cmaker = ContextMaker(gsims, maximum_distance)
-    sources_sites = ((source, sites) for source in sources)
-    ctx_mon = monitor('making contexts', measuremem=False)
-    pne_mon = monitor('computing poes', measuremem=False)
-    disagg_mon = monitor('get closest points', measuremem=False)
-    monitor.calc_times = []  # pairs (src_id, delta_t)
-    pmap = ProbabilityMap()
-    for src, s_sites in source_site_filter(sources_sites):
-        t0 = time.time()
-        pmap |= poe_map(src, s_sites, imtls, cmaker, truncation_level, bbs,
-                        ctx_mon, pne_mon, disagg_mon)
-        # we are attaching the calculation times to the monitor
-        # so that oq-lite (and the engine) can store them
-        monitor.calc_times.append((src.id, time.time() - t0))
-        # NB: source.id is an integer; it should not be confused
-        # with source.source_id, which is a string
-    monitor.eff_ruptures = pne_mon.counts  # contributing ruptures
-    return pmap
+    with GroundShakingIntensityModel.forbid_instantiation():
+        imtls = DictArray(imtls)
+        cmaker = ContextMaker(gsims, maximum_distance)
+        sources_sites = ((source, sites) for source in sources)
+        ctx_mon = monitor('making contexts', measuremem=False)
+        pne_mon = monitor('computing poes', measuremem=False)
+        disagg_mon = monitor('get closest points', measuremem=False)
+        monitor.calc_times = []  # pairs (src_id, delta_t)
+        pmap = ProbabilityMap()
+        for src, s_sites in source_site_filter(sources_sites):
+            t0 = time.time()
+            pmap |= poe_map(src, s_sites, imtls, cmaker, truncation_level, bbs,
+                            ctx_mon, pne_mon, disagg_mon)
+            # we are attaching the calculation times to the monitor
+            # so that oq-lite (and the engine) can store them
+            monitor.calc_times.append((src.id, time.time() - t0))
+            # NB: source.id is an integer; it should not be confused
+            # with source.source_id, which is a string
+        monitor.eff_ruptures = pne_mon.counts  # contributing ruptures
+        return pmap
