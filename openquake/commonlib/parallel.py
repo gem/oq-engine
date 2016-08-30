@@ -296,7 +296,7 @@ class TaskManager(object):
 
     @classmethod
     def apply(cls, task, task_args,
-              concurrent_tasks=executor._max_workers * 2,
+              concurrent_tasks=executor.num_tasks_hint,
               weight=lambda item: 1,
               key=lambda item: 'Unspecified',
               name=None):
