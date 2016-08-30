@@ -267,10 +267,10 @@ def hazard_curves_per_rupture_subset(rupset_idx, ucerf_source, sites, imtls,
 
 
 def ucerf_classical_hazard_by_rupture_set(
-        rupset_idxs, branchname, ucerf_source, src_group_id, sitecol,
-        rlzs_assoc, monitor):
+        rupset_idx, branchname, ucerf_source, src_group_id, sitecol,
+        gsims, monitor):
     """
-    :param rupset_idxs:
+    :param rupset_idx:
         indices of the rupture sets
     :param branchname:
         name of the branch
@@ -280,8 +280,8 @@ def ucerf_classical_hazard_by_rupture_set(
         source group index
     :param sitecol:
         a SiteCollection instance
-    :param rlzs_assoc:
-        a RlzsAssoc instance
+    :param gsims:
+        a list of GSIMs
     :param monitor:
         a monitor instance
     :returns:
@@ -289,60 +289,56 @@ def ucerf_classical_hazard_by_rupture_set(
     """
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.imtls
-    gsims = rlzs_assoc.gsims_by_grp_id[src_group_id]
     max_dist = monitor.oqparam.maximum_distance[DEFAULT_TRT]
 
     dic = AccumDict()
     dic.bbs = []
     dic.calc_times = []
-    # Two step process here - the first generates the hazard curves from the
-    # rupture sets
     monitor.eff_ruptures = 0
+    monitor.calc_times = []
+
     # Apply the initial rupture to site filtering
-    for rupset_idx in rupset_idxs:
-        rupset_idx, s_sites = \
-            ucerf_source.filter_sites_by_distance_from_rupture_set(
-                rupset_idx, sitecol,
-                monitor.oqparam.maximum_distance[DEFAULT_TRT])
+    rupset_idx, s_sites = \
+        ucerf_source.filter_sites_by_distance_from_rupture_set(
+            rupset_idx, sitecol,
+            monitor.oqparam.maximum_distance[DEFAULT_TRT])
 
-        if len(s_sites):
-            dic[src_group_id] = hazard_curves_per_rupture_subset(
-                rupset_idx, ucerf_source, s_sites, imtls, gsims,
-                truncation_level, maximum_distance=max_dist, bbs=dic.bbs,
-                monitor=monitor)
+    if len(s_sites):
+        dic[src_group_id] = hazard_curves_per_rupture_subset(
+            rupset_idx, ucerf_source, s_sites, imtls, gsims,
+            truncation_level, maximum_distance=max_dist, bbs=dic.bbs,
+            monitor=monitor)
 
-        else:
-            dic[src_group_id] = ProbabilityMap()
-        dic.calc_times += monitor.calc_times  # added by hazard_curves_per_trt
-        dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
+    else:
+        dic[src_group_id] = ProbabilityMap()
+    dic.calc_times += monitor.calc_times  # added by hazard_curves_per_trt
+    dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
 
-        logging.info('Branch %s', branchname)
-        # Get the background point sources
-        bckgnd_sources = ucerf_source.get_background_sources(
-            branchname, sitecol, max_dist)
-        if len(bckgnd_sources):
-            dic2 = AccumDict()
-            dic2[src_group_id] = hazard_curves_per_trt(
-                bckgnd_sources,
-                sitecol, imtls, gsims, truncation_level,
-                source_site_filter=source_site_distance_filter(max_dist),
-                maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
+    # Get the background point sources
+    bckgnd_sources = ucerf_source.get_background_sources(
+        branchname, sitecol, max_dist)
+    if len(bckgnd_sources):
+        dic2 = AccumDict()
+        dic2[src_group_id] = hazard_curves_per_trt(
+            bckgnd_sources, sitecol, imtls, gsims, truncation_level,
+            source_site_filter=source_site_distance_filter(max_dist),
+            maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
 
-            dic[src_group_id] |= dic2[src_group_id]
-            dic.eff_ruptures[src_group_id] += monitor.eff_ruptures
-            dic.calc_times += monitor.calc_times
+        dic[src_group_id] |= dic2[src_group_id]
+        dic.eff_ruptures[src_group_id] += monitor.eff_ruptures
+        dic.calc_times += monitor.calc_times
     return dic
 
 
 def ucerf_classical_hazard_by_branch(branchnames, ucerf_source, src_group_id,
-                                     sitecol, rlzs_assoc, monitor):
+                                     sitecol, gsims, monitor):
     """
     :param sources:
         a non-empty sequence of sources of homogeneous tectonic region type
     :param sitecol:
         a SiteCollection instance
-    :param rlzs_assoc:
-        a RlzsAssoc instance
+    :param gsims:
+        a list of GSIMs
     :param monitor:
         a monitor instance
     :returns:
@@ -350,14 +346,12 @@ def ucerf_classical_hazard_by_branch(branchnames, ucerf_source, src_group_id,
     """
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.imtls
-    gsims = rlzs_assoc.gsims_by_grp_id[src_group_id]
     trt = ucerf_source.tectonic_region_type
     max_dist = monitor.oqparam.maximum_distance[trt]
 
     dic = AccumDict()
     dic.bbs = []
     dic.calc_times = []
-    
     for branchname in branchnames:
         # Two step process here - the first generates the hazard curves from
         # the rupture sets
@@ -379,7 +373,7 @@ def ucerf_classical_hazard_by_branch(branchnames, ucerf_source, src_group_id,
             dic[src_group_id] = ProbabilityMap()
         dic.calc_times += monitor.calc_times  # added by hazard_curves_per_trt
         dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
-        logging.info('Branchname for Background %s', branchname)
+        logging.info('Branch %s', branchname)
         # Get the background point sources
         bckgnd_sources = ucerf_source.get_background_sources(branchname,
                                                              sitecol,
@@ -437,6 +431,11 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         self.infos = []
         self.num_tiles = 1
 
+    def gen_args(self, branches, ucerf_source, monitor):
+        for grp_id, branch in enumerate(branches):
+            gsims = list(self.rlzs_assoc.get_rlzs_by_gsim(grp_id))
+            yield branch, ucerf_source, grp_id, self.sitecol, gsims, monitor
+
     def execute(self):
         """
         Run in parallel `core_task(sources, sitecol, monitor)`, by
@@ -451,27 +450,24 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         acc.calc_times = []
         acc.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         acc.bb_dict = {}
+
         if len(self.csm) > 1:
             # when multiple branches, parallelise by branch
-            branches = [branch.value
-                        for branch in self.smlt.branches.values()]
-            # Run parallelizing by branch
-            pmap_by_grp_id = parallel.apply(
-                 ucerf_classical_hazard_by_branch,
-                 (branches, ucerf_source, self.src_group.id, self.sitecol,
-                  self.rlzs_assoc, monitor),
-                 concurrent_tasks=self.oqparam.concurrent_tasks).reduce(
-                     agg=self.agg_dicts, acc=acc)
+            branches = [br.value for br in self.smlt.branches.values()]
+            pmap_by_grp_id = parallel.starmap(
+                ucerf_classical_hazard_by_branch,
+                self.gen_args(branches, ucerf_source, monitor).reduce(
+                     agg=self.agg_dicts, acc=acc))
         else:
             # single branch, parallelize by rupture subsets
+            rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(0)
             [(branch_id, branch)] = self.smlt.branches.items()
             branchname = branch.value
-            rup_sets = self.csm.get_sources()[0].get_rupture_indices(
-                branchname, self.oqparam.concurrent_tasks)
+            rup_sets = ucerf_source.get_rupture_indices(branchname)
             pmap_by_grp_id = parallel.apply(
                 ucerf_classical_hazard_by_rupture_set,
                 (rup_sets, branchname, ucerf_source, self.src_group.id,
-                 self.sitecol, self.rlzs_assoc, monitor),
+                 self.sitecol, list(rlzs_by_gsim), monitor),
                 concurrent_tasks=self.oqparam.concurrent_tasks).reduce(
                     agg=self.agg_dicts, acc=acc)
 
