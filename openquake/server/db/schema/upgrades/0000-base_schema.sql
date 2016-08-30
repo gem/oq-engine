@@ -17,13 +17,15 @@ CREATE TABLE log(
      timestamp TIMESTAMP NOT NULL,
      level TEXT NOT NULL,
      process TEXT NOT NULL,
-     message TEXT NOT NULL);   
+     message TEXT NOT NULL);
+
 CREATE TABLE output(
      id INTEGER PRIMARY KEY AUTOINCREMENT,     
      oq_job_id INTEGER NOT NULL REFERENCES job (id) ON DELETE CASCADE,
      display_name TEXT NOT NULL,
      last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
      ds_key TEXT NOT NULL);
+
 CREATE TABLE performance(
      id INTEGER PRIMARY KEY AUTOINCREMENT,
      job_id INTEGER NOT NULL REFERENCES job (id) ON DELETE CASCADE,
