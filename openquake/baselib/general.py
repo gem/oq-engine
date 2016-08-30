@@ -643,7 +643,8 @@ class DictArray(collections.Mapping):
     def __fromh5__(self, carray, attrs):
         self.array = carray[:].view(F64)
         self.imt_dt = dt = numpy.dtype(
-            [(imt, F64, len(carray[0][imt])) for imt in carray.dtype.names])
+            [(str(imt), F64, len(carray[0][imt]))
+             for imt in carray.dtype.names])
         self.slicedic, num_levels = _slicedict_n(dt)
         for imt in carray.dtype.names:
             self[imt] = carray[0][imt]
