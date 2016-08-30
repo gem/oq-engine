@@ -18,6 +18,7 @@
 
 import sys
 import socket
+import sqlite3
 import os.path
 import logging
 try:
@@ -28,15 +29,12 @@ from threading import Thread
 from multiprocessing import Process
 from multiprocessing.connection import Listener
 
-from openquake.commonlib import sap
+from openquake.baselib import sap
 from openquake.commonlib.parallel import safely_call
 from openquake.engine import config
 from openquake.server.db import actions
+from openquake.server import dbapi
 from openquake.server.settings import DATABASE
-from django.db import connection
-import django
-if hasattr(django, 'setup'):  # >= 1.7
-    django.setup()
 
 queue = Queue()
 
@@ -63,7 +61,7 @@ def run_command(cmd, args, conn):
         conn.close()
 
 
-def run_commands():
+def run_commands(db):
     """
     Execute the received commands in a queue.
     """
@@ -73,17 +71,17 @@ def run_commands():
             conn.send((None, None))
             conn.close()
             break
-        run_command(cmd, args, conn)
+        run_command(cmd, (db,) + args, conn)
 
 
 class DbServer(object):
     """
     A server collecting the received commands into a queue
     """
-    def __init__(self, address, authkey):
+    def __init__(self, db, address, authkey):
         self.address = address
         self.authkey = authkey
-        self.thread = Thread(target=run_commands)
+        self.thread = Thread(target=run_commands, args=(db,))
 
     def loop(self):
         listener = Listener(self.address, backlog=5, authkey=self.authkey)
@@ -152,13 +150,15 @@ def run_server(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
         os.makedirs(dirname)
 
     # create and upgrade the db if needed
-    curs = connection.cursor()  # bind the db
-    curs.execute('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
-    actions.upgrade_db()
+    db = dbapi.Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
+                  detect_types=sqlite3.PARSE_DECLTYPES)
+    db('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
+    actions.upgrade_db(db)
+    db.conn.close()
 
     # configure logging and start the server
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
-    DbServer(addr, config.DBS_AUTHKEY).loop()
+    DbServer(db, addr, config.DBS_AUTHKEY).loop()
 
 run_server.arg('dbpathport', 'dbpath:port')
 run_server.arg('logfile', 'log file')

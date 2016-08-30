@@ -26,9 +26,9 @@ from xml.etree.ElementTree import iterparse
 from openquake.baselib.general import groupby
 from openquake.risklib import scientific
 from openquake.commonlib.nrml import NRML05
-from openquake.commonlib import sap, nrml
+from openquake.baselib import sap
 from openquake.commonlib.node import context, striptag, Node
-from openquake.commonlib import InvalidFile, riskmodels
+from openquake.commonlib import InvalidFile, riskmodels, nrml
 
 
 def get_vulnerability_functions_04(fname):

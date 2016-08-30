@@ -28,7 +28,6 @@ from contextlib import contextmanager
 from multiprocessing.connection import Client
 from openquake.engine import config
 
-
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
           'warn': logging.WARNING,
