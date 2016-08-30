@@ -18,9 +18,9 @@
 
 from __future__ import division
 import re
-import sys
 import copy
 import math
+import time
 import logging
 import operator
 import collections
@@ -29,12 +29,11 @@ import random
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import raise_, decode
-from openquake.baselib.general import (
-    AccumDict, groupby, block_splitter, group_array)
+from openquake.baselib.python3compat import decode
+from openquake.baselib.general import groupby, block_splitter, group_array
 from openquake.hazardlib.site import Tile
 from openquake.commonlib import logictree, sourceconverter
-from openquake.commonlib import nrml, node
+from openquake.commonlib import nrml, node, parallel
 
 MAXWEIGHT = 200  # tuned by M. Simionato
 MAX_INT = 2 ** 31 - 1
@@ -728,6 +727,30 @@ source_info_dt = numpy.dtype([
 ])
 
 
+def split_filter(src, sites, max_dist, random_seed):
+    """
+    :param src: an heavy source
+    :param sites: the sites affected by the source
+    :param max_dist: maximum distance for the current TRT
+    :random_seed: used only for event based calculations
+    :returns:
+        a list [(src, sites, split_sources, filter_time, split_time), ...]
+    """
+    t0 = time.time()
+    split_sources = []
+    start = 0
+    for ss in sourceconverter.split_source(src):
+        if random_seed:
+            nr = ss.num_ruptures
+            ss.serial = src.serial[start:start + nr]
+            start += nr
+        ss.id = src.id
+        s = ss.filter_sites_by_distance_to_source(max_dist, sites)
+        if s is not None:
+            split_sources.append(ss)
+    return [(src, sites, split_sources, 0, time.time() - t0)]
+
+
 class SourceManager(object):
     """
     Manager associated to a CompositeSourceModel instance.
@@ -745,7 +768,6 @@ class SourceManager(object):
         self.filter_sources = filter_sources
         self.num_tiles = num_tiles
         self.rlzs_assoc = csm.info.get_rlzs_assoc()
-        self.split_map = {}  # src_group_id, source_id -> split sources
         self.infos = {}  # src_group_id, source_id -> SourceInfo tuple
 
         self.maxweight = math.ceil(csm.weight / self.concurrent_tasks)
@@ -755,109 +777,108 @@ class SourceManager(object):
                      self.maxweight)
         if random_seed is not None:
             # generate unique seeds for each rupture with numpy.arange
-            self.src_serial = {}
             n = sum(sg.tot_ruptures() for sg in self.csm.src_groups)
             rup_serial = numpy.arange(n, dtype=numpy.uint32)
             start = 0
             for src in self.csm.get_sources():
                 nr = src.num_ruptures
-                self.src_serial[src.id] = rup_serial[start:start + nr]
+                src.serial = rup_serial[start:start + nr]
                 start += nr
 
-    def get_sources(self, kind, tile):
+    def gen_blocks(self, srcs_times, tiles):
         """
-        :param kind: a string 'light', 'heavy' or 'all'
-        :param tile: a :class:`openquake.hazardlib.site.Tile` instance
-        :returns: the sources of the given kind affecting the given tile
+        :param srcs_times:
+            a 5-uple (src, sites, split_sources, filter_time, split_time)
+        :param tiles:
+            a list of :class:`openquake.hazardlib.site.Tile` objects
+        :yields:
+            pairs (sources, sitecol)
         """
-        filter_mon = self.monitor('filtering sources')
-        split_mon = self.monitor('splitting sources')
-        for src in self.csm.get_sources(kind, self.maxweight):
-            filter_time = split_time = 0
-            if self.filter_sources:
-                with filter_mon:
-                    try:
-                        if src not in tile:
-                            continue
-                    except:
-                        etype, err, tb = sys.exc_info()
-                        msg = 'An error occurred with source id=%s: %s'
-                        msg %= (src.source_id, err)
-                        raise_(etype, msg, tb)
-                filter_time = filter_mon.dt
-            if kind == 'heavy':
-                if (src.src_group_id, src.id) not in self.split_map:
-                    with split_mon:
-                        sources = list(sourceconverter.split_source(src))
-                        if len(sources) > 1:
-                            logging.info('split %s of weight %s in %d',
-                                         src, src.weight, len(sources))
-                        self.split_map[src.src_group_id, src.id] = sources
-                    split_time = split_mon.dt
-                    self.set_serial(src, sources)
-                for ss in self.split_map[src.src_group_id, src.id]:
-                    ss.id = src.id
-                    yield ss
+        light = [[] for tile in tiles]
+        for src, sites, sources, filter_time, split_time in srcs_times:
+            if sources:  # heavy
+                for block in block_splitter(sources, self.maxweight,
+                                            operator.attrgetter('weight')):
+                    yield block, sites
             else:
-                self.set_serial(src)
-                yield src
-            split_sources = self.split_map.get(
-                (src.src_group_id, src.id), [src])
+                light[sites].append(src)  # sites here is a tile index
             info = SourceInfo(src.src_group_id, src.source_id,
                               src.__class__.__name__,
-                              src.weight, len(split_sources),
+                              src.weight, len(sources),
                               filter_time, split_time, 0, 0, 0)
             key = (src.src_group_id, src.source_id)
             if key in self.infos:
                 self.infos[key] += info
             else:
                 self.infos[key] = info
+        # light
+        for srcs, tile in zip(light, tiles):
+            for block in block_splitter(
+                    srcs, self.maxweight,
+                    operator.attrgetter('weight'),
+                    operator.attrgetter('src_group_id')):
+                yield block, tile.sitecol
 
-        filter_mon.flush()
-        split_mon.flush()
-
-    def set_serial(self, src, split_sources=()):
+    def gen_args(self, sitecol, tiles):
         """
-        Set a serial number per each rupture in a source, managing also the
-        case of split sources, if any.
-        """
-        if self.random_seed is not None:
-            src.serial = self.src_serial[src.id]
-            if split_sources:
-                start = 0
-                for ss in split_sources:
-                    nr = ss.num_ruptures
-                    ss.serial = src.serial[start:start + nr]
-                    start += nr
-
-    def gen_args(self, tiles):
-        """
-        Yield (sources, sitecol, rlzs_assoc, monitor) by
+        Yield (sources, sites, rlzs_assoc, monitor) by
         looping on the tiles and on the source blocks.
         """
-        for i, sitecol in enumerate(tiles, 1):
+        for args_per_tile in self._gen_args_light(tiles):
+            for args in args_per_tile:
+                yield args
+        for args in self._gen_args_heavy(sitecol):
+            yield args
+
+    def _gen_args(self, srcs_times, tiles):
+        if not srcs_times:
+            return
+        mon = self.monitor.new()
+        nblocks = 0
+        nsources = 0
+        for block, sites in self.gen_blocks(srcs_times, tiles):
+            grp_id = block[0].src_group_id
+            rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
+            nsources += len(block)
+            nblocks += 1
+            yield block, sites, rlzs_by_gsim, mon
+        logging.info('Sent %d sources in %d tasks(s)', nsources, nblocks)
+
+    def _gen_args_light(self, tiles):
+        filter_mon = self.monitor('filtering sources')
+        tiles = [Tile(tile, self.maximum_distance) for tile in tiles]
+        if self.filter_sources and self.num_tiles == 1:
+            logging.info('Filtering light sources')
+        sources = self.csm.get_sources('light', self.maxweight)
+        for i, tile in enumerate(tiles):
+            data = []
+            for src in sources:
+                with filter_mon:
+                    ok = src in tile
+                if ok:
+                    data.append((src, i, [], filter_mon.dt, 0))
+                self.csm.filtered_weight += src.weight
+            filter_mon.flush()
             if len(tiles) > 1:
-                logging.info('Processing tile %d', i)
-            tile = Tile(sitecol, self.maximum_distance)
-            for kind in ('light', 'heavy'):
-                if self.filter_sources:
-                    logging.info('Filtering %s sources', kind)
-                sources = list(self.get_sources(kind, tile))
-                if not sources:
-                    continue
-                for src in sources:
-                    self.csm.filtered_weight += src.weight
-                nblocks = 0
-                for block in block_splitter(
-                        sources, self.maxweight,
-                        operator.attrgetter('weight'),
-                        operator.attrgetter('src_group_id')):
-                    grp_id = block[0].src_group_id
-                    rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
-                    yield block, sitecol, rlzs_by_gsim, self.monitor.new()
-                    nblocks += 1
-                logging.info('Sent %d sources in %d block(s)',
-                             len(sources), nblocks)
+                logging.info('Got %d light source(s) from tile %d',
+                             len(data), i + 1)
+            yield self._gen_args(data, tiles)
+
+    def _gen_args_heavy(self, sitecol):
+        sources = self.csm.get_sources('heavy', self.maxweight)
+        data = []
+        for src in sources:
+            self.csm.filtered_weight += src.weight
+            sites = src.filter_sites_by_distance_to_source(
+                self.maximum_distance[src.tectonic_region_type], sitecol)
+            if sites is not None:
+                max_dist = self.maximum_distance[src.tectonic_region_type]
+                data.append((src, sites, max_dist, self.random_seed))
+        if len(data) == 1:
+            srcs_times = split_filter(*data[0])
+        else:
+            srcs_times = parallel.starmap(split_filter, data).reduce(acc=[])
+        return self._gen_args(srcs_times, [sitecol])
 
     def pre_store_source_info(self, dstore):
         """
