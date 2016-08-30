@@ -22,7 +22,8 @@ import getpass
 import logging
 import subprocess
 from openquake.risklib import valid
-from openquake.commonlib import sap, datastore
+from openquake.baselib import sap
+from openquake.commonlib import datastore
 from openquake.engine import engine as eng, config, logs
 from openquake.engine.export import core
 from openquake.engine.utils import confirm

@@ -1,6 +1,14 @@
 openquake.server package
 ========================
 
+openquake.server.dbapi module
+--------------------------------
+
+.. automodule:: openquake.server.dbapi
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 openquake.server.dbserver module
 --------------------------------
 

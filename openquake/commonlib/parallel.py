@@ -35,7 +35,6 @@ from concurrent.futures import as_completed, ProcessPoolExecutor
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
 from openquake.baselib.general import split_in_blocks, AccumDict, humansize
-from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 
 executor = ProcessPoolExecutor()
 # the num_tasks_hint is chosen to be 2 times bigger than the name of
@@ -103,29 +102,33 @@ def safely_call(func, args, pickle=False):
         if set, the input arguments are unpickled and the return value
         is pickled; otherwise they are left unchanged
     """
-    if pickle:
-        args = [a.unpickle() for a in args]
-    ismon = args and isinstance(args[-1], Monitor)
-    mon = args[-1] if ismon else Monitor()
-    check_mem_usage(mon)  # check if too much memory is used
-    mon.flush = NoFlush(mon, func.__name__)
-    try:
-        with mon('total ' + func.__name__, measuremem=True), \
-                GroundShakingIntensityModel.forbid_instantiation():
+    with Monitor('total ' + func.__name__, measuremem=True) as child:
+        if pickle:  # measure the unpickling time too
+            args = [a.unpickle() for a in args]
+        if args and isinstance(args[-1], Monitor):
+            mon = args[-1]
+            mon.children.append(child)  # child is a child of mon
+            child.hdf5path = mon.hdf5path
+        else:
+            mon = child
+        check_mem_usage(mon)  # check if too much memory is used
+        mon.flush = NoFlush(mon, func.__name__)
+        try:
             got = func(*args)
             if inspect.isgenerator(got):
                 got = list(got)
-        res = got, None, mon
-    except:
-        etype, exc, tb = sys.exc_info()
-        tb_str = ''.join(traceback.format_tb(tb))
-        res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc), etype, mon)
+            res = got, None, mon
+        except:
+            etype, exc, tb = sys.exc_info()
+            tb_str = ''.join(traceback.format_tb(tb))
+            res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc), etype, mon)
 
-    # NB: flush must not be called in the workers - they must not
-    # have access to the datastore - so we remove it
-    rec_delattr(mon, 'flush')
-    if pickle:
-        return Pickled(res)
+        # NB: flush must not be called in the workers - they must not
+        # have access to the datastore - so we remove it
+        rec_delattr(mon, 'flush')
+
+    if pickle:  # it is impossible to measure the pickling time :-(
+        res = Pickled(res)
     return res
 
 
@@ -277,9 +280,13 @@ class TaskManager(object):
         :returns: a TaskManager object with a .result method.
         """
         self = cls(task, name)
+        try:
+            nargs = len(task_args)
+        except TypeError:  # a generator has no len
+            nargs = ''
         for i, a in enumerate(task_args, 1):
             if i == 1:  # first time
-                cls.progress('Submitting "%s" tasks', self.name)
+                cls.progress('Submitting %s "%s" tasks', nargs, self.name)
             if isinstance(a[-1], Monitor):  # add incremental task number
                 a[-1].task_no = i
             self.submit(*a)
@@ -287,7 +294,7 @@ class TaskManager(object):
 
     @classmethod
     def apply(cls, task, task_args,
-              concurrent_tasks=executor._max_workers,
+              concurrent_tasks=executor.num_tasks_hint,
               weight=lambda item: 1,
               key=lambda item: 'Unspecified',
               name=None):
@@ -530,8 +537,7 @@ class Threadmap(Starmap):
     MapReduce implementation based on threads. For instance
 
     >>> from collections import Counter
-    >>> Threadmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
-    Counter({'l': 3, 'o': 2, 'e': 1, 'd': 1, 'h': 1, 'r': 1, 'w': 1})
+    >>> c = Threadmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
     """
     poolfactory = staticmethod(
         # following the same convention of the standard library, num_proc * 5
@@ -544,8 +550,7 @@ class Processmap(Starmap):
     MapReduce implementation based on processes. For instance
 
     >>> from collections import Counter
-    >>> Processmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
-    Counter({'l': 3, 'o': 2, 'e': 1, 'd': 1, 'h': 1, 'r': 1, 'w': 1})
+    >>> c = Processmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
     """
     poolfactory = staticmethod(multiprocessing.Pool)
     pool = None  # built at instantiation time
