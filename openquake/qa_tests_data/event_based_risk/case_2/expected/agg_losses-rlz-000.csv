@@ -1,4 +1,4 @@
-event_tag,ses,structural:float32,structural_ins:float32
+event_tag,event_set,structural:float32,structural_ins:float32
 trt=00~ses=0001~src=1~rup=2-01,1,9.56363E+02,2.06363E+02
 trt=00~ses=0001~src=2~rup=7-01,1,7.52054E+01,0.00000E+00
 trt=00~ses=0002~src=1~rup=1-01,2,2.59049E+02,0.00000E+00
