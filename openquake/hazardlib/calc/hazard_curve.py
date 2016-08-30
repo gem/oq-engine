@@ -193,7 +193,7 @@ def poe_map(src, s_sites, imtls, cmaker, trunclevel, bbs,
         msg = 'An error occurred with source id=%s. Error: %s'
         msg %= (src.source_id, str(err))
         raise_(etype, msg, tb)
-return ~pmap
+    return ~pmap
 
 
 # this is used by the engine
