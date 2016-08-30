@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed the dependency from the Django ORM
   * Now the WebUI restarts the ProcessPoolExecutor at the end of each job,
     to conserve resources
   * Optimized the computation of hazard curves and statistics, especially
