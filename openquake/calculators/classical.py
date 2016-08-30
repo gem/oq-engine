@@ -290,7 +290,7 @@ class PSHACalculator(base.HazardCalculator):
                 self.datastore, monitor, self.random_seed, oq.filter_sources,
                 num_tiles=self.num_tiles)
             tm = parallel.starmap(
-                self.core_task.__func__, srcman.gen_args(tiles))
+                self.core_task.__func__, srcman.gen_args(self.sitecol, tiles))
             srcman.pre_store_source_info(self.datastore)
         pmap_by_grp_id = tm.reduce(self.agg_dicts, self.zerodict())
         self.save_data_transfer(tm)
