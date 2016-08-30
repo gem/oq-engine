@@ -28,29 +28,20 @@ import time
 import unittest
 import subprocess
 import tempfile
-import requests
 import django
+import requests
 from openquake.baselib.general import writetmp
-from openquake.engine import logs, config
-from openquake.server import dbserver
+
 
 if requests.__version__ < '1.0.0':
     requests.Response.text = property(lambda self: self.content)
-if hasattr(django, 'setup'):
-    django.setup()  # for Django >= 1.7
 
 
 class EngineServerTestCase(unittest.TestCase):
     hostport = 'localhost:8761'
-    dbserverport = '2000'
     datadir = os.path.join(os.path.dirname(__file__), 'data')
 
     # general utilities
-
-    @classmethod
-    def assert_ok(cls, resp):
-        if not resp.text:
-            sys.stderr.write(open(cls.errfname).read())
 
     @classmethod
     def post(cls, path, data=None, **params):
@@ -67,7 +58,9 @@ class EngineServerTestCase(unittest.TestCase):
     def get(cls, path, **params):
         resp = requests.get('http://%s/v1/calc/%s' % (cls.hostport, path),
                             params=params)
-        cls.assert_ok(resp)
+        if not resp.text:
+            sys.stderr.write(open(cls.errfname).read())
+            return {}
         try:
             return json.loads(resp.text)
         except:
@@ -79,7 +72,6 @@ class EngineServerTestCase(unittest.TestCase):
     def get_text(cls, path, **params):
         resp = requests.get('http://%s/v1/calc/%s' % (cls.hostport, path),
                             params=params)
-        cls.assert_ok(resp)
         return resp.text
 
     @classmethod
@@ -112,7 +104,7 @@ class EngineServerTestCase(unittest.TestCase):
     def setUpClass(cls):
         if django.get_version() < '1.5':
             # Django too old
-            raise unittest.SkipTest
+            raise unittest.SkipTest('webui tests do not run with Diango < 1.5')
 
         cls.job_ids = []
         env = os.environ.copy()
@@ -120,23 +112,11 @@ class EngineServerTestCase(unittest.TestCase):
         # let's impersonate the user openquake, the one running the WebUI:
         # we need to set LOGNAME on Linux and USERNAME on Windows
         env['LOGNAME'] = env['USERNAME'] = 'openquake'
-        fh, cls.tmpdb = tempfile.mkstemp()
-        sys.stderr.write('sqlite3 %s\n' % cls.tmpdb)
-        os.close(fh)
-        tmpdb = '%s:%s' % (cls.tmpdb, cls.dbserverport)
         cls.fd, cls.errfname = tempfile.mkstemp()
         print('Errors saved in %s' % cls.errfname, file=sys.stderr)
-        config.DBS_ADDRESS = ('localhost', int(cls.dbserverport))
-        dbstatus = dbserver.get_status()
-        if dbstatus == 'running':
-            # some test broke before without stopping the dbserver
-            logs.dbcmd('stop')
-        cls.dbs = subprocess.Popen(
-            [sys.executable, '-m', 'openquake.server.dbserver',
-             tmpdb, cls.errfname], env=env, stderr=cls.fd)
         cls.proc = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
-             cls.hostport, '--noreload', '--nothreading', 'tmpdb=' + tmpdb],
+             cls.hostport, '--noreload', '--nothreading'],
             env=env, stderr=cls.fd)  # redirect the server logs
         time.sleep(5)
 
@@ -145,7 +125,6 @@ class EngineServerTestCase(unittest.TestCase):
         cls.wait()
         cls.get('list', job_type='hazard', relevant='true')
         cls.proc.kill()
-        cls.dbs.kill()
         os.close(cls.fd)
 
     # tests
