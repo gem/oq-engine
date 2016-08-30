@@ -13,10 +13,14 @@ Contents:
 
    architecture
    effective-realizations
+   event-based-with-large-logic-tree
+   how-to-change-the-XML-for-sources
 
-   openquake.baselib
    openquake.risklib
    openquake.commonlib
+   openquake.calculators           
+   openquake.engine
+   openquake.server
 
 
 Indices and tables
