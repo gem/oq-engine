@@ -790,7 +790,9 @@ class SourceManager(object):
         :param srcs_times:
             a 5-uple (src, sites, split_sources, filter_time, split_time)
         :param tiles:
-            a list of filtered site collections, one per each tile
+            a list of :class:`openquake.hazardlib.site.Tile` objects
+        :yields:
+            pairs (sources, sitecol)
         """
         light = [[] for tile in tiles]
         for src, sites, sources, filter_time, split_time in srcs_times:
