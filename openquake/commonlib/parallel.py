@@ -280,9 +280,13 @@ class TaskManager(object):
         :returns: a TaskManager object with a .result method.
         """
         self = cls(task, name)
+        try:
+            nargs = len(task_args)
+        except TypeError:  # a generator has no len
+            nargs = ''
         for i, a in enumerate(task_args, 1):
             if i == 1:  # first time
-                cls.progress('Submitting "%s" tasks', self.name)
+                cls.progress('Submitting %s "%s" tasks', nargs, self.name)
             if isinstance(a[-1], Monitor):  # add incremental task number
                 a[-1].task_no = i
             self.submit(*a)
@@ -290,7 +294,7 @@ class TaskManager(object):
 
     @classmethod
     def apply(cls, task, task_args,
-              concurrent_tasks=executor._max_workers,
+              concurrent_tasks=executor.num_tasks_hint,
               weight=lambda item: 1,
               key=lambda item: 'Unspecified',
               name=None):
