@@ -213,7 +213,7 @@ class IterResult(object):
     def __init__(self, futures, taskname, num_tasks=None,
                  progress=logging.info):
         self.futures = futures
-        self.taskname = taskname
+        self.name = taskname
         self.num_tasks = num_tasks
         self.progress = progress
         self.received = []
@@ -228,11 +228,11 @@ class IterResult(object):
         while done < self.num_tasks:
             percent = int(float(done) / self.num_tasks * 100)
             if percent > prev_percent:
-                self.progress('%s %3d%%', self.taskname, percent)
+                self.progress('%s %3d%%', self.name, percent)
                 prev_percent = percent
             yield done
             done += 1
-        self.progress('%s 100%%', self.taskname)
+        self.progress('%s 100%%', self.name)
         yield done
 
     def __iter__(self):
@@ -438,7 +438,9 @@ class TaskManager(object):
             self.submit(*args)
         if not task_no:
             logging.warn('No tasks were submitted')
-        return IterResult(self.results, self.name, task_no, self.progress)
+        ir = IterResult(self.results, self.name, task_no, self.progress)
+        ir.sent = self.sent  # for information purposes
+        return ir
 
     def __iter__(self):
         return iter(self.submit_all())
