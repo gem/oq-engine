@@ -171,7 +171,7 @@ def export_agg_losses_ebr(ekey, dstore):
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     agg_losses = dstore[ekey[0]]
     oq = dstore['oqparam']
-    dtlist = [('event_tag', (numpy.string_, 100)), ('ses', U32)
+    dtlist = [('event_tag', (numpy.string_, 100)), ('event_set', U32)
               ] + oq.loss_dt_list()
     elt_dt = numpy.dtype(dtlist)
     etags = dstore['etags'].value
@@ -187,7 +187,7 @@ def export_agg_losses_ebr(ekey, dstore):
         eid2idx = dict(zip(eids, range(len(eids))))
         elt = numpy.zeros(len(eids), elt_dt)
         elt['event_tag'] = etags[eids]
-        elt['ses'] = numpy.array(
+        elt['event_set'] = numpy.array(
             [get_ses_idx(etag) for etag in elt['event_tag']], U32)
         for loss_type in loss_types:
             elt_lt = elt[loss_type]
