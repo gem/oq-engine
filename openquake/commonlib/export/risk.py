@@ -25,7 +25,7 @@ from openquake.baselib.general import AccumDict
 from openquake.risklib import scientific
 from openquake.commonlib.export import export
 from openquake.commonlib import writers, risk_writers
-from openquake.commonlib.util import get_assets, compose_arrays
+from openquake.commonlib.util import get_assets, compose_arrays, get_ses_idx
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
     ExposureData, Site)
@@ -171,7 +171,8 @@ def export_agg_losses_ebr(ekey, dstore):
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     agg_losses = dstore[ekey[0]]
     oq = dstore['oqparam']
-    dtlist = [('event_tag', (numpy.string_, 100))] + oq.loss_dt_list()
+    dtlist = [('event_tag', (numpy.string_, 100)), ('ses', U32)
+              ] + oq.loss_dt_list()
     elt_dt = numpy.dtype(dtlist)
     etags = dstore['etags'].value
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
@@ -186,6 +187,8 @@ def export_agg_losses_ebr(ekey, dstore):
         eid2idx = dict(zip(eids, range(len(eids))))
         elt = numpy.zeros(len(eids), elt_dt)
         elt['event_tag'] = etags[eids]
+        elt['ses'] = numpy.array(
+            [get_ses_idx(etag) for etag in elt['event_tag']], U32)
         for loss_type in loss_types:
             elt_lt = elt[loss_type]
             if oq.insured_losses:
@@ -198,6 +201,7 @@ def export_agg_losses_ebr(ekey, dstore):
                     elt_lt_ins[idx] = data['loss'][i, 1]
                 else:
                     elt_lt[idx] = data['loss'][i]
+        elt.sort(order='event_tag')
         writer.save(elt, dest)
     return writer.getsaved()
 
