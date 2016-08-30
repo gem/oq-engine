@@ -36,6 +36,7 @@ from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 
 from openquake.hazardlib.imt import from_string
 
+
 def zero_curves(num_sites, imtls):
     """
     :param num_sites: the number of sites
@@ -47,21 +48,6 @@ def zero_curves(num_sites, imtls):
                           for imt, imls in imtls.items()])
     zero = numpy.zeros(num_sites, imt_dt)
     return zero
-
-
-def zero_maps(num_sites, imts, poes=()):
-    """
-    :param num_sites: the number of sites
-    :param imts: the intensity measure types
-    :returns: an array of zero curves with length num_sites
-    """
-    # numpy dtype for the hazard maps
-    if poes:
-        imt_dt = numpy.dtype([('%s-%s' % (imt, poe), numpy.float32)
-                              for imt in imts for poe in poes])
-    else:
-        imt_dt = numpy.dtype([(imt, numpy.float32) for imt in imts])
-    return numpy.zeros(num_sites, imt_dt)
 
 
 def agg_curves(acc, curves):
@@ -174,41 +160,40 @@ def poe_map(src, s_sites, imtls, cmaker, trunclevel, bbs,
     store some information in the monitors and optionally in the
     bounding boxes.
     """
-    with GroundShakingIntensityModel.forbid_instantiation():
-        pmap = ProbabilityMap.build(
-            len(imtls.array), len(cmaker.gsims), s_sites.sids, initvalue=1.)
-        try:
-            for rup in src.iter_ruptures():
-                with ctx_mon:  # compute distances
-                    try:
-                        sctx, rctx, dctx = cmaker.make_contexts(s_sites, rup)
-                    except FarAwayRupture:
-                        continue
-                with pne_mon:  # compute probabilities and updates the pmap
-                    pnes = get_probability_no_exceedance(
-                        rup, sctx, rctx, dctx, imtls, cmaker.gsims, trunclevel)
-                    for sid, pne in zip(sctx.sites.sids, pnes):
-                        pmap[sid].array *= pne
+    pmap = ProbabilityMap.build(
+        len(imtls.array), len(cmaker.gsims), s_sites.sids, initvalue=1.)
+    try:
+        for rup in src.iter_ruptures():
+            with ctx_mon:  # compute distances
+                try:
+                    sctx, rctx, dctx = cmaker.make_contexts(s_sites, rup)
+                except FarAwayRupture:
+                    continue
+            with pne_mon:  # compute probabilities and updates the pmap
+                pnes = get_probability_no_exceedance(
+                    rup, sctx, rctx, dctx, imtls, cmaker.gsims, trunclevel)
+                for sid, pne in zip(sctx.sites.sids, pnes):
+                    pmap[sid].array *= pne
 
-                # add optional disaggregation information (bounding boxes)
-                if bbs:
-                    with disagg_mon:
-                        sids = set(sctx.sites.sids)
-                        jb_dists = dctx.rjb
-                        closest_points = rup.surface.get_closest_points(
-                            sctx.sites.mesh)
-                        bs = [bb for bb in bbs if bb.site_id in sids]
-                        # NB: the assert below is always true; we are
-                        # protecting against possible refactoring errors
-                        assert len(bs) == len(jb_dists) == len(closest_points)
-                        for bb, dist, p in zip(bs, jb_dists, closest_points):
-                            bb.update([dist], [p.longitude], [p.latitude])
-        except Exception as err:
-            etype, err, tb = sys.exc_info()
-            msg = 'An error occurred with source id=%s. Error: %s'
-            msg %= (src.source_id, str(err))
-            raise_(etype, msg, tb)
-    return ~pmap
+            # add optional disaggregation information (bounding boxes)
+            if bbs:
+                with disagg_mon:
+                    sids = set(sctx.sites.sids)
+                    jb_dists = dctx.rjb
+                    closest_points = rup.surface.get_closest_points(
+                        sctx.sites.mesh)
+                    bs = [bb for bb in bbs if bb.site_id in sids]
+                    # NB: the assert below is always true; we are
+                    # protecting against possible refactoring errors
+                    assert len(bs) == len(jb_dists) == len(closest_points)
+                    for bb, dist, p in zip(bs, jb_dists, closest_points):
+                        bb.update([dist], [p.longitude], [p.latitude])
+    except Exception as err:
+        etype, err, tb = sys.exc_info()
+        msg = 'An error occurred with source id=%s. Error: %s'
+        msg %= (src.source_id, str(err))
+        raise_(etype, msg, tb)
+return ~pmap
 
 
 # this is used by the engine
@@ -224,22 +209,23 @@ def hazard_curves_per_trt(
 
     :returns: a ProbabilityMap instance
     """
-    imtls = DictArray(imtls)
-    cmaker = ContextMaker(gsims, maximum_distance)
-    sources_sites = ((source, sites) for source in sources)
-    ctx_mon = monitor('making contexts', measuremem=False)
-    pne_mon = monitor('computing poes', measuremem=False)
-    disagg_mon = monitor('get closest points', measuremem=False)
-    monitor.calc_times = []  # pairs (src_id, delta_t)
-    pmap = ProbabilityMap()
-    for src, s_sites in source_site_filter(sources_sites):
-        t0 = time.time()
-        pmap |= poe_map(src, s_sites, imtls, cmaker, truncation_level, bbs,
-                        ctx_mon, pne_mon, disagg_mon)
-        # we are attaching the calculation times to the monitor
-        # so that oq-lite (and the engine) can store them
-        monitor.calc_times.append((src.id, time.time() - t0))
-        # NB: source.id is an integer; it should not be confused
-        # with source.source_id, which is a string
-    monitor.eff_ruptures = pne_mon.counts  # contributing ruptures
-    return pmap
+    with GroundShakingIntensityModel.forbid_instantiation():
+        imtls = DictArray(imtls)
+        cmaker = ContextMaker(gsims, maximum_distance)
+        sources_sites = ((source, sites) for source in sources)
+        ctx_mon = monitor('making contexts', measuremem=False)
+        pne_mon = monitor('computing poes', measuremem=False)
+        disagg_mon = monitor('get closest points', measuremem=False)
+        monitor.calc_times = []  # pairs (src_id, delta_t)
+        pmap = ProbabilityMap()
+        for src, s_sites in source_site_filter(sources_sites):
+            t0 = time.time()
+            pmap |= poe_map(src, s_sites, imtls, cmaker, truncation_level, bbs,
+                            ctx_mon, pne_mon, disagg_mon)
+            # we are attaching the calculation times to the monitor
+            # so that oq-lite (and the engine) can store them
+            monitor.calc_times.append((src.id, time.time() - t0))
+            # NB: source.id is an integer; it should not be confused
+            # with source.source_id, which is a string
+        monitor.eff_ruptures = pne_mon.counts  # contributing ruptures
+        return pmap
