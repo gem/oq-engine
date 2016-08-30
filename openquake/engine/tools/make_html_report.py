@@ -91,12 +91,14 @@ class HtmlTable(object):
 
 
 JOB_STATS = '''
-SELECT id, user_name, start_time, stop_time, status FROM job WHERE id=%s;
+SELECT id, user_name, start_time, stop_time, status,
+strftime('%s', stop_time) - strftime('%s', start_time) AS duration
+FROM job WHERE id=?x;
 '''
 
 ALL_JOBS = '''
 SELECT id, user_name, status, ds_calc_dir FROM job
-WHERE start_time >= %s AND start_time < %s ORDER BY stop_time
+WHERE start_time >= ?x AND start_time < ?x ORDER BY stop_time
 '''
 
 PAGE_TEMPLATE = '''\
@@ -142,18 +144,6 @@ def make_tabs(tag_ids, tag_status, tag_contents):
     return templ % ('\n'.join(lis), '\n'.join(contents))
 
 
-def add_duration(stats):
-    START_TIME = 2
-    STOP_TIME = 3
-    stats[0] = stats[0] + ['duration']
-    for i, rec in enumerate(stats[1:], 1):
-        if rec[STOP_TIME] is None:
-            duration = '?'
-        else:
-            duration = (rec[STOP_TIME] - rec[START_TIME]).total_seconds()
-        stats[i] = rec + (duration,)
-
-
 def make_report(isodate='today'):
     """
     Build a HTML report with the computations performed at the given isodate.
@@ -171,16 +161,14 @@ def make_report(isodate='today'):
 
     # the fetcher returns an header which is stripped with [1:]
     jobs = dbcmd(
-        'fetch', ALL_JOBS, isodate.isoformat(), isodate1.isoformat())[1:]
+        'fetch', ALL_JOBS, isodate.isoformat(), isodate1.isoformat())
     page = '<h2>%d job(s) finished before midnight of %s</h2>' % (
         len(jobs), isodate)
     for job_id, user, status, ds_calc in jobs:
         tag_ids.append(job_id)
         tag_status.append(status)
-        stats = dbcmd('fetch', JOB_STATS, job_id)
-        if not stats[1:]:
-            continue
-        (job_id, user, start_time, stop_time, status) = stats[1]
+        [stats] = dbcmd('fetch', JOB_STATS, job_id)
+        (job_id, user, start_time, stop_time, status, duration) = stats
         try:
             ds = read(job_id, datadir=os.path.dirname(ds_calc))
             txt = view_fullreport('fullreport', ds)
@@ -190,14 +178,9 @@ def make_report(isodate='today'):
                 html_title='Could not generate report: %s' % cgi.escape(
                     exc, quote=True),
                 fragment='')
-
         page = report['html_title']
-
-        add_duration(stats)
-        page += html(stats)
-
+        page += html([stats._fields, stats])
         page += report['fragment']
-
         tag_contents.append(page)
 
     page = make_tabs(tag_ids, tag_status, tag_contents) + (
