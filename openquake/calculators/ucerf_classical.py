@@ -38,7 +38,7 @@ from openquake.hazardlib.calc.hazard_curve import (
     get_probability_no_exceedance, hazard_curves_per_trt)
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.risklib import valid
-from openquake.commonlib import parallel, datastore, source, readinput
+from openquake.commonlib import parallel, source, readinput
 from openquake.commonlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base, classical
@@ -107,33 +107,17 @@ class UCERFControl(UCERFSESControl):
                                self.npd,
                                self.hdd))
         return sources
-        
-#    def __iter__(self):
-#        """
-#        A bit of trickery here! The __iter__ method will split a vector
-#        of rupture indices [0, 1, 2, ..., Nrup] into a number of subsets
-#        or rupture indices, the number given by the DEFAULT_SPLIT option
-#        """
-#        with h5py.File(self.source_file, "r") as hdf5:
-#            nrup = len(hdf5[self.idx_set["rate_idx"]][:])
-#            rup_indices = np.arange(0, nrup)
-#            for ridx in np.array_split(rup_indices, DEFAULT_SPLIT):
-#                yield ridx
 
-    def get_rupture_indices(self, branch_id, split=0):
+    def get_rupture_indices(self, branch_id, split=None):
         """
         Returns a set of rupture indices
         """
         if not self.idx_set:
             self.idx_set = self.build_idx_set(branch_id)
         with h5py.File(self.source_file, "r") as hdf5:
-            nrup = len(hdf5[self.idx_set["rate_idx"]][:])
-            rup_indices = np.arange(0, nrup)
-            if split:
-                return np.array_split(rup_indices, split)
-            else:
-                return rup_indices
-    
+            idxs = np.arange(len(hdf5[self.idx_set["rate_idx"]]))
+        return np.array_split(idxs, split) if split else idxs
+
     def filter_sites_by_distance_from_rupture_set(
             self, rupset_idx, sites, max_dist):
         """
@@ -144,7 +128,7 @@ class UCERFControl(UCERFSESControl):
                                       "RuptureIndex"])
 
             # Find the combination of rupture sections used in this model
-            rupture_set = set(())
+            rupture_set = set()
             # Determine which of the rupture sections used in this set
             # of indices
             for i in rupset_idx:
@@ -332,7 +316,7 @@ def ucerf_classical_hazard_by_rupture_set(
         dic.calc_times += monitor.calc_times  # added by hazard_curves_per_trt
         dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
 
-        logging.info('Branchname for Background %s', branchname)
+        logging.info('Branch %s', branchname)
         # Get the background point sources
         bckgnd_sources = ucerf_source.get_background_sources(
             branchname, sitecol, max_dist)
@@ -483,7 +467,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             [(branch_id, branch)] = self.smlt.branches.items()
             branchname = branch.value
             rup_sets = self.csm.get_sources()[0].get_rupture_indices(
-                branchname, split=monitor.oqparam.rupture_split)
+                branchname, self.oqparam.concurrent_tasks)
             pmap_by_grp_id = parallel.apply(
                 ucerf_classical_hazard_by_rupture_set,
                 (rup_sets, branchname, ucerf_source, self.src_group.id,
