@@ -426,6 +426,9 @@ class TaskManager(object):
             nargs = len(self.task_args)
         except TypeError:  # generators have no len
             nargs = ''
+        if nargs == 1:
+            [args] = self.task_args
+            return IterResult([safely_call(self.task_func, args)], self.name)
         task_no = 0
         for args in self.task_args:
             task_no += 1
