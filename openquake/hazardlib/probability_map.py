@@ -186,7 +186,7 @@ class ProbabilityMap(dict):
         Extracts a component of the underlying ProbabilityCurves,
         specified by the index `inner_idx`.
         """
-        out = self.__class__(self.outer_levels, self.inner_levels)
+        out = self.__class__(self.outer_levels, 1)
         for sid in self:
             curve = self[sid]
             array = curve.array[:, inner_idx].reshape(-1, 1)
