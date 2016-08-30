@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import groupby, group_array, split_in_blocks
+from openquake.baselib.general import groupby, split_in_blocks
 from openquake.hazardlib import site, calc
 from openquake.risklib import scientific, riskmodels
 
@@ -596,8 +596,9 @@ class GmfCollector(object):
                 dset = hdf5.create(
                     dstore.hdf5, fullkey, GmvEidDset.dt, (None,))
             gmfa = data.value
-            gmfa['eid'] += offset
-            offset += len(set(gmfa['eid']))
+            if offset:
+                gmfa['eid'] += offset  # the bug is here
+                offset += len(set(gmfa['eid']))
             hdf5.extend(dset, gmfa)
         return offset
 
