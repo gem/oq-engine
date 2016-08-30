@@ -874,10 +874,7 @@ class SourceManager(object):
             if sites is not None:
                 max_dist = self.maximum_distance[src.tectonic_region_type]
                 data.append((src, sites, max_dist, self.random_seed))
-        if len(data) == 1:
-            srcs_times = split_filter(*data[0])
-        else:
-            srcs_times = parallel.starmap(split_filter, data).reduce(acc=[])
+        srcs_times = parallel.starmap(split_filter, data).reduce(acc=[])
         return self._gen_args(srcs_times, [sitecol])
 
     def pre_store_source_info(self, dstore):
