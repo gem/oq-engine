@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Parallelized the splitting of the heavy sources
   * Removed the dependency from the Django ORM
   * Now the WebUI restarts the ProcessPoolExecutor at the end of each job,
     to conserve resources
