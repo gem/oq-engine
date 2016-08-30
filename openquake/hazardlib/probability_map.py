@@ -105,28 +105,28 @@ class ProbabilityMap(dict):
     (N, L, I) where N is the number of site IDs.
     """
     @classmethod
-    def build(cls, outer_levels, inner_levels, sids, initvalue=0.):
+    def build(cls, shape_y, shape_z, sids, initvalue=0.):
         """
-        :param outer_levels: the total number of intensity measure levels
-        :param inner_levels: the number of inner levels
+        :param shape_y: the total number of intensity measure levels
+        :param shape_z: the number of inner levels
         :param sids: a set of site indices
         :param initvalue: the initial value of the probability (default 0)
         :returns: a ProbabilityMap dictionary
         """
-        dic = cls(outer_levels, inner_levels)
+        dic = cls(shape_y, shape_z)
         for sid in sids:
             dic.setdefault(sid, initvalue)
         return dic
 
-    def __init__(self, outer_levels, inner_levels):
-        self.outer_levels = outer_levels
-        self.inner_levels = inner_levels
+    def __init__(self, shape_y, shape_z):
+        self.shape_y = shape_y
+        self.shape_z = shape_z
 
     def setdefault(self, sid, value):
         try:
             return self[sid]
         except KeyError:
-            array = numpy.empty((self.outer_levels, self.inner_levels), F64)
+            array = numpy.empty((self.shape_y, self.shape_z), F64)
             array.fill(value)
             pc = ProbabilityCurve(array)
             self[sid] = pc
@@ -173,7 +173,7 @@ class ProbabilityMap(dict):
         """
         Extracs a submap of self for the given sids.
         """
-        dic = self.__class__(self.outer_levels, self.inner_levels)
+        dic = self.__class__(self.shape_y, self.shape_z)
         for sid in sids:
             try:
                 dic[sid] = self[sid]
@@ -186,7 +186,7 @@ class ProbabilityMap(dict):
         Extracts a component of the underlying ProbabilityCurves,
         specified by the index `inner_idx`.
         """
-        out = self.__class__(self.outer_levels, 1)
+        out = self.__class__(self.shape_y, 1)
         for sid in self:
             curve = self[sid]
             array = curve.array[:, inner_idx].reshape(-1, 1)
@@ -203,7 +203,7 @@ class ProbabilityMap(dict):
         return self
 
     def __or__(self, other):
-        new = self.__class__(self.outer_levels, self.inner_levels)
+        new = self.__class__(self.shape_y, self.shape_z)
         new |= other
         return new
 
@@ -211,23 +211,23 @@ class ProbabilityMap(dict):
 
     def __mul__(self, other):
         sids = set(self) | set(other)
-        new = self.__class__(self.outer_levels, self.inner_levels)
+        new = self.__class__(self.shape_y, self.shape_z)
         for sid in sids:
             new[sid] = self.get(sid, 1) * other.get(sid, 1)
         return new
 
     def __invert__(self):
-        new = self.__class__(self.outer_levels, self.inner_levels)
+        new = self.__class__(self.shape_y, self.shape_z)
         for sid in self:
             if (self[sid].array != 1.).any():
                 new[sid] = ~self[sid]  # store only nonzero probabilities
         return new
 
     def __toh5__(self):
-        # converts to an array of shape (num_sids, outer_levels, inner_levels)
+        # converts to an array of shape (num_sids, shape_y, shape_z)
         size = len(self)
         sids = self.sids
-        shape = (size, self.outer_levels, self.inner_levels)
+        shape = (size, self.shape_y, self.shape_z)
         array = numpy.zeros(shape, F64)
         for i, sid in numpy.ndenumerate(sids):
             array[i] = self[sid].array
@@ -235,8 +235,8 @@ class ProbabilityMap(dict):
 
     def __fromh5__(self, array, attrs):
         # rebuild the map from sids and probs arrays
-        self.outer_levels = array.shape[1]
-        self.inner_levels = array.shape[2]
+        self.shape_y = array.shape[1]
+        self.shape_z = array.shape[2]
         for sid, prob in zip(attrs['sids'], array):
             self[sid] = ProbabilityCurve(prob)
 
