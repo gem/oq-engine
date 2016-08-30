@@ -539,8 +539,7 @@ class Threadmap(Starmap):
     MapReduce implementation based on threads. For instance
 
     >>> from collections import Counter
-    >>> Threadmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
-    Counter({'l': 3, 'o': 2, 'e': 1, 'd': 1, 'h': 1, 'r': 1, 'w': 1})
+    >>> c = Threadmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
     """
     poolfactory = staticmethod(
         # following the same convention of the standard library, num_proc * 5
@@ -553,8 +552,7 @@ class Processmap(Starmap):
     MapReduce implementation based on processes. For instance
 
     >>> from collections import Counter
-    >>> Processmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
-    Counter({'l': 3, 'o': 2, 'e': 1, 'd': 1, 'h': 1, 'r': 1, 'w': 1})
+    >>> c = Processmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
     """
     poolfactory = staticmethod(multiprocessing.Pool)
     pool = None  # built at instantiation time

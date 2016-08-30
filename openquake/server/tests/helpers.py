@@ -19,25 +19,18 @@
 """
 Helper functions for our unit and smoke tests.
 """
-
 import functools
-import logging
 import mock as mock_module
-import numpy
 import os
 import random
 import shutil
 import string
-import sys
 import tempfile
 import textwrap
-import time
-
-from django.core import exceptions
 
 from openquake.baselib.general import writetmp as touch
 
-from openquake.engine import engine, logs, config
+from openquake.engine import engine, config
 
 CD = os.path.dirname(__file__)  # current directory
 
@@ -46,9 +39,6 @@ RUNNER = os.path.abspath(os.path.join(CD, '../../../bin/oq-engine'))
 DATA_DIR = os.path.abspath(os.path.join(CD, './data'))
 
 OUTPUT_DIR = os.path.abspath(os.path.join(CD, './data/output'))
-
-WAIT_TIME_STEP_FOR_TASK_SECS = 0.5
-MAX_WAIT_LOOPS = 10
 
 
 #: Wraps mock.patch() to make mocksignature=True by default.
@@ -106,133 +96,6 @@ def run_job(cfg, exports='xml,csv', hazard_calculation_id=None, **params):
         cfg, 'openquake', 'error', [], hazard_calculation_id, **params)
     logfile = os.path.join(tempfile.gettempdir(), 'qatest.log')
     return engine.run_calc(job_id, oqparam, 'error', logfile, exports)
-
-
-def timeit(method):
-    """Decorator for timing methods"""
-
-    def _timed(*args, **kw):
-        """Wrapped function for timed methods"""
-        timestart = time.time()
-        result = method(*args, **kw)
-        timeend = time.time()
-
-        print('%r (%r, %r) %2.2f sec' % (
-            method.__name__, args, kw, timeend - timestart))
-        return result
-    try:
-        import nose
-        return nose.tools.make_decorator(method)(_timed)
-    except ImportError:
-        pass
-    return _timed
-
-
-def assertDeepAlmostEqual(test_case, expected, actual, *args, **kwargs):
-    """
-    Assert that two complex structures have almost equal contents.
-
-    Compares lists, dicts and tuples recursively. Checks numeric values
-    using test_case's :py:meth:`unittest.TestCase.assertAlmostEqual` and
-    checks all other values with :py:meth:`unittest.TestCase.assertEqual`.
-    Accepts additional positional and keyword arguments and pass those
-    intact to assertAlmostEqual() (that's how you specify comparison
-    precision).
-
-    :param test_case: TestCase object on which we can call all of the basic
-        'assert' methods.
-    :type test_case: :py:class:`unittest.TestCase` object
-    """
-    is_root = '__trace' not in kwargs
-    trace = kwargs.pop('__trace', 'ROOT')
-    try:
-        if isinstance(expected, (int, float, long, complex)):
-            test_case.assertAlmostEqual(expected, actual, *args, **kwargs)
-        elif isinstance(expected, (list, tuple, numpy.ndarray)):
-            test_case.assertEqual(len(expected), len(actual))
-            for index in xrange(len(expected)):
-                v1, v2 = expected[index], actual[index]
-                assertDeepAlmostEqual(test_case, v1, v2,
-                                      __trace=repr(index), *args, **kwargs)
-        elif isinstance(expected, dict):
-            test_case.assertEqual(set(expected), set(actual))
-            for key in expected:
-                assertDeepAlmostEqual(test_case, expected[key], actual[key],
-                                      __trace=repr(key), *args, **kwargs)
-        else:
-            test_case.assertEqual(expected, actual)
-    except AssertionError as exc:
-        exc.__dict__.setdefault('traces', []).append(trace)
-        if is_root:
-            trace = ' -> '.join(reversed(exc.traces))
-            exc = AssertionError("%s\nTRACE: %s" % (exc, trace))
-        raise exc
-
-
-def assertModelAlmostEqual(test_case, expected, actual):
-    """
-    Assert that two Django models are equal. For values which are numbers,
-    we use :py:meth:`unittest.TestCase.assertAlmostEqual` for number
-    comparisons with a reasonable precision tolerance.
-
-    If the `expected` input value contains nested models, this function
-    will recurse through them and check for equality.
-
-    :param test_case: TestCase object on which we can call all of the basic
-        'assert' methods.
-    :type test_case: :py:class:`unittest.TestCase` object
-    :type expected: dict
-    :type actual: dict
-    """
-
-    from django.db import models as gis_models
-
-    test_case.assertEqual(type(expected), type(actual))
-
-    def getattr_or_none(model, field):
-        try:
-            return getattr(model, field.name)
-        except exceptions.ObjectDoesNotExist:
-            return None
-
-    for field in expected._meta.fields:
-        if field.name == 'last_update':
-            continue
-
-        exp_val = getattr_or_none(expected, field)
-        act_val = getattr_or_none(actual, field)
-
-        # If it's a number, use assertAlmostEqual to compare
-        # the values with a reasonable tolerance.
-        if isinstance(exp_val, (int, float, long, complex)):
-            test_case.assertAlmostEqual(exp_val, act_val)
-        elif isinstance(exp_val, gis_models.Model):
-            # make a recursive call in case there are nested models
-            assertModelAlmostEqual(test_case, exp_val, act_val)
-        else:
-            test_case.assertEqual(exp_val, act_val)
-
-
-# preserve stdout/stderr (note: we want the nose-manipulated stdout/stderr,
-# otherwise we could just use __stdout__/__stderr__)
-STDOUT = sys.stdout
-STDERR = sys.stderr
-
-
-def cleanup_loggers():
-    root = logging.getLogger()
-
-    for h in list(root.handlers):
-        if (isinstance(h, logging.FileHandler) or
-            isinstance(h, logging.StreamHandler) or
-                isinstance(h, logs.AMQPHandler)):
-            root.removeHandler(h)
-
-    # restore the damage created by redirect_stdouts_to_logger; this is only
-    # necessary because tests perform multiple log initializations, sometimes
-    # for AMQP, sometimes for console
-    sys.stdout = STDOUT
-    sys.stderr = STDERR
 
 
 class ConfigTestCase(object):

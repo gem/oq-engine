@@ -20,41 +20,48 @@ import os
 import operator
 from datetime import datetime
 
-from django.core import exceptions
-from django import db
-
 from openquake.risklib import valid
 from openquake.commonlib import datastore
-from openquake.server.db import models
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
+from openquake.server.dbapi import NotFound
 
-INPUT_TYPES = set(dict(models.INPUT_TYPE_CHOICES))
-UNABLE_TO_DEL_HC_FMT = 'Unable to delete hazard calculation: %s'
-UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
+JOB_TYPE = '''CASE
+WHEN calculation_mode LIKE '%risk'
+OR calculation_mode LIKE '%bcr'
+OR calculation_mode LIKE '%damage'
+THEN 'risk'
+ELSE 'hazard'
+END AS job_type
+'''
 
 
-def check_outdated():
+def check_outdated(db):
     """
     Check if the db is outdated, called before starting anything
+
+    :param db: a :class:`openquake.server.dbapi.Db` instance
     """
-    return upgrader.check_versions(db.connection)
+    return upgrader.check_versions(db.conn)
 
 
-def reset_is_running():
+def reset_is_running(db):
     """
     Reset the flag job.is_running to False. This is called when the
     Web UI is re-started: the idea is that it is restarted only when
     all computations are completed.
+
+    :param db: a :class:`openquake.server.dbapi.Db` instance
     """
-    db.connection.cursor().execute(  # reset the flag job.is_running
-        'UPDATE job SET is_running=0 WHERE is_running=1')
+    db('UPDATE job SET is_running=0 WHERE is_running=1')
 
 
-def create_job(calc_mode, description, user_name, datadir, hc_id=None):
+def create_job(db, calc_mode, description, user_name, datadir, hc_id=None):
     """
     Create job for the given user, return it.
 
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
     :param str calc_mode:
         Calculation mode, such as classical, event_based, etc
     :param user_name:
@@ -68,69 +75,81 @@ def create_job(calc_mode, description, user_name, datadir, hc_id=None):
     :returns:
         :class:`openquake.server.db.models.OqJob` instance.
     """
-    calc_id = get_calc_id(datadir) + 1
-    job = models.OqJob.objects.create(
-        id=calc_id,
-        calculation_mode=calc_mode,
-        description=description,
-        user_name=user_name,
-        ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
-    if hc_id:
-        job.hazard_calculation = models.get(models.OqJob, pk=hc_id)
-    job.save()
-    return job.id
+    calc_id = get_calc_id(db, datadir) + 1
+    job = dict(id=calc_id,
+               calculation_mode=calc_mode,
+               description=description,
+               user_name=user_name,
+               hazard_calculation_id=hc_id,
+               ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
+    job_id = db('INSERT INTO job (?S) VALUES (?X)',
+                job.keys(), job.values()).lastrowid
+    return job_id
 
 
-def delete_uncompleted_calculations(user):
+def delete_uncompleted_calculations(db, user):
     """
-    Delete the uncompleted calculations of the given user
+    Delete the uncompleted calculations of the given user.
+
+    :param db: a :class:`openquake.server.dbapi.Db` instance
+    :param user: user name
     """
-    for job in models.OqJob.objects.filter(
-            oqjob__user_name=user).exclude(
-            oqjob__status="complete"):
-        del_calc(job.id, user)
+    db("DELETE FROM job WHERE user_name=?x AND status != 'complete'", user)
 
 
-def get_job_id(job_id, username):
+def get_job_id(db, job_id, username):
     """
     If job_id is negative, return the last calculation of the current
     user, otherwise returns the job_id unchanged.
+
+    :param db: a :class:`openquake.server.dbapi.Db` instance
+    :param job_id: a job ID (can be negative and can be nonexisting)
+    :param username: an user name
+    :returns: a valid job ID or None if the original job ID was invalid
     """
     job_id = int(job_id)
     if job_id > 0:
         return job_id
-    my_jobs = models.OqJob.objects.filter(user_name=username).order_by('id')
-    n = my_jobs.count()
+    my_jobs = db('SELECT id FROM job WHERE user_name=?x ORDER BY id',
+                 username)
+    n = len(my_jobs)
     if n == 0:  # no jobs
         return
     else:  # typically job_id is -1
         return my_jobs[n + job_id].id
 
 
-def get_calc_id(datadir, job_id=None):
+def get_calc_id(db, datadir, job_id=None):
     """
     Return the latest calc_id by looking both at the datastore
     and the database.
+
+    :param db: a :class:`openquake.server.dbapi.Db` instance
+    :param datadir: the directory containing the datastores
+    :param job_id: a job ID; if None, returns the latest job ID
     """
     calcs = datastore.get_calc_ids(datadir)
     calc_id = 0 if not calcs else calcs[-1]
     if job_id is None:
         try:
-            job_id = models.OqJob.objects.latest('id').id
-        except exceptions.ObjectDoesNotExist:
+            job_id = db('SELECT seq FROM sqlite_sequence WHERE name="job"',
+                        scalar=True)
+        except NotFound:
             job_id = 0
     return max(calc_id, job_id)
 
 
-def list_calculations(job_type, user_name):
+def list_calculations(db, job_type, user_name):
     """
     Yield a summary of past calculations.
 
+    :param db: a :class:`openquake.server.dbapi.Db` instance
     :param job_type: 'hazard' or 'risk'
+    :param user_name: an user name
     """
-    jobs = [job for job in models.OqJob.objects.filter(
-        user_name=user_name).order_by('start_time')
-            if job.job_type == job_type]
+    jobs = db('SELECT *, %s FROM job WHERE user_name=?x '
+              'AND job_type=?x ORDER BY start_time' % JOB_TYPE,
+              user_name, job_type)
 
     if len(jobs) == 0:
         yield 'None'
@@ -139,39 +158,31 @@ def list_calculations(job_type, user_name):
                '        description')
         for job in jobs:
             descr = job.description
-            latest_job = job
-            if latest_job.is_running:
+            if job.is_running:
                 status = 'pending'
             else:
-                if latest_job.status == 'complete':
+                if job.status == 'complete':
                     status = 'successful'
                 else:
                     status = 'failed'
-            start_time = latest_job.start_time.strftime(
-                '%Y-%m-%d %H:%M:%S %Z'
-            )
+            start_time = job.start_time
             yield ('%6d | %10s | %s| %s' % (
                 job.id, status, start_time, descr)).encode('utf-8')
 
 
-def list_outputs(job_id, full=True):
+def list_outputs(db, job_id, full=True):
     """
     List the outputs for a given
     :class:`~openquake.server.db.models.OqJob`.
 
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
     :param job_id:
         ID of a calculation.
     :param bool full:
         If True produce a full listing, otherwise a short version
     """
-    outputs = get_outputs(job_id)
-    return print_outputs_summary(outputs, full)
-
-
-def print_outputs_summary(outputs, full=True):
-    """
-    List of :class:`openquake.server.db.models.Output` objects.
-    """
+    outputs = get_outputs(db, job_id)
     if len(outputs) > 0:
         truncated = False
         yield '  id | name'
@@ -187,170 +198,189 @@ def print_outputs_summary(outputs, full=True):
                    'with the command\n`oq engine --list-outputs`')
 
 
-def get_outputs(job_id):
+def get_outputs(db, job_id):
     """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
     :param job_id:
         ID of a calculation.
     :returns:
         A sequence of :class:`openquake.server.db.models.Output` objects
     """
-    return models.Output.objects.filter(oq_job=job_id)
+    return db('SELECT * FROM output WHERE oq_job_id=?x', job_id)
 
 DISPLAY_NAME = dict(dmg_by_asset='dmg_by_asset_and_collapse_map')
 
 
-def create_outputs(job_id, dskeys):
+def create_outputs(db, job_id, dskeys):
     """
     Build a correspondence between the outputs in the datastore and the
     ones in the database.
 
+    :param db: a :class:`openquake.server.dbapi.Db` instance
     :param job_id: ID of the current job
     :param dskeys: a list of datastore keys
     """
-    job = models.get(models.OqJob, pk=job_id)
-    for key in dskeys:
-        models.Output.objects.create_output(
-            job, DISPLAY_NAME.get(key, key), ds_key=key)
+    rows = [(job_id, DISPLAY_NAME.get(key, key), key) for key in dskeys]
+    db.insert('output', 'oq_job_id display_name ds_key'.split(), rows)
 
 
-def finish(job_id, status):
+def finish(db, job_id, status):
     """
-    Set the job columns `is_running`, `status`, and `stop_time`
-    """
-    job = models.get(models.OqJob, pk=job_id)
-    job.is_running = False
-    job.status = status
-    job.stop_time = datetime.utcnow()
-    job.save()
+    Set the job columns `is_running`, `status`, and `stop_time`.
 
-
-def del_calc(job_id, user):
-    """
-    Delete a calculation and all associated outputs.
-
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
     :param job_id:
-        ID of a :class:`~openquake.server.db.models.OqJob`.
+        ID of the current job
+    :param status:
+        a string such as 'successful' or 'failed'
     """
-    try:
-        job = models.get(models.OqJob, pk=job_id)
-    except models.NotFound:
-        return ('Unable to delete calculation from db: '
-                'ID=%s does not exist' % job_id)
-    if job.user_name == user:
-        # we are allowed to delete this
-
-        # but first, check if any risk calculations are referencing any of our
-        # outputs, or the hazard calculation itself
-        msg = UNABLE_TO_DEL_HC_FMT % (
-            'The following risk calculations are referencing this hazard'
-            ' calculation: %s')
-
-        assoc_outputs = models.OqJob.objects.filter(hazard_calculation=job)
-        if assoc_outputs.count() > 0:
-            raise RuntimeError(
-                msg % ', '.join(str(x.id) for x in assoc_outputs))
-        # not using Django since we got strange errors on Ubuntu 12.04
-        # like https://ci.openquake.org/job/master_oq-engine/2581/console
-        db.connection.cursor().execute(
-            'DELETE FROM job WHERE id=%d' % job_id)
-    else:
-        # this doesn't belong to the current user
-        raise RuntimeError(UNABLE_TO_DEL_HC_FMT % 'Access denied')
-    try:
-        os.remove(job.ds_calc_dir + '.hdf5')
-    except:  # already removed or missing permission
-        pass
+    db('UPDATE job SET ?D WHERE id=?x',
+       dict(is_running=False, status=status, stop_time=datetime.utcnow()),
+       job_id)
 
 
-def log(job_id, timestamp, level, process, message):
+def del_calc(db, job_id, user):
     """
-    Write a log record in the database
+    Delete a calculation and all associated outputs, if possible.
+
+    :param db: a :class:`openquake.server.dbapi.Db` instance
+    :param job_id: job ID
+    :param user: username
+    :returns: None if everything went fine or an error message
     """
-    db.connection.cursor().execute(
-        'INSERT INTO log (job_id, timestamp, level, process, message) VALUES'
-        '(%s, %s, %s, %s, %s)', (job_id, timestamp, level, process, message))
+    dependent = db(
+        'SELECT id FROM job WHERE hazard_calculation_id=?x', job_id)
+    if dependent:
+        return ('Cannot delete calculation %d: there are calculations '
+                'dependent from it: %s' % job_id, [j.id for j in dependent])
+    deleted = db('DELETE FROM job WHERE id=?x', job_id).rowcount
+    if not deleted:
+        return ('Cannot delete calculation %d: ID does not exist' % job_id)
+    deleted = db('DELETE FROM job WHERE id=?x AND user_name=?x',
+                 job_id, user).rowcount
+    if not deleted:
+        return ('Cannot delete calculation %d: belongs to a different user'
+                % job_id)
 
 
-def get_log(job_id):
+def log(db, job_id, timestamp, level, process, message):
+    """
+    Write a log record in the database.
+
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        a job ID
+    :param timestamp:
+        timestamp to store in the log record
+    :param level:
+        logging level to store in the log record
+    :param process:
+        process ID to store in the log record
+    :param message:
+        message to store in the log record
+    """
+    db('INSERT INTO log (job_id, timestamp, level, process, message) '
+       'VALUES (?X)', (job_id, timestamp, level, process, message))
+
+
+def get_log(db, job_id):
     """
     Extract the logs as a big string
+
+    :param db: a :class:`openquake.server.dbapi.Db` instance
+    :param job_id: a job ID
     """
-    logs = models.Log.objects.filter(job=job_id).order_by('id')
+    logs = db('SELECT * FROM log WHERE job_id=?x ORDER BY id', job_id)
     for log in logs:
         time = str(log.timestamp)[:-4]  # strip decimals
         yield '[%s #%d %s] %s' % (time, job_id, log.level, log.message)
 
 
-def get_output(output_id):
+def get_output(db, output_id):
     """
+    :param db: a :class:`openquake.server.dbapi.Db` instance
     :param output_id: ID of an Output object
     :returns: (ds_key, calc_id, dirname)
     """
-    out = models.get(models.Output, pk=output_id)
-    return out.ds_key, out.oq_job.id, os.path.dirname(out.oq_job.ds_calc_dir)
+    out = db('SELECT output.*, ds_calc_dir FROM output, job '
+             'WHERE oq_job_id=job.id AND output.id=?x', output_id, one=True)
+    return out.ds_key, out.oq_job_id, os.path.dirname(out.ds_calc_dir)
 
 
-def save_performance(job_id, records):
+def save_performance(db, job_id, records):
     """
-    Save in the database the performance information about the given job
+    Save in the database the performance information about the given job.
+
+    :param db: a :class:`openquake.server.dbapi.Db` instance
+    :param job_id: a job ID
+    :param records: a list of performance records
     """
-    for rec in records:
-        models.Performance.objects.create(
-            job_id=job_id, operation=rec['operation'],
-            time_sec=rec['time_sec'], memory_mb=rec['memory_mb'],
-            counts=rec['counts'])
+    rows = [(job_id, rec['operation'], rec['time_sec'], rec['memory_mb'],
+             rec['counts']) for rec in records]
+    db.insert('performance',
+              'job_id operation time_sec memory_mb counts'.split(), rows)
 
 
 # used in make_report
-def fetch(templ, *args):
+def fetch(db, templ, *args):
     """
-    Run queries directly on the database. Return header + rows
+    Run generic queries directly on the database. See the documentation
+    of the dbapi module.
+
+    :param db: a :class:`openquake.server.dbapi.Db` instance
+    :param templ: a SQL query template
+    :param args: arguments to pass to the template
     """
-    curs = db.connection.cursor()
-    curs.execute(templ, args)
-    header = [r[0] for r in curs.description]
-    return [header] + curs.fetchall()
+    return db(templ, *args)
 
 
-def get_dbpath():
+def get_dbpath(db):
     """
-    Returns the path to the database file
+    :param db: a :class:`openquake.server.dbapi.Db` instance
+    :returns: the path to the database file.
     """
-    curs = db.connection.cursor()
-    curs.execute('PRAGMA database_list')
+    curs = db('PRAGMA database_list')
     # return a row with fields (id, dbname, dbpath)
     return curs.fetchall()[0][-1]
 
 
 # ########################## upgrade operations ########################## #
 
-def what_if_I_upgrade(extract_scripts):
-    db.connection.cursor()  # bind the connection
-    conn = db.connection.connection
+def what_if_I_upgrade(db, extract_scripts):
+    """
+    :param db: a :class:`openquake.server.dbapi.Db` instance
+    :param extract_scripts: scripts to extract
+    """
     return upgrade_manager.what_if_I_upgrade(
-        conn, extract_scripts=extract_scripts)
+        db.conn, extract_scripts=extract_scripts)
 
 
-def version_db():
-    db.connection.cursor()  # bind the connection
-    conn = db.connection.connection
-    return upgrade_manager.version_db(conn)
+def version_db(db):
+    """
+    :param db: a :class:`openquake.server.dbapi.Db` instance
+    """
+    return upgrade_manager.version_db(db.conn)
 
 
-def upgrade_db():
-    db.connection.cursor()  # bind the connection
-    conn = db.connection.connection
-    return upgrade_manager.upgrade_db(conn)
+def upgrade_db(db):
+    """
+    :param db: a :class:`openquake.server.dbapi.Db` instance
+    """
+    return upgrade_manager.upgrade_db(db.conn)
 
 
 # ################### used in Web UI ######################## #
 
-def calc_info(calc_id):
+def calc_info(db, calc_id):
     """
+    :param db: a :class:`openquake.server.dbapi.Db` instance
     :param calc_id: calculation ID
     :returns: dictionary of info about the given calculation
     """
-    job = models.get(models.OqJob, pk=calc_id)
+    job = db('SELECT * FROM job WHERE id=?x', calc_id, one=True)
     response_data = {}
     response_data['user_name'] = job.user_name
     response_data['status'] = job.status
@@ -360,97 +390,140 @@ def calc_info(calc_id):
     return response_data
 
 
-def get_calcs(request_get_dict, user_name, user_acl_on=False, id=None):
+def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param request_get_dict:
+        a dictionary
+    :param user_name:
+        user name
+    :param user_acl_on:
+        if True, returns only the calculations owned by the user
+    :param id:
+        if given, extract only the specified calculation
     :returns:
         list of tuples (job_id, user_name, job_status, job_type,
                         job_is_running, job_description)
     """
     # helper to get job+calculation data from the oq-engine database
-    jobs = models.OqJob.objects.filter()
+    filterdict = {}
 
     # user_acl_on is true if settings.ACL_ON = True or when the user is a
     # Django super user
     if user_acl_on:
-        jobs = jobs.filter(user_name=user_name)
+        filterdict['user_name'] = user_name
 
     if id is not None:
-        jobs = jobs.filter(id=id)
+        filterdict['id'] = id
 
     if 'job_type' in request_get_dict:
-        job_type = request_get_dict.get('job_type')
-        jobs = jobs.filter(hazard_calculation__isnull=job_type == 'hazard')
+        filterdict['job_type'] = request_get_dict.get('job_type')
 
     if 'is_running' in request_get_dict:
         is_running = request_get_dict.get('is_running')
-        jobs = jobs.filter(is_running=valid.boolean(is_running))
+        filterdict['is_running'] = valid.boolean(is_running)
 
     if 'relevant' in request_get_dict:
         relevant = request_get_dict.get('relevant')
-        jobs = jobs.filter(relevant=valid.boolean(relevant))
-
+        filterdict['relevant'] = valid.boolean(relevant)
+    jobs = db('SELECT *, %s FROM job WHERE ?A ORDER BY id DESC' % JOB_TYPE,
+              filterdict)
     return [(job.id, job.user_name, job.status, job.job_type,
-             job.is_running, job.description) for job in jobs.order_by('-id')]
+             job.is_running, job.description) for job in jobs]
 
 
-def set_relevant(calc_id, flag):
+def set_relevant(db, job_id, flag):
     """
-    Set the `relevant` field of the given calculation record
+    Set the `relevant` field of the given calculation record.
+
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        a job ID
+    :param flag:
+        flag for the field job.relevant
     """
-    job = models.get(models.OqJob, pk=calc_id)
-    job.relevant = flag
-    job.save()
+    db('UPDATE job SET relevant=?x WHERE id=?x', flag, job_id)
 
 
-def log_to_json(log):
-    """
-    Convert a log record into a list of strings
-    """
-    return [log.timestamp.isoformat()[:22],
-            log.level, log.process, log.message]
-
-
-def get_log_slice(calc_id, start, stop):
+def get_log_slice(db, job_id, start, stop):
     """
     Get a slice of the calculation log as a JSON list of rows
+
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        a job ID
+    :param start:
+        start of the slice
+    :param stop:
+        end of the slice (the last element is excluded)
     """
-    start = start or 0
-    stop = stop or None
-    rows = models.Log.objects.filter(job_id=calc_id)[start:stop]
-    return [log_to_json(row) for row in rows]
+    start = int(start)
+    stop = int(stop)
+    limit = -1 if stop == 0 else stop - start
+    logs = db('SELECT * FROM log WHERE job_id=?x '
+              'ORDER BY id LIMIT ?s OFFSET ?s',
+              job_id, limit, start)
+    # NB: .isoformat() returns a string like '2016-08-29T15:42:34.984756'
+    # we consider only the first 22 characters, i.e. '2016-08-29T15:42:34.98'
+    return [[log.timestamp.isoformat()[:22], log.level,
+             log.process, log.message] for log in logs]
 
 
-def get_log_size(calc_id):
+def get_log_size(db, job_id):
     """
-    Get a slice of the calculation log as a JSON list of rows
+    Get a slice of the calculation log as a JSON list of rows.
+
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        a job ID
     """
-    return models.Log.objects.filter(job_id=calc_id).count()
+    return db('SELECT count(id) FROM log WHERE job_id=?x', job_id,
+              scalar=True)
 
 
-def get_traceback(calc_id):
+def get_traceback(db, job_id):
     """
     Return the traceback of the given calculation as a list of lines.
     The list is empty if the calculation was successful.
+
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        a job ID
     """
     # strange: understand why the filter returns two lines
-    log = list(models.Log.objects.filter(job_id=calc_id, level='CRITICAL'))[-1]
+    log = db("SELECT * FROM log WHERE job_id=?x AND level='CRITICAL'",
+             job_id)[-1]
     response_data = log.message.splitlines()
     return response_data
 
 
-def get_result(result_id):
+def get_result(db, result_id):
     """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param result_id:
+        a result ID
     :returns: (job_id, job_status, datadir, datastore_key)
     """
-    output = models.get(models.Output, pk=result_id)
-    job = output.oq_job
-    return job.id, job.status, os.path.dirname(job.ds_calc_dir), output.ds_key
+    job = db('SELECT job.*, ds_key FROM job, output WHERE '
+             'oq_job_id=job.id AND output.id=?x', result_id, one=True)
+    return job.id, job.status, os.path.dirname(job.ds_calc_dir), job.ds_key
 
 
-def get_results(job_id):
+def get_results(db, job_id):
     """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        a job ID
     :returns: (datadir, datastore_keys)
     """
-    job = models.get(models.OqJob, pk=job_id)
-    datadir = os.path.dirname(job.ds_calc_dir)
-    return datadir, [output.ds_key for output in get_outputs(job_id)]
+    ds_calc_dir = db('SELECT ds_calc_dir FROM job WHERE id=?x', job_id,
+                     scalar=True)
+    datadir = os.path.dirname(ds_calc_dir)
+    return datadir, [output.ds_key for output in get_outputs(db, job_id)]
