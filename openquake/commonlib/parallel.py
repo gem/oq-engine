@@ -397,10 +397,6 @@ class TaskManager(object):
         if acc is None:
             acc = AccumDict()
         results = self.submit_all()
-        if self.sent:
-            self.progress('Sent %s of data in %d task(s)',
-                          humansize(sum(self.sent.values())),
-                          results.num_tasks)
         for res in results:
             acc = agg(acc, res)
         if results.received:
@@ -441,6 +437,10 @@ class TaskManager(object):
             logging.warn('No tasks were submitted')
         ir = IterResult(self.results, self.name, task_no, self.progress)
         ir.sent = self.sent  # for information purposes
+        if self.sent:
+            self.progress('Sent %s of data in %d task(s)',
+                          humansize(sum(self.sent.values())),
+                          ir.num_tasks)
         return ir
 
     def __iter__(self):
