@@ -291,10 +291,10 @@ class PSHACalculator(base.HazardCalculator):
                 num_tiles=self.num_tiles)
             tm = parallel.starmap(
                 self.core_task.__func__, srcman.gen_args(self.sitecol, tiles))
-            results = tm.submit_all()
+            iter_result = tm.submit_all()
             srcman.pre_store_source_info(self.datastore)
-        pmap_by_grp_id = reduce(self.agg_dicts, results, self.zerodict())
-        self.save_data_transfer(results)
+        pmap_by_grp_id = reduce(self.agg_dicts, iter_result, self.zerodict())
+        self.save_data_transfer(iter_result)
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(tm, pmap_by_grp_id)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
