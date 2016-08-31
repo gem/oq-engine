@@ -19,44 +19,37 @@
 from __future__ import print_function
 import os
 import sys
+import sqlite3
 from django.core.management import execute_from_command_line
+from openquake.server.settings import DATABASE
 from openquake.server import executor
+from openquake.server.db import actions
+from openquake.server.dbapi import Db
 from openquake.engine import logs
 
-
-def use_tmp_db(tmpfile_port):
-    from openquake.engine import config
-    from openquake.server.settings import DATABASE
-    tmpfile, port_str = tmpfile_port.rsplit(':', 1)
-    DATABASE['NAME'] = tmpfile
-    DATABASE['PORT'] = port = int(port_str)
-    # make sure we use the server on the temporary db
-    config.DBS_ADDRESS = ('localhost', port)
+db = Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
+        detect_types=sqlite3.PARSE_DECLTYPES)
 
 
-def parse_args(argv):
-    # manages the argument "tmpdb=XXX" used in the functional tests
-    args = []
-    dbname = None
-    for arg in argv:
-        if arg.startswith('tmpdb='):
-            dbname = arg[6:]
-        else:
-            args.append(arg)
-    return args, dbname
+# bypass the DbServer and run the action directly
+def dbcmd(action, *args):
+    """
+    A dispatcher to the database server.
+
+    :param action: database action to perform
+    :param args: arguments
+    """
+    return getattr(actions, action)(db, *args)
+
 
 # the code here is run in development mode; for instance
 # $ python manage.py runserver 0.0.0.0:8800
 if __name__ == "__main__":
     os.environ.setdefault(
         "DJANGO_SETTINGS_MODULE", "openquake.server.settings")
-    argv, tmpfile_port = parse_args(sys.argv)
-    if tmpfile_port:  # this is used in the functional tests
-        use_tmp_db(tmpfile_port)
-    else:
-        # check the database version
-        logs.dbcmd('check_outdated')
-        # reset is_running
-        logs.dbcmd('reset_is_running')
+    if '--nothreading' in sys.argv:
+        logs.dbcmd = dbcmd  # turn this on when debugging
+    logs.dbcmd('upgrade_db')  # make sure the DB exists
+    logs.dbcmd('reset_is_running')  # reset the flag is_running
     with executor:
-        execute_from_command_line(argv)
+        execute_from_command_line(sys.argv)
