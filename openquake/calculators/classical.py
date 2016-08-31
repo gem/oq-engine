@@ -422,7 +422,7 @@ class ClassicalCalculator(PSHACalculator):
         # build hcurves and stats
         with self.monitor('submitting poes', autoflush=True):
             sm = parallel.starmap(build_hcurves_and_stats,
-                                  self.gen_args(pmap_by_grp))
+                                  list(self.gen_args(pmap_by_grp)))
         with self.monitor('saving hcurves and stats', autoflush=True):
             return sm.reduce(self.save_hcurves)
 
@@ -437,9 +437,8 @@ class ClassicalCalculator(PSHACalculator):
         weights = (None if self.oqparam.number_of_logic_tree_samples
                    else [rlz.weight for rlz in self.rlzs_assoc.realizations])
         pstats = PmapStats(self.oqparam.quantile_hazard_curves, weights)
-        num_tiles = math.ceil(len(self.sitecol) / self.oqparam.sites_per_tile)
-        num_blocks = int(self.oqparam.concurrent_tasks * num_tiles)
-        for block in self.sitecol.split_in_tiles(num_blocks):
+        num_rlzs = len(self.rlzs_assoc.realizations)
+        for block in self.sitecol.split_in_tiles(num_rlzs):
             pg = {grp_id: pmap_by_grp[grp_id].filter(block.sids)
                   for grp_id in pmap_by_grp}
             yield pg, block.sids, pstats, self.rlzs_assoc, monitor
