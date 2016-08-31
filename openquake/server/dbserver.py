@@ -21,13 +21,8 @@ import socket
 import sqlite3
 import os.path
 import logging
-try:
-    from Queue import Queue
-except ImportError:
-    from queue import Queue
-from threading import Thread
-from multiprocessing import Process
 from multiprocessing.connection import Listener
+from concurrent.futures import ProcessPoolExecutor
 
 from openquake.baselib import sap
 from openquake.commonlib.parallel import safely_call
@@ -36,42 +31,7 @@ from openquake.server.db import actions
 from openquake.server import dbapi
 from openquake.server.settings import DATABASE
 
-queue = Queue()
-
-
-def run_command(cmd, args, conn):
-    """
-    Execute the received command. Errors are trapped and a pair
-    (result, exctype) is sent back.
-    `exctype` is None if there is no exception, otherwise it is an exception
-    class and `result` is an error string containing the traceback.
-    """
-    try:
-        logging.info('Processing %s%s', cmd, args)
-        func = getattr(actions, cmd)
-
-        # execute the function by trapping any possible exception
-        res, etype, _ = safely_call(func, args)
-        if etype:
-            logging.error(res)
-
-        # send back the result and the exception class
-        conn.send((res, etype))
-    finally:
-        conn.close()
-
-
-def run_commands(db):
-    """
-    Execute the received commands in a queue.
-    """
-    while True:
-        conn, cmd, args = queue.get()
-        if cmd == 'stop':
-            conn.send((None, None))
-            conn.close()
-            break
-        run_command(cmd, (db,) + args, conn)
+executor = ProcessPoolExecutor(1)  # there is a single db process
 
 
 class DbServer(object):
@@ -79,18 +39,16 @@ class DbServer(object):
     A server collecting the received commands into a queue
     """
     def __init__(self, db, address, authkey):
+        self.db = db
         self.address = address
         self.authkey = authkey
-        self.thread = Thread(target=run_commands, args=(db,))
 
     def loop(self):
         listener = Listener(self.address, backlog=5, authkey=self.authkey)
         logging.warn('DB server started with %s, listening on %s:%d...',
                      sys.executable, *self.address)
-        self.thread.start()
-        cmd = None
         try:
-            while cmd != 'stop':
+            while True:
                 try:
                     conn = listener.accept()
                 except KeyboardInterrupt:
@@ -101,18 +59,21 @@ class DbServer(object):
                     continue
                 cmd_ = conn.recv()  # a tuple (name, arg1, ... argN)
                 cmd, args = cmd_[0], cmd_[1:]
-                if cmd.startswith('@'):  # slow command, run in process
-                    cmd = cmd[1:]  # strip @
-                    proc = Process(
-                        target=run_command, name=cmd, args=(cmd, args, conn))
-                    proc.start()
-                    logging.warn('Started %s%s in process %d',
-                                 cmd, args, proc.pid)
-                else:
-                    queue.put((conn, cmd, args))
+                if cmd == 'stop':
+                    break
+                func = getattr(actions, cmd)
+                fut = executor.submit(safely_call, func, (self.db, ) + args)
+
+                def sendback(fut, conn=conn):
+                    res, etype, _mon = fut.result()
+                    if etype:
+                        logging.error(res)
+                    # send back the result and the exception class
+                    conn.send((res, etype))
+                    conn.close()
+                fut.add_done_callback(sendback)
         finally:
             listener.close()
-            self.thread.join()
 
 
 def get_status(address=None):
