@@ -396,13 +396,13 @@ class TaskManager(object):
         """
         if acc is None:
             acc = AccumDict()
-        results = self.submit_all()
-        for res in results:
+        iter_result = self.submit_all()
+        for res in iter_result:
             acc = agg(acc, res)
-        if results.received:
+        if iter_result.received:
             self.progress('Received %s of data, maximum per task %s',
-                          humansize(sum(results.received)),
-                          humansize(max(results.received)))
+                          humansize(sum(iter_result.received)),
+                          humansize(max(iter_result.received)))
         self.results = []
         return acc
 
