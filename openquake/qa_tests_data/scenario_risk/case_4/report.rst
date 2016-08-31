@@ -1,7 +1,7 @@
 Scenario Risk for Nepal with 20 assets
 ======================================
 
-gem-tstation:/home/michele/ssd/calc_43353.hdf5 updated Wed Aug 24 20:19:32 2016
+gem-tstation:/home/michele/ssd/calc_45879.hdf5 updated Wed Aug 31 12:12:28 2016
 
 num_sites = 20, sitecol = 1.58 KB
 
@@ -21,7 +21,7 @@ area_source_discretization   None
 random_seed                  42                
 master_seed                  0                 
 avg_losses                   False             
-engine_version               '2.1.0-git50eb989'
+engine_version               '2.1.0-git49748af'
 ============================ ==================
 
 Input files
@@ -74,7 +74,7 @@ reading exposure        0.007     0.0       1
 filtering sites         0.003     0.0       1     
 computing gmfs          0.003     0.0       1     
 saving gmfs             0.001     0.0       1     
-building riskinputs     7.010E-04 0.0       1     
-building epsilons       3.102E-04 0.0       1     
+building riskinputs     7.091E-04 0.0       1     
+building epsilons       2.890E-04 0.0       1     
 reading site collection 6.914E-06 0.0       1     
 ======================= ========= ========= ======
