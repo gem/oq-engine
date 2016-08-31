@@ -462,7 +462,7 @@ class RiskInput(object):
         :returns:
             list of hazard dictionaries imt -> rlz -> haz per each site
         """
-        if rlzs_assoc is None:  # case ebr_from_gmfs
+        if rlzs_assoc is None:  # case ebr_gmf
             return self.hazard_by_site
         return [{imt: rlzs_assoc.combine(haz[imt]) for imt in haz}
                 for haz in self.hazard_by_site]
