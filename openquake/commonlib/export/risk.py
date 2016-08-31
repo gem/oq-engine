@@ -827,7 +827,10 @@ def export_loss_curves_rlzs(ekey, dstore):
             losses = data['losses' + ins]
             poes = data['poes' + ins]
             avg = data['avg' + ins]
-            loss_ratios = losses / ass['value-' + lt]
+            if lt == 'occupants':
+                loss_ratios = losses / ass['occupants']
+            else:
+                loss_ratios = losses / ass['value-' + lt]
             curve = LossCurve(loc, aref[ass['idx']], poes,
                               losses, loss_ratios, avg, None)
             curves.append(curve)
