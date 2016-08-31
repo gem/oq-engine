@@ -1031,7 +1031,10 @@ class CurveBuilder(object):
         N = len(assetcol)
         R = rcurves.shape[1]
         if self.user_provided:  # loss_ratios provided
-            asset_values = assetcol[self.loss_type]
+            if self.loss_type == 'occupants':
+                asset_values = assetcol['occupants']
+            else:
+                asset_values = assetcol['value-' + self.loss_type]
             curves_lt = rcurves[self.loss_type]
             for rlzi in range(R):
                 loss_maps = numpy.zeros(N, self.loss_maps_dt)
