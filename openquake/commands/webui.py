@@ -43,14 +43,14 @@ def webui(cmd, hostport='127.0.0.1:8800'):
             sys.exit('Please start the DbServer: '
                      'see the documentation for details')
         subprocess.Popen([sys.executable, '-m', 'openquake.server.dbserver'])
-        counter = 0
+        waiting_seconds = 5
         while dbstatus == 'not-running':
-            if counter >= 5:
+            if waiting_seconds == 0:
                 sys.exit('The DbServer cannot be started. '
                          'Please check the configuration')
             sleep(1)
             dbstatus = get_status()
-            counter += 1
+            waiting_seconds -= 1
 
     if cmd == 'start':
         rundjango('runserver', hostport)
