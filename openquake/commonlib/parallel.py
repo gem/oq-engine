@@ -124,7 +124,6 @@ def safely_call(func, args, pickle=False):
     return res
 
 
-        if isinstance(mon, Monitor):
 class Pickled(object):
     """
     An utility to manually pickling/unpickling objects.
