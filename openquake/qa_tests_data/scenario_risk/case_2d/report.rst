@@ -1,7 +1,7 @@
 scenario hazard
 ===============
 
-gem-tstation:/home/michele/ssd/calc_42172.hdf5 updated Wed Aug 24 08:13:53 2016
+gem-tstation:/home/michele/ssd/calc_45880.hdf5 updated Wed Aug 31 12:12:28 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  42                 
 master_seed                  0                  
-engine_version               '2.1.0-git81d4f3d' 
+engine_version               '2.1.0-git49748af' 
 ============================ ===================
 
 Input files
@@ -66,5 +66,5 @@ operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 filtering sites         0.006     0.0       1     
 reading exposure        0.002     0.0       1     
-reading site collection 5.007E-06 0.0       1     
+reading site collection 6.914E-06 0.0       1     
 ======================= ========= ========= ======
