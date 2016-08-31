@@ -91,7 +91,6 @@ def prefilter_ruptures(hdf5, ridx, idx_set, sites, integration_distance):
     """
     Determines if a rupture is likely to be inside the integration distance
     by considering the set of fault plane centroids.
-
     :param hdf5:
         Source of UCERF file as h5py.File object
     :param list ridx:
@@ -514,7 +513,7 @@ class UCERFSESControl(object):
                  npd=NPD, hdd=HDD, aspect=1.5, upper_seismogenic_depth=0.0,
                  lower_seismogenic_depth=15.0, msr=WC1994(), mesh_spacing=1.0,
                  trt="Active Shallow Crust", integration_distance=1000):
-        assert os.path.exists(source_file)
+        assert os.path.exists(source_file), source_file 
         self.source_file = source_file
         self.source_id = id
         self.inv_time = investigation_time
@@ -548,8 +547,7 @@ class UCERFSESControl(object):
         """
         self.sites = sites
         self.integration_distance = integration_distance
-        if not self.idx_set:
-            self.idx_set = self.build_idx_set(branch_key)
+        self.idx_set = self.build_idx_set(branch_key)
         with h5py.File(self.source_file, 'r') as hdf5:
             self.background_idx = prefilter_background_model(
                 hdf5, self.idx_set["grid_key"], self.sites,
@@ -575,8 +573,7 @@ class UCERFSESControl(object):
         """
         Generates the event set corresponding to a particular branch
         """
-        if not self.idx_set:
-            self.idx_set = self.build_idx_set(branch_id)
+        self.idx_set = self.build_idx_set(branch_id)
         self.update_background_site_filter(branch_id,
                                            sites,
                                            integration_distance)
