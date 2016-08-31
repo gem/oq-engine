@@ -45,7 +45,7 @@ def webui(cmd, hostport='127.0.0.1:8800'):
         subprocess.Popen([sys.executable, '-m', 'openquake.server.dbserver'])
         counter = 0
         while dbstatus == 'not-running':
-            if counter >= 10:
+            if counter >= 5:
                 sys.exit('The DbServer cannot be started. '
                          'Please check the configuration')
             sleep(1)
