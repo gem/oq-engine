@@ -1,7 +1,7 @@
 classical risk
 ==============
 
-gem-tstation:/home/michele/ssd/calc_43267.hdf5 updated Wed Aug 24 20:17:14 2016
+gem-tstation:/home/michele/ssd/calc_45793.hdf5 updated Wed Aug 31 12:10:05 2016
 
 num_sites = 7, sitecol = 1015 B
 
@@ -22,7 +22,7 @@ random_seed                  24
 master_seed                  0                                                               
 avg_losses                   False                                                           
 sites_per_tile               10000                                                           
-engine_version               '2.1.0-git50eb989'                                              
+engine_version               '2.1.0-git49748af'                                              
 ============================ ================================================================
 
 Input files
@@ -99,13 +99,13 @@ filtered_weight 969
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,635       
+count_eff_ruptures_max_received_per_task 1,631       
 count_eff_ruptures_num_tasks             24          
 count_eff_ruptures_sent.monitor          32,448      
 count_eff_ruptures_sent.rlzs_by_gsim     24,456      
 count_eff_ruptures_sent.sitecol          13,272      
 count_eff_ruptures_sent.sources          38,110      
-count_eff_ruptures_tot_received          39,240      
+count_eff_ruptures_tot_received          39,093      
 hazard.input_weight                      969         
 hazard.n_imts                            4           
 hazard.n_levels                          10          
@@ -139,10 +139,10 @@ Slowest sources
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class              weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
-0            1         SimpleFaultSource         482    15        0.002       0.030      0.0           0.0           0        
-2            1         SimpleFaultSource         482    15        0.001       0.029      0.0           0.0           0        
-1            2         SimpleFaultSource         4.000  1         0.002       0.0        0.0           0.0           0        
-3            2         CharacteristicFaultSource 1.000  1         0.001       0.0        0.0           0.0           0        
+2            1         SimpleFaultSource         482    15        0.0         0.099      0.0           0.0           0        
+0            1         SimpleFaultSource         482    15        0.0         0.097      0.0           0.0           0        
+1            2         SimpleFaultSource         4.000  0         0.001       0.0        0.0           0.0           0        
+3            2         CharacteristicFaultSource 1.000  0         0.001       0.0        0.0           0.0           0        
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -151,7 +151,7 @@ Computation times by source typology
 source_class              filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ========================= =========== ========== ============= ============= ========= ======
 CharacteristicFaultSource 0.001       0.0        0.0           0.0           0         1     
-SimpleFaultSource         0.005       0.058      0.0           0.0           0         3     
+SimpleFaultSource         0.001       0.196      0.0           0.0           0         3     
 ========================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
@@ -163,14 +163,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.093     0.0       1     
-splitting sources              0.058     0.0       2     
-reading composite source model 0.016     0.0       1     
-store source_info              0.014     0.0       1     
-filtering sources              0.006     0.0       4     
-total count_eff_ruptures       0.006     0.0       24    
+managing sources               0.145     0.0       1     
+total count_eff_ruptures       0.024     1.250     24    
+reading composite source model 0.017     0.0       1     
 reading exposure               0.004     0.0       1     
-aggregate curves               5.155E-04 0.0       24    
-saving probability maps        3.695E-05 0.0       1     
-reading site collection        6.914E-06 0.0       1     
+filtering sources              0.002     0.0       2     
+aggregate curves               5.939E-04 0.0       24    
+saving probability maps        4.101E-05 0.0       1     
+store source_info              1.097E-05 0.0       1     
+reading site collection        5.960E-06 0.0       1     
 ============================== ========= ========= ======

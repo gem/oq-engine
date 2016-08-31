@@ -1,7 +1,7 @@
 Calculation of the ground motion fields for a scenario
 ======================================================
 
-gem-tstation:/home/michele/ssd/calc_43275.hdf5 updated Wed Aug 24 20:17:16 2016
+gem-tstation:/home/michele/ssd/calc_45801.hdf5 updated Wed Aug 31 12:10:07 2016
 
 num_sites = 7, sitecol = 825 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None              
 random_seed                  3                 
 master_seed                  0                 
-engine_version               '2.1.0-git50eb989'
+engine_version               '2.1.0-git49748af'
 ============================ ==================
 
 Input files
@@ -70,5 +70,5 @@ operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 reading exposure        0.004     0.0       1     
 filtering sites         0.003     0.0       1     
-reading site collection 6.914E-06 0.0       1     
+reading site collection 5.960E-06 0.0       1     
 ======================= ========= ========= ======
