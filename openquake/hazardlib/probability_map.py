@@ -101,8 +101,9 @@ class ProbabilityMap(dict):
     Such operators are implemented efficiently at the numpy level, by
     dispatching on the underlying array. Moreover there is a classmethod
     .build(L, I, sids, initvalue) to build initialized instances of
-    ProbabilityMap. The map can be represented as an array of shape
-    (N, L, I) where N is the number of site IDs.
+    :class:`ProbabilityMap`. The map can be represented as 3D array of shape
+    (shape_x, shape_y, shape_z) = (N, L, I), where N is the number of site IDs,
+    L the total number of hazard levels and I the number of GSIMs.
     """
     @classmethod
     def build(cls, shape_y, shape_z, sids, initvalue=0.):
