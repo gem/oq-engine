@@ -49,7 +49,7 @@ class AssetCollection(object):
             assets_by_site, time_event)
         fields = self.array.dtype.names
         self.loss_types = hdf5.array_of_vstr(
-            sorted(f for f in fields if not f.startswith(FIELDS)))
+            sorted(f[6:] for f in fields if f.startswith('value-')))
         self.deduc = hdf5.array_of_vstr(
             n for n in fields if n.startswith('deductible-'))
         self.i_lim = hdf5.array_of_vstr(
@@ -76,7 +76,7 @@ class AssetCollection(object):
     def __getitem__(self, indices):
         if isinstance(indices, int):  # single asset
             a = self.array[indices]
-            values = {lt: a[str(lt)] for lt in self.loss_types}
+            values = {lt: a['value-' + lt] for lt in self.loss_types}
             if 'occupants' in self.array.dtype.names:
                 values['occupants_' + str(self.time_event)] = a['occupants']
             return riskmodels.Asset(
@@ -136,7 +136,7 @@ class AssetCollection(object):
                     loss_types.append('occupants')
                 # discard occupants for different time periods
             else:
-                loss_types.append(candidate)
+                loss_types.append('value-' + candidate)
         deductible_d = first_asset.deductibles or {}
         limit_d = first_asset.insurance_limits or {}
         retrofitting_d = first_asset.retrofitteds or {}
