@@ -794,7 +794,9 @@ def export_rcurves_rlzs(ekey, dstore):
         curves = []
         for ass, poes in zip(assetcol, array):
             loc = Location(ass['lon'], ass['lat'])
-            losses = loss_ratios[ltype] * ass[ltype]
+            value = (ass['occupants'] if ltype == 'occupants'
+                     else ass['value-' + ltype])
+            losses = loss_ratios[ltype] * value
             avg = scientific.average_loss((losses, poes))
             curve = LossCurve(loc, aref[ass['idx']], poes,
                               losses, loss_ratios[ltype], avg, None)
@@ -825,7 +827,7 @@ def export_loss_curves_rlzs(ekey, dstore):
             losses = data['losses' + ins]
             poes = data['poes' + ins]
             avg = data['avg' + ins]
-            loss_ratios = losses / ass[lt]
+            loss_ratios = losses / ass['value-' + lt]
             curve = LossCurve(loc, aref[ass['idx']], poes,
                               losses, loss_ratios, avg, None)
             curves.append(curve)
