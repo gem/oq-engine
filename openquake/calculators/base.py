@@ -536,18 +536,18 @@ class HazardCalculator(BaseCalculator):
         return (self.oqparam.calculation_mode in ('psha', 'classical') and
                 len(self.sitecol) > self.oqparam.sites_per_tile)
 
-    def save_data_transfer(self, result_iter):
+    def save_data_transfer(self, iter_result):
         """
         Save information about the data transfer in the risk calculation
         as attributes of agg_loss_table
         """
-        if result_iter.received:  # nothing is received when OQ_DISTRIBUTE=no
-            tname = result_iter.name
+        if iter_result.received:  # nothing is received when OQ_DISTRIBUTE=no
+            tname = iter_result.name
             self.datastore.save('job_info', {
-                tname + '_sent': result_iter.sent,
-                tname + '_max_received_per_task': max(result_iter.received),
-                tname + '_tot_received': sum(result_iter.received),
-                tname + '_num_tasks': len(result_iter.received)})
+                tname + '_sent': iter_result.sent,
+                tname + '_max_received_per_task': max(iter_result.received),
+                tname + '_tot_received': sum(iter_result.received),
+                tname + '_num_tasks': len(iter_result.received)})
 
     def post_process(self):
         """For compatibility with the engine"""

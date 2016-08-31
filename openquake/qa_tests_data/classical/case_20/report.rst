@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 20
 =================================
 
-gem-tstation:/home/michele/ssd/calc_42141.hdf5 updated Wed Aug 24 08:12:39 2016
+gem-tstation:/home/michele/ssd/calc_45849.hdf5 updated Wed Aug 31 12:11:11 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  106                             
 master_seed                  0                               
 sites_per_tile               10000                           
-engine_version               '2.1.0-git81d4f3d'              
+engine_version               '2.1.0-git49748af'              
 ============================ ================================
 
 Input files
@@ -156,13 +156,13 @@ filtered_weight 1,242
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,195       
+count_eff_ruptures_max_received_per_task 1,143       
 count_eff_ruptures_num_tasks             24          
 count_eff_ruptures_sent.monitor          20,808      
 count_eff_ruptures_sent.rlzs_by_gsim     13,464      
 count_eff_ruptures_sent.sitecol          10,392      
 count_eff_ruptures_sent.sources          100,996     
-count_eff_ruptures_tot_received          28,680      
+count_eff_ruptures_tot_received          27,432      
 hazard.input_weight                      1,242       
 hazard.n_imts                            1           
 hazard.n_levels                          4.000       
@@ -178,26 +178,26 @@ Slowest sources
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class              weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
-5            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0           0.0           0        
-4            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0           0.0           0        
-2            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0           0.0           0        
-0            COMFLT1   ComplexFaultSource        29     1         0.001       0.0        0.0           0.0           0        
-0            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0           0.0           0        
-7            SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0           0.0           0        
-8            SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0           0.0           0        
-1            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0           0.0           0        
-5            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0           0.0           0        
-3            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0           0.0           0        
-10           SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0           0.0           0        
-6            SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0           0.0           0        
-9            SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0           0.0           0        
-11           SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0           0.0           0        
-1            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0           0.0           0        
-10           CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0           0.0           0        
-0            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0           0.0           0        
-4            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0           0.0           0        
-6            COMFLT1   ComplexFaultSource        29     1         0.001       0.0        0.0           0.0           0        
-7            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0           0.0           0        
+5            SFLT1     SimpleFaultSource         56     0         0.001       0.0        0.0           0.0           0        
+0            SFLT1     SimpleFaultSource         56     0         0.001       0.0        0.0           0.0           0        
+4            SFLT1     SimpleFaultSource         56     0         0.001       0.0        0.0           0.0           0        
+6            SFLT1     SimpleFaultSource         58     0         0.001       0.0        0.0           0.0           0        
+9            SFLT1     SimpleFaultSource         58     0         0.001       0.0        0.0           0.0           0        
+1            SFLT1     SimpleFaultSource         56     0         0.001       0.0        0.0           0.0           0        
+7            SFLT1     SimpleFaultSource         58     0         0.001       0.0        0.0           0.0           0        
+8            SFLT1     SimpleFaultSource         58     0         0.001       0.0        0.0           0.0           0        
+2            SFLT1     SimpleFaultSource         56     0         0.001       0.0        0.0           0.0           0        
+3            SFLT1     SimpleFaultSource         56     0         0.001       0.0        0.0           0.0           0        
+0            CHAR1     CharacteristicFaultSource 1.000  0         0.001       0.0        0.0           0.0           0        
+10           SFLT1     SimpleFaultSource         58     0         0.001       0.0        0.0           0.0           0        
+0            COMFLT1   ComplexFaultSource        29     0         0.001       0.0        0.0           0.0           0        
+11           SFLT1     SimpleFaultSource         58     0         0.001       0.0        0.0           0.0           0        
+5            CHAR1     CharacteristicFaultSource 1.000  0         0.001       0.0        0.0           0.0           0        
+1            CHAR1     CharacteristicFaultSource 1.000  0         0.001       0.0        0.0           0.0           0        
+4            CHAR1     CharacteristicFaultSource 1.000  0         0.001       0.0        0.0           0.0           0        
+10           CHAR1     CharacteristicFaultSource 1.000  0         0.001       0.0        0.0           0.0           0        
+7            CHAR1     CharacteristicFaultSource 1.000  0         0.001       0.0        0.0           0.0           0        
+5            COMFLT1   ComplexFaultSource        62     0         0.001       0.0        0.0           0.0           0        
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -207,7 +207,7 @@ source_class              filter_time split_time cum_calc_time max_calc_time num
 ========================= =========== ========== ============= ============= ========= ======
 CharacteristicFaultSource 0.013       0.0        0.0           0.0           0         12    
 ComplexFaultSource        0.013       0.0        0.0           0.0           0         12    
-SimpleFaultSource         0.014       0.0        0.0           0.0           0         12    
+SimpleFaultSource         0.015       0.0        0.0           0.0           0         12    
 ========================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
@@ -219,12 +219,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.593     0.0       1     
-managing sources               0.065     0.0       1     
-filtering sources              0.039     0.0       36    
-total count_eff_ruptures       0.007     0.0       24    
-store source_info              0.006     0.0       1     
-aggregate curves               5.431E-04 0.0       24    
-reading site collection        3.791E-05 0.0       1     
-saving probability maps        3.386E-05 0.0       1     
+reading composite source model 0.672     0.0       1     
+managing sources               0.074     0.0       1     
+filtering sources              0.041     0.0       36    
+total count_eff_ruptures       0.020     0.0       24    
+aggregate curves               5.805E-04 0.0       24    
+saving probability maps        3.409E-05 0.0       1     
+reading site collection        2.694E-05 0.0       1     
+store source_info              1.097E-05 0.0       1     
 ============================== ========= ========= ======

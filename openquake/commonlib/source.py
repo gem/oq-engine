@@ -785,9 +785,9 @@ class SourceManager(object):
                 src.serial = rup_serial[start:start + nr]
                 start += nr
 
-    def _sources_sites(self, srcs_times, tiles):
+    def _sources_sites(self, src_data, tiles):
         """
-        :param srcs_times:
+        :param src_data:
             a 5-uple (src, sites, split_sources, filter_time, split_time)
         :param tiles:
             a list of :class:`openquake.hazardlib.site.Tile` objects
@@ -795,7 +795,7 @@ class SourceManager(object):
             pairs (sources, sitecol)
         """
         light = [[] for tile in tiles]
-        for src, sites, sources, filter_time, split_time in srcs_times:
+        for src, sites, sources, filter_time, split_time in src_data:
             if sources:  # heavy
                 yield sources, sites
             else:
@@ -818,19 +818,17 @@ class SourceManager(object):
         Yield (sources, sites, rlzs_assoc, monitor) by
         looping on the tiles and on the source blocks.
         """
-        for srcs_times in self._gen_args_light(tiles):
-            for args in self._gen_args(srcs_times, tiles):
+        for src_data in self._gen_src_light(tiles):
+            for args in self._gen_args(src_data, tiles):
                 yield args
         tile = Tile(sitecol, self.maximum_distance)
-        for srcs_times in self._gen_args_heavy(sitecol):
-            for args in self._gen_args(srcs_times, [tile]):
+        for src_data in self._gen_src_heavy(sitecol):
+            for args in self._gen_args(src_data, [tile]):
                 yield args
 
-    def _gen_args(self, srcs_times, tiles):
-        if not srcs_times:
-            return
+    def _gen_args(self, src_data, tiles):
         mon = self.monitor.new()
-        for sources, sites in self._sources_sites(srcs_times, tiles):
+        for sources, sites in self._sources_sites(src_data, tiles):
             for block in block_splitter(
                     sources, self.maxweight,
                     operator.attrgetter('weight'),
@@ -839,7 +837,7 @@ class SourceManager(object):
                 rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
                 yield block, sites, rlzs_by_gsim, mon
 
-    def _gen_args_light(self, tiles):
+    def _gen_src_light(self, tiles):
         filter_mon = self.monitor('filtering sources')
         tiles = [Tile(tile, self.maximum_distance) for tile in tiles]
         if self.filter_sources and self.num_tiles == 1:
@@ -859,7 +857,7 @@ class SourceManager(object):
                              len(data), i + 1)
             yield data
 
-    def _gen_args_heavy(self, sitecol):
+    def _gen_src_heavy(self, sitecol):
         sources = self.csm.get_sources('heavy', self.maxweight)
         data = []
         for src in sources:

@@ -25,7 +25,7 @@ from openquake.baselib.general import AccumDict
 from openquake.risklib import scientific
 from openquake.commonlib.export import export
 from openquake.commonlib import writers, risk_writers
-from openquake.commonlib.util import get_assets, compose_arrays
+from openquake.commonlib.util import get_assets, compose_arrays, get_ses_idx
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
     ExposureData, Site)
@@ -170,23 +170,39 @@ def export_agg_losses_ebr(ekey, dstore):
     """
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     agg_losses = dstore[ekey[0]]
+    oq = dstore['oqparam']
+    dtlist = [('event_tag', (numpy.string_, 100)), ('event_set', U32)
+              ] + oq.loss_dt_list()
+    elt_dt = numpy.dtype(dtlist)
     etags = dstore['etags'].value
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz in rlzs:
+        dest = dstore.build_fname('agg_losses', rlz, 'csv')
+        eids = set()
         for loss_type in loss_types:
+            dset = agg_losses['rlz-%03d/%s' % (rlz.ordinal, loss_type)]
+            eids.update(dset['rup_id'])
+        eids = sorted(eids)
+        eid2idx = dict(zip(eids, range(len(eids))))
+        elt = numpy.zeros(len(eids), elt_dt)
+        elt['event_tag'] = etags[eids]
+        elt['event_set'] = numpy.array(
+            [get_ses_idx(etag) for etag in elt['event_tag']], U32)
+        for loss_type in loss_types:
+            elt_lt = elt[loss_type]
+            if oq.insured_losses:
+                elt_lt_ins = elt[loss_type + '_ins']
             data = agg_losses['rlz-%03d/%s' % (rlz.ordinal, loss_type)].value
-            data.sort(order='loss')
-            dest = dstore.build_fname('agg_losses-' + loss_type, rlz, 'csv')
-            tags = etags[data['rup_id']]
-            if data.dtype['loss'].shape == (2,):  # insured losses
-                losses = data['loss'][:, 0]
-                inslosses = data['loss'][:, 1]
-                edata = [('event_tag', 'loss', 'loss_ins')] + list(
-                    zip(tags, losses, inslosses))
-            else:
-                edata = [('event_tag', 'loss')] + list(zip(tags, data['loss']))
-            writer.save(edata, dest)
+            for i, eid in numpy.ndenumerate(data['rup_id']):
+                idx = eid2idx[eid]
+                if oq.insured_losses:
+                    elt_lt[idx] = data['loss'][i, 0]
+                    elt_lt_ins[idx] = data['loss'][i, 1]
+                else:
+                    elt_lt[idx] = data['loss'][i]
+        elt.sort(order='event_tag')
+        writer.save(elt, dest)
     return writer.getsaved()
 
 
@@ -778,7 +794,9 @@ def export_rcurves_rlzs(ekey, dstore):
         curves = []
         for ass, poes in zip(assetcol, array):
             loc = Location(ass['lon'], ass['lat'])
-            losses = loss_ratios[ltype] * ass[ltype]
+            value = (ass['occupants'] if ltype == 'occupants'
+                     else ass['value-' + ltype])
+            losses = loss_ratios[ltype] * value
             avg = scientific.average_loss((losses, poes))
             curve = LossCurve(loc, aref[ass['idx']], poes,
                               losses, loss_ratios[ltype], avg, None)
@@ -809,7 +827,10 @@ def export_loss_curves_rlzs(ekey, dstore):
             losses = data['losses' + ins]
             poes = data['poes' + ins]
             avg = data['avg' + ins]
-            loss_ratios = losses / ass[lt]
+            if lt == 'occupants':
+                loss_ratios = losses / ass['occupants']
+            else:
+                loss_ratios = losses / ass['value-' + lt]
             curve = LossCurve(loc, aref[ass['idx']], poes,
                               losses, loss_ratios, avg, None)
             curves.append(curve)
