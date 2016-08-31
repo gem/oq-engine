@@ -361,7 +361,7 @@ class TaskManager(object):
             return self.executor.submit(
                 safely_call, self.task_func, piks, True)
 
-    def _iter_futures(self):
+    def _iterfutures(self):
         # compatibility wrapper for different concurrency frameworks
 
         if self.distribute == 'no':
@@ -435,7 +435,7 @@ class TaskManager(object):
             self.submit(*args)
         if not task_no:
             logging.warn('No tasks were submitted')
-        ir = IterResult(self.results, self.name, task_no, self.progress)
+        ir = IterResult(self._iterfutures(), self.name, task_no, self.progress)
         ir.sent = self.sent  # for information purposes
         if self.sent:
             self.progress('Sent %s of data in %d task(s)',
