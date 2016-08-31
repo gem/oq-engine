@@ -372,24 +372,6 @@ def fix_minimum_intensity(min_iml, imts):
     return F32([min_iml.get(imt, 0) for imt in imts])
 
 
-class GmfColl(object):
-    """
-    A class to collect GMFs in memory, with methods .save and .by_rlzi
-    returning a dictionary rlzi -> gmv_dt
-    """
-    def __init__(self, imts, rlzs):
-        self.data = collections.defaultdict(list)  # rlzi -> data
-
-    def save(self, eid, imti, rlz, gmf, sids):
-        rlzi = rlz.ordinal
-        for gmv, sid in zip(gmf, sids):
-            self.data[rlzi].append((sid, eid, imti, gmv))
-
-    def by_rlzi(self):
-        return {rlzi: numpy.array(self.data[rlzi], gmv_dt)
-                for rlzi in self.data}
-
-
 gmv_dt = numpy.dtype([('sid', U16), ('eid', U32), ('imti', U8), ('gmv', F32)])
 
 
