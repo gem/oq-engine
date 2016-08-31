@@ -74,7 +74,7 @@ PRECALC_MAP = dict(
     classical_bcr=['classical', 'classical_bcr'],
     classical_damage=['classical', 'classical_damage'],
     event_based_risk=['event_based', 'event_based_risk'],
-    ebr_from_gmfs=['event_based'])
+    ebr_gmf=['event_based'])
 
 
 def set_array(longarray, shortarray):
