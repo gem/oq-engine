@@ -298,6 +298,7 @@ def ucerf_classical_hazard_by_rupture_set(
     # Two step process here - the first generates the hazard curves from the
     # rupture sets
     monitor.eff_ruptures = 0
+    monitor.calc_times = []
     # Apply the initial rupture to site filtering
     for rupset_idx in rupset_idxs:
         rupset_idx, s_sites = \
