@@ -30,7 +30,6 @@ import time
 
 from openquake.baselib.general import humansize, AccumDict
 from openquake.baselib.python3compat import encode
-from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib import readinput, datastore, parallel
 from openquake.calculators.classical import PSHACalculator
 
@@ -46,7 +45,7 @@ def count_eff_ruptures(sources, sitecol, rlzs_by_gsim, monitor):
     same tectonic region type.
     """
     grp_id = sources[0].src_group_id
-    acc = AccumDict({grp_id: ProbabilityMap()})
+    acc = AccumDict({grp_id: {}})
     acc.eff_ruptures = {grp_id: sum(src.num_ruptures for src in sources)}
     return acc
 
