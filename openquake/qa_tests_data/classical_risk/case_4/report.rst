@@ -1,7 +1,7 @@
 Classical Hazard-Risk QA test 4
 ===============================
 
-gem-tstation:/home/michele/ssd/calc_42179.hdf5 updated Wed Aug 24 09:01:56 2016
+gem-tstation:/home/michele/ssd/calc_45792.hdf5 updated Wed Aug 31 12:10:05 2016
 
 num_sites = 6, sitecol = 969 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                              
 master_seed                  0                               
 sites_per_tile               10000                           
-engine_version               '2.1.0-gite331d0b'              
+engine_version               '2.1.0-git49748af'              
 ============================ ================================
 
 Input files
@@ -73,13 +73,13 @@ source_model.xml 0      Active Shallow Crust 2           6405         160
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,259       
+count_eff_ruptures_max_received_per_task 1,220       
 count_eff_ruptures_num_tasks             2           
 count_eff_ruptures_sent.monitor          1,876       
 count_eff_ruptures_sent.rlzs_by_gsim     1,402       
 count_eff_ruptures_sent.sitecol          1,066       
 count_eff_ruptures_sent.sources          3,950       
-count_eff_ruptures_tot_received          2,518       
+count_eff_ruptures_tot_received          2,440       
 hazard.input_weight                      2,276       
 hazard.n_imts                            1           
 hazard.n_levels                          19          
@@ -112,8 +112,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            376       AreaSource   55     1         6.709E-04   0.0        0.0           0.0           0        
-0            231       AreaSource   104    1         6.530E-04   0.0        0.0           0.0           0        
+0            376       AreaSource   55     0         6.800E-04   0.0        0.0           0.0           0        
+0            231       AreaSource   104    0         6.459E-04   0.0        0.0           0.0           0        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -133,13 +133,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 1.962     0.0       1     
+reading composite source model 2.103     0.0       1     
 managing sources               0.031     0.0       1     
-filtering sources              0.027     0.0       39    
-store source_info              0.008     0.0       1     
-total count_eff_ruptures       0.003     0.0       2     
+filtering sources              0.025     0.0       37    
+total count_eff_ruptures       0.005     2.508     2     
 reading exposure               0.003     0.0       1     
-aggregate curves               2.694E-05 0.0       2     
-saving probability maps        2.003E-05 0.0       1     
-reading site collection        1.001E-05 0.0       1     
+aggregate curves               2.909E-05 0.0       2     
+saving probability maps        2.217E-05 0.0       1     
+reading site collection        1.097E-05 0.0       1     
+store source_info              7.153E-06 0.0       1     
 ============================== ========= ========= ======

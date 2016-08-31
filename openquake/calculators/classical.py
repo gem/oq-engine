@@ -390,9 +390,11 @@ class ClassicalCalculator(PSHACalculator):
         """
         Builds hcurves and stats from the stored PoEs
         """
+        if 'poes' not in self.datastore:  # for short report
+            return
+
         oq = self.oqparam
         rlzs = self.rlzs_assoc.realizations
-
         with self.monitor('reading poes', autoflush=True):
             pmap_by_grp = {
                 int(group_id): self.datastore['poes/' + group_id]
