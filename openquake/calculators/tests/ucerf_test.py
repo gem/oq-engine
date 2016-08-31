@@ -23,10 +23,18 @@ from openquake.calculators.tests import CalculatorTestCase
 
 
 class UcerfTestCase(CalculatorTestCase):
-    def test(self):
+    def test_event_based(self):
         if h5py.__version__ < '2.3.0':
             raise unittest.SkipTest  # UCERF requires vlen arrays
         out = self.run_calc(ucerf.__file__, 'job.ini', exports='txt')
         num_exported = len(out['gmf_data', 'txt'])
         # just check that some realizations are exported
         self.assertGreaterEqual(num_exported, 1)
+
+    def test_classical(self):
+        if h5py.__version__ < '2.3.0':
+            raise unittest.SkipTest  # UCERF requires vlen arrays
+        out = self.run_calc(ucerf.__file__, 'job_classical_redux.ini',
+                            exports='csv')
+        [fname] = out['hcurves', 'csv']
+        # TODO: add some check
