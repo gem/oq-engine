@@ -1,7 +1,7 @@
 SHARE OpenQuake Computational Settings
 ======================================
 
-gem-tstation:/home/michele/ssd/calc_42150.hdf5 updated Wed Aug 24 08:13:09 2016
+gem-tstation:/home/michele/ssd/calc_45858.hdf5 updated Wed Aug 31 12:11:43 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                                                                                                                                                                                            
 master_seed                  0                                                                                                                                                                                             
 sites_per_tile               10000                                                                                                                                                                                         
-engine_version               '2.1.0-git81d4f3d'                                                                                                                                                                            
+engine_version               '2.1.0-git49748af'                                                                                                                                                                            
 ============================ ==============================================================================================================================================================================================
 
 Input files
@@ -73,13 +73,13 @@ simple_area_source_model.xml 4      Subduction Inslab 1           7770         1
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 2,089       
+count_eff_ruptures_max_received_per_task 2,037       
 count_eff_ruptures_num_tasks             1           
 count_eff_ruptures_sent.monitor          1,772       
 count_eff_ruptures_sent.rlzs_by_gsim     29,506      
 count_eff_ruptures_sent.sitecol          433         
 count_eff_ruptures_sent.sources          2,816       
-count_eff_ruptures_tot_received          2,089       
+count_eff_ruptures_tot_received          2,037       
 hazard.input_weight                      49,409      
 hazard.n_imts                            3           
 hazard.n_levels                          26          
@@ -95,7 +95,7 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-4            s46       AreaSource   194    1         9.210E-04   0.0        0.0           0.0           0        
+4            s46       AreaSource   194    0         9.260E-04   0.0        0.0           0.0           0        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -103,7 +103,7 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-AreaSource   9.210E-04   0.0        0.0           0.0           0         1     
+AreaSource   9.260E-04   0.0        0.0           0.0           0         1     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
@@ -115,12 +115,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 4.478     0.0       1     
+reading composite source model 4.959     0.0       1     
 managing sources               0.111     0.0       1     
-filtering sources              0.022     0.0       18    
-store source_info              0.004     0.0       1     
-total count_eff_ruptures       3.591E-04 0.0       1     
-reading site collection        3.505E-05 0.0       1     
-saving probability maps        2.599E-05 0.0       1     
-aggregate curves               1.502E-05 0.0       1     
+filtering sources              0.015     0.0       16    
+total count_eff_ruptures       0.004     0.0       1     
+reading site collection        3.600E-05 0.0       1     
+saving probability maps        2.193E-05 0.0       1     
+aggregate curves               1.812E-05 0.0       1     
+store source_info              7.868E-06 0.0       1     
 ============================== ========= ========= ======

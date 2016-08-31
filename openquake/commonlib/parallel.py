@@ -434,7 +434,7 @@ class TaskManager(object):
                 args[-1].task_no = task_no
             self.submit(*args)
         if not task_no:
-            logging.warn('No tasks were submitted')
+            logging.info('No %s tasks were submitted', self.name)
         ir = IterResult(self._iterfutures(), self.name, task_no, self.progress)
         ir.sent = self.sent  # for information purposes
         if self.sent:
