@@ -318,8 +318,10 @@ def save_performance(db, job_id, records):
     :param job_id: a job ID
     :param records: a list of performance records
     """
+    # NB: rec['counts'] is a numpy.uint64 which is not automatically converted
+    # into an int in Ubuntu 12.04, so we convert it manually below
     rows = [(job_id, rec['operation'], rec['time_sec'], rec['memory_mb'],
-             rec['counts']) for rec in records]
+             int(rec['counts'])) for rec in records]
     db.insert('performance',
               'job_id operation time_sec memory_mb counts'.split(), rows)
 

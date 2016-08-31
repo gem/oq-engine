@@ -54,7 +54,7 @@ class RiskInputTestCase(unittest.TestCase):
 
     def test_assetcol(self):
         expected = writetmp('''\
-idx:uint32,lon,lat,site_id:uint32,taxonomy_id:uint32:,number:float32:,area:float32:,occupants,structural,deductible-structural,insurance_limit-structural
+idx:uint32,lon,lat,site_id:uint32,taxonomy_id:uint32:,number:float32:,area:float32:,occupants,value-structural,deductible-structural,insurance_limit-structural
 0,8.12985001E+01,2.91098003E+01,0,1,3.00000000E+00,1.00000000E+01,1.00000000E+01,1.00000000E+02,2.50000000E+01,1.00000000E+02
 1,8.30822983E+01,2.79006004E+01,1,0,5.00000000E+02,1.00000000E+01,2.00000000E+01,4.00000000E-01,1.00000000E-01,2.00000000E-01
 ''')
