@@ -496,7 +496,7 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
     return eps
 
 
-class GmvEidDset(object):
+class GmvEid(object):
     dt = numpy.dtype([('gmv', F32), ('eid', U32)])
 
     def __init__(self):
@@ -514,11 +514,19 @@ class GmvEidDset(object):
 
 
 def str2rsi(key):
+    """
+    Convert a string of the form 'rlz-XXXX/sid-YYYY/ZZZ'
+    into a triple (XXXX, YYYY, ZZZ)
+    """
     rlzi, sid, imt = key.split('/')
     return int(rlzi[4:]), int(sid[4:]), imt
 
 
 def rsi2str(rlzi, sid, imt):
+    """
+    Convert a triple (XXXX, YYYY, ZZZ) into a string of the form
+    'rlz-XXXX/sid-YYYY/ZZZ'
+    """
     return 'rlz-%04d/sid-%04d/%s' % (rlzi, sid, imt)
 
 
@@ -550,7 +558,7 @@ class GmfCollector(object):
         self.imts = imts
         self.rlzs = rlzs
         if dstore is None:
-            self.dic = collections.defaultdict(GmvEidDset)
+            self.dic = collections.defaultdict(GmvEid)
         else:
             self.dic = dstore
         self.nbytes = 0
@@ -587,20 +595,19 @@ class GmfCollector(object):
                 pass
         return hazard
 
-    def flush(self, dstore, offset=0):
+    def flush(self, dstore):
+        """
+        Save the GMFs on the datastore
+        """
         for key, data in self.dic.items():
             fullkey = 'gmf_data/' + key
             try:
                 dset = dstore.hdf5[fullkey]
             except KeyError:
                 dset = hdf5.create(
-                    dstore.hdf5, fullkey, GmvEidDset.dt, (None,))
+                    dstore.hdf5, fullkey, GmvEid.dt, (None,))
             gmfa = data.value
-            if offset:
-                gmfa['eid'] += offset  # the bug is here
-                offset += len(set(gmfa['eid']))
             hdf5.extend(dset, gmfa)
-        return offset
 
 
 class RiskInputFromRuptures(object):
