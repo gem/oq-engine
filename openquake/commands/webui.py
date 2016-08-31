@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import sys
 import subprocess
+from time import sleep
 from openquake.risklib import valid
 from openquake.baselib import sap
 from openquake.engine import config
@@ -42,6 +43,14 @@ def webui(cmd, hostport='127.0.0.1:8800'):
             sys.exit('Please start the DbServer: '
                      'see the documentation for details')
         subprocess.Popen([sys.executable, '-m', 'openquake.server.dbserver'])
+        counter = 0
+        while dbstatus == 'not-running':
+            if counter >= 10:
+                sys.exit('The DbServer cannot be started. '
+                         'Please check the configuration')
+            sleep(1)
+            dbstatus = get_status()
+            counter += 1
 
     if cmd == 'start':
         rundjango('runserver', hostport)
