@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 5
 ================================
 
-gem-tstation:/home/michele/ssd/calc_43328.hdf5 updated Wed Aug 24 20:18:40 2016
+gem-tstation:/home/michele/ssd/calc_45854.hdf5 updated Wed Aug 31 12:11:37 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  1066                            
 master_seed                  0                               
 sites_per_tile               10000                           
-engine_version               '2.1.0-git50eb989'              
+engine_version               '2.1.0-git49748af'              
 ============================ ================================
 
 Input files
@@ -70,13 +70,13 @@ source_model.xml 0      Active Shallow Crust 1           485          485
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,155       
+count_eff_ruptures_max_received_per_task 1,137       
 count_eff_ruptures_num_tasks             1           
 count_eff_ruptures_sent.monitor          860         
 count_eff_ruptures_sent.rlzs_by_gsim     516         
 count_eff_ruptures_sent.sitecol          433         
 count_eff_ruptures_sent.sources          1,176       
-count_eff_ruptures_tot_received          1,155       
+count_eff_ruptures_tot_received          1,137       
 hazard.input_weight                      485         
 hazard.n_imts                            1           
 hazard.n_levels                          3.000       
@@ -92,7 +92,7 @@ Slowest sources
 ============ ========= ================== ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class       weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ================== ====== ========= =========== ========== ============= ============= =========
-0            1         ComplexFaultSource 485    1         0.001       5.403      0.0           0.0           0        
+0            1         ComplexFaultSource 485    1         0.0         5.879      0.0           0.0           0        
 ============ ========= ================== ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -100,7 +100,7 @@ Computation times by source typology
 ================== =========== ========== ============= ============= ========= ======
 source_class       filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ================== =========== ========== ============= ============= ========= ======
-ComplexFaultSource 0.001       5.403      0.0           0.0           0         1     
+ComplexFaultSource 0.0         5.879      0.0           0.0           0         1     
 ================== =========== ========== ============= ============= ========= ======
 
 Information about the tasks
@@ -112,13 +112,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 5.617     0.0       1     
-managing sources               5.409     0.0       1     
-splitting sources              5.403     0.0       1     
-store source_info              0.004     0.0       1     
-filtering sources              0.001     0.0       1     
-total count_eff_ruptures       6.890E-05 0.0       1     
-reading site collection        4.101E-05 0.0       1     
-saving probability maps        2.003E-05 0.0       1     
-aggregate curves               1.597E-05 0.0       1     
+reading composite source model 6.075     0.0       1     
+managing sources               5.883     0.0       1     
+total count_eff_ruptures       8.440E-04 0.0       1     
+reading site collection        4.506E-05 0.0       1     
+saving probability maps        1.907E-05 0.0       1     
+aggregate curves               1.693E-05 0.0       1     
+store source_info              7.868E-06 0.0       1     
 ============================== ========= ========= ======

@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 10
 =================================
 
-gem-tstation:/home/michele/ssd/calc_43314.hdf5 updated Wed Aug 24 20:17:47 2016
+gem-tstation:/home/michele/ssd/calc_45840.hdf5 updated Wed Aug 31 12:10:40 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  1066                            
 master_seed                  0                               
 sites_per_tile               10000                           
-engine_version               '2.1.0-git50eb989'              
+engine_version               '2.1.0-git49748af'              
 ============================ ================================
 
 Input files
@@ -83,13 +83,13 @@ filtered_weight 150
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,163       
+count_eff_ruptures_max_received_per_task 1,145       
 count_eff_ruptures_num_tasks             2           
 count_eff_ruptures_sent.monitor          1,736       
 count_eff_ruptures_sent.rlzs_by_gsim     1,050       
 count_eff_ruptures_sent.sitecol          866         
-count_eff_ruptures_sent.sources          2,404       
-count_eff_ruptures_tot_received          2,326       
+count_eff_ruptures_sent.sources          2,396       
+count_eff_ruptures_tot_received          2,290       
 hazard.input_weight                      150         
 hazard.n_imts                            1           
 hazard.n_levels                          4.000       
@@ -105,8 +105,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            1         PointSource  75     1         0.004       2.909E-05  0.0           0.0           0        
-1            1         PointSource  75     1         0.004       1.597E-05  0.0           0.0           0        
+0            1         PointSource  75     1         0.0         2.501E-04  0.0           0.0           0        
+1            1         PointSource  75     1         0.0         2.420E-04  0.0           0.0           0        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -114,7 +114,7 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-PointSource  0.009       4.506E-05  0.0           0.0           0         2     
+PointSource  0.0         4.921E-04  0.0           0.0           0         2     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
@@ -126,13 +126,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.014     0.0       1     
-managing sources               0.013     0.0       1     
-filtering sources              0.009     0.0       2     
-store source_info              0.005     0.0       1     
-total count_eff_ruptures       8.678E-05 0.0       2     
-splitting sources              4.506E-05 0.0       2     
-aggregate curves               3.600E-05 0.0       2     
-reading site collection        3.600E-05 0.0       1     
-saving probability maps        2.599E-05 0.0       1     
+managing sources               0.046     0.0       1     
+reading composite source model 0.015     0.0       1     
+total count_eff_ruptures       0.002     0.0       2     
+aggregate curves               7.510E-05 0.0       2     
+saving probability maps        4.411E-05 0.0       1     
+reading site collection        3.481E-05 0.0       1     
+store source_info              1.502E-05 0.0       1     
 ============================== ========= ========= ======
