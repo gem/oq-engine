@@ -1,7 +1,7 @@
 Ucerf test
 ==========
 
-gem-tstation:/home/michele/ssd/calc_43269.hdf5 updated Wed Aug 24 20:17:15 2016
+gem-tstation:/home/michele/ssd/calc_45795.hdf5 updated Wed Aug 31 12:10:06 2016
 
 num_sites = 1588, sitecol = 72.04 KB
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             1.0
 area_source_discretization   None                            
 random_seed                  1066                            
 master_seed                  0                               
-engine_version               '2.1.0-git50eb989'              
+engine_version               '2.1.0-git49748af'              
 ============================ ================================
 
 Input files
@@ -183,26 +183,26 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            ltbr0758  type         1.000  1         0.0         0.0        0.058         0.058         1        
-1            ltbr0759  type         1.000  1         0.0         0.0        0.040         0.040         1        
-0            ltbr0542  type         1.000  1         0.0         0.0        0.096         0.096         1        
-1            ltbr0037  type         1.000  1         0.0         0.0        0.042         0.042         1        
-0            ltbr1299  type         1.000  1         0.0         0.0        0.080         0.080         1        
-1            ltbr0541  type         1.000  1         0.0         0.0        0.061         0.061         1        
-0            ltbr0577  type         1.000  1         0.0         0.0        0.082         0.082         1        
-1            ltbr0578  type         1.000  1         0.0         0.0        0.072         0.072         1        
-0            ltbr0723  type         1.000  1         0.0         0.0        0.106         0.106         1        
-1            ltbr0722  type         1.000  1         0.0         0.0        0.054         0.054         1        
-0            ltbr1297  type         1.000  1         0.0         0.0        0.077         0.077         1        
-1            ltbr0543  type         1.000  1         0.0         0.0        0.105         0.105         1        
-0            ltbr0001  type         1.000  1         0.0         0.0        0.118         0.118         1        
-1            ltbr0002  type         1.000  1         0.0         0.0        0.082         0.082         1        
-0            ltbr0579  type         1.000  1         0.0         0.0        0.127         0.127         1        
-1            ltbr0721  type         1.000  1         0.0         0.0        0.075         0.075         1        
-0            ltbr0003  type         1.000  1         0.0         0.0        0.121         0.121         1        
-1            ltbr1298  type         1.000  1         0.0         0.0        0.121         0.121         1        
-0            ltbr0757  type         1.000  1         0.0         0.0        0.352         0.352         1        
-1            ltbr0039  type         1.000  1         0.0         0.0        0.042         0.042         1        
+0            ltbr0577  type         1.000  1         0.0         0.0        0.127         0.127         1        
+1            ltbr0578  type         1.000  1         0.0         0.0        0.077         0.077         1        
+0            ltbr0579  type         1.000  1         0.0         0.0        0.091         0.091         1        
+1            ltbr0721  type         1.000  1         0.0         0.0        0.067         0.067         1        
+0            ltbr0723  type         1.000  1         0.0         0.0        0.109         0.109         1        
+1            ltbr0722  type         1.000  1         0.0         0.0        0.052         0.052         1        
+0            ltbr0001  type         1.000  1         0.0         0.0        0.137         0.137         1        
+1            ltbr0002  type         1.000  1         0.0         0.0        0.083         0.083         1        
+0            ltbr0003  type         1.000  1         0.0         0.0        0.120         0.120         1        
+1            ltbr1298  type         1.000  1         0.0         0.0        0.116         0.116         1        
+0            ltbr1299  type         1.000  1         0.0         0.0        0.072         0.072         1        
+1            ltbr0541  type         1.000  1         0.0         0.0        0.058         0.058         1        
+0            ltbr1297  type         1.000  1         0.0         0.0        0.120         0.120         1        
+1            ltbr0543  type         1.000  1         0.0         0.0        0.088         0.088         1        
+0            ltbr0542  type         1.000  1         0.0         0.0        0.130         0.130         1        
+1            ltbr0037  type         1.000  1         0.0         0.0        0.036         0.036         1        
+0            ltbr0758  type         1.000  1         0.0         0.0        0.037         0.037         1        
+1            ltbr0759  type         1.000  1         0.0         0.0        0.032         0.032         1        
+0            ltbr0757  type         1.000  1         0.0         0.0        0.370         0.370         1        
+1            ltbr0039  type         1.000  1         0.0         0.0        0.041         0.041         1        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -210,15 +210,15 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-type         0.0         0.0        2.587         2.587         24        24    
+type         0.0         0.0        2.601         2.601         24        24    
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ========================== ===== ====== ===== ===== =========
 measurement                mean  stddev min   max   num_tasks
-compute_ruptures.time_sec  0.216 0.095  0.098 0.394 12       
-compute_ruptures.memory_mb 0.0   0.0    0.0   0.0   12       
+compute_ruptures.time_sec  0.218 0.096  0.070 0.412 12       
+compute_ruptures.memory_mb 5.677 2.142  1.238 9.684 12       
 ========================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -226,8 +226,8 @@ Slowest operations
 ============================= ======== ========= ======
 operation                     time_sec memory_mb counts
 ============================= ======== ========= ======
-total compute_ruptures        2.589    0.0       12    
-sampling ruptures             1.582    0.0       24    
-saving ruptures               0.384    0.0       1     
-update_background_site_filter 0.125    0.0       24    
+total compute_ruptures        2.612    9.684     12    
+sampling ruptures             1.641    0.0       24    
+saving ruptures               0.368    0.0       1     
+update_background_site_filter 0.120    0.0       24    
 ============================= ======== ========= ======
