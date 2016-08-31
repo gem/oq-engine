@@ -59,7 +59,10 @@ class DbServer(object):
                     continue
                 cmd_ = conn.recv()  # a tuple (name, arg1, ... argN)
                 cmd, args = cmd_[0], cmd_[1:]
+                logging.debug('Got ' + str(cmd_))
                 if cmd == 'stop':
+                    conn.send((None, None))
+                    conn.close()
                     break
                 func = getattr(actions, cmd)
                 fut = executor.submit(safely_call, func, (self.db, ) + args)
