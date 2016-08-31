@@ -295,10 +295,10 @@ class PSHACalculator(base.HazardCalculator):
                 num_tiles=self.num_tiles)
             tm = parallel.starmap(
                 self.core_task.__func__, srcman.gen_args(self.sitecol, tiles))
-            results = tm.submit_all()
+            iter_result = tm.submit_all()
             srcman.pre_store_source_info(self.datastore)
-        pmap_by_grp_id = reduce(self.agg_dicts, results, self.zerodict())
-        self.save_data_transfer(results)
+        pmap_by_grp_id = reduce(self.agg_dicts, iter_result, self.zerodict())
+        self.save_data_transfer(iter_result)
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(tm, pmap_by_grp_id)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
@@ -396,9 +396,11 @@ class ClassicalCalculator(PSHACalculator):
         """
         Builds hcurves and stats from the stored PoEs
         """
+        if 'poes' not in self.datastore:  # for short report
+            return
+
         oq = self.oqparam
         rlzs = self.rlzs_assoc.realizations
-
         with self.monitor('reading poes', autoflush=True):
             pmap_by_grp = {
                 int(group_id): self.datastore['poes/' + group_id]
@@ -426,7 +428,7 @@ class ClassicalCalculator(PSHACalculator):
         # build hcurves and stats
         with self.monitor('submitting poes', autoflush=True):
             sm = parallel.starmap(build_hcurves_and_stats,
-                                  self.gen_args(pmap_by_grp))
+                                  list(self.gen_args(pmap_by_grp)))
         with self.monitor('saving hcurves and stats', autoflush=True):
             return sm.reduce(self.save_hcurves)
 
@@ -441,9 +443,8 @@ class ClassicalCalculator(PSHACalculator):
         weights = (None if self.oqparam.number_of_logic_tree_samples
                    else [rlz.weight for rlz in self.rlzs_assoc.realizations])
         pstats = PmapStats(self.oqparam.quantile_hazard_curves, weights)
-        num_tiles = math.ceil(len(self.sitecol) / self.oqparam.sites_per_tile)
-        num_blocks = int(self.oqparam.concurrent_tasks * num_tiles)
-        for block in self.sitecol.split_in_tiles(num_blocks):
+        num_rlzs = len(self.rlzs_assoc.realizations)
+        for block in self.sitecol.split_in_tiles(num_rlzs):
             pg = {grp_id: pmap_by_grp[grp_id].filter(block.sids)
                   for grp_id in pmap_by_grp}
             yield pg, block.sids, pstats, self.rlzs_assoc, monitor

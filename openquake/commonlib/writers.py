@@ -259,6 +259,8 @@ class HeaderTranslator(object):
 
 htranslator = HeaderTranslator(
     '(asset_ref):\|S100',
+    '(event_tag):\|S100',
+    '(event_set):uint32',
     '(rup_id):uint32',
     '(taxonomy):\|S100',
     '(rupserial):uint32',
@@ -270,10 +272,10 @@ htranslator = HeaderTranslator(
     '(poe-[\d\.]+):float32',
     '(lon):float32',
     '(lat):float32',
-    '(structural~.+):float32',
-    '(nonstructural~.+):float32',
-    '(business_interruption~.+):float32',
-    '(contents~.+):float32',
+    '(structural.*):float32',
+    '(nonstructural.*):float32',
+    '(business_interruption.*):float32',
+    '(contents.*):float32',
     '(occupants~.+):float32',
     '(no_damage):float32',
     '(slight):float32',
