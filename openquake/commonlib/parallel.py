@@ -362,7 +362,7 @@ class TaskManager(object):
             return self.executor.submit(
                 safely_call, self.task_func, piks, True)
 
-    def _iter_futures(self):
+    def _iterfutures(self):
         # compatibility wrapper for different concurrency frameworks
 
         if self.distribute == 'no':
@@ -397,13 +397,13 @@ class TaskManager(object):
         """
         if acc is None:
             acc = AccumDict()
-        results = self.submit_all()
-        for res in results:
+        iter_result = self.submit_all()
+        for res in iter_result:
             acc = agg(acc, res)
-        if results.received:
+        if iter_result.received:
             self.progress('Received %s of data, maximum per task %s',
-                          humansize(sum(results.received)),
-                          humansize(max(results.received)))
+                          humansize(sum(iter_result.received)),
+                          humansize(max(iter_result.received)))
         self.results = []
         return acc
 
@@ -435,8 +435,8 @@ class TaskManager(object):
                 args[-1].task_no = task_no
             self.submit(*args)
         if not task_no:
-            logging.warn('No tasks were submitted')
-        ir = IterResult(self.results, self.name, task_no, self.progress)
+            logging.info('No %s tasks were submitted', self.name)
+        ir = IterResult(self._iterfutures(), self.name, task_no, self.progress)
         ir.sent = self.sent  # for information purposes
         if self.sent:
             self.progress('Sent %s of data in %d task(s)',

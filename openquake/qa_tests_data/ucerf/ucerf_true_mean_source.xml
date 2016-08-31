@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="UCERF TRUE MEAN MODEL"
+    >
+        <UCERFSource
+        filename="UCERF_TRUE_MEAN_REDUX_v2.hdf5"
+        id="001"
+        minMag="5.0"
+        tectonicRegion="Active Shallow Crust"
+        >
+        <!-- the minMag can go down to 4.5 -->
+            <pointGeometry>
+                <upperSeismoDepth>
+                    0.0
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    15.0
+                </lowerSeismoDepth>
+            </pointGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.5
+            </ruptAspectRatio>
+            <nodalPlaneDist>
+                <nodalPlane dip="90.0" probability="0.15" rake="0.0" strike="0.0"/>
+                <nodalPlane dip="90.0" probability="0.15" rake="0.0" strike="45.0"/>
+                <nodalPlane dip="90.0" probability="0.15" rake="0.0" strike="90.0"/>
+                <nodalPlane dip="90.0" probability="0.15" rake="0.0" strike="135.0"/>
+                <nodalPlane dip="45.0" probability="0.1" rake="90.0" strike="0.0"/>
+                <nodalPlane dip="45.0" probability="0.1" rake="90.0" strike="90.0"/>
+                <nodalPlane dip="45.0" probability="0.1" rake="90.0" strike="180.0"/>
+                <nodalPlane dip="45.0" probability="0.1" rake="90.0" strike="270.0"/>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth depth="6.0" probability="1.0"/>
+            </hypoDepthDist>
+        </UCERFSource>
+    </sourceModel>
+</nrml>
+

@@ -1,7 +1,7 @@
 Scenario QA Test 3
 ==================
 
-gem-tstation:/home/michele/ssd/calc_42170.hdf5 updated Wed Aug 24 08:13:53 2016
+gem-tstation:/home/michele/ssd/calc_45878.hdf5 updated Wed Aug 31 12:12:28 2016
 
 num_sites = 4, sitecol = 877 B
 
@@ -21,7 +21,7 @@ area_source_discretization   None
 random_seed                  3                 
 master_seed                  0                 
 avg_losses                   False             
-engine_version               '2.1.0-git81d4f3d'
+engine_version               '2.1.0-git49748af'
 ============================ ==================
 
 Input files
@@ -69,11 +69,11 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-computing gmfs          0.029     0.0       1     
-filtering sites         0.005     0.0       1     
+computing gmfs          0.023     0.0       1     
+filtering sites         0.004     0.0       1     
 reading exposure        0.003     0.0       1     
-saving gmfs             0.002     0.0       1     
-building epsilons       6.180E-04 0.0       1     
-building riskinputs     2.949E-04 0.0       1     
-reading site collection 6.914E-06 0.0       1     
+saving gmfs             0.001     0.0       1     
+building epsilons       4.981E-04 0.0       1     
+building riskinputs     3.428E-04 0.0       1     
+reading site collection 5.960E-06 0.0       1     
 ======================= ========= ========= ======

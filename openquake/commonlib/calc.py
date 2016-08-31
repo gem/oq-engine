@@ -25,7 +25,6 @@ import copy
 
 import numpy
 
-from openquake.baselib.python3compat import dtype
 from openquake.baselib.general import get_array, group_array, AccumDict
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import filters
@@ -285,7 +284,7 @@ def make_uhs(pmap, imtls, poes, nsites):
     P = len(poes)
     array = make_hmap(pmap, imtls, poes).array  # size (N, I x P, 1)
     imts, _ = get_imts_periods(imtls)
-    imts_dt = numpy.dtype([(imt, F64) for imt in imts])
+    imts_dt = numpy.dtype([(str(imt), F64) for imt in imts])
     uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in poes])
     uhs = numpy.zeros(nsites, uhs_dt)
     for j, poe in enumerate(map(str, poes)):
@@ -325,7 +324,7 @@ def get_gmfs(dstore):
         haz_sitecol = sitecol
     risk_indices = set(sitecol.indices)  # N'' values
     N = len(haz_sitecol.complete)
-    imt_dt = dtype((imt, F32) for imt in oq.imtls)
+    imt_dt = numpy.dtype([(str(imt), F32) for imt in oq.imtls])
     E = oq.number_of_ground_motion_fields
     # build a matrix N x E for each GSIM realization
     gmfs = {(grp_id, gsim): numpy.zeros((N, E), imt_dt)
