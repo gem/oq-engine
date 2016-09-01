@@ -1,7 +1,7 @@
 Event-Based Hazard QA Test, Case 4
 ==================================
 
-gem-tstation:/home/michele/ssd/calc_42159.hdf5 updated Wed Aug 24 08:13:18 2016
+gem-tstation:/home/michele/ssd/calc_45867.hdf5 updated Wed Aug 31 12:11:52 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             1.0
 area_source_discretization   10.0                            
 random_seed                  1066                            
 master_seed                  0                               
-engine_version               '2.1.0-git81d4f3d'              
+engine_version               '2.1.0-git49748af'              
 ============================ ================================
 
 Input files
@@ -69,13 +69,13 @@ source_model.xml 0      Active Shallow Crust 1           10           10
 Informational data
 ------------------
 ====================================== ============
-compute_ruptures_max_received_per_task 8,846       
+compute_ruptures_max_received_per_task 8,831       
 compute_ruptures_num_tasks             1           
 compute_ruptures_sent.monitor          860         
 compute_ruptures_sent.rlzs_by_gsim     516         
 compute_ruptures_sent.sitecol          433         
 compute_ruptures_sent.sources          1,267       
-compute_ruptures_tot_received          8,846       
+compute_ruptures_tot_received          8,831       
 hazard.input_weight                    10          
 hazard.n_imts                          1           
 hazard.n_levels                        3.000       
@@ -99,7 +99,7 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class      weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
-0            1         SimpleFaultSource 10     1         0.002       0.002      0.016         0.016         1        
+0            1         SimpleFaultSource 10     1         0.0         0.003      0.029         0.029         1        
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -107,14 +107,14 @@ Computation times by source typology
 ================= =========== ========== ============= ============= ========= ======
 source_class      filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ================= =========== ========== ============= ============= ========= ======
-SimpleFaultSource 0.002       0.002      0.016         0.016         1         1     
+SimpleFaultSource 0.0         0.003      0.029         0.029         1         1     
 ================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ========================== ===== ====== ===== ===== =========
 measurement                mean  stddev min   max   num_tasks
-compute_ruptures.time_sec  0.016 NaN    0.016 0.016 1        
+compute_ruptures.time_sec  0.030 NaN    0.030 0.030 1        
 compute_ruptures.memory_mb 0.0   NaN    0.0   0.0   1        
 ========================== ===== ====== ===== ===== =========
 
@@ -123,14 +123,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.016     0.0       1     
-saving ruptures                0.009     0.0       1     
-filtering ruptures             0.009     0.0       10    
-managing sources               0.008     0.0       1     
-reading composite source model 0.007     0.0       1     
-store source_info              0.006     0.0       1     
-splitting sources              0.002     0.0       1     
-filtering sources              0.002     0.0       1     
-aggregate curves               8.409E-04 0.0       1     
-reading site collection        3.719E-05 0.0       1     
+total compute_ruptures         0.030     0.0       1     
+filtering ruptures             0.015     0.0       10    
+saving ruptures                0.006     0.0       1     
+managing sources               0.006     0.0       1     
+reading composite source model 0.005     0.0       1     
+store source_info              9.060E-04 0.0       1     
+aggregate curves               6.120E-04 0.0       1     
+reading site collection        3.791E-05 0.0       1     
 ============================== ========= ========= ======
