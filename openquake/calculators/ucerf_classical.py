@@ -45,8 +45,6 @@ from openquake.calculators import base, classical
 from openquake.calculators.ucerf_event_based import (
     UCERFSESControl, get_ucerf_rupture, DEFAULT_TRT)
 
-DEFAULT_SPLIT = 100
-
 
 class UCERFControl(UCERFSESControl):
     """
