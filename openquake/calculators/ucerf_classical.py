@@ -453,14 +453,14 @@ class UcerfPSHACalculator(classical.PSHACalculator):
                      agg=self.agg_dicts, acc=acc))
         else:
             # single branch, parallelize by rupture subsets
-            rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(0)
+            gsims = self.rlzs_assoc.gsims_by_grp_id[0]
             [(branch_id, branch)] = self.smlt.branches.items()
             branchname = branch.value
             rup_sets = ucerf_source.get_rupture_indices(branchname)
             pmap_by_grp_id = parallel.apply(
                 ucerf_classical_hazard_by_rupture_set,
                 (rup_sets, branchname, ucerf_source, self.src_group.id,
-                 self.sitecol, list(rlzs_by_gsim), monitor),
+                 self.sitecol, gsims, monitor),
                 concurrent_tasks=self.oqparam.concurrent_tasks).reduce(
                     agg=self.agg_dicts, acc=acc)
 
