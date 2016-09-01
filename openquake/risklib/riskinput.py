@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import groupby, split_in_blocks
+from openquake.baselib.general import groupby, split_in_blocks, group_array
 from openquake.hazardlib import site, calc
 from openquake.risklib import scientific, riskmodels
 
@@ -497,13 +497,13 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
 
 
 class Gmvset(object):
-    dt = numpy.dtype([('gmv', F32), ('eid', U32)])
+    dt = numpy.dtype([('gmv', F32), ('eid', U32), ('rlzi', U16), ('imti', U8)])
 
     def __init__(self):
         self.pairs = []
 
-    def append(self, gmv, eid):
-        self.pairs.append((gmv, eid))
+    def append(self, gmv, eid, rlzi, imti):
+        self.pairs.append((gmv, eid, rlzi, imti))
 
     @property
     def value(self):
@@ -530,26 +530,6 @@ def rsi2str(rlzi, sid, imt):
     return 'rlz-%04d/sid-%04d/%s' % (rlzi, sid, imt)
 
 
-# TODO: this will be removed
-def gmf_array(gmfs_by_sid_imt, imtls):
-    """
-    Convert GMFs into an array suitable for XML export
-    """
-    dt = numpy.dtype([('sid', U16), ('imti', U8), ('gmv', F32), ('eid', U32)])
-    rows = []
-    for key in gmfs_by_sid_imt:
-        sid = int(key[4:])  # has the form "sid-XXXX"
-        gmvs_by_imt = gmfs_by_sid_imt[key]
-        for imti, imt in enumerate(imtls):
-            try:
-                gmvs = gmvs_by_imt[imt]
-            except KeyError:
-                gmvs = []
-            for gmv, eid in gmvs:
-                rows.append((sid, imti, gmv, eid))
-    return numpy.array(sorted(rows), dt)
-
-
 class GmfCollector(object):
     """
     An object storing the GMFs in memory.
@@ -573,19 +553,19 @@ class GmfCollector(object):
 
     def save(self, eid, imti, rlz, gmf, sids):
         for gmv, sid in zip(gmf, sids):
-            key = rsi2str(rlz.ordinal, sid, self.imts[imti])
-            self.dic[key].append(gmv, eid)
+            self.dic[sid].append(gmv, eid, rlz.ordinal, imti)
         self.nbytes += gmf.nbytes * 2
 
     def __getitem__(self, sid):
+        data = group_array(self.dic[sid].value, 'imti')
         hazard = {}  # return a dictionary with all IMTs
-        for imt in self.imts:
+        for imti, imt in enumerate(self.imts):
             hazard[imt] = {}
-            for rlz in self.rlzs:
-                key = rsi2str(rlz.ordinal, sid, imt)
-                data = self.dic[key].value
-                if len(data):
-                    hazard[imt][rlz] = data
+            if imti in data:
+                dic = group_array(data[imti], 'rlzi')
+                for rlz in self.rlzs:
+                    if rlz.ordinal in dic:
+                        hazard[imt][rlz] = dic[rlz.ordinal]
         return hazard
 
     def flush(self, dstore):
@@ -594,8 +574,8 @@ class GmfCollector(object):
 
         :returns: the number of bytes saved
         """
-        for key, data in self.dic.items():
-            dstore.extend('gmf_data/' + key, data.value)
+        for sid, data in self.dic.items():
+            dstore.extend('gmf_data/sid-%04d' % sid, data.value)
         dstore.flush()
         return self.close()
 

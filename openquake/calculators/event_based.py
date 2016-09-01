@@ -36,7 +36,7 @@ from openquake.hazardlib import geo
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import readinput, parallel, calc
 from openquake.commonlib.util import max_rel_diff_index, Rupture
-from openquake.risklib.riskinput import create, GmfCollector, str2rsi
+from openquake.risklib.riskinput import create, GmfCollector, str2rsi, rsi2str
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 
@@ -472,13 +472,15 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_by_gsim,
                   hcurves={})
     with monitor('bulding hazard curves', measuremem=False):
         duration = oq.investigation_time * oq.ses_per_logic_tree_path
-        for key, dset in gmfcoll.dic.items():
-            # key has the form rzli/sid/imt
-            imt = key.rsplit('/', 1)[-1]
-            poes = calc._gmvs_to_haz_curve(
-                dset.value['gmv'], oq.imtls[imt], oq.investigation_time,
-                duration)
-            result['hcurves'][key] = poes
+        for sid in gmfcoll.dic:
+            haz_by_imt_rlz = gmfcoll[sid]
+            for imt in haz_by_imt_rlz:
+                for rlz, gmvs in haz_by_imt_rlz[imt].items():
+                    poes = calc._gmvs_to_haz_curve(
+                        gmvs['gmv'], oq.imtls[imt],
+                        oq.investigation_time, duration)
+                    key = rsi2str(rlz.ordinal, sid, imt)
+                    result['hcurves'][key] = poes
     return result
 
 

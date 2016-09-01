@@ -18,18 +18,11 @@
 import collections
 import numpy
 
-from openquake.baselib import hdf5
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput, source
+from openquake.commonlib.export.hazard import gmv_dt
 from openquake.calculators import base
-
-U8 = numpy.uint8
-U16 = numpy.uint16
-U32 = numpy.uint32
-F32 = numpy.float32
-
-gmv_dt = numpy.dtype([('sid', U16), ('eid', U32), ('imti', U8), ('gmv', F32)])
 
 
 @base.calculators.add('scenario')
