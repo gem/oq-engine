@@ -69,9 +69,8 @@ class UCERFControl(UCERFSESControl):
         """
         if not self.idx_set:
             self.idx_set = self.build_idx_set(branch_id)
-        self.update_background_site_filter(branch_id,
-                                           sites,
-                                           integration_distance)
+        self.update_background_site_filter(
+            branch_id, sites, integration_distance)
 
         with h5py.File(self.source_file, "r") as hdf5:
             background_idx = np.where(self.background_idx)[0].tolist()
@@ -85,27 +84,19 @@ class UCERFControl(UCERFSESControl):
                 src_id = "_".join([self.idx_set["grid_key"], str(bg_idx)])
                 src_name = "|".join([self.idx_set["total_key"], str(bg_idx)])
                 # Get MFD
-                mag_idx = np.logical_and(mags >= self.min_mag,
-                                         mags < mmax[i])
+                mag_idx = np.logical_and(mags >= self.min_mag, mags < mmax[i])
                 src_mags = mags[mag_idx]
                 src_rates = rates[i, :]
-                src_mfd = EvenlyDiscretizedMFD(src_mags[0],
-                                               src_mags[1] - src_mags[0],
-                                               src_rates[mag_idx].tolist())
-                sources.append(PointSource(
-                               src_id,
-                               src_name,
-                               self.tectonic_region_type,
-                               src_mfd,
-                               self.mesh_spacing,
-                               self.msr,
-                               self.aspect,
-                               self.tom,
-                               self.usd,
-                               self.lsd,
-                               Point(locations[i, 0], locations[i, 1]),
-                               self.npd,
-                               self.hdd))
+                src_mfd = EvenlyDiscretizedMFD(
+                    src_mags[0], src_mags[1] - src_mags[0],
+                    src_rates[mag_idx].tolist())
+                ps = PointSource(
+                    src_id, src_name, self.tectonic_region_type, src_mfd,
+                    self.mesh_spacing, self.msr, self.aspect, self.tom,
+                    self.usd, self.lsd,
+                    Point(locations[i, 0], locations[i, 1]),
+                    self.npd, self.hdd)
+                sources.append(ps)
         return sources
 
     def get_rupture_indices(self, branch_id, split=None):
@@ -318,14 +309,12 @@ def ucerf_classical_hazard_by_rupture_set(
     # Get the background point sources
     bckgnd_sources = ucerf_source.get_background_sources(
         branchname, sitecol, max_dist)
-    if len(bckgnd_sources):
-        dic2 = AccumDict()
-        dic2[src_group_id] = hazard_curves_per_trt(
+    if bckgnd_sources:
+        pmap = hazard_curves_per_trt(
             bckgnd_sources, sitecol, imtls, gsims, truncation_level,
             source_site_filter=source_site_distance_filter(max_dist),
             maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
-
-        dic[src_group_id] |= dic2[src_group_id]
+        dic[src_group_id] |= pmap
         dic.eff_ruptures[src_group_id] += monitor.eff_ruptures
         dic.calc_times += monitor.calc_times
     return dic
@@ -468,16 +457,16 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             [(branch_id, branch)] = self.smlt.branches.items()
             branchname = branch.value
             rup_sets = ucerf_source.get_rupture_indices(branchname)
-            itres = parallel.apply(
+            pmap_by_grp_id = parallel.apply(
                 ucerf_classical_hazard_by_rupture_set,
                 (rup_sets, branchname, ucerf_source, self.src_group.id,
                  self.sitecol, list(rlzs_by_gsim), monitor),
-                concurrent_tasks=self.oqparam.concurrent_tasks).submit_all()
-            pmap_by_grp_id = functools.reduce(self.agg_dicts, itres, acc)
+                concurrent_tasks=self.oqparam.concurrent_tasks).reduce(
+                    agg=self.agg_dicts, acc=acc)
 
         # TODO: save source_info
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(itres, pmap_by_grp_id)
+            self.store_source_info(pmap_by_grp_id)
         self.datastore['csm_info'] = self.csm.info
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             functools.partial(self.count_eff_ruptures, pmap_by_grp_id))
