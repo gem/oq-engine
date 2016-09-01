@@ -335,7 +335,7 @@ def run_calc(request):
         response_data = exc_msg.splitlines()
         status = 500
     else:
-        response_data = dict(job_id=job_id, status='executing')
+        response_data = dict(job_id=job_id, status='created')
         status = 200
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=status)
