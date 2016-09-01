@@ -557,7 +557,10 @@ class GmfCollector(object):
         self.nbytes += gmf.nbytes * 2
 
     def __getitem__(self, sid):
-        data = group_array(self.dic[sid].value, 'imti')
+        gmvs = self.dic[sid]
+        if hasattr(gmvs, 'value'):
+            gmvs = gmvs.value
+        data = group_array(gmvs, 'imti')
         hazard = {}  # return a dictionary with all IMTs
         for imti, imt in enumerate(self.imts):
             hazard[imt] = {}
@@ -575,7 +578,7 @@ class GmfCollector(object):
         :returns: the number of bytes saved
         """
         for sid, data in self.dic.items():
-            dstore.extend('gmf_data/sid-%04d' % sid, data.value)
+            dstore.extend('gmf_data/sid-%04d' % sid, data)
         dstore.flush()
         return self.close()
 
@@ -674,4 +677,6 @@ def create(GmfColl, eb_ruptures, sitecol, imts, rlzs_by_gsim,
                 rup.seed, ebr.events, rlzs_by_gsim, min_iml)
             for eid, imti, rlz, gmf_sids in data:
                 gmfcoll.save(eid, imti, rlz, *gmf_sids)
+    for sid in gmfcoll.dic:
+        gmfcoll.dic[sid] = gmfcoll.dic[sid].value
     return gmfcoll
