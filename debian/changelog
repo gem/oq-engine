@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * If `filter_sources` if false, the light sources are not filtered, but the
+    heavy sources are always filtered
   * Now the dbserver can be stopped correctly with CTRL-C
   * Parallelized the splitting of heavy sources
   * Changed the event loss table exporter: now a single file per realization
