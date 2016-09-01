@@ -401,8 +401,6 @@ class HazardCalculator(BaseCalculator):
         job_info['hostname'] = socket.gethostname()
         if hasattr(self, 'riskmodel'):
             job_info['require_epsilons'] = bool(self.riskmodel.covs)
-        if 'job_info' not in self.datastore:
-            self.datastore['job_info'] = hdf5.LiteralAttrs()
         self.datastore.save('job_info', job_info)
         self.datastore.flush()
         try:
