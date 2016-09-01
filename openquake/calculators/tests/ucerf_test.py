@@ -20,9 +20,11 @@ import h5py
 import unittest
 from openquake.qa_tests_data import ucerf
 from openquake.calculators.tests import CalculatorTestCase
+from nose.plugins.attrib import attr
 
 
 class UcerfTestCase(CalculatorTestCase):
+    @attr('qa', 'hazard', 'ucerf')
     def test_event_based(self):
         if h5py.__version__ < '2.3.0':
             raise unittest.SkipTest  # UCERF requires vlen arrays
@@ -31,10 +33,11 @@ class UcerfTestCase(CalculatorTestCase):
         # just check that some realizations are exported
         self.assertGreaterEqual(num_exported, 1)
 
+    @attr('qa', 'hazard', 'ucerf')
     def test_classical(self):
         if h5py.__version__ < '2.3.0':
             raise unittest.SkipTest  # UCERF requires vlen arrays
         out = self.run_calc(ucerf.__file__, 'job_classical_redux.ini',
                             exports='csv')
         [fname] = out['hcurves', 'csv']
-        # TODO: add some check
+        self.assertEqualFiles('expected/hazard_curve.csv', fname)
