@@ -47,6 +47,15 @@ F32 = numpy.float32
 
 @contextmanager
 def context(src):
+    """
+    Used to add the source_id to the error message. To be used as
+
+    with context(src):
+        operation_with(src)
+
+    Typically the operation is filtering a source, that can fail for
+    tricky geometries.
+    """
     try:
         yield
     except:
