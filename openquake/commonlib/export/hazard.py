@@ -33,7 +33,7 @@ from openquake.hazardlib.calc import disagg
 from openquake.commonlib.export import export
 from openquake.commonlib.writers import floatformat, write_csv
 from openquake.commonlib import writers, hazard_writers, util, readinput
-from openquake.risklib.riskinput import create, gmf_array
+from openquake.risklib.riskinput import create, gmf_array, GmfCollector
 from openquake.commonlib import calc
 
 F32 = numpy.float32
@@ -680,15 +680,15 @@ def _calc_gmfs(dstore, serial, eid):
     rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(rup.grp_id)
     gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F64)
                           for rlz in rlzs_by_gsim.realizations])
-    gmfadict = create(calc.GmfColl,
-                      [rup], sitecol, list(oq.imtls), rlzs_by_gsim,
-                      oq.truncation_level, correl_model, min_iml).by_rlzi()
+    gmfcoll = create(GmfCollector,
+                     [rup], sitecol, list(oq.imtls), rlzs_by_gsim,
+                     oq.truncation_level, correl_model, min_iml)
     for imti, imt in enumerate(oq.imtls):
         gmfa = numpy.zeros(N, gmf_dt)
         for rlzname in gmf_dt.names:
-            rlzi = int(rlzname)
-            gmvs = get_array(gmfadict[rlzi], eid=eid, imti=imti)['gmv']
-            gmfa[rlzname][rup.indices] = gmvs
+            for sid in rup.indices:
+                gmvs = gmfcoll.dic['rlz-0%s/sid-%04d/%s' % (rlzname, sid, imt)]
+                gmfa[rlzname][sid] = gmvs.value['gmv']
         yield gmfa, imt
 
 
