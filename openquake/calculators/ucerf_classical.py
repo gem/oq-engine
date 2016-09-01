@@ -433,8 +433,11 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         self.num_tiles = 1
 
     def gen_args(self, branches, ucerf_source, monitor):
+        """
+        :yields: (branch, ucerf_source, grp_id, self.sitecol, gsims, monitor)
+        """
         for grp_id, branch in enumerate(branches):
-            gsims = list(self.rlzs_assoc.get_rlzs_by_gsim(grp_id))
+            gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
             yield branch, ucerf_source, grp_id, self.sitecol, gsims, monitor
 
     def execute(self):
@@ -465,14 +468,17 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             [(branch_id, branch)] = self.smlt.branches.items()
             branchname = branch.value
             rup_sets = ucerf_source.get_rupture_indices(branchname)
-            pmap_by_grp_id = parallel.apply(
+            itres = parallel.apply(
                 ucerf_classical_hazard_by_rupture_set,
                 (rup_sets, branchname, ucerf_source, self.src_group.id,
                  self.sitecol, list(rlzs_by_gsim), monitor),
-                concurrent_tasks=self.oqparam.concurrent_tasks).reduce(
-                    agg=self.agg_dicts, acc=acc)
+                concurrent_tasks=self.oqparam.concurrent_tasks).submit_all()
+            pmap_by_grp_id = functools.reduce(self.agg_dicts, itres, acc)
 
-        # TODO: save data transfer information and source_info
+        # TODO: save source_info
+        with self.monitor('store source_info', autoflush=True):
+            self.store_source_info(itres, pmap_by_grp_id)
+        self.datastore['csm_info'] = self.csm.info
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             functools.partial(self.count_eff_ruptures, pmap_by_grp_id))
         self.datastore['csm_info'] = self.csm.info
