@@ -33,11 +33,16 @@ from openquake.hazardlib.calc import disagg
 from openquake.commonlib.export import export
 from openquake.commonlib.writers import floatformat, write_csv
 from openquake.commonlib import writers, hazard_writers, util, readinput
-from openquake.risklib.riskinput import create, gmf_array, GmfCollector
+from openquake.risklib.riskinput import create, GmfCollector
 from openquake.commonlib import calc
 
 F32 = numpy.float32
 F64 = numpy.float64
+U8 = numpy.uint8
+U16 = numpy.uint16
+U32 = numpy.uint32
+
+gmv_dt = numpy.dtype([('sid', U16), ('eid', U32), ('imti', U8), ('gmv', F32)])
 
 GMF_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
 GMF_WARNING = '''\
@@ -562,7 +567,17 @@ def export_gmf(ekey, dstore):
             # TODO: change to use the prefix rlz-
             gmf_arr = gmf_data['%04d' % rlz.ordinal].value
         else:
-            gmf_arr = gmf_array(gmf_data['rlz-%04d' % rlz.ordinal], oq.imtls)
+            # convert gmf_data in the same format used by scenario
+            arrays = []
+            for sid in sorted(gmf_data):
+                array = get_array(gmf_data[sid].value, rlzi=rlz.ordinal)
+                arr = numpy.zeros(len(array), gmv_dt)
+                arr['sid'] = int(sid[4:])  # has the form 'sid-XXXX'
+                arr['imti'] = array['imti']
+                arr['gmv'] = array['gmv']
+                arr['eid'] = array['eid']
+                arrays.append(arr)
+            gmf_arr = numpy.concatenate(arrays)
         ruptures = []
         for eid, gmfa in group_array(gmf_arr, 'eid').items():
             rup = util.Rupture(etags[eid], sorted(set(gmfa['sid'])))
@@ -673,6 +688,7 @@ def _calc_gmfs(dstore, serial, eid):
     oq = dstore['oqparam']
     min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    rlzs = rlzs_assoc.realizations
     sitecol = dstore['sitecol'].complete
     N = len(sitecol.complete)
     rup = dstore['sescollection/' + serial]
@@ -683,12 +699,14 @@ def _calc_gmfs(dstore, serial, eid):
     gmfcoll = create(GmfCollector,
                      [rup], sitecol, list(oq.imtls), rlzs_by_gsim,
                      oq.truncation_level, correl_model, min_iml)
-    for imti, imt in enumerate(oq.imtls):
+    hazard = {sid: gmfcoll[sid] for sid in gmfcoll.dic}
+    for imt in oq.imtls:
         gmfa = numpy.zeros(N, gmf_dt)
         for rlzname in gmf_dt.names:
+            rlz = rlzs[int(rlzname)]
             for sid in rup.indices:
-                gmvs = gmfcoll.dic['rlz-0%s/sid-%04d/%s' % (rlzname, sid, imt)]
-                gmfa[rlzname][sid] = gmvs.value['gmv']
+                gmvs = hazard[sid][imt][rlz]['gmv']
+                gmfa[rlzname][sid] = gmvs
         yield gmfa, imt
 
 

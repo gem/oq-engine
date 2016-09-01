@@ -90,8 +90,8 @@ class EventBasedTestCase(CalculatorTestCase):
             oq = self.calc.oqparam
             self.assertEqual(list(oq.imtls), ['PGA'])
             dstore = read(self.calc.datastore.calc_id)
-            gmvs_site_0 = dstore['gmf_data/rlz-0000/sid-0000/PGA']['gmv']
-            gmvs_site_1 = dstore['gmf_data/rlz-0000/sid-0001/PGA']['gmv']
+            gmvs_site_0 = dstore['gmf_data/sid-0000']['gmv']
+            gmvs_site_1 = dstore['gmf_data/sid-0001']['gmv']
             joint_prob_0_5 = joint_prob_of_occurrence(
                 gmvs_site_0, gmvs_site_1, 0.5, oq.investigation_time,
                 oq.ses_per_logic_tree_path)
