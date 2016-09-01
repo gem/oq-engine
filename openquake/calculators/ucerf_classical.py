@@ -305,18 +305,6 @@ def ucerf_classical_hazard_by_rupture_set(
         dic[src_group_id] = ProbabilityMap()
     dic.calc_times += monitor.calc_times  # added by hazard_curves_per_trt
     dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
-
-    # Get the background point sources
-    bckgnd_sources = ucerf_source.get_background_sources(
-        branchname, sitecol, max_dist)
-    if bckgnd_sources:
-        pmap = hazard_curves_per_trt(
-            bckgnd_sources, sitecol, imtls, gsims, truncation_level,
-            source_site_filter=source_site_distance_filter(max_dist),
-            maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
-        dic[src_group_id] |= pmap
-        dic.eff_ruptures[src_group_id] += monitor.eff_ruptures
-        dic.calc_times += monitor.calc_times
     return dic
 
 
@@ -365,18 +353,15 @@ def ucerf_classical_hazard_by_branch(branchnames, ucerf_source, src_group_id,
         dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
         logging.info('Branch %s', branchname)
         # Get the background point sources
-        bckgnd_sources = ucerf_source.get_background_sources(branchname,
-                                                             sitecol,
-                                                             max_dist)
-        if len(bckgnd_sources):
-            dic2 = AccumDict()
-            dic2[src_group_id] = hazard_curves_per_trt(
+        bckgnd_sources = ucerf_source.get_background_sources(
+            branchname, sitecol, max_dist)
+        if bckgnd_sources:
+            pmap = hazard_curves_per_trt(
                 bckgnd_sources,
                 sitecol, imtls, gsims, truncation_level,
                 source_site_filter=source_site_noop_filter,
                 maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
-
-            dic[src_group_id] |= dic2[src_group_id]
+            dic[src_group_id] |= pmap
             dic.eff_ruptures[src_group_id] += monitor.eff_ruptures
             dic.calc_times += monitor.calc_times
     return dic
@@ -436,8 +421,9 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         tectonic region type.
         """
         monitor = self.monitor.new(self.core_task.__name__)
-        monitor.oqparam = self.oqparam
+        monitor.oqparam = oq = self.oqparam
         ucerf_source = self.src_group.sources[0]
+        max_dist = self.oqparam.maximum_distance[DEFAULT_TRT]
         acc = AccumDict({sg.id: ProbabilityMap()
                          for sg in self.csm.src_groups})
         acc.calc_times = []
@@ -456,6 +442,17 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             gsims = self.rlzs_assoc.gsims_by_grp_id[0]
             [(branch_id, branch)] = self.smlt.branches.items()
             branchname = branch.value
+
+            # Get the background point sources
+            bckgnd_sources = ucerf_source.get_background_sources(
+                branchname, self.sitecol, max_dist)
+            if bckgnd_sources:
+                acc[0] = hazard_curves_per_trt(
+                    bckgnd_sources, self.sitecol, oq.imtls, gsims,
+                    self.oqparam.truncation_level,
+                    source_site_filter=source_site_distance_filter(max_dist),
+                    maximum_distance=max_dist, monitor=monitor)
+
             rup_sets = ucerf_source.get_rupture_indices(branchname)
             pmap_by_grp_id = parallel.apply(
                 ucerf_classical_hazard_by_rupture_set,
