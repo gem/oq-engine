@@ -1,7 +1,7 @@
 Classical PSHA-Based Hazard
 ===========================
 
-gem-tstation:/home/michele/ssd/calc_42204.hdf5 updated Wed Aug 24 09:02:01 2016
+gem-tstation:/home/michele/ssd/calc_45817.hdf5 updated Wed Aug 31 12:10:09 2016
 
 num_sites = 7, sitecol = 1015 B
 
@@ -21,7 +21,7 @@ area_source_discretization   20.0
 random_seed                  42                              
 master_seed                  0                               
 sites_per_tile               10000                           
-engine_version               '2.1.0-gite331d0b'              
+engine_version               '2.1.0-git49748af'              
 ============================ ================================
 
 Input files
@@ -72,13 +72,13 @@ source_model.xml 0      Active Shallow Crust 1           1694         1,694
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,389       
+count_eff_ruptures_max_received_per_task 1,337       
 count_eff_ruptures_num_tasks             13          
 count_eff_ruptures_sent.monitor          13,793      
 count_eff_ruptures_sent.rlzs_by_gsim     6,695       
 count_eff_ruptures_sent.sitecol          7,189       
 count_eff_ruptures_sent.sources          14,667      
-count_eff_ruptures_tot_received          18,057      
+count_eff_ruptures_tot_received          17,381      
 hazard.input_weight                      1,694       
 hazard.n_imts                            1           
 hazard.n_levels                          28          
@@ -109,7 +109,7 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class      weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
-0            1         SimpleFaultSource 1,694  15        0.002       0.069      0.0           0.0           0        
+0            1         SimpleFaultSource 1,694  15        0.0         0.099      0.0           0.0           0        
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -117,7 +117,7 @@ Computation times by source typology
 ================= =========== ========== ============= ============= ========= ======
 source_class      filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ================= =========== ========== ============= ============= ========= ======
-SimpleFaultSource 0.002       0.069      0.0           0.0           0         1     
+SimpleFaultSource 0.0         0.099      0.0           0.0           0         1     
 ================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
@@ -129,14 +129,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.085     0.0       1     
-splitting sources              0.069     0.0       1     
-reading composite source model 0.011     0.0       1     
-store source_info              0.005     0.0       1     
-total count_eff_ruptures       0.004     0.0       13    
-reading exposure               0.004     0.0       1     
-filtering sources              0.002     0.0       1     
-aggregate curves               1.860E-04 0.0       13    
-saving probability maps        2.813E-05 0.0       1     
-reading site collection        7.868E-06 0.0       1     
+managing sources               0.114     0.0       1     
+reading composite source model 0.010     0.0       1     
+total count_eff_ruptures       0.010     0.0       13    
+reading exposure               0.003     0.0       1     
+aggregate curves               2.017E-04 0.0       13    
+saving probability maps        2.694E-05 0.0       1     
+store source_info              9.060E-06 0.0       1     
+reading site collection        6.914E-06 0.0       1     
 ============================== ========= ========= ======
