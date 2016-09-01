@@ -861,7 +861,10 @@ class SourceManager(object):
             data = []
             for src in sources:
                 with filter_mon, context(src):
-                    ok = src in tile
+                    if self.filter_sources:
+                        ok = src in tile
+                    else:  # accept all sources
+                        ok = True
                 if ok:
                     data.append((src, i, [], filter_mon.dt, 0))
                 self.csm.filtered_weight += src.weight
