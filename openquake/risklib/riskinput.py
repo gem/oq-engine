@@ -496,7 +496,7 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
     return eps
 
 
-class GmvEid(object):
+class Gmvset(object):
     dt = numpy.dtype([('gmv', F32), ('eid', U32)])
 
     def __init__(self):
@@ -530,7 +530,11 @@ def rsi2str(rlzi, sid, imt):
     return 'rlz-%04d/sid-%04d/%s' % (rlzi, sid, imt)
 
 
+# TODO: this will be removed
 def gmf_array(gmfs_by_sid_imt, imtls):
+    """
+    Convert GMFs into an array suitable for XML export
+    """
     dt = numpy.dtype([('sid', U16), ('imti', U8), ('gmv', F32), ('eid', U32)])
     rows = []
     for key in gmfs_by_sid_imt:
@@ -558,7 +562,7 @@ class GmfCollector(object):
         self.imts = imts
         self.rlzs = rlzs
         if dstore is None:
-            self.dic = collections.defaultdict(GmvEid)
+            self.dic = collections.defaultdict(Gmvset)
         else:
             self.dic = dstore
         self.nbytes = 0
@@ -573,41 +577,27 @@ class GmfCollector(object):
             self.dic[key].append(gmv, eid)
         self.nbytes += gmf.nbytes * 2
 
-    def __getitem__(self, sid_imt):
-        hazard = {}
-        if isinstance(sid_imt, int):
-            # return a dictionary with all IMTs
-            for imt in self.imts:
-                hazard[imt] = {}
-                for rlz in self.rlzs:
-                    key = rsi2str(rlz.ordinal, sid_imt, imt)
-                    data = self.dic[key].value
-                    if len(data):
-                        hazard[imt][rlz] = data
-            return hazard
-        # else assume a pair was passed, return the gmfs per realization
-        sid, imt = sid_imt
-        for rlz in self.rlzs:
-            key = 'gmf_data/' + rsi2str(rlz.ordinal, sid, imt)
-            try:
-                hazard[rlz] = self.dic[key].value
-            except KeyError:
-                pass
+    def __getitem__(self, sid):
+        hazard = {}  # return a dictionary with all IMTs
+        for imt in self.imts:
+            hazard[imt] = {}
+            for rlz in self.rlzs:
+                key = rsi2str(rlz.ordinal, sid, imt)
+                data = self.dic[key].value
+                if len(data):
+                    hazard[imt][rlz] = data
         return hazard
 
     def flush(self, dstore):
         """
-        Save the GMFs on the datastore
+        Save the GMFs on the datastore.
+
+        :returns: the number of bytes saved
         """
         for key, data in self.dic.items():
-            fullkey = 'gmf_data/' + key
-            try:
-                dset = dstore.hdf5[fullkey]
-            except KeyError:
-                dset = hdf5.create(
-                    dstore.hdf5, fullkey, GmvEid.dt, (None,))
-            gmfa = data.value
-            hdf5.extend(dset, gmfa)
+            dstore.extend('gmf_data/' + key, data.value)
+        dstore.flush()
+        return self.close()
 
 
 class RiskInputFromRuptures(object):
