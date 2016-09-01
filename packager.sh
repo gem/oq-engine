@@ -336,9 +336,9 @@ _devtest_innervm_run () {
                      set -x
                  fi
                  export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine\" ;
-                 cd oq-engine
-                 nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
+                 cd oq-engine; bin/oq dbserver start &
                  nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
+                 nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
 
                  # OQ Engine QA tests (splitted into multiple execution to track the performance)
                  nosetests  -a '${skip_tests}qa,hazard' -v --with-xunit --xunit-file=xunit-qa-hazard.xml
@@ -349,7 +349,7 @@ _devtest_innervm_run () {
                  nosetests -v --with-doctest --with-coverage --cover-package=openquake.commands openquake/commands
 
                  python-coverage xml --include=\"openquake/*\"
-        "
+        bin/oq dbserver stop"
         scp "${lxc_ip}:oq-engine/xunit-*.xml" "out_${BUILD_UBUVER}/" || true
         scp "${lxc_ip}:oq-engine/coverage.xml" "out_${BUILD_UBUVER}/" || true
     else

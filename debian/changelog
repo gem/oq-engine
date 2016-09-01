@@ -1,4 +1,9 @@
   [Michele Simionato]
+  * Now the dbserver can be stopped correctly with CTRL-C
+  * Parallelized the splitting of heavy sources
+  * Changed the event loss table exporter: now a single file per realization
+    is exported, containing all the loss types
+  * Removed the dependency from the Django ORM
   * Now the WebUI restarts the ProcessPoolExecutor at the end of each job,
     to conserve resources
   * Optimized the computation of hazard curves and statistics, especially

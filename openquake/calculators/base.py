@@ -73,6 +73,7 @@ PRECALC_MAP = dict(
     classical_risk=['classical', 'classical_risk'],
     classical_bcr=['classical', 'classical_bcr'],
     classical_damage=['classical', 'classical_damage'],
+    event_based=['event_based', 'event_based_risk'],
     event_based_risk=['event_based', 'event_based_risk'])
 
 
@@ -535,18 +536,18 @@ class HazardCalculator(BaseCalculator):
         return (self.oqparam.calculation_mode in ('psha', 'classical') and
                 len(self.sitecol) > self.oqparam.sites_per_tile)
 
-    def save_data_transfer(self, taskmanager):
+    def save_data_transfer(self, iter_result):
         """
         Save information about the data transfer in the risk calculation
         as attributes of agg_loss_table
         """
-        if taskmanager.received:  # nothing is received when OQ_DISTRIBUTE=no
-            tname = taskmanager.name
+        if iter_result.received:  # nothing is received when OQ_DISTRIBUTE=no
+            tname = iter_result.name
             self.datastore.save('job_info', {
-                tname + '_sent': taskmanager.sent,
-                tname + '_max_received_per_task': max(taskmanager.received),
-                tname + '_tot_received': sum(taskmanager.received),
-                tname + '_num_tasks': len(taskmanager.received)})
+                tname + '_sent': iter_result.sent,
+                tname + '_max_received_per_task': max(iter_result.received),
+                tname + '_tot_received': sum(iter_result.received),
+                tname + '_num_tasks': len(iter_result.received)})
 
     def post_process(self):
         """For compatibility with the engine"""
