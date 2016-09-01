@@ -497,6 +497,10 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
 
 
 class Gmvset(object):
+    """
+    Emulate a dataset containing ground motion values per event ID,
+    realization ordinal and IMT index.
+    """
     dt = numpy.dtype([('gmv', F32), ('eid', U32), ('rlzi', U16), ('imti', U8)])
 
     def __init__(self):
@@ -532,12 +536,8 @@ def rsi2str(rlzi, sid, imt):
 
 class GmfCollector(object):
     """
-    An object storing the GMFs in memory.
+    An object storing the GMFs per site_id.
     """
-    # NB: the data is stored in an internal dictionary called .dic
-    # of the form string -> gmv_eid array, {rlzi/sid/imt: [gmv_eid])}
-    # using a string consumes a lot less memory than using a triple
-
     def __init__(self, imts, rlzs, dstore=None):
         self.imts = imts
         self.rlzs = rlzs
