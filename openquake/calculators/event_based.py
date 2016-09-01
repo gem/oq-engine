@@ -470,17 +470,18 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_by_gsim,
         trunc_level, correl_model, min_iml, monitor)
     result = dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
                   hcurves={})
-    with monitor('bulding hazard curves', measuremem=False):
-        duration = oq.investigation_time * oq.ses_per_logic_tree_path
-        for sid in gmfcoll.dic:
-            haz_by_imt_rlz = gmfcoll[sid]
-            for imt in haz_by_imt_rlz:
-                for rlz, gmvs in haz_by_imt_rlz[imt].items():
-                    poes = calc._gmvs_to_haz_curve(
-                        gmvs['gmv'], oq.imtls[imt],
-                        oq.investigation_time, duration)
-                    key = rsi2str(rlz.ordinal, sid, imt)
-                    result['hcurves'][key] = poes
+    if oq.hazard_curves_from_gmfs:
+        with monitor('building hazard curves', measuremem=False):
+            duration = oq.investigation_time * oq.ses_per_logic_tree_path
+            for sid in gmfcoll.dic:
+                haz_by_imt_rlz = gmfcoll[sid]
+                for imt in haz_by_imt_rlz:
+                    for rlz, gmvs in haz_by_imt_rlz[imt].items():
+                        poes = calc._gmvs_to_haz_curve(
+                            gmvs['gmv'], oq.imtls[imt],
+                            oq.investigation_time, duration)
+                        key = rsi2str(rlz.ordinal, sid, imt)
+                        result['hcurves'][key] = poes
     return result
 
 
