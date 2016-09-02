@@ -30,7 +30,7 @@ import h5py
 
 from openquake.baselib.general import humansize, groupby, AccumDict
 from openquake.baselib.performance import perf_dt
-from openquake.baselib.python3compat import unicode, dtype
+from openquake.baselib.python3compat import unicode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source
 from openquake.commonlib.datastore import view
@@ -76,7 +76,7 @@ def form(value):
         else:  # in the range 10-1000
             return str(int(value))
     elif isinstance(value, bytes):
-        return value.decode('utf-8')
+        return decode(value)
     elif isinstance(value, unicode):
         return value
     elif isinstance(value, numpy.object_):
@@ -142,7 +142,7 @@ def sum_tbl(tbl, kfield, vfields):
     array([3, 3])
     """
     pairs = [(n, tbl.dtype[n]) for n in [kfield] + vfields]
-    dt = dtype(pairs + [('counts', int)])
+    dt = numpy.dtype(pairs + [('counts', int)])
 
     def sum_all(group):
         vals = numpy.zeros(1, dt)[0]
@@ -319,7 +319,7 @@ def view_job_info(token, dstore):
     to the workers and back in a classical calculation.
     """
     job_info = h5py.File.__getitem__(dstore.hdf5, 'job_info')
-    rows = [(k, ast.literal_eval(v)) for k, v in job_info]
+    rows = [(k, ast.literal_eval(decode(v))) for k, v in job_info]
     return rst_table(rows)
 
 
@@ -542,7 +542,7 @@ def view_fullreport(token, dstore):
     Display an .rst report about the computation
     """
     # avoid circular imports
-    from openquake.commonlib.reportwriter import ReportWriter
+    from openquake.calculators.reportwriter import ReportWriter
     return ReportWriter(dstore).make_report()
 
 
@@ -619,4 +619,5 @@ def view_required_params_per_trt(token, dstore):
         ruptparams = maker.REQUIRES_RUPTURE_PARAMETERS
         tbl.append((grp_id, gsims, distances, siteparams, ruptparams))
     return rst_table(
-        tbl, header='grp_id gsims distances siteparams ruptparams'.split())
+        tbl, header='grp_id gsims distances siteparams ruptparams'.split(),
+        fmt=scientificformat)

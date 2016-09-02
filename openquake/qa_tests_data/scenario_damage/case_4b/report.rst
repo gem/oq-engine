@@ -1,27 +1,27 @@
 scenario hazard
 ===============
 
-gem-tstation:/home/michele/ssd/calc_22550.hdf5 updated Tue May 31 15:36:58 2016
+gem-tstation:/home/michele/ssd/calc_45802.hdf5 updated Wed Aug 31 12:10:07 2016
 
 num_sites = 7, sitecol = 1015 B
 
 Parameters
 ----------
-============================ ==================
-calculation_mode             'scenario'        
-number_of_logic_tree_samples 0                 
-maximum_distance             {'default': 200.0}
-investigation_time           None              
-ses_per_logic_tree_path      1                 
-truncation_level             3.0               
-rupture_mesh_spacing         2.0               
-complex_fault_mesh_spacing   2.0               
-width_of_mfd_bin             None              
-area_source_discretization   None              
-random_seed                  42                
-master_seed                  0                 
-engine_version               '2.0.0-git4fb4450'
-============================ ==================
+============================ ===================
+calculation_mode             'scenario'         
+number_of_logic_tree_samples 0                  
+maximum_distance             {u'default': 200.0}
+investigation_time           None               
+ses_per_logic_tree_path      1                  
+truncation_level             3.0                
+rupture_mesh_spacing         2.0                
+complex_fault_mesh_spacing   2.0                
+width_of_mfd_bin             None               
+area_source_discretization   None               
+random_seed                  42                 
+master_seed                  0                  
+engine_version               '2.1.0-git49748af' 
+============================ ===================
 
 Input files
 -----------
@@ -45,10 +45,12 @@ Realizations per (TRT, GSIM)
 
 Exposure model
 --------------
-=========== =
-#assets     7
-#taxonomies 3
-=========== =
+=============== ========
+#assets         7       
+#taxonomies     3       
+deductibile     absolute
+insurance_limit absolute
+=============== ========
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
@@ -67,8 +69,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.008     0.0       1     
-reading exposure        0.007     0.0       1     
-computing gmfs          0.005     0.0       1     
-reading site collection 5.960E-06 0.0       1     
+filtering sites         0.007     0.0       1     
+reading exposure        0.004     0.0       1     
+reading site collection 6.914E-06 0.0       1     
 ======================= ========= ========= ======

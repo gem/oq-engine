@@ -1,4 +1,4 @@
-asset_ref,taxonomy,lon,lat,contents,nonstructural,occupants,structural
+asset_ref,taxonomy,lon,lat,contents,nonstructural,occupants:float32,structural
 a0,"RM",81.29850,29.10980,5.69353E+01,9.22670E+01,3.44980E-01,3.06186E+02
 a1,"RC",83.08230,27.90060,6.87664E+01,5.51319E+01,3.70647E-01,6.70382E+01
 a2,"W",85.74770,27.90150,2.11015E+01,1.00349E+01,1.59684E-01,9.54254E+01

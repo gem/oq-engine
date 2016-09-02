@@ -41,14 +41,13 @@ from django.contrib.auth import authenticate, login, logout
 from openquake.baselib.general import groupby, writetmp
 from openquake.baselib.python3compat import unicode
 from openquake.commonlib import nrml, readinput, oqvalidation
-from openquake.commonlib.parallel import safely_call
+from openquake.commonlib.parallel import TaskManager, safely_call
 from openquake.commonlib.export import export
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, logs
 from openquake.engine.export.core import DataStoreExportError
-from openquake.server import executor, utils
-from openquake.server.db import models
+from openquake.server import executor, utils, dbapi
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -249,7 +248,7 @@ def calc_info(request, calc_id):
     """
     try:
         info = logs.dbcmd('calc_info', calc_id)
-    except models.NotFound:
+    except dbapi.NotFound:
         return HttpResponseNotFound()
     return HttpResponse(content=json.dumps(info), content_type=JSON)
 
@@ -295,7 +294,7 @@ def calc_remove(request, calc_id):
     """
     try:
         logs.dbcmd('set_relevant', calc_id, False)
-    except models.NotFound:
+    except dbapi.NotFound:
         return HttpResponseNotFound()
     return HttpResponse(content=json.dumps([]),
                         content_type=JSON, status=200)
@@ -314,10 +313,10 @@ def get_log_slice(request, calc_id, start, stop):
     Get a slice of the calculation log as a JSON list of rows
     """
     start = start or 0
-    stop = stop or None
+    stop = stop or 0
     try:
         response_data = logs.dbcmd('get_log_slice', calc_id, start, stop)
-    except models.NotFound:
+    except dbapi.NotFound:
         return HttpResponseNotFound()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
@@ -330,7 +329,7 @@ def get_log_size(request, calc_id):
     """
     try:
         response_data = logs.dbcmd('get_log_size', calc_id)
-    except models.NotFound:
+    except dbapi.NotFound:
         return HttpResponseNotFound()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
@@ -370,7 +369,9 @@ def run_calc(request):
 
     user = utils.get_user_data(request)
     try:
-        job_id, _fut = submit_job(einfo[0], user['name'], hazard_job_id)
+        job_id, fut = submit_job(einfo[0], user['name'], hazard_job_id)
+        # restart the process pool at the end of each job
+        fut .add_done_callback(lambda f: TaskManager.restart())
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = str(exc)
@@ -416,7 +417,7 @@ def calc_results(request, calc_id):
         info = logs.dbcmd('calc_info', calc_id)
         if user['acl_on'] and info['user_name'] != user['name']:
             return HttpResponseNotFound()
-    except models.NotFound:
+    except dbapi.NotFound:
         return HttpResponseNotFound()
     base_url = _get_base_url(request)
 
@@ -455,7 +456,7 @@ def get_traceback(request, calc_id):
     # If the specified calculation doesn't exist throw back a 404.
     try:
         response_data = logs.dbcmd('get_traceback', calc_id)
-    except models.NotFound:
+    except dbapi.NotFound:
         return HttpResponseNotFound()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
@@ -491,7 +492,7 @@ def get_result(request, result_id):
             'get_result', result_id)
         if not job_status == 'complete':
             return HttpResponseNotFound()
-    except models.NotFound:
+    except dbapi.NotFound:
         return HttpResponseNotFound()
 
     etype = request.GET.get('export_type')

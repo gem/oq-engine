@@ -20,7 +20,6 @@
 TODO: write documentation.
 """
 from __future__ import print_function
-from functools import reduce
 import os
 import sys
 import socket
@@ -30,13 +29,11 @@ import operator
 import traceback
 import functools
 import multiprocessing.dummy
-from concurrent.futures import as_completed, ProcessPoolExecutor
-from decorator import FunctionMaker
+from concurrent.futures import as_completed, ProcessPoolExecutor, Future
 
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
 from openquake.baselib.general import split_in_blocks, AccumDict, humansize
-from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 
 executor = ProcessPoolExecutor()
 # the num_tasks_hint is chosen to be 2 times bigger than the name of
@@ -53,6 +50,9 @@ if OQ_DISTRIBUTE == 'celery':
     from openquake.engine.celeryconfig import BROKER_URL
     app = Celery('openquake', backend='amqp://', broker=BROKER_URL)
 
+elif OQ_DISTRIBUTE == 'ipython':
+    import ipyparallel as ipp
+
 
 def oq_distribute():
     """
@@ -60,13 +60,6 @@ def oq_distribute():
     return 'futures'.
     """
     return os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
-
-
-def no_distribute():
-    """
-    True if the variable OQ_DISTRIBUTE is "no"
-    """
-    return oq_distribute() == 'no'
 
 
 def check_mem_usage(monitor=Monitor(),
@@ -101,68 +94,34 @@ def safely_call(func, args, pickle=False):
         if set, the input arguments are unpickled and the return value
         is pickled; otherwise they are left unchanged
     """
-    if pickle:
-        args = [a.unpickle() for a in args]
-    ismon = args and isinstance(args[-1], Monitor)
-    mon = args[-1] if ismon else Monitor()
-    try:
-        got = func(*args)
-        if inspect.isgenerator(got):
-            got = list(got)
-        res = got, None, mon
-    except:
-        etype, exc, tb = sys.exc_info()
-        tb_str = ''.join(traceback.format_tb(tb))
-        res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc), etype, mon)
-    if pickle:
-        return Pickled(res)
+    with Monitor('total ' + func.__name__, measuremem=True) as child:
+        if pickle:  # measure the unpickling time too
+            args = [a.unpickle() for a in args]
+        if args and isinstance(args[-1], Monitor):
+            mon = args[-1]
+            mon.children.append(child)  # child is a child of mon
+            child.hdf5path = mon.hdf5path
+        else:
+            mon = child
+        check_mem_usage(mon)  # check if too much memory is used
+        mon.flush = NoFlush(mon, func.__name__)
+        try:
+            got = func(*args)
+            if inspect.isgenerator(got):
+                got = list(got)
+            res = got, None, mon
+        except:
+            etype, exc, tb = sys.exc_info()
+            tb_str = ''.join(traceback.format_tb(tb))
+            res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc), etype, mon)
+
+        # NB: flush must not be called in the workers - they must not
+        # have access to the datastore - so we remove it
+        rec_delattr(mon, 'flush')
+
+    if pickle:  # it is impossible to measure the pickling time :-(
+        res = Pickled(res)
     return res
-
-
-class Aggregator(object):
-    """
-    Each time the aggregator is called it aggregates the output of a task
-    and logs a progress message.
-
-    :param agg:
-        aggregation function (acc, val) -> new acc
-    :param taskname:
-        the name of the task
-    :param todo:
-        the number of times the generator object will be called
-    :param progress:
-        a logging function for the progress report
-    """
-    def __init__(self, agg, taskname, todo, progress=logging.info):
-        self.agg = agg
-        self.taskname = taskname
-        self.todo = todo
-        self.progress = progress
-        self.log_percent = self._log_percent()
-        next(self.log_percent)
-
-    def _log_percent(self):
-        yield 0
-        done = 1
-        prev_percent = 0
-        while done < self.todo:
-            percent = int(float(done) / self.todo * 100)
-            if percent > prev_percent:
-                self.progress('%s %3d%%', self.taskname, percent)
-                prev_percent = percent
-            yield done
-            done += 1
-        self.progress('%s 100%%', self.taskname)
-        yield done
-
-    def __call__(self, acc, triple):
-        (val, exc, mon) = triple
-        if exc:
-            raise RuntimeError(val)
-        res = self.agg(acc, val)
-        next(self.log_percent)
-        mon.flush()
-        return res
 
 
 class Pickled(object):
@@ -238,6 +197,63 @@ def pickle_sequence(objects):
     return out
 
 
+class IterResult(object):
+    """
+    :param futures:
+        an iterator over futures
+    :param taskname:
+        the name of the task
+    :param num_tasks
+        the total number of expected futures (None if unknown)
+    :param progress:
+        a logging function for the progress report
+    """
+    def __init__(self, futures, taskname, num_tasks=None,
+                 progress=logging.info):
+        self.futures = futures
+        self.name = taskname
+        self.num_tasks = num_tasks
+        self.progress = progress
+        self.received = []
+        if self.num_tasks:
+            self.log_percent = self._log_percent()
+            next(self.log_percent)
+
+    def _log_percent(self):
+        yield 0
+        done = 1
+        prev_percent = 0
+        while done < self.num_tasks:
+            percent = int(float(done) / self.num_tasks * 100)
+            if percent > prev_percent:
+                self.progress('%s %3d%%', self.name, percent)
+                prev_percent = percent
+            yield done
+            done += 1
+        self.progress('%s 100%%', self.name)
+        yield done
+
+    def __iter__(self):
+        self.received = []
+        for fut in self.futures:
+            check_mem_usage()  # log a warning if too much memory is used
+            if hasattr(fut, 'result'):
+                result = fut.result()
+            else:
+                result = fut
+            if hasattr(result, 'unpickle'):
+                self.received.append(len(result))
+                val, etype, mon = result.unpickle()
+            else:
+                val, etype, mon = result
+            if etype:
+                raise etype(val)
+            if self.num_tasks:
+                next(self.log_percent)
+            mon.flush()
+            yield val
+
+
 class TaskManager(object):
     """
     A manager to submit several tasks of the same type.
@@ -267,20 +283,15 @@ class TaskManager(object):
         :returns: a TaskManager object with a .result method.
         """
         self = cls(task, name)
-        for i, a in enumerate(task_args, 1):
-            if i == 1:  # first time
-                cls.progress('Submitting "%s" tasks', self.name)
-            if isinstance(a[-1], Monitor):  # add incremental task number
-                a[-1].task_no = i
-            self.submit(*a)
+        self.task_args = task_args
         return self
 
     @classmethod
-    def apply_reduce(cls, task, task_args, agg=operator.add, acc=None,
-                     concurrent_tasks=executor._max_workers,
-                     weight=lambda item: 1,
-                     key=lambda item: 'Unspecified',
-                     name=None):
+    def apply(cls, task, task_args,
+              concurrent_tasks=executor.num_tasks_hint,
+              weight=lambda item: 1,
+              key=lambda item: 'Unspecified',
+              name=None):
         """
         Apply a task to a tuple of the form (sequence, \*other_args)
         by first splitting the sequence in chunks, according to the weight
@@ -289,7 +300,7 @@ class TaskManager(object):
         Then reduce the results with an aggregation function.
         The chunks which are generated internally can be seen directly (
         useful for debugging purposes) by looking at the attribute `._chunks`,
-        right after the `apply_reduce` function has been called.
+        right after the `apply` function has been called.
 
         :param task: a task to run in parallel
         :param task_args: the arguments to be passed to the task function
@@ -301,45 +312,36 @@ class TaskManager(object):
         """
         arg0 = task_args[0]  # this is assumed to be a sequence
         args = task_args[1:]
-        task_func = getattr(task, 'task_func', task)
-        if acc is None:
-            acc = AccumDict()
-        if len(arg0) == 0:  # nothing to do
-            return acc
         chunks = list(split_in_blocks(
             arg0, concurrent_tasks or 1, weight, key))
-        cls.apply_reduce.__func__._chunks = chunks
-        if not concurrent_tasks or no_distribute() or len(chunks) == 1:
-            # apply the function in the master process
-            for i, chunk in enumerate(chunks):
-                if args and hasattr(args[-1], 'flush'):  # is monitor
-                    args[-1].task_no = i
-                acc = agg(acc, task_func(chunk, *args))
-            return acc
+        cls.apply.__func__._chunks = chunks
         logging.info('Starting %d tasks', len(chunks))
-        self = cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
-        return self.reduce(agg, acc)
+        return cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
 
     def __init__(self, oqtask, name=None):
-        self.oqtask = oqtask
-        self.task_func = getattr(oqtask, 'task_func', oqtask)
+        self.task_func = oqtask
         self.name = name or oqtask.__name__
         self.results = []
         self.sent = AccumDict()
         self.received = []
-        self.no_distribute = no_distribute()
+        self.distribute = oq_distribute()
         self.argnames = inspect.getargspec(self.task_func).args
+
+        if self.distribute == 'ipython' and isinstance(
+                self.executor, ProcessPoolExecutor):
+            client = ipp.Client()
+            self.__class__.executor = client.executor()
 
     def submit(self, *args):
         """
         Submit a function with the given arguments to the process pool
-        and add a Future to the list `.results`. If the variable
-        OQ_DISTRIBUTE is set, the function is run in process and the
+        and add a Future to the list `.results`. If the attribute
+        distribute is set, the function is run in process and the
         result is returned.
         """
         check_mem_usage()
         # log a warning if too much memory is used
-        if self.no_distribute:
+        if self.distribute == 'no':
             sent = {}
             res = (self.task_func(*args), None, args[-1])
         else:
@@ -351,58 +353,37 @@ class TaskManager(object):
         return sent
 
     def _submit(self, piks):
-        # submit tasks by using the ProcessPoolExecutor
-        if self.oqtask is self.task_func:
-            return self.executor.submit(
-                safely_call, self.task_func, piks, True)
-        elif OQ_DISTRIBUTE == 'futures':  # call the decorated task
-            return self.executor.submit(self.oqtask, *piks)
-        elif OQ_DISTRIBUTE == 'celery':
-            res = self.oqtask.delay(*piks)
+        if self.distribute == 'celery':
+            res = safe_task.delay(self.task_func, piks, True)
             self.task_ids.append(res.task_id)
             return res
+        else:  # submit tasks by using the ProcessPoolExecutor or ipyparallel
+            return self.executor.submit(
+                safely_call, self.task_func, piks, True)
 
-    def aggregate_result_set(self, agg, acc):
-        """
-        Loop on a set results and update the accumulator
-        by using the aggregation function.
+    def _iterfutures(self):
+        # compatibility wrapper for different concurrency frameworks
 
-        :param agg: the aggregation function, (acc, val) -> new acc
-        :param acc: the initial value of the accumulator
-        :returns: the final value of the accumulator
-        """
-        if not self.results:
-            return acc
+        if self.distribute == 'no':
+            for result in self.results:
+                fut = Future()
+                fut.set_result(result)
+                yield fut
 
-        distribute = oq_distribute()  # not called for distribute == 'no'
-
-        if distribute == 'celery':
-
+        elif self.distribute == 'celery':
             rset = ResultSet(self.results)
             for task_id, result_dict in rset.iter_native():
                 idx = self.task_ids.index(task_id)
                 self.task_ids.pop(idx)
-                check_mem_usage()  # warn if too much memory is used
-                result = result_dict['result']
-                if isinstance(result, BaseException):
-                    raise result
-                self.received.append(len(result))
-                acc = agg(acc, result.unpickle())
+                fut = Future()
+                fut.set_result(result_dict['result'])
                 # work around a celery bug
                 del app.backend._cache[task_id]
-            return acc
+                yield fut
 
-        elif distribute == 'futures':
-
-            for future in as_completed(self.results):
-                check_mem_usage()
-                # log a warning if too much memory is used
-                result = future.result()
-                if isinstance(result, BaseException):
-                    raise result
-                self.received.append(len(result))
-                acc = agg(acc, result.unpickle())
-            return acc
+        else:  # future interface
+            for fut in as_completed(self.results):
+                yield fut
 
     def reduce(self, agg=operator.add, acc=None):
         """
@@ -415,23 +396,15 @@ class TaskManager(object):
         """
         if acc is None:
             acc = AccumDict()
-        num_tasks = len(self.results)
-        if num_tasks == 0:
-            logging.warn('No tasks were submitted')
-            return acc
-
-        agg_and_log = Aggregator(agg, self.name, num_tasks, self.progress)
-        if self.no_distribute:
-            agg_result = reduce(agg_and_log, self.results, acc)
-        else:
-            self.progress('Sent %s of data in %d task(s)',
-                          humansize(sum(self.sent.values())), num_tasks)
-            agg_result = self.aggregate_result_set(agg_and_log, acc)
+        iter_result = self.submit_all()
+        for res in iter_result:
+            acc = agg(acc, res)
+        if iter_result.received:
             self.progress('Received %s of data, maximum per task %s',
-                          humansize(sum(self.received)),
-                          humansize(max(self.received)))
+                          humansize(sum(iter_result.received)),
+                          humansize(max(iter_result.received)))
         self.results = []
-        return agg_result
+        return acc
 
     def wait(self):
         """
@@ -441,22 +414,47 @@ class TaskManager(object):
         """
         return self.reduce(self, lambda acc, res: acc + 1, 0)
 
+    def submit_all(self):
+        """
+        :returns: an IterResult object
+        """
+        try:
+            nargs = len(self.task_args)
+        except TypeError:  # generators have no len
+            nargs = ''
+        if nargs == 1:
+            [args] = self.task_args
+            return IterResult([safely_call(self.task_func, args)], self.name)
+        task_no = 0
+        for args in self.task_args:
+            task_no += 1
+            if task_no == 1:  # first time
+                self.progress('Submitting %s "%s" tasks', nargs, self.name)
+            if isinstance(args[-1], Monitor):  # add incremental task number
+                args[-1].task_no = task_no
+            self.submit(*args)
+        if not task_no:
+            logging.info('No %s tasks were submitted', self.name)
+        ir = IterResult(self._iterfutures(), self.name, task_no, self.progress)
+        ir.sent = self.sent  # for information purposes
+        if self.sent:
+            self.progress('Sent %s of data in %d task(s)',
+                          humansize(sum(self.sent.values())),
+                          ir.num_tasks)
+        return ir
+
     def __iter__(self):
-        """
-        An iterator over the results
-        """
-        return iter(self.results)
+        return iter(self.submit_all())
+
 
 # convenient aliases
 starmap = TaskManager.starmap
-apply_reduce = TaskManager.apply_reduce
+apply = TaskManager.apply
 
 
 def do_not_aggregate(acc, value):
     """
-    Do nothing aggregation function, use it in
-    :class:`openquake.commonlib.parallel.apply_reduce` calls
-    when no aggregation is required.
+    Do nothing aggregation function.
 
     :param acc: the accumulator
     :param value: the value to accumulate
@@ -466,7 +464,7 @@ def do_not_aggregate(acc, value):
 
 
 class NoFlush(object):
-    # this is instantiated by the litetask decorator
+    # this is instantiated by safely_call
     def __init__(self, monitor, taskname):
         self.monitor = monitor
         self.taskname = taskname
@@ -486,47 +484,12 @@ def rec_delattr(mon, name):
         delattr(mon, name)
 
 
-def litetask_futures(func):
-    """
-    Add monitoring support to the decorated function. The last argument
-    must be a monitor object.
-    """
-    def wrapper(*args):
-        monitor = args[-1]
-        check_mem_usage(monitor)  # check if too much memory is used
-        monitor.flush = NoFlush(monitor, func.__name__)
-        with monitor('total ' + func.__name__, measuremem=True), \
-                GroundShakingIntensityModel.forbid_instantiation():
-            result = func(*args)
-        # NB: flush must not be called in the workers - they must not
-        # have access to the datastore - so we remove it
-        rec_delattr(monitor, 'flush')
-        return result
-
-    # NB: the returned function must have the same signature of func;
-    # we need pickle=True because celery is using the worst possible
-    # protocol; once we remove celery we can try to remove pickle=True
-    return FunctionMaker.create(
-        func, 'return _s_(_w_, (%(shortsignature)s,), pickle={})'.format(
-            OQ_DISTRIBUTE in ('celery', 'futures')),
-        dict(_s_=safely_call, _w_=wrapper), task_func=func)
-
-
 if OQ_DISTRIBUTE == 'celery':
-    def litetask_celery(task_func):
-        """
-        Wrapper around celery.task
-        """
-        tsk = task(litetask_futures(task_func), queue='celery')
-        tsk.__func__ = tsk
-        tsk.task_func = task_func
-        return tsk
-    litetask = litetask_celery
-else:
-    litetask = litetask_futures
+    safe_task = task(safely_call,  queue='celery')
 
 
 class Starmap(object):
+    poolfactory = None  # to be overridden
     pool = None  # to be overridden
 
     @classmethod
@@ -536,18 +499,35 @@ class Starmap(object):
         return cls(func, (((chunk,) + args[1:]) for chunk in chunks))
 
     def __init__(self, func, iterargs):
+        # build the pool at first instantiation only
+        if self.__class__.pool is None:
+            self.__class__.pool = self.poolfactory()
         self.func = func
-        self.received = []
         allargs = list(iterargs)
-        self.todo = len(allargs)
-        logging.info('Starting %d tasks', self.todo)
+        self.num_tasks = len(allargs)
+        logging.info('Starting %d tasks', self.num_tasks)
         self.imap = self.pool.imap_unordered(
             functools.partial(safely_call, func), allargs)
 
     def reduce(self, agg=operator.add, acc=None, progress=logging.info):
-        agg_and_log = Aggregator(agg, self.func.__name__, self.todo, progress)
-        return functools.reduce(
-            agg_and_log, self.imap, AccumDict() if acc is None else acc)
+        if acc is None:
+            acc = AccumDict()
+        for res in IterResult(
+                self.imap, self.func.__name__, self.num_tasks, progress):
+            acc = agg(acc, res)
+        return acc
+
+
+class Serialmap(Starmap):
+    """
+    A sequential Starmap, useful for debugging purpose.
+    """
+    def __init__(self, func, iterargs):
+        self.func = func
+        allargs = list(iterargs)
+        self.num_tasks = len(allargs)
+        logging.info('Starting %d tasks', self.num_tasks)
+        self.imap = [safely_call(func, args) for args in allargs]
 
 
 class Threadmap(Starmap):
@@ -555,11 +535,12 @@ class Threadmap(Starmap):
     MapReduce implementation based on threads. For instance
 
     >>> from collections import Counter
-    >>> Threadmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
-    Counter({'l': 3, 'o': 2, 'e': 1, 'd': 1, 'h': 1, 'r': 1, 'w': 1})
+    >>> c = Threadmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
     """
-    # following the same convention of the standard library, num_proc * 5
-    pool = multiprocessing.dummy.Pool(executor._max_workers * 5)
+    poolfactory = staticmethod(
+        # following the same convention of the standard library, num_proc * 5
+        lambda: multiprocessing.dummy.Pool(executor._max_workers * 5))
+    pool = None  # built at instantiation time
 
 
 class Processmap(Starmap):
@@ -567,7 +548,7 @@ class Processmap(Starmap):
     MapReduce implementation based on processes. For instance
 
     >>> from collections import Counter
-    >>> Processmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
-    Counter({'l': 3, 'o': 2, 'e': 1, 'd': 1, 'h': 1, 'r': 1, 'w': 1})
+    >>> c = Processmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
     """
-    pool = multiprocessing.Pool()
+    poolfactory = staticmethod(multiprocessing.Pool)
+    pool = None  # built at instantiation time

@@ -28,8 +28,8 @@ from openquake.baselib.performance import Monitor
 from openquake.risklib import valid
 from openquake.commonlib import parallel, readinput
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import export, datastore, views
-from openquake.calculators import base
+from openquake.commonlib import export, datastore
+from openquake.calculators import base, views
 from openquake.engine import logs, config
 
 TERMINATE = valid.boolean(
@@ -87,8 +87,8 @@ def expose_outputs(dstore):
     dskeys = set(dstore) & exportable  # exportable datastore keys
     if oq.uniform_hazard_spectra:
         dskeys.add('uhs')  # export them
-    if 'hmaps' in dskeys and not oq.hazard_maps:
-        dskeys.remove('hmaps')  # do not export
+    if oq.hazard_maps:
+        dskeys.add('hmaps')  # export them
     if 'realizations' in dskeys and len(dstore['realizations']) <= 1:
         dskeys.remove('realizations')  # do not export a single realization
     if 'sescollection' in dskeys and 'scenario' in calcmode:
