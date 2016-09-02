@@ -22,7 +22,9 @@ file formats."""
 
 
 import os
+import sys
 import zipfile
+import traceback
 
 from openquake.commonlib.export import export
 from openquake.commonlib import datastore
@@ -74,11 +76,13 @@ def export_from_db(output_key, calc_id, datadir, target):
         dstore.export_dir = target
         try:
             exported = export(output_key, dstore)
-        except Exception as exc:
+        except Exception:
+            etype, err, tb = sys.exc_info()
+            tb_str = ''.join(traceback.format_tb(tb))
             version = check_version(dstore)
             raise DataStoreExportError(
-                'Could not export %s in %s%s: %s' %
-                (output_key + (version, exc)))
+                'Could not export %s in %s%s\n%s%s' %
+                (output_key + (version, tb_str, err)))
         if not exported:
             raise DataStoreExportError(
                 'Nothing to export for %s' % ds_key)
