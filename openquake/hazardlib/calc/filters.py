@@ -85,7 +85,9 @@ def filter_sites_by_distance_to_rupture(rupture, integration_distance, sites):
     jb_dist = rupture.surface.get_joyner_boore_distance(sites.mesh)
     return sites.filter(jb_dist <= integration_distance)
 
-def source_site_distance_filter(integration_distance):
+
+# this is a class because it must be pickleable
+class source_site_distance_filter(object):
     """
     Source-site filter based on distance.
 
@@ -94,18 +96,20 @@ def source_site_distance_filter(integration_distance):
         :meth:`openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source`
         which is what is actually used for filtering.
     """
-    def filter_func(sources_sites):
+    def __init__(self, integration_distance):
+        self.integration_distance = integration_distance
+
+    def __call__(self, sources_sites):
         for source, sites in sources_sites:
             s_sites = source.filter_sites_by_distance_to_source(
-                integration_distance, sites
+                self.integration_distance, sites
             )
             if s_sites is None:
                 continue
             yield source, s_sites
-    return filter_func
 
 
-def rupture_site_distance_filter(integration_distance):
+class rupture_site_distance_filter(object):
     """
     Rupture-site filter based on distance.
 
@@ -114,14 +118,16 @@ def rupture_site_distance_filter(integration_distance):
         :func:`openquake.hazardlib.calc.filters.filter_sites_by_distance_to_rupture`
         which is what is actually used for filtering.
     """
-    def filter_func(ruptures_sites):
+    def __init__(self, integration_distance):
+        self.integration_distance = integration_distance
+
+    def __call__(self, ruptures_sites):
         for rupture, sites in ruptures_sites:
             r_sites = filter_sites_by_distance_to_rupture(
-                rupture, integration_distance, sites)
+                rupture, self.integration_distance, sites)
             if r_sites is None:
                 continue
             yield rupture, r_sites
-    return filter_func
 
 
 #: Transparent source-site "no-op" filter -- behaves like a real filter
