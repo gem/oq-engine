@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added an HDF5 export for scenario GMFs
   * If `filter_sources` if false, the light sources are not filtered, but the
     heavy sources are always filtered
   * Now the dbserver can be stopped correctly with CTRL-C
