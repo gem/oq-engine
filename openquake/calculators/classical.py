@@ -296,24 +296,16 @@ class PSHACalculator(base.HazardCalculator):
         pmap_by_grp_id = reduce(self.agg_dicts, iter_result, self.zerodict())
         self.save_data_transfer(iter_result)
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(tm, pmap_by_grp_id)
+            self.store_source_info(pmap_by_grp_id)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             partial(self.count_eff_ruptures, pmap_by_grp_id))
         self.datastore['csm_info'] = self.csm.info
         return pmap_by_grp_id
 
-    def store_source_info(self, taskman, pmap_by_grp_id):
-        # store the information about received data
-        received = taskman.received
-        if received:
-            tname = taskman.name
-            self.datastore.save('job_info', {
-                tname + '_max_received_per_task': max(received),
-                tname + '_tot_received': sum(received),
-                tname + '_num_tasks': len(received)})
-        # then save the calculation times per each source
+    def store_source_info(self, pmap_by_grp_id):
+        # save the calculation times per each source
         calc_times = getattr(pmap_by_grp_id, 'calc_times', [])
-        if calc_times:
+        if calc_times and 'source_info' in self.datastore:
             sources = self.csm.get_sources()
             info_dict = {(rec['src_group_id'], rec['source_id']): rec
                          for rec in self.source_info}
@@ -392,13 +384,8 @@ class ClassicalCalculator(PSHACalculator):
         """
         if 'poes' not in self.datastore:  # for short report
             return
-
         oq = self.oqparam
         rlzs = self.rlzs_assoc.realizations
-        with self.monitor('reading poes', autoflush=True):
-            pmap_by_grp = {
-                int(group_id): self.datastore['poes/' + group_id]
-                for group_id in self.datastore['poes']}
 
         # initialize datasets
         N = len(self.sitecol)
@@ -419,8 +406,11 @@ class ClassicalCalculator(PSHACalculator):
                 'hcurves/quantile-%s' % q, F32, (N, L, 1), attrs=attrs)
         self.datastore.flush()
 
-        # build hcurves and stats
+        logging.info('Building hazard curves')
         with self.monitor('submitting poes', autoflush=True):
+            pmap_by_grp = {
+                int(group_id): self.datastore['poes/' + group_id]
+                for group_id in self.datastore['poes']}
             sm = parallel.starmap(build_hcurves_and_stats,
                                   list(self.gen_args(pmap_by_grp)))
         with self.monitor('saving hcurves and stats', autoflush=True):
