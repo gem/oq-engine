@@ -448,17 +448,18 @@ class UcerfPSHACalculator(classical.PSHACalculator):
                 concurrent_tasks=self.oqparam.concurrent_tasks).submit_all()
 
             logging.info('Getting the background point sources')
-            with self.monitor('background sources', autoflush=True):
+            with self.monitor('getting background sources', autoflush=True):
                 bckgnd_sources = ucerf_source.get_background_sources(
                     branchname, self.sitecol, max_dist)
 
             # parallelize on the background sources
+            args = (bckgnd_sources, self.sitecol, oq.imtls,
+                    gsims, self.oqparam.truncation_level,
+                    source_site_distance_filter(max_dist),
+                    max_dist, (), monitor)
             for pmap in parallel.apply(
-                hazard_curves_per_trt,
-                (bckgnd_sources, self.sitecol, oq.imtls,
-                 gsims, self.oqparam.truncation_level,
-                 source_site_distance_filter(max_dist),
-                 max_dist, (), monitor)):
+                    hazard_curves_per_trt, args,
+                    concurrent_tasks=self.oqparam.concurrent_tasks):
                 acc[0] |= pmap
 
             pmap_by_grp_id = functools.reduce(self.agg_dicts, results, acc)
