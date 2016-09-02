@@ -1,5 +1,25 @@
   [Michele Simionato]
-  * Used a fixed MAXWEIGHT when there is more than one tile
+  * If `filter_sources` if false, the light sources are not filtered, but the
+    heavy sources are always filtered
+  * Now the dbserver can be stopped correctly with CTRL-C
+  * Parallelized the splitting of heavy sources
+  * Changed the event loss table exporter: now a single file per realization
+    is exported, containing all the loss types
+  * Removed the dependency from the Django ORM
+  * Now the WebUI restarts the ProcessPoolExecutor at the end of each job,
+    to conserve resources
+  * Optimized the computation of hazard curves and statistics, especially
+    for the memory consumption
+  * Reduced the data transfer due to the `rlzs_assoc` and `oqparam` objects
+  * Fixed a bug in the disaggregation calculator when a source group has
+    been filtered away by the maximum distance criterium
+  * Fixed an encoding error in the reports when the description contains a
+    non-ASCII character
+  * Changed the distribution framework: celery is supported in a way more
+    consistent with the other approaches; moreover, ipyparallel is supported
+  * Hazard maps are now a fake output, dynamically generated at export time
+  * Made the number of produced tasks proportional to the number of tiles
+  * Raised an error for event_based_risk producing no GMFs
   * Added a view for the slow sources
   * Transmitted the attributes of a SourceGroup to the underlying sources
   * Fixed the names of exported files for hazard maps in .geojson format

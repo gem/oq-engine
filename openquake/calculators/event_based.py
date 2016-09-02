@@ -27,10 +27,11 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict, group_array
+from openquake.baselib.general import AccumDict, group_array, split_in_blocks
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import ProbabilityMap
+from openquake.hazardlib.probability_map import PmapStats
 from openquake.hazardlib import geo
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import readinput, parallel, calc
@@ -44,6 +45,7 @@ from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
+F64 = numpy.float64
 POEMAP = 1
 
 event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32),
@@ -215,15 +217,14 @@ class EBRupture(object):
                                         self.serial, self.grp_id)
 
 
-@parallel.litetask
-def compute_ruptures(sources, sitecol, rlzs_assoc, monitor):
+def compute_ruptures(sources, sitecol, rlzs_by_gsim, monitor):
     """
     :param sources:
         List of commonlib.source.Source tuples
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param rlzs_assoc:
-        a :class:`openquake.commonlib.source.RlzsAssoc` instance
+    :param rlzs_by_gsim:
+        a dictionary gsim -> realizations of that GSIM
     :param monitor:
         monitor instance
     :returns:
@@ -232,20 +233,19 @@ def compute_ruptures(sources, sitecol, rlzs_assoc, monitor):
     # NB: by construction each block is a non-empty list with
     # sources of the same src_group_id
     src_group_id = sources[0].src_group_id
-    oq = monitor.oqparam
     trt = sources[0].tectonic_region_type
-    max_dist = oq.maximum_distance[trt]
-    cmaker = ContextMaker(rlzs_assoc.gsims_by_grp_id[src_group_id])
+    max_dist = monitor.maximum_distance[trt]
+    cmaker = ContextMaker(rlzs_by_gsim)
     params = sorted(cmaker.REQUIRES_RUPTURE_PARAMETERS)
     rup_data_dt = numpy.dtype(
         [('rupserial', U32), ('multiplicity', U16),
-         ('numsites', U32), ('occurrence_rate', F32)] + [
-            (param, F32) for param in params])
+         ('numsites', U32), ('occurrence_rate', F64)] + [
+            (param, F64) for param in params])
     eb_ruptures = []
     rup_data = []
     calc_times = []
     rup_mon = monitor('filtering ruptures', measuremem=False)
-    num_samples = rlzs_assoc.samples[src_group_id]
+    num_samples = rlzs_by_gsim.samples
 
     # Compute and save stochastic event sets
     for src in sources:
@@ -257,13 +257,14 @@ def compute_ruptures(sources, sitecol, rlzs_assoc, monitor):
             filter_sites_by_distance_to_rupture,
             integration_distance=max_dist, sites=s_sites)
         num_occ_by_rup = sample_ruptures(
-            src, oq.ses_per_logic_tree_path, num_samples,
-            rlzs_assoc.seed)
+            src, monitor.ses_per_logic_tree_path, num_samples,
+            rlzs_by_gsim.seed)
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
         for ebr in build_eb_ruptures(
-                src, num_occ_by_rup, rupture_filter, oq.random_seed, rup_mon):
+                src, num_occ_by_rup, rupture_filter,
+                monitor.random_seed, rup_mon):
             nsites = len(ebr.indices)
             try:
                 rate = ebr.rupture.occurrence_rate
@@ -400,7 +401,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
                 except KeyError:
                     dset = self.rup_data[trt] = self.datastore.create_dset(
                         'rup_data/' + trt, ruptures_by_grp_id.rup_data.dtype)
-                dset.extend(ruptures_by_grp_id.rup_data)
+                hdf5.extend(dset, ruptures_by_grp_id.rup_data)
         self.datastore.flush()
         return acc
 
@@ -431,9 +432,9 @@ class EventBasedRuptureCalculator(PSHACalculator):
             self.datastore.set_nbytes('sescollection')
 
         for dset in self.rup_data.values():
-            if len(dset.dset):
-                numsites = dset.dset['numsites']
-                multiplicity = dset.dset['multiplicity']
+            if len(dset):
+                numsites = dset['numsites']
+                multiplicity = dset['multiplicity']
                 spr = numpy.average(numsites, weights=multiplicity)
                 mul = numpy.average(multiplicity, weights=numsites)
                 self.datastore.set_attrs(dset.name, sites_per_rupture=spr,
@@ -444,8 +445,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
 
 # ######################## GMF calculator ############################ #
 
-@parallel.litetask
-def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc,
+def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_by_gsim,
                             min_iml, monitor):
     """
     :param eb_ruptures:
@@ -454,8 +454,8 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc,
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param imts:
         a list of IMT string
-    :param rlzs_assoc:
-        a RlzsAssoc instance
+    :param rlzs_by_gsim:
+        a dictionary gsim -> associated realizations
     :param monitor:
         a Monitor instance
     :returns:
@@ -467,7 +467,7 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc,
     trunc_level = oq.truncation_level
     correl_model = readinput.get_correl_model(oq)
     gmfadict = create(
-        calc.GmfColl, eb_ruptures, sitecol, imts, rlzs_assoc, trunc_level,
+        calc.GmfColl, eb_ruptures, sitecol, imts, rlzs_by_gsim, trunc_level,
         correl_model, min_iml, monitor).by_rlzi()
     result = {rlzi: [gmfadict[rlzi], None]
               if oq.ground_motion_fields else [None, None]
@@ -514,7 +514,7 @@ class EventBasedCalculator(ClassicalCalculator):
                 self.datastore.create_dset(
                     'gmf_data/%04d' % rlz.ordinal, calc.gmv_dt)
 
-    def combine_curves_and_save_gmfs(self, acc, res):
+    def combine_pmaps_and_save_gmfs(self, acc, res):
         """
         Combine the hazard curves (if any) and save the gmfs (if any)
         sequentially; notice that the gmfs may come from
@@ -539,6 +539,24 @@ class EventBasedCalculator(ClassicalCalculator):
         self.datastore.flush()
         return acc
 
+    def gen_args(self, ebruptures):
+        """
+        :param ebruptures: a list of EBRupture objects to be split
+        :yields: the arguments for compute_gmfs_and_curves
+        """
+        oq = self.oqparam
+        monitor = self.monitor(self.core_task.__name__)
+        monitor.oqparam = oq
+        min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
+        for block in split_in_blocks(
+                ebruptures, oq.concurrent_tasks or 1,
+                key=operator.attrgetter('grp_id'),
+                weight=operator.attrgetter('weight')):
+            grp_id = block[0].grp_id
+            rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
+            yield (block, self.sitecol, oq.imtls, rlzs_by_gsim,
+                   min_iml, monitor)
+
     def execute(self):
         """
         Run in parallel `core_task(sources, sitecol, monitor)`, by
@@ -548,19 +566,11 @@ class EventBasedCalculator(ClassicalCalculator):
         oq = self.oqparam
         if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
             return
-        monitor = self.monitor(self.core_task.__name__)
-        monitor.oqparam = oq
-        min_iml = calc.fix_minimum_intensity(
-            oq.minimum_intensity, oq.imtls)
-        acc = parallel.apply_reduce(
-            self.core_task.__func__,
-            (self.sesruptures, self.sitecol, oq.imtls, self.rlzs_assoc,
-             min_iml, monitor),
-            concurrent_tasks=self.oqparam.concurrent_tasks,
-            agg=self.combine_curves_and_save_gmfs,
-            acc=ProbabilityMap(),
-            key=operator.attrgetter('grp_id'),
-            weight=operator.attrgetter('weight'))
+        acc = parallel.starmap(
+            self.core_task.__func__, self.gen_args(self.sesruptures)).reduce(
+                agg=self.combine_pmaps_and_save_gmfs,
+                acc={rlz.ordinal: ProbabilityMap()
+                     for rlz in self.rlzs_assoc.realizations})
         if oq.ground_motion_fields:
             self.datastore.set_nbytes('gmf_data')
         return acc
@@ -576,8 +586,22 @@ class EventBasedCalculator(ClassicalCalculator):
             return
         elif oq.hazard_curves_from_gmfs:
             rlzs = self.rlzs_assoc.realizations
-            ClassicalCalculator.post_execute(
-                self, ((rlzs[i], result[i]) for i in result))
+            # save individual curves
+            if self.oqparam.individual_curves:
+                for i in sorted(result):
+                    self.datastore['hcurves/rlz-%03d' % i] = result[i]
+            # compute and save statistics; this is done in process
+            # we don't need to parallelize, since event based calculations
+            # involves a "small" number of sites (<= 65,536)
+            weights = (None if self.oqparam.number_of_logic_tree_samples
+                       else [rlz.weight for rlz in rlzs])
+            pstats = PmapStats(self.oqparam.quantile_hazard_curves, weights)
+            for kind, stat in pstats.compute(
+                    self.sitecol.sids, list(result.values())):
+                if kind == 'mean' and not self.oqparam.mean_hazard_curves:
+                    continue
+                self.datastore['hcurves/' + kind] = stat
+
         if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
             if not os.path.exists(export_dir):
@@ -588,10 +612,27 @@ class EventBasedCalculator(ClassicalCalculator):
             # TODO: perhaps it is possible to avoid reprocessing the source
             # model, however usually this is quite fast and do not dominate
             # the computation
-            self.cl.run()
-            for imt in self.mean_curves.dtype.fields:
+            self.cl.run(close=False)
+            cl_mean_curves = get_mean_curves(self.cl.datastore)
+            eb_mean_curves = get_mean_curves(self.datastore)
+            for imt in eb_mean_curves.dtype.names:
                 rdiff, index = max_rel_diff_index(
-                    self.cl.mean_curves[imt], self.mean_curves[imt])
+                    cl_mean_curves[imt], eb_mean_curves[imt])
                 logging.warn('Relative difference with the classical '
                              'mean curves for IMT=%s: %d%% at site index %d',
                              imt, rdiff * 100, index)
+
+
+def get_mean_curves(dstore):
+    """
+    Extract the mean hazard curves from the datastore, as a composite
+    array of length nsites.
+    """
+    imtls = dstore['oqparam'].imtls
+    nsites = len(dstore['sitecol'])
+    hcurves = dstore['hcurves']
+    if 'mean' in hcurves:
+        mean = dstore['hcurves/mean']
+    elif len(hcurves) == 1:  # there is a single realization
+        mean = dstore['hcurves/rlz-0000']
+    return mean.convert(imtls, nsites)

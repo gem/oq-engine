@@ -24,6 +24,7 @@ import collections
 
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, humansize
 from openquake.calculators import base
@@ -49,7 +50,6 @@ def build_el_dtypes(insured_losses):
     return numpy.dtype(ela_list), numpy.dtype(elt_list)
 
 
-@parallel.litetask
 def build_agg_curve(lr_data, insured_losses, ses_ratio, curve_resolution, L,
                     monitor):
     """
@@ -158,7 +158,6 @@ def _aggregate_output(output, compositemodel, agg, ass, idx, result, monitor):
             agg[indices, l, r] += losses
 
 
-@parallel.litetask
 def event_based_risk(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     """
     :param riskinput:
@@ -316,8 +315,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = self.riskmodel.build_inputs_from_ruptures(
-                self.sitecol.complete, all_ruptures, oq.truncation_level,
-                correl_model, min_iml, eps, oq.concurrent_tasks or 1)
+                list(oq.imtls), self.sitecol.complete, all_ruptures,
+                oq.truncation_level, correl_model, min_iml, eps,
+                oq.concurrent_tasks or 1)
             # NB: I am using generators so that the tasks are submitted one at
             # the time, without keeping all of the arguments in memory
             tm = starmap(
@@ -340,10 +340,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         with self.monitor('saving event loss tables', autoflush=True):
             if self.oqparam.asset_loss_table:
                 for lr, array in sorted(result.pop('ASSLOSS').items()):
-                    self.ass_loss_table[lr].extend(array)
+                    hdf5.extend(self.ass_loss_table[lr], array)
                     self.ass_bytes += array.nbytes
             for lr, array in sorted(result.pop('AGGLOSS').items()):
-                self.agg_loss_table[lr].extend(array)
+                hdf5.extend(self.agg_loss_table[lr], array)
                 self.agg_bytes += array.nbytes
             self.datastore.hdf5.flush()
         return acc + result
@@ -357,6 +357,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         logging.info('Generated %s of GMFs', humansize(self.gmfbytes))
         self.datastore.save('job_info', {'gmfbytes': self.gmfbytes})
+        if self.gmfbytes == 0:
+            raise RuntimeError('No GMFs were generated, perhaps they were '
+                               'all below the minimum_intensity threshold')
 
         if self.oqparam.asset_loss_table:
             asslt = self.datastore['ass_loss_table']
@@ -492,13 +495,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         loss_curve_dt, _ = self.riskmodel.build_all_loss_dtypes(
             C, oq.conditional_loss_poes, oq.insured_losses)
         lts = self.riskmodel.loss_types
-        lr_data = [(l, r, dset.dset.value) for (l, r), dset in
+        lr_data = [(l, r, dset.value) for (l, r), dset in
                    numpy.ndenumerate(self.agg_loss_table)]
         ses_ratio = self.oqparam.ses_ratio
-        result = parallel.apply_reduce(
+        result = parallel.apply(
             build_agg_curve, (lr_data, self.I, ses_ratio, C, self.L,
                               self.monitor('')),
-            concurrent_tasks=self.oqparam.concurrent_tasks)
+            concurrent_tasks=self.oqparam.concurrent_tasks).reduce()
         agg_curve = numpy.zeros(self.R, loss_curve_dt)
         for l, r, name in result:
             agg_curve[lts[l]][name][r] = result[l, r, name]

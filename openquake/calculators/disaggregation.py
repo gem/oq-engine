@@ -114,7 +114,6 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
                    pnes)
 
 
-@parallel.litetask
 def compute_disagg(sitecol, sources, src_group_id, rlzs_assoc,
                    trt_names, curves_dict, bin_edges, oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
@@ -209,8 +208,8 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
     """
     Classical PSHA disaggregation calculator
     """
-    def post_execute(self, result=None):
-        super(DisaggregationCalculator, self).post_execute(result)
+    def post_execute(self, nbytes_by_kind):
+        """Performs the disaggregation"""
         self.full_disaggregation()
 
     def agg_result(self, acc, result):
@@ -232,9 +231,17 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         Returns a dictionary {(rlz_id, imt) -> curve}.
         """
         dic = {}
+        imtls = self.oqparam.imtls
         for rlz in self.rlzs_assoc.realizations:
-            poes = self.datastore['hcurves/rlz-%03d' % rlz.ordinal][sid]
-            for imt_str in self.oqparam.imtls:
+            pmap = self.datastore['hcurves/rlz-%03d' % rlz.ordinal]
+            if sid in pmap:
+                poes = pmap[sid].convert(imtls)
+            else:
+                logging.info(
+                    'hazard curve contains all zero probabilities; '
+                    'skipping site %d, rlz=%d', sid, rlz.ordinal)
+                continue
+            for imt_str in imtls:
                 if all(x == 0.0 for x in poes[imt_str]):
                     logging.info(
                         'hazard curve contains all zero probabilities; '
@@ -273,6 +280,8 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
             logging.info('%d mag bins from %s to %s', len(mag_edges) - 1,
                          min_mag, max_mag)
             for src_group in smodel.src_groups:
+                if src_group.id not in self.rlzs_assoc.gsims_by_grp_id:
+                    continue  # the group has been filtered away
                 for sid, site in zip(sitecol.sids, sitecol):
                     curves = curves_dict[sid]
                     if not curves:

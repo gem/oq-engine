@@ -25,7 +25,7 @@ from openquake.commonlib.readers import CurveReader
 from openquake.commonlib.writers import write_csv, read_composite_array
 
 fname = writetmp('''\
-asset_ref:|S20:,lon:float64:,poe~0.9:float64:,lat:float64:,poe~0.5:float64:,poe~0.1:float64:
+asset_ref,lon,poe~0.9:float64:,lat,poe~0.5:float64:,poe~0.1:float64:
 a0,8.129850E+01,0.000000E+00,2.910980E+01,0.000000E+00,5.421328E+02
 a1,8.308230E+01,0.000000E+00,2.790060E+01,0.000000E+00,2.547904E+02
 a2,8.574770E+01,0.000000E+00,2.790150E+01,0.000000E+00,6.538710E+02
@@ -33,7 +33,7 @@ a3,8.574770E+01,0.000000E+00,2.790150E+01,0.000000E+00,8.062714E+02
 ''')
 
 wrong1 = writetmp('''\
-asset_ref:|S20:,lon:float64:,poe~0.9:float64:,lat:float64:,poe~0.5:float64:,poe~0.1:float64:
+asset_ref,lon,poe~0.9:float64:,lat,poe~0.5:float64:,poe~0.1:float64:
 a0,8.129850E+01,0.000000E+00,2.910980E+01,0.000000E+00 5.421328E+02
 a1,8.308230E+01,0.000000E+00,2.790060E+01,0.000000E+00,2.547904E+02
 a2,8.574770E+01,0.000000E+00,2.790150E+01,0.000000E+00,6.538710E+02
@@ -42,7 +42,7 @@ a3,8.574770E+01,0.000000E+00,2.790150E+01,0.000000E+00,8.062714E+02
 
 
 wrong2 = writetmp('''\
-asset_ref:|S20:,lon:float64:,poe~0.9:float64:,lat:float64:,poe~0.5:float64:,poe~0.1:float64:
+asset_ref,lon,poe~0.9:float64:,lat,poe~0.5:float64:,poe~0.1:float64:
 a0,8.129850E+01,0.000000E+00,2.910980E+01,0.0 0.0,5.421328E+02
 a1,8.308230E+01,0.000000E+00,2.790060E+01,0.000000E+00,2.547904E+02
 a2,8.574770E+01,0.000000E+00,2.790150E+01,0.000000E+00,6.538710E+02

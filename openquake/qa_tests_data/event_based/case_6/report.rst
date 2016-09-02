@@ -1,27 +1,27 @@
 Event-based PSHA producing hazard curves only
 =============================================
 
-gem-tstation:/home/michele/ssd/calc_22609.hdf5 updated Tue May 31 15:38:35 2016
+gem-tstation:/home/michele/ssd/calc_45862.hdf5 updated Wed Aug 31 12:11:49 2016
 
 num_sites = 1, sitecol = 739 B
 
 Parameters
 ----------
-============================ ===============================
-calculation_mode             'event_based'                  
-number_of_logic_tree_samples 0                              
-maximum_distance             {'Active Shallow Crust': 200.0}
-investigation_time           50.0                           
-ses_per_logic_tree_path      300                            
-truncation_level             3.0                            
-rupture_mesh_spacing         2.0                            
-complex_fault_mesh_spacing   2.0                            
-width_of_mfd_bin             0.2                            
-area_source_discretization   20.0                           
-random_seed                  23                             
-master_seed                  0                              
-engine_version               '2.0.0-git4fb4450'             
-============================ ===============================
+============================ ================================
+calculation_mode             'event_based'                   
+number_of_logic_tree_samples 0                               
+maximum_distance             {u'Active Shallow Crust': 200.0}
+investigation_time           50.0                            
+ses_per_logic_tree_path      300                             
+truncation_level             3.0                             
+rupture_mesh_spacing         2.0                             
+complex_fault_mesh_spacing   2.0                             
+width_of_mfd_bin             0.2                             
+area_source_discretization   20.0                            
+random_seed                  23                              
+master_seed                  0                               
+engine_version               '2.1.0-git49748af'              
+============================ ================================
 
 Input files
 -----------
@@ -84,9 +84,23 @@ filtered_weight 122
 
 Informational data
 ------------------
-======== ============
-hostname gem-tstation
-======== ============
+====================================== ============
+compute_ruptures_max_received_per_task 242,269     
+compute_ruptures_num_tasks             20          
+compute_ruptures_sent.monitor          17,520      
+compute_ruptures_sent.rlzs_by_gsim     17,960      
+compute_ruptures_sent.sitecol          8,660       
+compute_ruptures_sent.sources          189,496     
+compute_ruptures_tot_received          2,997,938   
+hazard.input_weight                    122         
+hazard.n_imts                          1           
+hazard.n_levels                        5.000       
+hazard.n_realizations                  6           
+hazard.n_sites                         1           
+hazard.n_sources                       2           
+hazard.output_weight                   900         
+hostname                               gem-tstation
+====================================== ============
 
 Specific information for event based
 ------------------------------------
@@ -98,49 +112,40 @@ Rupture multiplicity     5.253
 
 Slowest sources
 ---------------
-============ ========= ============ ====== ========= =========== ========== =========
-src_group_id source_id source_class weight split_num filter_time split_time calc_time
-============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   61     307       0.001       0.049      2.506    
-1            1         AreaSource   61     307       0.001       0.052      1.735    
-============ ========= ============ ====== ========= =========== ========== =========
+============ ========= ============ ====== ========= =========== ========== ============= ============= =========
+src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
+============ ========= ============ ====== ========= =========== ========== ============= ============= =========
+0            1         AreaSource   61     307       0.0         0.108      2.579         0.027         307      
+1            1         AreaSource   61     307       0.0         0.112      1.809         0.043         307      
+============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
 ------------------------------------
-============ =========== ========== ========= ======
-source_class filter_time split_time calc_time counts
-============ =========== ========== ========= ======
-AreaSource   0.002       0.101      4.241     2     
-============ =========== ========== ========= ======
+============ =========== ========== ============= ============= ========= ======
+source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
+============ =========== ========== ============= ============= ========= ======
+AreaSource   0.0         0.220      4.388         0.070         614       2     
+============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
-================================= ===== ====== ===== ===== =========
-measurement                       mean  stddev min   max   num_tasks
-compute_ruptures.time_sec         0.112 0.047  0.005 0.232 38       
-compute_ruptures.memory_mb        0.0   0.0    0.0   0.0   38       
-compute_gmfs_and_curves.time_sec  0.578 0.333  0.172 1.680 21       
-compute_gmfs_and_curves.memory_mb 0.015 0.067  0.0   0.309 21       
-================================= ===== ====== ===== ===== =========
+========================== ===== ====== ===== ===== =========
+measurement                mean  stddev min   max   num_tasks
+compute_ruptures.time_sec  0.221 0.087  0.006 0.326 20       
+compute_ruptures.memory_mb 0.011 0.049  0.0   0.219 20       
+========================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_gmfs_and_curves  12        0.309     21    
-compute poes                   10        0.0       3,081 
-total compute_ruptures         4.255     0.0       38    
-saving ruptures                2.245     0.0       1     
-make contexts                  1.822     0.0       3,081 
-filtering ruptures             0.783     0.0       3,081 
-managing sources               0.182     0.0       1     
-splitting sources              0.101     0.0       2     
-reading composite source model 0.096     0.0       1     
-bulding hazard curves          0.066     0.0       21    
-aggregating hcurves            0.055     0.0       63    
-aggregate curves               0.013     0.0       101   
-store source_info              0.008     0.0       1     
-filtering sources              0.002     0.0       2     
-reading site collection        2.885E-05 0.0       1     
+total compute_ruptures         4.415     0.219     20    
+saving ruptures                1.867     0.0       1     
+filtering ruptures             0.886     0.0       3,081 
+managing sources               0.236     0.0       1     
+reading composite source model 0.123     0.0       1     
+store source_info              0.009     0.0       1     
+aggregate curves               0.007     0.0       20    
+reading site collection        3.409E-05 0.0       1     
 ============================== ========= ========= ======
