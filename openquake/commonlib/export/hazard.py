@@ -713,41 +713,30 @@ def export_gmf_scenario(ekey, dstore):
     return writer.getsaved()
 
 
-# not used right now
-def export_hazard_curves_xml(key, dest, sitecol, curves_by_imt,
-                             imtls, investigation_time):
-    """
-    Export the curves of the given realization into XML.
 
-    :param key: output_type and export_type
-    :param dest: name of the exported file
-    :param sitecol: site collection
-    :param curves_by_imt: dictionary with the curves keyed by IMT
-    :param imtls: dictionary with the intensity measure types and levels
-    :param investigation_time: investigation time in years
-    """
-    mdata = []
-    hcurves = []
-    for imt_str, imls in sorted(imtls.items()):
-        hcurves.append(
-            [HazardCurve(site.location, poes)
-             for site, poes in zip(sitecol, curves_by_imt[imt_str])])
-        imt = from_string(imt_str)
-        mdata.append({
-            'quantile_value': None,
-            'statistics': None,
-            'smlt_path': '',
-            'gsimlt_path': '',
-            'investigation_time': investigation_time,
-            'imt': imt[0],
-            'sa_period': imt[1],
-            'sa_damping': imt[2],
-            'imls': imls,
-        })
-    writer = hazard_writers.MultiHazardCurveXMLWriter(dest, mdata)
-    with floatformat('%12.8E'):
-        writer.serialize(hcurves)
-    return {dest: dest}
+@export.add(('gmf_data', 'csv'))
+def export_gmf_scenario(ekey, dstore):
+    oq = dstore['oqparam']
+    if 'scenario' in oq.calculation_mode:
+        n_gmfs = oq.number_of_ground_motion_fields
+        fields = ['%03d' % i for i in range(n_gmfs)]
+        dt = numpy.dtype([(f, F32) for f in fields])
+        etags, gmfs_by_trt_gsim = calc.get_gmfs(dstore)
+        sitemesh = get_mesh(dstore['sitecol'])
+        writer = writers.CsvWriter(fmt='%.5f')
+        for (trt, gsim), gmfs_ in gmfs_by_trt_gsim.items():
+            for imt in gmfs_.dtype.names:
+                gmfs = numpy.zeros(len(gmfs_), dt)
+                for i in range(len(gmfs)):
+                    gmfs[i] = tuple(gmfs_[imt][i])
+                dest = dstore.build_fname('gmf', '%s-%s' % (gsim, imt), 'csv')
+                data = util.compose_arrays(sitemesh, gmfs)
+                writer.save(data, dest)
+    else:  # event based
+        logging.warn('Not exporting the full GMFs for event_based, but you can'
+                     ' specify the rupture ordinals with gmfs:R1,...,Rn')
+        return []
+    return writer.getsaved()
 
 
 DisaggMatrix = collections.namedtuple(
