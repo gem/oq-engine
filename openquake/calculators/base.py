@@ -259,15 +259,17 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
 
             if has_hcurves and self.oqparam.hazard_maps:
                 ekey = ('hmaps', fmt)
-                with self.monitor('export'):
-                    exported[ekey] = exp(ekey, self.datastore)
-                logging.info('exported %s: %s', key, exported[ekey])
+                if ekey in exp:
+                    with self.monitor('export'):
+                        exported[ekey] = exp(ekey, self.datastore)
+                    logging.info('exported %s: %s', key, exported[ekey])
 
             if has_hcurves and self.oqparam.uniform_hazard_spectra:
                 ekey = ('uhs', fmt)
-                with self.monitor('export'):
-                    exported[ekey] = exp(ekey, self.datastore)
-                logging.info('exported %s: %s', key, exported[ekey])
+                if ekey in exp:
+                    with self.monitor('export'):
+                        exported[ekey] = exp(ekey, self.datastore)
+                    logging.info('exported %s: %s', key, exported[ekey])
 
         if self.close:  # in the engine we close later
             try:
