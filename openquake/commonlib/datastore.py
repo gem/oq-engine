@@ -255,7 +255,10 @@ class DataStore(collections.MutableMapping):
         Update the object associated to `key` with the `kw` dictionary;
         works for LiteralAttrs objects and automatically flushes.
         """
-        obj = self[key]
+        if key not in self:
+            obj = hdf5.LiteralAttrs()
+        else:
+            obj = self[key]
         vars(obj).update(kw)
         self[key] = obj
         self.flush()

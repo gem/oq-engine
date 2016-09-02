@@ -822,9 +822,13 @@ class SourceManager(object):
             for args in self._gen_args(src_data, tiles):
                 yield args
         tile = Tile(sitecol, self.maximum_distance)
+        ntasks = 0
         for src_data in self._gen_src_heavy(sitecol):
             for args in self._gen_args(src_data, [tile]):
                 yield args
+                ntasks += 1
+        if ntasks:
+            logging.info('Generated %s tasks from the heavy sources', ntasks)
 
     def _gen_args(self, src_data, tiles):
         mon = self.monitor.new()
@@ -847,7 +851,10 @@ class SourceManager(object):
             data = []
             for src in sources:
                 with filter_mon:
-                    ok = src in tile
+                    if self.filter_sources:
+                        ok = src in tile
+                    else:  # accept all sources
+                        ok = True
                 if ok:
                     data.append((src, i, [], filter_mon.dt, 0))
                 self.csm.filtered_weight += src.weight
