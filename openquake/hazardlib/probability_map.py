@@ -124,6 +124,13 @@ class ProbabilityMap(dict):
         self.shape_z = shape_z
 
     def setdefault(self, sid, value):
+        """
+        Works like `dict.setdefault`: if the `sid` key is missing, it fills
+        it with an array and returns it.
+
+        :param sid: site ID
+        :param value: value used to fill the returned array
+        """
         try:
             return self[sid]
         except KeyError:
