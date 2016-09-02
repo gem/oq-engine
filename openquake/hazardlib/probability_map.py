@@ -101,24 +101,44 @@ class ProbabilityMap(dict):
     Such operators are implemented efficiently at the numpy level, by
     dispatching on the underlying array. Moreover there is a classmethod
     .build(L, I, sids, initvalue) to build initialized instances of
-    ProbabilityMap. The map can be represented as an array of shape
-    (N, L, I) where N is the number of site IDs.
+    :class:`ProbabilityMap`. The map can be represented as 3D array of shape
+    (shape_x, shape_y, shape_z) = (N, L, I), where N is the number of site IDs,
+    L the total number of hazard levels and I the number of GSIMs.
     """
     @classmethod
-    def build(cls, num_levels, num_gsims, sids, initvalue=0.):
+    def build(cls, shape_y, shape_z, sids, initvalue=0.):
         """
-        :param num_levels: the total number of intensity measure levels
-        :param num_gsims: the number of GSIMs
+        :param shape_y: the total number of intensity measure levels
+        :param shape_z: the number of inner levels
         :param sids: a set of site indices
         :param initvalue: the initial value of the probability (default 0)
         :returns: a ProbabilityMap dictionary
         """
-        dic = cls()
+        dic = cls(shape_y, shape_z)
         for sid in sids:
-            array = numpy.empty((num_levels, num_gsims), F64)
-            array.fill(initvalue)
-            dic[sid] = ProbabilityCurve(array)
+            dic.setdefault(sid, initvalue)
         return dic
+
+    def __init__(self, shape_y, shape_z):
+        self.shape_y = shape_y
+        self.shape_z = shape_z
+
+    def setdefault(self, sid, value):
+        """
+        Works like `dict.setdefault`: if the `sid` key is missing, it fills
+        it with an array and returns it.
+
+        :param sid: site ID
+        :param value: value used to fill the returned array
+        """
+        try:
+            return self[sid]
+        except KeyError:
+            array = numpy.empty((self.shape_y, self.shape_z), F64)
+            array.fill(value)
+            pc = ProbabilityCurve(array)
+            self[sid] = pc
+            return pc
 
     @property
     def sids(self):
@@ -139,16 +159,17 @@ class ProbabilityMap(dict):
         return BYTES_PER_FLOAT * N * L * I
 
     # used when exporting to HDF5
-    def convert(self, imtls, nsites, idx=0):
+    def convert(self, imtls, nsites=None, idx=0):
         """
         Convert a probability map into a composite array of length `nsites`
         and dtype `imtls.imt_dt`.
 
         :param imtls: DictArray instance
-        :param nsites: the total number of sites
+        :param nsites: the total number of sites (or None)
         :param idx: extract the data corresponding to the given inner index
         """
-        # NB: I am not using ProbabilityCurve.convert to work around a bug of numpy 1.8.1
+        if nsites is None:
+            nsites = len(self)
         curves = numpy.zeros(nsites, imtls.imt_dt)
         for imt in curves.dtype.names:
             curves_by_imt = curves[imt]
@@ -160,7 +181,7 @@ class ProbabilityMap(dict):
         """
         Extracs a submap of self for the given sids.
         """
-        dic = self.__class__()
+        dic = self.__class__(self.shape_y, self.shape_z)
         for sid in sids:
             try:
                 dic[sid] = self[sid]
@@ -168,15 +189,15 @@ class ProbabilityMap(dict):
                 pass
         return dic
 
-    def extract(self, gsim_idx):
+    def extract(self, inner_idx):
         """
         Extracts a component of the underlying ProbabilityCurves,
-        specified by the index `gsim_idx`.
+        specified by the index `inner_idx`.
         """
-        out = self.__class__()
+        out = self.__class__(self.shape_y, 1)
         for sid in self:
             curve = self[sid]
-            array = curve.array[:, gsim_idx].reshape(-1, 1)
+            array = curve.array[:, inner_idx].reshape(-1, 1)
             out[sid] = ProbabilityCurve(array)
         return out
 
@@ -190,7 +211,7 @@ class ProbabilityMap(dict):
         return self
 
     def __or__(self, other):
-        new = self.__class__(self)
+        new = self.__class__(self.shape_y, self.shape_z)
         new |= other
         return new
 
@@ -198,31 +219,32 @@ class ProbabilityMap(dict):
 
     def __mul__(self, other):
         sids = set(self) | set(other)
-        return self.__class__((sid, self.get(sid, 1) * other.get(sid, 1))
-                              for sid in sids)
+        new = self.__class__(self.shape_y, self.shape_z)
+        for sid in sids:
+            new[sid] = self.get(sid, 1) * other.get(sid, 1)
+        return new
 
     def __invert__(self):
-        new = self.__class__()
+        new = self.__class__(self.shape_y, self.shape_z)
         for sid in self:
             if (self[sid].array != 1.).any():
                 new[sid] = ~self[sid]  # store only nonzero probabilities
         return new
 
     def __toh5__(self):
-        # converts to an array of shape (num_sids, num_levels, num_gsims)
+        # converts to an array of shape (num_sids, shape_y, shape_z)
         size = len(self)
         sids = self.sids
-        if size:
-            shape = (size,) + self[sids[0]].array.shape
-            array = numpy.zeros(shape)
-            for i, sid in numpy.ndenumerate(sids):
-                array[i] = self[sid].array
-        else:
-            array = numpy.zeros(0)
+        shape = (size, self.shape_y, self.shape_z)
+        array = numpy.zeros(shape, F64)
+        for i, sid in numpy.ndenumerate(sids):
+            array[i] = self[sid].array
         return array, dict(sids=sids)
 
     def __fromh5__(self, array, attrs):
         # rebuild the map from sids and probs arrays
+        self.shape_y = array.shape[1]
+        self.shape_z = array.shape[2]
         for sid, prob in zip(attrs['sids'], array):
             self[sid] = ProbabilityCurve(prob)
 
@@ -250,9 +272,9 @@ class PmapStats(object):
 
     Here is an example:
 
-    >>> pm1 = ProbabilityMap.build(num_levels=3, num_gsims=1, sids=[0, 1],
+    >>> pm1 = ProbabilityMap.build(3, 1, sids=[0, 1],
     ...                            initvalue=1.0)
-    >>> pm2 = ProbabilityMap.build(num_levels=3, num_gsims=1, sids=[0],
+    >>> pm2 = ProbabilityMap.build(3, 1, sids=[0],
     ...                            initvalue=0.8)
     >>> PmapStats(quantiles=[]).compute(sids=[0, 1], pmaps=[pm1, pm2])
     [('mean', {0: <ProbabilityCurve
@@ -280,7 +302,7 @@ class PmapStats(object):
             assert not self.quantiles, self.quantiles
             return pmaps[0]
         elif sum(len(pmap) for pmap in pmaps) == 0:  # all empty pmaps
-            return ProbabilityMap()
+            raise ValueError('All empty probability maps!')
         N, L, I = get_shape(pmaps)
         nstats = len(self.quantiles) + 1
         stats = ProbabilityMap.build(L, nstats, sids)
