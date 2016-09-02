@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <logicTree
+    logicTreeID="WUSOnlyLT"
+    >
+        <logicTreeBranchingLevel
+        branchingLevelID="gms1"
+        >
+            <logicTreeBranchSet
+            applyToTectonicRegionType="Active Shallow Crust"
+            branchSetID="wus_asc"
+            uncertaintyType="gmpeModel"
+            >
+                <logicTreeBranch
+                branchID="ASK08"
+                >
+                    <uncertaintyModel>
+                        AbrahamsonSilva2008
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        0.22
+                    </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch
+                branchID="BSSA14"
+                >
+                    <uncertaintyModel>
+                        BooreEtAl2014
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        0.22
+                    </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch
+                branchID="CB08"
+                >
+                    <uncertaintyModel>
+                        CampbellBozorgnia2008
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        0.22
+                    </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch
+                branchID="CY08"
+                >
+                    <uncertaintyModel>
+                        ChiouYoungs2008
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        0.22
+                    </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch
+                branchID="I14"
+                >
+                    <uncertaintyModel>
+                        Idriss2014
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        0.12
+                    </uncertaintyWeight>
+                </logicTreeBranch>
+                 -->
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+    </logicTree>
+</nrml>
