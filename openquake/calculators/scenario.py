@@ -40,7 +40,7 @@ class ScenarioCalculator(base.HazardCalculator):
         oq = self.oqparam
         trunc_level = oq.truncation_level
         correl_model = readinput.get_correl_model(oq)
-        rupture = readinput.get_rupture(oq)
+        self.datastore['rupture'] = rupture = readinput.get_rupture(oq)
         self.gsims = readinput.get_gsims(oq)
         maxdist = oq.maximum_distance['default']
         with self.monitor('filtering sites', autoflush=True):
