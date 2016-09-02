@@ -45,8 +45,8 @@ There are a lot of ground motion fields; the export will be slow.
 Consider canceling the operation and accessing directly %s.'''
 
 
-def get_mesh(sitecol):
-    sc = sitecol.complete
+def get_mesh(sitecol, complete=True):
+    sc = sitecol.complete if complete else sitecol
     mesh = numpy.zeros(len(sc), [('lon', F64), ('lat', F64)])
     mesh['lon'] = sc.lons
     mesh['lat'] = sc.lats
@@ -717,7 +717,7 @@ def export_gmf_scenario(ekey, dstore):
 def export_gmf_scenario_hdf5(ekey, dstore):
     # compute the GMFs on the fly from the stored rupture (if any)
     oq = dstore['oqparam']
-    sitemesh = get_mesh(dstore['sitecol'])
+    sitemesh = get_mesh(dstore['sitecol'], complete=False)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     gsims = rlzs_assoc.gsims_by_grp_id[0]  # there is a single grp_id
     assert 'scenario' in oq.calculation_mode, oq.calculation_mode
