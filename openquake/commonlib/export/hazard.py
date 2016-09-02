@@ -29,7 +29,7 @@ from openquake.baselib.general import (
     groupby, humansize, get_array, group_array, DictArray)
 from openquake.baselib import hdf5
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc import disagg
+from openquake.hazardlib.calc import disagg, gmf
 from openquake.commonlib.export import export
 from openquake.commonlib.writers import floatformat, write_csv
 from openquake.commonlib import writers, hazard_writers, util, readinput
@@ -711,6 +711,36 @@ def export_gmf_scenario(ekey, dstore):
                      ' specify the rupture ordinals with gmfs:R1,...,Rn')
         return []
     return writer.getsaved()
+
+
+@export.add(('gmf_data', 'hdf5'))
+def export_gmf_scenario_hdf5(ekey, dstore):
+    # compute the GMFs on the fly from the stored rupture (if any)
+    oq = dstore['oqparam']
+    sitemesh = get_mesh(dstore['sitecol'])
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    gsims = rlzs_assoc.gsims_by_grp_id[0]  # there is a single grp_id
+    assert 'scenario' in oq.calculation_mode, oq.calculation_mode
+    E = oq.number_of_ground_motion_fields
+    correl_model = readinput.get_correl_model(oq)
+    computer = gmf.GmfComputer(
+            dstore['rupture'], dstore['sitecol'], oq.imtls, gsims,
+            oq.truncation_level, correl_model)
+    fname = dstore.export_path('%s.%s' % ekey)
+    gmf_dt = numpy.dtype([('%s-%03d' % (imt, eid), F32) for imt in oq.imtls
+                          for eid in range(E)])
+    imts = list(oq.imtls)
+    with hdf5.File(fname, 'w') as f:
+        for gsim in gsims:
+            arr = computer.compute(oq.random_seed, gsim, E)
+            I, S, E = arr.shape  # #IMTs, #sites, #events
+            gmfa = numpy.zeros(S, gmf_dt)
+            for imti in range(I):
+                for eid in range(E):
+                    field = '%s-%03d' % (imts[imti], eid)
+                    gmfa[field] = arr[imti, :, eid]
+            f[str(gsim)] = util.compose_arrays(sitemesh, gmfa)
+    return [fname]
 
 
 # not used right now
