@@ -440,24 +440,28 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             gsims = self.rlzs_assoc.gsims_by_grp_id[0]
             [(branch_id, branch)] = self.smlt.branches.items()
             branchname = branch.value
-
-            # Get the background point sources
-            bckgnd_sources = ucerf_source.get_background_sources(
-                branchname, self.sitecol, max_dist)
-            if bckgnd_sources:
-                acc[0] = hazard_curves_per_trt(
-                    bckgnd_sources, self.sitecol, oq.imtls, gsims,
-                    self.oqparam.truncation_level,
-                    source_site_filter=source_site_distance_filter(max_dist),
-                    maximum_distance=max_dist, monitor=monitor)
-
             rup_sets = ucerf_source.get_rupture_indices(branchname)
-            pmap_by_grp_id = parallel.apply(
+            results = parallel.apply(
                 ucerf_classical_hazard_by_rupture_set,
                 (rup_sets, branchname, ucerf_source, self.src_group.id,
                  self.sitecol, gsims, monitor),
-                concurrent_tasks=self.oqparam.concurrent_tasks).reduce(
-                    agg=self.agg_dicts, acc=acc)
+                concurrent_tasks=self.oqparam.concurrent_tasks).submit_all()
+
+            logging.info('Getting the background point sources')
+            with self.monitor('background sources', autoflush=True):
+                bckgnd_sources = ucerf_source.get_background_sources(
+                    branchname, self.sitecol, max_dist)
+
+            # parallelize on the background sources
+            for pmap in parallel.apply(
+                hazard_curves_per_trt,
+                (bckgnd_sources, self.sitecol, oq.imtls,
+                 gsims, self.oqparam.truncation_level,
+                 source_site_distance_filter(max_dist),
+                 max_dist, (), monitor)):
+                acc[0] |= pmap
+
+            pmap_by_grp_id = functools.reduce(self.agg_dicts, results, acc)
 
         # TODO: save source_info
         with self.monitor('store source_info', autoflush=True):
