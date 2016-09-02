@@ -245,7 +245,7 @@ def hazard_curves_per_rupture_subset(rupset_idx, ucerf_source, sites, imtls,
     pne_mon = monitor('computing poes', measuremem=False)
     disagg_mon = monitor('get closest points', measuremem=False)
     monitor.calc_times = []
-    pmap = ProbabilityMap()
+    pmap = ProbabilityMap(len(imtls.array), len(gsims))
     with h5py.File(ucerf_source.source_file, "r") as hdf5:
         t0 = time.time()
         pmap |= ucerf_poe_map(hdf5, ucerf_source, rupset_idx, sites,
@@ -300,7 +300,7 @@ def ucerf_classical_hazard_by_rupture_set(
             monitor=monitor)
 
     else:
-        dic[src_group_id] = ProbabilityMap()
+        dic[src_group_id] = ProbabilityMap(len(imtls.array), len(gsims))
     dic.calc_times += monitor.calc_times  # added by hazard_curves_per_trt
     dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
     return dic
@@ -421,9 +421,9 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         monitor = self.monitor.new(self.core_task.__name__)
         monitor.oqparam = oq = self.oqparam
         ucerf_source = self.src_group.sources[0]
-        max_dist = self.oqparam.maximum_distance[DEFAULT_TRT]
-        acc = AccumDict({sg.id: ProbabilityMap()
-                         for sg in self.csm.src_groups})
+        max_dist = oq.maximum_distance[DEFAULT_TRT]
+        acc = AccumDict({sg.id: ProbabilityMap(len(oq.imtls.array), 1)
+                         for sg in self.src_group})
         acc.calc_times = []
         acc.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         acc.bb_dict = {}
@@ -461,7 +461,6 @@ class UcerfPSHACalculator(classical.PSHACalculator):
                     hazard_curves_per_trt, args,
                     concurrent_tasks=self.oqparam.concurrent_tasks):
                 acc[0] |= pmap
-
             pmap_by_grp_id = functools.reduce(self.agg_dicts, results, acc)
 
         # TODO: save source_info
