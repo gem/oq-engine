@@ -73,6 +73,7 @@ NPD = PMF([(0.15, NodalPlane(0.0, 90.0, 0.0)),
            (0.05, NodalPlane(270.0, 45.0, 90.)),
            (0.05, NodalPlane(325.0, 45.0, 90.))])
 
+
 class ImperfectPlanarSurface(PlanarSurface):
     """
     The planar surface class sets a narrow tolerance for the rectangular plane
@@ -114,7 +115,6 @@ def prefilter_ruptures(hdf5, ridx, idx_set, sites, integration_distance):
     centroids = centroids[1:, :]
     distance = min_geodetic_distance(centroids[:, 0], centroids[:, 1],
                                      sites.lons, sites.lats)
-    #logging.info("%s  -  %s", str(ridx), str(numpy.min(distance)))
     return numpy.any(distance <= integration_distance)
 
 
