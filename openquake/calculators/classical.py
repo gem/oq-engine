@@ -411,7 +411,7 @@ class ClassicalCalculator(PSHACalculator):
                 'hcurves/quantile-%s' % q, F32, (N, L, 1), attrs=attrs)
         self.datastore.flush()
 
-        # build hcurves and stats
+        logging.info('Building hazard curves')
         with self.monitor('submitting poes', autoflush=True):
             sm = parallel.starmap(build_hcurves_and_stats,
                                   list(self.gen_args(pmap_by_grp)))
