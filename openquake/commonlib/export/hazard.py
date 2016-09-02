@@ -719,10 +719,12 @@ def export_gmf_scenario(ekey, dstore):
 def export_gmf_scenario_hdf5(ekey, dstore):
     # compute the GMFs on the fly from the stored rupture (if any)
     oq = dstore['oqparam']
+    if 'scenario' not in oq.calculation_mode:
+        logging.warn('GMF export not implemented for %s', oq.calculation_mode)
+        return []
     sitemesh = get_mesh(dstore['sitecol'], complete=False)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     gsims = rlzs_assoc.gsims_by_grp_id[0]  # there is a single grp_id
-    assert 'scenario' in oq.calculation_mode, oq.calculation_mode
     E = oq.number_of_ground_motion_fields
     correl_model = readinput.get_correl_model(oq)
     computer = gmf.GmfComputer(
