@@ -242,7 +242,6 @@ class ProbabilityMap(dict):
             self[sid] = ProbabilityCurve(prob)
 
 
-# TODO: simplify this
 def get_shape(pmaps):
     """
     :param pmaps: a set of homogenous ProbabilityMaps
