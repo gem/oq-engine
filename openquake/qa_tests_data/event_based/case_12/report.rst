@@ -1,27 +1,27 @@
 Event Based QA Test, Case 12
 ============================
 
-gem-tstation:/home/michele/ssd/calc_22619.hdf5 updated Tue May 31 15:39:11 2016
+gem-tstation:/home/michele/ssd/calc_45872.hdf5 updated Wed Aug 31 12:12:24 2016
 
 num_sites = 1, sitecol = 739 B
 
 Parameters
 ----------
-============================ ============================================================
-calculation_mode             'event_based'                                               
-number_of_logic_tree_samples 0                                                           
-maximum_distance             {'stable continental': 200.0, 'active shallow crust': 200.0}
-investigation_time           1.0                                                         
-ses_per_logic_tree_path      3500                                                        
-truncation_level             2.0                                                         
-rupture_mesh_spacing         1.0                                                         
-complex_fault_mesh_spacing   1.0                                                         
-width_of_mfd_bin             1.0                                                         
-area_source_discretization   10.0                                                        
-random_seed                  1066                                                        
-master_seed                  0                                                           
-engine_version               '2.0.0-git4fb4450'                                          
-============================ ============================================================
+============================ ==============================================================
+calculation_mode             'event_based'                                                 
+number_of_logic_tree_samples 0                                                             
+maximum_distance             {u'stable continental': 200.0, u'active shallow crust': 200.0}
+investigation_time           1.0                                                           
+ses_per_logic_tree_path      3500                                                          
+truncation_level             2.0                                                           
+rupture_mesh_spacing         1.0                                                           
+complex_fault_mesh_spacing   1.0                                                           
+width_of_mfd_bin             1.0                                                           
+area_source_discretization   10.0                                                          
+random_seed                  1066                                                          
+master_seed                  0                                                             
+engine_version               '2.1.0-git49748af'                                            
+============================ ==============================================================
 
 Input files
 -----------
@@ -78,9 +78,23 @@ filtered_weight 0.050
 
 Informational data
 ------------------
-======== ============
-hostname gem-tstation
-======== ============
+====================================== ============
+compute_ruptures_max_received_per_task 59,803      
+compute_ruptures_num_tasks             2           
+compute_ruptures_sent.monitor          1,786       
+compute_ruptures_sent.rlzs_by_gsim     1,206       
+compute_ruptures_sent.sitecol          866         
+compute_ruptures_sent.sources          2,656       
+compute_ruptures_tot_received          116,951     
+hazard.input_weight                    0.050       
+hazard.n_imts                          1           
+hazard.n_levels                        3.000       
+hazard.n_realizations                  1           
+hazard.n_sites                         1           
+hazard.n_sources                       2           
+hazard.output_weight                   35          
+hostname                               gem-tstation
+====================================== ============
 
 Specific information for event based
 ------------------------------------
@@ -92,49 +106,41 @@ Rupture multiplicity     3,453
 
 Slowest sources
 ---------------
-============ ========= ============ ====== ========= =========== ========== =========
-src_group_id source_id source_class weight split_num filter_time split_time calc_time
-============ ========= ============ ====== ========= =========== ========== =========
-0            1         PointSource  0.025  1         2.789E-05   0.0        0.069    
-1            2         PointSource  0.025  1         1.311E-05   0.0        0.064    
-============ ========= ============ ====== ========= =========== ========== =========
+============ ========= ============ ====== ========= =========== ========== ============= ============= =========
+src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
+============ ========= ============ ====== ========= =========== ========== ============= ============= =========
+1            2         PointSource  0.025  0         1.502E-05   0.0        0.105         0.105         1        
+0            1         PointSource  0.025  0         2.813E-05   0.0        0.084         0.084         1        
+============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
 ------------------------------------
-============ =========== ========== ========= ======
-source_class filter_time split_time calc_time counts
-============ =========== ========== ========= ======
-PointSource  4.101E-05   0.0        0.132     2     
-============ =========== ========== ========= ======
+============ =========== ========== ============= ============= ========= ======
+source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
+============ =========== ========== ============= ============= ========= ======
+PointSource  4.315E-05   0.0        0.190         0.190         2         2     
+============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
-================================= ====== ====== =========== =========== =========
-measurement                       mean   stddev min         max         num_tasks
-compute_ruptures.time_sec         0.067  0.004  0.064       0.069       2        
-compute_ruptures.memory_mb        -0.375 0.094  -0.44140625 -0.30859375 2        
-compute_gmfs_and_curves.time_sec  0.045  0.002  0.044       0.047       2        
-compute_gmfs_and_curves.memory_mb 0.0    0.0    0.0         0.0         2        
-================================= ====== ====== =========== =========== =========
+========================== ====== ====== ===== ===== =========
+measurement                mean   stddev min   max   num_tasks
+compute_ruptures.time_sec  0.096  0.015  0.085 0.107 2        
+compute_ruptures.memory_mb -0.125 0.177  -0.25 0.0   2        
+========================== ====== ====== ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.134     0.0       2     
-total compute_gmfs_and_curves  0.091     0.0       2     
-saving ruptures                0.081     0.0       1     
-compute poes                   0.068     0.0       2     
-bulding hazard curves          0.016     0.0       2     
-store source_info              0.011     0.0       1     
+total compute_ruptures         0.192     0.0       2     
+saving ruptures                0.079     0.0       1     
 reading composite source model 0.006     0.0       1     
-aggregate curves               0.003     0.0       4     
-aggregating hcurves            0.003     0.0       2     
-managing sources               0.003     0.0       1     
-saving gmfs                    0.002     0.0       2     
-make contexts                  0.002     0.0       2     
+managing sources               0.004     0.0       1     
+aggregate curves               0.001     0.0       2     
+store source_info              0.001     0.0       1     
 filtering ruptures             0.001     0.0       2     
-filtering sources              4.101E-05 0.0       2     
-reading site collection        3.505E-05 0.0       1     
+filtering sources              4.315E-05 0.0       2     
+reading site collection        3.791E-05 0.0       1     
 ============================== ========= ========= ======

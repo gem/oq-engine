@@ -21,7 +21,7 @@ import re
 from nose.plugins.attrib import attr
 
 from openquake.baselib.general import writetmp
-from openquake.commonlib.views import view
+from openquake.calculators.views import view
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.commonlib.export import export
 from openquake.calculators.tests import check_platform
@@ -85,6 +85,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = writetmp(view('mean_avg_losses', self.calc.datastore))
         self.assertEqualFiles('expected/mean_avg_losses.txt', fname)
 
+        # test the case when all GMFs are filtered out
+        with self.assertRaises(RuntimeError) as ctx:
+            self.run_calc(case_2.__file__, 'job.ini', minimum_intensity='10.0')
+        self.assertEqual(
+            str(ctx.exception),
+            'No GMFs were generated, perhaps they were all below the '
+            'minimum_intensity threshold')
+
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2bis(self):
         # test for a single realization
@@ -92,8 +100,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                             concurrent_tasks='0')
         # this also tests that concurrent_tasks=0 does not give issues
         [fname] = out['agg_loss_table', 'csv']
-        self.assertEqualFiles(
-            'expected/agg_losses-b1,b1-structural.csv', fname)
+        self.assertEqualFiles('expected/agg_losses_bis.csv', fname)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_missing_taxonomy(self):

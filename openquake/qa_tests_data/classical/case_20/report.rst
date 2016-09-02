@@ -1,39 +1,74 @@
 Classical Hazard QA Test, Case 20
 =================================
 
-gem-tstation:/home/michele/ssd/calc_22596.hdf5 updated Tue May 31 15:37:54 2016
+gem-tstation:/home/michele/ssd/calc_45849.hdf5 updated Wed Aug 31 12:11:11 2016
 
 num_sites = 1, sitecol = 739 B
 
 Parameters
 ----------
-============================ ===============================
-calculation_mode             'classical'                    
-number_of_logic_tree_samples 0                              
-maximum_distance             {'Active Shallow Crust': 200.0}
-investigation_time           1.0                            
-ses_per_logic_tree_path      1                              
-truncation_level             3.0                            
-rupture_mesh_spacing         2.0                            
-complex_fault_mesh_spacing   2.0                            
-width_of_mfd_bin             1.0                            
-area_source_discretization   10.0                           
-random_seed                  106                            
-master_seed                  0                              
-sites_per_tile               10000                          
-engine_version               '2.0.0-git4fb4450'             
-============================ ===============================
+============================ ================================
+calculation_mode             'classical'                     
+number_of_logic_tree_samples 0                               
+maximum_distance             {u'Active Shallow Crust': 200.0}
+investigation_time           1.0                             
+ses_per_logic_tree_path      1                               
+truncation_level             3.0                             
+rupture_mesh_spacing         2.0                             
+complex_fault_mesh_spacing   2.0                             
+width_of_mfd_bin             1.0                             
+area_source_discretization   10.0                            
+random_seed                  106                             
+master_seed                  0                               
+sites_per_tile               10000                           
+engine_version               '2.1.0-git49748af'              
+============================ ================================
 
 Input files
 -----------
-======================= ============================================================
-Name                    File                                                        
-======================= ============================================================
-gsim_logic_tree         `gsim_logic_tree.xml <gsim_logic_tree.xml>`_                
-job_ini                 `job.ini <job.ini>`_                                        
-source                  `source_model.xml <source_model.xml>`_                      
-source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
-======================= ============================================================
+======================= ==================================================================================================
+Name                    File                                                                                              
+======================= ==================================================================================================
+gsim_logic_tree         `gsim_logic_tree.xml <gsim_logic_tree.xml>`_                                                      
+job_ini                 `job.ini <job.ini>`_                                                                              
+source                  `
+                        
+                     <
+                        
+                    >`_
+source                  `
+                        
+                     <
+                        
+                    >`_
+source                  `
+                        
+                     <
+                        
+                    >`_
+source                  `
+                        
+                     <
+                        
+                    >`_
+source                  `
+                        
+                     <
+                        
+                    >`_
+source                  `
+                        
+                     <
+                        
+                    >`_
+source                  `
+                        
+                     <
+                        
+                    >`_
+source                  `source_model.xml <source_model.xml>`_                                                            
+source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_                                      
+======================= ==================================================================================================
 
 Composite source model
 ----------------------
@@ -121,60 +156,59 @@ filtered_weight 1,242
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 2,513       
-count_eff_ruptures_num_tasks             30          
-count_eff_ruptures_sent.monitor          67,590      
-count_eff_ruptures_sent.rlzs_assoc       76,050      
-count_eff_ruptures_sent.sitecol          12,990      
-count_eff_ruptures_sent.siteidx          150         
-count_eff_ruptures_sent.sources          103,600     
-count_eff_ruptures_tot_received          75,390      
+count_eff_ruptures_max_received_per_task 1,143       
+count_eff_ruptures_num_tasks             24          
+count_eff_ruptures_sent.monitor          20,808      
+count_eff_ruptures_sent.rlzs_by_gsim     13,464      
+count_eff_ruptures_sent.sitecol          10,392      
+count_eff_ruptures_sent.sources          100,996     
+count_eff_ruptures_tot_received          27,432      
 hazard.input_weight                      1,242       
 hazard.n_imts                            1           
 hazard.n_levels                          4.000       
 hazard.n_realizations                    12          
 hazard.n_sites                           1           
-hazard.n_sources                         0           
+hazard.n_sources                         36          
 hazard.output_weight                     48          
 hostname                                 gem-tstation
 ======================================== ============
 
 Slowest sources
 ---------------
-============ ========= ========================= ====== ========= =========== ========== =========
-src_group_id source_id source_class              weight split_num filter_time split_time calc_time
-============ ========= ========================= ====== ========= =========== ========== =========
-2            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
-9            SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
-1            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
-10           SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
-0            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
-8            SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
-3            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
-6            SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
-5            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
-7            SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
-4            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
-0            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0      
-11           SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
-4            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0      
-0            COMFLT1   ComplexFaultSource        29     1         0.001       0.0        0.0      
-5            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0      
-6            COMFLT1   ComplexFaultSource        29     1         0.001       0.0        0.0      
-7            COMFLT1   ComplexFaultSource        29     1         0.001       0.0        0.0      
-1            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0      
-7            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0      
-============ ========= ========================= ====== ========= =========== ========== =========
+============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
+src_group_id source_id source_class              weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
+============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
+5            SFLT1     SimpleFaultSource         56     0         0.001       0.0        0.0           0.0           0        
+0            SFLT1     SimpleFaultSource         56     0         0.001       0.0        0.0           0.0           0        
+4            SFLT1     SimpleFaultSource         56     0         0.001       0.0        0.0           0.0           0        
+6            SFLT1     SimpleFaultSource         58     0         0.001       0.0        0.0           0.0           0        
+9            SFLT1     SimpleFaultSource         58     0         0.001       0.0        0.0           0.0           0        
+1            SFLT1     SimpleFaultSource         56     0         0.001       0.0        0.0           0.0           0        
+7            SFLT1     SimpleFaultSource         58     0         0.001       0.0        0.0           0.0           0        
+8            SFLT1     SimpleFaultSource         58     0         0.001       0.0        0.0           0.0           0        
+2            SFLT1     SimpleFaultSource         56     0         0.001       0.0        0.0           0.0           0        
+3            SFLT1     SimpleFaultSource         56     0         0.001       0.0        0.0           0.0           0        
+0            CHAR1     CharacteristicFaultSource 1.000  0         0.001       0.0        0.0           0.0           0        
+10           SFLT1     SimpleFaultSource         58     0         0.001       0.0        0.0           0.0           0        
+0            COMFLT1   ComplexFaultSource        29     0         0.001       0.0        0.0           0.0           0        
+11           SFLT1     SimpleFaultSource         58     0         0.001       0.0        0.0           0.0           0        
+5            CHAR1     CharacteristicFaultSource 1.000  0         0.001       0.0        0.0           0.0           0        
+1            CHAR1     CharacteristicFaultSource 1.000  0         0.001       0.0        0.0           0.0           0        
+4            CHAR1     CharacteristicFaultSource 1.000  0         0.001       0.0        0.0           0.0           0        
+10           CHAR1     CharacteristicFaultSource 1.000  0         0.001       0.0        0.0           0.0           0        
+7            CHAR1     CharacteristicFaultSource 1.000  0         0.001       0.0        0.0           0.0           0        
+5            COMFLT1   ComplexFaultSource        62     0         0.001       0.0        0.0           0.0           0        
+============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
 ------------------------------------
-========================= =========== ========== ========= ======
-source_class              filter_time split_time calc_time counts
-========================= =========== ========== ========= ======
-CharacteristicFaultSource 0.013       0.0        0.0       12    
-ComplexFaultSource        0.013       0.0        0.0       12    
-SimpleFaultSource         0.015       0.0        0.0       12    
-========================= =========== ========== ========= ======
+========================= =========== ========== ============= ============= ========= ======
+source_class              filter_time split_time cum_calc_time max_calc_time num_tasks counts
+========================= =========== ========== ============= ============= ========= ======
+CharacteristicFaultSource 0.013       0.0        0.0           0.0           0         12    
+ComplexFaultSource        0.013       0.0        0.0           0.0           0         12    
+SimpleFaultSource         0.015       0.0        0.0           0.0           0         12    
+========================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
@@ -185,11 +219,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.626     0.0       1     
-managing sources               0.076     0.0       1     
-filtering sources              0.042     0.0       36    
-total count_eff_ruptures       0.007     0.0       30    
-store source_info              0.006     0.0       1     
-aggregate curves               6.387E-04 0.0       30    
-reading site collection        2.885E-05 0.0       1     
+reading composite source model 0.672     0.0       1     
+managing sources               0.074     0.0       1     
+filtering sources              0.041     0.0       36    
+total count_eff_ruptures       0.020     0.0       24    
+aggregate curves               5.805E-04 0.0       24    
+saving probability maps        3.409E-05 0.0       1     
+reading site collection        2.694E-05 0.0       1     
+store source_info              1.097E-05 0.0       1     
 ============================== ========= ========= ======
