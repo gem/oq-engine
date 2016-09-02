@@ -384,13 +384,8 @@ class ClassicalCalculator(PSHACalculator):
         """
         if 'poes' not in self.datastore:  # for short report
             return
-
         oq = self.oqparam
         rlzs = self.rlzs_assoc.realizations
-        with self.monitor('reading poes', autoflush=True):
-            pmap_by_grp = {
-                int(group_id): self.datastore['poes/' + group_id]
-                for group_id in self.datastore['poes']}
 
         # initialize datasets
         N = len(self.sitecol)
@@ -413,6 +408,9 @@ class ClassicalCalculator(PSHACalculator):
 
         logging.info('Building hazard curves')
         with self.monitor('submitting poes', autoflush=True):
+            pmap_by_grp = {
+                int(group_id): self.datastore['poes/' + group_id]
+                for group_id in self.datastore['poes']}
             sm = parallel.starmap(build_hcurves_and_stats,
                                   list(self.gen_args(pmap_by_grp)))
         with self.monitor('saving hcurves and stats', autoflush=True):
