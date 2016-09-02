@@ -14,17 +14,16 @@ xmlns:gml="http://www.opengis.net/gml"
             branchSetID="wus_asc"
             uncertaintyType="gmpeModel"
             >
-            <!--
                 <logicTreeBranch
-                branchID="ASK14"
+                branchID="ASK08"
                 >
                     <uncertaintyModel>
-                        AbrahamsonEtAl2014
+                        AbrahamsonSilva2008
                     </uncertaintyModel>
                     <uncertaintyWeight>
                         0.22
                     </uncertaintyWeight>
-                </logicTreeBranch> -->
+                </logicTreeBranch>
                 <logicTreeBranch
                 branchID="BSSA14"
                 >
@@ -32,25 +31,24 @@ xmlns:gml="http://www.opengis.net/gml"
                         BooreEtAl2014
                     </uncertaintyModel>
                     <uncertaintyWeight>
-                        1.0
+                        0.22
                     </uncertaintyWeight>
                 </logicTreeBranch>
-                <!--
                 <logicTreeBranch
-                branchID="CB14"
+                branchID="CB08"
                 >
                     <uncertaintyModel>
-                        CampbellBozorgnia2014
+                        CampbellBozorgnia2008
                     </uncertaintyModel>
                     <uncertaintyWeight>
                         0.22
                     </uncertaintyWeight>
                 </logicTreeBranch>
                 <logicTreeBranch
-                branchID="CY14"
+                branchID="CY08"
                 >
                     <uncertaintyModel>
-                        ChiouYoungs2014
+                        ChiouYoungs2008
                     </uncertaintyModel>
                     <uncertaintyWeight>
                         0.22
