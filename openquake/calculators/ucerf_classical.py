@@ -422,7 +422,8 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         monitor.oqparam = oq = self.oqparam
         ucerf_source = self.src_group.sources[0]
         max_dist = oq.maximum_distance[DEFAULT_TRT]
-        acc = AccumDict({sg.id: {} for sg in self.src_group})
+        acc = AccumDict({sg.id: ProbabilityMap(len(oq.imtls.array), 1)
+                         for sg in self.src_group})
         acc.calc_times = []
         acc.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         acc.bb_dict = {}
@@ -460,7 +461,6 @@ class UcerfPSHACalculator(classical.PSHACalculator):
                     hazard_curves_per_trt, args,
                     concurrent_tasks=self.oqparam.concurrent_tasks):
                 acc[0] |= pmap
-
             pmap_by_grp_id = functools.reduce(self.agg_dicts, results, acc)
 
         # TODO: save source_info
