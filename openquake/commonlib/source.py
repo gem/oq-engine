@@ -17,7 +17,9 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
+from contextlib import contextmanager
 import re
+import sys
 import copy
 import math
 import time
@@ -29,7 +31,7 @@ import random
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import decode
+from openquake.baselib.python3compat import decode, raise_
 from openquake.baselib.general import groupby, block_splitter, group_array
 from openquake.hazardlib.site import Tile
 from openquake.commonlib import logictree, sourceconverter
@@ -41,6 +43,26 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
+
+
+@contextmanager
+def context(src):
+    """
+    Used to add the source_id to the error message. To be used as
+
+    with context(src):
+        operation_with(src)
+
+    Typically the operation is filtering a source, that can fail for
+    tricky geometries.
+    """
+    try:
+        yield
+    except:
+        etype, err, tb = sys.exc_info()
+        msg = 'An error occurred with source id=%s. Error: %s'
+        msg %= (src.source_id, err)
+        raise_(etype, msg, tb)
 
 
 class LtRealization(object):
@@ -745,7 +767,8 @@ def split_filter(src, sites, max_dist, random_seed):
             ss.serial = src.serial[start:start + nr]
             start += nr
         ss.id = src.id
-        s = ss.filter_sites_by_distance_to_source(max_dist, sites)
+        with context(ss):
+            s = ss.filter_sites_by_distance_to_source(max_dist, sites)
         if s is not None:
             split_sources.append(ss)
     return [(src, sites, split_sources, 0, time.time() - t0)]
@@ -850,7 +873,7 @@ class SourceManager(object):
         for i, tile in enumerate(tiles):
             data = []
             for src in sources:
-                with filter_mon:
+                with filter_mon, context(src):
                     if self.filter_sources:
                         ok = src in tile
                     else:  # accept all sources
@@ -869,8 +892,9 @@ class SourceManager(object):
         data = []
         for src in sources:
             self.csm.filtered_weight += src.weight
-            sites = src.filter_sites_by_distance_to_source(
-                self.maximum_distance[src.tectonic_region_type], sitecol)
+            with context(src):
+                sites = src.filter_sites_by_distance_to_source(
+                    self.maximum_distance[src.tectonic_region_type], sitecol)
             if sites is not None:
                 max_dist = self.maximum_distance[src.tectonic_region_type]
                 data.append((src, sites, max_dist, self.random_seed))
