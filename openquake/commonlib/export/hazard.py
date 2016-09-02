@@ -520,16 +520,18 @@ def _extract(hmap, imt, j):
     return tup
 
 
-# FIXME: uhs not working yet
-@export.add(('hcurves', 'hdf5'), ('hmaps', 'hdf5'))
+# FIXME: hmaps, uhs not working yet
+@export.add(('hcurves', 'hdf5'))
 def export_hazard_hdf5(ekey, dstore):
     mesh = get_mesh(dstore['sitecol'])
     imtls = dstore['oqparam'].imtls
     fname = dstore.export_path('%s.%s' % ekey)
     with hdf5.File(fname, 'w') as f:
         f['imtls'] = imtls
-        for dskey, ds in dstore[ekey[0]].items():
-            f['%s/%s' % (ekey[0], dskey)] = util.compose_arrays(mesh, ds.value)
+        for dskey in dstore[ekey[0]]:
+            curves = dstore['%s/%s' % (ekey[0], dskey)].convert(
+                imtls, len(mesh))
+            f['%s/%s' % (ekey[0], dskey)] = util.compose_arrays(mesh, curves)
     return [fname]
 
 
