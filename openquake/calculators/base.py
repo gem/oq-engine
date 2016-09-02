@@ -292,6 +292,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             self.datastore.set_nbytes('hcurves')
         self.datastore.flush()
 
+
 def check_time_event(oqparam, time_events):
     """
     Check the `time_event` parameter in the datastore, by comparing
@@ -401,8 +402,6 @@ class HazardCalculator(BaseCalculator):
         job_info['hostname'] = socket.gethostname()
         if hasattr(self, 'riskmodel'):
             job_info['require_epsilons'] = bool(self.riskmodel.covs)
-        if 'job_info' not in self.datastore:
-            self.datastore['job_info'] = hdf5.LiteralAttrs()
         self.datastore.save('job_info', job_info)
         self.datastore.flush()
         try:
