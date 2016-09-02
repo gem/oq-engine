@@ -300,7 +300,7 @@ def ucerf_classical_hazard_by_rupture_set(
             monitor=monitor)
 
     else:
-            dic[src_group_id] = ProbabilityMap(len(imtls.array), len(gsims))
+        dic[src_group_id] = ProbabilityMap(len(imtls.array), len(gsims))
     dic.calc_times += monitor.calc_times  # added by hazard_curves_per_trt
     dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
     return dic

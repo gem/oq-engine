@@ -468,7 +468,7 @@ class RiskInput(object):
                 for haz in self.hazard_by_site]
 
     def __repr__(self):
-        return '<%s IMT=%s, taxonomy=%s, %d asset(s)>' % (
+        return '<%s taxonomy=%s, %d asset(s)>' % (
             self.__class__.__name__, ', '.join(self.taxonomies), self.weight)
 
 
