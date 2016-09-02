@@ -867,7 +867,7 @@ class SourceManager(object):
     def _gen_src_light(self, tiles):
         filter_mon = self.monitor('filtering sources')
         tiles = [Tile(tile, self.maximum_distance) for tile in tiles]
-        if self.num_tiles == 1:
+        if self.filter_sources and self.num_tiles == 1:
             logging.info('Filtering light sources')
         sources = self.csm.get_sources('light', self.maxweight)
         for i, tile in enumerate(tiles):
