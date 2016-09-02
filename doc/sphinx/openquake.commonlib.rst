@@ -73,10 +73,10 @@ openquake.commonlib.readinput module
     :undoc-members:
     :show-inheritance:
 
-openquake.commonlib.reportwriter module
+openquake.calculators.reportwriter module
 ---------------------------------------
 
-.. automodule:: openquake.commonlib.reportwriter
+.. automodule:: openquake.calculators.reportwriter
     :members:
     :undoc-members:
     :show-inheritance:

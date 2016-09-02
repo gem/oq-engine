@@ -20,7 +20,6 @@ import os
 import logging
 import numpy
 
-from openquake.baselib import python3compat
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.imt import from_string
 from openquake.risklib import valid
@@ -119,7 +118,7 @@ class OqParam(valid.ParamSet):
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint)
-    poes = valid.Param(valid.probabilities)
+    poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     quantile_hazard_curves = valid.Param(valid.probabilities, [])
     quantile_loss_curves = valid.Param(valid.probabilities, [])
@@ -294,12 +293,18 @@ class OqParam(valid.ParamSet):
         """
         Return a composite dtype based on the loss types, including occupants
         """
+        return numpy.dtype(self.loss_dt_list(dtype))
+
+    def loss_dt_list(self, dtype=numpy.float32):
+        """
+        Return a data type list [(loss_name, dtype), ...]
+        """
         loss_types = self.all_cost_types
-        dts = [(lt, dtype) for lt in loss_types]
+        dts = [(str(lt), dtype) for lt in loss_types]
         if self.insured_losses:
             for lt in loss_types:
-                dts.append((lt + '_ins', dtype))
-        return python3compat.dtype(dts)
+                dts.append((str(lt) + '_ins', dtype))
+        return dts
 
     def no_imls(self):
         """

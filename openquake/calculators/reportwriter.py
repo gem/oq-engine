@@ -20,20 +20,35 @@
 """
 Utilities to build a report writer generating a .rst report for a calculation
 """
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
+from openquake.baselib.python3compat import decode
 import os
 import sys
 import mock
 import time
-import logging
 
 
-from openquake.baselib.general import humansize
-from openquake.commonlib import readinput, datastore, source, parallel
+from openquake.baselib.general import humansize, AccumDict
+from openquake.baselib.python3compat import encode
+from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.commonlib import readinput, datastore, parallel
+from openquake.calculators.classical import PSHACalculator
 
 
 def indent(text):
     return '  ' + '\n  '.join(text.splitlines())
+
+
+def count_eff_ruptures(sources, sitecol, rlzs_by_gsim, monitor):
+    """
+    Count the number of ruptures contained in the given sources and return
+    a dictionary src_group_id -> num_ruptures. All sources belong to the
+    same tectonic region type.
+    """
+    grp_id = sources[0].src_group_id
+    acc = AccumDict({grp_id: ProbabilityMap()})
+    acc.eff_ruptures = {grp_id: sum(src.num_ruptures for src in sources)}
+    return acc
 
 
 class ReportWriter(object):
@@ -61,16 +76,15 @@ class ReportWriter(object):
     def __init__(self, dstore):
         self.dstore = dstore
         self.oq = oq = dstore['oqparam']
-        self.text = (oq.description.encode('utf8') + '\n' +
-                     '=' * len(oq.description))
+        self.text = (decode(oq.description) + '\n' + '=' * len(oq.description))
         info = dstore['job_info']
         dpath = dstore.hdf5path
         mtime = os.path.getmtime(dpath)
         self.text += '\n\n%s:%s updated %s' % (
-            info.hostname, dpath.encode('utf-8'), time.ctime(mtime))
+            info.hostname, decode(dpath), time.ctime(mtime))
         # NB: in the future, the sitecol could be transferred as
-        # an array by leveraging the HDF5 serialization protocol in
-        # litetask decorator; for the moment however the size of the
+        # an array by leveraging the HDF5 serialization protocol;
+        # for the moment however the size of the
         # data to transfer is given by the usual pickle
         sitecol_size = humansize(len(parallel.Pickled(dstore['sitecol'])))
         self.text += '\n\nnum_sites = %d, sitecol = %s' % (
@@ -117,8 +131,8 @@ class ReportWriter(object):
 
     def save(self, fname):
         """Save the report"""
-        with open(fname, 'w') as f:
-            f.write(self.text)
+        with open(fname, 'wb') as f:
+            f.write(encode(self.text))
 
 
 def build_report(job_ini, output_dir=None):
@@ -135,14 +149,12 @@ def build_report(job_ini, output_dir=None):
     output_dir = output_dir or os.path.dirname(job_ini)
     from openquake.calculators import base  # ugly
     calc = base.calculators(oq)
+    calc.save_params()  # needed to save oqparam
+
     # some taken is care so that the real calculation is not run:
     # the goal is to extract information about the source management only
-    with mock.patch.object(
-            calc.__class__, 'core_task', source.count_eff_ruptures):
+    with mock.patch.object(PSHACalculator, 'core_task', count_eff_ruptures):
         calc.pre_execute()
-    with mock.patch.object(logging.root, 'info'):  # reduce logging
-        calc.execute()
-    calc.save_params()
     rw = ReportWriter(calc.datastore)
     rw.make_report()
     report = (os.path.join(output_dir, 'report.rst') if output_dir

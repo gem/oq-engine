@@ -54,7 +54,7 @@ class RiskInputTestCase(unittest.TestCase):
 
     def test_assetcol(self):
         expected = writetmp('''\
-idx:uint32,lon,lat,site_id:uint32,taxonomy:uint32:,number,area,occupants:float64:,structural:float64:,deductible-structural:float64:,insurance_limit-structural:float64:
+idx:uint32,lon,lat,site_id:uint32,taxonomy_id:uint32:,number:float32:,area:float32:,occupants,value-structural,deductible-structural,insurance_limit-structural
 0,8.12985001E+01,2.91098003E+01,0,1,3.00000000E+00,1.00000000E+01,1.00000000E+01,1.00000000E+02,2.50000000E+01,1.00000000E+02
 1,8.30822983E+01,2.79006004E+01,1,0,5.00000000E+02,1.00000000E+01,2.00000000E+01,4.00000000E-01,1.00000000E-01,2.00000000E-01
 ''')
@@ -66,24 +66,9 @@ idx:uint32,lon,lat,site_id:uint32,taxonomy:uint32:,number,area,occupants:float64
         pickle.loads(pickle.dumps(assetcol))
 
     def test_get_hazard(self):
-        self.assertEqual(
-            list(self.riskmodel.get_imt_taxonomies()),
-            [('PGA', set(['RM'])), ('SA(0.2)', set(['RC+'])),
-             ('SA(0.5)', set(['W']))])
         self.assertEqual(len(self.sitecol), 2)
         hazard_by_site = [{}] * 2
-
-        ri_PGA = self.riskmodel.build_input(
-            'PGA', hazard_by_site, self.assets_by_site, {})
-        haz = ri_PGA.get_hazard(rlzs_assoc)
-        self.assertEqual(len(haz), 2)
-
-        ri_SA_02 = self.riskmodel.build_input(
-            'SA(0.2)', hazard_by_site, self.assets_by_site, {})
-        haz = ri_SA_02.get_hazard(rlzs_assoc)
-        self.assertEqual(len(haz), 2)
-
-        ri_SA_05 = self.riskmodel.build_input(
-            'SA(0.5)', hazard_by_site, self.assets_by_site, {})
-        haz = ri_SA_05.get_hazard(rlzs_assoc)
+        ri = self.riskmodel.build_input(
+            hazard_by_site, self.assets_by_site, {})
+        haz = ri.get_hazard(rlzs_assoc)
         self.assertEqual(len(haz), 2)

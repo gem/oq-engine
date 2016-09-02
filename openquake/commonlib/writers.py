@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import re
 import types
 import logging
 import warnings
@@ -201,38 +202,87 @@ def tostring(node, indent=4, nsmap=None):
 
 
 class HeaderTranslator(object):
-    """
+    r"""
     An utility to convert the headers in CSV files. When reading,
     the column names are converted into column descriptions with the
     method .read, when writing column descriptions are converted
     into column names with the method .write. The usage is
 
     >>> htranslator = HeaderTranslator(
-    ...     asset_ref='asset_ref:|S20',
-    ...     rup_id='rup_id:uint32',
-    ...     taxonomy='taxonomy:object')
-    >>> htranslator.read('asset_ref value:5'.split())
-    ['asset_ref:|S20', 'value:5']
-    >>> htranslator.write('asset_ref:|S20 value:5'.split())
+    ...     '(asset_ref):\|S100',
+    ...     '(rup_id):uint32',
+    ...     '(taxonomy):object')
+    >>> htranslator.write('asset_ref:|S100 value:5'.split())
     ['asset_ref', 'value:5']
+    >>> htranslator.read('asset_ref value:5'.split())
+    ['asset_ref:|S100', 'value:5']
     """
-    def __init__(self, **descr):
-        self.descr = descr
-        self.name = {d: n for n, d in descr.items()}
+    def __init__(self, *regexps):
+        self.suffix = []
+        short_regexps = []
+        for regex in regexps:
+            prefix, suffix = regex.split(')')
+            short_regexps.append(prefix + ')$')
+            self.suffix.append(suffix)
+        self.short_regex = '|'.join(short_regexps)
+        self.long_regex = '|'.join(regexps)
 
     def read(self, names):
-        return [self.descr.get(n, n) for n in names]
+        """
+        Convert names into descriptions
+        """
+        descrs = []
+        for name in names:
+            mo = re.match(self.short_regex, name)
+            if mo:
+                idx = mo.lastindex  # matching group index, starting from 1
+                suffix = self.suffix[idx - 1].replace(r':\|', ':|')
+                descrs.append(mo.group(mo.lastindex) + suffix +
+                              name[mo.end():])
+            else:
+                descrs.append(name)
+        return descrs
 
-    def write(self, descr):
-        return [self.name.get(d, d) for d in descr]
+    def write(self, descrs):
+        """
+        Convert descriptions into names
+        """
+        # example: '(poe-[\d\.]+):float32' -> 'poe-[\d\.]+'
+        names = []
+        for descr in descrs:
+            mo = re.match(self.long_regex, descr)
+            if mo:
+                names.append(mo.group(mo.lastindex) + descr[mo.end():])
+            else:
+                names.append(descr)
+        return names
 
 htranslator = HeaderTranslator(
-    asset_ref='asset_ref:|S100',
-    rup_id='rup_id:uint32',
-    taxonomy='taxonomy:|S100',
-    rupserial='rupserial:uint32',
-    multiplicity='multiplicity:uint16',
-    numsites='numsites:uint32',
+    '(asset_ref):\|S100',
+    '(event_tag):\|S100',
+    '(event_set):uint32',
+    '(rup_id):uint32',
+    '(taxonomy):\|S100',
+    '(rupserial):uint32',
+    '(multiplicity):uint16',
+    '(numsites):uint32',
+    '(losses):float32',
+    '(poes):float32',
+    '(avg):float32',
+    '(poe-[\d\.]+):float32',
+    '(lon):float32',
+    '(lat):float32',
+    '(structural.*):float32',
+    '(nonstructural.*):float32',
+    '(business_interruption.*):float32',
+    '(contents.*):float32',
+    '(occupants~.+):float32',
+    '(no_damage):float32',
+    '(slight):float32',
+    '(moderate):float32',
+    '(extensive):float32',
+    '(complete):float32',
+    '(\d+):float32',  # realization column, used in the GMF scenario exporter
 )
 
 
@@ -261,11 +311,11 @@ def build_header(dtype):
 
     >>> imt_dt = numpy.dtype([('PGA', float, 3), ('PGV', float, 4)])
     >>> build_header(imt_dt)
-    ['PGA:float64:3', 'PGV:float64:4']
+    ['PGA:3', 'PGV:4']
     >>> gmf_dt = numpy.dtype([('A', imt_dt), ('B', imt_dt),
     ...                       ('idx', numpy.uint32)])
     >>> build_header(gmf_dt)
-    ['A~PGA:float64:3', 'A~PGV:float64:4', 'B~PGA:float64:3', 'B~PGV:float64:4', 'idx:uint32']
+    ['A~PGA:3', 'A~PGV:4', 'B~PGA:3', 'B~PGV:4', 'idx:uint32']
     """
     header = _build_header(dtype, ())
     h = []
@@ -274,7 +324,7 @@ def build_header(dtype):
         numpytype = col[-2]
         shape = col[-1]
         coldescr = name
-        if numpytype != 'float32':
+        if numpytype != 'float64':
             coldescr += ':' + numpytype
         if shape:
             coldescr += ':' + ':'.join(map(str, shape))
@@ -406,7 +456,7 @@ def parse_header(header):
     by :func:`openquake.commonlib.writers.build_header`.
     Here is an example:
 
-    >>> parse_header(['PGA', 'PGV:float64', 'avg:2'])
+    >>> parse_header(['PGA:float32', 'PGV', 'avg:float32:2'])
     (['PGA', 'PGV', 'avg'], dtype([('PGA', '<f4'), ('PGV', '<f8'), ('avg', '<f4', (2,))]))
 
     :params header: a list of type descriptions
@@ -415,13 +465,13 @@ def parse_header(header):
     triples = []
     fields = []
     for col_str in header:
-        col = col_str.split(':')
+        col = col_str.strip().split(':')
         n = len(col)
         if n == 1:  # default dtype and no shape
-            col = [col[0], 'float32', '']
+            col = [col[0], 'float64', '']
         elif n == 2:
             if castable_to_int(col[1]):  # default dtype and shape
-                col = [col[0], 'float32', col[1]]
+                col = [col[0], 'float64', col[1]]
             else:  # dtype and no shape
                 col = [col[0], col[1], '']
         elif n > 3:
@@ -448,14 +498,15 @@ def read_composite_array(fname, sep=','):
     Convert a CSV file with header into a numpy array of records.
 
     >>> from openquake.baselib.general import writetmp
-    >>> fname = writetmp('PGA:float64:3,PGV:float64:2,avg:float64:1\n'
+    >>> fname = writetmp('PGA:3,PGV:2,avg:1\n'
     ...                  '.1 .2 .3,.4 .5,.6\n')
     >>> print(read_composite_array(fname))  # array of shape (1,)
     [([0.1, 0.2, 0.3], [0.4, 0.5], [0.6])]
     """
     with open(fname) as f:
         header = next(f)
-        fields, dtype = parse_header(htranslator.read(header.split(sep)))
+        transheader = htranslator.read(header.split(sep))
+        fields, dtype = parse_header(transheader)
         ts_pairs = []  # [(type, shape), ...]
         for name in fields:
             dt = dtype.fields[name][0]

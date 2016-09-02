@@ -1,7 +1,7 @@
 Scenario QA Test for occupants
 ==============================
 
-gem-tstation:/home/michele/ssd/calc_22623.hdf5 updated Tue May 31 15:39:12 2016
+gem-tstation:/home/michele/ssd/calc_45876.hdf5 updated Wed Aug 31 12:12:25 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -10,7 +10,7 @@ Parameters
 ============================ ==================
 calculation_mode             'scenario'        
 number_of_logic_tree_samples 0                 
-maximum_distance             {'default': 300}  
+maximum_distance             {u'default': 300} 
 investigation_time           None              
 ses_per_logic_tree_path      1                 
 truncation_level             3.0               
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None              
 random_seed                  3                 
 master_seed                  0                 
-engine_version               '2.0.0-git4fb4450'
+engine_version               '2.1.0-git49748af'
 ============================ ==================
 
 Input files
@@ -44,10 +44,12 @@ Realizations per (TRT, GSIM)
 
 Exposure model
 --------------
-=========== =
-#assets     3
-#taxonomies 3
-=========== =
+=============== ========
+#assets         3       
+#taxonomies     3       
+deductibile     absolute
+insurance_limit absolute
+=============== ========
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
@@ -66,8 +68,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.006     0.0       1     
-reading exposure        0.004     0.0       1     
-computing gmfs          0.002     0.0       1     
-reading site collection 8.106E-06 0.0       1     
+filtering sites         0.004     0.0       1     
+reading exposure        0.002     0.0       1     
+reading site collection 5.007E-06 0.0       1     
 ======================= ========= ========= ======

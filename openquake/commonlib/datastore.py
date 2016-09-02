@@ -173,6 +173,12 @@ class DataStore(collections.MutableMapping):
         for name, value in params:
             self.attrs[name] = value
 
+    def getitem(self, name):
+        """
+        Return a dataset by using h5py.File.__getitem__
+        """
+        return h5py.File.__getitem__(self.hdf5, name)
+
     def set_parent(self, parent):
         """
         Give a parent to a datastore and update its .attrs with the parent
@@ -216,16 +222,19 @@ class DataStore(collections.MutableMapping):
                 raise
             return default
 
-    def create_dset(self, key, dtype, size=None, compression=None):
+    def create_dset(self, key, dtype, shape=(None,), compression=None,
+                    fillvalue=0, attrs=None):
         """
         Create a one-dimensional HDF5 dataset.
 
         :param key: name of the dataset
         :param dtype: dtype of the dataset (usually composite)
-        :param size: size of the dataset (if None, the dataset is extendable)
+        :param shape: shape of the dataset, possibly extendable
+        :param compression: the kind of HDF5 compression to use
+        :param attrs: dictionary of attributes of the dataset
         """
-        return hdf5.Hdf5Dataset.create(
-            self.hdf5, key, dtype, size, compression)
+        return hdf5.create(
+            self.hdf5, key, dtype, shape, compression, fillvalue, attrs)
 
     def save(self, key, kw):
         """
@@ -365,7 +374,7 @@ class DataStore(collections.MutableMapping):
             yield path
 
     def __contains__(self, key):
-        return key in self.hdf5
+        return key in self.hdf5 or self.parent and key in self.parent.hdf5
 
     def __len__(self):
         return sum(1 for f in self)

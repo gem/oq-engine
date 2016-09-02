@@ -1,7 +1,7 @@
 Scenario QA Test 3
 ==================
 
-gem-tstation:/home/michele/ssd/calc_22625.hdf5 updated Tue May 31 15:39:15 2016
+gem-tstation:/home/michele/ssd/calc_45878.hdf5 updated Wed Aug 31 12:12:28 2016
 
 num_sites = 4, sitecol = 877 B
 
@@ -10,7 +10,7 @@ Parameters
 ============================ ==================
 calculation_mode             'scenario_risk'   
 number_of_logic_tree_samples 0                 
-maximum_distance             {'default': 300}  
+maximum_distance             {u'default': 300} 
 investigation_time           None              
 ses_per_logic_tree_path      1                 
 truncation_level             3.0               
@@ -21,7 +21,7 @@ area_source_discretization   None
 random_seed                  3                 
 master_seed                  0                 
 avg_losses                   False             
-engine_version               '2.0.0-git4fb4450'
+engine_version               '2.1.0-git49748af'
 ============================ ==================
 
 Input files
@@ -45,10 +45,12 @@ Realizations per (TRT, GSIM)
 
 Exposure model
 --------------
-=========== =
-#assets     4
-#taxonomies 3
-=========== =
+=============== ========
+#assets         4       
+#taxonomies     3       
+deductibile     absolute
+insurance_limit absolute
+=============== ========
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
@@ -60,25 +62,18 @@ W        1.000 0.0    1   1   2         2
 
 Information about the tasks
 ---------------------------
-======================= ===== ========= ========= ===== =========
-measurement             mean  stddev    min       max   num_tasks
-scenario_risk.time_sec  0.001 2.381E-04 7.880E-04 0.001 4        
-scenario_risk.memory_mb 0.0   0.0       0.0       0.0   4        
-======================= ===== ========= ========= ===== =========
+Not available
 
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-computing gmfs          0.030     0.0       1     
-filtering sites         0.005     0.0       1     
-reading exposure        0.004     0.0       1     
-total scenario_risk     0.004     0.0       4     
-computing riskmodel     0.002     0.0       4     
-saving gmfs             0.002     0.0       1     
-building epsilons       5.889E-04 0.0       1     
-building riskinputs     4.530E-04 0.0       1     
-building hazard         4.408E-04 0.0       4     
-reading site collection 7.153E-06 0.0       1     
+computing gmfs          0.023     0.0       1     
+filtering sites         0.004     0.0       1     
+reading exposure        0.003     0.0       1     
+saving gmfs             0.001     0.0       1     
+building epsilons       4.981E-04 0.0       1     
+building riskinputs     3.428E-04 0.0       1     
+reading site collection 5.960E-06 0.0       1     
 ======================= ========= ========= ======

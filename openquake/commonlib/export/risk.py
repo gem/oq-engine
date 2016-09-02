@@ -25,8 +25,7 @@ from openquake.baselib.general import AccumDict
 from openquake.risklib import scientific
 from openquake.commonlib.export import export
 from openquake.commonlib import writers, risk_writers
-from openquake.commonlib.util import get_assets, compose_arrays
-from openquake.commonlib.views import FIVEDIGITS
+from openquake.commonlib.util import get_assets, compose_arrays, get_ses_idx
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
     ExposureData, Site)
@@ -115,7 +114,7 @@ def export_avg_losses(ekey, dstore):
     avg_losses = dstore[ekey[0]].value
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = get_assets(dstore)
-    writer = writers.CsvWriter(fmt=FIVEDIGITS)
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz in rlzs:
         losses = avg_losses[:, rlz.ordinal]
         dest = dstore.build_fname('losses_by_asset', rlz, 'csv')
@@ -134,7 +133,7 @@ def export_avg_losses_stats(ekey, dstore):
     avg_losses = dstore[ekey[0]].value
     quantiles = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     assets = get_assets(dstore)
-    writer = writers.CsvWriter(fmt=FIVEDIGITS)
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for i, quantile in enumerate(quantiles):
         losses = avg_losses[:, i]
         dest = dstore.build_fname('avg_losses', quantile, 'csv')
@@ -153,7 +152,7 @@ def export_agg_losses(ekey, dstore):
     agg_losses = compactify(dstore[ekey[0]].value)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     etags = dstore['etags'].value
-    writer = writers.CsvWriter(fmt=FIVEDIGITS)
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz in rlzs:
         losses = agg_losses[:, rlz.ordinal]
         dest = dstore.build_fname('agg_losses', rlz, 'csv')
@@ -171,23 +170,39 @@ def export_agg_losses_ebr(ekey, dstore):
     """
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     agg_losses = dstore[ekey[0]]
+    oq = dstore['oqparam']
+    dtlist = [('event_tag', (numpy.string_, 100)), ('event_set', U32)
+              ] + oq.loss_dt_list()
+    elt_dt = numpy.dtype(dtlist)
     etags = dstore['etags'].value
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    writer = writers.CsvWriter(fmt=FIVEDIGITS)
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz in rlzs:
+        dest = dstore.build_fname('agg_losses', rlz, 'csv')
+        eids = set()
         for loss_type in loss_types:
+            dset = agg_losses['rlz-%03d/%s' % (rlz.ordinal, loss_type)]
+            eids.update(dset['rup_id'])
+        eids = sorted(eids)
+        eid2idx = dict(zip(eids, range(len(eids))))
+        elt = numpy.zeros(len(eids), elt_dt)
+        elt['event_tag'] = etags[eids]
+        elt['event_set'] = numpy.array(
+            [get_ses_idx(etag) for etag in elt['event_tag']], U32)
+        for loss_type in loss_types:
+            elt_lt = elt[loss_type]
+            if oq.insured_losses:
+                elt_lt_ins = elt[loss_type + '_ins']
             data = agg_losses['rlz-%03d/%s' % (rlz.ordinal, loss_type)].value
-            data.sort(order='loss')
-            dest = dstore.build_fname('agg_losses-' + loss_type, rlz, 'csv')
-            tags = etags[data['rup_id']]
-            if data.dtype['loss'].shape == (2,):  # insured losses
-                losses = data['loss'][:, 0]
-                inslosses = data['loss'][:, 1]
-                edata = [('event_tag', 'loss', 'loss_ins')] + list(
-                    zip(tags, losses, inslosses))
-            else:
-                edata = [('event_tag', 'loss')] + list(zip(tags, data['loss']))
-            writer.save(edata, dest)
+            for i, eid in numpy.ndenumerate(data['rup_id']):
+                idx = eid2idx[eid]
+                if oq.insured_losses:
+                    elt_lt[idx] = data['loss'][i, 0]
+                    elt_lt_ins[idx] = data['loss'][i, 1]
+                else:
+                    elt_lt[idx] = data['loss'][i]
+        elt.sort(order='event_tag')
+        writer.save(elt, dest)
     return writer.getsaved()
 
 
@@ -219,7 +234,7 @@ def export_rcurves(ekey, dstore):
     assets = get_assets(dstore)
     curves = compactify(dstore[ekey[0]].value)
     name = ekey[0].split('-')[0]
-    writer = writers.CsvWriter(fmt=FIVEDIGITS)
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz in rlzs:
         array = compose_arrays(assets, curves[:, rlz.ordinal])
         path = dstore.build_fname(name, rlz, 'csv')
@@ -346,7 +361,7 @@ def export_loss_maps_csv(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = get_assets(dstore)
     value = dstore[ekey[0]].value  # matrix N x R or T x R
-    writer = writers.CsvWriter(fmt=FIVEDIGITS)
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz, values in zip(rlzs, value.T):
         fname = dstore.build_fname('loss_maps', rlz, ekey[1])
         writer.save(compose_arrays(assets, values), fname)
@@ -358,7 +373,7 @@ def export_rlzs_by_asset_csv(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = get_assets(dstore)
     value = dstore[ekey[0]].value  # matrix N x R or T x R
-    writer = writers.CsvWriter(fmt=FIVEDIGITS)
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz, values in zip(rlzs, value.T):
         fname = dstore.build_fname(ekey[0], rlz.gsim_rlz, ekey[1])
         writer.save(compose_arrays(assets, values), fname)
@@ -370,7 +385,7 @@ def export_csq_by_taxon_csv(ekey, dstore):
     taxonomies = add_quotes(dstore['assetcol/taxonomies'].value)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     value = dstore[ekey[0]].value  # matrix T x R
-    writer = writers.CsvWriter(fmt=FIVEDIGITS)
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz, values in zip(rlzs, value.T):
         fname = dstore.build_fname(ekey[0], rlz.gsim_rlz, ekey[1])
         writer.save(compose_arrays(taxonomies, values, 'taxonomy'), fname)
@@ -382,7 +397,7 @@ def export_csq_by_taxon_csv(ekey, dstore):
 def export_csq_total_csv(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     value = dstore[ekey[0]].value
-    writer = writers.CsvWriter(fmt=FIVEDIGITS)
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz, values in zip(rlzs, value):
         fname = dstore.build_fname(ekey[0], rlz.gsim_rlz, ekey[1])
         writer.save(numpy.array([values], value.dtype), fname)
@@ -779,7 +794,9 @@ def export_rcurves_rlzs(ekey, dstore):
         curves = []
         for ass, poes in zip(assetcol, array):
             loc = Location(ass['lon'], ass['lat'])
-            losses = loss_ratios[ltype] * ass[ltype]
+            value = (ass['occupants'] if ltype == 'occupants'
+                     else ass['value-' + ltype])
+            losses = loss_ratios[ltype] * value
             avg = scientific.average_loss((losses, poes))
             curve = LossCurve(loc, aref[ass['idx']], poes,
                               losses, loss_ratios[ltype], avg, None)
@@ -810,7 +827,10 @@ def export_loss_curves_rlzs(ekey, dstore):
             losses = data['losses' + ins]
             poes = data['poes' + ins]
             avg = data['avg' + ins]
-            loss_ratios = losses / ass[lt]
+            if lt == 'occupants':
+                loss_ratios = losses / ass['occupants']
+            else:
+                loss_ratios = losses / ass['value-' + lt]
             curve = LossCurve(loc, aref[ass['idx']], poes,
                               losses, loss_ratios, avg, None)
             curves.append(curve)

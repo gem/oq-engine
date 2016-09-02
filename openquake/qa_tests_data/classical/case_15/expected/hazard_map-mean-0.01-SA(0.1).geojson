@@ -3,13 +3,13 @@
         {
             "geometry": {
                 "coordinates": [
-                    -0.10000000149011612,
+                    -0.1,
                     0.0
                 ],
                 "type": "Point"
             },
             "properties": {
-                "iml": 0.800000011920929
+                "iml": 0.8
             },
             "type": "Feature"
         },
@@ -22,20 +22,20 @@
                 "type": "Point"
             },
             "properties": {
-                "iml": 0.800000011920929
+                "iml": 0.8
             },
             "type": "Feature"
         },
         {
             "geometry": {
                 "coordinates": [
-                    0.10000000149011612,
+                    0.1,
                     0.0
                 ],
                 "type": "Point"
             },
             "properties": {
-                "iml": 0.800000011920929
+                "iml": 0.8
             },
             "type": "Feature"
         }
