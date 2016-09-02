@@ -29,7 +29,7 @@ from openquake.baselib.general import (
     groupby, humansize, get_array, group_array, DictArray)
 from openquake.baselib import hdf5
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc import disagg
+from openquake.hazardlib.calc import disagg, gmf
 from openquake.commonlib.export import export
 from openquake.commonlib.writers import floatformat, write_csv
 from openquake.commonlib import writers, hazard_writers, util, readinput
@@ -45,8 +45,8 @@ There are a lot of ground motion fields; the export will be slow.
 Consider canceling the operation and accessing directly %s.'''
 
 
-def get_mesh(sitecol):
-    sc = sitecol.complete
+def get_mesh(sitecol, complete=True):
+    sc = sitecol.complete if complete else sitecol
     mesh = numpy.zeros(len(sc), [('lon', F64), ('lat', F64)])
     mesh['lon'] = sc.lons
     mesh['lat'] = sc.lats
@@ -520,16 +520,18 @@ def _extract(hmap, imt, j):
     return tup
 
 
-# FIXME: uhs not working yet
-@export.add(('hcurves', 'hdf5'), ('hmaps', 'hdf5'))
+# FIXME: hmaps, uhs not working yet
+@export.add(('hcurves', 'hdf5'))
 def export_hazard_hdf5(ekey, dstore):
     mesh = get_mesh(dstore['sitecol'])
     imtls = dstore['oqparam'].imtls
     fname = dstore.export_path('%s.%s' % ekey)
     with hdf5.File(fname, 'w') as f:
         f['imtls'] = imtls
-        for dskey, ds in dstore[ekey[0]].items():
-            f['%s/%s' % (ekey[0], dskey)] = util.compose_arrays(mesh, ds.value)
+        for dskey in dstore[ekey[0]]:
+            curves = dstore['%s/%s' % (ekey[0], dskey)].convert(
+                imtls, len(mesh))
+            f['%s/%s' % (ekey[0], dskey)] = util.compose_arrays(mesh, curves)
     return [fname]
 
 
@@ -711,6 +713,38 @@ def export_gmf_scenario(ekey, dstore):
                      ' specify the rupture ordinals with gmfs:R1,...,Rn')
         return []
     return writer.getsaved()
+
+
+@export.add(('gmf_data', 'hdf5'))
+def export_gmf_scenario_hdf5(ekey, dstore):
+    # compute the GMFs on the fly from the stored rupture (if any)
+    oq = dstore['oqparam']
+    if 'scenario' not in oq.calculation_mode:
+        logging.warn('GMF export not implemented for %s', oq.calculation_mode)
+        return []
+    sitemesh = get_mesh(dstore['sitecol'], complete=False)
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    gsims = rlzs_assoc.gsims_by_grp_id[0]  # there is a single grp_id
+    E = oq.number_of_ground_motion_fields
+    correl_model = readinput.get_correl_model(oq)
+    computer = gmf.GmfComputer(
+            dstore['rupture'], dstore['sitecol'], oq.imtls, gsims,
+            oq.truncation_level, correl_model)
+    fname = dstore.export_path('%s.%s' % ekey)
+    gmf_dt = numpy.dtype([('%s-%03d' % (imt, eid), F32) for imt in oq.imtls
+                          for eid in range(E)])
+    imts = list(oq.imtls)
+    with hdf5.File(fname, 'w') as f:
+        for gsim in gsims:
+            arr = computer.compute(oq.random_seed, gsim, E)
+            I, S, E = arr.shape  # #IMTs, #sites, #events
+            gmfa = numpy.zeros(S, gmf_dt)
+            for imti in range(I):
+                for eid in range(E):
+                    field = '%s-%03d' % (imts[imti], eid)
+                    gmfa[field] = arr[imti, :, eid]
+            f[str(gsim)] = util.compose_arrays(sitemesh, gmfa)
+    return [fname]
 
 
 # not used right now
