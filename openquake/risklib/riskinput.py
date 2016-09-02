@@ -24,10 +24,12 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import groupby, split_in_blocks
+from openquake.baselib.general import groupby, split_in_blocks, group_array
 from openquake.hazardlib import site, calc
 from openquake.risklib import scientific, riskmodels
 
+U8 = numpy.uint8
+U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 
@@ -388,14 +390,14 @@ class CompositeRiskModel(collections.Mapping):
         :param assetcol: not None only for event based risk
         """
         mon_hazard = monitor('building hazard')
-        mon_risk = monitor('computing riskmodel', measuremem=False)
+        mon_risk = monitor('riskmodel.out_by_lr', measuremem=False)
         with mon_hazard:
             assets_by_site = (riskinput.assets_by_site if assetcol is None
                               else assetcol.assets_by_site())
             hazard_by_site = riskinput.get_hazard(
                 rlzs_assoc, mon_hazard(measuremem=False))
-        for sid, assets in enumerate(assets_by_site):
-            hazard = hazard_by_site[sid]
+        for i, assets in enumerate(assets_by_site):
+            hazard = hazard_by_site[i]
             the_assets = groupby(assets, by_taxonomy)
             for taxonomy, assets in the_assets.items():
                 riskmodel = self[taxonomy]
@@ -427,13 +429,15 @@ class RiskInput(object):
         self.assets_by_site = assets_by_site
         self.eps = eps_dict
         taxonomies_set = set()
-        self.weight = 0
+        aids = []
         for assets in self.assets_by_site:
             for asset in assets:
                 taxonomies_set.add(asset.taxonomy)
-            self.weight += len(assets)
+                aids.append(asset.ordinal)
+        self.aids = numpy.array(aids, numpy.uint32)
         self.taxonomies = sorted(taxonomies_set)
         self.eids = None  # for API compatibility with RiskInputFromRuptures
+        self.weight = len(self.aids)
 
     @property
     def imt_taxonomies(self):
@@ -445,7 +449,9 @@ class RiskInput(object):
         :param asset_ordinals: list of ordinals of the assets
         :returns: a closure returning an array of epsilons from the event IDs
         """
-        return lambda: [self.eps[aid] for aid in asset_ordinals]
+        return lambda dummy1, dummy2: (
+            [self.eps[aid] for aid in asset_ordinals]
+            if self.eps else None)
 
     def get_hazard(self, rlzs_assoc, monitor=Monitor()):
         """
@@ -456,11 +462,13 @@ class RiskInput(object):
         :returns:
             list of hazard dictionaries imt -> rlz -> haz per each site
         """
+        if rlzs_assoc is None:  # case ebr_gmf
+            return self.hazard_by_site
         return [{imt: rlzs_assoc.combine(haz[imt]) for imt in haz}
                 for haz in self.hazard_by_site]
 
     def __repr__(self):
-        return '<%s taxonomies=%s, weight=%d>' % (
+        return '<%s taxonomy=%s, %d asset(s)>' % (
             self.__class__.__name__, ', '.join(self.taxonomies), self.weight)
 
 
@@ -488,14 +496,55 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
     return eps
 
 
+class Gmvset(object):
+    """
+    Emulate a dataset containing ground motion values per event ID,
+    realization ordinal and IMT index.
+    """
+    dt = numpy.dtype([('gmv', F32), ('eid', U32), ('rlzi', U16), ('imti', U8)])
+
+    def __init__(self):
+        self.pairs = []
+
+    def append(self, gmv, eid, rlzi, imti):
+        self.pairs.append((gmv, eid, rlzi, imti))
+
+    @property
+    def value(self):
+        return numpy.array(self.pairs, self.dt)
+
+    def __len__(self):
+        return len(self.pairs)
+
+
+def str2rsi(key):
+    """
+    Convert a string of the form 'rlz-XXXX/sid-YYYY/ZZZ'
+    into a triple (XXXX, YYYY, ZZZ)
+    """
+    rlzi, sid, imt = key.split('/')
+    return int(rlzi[4:]), int(sid[4:]), imt
+
+
+def rsi2str(rlzi, sid, imt):
+    """
+    Convert a triple (XXXX, YYYY, ZZZ) into a string of the form
+    'rlz-XXXX/sid-YYYY/ZZZ'
+    """
+    return 'rlz-%04d/sid-%04d/%s' % (rlzi, sid, imt)
+
+
 class GmfCollector(object):
     """
-    An object storing the GMFs in memory.
+    An object storing the GMFs per site_id.
     """
-    def __init__(self, imts, rlzs):
+    def __init__(self, imts, rlzs, dstore=None):
         self.imts = imts
         self.rlzs = rlzs
-        self.dic = collections.defaultdict(lambda: ([], []))
+        if dstore is None:
+            self.dic = collections.defaultdict(Gmvset)
+        else:
+            self.dic = dstore
         self.nbytes = 0
 
     def close(self):
@@ -504,24 +553,34 @@ class GmfCollector(object):
 
     def save(self, eid, imti, rlz, gmf, sids):
         for gmv, sid in zip(gmf, sids):
-            key = '%s/%s/%s' % (sid, self.imts[imti], rlz.ordinal)
-            glist, elist = self.dic[key]
-            glist.append(gmv)
-            elist.append(eid)
+            self.dic[sid].append(gmv, eid, rlz.ordinal, imti)
         self.nbytes += gmf.nbytes * 2
 
     def __getitem__(self, sid):
-        hazard = {}
-        for imt in self.imts:
+        gmvs = self.dic[sid]
+        if hasattr(gmvs, 'value'):
+            gmvs = gmvs.value
+        data = group_array(gmvs, 'imti')
+        hazard = {}  # return a dictionary with all IMTs
+        for imti, imt in enumerate(self.imts):
             hazard[imt] = {}
-            for rlz in self.rlzs:
-                key = '%s/%s/%s' % (sid, imt, rlz.ordinal)
-                data = self.dic[key]
-                if data[0]:
-                    # a pairs of F32 arrays (gmvs, eids)
-                    hazard[imt][rlz] = (numpy.array(data[0], F32),
-                                        numpy.array(data[1], U32))
+            if imti in data:
+                dic = group_array(data[imti], 'rlzi')
+                for rlz in self.rlzs:
+                    if rlz.ordinal in dic:
+                        hazard[imt][rlz] = dic[rlz.ordinal]
         return hazard
+
+    def flush(self, dstore):
+        """
+        Save the GMFs on the datastore.
+
+        :returns: the number of bytes saved
+        """
+        for sid, data in self.dic.items():
+            dstore.extend('gmf_data/sid-%04d' % sid, data)
+        dstore.flush()
+        return self.close()
 
 
 class RiskInputFromRuptures(object):
@@ -529,7 +588,7 @@ class RiskInputFromRuptures(object):
     Contains all the assets associated to the given IMT and a subsets of
     the ruptures for a given calculation.
 
-    :param imt_taxonomies: list given by the risk model
+    :param imts: a list of intensity measure type strings
     :param sitecol: SiteCollection instance
     :param assets_by_site: list of list of assets
     :param ses_ruptures: ordered array of EBRuptures
@@ -618,4 +677,6 @@ def create(GmfColl, eb_ruptures, sitecol, imts, rlzs_by_gsim,
                 rup.seed, ebr.events, rlzs_by_gsim, min_iml)
             for eid, imti, rlz, gmf_sids in data:
                 gmfcoll.save(eid, imti, rlz, *gmf_sids)
+    for sid in gmfcoll.dic:
+        gmfcoll.dic[sid] = gmfcoll.dic[sid].value
     return gmfcoll

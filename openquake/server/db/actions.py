@@ -273,7 +273,7 @@ def del_calc(db, job_id, user):
         'SELECT id FROM job WHERE hazard_calculation_id=?x', job_id)
     if dependent:
         return ('Cannot delete calculation %d: there are calculations '
-                'dependent from it: %s' % job_id, [j.id for j in dependent])
+                'dependent from it: %s' % (job_id, [j.id for j in dependent]))
     deleted = db('DELETE FROM job WHERE id=?x', job_id).rowcount
     if not deleted:
         return ('Cannot delete calculation %d: ID does not exist' % job_id)
