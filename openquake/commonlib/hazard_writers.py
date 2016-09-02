@@ -270,43 +270,6 @@ class HazardCurveGeoJSONWriter(BaseCurveWriter):
                       separators=(',', ': '))
 
 
-class MultiHazardCurveXMLWriter(object):
-    """
-    A serializer of multiple hazard curve set having multiple
-    metadata. It uses
-    :class:`openquake.commonlib.hazard_writers.HazardCurveXMLWriter` to
-    actually serialize the single set of curves.
-
-    :attr str dest:
-         The path of the filename to be written, or a file-like object
-    :attr metadata_set:
-         Iterable over metadata suitable to create instances of
-         :class:`openquake.commonlib.hazard_writers.HazardCurveXMLWriter`
-    """
-    def __init__(self, dest, metadata_set):
-        self.dest = dest
-        self.metadata_set = sorted(metadata_set, key=by_imt)
-        for metadata in metadata_set:
-            _validate_hazard_metadata(metadata)
-
-    def serialize(self, curve_set):
-        """
-        Write a set of sequence of hazard curves to the specified file.
-        :param curve_set:
-
-           Iterable over sequence of curves. Each element returned by
-           the iterable is an iterable suitable to be used by the
-           :meth:`serialize` of the class
-           :class:`openquake.commonlib.hazard_writers.HazardCurveXMLWriter`
-        """
-        with open(self.dest, 'wb') as fh:
-            root = et.Element('nrml')
-            for metadata, curve_data in zip(self.metadata_set, curve_set):
-                writer = HazardCurveXMLWriter(self.dest, **metadata)
-                writer.add_hazard_curves(root, metadata, curve_data)
-            nrml.write(list(root), fh)
-
-
 def gen_gmfs(gmf_set):
     """
     Generate GMF nodes from a gmf_set
