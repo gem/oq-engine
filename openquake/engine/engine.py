@@ -89,7 +89,7 @@ def expose_outputs(dstore):
         dskeys.add('uhs')  # export them
     if oq.hazard_maps:
         dskeys.add('hmaps')  # export them
-    if 'realizations' in dskeys and len(dstore['realizations']) <= 1:
+    if 'realizations' in dstore and len(dstore['realizations']) <= 1:
         dskeys.remove('realizations')  # do not export a single realization
     if 'sescollection' in dskeys and 'scenario' in calcmode:
         exportable.remove('sescollection')  # do not export
