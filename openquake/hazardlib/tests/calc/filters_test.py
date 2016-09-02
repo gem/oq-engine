@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import mock
+import pickle
 import unittest
 
 from types import GeneratorType
@@ -21,8 +22,15 @@ from types import GeneratorType
 from openquake.hazardlib.calc import filters
 
 
+def assert_pickleable(obj):
+    assert (pickle.loads(pickle.dumps(obj)).integration_distance ==
+            obj.integration_distance)
+
+
 class SourceSiteDistanceFilterTestCase(unittest.TestCase):
     def test(self):
+        assert_pickleable(filters.source_site_distance_filter(100))
+
         class FakeSource(object):
             def __init__(self, integration_distance, sites_mapping):
                 self.integration_distance = integration_distance
@@ -56,6 +64,8 @@ class SourceSiteDistanceFilterTestCase(unittest.TestCase):
 
 class RuptureSiteDistanceFilterTestCase(unittest.TestCase):
     def test(self):
+        assert_pickleable(filters.rupture_site_distance_filter(100))
+
         def fake_filter(rupture, integration_distance, sites):
             if rupture == 1:
                 return None  # all filtered out
