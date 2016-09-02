@@ -578,7 +578,7 @@ celeryd_wait $GEM_MAXLOOP"
             echo \"Running \$ini\"
             for loop in \$(seq 1 $GEM_MAXLOOP); do
                 set +e
-                oq engine --run \$ini --exports xml
+                oq engine --run \$ini --exports xml,hdf5
                 oq_ret=\$?
                 set -e
                 if [ \$oq_ret -eq 0 ]; then
