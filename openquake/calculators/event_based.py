@@ -248,6 +248,7 @@ def compute_ruptures(sources, sitecol, rlzs_by_gsim, monitor):
     calc_times = []
     rup_mon = monitor('filtering ruptures', measuremem=False)
     num_samples = rlzs_by_gsim.samples
+    num_events = 0
 
     # Compute and save stochastic event sets
     for src in sources:
@@ -277,9 +278,11 @@ def compute_ruptures(sources, sitecol, rlzs_by_gsim, monitor):
             rup_data.append((ebr.serial, ebr.multiplicity, nsites, rate) +
                             ruptparams)
             eb_ruptures.append(ebr)
+            num_events += ebr.multiplicity
         dt = time.time() - t0
         calc_times.append((src.id, dt))
     res = AccumDict({src_group_id: eb_ruptures})
+    res.num_events = num_events
     res.calc_times = calc_times
     res.rup_data = numpy.array(rup_data, rup_data_dt)
     res.trt = trt
@@ -398,11 +401,22 @@ class EventBasedRuptureCalculator(PSHACalculator):
                 acc.eff_ruptures += ruptures_by_grp_id.eff_ruptures
             acc += ruptures_by_grp_id
             # set eid
+            n = ruptures_by_grp_id.num_events
             for grp_id, ebrs in ruptures_by_grp_id.items():
+                events = numpy.zeros(n, long_event_dt)
+                i = 0
                 for ebr in ebrs:
+                    names = ebr.events.dtype.names
                     for event in ebr.events:
                         event['eid'] = self.eid
+                        events['source_id'][i] = ebr.source_id
+                        events['grp_id'][i] = ebr.grp_id
+                        events['rupserial'][i] = ebr.serial
+                        for name in names:
+                            events[name][i] = event[name]
                         self.eid += 1
+                        i += 1
+                self.datastore.extend('events', events)
             # save rup_data
             if len(ruptures_by_grp_id):
                 trt = ruptures_by_grp_id.trt
@@ -416,29 +430,17 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """
         with self.monitor('saving ruptures', autoflush=True):
             # ordering ruptures
-            num_events = 0
             sescollection = []
             for grp_id in result:
                 for ebr in result[grp_id]:
-                    num_events += ebr.multiplicity
                     sescollection.append(ebr)
             sescollection.sort(key=operator.attrgetter('serial'))
             nr = len(sescollection)
             logging.info('Saving SES collection with %d ruptures, %d events',
-                         nr, num_events)
-            events = numpy.zeros(num_events, long_event_dt)
+                         nr, self.eid)
             for ebr in sescollection:
-                names = ebr.events.dtype.names
-                for event in ebr.events:
-                    eid = event['eid']
-                    events['source_id'][eid] = ebr.source_id
-                    events['grp_id'][eid] = ebr.grp_id
-                    events['rupserial'][eid] = ebr.serial
-                    for name in names:
-                        events[name][eid] = event[name]
                 self.datastore['sescollection/%s' % ebr.serial] = ebr
             self.datastore.set_nbytes('sescollection')
-            self.datastore['events'] = events
             self.datastore.set_nbytes('events')
 
         for dset in self.rup_data.values():
