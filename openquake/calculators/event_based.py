@@ -25,7 +25,6 @@ import collections
 
 import numpy
 
-from openquake.baselib import hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict, split_in_blocks
 from openquake.hazardlib.calc.filters import \
@@ -51,8 +50,8 @@ event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
 
 long_event_dt = numpy.dtype([
-    ('rupserial', U32), ('grp_id', U16), ('source_id', 'S30'), ('eid', U32),
-    ('ses', U32), ('occ', U32), ('sample', U32)])
+    ('rupserial', U32), ('eid', U32), ('ses', U32), ('occ', U32),
+    ('sample', U32), ('grp_id', U16), ('source_id', 'S30')])
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface):
@@ -382,6 +381,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
         zd = AccumDict()
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()
+        self.eid = 0
         return zd
 
     def agg_dicts(self, acc, ruptures_by_grp_id):
@@ -397,11 +397,17 @@ class EventBasedRuptureCalculator(PSHACalculator):
             if hasattr(ruptures_by_grp_id, 'eff_ruptures'):
                 acc.eff_ruptures += ruptures_by_grp_id.eff_ruptures
             acc += ruptures_by_grp_id
+            # set eid
+            for grp_id, ebrs in ruptures_by_grp_id.items():
+                for ebr in ebrs:
+                    for event in ebr.events:
+                        event['eid'] = self.eid
+                        self.eid += 1
+            # save rup_data
             if len(ruptures_by_grp_id):
                 trt = ruptures_by_grp_id.trt
                 self.rup_data[trt] = self.datastore.extend(
                         'rup_data/' + trt, ruptures_by_grp_id.rup_data)
-        self.datastore.flush()
         return acc
 
     def post_execute(self, result):
@@ -421,22 +427,19 @@ class EventBasedRuptureCalculator(PSHACalculator):
             logging.info('Saving SES collection with %d ruptures, %d events',
                          nr, num_events)
             events = numpy.zeros(num_events, long_event_dt)
-            eid = 0
             for ebr in sescollection:
                 names = ebr.events.dtype.names
-                eids = []
                 for event in ebr.events:
-                    event['eid'] = eid
+                    eid = event['eid']
                     events['source_id'][eid] = ebr.source_id
                     events['grp_id'][eid] = ebr.grp_id
                     events['rupserial'][eid] = ebr.serial
                     for name in names:
                         events[name][eid] = event[name]
-                    eids.append(eid)
-                    eid += 1
                 self.datastore['sescollection/%s' % ebr.serial] = ebr
             self.datastore.set_nbytes('sescollection')
             self.datastore['events'] = events
+            self.datastore.set_nbytes('events')
 
         for dset in self.rup_data.values():
             if len(dset):
