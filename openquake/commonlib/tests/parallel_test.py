@@ -38,8 +38,7 @@ class TaskManagerTestCase(unittest.TestCase):
     def test_apply_reduce(self):
         res = parallel.apply(
             get_length, (numpy.arange(10),), concurrent_tasks=3).reduce()
-        self.assertEqual(res, {'n': 10})
-        self.assertEqual(list(map(len, parallel.apply._chunks)), [4, 4, 2])
+        self.assertEqual(res, {'n': 10})  # chunks [4, 4, 2]
 
     # this case is non-trivial since there is a key, so two groups are
     # generated even if everything is run in a single core
@@ -48,7 +47,7 @@ class TaskManagerTestCase(unittest.TestCase):
             get_length, ('aaabb',), concurrent_tasks=0,
             key=lambda char: char).reduce()
         self.assertEqual(res, {'n': 5})
-        self.assertEqual(parallel.apply._chunks, [['a', 'a', 'a'], ['b', 'b']])
+        # chunks [['a', 'a', 'a'], ['b', 'b']]
 
     def test_spawn(self):
         all_data = [
