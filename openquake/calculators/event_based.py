@@ -395,7 +395,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
         :param acc: accumulator dictionary
         :param ruptures_by_grp_id: a nested dictionary grp_id -> ruptures
         """
-        with self.monitor('save rup_data and events', autoflush=True):
+        with self.monitor('saving ruptures', autoflush=True):
             if hasattr(ruptures_by_grp_id, 'calc_times'):
                 acc.calc_times.extend(ruptures_by_grp_id.calc_times)
             if hasattr(ruptures_by_grp_id, 'eff_ruptures'):
@@ -426,26 +426,17 @@ class EventBasedRuptureCalculator(PSHACalculator):
                         events[name][i] = event[name]
                     self.eid += 1
                     i += 1
+                self.datastore['sescollection/%s' % ebr.serial] = ebr
             self.datastore.extend('events', events)
 
     def post_execute(self, result):
         """
         Save the SES collection
         """
-        with self.monitor('saving ruptures', autoflush=True):
-            # ordering ruptures
-            sescollection = []
-            for grp_id in result:
-                for ebr in result[grp_id]:
-                    sescollection.append(ebr)
-            sescollection.sort(key=operator.attrgetter('serial'))
-            nr = len(sescollection)
-            logging.info('Saving SES collection with %d ruptures, %d events',
-                         nr, self.eid)
-            for ebr in sescollection:
-                self.datastore['sescollection/%s' % ebr.serial] = ebr
-            self.datastore.set_nbytes('sescollection')
-            self.datastore.set_nbytes('events')
+        nr = sum(len(result[grp_id]) for grp_id in result)
+        logging.info('Saved %d ruptures, %d events', nr, self.eid)
+        self.datastore.set_nbytes('sescollection')
+        self.datastore.set_nbytes('events')
 
         for dset in self.rup_data.values():
             if len(dset):
