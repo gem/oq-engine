@@ -619,9 +619,8 @@ def export_gmf_spec(ekey, dstore, spec):
     eids = numpy.array([int(rid) for rid in spec.split(',')])
     sitemesh = get_mesh(dstore['sitecol'])
     writer = writers.CsvWriter(fmt='%.5f')
-    etags = build_etags(dstore['events'])
     if 'scenario' in oq.calculation_mode:
-        _, gmfs_by_trt_gsim = calc.get_gmfs(dstore)
+        etags, gmfs_by_trt_gsim = calc.get_gmfs(dstore)
         gsims = sorted(gsim for trt, gsim in gmfs_by_trt_gsim)
         imts = gmfs_by_trt_gsim[0, gsims[0]].dtype.names
         gmf_dt = numpy.dtype([(str(gsim), F32) for gsim in gsims])
@@ -635,6 +634,7 @@ def export_gmf_spec(ekey, dstore, spec):
                 data = util.compose_arrays(sitemesh, gmfa)
                 writer.save(data, dest)
     else:  # event based
+        etags = build_etags(dstore['events'])
         for eid in eids:
             etag = etags[eid]
             for gmfa, imt in _calc_gmfs(dstore, util.get_serial(etag), eid):
