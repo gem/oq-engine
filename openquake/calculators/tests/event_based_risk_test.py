@@ -171,13 +171,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqual(len(fnames), 4)  # 2 IMT x 2 poes
 
         # export a single rupture
-        [f1, f2] = export(('gmfs:0', 'csv'), self.calc.datastore)
+        [f1, f2] = export(('gmfs:13', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
             'expected/gmf-trt=05'
-            '~ses=0001~src=AS_TRAS334~rup=612021-01-PGA.csv', f1)
+            '~ses=0001~src=AS_GEAS479~rup=357385-01-PGA.csv', f1)
         self.assertEqualFiles(
             'expected/gmf-trt=05'
-            '~ses=0001~src=AS_TRAS334~rup=612021-01-SA(0.5).csv', f2)
+            '~ses=0001~src=AS_GEAS479~rup=357385-01-SA(0.5).csv', f2)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4a(self):
