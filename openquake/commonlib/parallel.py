@@ -33,7 +33,8 @@ from concurrent.futures import as_completed, ProcessPoolExecutor, Future
 
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
-from openquake.baselib.general import split_in_blocks, AccumDict, humansize
+from openquake.baselib.general import (
+    block_splitter, split_in_blocks, AccumDict, humansize)
 
 executor = ProcessPoolExecutor()
 # the num_tasks_hint is chosen to be 2 times bigger than the name of
@@ -289,6 +290,7 @@ class TaskManager(object):
     @classmethod
     def apply(cls, task, task_args,
               concurrent_tasks=executor.num_tasks_hint,
+              maxweight=None,
               weight=lambda item: 1,
               key=lambda item: 'Unspecified',
               name=None):
@@ -307,15 +309,16 @@ class TaskManager(object):
         :param agg: the aggregation function
         :param acc: initial value of the accumulator (default empty AccumDict)
         :param concurrent_tasks: hint about how many tasks to generate
+        :param maxweight: if not None, used to split the tasks
         :param weight: function to extract the weight of an item in arg0
         :param key: function to extract the kind of an item in arg0
         """
         arg0 = task_args[0]  # this is assumed to be a sequence
         args = task_args[1:]
-        chunks = list(split_in_blocks(
-            arg0, concurrent_tasks or 1, weight, key))
-        cls.apply.__func__._chunks = chunks
-        logging.info('Starting %d tasks', len(chunks))
+        if maxweight:
+            chunks = block_splitter(arg0, maxweight, weight, key)
+        else:
+            chunks = split_in_blocks(arg0, concurrent_tasks or 1, weight, key)
         return cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
 
     def __init__(self, oqtask, name=None):
