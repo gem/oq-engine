@@ -391,7 +391,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
         :param acc: accumulator dictionary
         :param ruptures_by_grp_id: a nested dictionary grp_id -> ProbabilityMap
         """
-        with self.monitor('aggregate curves', autoflush=True):
+        with self.monitor('save rupture data', autoflush=True):
             if hasattr(ruptures_by_grp_id, 'calc_times'):
                 acc.calc_times.extend(ruptures_by_grp_id.calc_times)
             if hasattr(ruptures_by_grp_id, 'eff_ruptures'):
@@ -399,12 +399,8 @@ class EventBasedRuptureCalculator(PSHACalculator):
             acc += ruptures_by_grp_id
             if len(ruptures_by_grp_id):
                 trt = ruptures_by_grp_id.trt
-                try:
-                    dset = self.rup_data[trt]
-                except KeyError:
-                    dset = self.rup_data[trt] = self.datastore.create_dset(
-                        'rup_data/' + trt, ruptures_by_grp_id.rup_data.dtype)
-                hdf5.extend(dset, ruptures_by_grp_id.rup_data)
+                self.rup_data[trt] = self.datastore.extend(
+                        'rup_data/' + trt, ruptures_by_grp_id.rup_data)
         self.datastore.flush()
         return acc
 
