@@ -50,6 +50,10 @@ F64 = numpy.float64
 event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
 
+long_event_dt = numpy.dtype([
+    ('rupserial', U32), ('grp_id', U16), ('source_id', 'S30'), ('eid', U32),
+    ('ses', U32), ('occ', U32), ('sample', U32)])
+
 
 def get_geom(surface, is_from_fault_source, is_multi_surface):
     """
@@ -271,7 +275,7 @@ def compute_ruptures(sources, sitecol, rlzs_by_gsim, monitor):
                 rate = numpy.nan
             rc = cmaker.make_rupture_context(ebr.rupture)
             ruptparams = tuple(getattr(rc, param) for param in params)
-            rup_data.append((ebr.serial, len(ebr.etags), nsites, rate) +
+            rup_data.append((ebr.serial, ebr.multiplicity, nsites, rate) +
                             ruptparams)
             eb_ruptures.append(ebr)
         dt = time.time() - t0
@@ -410,25 +414,33 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """
         with self.monitor('saving ruptures', autoflush=True):
             # ordering ruptures
+            num_events = 0
             sescollection = []
             for grp_id in result:
                 for ebr in result[grp_id]:
+                    num_events += ebr.multiplicity
                     sescollection.append(ebr)
             sescollection.sort(key=operator.attrgetter('serial'))
-            etags = numpy.concatenate([ebr.etags for ebr in sescollection])
-            self.datastore['etags'] = etags
             nr = len(sescollection)
             logging.info('Saving SES collection with %d ruptures, %d events',
-                         nr, len(etags))
+                         nr, num_events)
+            events = numpy.zeros(num_events, long_event_dt)
             eid = 0
             for ebr in sescollection:
+                names = ebr.events.dtype.names
                 eids = []
                 for event in ebr.events:
                     event['eid'] = eid
+                    events['source_id'][eid] = ebr.source_id
+                    events['grp_id'][eid] = ebr.grp_id
+                    events['rupserial'][eid] = ebr.serial
+                    for name in names:
+                        events[name][eid] = event[name]
                     eids.append(eid)
                     eid += 1
                 self.datastore['sescollection/%s' % ebr.serial] = ebr
             self.datastore.set_nbytes('sescollection')
+            self.datastore['events'] = events
 
         for dset in self.rup_data.values():
             if len(dset):
