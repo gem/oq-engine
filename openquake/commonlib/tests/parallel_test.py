@@ -35,19 +35,28 @@ def get_len(data, monitor):
 class TaskManagerTestCase(unittest.TestCase):
     monitor = parallel.Monitor()
 
-    def test_apply_reduce(self):
+    def test_apply(self):
         res = parallel.apply(
             get_length, (numpy.arange(10),), concurrent_tasks=3).reduce()
         self.assertEqual(res, {'n': 10})  # chunks [4, 4, 2]
 
     # this case is non-trivial since there is a key, so two groups are
     # generated even if everything is run in a single core
-    def test_apply_reduce_no_tasks(self):
+    def test_apply_no_tasks(self):
         res = parallel.apply(
             get_length, ('aaabb',), concurrent_tasks=0,
-            key=lambda char: char).reduce()
-        self.assertEqual(res, {'n': 5})
+            key=lambda char: char)
         # chunks [['a', 'a', 'a'], ['b', 'b']]
+        partial_sums = sorted(dic['n'] for dic in res)
+        self.assertEqual(partial_sums, [2, 3])
+
+    def test_apply_maxweight(self):
+        res = parallel.apply(
+            get_length, ('aaabb',), maxweight=2,
+            key=lambda char: char)
+        # chunks ['aa', 'ab', 'b']
+        partial_sums = sorted(dic['n'] for dic in res)
+        self.assertEqual(partial_sums, [1, 2, 2])
 
     def test_spawn(self):
         all_data = [
