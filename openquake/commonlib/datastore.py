@@ -249,6 +249,7 @@ class DataStore(collections.MutableMapping):
             dset = hdf5.create(self.hdf5, key, array.dtype,
                                shape=(None,) + array.shape[1:])
         hdf5.extend(dset, array)
+        return dset
 
     def save(self, key, kw):
         """
