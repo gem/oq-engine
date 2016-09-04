@@ -389,40 +389,44 @@ class EventBasedRuptureCalculator(PSHACalculator):
 
     def agg_dicts(self, acc, ruptures_by_grp_id):
         """
-        Aggregate dictionaries of hazard curves by updating the accumulator.
+        Accumulate dictionaries of ruptures and populate the `events`
+        dataset in the datastore.
 
         :param acc: accumulator dictionary
-        :param ruptures_by_grp_id: a nested dictionary grp_id -> ProbabilityMap
+        :param ruptures_by_grp_id: a nested dictionary grp_id -> ruptures
         """
-        with self.monitor('save rupture data', autoflush=True):
+        with self.monitor('save rup_data and events', autoflush=True):
             if hasattr(ruptures_by_grp_id, 'calc_times'):
                 acc.calc_times.extend(ruptures_by_grp_id.calc_times)
             if hasattr(ruptures_by_grp_id, 'eff_ruptures'):
                 acc.eff_ruptures += ruptures_by_grp_id.eff_ruptures
             acc += ruptures_by_grp_id
-            # set eid
-            n = ruptures_by_grp_id.num_events
-            for grp_id, ebrs in ruptures_by_grp_id.items():
-                events = numpy.zeros(n, long_event_dt)
-                i = 0
-                for ebr in ebrs:
-                    names = ebr.events.dtype.names
-                    for event in ebr.events:
-                        event['eid'] = self.eid
-                        events['source_id'][i] = ebr.source_id
-                        events['grp_id'][i] = ebr.grp_id
-                        events['rupserial'][i] = ebr.serial
-                        for name in names:
-                            events[name][i] = event[name]
-                        self.eid += 1
-                        i += 1
-                self.datastore.extend('events', events)
+            self.extend_events(ruptures_by_grp_id)
             # save rup_data
             if len(ruptures_by_grp_id):
                 trt = ruptures_by_grp_id.trt
                 self.rup_data[trt] = self.datastore.extend(
                         'rup_data/' + trt, ruptures_by_grp_id.rup_data)
         return acc
+
+    def extend_events(self, ruptures_by_grp_id):
+        """Extend the 'events' dataset with the given ruptures"""
+        n = ruptures_by_grp_id.num_events
+        for grp_id, ebrs in ruptures_by_grp_id.items():
+            events = numpy.zeros(n, long_event_dt)
+            i = 0
+            for ebr in ebrs:
+                names = ebr.events.dtype.names
+                for event in ebr.events:
+                    event['eid'] = self.eid
+                    events['source_id'][i] = ebr.source_id
+                    events['grp_id'][i] = ebr.grp_id
+                    events['rupserial'][i] = ebr.serial
+                    for name in names:
+                        events[name][i] = event[name]
+                    self.eid += 1
+                    i += 1
+            self.datastore.extend('events', events)
 
     def post_execute(self, result):
         """
