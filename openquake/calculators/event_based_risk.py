@@ -237,7 +237,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         oq = self.oqparam
         correl_model = readinput.get_correl_model(oq)
         self.N = len(self.assetcol)
-        self.E = len(self.datastore['etags'])
+        self.E = len(self.datastore['events'])
         logging.info('Populating the risk inputs')
         rlzs_by_tr_id = self.rlzs_assoc.get_rlzs_by_grp_id()
         num_rlzs = {t: len(rlzs) for t, rlzs in rlzs_by_tr_id.items()}
@@ -276,7 +276,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 oq.investigation_time * oq.ses_per_logic_tree_path)
 
         self.N = N = len(self.assetcol)
-        self.E = len(self.datastore['etags'])
+        self.E = len(self.datastore['events'])
 
         # average losses, stored in a composite array of shape N, R
         self.avg_losses = numpy.zeros((N, R), oq.loss_dt())
