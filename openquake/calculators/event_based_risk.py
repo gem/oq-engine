@@ -20,6 +20,7 @@ from __future__ import division
 import logging
 import operator
 import itertools
+import functools
 import collections
 
 import numpy
@@ -320,14 +321,14 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 oq.concurrent_tasks or 1)
             # NB: I am using generators so that the tasks are submitted one at
             # the time, without keeping all of the arguments in memory
-            tm = starmap(
+            res = starmap(
                 self.core_task.__func__,
                 ((riskinput, self.riskmodel, self.rlzs_assoc,
                   self.assetcol, self.monitor.new('task'))
-                 for riskinput in riskinputs))
-        res = tm.reduce(agg=self.agg)
-        self.save_data_transfer(tm)
-        return res
+                 for riskinput in riskinputs)).submit_all()
+        acc = functools.reduce(self.agg, res, AccumDict())
+        self.save_data_transfer(res)
+        return acc
 
     def agg(self, acc, result):
         """
