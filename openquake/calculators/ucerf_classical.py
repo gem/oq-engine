@@ -445,7 +445,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
                 bckgnd_sources = ucerf_source.get_background_sources(
                     branchname, self.sitecol, max_dist)
 
-            # parallelize on the background sources
+            # parallelize on the background sources, small tasks
             args = (bckgnd_sources, self.sitecol, oq.imtls,
                     gsims, self.oqparam.truncation_level,
                     source_site_distance_filter(max_dist),
@@ -455,12 +455,13 @@ class UcerfPSHACalculator(classical.PSHACalculator):
                 concurrent_tasks=self.oqparam.concurrent_tasks).submit_all()
 
             # parallelize by rupture subsets
+            tasks = self.oqparam.concurrent_tasks * 2  # they are big tasks
             rup_sets = ucerf_source.get_rupture_indices(branchname)
             rup_res = parallel.apply(
                 ucerf_classical_hazard_by_rupture_set,
                 (rup_sets, branchname, ucerf_source, self.src_group.id,
                  self.sitecol, gsims, monitor),
-                concurrent_tasks=self.oqparam.concurrent_tasks).submit_all()
+                concurrent_tasks=tasks).submit_all()
 
             # compose probabilities from background sources
             for pmap in bg_res:
