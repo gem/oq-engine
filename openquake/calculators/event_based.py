@@ -25,7 +25,6 @@ import collections
 
 import numpy
 
-from openquake.baselib import hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict, split_in_blocks
 from openquake.hazardlib.calc.filters import \
@@ -49,6 +48,10 @@ F64 = numpy.float64
 
 event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
+
+stored_event_dt = numpy.dtype([
+    ('rupserial', U32), ('eid', U32), ('ses', U32), ('occ', U32),
+    ('sample', U32), ('grp_id', U16), ('source_id', 'S30')])
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface):
@@ -245,6 +248,7 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     calc_times = []
     rup_mon = monitor('filtering ruptures', measuremem=False)
     num_samples = monitor.samples
+    num_events = 0
 
     # Compute and save stochastic event sets
     for src in sources:
@@ -271,12 +275,14 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
                 rate = numpy.nan
             rc = cmaker.make_rupture_context(ebr.rupture)
             ruptparams = tuple(getattr(rc, param) for param in params)
-            rup_data.append((ebr.serial, len(ebr.etags), nsites, rate) +
+            rup_data.append((ebr.serial, ebr.multiplicity, nsites, rate) +
                             ruptparams)
             eb_ruptures.append(ebr)
+            num_events += ebr.multiplicity
         dt = time.time() - t0
         calc_times.append((src.id, dt))
     res = AccumDict({src_group_id: eb_ruptures})
+    res.num_events = num_events
     res.calc_times = calc_times
     res.rup_data = numpy.array(rup_data, rup_data_dt)
     res.trt = trt
@@ -378,57 +384,59 @@ class EventBasedRuptureCalculator(PSHACalculator):
         zd = AccumDict()
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()
+        self.eid = 0
         return zd
 
     def agg_dicts(self, acc, ruptures_by_grp_id):
         """
-        Aggregate dictionaries of hazard curves by updating the accumulator.
+        Accumulate dictionaries of ruptures and populate the `events`
+        dataset in the datastore.
 
         :param acc: accumulator dictionary
-        :param ruptures_by_grp_id: a nested dictionary grp_id -> ProbabilityMap
+        :param ruptures_by_grp_id: a nested dictionary grp_id -> ruptures
         """
-        with self.monitor('aggregate curves', autoflush=True):
+        with self.monitor('saving ruptures', autoflush=True):
             if hasattr(ruptures_by_grp_id, 'calc_times'):
                 acc.calc_times.extend(ruptures_by_grp_id.calc_times)
             if hasattr(ruptures_by_grp_id, 'eff_ruptures'):
                 acc.eff_ruptures += ruptures_by_grp_id.eff_ruptures
             acc += ruptures_by_grp_id
+            self.save_ruptures(ruptures_by_grp_id)
+            # save rup_data
             if len(ruptures_by_grp_id):
                 trt = ruptures_by_grp_id.trt
-                try:
-                    dset = self.rup_data[trt]
-                except KeyError:
-                    dset = self.rup_data[trt] = self.datastore.create_dset(
-                        'rup_data/' + trt, ruptures_by_grp_id.rup_data.dtype)
-                hdf5.extend(dset, ruptures_by_grp_id.rup_data)
-        self.datastore.flush()
+                self.rup_data[trt] = self.datastore.extend(
+                        'rup_data/' + trt, ruptures_by_grp_id.rup_data)
         return acc
+
+    def save_ruptures(self, ruptures_by_grp_id):
+        """Extend the 'events' dataset with the given ruptures"""
+        n = ruptures_by_grp_id.num_events
+        for grp_id, ebrs in ruptures_by_grp_id.items():
+            events = numpy.zeros(n, stored_event_dt)
+            i = 0
+            for ebr in ebrs:
+                names = ebr.events.dtype.names
+                for event in ebr.events:
+                    event['eid'] = self.eid
+                    events['source_id'][i] = ebr.source_id
+                    events['grp_id'][i] = ebr.grp_id
+                    events['rupserial'][i] = ebr.serial
+                    for name in names:
+                        events[name][i] = event[name]
+                    self.eid += 1
+                    i += 1
+                self.datastore['sescollection/%s' % ebr.serial] = ebr
+            self.datastore.extend('events', events)
 
     def post_execute(self, result):
         """
         Save the SES collection
         """
-        with self.monitor('saving ruptures', autoflush=True):
-            # ordering ruptures
-            sescollection = []
-            for grp_id in result:
-                for ebr in result[grp_id]:
-                    sescollection.append(ebr)
-            sescollection.sort(key=operator.attrgetter('serial'))
-            etags = numpy.concatenate([ebr.etags for ebr in sescollection])
-            self.datastore['etags'] = etags
-            nr = len(sescollection)
-            logging.info('Saving SES collection with %d ruptures, %d events',
-                         nr, len(etags))
-            eid = 0
-            for ebr in sescollection:
-                eids = []
-                for event in ebr.events:
-                    event['eid'] = eid
-                    eids.append(eid)
-                    eid += 1
-                self.datastore['sescollection/%s' % ebr.serial] = ebr
-            self.datastore.set_nbytes('sescollection')
+        nr = sum(len(result[grp_id]) for grp_id in result)
+        logging.info('Saved %d ruptures, %d events', nr, self.eid)
+        self.datastore.set_nbytes('sescollection')
+        self.datastore.set_nbytes('events')
 
         for dset in self.rup_data.values():
             if len(dset):
