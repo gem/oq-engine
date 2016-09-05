@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Improved the saving of the ruptures in event based calculations
+  * Reduced the data transfer due to the `rlzs_by_gsim` parameter
   * Added an HDF5 export for scenario GMFs
   * If `filter_sources` if false, the light sources are not filtered, but the
     heavy sources are always filtered
