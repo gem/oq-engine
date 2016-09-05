@@ -216,14 +216,14 @@ class EBRupture(object):
                                         self.serial, self.grp_id)
 
 
-def compute_ruptures(sources, sitecol, rlzs_by_gsim, monitor):
+def compute_ruptures(sources, sitecol, gsims, monitor):
     """
     :param sources:
         List of commonlib.source.Source tuples
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param rlzs_by_gsim:
-        a dictionary gsim -> realizations of that GSIM
+        a list of GSIMs for the current tectonic region model
     :param monitor:
         monitor instance
     :returns:
@@ -234,7 +234,7 @@ def compute_ruptures(sources, sitecol, rlzs_by_gsim, monitor):
     src_group_id = sources[0].src_group_id
     trt = sources[0].tectonic_region_type
     max_dist = monitor.maximum_distance[trt]
-    cmaker = ContextMaker(rlzs_by_gsim)
+    cmaker = ContextMaker(gsims)
     params = sorted(cmaker.REQUIRES_RUPTURE_PARAMETERS)
     rup_data_dt = numpy.dtype(
         [('rupserial', U32), ('multiplicity', U16),
@@ -244,7 +244,7 @@ def compute_ruptures(sources, sitecol, rlzs_by_gsim, monitor):
     rup_data = []
     calc_times = []
     rup_mon = monitor('filtering ruptures', measuremem=False)
-    num_samples = rlzs_by_gsim.samples
+    num_samples = monitor.samples
 
     # Compute and save stochastic event sets
     for src in sources:
@@ -257,7 +257,7 @@ def compute_ruptures(sources, sitecol, rlzs_by_gsim, monitor):
             integration_distance=max_dist, sites=s_sites)
         num_occ_by_rup = sample_ruptures(
             src, monitor.ses_per_logic_tree_path, num_samples,
-            rlzs_by_gsim.seed)
+            monitor.seed)
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
