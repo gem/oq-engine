@@ -861,8 +861,11 @@ class SourceManager(object):
                     operator.attrgetter('weight'),
                     operator.attrgetter('src_group_id')):
                 grp_id = block[0].src_group_id
-                rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
-                yield block, sites, rlzs_by_gsim, mon
+                gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
+                mon.sm_id = self.rlzs_assoc.sm_ids[grp_id]
+                mon.seed = self.rlzs_assoc.seed
+                mon.samples = self.rlzs_assoc.samples[grp_id]
+                yield block, sites, gsims, mon
 
     def _gen_src_light(self, tiles):
         filter_mon = self.monitor('filtering sources')
