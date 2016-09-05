@@ -93,8 +93,7 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
     logging.basicConfig(level=getattr(logging, loglevel.upper()))
     job_inis = job_ini.split(',')
     assert len(job_inis) in (1, 2), job_inis
-    monitor = performance.Monitor(
-        'total runtime', measuremem=True)
+    monitor = performance.Monitor('complete runtime', measuremem=True)
     if len(job_inis) == 1:  # run hazard or risk
         if hc:
             hc_id = hc[0]

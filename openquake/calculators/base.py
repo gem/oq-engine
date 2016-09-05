@@ -650,10 +650,12 @@ def view_task_info(token, dstore):
     Display statistical information about the tasks performance
     """
     pdata = dstore['performance_data'].value
-    tasks = [calc.core_task.__name__ for calc in calculators.values()]
+    operations = sorted(op for op in set(pdata['operation'])
+                        if op.startswith('total '))
     data = ['measurement mean stddev min max num_tasks'.split()]
-    for task in set(tasks):  # strip duplicates
-        records = pdata[pdata['operation'] == encode('total ' + task)]
+    for op in operations:
+        task = op[6:]  # strip 'total '
+        records = pdata[pdata['operation'] == encode(op)]
         if len(records):
             for stat in ('time_sec', 'memory_mb'):
                 val = records[stat]
