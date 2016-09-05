@@ -439,7 +439,8 @@ class Classical(RiskModel):
             loss_maps=values * maps)
 
 
-@registry.add('event_based_risk', 'event_based', 'event_based_rupture')
+@registry.add('event_based_risk', 'event_based', 'event_based_rupture',
+              'ebr_gmf')
 class ProbabilisticEventBased(RiskModel):
     """
     Implements the Probabilistic Event Based riskmodel
@@ -506,7 +507,7 @@ class ProbabilisticEventBased(RiskModel):
         :param assets:
            a list of assets on the same site and with the same taxonomy
         :param gmvs_eids:
-           a pair of arrays of E elements
+           a composite array of E elements with fields 'gmv' and 'eid'
         :param epsgetter:
            a callable returning the correct epsilons for the given gmvs
         :returns:
@@ -514,7 +515,7 @@ class ProbabilisticEventBased(RiskModel):
             `openquake.risklib.scientific.ProbabilisticEventBased.Output`
             instance.
         """
-        gmvs, eids = gmvs_eids
+        gmvs, eids = gmvs_eids['gmv'], gmvs_eids['eid']
         E = len(gmvs)
         I = self.insured_losses + 1
         N = len(assets)
@@ -610,7 +611,7 @@ class Scenario(RiskModel):
         self.time_event = time_event
 
     def __call__(self, loss_type, assets, ground_motion_values, epsgetter):
-        epsilons = epsgetter()
+        epsilons = epsgetter(None, None)
         values = get_values(loss_type, assets, self.time_event)
         ok = ~numpy.isnan(values)
         if not ok.any():
