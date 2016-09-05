@@ -74,7 +74,8 @@ PRECALC_MAP = dict(
     classical_bcr=['classical', 'classical_bcr'],
     classical_damage=['classical', 'classical_damage'],
     event_based=['event_based', 'event_based_risk'],
-    event_based_risk=['event_based', 'event_based_risk'])
+    event_based_risk=['event_based', 'event_based_risk'],
+    ebr_gmf=['event_based'])
 
 
 def set_array(longarray, shortarray):
@@ -259,15 +260,17 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
 
             if has_hcurves and self.oqparam.hazard_maps:
                 ekey = ('hmaps', fmt)
-                with self.monitor('export'):
-                    exported[ekey] = exp(ekey, self.datastore)
-                logging.info('exported %s: %s', key, exported[ekey])
+                if ekey in exp:
+                    with self.monitor('export'):
+                        exported[ekey] = exp(ekey, self.datastore)
+                    logging.info('exported %s: %s', key, exported[ekey])
 
             if has_hcurves and self.oqparam.uniform_hazard_spectra:
                 ekey = ('uhs', fmt)
-                with self.monitor('export'):
-                    exported[ekey] = exp(ekey, self.datastore)
-                logging.info('exported %s: %s', key, exported[ekey])
+                if ekey in exp:
+                    with self.monitor('export'):
+                        exported[ekey] = exp(ekey, self.datastore)
+                    logging.info('exported %s: %s', key, exported[ekey])
 
         if self.close:  # in the engine we close later
             try:
@@ -291,6 +294,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         if 'hcurves' in set(self.datastore):
             self.datastore.set_nbytes('hcurves')
         self.datastore.flush()
+
 
 def check_time_event(oqparam, time_events):
     """
@@ -401,8 +405,6 @@ class HazardCalculator(BaseCalculator):
         job_info['hostname'] = socket.gethostname()
         if hasattr(self, 'riskmodel'):
             job_info['require_epsilons'] = bool(self.riskmodel.covs)
-        if 'job_info' not in self.datastore:
-            self.datastore['job_info'] = hdf5.LiteralAttrs()
         self.datastore.save('job_info', job_info)
         self.datastore.flush()
         try:
@@ -417,7 +419,7 @@ class HazardCalculator(BaseCalculator):
         To be overridden to initialize the datasets needed by the calculation
         """
         self.random_seed = None
-        if 'csm_info' in self.datastore or 'csm_info' in self.datastore.parent:
+        if 'csm_info' in self.datastore:
             self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
         else:  # build a fake; used by risk-from-file calculators
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
