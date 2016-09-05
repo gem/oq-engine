@@ -366,16 +366,19 @@ class CompositeRiskModel(collections.Mapping):
         Yield :class:`RiskInputFromRuptures` instances.
         """
         by_grp_id = operator.attrgetter('grp_id')
+        start = 0
         for ses_ruptures in split_in_blocks(
                 all_ruptures, hint or 1, key=by_grp_id,
                 weight=operator.attrgetter('weight')):
             eids = []
             for sr in ses_ruptures:
                 eids.extend(sr.events['eid'])
+            idxs = numpy.arange(start, start + len(eids))
+            start += len(eids)
             yield RiskInputFromRuptures(
                 imts, sitecol, ses_ruptures,
                 trunc_level, correl_model, min_iml,
-                eps[:, eids] if eps is not None else None, eids)
+                eps[:, idxs] if eps is not None else None, eids)
 
     def gen_outputs(self, riskinput, rlzs_assoc, monitor,
                     assetcol=None):
