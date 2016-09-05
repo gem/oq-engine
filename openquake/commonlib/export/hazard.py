@@ -33,11 +33,16 @@ from openquake.hazardlib.calc import disagg, gmf
 from openquake.commonlib.export import export
 from openquake.commonlib.writers import floatformat, write_csv
 from openquake.commonlib import writers, hazard_writers, util, readinput
-from openquake.risklib.riskinput import create
+from openquake.risklib.riskinput import create, GmfCollector
 from openquake.commonlib import calc
 
 F32 = numpy.float32
 F64 = numpy.float64
+U8 = numpy.uint8
+U16 = numpy.uint16
+U32 = numpy.uint32
+
+gmv_dt = numpy.dtype([('sid', U16), ('eid', U32), ('imti', U8), ('gmv', F32)])
 
 GMF_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
 GMF_WARNING = '''\
@@ -51,6 +56,20 @@ def get_mesh(sitecol, complete=True):
     mesh['lon'] = sc.lons
     mesh['lat'] = sc.lats
     return mesh
+
+
+def build_etags(stored_events):
+    """
+    An array of tags for the underlying seismic events
+    """
+    tags = []
+    for (serial, eid, ses, occ, sampleid, grp_id, source_id) in stored_events:
+        tag = b'trt=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
+            grp_id, ses, source_id, serial, occ)
+        if sampleid > 0:
+            tag += b'~sample=%d' % sampleid
+        tags.append(tag)
+    return numpy.array(tags)
 
 
 class SES(object):
@@ -552,7 +571,7 @@ def export_gmf(ekey, dstore):
         etags = numpy.array(
             sorted([b'scenario-%010d~ses=1' % i for i in range(n_gmfs)]))
     else:
-        etags = dstore['etags']
+        etags = build_etags(dstore['events'])
     gmf_data = dstore['gmf_data']
     nbytes = gmf_data.attrs['nbytes']
     logging.info('Internal size of the GMFs: %s', humansize(nbytes))
@@ -560,7 +579,21 @@ def export_gmf(ekey, dstore):
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
     for rlz in rlzs_assoc.realizations:
-        gmf_arr = gmf_data['%04d' % rlz.ordinal].value
+        if n_gmfs:
+            # TODO: change to use the prefix rlz-
+            gmf_arr = gmf_data['%04d' % rlz.ordinal].value
+        else:
+            # convert gmf_data in the same format used by scenario
+            arrays = []
+            for sid in sorted(gmf_data):
+                array = get_array(gmf_data[sid].value, rlzi=rlz.ordinal)
+                arr = numpy.zeros(len(array), gmv_dt)
+                arr['sid'] = int(sid[4:])  # has the form 'sid-XXXX'
+                arr['imti'] = array['imti']
+                arr['gmv'] = array['gmv']
+                arr['eid'] = array['eid']
+                arrays.append(arr)
+            gmf_arr = numpy.concatenate(arrays)
         ruptures = []
         for eid, gmfa in group_array(gmf_arr, 'eid').items():
             rup = util.Rupture(etags[eid], sorted(set(gmfa['sid'])))
@@ -586,9 +619,8 @@ def export_gmf_spec(ekey, dstore, spec):
     eids = numpy.array([int(rid) for rid in spec.split(',')])
     sitemesh = get_mesh(dstore['sitecol'])
     writer = writers.CsvWriter(fmt='%.5f')
-    etags = dstore['etags']
     if 'scenario' in oq.calculation_mode:
-        _, gmfs_by_trt_gsim = calc.get_gmfs(dstore)
+        etags, gmfs_by_trt_gsim = calc.get_gmfs(dstore)
         gsims = sorted(gsim for trt, gsim in gmfs_by_trt_gsim)
         imts = gmfs_by_trt_gsim[0, gsims[0]].dtype.names
         gmf_dt = numpy.dtype([(str(gsim), F32) for gsim in gsims])
@@ -602,9 +634,10 @@ def export_gmf_spec(ekey, dstore, spec):
                 data = util.compose_arrays(sitemesh, gmfa)
                 writer.save(data, dest)
     else:  # event based
+        etags = build_etags(dstore['events'])
         for eid in eids:
             etag = etags[eid]
-            for gmfa, imt in _get_gmfs(dstore, util.get_serial(etag), eid):
+            for gmfa, imt in _calc_gmfs(dstore, util.get_serial(etag), eid):
                 dest = dstore.export_path('gmf-%s-%s.csv' % (etag, imt))
                 data = util.compose_arrays(sitemesh, gmfa)
                 writer.save(data, dest)
@@ -667,10 +700,11 @@ def get_rup_idx(ebrup, etag):
     raise ValueError('event tag %s not found in the rupture collection')
 
 
-def _get_gmfs(dstore, serial, eid):
+def _calc_gmfs(dstore, serial, eid):
     oq = dstore['oqparam']
     min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    rlzs = rlzs_assoc.realizations
     sitecol = dstore['sitecol'].complete
     N = len(sitecol.complete)
     rup = dstore['sescollection/' + serial]
@@ -678,15 +712,17 @@ def _get_gmfs(dstore, serial, eid):
     rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(rup.grp_id)
     gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F64)
                           for rlz in rlzs_by_gsim.realizations])
-    gmfadict = create(calc.GmfColl,
-                      [rup], sitecol, oq.imtls, rlzs_by_gsim,
-                      oq.truncation_level, correl_model, min_iml).by_rlzi()
-    for imti, imt in enumerate(oq.imtls):
+    gmfcoll = create(GmfCollector,
+                     [rup], sitecol, list(oq.imtls), rlzs_by_gsim,
+                     oq.truncation_level, correl_model, min_iml)
+    hazard = {sid: gmfcoll[sid] for sid in gmfcoll.dic}
+    for imt in oq.imtls:
         gmfa = numpy.zeros(N, gmf_dt)
         for rlzname in gmf_dt.names:
-            rlzi = int(rlzname)
-            gmvs = get_array(gmfadict[rlzi], eid=eid, imti=imti)['gmv']
-            gmfa[rlzname][rup.indices] = gmvs
+            rlz = rlzs[int(rlzname)]
+            for sid in rup.indices:
+                gmvs = hazard[sid][imt][rlz]['gmv']
+                gmfa[rlzname][sid] = gmvs
         yield gmfa, imt
 
 

@@ -225,23 +225,6 @@ def _gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
     return poes
 
 
-def gmvs_to_poe_map(gmvs_by_sid, imtls, invest_time, duration):
-    """
-    Convert a dictionary sid -> gmva into a ProbabilityMap
-    """
-    pmap = ProbabilityMap()
-    for sid in gmvs_by_sid:
-        data = []
-        for imti, imt in enumerate(imtls):
-            gmvs = get_array(gmvs_by_sid[sid], imti=imti)['gmv']
-            data.append(
-                _gmvs_to_haz_curve(gmvs, imtls[imt], invest_time, duration))
-        # the array underlying the ProbabilityCurve has size (num_levels, 1)
-        array = numpy.concatenate(data).reshape(-1, 1)
-        pmap[sid] = ProbabilityCurve(array)
-    return pmap
-
-
 # ################## utilities for classical calculators ################ #
 
 def get_imts_periods(imtls):
@@ -389,24 +372,6 @@ def fix_minimum_intensity(min_iml, imts):
     return F32([min_iml.get(imt, 0) for imt in imts])
 
 
-class GmfColl(object):
-    """
-    A class to collect GMFs in memory, with methods .save and .by_rlzi
-    returning a dictionary rlzi -> gmv_dt
-    """
-    def __init__(self, imts, rlzs):
-        self.data = collections.defaultdict(list)  # rlzi -> data
-
-    def save(self, eid, imti, rlz, gmf, sids):
-        rlzi = rlz.ordinal
-        for gmv, sid in zip(gmf, sids):
-            self.data[rlzi].append((sid, eid, imti, gmv))
-
-    def by_rlzi(self):
-        return {rlzi: numpy.array(self.data[rlzi], gmv_dt)
-                for rlzi in self.data}
-
-
 gmv_dt = numpy.dtype([('sid', U16), ('eid', U32), ('imti', U8), ('gmv', F32)])
 
 
@@ -421,7 +386,7 @@ def check_overflow(calc):
     """
     max_ = dict(sites=2**16, events=2**32, imts=2**8)
     num_ = dict(sites=len(calc.sitecol),
-                events=len(calc.datastore['etags']),
+                events=len(calc.datastore['events']),
                 imts=len(calc.oqparam.imtls))
     for var in max_:
         if num_[var] > max_[var]:
