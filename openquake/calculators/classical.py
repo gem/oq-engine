@@ -168,14 +168,14 @@ class BoundingBox(object):
     __nonzero__ = __bool__
 
 
-def classical(sources, sitecol, rlzs_by_gsim, monitor):
+def classical(sources, sitecol, gsims, monitor):
     """
     :param sources:
         a non-empty sequence of sources of homogeneous tectonic region type
     :param sitecol:
         a SiteCollection instance
-    :param rlzs_by_gsim:
-        a dictionary of realizations by GSIM
+    :param gsims:
+        a list of GSIMs for the current tectonic region type
     :param monitor:
         a monitor instance
     :returns:
@@ -187,13 +187,12 @@ def classical(sources, sitecol, rlzs_by_gsim, monitor):
     # sanity check: the src_group must be the same for all sources
     for src in sources[1:]:
         assert src.src_group_id == src_group_id
-    gsims = list(rlzs_by_gsim)
     trt = sources[0].tectonic_region_type
     max_dist = monitor.maximum_distance[trt]
 
     dic = AccumDict()
     if monitor.poes_disagg:
-        sm_id = rlzs_by_gsim.sm_id
+        sm_id = monitor.sm_id
         dic.bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
     else:
         dic.bbs = []
@@ -248,9 +247,13 @@ class PSHACalculator(base.HazardCalculator):
 
     def zerodict(self):
         """
-        Initial accumulator, a dict grp_id -> ProbabilityMap()
+        Initial accumulator, a dict grp_id -> ProbabilityMap(L, G)
         """
-        zd = AccumDict({sg.id: ProbabilityMap() for sg in self.csm.src_groups})
+        zd = AccumDict()
+        num_levels = len(self.oqparam.imtls.array)
+        for grp in self.csm.src_groups:
+            num_gsims = len(self.rlzs_assoc.gsims_by_grp_id[grp.id])
+            zd[grp.id] = ProbabilityMap(num_levels, num_gsims)
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         zd.bb_dict = BBdict()
@@ -296,24 +299,16 @@ class PSHACalculator(base.HazardCalculator):
         pmap_by_grp_id = reduce(self.agg_dicts, iter_result, self.zerodict())
         self.save_data_transfer(iter_result)
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(tm, pmap_by_grp_id)
+            self.store_source_info(pmap_by_grp_id)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             partial(self.count_eff_ruptures, pmap_by_grp_id))
         self.datastore['csm_info'] = self.csm.info
         return pmap_by_grp_id
 
-    def store_source_info(self, taskman, pmap_by_grp_id):
-        # store the information about received data
-        received = taskman.received
-        if received:
-            tname = taskman.name
-            self.datastore.save('job_info', {
-                tname + '_max_received_per_task': max(received),
-                tname + '_tot_received': sum(received),
-                tname + '_num_tasks': len(received)})
-        # then save the calculation times per each source
+    def store_source_info(self, pmap_by_grp_id):
+        # save the calculation times per each source
         calc_times = getattr(pmap_by_grp_id, 'calc_times', [])
-        if calc_times:
+        if calc_times and 'source_info' in self.datastore:
             sources = self.csm.get_sources()
             info_dict = {(rec['src_group_id'], rec['source_id']): rec
                          for rec in self.source_info}
@@ -366,6 +361,8 @@ def build_hcurves_and_stats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
     The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
     used to specify the kind of output.
     """
+    if sum(len(pmap) for pmap in pmap_by_grp.values()) == 0:  # all empty
+        return {}
     rlzs = rlzs_assoc.realizations
     with monitor('combine pmaps'):
         pmap_by_rlz = calc.combine_pmaps(rlzs_assoc, pmap_by_grp)
@@ -392,13 +389,8 @@ class ClassicalCalculator(PSHACalculator):
         """
         if 'poes' not in self.datastore:  # for short report
             return
-
         oq = self.oqparam
         rlzs = self.rlzs_assoc.realizations
-        with self.monitor('reading poes', autoflush=True):
-            pmap_by_grp = {
-                int(group_id): self.datastore['poes/' + group_id]
-                for group_id in self.datastore['poes']}
 
         # initialize datasets
         N = len(self.sitecol)
@@ -419,8 +411,11 @@ class ClassicalCalculator(PSHACalculator):
                 'hcurves/quantile-%s' % q, F32, (N, L, 1), attrs=attrs)
         self.datastore.flush()
 
-        # build hcurves and stats
+        logging.info('Building hazard curves')
         with self.monitor('submitting poes', autoflush=True):
+            pmap_by_grp = {
+                int(group_id): self.datastore['poes/' + group_id]
+                for group_id in self.datastore['poes']}
             sm = parallel.starmap(build_hcurves_and_stats,
                                   list(self.gen_args(pmap_by_grp)))
         with self.monitor('saving hcurves and stats', autoflush=True):

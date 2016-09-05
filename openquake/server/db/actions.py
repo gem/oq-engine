@@ -56,6 +56,24 @@ def reset_is_running(db):
     db('UPDATE job SET is_running=0 WHERE is_running=1')
 
 
+def set_status(db, job_id, status):
+    """
+    Set the status 'created', 'executing', 'successful', 'failed'
+    consistently with `is_running`.
+
+    :param db: a :class:`openquake.server.dbapi.Db` instance
+    :param job_id: ID of the current job
+    :param status: status string
+    """
+    assert status in ('created', 'executing', 'successful', 'failed'), status
+    if status in ('created', 'successful', 'failed'):
+        is_running = 0
+    else:  # 'executing'
+        is_running = 1
+    db('UPDATE job SET status=?x, is_running=?x WHERE id=?x',
+       status, is_running, job_id)
+
+
 def create_job(db, calc_mode, description, user_name, datadir, hc_id=None):
     """
     Create job for the given user, return it.
@@ -81,6 +99,7 @@ def create_job(db, calc_mode, description, user_name, datadir, hc_id=None):
                description=description,
                user_name=user_name,
                hazard_calculation_id=hc_id,
+               is_running=0,
                ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
     job_id = db('INSERT INTO job (?S) VALUES (?X)',
                 job.keys(), job.values()).lastrowid
@@ -254,7 +273,7 @@ def del_calc(db, job_id, user):
         'SELECT id FROM job WHERE hazard_calculation_id=?x', job_id)
     if dependent:
         return ('Cannot delete calculation %d: there are calculations '
-                'dependent from it: %s' % job_id, [j.id for j in dependent])
+                'dependent from it: %s' % (job_id, [j.id for j in dependent]))
     deleted = db('DELETE FROM job WHERE id=?x', job_id).rowcount
     if not deleted:
         return ('Cannot delete calculation %d: ID does not exist' % job_id)
