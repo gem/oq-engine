@@ -38,7 +38,7 @@ def indent(text):
     return '  ' + '\n  '.join(text.splitlines())
 
 
-def count_eff_ruptures(sources, sitecol, rlzs_by_gsim, monitor):
+def count_eff_ruptures(sources, sitecol, gsims, monitor):
     """
     Count the number of ruptures contained in the given sources and return
     a dictionary src_group_id -> num_ruptures. All sources belong to the
