@@ -280,7 +280,6 @@ class RlzsAssoc(collections.Mapping):
             rlzs_by_gsim[gsim] = self[grp_id, str(gsim)]
             rlzs.update(rlzs_by_gsim[gsim])
         rlzs_by_gsim.realizations = sorted(rlzs)
-        rlzs_by_gsim.sm_id = self.sm_ids[grp_id]
         rlzs_by_gsim.samples = self.samples[grp_id]
         rlzs_by_gsim.seed = self.seed
         return rlzs_by_gsim
@@ -862,7 +861,8 @@ class SourceManager(object):
                     operator.attrgetter('src_group_id')):
                 grp_id = block[0].src_group_id
                 gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
-                mon.sm_id = self.rlzs_assoc.sm_ids[grp_id]
+                if self.monitor.poes_disagg:  # only for disaggregation
+                    mon.sm_id = self.rlzs_assoc.sm_ids[grp_id]
                 mon.seed = self.rlzs_assoc.seed
                 mon.samples = self.rlzs_assoc.samples[grp_id]
                 yield block, sites, gsims, mon
