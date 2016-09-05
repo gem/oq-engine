@@ -280,6 +280,7 @@ class RlzsAssoc(collections.Mapping):
             rlzs_by_gsim[gsim] = self[grp_id, str(gsim)]
             rlzs.update(rlzs_by_gsim[gsim])
         rlzs_by_gsim.realizations = sorted(rlzs)
+        rlzs_by_gsim.sm_id = self.sm_ids[grp_id]
         rlzs_by_gsim.samples = self.samples[grp_id]
         rlzs_by_gsim.seed = self.seed
         return rlzs_by_gsim
@@ -778,13 +779,13 @@ class SourceManager(object):
     Manager associated to a CompositeSourceModel instance.
     Filter and split sources and send them to the worker tasks.
     """
-    def __init__(self, csm, concurrent_tasks, dstore,
-                 monitor, filter_sources=True, num_tiles=1):
+    def __init__(self, csm, maximum_distance, concurrent_tasks,
+                 dstore, monitor, random_seed=None,
+                 filter_sources=True, num_tiles=1):
         self.csm = csm
-        self.maximum_distance = monitor.maximum_distance
+        self.maximum_distance = maximum_distance
         self.concurrent_tasks = concurrent_tasks or 1
-        self.random_seed = monitor.random_seed
-        self.poes_disagg = monitor.poes_disagg
+        self.random_seed = random_seed
         self.dstore = dstore
         self.monitor = monitor
         self.filter_sources = filter_sources
@@ -797,7 +798,7 @@ class SourceManager(object):
             self.maxweight = max(self.maxweight / num_tiles, MAXWEIGHT)
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.maxweight)
-        if self.random_seed is not None:
+        if random_seed is not None:
             # generate unique seeds for each rupture with numpy.arange
             n = sum(sg.tot_ruptures() for sg in self.csm.src_groups)
             rup_serial = numpy.arange(n, dtype=numpy.uint32)
@@ -861,8 +862,7 @@ class SourceManager(object):
                     operator.attrgetter('src_group_id')):
                 grp_id = block[0].src_group_id
                 gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
-                if self.poes_disagg:  # only for disaggregation
-                    mon.sm_id = self.rlzs_assoc.sm_ids[grp_id]
+                mon.sm_id = self.rlzs_assoc.sm_ids[grp_id]
                 mon.seed = self.rlzs_assoc.seed
                 mon.samples = self.rlzs_assoc.samples[grp_id]
                 yield block, sites, gsims, mon

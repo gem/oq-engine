@@ -289,8 +289,9 @@ class PSHACalculator(base.HazardCalculator):
                          self.num_tiles, len(tiles[0]))
         with self.monitor('managing sources', autoflush=True):
             srcman = source.SourceManager(
-                self.csm, oq.concurrent_tasks, self.datastore,
-                monitor, oq.filter_sources, self.num_tiles)
+                self.csm, oq.maximum_distance, oq.concurrent_tasks,
+                self.datastore, monitor, self.random_seed, oq.filter_sources,
+                num_tiles=self.num_tiles)
             tm = parallel.starmap(
                 self.core_task.__func__, srcman.gen_args(self.sitecol, tiles))
             iter_result = tm.submit_all()
