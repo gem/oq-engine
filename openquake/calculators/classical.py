@@ -168,14 +168,14 @@ class BoundingBox(object):
     __nonzero__ = __bool__
 
 
-def classical(sources, sitecol, rlzs_by_gsim, monitor):
+def classical(sources, sitecol, gsims, monitor):
     """
     :param sources:
         a non-empty sequence of sources of homogeneous tectonic region type
     :param sitecol:
         a SiteCollection instance
-    :param rlzs_by_gsim:
-        a dictionary of realizations by GSIM
+    :param gsims:
+        a list of GSIMs for the current tectonic region type
     :param monitor:
         a monitor instance
     :returns:
@@ -187,13 +187,12 @@ def classical(sources, sitecol, rlzs_by_gsim, monitor):
     # sanity check: the src_group must be the same for all sources
     for src in sources[1:]:
         assert src.src_group_id == src_group_id
-    gsims = list(rlzs_by_gsim)
     trt = sources[0].tectonic_region_type
     max_dist = monitor.maximum_distance[trt]
 
     dic = AccumDict()
     if monitor.poes_disagg:
-        sm_id = rlzs_by_gsim.sm_id
+        sm_id = monitor.sm_id
         dic.bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
     else:
         dic.bbs = []
