@@ -253,6 +253,10 @@ class IterResult(object):
                 next(self.log_percent)
             mon.flush()
             yield val
+        if self.received:
+            self.progress('Received %s of data, maximum per task %s',
+                          humansize(sum(self.received)),
+                          humansize(max(self.received)))
 
 
 class TaskManager(object):
@@ -326,7 +330,6 @@ class TaskManager(object):
         self.name = name or oqtask.__name__
         self.results = []
         self.sent = AccumDict()
-        self.received = []
         self.distribute = oq_distribute()
         self.argnames = inspect.getargspec(self.task_func).args
 
@@ -402,10 +405,6 @@ class TaskManager(object):
         iter_result = self.submit_all()
         for res in iter_result:
             acc = agg(acc, res)
-        if iter_result.received:
-            self.progress('Received %s of data, maximum per task %s',
-                          humansize(sum(iter_result.received)),
-                          humansize(max(iter_result.received)))
         self.results = []
         return acc
 
