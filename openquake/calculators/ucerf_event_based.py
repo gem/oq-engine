@@ -513,7 +513,7 @@ class UCERFSESControl(object):
                  npd=NPD, hdd=HDD, aspect=1.5, upper_seismogenic_depth=0.0,
                  lower_seismogenic_depth=15.0, msr=WC1994(), mesh_spacing=1.0,
                  trt="Active Shallow Crust", integration_distance=1000):
-        assert os.path.exists(source_file), source_file 
+        assert os.path.exists(source_file), source_file
         self.source_file = source_file
         self.source_id = id
         self.inv_time = investigation_time
@@ -686,6 +686,7 @@ def compute_ruptures(branch_info, ucerf, sitecol, oqparam, monitor):
     serial = 1
     filter_mon = monitor('update_background_site_filter', measuremem=False)
     event_mon = monitor('sampling ruptures', measuremem=False)
+    num_events = 0
     for src_group_id, (ltbrid, branch_id, _) in enumerate(branch_info):
         t0 = time.time()
         with filter_mon:
@@ -713,17 +714,19 @@ def compute_ruptures(branch_info, ucerf, sitecol, oqparam, monitor):
                     # set later, in EventBasedRuptureCalculator.post_execute;
                     # the second 0 is the sampling ID
                     events.append((0, ses_idx, j, 0))
-                if len(events):
+                if events:
                     ses_ruptures.append(
                         event_based.EBRupture(
                             rup, indices,
                             numpy.array(events, event_based.event_dt),
                             ucerf.source_id, src_group_id, serial))
                     serial += 1
+                    num_events += len(events)
         dt = time.time() - t0
         res.calc_times[src_group_id] = (ltbrid, dt)
         res[src_group_id] = ses_ruptures
     res.trt = DEFAULT_TRT
+    res.num_events = num_events
     return res
 
 
@@ -762,6 +765,7 @@ class UCERFEventBasedRuptureCalculator(
             self.gsim_lt, self.smlt, source_models, set_weight=False)
         self.rup_data = {}
         self.infos = []
+        self.eid = 0
 
     def execute(self):
         """
@@ -794,6 +798,7 @@ class UCERFEventBasedRuptureCalculator(
                 weight=1, sources=1, filter_time=0, split_time=0,
                 cum_calc_time=dt, max_calc_time=dt, num_tasks=1)
             self.infos.append(info)
+        self.save_ruptures(val)
         return acc + val
 
 
