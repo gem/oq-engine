@@ -24,7 +24,6 @@ from nose.plugins.attrib import attr
 
 import numpy.testing
 
-from openquake.baselib.general import get_array
 from openquake.commonlib.datastore import read
 from openquake.commonlib.util import max_rel_diff_index
 from openquake.commonlib.export import export

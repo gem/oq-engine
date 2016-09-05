@@ -58,6 +58,20 @@ def get_mesh(sitecol, complete=True):
     return mesh
 
 
+def build_etags(stored_events):
+    """
+    An array of tags for the underlying seismic events
+    """
+    tags = []
+    for (serial, eid, ses, occ, sampleid, grp_id, source_id) in stored_events:
+        tag = b'trt=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
+            grp_id, ses, source_id, serial, occ)
+        if sampleid > 0:
+            tag += b'~sample=%d' % sampleid
+        tags.append(tag)
+    return numpy.array(tags)
+
+
 class SES(object):
     """
     Stochastic Event Set: A container for 1 or more ruptures associated with a
@@ -557,7 +571,7 @@ def export_gmf(ekey, dstore):
         etags = numpy.array(
             sorted([b'scenario-%010d~ses=1' % i for i in range(n_gmfs)]))
     else:
-        etags = dstore['etags']
+        etags = build_etags(dstore['events'])
     gmf_data = dstore['gmf_data']
     nbytes = gmf_data.attrs['nbytes']
     logging.info('Internal size of the GMFs: %s', humansize(nbytes))
@@ -605,9 +619,8 @@ def export_gmf_spec(ekey, dstore, spec):
     eids = numpy.array([int(rid) for rid in spec.split(',')])
     sitemesh = get_mesh(dstore['sitecol'])
     writer = writers.CsvWriter(fmt='%.5f')
-    etags = dstore['etags']
     if 'scenario' in oq.calculation_mode:
-        _, gmfs_by_trt_gsim = calc.get_gmfs(dstore)
+        etags, gmfs_by_trt_gsim = calc.get_gmfs(dstore)
         gsims = sorted(gsim for trt, gsim in gmfs_by_trt_gsim)
         imts = gmfs_by_trt_gsim[0, gsims[0]].dtype.names
         gmf_dt = numpy.dtype([(str(gsim), F32) for gsim in gsims])
@@ -621,6 +634,7 @@ def export_gmf_spec(ekey, dstore, spec):
                 data = util.compose_arrays(sitemesh, gmfa)
                 writer.save(data, dest)
     else:  # event based
+        etags = build_etags(dstore['events'])
         for eid in eids:
             etag = etags[eid]
             for gmfa, imt in _calc_gmfs(dstore, util.get_serial(etag), eid):

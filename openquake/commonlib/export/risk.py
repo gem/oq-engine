@@ -24,6 +24,7 @@ import numpy
 from openquake.baselib.general import AccumDict
 from openquake.risklib import scientific
 from openquake.commonlib.export import export
+from openquake.commonlib.export.hazard import build_etags
 from openquake.commonlib import writers, risk_writers
 from openquake.commonlib.util import get_assets, compose_arrays, get_ses_idx
 from openquake.commonlib.risk_writers import (
@@ -151,7 +152,7 @@ def export_agg_losses(ekey, dstore):
     """
     agg_losses = compactify(dstore[ekey[0]].value)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    etags = dstore['etags'].value
+    etags = build_etags(dstore['events'])
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz in rlzs:
         losses = agg_losses[:, rlz.ordinal]
@@ -174,7 +175,7 @@ def export_agg_losses_ebr(ekey, dstore):
     dtlist = [('event_tag', (numpy.string_, 100)), ('event_set', U32)
               ] + oq.loss_dt_list()
     elt_dt = numpy.dtype(dtlist)
-    etags = dstore['etags'].value
+    etags = build_etags(dstore['events'])
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz in rlzs:
