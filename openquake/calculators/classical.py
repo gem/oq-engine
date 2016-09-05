@@ -327,7 +327,7 @@ class PSHACalculator(base.HazardCalculator):
                 for name in array.dtype.names:
                     array[i][name] = row[name]
             self.source_info = array
-        self.datastore.hdf5.flush()
+        self.datastore.flush()
 
     def post_execute(self, pmap_by_grp_id):
         """
