@@ -783,32 +783,6 @@ def export_gmf_scenario_hdf5(ekey, dstore):
     return [fname]
 
 
-
-@export.add(('gmf_data', 'csv'))
-def export_gmf_scenario(ekey, dstore):
-    oq = dstore['oqparam']
-    if 'scenario' in oq.calculation_mode:
-        n_gmfs = oq.number_of_ground_motion_fields
-        fields = ['%03d' % i for i in range(n_gmfs)]
-        dt = numpy.dtype([(f, F32) for f in fields])
-        etags, gmfs_by_trt_gsim = calc.get_gmfs(dstore)
-        sitemesh = get_mesh(dstore['sitecol'])
-        writer = writers.CsvWriter(fmt='%.5f')
-        for (trt, gsim), gmfs_ in gmfs_by_trt_gsim.items():
-            for imt in gmfs_.dtype.names:
-                gmfs = numpy.zeros(len(gmfs_), dt)
-                for i in range(len(gmfs)):
-                    gmfs[i] = tuple(gmfs_[imt][i])
-                dest = dstore.build_fname('gmf', '%s-%s' % (gsim, imt), 'csv')
-                data = util.compose_arrays(sitemesh, gmfs)
-                writer.save(data, dest)
-    else:  # event based
-        logging.warn('Not exporting the full GMFs for event_based, but you can'
-                     ' specify the rupture ordinals with gmfs:R1,...,Rn')
-        return []
-    return writer.getsaved()
-
-
 DisaggMatrix = collections.namedtuple(
     'DisaggMatrix', 'poe iml dim_labels matrix')
 
