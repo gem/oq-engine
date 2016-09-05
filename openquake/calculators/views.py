@@ -528,7 +528,7 @@ def view_biggest_ebr_gmf(token, dstore):
 @view.add('ruptures_events')
 def view_ruptures_events(token, dstore):
     num_ruptures = len(dstore['sescollection'])
-    num_events = len(dstore['etags'])
+    num_events = len(dstore['events'])
     mult = round(num_events / num_ruptures, 3)
     lst = [('Total number of ruptures', num_ruptures),
            ('Total number of events', num_events),

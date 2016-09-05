@@ -89,7 +89,11 @@ def expose_outputs(dstore):
         dskeys.add('uhs')  # export them
     if oq.hazard_maps:
         dskeys.add('hmaps')  # export them
-    if 'realizations' in dskeys and len(dstore['realizations']) <= 1:
+    try:
+        rlzs = dstore['realizations']
+    except KeyError:
+        rlzs = []
+    if 'realizations' in dskeys and len(rlzs) <= 1:
         dskeys.remove('realizations')  # do not export a single realization
     if 'sescollection' in dskeys and 'scenario' in calcmode:
         exportable.remove('sescollection')  # do not export
@@ -171,6 +175,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         calc = base.calculators(oqparam, monitor, calc_id=job_id)
         tb = 'None\n'
         try:
+            logs.dbcmd('set_status', job_id, 'executing')
             _do_run_calc(calc, exports, hazard_calculation_id)
             logs.dbcmd('finish', job_id, 'complete')
             expose_outputs(calc.datastore)

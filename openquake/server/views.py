@@ -237,7 +237,7 @@ def calc(request, id=None):
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
         response_data.append(
             dict(id=hc_id, owner=owner, status=status, job_type=job_type,
-                 is_running=is_running, description=desc, url=url))
+                 is_running=bool(is_running), description=desc, url=url))
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
@@ -335,7 +335,7 @@ def run_calc(request):
         response_data = exc_msg.splitlines()
         status = 500
     else:
-        response_data = dict(job_id=job_id, status='executing')
+        response_data = dict(job_id=job_id, status='created')
         status = 200
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=status)
