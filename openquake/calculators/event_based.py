@@ -49,7 +49,7 @@ F64 = numpy.float64
 event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
 
-long_event_dt = numpy.dtype([
+stored_event_dt = numpy.dtype([
     ('rupserial', U32), ('eid', U32), ('ses', U32), ('occ', U32),
     ('sample', U32), ('grp_id', U16), ('source_id', 'S30')])
 
@@ -413,7 +413,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """Extend the 'events' dataset with the given ruptures"""
         n = ruptures_by_grp_id.num_events
         for grp_id, ebrs in ruptures_by_grp_id.items():
-            events = numpy.zeros(n, long_event_dt)
+            events = numpy.zeros(n, stored_event_dt)
             i = 0
             for ebr in ebrs:
                 names = ebr.events.dtype.names
