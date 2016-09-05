@@ -74,7 +74,8 @@ PRECALC_MAP = dict(
     classical_bcr=['classical', 'classical_bcr'],
     classical_damage=['classical', 'classical_damage'],
     event_based=['event_based', 'event_based_risk'],
-    event_based_risk=['event_based', 'event_based_risk'])
+    event_based_risk=['event_based', 'event_based_risk'],
+    ebr_gmf=['event_based'])
 
 
 def set_array(longarray, shortarray):
@@ -418,7 +419,7 @@ class HazardCalculator(BaseCalculator):
         To be overridden to initialize the datasets needed by the calculation
         """
         self.random_seed = None
-        if 'csm_info' in self.datastore or 'csm_info' in self.datastore.parent:
+        if 'csm_info' in self.datastore:
             self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
         else:  # build a fake; used by risk-from-file calculators
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
