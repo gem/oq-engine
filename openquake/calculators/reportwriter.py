@@ -30,8 +30,9 @@ import time
 
 from openquake.baselib.general import humansize, AccumDict
 from openquake.baselib.python3compat import encode
-from openquake.commonlib import readinput, datastore, parallel
+from openquake.commonlib import readinput, parallel
 from openquake.calculators.classical import PSHACalculator
+from openquake.calculators import views
 
 
 def indent(text):
@@ -96,7 +97,7 @@ class ReportWriter(object):
         if obj:
             text = '\n::\n\n' + indent(str(obj))
         else:
-            text = datastore.view(name, self.dstore)
+            text = views.view(name, self.dstore)
         self.text += '\n'.join(['\n\n' + title, line, text])
 
     def make_report(self):

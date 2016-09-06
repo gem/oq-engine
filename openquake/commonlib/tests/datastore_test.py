@@ -21,12 +21,7 @@ import os
 import unittest
 import tempfile
 import numpy
-from openquake.commonlib.datastore import DataStore, view, read
-
-
-@view.add('key1_upper')
-def view_key1_upper(key, dstore):
-    return dstore['key1'].upper()
+from openquake.commonlib.datastore import DataStore, read
 
 
 class DataStoreTestCase(unittest.TestCase):
@@ -45,9 +40,6 @@ class DataStoreTestCase(unittest.TestCase):
         del self.dstore['key2']
         self.assertEqual(list(self.dstore), ['key1'])
         self.assertEqual(self.dstore['key1'], 'value1')
-
-        # test a datastore view
-        self.assertEqual(view('key1_upper', self.dstore), 'VALUE1')
 
     def test_hdf5(self):
         # store numpy arrays as hdf5 files
