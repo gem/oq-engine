@@ -245,10 +245,17 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         num_assets = {sid: len(self.assets_by_site[sid])
                       for sid in self.sitecol.sids}
         all_ruptures = []
-        for serial in self.datastore['sescollection']:
-            rup = self.datastore['sescollection/' + serial]
-            rup.set_weight(num_rlzs, num_assets)
-            all_ruptures.append(rup)
+        precalc = self.precalc.precalc
+        if precalc:
+            for grp_id, sesruptures in precalc.result.items():
+                for sr in sesruptures:
+                    sr.set_weight(num_rlzs, {})
+                    all_ruptures.append(sr)
+        else:
+            for serial in self.datastore['sescollection']:
+                rup = self.datastore['sescollection/' + serial]
+                rup.set_weight(num_rlzs, num_assets)
+                all_ruptures.append(rup)
         all_ruptures.sort(key=operator.attrgetter('serial'))
         if not self.riskmodel.covs:
             # do not generate epsilons
