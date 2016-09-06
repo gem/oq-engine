@@ -570,11 +570,13 @@ def export_uhs_hdf5(ekey, dstore):
 def export_hmaps_hdf5(ekey, dstore):
     oq = dstore['oqparam']
     mesh = get_mesh(dstore['sitecol'])
+    pdic = DictArray({imt: oq.poes for imt in oq.imtls})
     fname = dstore.export_path('%s.%s' % ekey)
     with hdf5.File(fname, 'w') as f:
         for dskey in dstore['hcurves']:
             hcurves = dstore['hcurves/%s' % dskey]
-            hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
+            hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes).convert(
+                pdic, len(mesh))
             f['hmaps/%s' % dskey] = util.compose_arrays(mesh, hmap)
     return [fname]
 
