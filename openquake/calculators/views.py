@@ -28,17 +28,20 @@ import collections
 import numpy
 import h5py
 
-from openquake.baselib.general import humansize, groupby, AccumDict
+from openquake.baselib.general import (
+    humansize, groupby, AccumDict, CallableDict)
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.python3compat import unicode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source
-from openquake.commonlib.datastore import view
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv, FIVEDIGITS)
 
 FLOAT = (float, numpy.float32, numpy.float64, decimal.Decimal)
 INT = (int, numpy.uint32, numpy.int64)
+
+# a dictionary of views datastore -> array
+view = CallableDict(keyfunc=lambda s: s.split(':', 1)[0])
 
 
 # ########################## utility functions ############################## #
@@ -628,6 +631,15 @@ def view_task_info(token, dstore):
     """
     Display statistical information about the tasks performance
     """
+    args = token.split(':')[1:]  # called as task_info:task_name
+    if args:
+        [task] = args
+        array = dstore['task_' + task].value
+        rduration = array['duration'] / array['weight']
+        data = util.compose_arrays(rduration, array, 'rduration')
+        data.sort(order='duration')
+        return rst_table(data)
+
     tasks = [key[5:] for key in dstore if key.startswith('task_')]
     data = ['operation-duration mean stddev min max num_tasks'.split()]
     for task in tasks:
