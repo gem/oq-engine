@@ -25,12 +25,7 @@ import numpy
 import h5py
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import CallableDict
 from openquake.commonlib.writers import write_csv
-
-
-# a dictionary of views datastore -> array
-view = CallableDict()
 
 DATADIR = os.environ.get('OQ_DATADIR', os.path.expanduser('~/oqdata'))
 
