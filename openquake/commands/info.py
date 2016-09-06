@@ -24,7 +24,7 @@ import operator
 from openquake.baselib import sap
 from openquake.baselib.general import groupby
 from openquake.baselib.performance import Monitor
-from openquake.commonlib import nrml, readinput, datastore
+from openquake.commonlib import nrml, readinput
 from openquake.commonlib.parallel import get_pickled_sizes
 from openquake.commonlib.export import export
 from openquake.calculators import base, reportwriter, views
@@ -76,7 +76,7 @@ def info(calculators, gsims, views, exports, report, input_file=''):
         for gs in gsim.get_available_gsims():
             print(gs)
     if views:
-        for name in sorted(datastore.view):
+        for name in sorted(views.view):
             print(name)
     if exports:
         dic = groupby(export, operator.itemgetter(0),
