@@ -516,7 +516,6 @@ class EventBasedCalculator(ClassicalCalculator):
         self.sesruptures = []
         for serial in self.datastore['sescollection']:
             sr = self.datastore['sescollection/' + serial]
-            sr.set_weight(num_rlzs, {})
             self.sesruptures.append(sr)
         self.sesruptures.sort(key=operator.attrgetter('serial'))
         if self.oqparam.ground_motion_fields:
@@ -560,8 +559,7 @@ class EventBasedCalculator(ClassicalCalculator):
         min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
         for block in split_in_blocks(
                 ebruptures, oq.concurrent_tasks or 1,
-                key=operator.attrgetter('grp_id'),
-                weight=operator.attrgetter('weight')):
+                key=operator.attrgetter('grp_id')):
             grp_id = block[0].grp_id
             rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
             yield block, self.sitecol, imts, rlzs_by_gsim, min_iml, monitor
