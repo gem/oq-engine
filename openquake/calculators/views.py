@@ -621,3 +621,18 @@ def view_required_params_per_trt(token, dstore):
     return rst_table(
         tbl, header='grp_id gsims distances siteparams ruptparams'.split(),
         fmt=scientificformat)
+
+
+@view.add('task_info')
+def view_task_info(token, dstore):
+    """
+    Display statistical information about the tasks performance
+    """
+    tasks = [key[5:] for key in dstore if key.startswith('task_')]
+    data = ['operation-duration mean stddev min max num_tasks'.split()]
+    for task in tasks:
+        val = dstore['task_' + task]['duration']
+        data.append(stats(task, val))
+    if len(data) == 1:
+        return 'Not available'
+    return rst_table(data)
