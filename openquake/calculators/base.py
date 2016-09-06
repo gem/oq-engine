@@ -35,7 +35,7 @@ from openquake.risklib import riskinput, __version__
 from openquake.commonlib import readinput, riskmodels, datastore, source
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import starmap, executor
-from openquake.baselib.python3compat import with_metaclass, encode
+from openquake.baselib.python3compat import with_metaclass
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -174,9 +174,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         try:
             if pre_execute:
                 self.pre_execute()
-            result = self.execute()
-            if result:
-                self.post_execute(result)
+            self.result = self.execute()
+            if self.result:
+                self.post_execute(self.result)
             self.before_export()
             exported = self.export(kw.get('exports', ''))
         except KeyboardInterrupt:
@@ -271,6 +271,8 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                     logging.info('exported %s: %s', key, exported[ekey])
 
         if self.close:  # in the engine we close later
+            if self.result:
+                self.result.clear()
             try:
                 self.datastore.close()
             except (RuntimeError, ValueError):
@@ -345,16 +347,16 @@ class HazardCalculator(BaseCalculator):
         return sum(len(assets) for assets in self.assets_by_site)
 
     def compute_previous(self):
-        precalc = calculators[self.pre_calculator](
+        self.precalc = calculators[self.pre_calculator](
             self.oqparam, self.monitor('precalculator'),
             self.datastore.calc_id)
-        precalc.run()
+        self.precalc.run(close=False)
         if 'scenario' not in self.oqparam.calculation_mode:
-            self.csm = precalc.csm
-        pre_attrs = vars(precalc)
+            self.csm = self.precalc.csm
+        pre_attrs = vars(self.precalc)
         for name in ('riskmodel', 'assets_by_site'):
             if name in pre_attrs:
-                setattr(self, name, getattr(precalc, name))
+                setattr(self, name, getattr(self.precalc, name))
 
     def read_previous(self, precalc_id):
         parent = datastore.read(precalc_id)
