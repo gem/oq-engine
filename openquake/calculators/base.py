@@ -66,16 +66,15 @@ rlz_dt = numpy.dtype([('uid', hdf5.vstr), ('model', hdf5.vstr),
 logversion = {True}
 
 PRECALC_MAP = dict(
-    classical=['psha', 'classical'],
-    disaggregation=['psha', 'classical'],
-    scenario_risk=['scenario', 'scenario_risk'],
-    scenario_damage=['scenario', 'scenario_damage'],
-    classical_risk=['classical', 'classical_risk'],
-    classical_bcr=['classical', 'classical_bcr'],
-    classical_damage=['classical', 'classical_damage'],
-    event_based=['event_based', 'event_based_risk'],
-    event_based_risk=['event_based', 'event_based_risk'],
-    ebr_gmf=['event_based'])
+    classical=['psha'],
+    disaggregation=['psha'],
+    scenario_risk=['scenario'],
+    scenario_damage=['scenario'],
+    classical_risk=['classical'],
+    classical_bcr=['classical'],
+    classical_damage=['classical'],
+    event_based=['event_based_risk'],
+    event_based_risk=['event_based'])
 
 
 def set_array(longarray, shortarray):
@@ -109,7 +108,7 @@ def check_precalc_consistency(calc_mode, precalc_mode):
         calculation_mode of the previous calculation
     """
     ok_mode = PRECALC_MAP[calc_mode]
-    if precalc_mode not in ok_mode:
+    if calc_mode != precalc_mode and precalc_mode not in ok_mode:
         raise InvalidCalculationID(
             'In order to run a risk calculation of kind %r, '
             'you need to provide a calculation of kind %r, '
