@@ -629,7 +629,11 @@ def view_required_params_per_trt(token, dstore):
 @view.add('task_info')
 def view_task_info(token, dstore):
     """
-    Display statistical information about the tasks performance
+    Display statistical information about the tasks performance.
+    It is possible to get full information about a specific task
+    with a command like this one, for a classical calculation::
+
+      $ oq show task_info:classical
     """
     args = token.split(':')[1:]  # called as task_info:task_name
     if args:
