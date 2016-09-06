@@ -783,43 +783,6 @@ def export_gmf_scenario_hdf5(ekey, dstore):
     return [fname]
 
 
-# not used right now
-def export_hazard_curves_xml(key, dest, sitecol, curves_by_imt,
-                             imtls, investigation_time):
-    """
-    Export the curves of the given realization into XML.
-
-    :param key: output_type and export_type
-    :param dest: name of the exported file
-    :param sitecol: site collection
-    :param curves_by_imt: dictionary with the curves keyed by IMT
-    :param imtls: dictionary with the intensity measure types and levels
-    :param investigation_time: investigation time in years
-    """
-    mdata = []
-    hcurves = []
-    for imt_str, imls in sorted(imtls.items()):
-        hcurves.append(
-            [HazardCurve(site.location, poes)
-             for site, poes in zip(sitecol, curves_by_imt[imt_str])])
-        imt = from_string(imt_str)
-        mdata.append({
-            'quantile_value': None,
-            'statistics': None,
-            'smlt_path': '',
-            'gsimlt_path': '',
-            'investigation_time': investigation_time,
-            'imt': imt[0],
-            'sa_period': imt[1],
-            'sa_damping': imt[2],
-            'imls': imls,
-        })
-    writer = hazard_writers.MultiHazardCurveXMLWriter(dest, mdata)
-    with floatformat('%12.8E'):
-        writer.serialize(hcurves)
-    return {dest: dest}
-
-
 DisaggMatrix = collections.namedtuple(
     'DisaggMatrix', 'poe iml dim_labels matrix')
 
