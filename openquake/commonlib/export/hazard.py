@@ -31,7 +31,7 @@ from openquake.baselib import hdf5
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
 from openquake.commonlib.export import export
-from openquake.commonlib.writers import floatformat, write_csv
+from openquake.commonlib.writers import write_csv
 from openquake.commonlib import writers, hazard_writers, util, readinput
 from openquake.risklib.riskinput import create, GmfCollector
 from openquake.commonlib import calc
@@ -539,9 +539,8 @@ def _extract(hmap, imt, j):
     return tup
 
 
-# FIXME: hmaps, uhs not working yet
 @export.add(('hcurves', 'hdf5'))
-def export_hazard_hdf5(ekey, dstore):
+def export_hcurves_hdf5(ekey, dstore):
     mesh = get_mesh(dstore['sitecol'])
     imtls = dstore['oqparam'].imtls
     fname = dstore.export_path('%s.%s' % ekey)
@@ -551,6 +550,32 @@ def export_hazard_hdf5(ekey, dstore):
             curves = dstore['%s/%s' % (ekey[0], dskey)].convert(
                 imtls, len(mesh))
             f['%s/%s' % (ekey[0], dskey)] = util.compose_arrays(mesh, curves)
+    return [fname]
+
+
+@export.add(('uhs', 'hdf5'))
+def export_uhs_hdf5(ekey, dstore):
+    oq = dstore['oqparam']
+    mesh = get_mesh(dstore['sitecol'])
+    fname = dstore.export_path('%s.%s' % ekey)
+    with hdf5.File(fname, 'w') as f:
+        for dskey in dstore['hcurves']:
+            hcurves = dstore['hcurves/%s' % dskey]
+            uhs_curves = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(mesh))
+            f['uhs/%s' % dskey] = util.compose_arrays(mesh, uhs_curves)
+    return [fname]
+
+
+@export.add(('hmaps', 'hdf5'))
+def export_hmaps_hdf5(ekey, dstore):
+    oq = dstore['oqparam']
+    mesh = get_mesh(dstore['sitecol'])
+    fname = dstore.export_path('%s.%s' % ekey)
+    with hdf5.File(fname, 'w') as f:
+        for dskey in dstore['hcurves']:
+            hcurves = dstore['hcurves/%s' % dskey]
+            hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
+            f['hmaps/%s' % dskey] = util.compose_arrays(mesh, hmap)
     return [fname]
 
 
