@@ -516,7 +516,7 @@ class EventBasedCalculator(ClassicalCalculator):
         self.sesruptures = []
         for serial in self.datastore['sescollection']:
             sr = self.datastore['sescollection/' + serial]
-            sr.set_weight(num_rlzs, {})
+            # sr.set_weight(num_rlzs, {})
             self.sesruptures.append(sr)
         self.sesruptures.sort(key=operator.attrgetter('serial'))
         if self.oqparam.ground_motion_fields:
