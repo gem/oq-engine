@@ -90,14 +90,14 @@ def show(what, calc_id=-1):
         print('Realizations in order of distance from the mean curves')
         for dist, rlz in sorted(dists):
             print('%s: rmsep=%s' % (rlz, dist))
-    elif what in datastore.view:
-        print(datastore.view(what, ds))
-    else:
+    elif what in ds:
         obj = ds[what]
         if hasattr(obj, 'value'):  # an array
             print(write_csv(io.StringIO(), obj.value))
         else:
             print(obj)
+    else:
+        print(datastore.view(what, ds))
 
     ds.close()
 
