@@ -23,7 +23,7 @@ from openquake.qa_tests_data.scenario_risk import (
 
 from openquake.baselib.general import writetmp
 from openquake.calculators.tests import CalculatorTestCase
-from openquake.commonlib.datastore import view
+from openquake.calculators.views import view
 from openquake.commonlib.export import export
 
 
