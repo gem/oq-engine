@@ -23,10 +23,11 @@ import logging
 
 from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.baselib import sap
+from openquake.risklib import scientific
 from openquake.commonlib import datastore
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import rmsep
-from openquake.risklib import scientific
+from openquake.calculators.views import view
 
 
 def get_hcurves_and_means(dstore):
@@ -97,7 +98,7 @@ def show(what, calc_id=-1):
         else:
             print(obj)
     else:
-        print(datastore.view(what, ds))
+        print(view(what, ds))
 
     ds.close()
 
