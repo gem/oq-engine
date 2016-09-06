@@ -27,7 +27,8 @@ from openquake.baselib.performance import Monitor
 from openquake.commonlib import nrml, readinput
 from openquake.commonlib.parallel import get_pickled_sizes
 from openquake.commonlib.export import export
-from openquake.calculators import base, reportwriter, views
+from openquake.calculators import base, reportwriter
+from openquake.calculators.views import view, rst_table
 from openquake.hazardlib import gsim
 
 
@@ -44,7 +45,7 @@ def print_csm_info(fname):
     rlzs_assoc = csm.info.get_rlzs_assoc()
     print(rlzs_assoc)
     tot, pairs = get_pickled_sizes(rlzs_assoc)
-    print(views.rst_table(pairs, ['attribute', 'nbytes']))
+    print(rst_table(pairs, ['attribute', 'nbytes']))
 
 
 def do_build_reports(directory):
@@ -76,7 +77,7 @@ def info(calculators, gsims, views, exports, report, input_file=''):
         for gs in gsim.get_available_gsims():
             print(gs)
     if views:
-        for name in sorted(views.view):
+        for name in sorted(view):
             print(name)
     if exports:
         dic = groupby(export, operator.itemgetter(0),
