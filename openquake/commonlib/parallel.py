@@ -30,7 +30,9 @@ import traceback
 import functools
 import multiprocessing.dummy
 from concurrent.futures import as_completed, ProcessPoolExecutor, Future
+import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
 from openquake.baselib.general import (
@@ -209,6 +211,10 @@ class IterResult(object):
     :param progress:
         a logging function for the progress report
     """
+    task_data_dt = numpy.dtype(
+        [('taskno', numpy.uint32), ('weight', numpy.float32),
+         ('duration', numpy.float32)])
+
     def __init__(self, futures, taskname, num_tasks=None,
                  progress=logging.info):
         self.futures = futures
@@ -251,12 +257,20 @@ class IterResult(object):
                 raise etype(val)
             if self.num_tasks:
                 next(self.log_percent)
-            mon.flush()
+            self.save_task_data(mon)
             yield val
         if self.received:
             self.progress('Received %s of data, maximum per task %s',
                           humansize(sum(self.received)),
                           humansize(max(self.received)))
+
+    def save_task_data(self, mon):
+        if hasattr(mon, 'weight'):
+            duration = mon.children[0].duration  # the task is the first child
+            tup = (mon.task_no, mon.weight, duration)
+            data = numpy.array([tup], self.task_data_dt)
+            hdf5.extend3(mon.hdf5path, 'task_' + self.name, data)
+        mon.flush()
 
 
 class TaskManager(object):
@@ -434,6 +448,9 @@ class TaskManager(object):
                 self.progress('Submitting %s "%s" tasks', nargs, self.name)
             if isinstance(args[-1], Monitor):  # add incremental task number
                 args[-1].task_no = task_no
+                weight = getattr(args[0], 'weight', None)
+                if weight:
+                    args[-1].weight = weight
             self.submit(*args)
         if not task_no:
             logging.info('No %s tasks were submitted', self.name)
