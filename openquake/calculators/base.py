@@ -35,7 +35,6 @@ from openquake.risklib import riskinput, __version__
 from openquake.commonlib import readinput, riskmodels, datastore, source
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import starmap, executor
-from openquake.calculators.views import view, rst_table, stats
 from openquake.baselib.python3compat import with_metaclass, encode
 
 get_taxonomy = operator.attrgetter('taxonomy')
@@ -643,23 +642,5 @@ class RiskCalculator(HazardCalculator):
         res = starmap(self.core_task.__func__, all_args).reduce()
         return res
 
-
-@view.add('task_info')
-def view_task_info(token, dstore):
-    """
-    Display statistical information about the tasks performance
-    """
-    pdata = dstore['performance_data'].value
-    operations = sorted(op for op in set(pdata['operation'])
                         if op.startswith('total '))
-    data = ['measurement mean stddev min max num_tasks'.split()]
-    for op in operations:
-        task = op[6:]  # strip 'total '
         records = pdata[pdata['operation'] == encode(op)]
-        if len(records):
-            for stat in ('time_sec', 'memory_mb'):
-                val = records[stat]
-                data.append(stats(task + '.' + stat, val))
-    if len(data) == 1:
-        return 'Not available'
-    return rst_table(data)
