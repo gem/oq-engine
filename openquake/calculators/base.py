@@ -641,6 +641,3 @@ class RiskCalculator(HazardCalculator):
                     for riskinput in self.riskinputs)
         res = starmap(self.core_task.__func__, all_args).reduce()
         return res
-
-                        if op.startswith('total '))
-        records = pdata[pdata['operation'] == encode(op)]
