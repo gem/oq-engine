@@ -426,7 +426,8 @@ class EventBasedRuptureCalculator(PSHACalculator):
                         events[name][i] = event[name]
                     self.eid += 1
                     i += 1
-                self.datastore['sescollection/%s' % ebr.serial] = ebr
+                if not self.oqparam.ground_motion_fields:
+                    self.datastore['sescollection/%s' % ebr.serial] = ebr
             self.datastore.extend('events', events)
 
     def post_execute(self, result):
@@ -435,7 +436,8 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """
         nr = sum(len(result[grp_id]) for grp_id in result)
         logging.info('Saved %d ruptures, %d events', nr, self.eid)
-        self.datastore.set_nbytes('sescollection')
+        if 'sescollection' in self.datastore:
+            self.datastore.set_nbytes('sescollection')
         self.datastore.set_nbytes('events')
 
         for dset in self.rup_data.values():
@@ -504,24 +506,6 @@ class EventBasedCalculator(ClassicalCalculator):
     core_task = compute_gmfs_and_curves
     is_stochastic = True
 
-    def pre_execute(self):
-        """
-        Read the precomputed ruptures (or compute them on the fly) and
-        prepare some empty files in the export directory to store the gmfs
-        (if any). If there were pre-existing files, they will be erased.
-        """
-        super(EventBasedCalculator, self).pre_execute()
-        rlzs_by_tr_id = self.rlzs_assoc.get_rlzs_by_grp_id()
-        num_rlzs = {t: len(rlzs) for t, rlzs in rlzs_by_tr_id.items()}
-        self.sesruptures = []
-        for serial in self.datastore['sescollection']:
-            sr = self.datastore['sescollection/' + serial]
-            sr.set_weight(num_rlzs, {})
-            self.sesruptures.append(sr)
-        self.sesruptures.sort(key=operator.attrgetter('serial'))
-        if self.oqparam.ground_motion_fields:
-            calc.check_overflow(self)
-
     def combine_pmaps_and_save_gmfs(self, acc, res):
         """
         Combine the hazard curves (if any) and save the gmfs (if any)
@@ -574,6 +558,23 @@ class EventBasedCalculator(ClassicalCalculator):
         oq = self.oqparam
         if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
             return
+
+        rlzs_by_tr_id = self.rlzs_assoc.get_rlzs_by_grp_id()
+        num_rlzs = {t: len(rlzs) for t, rlzs in rlzs_by_tr_id.items()}
+        self.sesruptures = []
+        if self.precalc:
+            for grp_id, sesruptures in self.precalc.result.items():
+                for sr in sesruptures:
+                    self.sesruptures.append(sr)
+        else:
+            for serial in self.datastore['sescollection']:
+                sr = self.datastore['sescollection/' + serial]
+                sr.set_weight(num_rlzs, {})
+                self.sesruptures.append(sr)
+        self.sesruptures.sort(key=operator.attrgetter('serial'))
+        if self.oqparam.ground_motion_fields:
+            calc.check_overflow(self)
+
         L = len(oq.imtls.array)
         acc = parallel.starmap(
             self.core_task.__func__, self.gen_args(self.sesruptures)).reduce(
