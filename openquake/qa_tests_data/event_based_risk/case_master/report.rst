@@ -1,11 +1,11 @@
 event based risk
 ================
 
-============================================== ================================
-gem-tstation:/home/michele/ssd/calc_48272.hdf5 updated Wed Sep  7 15:56:09 2016
-engine_version                                 2.1.0-git3a14ca6                
-hazardlib_version                              0.21.0-git89bccaf               
-============================================== ================================
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_48423.hdf5 Wed Sep  7 16:04:33 2016
+engine_version                                 2.1.0-gitfaa2965        
+hazardlib_version                              0.21.0-git89bccaf       
+============================================== ========================
 
 num_sites = 7, sitecol = 1015 B
 
@@ -110,7 +110,7 @@ hazard.n_levels                        46
 hazard.n_realizations                  8           
 hazard.n_sites                         7           
 hazard.n_sources                       4           
-hazard.output_weight                   10,304      
+hazard.output_weight                   2,576       
 hostname                               gem-tstation
 require_epsilons                       1           
 ====================================== ============
@@ -141,9 +141,9 @@ Slowest sources
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class              weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
-2            1         SimpleFaultSource         482    15        0.0         0.051      0.193         0.032         15       
-0            1         SimpleFaultSource         482    15        0.0         0.077      0.161         0.023         15       
-1            2         SimpleFaultSource         4.000  0         0.002       0.0        0.017         0.017         1        
+0            1         SimpleFaultSource         482    15        0.0         0.095      0.179         0.026         15       
+2            1         SimpleFaultSource         482    15        0.0         0.096      0.173         0.026         15       
+1            2         SimpleFaultSource         4.000  0         0.001       0.0        0.017         0.017         1        
 3            2         CharacteristicFaultSource 1.000  0         0.001       0.0        0.003         0.003         1        
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 
@@ -153,15 +153,15 @@ Computation times by source typology
 source_class              filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ========================= =========== ========== ============= ============= ========= ======
 CharacteristicFaultSource 0.001       0.0        0.003         0.003         1         1     
-SimpleFaultSource         0.002       0.128      0.372         0.072         31        3     
+SimpleFaultSource         0.001       0.191      0.369         0.069         31        3     
 ========================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ======================= ===== ====== ===== ===== =========
 operation-duration      mean  stddev min   max   num_tasks
-compute_gmfs_and_curves 0.036 0.016  0.021 0.059 9        
-compute_ruptures        0.017 0.009  0.004 0.033 24       
+compute_gmfs_and_curves 0.039 0.017  0.020 0.064 9        
+compute_ruptures        0.016 0.007  0.004 0.029 24       
 ======================= ===== ====== ===== ===== =========
 
 Slowest operations
@@ -169,19 +169,19 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.398     0.0       24    
-total compute_gmfs_and_curves  0.327     0.828     9     
-compute poes                   0.145     0.0       9     
-building hazard curves         0.141     0.0       9     
-managing sources               0.099     0.0       1     
-saving gmfs                    0.044     0.0       9     
-make contexts                  0.027     0.0       9     
-saving ruptures                0.017     0.0       24    
-filtering ruptures             0.017     0.0       9     
-reading composite source model 0.017     0.0       1     
-aggregating hcurves            0.009     0.0       9     
-reading exposure               0.005     0.0       1     
-filtering sources              0.003     0.0       2     
-store source_info              0.002     0.0       1     
-reading site collection        7.153E-06 0.0       1     
+total compute_ruptures         0.390     0.0       24    
+total compute_gmfs_and_curves  0.350     0.742     9     
+managing sources               0.162     0.0       1     
+compute poes                   0.158     0.0       9     
+building hazard curves         0.149     0.0       9     
+saving gmfs                    0.041     0.0       9     
+make contexts                  0.028     0.0       9     
+saving ruptures                0.026     0.0       24    
+filtering ruptures             0.018     0.0       9     
+reading composite source model 0.016     0.0       1     
+aggregating hcurves            0.008     0.0       9     
+reading exposure               0.004     0.0       1     
+store source_info              0.003     0.0       1     
+filtering sources              0.002     0.0       2     
+reading site collection        6.914E-06 0.0       1     
 ============================== ========= ========= ======

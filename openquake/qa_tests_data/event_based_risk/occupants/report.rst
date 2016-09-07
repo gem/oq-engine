@@ -1,11 +1,11 @@
 event based risk
 ================
 
-============================================== ================================
-gem-tstation:/home/michele/ssd/calc_48268.hdf5 updated Wed Sep  7 15:55:47 2016
-engine_version                                 2.1.0-git3a14ca6                
-hazardlib_version                              0.21.0-git89bccaf               
-============================================== ================================
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_48419.hdf5 Wed Sep  7 16:04:12 2016
+engine_version                                 2.1.0-gitfaa2965        
+hazardlib_version                              0.21.0-git89bccaf       
+============================================== ========================
 
 num_sites = 7, sitecol = 1015 B
 
@@ -88,7 +88,7 @@ hazard.n_levels                        1
 hazard.n_realizations                  1           
 hazard.n_sites                         7           
 hazard.n_sources                       1           
-hazard.output_weight                   7           
+hazard.output_weight                   7.000       
 hostname                               gem-tstation
 require_epsilons                       1           
 ====================================== ============
@@ -129,7 +129,7 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class      weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
-0            1         SimpleFaultSource 482    15        0.0         0.058      0.805         0.098         15       
+0            1         SimpleFaultSource 482    15        0.0         0.057      0.827         0.104         15       
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -137,14 +137,14 @@ Computation times by source typology
 ================= =========== ========== ============= ============= ========= ======
 source_class      filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ================= =========== ========== ============= ============= ========= ======
-SimpleFaultSource 0.0         0.058      0.805         0.098         15        1     
+SimpleFaultSource 0.0         0.057      0.827         0.104         15        1     
 ================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.063 0.021  0.032 0.099 13       
+compute_ruptures   0.064 0.021  0.031 0.105 13       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -152,12 +152,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.814     1.254     13    
-filtering ruptures             0.602     0.0       265   
-saving ruptures                0.155     0.0       13    
-managing sources               0.086     0.0       1     
-reading composite source model 0.008     0.0       1     
+total compute_ruptures         0.836     1.219     13    
+filtering ruptures             0.627     0.0       265   
+saving ruptures                0.151     0.0       13    
+managing sources               0.116     0.0       1     
+reading composite source model 0.007     0.0       1     
 reading exposure               0.005     0.0       1     
 store source_info              0.001     0.0       1     
-reading site collection        9.060E-06 0.0       1     
+reading site collection        8.106E-06 0.0       1     
 ============================== ========= ========= ======

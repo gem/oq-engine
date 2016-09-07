@@ -1,11 +1,11 @@
 classical damage
 ================
 
-============================================== ================================
-gem-tstation:/home/michele/ssd/calc_48258.hdf5 updated Wed Sep  7 15:55:44 2016
-engine_version                                 2.1.0-git3a14ca6                
-hazardlib_version                              0.21.0-git89bccaf               
-============================================== ================================
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_48409.hdf5 Wed Sep  7 16:04:08 2016
+engine_version                                 2.1.0-gitfaa2965        
+hazardlib_version                              0.21.0-git89bccaf       
+============================================== ========================
 
 num_sites = 7, sitecol = 1015 B
 
@@ -99,20 +99,20 @@ filtered_weight 969
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,907       
+count_eff_ruptures_max_received_per_task 1,910       
 count_eff_ruptures_num_tasks             24          
 count_eff_ruptures_sent.gsims            4,024       
 count_eff_ruptures_sent.monitor          40,608      
 count_eff_ruptures_sent.sitecol          13,272      
 count_eff_ruptures_sent.sources          38,110      
-count_eff_ruptures_tot_received          45,768      
+count_eff_ruptures_tot_received          45,771      
 hazard.input_weight                      969         
 hazard.n_imts                            3           
 hazard.n_levels                          79          
 hazard.n_realizations                    8           
 hazard.n_sites                           7           
 hazard.n_sources                         4           
-hazard.output_weight                     13,272      
+hazard.output_weight                     4,424       
 hostname                                 gem-tstation
 require_epsilons                         False       
 ======================================== ============
@@ -139,8 +139,8 @@ Slowest sources
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class              weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
-2            1         SimpleFaultSource         482    15        0.0         0.096      0.0           0.0           0        
-0            1         SimpleFaultSource         482    15        0.0         0.096      0.0           0.0           0        
+0            1         SimpleFaultSource         482    15        0.0         0.074      0.0           0.0           0        
+2            1         SimpleFaultSource         482    15        0.0         0.058      0.0           0.0           0        
 1            2         SimpleFaultSource         4.000  0         0.002       0.0        0.0           0.0           0        
 3            2         CharacteristicFaultSource 1.000  0         0.001       0.0        0.0           0.0           0        
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
@@ -151,14 +151,14 @@ Computation times by source typology
 source_class              filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ========================= =========== ========== ============= ============= ========= ======
 CharacteristicFaultSource 0.001       0.0        0.0           0.0           0         1     
-SimpleFaultSource         0.002       0.193      0.0           0.0           0         3     
+SimpleFaultSource         0.002       0.132      0.0           0.0           0         3     
 ========================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 6.531E-04 1.201E-04 4.640E-04 8.869E-04 24       
+count_eff_ruptures 6.356E-04 1.462E-04 3.941E-04 8.960E-04 24       
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -166,13 +166,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.135     0.0       1     
-reading composite source model 0.022     0.0       1     
-total count_eff_ruptures       0.016     0.0       24    
+managing sources               0.099     0.0       1     
+reading composite source model 0.023     0.0       1     
+total count_eff_ruptures       0.015     0.238     24    
 reading exposure               0.005     0.0       1     
 filtering sources              0.003     0.0       2     
-aggregate curves               5.736E-04 0.0       24    
-saving probability maps        3.719E-05 0.0       1     
-store source_info              1.192E-05 0.0       1     
+aggregate curves               5.341E-04 0.0       24    
+saving probability maps        3.505E-05 0.0       1     
+store source_info              1.121E-05 0.0       1     
 reading site collection        7.868E-06 0.0       1     
 ============================== ========= ========= ======

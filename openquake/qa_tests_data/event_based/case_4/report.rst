@@ -1,11 +1,11 @@
 Event-Based Hazard QA Test, Case 4
 ==================================
 
-============================================== ================================
-gem-tstation:/home/michele/ssd/calc_48305.hdf5 updated Wed Sep  7 15:57:22 2016
-engine_version                                 2.1.0-git3a14ca6                
-hazardlib_version                              0.21.0-git89bccaf               
-============================================== ================================
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_48456.hdf5 Wed Sep  7 16:05:46 2016
+engine_version                                 2.1.0-gitfaa2965        
+hazardlib_version                              0.21.0-git89bccaf       
+============================================== ========================
 
 num_sites = 1, sitecol = 739 B
 
@@ -94,7 +94,7 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class      weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
-0            1         SimpleFaultSource 10     1         0.0         0.003      0.027         0.027         1        
+0            1         SimpleFaultSource 10     1         0.0         0.003      0.028         0.028         1        
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -102,14 +102,14 @@ Computation times by source typology
 ================= =========== ========== ============= ============= ========= ======
 source_class      filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ================= =========== ========== ============= ============= ========= ======
-SimpleFaultSource 0.0         0.003      0.027         0.027         1         1     
+SimpleFaultSource 0.0         0.003      0.028         0.028         1         1     
 ================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.028 NaN    0.028 0.028 1        
+compute_ruptures   0.029 NaN    0.029 0.029 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -117,11 +117,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.028     0.0       1     
-filtering ruptures             0.015     0.0       10    
-managing sources               0.007     0.0       1     
-reading composite source model 0.006     0.0       1     
+total compute_ruptures         0.029     0.0       1     
+filtering ruptures             0.016     0.0       10    
+managing sources               0.006     0.0       1     
+reading composite source model 0.005     0.0       1     
 saving ruptures                0.002     0.0       1     
-store source_info              0.001     0.0       1     
-reading site collection        3.195E-05 0.0       1     
+store source_info              9.160E-04 0.0       1     
+reading site collection        2.885E-05 0.0       1     
 ============================== ========= ========= ======
