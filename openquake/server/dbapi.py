@@ -230,7 +230,7 @@ class _Replacer(object):
         elif placeholder == '?A':
             return self.join(' AND ', arg) or '1'
         elif placeholder == '?O':
-            return self.join(' OR ', arg)
+            return self.join(' OR ', arg) or '1'
         elif placeholder == '?x':
             self.xargs.append(arg)
             return self.ph
