@@ -252,8 +252,13 @@ HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 def convert_to_array(pmap, sitemesh, imtls):
     """
-    Convert probability map into a composity array with header
+    Convert the probability map into a composite array with header
     of the form PGA-0.1, PGA-0.2 ...
+
+    :param pmap: probability map
+    :param sitemesh: mesh of N sites
+    :param imtls: a DictArray with IMT and levels
+    :returns: a composite array of lenght N
     """
     nsites = len(sitemesh)
     lst = []
