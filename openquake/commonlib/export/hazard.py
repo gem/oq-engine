@@ -250,17 +250,10 @@ class GmfCollection(object):
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-def export_hazard_csv(key, dest, sitemesh, pmap,
-                      imtls, comment):
+def convert_to_array(pmap, sitemesh, imtls):
     """
-    Export the curves of the given realization into CSV.
-
-    :param key: output_type and export_type
-    :param dest: name of the exported file
-    :param sitemesh: site collection
-    :param pmap: a ProbabilityMap
-    :param dict imtls: intensity measure types and levels
-    :param comment: comment to use as header of the exported CSV file
+    Convert probability map into a composity array with header
+    of the form PGA-0.1, PGA-0.2 ...
     """
     nsites = len(sitemesh)
     lst = []
@@ -276,7 +269,23 @@ def export_hazard_csv(key, dest, sitemesh, pmap,
             for iml in imls:
                 curve['%s-%s' % (imt, iml)] = pcurve.array[idx]
                 idx += 1
-    write_csv(dest, util.compose_arrays(sitemesh, curves), comment=comment)
+    return util.compose_arrays(sitemesh, curves)
+
+
+def export_hazard_csv(key, dest, sitemesh, pmap,
+                      imtls, comment):
+    """
+    Export the curves of the given realization into CSV.
+
+    :param key: output_type and export_type
+    :param dest: name of the exported file
+    :param sitemesh: site collection
+    :param pmap: a ProbabilityMap
+    :param dict imtls: intensity measure types and levels
+    :param comment: comment to use as header of the exported CSV file
+    """
+    curves = convert_to_array(pmap, sitemesh, imtls)
+    write_csv(dest, curves, comment=comment)
     return [dest]
 
 
@@ -575,9 +584,8 @@ def export_hmaps_hdf5(ekey, dstore):
     with hdf5.File(fname, 'w') as f:
         for dskey in dstore['hcurves']:
             hcurves = dstore['hcurves/%s' % dskey]
-            hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes).convert(
-                pdic, len(mesh))
-            f['hmaps/%s' % dskey] = util.compose_arrays(mesh, hmap)
+            hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
+            f['hmaps/%s' % dskey] = convert_to_array(hmap, mesh, pdic)
     return [fname]
 
 
