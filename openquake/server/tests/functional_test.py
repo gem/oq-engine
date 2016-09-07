@@ -123,7 +123,6 @@ class EngineServerTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.wait()
-        cls.get('list', job_type='hazard', relevant='true')
         cls.proc.kill()
         os.close(cls.fd)
 
@@ -148,6 +147,10 @@ class EngineServerTestCase(unittest.TestCase):
             text = self.get_text(
                 'result/%s' % res['id'], export_type=etype)
             self.assertGreater(len(text), 0)
+
+        # test no filtering in actions.get_calcs
+        #all_jobs = self.get('list')
+        #self.assertGreater(len(all_jobs), 1)
 
     def test_err_1(self):
         # the rupture XML file has a syntax error
