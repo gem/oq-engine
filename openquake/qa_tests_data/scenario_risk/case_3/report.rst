@@ -1,28 +1,31 @@
 Scenario QA Test 3
 ==================
 
-gem-tstation:/home/michele/ssd/calc_45878.hdf5 updated Wed Aug 31 12:12:28 2016
+============================================== ================================
+gem-tstation:/home/michele/ssd/calc_48316.hdf5 updated Wed Sep  7 15:57:56 2016
+engine_version                                 2.1.0-git3a14ca6                
+hazardlib_version                              0.21.0-git89bccaf               
+============================================== ================================
 
 num_sites = 4, sitecol = 877 B
 
 Parameters
 ----------
-============================ ==================
-calculation_mode             'scenario_risk'   
-number_of_logic_tree_samples 0                 
-maximum_distance             {u'default': 300} 
-investigation_time           None              
-ses_per_logic_tree_path      1                 
-truncation_level             3.0               
-rupture_mesh_spacing         10.0              
-complex_fault_mesh_spacing   10.0              
-width_of_mfd_bin             None              
-area_source_discretization   None              
-random_seed                  3                 
-master_seed                  0                 
-avg_losses                   False             
-engine_version               '2.1.0-git49748af'
-============================ ==================
+============================ =================
+calculation_mode             'scenario_risk'  
+number_of_logic_tree_samples 0                
+maximum_distance             {u'default': 300}
+investigation_time           None             
+ses_per_logic_tree_path      1                
+truncation_level             3.0              
+rupture_mesh_spacing         10.0             
+complex_fault_mesh_spacing   10.0             
+width_of_mfd_bin             None             
+area_source_discretization   None             
+random_seed                  3                
+master_seed                  0                
+avg_losses                   False            
+============================ =================
 
 Input files
 -----------
@@ -69,11 +72,11 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-computing gmfs          0.023     0.0       1     
+computing gmfs          0.024     0.0       1     
 filtering sites         0.004     0.0       1     
 reading exposure        0.003     0.0       1     
 saving gmfs             0.001     0.0       1     
-building epsilons       4.981E-04 0.0       1     
-building riskinputs     3.428E-04 0.0       1     
-reading site collection 5.960E-06 0.0       1     
+building epsilons       4.830E-04 0.0       1     
+building riskinputs     3.490E-04 0.0       1     
+reading site collection 6.199E-06 0.0       1     
 ======================= ========= ========= ======

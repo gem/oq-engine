@@ -1,7 +1,11 @@
 Classical PSHA QA test
 ======================
 
-gem-tstation:/home/michele/ssd/calc_45842.hdf5 updated Wed Aug 31 12:10:56 2016
+============================================== ================================
+gem-tstation:/home/michele/ssd/calc_48280.hdf5 updated Wed Sep  7 15:56:30 2016
+engine_version                                 2.1.0-git3a14ca6                
+hazardlib_version                              0.21.0-git89bccaf               
+============================================== ================================
 
 num_sites = 21, sitecol = 1.62 KB
 
@@ -21,7 +25,6 @@ area_source_discretization   10.0
 random_seed                  23                              
 master_seed                  0                               
 sites_per_tile               10000                           
-engine_version               '2.1.0-git49748af'              
 ============================ ================================
 
 Input files
@@ -85,20 +88,20 @@ filtered_weight 3,894
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,393       
+count_eff_ruptures_max_received_per_task 1,378       
 count_eff_ruptures_num_tasks             17          
-count_eff_ruptures_sent.monitor          18,972      
-count_eff_ruptures_sent.rlzs_by_gsim     12,804      
+count_eff_ruptures_sent.gsims            2,856       
+count_eff_ruptures_sent.monitor          19,686      
 count_eff_ruptures_sent.sitecol          14,161      
 count_eff_ruptures_sent.sources          1,637,018   
-count_eff_ruptures_tot_received          23,665      
+count_eff_ruptures_tot_received          23,378      
 hazard.input_weight                      4,686       
 hazard.n_imts                            2           
-hazard.n_levels                          13          
+hazard.n_levels                          26          
 hazard.n_realizations                    4           
 hazard.n_sites                           21          
 hazard.n_sources                         426         
-hazard.output_weight                     2,184       
+hazard.output_weight                     4,368       
 hostname                                 gem-tstation
 ======================================== ============
 
@@ -108,25 +111,25 @@ Slowest sources
 src_group_id source_id source_class              weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 0            0_0       CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
-1            50_0      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
-1            96_0      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
-1            103_0     CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
-1            97_1      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
-1            66_1      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
-1            99_1      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
-1            80_0      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
-1            49_1      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
-0            28_1      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
-1            103_1     CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
-1            114_0     CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
-0            0_1       CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
-1            50_1      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
-0            29_0      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
-0            11_1      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
-1            118_0     CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
-1            56_0      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
-0            4_0       CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
-0            8_1       CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
+1            39_1      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
+1            114_1     CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
+0            22_1      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
+0            57_1      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
+0            4_1       CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
+0            29_1      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
+1            31_1      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
+1            53_0      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
+1            81_0      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
+1            88_0      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
+1            108_0     CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
+0            42_1      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
+0            64_1      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
+1            67_0      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
+1            100_1     CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
+1            73_1      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
+0            36_1      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
+1            95_1      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
+0            79_0      CharacteristicFaultSource 11     0         0.001       0.0        0.0           0.0           0        
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -134,24 +137,27 @@ Computation times by source typology
 ========================= =========== ========== ============= ============= ========= ======
 source_class              filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ========================= =========== ========== ============= ============= ========= ======
-CharacteristicFaultSource 0.365       0.0        0.0           0.0           0         354   
+CharacteristicFaultSource 0.380       0.0        0.0           0.0           0         354   
 ========================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
-Not available
+================== ===== ========= ===== ===== =========
+operation-duration mean  stddev    min   max   num_tasks
+count_eff_ruptures 0.002 5.812E-04 0.001 0.003 17       
+================== ===== ========= ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 2.336     0.0       1     
-managing sources               0.529     0.0       1     
-filtering sources              0.439     0.0       426   
-total count_eff_ruptures       0.038     0.059     17    
-aggregate curves               3.371E-04 0.0       17    
-reading site collection        1.671E-04 0.0       1     
-saving probability maps        2.980E-05 0.0       1     
-store source_info              1.097E-05 0.0       1     
+reading composite source model 2.141     0.0       1     
+managing sources               0.509     0.0       1     
+filtering sources              0.456     0.0       426   
+total count_eff_ruptures       0.034     0.121     17    
+aggregate curves               2.182E-04 0.0       17    
+reading site collection        1.791E-04 0.0       1     
+saving probability maps        2.098E-05 0.0       1     
+store source_info              7.153E-06 0.0       1     
 ============================== ========= ========= ======
