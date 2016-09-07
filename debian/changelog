@@ -1,5 +1,7 @@
 [Michele Simionato]
   * Avoided saving the ruptures when ground_motion_fields is True
+  * Finalized the HDF5 export for hazard curves, hazard maps and uniform
+    hazard spectra
   * Restored a weight of 1 for each rupture in the event based calculator
   * Removed the MultiHazardCurveXMLWriter
   * Improved the saving of the ruptures in event based calculations
