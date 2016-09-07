@@ -221,7 +221,6 @@ class _Replacer(object):
             self.xargs.extend(arg)
             return ', '.join([self.ph] * len(arg))
         elif placeholder == '?S':
-            self.sargs.extend(arg)
             return ', '.join(['{}'] * len(arg))
         elif placeholder == '?D':
             keys, values = zip(*sorted(arg.items()))
@@ -229,7 +228,7 @@ class _Replacer(object):
             self.xargs.extend(values)
             return ', '.join(['{}=' + self.ph] * len(arg))
         elif placeholder == '?A':
-            return self.join(' AND ', arg)
+            return self.join(' AND ', arg) or '1'
         elif placeholder == '?O':
             return self.join(' OR ', arg)
         elif placeholder == '?x':
@@ -285,6 +284,13 @@ class Db(object):
         self.args = args
         self.kw = kw
         self.local = threading.local()
+
+    @classmethod
+    def expand(cls, m_templ, *m_args):
+        """
+        Performs partial interpolation of the template. Used for debugging.
+        """
+        return match(m_templ, *m_args)[0]
 
     @property
     def conn(self):
