@@ -246,12 +246,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                       for sid in self.sitecol.sids}
         all_ruptures = []
         precalc = self.precalc.precalc
-        if precalc:
+        if precalc:  # the ruptures are already in memory
             for grp_id, sesruptures in precalc.result.items():
                 for sr in sesruptures:
-                    sr.set_weight(num_rlzs, {})
+                    sr.set_weight(num_rlzs, num_assets)
                     all_ruptures.append(sr)
-        else:
+        else:  # read the ruptures from the datastore
             for serial in self.datastore['sescollection']:
                 rup = self.datastore['sescollection/' + serial]
                 rup.set_weight(num_rlzs, num_assets)
