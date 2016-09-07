@@ -1,11 +1,11 @@
 Event-based PSHA producing hazard curves only
 =============================================
 
-============================================== ================================
-gem-tstation:/home/michele/ssd/calc_48300.hdf5 updated Wed Sep  7 15:57:21 2016
-engine_version                                 2.1.0-git3a14ca6                
-hazardlib_version                              0.21.0-git89bccaf               
-============================================== ================================
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_48451.hdf5 Wed Sep  7 16:05:45 2016
+engine_version                                 2.1.0-gitfaa2965        
+hazardlib_version                              0.21.0-git89bccaf       
+============================================== ========================
 
 num_sites = 1, sitecol = 739 B
 
@@ -94,7 +94,7 @@ compute_ruptures_sent.gsims            5,080
 compute_ruptures_sent.monitor          18,360      
 compute_ruptures_sent.sitecol          8,660       
 compute_ruptures_sent.sources          189,496     
-compute_ruptures_tot_received          2,999,378   
+compute_ruptures_tot_received          2,999,381   
 hazard.input_weight                    122         
 hazard.n_imts                          1           
 hazard.n_levels                        5           
@@ -118,8 +118,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            1         AreaSource   61     307       0.0         0.126      2.344         0.028         307      
-1            1         AreaSource   61     307       0.0         0.125      1.696         0.045         307      
+0            1         AreaSource   61     307       0.0         0.125      2.317         0.025         307      
+1            1         AreaSource   61     307       0.0         0.125      1.727         0.026         307      
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -127,14 +127,14 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-AreaSource   0.0         0.251      4.040         0.073         614       2     
+AreaSource   0.0         0.250      4.044         0.051         614       2     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.203 0.078  0.005 0.300 20       
+compute_ruptures   0.203 0.078  0.008 0.324 20       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -142,11 +142,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         4.063     0.555     20    
-saving ruptures                1.536     0.0       20    
-filtering ruptures             0.839     0.0       3,081 
-managing sources               0.193     0.0       1     
-reading composite source model 0.122     0.0       1     
-store source_info              0.009     0.0       1     
-reading site collection        3.386E-05 0.0       1     
+total compute_ruptures         4.067     0.0       20    
+saving ruptures                1.473     0.0       20    
+filtering ruptures             0.821     0.0       3,081 
+managing sources               0.183     0.0       1     
+reading composite source model 0.124     0.0       1     
+store source_info              0.007     0.0       1     
+reading site collection        3.219E-05 0.0       1     
 ============================== ========= ========= ======
