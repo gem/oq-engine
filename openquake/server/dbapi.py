@@ -221,6 +221,7 @@ class _Replacer(object):
             self.xargs.extend(arg)
             return ', '.join([self.ph] * len(arg))
         elif placeholder == '?S':
+            self.sargs.extend(arg)
             return ', '.join(['{}'] * len(arg))
         elif placeholder == '?D':
             keys, values = zip(*sorted(arg.items()))
