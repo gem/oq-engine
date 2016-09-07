@@ -25,7 +25,6 @@ from docutils.examples import html_parts
 
 from openquake.commonlib.datastore import read
 from openquake.calculators.views import view_fullreport
-from openquake.calculators import base  # needed for registering task_info
 from openquake.engine.logs import dbcmd
 
 tablecounter = itertools.count(0)
@@ -176,7 +175,7 @@ def make_report(isodate='today'):
         except Exception as exc:
             report = dict(
                 html_title='Could not generate report: %s' % cgi.escape(
-                    exc, quote=True),
+                    str(exc), quote=True),
                 fragment='')
         page = report['html_title']
         page += html([stats._fields, stats])
