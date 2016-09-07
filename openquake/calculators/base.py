@@ -35,7 +35,7 @@ from openquake.risklib import riskinput, __version__
 from openquake.commonlib import readinput, riskmodels, datastore, source
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import starmap, executor
-from openquake.baselib.python3compat import with_metaclass, encode
+from openquake.baselib.python3compat import with_metaclass
 from openquake.commonlib.export import export as exp
 
 get_taxonomy = operator.attrgetter('taxonomy')
@@ -66,16 +66,15 @@ rlz_dt = numpy.dtype([('uid', hdf5.vstr), ('model', hdf5.vstr),
 logversion = {True}
 
 PRECALC_MAP = dict(
-    classical=['psha', 'classical'],
-    disaggregation=['psha', 'classical'],
-    scenario_risk=['scenario', 'scenario_risk'],
-    scenario_damage=['scenario', 'scenario_damage'],
-    classical_risk=['classical', 'classical_risk'],
-    classical_bcr=['classical', 'classical_bcr'],
-    classical_damage=['classical', 'classical_damage'],
-    event_based=['event_based', 'event_based_risk'],
-    event_based_risk=['event_based', 'event_based_risk'],
-    ebr_gmf=['event_based'])
+    classical=['psha'],
+    disaggregation=['psha'],
+    scenario_risk=['scenario'],
+    scenario_damage=['scenario'],
+    classical_risk=['classical'],
+    classical_bcr=['classical'],
+    classical_damage=['classical'],
+    event_based=['event_based_risk'],
+    event_based_risk=['event_based'])
 
 
 def set_array(longarray, shortarray):
@@ -109,7 +108,7 @@ def check_precalc_consistency(calc_mode, precalc_mode):
         calculation_mode of the previous calculation
     """
     ok_mode = PRECALC_MAP[calc_mode]
-    if precalc_mode not in ok_mode:
+    if calc_mode != precalc_mode and precalc_mode not in ok_mode:
         raise InvalidCalculationID(
             'In order to run a risk calculation of kind %r, '
             'you need to provide a calculation of kind %r, '
@@ -176,9 +175,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         try:
             if pre_execute:
                 self.pre_execute()
-            result = self.execute()
-            if result:
-                self.post_execute(result)
+            self.result = self.execute()
+            if self.result:
+                self.post_execute(self.result)
             self.before_export()
             exported = self.export(kw.get('exports', ''))
         except KeyboardInterrupt:
@@ -256,6 +255,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 self._export(('uhs', fmt), exported)
 
         if self.close:  # in the engine we close later
+            self.result.clear()
             try:
                 self.datastore.close()
             except (RuntimeError, ValueError):
@@ -336,16 +336,16 @@ class HazardCalculator(BaseCalculator):
         return sum(len(assets) for assets in self.assets_by_site)
 
     def compute_previous(self):
-        precalc = calculators[self.pre_calculator](
+        self.precalc = calculators[self.pre_calculator](
             self.oqparam, self.monitor('precalculator'),
             self.datastore.calc_id)
-        precalc.run()
+        self.precalc.run(close=False)
         if 'scenario' not in self.oqparam.calculation_mode:
-            self.csm = precalc.csm
-        pre_attrs = vars(precalc)
+            self.csm = self.precalc.csm
+        pre_attrs = vars(self.precalc)
         for name in ('riskmodel', 'assets_by_site'):
             if name in pre_attrs:
-                setattr(self, name, getattr(precalc, name))
+                setattr(self, name, getattr(self.precalc, name))
 
     def read_previous(self, precalc_id):
         parent = datastore.read(precalc_id)
