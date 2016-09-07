@@ -34,6 +34,8 @@ from openquake.baselib.general import groupby, DictArray
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
+from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
+
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.source.base import SourceGroup, SourceGroupCollection
 
@@ -61,21 +63,6 @@ def zero_curves(num_sites, imtls):
     # numpy dtype for the hazard curves
     imt_dt = numpy.dtype([(imt, float, 1 if imls is None else len(imls))
                           for imt, imls in imtls.items()])
-    return numpy.zeros(num_sites, imt_dt)
-
-
-def zero_maps(num_sites, imts, poes=()):
-    """
-    :param num_sites: the number of sites
-    :param imts: the intensity measure types
-    :returns: an array of zero curves with length num_sites
-    """
-    # numpy dtype for the hazard maps
-    if poes:
-        imt_dt = numpy.dtype([('%s-%s' % (imt, poe), numpy.float32)
-                              for imt in imts for poe in poes])
-    else:
-        imt_dt = numpy.dtype([(imt, numpy.float32) for imt in imts])
     return numpy.zeros(num_sites, imt_dt)
 
 
@@ -149,7 +136,7 @@ def calc_hazard_curves(
     imtls = DictArray(imtls)
     sources_by_trt = groupby(
         sources, operator.attrgetter('tectonic_region_type'))
-    pmap = ProbabilityMap()
+    pmap = ProbabilityMap(len(imtls.array), 1)
     for trt in sources_by_trt:
         pmap |= hazard_curves_per_trt(
             sources_by_trt[trt], sites, imtls, [gsim_by_trt[trt]],
@@ -251,15 +238,17 @@ def hazard_curves_per_trt(
     assert len(trts) == 1, 'Multiple TRTs: %s' % ', '.join(trts)
 
     src_indep = group.src_interdep == 'indep'
-    cmaker = ContextMaker(gsims, maximum_distance)
-    sources_sites = ((source, sites) for source in sources)
-    ctx_mon = monitor('making contexts', measuremem=False)
-    pne_mon = monitor('computing poes', measuremem=False)
-    disagg_mon = monitor('get closest points', measuremem=False)
-    monitor.calc_times = []  # pairs (src_id, delta_t)
-    pmap = ProbabilityMap()
-    for src, s_sites in source_site_filter(sources_sites):
-        t0 = time.time()
+    with GroundShakingIntensityModel.forbid_instantiation():
+        imtls = DictArray(imtls)
+        cmaker = ContextMaker(gsims, maximum_distance)
+        sources_sites = ((source, sites) for source in sources)
+        ctx_mon = monitor('making contexts', measuremem=False)
+        pne_mon = monitor('computing poes', measuremem=False)
+        disagg_mon = monitor('get closest points', measuremem=False)
+        monitor.calc_times = []  # pairs (src_id, delta_t)
+        pmap = ProbabilityMap(len(imtls.array), len(gsims))
+        for src, s_sites in source_site_filter(sources_sites):
+            t0 = time.time()
         poemap = poe_map(src, s_sites, imtls, cmaker, truncation_level, bbs,
                          group.rup_interdep == 'indep',
                          ctx_mon, pne_mon, disagg_mon)
@@ -269,13 +258,13 @@ def hazard_curves_per_trt(
             weight = float(group.srcs_weights[src.source_id])
             for sid in poemap:
                 pmap[sid] += poemap[sid] * weight
-        # we are attaching the calculation times to the monitor
-        # so that oq-lite (and the engine) can store them
-        monitor.calc_times.append((src.id, time.time() - t0))
-        # NB: source.id is an integer; it should not be confused
-        # with source.source_id, which is a string
-    monitor.eff_ruptures = pne_mon.counts  # contributing ruptures
-    return pmap
+            # we are attaching the calculation times to the monitor
+            # so that oq-lite (and the engine) can store them
+            monitor.calc_times.append((src.id, time.time() - t0))
+            # NB: source.id is an integer; it should not be confused
+            # with source.source_id, which is a string
+        monitor.eff_ruptures = pne_mon.counts  # contributing ruptures
+        return pmap
 
 
 def calc_hazard_curves_ext(
