@@ -109,7 +109,7 @@ class ReportWriter(object):
             self.add('csm_info')
             self.add('required_params_per_trt')
         self.add('rlzs_assoc', ds['csm_info'].get_rlzs_assoc())
-        if 'composite_source_model' in ds:
+        if 'source_info' in ds:
             self.add('ruptures_per_trt')
         if 'scenario' not in oq.calculation_mode:
             self.add('job_info')
