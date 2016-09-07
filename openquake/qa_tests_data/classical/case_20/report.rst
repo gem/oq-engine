@@ -1,11 +1,11 @@
 Classical Hazard QA Test, Case 20
 =================================
 
-============================================== ================================
-gem-tstation:/home/michele/ssd/calc_48287.hdf5 updated Wed Sep  7 15:56:44 2016
-engine_version                                 2.1.0-git3a14ca6                
-hazardlib_version                              0.21.0-git89bccaf               
-============================================== ================================
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_48438.hdf5 Wed Sep  7 16:05:09 2016
+engine_version                                 2.1.0-gitfaa2965        
+hazardlib_version                              0.21.0-git89bccaf       
+============================================== ========================
 
 num_sites = 1, sitecol = 739 B
 
@@ -181,26 +181,26 @@ Slowest sources
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class              weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
-1            SFLT1     SimpleFaultSource         56     0         0.001       0.0        0.0           0.0           0        
-7            SFLT1     SimpleFaultSource         58     0         0.001       0.0        0.0           0.0           0        
-0            SFLT1     SimpleFaultSource         56     0         0.001       0.0        0.0           0.0           0        
-8            SFLT1     SimpleFaultSource         58     0         0.001       0.0        0.0           0.0           0        
-5            SFLT1     SimpleFaultSource         56     0         0.001       0.0        0.0           0.0           0        
-2            SFLT1     SimpleFaultSource         56     0         0.001       0.0        0.0           0.0           0        
-6            SFLT1     SimpleFaultSource         58     0         0.001       0.0        0.0           0.0           0        
 4            SFLT1     SimpleFaultSource         56     0         0.001       0.0        0.0           0.0           0        
-3            SFLT1     SimpleFaultSource         56     0         0.001       0.0        0.0           0.0           0        
+5            SFLT1     SimpleFaultSource         56     0         0.001       0.0        0.0           0.0           0        
 11           SFLT1     SimpleFaultSource         58     0         0.001       0.0        0.0           0.0           0        
-10           SFLT1     SimpleFaultSource         58     0         0.001       0.0        0.0           0.0           0        
 9            SFLT1     SimpleFaultSource         58     0         0.001       0.0        0.0           0.0           0        
+3            SFLT1     SimpleFaultSource         56     0         0.001       0.0        0.0           0.0           0        
+6            SFLT1     SimpleFaultSource         58     0         0.001       0.0        0.0           0.0           0        
+10           SFLT1     SimpleFaultSource         58     0         0.001       0.0        0.0           0.0           0        
+2            SFLT1     SimpleFaultSource         56     0         0.001       0.0        0.0           0.0           0        
+0            SFLT1     SimpleFaultSource         56     0         0.001       0.0        0.0           0.0           0        
+1            SFLT1     SimpleFaultSource         56     0         0.001       0.0        0.0           0.0           0        
 0            COMFLT1   ComplexFaultSource        29     0         0.001       0.0        0.0           0.0           0        
+7            SFLT1     SimpleFaultSource         58     0         0.001       0.0        0.0           0.0           0        
+8            SFLT1     SimpleFaultSource         58     0         0.001       0.0        0.0           0.0           0        
+7            CHAR1     CharacteristicFaultSource 1.000  0         0.001       0.0        0.0           0.0           0        
 4            CHAR1     CharacteristicFaultSource 1.000  0         0.001       0.0        0.0           0.0           0        
 10           CHAR1     CharacteristicFaultSource 1.000  0         0.001       0.0        0.0           0.0           0        
-1            CHAR1     CharacteristicFaultSource 1.000  0         0.001       0.0        0.0           0.0           0        
 0            CHAR1     CharacteristicFaultSource 1.000  0         0.001       0.0        0.0           0.0           0        
 5            CHAR1     CharacteristicFaultSource 1.000  0         0.001       0.0        0.0           0.0           0        
-5            COMFLT1   ComplexFaultSource        62     0         0.001       0.0        0.0           0.0           0        
-6            COMFLT1   ComplexFaultSource        29     0         0.001       0.0        0.0           0.0           0        
+8            CHAR1     CharacteristicFaultSource 1.000  0         0.001       0.0        0.0           0.0           0        
+1            COMFLT1   ComplexFaultSource        29     0         0.001       0.0        0.0           0.0           0        
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -208,16 +208,16 @@ Computation times by source typology
 ========================= =========== ========== ============= ============= ========= ======
 source_class              filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ========================= =========== ========== ============= ============= ========= ======
-CharacteristicFaultSource 0.013       0.0        0.0           0.0           0         12    
-ComplexFaultSource        0.013       0.0        0.0           0.0           0         12    
-SimpleFaultSource         0.014       0.0        0.0           0.0           0         12    
+CharacteristicFaultSource 0.014       0.0        0.0           0.0           0         12    
+ComplexFaultSource        0.014       0.0        0.0           0.0           0         12    
+SimpleFaultSource         0.015       0.0        0.0           0.0           0         12    
 ========================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 6.610E-04 9.171E-05 3.500E-04 8.390E-04 24       
+count_eff_ruptures 4.537E-04 1.213E-04 3.240E-04 8.230E-04 24       
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -225,12 +225,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.632     0.0       1     
-managing sources               0.063     0.0       1     
-filtering sources              0.040     0.0       36    
-total count_eff_ruptures       0.016     0.0       24    
-aggregate curves               5.772E-04 0.0       24    
-saving probability maps        3.505E-05 0.0       1     
-reading site collection        2.718E-05 0.0       1     
-store source_info              1.001E-05 0.0       1     
+reading composite source model 0.675     0.0       1     
+managing sources               0.069     0.0       1     
+filtering sources              0.043     0.0       36    
+total count_eff_ruptures       0.011     0.0       24    
+aggregate curves               5.250E-04 0.0       24    
+reading site collection        3.219E-05 0.0       1     
+saving probability maps        2.909E-05 0.0       1     
+store source_info              8.106E-06 0.0       1     
 ============================== ========= ========= ======

@@ -1,11 +1,11 @@
 Classical Tiling for Turkey reduced
 ===================================
 
-============================================== ================================
-gem-tstation:/home/michele/ssd/calc_48322.hdf5 updated Wed Sep  7 15:57:59 2016
-engine_version                                 2.1.0-git3a14ca6                
-hazardlib_version                              0.21.0-git89bccaf               
-============================================== ================================
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_48473.hdf5 Wed Sep  7 16:06:23 2016
+engine_version                                 2.1.0-gitfaa2965        
+hazardlib_version                              0.21.0-git89bccaf       
+============================================== ========================
 
 num_sites = 83, sitecol = 4.42 KB
 
@@ -108,7 +108,7 @@ hazard.n_levels                          90
 hazard.n_realizations                    3,840       
 hazard.n_sites                           83          
 hazard.n_sources                         31          
-hazard.output_weight                     57,369,600  
+hazard.output_weight                     28,684,800  
 hostname                                 gem-tstation
 require_epsilons                         False       
 ======================================== ============
@@ -118,9 +118,9 @@ Slowest sources
 ============ ============ ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id    source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ============ ============ ====== ========= =========== ========== ============= ============= =========
-4            AS_GEAS343   AreaSource   96     0         0.011       0.0        0.0           0.0           0        
+4            AS_GEAS343   AreaSource   96     0         0.012       0.0        0.0           0.0           0        
 9            FSBG_TRBG103 AreaSource   43     0         0.004       0.0        0.0           0.0           0        
-9            FSBG_ARAS462 AreaSource   7.650  0         0.001       0.0        0.0           0.0           0        
+9            FSBG_ARAS462 AreaSource   7.650  0         0.002       0.0        0.0           0.0           0        
 ============ ============ ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -135,7 +135,7 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 7.294E-04 1.569E-04 4.270E-04 9.570E-04 15       
+count_eff_ruptures 7.573E-04 1.265E-04 5.560E-04 9.248E-04 15       
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -144,11 +144,11 @@ Slowest operations
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
 reading composite source model 0.627     0.0       1     
-managing sources               0.502     0.0       1     
-filtering sources              0.187     0.0       234   
+managing sources               0.500     0.0       1     
+filtering sources              0.188     0.0       234   
 total count_eff_ruptures       0.011     0.0       15    
 reading site collection        0.009     0.0       1     
-aggregate curves               1.917E-04 0.0       15    
-saving probability maps        2.503E-05 0.0       1     
+aggregate curves               1.915E-04 0.0       15    
+saving probability maps        2.408E-05 0.0       1     
 store source_info              6.914E-06 0.0       1     
 ============================== ========= ========= ======

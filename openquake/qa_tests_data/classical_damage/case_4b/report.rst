@@ -1,11 +1,11 @@
 Classical PSHA-Based Hazard
 ===========================
 
-============================================== ================================
-gem-tstation:/home/michele/ssd/calc_48266.hdf5 updated Wed Sep  7 15:55:47 2016
-engine_version                                 2.1.0-git3a14ca6                
-hazardlib_version                              0.21.0-git89bccaf               
-============================================== ================================
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_48417.hdf5 Wed Sep  7 16:04:11 2016
+engine_version                                 2.1.0-gitfaa2965        
+hazardlib_version                              0.21.0-git89bccaf       
+============================================== ========================
 
 num_sites = 1, sitecol = 739 B
 
@@ -112,7 +112,7 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class      weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
-0            1         SimpleFaultSource 1,694  15        0.0         0.097      0.0           0.0           0        
+0            1         SimpleFaultSource 1,694  15        0.0         0.094      0.0           0.0           0        
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -120,14 +120,14 @@ Computation times by source typology
 ================= =========== ========== ============= ============= ========= ======
 source_class      filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ================= =========== ========== ============= ============= ========= ======
-SimpleFaultSource 0.0         0.097      0.0           0.0           0         1     
+SimpleFaultSource 0.0         0.094      0.0           0.0           0         1     
 ================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 5.870E-04 1.209E-04 3.798E-04 7.262E-04 13       
+count_eff_ruptures 6.564E-04 1.168E-04 3.750E-04 7.632E-04 13       
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -135,12 +135,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.111     0.0       1     
-reading composite source model 0.010     0.0       1     
-total count_eff_ruptures       0.008     0.0       13    
+managing sources               0.105     0.0       1     
+reading composite source model 0.012     0.0       1     
+total count_eff_ruptures       0.009     0.0       13    
 reading exposure               0.003     0.0       1     
-aggregate curves               3.426E-04 0.0       13    
-saving probability maps        4.697E-05 0.0       1     
+aggregate curves               3.457E-04 0.0       13    
+saving probability maps        3.910E-05 0.0       1     
 store source_info              1.311E-05 0.0       1     
-reading site collection        7.153E-06 0.0       1     
+reading site collection        8.106E-06 0.0       1     
 ============================== ========= ========= ======

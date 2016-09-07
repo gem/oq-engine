@@ -1,11 +1,11 @@
 Classical Hazard QA Test, Case 12
 =================================
 
-============================================== ================================
-gem-tstation:/home/michele/ssd/calc_48294.hdf5 updated Wed Sep  7 15:57:10 2016
-engine_version                                 2.1.0-git3a14ca6                
-hazardlib_version                              0.21.0-git89bccaf               
-============================================== ================================
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_48445.hdf5 Wed Sep  7 16:05:34 2016
+engine_version                                 2.1.0-gitfaa2965        
+hazardlib_version                              0.21.0-git89bccaf       
+============================================== ========================
 
 num_sites = 1, sitecol = 739 B
 
@@ -96,7 +96,7 @@ hazard.n_levels                          3
 hazard.n_realizations                    1           
 hazard.n_sites                           1           
 hazard.n_sources                         2           
-hazard.output_weight                     3           
+hazard.output_weight                     3.000       
 hostname                                 gem-tstation
 ======================================== ============
 
@@ -105,8 +105,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            1         PointSource  0.025  0         3.791E-05   0.0        0.0           0.0           0        
-1            2         PointSource  0.025  0         2.098E-05   0.0        0.0           0.0           0        
+0            1         PointSource  0.025  0         3.600E-05   0.0        0.0           0.0           0        
+1            2         PointSource  0.025  0         2.003E-05   0.0        0.0           0.0           0        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -114,14 +114,14 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-PointSource  5.889E-05   0.0        0.0           0.0           0         2     
+PointSource  5.603E-05   0.0        0.0           0.0           0         2     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 6.214E-04 1.307E-04 5.291E-04 7.138E-04 2        
+count_eff_ruptures 5.800E-04 4.097E-05 5.510E-04 6.089E-04 2        
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -129,12 +129,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.006     0.0       1     
+reading composite source model 0.005     0.0       1     
 managing sources               0.004     0.0       1     
 total count_eff_ruptures       0.001     0.0       2     
-filtering sources              5.889E-05 0.0       2     
-aggregate curves               4.101E-05 0.0       2     
-reading site collection        3.505E-05 0.0       1     
+filtering sources              5.603E-05 0.0       2     
+aggregate curves               3.815E-05 0.0       2     
+reading site collection        3.409E-05 0.0       1     
 saving probability maps        2.503E-05 0.0       1     
-store source_info              1.001E-05 0.0       1     
+store source_info              8.106E-06 0.0       1     
 ============================== ========= ========= ======

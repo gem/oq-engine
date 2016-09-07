@@ -1,11 +1,11 @@
 Event Based Risk QA Test 1
 ==========================
 
-============================================== ================================
-gem-tstation:/home/michele/ssd/calc_48274.hdf5 updated Wed Sep  7 15:56:14 2016
-engine_version                                 2.1.0-git3a14ca6                
-hazardlib_version                              0.21.0-git89bccaf               
-============================================== ================================
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_48425.hdf5 Wed Sep  7 16:04:38 2016
+engine_version                                 2.1.0-gitfaa2965        
+hazardlib_version                              0.21.0-git89bccaf       
+============================================== ========================
 
 num_sites = 3, sitecol = 831 B
 
@@ -92,7 +92,7 @@ hazard.n_levels                        34
 hazard.n_realizations                  2           
 hazard.n_sites                         3           
 hazard.n_sources                       3           
-hazard.output_weight                   1,224       
+hazard.output_weight                   204         
 hostname                               gem-tstation
 require_epsilons                       1           
 ====================================== ============
@@ -123,9 +123,9 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            3         PointSource  0.150  0         2.003E-05   0.0        0.006         0.006         1        
-0            2         PointSource  0.150  0         2.313E-05   0.0        0.006         0.006         1        
-0            1         PointSource  0.150  0         4.101E-05   0.0        0.003         0.003         1        
+0            2         PointSource  0.150  0         2.289E-05   0.0        0.005         0.005         1        
+0            3         PointSource  0.150  0         2.003E-05   0.0        0.005         0.005         1        
+0            1         PointSource  0.150  0         4.101E-05   0.0        0.005         0.005         1        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -133,15 +133,15 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-PointSource  8.416E-05   0.0        0.015         0.015         3         3     
+PointSource  8.392E-05   0.0        0.015         0.015         3         3     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ======================= ===== ====== ===== ===== =========
 operation-duration      mean  stddev min   max   num_tasks
-compute_gmfs_and_curves 0.009 0.003  0.005 0.012 8        
-compute_ruptures        0.015 NaN    0.015 0.015 1        
+compute_gmfs_and_curves 0.009 0.002  0.006 0.012 8        
+compute_ruptures        0.016 NaN    0.016 0.016 1        
 ======================= ===== ====== ===== ===== =========
 
 Slowest operations
@@ -149,18 +149,18 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_gmfs_and_curves  0.074     0.625     8     
-compute poes                   0.058     0.0       8     
-total compute_ruptures         0.015     0.0       1     
+total compute_gmfs_and_curves  0.073     0.418     8     
+compute poes                   0.057     0.0       8     
+total compute_ruptures         0.016     0.0       1     
 make contexts                  0.008     0.0       8     
 saving gmfs                    0.008     0.0       8     
 reading composite source model 0.005     0.0       1     
+reading exposure               0.004     0.0       1     
 filtering ruptures             0.003     0.0       8     
-reading exposure               0.003     0.0       1     
 managing sources               0.003     0.0       1     
 saving ruptures                0.001     0.0       1     
 store source_info              0.001     0.0       1     
-filtering sources              8.416E-05 0.0       3     
+filtering sources              8.392E-05 0.0       3     
 reading site collection        3.099E-05 0.0       1     
-aggregating hcurves            2.718E-05 0.0       8     
+aggregating hcurves            2.766E-05 0.0       8     
 ============================== ========= ========= ======

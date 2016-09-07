@@ -1,11 +1,11 @@
 Scenario QA Test for occupants
 ==============================
 
-============================================== ================================
-gem-tstation:/home/michele/ssd/calc_48314.hdf5 updated Wed Sep  7 15:57:53 2016
-engine_version                                 2.1.0-git3a14ca6                
-hazardlib_version                              0.21.0-git89bccaf               
-============================================== ================================
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_48465.hdf5 Wed Sep  7 16:06:17 2016
+engine_version                                 2.1.0-gitfaa2965        
+hazardlib_version                              0.21.0-git89bccaf       
+============================================== ========================
 
 num_sites = 3, sitecol = 831 B
 

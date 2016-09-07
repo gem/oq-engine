@@ -1,11 +1,11 @@
 Classical PSHA-Based Hazard
 ===========================
 
-============================================== ================================
-gem-tstation:/home/michele/ssd/calc_48257.hdf5 updated Wed Sep  7 15:55:44 2016
-engine_version                                 2.1.0-git3a14ca6                
-hazardlib_version                              0.21.0-git89bccaf               
-============================================== ================================
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_48408.hdf5 Wed Sep  7 16:04:08 2016
+engine_version                                 2.1.0-gitfaa2965        
+hazardlib_version                              0.21.0-git89bccaf       
+============================================== ========================
 
 num_sites = 1, sitecol = 739 B
 
@@ -127,7 +127,7 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 6.828E-04 9.019E-05 3.879E-04 7.401E-04 13       
+count_eff_ruptures 6.467E-04 1.017E-04 4.420E-04 7.660E-04 13       
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -135,12 +135,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.112     0.0       1     
+managing sources               0.110     0.0       1     
 reading composite source model 0.011     0.0       1     
-total count_eff_ruptures       0.009     0.0       13    
+total count_eff_ruptures       0.008     0.0       13    
 reading exposure               0.003     0.0       1     
-aggregate curves               3.233E-04 0.0       13    
-saving probability maps        4.101E-05 0.0       1     
-store source_info              1.192E-05 0.0       1     
-reading site collection        6.914E-06 0.0       1     
+aggregate curves               2.017E-04 0.0       13    
+saving probability maps        3.314E-05 0.0       1     
+store source_info              9.060E-06 0.0       1     
+reading site collection        7.868E-06 0.0       1     
 ============================== ========= ========= ======

@@ -1,11 +1,11 @@
 Scenario Damage
 ===============
 
-============================================== ================================
-gem-tstation:/home/michele/ssd/calc_48234.hdf5 updated Wed Sep  7 15:55:40 2016
-engine_version                                 2.1.0-git3a14ca6                
-hazardlib_version                              0.21.0-git89bccaf               
-============================================== ================================
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_48385.hdf5 Wed Sep  7 16:04:05 2016
+engine_version                                 2.1.0-gitfaa2965        
+hazardlib_version                              0.21.0-git89bccaf       
+============================================== ========================
 
 num_sites = 1, sitecol = 697 B
 
@@ -69,10 +69,10 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.006     0.0       1     
-reading exposure        0.002     0.0       1     
+filtering sites         0.007     0.0       1     
+reading exposure        0.003     0.0       1     
 computing gmfs          0.002     0.0       1     
 saving gmfs             0.001     0.0       1     
-building riskinputs     9.990E-05 0.0       1     
-reading site collection 8.702E-05 0.0       1     
+building riskinputs     1.259E-04 0.0       1     
+reading site collection 9.990E-05 0.0       1     
 ======================= ========= ========= ======

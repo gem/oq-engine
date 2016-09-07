@@ -81,7 +81,7 @@ class ReportWriter(object):
         dpath = dstore.hdf5path
         mtime = os.path.getmtime(dpath)
         host = '%s:%s' % (info.hostname, decode(dpath))
-        updated = 'updated %s' % time.ctime(mtime)
+        updated = str(time.ctime(mtime))
         versions = sorted(dstore['/'].attrs.items())
         self.text += '\n\n' + views.rst_table([[host, updated]] + versions)
         # NB: in the future, the sitecol could be transferred as
