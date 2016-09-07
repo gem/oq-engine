@@ -427,6 +427,8 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
         list of tuples (job_id, user_name, job_status, job_type,
                         job_is_running, job_description)
     """
+    job_id = ('WHERE id = %s' % id) if id is not None else ''
+
     # helper to get job+calculation data from the oq-engine database
     filterdict = {}
 
@@ -434,9 +436,6 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     # Django super user
     if user_acl_on:
         filterdict['user_name'] = user_name
-
-    if id is not None:
-        filterdict['id'] = id
 
     if 'job_type' in request_get_dict:
         filterdict['job_type'] = request_get_dict.get('job_type')
@@ -448,8 +447,8 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     if 'relevant' in request_get_dict:
         relevant = request_get_dict.get('relevant')
         filterdict['relevant'] = valid.boolean(relevant)
-    jobs = db('SELECT *, %s FROM job WHERE ?A ORDER BY id DESC' % JOB_TYPE,
-              filterdict)
+    jobs = db('SELECT *, %s FROM job %s ORDER BY id DESC' % (JOB_TYPE,
+              job_id), filterdict)
     return [(job.id, job.user_name, job.status, job.job_type,
              job.is_running, job.description) for job in jobs]
 
