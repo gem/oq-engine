@@ -21,3 +21,4 @@ script:
   # FIXME --with-doctest does not work
   # - PYTHONPATH=. nosetests -vsx -a'!slow' --with-xunit --nologcapture
   - PYTHONPATH=.:$(pwd)/oq-hazardlib nosetests -v -a'!slow'
+  - cat /tmp/webui*
