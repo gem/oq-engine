@@ -80,8 +80,10 @@ class ReportWriter(object):
         info = dstore['job_info']
         dpath = dstore.hdf5path
         mtime = os.path.getmtime(dpath)
-        self.text += '\n\n%s:%s updated %s' % (
-            info.hostname, decode(dpath), time.ctime(mtime))
+        host = '%s:%s' % (info.hostname, decode(dpath))
+        updated = 'updated %s' % time.ctime(mtime)
+        versions = sorted(dstore['/'].attrs.items())
+        self.text += '\n\n' + views.rst_table([[host, updated]] + versions)
         # NB: in the future, the sitecol could be transferred as
         # an array by leveraging the HDF5 serialization protocol;
         # for the moment however the size of the
