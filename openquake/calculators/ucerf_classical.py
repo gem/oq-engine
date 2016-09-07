@@ -32,8 +32,7 @@ from openquake.hazardlib.geo.geodetic import min_geodetic_distance
 from openquake.hazardlib.source import PointSource
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.calc.filters import (source_site_distance_filter,
-                                              source_site_noop_filter)
+from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
     get_probability_no_exceedance, hazard_curves_per_trt)
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
@@ -357,7 +356,7 @@ def ucerf_classical_hazard_by_branch(branchnames, ucerf_source, src_group_id,
             pmap = hazard_curves_per_trt(
                 bckgnd_sources,
                 sitecol, imtls, gsims, truncation_level,
-                source_site_filter=source_site_noop_filter,
+                source_site_filter=source_site_distance_filter(max_dist),
                 maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
             dic[src_group_id] |= pmap
             dic.eff_ruptures[src_group_id] += monitor.eff_ruptures
@@ -368,6 +367,7 @@ def ucerf_classical_hazard_by_branch(branchnames, ucerf_source, src_group_id,
 @base.calculators.add('ucerf_psha')
 class UcerfPSHACalculator(classical.PSHACalculator):
     """
+    UCERF classical calculator.
     """
     core_task = ucerf_classical_hazard_by_branch
     is_stochastic = False
@@ -431,41 +431,49 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         if len(self.csm) > 1:
             # when multiple branches, parallelise by branch
             branches = [br.value for br in self.smlt.branches.values()]
-            pmap_by_grp_id = parallel.starmap(
+            rup_res = parallel.starmap(
                 ucerf_classical_hazard_by_branch,
-                self.gen_args(branches, ucerf_source, monitor).reduce(
-                     agg=self.agg_dicts, acc=acc))
+                self.gen_args(branches, ucerf_source, monitor)).submit_all()
         else:
-            # single branch, parallelize by rupture subsets
+            # single branch
             gsims = self.rlzs_assoc.gsims_by_grp_id[0]
             [(branch_id, branch)] = self.smlt.branches.items()
             branchname = branch.value
-            rup_sets = ucerf_source.get_rupture_indices(branchname)
-            results = parallel.apply(
-                ucerf_classical_hazard_by_rupture_set,
-                (rup_sets, branchname, ucerf_source, self.src_group.id,
-                 self.sitecol, gsims, monitor),
-                concurrent_tasks=self.oqparam.concurrent_tasks).submit_all()
 
             logging.info('Getting the background point sources')
             with self.monitor('getting background sources', autoflush=True):
                 bckgnd_sources = ucerf_source.get_background_sources(
                     branchname, self.sitecol, max_dist)
 
-            # parallelize on the background sources
+            # parallelize on the background sources, small tasks
             args = (bckgnd_sources, self.sitecol, oq.imtls,
                     gsims, self.oqparam.truncation_level,
                     source_site_distance_filter(max_dist),
                     max_dist, (), monitor)
-            for pmap in parallel.apply(
-                    hazard_curves_per_trt, args,
-                    concurrent_tasks=self.oqparam.concurrent_tasks):
-                acc[0] |= pmap
-            pmap_by_grp_id = functools.reduce(self.agg_dicts, results, acc)
+            bg_res = parallel.apply(
+                hazard_curves_per_trt, args,
+                concurrent_tasks=self.oqparam.concurrent_tasks).submit_all()
 
-        # TODO: save source_info
+            # parallelize by rupture subsets
+            tasks = self.oqparam.concurrent_tasks * 2  # they are big tasks
+            rup_sets = ucerf_source.get_rupture_indices(branchname)
+            rup_res = parallel.apply(
+                ucerf_classical_hazard_by_rupture_set,
+                (rup_sets, branchname, ucerf_source, self.src_group.id,
+                 self.sitecol, gsims, monitor),
+                concurrent_tasks=tasks).submit_all()
+
+            # compose probabilities from background sources
+            for pmap in bg_res:
+                acc[0] |= pmap
+            with self.monitor('store source_info', autoflush=True):
+                self.store_source_info(acc)
+                self.save_data_transfer(bg_res)
+
+        pmap_by_grp_id = functools.reduce(self.agg_dicts, rup_res, acc)
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(pmap_by_grp_id)
+            self.save_data_transfer(rup_res)
         self.datastore['csm_info'] = self.csm.info
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             functools.partial(self.count_eff_ruptures, pmap_by_grp_id))
