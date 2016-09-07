@@ -1,11 +1,11 @@
 Event Based Hazard
 ==================
 
-============================================== ================================
-gem-tstation:/home/michele/ssd/calc_48270.hdf5 updated Wed Sep  7 15:55:53 2016
-engine_version                                 2.1.0-git3a14ca6                
-hazardlib_version                              0.21.0-git89bccaf               
-============================================== ================================
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_48421.hdf5 Wed Sep  7 16:04:17 2016
+engine_version                                 2.1.0-gitfaa2965        
+hazardlib_version                              0.21.0-git89bccaf       
+============================================== ========================
 
 num_sites = 1, sitecol = 739 B
 
@@ -112,8 +112,8 @@ Slowest sources
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class              weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
-0            3         SimpleFaultSource         482    15        0.0         0.057      0.277         0.036         15       
-0            1         CharacteristicFaultSource 1.000  0         0.002       0.0        0.022         0.022         1        
+0            3         SimpleFaultSource         482    15        0.0         0.057      0.248         0.033         15       
+0            1         CharacteristicFaultSource 1.000  0         0.002       0.0        0.020         0.020         1        
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -121,15 +121,15 @@ Computation times by source typology
 ========================= =========== ========== ============= ============= ========= ======
 source_class              filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ========================= =========== ========== ============= ============= ========= ======
-CharacteristicFaultSource 0.002       0.0        0.022         0.022         1         1     
-SimpleFaultSource         0.0         0.057      0.277         0.036         15        1     
+CharacteristicFaultSource 0.002       0.0        0.020         0.020         1         1     
+SimpleFaultSource         0.0         0.057      0.248         0.033         15        1     
 ========================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.022 0.008  0.008 0.037 14       
+compute_ruptures   0.020 0.009  0.009 0.034 14       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -137,11 +137,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.309     0.0       14    
-managing sources               0.075     0.0       1     
-filtering ruptures             0.032     0.0       5     
-saving ruptures                0.016     0.0       14    
-reading composite source model 0.016     0.0       1     
+total compute_ruptures         0.278     0.0       14    
+managing sources               0.076     0.0       1     
+filtering ruptures             0.031     0.0       5     
+saving ruptures                0.018     0.0       14    
+reading composite source model 0.014     0.0       1     
 reading exposure               0.003     0.0       1     
 store source_info              0.002     0.0       1     
 filtering sources              0.002     0.0       1     

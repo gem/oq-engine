@@ -1,11 +1,11 @@
 Classical PSHA with GMPE logic tree with multiple tectonic region types
 =======================================================================
 
-============================================== ================================
-gem-tstation:/home/michele/ssd/calc_48277.hdf5 updated Wed Sep  7 15:56:15 2016
-engine_version                                 2.1.0-git3a14ca6                
-hazardlib_version                              0.21.0-git89bccaf               
-============================================== ================================
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_48428.hdf5 Wed Sep  7 16:04:39 2016
+engine_version                                 2.1.0-gitfaa2965        
+hazardlib_version                              0.21.0-git89bccaf       
+============================================== ========================
 
 num_sites = 3, sitecol = 831 B
 
@@ -111,7 +111,7 @@ hazard.n_levels                          17
 hazard.n_realizations                    12          
 hazard.n_sites                           3           
 hazard.n_sources                         4           
-hazard.output_weight                     1,224       
+hazard.output_weight                     612         
 hostname                                 gem-tstation
 ======================================== ============
 
@@ -120,10 +120,10 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
+2            1         AreaSource   6.000  16        0.0         0.008      0.0           0.0           0        
 3            1         AreaSource   6.000  16        0.0         0.008      0.0           0.0           0        
-2            1         AreaSource   6.000  16        0.0         0.007      0.0           0.0           0        
-0            1         PointSource  0.375  0         6.294E-05   0.0        0.0           0.0           0        
-1            2         PointSource  0.375  0         4.315E-05   0.0        0.0           0.0           0        
+0            1         PointSource  0.375  0         7.892E-05   0.0        0.0           0.0           0        
+1            2         PointSource  0.375  0         4.792E-05   0.0        0.0           0.0           0        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -131,15 +131,15 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-AreaSource   0.0         0.014      0.0           0.0           0         2     
-PointSource  1.061E-04   0.0        0.0           0.0           0         2     
+AreaSource   0.0         0.016      0.0           0.0           0         2     
+PointSource  1.268E-04   0.0        0.0           0.0           0         2     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 6.747E-04 9.243E-05 4.580E-04 8.111E-04 18       
+count_eff_ruptures 6.431E-04 1.317E-04 4.070E-04 7.999E-04 18       
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -147,12 +147,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.038     0.0       1     
+managing sources               0.037     0.0       1     
 reading composite source model 0.015     0.0       1     
 total count_eff_ruptures       0.012     0.0       18    
-aggregate curves               4.120E-04 0.0       18    
-filtering sources              1.061E-04 0.0       2     
-saving probability maps        3.600E-05 0.0       1     
-reading site collection        3.290E-05 0.0       1     
-store source_info              1.192E-05 0.0       1     
+aggregate curves               4.237E-04 0.0       18    
+filtering sources              1.268E-04 0.0       2     
+saving probability maps        3.481E-05 0.0       1     
+reading site collection        3.386E-05 0.0       1     
+store source_info              1.097E-05 0.0       1     
 ============================== ========= ========= ======

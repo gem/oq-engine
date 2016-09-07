@@ -1,11 +1,11 @@
 Classical Hazard-Risk QA test 4
 ===============================
 
-============================================== ================================
-gem-tstation:/home/michele/ssd/calc_48230.hdf5 updated Wed Sep  7 15:55:39 2016
-engine_version                                 2.1.0-git3a14ca6                
-hazardlib_version                              0.21.0-git89bccaf               
-============================================== ================================
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_48381.hdf5 Wed Sep  7 16:04:03 2016
+engine_version                                 2.1.0-gitfaa2965        
+hazardlib_version                              0.21.0-git89bccaf       
+============================================== ========================
 
 num_sites = 6, sitecol = 969 B
 
@@ -115,8 +115,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            376       AreaSource   55     0         6.750E-04   0.0        0.0           0.0           0        
-0            231       AreaSource   104    0         6.690E-04   0.0        0.0           0.0           0        
+0            376       AreaSource   55     0         6.900E-04   0.0        0.0           0.0           0        
+0            231       AreaSource   104    0         6.840E-04   0.0        0.0           0.0           0        
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -131,7 +131,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.002 4.114E-05 0.002 0.002 2        
+count_eff_ruptures 0.002 6.086E-05 0.002 0.002 2        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -139,13 +139,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 1.960     0.0       1     
+reading composite source model 1.993     0.0       1     
 managing sources               0.031     0.0       1     
 filtering sources              0.025     0.0       37    
-total count_eff_ruptures       0.004     2.383     2     
+total count_eff_ruptures       0.004     2.332     2     
 reading exposure               0.003     0.0       1     
-aggregate curves               2.980E-05 0.0       2     
-saving probability maps        2.193E-05 0.0       1     
-store source_info              6.914E-06 0.0       1     
+aggregate curves               2.885E-05 0.0       2     
+saving probability maps        2.003E-05 0.0       1     
 reading site collection        5.960E-06 0.0       1     
+store source_info              5.960E-06 0.0       1     
 ============================== ========= ========= ======

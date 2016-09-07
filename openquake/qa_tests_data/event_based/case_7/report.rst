@@ -1,11 +1,11 @@
 Event-based PSHA with logic tree sampling
 =========================================
 
-============================================== ================================
-gem-tstation:/home/michele/ssd/calc_48307.hdf5 updated Wed Sep  7 15:57:27 2016
-engine_version                                 2.1.0-git3a14ca6                
-hazardlib_version                              0.21.0-git89bccaf               
-============================================== ================================
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_48458.hdf5 Wed Sep  7 16:05:51 2016
+engine_version                                 2.1.0-gitfaa2965        
+hazardlib_version                              0.21.0-git89bccaf       
+============================================== ========================
 
 num_sites = 3, sitecol = 831 B
 
@@ -117,8 +117,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            1         AreaSource   61     307       0.0         0.118      2.341         0.025         307      
-1            1         AreaSource   61     307       0.0         0.123      1.183         0.009         307      
+0            1         AreaSource   61     307       0.0         0.122      1.908         0.009         307      
+1            1         AreaSource   61     307       0.0         0.131      1.465         0.008         307      
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -126,14 +126,14 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-AreaSource   0.0         0.242      3.524         0.034         614       2     
+AreaSource   0.0         0.253      3.373         0.018         614       2     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.177 0.086  0.004 0.281 20       
+compute_ruptures   0.170 0.062  0.004 0.221 20       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -141,11 +141,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         3.547     0.0       20    
-saving ruptures                1.259     0.0       20    
-filtering ruptures             0.751     0.0       2,598 
-managing sources               0.211     0.0       1     
-reading composite source model 0.119     0.0       1     
+total compute_ruptures         3.393     0.258     20    
+saving ruptures                1.165     0.0       20    
+filtering ruptures             0.663     0.0       2,598 
+managing sources               0.222     0.0       1     
+reading composite source model 0.121     0.0       1     
 store source_info              0.007     0.0       1     
-reading site collection        4.387E-05 0.0       1     
+reading site collection        4.411E-05 0.0       1     
 ============================== ========= ========= ======

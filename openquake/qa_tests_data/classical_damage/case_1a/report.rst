@@ -1,11 +1,11 @@
 Classical PSHA-Based Hazard
 ===========================
 
-============================================== ================================
-gem-tstation:/home/michele/ssd/calc_48261.hdf5 updated Wed Sep  7 15:55:45 2016
-engine_version                                 2.1.0-git3a14ca6                
-hazardlib_version                              0.21.0-git89bccaf               
-============================================== ================================
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_48412.hdf5 Wed Sep  7 16:04:09 2016
+engine_version                                 2.1.0-gitfaa2965        
+hazardlib_version                              0.21.0-git89bccaf       
+============================================== ========================
 
 num_sites = 1, sitecol = 739 B
 
@@ -88,7 +88,7 @@ hazard.n_levels                          8
 hazard.n_realizations                    1           
 hazard.n_sites                           1           
 hazard.n_sources                         1           
-hazard.output_weight                     8           
+hazard.output_weight                     8.000       
 hostname                                 gem-tstation
 require_epsilons                         False       
 ======================================== ============
@@ -112,7 +112,7 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class      weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
-0            1         SimpleFaultSource 1,694  15        0.0         0.094      0.0           0.0           0        
+0            1         SimpleFaultSource 1,694  15        0.0         0.093      0.0           0.0           0        
 ============ ========= ================= ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -120,14 +120,14 @@ Computation times by source typology
 ================= =========== ========== ============= ============= ========= ======
 source_class      filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ================= =========== ========== ============= ============= ========= ======
-SimpleFaultSource 0.0         0.094      0.0           0.0           0         1     
+SimpleFaultSource 0.0         0.093      0.0           0.0           0         1     
 ================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 5.709E-04 1.227E-04 4.382E-04 7.489E-04 13       
+count_eff_ruptures 6.007E-04 1.395E-04 3.581E-04 7.350E-04 13       
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -135,12 +135,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.108     0.0       1     
+managing sources               0.109     0.0       1     
 reading composite source model 0.010     0.0       1     
-total count_eff_ruptures       0.007     0.0       13    
+total count_eff_ruptures       0.008     0.0       13    
 reading exposure               0.003     0.0       1     
-aggregate curves               3.190E-04 0.0       13    
-saving probability maps        3.695E-05 0.0       1     
+aggregate curves               3.247E-04 0.0       13    
+saving probability maps        3.910E-05 0.0       1     
 store source_info              1.192E-05 0.0       1     
 reading site collection        8.106E-06 0.0       1     
 ============================== ========= ========= ======

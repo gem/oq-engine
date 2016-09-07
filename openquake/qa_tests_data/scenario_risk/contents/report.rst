@@ -1,11 +1,11 @@
 Scenario QA Test for contents
 =============================
 
-============================================== ================================
-gem-tstation:/home/michele/ssd/calc_48313.hdf5 updated Wed Sep  7 15:57:53 2016
-engine_version                                 2.1.0-git3a14ca6                
-hazardlib_version                              0.21.0-git89bccaf               
-============================================== ================================
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_48464.hdf5 Wed Sep  7 16:06:17 2016
+engine_version                                 2.1.0-gitfaa2965        
+hazardlib_version                              0.21.0-git89bccaf       
+============================================== ========================
 
 num_sites = 3, sitecol = 831 B
 
@@ -73,5 +73,5 @@ operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 filtering sites         0.005     0.0       1     
 reading exposure        0.003     0.0       1     
-reading site collection 6.914E-06 0.0       1     
+reading site collection 5.960E-06 0.0       1     
 ======================= ========= ========= ======
