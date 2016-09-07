@@ -558,18 +558,14 @@ class EventBasedCalculator(ClassicalCalculator):
         oq = self.oqparam
         if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
             return
-
-        rlzs_by_tr_id = self.rlzs_assoc.get_rlzs_by_grp_id()
-        num_rlzs = {t: len(rlzs) for t, rlzs in rlzs_by_tr_id.items()}
         self.sesruptures = []
-        if self.precalc:
+        if self.precalc:  # the ruptures are already in memory
             for grp_id, sesruptures in self.precalc.result.items():
                 for sr in sesruptures:
                     self.sesruptures.append(sr)
-        else:
+        else:  # read the ruptures from the datastore
             for serial in self.datastore['sescollection']:
                 sr = self.datastore['sescollection/' + serial]
-                sr.set_weight(num_rlzs, {})
                 self.sesruptures.append(sr)
         self.sesruptures.sort(key=operator.attrgetter('serial'))
         if self.oqparam.ground_motion_fields:

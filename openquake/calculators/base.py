@@ -271,8 +271,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                     logging.info('exported %s: %s', key, exported[ekey])
 
         if self.close:  # in the engine we close later
-            if self.result:
-                self.result.clear()
+            self.result.clear()
             try:
                 self.datastore.close()
             except (RuntimeError, ValueError):
