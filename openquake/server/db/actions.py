@@ -427,13 +427,13 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
         list of tuples (job_id, user_name, job_status, job_type,
                         job_is_running, job_description)
     """
+    job_id = ('WHERE id = %s' % id) if id is not None else ''
+
     # helper to get job+calculation data from the oq-engine database
     filterdict = {}
 
     # user_acl_on is true if settings.ACL_ON = True or when the user is a
     # Django super user
-    job_id = ('WHERE id = %s' % id) if id is not None else ''
-
     if user_acl_on:
         filterdict['user_name'] = user_name
 
