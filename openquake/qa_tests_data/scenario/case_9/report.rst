@@ -1,27 +1,30 @@
 Scenario QA Test, Case 9, Multiple GSIMs
 ========================================
 
-gem-tstation:/home/michele/ssd/calc_45805.hdf5 updated Wed Aug 31 12:10:07 2016
+============================================== ================================
+gem-tstation:/home/michele/ssd/calc_48243.hdf5 updated Wed Sep  7 15:55:41 2016
+engine_version                                 2.1.0-git3a14ca6                
+hazardlib_version                              0.21.0-git89bccaf               
+============================================== ================================
 
 num_sites = 3, sitecol = 831 B
 
 Parameters
 ----------
-============================ ==================
-calculation_mode             'scenario'        
-number_of_logic_tree_samples 0                 
-maximum_distance             {u'default': 200} 
-investigation_time           None              
-ses_per_logic_tree_path      1                 
-truncation_level             1.0               
-rupture_mesh_spacing         1.0               
-complex_fault_mesh_spacing   1.0               
-width_of_mfd_bin             None              
-area_source_discretization   None              
-random_seed                  3                 
-master_seed                  0                 
-engine_version               '2.1.0-git49748af'
-============================ ==================
+============================ =================
+calculation_mode             'scenario'       
+number_of_logic_tree_samples 0                
+maximum_distance             {u'default': 200}
+investigation_time           None             
+ses_per_logic_tree_path      1                
+truncation_level             1.0              
+rupture_mesh_spacing         1.0              
+complex_fault_mesh_spacing   1.0              
+width_of_mfd_bin             None             
+area_source_discretization   None             
+random_seed                  3                
+master_seed                  0                
+============================ =================
 
 Input files
 -----------
@@ -51,6 +54,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.011     0.0       1     
-reading site collection 5.102E-05 0.0       1     
+filtering sites         0.012     0.0       1     
+reading site collection 2.789E-05 0.0       1     
 ======================= ========= ========= ======
