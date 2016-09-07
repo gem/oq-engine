@@ -149,8 +149,8 @@ class EngineServerTestCase(unittest.TestCase):
             self.assertGreater(len(text), 0)
 
         # test no filtering in actions.get_calcs
-        #all_jobs = self.get('list')
-        #self.assertGreater(len(all_jobs), 1)
+        all_jobs = self.get('list')
+        self.assertGreater(len(all_jobs), 1)
 
     def test_err_1(self):
         # the rupture XML file has a syntax error
