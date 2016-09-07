@@ -229,9 +229,9 @@ class _Replacer(object):
             self.xargs.extend(values)
             return ', '.join(['{}=' + self.ph] * len(arg))
         elif placeholder == '?A':
-            return self.join(' AND ', arg)
+            return self.join(' AND ', arg) or '1'
         elif placeholder == '?O':
-            return self.join(' OR ', arg)
+            return self.join(' OR ', arg) or '1'
         elif placeholder == '?x':
             self.xargs.append(arg)
             return self.ph
@@ -285,6 +285,13 @@ class Db(object):
         self.args = args
         self.kw = kw
         self.local = threading.local()
+
+    @classmethod
+    def expand(cls, m_templ, *m_args):
+        """
+        Performs partial interpolation of the template. Used for debugging.
+        """
+        return match(m_templ, *m_args)[0]
 
     @property
     def conn(self):
