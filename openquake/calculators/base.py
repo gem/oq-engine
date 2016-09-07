@@ -36,6 +36,7 @@ from openquake.commonlib import readinput, riskmodels, datastore, source
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import starmap, executor
 from openquake.baselib.python3compat import with_metaclass
+from openquake.commonlib.export import export as exp
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -227,8 +228,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
 
         :returns: dictionary output_key -> sorted list of exported paths
         """
-        # avoid circular imports
-        from openquake.commonlib.export import export as exp
         exported = {}
         individual_curves = self.oqparam.individual_curves
         if isinstance(exports, tuple):
@@ -249,26 +248,11 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             for key in sorted(keys):  # top level keys
                 if 'rlzs' in key and not individual_curves:
                     continue  # skip individual curves
-                ekey = (key, fmt)
-                if ekey not in exp:  # non-exportable output
-                    continue
-                with self.monitor('export'):
-                    exported[ekey] = exp(ekey, self.datastore)
-                logging.info('exported %s: %s', key, exported[ekey])
-
+                self._export((key, fmt), exported)
             if has_hcurves and self.oqparam.hazard_maps:
-                ekey = ('hmaps', fmt)
-                if ekey in exp:
-                    with self.monitor('export'):
-                        exported[ekey] = exp(ekey, self.datastore)
-                    logging.info('exported %s: %s', key, exported[ekey])
-
+                self._export(('hmaps', fmt), exported)
             if has_hcurves and self.oqparam.uniform_hazard_spectra:
-                ekey = ('uhs', fmt)
-                if ekey in exp:
-                    with self.monitor('export'):
-                        exported[ekey] = exp(ekey, self.datastore)
-                    logging.info('exported %s: %s', key, exported[ekey])
+                self._export(('uhs', fmt), exported)
 
         if self.close:  # in the engine we close later
             self.result.clear()
@@ -279,6 +263,12 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 # reproduce
                 logging.warn('', exc_info=True)
         return exported
+
+    def _export(self, ekey, exported):
+        if ekey in exp:
+            with self.monitor('export'):
+                exported[ekey] = exp(ekey, self.datastore)
+                logging.info('exported %s: %s', ekey[0], exported[ekey])
 
     def before_export(self):
         """
