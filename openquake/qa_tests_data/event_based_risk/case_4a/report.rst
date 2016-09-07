@@ -1,7 +1,11 @@
 Event Based Hazard
 ==================
 
-gem-tstation:/home/michele/ssd/calc_45832.hdf5 updated Wed Aug 31 12:10:20 2016
+============================================== ================================
+gem-tstation:/home/michele/ssd/calc_48270.hdf5 updated Wed Sep  7 15:55:53 2016
+engine_version                                 2.1.0-git3a14ca6                
+hazardlib_version                              0.21.0-git89bccaf               
+============================================== ================================
 
 num_sites = 1, sitecol = 739 B
 
@@ -20,7 +24,6 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0                            
 random_seed                  24                              
 master_seed                  0                               
-engine_version               '2.1.0-git49748af'              
 ============================ ================================
 
 Input files
@@ -72,13 +75,13 @@ source_model.xml 0      Active Shallow Crust 2           5            483
 Informational data
 ------------------
 ====================================== ============
-compute_ruptures_max_received_per_task 12,491      
+compute_ruptures_max_received_per_task 12,554      
 compute_ruptures_num_tasks             14          
-compute_ruptures_sent.monitor          12,922      
-compute_ruptures_sent.rlzs_by_gsim     7,210       
+compute_ruptures_sent.gsims            1,148       
+compute_ruptures_sent.monitor          13,510      
 compute_ruptures_sent.sitecol          8,456       
 compute_ruptures_sent.sources          30,006      
-compute_ruptures_tot_received          41,293      
+compute_ruptures_tot_received          42,301      
 hazard.input_weight                    483         
 hazard.n_imts                          1           
 hazard.n_levels                        11          
@@ -89,14 +92,6 @@ hazard.output_weight                   1.000
 hostname                               gem-tstation
 require_epsilons                       1           
 ====================================== ============
-
-Specific information for event based
-------------------------------------
-======================== =====
-Total number of ruptures 5    
-Total number of events   6    
-Rupture multiplicity     1.200
-======================== =====
 
 Exposure model
 --------------
@@ -117,8 +112,8 @@ Slowest sources
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class              weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
-0            3         SimpleFaultSource         482    15        0.0         0.059      0.259         0.035         15       
-0            1         CharacteristicFaultSource 1.000  0         0.001       0.0        0.013         0.013         1        
+0            3         SimpleFaultSource         482    15        0.0         0.057      0.277         0.036         15       
+0            1         CharacteristicFaultSource 1.000  0         0.002       0.0        0.022         0.022         1        
 ============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -126,31 +121,29 @@ Computation times by source typology
 ========================= =========== ========== ============= ============= ========= ======
 source_class              filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ========================= =========== ========== ============= ============= ========= ======
-CharacteristicFaultSource 0.001       0.0        0.013         0.013         1         1     
-SimpleFaultSource         0.0         0.059      0.259         0.035         15        1     
+CharacteristicFaultSource 0.002       0.0        0.022         0.022         1         1     
+SimpleFaultSource         0.0         0.057      0.277         0.036         15        1     
 ========================= =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
-========================== ===== ====== ===== ===== =========
-measurement                mean  stddev min   max   num_tasks
-compute_ruptures.time_sec  0.020 0.008  0.007 0.037 14       
-compute_ruptures.memory_mb 0.0   0.0    0.0   0.0   14       
-========================== ===== ====== ===== ===== =========
+================== ===== ====== ===== ===== =========
+operation-duration mean  stddev min   max   num_tasks
+compute_ruptures   0.022 0.008  0.008 0.037 14       
+================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.284     0.0       14    
-managing sources               0.094     0.0       1     
-filtering ruptures             0.025     0.0       5     
-reading composite source model 0.015     0.0       1     
-saving ruptures                0.005     0.0       1     
-aggregate curves               0.004     0.0       14    
+total compute_ruptures         0.309     0.0       14    
+managing sources               0.075     0.0       1     
+filtering ruptures             0.032     0.0       5     
+saving ruptures                0.016     0.0       14    
+reading composite source model 0.016     0.0       1     
 reading exposure               0.003     0.0       1     
 store source_info              0.002     0.0       1     
-filtering sources              0.001     0.0       1     
+filtering sources              0.002     0.0       1     
 reading site collection        8.106E-06 0.0       1     
 ============================== ========= ========= ======

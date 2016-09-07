@@ -1,7 +1,11 @@
 Event-based PSHA with logic tree sampling
 =========================================
 
-gem-tstation:/home/michele/ssd/calc_45869.hdf5 updated Wed Aug 31 12:11:58 2016
+============================================== ================================
+gem-tstation:/home/michele/ssd/calc_48307.hdf5 updated Wed Sep  7 15:57:27 2016
+engine_version                                 2.1.0-git3a14ca6                
+hazardlib_version                              0.21.0-git89bccaf               
+============================================== ================================
 
 num_sites = 3, sitecol = 831 B
 
@@ -20,7 +24,6 @@ width_of_mfd_bin             0.2
 area_source_discretization   20.0                            
 random_seed                  23                              
 master_seed                  0                               
-engine_version               '2.1.0-git49748af'              
 ============================ ================================
 
 Input files
@@ -84,16 +87,16 @@ filtered_weight 122
 Informational data
 ------------------
 ====================================== ============
-compute_ruptures_max_received_per_task 238,641     
+compute_ruptures_max_received_per_task 238,714     
 compute_ruptures_num_tasks             20          
-compute_ruptures_sent.monitor          24,320      
-compute_ruptures_sent.rlzs_by_gsim     20,670      
+compute_ruptures_sent.gsims            4,340       
+compute_ruptures_sent.monitor          25,160      
 compute_ruptures_sent.sitecol          9,460       
 compute_ruptures_sent.sources          189,496     
-compute_ruptures_tot_received          2,515,869   
+compute_ruptures_tot_received          2,517,315   
 hazard.input_weight                    614         
 hazard.n_imts                          2           
-hazard.n_levels                        19          
+hazard.n_levels                        38          
 hazard.n_realizations                  10          
 hazard.n_sites                         3           
 hazard.n_sources                       2           
@@ -114,8 +117,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            1         AreaSource   61     307       0.0         0.127      2.518         0.016         307      
-1            1         AreaSource   61     307       0.0         0.124      1.240         0.015         307      
+0            1         AreaSource   61     307       0.0         0.118      2.341         0.025         307      
+1            1         AreaSource   61     307       0.0         0.123      1.183         0.009         307      
 ============ ========= ============ ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -123,28 +126,26 @@ Computation times by source typology
 ============ =========== ========== ============= ============= ========= ======
 source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ============ =========== ========== ============= ============= ========= ======
-AreaSource   0.0         0.252      3.759         0.030         614       2     
+AreaSource   0.0         0.242      3.524         0.034         614       2     
 ============ =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
-========================== ======= ====== ===== ===== =========
-measurement                mean    stddev min   max   num_tasks
-compute_ruptures.time_sec  0.190   0.094  0.005 0.298 20       
-compute_ruptures.memory_mb -0.0125 0.056  -0.25 0.0   20       
-========================== ======= ====== ===== ===== =========
+================== ===== ====== ===== ===== =========
+operation-duration mean  stddev min   max   num_tasks
+compute_ruptures   0.177 0.086  0.004 0.281 20       
+================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         3.790     0.0       20    
-saving ruptures                1.592     0.0       1     
-filtering ruptures             0.735     0.0       2,598 
-managing sources               0.232     0.0       1     
-reading composite source model 0.122     0.0       1     
-store source_info              0.009     0.0       1     
-aggregate curves               0.007     0.0       20    
-reading site collection        4.292E-05 0.0       1     
+total compute_ruptures         3.547     0.0       20    
+saving ruptures                1.259     0.0       20    
+filtering ruptures             0.751     0.0       2,598 
+managing sources               0.211     0.0       1     
+reading composite source model 0.119     0.0       1     
+store source_info              0.007     0.0       1     
+reading site collection        4.387E-05 0.0       1     
 ============================== ========= ========= ======

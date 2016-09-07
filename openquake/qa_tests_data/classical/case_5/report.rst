@@ -1,7 +1,11 @@
 Classical Hazard QA Test, Case 5
 ================================
 
-gem-tstation:/home/michele/ssd/calc_45854.hdf5 updated Wed Aug 31 12:11:37 2016
+============================================== ================================
+gem-tstation:/home/michele/ssd/calc_48292.hdf5 updated Wed Sep  7 15:57:09 2016
+engine_version                                 2.1.0-git3a14ca6                
+hazardlib_version                              0.21.0-git89bccaf               
+============================================== ================================
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +25,6 @@ area_source_discretization   10.0
 random_seed                  1066                            
 master_seed                  0                               
 sites_per_tile               10000                           
-engine_version               '2.1.0-git49748af'              
 ============================ ================================
 
 Input files
@@ -70,20 +73,20 @@ source_model.xml 0      Active Shallow Crust 1           485          485
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,137       
+count_eff_ruptures_max_received_per_task 1,121       
 count_eff_ruptures_num_tasks             1           
-count_eff_ruptures_sent.monitor          860         
-count_eff_ruptures_sent.rlzs_by_gsim     516         
+count_eff_ruptures_sent.gsims            82          
+count_eff_ruptures_sent.monitor          903         
 count_eff_ruptures_sent.sitecol          433         
 count_eff_ruptures_sent.sources          1,176       
-count_eff_ruptures_tot_received          1,137       
+count_eff_ruptures_tot_received          1,121       
 hazard.input_weight                      485         
 hazard.n_imts                            1           
-hazard.n_levels                          3.000       
+hazard.n_levels                          3           
 hazard.n_realizations                    1           
 hazard.n_sites                           1           
 hazard.n_sources                         1           
-hazard.output_weight                     3.000       
+hazard.output_weight                     3           
 hostname                                 gem-tstation
 ======================================== ============
 
@@ -92,7 +95,7 @@ Slowest sources
 ============ ========= ================== ====== ========= =========== ========== ============= ============= =========
 src_group_id source_id source_class       weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
 ============ ========= ================== ====== ========= =========== ========== ============= ============= =========
-0            1         ComplexFaultSource 485    1         0.0         5.879      0.0           0.0           0        
+0            1         ComplexFaultSource 485    1         0.0         5.613      0.0           0.0           0        
 ============ ========= ================== ====== ========= =========== ========== ============= ============= =========
 
 Computation times by source typology
@@ -100,23 +103,26 @@ Computation times by source typology
 ================== =========== ========== ============= ============= ========= ======
 source_class       filter_time split_time cum_calc_time max_calc_time num_tasks counts
 ================== =========== ========== ============= ============= ========= ======
-ComplexFaultSource 0.0         5.879      0.0           0.0           0         1     
+ComplexFaultSource 0.0         5.613      0.0           0.0           0         1     
 ================== =========== ========== ============= ============= ========= ======
 
 Information about the tasks
 ---------------------------
-Not available
+================== ========= ====== ========= ========= =========
+operation-duration mean      stddev min       max       num_tasks
+count_eff_ruptures 7.300E-04 NaN    7.300E-04 7.300E-04 1        
+================== ========= ====== ========= ========= =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 6.075     0.0       1     
-managing sources               5.883     0.0       1     
-total count_eff_ruptures       8.440E-04 0.0       1     
-reading site collection        4.506E-05 0.0       1     
-saving probability maps        1.907E-05 0.0       1     
-aggregate curves               1.693E-05 0.0       1     
-store source_info              7.868E-06 0.0       1     
+reading composite source model 5.674     0.0       1     
+managing sources               5.617     0.0       1     
+total count_eff_ruptures       7.300E-04 0.0       1     
+reading site collection        3.910E-05 0.0       1     
+saving probability maps        2.003E-05 0.0       1     
+aggregate curves               1.788E-05 0.0       1     
+store source_info              6.914E-06 0.0       1     
 ============================== ========= ========= ======
