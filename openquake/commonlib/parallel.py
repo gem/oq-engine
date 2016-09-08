@@ -269,7 +269,7 @@ class IterResult(object):
             duration = mon.children[0].duration  # the task is the first child
             tup = (mon.task_no, mon.weight, duration)
             data = numpy.array([tup], self.task_data_dt)
-            hdf5.extend3(mon.hdf5path, 'task_' + self.name, data)
+            hdf5.extend3(mon.hdf5path, 'task_info/' + self.name, data)
         mon.flush()
 
 
