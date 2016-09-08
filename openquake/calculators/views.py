@@ -625,8 +625,8 @@ def view_required_params_per_trt(token, dstore):
         fmt=scientificformat)
 
 
-@view.add('task_info')
-def view_task_info(token, dstore):
+@view.add('taskinfo')
+def view_taskinfo(token, dstore):
     """
     Display statistical information about the tasks performance.
     It is possible to get full information about a specific task
