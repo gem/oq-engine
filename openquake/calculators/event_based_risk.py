@@ -20,6 +20,7 @@ from __future__ import division
 import logging
 import operator
 import itertools
+import functools
 import collections
 
 import numpy
@@ -237,17 +238,24 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         oq = self.oqparam
         correl_model = readinput.get_correl_model(oq)
         self.N = len(self.assetcol)
-        self.E = len(self.datastore['etags'])
+        self.E = len(self.datastore['events'])
         logging.info('Populating the risk inputs')
         rlzs_by_tr_id = self.rlzs_assoc.get_rlzs_by_grp_id()
         num_rlzs = {t: len(rlzs) for t, rlzs in rlzs_by_tr_id.items()}
         num_assets = {sid: len(self.assets_by_site[sid])
                       for sid in self.sitecol.sids}
         all_ruptures = []
-        for serial in self.datastore['sescollection']:
-            rup = self.datastore['sescollection/' + serial]
-            rup.set_weight(num_rlzs, num_assets)
-            all_ruptures.append(rup)
+        precalc = self.precalc.precalc
+        if precalc:  # the ruptures are already in memory
+            for grp_id, sesruptures in precalc.result.items():
+                for sr in sesruptures:
+                    sr.set_weight(num_rlzs, num_assets)
+                    all_ruptures.append(sr)
+        else:  # read the ruptures from the datastore
+            for serial in self.datastore['sescollection']:
+                rup = self.datastore['sescollection/' + serial]
+                rup.set_weight(num_rlzs, num_assets)
+                all_ruptures.append(rup)
         all_ruptures.sort(key=operator.attrgetter('serial'))
         if not self.riskmodel.covs:
             # do not generate epsilons
@@ -276,7 +284,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 oq.investigation_time * oq.ses_per_logic_tree_path)
 
         self.N = N = len(self.assetcol)
-        self.E = len(self.datastore['etags'])
+        self.E = len(self.datastore['events'])
 
         # average losses, stored in a composite array of shape N, R
         self.avg_losses = numpy.zeros((N, R), oq.loss_dt())
@@ -320,14 +328,14 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 oq.concurrent_tasks or 1)
             # NB: I am using generators so that the tasks are submitted one at
             # the time, without keeping all of the arguments in memory
-            tm = starmap(
+            res = starmap(
                 self.core_task.__func__,
                 ((riskinput, self.riskmodel, self.rlzs_assoc,
                   self.assetcol, self.monitor.new('task'))
-                 for riskinput in riskinputs))
-        res = tm.reduce(agg=self.agg)
-        self.save_data_transfer(tm)
-        return res
+                 for riskinput in riskinputs)).submit_all()
+        acc = functools.reduce(self.agg, res, AccumDict())
+        self.save_data_transfer(res)
+        return acc
 
     def agg(self, acc, result):
         """
