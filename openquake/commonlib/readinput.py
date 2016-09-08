@@ -20,7 +20,6 @@ from __future__ import division
 import os
 import csv
 import gzip
-import math
 import zipfile
 import logging
 import operator
@@ -509,8 +508,7 @@ def get_job_info(oqparam, csm, sitecol):
     # the imtls object has values [NaN] when the levels are unknown
     # (this is a valid case for the event based hazard calculator)
     n_imts = len(imtls)
-    n_levels = sum(len(ls) if hasattr(ls, '__len__') else 0
-                   for ls in imtls.values()) / float(n_imts)
+    n_levels = len(oqparam.imtls.array)
 
     n_realizations = oqparam.number_of_logic_tree_samples or sum(
         sm.num_gsim_paths for sm in csm)
@@ -530,7 +528,7 @@ def get_job_info(oqparam, csm, sitecol):
                       oqparam.ses_per_logic_tree_path)
         output_weight *= total_time * NORMALIZATION_FACTOR
     else:
-        output_weight *= n_levels
+        output_weight *= n_levels / n_imts
 
     n_sources = csm.get_num_sources()
     info['hazard'] = dict(input_weight=input_weight,

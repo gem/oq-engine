@@ -30,10 +30,13 @@ import traceback
 import functools
 import multiprocessing.dummy
 from concurrent.futures import as_completed, ProcessPoolExecutor, Future
+import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
-from openquake.baselib.general import split_in_blocks, AccumDict, humansize
+from openquake.baselib.general import (
+    block_splitter, split_in_blocks, AccumDict, humansize)
 
 executor = ProcessPoolExecutor()
 # the num_tasks_hint is chosen to be 2 times bigger than the name of
@@ -208,6 +211,10 @@ class IterResult(object):
     :param progress:
         a logging function for the progress report
     """
+    task_data_dt = numpy.dtype(
+        [('taskno', numpy.uint32), ('weight', numpy.float32),
+         ('duration', numpy.float32)])
+
     def __init__(self, futures, taskname, num_tasks=None,
                  progress=logging.info):
         self.futures = futures
@@ -250,8 +257,20 @@ class IterResult(object):
                 raise etype(val)
             if self.num_tasks:
                 next(self.log_percent)
-            mon.flush()
+            self.save_task_data(mon)
             yield val
+        if self.received:
+            self.progress('Received %s of data, maximum per task %s',
+                          humansize(sum(self.received)),
+                          humansize(max(self.received)))
+
+    def save_task_data(self, mon):
+        if hasattr(mon, 'weight'):
+            duration = mon.children[0].duration  # the task is the first child
+            tup = (mon.task_no, mon.weight, duration)
+            data = numpy.array([tup], self.task_data_dt)
+            hdf5.extend3(mon.hdf5path, 'task_' + self.name, data)
+        mon.flush()
 
 
 class TaskManager(object):
@@ -289,6 +308,7 @@ class TaskManager(object):
     @classmethod
     def apply(cls, task, task_args,
               concurrent_tasks=executor.num_tasks_hint,
+              maxweight=None,
               weight=lambda item: 1,
               key=lambda item: 'Unspecified',
               name=None):
@@ -307,15 +327,16 @@ class TaskManager(object):
         :param agg: the aggregation function
         :param acc: initial value of the accumulator (default empty AccumDict)
         :param concurrent_tasks: hint about how many tasks to generate
+        :param maxweight: if not None, used to split the tasks
         :param weight: function to extract the weight of an item in arg0
         :param key: function to extract the kind of an item in arg0
         """
         arg0 = task_args[0]  # this is assumed to be a sequence
         args = task_args[1:]
-        chunks = list(split_in_blocks(
-            arg0, concurrent_tasks or 1, weight, key))
-        cls.apply.__func__._chunks = chunks
-        logging.info('Starting %d tasks', len(chunks))
+        if maxweight:
+            chunks = block_splitter(arg0, maxweight, weight, key)
+        else:
+            chunks = split_in_blocks(arg0, concurrent_tasks or 1, weight, key)
         return cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
 
     def __init__(self, oqtask, name=None):
@@ -323,7 +344,6 @@ class TaskManager(object):
         self.name = name or oqtask.__name__
         self.results = []
         self.sent = AccumDict()
-        self.received = []
         self.distribute = oq_distribute()
         self.argnames = inspect.getargspec(self.task_func).args
 
@@ -343,7 +363,7 @@ class TaskManager(object):
         # log a warning if too much memory is used
         if self.distribute == 'no':
             sent = {}
-            res = (self.task_func(*args), None, args[-1])
+            res = safely_call(self.task_func, args)
         else:
             piks = pickle_sequence(args)
             sent = {arg: len(p) for arg, p in zip(self.argnames, piks)}
@@ -399,10 +419,6 @@ class TaskManager(object):
         iter_result = self.submit_all()
         for res in iter_result:
             acc = agg(acc, res)
-        if iter_result.received:
-            self.progress('Received %s of data, maximum per task %s',
-                          humansize(sum(iter_result.received)),
-                          humansize(max(iter_result.received)))
         self.results = []
         return acc
 
@@ -432,6 +448,9 @@ class TaskManager(object):
                 self.progress('Submitting %s "%s" tasks', nargs, self.name)
             if isinstance(args[-1], Monitor):  # add incremental task number
                 args[-1].task_no = task_no
+                weight = getattr(args[0], 'weight', None)
+                if weight:
+                    args[-1].weight = weight
             self.submit(*args)
         if not task_no:
             logging.info('No %s tasks were submitted', self.name)

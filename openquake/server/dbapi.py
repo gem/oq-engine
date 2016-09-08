@@ -101,12 +101,11 @@ The queries can have different kind of `?` parameters:
   >>> db('INSERT INTO job (?S) VALUES (?X)', ['id', 'value'], (3, 44)) # doctest: +ELLIPSIS
   <sqlite3.Cursor object at ...>
 
-You can see how the interpolation works by calling the `match` function
-that returns the interpolated template and the parameters that will be
-passed to the low level driver. In this case
+You can see how the interpolation works by calling the `expand` method
+that returns the interpolated template. In this case
 
->>> match('INSERT INTO job (?S) VALUES (?X)', ['id', 'value'], [3, 44])
-('INSERT INTO job (id, value) VALUES (?, ?)', (3, 44))
+>>> db.expand('INSERT INTO job (?S) VALUES (?X)', ['id', 'value'], [3, 44])
+'INSERT INTO job (id, value) VALUES (?, ?)'
 
 As you see, `?S` parameters work by replacing a list of strings with a comma
 separated string, where ?X parameters are replaced by a comma separated
@@ -229,9 +228,9 @@ class _Replacer(object):
             self.xargs.extend(values)
             return ', '.join(['{}=' + self.ph] * len(arg))
         elif placeholder == '?A':
-            return self.join(' AND ', arg)
+            return self.join(' AND ', arg) or '1'
         elif placeholder == '?O':
-            return self.join(' OR ', arg)
+            return self.join(' OR ', arg) or '1'
         elif placeholder == '?x':
             self.xargs.append(arg)
             return self.ph
@@ -285,6 +284,13 @@ class Db(object):
         self.args = args
         self.kw = kw
         self.local = threading.local()
+
+    @classmethod
+    def expand(cls, m_templ, *m_args):
+        """
+        Performs partial interpolation of the template. Used for debugging.
+        """
+        return match(m_templ, *m_args)[0]
 
     @property
     def conn(self):

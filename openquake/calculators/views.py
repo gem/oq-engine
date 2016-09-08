@@ -28,17 +28,20 @@ import collections
 import numpy
 import h5py
 
-from openquake.baselib.general import humansize, groupby, AccumDict
+from openquake.baselib.general import (
+    humansize, groupby, AccumDict, CallableDict)
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.python3compat import unicode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source
-from openquake.commonlib.datastore import view
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv, FIVEDIGITS)
 
 FLOAT = (float, numpy.float32, numpy.float64, decimal.Decimal)
 INT = (int, numpy.uint32, numpy.int64)
+
+# a dictionary of views datastore -> array
+view = CallableDict(keyfunc=lambda s: s.split(':', 1)[0])
 
 
 # ########################## utility functions ############################## #
@@ -285,7 +288,6 @@ def view_params(token, dstore):
         params.append('avg_losses')
     if 'classical' in oq.calculation_mode:
         params.append('sites_per_tile')
-    params.append('engine_version')
     return rst_table([(param, repr(getattr(oq, param, None)))
                       for param in params])
 
@@ -528,7 +530,7 @@ def view_biggest_ebr_gmf(token, dstore):
 @view.add('ruptures_events')
 def view_ruptures_events(token, dstore):
     num_ruptures = len(dstore['sescollection'])
-    num_events = len(dstore['etags'])
+    num_events = len(dstore['events'])
     mult = round(num_events / num_ruptures, 3)
     lst = [('Total number of ruptures', num_ruptures),
            ('Total number of events', num_events),
@@ -621,3 +623,31 @@ def view_required_params_per_trt(token, dstore):
     return rst_table(
         tbl, header='grp_id gsims distances siteparams ruptparams'.split(),
         fmt=scientificformat)
+
+
+@view.add('task_info')
+def view_task_info(token, dstore):
+    """
+    Display statistical information about the tasks performance.
+    It is possible to get full information about a specific task
+    with a command like this one, for a classical calculation::
+
+      $ oq show task_info:classical
+    """
+    args = token.split(':')[1:]  # called as task_info:task_name
+    if args:
+        [task] = args
+        array = dstore['task_' + task].value
+        rduration = array['duration'] / array['weight']
+        data = util.compose_arrays(rduration, array, 'rduration')
+        data.sort(order='duration')
+        return rst_table(data)
+
+    tasks = [key[5:] for key in dstore if key.startswith('task_')]
+    data = ['operation-duration mean stddev min max num_tasks'.split()]
+    for task in tasks:
+        val = dstore['task_' + task]['duration']
+        data.append(stats(task, val))
+    if len(data) == 1:
+        return 'Not available'
+    return rst_table(data)
