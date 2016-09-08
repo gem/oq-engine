@@ -28,15 +28,16 @@ import collections
 
 import numpy
 
+from openquake.hazardlib import __version__ as hazardlib_version
 from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
-from openquake.risklib import riskinput, __version__
+from openquake.risklib import riskinput, __version__ as engine_version
 from openquake.commonlib import readinput, riskmodels, datastore, source
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import starmap, executor
-from openquake.calculators.views import view, rst_table, stats
-from openquake.baselib.python3compat import with_metaclass, encode
+from openquake.baselib.python3compat import with_metaclass
+from openquake.commonlib.export import export as exp
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -66,15 +67,15 @@ rlz_dt = numpy.dtype([('uid', hdf5.vstr), ('model', hdf5.vstr),
 logversion = {True}
 
 PRECALC_MAP = dict(
-    classical=['psha', 'classical'],
-    disaggregation=['psha', 'classical'],
-    scenario_risk=['scenario', 'scenario_risk'],
-    scenario_damage=['scenario', 'scenario_damage'],
-    classical_risk=['classical', 'classical_risk'],
-    classical_bcr=['classical', 'classical_bcr'],
-    classical_damage=['classical', 'classical_damage'],
-    event_based=['event_based', 'event_based_risk'],
-    event_based_risk=['event_based', 'event_based_risk'])
+    classical=['psha'],
+    disaggregation=['psha'],
+    scenario_risk=['scenario'],
+    scenario_damage=['scenario'],
+    classical_risk=['classical'],
+    classical_bcr=['classical'],
+    classical_damage=['classical'],
+    event_based=['event_based_risk'],
+    event_based_risk=['event_based'])
 
 
 def set_array(longarray, shortarray):
@@ -108,7 +109,7 @@ def check_precalc_consistency(calc_mode, precalc_mode):
         calculation_mode of the previous calculation
     """
     ok_mode = PRECALC_MAP[calc_mode]
-    if precalc_mode not in ok_mode:
+    if calc_mode != precalc_mode and precalc_mode not in ok_mode:
         raise InvalidCalculationID(
             'In order to run a risk calculation of kind %r, '
             'you need to provide a calculation of kind %r, '
@@ -147,8 +148,11 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         Update the current calculation parameters and save engine_version
         """
-        vars(self.oqparam).update(engine_version=__version__, **kw)
+        vars(self.oqparam).update(**kw)
         self.datastore['oqparam'] = self.oqparam  # save the updated oqparam
+        attrs = self.datastore['/'].attrs
+        attrs['engine_version'] = engine_version
+        attrs['hazardlib_version'] = hazardlib_version
         self.datastore.flush()
 
     def set_log_format(self):
@@ -165,7 +169,8 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.close = close
         self.set_log_format()
         if logversion:  # make sure this is logged only once
-            logging.info('Using engine version %s', __version__)
+            logging.info('Using engine version %s', engine_version)
+            logging.info('Using hazardlib version %s', hazardlib_version)
             logversion.pop()
         if (concurrent_tasks is not None and concurrent_tasks !=
                 OqParam.concurrent_tasks.default):
@@ -175,9 +180,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         try:
             if pre_execute:
                 self.pre_execute()
-            result = self.execute()
-            if result:
-                self.post_execute(result)
+            self.result = self.execute()
+            if self.result:
+                self.post_execute(self.result)
             self.before_export()
             exported = self.export(kw.get('exports', ''))
         except KeyboardInterrupt:
@@ -228,8 +233,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
 
         :returns: dictionary output_key -> sorted list of exported paths
         """
-        # avoid circular imports
-        from openquake.commonlib.export import export as exp
         exported = {}
         individual_curves = self.oqparam.individual_curves
         if isinstance(exports, tuple):
@@ -250,28 +253,14 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             for key in sorted(keys):  # top level keys
                 if 'rlzs' in key and not individual_curves:
                     continue  # skip individual curves
-                ekey = (key, fmt)
-                if ekey not in exp:  # non-exportable output
-                    continue
-                with self.monitor('export'):
-                    exported[ekey] = exp(ekey, self.datastore)
-                logging.info('exported %s: %s', key, exported[ekey])
-
+                self._export((key, fmt), exported)
             if has_hcurves and self.oqparam.hazard_maps:
-                ekey = ('hmaps', fmt)
-                if ekey in exp:
-                    with self.monitor('export'):
-                        exported[ekey] = exp(ekey, self.datastore)
-                    logging.info('exported %s: %s', key, exported[ekey])
-
+                self._export(('hmaps', fmt), exported)
             if has_hcurves and self.oqparam.uniform_hazard_spectra:
-                ekey = ('uhs', fmt)
-                if ekey in exp:
-                    with self.monitor('export'):
-                        exported[ekey] = exp(ekey, self.datastore)
-                    logging.info('exported %s: %s', key, exported[ekey])
+                self._export(('uhs', fmt), exported)
 
         if self.close:  # in the engine we close later
+            self.result.clear()
             try:
                 self.datastore.close()
             except (RuntimeError, ValueError):
@@ -279,6 +268,12 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 # reproduce
                 logging.warn('', exc_info=True)
         return exported
+
+    def _export(self, ekey, exported):
+        if ekey in exp:
+            with self.monitor('export'):
+                exported[ekey] = exp(ekey, self.datastore)
+                logging.info('exported %s: %s', ekey[0], exported[ekey])
 
     def before_export(self):
         """
@@ -346,16 +341,16 @@ class HazardCalculator(BaseCalculator):
         return sum(len(assets) for assets in self.assets_by_site)
 
     def compute_previous(self):
-        precalc = calculators[self.pre_calculator](
+        self.precalc = calculators[self.pre_calculator](
             self.oqparam, self.monitor('precalculator'),
             self.datastore.calc_id)
-        precalc.run()
+        self.precalc.run(close=False)
         if 'scenario' not in self.oqparam.calculation_mode:
-            self.csm = precalc.csm
-        pre_attrs = vars(precalc)
+            self.csm = self.precalc.csm
+        pre_attrs = vars(self.precalc)
         for name in ('riskmodel', 'assets_by_site'):
             if name in pre_attrs:
-                setattr(self, name, getattr(precalc, name))
+                setattr(self, name, getattr(self.precalc, name))
 
     def read_previous(self, precalc_id):
         parent = datastore.read(precalc_id)
@@ -418,7 +413,7 @@ class HazardCalculator(BaseCalculator):
         To be overridden to initialize the datasets needed by the calculation
         """
         self.random_seed = None
-        if 'csm_info' in self.datastore or 'csm_info' in self.datastore.parent:
+        if 'csm_info' in self.datastore:
             self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
         else:  # build a fake; used by risk-from-file calculators
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
@@ -641,22 +636,3 @@ class RiskCalculator(HazardCalculator):
                     for riskinput in self.riskinputs)
         res = starmap(self.core_task.__func__, all_args).reduce()
         return res
-
-
-@view.add('task_info')
-def view_task_info(token, dstore):
-    """
-    Display statistical information about the tasks performance
-    """
-    pdata = dstore['performance_data'].value
-    tasks = [calc.core_task.__name__ for calc in calculators.values()]
-    data = ['measurement mean stddev min max num_tasks'.split()]
-    for task in set(tasks):  # strip duplicates
-        records = pdata[pdata['operation'] == encode('total ' + task)]
-        if len(records):
-            for stat in ('time_sec', 'memory_mb'):
-                val = records[stat]
-                data.append(stats(task + '.' + stat, val))
-    if len(data) == 1:
-        return 'Not available'
-    return rst_table(data)

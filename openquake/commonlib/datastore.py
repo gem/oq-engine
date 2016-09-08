@@ -25,12 +25,7 @@ import numpy
 import h5py
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import CallableDict
 from openquake.commonlib.writers import write_csv
-
-
-# a dictionary of views datastore -> array
-view = CallableDict()
 
 DATADIR = os.environ.get('OQ_DATADIR', os.path.expanduser('~/oqdata'))
 
@@ -235,6 +230,21 @@ class DataStore(collections.MutableMapping):
         """
         return hdf5.create(
             self.hdf5, key, dtype, shape, compression, fillvalue, attrs)
+
+    def extend(self, key, array):
+        """
+        Extend the dataset associated to the given key; create it if needed
+
+        :param key: name of the dataset
+        :param array: array to store
+        """
+        try:
+            dset = self.hdf5[key]
+        except KeyError:
+            dset = hdf5.create(self.hdf5, key, array.dtype,
+                               shape=(None,) + array.shape[1:])
+        hdf5.extend(dset, array)
+        return dset
 
     def save(self, key, kw):
         """

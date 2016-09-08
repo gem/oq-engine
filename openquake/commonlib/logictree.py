@@ -68,15 +68,13 @@ def get_effective_rlzs(rlzs):
     and yield the first representative of each group.
     """
     effective = []
-    ordinal = 0
     for uid, group in groupby(rlzs, operator.attrgetter('uid')).items():
         rlz = group[0]
         if all(path == '@' for path in rlz.lt_uid):  # empty realization
             continue
         effective.append(
             Realization(rlz.value, sum(r.weight for r in group),
-                        rlz.lt_path, ordinal, rlz.lt_uid))
-        ordinal += 1
+                        rlz.lt_path, rlz.ordinal, rlz.lt_uid))
     return effective
 
 

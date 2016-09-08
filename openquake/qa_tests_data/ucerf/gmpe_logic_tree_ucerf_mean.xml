@@ -13,7 +13,8 @@ xmlns:gml="http://www.opengis.net/gml"
             applyToTectonicRegionType="Active Shallow Crust"
             branchSetID="wus_asc"
             uncertaintyType="gmpeModel"
-            ><!--
+            >
+            <!--
                 <logicTreeBranch
                 branchID="ASK14"
                 >

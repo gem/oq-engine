@@ -30,23 +30,23 @@ import time
 
 from openquake.baselib.general import humansize, AccumDict
 from openquake.baselib.python3compat import encode
-from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.commonlib import readinput, datastore, parallel
+from openquake.commonlib import readinput, parallel
 from openquake.calculators.classical import PSHACalculator
+from openquake.calculators import views
 
 
 def indent(text):
     return '  ' + '\n  '.join(text.splitlines())
 
 
-def count_eff_ruptures(sources, sitecol, rlzs_by_gsim, monitor):
+def count_eff_ruptures(sources, sitecol, gsims, monitor):
     """
     Count the number of ruptures contained in the given sources and return
     a dictionary src_group_id -> num_ruptures. All sources belong to the
     same tectonic region type.
     """
     grp_id = sources[0].src_group_id
-    acc = AccumDict({grp_id: ProbabilityMap()})
+    acc = AccumDict({grp_id: {}})
     acc.eff_ruptures = {grp_id: sum(src.num_ruptures for src in sources)}
     return acc
 
@@ -80,8 +80,10 @@ class ReportWriter(object):
         info = dstore['job_info']
         dpath = dstore.hdf5path
         mtime = os.path.getmtime(dpath)
-        self.text += '\n\n%s:%s updated %s' % (
-            info.hostname, decode(dpath), time.ctime(mtime))
+        host = '%s:%s' % (info.hostname, decode(dpath))
+        updated = str(time.ctime(mtime))
+        versions = sorted(dstore['/'].attrs.items())
+        self.text += '\n\n' + views.rst_table([[host, updated]] + versions)
         # NB: in the future, the sitecol could be transferred as
         # an array by leveraging the HDF5 serialization protocol;
         # for the moment however the size of the
@@ -97,7 +99,7 @@ class ReportWriter(object):
         if obj:
             text = '\n::\n\n' + indent(str(obj))
         else:
-            text = datastore.view(name, self.dstore)
+            text = views.view(name, self.dstore)
         self.text += '\n'.join(['\n\n' + title, line, text])
 
     def make_report(self):
@@ -109,15 +111,15 @@ class ReportWriter(object):
             self.add('csm_info')
             self.add('required_params_per_trt')
         self.add('rlzs_assoc', ds['csm_info'].get_rlzs_assoc())
-        if 'composite_source_model' in ds:
+        if 'source_info' in ds:
             self.add('ruptures_per_trt')
         if 'scenario' not in oq.calculation_mode:
             self.add('job_info')
-        if oq.calculation_mode in ('event_based_rupture', 'event_based',
-                                   'event_based_risk'):
+        if 'sescollection' in ds:
             self.add('ruptures_events')
         if oq.calculation_mode in ('event_based_risk',):
-            self.add('biggest_ebr_gmf')
+            if 'sescollection' in ds:
+                self.add('biggest_ebr_gmf')
             self.add('avglosses_data_transfer')
         if 'exposure' in oq.inputs:
             self.add('exposure_info')

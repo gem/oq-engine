@@ -61,5 +61,5 @@ class CheckHazardRiskConsistencyTestCase(unittest.TestCase):
         self.assertEqual(
             msg, "In order to run a risk calculation of kind "
             "'classical_risk', you need to provide a "
-            "calculation of kind ['classical', 'classical_risk'], "
+            "calculation of kind ['classical'], "
             "but you provided a 'scenario' instead")
