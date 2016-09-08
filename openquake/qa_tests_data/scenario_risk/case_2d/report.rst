@@ -1,7 +1,11 @@
 scenario hazard
 ===============
 
-gem-tstation:/home/michele/ssd/calc_45880.hdf5 updated Wed Aug 31 12:12:28 2016
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_48469.hdf5 Wed Sep  7 16:06:20 2016
+engine_version                                 2.1.0-gitfaa2965        
+hazardlib_version                              0.21.0-git89bccaf       
+============================================== ========================
 
 num_sites = 1, sitecol = 739 B
 
@@ -20,7 +24,6 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  42                 
 master_seed                  0                  
-engine_version               '2.1.0-git49748af' 
 ============================ ===================
 
 Input files
