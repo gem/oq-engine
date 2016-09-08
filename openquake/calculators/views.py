@@ -637,7 +637,7 @@ def view_task_info(token, dstore):
     args = token.split(':')[1:]  # called as task_info:task_name
     if args:
         [task] = args
-        array = dstore['task_' + task].value
+        array = dstore['task_info/' + task].value
         rduration = array['duration'] / array['weight']
         data = util.compose_arrays(rduration, array, 'rduration')
         data.sort(order='duration')
@@ -646,7 +646,7 @@ def view_task_info(token, dstore):
     tasks = [key[5:] for key in dstore if key.startswith('task_')]
     data = ['operation-duration mean stddev min max num_tasks'.split()]
     for task in tasks:
-        val = dstore['task_' + task]['duration']
+        val = dstore['task_info/' + task]['duration']
         data.append(stats(task, val))
     if len(data) == 1:
         return 'Not available'
