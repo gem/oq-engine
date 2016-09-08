@@ -28,10 +28,11 @@ import collections
 
 import numpy
 
+from openquake.hazardlib import __version__ as hazardlib_version
 from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
-from openquake.risklib import riskinput, __version__
+from openquake.risklib import riskinput, __version__ as engine_version
 from openquake.commonlib import readinput, riskmodels, datastore, source
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import starmap, executor
@@ -147,8 +148,11 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         Update the current calculation parameters and save engine_version
         """
-        vars(self.oqparam).update(engine_version=__version__, **kw)
+        vars(self.oqparam).update(**kw)
         self.datastore['oqparam'] = self.oqparam  # save the updated oqparam
+        attrs = self.datastore['/'].attrs
+        attrs['engine_version'] = engine_version
+        attrs['hazardlib_version'] = hazardlib_version
         self.datastore.flush()
 
     def set_log_format(self):
@@ -165,7 +169,8 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.close = close
         self.set_log_format()
         if logversion:  # make sure this is logged only once
-            logging.info('Using engine version %s', __version__)
+            logging.info('Using engine version %s', engine_version)
+            logging.info('Using hazardlib version %s', hazardlib_version)
             logversion.pop()
         if (concurrent_tasks is not None and concurrent_tasks !=
                 OqParam.concurrent_tasks.default):
