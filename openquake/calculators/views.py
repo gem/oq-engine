@@ -632,7 +632,7 @@ def view_taskinfo(token, dstore):
     It is possible to get full information about a specific task
     with a command like this one, for a classical calculation::
 
-      $ oq show task_info:classical
+      $ oq show taskinfo:classical
     """
     args = token.split(':')[1:]  # called as task_info:task_name
     if args:
@@ -643,9 +643,8 @@ def view_taskinfo(token, dstore):
         data.sort(order='duration')
         return rst_table(data)
 
-    tasks = [key[5:] for key in dstore if key.startswith('task_')]
     data = ['operation-duration mean stddev min max num_tasks'.split()]
-    for task in tasks:
+    for task in dstore['task_info']:
         val = dstore['task_info/' + task]['duration']
         data.append(stats(task, val))
     if len(data) == 1:
