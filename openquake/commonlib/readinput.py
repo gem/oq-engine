@@ -20,7 +20,6 @@ from __future__ import division
 import os
 import csv
 import gzip
-import math
 import zipfile
 import logging
 import operator
@@ -529,7 +528,7 @@ def get_job_info(oqparam, csm, sitecol):
                       oqparam.ses_per_logic_tree_path)
         output_weight *= total_time * NORMALIZATION_FACTOR
     else:
-        output_weight *= n_levels
+        output_weight *= n_levels / n_imts
 
     n_sources = csm.get_num_sources()
     info['hazard'] = dict(input_weight=input_weight,

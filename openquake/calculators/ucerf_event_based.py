@@ -583,7 +583,7 @@ class UCERFSESControl(object):
             rates = hdf5[self.idx_set["rate_idx"]][:]
             occurrences = self.tom.sample_number_of_occurrences(rates)
             indices = numpy.where(occurrences)[0]
-            logging.info('Considering %s %s', branch_id, indices)
+            logging.info('Considering %s %d ruptures', branch_id, len(indices))
 
             # get ruptures from the indices
             ruptures = []
