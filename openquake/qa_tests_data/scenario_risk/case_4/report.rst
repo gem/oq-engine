@@ -1,28 +1,31 @@
 Scenario Risk for Nepal with 20 assets
 ======================================
 
-gem-tstation:/home/michele/ssd/calc_45879.hdf5 updated Wed Aug 31 12:12:28 2016
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_48468.hdf5 Wed Sep  7 16:06:20 2016
+engine_version                                 2.1.0-gitfaa2965        
+hazardlib_version                              0.21.0-git89bccaf       
+============================================== ========================
 
 num_sites = 20, sitecol = 1.58 KB
 
 Parameters
 ----------
-============================ ==================
-calculation_mode             'scenario_risk'   
-number_of_logic_tree_samples 0                 
-maximum_distance             {u'default': 500} 
-investigation_time           None              
-ses_per_logic_tree_path      1                 
-truncation_level             3.0               
-rupture_mesh_spacing         15.0              
-complex_fault_mesh_spacing   15.0              
-width_of_mfd_bin             None              
-area_source_discretization   None              
-random_seed                  42                
-master_seed                  0                 
-avg_losses                   False             
-engine_version               '2.1.0-git49748af'
-============================ ==================
+============================ =================
+calculation_mode             'scenario_risk'  
+number_of_logic_tree_samples 0                
+maximum_distance             {u'default': 500}
+investigation_time           None             
+ses_per_logic_tree_path      1                
+truncation_level             3.0              
+rupture_mesh_spacing         15.0             
+complex_fault_mesh_spacing   15.0             
+width_of_mfd_bin             None             
+area_source_discretization   None             
+random_seed                  42               
+master_seed                  0                
+avg_losses                   False            
+============================ =================
 
 Input files
 -----------
@@ -74,7 +77,7 @@ reading exposure        0.007     0.0       1
 filtering sites         0.003     0.0       1     
 computing gmfs          0.003     0.0       1     
 saving gmfs             0.001     0.0       1     
-building riskinputs     7.091E-04 0.0       1     
-building epsilons       2.890E-04 0.0       1     
+building riskinputs     7.670E-04 0.0       1     
+building epsilons       2.842E-04 0.0       1     
 reading site collection 6.914E-06 0.0       1     
 ======================= ========= ========= ======
