@@ -1,7 +1,11 @@
 Classical PSHA using Area Source
 ================================
 
-gem-tstation:/home/michele/ssd/calc_45885.hdf5 updated Wed Aug 31 12:12:33 2016
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_48474.hdf5 Wed Sep  7 16:06:23 2016
+engine_version                                 2.1.0-gitfaa2965        
+hazardlib_version                              0.21.0-git89bccaf       
+============================================== ========================
 
 num_sites = 6, sitecol = 969 B
 
@@ -21,7 +25,6 @@ area_source_discretization   5.0
 random_seed                  23                              
 master_seed                  0                               
 sites_per_tile               1                               
-engine_version               '2.1.0-git49748af'              
 ============================ ================================
 
 Input files
@@ -71,16 +74,16 @@ source_model.xml 0      Active Shallow Crust 1           1640         41
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,719       
+count_eff_ruptures_max_received_per_task 1,702       
 count_eff_ruptures_num_tasks             6           
-count_eff_ruptures_sent.monitor          8,652       
-count_eff_ruptures_sent.rlzs_by_gsim     4,230       
+count_eff_ruptures_sent.gsims            1,008       
+count_eff_ruptures_sent.monitor          8,904       
 count_eff_ruptures_sent.sitecol          2,598       
-count_eff_ruptures_sent.sources          11,672      
-count_eff_ruptures_tot_received          10,314      
+count_eff_ruptures_sent.sources          11,674      
+count_eff_ruptures_tot_received          10,212      
 hazard.input_weight                      41          
 hazard.n_imts                            3           
-hazard.n_levels                          19          
+hazard.n_levels                          57          
 hazard.n_realizations                    2           
 hazard.n_sites                           6           
 hazard.n_sources                         1           
@@ -106,19 +109,22 @@ AreaSource   0.006       0.0        0.0           0.0           0         1
 
 Information about the tasks
 ---------------------------
-Not available
+================== ========= ========= ========= ========= =========
+operation-duration mean      stddev    min       max       num_tasks
+count_eff_ruptures 8.637E-04 3.442E-05 8.090E-04 9.122E-04 6        
+================== ========= ========= ========= ========= =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.040     0.0       1     
-managing sources               0.016     0.0       1     
-total count_eff_ruptures       0.006     0.0       6     
+reading composite source model 0.039     0.0       1     
+managing sources               0.015     0.0       1     
 filtering sources              0.006     0.0       6     
+total count_eff_ruptures       0.005     0.0       6     
 reading site collection        0.002     0.0       1     
-aggregate curves               8.011E-05 0.0       6     
+aggregate curves               8.178E-05 0.0       6     
 saving probability maps        2.003E-05 0.0       1     
 store source_info              7.153E-06 0.0       1     
 ============================== ========= ========= ======
