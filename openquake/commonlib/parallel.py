@@ -396,7 +396,7 @@ class TaskManager(object):
                 idx = self.task_ids.index(task_id)
                 self.task_ids.pop(idx)
                 fut = Future()
-                fut.set_result(result_dict['result'])
+                fut.set_result(result_dict['result'].unpickle())
                 # work around a celery bug
                 del app.backend._cache[task_id]
                 yield fut
