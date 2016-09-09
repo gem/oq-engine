@@ -775,10 +775,12 @@ class UCERFEventBasedRuptureCalculator(
                   self.smlt.branches[key].weight)
                   for key in self.smlt.branches]
         [ucerf] = self.src_group
-        ruptures_by_grp_id = parallel.apply(
+        res = parallel.apply(
             compute_ruptures,
             (id_set, ucerf, self.sitecol, self.oqparam, self.monitor),
-            concurrent_tasks=self.oqparam.concurrent_tasks).reduce(self.agg)
+            concurrent_tasks=self.oqparam.concurrent_tasks).submit_all()
+        ruptures_by_grp_id = functools.reduce(self.agg, res, AccumDict())
+        self.save_data_transfer(res)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             functools.partial(self.count_eff_ruptures, ruptures_by_grp_id))
         self.datastore['csm_info'] = self.csm.info
