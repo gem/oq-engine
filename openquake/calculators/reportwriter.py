@@ -126,8 +126,9 @@ class ReportWriter(object):
         if 'source_info' in ds:
             self.add('short_source_info')
             self.add('times_by_source_class')
-        if 'performance_data' in ds:
+        if 'task_info' in ds:
             self.add('taskinfo')
+        if 'performance_data' in ds:
             self.add('performance')
         return self.text
 
