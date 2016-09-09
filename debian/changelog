@@ -1,4 +1,4 @@
-[Michele Simionato]
+  [Michele Simionato]
   * Saved engine_version and hazardlib_version as attributes of the datastore
   * Avoided saving the ruptures when ground_motion_fields is True
   * Finalized the HDF5 export for hazard curves, hazard maps and uniform
