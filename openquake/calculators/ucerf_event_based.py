@@ -763,6 +763,8 @@ class UCERFEventBasedRuptureCalculator(
             source_models.append(sm)
         self.csm = source.CompositeSourceModel(
             self.gsim_lt, self.smlt, source_models, set_weight=False)
+        logging.info('Found %d x %d logic tree branches', len(branches),
+                     self.gsim_lt.get_num_paths())
         self.rup_data = {}
         self.infos = []
         self.eid = 0
