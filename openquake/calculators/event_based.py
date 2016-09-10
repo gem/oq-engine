@@ -572,11 +572,13 @@ class EventBasedCalculator(ClassicalCalculator):
             calc.check_overflow(self)
 
         L = len(oq.imtls.array)
-        acc = parallel.starmap(
-            self.core_task.__func__, self.gen_args(self.sesruptures)).reduce(
-                agg=self.combine_pmaps_and_save_gmfs,
-                acc={rlz.ordinal: ProbabilityMap(L, 1)
-                     for rlz in self.rlzs_assoc.realizations})
+        res = parallel.starmap(
+            self.core_task.__func__, self.gen_args(self.sesruptures)
+        ).submit_all()
+        acc = functools.reduce(self.combine_pmaps_and_save_gmfs, res, {
+            rlz.ordinal: ProbabilityMap(L, 1)
+            for rlz in self.rlzs_assoc.realizations})
+        self.save_data_transfer(res)
         if oq.ground_motion_fields and 'gmf_data' in self.datastore:
             self.datastore.set_nbytes('gmf_data')
         return acc
