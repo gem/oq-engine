@@ -341,16 +341,17 @@ class HazardCalculator(BaseCalculator):
         return sum(len(assets) for assets in self.assets_by_site)
 
     def compute_previous(self):
-        self.precalc = calculators[self.pre_calculator](
+        precalc = calculators[self.pre_calculator](
             self.oqparam, self.monitor('precalculator'),
             self.datastore.calc_id)
-        self.precalc.run(close=False)
+        precalc.run(close=False)
         if 'scenario' not in self.oqparam.calculation_mode:
-            self.csm = self.precalc.csm
-        pre_attrs = vars(self.precalc)
+            self.csm = precalc.csm
+        pre_attrs = vars(precalc)
         for name in ('riskmodel', 'assets_by_site'):
             if name in pre_attrs:
-                setattr(self, name, getattr(self.precalc, name))
+                setattr(self, name, getattr(precalc, name))
+        return precalc
 
     def read_previous(self, precalc_id):
         parent = datastore.read(precalc_id)
@@ -385,12 +386,11 @@ class HazardCalculator(BaseCalculator):
             # the parameter hazard_calculation_id is only meaningful if
             # there is a precalculator
             precalc_id = self.oqparam.hazard_calculation_id
-            if precalc_id is None:  # recompute everything
-                self.compute_previous()
-            else:  # read previously computed data
-                self.read_previous(precalc_id)
+            self.precalc = (self.compute_previous() if precalc_id is None
+                            else self.read_previous(precalc_id))
             self.init()
         else:  # we are in a basic calculator
+            self.precalc = None
             self.basic_pre_execute()
             if 'source' in self.oqparam.inputs:
                 job_info.update(readinput.get_job_info(
