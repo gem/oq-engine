@@ -475,7 +475,7 @@ def sample_background_model(
 
 
 # this is a fake source object built around the HDF5 UCERF file
-# there is one object per branch, so there are 1,400 UCERFSESControls
+# there is one object per branch, so there are 1,440 UCERFSESControls
 # this approach cannot work on a cluster unless the HDF5 file is
 # on a shared file system
 class UCERFSESControl(object):
@@ -574,13 +574,12 @@ class UCERFSESControl(object):
         Generates the event set corresponding to a particular branch
         """
         self.idx_set = self.build_idx_set(branch_id)
-        self.update_background_site_filter(branch_id,
-                                           sites,
-                                           integration_distance)
+        self.update_background_site_filter(
+            branch_id, sites, integration_distance)
 
         # get rates from file
         with h5py.File(self.source_file, 'r') as hdf5:
-            rates = hdf5[self.idx_set["rate_idx"]][:]
+            rates = hdf5[self.idx_set["rate_idx"]].value
             occurrences = self.tom.sample_number_of_occurrences(rates)
             indices = numpy.where(occurrences)[0]
             logging.info('Considering %s %d ruptures', branch_id, len(indices))
@@ -600,15 +599,9 @@ class UCERFSESControl(object):
 
             # sample background sources
             background_ruptures, background_n_occ = sample_background_model(
-                hdf5,
-                self.idx_set["grid_key"],
-                self.tom,
-                self.background_idx,
-                self.min_mag,
-                self.npd, self.hdd,
-                self.usd, self.lsd,
-                self.msr, self.aspect,
-                self.tectonic_region_type)
+                hdf5, self.idx_set["grid_key"], self.tom, self.background_idx,
+                self.min_mag, self.npd, self.hdd, self.usd, self.lsd, self.msr,
+                self.aspect, self.tectonic_region_type)
             ruptures.extend(background_ruptures)
             rupture_occ.extend(background_n_occ)
         return ruptures, rupture_occ
@@ -690,9 +683,8 @@ def compute_ruptures(branch_info, ucerf, sitecol, oqparam, monitor):
     for src_group_id, (ltbrid, branch_id, _) in enumerate(branch_info):
         t0 = time.time()
         with filter_mon:
-            ucerf.update_background_site_filter(branch_id,
-                                                sitecol,
-                                                integration_distance)
+            ucerf.update_background_site_filter(
+                branch_id, sitecol, integration_distance)
 
         # set the seed before calling generate_event_set
         numpy.random.seed(oqparam.random_seed + src_group_id)
@@ -773,9 +765,8 @@ class UCERFEventBasedRuptureCalculator(
         """
         Run the ucerf rupture calculation
         """
-        id_set = [(key, self.smlt.branches[key].value,
-                  self.smlt.branches[key].weight)
-                  for key in self.smlt.branches]
+        id_set = [(key, branch.value, branch.weight)
+                  for key, branch in self.smlt.branches.items()]
         [ucerf] = self.src_group
         res = parallel.apply(
             compute_ruptures,
