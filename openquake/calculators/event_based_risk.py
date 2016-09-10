@@ -245,9 +245,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         num_assets = {sid: len(self.assets_by_site[sid])
                       for sid in self.sitecol.sids}
         all_ruptures = []
-        precalc = self.precalc.precalc
-        if precalc:  # the ruptures are already in memory
-            for grp_id, sesruptures in precalc.result.items():
+        preprecalc = getattr(self.precalc, 'precalc', None)
+        if preprecalc:  # the ruptures are already in memory
+            for grp_id, sesruptures in preprecalc.result.items():
                 for sr in sesruptures:
                     sr.set_weight(num_rlzs, num_assets)
                     all_ruptures.append(sr)
