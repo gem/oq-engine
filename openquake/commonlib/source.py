@@ -885,9 +885,10 @@ class SourceManager(object):
         for i, tile in enumerate(tiles):
             data = []
             for src in sources:
-                with filter_mon, context(src):
+                with context(src):
                     if self.filter_sources:
-                        ok = src in tile
+                        with filter_mon:
+                            ok = src in tile
                     else:  # accept all sources
                         ok = True
                 if ok:
