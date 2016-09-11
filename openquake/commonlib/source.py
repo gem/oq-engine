@@ -792,8 +792,13 @@ class SourceManager(object):
         self.rlzs_assoc = csm.info.get_rlzs_assoc()
         self.infos = {}  # src_group_id, source_id -> SourceInfo tuple
 
-        self.maxweight = max(math.ceil(csm.weight / self.concurrent_tasks),
-                             MAXWEIGHT)
+        maxweight = math.ceil(csm.weight / self.concurrent_tasks / (
+            num_tiles if filter_sources else 1))
+        # if there are S filtered sources and there are T tiles, only S/T
+        # S/T sources contribute to a given tile; by reducing the maxweight
+        # by T we generate the same number of "concurrent_tasks" per tile
+        self.maxweight = max(maxweight, MAXWEIGHT)
+        # MAXWEIGHT is the minimal maxweight, needed to avoid too many tasks
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.maxweight)
         if random_seed is not None:
