@@ -75,7 +75,8 @@ PRECALC_MAP = dict(
     classical_bcr=['classical'],
     classical_damage=['classical'],
     event_based=['event_based_risk'],
-    event_based_risk=['event_based'])
+    event_based_risk=['event_based'],
+    ucerf_event_based=['ucerf_event_based_rupture'])
 
 
 def set_array(longarray, shortarray):
