@@ -839,6 +839,15 @@ class SourceManager(object):
         Yield (sources, sites, rlzs_assoc, monitor) by
         looping on the tiles and on the source blocks.
         """
+        ntasks = 0
+        for src_data in self._gen_src_light(tiles):
+            for args in self._gen_args(src_data, tiles):
+                yield args
+                ntasks += 1
+        if ntasks:
+            logging.info('Generated %d tasks from the light sources', ntasks)
+
+        # this blocks for a long time, so it is best to do it later
         tile = Tile(sitecol, self.maximum_distance)
         ntasks = 0
         for src_data in self._gen_src_heavy(sitecol):
@@ -847,13 +856,6 @@ class SourceManager(object):
                 ntasks += 1
         if ntasks:
             logging.info('Generated %d tasks from the heavy sources', ntasks)
-        ntasks = 0
-        for src_data in self._gen_src_light(tiles):
-            for args in self._gen_args(src_data, tiles):
-                yield args
-                ntasks += 1
-        if ntasks:
-            logging.info('Generated %d tasks from the light sources', ntasks)
 
     def _gen_args(self, src_data, tiles):
         mon = self.monitor.new()
