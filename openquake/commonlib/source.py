@@ -248,8 +248,8 @@ class RlzsAssoc(collections.Mapping):
             elif abs(tot_weight - 1) > 1E-12:  # allow for rounding errors
                 logging.warn('Some source models are not contributing, '
                              'weights are being rescaled')
-            for rlz in self.realizations:
-                rlz.weight = rlz.weight / tot_weight
+                for rlz in self.realizations:
+                    rlz.weight = rlz.weight / tot_weight
 
         self.gsims_by_grp_id = groupby(
             self.rlzs_assoc, operator.itemgetter(0),
@@ -511,7 +511,6 @@ class CompositionInfo(object):
         trts = set(sg.trt for sg in source_model.src_groups)
         return self.gsim_lt.reduce(trts).get_num_paths()
 
-    # FIXME: this is called several times, both in .init and in .send_sources
     def get_rlzs_assoc(self, count_ruptures=None):
         """
         Return a RlzsAssoc with fields realizations, gsim_by_trt,
