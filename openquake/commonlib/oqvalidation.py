@@ -252,8 +252,6 @@ class OqParam(valid.ParamSet):
         levels, if given, or the hazard ones.
         """
         imtls = getattr(self, 'hazard_imtls', None) or self.risk_imtls
-        if self.job_type == 'hazard' and not imtls:
-            raise ValueError('Missing intensity_measure_types!')
         return DictArray(imtls)
 
     @property
