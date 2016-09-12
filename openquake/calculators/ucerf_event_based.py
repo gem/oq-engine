@@ -765,6 +765,8 @@ class UCERFEventBasedCalculator(event_based.EventBasedCalculator):
         self.rup_data = {}
         self.infos = []
         self.eid = 0
+        if not self.oqparam.imtls:
+            raise ValueError('Missing intensity_measure_types!')
 
     def execute(self):
         """
