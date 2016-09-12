@@ -531,7 +531,7 @@ class EventBasedCalculator(ClassicalCalculator):
         agg_mon.flush()
         self.datastore.flush()
         if 'ruptures' in res:
-            EventBasedRuptureCalculator.save_ruptures.__func__(
+            vars(EventBasedRuptureCalculator)['save_ruptures'](
                 self, res['ruptures'])
         return acc
 

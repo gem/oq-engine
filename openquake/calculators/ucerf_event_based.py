@@ -582,7 +582,8 @@ class UCERFSESControl(object):
             rates = hdf5[self.idx_set["rate_idx"]].value
             occurrences = self.tom.sample_number_of_occurrences(rates)
             indices = numpy.where(occurrences)[0]
-            logging.info('Considering %s %d ruptures', branch_id, len(indices))
+            logging.debug(
+                'Considering "%s", %d ruptures', branch_id, len(indices))
 
             # get ruptures from the indices
             ruptures = []
@@ -657,7 +658,8 @@ class UCERFSourceConverter(SourceConverter):
             trt=node["tectonicRegion"])
 
 
-def compute_gmfs_curves(branch_info, ucerf, sitecol, rlzs_assoc, monitor):
+def compute_ruptures_gmfs_curves(
+        branch_info, ucerf, sitecol, rlzs_assoc, monitor):
     """
     Returns the ruptures as a TRT set
     :param str branch_info:
@@ -732,8 +734,6 @@ class UCERFEventBasedCalculator(event_based.EventBasedCalculator):
     """
     Event based PSHA calculator generating the ruptures only
     """
-    core_task = compute_gmfs_curves
-    etags = datastore.persistent_attribute('etags')
     is_stochastic = True
 
     def pre_execute(self):
@@ -775,14 +775,12 @@ class UCERFEventBasedCalculator(event_based.EventBasedCalculator):
         [ucerf] = self.src_group
         monitor = self.monitor(oqparam=self.oqparam)
         res = parallel.apply(
-            compute_gmfs_curves,
+            compute_ruptures_gmfs_curves,
             (id_set, ucerf, self.sitecol, self.rlzs_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks).submit_all()
         data = functools.reduce(
             self.combine_pmaps_and_save_gmfs, res, AccumDict())
         self.save_data_transfer(res)
-        #self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
-        #    lambda grp: data.num_events)
         self.datastore['csm_info'] = self.csm.info
         self.datastore['source_info'] = numpy.array(
             self.infos, source.source_info_dt)
