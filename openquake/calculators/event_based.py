@@ -600,7 +600,8 @@ class EventBasedCalculator(ClassicalCalculator):
             # save individual curves
             if self.oqparam.individual_curves:
                 for i in sorted(result):
-                    self.datastore['hcurves/rlz-%03d' % i] = result[i]
+                    if result[i]:
+                        self.datastore['hcurves/rlz-%03d' % i] = result[i]
             # compute and save statistics; this is done in process
             # we don't need to parallelize, since event based calculations
             # involves a "small" number of sites (<= 65,536)
