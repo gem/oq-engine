@@ -530,6 +530,9 @@ class EventBasedCalculator(ClassicalCalculator):
         sav_mon.flush()
         agg_mon.flush()
         self.datastore.flush()
+        if 'ruptures' in res:
+            EventBasedRuptureCalculator.save_ruptures.__func__(
+                self, res['ruptures'])
         return acc
 
     def gen_args(self, ebruptures):
