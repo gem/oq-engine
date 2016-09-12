@@ -29,8 +29,9 @@ import numpy
 
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip
+from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import valid
-from openquake.commonlib import readinput, parallel, datastore, source, calc
+from openquake.commonlib import readinput, parallel, source, calc
 from openquake.calculators import base, event_based
 
 from openquake.hazardlib.geo.surface.multi import MultiSurface
@@ -780,11 +781,15 @@ class UCERFEventBasedCalculator(event_based.EventBasedCalculator):
             compute_ruptures_gmfs_curves,
             (id_set, ucerf, self.sitecol, self.rlzs_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks).submit_all()
+        L = len(self.oqparam.imtls.array)
+        acc = {rlz.ordinal: ProbabilityMap(L, 1)
+               for rlz in self.rlzs_assoc.realizations}
         data = functools.reduce(
-            self.combine_pmaps_and_save_gmfs, res, AccumDict())
+            self.combine_pmaps_and_save_gmfs, res, AccumDict(acc))
         self.save_data_transfer(res)
         self.datastore['csm_info'] = self.csm.info
         self.datastore['source_info'] = numpy.array(
             self.infos, source.source_info_dt)
-        self.datastore.set_nbytes('gmf_data')
+        if 'gmf_data' in self.datastore:
+            self.datastore.set_nbytes('gmf_data')
         return data
