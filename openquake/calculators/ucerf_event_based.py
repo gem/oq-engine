@@ -30,7 +30,7 @@ import numpy
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip
 from openquake.risklib import valid
-from openquake.commonlib import readinput, parallel, datastore, source
+from openquake.commonlib import readinput, parallel, datastore, source, calc
 from openquake.calculators import base, event_based
 
 from openquake.hazardlib.geo.surface.multi import MultiSurface
@@ -657,7 +657,7 @@ class UCERFSourceConverter(SourceConverter):
             trt=node["tectonicRegion"])
 
 
-def compute_ruptures(branch_info, ucerf, sitecol, oqparam, monitor):
+def compute_gmfs_curves(branch_info, ucerf, sitecol, rlzs_assoc, monitor):
     """
     Returns the ruptures as a TRT set
     :param str branch_info:
@@ -666,35 +666,41 @@ def compute_ruptures(branch_info, ucerf, sitecol, oqparam, monitor):
         Instance of the UCERFSESControl object
     :param sitecol:
         Site collection :class:`openquake.hazardlib.site.SiteCollection`
-    :param oqparam:
-        Instance of :class:`openquake.commonlib.oqvalidation.OqParam`
+    :param rlzs_assoc:
+        Instance of :class:`openquake.commonlib.source.RlzsAssoc`
     :param monitor:
         Instance of :class:`openquake.baselib.performance.Monitor`
     :returns:
         Dictionary of rupture instances associated to a TRT ID
     """
-    integration_distance = oqparam.maximum_distance[DEFAULT_TRT]
+    oq = monitor.oqparam
+    imts = list(oq.imtls)
+    min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
+    integration_distance = oq.maximum_distance[DEFAULT_TRT]
     res = AccumDict()
     res.calc_times = AccumDict()
     serial = 1
     filter_mon = monitor('update_background_site_filter', measuremem=False)
     event_mon = monitor('sampling ruptures', measuremem=False)
-    num_events = 0
-    for src_group_id, (ltbrid, branch_id, _) in enumerate(branch_info):
+    res['ruptures'] = rupdic = AccumDict()
+    rupdic.num_events = 0
+    rupdic.trt = DEFAULT_TRT
+    for grp_id, (ltbrid, branch_id, _) in enumerate(branch_info):
         t0 = time.time()
+        rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
         with filter_mon:
             ucerf.update_background_site_filter(
                 branch_id, sitecol, integration_distance)
 
         # set the seed before calling generate_event_set
-        numpy.random.seed(oqparam.random_seed + src_group_id)
+        numpy.random.seed(oq.random_seed + grp_id)
         ses_ruptures = []
-        for ses_idx in range(1, oqparam.ses_per_logic_tree_path + 1):
+        for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
             with event_mon:
                 rups, n_occs = ucerf.generate_event_set(
                     branch_id, sitecol, integration_distance)
             for i, rup in enumerate(rups):
-                rup.seed = oqparam.random_seed  # to think
+                rup.seed = oq.random_seed  # to think
                 rrup = rup.surface.get_min_distance(sitecol.mesh)
                 r_sites = sitecol.filter(rrup <= integration_distance)
                 if r_sites is None:
@@ -711,24 +717,22 @@ def compute_ruptures(branch_info, ucerf, sitecol, oqparam, monitor):
                         event_based.EBRupture(
                             rup, indices,
                             numpy.array(events, event_based.event_dt),
-                            ucerf.source_id, src_group_id, serial))
+                            ucerf.source_id, grp_id, serial))
                     serial += 1
-                    num_events += len(events)
-        dt = time.time() - t0
-        res.calc_times[src_group_id] = (ltbrid, dt)
-        res[src_group_id] = ses_ruptures
-    res.trt = DEFAULT_TRT
-    res.num_events = num_events
+                    rupdic.num_events += len(events)
+        res['ruptures'][grp_id] = ses_ruptures
+        res.update(event_based.compute_gmfs_and_curves(
+            ses_ruptures, sitecol, imts, rlzs_by_gsim, min_iml, monitor))
+        res.calc_times[grp_id] = (ltbrid, time.time() - t0)
     return res
 
 
-@base.calculators.add('ucerf_event_based_rupture')
-class UCERFEventBasedRuptureCalculator(
-        event_based.EventBasedRuptureCalculator):
+@base.calculators.add('ucerf_event_based')
+class UCERFEventBasedCalculator(event_based.EventBasedCalculator):
     """
     Event based PSHA calculator generating the ruptures only
     """
-    core_task = compute_ruptures
+    core_task = compute_gmfs_curves
     etags = datastore.persistent_attribute('etags')
     is_stochastic = True
 
@@ -757,51 +761,30 @@ class UCERFEventBasedRuptureCalculator(
             self.gsim_lt, self.smlt, source_models, set_weight=False)
         logging.info('Found %d x %d logic tree branches', len(branches),
                      self.gsim_lt.get_num_paths())
+        self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
         self.rup_data = {}
         self.infos = []
         self.eid = 0
 
     def execute(self):
         """
-        Run the ucerf rupture calculation
+        Run the ucerf calculation
         """
         id_set = [(key, branch.value, branch.weight)
                   for key, branch in self.smlt.branches.items()]
         [ucerf] = self.src_group
+        monitor = self.monitor(oqparam=self.oqparam)
         res = parallel.apply(
-            compute_ruptures,
-            (id_set, ucerf, self.sitecol, self.oqparam, self.monitor),
+            compute_gmfs_curves,
+            (id_set, ucerf, self.sitecol, self.rlzs_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks).submit_all()
-        ruptures_by_grp_id = functools.reduce(self.agg, res, AccumDict())
+        data = functools.reduce(
+            self.combine_pmaps_and_save_gmfs, res, AccumDict())
         self.save_data_transfer(res)
-        self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
-            functools.partial(self.count_eff_ruptures, ruptures_by_grp_id))
+        #self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
+        #    lambda grp: data.num_events)
         self.datastore['csm_info'] = self.csm.info
         self.datastore['source_info'] = numpy.array(
             self.infos, source.source_info_dt)
-        return ruptures_by_grp_id
-
-    def agg(self, acc, val):
-        """
-        Aggregated the ruptures and the calculation times
-        """
-        for grp_id in val:
-            ltbrid, dt = val.calc_times[grp_id]
-            info = source.SourceInfo(
-                grp_id, ltbrid,
-                source_class=UCERFSESControl.__class__.__name__,
-                weight=1, sources=1, filter_time=0, split_time=0,
-                cum_calc_time=dt, max_calc_time=dt, num_tasks=1)
-            self.infos.append(info)
-        self.save_ruptures(val)
-        return acc + val
-
-
-@base.calculators.add('ucerf_event_based')
-class UCERFEventBasedCalculator(event_based.EventBasedCalculator):
-    """
-    Event based PSHA calculator generating the ground motion fields and
-    the hazard curves from the ruptures, depending on the configuration
-    parameters. Specialized for the UCERF model.
-    """
-    pre_calculator = 'ucerf_event_based_rupture'
+        self.datastore.set_nbytes('gmf_data')
+        return data
