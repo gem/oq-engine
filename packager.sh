@@ -513,8 +513,6 @@ _pkgtest_innervm_run () {
     # configure the machine to run tests
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # use celery to run the demos
-        ssh $lxc_ip "sudo sed -i 's/use_celery = false/use_celery = true/g' /etc/openquake/openquake.cfg" 
-        # run celeryd daemon
         ssh $lxc_ip "cd /usr/share/openquake/engine ; celeryd --config openquake.engine.celeryconfig >/tmp/celeryd.log 2>&1 3>&1 &"
 
         # wait for celeryd startup time
