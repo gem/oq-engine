@@ -796,7 +796,7 @@ class SourceManager(object):
         maxweight = math.ceil(csm.weight / self.concurrent_tasks / (
             num_tiles if filter_sources else 1))
         # if there are S filtered sources and there are T tiles, only S/T
-        # S/T sources contribute to a given tile; by reducing the maxweight
+        # sources contribute to a given tile; by reducing the maxweight
         # by T we generate the same number of "concurrent_tasks" per tile
         self.maxweight = max(maxweight, MAXWEIGHT)
         # MAXWEIGHT is the minimal maxweight, needed to avoid too many tasks
