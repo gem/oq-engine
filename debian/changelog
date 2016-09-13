@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Reduced the number of tasks generated when filter_sources is False
   * Saved engine_version and hazardlib_version as attributes of the datastore
   * Avoided saving the ruptures when ground_motion_fields is True
   * Finalized the HDF5 export for hazard curves, hazard maps and uniform
