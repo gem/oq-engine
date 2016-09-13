@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
 """
 Module :mod:`~openquake.hazardlib.calc.filters` contain filter functions for
 calculators.
@@ -55,6 +54,27 @@ filter function of each kind (see :func:`source_site_distance_filter` and
 :func:`rupture_site_distance_filter`) as well as "no operation" filters
 (:func:`source_site_noop_filter` and :func:`rupture_site_noop_filter`).
 """
+from contextlib import contextmanager
+
+
+@contextmanager
+def context(src):
+    """
+    Used to add the source_id to the error message. To be used as
+
+    with context(src):
+        operation_with(src)
+
+    Typically the operation is filtering a source, that can fail for
+    tricky geometries.
+    """
+    try:
+        yield
+    except:
+        etype, err, tb = sys.exc_info()
+        msg = 'An error occurred with source id=%s. Error: %s'
+        msg %= (src.source_id, err)
+        raise_(etype, msg, tb)
 
 
 def filter_sites_by_distance_to_rupture(rupture, integration_distance, sites):
@@ -86,7 +106,8 @@ def filter_sites_by_distance_to_rupture(rupture, integration_distance, sites):
     return sites.filter(jb_dist <= integration_distance)
 
 
-# this is a class because it must be pickleable
+# this is a class because it must be pickleable; it is lowercase for
+# legacy reasons
 class source_site_distance_filter(object):
     """
     Source-site filter based on distance.
@@ -101,12 +122,17 @@ class source_site_distance_filter(object):
 
     def __call__(self, sources_sites):
         for source, sites in sources_sites:
-            s_sites = source.filter_sites_by_distance_to_source(
-                self.integration_distance, sites
-            )
-            if s_sites is None:
-                continue
-            yield source, s_sites
+            if hasattr(self.integration_distance, '__getitem__'):
+                # a dictionary TRT -> distance
+                integration_distance = self.integration_distance[
+                    source.tectonic_region_type]
+            else:
+                integration_distance = self.integration_distance
+            with context(source):
+                s_sites = source.filter_sites_by_distance_to_source(
+                    integration_distance, sites)
+            if s_sites is not None:
+                yield source, s_sites
 
 
 class rupture_site_distance_filter(object):

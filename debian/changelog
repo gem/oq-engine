@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * The `source_site_distance_filter` is now used by default in
+    `hazard_curves_per_trt`
   * Added a simple argument parser in baselib
   * Replaced pydoc.locate with a call to importlib to work around a QGIS issue
   * Fixed the encode/decode functions in baselib.python3compat

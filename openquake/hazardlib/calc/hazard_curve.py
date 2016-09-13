@@ -199,8 +199,8 @@ def poe_map(src, s_sites, imtls, cmaker, trunclevel, bbs,
 # this is used by the engine
 def hazard_curves_per_trt(
         sources, sites, imtls, gsims, truncation_level=None,
-        source_site_filter=filters.source_site_noop_filter,
-        maximum_distance=None, bbs=(), monitor=Monitor()):
+        source_site_filter='default', maximum_distance=None, bbs=(),
+        monitor=Monitor()):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
@@ -209,6 +209,9 @@ def hazard_curves_per_trt(
 
     :returns: a ProbabilityMap instance
     """
+    if source_site_filter == 'default':
+        source_site_filter = filters.source_site_distance_filter(
+            maximum_distance)
     with GroundShakingIntensityModel.forbid_instantiation():
         imtls = DictArray(imtls)
         cmaker = ContextMaker(gsims, maximum_distance)
