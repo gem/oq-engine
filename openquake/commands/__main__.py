@@ -35,7 +35,7 @@ if 'OQ_DISTRIBUTE' not in os.environ and USE_CELERY:
     os.environ['OQ_DISTRIBUTE'] = 'celery'
 
 # force cluster users to use `oq engine` so that we have centralized logs
-if USE_CELERY and'run' in sys.argv:
+if USE_CELERY and 'run' in sys.argv:
     sys.exit('You are on a cluster and you are using oq run?? '
              'Use oq engine --run instead!')
 
