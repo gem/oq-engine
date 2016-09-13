@@ -23,6 +23,7 @@ import os.path
 import logging
 import math
 import random
+import socket
 import functools
 import h5py
 import numpy
@@ -744,6 +745,8 @@ class UCERFEventBasedCalculator(event_based.EventBasedCalculator):
         self.sitecol = readinput.get_site_collection(self.oqparam)
         self.gsim_lt = readinput.get_gsim_lt(self.oqparam, [DEFAULT_TRT])
         self.smlt = readinput.get_source_model_lt(self.oqparam)
+        job_info = dict(hostname=socket.gethostname())
+        self.datastore.save('job_info', job_info)
         parser = source.SourceModelParser(
             UCERFSourceConverter(self.oqparam.investigation_time,
                                  self.oqparam.rupture_mesh_spacing))
