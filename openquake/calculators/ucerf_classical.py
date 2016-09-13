@@ -345,7 +345,7 @@ def ucerf_classical_hazard_by_branch(branchnames, ucerf_source, src_group_id,
                 monitor=monitor)
 
         else:
-            dic[src_group_id] = ProbabilityMap()
+            dic[src_group_id] = ProbabilityMap(len(imtls.array), len(gsims))
         dic.calc_times += monitor.calc_times  # added by hazard_curves_per_trt
         dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
         logging.info('Branch %s', branchname)
@@ -422,8 +422,9 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         monitor.oqparam = oq = self.oqparam
         ucerf_source = self.src_group.sources[0]
         max_dist = oq.maximum_distance[DEFAULT_TRT]
-        acc = AccumDict({sg.id: ProbabilityMap(len(oq.imtls.array), 1)
-                         for sg in self.src_group})
+        acc = AccumDict({
+            grp_id: ProbabilityMap(len(oq.imtls.array), len(gsims))
+            for grp_id, gsims in self.rlzs_assoc.gsims_by_grp_id.items()})
         acc.calc_times = []
         acc.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         acc.bb_dict = {}
