@@ -245,11 +245,13 @@ class RlzsAssoc(collections.Mapping):
             tot_weight = sum(rlz.weight for rlz in self.realizations)
             if tot_weight == 0:
                 raise ValueError('All realizations have zero weight??')
-            elif abs(tot_weight - 1) > 1E-12:  # allow for rounding errors
+            elif abs(tot_weight - 1) > 1E-8:  # allow for rounding errors
+                # 1E-8 is the value that makes the LogicTreeCase2ClassicalPSHA
+                # demo raise no warning (it should NOT raise warnings)
                 logging.warn('Some source models are not contributing, '
                              'weights are being rescaled')
-            for rlz in self.realizations:
-                rlz.weight = rlz.weight / tot_weight
+                for rlz in self.realizations:
+                    rlz.weight = rlz.weight / tot_weight
 
         self.gsims_by_grp_id = groupby(
             self.rlzs_assoc, operator.itemgetter(0),
@@ -511,7 +513,6 @@ class CompositionInfo(object):
         trts = set(sg.trt for sg in source_model.src_groups)
         return self.gsim_lt.reduce(trts).get_num_paths()
 
-    # FIXME: this is called several times, both in .init and in .send_sources
     def get_rlzs_assoc(self, count_ruptures=None):
         """
         Return a RlzsAssoc with fields realizations, gsim_by_trt,
@@ -792,9 +793,13 @@ class SourceManager(object):
         self.rlzs_assoc = csm.info.get_rlzs_assoc()
         self.infos = {}  # src_group_id, source_id -> SourceInfo tuple
 
-        self.maxweight = math.ceil(csm.weight / self.concurrent_tasks)
-        if num_tiles > 1:
-            self.maxweight = max(self.maxweight / num_tiles, MAXWEIGHT)
+        maxweight = math.ceil(csm.weight / self.concurrent_tasks / (
+            num_tiles if filter_sources else 1))
+        # if there are S filtered sources and there are T tiles, only S/T
+        # sources contribute to a given tile; by reducing the maxweight
+        # by T we generate the same number of "concurrent_tasks" per tile
+        self.maxweight = max(maxweight, MAXWEIGHT)
+        # MAXWEIGHT is the minimal maxweight, needed to avoid too many tasks
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.maxweight)
         if random_seed is not None:
@@ -840,9 +845,15 @@ class SourceManager(object):
         Yield (sources, sites, rlzs_assoc, monitor) by
         looping on the tiles and on the source blocks.
         """
+        ntasks = 0
         for src_data in self._gen_src_light(tiles):
             for args in self._gen_args(src_data, tiles):
                 yield args
+                ntasks += 1
+        if ntasks:
+            logging.info('Generated %d tasks from the light sources', ntasks)
+
+        # this blocks for a long time, so it is best to do it later
         tile = Tile(sitecol, self.maximum_distance)
         ntasks = 0
         for src_data in self._gen_src_heavy(sitecol):
@@ -850,7 +861,7 @@ class SourceManager(object):
                 yield args
                 ntasks += 1
         if ntasks:
-            logging.info('Generated %s tasks from the heavy sources', ntasks)
+            logging.info('Generated %d tasks from the heavy sources', ntasks)
 
     def _gen_args(self, src_data, tiles):
         mon = self.monitor.new()
@@ -876,11 +887,11 @@ class SourceManager(object):
         for i, tile in enumerate(tiles):
             data = []
             for src in sources:
-                with filter_mon, context(src):
-                    if self.filter_sources:
+                if self.filter_sources:
+                    with filter_mon, context(src):
                         ok = src in tile
-                    else:  # accept all sources
-                        ok = True
+                else:  # accept all sources
+                    ok = True
                 if ok:
                     data.append((src, i, [], filter_mon.dt, 0))
                 self.csm.filtered_weight += src.weight
