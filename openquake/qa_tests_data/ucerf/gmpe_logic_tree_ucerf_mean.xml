@@ -14,59 +14,26 @@ xmlns:gml="http://www.opengis.net/gml"
             branchSetID="wus_asc"
             uncertaintyType="gmpeModel"
             >
-            <!--
                 <logicTreeBranch
-                branchID="ASK14"
+                branchID="AS08"
                 >
                     <uncertaintyModel>
-                        AbrahamsonEtAl2014
+                        AbrahamsonSilva2008
                     </uncertaintyModel>
                     <uncertaintyWeight>
-                        0.22
+                        0.6
                     </uncertaintyWeight>
-                </logicTreeBranch> -->
+                </logicTreeBranch>
                 <logicTreeBranch
-                branchID="BSSA14"
+                branchID="BA14"
                 >
                     <uncertaintyModel>
                         BooreEtAl2014
                     </uncertaintyModel>
                     <uncertaintyWeight>
-                        1.0
+                        0.4
                     </uncertaintyWeight>
                 </logicTreeBranch>
-                <!--
-                <logicTreeBranch
-                branchID="CB14"
-                >
-                    <uncertaintyModel>
-                        CampbellBozorgnia2014
-                    </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.22
-                    </uncertaintyWeight>
-                </logicTreeBranch>
-                <logicTreeBranch
-                branchID="CY14"
-                >
-                    <uncertaintyModel>
-                        ChiouYoungs2014
-                    </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.22
-                    </uncertaintyWeight>
-                </logicTreeBranch>
-                <logicTreeBranch
-                branchID="I14"
-                >
-                    <uncertaintyModel>
-                        Idriss2014
-                    </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.12
-                    </uncertaintyWeight>
-                </logicTreeBranch>
-                 -->
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>
     </logicTree>
