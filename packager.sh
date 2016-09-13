@@ -513,7 +513,7 @@ _pkgtest_innervm_run () {
     # configure the machine to run tests
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # use celery to run the demos
-        ssh $lxc_ip "cd /usr/share/openquake/engine ; celeryd --config openquake.engine.celeryconfig >/tmp/celeryd.log 2>&1 3>&1 &"
+        ssh $lxc_ip "celeryd --config openquake.engine.celeryconfig >/tmp/celeryd.log 2>&1 3>&1 &"
 
         # wait for celeryd startup time
         ssh $lxc_ip "
@@ -530,8 +530,6 @@ celeryd_wait() {
         echo \"ERROR: no Celery available\"
         return 1
     fi
-
-    cd /usr/share/openquake/engine
 
     for cw_i in \$(seq 1 \$cw_nloop); do
         cw_ret=\"\$(\$celery status)\"
