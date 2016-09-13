@@ -98,9 +98,7 @@ sig_hand () {
     echo "signal trapped"
     if [ "$lxc_name" != "" ]; then
         set +e
-        if [ "$GEM_USE_CELERY" ]; then
-            scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
-        fi
+        scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
         scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/ssh.history"
         echo "Destroying [$lxc_name] lxc"
         upper="$(mount | grep "${lxc_name}.*upperdir" | sed 's@.*upperdir=@@g;s@,.*@@g')"
@@ -420,7 +418,7 @@ _builddoc_innervm_run () {
 #                     - adds repositories to apt sources on lxc
 #                     - performs package tests (install, remove, reinstall ..)
 #                     - set up db
-#                     - runs celeryd if GEM_USE_CELERY is set
+#                     - runs celeryd
 #                     - executes demos
 #
 #      <lxc_ip>    the IP address of lxc instance
@@ -514,14 +512,11 @@ _pkgtest_innervm_run () {
 
     # configure the machine to run tests
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
-        # Is the GEM_USE_CELERY flag is set, use celery to run the demos
-        if [ "$GEM_USE_CELERY" ]; then
-            ssh $lxc_ip "sudo sed -i 's/use_celery = false/use_celery = true/g' /etc/openquake/openquake.cfg" 
-            # run celeryd daemon
-            ssh $lxc_ip "cd /usr/share/openquake/engine ; celeryd --config openquake.engine.celeryconfig >/tmp/celeryd.log 2>&1 3>&1 &"
+        # use celery to run the demos
+        ssh $lxc_ip "cd /usr/share/openquake/engine ; celeryd --config openquake.engine.celeryconfig >/tmp/celeryd.log 2>&1 3>&1 &"
 
-            # wait for celeryd startup time
-            ssh $lxc_ip "
+        # wait for celeryd startup time
+        ssh $lxc_ip "
 celeryd_wait() {
     local cw_nloop=\"\$1\" cw_ret cw_i
 
@@ -610,7 +605,7 @@ celeryd_wait $GEM_MAXLOOP"
             if [ -f \$demo_dir/job_hazard.ini ]; then
             cd \$demo_dir
             echo \"Running \$demo_dir/job_hazard.ini\"
-            oq engine --run job_hazard.ini
+            OQ_DISTRIBUTE=celery oq engine --run job_hazard.ini
             echo \"Running \$demo_dir/job_risk.ini\"
             oq engine --run job_risk.ini --exports csv,xml --hazard-calculation-id -1
             cd -
@@ -621,7 +616,6 @@ celeryd_wait $GEM_MAXLOOP"
         oq engine --lhc
         echo 'Listing risk calculations'
         oq engine --lrc"
-    fi
 
     ssh $lxc_ip "oq engine --make-html-report today
     oq engine --delete-calculation 1 --yes
@@ -1014,9 +1008,7 @@ EOF
     _pkgtest_innervm_run "$lxc_ip" "$branch"
     inner_ret=$?
 
-    if [ "$GEM_USE_CELERY" ]; then
-        scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
-    fi
+    scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/pkgtest.history"
 
     sudo $LXC_TERM -n $lxc_name
