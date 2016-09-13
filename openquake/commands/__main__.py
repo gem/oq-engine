@@ -29,7 +29,8 @@ from openquake.engine import config
 
 USE_CELERY = valid.boolean(config.get('celery', 'use_celery') or 'false')
 
-if USE_CELERY:
+# the environment variable has the precedence over the configuration file
+if 'OQ_DISTRIBUTE' not in os.environ and USE_CELERY:
     os.environ['OQ_DISTRIBUTE'] = 'celery'
 
 

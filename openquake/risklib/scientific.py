@@ -59,13 +59,13 @@ def build_dtypes(curve_resolution, conditional_loss_poes, insured=False):
 def extract_poe_ins(name):
     """
     >>> extract_poe_ins('poe-0.1')
-    (0.1, False)
+    (0.1, 0)
     >>> extract_poe_ins('poe-0.2_ins')
-    (0.2, True)
+    (0.2, 1)
     """
-    ins = False
+    ins = 0
     if name.endswith('_ins'):
-        ins = True
+        ins = 1
         name = name[:-4]
     poe = float(name[4:])
     return poe, ins
