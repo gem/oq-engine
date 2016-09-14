@@ -32,6 +32,7 @@ from openquake.hazardlib import __version__ as hazardlib_version
 from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
+from openquake.hazardlib.calc.filters import SourceSitesFilter
 from openquake.risklib import riskinput, __version__ as engine_version
 from openquake.commonlib import readinput, riskmodels, datastore, source
 from openquake.commonlib.oqvalidation import OqParam
@@ -49,6 +50,10 @@ calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
 Site = collections.namedtuple('Site', 'sid lon lat')
 
 F32 = numpy.float32
+
+def is_small(sitecol):
+    # if the site collection has up to 10 sites, filter it
+    return len(sitecol) <= 10
 
 
 class InvalidCalculationID(Exception):
@@ -371,7 +376,12 @@ class HazardCalculator(BaseCalculator):
         if 'source' in self.oqparam.inputs:
             with self.monitor(
                     'reading composite source model', autoflush=True):
-                self.csm = readinput.get_composite_source_model(self.oqparam)
+                csm = readinput.get_composite_source_model(self.oqparam)
+                if is_small(self.sitecol):
+                    ss_filter = SourceSitesFilter(self.oqparam.maximum_distance)
+                    self.csm = csm.filter(self.sitecol, ss_filter)
+                else:
+                    self.csm = csm
                 self.datastore['csm_info'] = self.csm.info
                 self.rup_data = {}
         self.init()
