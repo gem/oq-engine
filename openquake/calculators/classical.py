@@ -281,30 +281,47 @@ class PSHACalculator(base.HazardCalculator):
             random_seed=oq.random_seed)
         tiles = [self.sitecol]
         self.num_tiles = 1
+        
+        with self.monitor('managing sources', autoflush=True):
+            src_groups = list(self.csm.src_groups)
+            if len(src_groups) > oq.concurrent_tasks:
+                # case with a large source model logic tree, ignore tiles
+                res = self.send_src_groups(src_groups, oq, monitor)
+            else:  # small logic tree, use SourceManager and tiles if any
+                res = self.send_sources(tiles, oq, monitor)
+        acc = reduce(self.agg_dicts, res, self.zerodict())
+        self.save_data_transfer(res)
+        with self.monitor('store source_info', autoflush=True):
+            self.store_source_info(acc)
+        self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
+            partial(self.count_eff_ruptures, acc))
+        self.datastore['csm_info'] = self.csm.info
+        return acc
+
+    def send_src_groups(self, src_groups, oq, monitor):
+        iterargs = ((sg.sources, self.sitecol,
+                     self.rlzs_assoc.gsims_by_grp_id[sg.id], monitor)
+                    for sg in src_groups)
+        return parallel.starmap(self.core_task.__func__, iterargs).submit_all()
+
+    def send_sources(self, tiles, oq, monitor):
         if self.is_tiling():
             hint = math.ceil(len(self.sitecol) / oq.sites_per_tile)
             tiles = self.sitecol.split_in_tiles(hint)
             self.num_tiles = len(tiles)
             logging.info('Generating %d tiles of %d sites each',
                          self.num_tiles, len(tiles[0]))
-        with self.monitor('managing sources', autoflush=True):
-            srcman = source.SourceManager(
-                self.csm, oq.maximum_distance, oq.concurrent_tasks,
-                self.datastore, monitor, self.random_seed, oq.filter_sources,
-                num_tiles=self.num_tiles)
-            tm = parallel.starmap(
-                self.core_task.__func__, srcman.gen_args(self.sitecol, tiles))
-            iter_result = tm.submit_all()
-            srcman.pre_store_source_info(self.datastore)
-        pmap_by_grp_id = reduce(self.agg_dicts, iter_result, self.zerodict())
-        self.save_data_transfer(iter_result)
-        with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(pmap_by_grp_id)
-        self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
-            partial(self.count_eff_ruptures, pmap_by_grp_id))
-        self.datastore['csm_info'] = self.csm.info
-        return pmap_by_grp_id
 
+        srcman = source.SourceManager(
+            self.csm, oq.maximum_distance, oq.concurrent_tasks,
+            self.datastore, monitor, self.random_seed, oq.filter_sources,
+            num_tiles=self.num_tiles)
+        res = parallel.starmap(
+            self.core_task.__func__, srcman.gen_args(self.sitecol, tiles)
+        ).submit_all()
+        srcman.pre_store_source_info(self.datastore)
+        return res
+  
     def store_source_info(self, pmap_by_grp_id):
         # save the calculation times per each source
         calc_times = getattr(pmap_by_grp_id, 'calc_times', [])
