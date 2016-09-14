@@ -57,8 +57,8 @@ class StochasticEventSetTestCase(unittest.TestCase):
         self.assertEqual(ses, [self.r1_1, self.r1_2, self.r1_2, self.r2_1])
 
     def test_filter(self):
-        def extract_first_source(sources_sites):
-            for source, _sites in sources_sites:
+        def extract_first_source(sources, sites):
+            for source in sources:
                 yield source, None
                 break
         fake_sites = [1, 2, 3]
@@ -69,8 +69,8 @@ class StochasticEventSetTestCase(unittest.TestCase):
             ))
         self.assertEqual(ses, [self.r1_1, self.r1_2, self.r1_2])
 
-        def extract_first_rupture(ruptures_sites):
-            for rupture, _sites in ruptures_sites:
+        def extract_first_rupture(ruptures, sites):
+            for rupture in ruptures:
                 yield rupture, None
                 break
         ses = list(

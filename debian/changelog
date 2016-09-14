@@ -2,6 +2,7 @@
   * Adds/Modifies Ry0 and Rx calculator for multi-surface typology using the Generalized Coordinate System (GC2)
   
   [Michele Simionato]
+  * The `SourceSitesFilter` is now used by default in `pmap_from_grp`
   * Added a simple argument parser in baselib
   * Replaced pydoc.locate with a call to importlib to work around a QGIS issue
   * Fixed the encode/decode functions in baselib.python3compat

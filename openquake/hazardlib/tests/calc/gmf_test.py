@@ -134,12 +134,13 @@ class BaseGMFCalcTestCase(unittest.TestCase):
         self.imt1 = SA(10, 5)
         self.imt2 = PGV()
 
-        def rupture_site_filter(rupture_site_gen):
-            [(rupture, sites)] = rupture_site_gen
+        def rupture_site_filter(ruptures, sites):
+            [rupture] = ruptures
             assert rupture is self.rupture
             assert sites is self.sites
             yield rupture, sites.filter(sites.vs30measured)
-
+        rupture_site_filter.affected = (
+            lambda rup, sites: sites.filter(sites.vs30measured))
         self.rupture_site_filter = rupture_site_filter
 
         self.gsim = FakeGSIMInterIntraStdDevs(self)
@@ -321,15 +322,15 @@ class GMFCalcNoCorrelationTestCase(BaseGMFCalcTestCase):
             self.assertEqual(intensity[6].mean(), 0)
 
     def test_filter_all_out(self):
-        def rupture_site_filter(rupture_site):
+        def rupture_site_filter(ruptures, sites):
             return []
+        rupture_site_filter.affected = lambda rup, sites: None
         for truncation_level in (None, 0, 1.3):
             gmfs = ground_motion_fields(
                 self.rupture, self.sites, [self.imt1, self.imt2], self.gsim,
                 truncation_level=truncation_level,
                 realizations=123,
-                rupture_site_filter=rupture_site_filter
-            )
+                rupture_site_filter=rupture_site_filter)
             self.assertEqual(gmfs[self.imt1].shape, (7, 123))
             self.assertEqual(gmfs[self.imt2].shape, (7, 123))
             assert_array_equal(gmfs[self.imt1], 0)
@@ -412,10 +413,10 @@ class GMFCalcCorrelatedTestCase(BaseGMFCalcTestCase):
         sites = [Site(point, mean, False, inter, intra) for point in points]
         self.sites = SiteCollection(sites)
 
-        def rupture_site_filter(rupture_sites):
-            [(rupture, sites)] = rupture_sites
-            yield rupture, sites.filter(sites.mesh.lats == 0)
-
+        def rupture_site_filter(ruptures, sites):
+            yield ruptures[0], sites.filter(sites.mesh.lats == 0)
+        rupture_site_filter.affected = (
+            lambda rup, sites: sites.filter(sites.mesh.lats == 0))
         numpy.random.seed(37)
         cormo = JB2009CorrelationModel(vs30_clustering=False)
         gmfs = ground_motion_fields(

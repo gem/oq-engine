@@ -131,7 +131,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
         ses = stochastic_event_set(
             [self.area1, self.area2],
             sites=sites,
-            source_site_filter=filters.source_site_distance_filter(100.)
+            source_site_filter=filters.SourceSitesFilter(100.)
         )
 
         rates = self._extract_rates(ses, time_span=self.time_span,

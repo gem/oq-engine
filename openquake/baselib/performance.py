@@ -174,22 +174,13 @@ class Monitor(object):
         data = self.get_data()
         if len(data) == 0:  # no information
             return []
+        elif self.hdf5path:
+            hdf5.extend3(self.hdf5path, 'performance_data', data)
 
         # reset monitor
         self.duration = 0
         self.mem = 0
         self.counts = 0
-
-        if self.hdf5path:
-            h5 = h5py.File(self.hdf5path)
-            try:
-                pdata = h5['performance_data']
-            except KeyError:
-                pdata = hdf5.create(h5, 'performance_data', perf_dt)
-            hdf5.extend(pdata, data)
-            h5.close()
-        # else print(data[0]) on stdout
-
         return data
 
     # TODO: rename this as spawn; see what will break
