@@ -536,6 +536,17 @@ def get_result(db, result_id):
     return job.id, job.status, os.path.dirname(job.ds_calc_dir), job.ds_key
 
 
+def get_job(db, job_id):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param job_id:
+        ID of the current job
+    :returns: the full path to the datastore
+    """
+    return db('SELECT * FROM job WHERE id=?x', job_id, one=True)
+
+
 def get_results(db, job_id):
     """
     :param db:
