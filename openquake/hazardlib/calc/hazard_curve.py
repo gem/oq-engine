@@ -123,7 +123,7 @@ def calc_hazard_curves(
         sources, operator.attrgetter('tectonic_region_type'))
     pmap = ProbabilityMap(len(imtls.array), 1)
     for trt in sources_by_trt:
-        pmap |= hazard_curves_per_trt(
+        pmap |= pmap_from_grp(
             sources_by_trt[trt], sites, imtls, [gsim_by_trt[trt]],
             truncation_level, source_site_filter)
     return pmap.convert(imtls, len(sites))
@@ -197,10 +197,10 @@ def poe_map(src, s_sites, imtls, cmaker, trunclevel, bbs,
 
 
 # this is used by the engine
-def hazard_curves_per_trt(
+def pmap_from_grp(
         sources, sites, imtls, gsims, truncation_level=None,
-        source_site_filter=filters.source_site_noop_filter,
-        maximum_distance=None, bbs=(), monitor=Monitor()):
+        source_site_filter='SourceSitesFilter', maximum_distance=None, bbs=(),
+        monitor=Monitor()):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
@@ -209,16 +209,17 @@ def hazard_curves_per_trt(
 
     :returns: a ProbabilityMap instance
     """
+    if source_site_filter == 'SourceSitesFilter':
+        source_site_filter = filters.SourceSitesFilter(maximum_distance)
     with GroundShakingIntensityModel.forbid_instantiation():
         imtls = DictArray(imtls)
         cmaker = ContextMaker(gsims, maximum_distance)
-        sources_sites = ((source, sites) for source in sources)
         ctx_mon = monitor('making contexts', measuremem=False)
         pne_mon = monitor('computing poes', measuremem=False)
         disagg_mon = monitor('get closest points', measuremem=False)
         monitor.calc_times = []  # pairs (src_id, delta_t)
         pmap = ProbabilityMap(len(imtls.array), len(gsims))
-        for src, s_sites in source_site_filter(sources_sites):
+        for src, s_sites in source_site_filter(sources, sites):
             t0 = time.time()
             pmap |= poe_map(src, s_sites, imtls, cmaker, truncation_level, bbs,
                             ctx_mon, pne_mon, disagg_mon)
