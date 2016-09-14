@@ -25,7 +25,7 @@ from functools import partial, reduce
 import numpy
 
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -39,6 +39,8 @@ from openquake.calculators import base
 U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
+
+MAXWEIGHT = 200
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
@@ -283,14 +285,10 @@ class PSHACalculator(base.HazardCalculator):
         
         with self.monitor('managing sources', autoflush=True):
             src_groups = list(self.csm.src_groups)
-            if len(src_groups) >= oq.concurrent_tasks:
-                # case with a large source model logic tree, ignore tiles
-                logging.info('Considering %d source groups', len(src_groups))
-                res = parallel.starmap(
-                    self.core_task.__func__, self.gen_args(oq, monitor)
-                ).submit_all()
-            else:  # small logic tree, use SourceManager and tiles if any
-                res = self.submit_sources(oq, monitor)
+            logging.info('Considering %d source groups', len(src_groups))
+            res = parallel.starmap(
+                self.core_task.__func__, self.gen_args(oq, monitor)
+            ).submit_all()
         acc = reduce(self.agg_dicts, res, self.zerodict())
         self.save_data_transfer(res)
         with self.monitor('store source_info', autoflush=True):
@@ -306,33 +304,18 @@ class PSHACalculator(base.HazardCalculator):
         """
         if self.random_seed is not None:
             self.csm.init_serials()
+        maxweight = max(math.ceil(self.csm.weight / oq.concurrent_tasks),
+                        MAXWEIGHT)
         for sg in self.csm.src_groups:
             gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
             monitor.seed = self.rlzs_assoc.seed
             monitor.samples = self.rlzs_assoc.samples[sg.id]
-            yield sg.sources, self.sitecol, gsims, monitor
-
-    def submit_sources(self, oq, monitor):
-        """
-        Submit a task per each block of sources produced by the SourceManager
-        """
-        if self.is_tiling():
-            hint = math.ceil(len(self.sitecol) / oq.sites_per_tile)
-            tiles = self.sitecol.split_in_tiles(hint)
-            self.num_tiles = len(tiles)
-            logging.info('Generating %d tiles of %d sites each',
-                         self.num_tiles, len(tiles[0]))
-        else:
-            tiles = [self.sitecol]
-        srcman = source.SourceManager(
-            self.csm, oq.maximum_distance, oq.concurrent_tasks,
-            self.datastore, monitor, self.random_seed, oq.filter_sources,
-            num_tiles=self.num_tiles)
-        res = parallel.starmap(
-            self.core_task.__func__, srcman.gen_args(self.sitecol, tiles)
-        ).submit_all()
-        srcman.pre_store_source_info(self.datastore)
-        return res
+            heavy = [src for src in sg.sources if src.weight > maxweight]
+            light = [src for src in sg.sources if src.weight <= maxweight]
+            for src in heavy:
+                yield [src], self.sitecol, gsims, monitor
+            for block in block_splitter(light, maxweight):
+                yield block, self.sitecol, gsims, monitor
   
     def store_source_info(self, pmap_by_grp_id):
         # save the calculation times per each source
