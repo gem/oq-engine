@@ -321,6 +321,8 @@ class PSHACalculator(base.HazardCalculator):
                 yield block, self.sitecol, gsims, monitor
                 nlight += 1
             for src in heavy:
+                # TODO: filter the heavy source and send the sites
+                # if not filtered already
                 for block in block_splitter(split_source(src), maxweight):
                     yield block, self.sitecol, gsims, monitor
                     nheavy += 1
