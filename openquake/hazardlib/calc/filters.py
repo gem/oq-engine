@@ -51,7 +51,7 @@ the actual calculation on unfiltered collection only decreases performance).
 
 Module :mod:`openquake.hazardlib.calc.filters` exports one distance-based
 filter function of each kind (see :func:`SourceSitesFilter` and
-:func:`rupture_site_distance_filter`) as well as "no operation" filters
+:func:`RuptureSitesFilter`) as well as "no operation" filters
 (:func:`source_site_noop_filter` and :func:`rupture_site_noop_filter`).
 """
 import sys
@@ -129,21 +129,15 @@ class SourceSitesFilter(object):
 
     def __call__(self, sources, sites):
         for source in sources:
-            if hasattr(self.integration_distance, '__getitem__'):
-                # a dictionary TRT -> distance
-                integration_distance = self.integration_distance[
-                    source.tectonic_region_type]
-            else:
-                integration_distance = self.integration_distance
             with context(source):
                 s_sites = source.filter_sites_by_distance_to_source(
-                    integration_distance, sites)
+                    self.integration_distance, sites)
             if s_sites is not None:
                 source.nsites = len(s_sites)
                 yield source, s_sites
 
 
-class rupture_site_distance_filter(object):
+class RuptureSitesFilter(object):
     """
     Rupture-site filter based on distance.
 
