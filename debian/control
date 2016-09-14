@@ -8,7 +8,7 @@ Homepage: http://www.globalquakemodel.org/openquake/
 
 Package: python-oq-engine
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${dist:Depends}, python-scipy, python-numpy, python-psutil, python-decorator, python-prctl, python-celery (>=2.4.6-1ubuntu0.2~gem03), python-geohash, python-paramiko, python-shapely, python-setuptools, python-nose, python-mock, python-pyshp, python-requests (>=0.8.2), python-docutils, python-oq-hazardlib (>=0.21.0-0~), python-concurrent.futures (>=2.1.2), python-django, rabbitmq-server (>=2.8.0-2~gem02), supervisor
+Depends: ${shlibs:Depends}, ${misc:Depends}, python-scipy, python-numpy, python-psutil, python-decorator, python-prctl, python-geohash, python-paramiko, python-shapely, python-setuptools, python-nose, python-mock, python-pyshp, python-requests (>=0.8.2), python-docutils, python-oq-hazardlib (>=0.21.0-0~), python-concurrent.futures (>=2.1.2), python-django, rabbitmq-server (>=2.8.0-2~gem02), supervisor, ${dist:Depends}
 Conflicts: python-oq-risklib, python-noq, python-oq
 Replaces: python-oq-risklib
 Recommends: ${dist:Recommends}
