@@ -842,7 +842,7 @@ class SourceManager(object):
 
     def gen_args(self, sitecol, tiles):
         """
-        Yield (sources, sites, rlzs_assoc, monitor) by
+        Yield (sources, sites, gsims, monitor) by
         looping on the tiles and on the source blocks.
         """
         ntasks = 0
