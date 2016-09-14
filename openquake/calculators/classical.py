@@ -31,6 +31,8 @@ from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.calc.hazard_curve import (
     pmap_from_grp, ProbabilityMap)
+from openquake.hazardlib.calc.filters import (
+    SourceSitesFilter, source_site_noop_filter)
 from openquake.hazardlib.probability_map import PmapStats
 from openquake.commonlib import parallel, datastore, source, calc
 from openquake.calculators import base
@@ -286,9 +288,11 @@ class PSHACalculator(base.HazardCalculator):
             logging.info('Generating %d tiles of %d sites each',
                          self.num_tiles, len(tiles[0]))
         with self.monitor('managing sources', autoflush=True):
+            ss_filter = (SourceSitesFilter(oq.maximum_distance)
+                         if oq.filter_sources else source_site_noop_filter)
             srcman = source.SourceManager(
-                self.csm, oq.maximum_distance, oq.concurrent_tasks,
-                self.datastore, monitor, self.random_seed, oq.filter_sources,
+                self.csm, ss_filter, oq.concurrent_tasks,
+                self.datastore, monitor, self.random_seed,
                 num_tiles=self.num_tiles)
             tm = parallel.starmap(
                 self.core_task.__func__, srcman.gen_args(self.sitecol, tiles))
