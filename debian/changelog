@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Optimized the source distribution for the case of large source model
+    logic trees
   * Reduced the number of tasks generated when filter_sources is False
   * Saved engine_version and hazardlib_version as attributes of the datastore
   * Avoided saving the ruptures when ground_motion_fields is True
