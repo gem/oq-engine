@@ -110,11 +110,11 @@ def filter_sites_by_distance_to_rupture(rupture, integration_distance, sites):
 
 class SourceSitesFilter(object):
     """
-    Source-sites filter based on the integration distance. Used as follows:
+    Source-sites filter based on the integration distance. Used as follows::
 
-    >> ss_filter = SourceSitesFilter(integration_distance)
-    >> for src, src_sites in ss_filter(sources, sites):
-            ...
+      ss_filter = SourceSitesFilter(integration_distance)
+      for src, affected_sites in ss_filter(sources, sites):
+         do_something(...)
 
     As a side effect, sets the `.nsites` attribute of the source, i.e. the
     number of sites within the integration distance.
@@ -172,13 +172,19 @@ class RuptureSitesFilter(object):
                 yield rupture, r_sites
 
 
-#: Transparent source-site "no-op" filter -- behaves like a real filter
-#: but never filters anything out and doesn't have any overhead.
 def source_site_noop_filter(sources, sites):
+    """
+    Transparent source-site "no-op" filter -- behaves like a real filter
+    but never filters anything out and doesn't have any overhead.
+    """
     return ((src, sites) for src in sources)
 source_site_noop_filter.affected = lambda src, sites: sites
 source_site_noop_filter.integration_distance = None
 
 #: Rupture-site "no-op" filter, same as :func:`source_site_noop_filter`.
 def rupture_site_noop_filter(ruptures, sites):
+    """
+    Transparent rupture-site "no-op" filter -- behaves like a real filter
+    but never filters anything out and doesn't have any overhead.
+    """
     return ((rup, sites) for rup in ruptures)
