@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Optimized the source distribution for the case of large source model
+  * Filtered the sources up front when there are few sites (<= 10)
     logic trees
   * Reduced the number of tasks generated when filter_sources is False
   * Saved engine_version and hazardlib_version as attributes of the datastore
