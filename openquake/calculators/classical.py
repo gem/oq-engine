@@ -317,18 +317,21 @@ class PSHACalculator(base.HazardCalculator):
                 mon.sm_id = self.rlzs_assoc.sm_ids[sg.id]
             monitor.seed = self.rlzs_assoc.seed
             monitor.samples = self.rlzs_assoc.samples[sg.id]
-            heavy = [src for src in sg.sources if src.weight > maxweight]
             light = [src for src in sg.sources if src.weight <= maxweight]
             for block in block_splitter(
                     light, maxweight, weight=operator.attrgetter('weight')):
                 yield block, self.sitecol, gsims, monitor
                 nlight += 1
-            for src, sites in ss_filter(heavy, self.sitecol):
-                for block in block_splitter(
-                        split_source(src), maxweight,
-                        weight=operator.attrgetter('weight')):
-                    yield block, sites, gsims, monitor
-                    nheavy += 1
+            heavy = [src for src in sg.sources if src.weight > maxweight]
+            if not heavy:
+                continue
+            with self.monitor('filter/split heavy sources', autoflush=True):
+                for src, sites in ss_filter(heavy, self.sitecol):
+                    for block in block_splitter(
+                            split_source(src), maxweight,
+                            weight=operator.attrgetter('weight')):
+                        yield block, sites, gsims, monitor
+                        nheavy += 1
         logging.info('Sent %d light and %d heavy tasks', nlight, nheavy)
   
     def store_source_info(self, pmap_by_grp_id):
