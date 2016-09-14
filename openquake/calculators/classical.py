@@ -286,9 +286,9 @@ class PSHACalculator(base.HazardCalculator):
             src_groups = list(self.csm.src_groups)
             if len(src_groups) > oq.concurrent_tasks:
                 # case with a large source model logic tree, ignore tiles
-                res = self.send_src_groups(src_groups, oq, monitor)
+                res = self.submit_src_groups(oq, monitor)
             else:  # small logic tree, use SourceManager and tiles if any
-                res = self.send_sources(tiles, oq, monitor)
+                res = self.submit_sources(oq, monitor)
         acc = reduce(self.agg_dicts, res, self.zerodict())
         self.save_data_transfer(res)
         with self.monitor('store source_info', autoflush=True):
@@ -298,13 +298,19 @@ class PSHACalculator(base.HazardCalculator):
         self.datastore['csm_info'] = self.csm.info
         return acc
 
-    def send_src_groups(self, src_groups, oq, monitor):
+    def submit_src_groups(self, oq, monitor):
+        """
+        Submit a task per each source group
+        """
         iterargs = ((sg.sources, self.sitecol,
                      self.rlzs_assoc.gsims_by_grp_id[sg.id], monitor)
-                    for sg in src_groups)
+                    for sg in self.csm.src_groups)
         return parallel.starmap(self.core_task.__func__, iterargs).submit_all()
 
-    def send_sources(self, tiles, oq, monitor):
+    def submit_sources(self, oq, monitor):
+        """
+        Submit a task per each block of sources produced by the SourceManager
+        """
         if self.is_tiling():
             hint = math.ceil(len(self.sitecol) / oq.sites_per_tile)
             tiles = self.sitecol.split_in_tiles(hint)
