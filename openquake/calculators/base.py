@@ -52,7 +52,9 @@ Site = collections.namedtuple('Site', 'sid lon lat')
 F32 = numpy.float32
 
 def is_small(sitecol):
-    # if the site collection has up to 10 sites, filter it
+    """
+    Returns True if the site collection contains up to 10 sites
+    """
     return len(sitecol) <= 10
 
 
@@ -378,6 +380,7 @@ class HazardCalculator(BaseCalculator):
                     'reading composite source model', autoflush=True):
                 csm = readinput.get_composite_source_model(self.oqparam)
                 if is_small(self.sitecol):
+                    # filter the CompositeSourceModel upfront
                     ss_filter = SourceSitesFilter(self.oqparam.maximum_distance)
                     self.csm = csm.filter(self.sitecol, ss_filter)
                 else:
