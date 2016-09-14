@@ -593,7 +593,7 @@ class CompositeSourceModel(collections.Sequence):
         self.gsim_lt = gsim_lt
         self.source_model_lt = source_model_lt
         self.source_models = source_models
-        self.source_info = ()  # set by the SourceSitesFilterSplitter
+        self.source_info = ()
         self.split_map = {}
         if set_weight:
             self.set_weights()
@@ -603,14 +603,14 @@ class CompositeSourceModel(collections.Sequence):
             self.source_model_lt.num_samples,
             [sm.get_skeleton() for sm in self.source_models])
 
-    def filter(self, sitecol, src_sites_filter):
+    def filter(self, sitecol, ss_filter):
         """
         Generate a new CompositeSourceModel by filtering the sources on
         the given site collection. Warning: this is slow, so use it only
         for small site collections (i.e. in disaggregation calculations).
 
         :param sitecol: a SiteCollection instance
-        :para src_sites_filter: a SourceSitesFilter instance
+        :para ss_filter: a SourceSitesFilter instance
         """
         source_models = []
         weight = 0
@@ -619,7 +619,7 @@ class CompositeSourceModel(collections.Sequence):
             src_groups = map(copy.copy, sm.src_groups)
             for src_group in src_groups:
                 sources = []
-                for src, sites in src_sites_filter(src_group.sources, sitecol):
+                for src, sites in ss_filter(src_group.sources, sitecol):
                     sources.append(src)
                     src.id = idx
                     weight += src.weight
@@ -769,15 +769,14 @@ def split_filter(src, sites, ss_filter, random_seed):
     t0 = time.time()
     split_sources = []
     start = 0
-    for ss in sourceconverter.split_source(src):
+    for split in sourceconverter.split_source(src):
         if random_seed:
-            nr = ss.num_ruptures
-            ss.serial = src.serial[start:start + nr]
+            nr = split.num_ruptures
+            split.serial = src.serial[start:start + nr]
             start += nr
-        ss.id = src.id
-        ss_sites = ss_filter.affected(ss, sites)
-        if ss_sites is not None:
-            split_sources.append(ss)
+        split.id = src.id
+        if ss_filter.affected(split, sites) is not None:
+            split_sources.append(split)
     return [(src, sites, split_sources, 0, time.time() - t0)]
 
 
@@ -889,9 +888,12 @@ class SourceManager(object):
         sources = self.csm.get_sources('light', self.maxweight)
         for i, tile in enumerate(tiles):
             data = []
-            for src, sites in self.ss_filter(sources, tile):
-                data.append((src, i, [], filter_mon.dt, 0))
-                self.csm.filtered_weight += src.weight
+            for src in sources:
+                with filter_mon:
+                    affected = self.ss_filter.affected(src, tile)
+                if affected is not None:
+                    data.append((src, i, [], filter_mon.dt, 0))
+                    self.csm.filtered_weight += src.weight
             filter_mon.flush()
             if len(tiles) > 1:
                 logging.info('Got %d light source(s) from tile %d',
