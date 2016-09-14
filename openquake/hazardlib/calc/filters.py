@@ -129,9 +129,15 @@ class SourceSitesFilter(object):
 
     def __call__(self, sources, sites):
         for source in sources:
+            if hasattr(self.integration_distance, '__getitem__'):
+                # a dictionary trt -> distance
+                trt = source.tectonic_region_type
+                integration_distance = self.integration_distance[trt]
+            else:  # just a distance in km
+                integration_distance = self.integration_distance
             with context(source):
                 s_sites = source.filter_sites_by_distance_to_source(
-                    self.integration_distance, sites)
+                    integration_distance, sites)
             if s_sites is not None:
                 source.nsites = len(s_sites)
                 yield source, s_sites
