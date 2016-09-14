@@ -279,14 +279,16 @@ class PSHACalculator(base.HazardCalculator):
             poes_disagg=oq.poes_disagg,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
             random_seed=oq.random_seed)
-        tiles = [self.sitecol]
         self.num_tiles = 1
         
         with self.monitor('managing sources', autoflush=True):
             src_groups = list(self.csm.src_groups)
             if len(src_groups) > oq.concurrent_tasks:
                 # case with a large source model logic tree, ignore tiles
-                res = self.submit_src_groups(oq, monitor)
+                logging.info('Considering %d source groups', len(src_groups))
+                res = parallel.starmap(
+                    self.core_task.__func__, self.gen_args(oq, monitor)
+                ).submit_all()
             else:  # small logic tree, use SourceManager and tiles if any
                 res = self.submit_sources(oq, monitor)
         acc = reduce(self.agg_dicts, res, self.zerodict())
@@ -298,14 +300,17 @@ class PSHACalculator(base.HazardCalculator):
         self.datastore['csm_info'] = self.csm.info
         return acc
 
-    def submit_src_groups(self, oq, monitor):
+    def gen_args(self, oq, monitor):
         """
-        Submit a task per each source group
+        Used in the case of large source model logic trees
         """
-        iterargs = ((sg.sources, self.sitecol,
-                     self.rlzs_assoc.gsims_by_grp_id[sg.id], monitor)
-                    for sg in self.csm.src_groups)
-        return parallel.starmap(self.core_task.__func__, iterargs).submit_all()
+        if self.random_seed is not None:
+            self.csm.init_serials()
+        for sg in self.csm.src_groups:
+            gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
+            monitor.seed = self.rlzs_assoc.seed
+            monitor.samples = self.rlzs_assoc.samples[sg.id]
+            yield sg.sources, self.sitecol, gsims, monitor
 
     def submit_sources(self, oq, monitor):
         """
@@ -317,7 +322,8 @@ class PSHACalculator(base.HazardCalculator):
             self.num_tiles = len(tiles)
             logging.info('Generating %d tiles of %d sites each',
                          self.num_tiles, len(tiles[0]))
-
+        else:
+            tiles = [self.sitecol]
         srcman = source.SourceManager(
             self.csm, oq.maximum_distance, oq.concurrent_tasks,
             self.datastore, monitor, self.random_seed, oq.filter_sources,
