@@ -34,6 +34,7 @@ from openquake.hazardlib.calc.hazard_curve import (
     hazard_curves_per_trt, ProbabilityMap)
 from openquake.hazardlib.probability_map import PmapStats
 from openquake.commonlib import parallel, datastore, source, calc
+from openquake.commonlib.sourceconverter import split_source
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -285,9 +286,8 @@ class PSHACalculator(base.HazardCalculator):
         
         with self.monitor('managing sources', autoflush=True):
             src_groups = list(self.csm.src_groups)
-            logging.info('Considering %d source groups', len(src_groups))
             res = parallel.starmap(
-                self.core_task.__func__, self.gen_args(oq, monitor)
+                self.core_task.__func__, self.gen_args(src_groups, oq, monitor)
             ).submit_all()
         acc = reduce(self.agg_dicts, res, self.zerodict())
         self.save_data_transfer(res)
@@ -298,24 +298,28 @@ class PSHACalculator(base.HazardCalculator):
         self.datastore['csm_info'] = self.csm.info
         return acc
 
-    def gen_args(self, oq, monitor):
+    def gen_args(self, src_groups, oq, monitor):
         """
         Used in the case of large source model logic trees
         """
+        ngroups = len(src_groups)
+        logging.info('Considering %d source groups', ngroups)
         if self.random_seed is not None:
             self.csm.init_serials()
-        maxweight = max(math.ceil(self.csm.weight / oq.concurrent_tasks),
-                        MAXWEIGHT)
-        for sg in self.csm.src_groups:
+        maxweight = max(
+            math.ceil(self.csm.weight / oq.concurrent_tasks), MAXWEIGHT)
+        for sg in src_groups:
             gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
+            if oq.poes_disagg:  # only for disaggregation
+                mon.sm_id = self.rlzs_assoc.sm_ids[sg.id]
             monitor.seed = self.rlzs_assoc.seed
             monitor.samples = self.rlzs_assoc.samples[sg.id]
             heavy = [src for src in sg.sources if src.weight > maxweight]
             light = [src for src in sg.sources if src.weight <= maxweight]
-            for src in heavy:
-                yield [src], self.sitecol, gsims, monitor
             for block in block_splitter(light, maxweight):
                 yield block, self.sitecol, gsims, monitor
+            for src in heavy:
+                yield list(split_source(src)), self.sitecol, gsims, monitor
   
     def store_source_info(self, pmap_by_grp_id):
         # save the calculation times per each source
