@@ -76,7 +76,7 @@ PRECALC_MAP = dict(
     classical_damage=['classical'],
     event_based=['event_based_risk'],
     event_based_risk=['event_based'],
-    ucerf_event_based=['ucerf_event_based_rupture'])
+    ucerf_classical=['ucerf_psha'])
 
 
 def set_array(longarray, shortarray):
@@ -414,6 +414,8 @@ class HazardCalculator(BaseCalculator):
         To be overridden to initialize the datasets needed by the calculation
         """
         self.random_seed = None
+        if not self.oqparam.imtls:
+            raise ValueError('Missing intensity_measure_types!')
         if self.precalc:
             self.rlzs_assoc = self.precalc.rlzs_assoc
         elif 'csm_info' in self.datastore:
