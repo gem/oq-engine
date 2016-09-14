@@ -283,7 +283,7 @@ class PSHACalculator(base.HazardCalculator):
         
         with self.monitor('managing sources', autoflush=True):
             src_groups = list(self.csm.src_groups)
-            if len(src_groups) > oq.concurrent_tasks:
+            if len(src_groups) >= oq.concurrent_tasks:
                 # case with a large source model logic tree, ignore tiles
                 logging.info('Considering %d source groups', len(src_groups))
                 res = parallel.starmap(
