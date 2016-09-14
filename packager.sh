@@ -513,7 +513,7 @@ _pkgtest_innervm_run () {
     # configure the machine to run tests
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # use celery to run the demos
-        ssh $lxc_ip "cd /usr/share/openquake/engine ; celeryd --config openquake.engine.celeryconfig >/tmp/celeryd.log 2>&1 3>&1 &"
+        ssh $lxc_ip "celeryd --config openquake.engine.celeryconfig >/tmp/celeryd.log 2>&1 3>&1 &"
 
         # wait for celeryd startup time
         ssh $lxc_ip "
@@ -530,8 +530,6 @@ celeryd_wait() {
         echo \"ERROR: no Celery available\"
         return 1
     fi
-
-    cd /usr/share/openquake/engine
 
     for cw_i in \$(seq 1 \$cw_nloop); do
         cw_ret=\"\$(\$celery status)\"
@@ -645,8 +643,8 @@ deps_list() {
         rules_rec=$(grep "^${BUILD_UBUVER^^}_REC *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
     else
         # Otherwise use the default values in debian/rules
-        rules_dep=$(grep "^DEFAULT_DEP *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
-        rules_rec=$(grep "^DEFAULT_REC *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
+        rules_dep=$(grep "^COMMON_DEP *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
+        rules_rec=$(grep "^COMMON_REC *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
     fi
 
     out_list=""
