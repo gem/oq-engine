@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-from contextlib import contextmanager
 import re
 import sys
 import copy
@@ -34,6 +33,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode, raise_
 from openquake.baselib.general import groupby, block_splitter, group_array
 from openquake.hazardlib.site import Tile
+from openquake.hazardlib.calc.filters import context
 from openquake.commonlib import logictree, sourceconverter
 from openquake.commonlib import nrml, node, parallel
 
@@ -43,27 +43,6 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
-
-
-@contextmanager
-def context(src):
-    """
-    Used to add the source_id to the error message. To be used as
-
-    with context(src):
-        operation_with(src)
-
-    Typically the operation is filtering a source, that can fail for
-    tricky geometries.
-    """
-    try:
-        yield
-    except:
-        etype, err, tb = sys.exc_info()
-        msg = 'An error occurred with source id=%s. Error: %s'
-        msg %= (src.source_id, err)
-        raise_(etype, msg, tb)
-
 
 class LtRealization(object):
     """
@@ -616,7 +595,7 @@ class CompositeSourceModel(collections.Sequence):
         self.gsim_lt = gsim_lt
         self.source_model_lt = source_model_lt
         self.source_models = source_models
-        self.source_info = ()  # set by the SourceFilterSplitter
+        self.source_info = ()  # set by the SourceSitesFilterSplitter
         self.split_map = {}
         if set_weight:
             self.set_weights()
