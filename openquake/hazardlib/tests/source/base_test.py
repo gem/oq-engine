@@ -82,9 +82,9 @@ class SeismicSourceGetAnnOccRatesTestCase(_BaseSeismicSourceTestCase):
         self.assertEqual(rates, [(5, 7)])
 
 
-class SeismicSourceFilterSitesTestCase(_BaseSeismicSourceTestCase):
+class SeismicSourceSitesFilterSitesTestCase(_BaseSeismicSourceTestCase):
     def setUp(self):
-        super(SeismicSourceFilterSitesTestCase, self).setUp()
+        super(SeismicSourceSitesFilterSitesTestCase, self).setUp()
 
         def get_rup_encl_poly(dilation=0):
             if dilation:
@@ -133,7 +133,7 @@ class SeismicSourceFilterSitesTestCase(_BaseSeismicSourceTestCase):
             self.assertIs(filtered, None)  # all filtered
 
 
-class SeismicSourceFilterSitesByRuptureTestCase(_BaseSeismicSourceTestCase):
+class SeismicSourceSitesFilterSitesByRuptureTestCase(_BaseSeismicSourceTestCase):
     def test(self):
         surface_mesh = RectangularMesh(self.POLYGON.lons.reshape((2, 2)),
                                        self.POLYGON.lats.reshape((2, 2)),

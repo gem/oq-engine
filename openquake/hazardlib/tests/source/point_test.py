@@ -503,7 +503,7 @@ class PointSourceRupEncPolygon(unittest.TestCase):
         numpy.testing.assert_allclose(polygon.lats, elats)
 
 
-class PointSourceSourceFilterTestCase(unittest.TestCase):
+class PointSourceSourceSitesFilterTestCase(unittest.TestCase):
     SITES = [
         Site(Point(2.0, 0.0), 0.1, True, 3, 4),  # on epicenter
         Site(Point(2.1, 0.0), 1, True, 3, 4),  # 11.1 km away
@@ -513,7 +513,7 @@ class PointSourceSourceFilterTestCase(unittest.TestCase):
     ]
 
     def setUp(self):
-        super(PointSourceSourceFilterTestCase, self).setUp()
+        super(PointSourceSourceSitesFilterTestCase, self).setUp()
         self.sitecol = SiteCollection(self.SITES)
 
         self.source1 = make_point_source(
@@ -589,7 +589,7 @@ class PointSourceSourceFilterTestCase(unittest.TestCase):
 
 
 class PointSourceRuptureFilterTestCase(unittest.TestCase):
-    SITES = PointSourceSourceFilterTestCase.SITES
+    SITES = PointSourceSourceSitesFilterTestCase.SITES
 
     def setUp(self):
         super(PointSourceRuptureFilterTestCase, self).setUp()

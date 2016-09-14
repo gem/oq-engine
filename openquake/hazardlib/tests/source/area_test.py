@@ -27,7 +27,7 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.area import AreaSource
 
 from openquake.hazardlib.tests.source.base_test import \
-    SeismicSourceFilterSitesTestCase
+    SeismicSourceSitesFilterSitesTestCase
 from openquake.hazardlib.tests import assert_pickleable
 
 
@@ -188,10 +188,10 @@ class AreaSourceRupEncPolyTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(polygon.lats, elats)
 
 
-class AreaSourceFilterSitesBySourceTestCase(SeismicSourceFilterSitesTestCase):
+class AreaSourceSitesFilterSitesBySourceTestCase(SeismicSourceSitesFilterSitesTestCase):
     # test that area source uses base implementation of source-site filtering
     def setUp(self):
-        super(AreaSourceFilterSitesBySourceTestCase, self).setUp()
+        super(AreaSourceSitesFilterSitesBySourceTestCase, self).setUp()
         mfd = TruncatedGRMFD(a_val=3, b_val=1, min_mag=1,
                              max_mag=2, bin_width=1)
         self.source = make_area_source(self.POLYGON, discretization=1,

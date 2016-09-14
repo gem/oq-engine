@@ -183,8 +183,8 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
         self.assertEqual(trt_bins, ['trt1', 'trt2'])
 
     def test_filters(self):
-        def source_site_filter(sources_sites):
-            for source, sites in sources_sites:
+        def source_site_filter(sources, sites):
+            for source in sources:
                 if source is self.source2:
                     continue
                 yield source, sites

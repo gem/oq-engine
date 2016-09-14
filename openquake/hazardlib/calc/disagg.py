@@ -150,13 +150,11 @@ def _collect_bins_data(sources, site, imt, iml, gsims,
 
     _next_trt_num = 0
     trt_nums = {}
-
-    sources_sites = ((source, sitecol) for source in sources)
     # here we ignore filtered site collection because either it is the same
     # as the original one (with one site), or the source/rupture is filtered
     # out and doesn't show up in the filter's output
     for src_idx, (source, s_sites) in \
-            enumerate(source_site_filter(sources_sites)):
+            enumerate(source_site_filter(sources, sitecol)):
         try:
             tect_reg = source.tectonic_region_type
             gsim = gsims[tect_reg]
