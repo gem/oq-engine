@@ -308,6 +308,7 @@ class PSHACalculator(base.HazardCalculator):
             self.csm.init_serials()
         maxweight = max(
             math.ceil(self.csm.weight / oq.concurrent_tasks), MAXWEIGHT)
+        nheavy = nlight = 0
         for sg in src_groups:
             gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
             if oq.poes_disagg:  # only for disaggregation
@@ -318,8 +319,12 @@ class PSHACalculator(base.HazardCalculator):
             light = [src for src in sg.sources if src.weight <= maxweight]
             for block in block_splitter(light, maxweight):
                 yield block, self.sitecol, gsims, monitor
+                nlight += 1
             for src in heavy:
-                yield list(split_source(src)), self.sitecol, gsims, monitor
+                for block in block_splitter(split_source(src), maxweight):
+                    yield block, self.sitecol, gsims, monitor
+                    nheavy += 1
+        logging.info('Sent %d light and %d heavy tasks', nlight, nheavy)
   
     def store_source_info(self, pmap_by_grp_id):
         # save the calculation times per each source
