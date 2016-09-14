@@ -641,10 +641,6 @@ deps_list() {
         # Use custom dependencies in debian/rules
         rules_dep=$(grep "^${BUILD_UBUVER^^}_DEP *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
         rules_rec=$(grep "^${BUILD_UBUVER^^}_REC *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
-    else
-        # Otherwise use the default values in debian/rules
-        rules_dep=$(grep "^COMMON_DEP *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
-        rules_rec=$(grep "^COMMON_REC *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
     fi
 
     out_list=""
