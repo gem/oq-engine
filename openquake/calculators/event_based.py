@@ -530,6 +530,9 @@ class EventBasedCalculator(ClassicalCalculator):
         sav_mon.flush()
         agg_mon.flush()
         self.datastore.flush()
+        if 'ruptures' in res:
+            vars(EventBasedRuptureCalculator)['save_ruptures'](
+                self, res['ruptures'])
         return acc
 
     def gen_args(self, ebruptures):
@@ -597,7 +600,11 @@ class EventBasedCalculator(ClassicalCalculator):
             # save individual curves
             if self.oqparam.individual_curves:
                 for i in sorted(result):
-                    self.datastore['hcurves/rlz-%03d' % i] = result[i]
+                    key = 'hcurves/rlz-%03d' % i
+                    if result[i]:
+                        self.datastore[key] = result[i]
+                    else:
+                        logging.info('Zero curves for %s', key)
             # compute and save statistics; this is done in process
             # we don't need to parallelize, since event based calculations
             # involves a "small" number of sites (<= 65,536)
