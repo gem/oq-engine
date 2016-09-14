@@ -134,8 +134,8 @@ class BaseGMFCalcTestCase(unittest.TestCase):
         self.imt1 = SA(10, 5)
         self.imt2 = PGV()
 
-        def rupture_site_filter(rupture_site_gen):
-            [(rupture, sites)] = rupture_site_gen
+        def rupture_site_filter(ruptures, sites):
+            [rupture] = ruptures
             assert rupture is self.rupture
             assert sites is self.sites
             yield rupture, sites.filter(sites.vs30measured)
@@ -321,7 +321,7 @@ class GMFCalcNoCorrelationTestCase(BaseGMFCalcTestCase):
             self.assertEqual(intensity[6].mean(), 0)
 
     def test_filter_all_out(self):
-        def rupture_site_filter(rupture_site):
+        def rupture_site_filter(ruptures, sites):
             return []
         for truncation_level in (None, 0, 1.3):
             gmfs = ground_motion_fields(
@@ -412,9 +412,8 @@ class GMFCalcCorrelatedTestCase(BaseGMFCalcTestCase):
         sites = [Site(point, mean, False, inter, intra) for point in points]
         self.sites = SiteCollection(sites)
 
-        def rupture_site_filter(rupture_sites):
-            [(rupture, sites)] = rupture_sites
-            yield rupture, sites.filter(sites.mesh.lats == 0)
+        def rupture_site_filter(ruptures, sites):
+            yield ruptures[0], sites.filter(sites.mesh.lats == 0)
 
         numpy.random.seed(37)
         cormo = JB2009CorrelationModel(vs30_clustering=False)

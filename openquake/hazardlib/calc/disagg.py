@@ -164,9 +164,8 @@ def _collect_bins_data(sources, site, imt, iml, gsims,
                 _next_trt_num += 1
             tect_reg = trt_nums[tect_reg]
 
-            ruptures_sites = ((rupture, s_sites)
-                              for rupture in source.iter_ruptures())
-            for rupture, r_sites in rupture_site_filter(ruptures_sites):
+            for rupture, r_sites in rupture_site_filter(
+                    source.iter_ruptures(), s_sites):
                 # extract rupture parameters of interest
                 mags.append(rupture.mag)
                 [jb_dist] = rupture.surface.get_joyner_boore_distance(sitemesh)

@@ -169,4 +169,5 @@ def source_site_noop_filter(sources, sites):
     return ((src, sites) for src in sources)
 
 #: Rupture-site "no-op" filter, same as :func:`source_site_noop_filter`.
-rupture_site_noop_filter = lambda ruptures_sites: ruptures_sites
+def rupture_site_noop_filter(ruptures, sites):
+    return ((rup, sites) for rup in ruptures)

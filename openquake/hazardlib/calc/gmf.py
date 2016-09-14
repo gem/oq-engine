@@ -251,7 +251,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         for all sites in the collection. First dimension represents
         sites and second one is for realizations.
     """
-    ruptures_sites = list(rupture_site_filter([(rupture, sites)]))
+    ruptures_sites = list(rupture_site_filter([rupture], sites))
     if not ruptures_sites:
         return dict((imt, numpy.zeros((len(sites), realizations)))
                     for imt in imts)

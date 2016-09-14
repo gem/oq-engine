@@ -181,8 +181,8 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
             self.counts = []
             self.chained_generator = chained_generator
 
-        def __call__(self, ruptures_sites):
-            for rupture, sites in self.chained_generator(ruptures_sites):
+        def __call__(self, ruptures, sites):
+            for rupture, sites in self.chained_generator(ruptures, sites):
                 self.counts.append((rupture.mag, list(map(int, sites.vs30))))
                 yield rupture, sites
 

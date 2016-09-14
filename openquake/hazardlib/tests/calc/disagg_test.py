@@ -189,8 +189,8 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
                     continue
                 yield source, sites
 
-        def rupture_site_filter(rupture_sites):
-            for rupture, sites in rupture_sites:
+        def rupture_site_filter(ruptures, sites):
+            for rupture in ruptures:
                 if rupture.mag < 6:
                     continue
                 yield rupture, sites

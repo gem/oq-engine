@@ -75,9 +75,8 @@ def stochastic_event_set(
     # else apply filtering
     for source, s_sites in source_site_filter(sources, sites):
         try:
-            ruptures_sites = rupture_site_filter(
-                (rupture, s_sites) for rupture in source.iter_ruptures())
-            for rupture, _sites in ruptures_sites:
+            for rupture, r_sites in rupture_site_filter(
+                    source.iter_ruptures(), s_sites):
                 for i in range(rupture.sample_number_of_occurrences()):
                     yield rupture
         except Exception as err:
