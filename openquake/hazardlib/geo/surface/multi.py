@@ -424,8 +424,6 @@ class MultiSurface(BaseSurface):
         sum_wi_ui_si = numpy.zeros_like(lons)
         # Find the cumulative length of the fault up until the given segment
         # Essentially calculating s_i
-        # total_length = numpy.sum([numpy.sum(lengths)
-        #                          for lengths in self.length_set])
         general_t = numpy.zeros_like(lons)
         general_u = numpy.zeros_like(lons)
         on_segment = numpy.zeros_like(lons, dtype=bool)
