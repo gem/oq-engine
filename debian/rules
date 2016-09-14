@@ -16,20 +16,18 @@ export DH_OPTIONS
 
 bd=openquake/bin
 
-COMMON_DEP = python-h5py (>= 2.2.1), python-celery, python-amqp
-COMMON_REC =
-XENIAL_DEP = python-celery-common
+XENIAL_DEP = python-h5py, python-celery, python-celery-common, python-amqp
 XENIAL_REC =
-TRUSTY_DEP =
+TRUSTY_DEP = python-h5py, python-celery, python-amqp
 TRUSTY_REC =
 PRECISE_DEP = python-celery (>=2.4.6-1ubuntu0.2~gem03), python-h5py (= 2.2.1-1build3~precise03)
 PRECISE_REC =
 
 ifeq ($(shell lsb_release --codename --short),xenial)
-	DEPENDS = -Vdist:Depends="$(COMMON_DEP), $(XENIAL_DEP)"
+	DEPENDS = -Vdist:Depends="$(XENIAL_DEP)"
 	RECOMMENDS = -Vdist:Recommends="$(XENIAL_REC)"
 else ifeq ($(shell lsb_release --codename --short),trusty)
-	DEPENDS = -Vdist:Depends="$(COMMON_DEP), $(TRUSTY_DEP)"
+	DEPENDS = -Vdist:Depends="$(TRUSTY_DEP)"
 	RECOMMENDS = -Vdist:Recommends="$(TRUSTY_REC)"
 else ifeq ($(shell lsb_release --codename --short),precise)
 	DEPENDS = -Vdist:Depends="$(PRECISE_DEP)"
