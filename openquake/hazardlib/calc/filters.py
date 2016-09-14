@@ -127,6 +127,15 @@ class SourceSitesFilter(object):
     def __init__(self, integration_distance):
         self.integration_distance = integration_distance
 
+    def affected(self, source, sites):
+        """
+        Returns the sites within the integration distance from the source,
+        or None.
+        """
+        source_sites = list(self([source], sites))
+        if source_sites:
+            return source_sites[0][1]
+
     def __call__(self, sources, sites):
         for source in sources:
             if hasattr(self.integration_distance, '__getitem__'):
@@ -167,6 +176,8 @@ class RuptureSitesFilter(object):
 #: but never filters anything out and doesn't have any overhead.
 def source_site_noop_filter(sources, sites):
     return ((src, sites) for src in sources)
+source_site_noop_filter.affected = lambda src, sites: sites
+source_site_noop_filter.integration_distance = None
 
 #: Rupture-site "no-op" filter, same as :func:`source_site_noop_filter`.
 def rupture_site_noop_filter(ruptures, sites):
