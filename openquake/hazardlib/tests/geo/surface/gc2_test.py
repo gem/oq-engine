@@ -21,12 +21,13 @@ a variety of fault conditions - we separate these out away from the main
 fault surface testing modules
 """
 
-import copy
+import os
 import unittest
 import numpy
 
 from openquake.hazardlib.geo.surface.multi import MultiSurface
-from openquake.hazardlib.geo import Mesh, Point, Line, PlanarSurface
+from openquake.hazardlib.geo import Mesh, Point, Line, PlanarSurface,\
+    SimpleFaultSurface
 from openquake.hazardlib.geo.surface.base import (downsample_mesh,
                                                   downsample_trace)
 
@@ -38,6 +39,7 @@ PNT5 = Point(-65.00000,  0.00000, 0.0)
 
 AS_ARRAY = numpy.array([[pnt.longitude, pnt.latitude, pnt.depth]
                         for pnt in [PNT1, PNT2, PNT3, PNT4, PNT5]])
+
 
 class CartesianTestingMultiSurface(MultiSurface):
     """
@@ -59,7 +61,7 @@ def _setup_peer_test_bending_fault_config():
     test case:
 
     (Fault is dipping east north east
-    Point 5 (-65.0, 0.0, 0.0)   
+    Point 5 (-65.0, 0.0, 0.0)
         o
         |
         |
@@ -91,14 +93,14 @@ def _setup_peer_test_bending_fault_config():
 
     strike4 = PNT4.azimuth(PNT5)
     dipdir4 = (strike4 + 90.) % 360.0
-    
+
     global_strike = PNT1.azimuth(PNT5)
     global_dipdir = (global_strike + 90.) % 360.0
     # Get lower trace
     usd = 0.0
     lsd = 12.0
     dip = 60.0
-    as_length = lsd / np.tan(np.radians(dip))
+    as_length = lsd / numpy.tan(numpy.radians(dip))
     PNT1b = PNT1.point_at(as_length, lsd, global_dipdir)
     PNT2b = PNT2.point_at(as_length, lsd, global_dipdir)
     PNT3b = PNT3.point_at(as_length, lsd, global_dipdir)
@@ -110,19 +112,19 @@ def _setup_peer_test_bending_fault_config():
         Line([PNT1, PNT2, PNT3, PNT4, PNT5]), usd, lsd, dip, mesh_spacing)
     # As a set of planes describing a concordant "Stirling fault"
     stirling_planes = [
-    PlanarSurface.from_corner_points(1.0, PNT1, PNT2, PNT2b, PNT1b),
-    PlanarSurface.from_corner_points(1.0, PNT2, PNT3, PNT3b, PNT2b),
-    PlanarSurface.from_corner_points(1.0, PNT3, PNT4, PNT4b, PNT3b),
-    PlanarSurface.from_corner_points(1.0, PNT4, PNT5, PNT5b, PNT4b)
+        PlanarSurface.from_corner_points(1.0, PNT1, PNT2, PNT2b, PNT1b),
+        PlanarSurface.from_corner_points(1.0, PNT2, PNT3, PNT3b, PNT2b),
+        PlanarSurface.from_corner_points(1.0, PNT3, PNT4, PNT4b, PNT3b),
+        PlanarSurface.from_corner_points(1.0, PNT4, PNT5, PNT5b, PNT4b)
     ]
     stirling_fault1 = MultiSurface(stirling_planes)
 
     # As a set of planes describing a concordant "Frankel Fault"
     # In the Frankel fault each segment is projected to the local dip direction
-    dipdir1b = (dipdir1 + 180.) % 360.0
+    # dipdir1b = (dipdir1 + 180.) % 360.0
     dipdir2b = (dipdir2 + 180.) % 360.0
-    dipdir3b = (dipdir3 + 180.) % 360.0
-    dipdir4b = (dipdir4 + 180.) % 360.0
+    # dipdir3b = (dipdir3 + 180.) % 360.0
+    # dipdir4b = (dipdir4 + 180.) % 360.0
 
     frankel_planes = [
         PlanarSurface.from_corner_points(
@@ -147,11 +149,11 @@ def _setup_peer_test_bending_fault_config():
             )
         ]
     frankel_fault1 = MultiSurface(frankel_planes)
-    
+
     # Test the case of a discordant Frankel plane
     # Swapping the strike of the second segment to change the dip direction
     # Also increasing the dip from 60 degrees to 75 degrees
-    as_length_alt = lsd / np.tan(np.radians(75.0))
+    as_length_alt = lsd / numpy.tan(numpy.radians(75.0))
     frankel_discordant = [
         PlanarSurface.from_corner_points(
             1.0, PNT1, PNT2,
@@ -168,7 +170,8 @@ def _setup_peer_test_bending_fault_config():
             PNT4.point_at(as_length, lsd, dipdir3),
             PNT3.point_at(as_length, lsd, dipdir3)
             ),
-        PlanarSurface.from_corner_points(1.0, PNT4, PNT5,
+        PlanarSurface.from_corner_points(
+            1.0, PNT4, PNT5,
             PNT5.point_at(as_length, lsd, dipdir4),
             PNT4.point_at(as_length, lsd, dipdir4)
             )
@@ -178,25 +181,29 @@ def _setup_peer_test_bending_fault_config():
 
 SFLT1, STIRFLT1, FRANK1, FRANK2 = _setup_peer_test_bending_fault_config()
 
+
 class TraceDownSamplingTestCase(unittest.TestCase):
     """
     Tests the downsampling algorithm for the Rectangular Mesh test case
     """
-    def test_downsample_mesh(self):
+    def test_downsample_trace(self):
         # Use the simple fault case with a tolerance of 1.0 degree
         downsampled_trace = downsample_trace(SFLT1.mesh, 1.0)
         # Top edge of downsampled mesh should correspond to the five
-        # input points of the simple fault
-        
+        # points of the simple fault
         # Check longitudes
-        np.testing.assert_array_almost_equal(downsampled_mesh.lons[0, :],
-                                             AS_ARRAY[:, 0])
+        numpy.testing.assert_array_almost_equal(downsampled_trace[:, 0],
+                                                AS_ARRAY[:, 0],
+                                                5)
         # Check latitude
-        np.testing.assert_array_almost_equal(downsampled_mesh.lats[0, :],
-                                             AS_ARRAY[:, 1])
+        numpy.testing.assert_array_almost_equal(downsampled_trace[:, 1],
+                                                AS_ARRAY[:, 1],
+                                                5)
         # Check depths
-        np.testing.assert_array_almost_equal(downsampled_mesh.depths[0, :],
-                                             AS_ARRAY[:, 2])
+        numpy.testing.assert_array_almost_equal(downsampled_trace[:, 2],
+                                                AS_ARRAY[:, 2],
+                                                5)
+
 
 class MeshDownSamplingTestCase(unittest.TestCase):
     """
@@ -204,15 +211,18 @@ class MeshDownSamplingTestCase(unittest.TestCase):
     """
     def test_downsample_mesh(self):
         # Use the simple fault case with a tolerance of 1.0 degree
-        np.testing.assert_array_almost_equal(
+        numpy.testing.assert_array_almost_equal(
             downsample_mesh(SFLT1.mesh, 1.0).lons[0, :],
-            AS_ARRAY[:, 0])
-        np.testing.assert_array_almost_equal(
+            AS_ARRAY[:, 0],
+            5)
+        numpy.testing.assert_array_almost_equal(
             downsample_mesh(SFLT1.mesh, 1.0).lats[0, :],
-            AS_ARRAY[:, 1])
-        np.testing.assert_array_almost_equal(
+            AS_ARRAY[:, 1],
+            5)
+        numpy.testing.assert_array_almost_equal(
             downsample_mesh(SFLT1.mesh, 1.0).depths[0, :],
-            AS_ARRAY[:, 2])
+            AS_ARRAY[:, 2],
+            5)
 
 
 class GC2SetupTestCase(unittest.TestCase):
@@ -221,30 +231,24 @@ class GC2SetupTestCase(unittest.TestCase):
     against the formulation example in the Spudich & Chiou (2015) report
     """
     def setUp(self):
-        p1 = np.array([2., 2., 0.])
-        p2 = np.array([3.00, 3.732, 0.])
-        p3 = np.array([6.654, 3.328, 0.])
-        p4 = np.array([7.939, 4.860, 0.])
-        p5 = np.array([4.000, 4.165, 0.])
-        p6 = np.array([0.0, 0.0, 0.])
-        p7 = np.array([1.0, 0.0, 0.])
-        p8 = np.array([1.0, 1.0, 0.])
-        p9 = np.array([2.0, 1.0, 0.])
-        #Defines three traces
-        trace1 = np.vstack([p1, p2])
-        trace2 = np.vstack([p3, p4, p5])
-        trace3 = np.vstack([p6, p7, p8, p9])
-        length1 = np.sqrt(np.sum((trace1[1:, :] - trace1[:-1, :]) ** 2.,
-                                 axis=1)) 
-        length2 = np.sqrt(np.sum((trace2[1:, :] - trace2[:-1, :]) ** 2.,
-                                 axis=1))
-        length3 = np.sqrt(np.sum((trace3[1:, :] - trace3[:-1, :]) ** 2.,
-                                 axis=1))
+        p1 = numpy.array([2., 2., 0.])
+        p2 = numpy.array([3.00, 3.732, 0.])
+        p3 = numpy.array([6.654, 3.328, 0.])
+        p4 = numpy.array([7.939, 4.860, 0.])
+        p5 = numpy.array([4.000, 4.165, 0.])
+        p6 = numpy.array([0.0, 0.0, 0.])
+        p7 = numpy.array([1.0, 0.0, 0.])
+        p8 = numpy.array([1.0, 1.0, 0.])
+        p9 = numpy.array([2.0, 1.0, 0.])
+        # Defines three traces
+        trace1 = numpy.vstack([p1, p2])
+        trace2 = numpy.vstack([p3, p4, p5])
+        trace3 = numpy.vstack([p6, p7, p8, p9])
         self.model = CartesianTestingMultiSurface(STIRFLT1.surfaces)
         self.model.cartesian_edges = [trace1, trace2, trace3]
-        self.model.cartesian_endpoints = [np.vstack([p1, p2]),
-                                          np.vstack([p3, p5]),
-                                          np.vstack([p6, p9])]
+        self.model.cartesian_endpoints = [numpy.vstack([p1, p2]),
+                                          numpy.vstack([p3, p5]),
+                                          numpy.vstack([p6, p9])]
 
     def test_spudich_chiou_calculations(self):
         """
@@ -252,25 +256,27 @@ class GC2SetupTestCase(unittest.TestCase):
         and interpreted in the Spudich and Chiou test case - presented in
         page 6 of Spudich & Chiou
         """
-        self.model._setup.gc2_framework()
+        self.model._setup_gc2_framework()
         # Test GC2 configuration params
-        np.testing.assert_array_almost_equal(
-            self.model.gc2_config["b_hat"], np.array([0.948, 0.318]), 3)
-        np.testing.assert_array_almost_equal(
-            self.model.gc2_config["a_hat"], np.array([0.894, 0.447]), 3)
-        np.testing.assert_array_almost_equal(
-            self.model.gc2_config["ejs"], np.array([1.669, -1.999, 2.236]), 3)
+        numpy.testing.assert_array_almost_equal(
+            self.model.gc2_config["b_hat"], numpy.array([0.948, 0.318]), 3)
+        numpy.testing.assert_array_almost_equal(
+            self.model.gc2_config["a_hat"], numpy.array([0.894, 0.447]), 3)
+        numpy.testing.assert_array_almost_equal(
+            self.model.gc2_config["ejs"],
+            numpy.array([1.669, -1.999, 2.236]),
+            3)
         self.assertAlmostEqual(self.model.gc2_config["e_tot"], 1.9059, 4)
-        np.testing.assert_array_almost_equal(self.model.p0,
-                                             np.array([0., 0.]))
+        numpy.testing.assert_array_almost_equal(self.model.p0,
+                                                numpy.array([0., 0.]))
 
 
 CONCORDANT_FILE = os.path.join(os.path.dirname(__file__),
-                               "GC2Test_Concordant.csv"))
+                               "GC2Test_Concordant.csv")
 
 
 DISCORDANT_FILE = os.path.join(os.path.dirname(__file__),
-                               "GC2Test_Discordant.csv"))
+                               "GC2Test_Discordant.csv")
 
 
 class ConcordantSurfaceTestCase(unittest.TestCase):
@@ -278,7 +284,7 @@ class ConcordantSurfaceTestCase(unittest.TestCase):
     Tests the verification of the GC2 module for the Concordant Test case
     """
     def setUp(self):
-        self.data = np.genfromtxt(CONCORDANT_FILE, delimiter=",")
+        self.data = numpy.genfromtxt(CONCORDANT_FILE, delimiter=",")
         self.mesh = Mesh(self.data[:, 0], self.data[:, 1], self.data[:, 2])
         self.model = MultiSurface(FRANK1.surfaces)
 
@@ -288,10 +294,10 @@ class ConcordantSurfaceTestCase(unittest.TestCase):
         """
         expected_t = self.data[:, 3]
         expected_u = self.data[:, 4]
-        gc2t, gc2u = self.model.generalised_coordinates(self.mesh.lons,
-                                                        self.mesh.lats)
-        np.testing.assert_array_almost_equal(expected_t, gc2t)
-        np.testing.assert_array_almost_equal(expected_u, gc2u)
+        gc2t, gc2u = self.model.get_generalised_coordinates(self.mesh.lons,
+                                                            self.mesh.lats)
+        numpy.testing.assert_array_almost_equal(expected_t, gc2t)
+        numpy.testing.assert_array_almost_equal(expected_u, gc2u)
 
     def test_gc2_rx(self):
         """
@@ -299,15 +305,15 @@ class ConcordantSurfaceTestCase(unittest.TestCase):
         """
         expected_rx = self.data[:, 5]
         r_x = self.model.get_rx_distance(self.mesh)
-        np.testing.assert_array_almost_equal(expected_rx, r_x)
+        numpy.testing.assert_array_almost_equal(expected_rx, r_x)
 
     def test_gc2_ry0(self):
         """
         Verifies Ry0 for the concordant case
         """
-        expected_ry0 = self.data[:, 5]
+        expected_ry0 = self.data[:, 6]
         ry0 = self.model.get_ry0_distance(self.mesh)
-        np.testing.assert_array_almost_equal(expected_ry0, ry0)
+        numpy.testing.assert_array_almost_equal(expected_ry0, ry0)
 
 
 class DiscordantSurfaceTestCase(unittest.TestCase):
@@ -315,7 +321,6 @@ class DiscordantSurfaceTestCase(unittest.TestCase):
     Tests the verification of the GC2 module for the Concordant Test case
     """
     def setUp(self):
-        self.data = np.genfromtxt(DISCORDANT_FILE, delimiter=",")
+        self.data = numpy.genfromtxt(DISCORDANT_FILE, delimiter=",")
         self.mesh = Mesh(self.data[:, 0], self.data[:, 1], self.data[:, 2])
         self.model = MultiSurface(FRANK2.surfaces)
-

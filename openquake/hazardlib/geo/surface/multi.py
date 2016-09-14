@@ -26,7 +26,7 @@ from scipy.spatial.distance import pdist, squareform
 from openquake.hazardlib.geo.surface.base import (BaseSurface,
                                                   downsample_trace)
 from openquake.hazardlib.geo.mesh import Mesh
-from openquake.hazardlib.geo import utils, geodetic, Point
+from openquake.hazardlib.geo import utils, geodetic
 from openquake.hazardlib.geo.surface import (PlanarSurface,
                                              SimpleFaultSurface,
                                              ComplexFaultSurface)
@@ -70,7 +70,8 @@ class MultiSurface(BaseSurface):
                 for pnt in [surface.top_left, surface.top_right]:
                     edge.append([pnt.longitude, pnt.latitude, pnt.depth])
                 edges.append(numpy.array(edge))
-            elif isinstance(surface, (ComplexFaultSurface, SimpleFaultSurface)):
+            elif isinstance(surface,
+                            (ComplexFaultSurface, SimpleFaultSurface)):
                 # Rectangular meshes are downsampled to reduce their
                 # overall size
                 edges.append(downsample_trace(surface.mesh, tol))
@@ -302,8 +303,8 @@ class MultiSurface(BaseSurface):
             self.cartesian_edges.append(numpy.column_stack([px, py,
                                                             edges[:, 2]]))
             # Get surface length vector for the trace
-            lengths = geodetic.geodetic_distance(edges[:-1, 0], edges[:-1, 1], 
-                                                 edges[1:, 0], edges[1:, 1])   
+            lengths = geodetic.geodetic_distance(edges[:-1, 0], edges[:-1, 1],
+                                                 edges[1:, 0], edges[1:, 1])
             self.length_set.append(lengths)
             # Get cumulative surface length vector
             self.cum_length_set.append(numpy.hstack([0.,
@@ -327,14 +328,14 @@ class MultiSurface(BaseSurface):
         # Join further points to form a vector (a_hat in Spudich & Chiou)
         # According to Spudich & Chiou, a_vec should be eastward trending
         if endpoint_set[irow, 0] > endpoint_set[icol, 0]:
-           # Row point is to the east of column point
-           beginning = endpoint_set[icol, :2]
-           ending = endpoint_set[irow, :2]
+            # Row point is to the east of column point
+            beginning = endpoint_set[icol, :2]
+            ending = endpoint_set[irow, :2]
         else:
-           # Column point is to the east of row point
-           beginning = endpoint_set[irow, :2]
-           ending = endpoint_set[icol, :2]
-        
+            # Column point is to the east of row point
+            beginning = endpoint_set[irow, :2]
+            ending = endpoint_set[icol, :2]
+
         # Convert to unit vector
         a_vec = ending - beginning
         self.gc2_config["a_hat"] = a_vec / numpy.linalg.norm(a_vec)
@@ -359,7 +360,7 @@ class MultiSurface(BaseSurface):
                 self.cartesian_endpoints[i] = numpy.flipud(
                     self.cartesian_endpoints[i])
             b_vec += (c_edges[-1, :2] - c_edges[0, :2])
-            
+
         # Get unit vector
         self.gc2_config["b_hat"] = b_vec / numpy.linalg.norm(b_vec)
         if numpy.dot(a_vec, self.gc2_config["b_hat"]) >= 0.0:
@@ -423,22 +424,22 @@ class MultiSurface(BaseSurface):
         sum_wi_ui_si = numpy.zeros_like(lons)
         # Find the cumulative length of the fault up until the given segment
         # Essentially calculating s_i
-        total_length = numpy.sum([numpy.sum(lengths)
-                                  for lengths in self.length_set])
+        # total_length = numpy.sum([numpy.sum(lengths)
+        #                          for lengths in self.length_set])
         general_t = numpy.zeros_like(lons)
         general_u = numpy.zeros_like(lons)
         on_segment = numpy.zeros_like(lons, dtype=bool)
         # Loop over the traces
         for j, edges in enumerate(self.cartesian_edges):
             # Loop over segments in trace
-            #s_ij_total = 0.0
+            # s_ij_total = 0.0
             for i in range(edges.shape[0] - 1):
                 # Get u_i and t_i
-                u_i, t_i = self._get_ut_i(edges[i:(i + 2),:], sx, sy)
+                u_i, t_i = self._get_ut_i(edges[i:(i + 2), :], sx, sy)
                 # If t_i is 0 and u_i is within the section length then site is
                 # directly on the edge - therefore general_t is 0
                 w_i = numpy.zeros_like(lons)
-                ti0_check = numpy.fabs(t_i) < 1.0E-3 # < 1 m precision
+                ti0_check = numpy.fabs(t_i) < 1.0E-3  # < 1 m precision
                 on_segment_range = numpy.logical_and(
                     u_i >= 0.0,
                     u_i <= self.length_set[j][i])
@@ -452,9 +453,9 @@ class MultiSurface(BaseSurface):
                 # Also take care of the U case this time using
                 # equation 12 of Spudich and Chiou
                 s_ij = self.cum_length_set[j][i] + numpy.dot(
-                    (edges[0,:2] - self.p0), self.gc2_config["b_hat"])
+                    (edges[0, :2] - self.p0), self.gc2_config["b_hat"])
                 general_u[idx0] = u_i[idx0] + s_ij
- 
+
                 # In the first case, ti = 0, u_i is outside of the segment
                 # this implements equation 5
                 idx1 = numpy.logical_and(ti0_check,
@@ -465,11 +466,10 @@ class MultiSurface(BaseSurface):
                 # In the last case the site is not on the edge (t != 0)
                 # implements equation 4
                 idx2 = numpy.logical_not(ti0_check)
-                w_i[idx2] = (
-                    (1. / t_i[idx2]) * (numpy.arctan(
-                    (self.length_set[j][i] - u_i[idx2]) / t_i[idx2]) - 
-                    numpy.arctan(-u_i[idx2] / t_i[idx2])))
-            
+                w_i[idx2] = ((1. / t_i[idx2]) * (numpy.arctan(
+                             (self.length_set[j][i] - u_i[idx2]) / t_i[idx2]) -
+                             numpy.arctan(-u_i[idx2] / t_i[idx2])))
+
                 idx = numpy.logical_or(idx1, idx2)
                 # Equation 3
                 sum_w_i[idx] += w_i[idx]
@@ -477,11 +477,11 @@ class MultiSurface(BaseSurface):
                 sum_w_i_t_i[idx] += (w_i[idx] * t_i[idx])
                 # Part of equation 9
                 sum_wi_ui_si[idx] += (w_i[idx] * (u_i[idx] + s_ij))
-        
+
         # For those sites not on the segment edge itself
         idx_t = numpy.logical_not(on_segment)
         general_t[idx_t] = (1.0 / sum_w_i[idx_t]) * sum_w_i_t_i[idx_t]
-        general_u[idx_t] = (1.0 / sum_w_i[idx_t]) * sum_wi_ui_si[idx_t] 
+        general_u[idx_t] = (1.0 / sum_w_i[idx_t]) * sum_wi_ui_si[idx_t]
         return general_t, general_u
 
     def get_rx_distance(self, mesh):
@@ -503,7 +503,7 @@ class MultiSurface(BaseSurface):
             self.tmp_mesh = deepcopy(mesh)
         # Rx coordinate is taken directly from gc2t
         return self.gc2t
-    
+
     def get_ry0_distance(self, mesh):
         """
         For each point determine the corresponding Ry0 distance using the GC2
@@ -532,7 +532,6 @@ class MultiSurface(BaseSurface):
         neg_gc2u = self.gc2u < 0.0
         ry0[neg_gc2u] = numpy.fabs(self.gc2u[neg_gc2u])
 
-        
         # Sites off the end of the fault have values shifted by the
         # GC2 length of the fault
         pos_gc2u = self.gc2u >= self.gc_length
