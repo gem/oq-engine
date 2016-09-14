@@ -677,6 +677,19 @@ class CompositeSourceModel(collections.Sequence):
                 src_group, key=operator.attrgetter('source_id'))
             self.weight += weight
 
+    def init_serials(self):
+        """
+        Generate unique seeds for each rupture with numpy.arange.
+        This should be called only in event based calculators
+        """
+        n = sum(sg.tot_ruptures() for sg in self.src_groups)
+        rup_serial = numpy.arange(n, dtype=numpy.uint32)
+        start = 0
+        for src in self.get_sources():
+            nr = src.num_ruptures
+            src.serial = rup_serial[start:start + nr]
+            start += nr
+
     def __repr__(self):
         """
         Return a string representation of the composite model
@@ -803,14 +816,7 @@ class SourceManager(object):
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.maxweight)
         if random_seed is not None:
-            # generate unique seeds for each rupture with numpy.arange
-            n = sum(sg.tot_ruptures() for sg in self.csm.src_groups)
-            rup_serial = numpy.arange(n, dtype=numpy.uint32)
-            start = 0
-            for src in self.csm.get_sources():
-                nr = src.num_ruptures
-                src.serial = rup_serial[start:start + nr]
-                start += nr
+            self.csm.init_serials()
 
     def _sources_sites(self, src_data, tiles):
         """
