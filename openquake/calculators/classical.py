@@ -29,9 +29,10 @@ from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
-from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
-    hazard_curves_per_trt, ProbabilityMap)
+    pmap_from_grp, ProbabilityMap)
+from openquake.hazardlib.calc.filters import (
+    SourceSitesFilter, source_site_noop_filter)
 from openquake.hazardlib.probability_map import PmapStats
 from openquake.commonlib import parallel, datastore, source, calc
 from openquake.commonlib.sourceconverter import split_source
@@ -200,13 +201,12 @@ def classical(sources, sitecol, gsims, monitor):
     else:
         dic.bbs = []
     # NB: the source_site_filter below is ESSENTIAL for performance inside
-    # hazard_curves_per_trt, since it reduces the full site collection
+    # pmap_from_grp, since it reduces the full site collection
     # to a filtered one *before* doing the rupture filtering
-    dic[src_group_id] = hazard_curves_per_trt(
+    dic[src_group_id] = pmap_from_grp(
         sources, sitecol, imtls, gsims, truncation_level,
-        source_site_filter=source_site_distance_filter(max_dist),
         maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
-    dic.calc_times = monitor.calc_times  # added by hazard_curves_per_trt
+    dic.calc_times = monitor.calc_times  # added by pmap_from_grp
     dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
     return dic
 
@@ -302,6 +302,8 @@ class PSHACalculator(base.HazardCalculator):
         """
         Used in the case of large source model logic trees
         """
+        ss_filter = (SourceSitesFilter(oq.maximum_distance)
+                     if oq.filter_sources else source_site_noop_filter)
         ngroups = len(src_groups)
         logging.info('Considering %d source groups', ngroups)
         if self.random_seed is not None:
@@ -320,11 +322,9 @@ class PSHACalculator(base.HazardCalculator):
             for block in block_splitter(light, maxweight):
                 yield block, self.sitecol, gsims, monitor
                 nlight += 1
-            for src in heavy:
-                # TODO: filter the heavy source and send the sites
-                # if not filtered already
+            for src, sites in ss_filter(heavy, self.sitecol):
                 for block in block_splitter(split_source(src), maxweight):
-                    yield block, self.sitecol, gsims, monitor
+                    yield block, sites, gsims, monitor
                     nheavy += 1
         logging.info('Sent %d light and %d heavy tasks', nlight, nheavy)
   
