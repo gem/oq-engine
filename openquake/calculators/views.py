@@ -382,7 +382,7 @@ def view_totlosses(token, dstore):
 def portfolio_loss_from_agg_loss_table(agg_loss_table, loss_dt):
     data = numpy.zeros(len(agg_loss_table), loss_dt)
     rlzids = []
-    for rlz, dset in dstore['agg_loss_table'].items():
+    for rlz, dset in agg_loss_table.items():
         rlzi = int(rlz.split('-')[1])  # rlz-000 -> 0 etc
         rlzids.append(rlzi)
         for loss_type, losses in dset.items():
@@ -414,8 +414,8 @@ def view_portfolio_loss(token, dstore):
     """
     oq = dstore['oqparam']
     if 'agg_loss_table' in dstore:
-        data, rlzids = portfolio_loss_from_agg_loss_table(
-            store['agg_loss_table'], oq.loss_dt())
+        rlzids, data = portfolio_loss_from_agg_loss_table(
+            dstore['agg_loss_table'], oq.loss_dt())
     else:
         oq.insured_losses = False
         rlzids, data = portfolio_loss_from_losses_by_taxon(
