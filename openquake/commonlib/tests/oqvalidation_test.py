@@ -322,3 +322,28 @@ class OqParamTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             oq.set_risk_imtls(rm)
         self.assertIn("Unknown IMT: ' SA(0.1)'", str(ctx.exception))
+
+
+    def test_disaggregation(self):
+        with self.assertRaises(ValueError) as ctx:
+            OqParam(
+                calculation_mode='disaggregation',
+                gsim='BooreAtkinson2008',
+                reference_vs30_value='200',
+                sites='0.1 0.2',
+                poes='0.2',
+                maximum_distance='400',
+                intensity_measure_types_and_levels="{'PGV': [0.1, 0.2, 0.3]}",
+                uniform_hazard_spectra='1')
+        self.assertIn("poes_disagg must be set", str(ctx.exception))
+        with self.assertRaises(ValueError) as ctx:
+            OqParam(
+                calculation_mode='disaggregation',
+                individual_curves='false',
+                reference_vs30_value='200',
+                sites='0.1 0.2',
+                poes='0.2',
+                maximum_distance='400',
+                intensity_measure_types_and_levels="{'PGV': [0.1, 0.2, 0.3]}",
+                uniform_hazard_spectra='1')
+        self.assertIn("`individual_curves` must be true", str(ctx.exception))
