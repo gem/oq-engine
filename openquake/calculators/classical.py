@@ -326,13 +326,13 @@ class PSHACalculator(base.HazardCalculator):
         logging.info('Considering %d source groups', ngroups)
         if self.random_seed is not None:
             self.csm.init_serials()
-        maxweight = max(
-            math.ceil(self.csm.weight / oq.concurrent_tasks), MAXWEIGHT)
+        ct = oq.concurrent_tasks or 1
+        maxweight = max(math.ceil(self.csm.weight / ct), MAXWEIGHT)
         nheavy = nlight = 0
         for sg in src_groups:
             gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
             if oq.poes_disagg:  # only for disaggregation
-                mon.sm_id = self.rlzs_assoc.sm_ids[sg.id]
+                monitor.sm_id = self.rlzs_assoc.sm_ids[sg.id]
             monitor.seed = self.rlzs_assoc.seed
             monitor.samples = self.rlzs_assoc.samples[sg.id]
             light = [src for src in sg.sources if src.weight <= maxweight]
