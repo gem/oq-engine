@@ -642,7 +642,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             agg_curve_stats.nbytes)
 
         
-def ebr(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
+def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     """
     :param riskinput:
         a :class:`openquake.risklib.riskinput.RiskInput` object
@@ -669,20 +669,20 @@ def ebr(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     return losses
 
 
-@base.calculators.add('ebr')
-class EbrCalculator(base.RiskCalculator):
+@base.calculators.add('ebrisk')
+class EbriskCalculator(base.RiskCalculator):
     """
     Event based PSHA calculator generating the total losses by taxonomy
     """
     pre_calculator = 'event_based'
-    core_task = ebr
+    core_task = losses_by_taxonomy
     is_stochastic = True
 
     def pre_execute(self):
         """
         Read the precomputed ruptures (or compute them on the fly)
         """
-        super(EbrCalculator, self).pre_execute()
+        super(EbriskCalculator, self).pre_execute()
         calc.check_overflow(self)
         if not self.riskmodel:  # there is no riskmodel, exit early
             self.execute = lambda: None
