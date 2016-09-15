@@ -187,3 +187,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = out['gmf_data', 'txt']
         self.assertEqualFiles(
             'expected/gmf-smltp_b1-gsimltp_b1.txt', fname)
+
+    @attr('qa', 'hazard', 'ebr')
+    def test_case_master_ebr(self):
+        out = self.run_calc(case_master.__file__, 'job.ini',
+                            calculation_mode='ebr', exports='csv')
+        for fname in out['losses_by_taxon', 'csv']:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
