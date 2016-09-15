@@ -194,3 +194,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                             calculation_mode='ebr', exports='csv')
         for fname in out['losses_by_taxon', 'csv']:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+
+        fname = writetmp(view('portfolio_loss', self.calc.datastore))
+        self.assertEqualFiles('expected/portfolio_loss_ebr.txt', fname)
