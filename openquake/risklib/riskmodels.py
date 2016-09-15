@@ -563,11 +563,10 @@ class EventBasedReduced(RiskModel):
             a :class:`openquake.risklib.scientific.Output`
             instance with the total losses
         """
-        gmvs, eids = gmvs_eids['gmv'], gmvs_eids['eid']
         vf = self.risk_functions[loss_type]
         loss = 0.0  # total loss
         for i, asset in enumerate(assets):
-            ratios, _covs, _idxs = vf.interpolate(gmvs)
+            ratios, _covs, _idxs = vf.interpolate(gmvs_eids['gmv'])
             loss += ratios.sum() * asset.value(loss_type, self.time_event)
         return scientific.Output(assets, loss_type, loss=loss)
 
