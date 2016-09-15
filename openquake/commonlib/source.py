@@ -616,7 +616,7 @@ class CompositeSourceModel(collections.Sequence):
         weight = 0
         idx = 0
         for sm in self.source_models:
-            src_groups = map(copy.copy, sm.src_groups)
+            src_groups = [copy.copy(src) for src in sm.src_groups]
             for src_group in src_groups:
                 sources = []
                 for src, sites in ss_filter(src_group.sources, sitecol):
