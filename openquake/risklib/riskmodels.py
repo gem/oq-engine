@@ -437,8 +437,7 @@ class Classical(RiskModel):
             loss_maps=values * maps)
 
 
-@registry.add('event_based_risk', 'event_based', 'event_based_rupture',
-              'ebr_gmf')
+@registry.add('event_based_risk', 'event_based', 'event_based_rupture')
 class ProbabilisticEventBased(RiskModel):
     """
     Implements the Probabilistic Event Based riskmodel
@@ -533,6 +532,44 @@ class ProbabilisticEventBased(RiskModel):
                     asset.insurance_limit(loss_type))
         return scientific.Output(
             assets, loss_type, loss_ratios=loss_ratios, eids=eids)
+
+
+@registry.add('ebr')
+class EventBasedReduced(RiskModel):
+    """
+    Implements the reduced event based riskmodel. This is used by the
+    EbrCalculator, a much simplified calculator that ignores asset correlation
+    and insured losses, cannot compute the event loss table, nor the average
+    losses, nor the loss curves. The only output returned is the total loss.
+    """
+    kind = 'vulnerability'
+
+    def __init__(self, taxonomy, vulnerability_functions, time_event):
+        self.taxonomy = taxonomy
+        self.risk_functions = vulnerability_functions
+        self.time_event = time_event
+
+    def __call__(self, loss_type, assets, gmvs_eids, epsgetter=None):
+        """
+        :param str loss_type:
+            the loss type considered
+        :param assets:
+           a list of assets on the same site and with the same taxonomy
+        :param gmvs_eids:
+           a composite array of E elements with fields 'gmv' and 'eid'
+        :param epsgetter:
+           ignored
+        :returns:
+            a :class:`openquake.risklib.scientific.Output`
+            instance with the total losses
+        """
+        gmvs, eids = gmvs_eids['gmv'], gmvs_eids['eid']
+        vf = self.risk_functions[loss_type]
+        loss = 0.0  # total loss
+        for i, asset in enumerate(assets):
+            ratios, _covs, _idxs = vf.interpolate(gmvs)
+            loss += ratios.sum() * asset.value(loss_type, self.time_event)
+        return scientific.Output(assets, loss_type, loss=loss)
 
 
 @registry.add('classical_bcr')

@@ -807,6 +807,19 @@ def export_rcurves_rlzs(ekey, dstore):
     return sorted(fnames)
 
 
+# used by ebr calculator
+@export.add(('losses_by_taxon', 'csv'))
+def export_losses_by_taxon_csv(ekey, dstore):
+    taxonomies = add_quotes(dstore['assetcol/taxonomies'].value)
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    value = dstore[ekey[0]].value  # matrix of shape (T, L, R)
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    for rlz, values in zip(rlzs, value.transpose(2, 0, 1)):
+        fname = dstore.build_fname(ekey[0], rlz, ekey[1])
+        writer.save(compose_arrays(taxonomies, values, 'taxonomy'), fname)
+    return writer.getsaved()
+
+
 # this is used by classical_risk
 @export.add(('loss_curves-rlzs', 'xml'),
             ('loss_curves-rlzs', 'geojson'))
