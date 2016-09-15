@@ -34,8 +34,8 @@ from openquake.hazardlib.calc.hazard_curve import (
 from openquake.hazardlib.calc.filters import (
     SourceSitesFilter, source_site_noop_filter)
 from openquake.hazardlib.probability_map import PmapStats
-from openquake.commonlib import parallel, datastore, source, calc
-from openquake.commonlib.sourceconverter import split_source
+from openquake.commonlib import (
+    parallel, datastore, source, calc, sourceconverter)
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -44,6 +44,24 @@ F64 = numpy.float64
 
 MAXWEIGHT = 200
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
+
+
+def split_source(src, random_seed):
+    """
+    :param src: an heavy source
+    :random_seed: used only for event based calculations
+    :returns: a list of split sources
+    """
+    split_sources = []
+    start = 0
+    for split in sourceconverter.split_source(src):
+        if random_seed:
+            nr = split.num_ruptures
+            split.serial = src.serial[start:start + nr]
+            start += nr
+        split.id = src.id
+        split_sources.append(split)
+    return split_sources
 
 
 class BBdict(AccumDict):
@@ -328,7 +346,7 @@ class PSHACalculator(base.HazardCalculator):
             with self.monitor('filter/split heavy sources', autoflush=True):
                 for src, sites in ss_filter(heavy, self.sitecol):
                     for block in block_splitter(
-                            split_source(src), maxweight,
+                            split_source(src, self.random_seed), maxweight,
                             weight=operator.attrgetter('weight')):
                         yield block, sites, gsims, monitor
                         nheavy += 1
