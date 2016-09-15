@@ -534,7 +534,7 @@ class ProbabilisticEventBased(RiskModel):
             assets, loss_type, loss_ratios=loss_ratios, eids=eids)
 
 
-@registry.add('ebr')
+@registry.add('ebrisk')
 class EventBasedReduced(RiskModel):
     """
     Implements the reduced event based riskmodel. This is used by the
