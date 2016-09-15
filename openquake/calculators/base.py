@@ -268,7 +268,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 self._export(('uhs', fmt), exported)
 
         if self.close:  # in the engine we close later
-            del self.result
+            self.result = None
             try:
                 self.datastore.close()
             except (RuntimeError, ValueError):
