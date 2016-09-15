@@ -189,7 +189,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             if pre_execute:
                 self.pre_execute()
             self.result = self.execute()
-            if self.result:
+            if self.result is not None:
                 self.post_execute(self.result)
             self.before_export()
             exported = self.export(kw.get('exports', ''))
@@ -268,7 +268,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 self._export(('uhs', fmt), exported)
 
         if self.close:  # in the engine we close later
-            self.result.clear()
+            del self.result
             try:
                 self.datastore.close()
             except (RuntimeError, ValueError):
