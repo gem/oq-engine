@@ -196,6 +196,15 @@ class OqParam(valid.ParamSet):
         elif self.gsim is not None:
             self.check_gsims([self.gsim])
 
+        # checks for disaggregation
+        if self.calculation_mode == 'disaggregation':
+            if not self.individual_curves:
+                raise ValueError(
+                    'For disaggregation the flag `individual_curves` '
+                    'must be true')
+            elif not self.poes_disagg:
+                raise ValueError('poes_disagg must be set in the job.ini file')
+
     def check_gsims(self, gsims):
         """
         :param gsims: a sequence of GSIM instances
