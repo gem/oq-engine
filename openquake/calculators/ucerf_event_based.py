@@ -727,7 +727,7 @@ def compute_ruptures_gmfs_curves(
         res['ruptures'][grp_id] = ses_ruptures
         res.update(event_based.compute_gmfs_and_curves(
             ses_ruptures, sitecol, imts, rlzs_by_gsim, min_iml, monitor))
-        res.calc_times[grp_id] = (ltbrid, time.time() - t0)
+        res.calc_times[grp_id] = (ltbrid, len(sitecol), time.time() - t0)
     return res
 
 
