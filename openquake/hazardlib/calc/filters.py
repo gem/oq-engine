@@ -169,7 +169,7 @@ class RuptureSitesFilter(object):
         Returns the ruptures within the integration distance from the source,
         or None.
         """
-        rupture_sites = list(self([rupture], sites))
+        rupture_sites = list(self([source], sites))
         if rupture_sites:
             return rupture_sites[0][1]
 
@@ -189,6 +189,7 @@ def source_site_noop_filter(sources, sites):
     return ((src, sites) for src in sources)
 source_site_noop_filter.affected = lambda src, sites: sites
 source_site_noop_filter.integration_distance = None
+
 
 #: Rupture-site "no-op" filter, same as :func:`source_site_noop_filter`.
 def rupture_site_noop_filter(ruptures, sites):

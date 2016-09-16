@@ -66,7 +66,7 @@ def agg_curves(acc, curves):
 
 def calc_hazard_curves(
         sources, sites, imtls, gsim_by_trt, truncation_level=None,
-        source_site_filter='SourceSitesFilter', maximum_distance=None):
+        source_site_filter=filters.source_site_noop_filter):
     """
     Compute hazard curves on a list of sites, given a set of seismic sources
     and a set of ground shaking intensity models (one per tectonic region type
@@ -209,8 +209,9 @@ def pmap_from_grp(
     :returns: a ProbabilityMap instance
     """
     if source_site_filter == 'SourceSitesFilter':
-        assert maximum_distance, maximum_distance
-        source_site_filter = filters.SourceSitesFilter(maximum_distance)
+        source_site_filter = (
+            filters.SourceSitesFilter(maximum_distance)
+            if maximum_distance else filters.source_site_noop_filter)
     with GroundShakingIntensityModel.forbid_instantiation():
         imtls = DictArray(imtls)
         cmaker = ContextMaker(gsims, maximum_distance)
