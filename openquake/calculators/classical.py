@@ -327,6 +327,8 @@ class PSHACalculator(base.HazardCalculator):
         if self.random_seed is not None:
             self.csm.init_serials()
         ct = oq.concurrent_tasks or 1
+        if len(self.sitecol) > 10000:  # correction for lots of sites
+            ct *= math.sqrt(len(self.sitecol) / 10000)
         maxweight = max(math.ceil(self.csm.weight / ct), MAXWEIGHT)
         nheavy = nlight = 0
         for sg in src_groups:
