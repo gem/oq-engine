@@ -273,8 +273,6 @@ class RiskModel(object):
                 out = self(loss_type, assets, haz, epsgetter)
                 if out:  # can be None in scenario_risk with no valid values
                     l = self.compositemodel.lti[loss_type]
-                    out.hid = r
-                    out.weight = rlz.weight
                     out_by_lr[l, r] = out
         return out_by_lr
 
