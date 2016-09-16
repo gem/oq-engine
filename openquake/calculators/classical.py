@@ -330,6 +330,7 @@ class PSHACalculator(base.HazardCalculator):
         if len(self.sitecol) > 10000:  # correction for lots of sites
             ct *= math.sqrt(len(self.sitecol) / 10000)
         maxweight = max(math.ceil(self.csm.weight / ct), MAXWEIGHT)
+        logging.info('Using a maxweight of %d', maxweight)
         nheavy = nlight = 0
         for sg in src_groups:
             gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
