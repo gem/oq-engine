@@ -272,6 +272,14 @@ class IterResult(object):
             hdf5.extend3(mon.hdf5path, 'task_info/' + self.name, data)
         mon.flush()
 
+    def reduce(self, agg=operator.add, acc=None):
+        for result in self:
+            if acc is None:  # first time
+                acc = result
+            else:
+                acc = agg(acc, result)
+        return acc
+
 
 class TaskManager(object):
     """
