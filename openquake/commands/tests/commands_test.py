@@ -43,7 +43,7 @@ from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import case_5
 from openquake.calculators.tests import check_platform
-from openquake.server.manage import dbcmd
+from openquake.server import manage, dbapi
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
 
@@ -321,7 +321,10 @@ class SourceModelShapefileConverterTestCase(unittest.TestCase):
 class DbTestCase(unittest.TestCase):
     def test_db(self):
         # the some db commands bypassing the dbserver
-        with Print.patch(), mock.patch('openquake.engine.logs.dbcmd', dbcmd):
+        with Print.patch(), mock.patch(
+                'openquake.engine.logs.dbcmd', manage.dbcmd):
             db('version_db')
-            db('calc_info 1')
-            db('get_results 1')
+            try:
+                db('calc_info 1')
+            except dbapi.NotFound:  # happens on an empty db
+                pass
