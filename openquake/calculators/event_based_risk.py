@@ -663,6 +663,7 @@ def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     taxonomy_id = {t: i for i, t in enumerate(sorted(assetcol.taxonomies))}
     losses = numpy.zeros((T, L, R), F64)
     for out in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor, assetcol):
+        # NB: out.assets is a non-empty list of assets with the same taxonomy
         t = taxonomy_id[out.assets[0].taxonomy]
         for l, r in out:
             losses[t, l, r] += out[l, r].loss
