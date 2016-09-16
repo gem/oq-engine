@@ -1,7 +1,9 @@
   [Michele Simionato]
   * Optimized the source distribution for the case of large source model
-  * Filtered the sources up front when there are few sites (<= 10)
     logic trees
+  * Added an optimized event based calculator computing the total losses by
+    taxonomy and nothing else
+  * Filtered the sources up front when there are few sites (<= 10)
   * Reduced the number of tasks generated when filter_sources is False
   * Saved engine_version and hazardlib_version as attributes of the datastore
   * Avoided saving the ruptures when ground_motion_fields is True
