@@ -249,7 +249,8 @@ def hazard_curves_per_rupture_subset(rupset_idx, ucerf_source, sites, imtls,
         pmap |= ucerf_poe_map(hdf5, ucerf_source, rupset_idx, sites,
                               imtls, cmaker, truncation_level, bbs,
                               ctx_mon, pne_mon, disagg_mon)
-        monitor.calc_times.append((ucerf_source.id, time.time() - t0))
+        monitor.calc_times.append(
+            (ucerf_source.id, len(sites), time.time() - t0))
         monitor.eff_ruptures += pne_mon.counts
     return pmap
 
