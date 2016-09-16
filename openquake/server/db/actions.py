@@ -363,9 +363,9 @@ def get_dbpath(db):
     :param db: a :class:`openquake.server.dbapi.Db` instance
     :returns: the path to the database file.
     """
-    curs = db('PRAGMA database_list')
+    rows = db('PRAGMA database_list')
     # return a row with fields (id, dbname, dbpath)
-    return curs.fetchall()[0][-1]
+    return rows[0].file
 
 
 # ########################## upgrade operations ########################## #
