@@ -43,20 +43,21 @@ def convert(strings):
 
 
 @sap.Script
-def db(cmd):
+def db(cmd, args=''):
     """
     Run a database command
     """
-    cmds = shlex.split(cmd)
-    if cmds[0] not in commands:
+    args = shlex.split(args)
+    if cmd not in commands:
         okcmds = '\n'.join('%s(%s)' % (name, ', '.join(args))
                            for name, args in sorted(commands.items()))
-        print('Invalid command "%s": choose one from\n%s' % (cmds[0], okcmds))
-    elif len(cmds[1:]) != len(commands[cmds[0]]):
+        print('Invalid command "%s": choose one from\n%s' % (cmd, okcmds))
+    elif len(args) != len(commands[cmd]):
         print('Wrong number of arguments, expected %s, got %s' % (
-            commands[cmds[0]], cmds[1:]))
+            commands[cmd], args))
     else:
-        print(logs.dbcmd(*convert(cmds)))
+        print(logs.dbcmd(cmd, *convert(args)))
 
 
 db.arg('cmd', 'db command')
+db.arg('args', 'a string of arguments')
