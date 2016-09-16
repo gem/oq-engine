@@ -543,14 +543,6 @@ class HazardCalculator(BaseCalculator):
                 raise RuntimeError('The exposure contains the taxonomies %s '
                                    'which are not in the risk model' % missing)
 
-    def is_tiling(self):
-        """
-        :returns:
-            True if the calculator produces more than one tile, False otherwise
-        """
-        return (self.oqparam.calculation_mode in ('psha', 'classical') and
-                len(self.sitecol) > self.oqparam.sites_per_tile)
-
     def save_data_transfer(self, iter_result):
         """
         Save information about the data transfer in the risk calculation
