@@ -35,6 +35,7 @@ from openquake.commonlib.parallel import starmap
 
 U32 = numpy.uint32
 F32 = numpy.float32
+F64 = numpy.float64
 
 
 def build_el_dtypes(insured_losses):
@@ -639,3 +640,110 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.datastore['agg_curve-stats'] = agg_curve_stats
         self.datastore['agg_curve-stats'].attrs['nbytes'] = (
             agg_curve_stats.nbytes)
+
+        
+def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
+    """
+    :param riskinput:
+        a :class:`openquake.risklib.riskinput.RiskInput` object
+    :param riskmodel:
+        a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
+    :param rlzs_assoc:
+        a class:`openquake.commonlib.source.RlzsAssoc` instance
+    :param assetcol:
+        AssetCollection instance
+    :param monitor:
+        :class:`openquake.baselib.performance.Monitor` instance
+    :returns:
+        a numpy array of shape (T, L, R)
+    """
+    lti = riskmodel.lti  # loss type -> index
+    L, R = len(lti), len(rlzs_assoc.realizations)
+    T = len(assetcol.taxonomies)
+    taxonomy_id = {t: i for i, t in enumerate(sorted(assetcol.taxonomies))}
+    losses = numpy.zeros((T, L, R), F64)
+    for out in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor, assetcol):
+        # NB: out.assets is a non-empty list of assets with the same taxonomy
+        t = taxonomy_id[out.assets[0].taxonomy]
+        for l, r in out:
+            losses[t, l, r] += out[l, r].loss
+    return losses
+
+
+@base.calculators.add('ebrisk')
+class EbriskCalculator(base.RiskCalculator):
+    """
+    Event based PSHA calculator generating the total losses by taxonomy
+    """
+    pre_calculator = 'event_based'
+    core_task = losses_by_taxonomy
+    is_stochastic = True
+
+    def pre_execute(self):
+        """
+        Read the precomputed ruptures (or compute them on the fly)
+        """
+        super(EbriskCalculator, self).pre_execute()
+        calc.check_overflow(self)
+        if not self.riskmodel:  # there is no riskmodel, exit early
+            self.execute = lambda: None
+            self.post_execute = lambda result: None
+            return
+
+    def execute(self):
+        """
+        Run the event_based_risk calculator and aggregate the results
+        """
+        oq = self.oqparam
+        correl_model = readinput.get_correl_model(oq)
+        self.A = len(self.assetcol)
+        self.E = len(self.datastore['events'])
+        logging.info('Populating the risk inputs')
+        rlzs_by_tr_id = self.rlzs_assoc.get_rlzs_by_grp_id()
+        num_rlzs = {t: len(rlzs) for t, rlzs in rlzs_by_tr_id.items()}
+        num_assets = {sid: len(self.assets_by_site[sid])
+                      for sid in self.sitecol.sids}
+        all_ruptures = []
+        preprecalc = getattr(self.precalc, 'precalc', None)
+        if preprecalc:  # the ruptures are already in memory
+            for grp_id, sesruptures in preprecalc.result.items():
+                for sr in sesruptures:
+                    sr.set_weight(num_rlzs, num_assets)
+                    all_ruptures.append(sr)
+        else:  # read the ruptures from the datastore
+            for serial in self.datastore['sescollection']:
+                rup = self.datastore['sescollection/' + serial]
+                rup.set_weight(num_rlzs, num_assets)
+                all_ruptures.append(rup)
+        all_ruptures.sort(key=operator.attrgetter('serial'))
+
+        if not oq.minimum_intensity:
+            # infer it from the risk models if not directly set in job.ini
+            oq.minimum_intensity = self.riskmodel.get_min_iml()
+        min_iml = calc.fix_minimum_intensity(
+            oq.minimum_intensity, oq.imtls)
+        if min_iml.sum() == 0:
+            logging.warn('The GMFs are not filtered: '
+                         'you may want to set a minimum_intensity')
+        else:
+            logging.info('minimum_intensity=%s', oq.minimum_intensity)
+
+        eps = None
+        with self.monitor('building riskinputs', autoflush=True):
+            riskinputs = self.riskmodel.build_inputs_from_ruptures(
+                list(oq.imtls), self.sitecol.complete, all_ruptures,
+                oq.truncation_level, correl_model, min_iml, eps,
+                oq.concurrent_tasks or 1)
+            res = starmap(
+                self.core_task.__func__,
+                ((riskinput, self.riskmodel, self.rlzs_assoc,
+                  self.assetcol, self.monitor.new('task'))
+                 for riskinput in riskinputs)).submit_all()
+        losses = res.reduce()
+        self.save_data_transfer(res)
+        return losses
+
+    def post_execute(self, losses):
+        self.datastore['losses_by_taxon'] = losses
+        logging.info('Saved %s losses by taxonomy', losses.shape)
+            
