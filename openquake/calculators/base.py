@@ -83,7 +83,8 @@ PRECALC_MAP = dict(
     classical_damage=['classical'],
     event_based=['event_based_risk'],
     event_based_risk=['event_based'],
-    ucerf_classical=['ucerf_psha'])
+    ucerf_classical=['ucerf_psha'],
+    ebrisk=['event_based'])
 
 
 def set_array(longarray, shortarray):
@@ -189,7 +190,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             if pre_execute:
                 self.pre_execute()
             self.result = self.execute()
-            if self.result:
+            if self.result is not None:
                 self.post_execute(self.result)
             self.before_export()
             exported = self.export(kw.get('exports', ''))
@@ -268,7 +269,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 self._export(('uhs', fmt), exported)
 
         if self.close:  # in the engine we close later
-            self.result.clear()
+            self.result = None
             try:
                 self.datastore.close()
             except (RuntimeError, ValueError):
