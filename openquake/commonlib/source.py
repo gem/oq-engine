@@ -912,7 +912,6 @@ class SourceManager(object):
         data = []
         for src, sites in ss_filter(sources, sitecol):
             self.csm.filtered_weight += src.weight
-            max_dist = ss_filter.integration_distance[src.tectonic_region_type]
             data.append((src, sites, self.ss_filter, self.random_seed))
         return parallel.starmap(split_filter, data)
 
