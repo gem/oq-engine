@@ -33,6 +33,7 @@ from openquake.commonlib.risk_writers import (
 
 Output = collections.namedtuple('Output', 'ltype path array')
 F32 = numpy.float32
+F64 = numpy.float64
 U32 = numpy.uint32
 
 
@@ -805,6 +806,26 @@ def export_rcurves_rlzs(ekey, dstore):
         writer.serialize(curves)
         fnames.append(writer._dest)
     return sorted(fnames)
+
+
+# used by ebr calculator
+@export.add(('losses_by_taxon', 'csv'))
+def export_losses_by_taxon_csv(ekey, dstore):
+    taxonomies = add_quotes(dstore['assetcol/taxonomies'].value)
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
+    value = dstore[ekey[0]].value  # matrix of shape (T, L, R)
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    dt = numpy.dtype([('taxonomy', taxonomies.dtype)]
+                     + [(lt, F64) for lt in loss_types])
+    for rlz, values in zip(rlzs, value.transpose(2, 0, 1)):
+        fname = dstore.build_fname(ekey[0], rlz, ekey[1])
+        array = numpy.zeros(len(values), dt)
+        array['taxonomy'] = taxonomies
+        for l, lt in enumerate(loss_types):
+            array[lt] = values[:, l]
+        writer.save(array, fname)
+    return writer.getsaved()
 
 
 # this is used by classical_risk
