@@ -423,8 +423,6 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
         if True, returns only the calculations owned by the user
     :param id:
         if given, extract only the specified calculation
-    :param start_time:
-        if given, extract only the most recent calculations
     :returns:
         list of tuples (job_id, user_name, job_status, job_type,
                         job_is_running, job_description)
