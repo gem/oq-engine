@@ -24,7 +24,6 @@ import collections
 from functools import partial, reduce
 import numpy
 
-from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
@@ -59,7 +58,6 @@ def split_source(src, random_seed):
             nr = split.num_ruptures
             split.serial = src.serial[start:start + nr]
             start += nr
-        split.id = src.id
         split_sources.append(split)
     return split_sources
 
@@ -245,13 +243,17 @@ class PSHACalculator(base.HazardCalculator):
         :param val: a nested dictionary grp_id -> ProbabilityMap
         """
         with self.monitor('aggregate curves', autoflush=True):
+            [(grp_id, pmap)] = val.items()  # val is a dict of len 1
             if hasattr(val, 'calc_times'):
-                acc.calc_times.extend(val.calc_times)
+                for src_id, calc_time, nsites in val.calc_times:
+                    src_id = src_id.split(':', 1)[0]
+                    info = self.infos[grp_id, src_id]
+                    info.calc_time += calc_time
+                    info.num_sites = max(info.num_sites, nsites)
             if hasattr(val, 'eff_ruptures'):
                 acc.eff_ruptures += val.eff_ruptures
             for bb in getattr(val, 'bbs', []):
                 acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
-            [(grp_id, pmap)] = val.items()  # val is a dict of len 1
             acc[grp_id] |= pmap
         self.datastore.flush()
         return acc
@@ -332,6 +334,7 @@ class PSHACalculator(base.HazardCalculator):
         maxweight = max(math.ceil(self.csm.weight / ct), MAXWEIGHT)
         logging.info('Using a maxweight of %d', maxweight)
         nheavy = nlight = 0
+        self.infos = {}
         for sg in src_groups:
             gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
             if oq.poes_disagg:  # only for disaggregation
@@ -341,6 +344,8 @@ class PSHACalculator(base.HazardCalculator):
             light = [src for src in sg.sources if src.weight <= maxweight]
             for block in block_splitter(
                     light, maxweight, weight=operator.attrgetter('weight')):
+                for src in block:
+                    self.infos[sg.id, src.source_id] = source.SourceInfo(src)
                 yield block, self.sitecol, gsims, monitor
                 nlight += 1
             heavy = [src for src in sg.sources if src.weight > maxweight]
@@ -348,34 +353,25 @@ class PSHACalculator(base.HazardCalculator):
                 continue
             with self.monitor('filter/split heavy sources', autoflush=True):
                 for src, sites in ss_filter(heavy, self.sitecol):
+                    self.infos[sg.id, src.source_id] = source.SourceInfo(src)
                     for block in block_splitter(
                             split_source(src, self.random_seed), maxweight,
                             weight=operator.attrgetter('weight')):
                         yield block, sites, gsims, monitor
                         nheavy += 1
         logging.info('Sent %d light and %d heavy tasks', nlight, nheavy)
-  
+
     def store_source_info(self, pmap_by_grp_id):
         # save the calculation times per each source
         calc_times = getattr(pmap_by_grp_id, 'calc_times', [])
-        if calc_times and 'source_info' in self.datastore:
-            sources = self.csm.get_sources()
-            info_dict = {(rec['src_group_id'], rec['source_id']): rec
-                         for rec in self.source_info}
-            for src_idx, dt in calc_times:
-                src = sources[src_idx]
-                info = info_dict[src.src_group_id, encode(src.source_id)]
-                info['cum_calc_time'] += dt
-                info['num_tasks'] += 1
-                if dt > info['max_calc_time']:
-                    info['max_calc_time'] = dt
-
+        if calc_times:
             rows = sorted(
-                info_dict.values(), key=operator.itemgetter(7), reverse=True)
-            array = numpy.zeros(len(rows), source.source_info_dt)
+                self.infos.values(), key=operator.attrgetter('calc_time'),
+                reverse=True)
+            array = numpy.zeros(len(rows), source.SourceInfo.dt)
             for i, row in enumerate(rows):
                 for name in array.dtype.names:
-                    array[i][name] = row[name]
+                    array[i][name] = getattr(row, name)
             self.source_info = array
         self.datastore.flush()
 
