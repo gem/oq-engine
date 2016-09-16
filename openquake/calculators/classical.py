@@ -245,7 +245,7 @@ class PSHACalculator(base.HazardCalculator):
         with self.monitor('aggregate curves', autoflush=True):
             [(grp_id, pmap)] = val.items()  # val is a dict of len 1
             if hasattr(val, 'calc_times'):
-                for src_id, calc_time, nsites in val.calc_times:
+                for src_id, nsites, calc_time in val.calc_times:
                     src_id = src_id.split(':', 1)[0]
                     info = self.infos[grp_id, src_id]
                     info.calc_time += calc_time
@@ -363,8 +363,7 @@ class PSHACalculator(base.HazardCalculator):
 
     def store_source_info(self, pmap_by_grp_id):
         # save the calculation times per each source
-        calc_times = getattr(pmap_by_grp_id, 'calc_times', [])
-        if calc_times:
+        if self.infos:
             rows = sorted(
                 self.infos.values(), key=operator.attrgetter('calc_time'),
                 reverse=True)
@@ -373,6 +372,7 @@ class PSHACalculator(base.HazardCalculator):
                 for name in array.dtype.names:
                     array[i][name] = getattr(row, name)
             self.source_info = array
+        self.infos.clear()
         self.datastore.flush()
 
     def post_execute(self, pmap_by_grp_id):
