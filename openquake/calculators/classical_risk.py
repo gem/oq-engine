@@ -45,7 +45,7 @@ def classical_risk(riskinput, riskmodel, rlzs_assoc, monitor):
     """
     oq = monitor.oqparam
     ins = oq.insured_losses
-    R = len(rlzs_assoc.realizations)
+    rlzs = rlzs_assoc.realizations
     result = dict(
         loss_curves=[], loss_maps=[], stat_curves=[], stat_maps=[])
     for out_by_lr in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor):
@@ -71,9 +71,13 @@ def classical_risk(riskinput, riskmodel, rlzs_assoc, monitor):
                     (l, r, aid, out.loss_maps[:, i]))
 
         # compute statistics
-        if R > 1:
+        if len(rlzs) > 1:
             for l, lrs in groupby(out_by_lr, operator.itemgetter(0)).items():
-                outs = [out_by_lr[lr] for lr in lrs]
+                outs = []
+                for l, r in lrs:
+                    out = out_by_lr[l, r]
+                    out.weight = rlzs[r].weight
+                    outs.append(out)
                 curve_resolution = outs[0].loss_curves.shape[-1]
                 statsbuilder = scientific.StatsBuilder(
                     oq.quantile_loss_curves,
