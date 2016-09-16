@@ -125,6 +125,7 @@ class SourceSitesFilter(object):
         which is what is actually used for filtering.
     """
     def __init__(self, integration_distance):
+        assert integration_distance, 'Must be set'
         self.integration_distance = integration_distance
 
     def affected(self, source, sites):
