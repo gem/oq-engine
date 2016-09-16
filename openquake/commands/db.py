@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import ast
+import shlex
 import inspect
 from decorator import getfullargspec
 from openquake.baselib import sap
@@ -46,7 +47,7 @@ def db(cmd):
     """
     Run a database command
     """
-    cmds = cmd.split()
+    cmds = shlex.split(cmd)
     if cmds[0] not in commands:
         okcmds = '\n'.join('%s(%s)' % (name, ', '.join(args))
                            for name, args in sorted(commands.items()))
