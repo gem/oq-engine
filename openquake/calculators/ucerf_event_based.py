@@ -792,7 +792,7 @@ class UCERFEventBasedCalculator(event_based.EventBasedCalculator):
         self.save_data_transfer(res)
         self.datastore['csm_info'] = self.csm.info
         self.datastore['source_info'] = numpy.array(
-            self.infos, source.source_info_dt)
+            self.infos, source.SourceInfo.dt)
         if 'gmf_data' in self.datastore:
             self.datastore.set_nbytes('gmf_data')
         return data
