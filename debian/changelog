@@ -1,6 +1,6 @@
   [Michele Simionato]
-  * Removed the SourceManager: now the sources are filtered in thr workers
-    and we never split in tiles
+  * Removed the SourceManager: now the sources are filtered in the workers
+    and we do not split in tiles anymore
   * Added more validity checks to the disaggregation parameters; split the
     sources even in the disaggregation phase
   * Added an optimized event based calculator computing the total losses by
