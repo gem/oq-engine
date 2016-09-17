@@ -444,7 +444,6 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             ucerf_source.weight = 1
             self.infos[0, ucerf_source.source_id] = source.SourceInfo(
                 ucerf_source)
-
             logging.info('Getting the background point sources')
             with self.monitor('getting background sources', autoflush=True):
                 bckgnd_sources = ucerf_source.get_background_sources(
@@ -470,9 +469,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             # compose probabilities from background sources
             for pmap in bg_res:
                 acc[0] |= pmap
-            with self.monitor('store source_info', autoflush=True):
-                self.store_source_info(acc)
-                self.save_data_transfer(bg_res)
+            self.save_data_transfer(bg_res)
 
         pmap_by_grp_id = functools.reduce(self.agg_dicts, rup_res, acc)
         with self.monitor('store source_info', autoflush=True):
