@@ -377,8 +377,8 @@ class HazardCalculator(BaseCalculator):
 
     def basic_pre_execute(self):
         self.read_risk_data()
-        self.ss_filter = SourceSitesFilter(self.oqparam.maximum_distance)
         if 'source' in self.oqparam.inputs:
+            self.ss_filter = SourceSitesFilter(self.oqparam.maximum_distance)
             with self.monitor(
                     'reading composite source model', autoflush=True):
                 csm = readinput.get_composite_source_model(self.oqparam)
