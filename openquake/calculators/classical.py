@@ -45,20 +45,28 @@ MAXWEIGHT = 200
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-def split_source(src, random_seed):
+# split (and filter if there are few sites)
+def split_source(src, sites, ss_filter, random_seed):
     """
     :param src: an heavy source
+    :param sites: a (filtered) SiteCollection
+    :param ss_filter: a SourceSitesFilter instance
     :random_seed: used only for event based calculations
     :returns: a list of split sources
     """
     split_sources = []
     start = 0
+    is_small = len(sites) <= 10
     for split in sourceconverter.split_source(src):
         if random_seed:
             nr = split.num_ruptures
             split.serial = src.serial[start:start + nr]
             start += nr
-        split_sources.append(split)
+        if is_small:
+            if ss_filter.affected(split, sites) is not None:
+                split_sources.append(split)
+        else:
+            split_sources.append(split)
     return split_sources
 
 
@@ -354,8 +362,10 @@ class PSHACalculator(base.HazardCalculator):
             with self.monitor('filter/split heavy sources', autoflush=True):
                 for src, sites in ss_filter(heavy, self.sitecol):
                     self.infos[sg.id, src.source_id] = source.SourceInfo(src)
+                    sources = split_source(
+                        src, sites, self.ss_filter, self.random_seed)
                     for block in block_splitter(
-                            split_source(src, self.random_seed), maxweight,
+                            sources, maxweight,
                             weight=operator.attrgetter('weight')):
                         yield block, sites, gsims, monitor
                         nheavy += 1
