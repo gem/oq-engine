@@ -670,3 +670,15 @@ def view_task_info(token, dstore):
     if len(data) == 1:
         return 'Not available'
     return rst_table(data)
+
+
+@view.add('task_durations')
+def view_task_durations(token, dstore):
+    """
+    Display the raw task durations. Here is an example of usage::
+
+      $ oq show task_durations:classical
+    """
+    task = token.split(':')[1]  # called as task_duration:task_name
+    array = dstore['task_info/' + task]['duration']
+    return '\n'.join(map(str, array))
