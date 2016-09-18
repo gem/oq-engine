@@ -682,7 +682,8 @@ def compute_losses(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
         dic = event_based.compute_ruptures(
             src_group, sitecol, gsims, monitor)
         ruptures_by_grp += dic
-        num_ruptures += len(dic.values()[0])
+        [rupts] = dic.values()
+        num_ruptures += len(rupts)
         num_events += dic.num_events
     rlzs_assoc = ssm.info.get_rlzs_assoc(
         count_ruptures=lambda grp: len(ruptures_by_grp.get(grp.id, 0)))
@@ -695,7 +696,7 @@ def compute_losses(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
     smap = starmap(losses_by_taxonomy, allargs)
     smap.num_ruptures = num_ruptures
     smap.num_events = num_events
-    return {ssm.sm_id: smap}
+    return ssm.sm_id, smap
 
 
 @base.calculators.add('ebrisk')
@@ -743,31 +744,29 @@ class EbriskCalculator(base.RiskCalculator):
         """
         Run the calculator and aggregate the results
         """
-        with self.monitor('sending sources', autoflush=True):
-            res = starmap(
-                self.core_task.__func__, self.gen_args()
-            ).submit_all()
+        pairs = []
         with self.monitor('sending riskinputs', autoflush=True):
-            pairs = res.reduce(self.send_risk, [])
-        self.save_data_transfer(res)
-        return groupby(pairs, operator.itemgetter(0),
-                       lambda rows: sum(sum(row[1]) for row in rows))
+            for args in self.gen_args():
+                sm_id, smap = compute_losses(*args)
+                logging.info(
+                    'Generated %d/%d ruptures/events for source model #%d',
+                    smap.num_ruptures, smap.num_events, sm_id)
+                pairs.append((sm_id, smap.submit_all()))
+        losses_by_sm = groupby(pairs, operator.itemgetter(0),
+                               lambda grp: sum(sum(pair[1]) for pair in grp))
+        self.save_data_transfer(
+            parallel.IterResult.sum(pair[1] for pair in pairs))
+        return losses_by_sm
 
-    def send_risk(self, acc, dic):
-        [(sm_id, smap)] = dic.items()
-        logging.info('Generated %d/%d ruptures/events for source model #%d',
-                     smap.num_ruptures, smap.num_events, sm_id)
-        return acc + [(sm_id, smap.submit_all())]
-
-    def post_execute(self, losses):
+    def post_execute(self, losses_by_sm):
         T, L = len(self.assetcol.taxonomies), len(self.riskmodel.lti)
         # compute the total number of realizations for all source models
-        R = sum(losses[sm_id].shape[-1] for sm_id in losses)
+        R = sum(losses_by_sm[sm_id].shape[-1] for sm_id in losses_by_sm)
         all_losses = numpy.zeros((T, L, R), F64)
         start = 0
-        for sm_id in sorted(losses):
-            newstart = start + losses[sm_id].shape[-1]
-            all_losses[:, :, start:newstart] = losses[sm_id]
+        for sm_id in sorted(losses_by_sm):
+            newstart = start + losses_by_sm[sm_id].shape[-1]
+            all_losses[:, :, start:newstart] = losses_by_sm[sm_id]
             start = newstart
         self.datastore['losses_by_taxon'] = all_losses
         logging.info('Saved %s losses by taxonomy', all_losses.shape)
