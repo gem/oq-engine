@@ -200,7 +200,7 @@ class RlzsAssoc(collections.Mapping):
         self.num_samples = csm_info.num_samples
         self.rlzs_assoc = collections.defaultdict(list)
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
-        self.rlzs_by_smodel = [[] for _ in range(len(csm_info.source_models))]
+        self.rlzs_by_smodel = {sm.ordinal: [] for sm in csm_info.source_models}
         self.gsims_by_grp_id = {}
         self.sm_ids = {}
         self.samples = {}
@@ -238,7 +238,7 @@ class RlzsAssoc(collections.Mapping):
     @property
     def realizations(self):
         """Flat list with all the realizations"""
-        return sum(self.rlzs_by_smodel, [])
+        return sum(self.rlzs_by_smodel.values(), [])
 
     def get_rlz(self, rlzstr):
         """
