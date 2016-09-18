@@ -598,10 +598,12 @@ class RiskInputFromRuptures(object):
     :param gsims: list of GSIM instances
     :param trunc_level: truncation level for the GSIMs
     :param correl_model: correlation model for the GSIMs
-    :params eps: a matrix of epsilons
+    :param min_iml: an array with the minimum intensity per IMT
+    :params epsilons: a matrix of epsilons (or None)
+    :param eids: an array of event IDs (or None)
     """
     def __init__(self, imts, sitecol, ses_ruptures,
-                 trunc_level, correl_model, min_iml, epsilons, eids):
+                 trunc_level, correl_model, min_iml, epsilons=None, eids=None):
         self.sitecol = sitecol
         self.ses_ruptures = numpy.array(ses_ruptures)
         self.grp_id = ses_ruptures[0].grp_id
