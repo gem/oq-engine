@@ -28,7 +28,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, humansize
-from openquake.calculators import base
+from openquake.calculators import base, event_based
 from openquake.commonlib import readinput, parallel, calc
 from openquake.risklib import riskinput, scientific
 from openquake.commonlib.parallel import starmap
@@ -641,7 +641,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.datastore['agg_curve-stats'].attrs['nbytes'] = (
             agg_curve_stats.nbytes)
 
-        
+
 def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     """
     :param riskinput:
@@ -670,53 +670,40 @@ def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     return losses
 
 
+def compute_losses(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
+                   trunc_level, correl_model, monitor):
+    ruptures_by_grp = AccumDict()
+    for src_group in ssm.src_groups:
+        gsims = ssm.gsim_lt.values[src_group.trt]
+        ruptures_by_grp += event_based.compute_ruptures(
+            src_group, sitecol, gsims, monitor)
+    rlzs_assoc = ssm.info.get_rlzs_assoc(
+        count_ruptures=lambda grp: len(ruptures_by_grp[grp.id]))
+    T, L, R = (len(assetcol.taxonomies), len(riskmodel.lti),
+               len(rlzs_assoc.realizations))
+    losses = numpy.zeros((T, L, R), F64)
+    for src_group in ssm.source_groups:
+        ri = riskinput.RiskInputFromRuptures(
+            imts, sitecol, ruptures_by_grp[src_group.id],
+            trunc_level, correl_model, min_iml,
+            epsilons=None, eids=None)
+        losses += losses_by_taxonomy(
+            ri, riskmodel, rlzs_assoc, assetcol, monitor)
+    return {ssm.sm_id: losses}
+
+
 @base.calculators.add('ebrisk')
 class EbriskCalculator(base.RiskCalculator):
     """
     Event based PSHA calculator generating the total losses by taxonomy
     """
-    pre_calculator = 'event_based'
-    core_task = losses_by_taxonomy
+    pre_calculator = None
+    core_task = compute_losses
     is_stochastic = True
 
-    def pre_execute(self):
-        """
-        Read the precomputed ruptures (or compute them on the fly)
-        """
-        super(EbriskCalculator, self).pre_execute()
-        calc.check_overflow(self)
-        if not self.riskmodel:  # there is no riskmodel, exit early
-            self.execute = lambda: None
-            self.post_execute = lambda result: None
-            return
-
-    def execute(self):
-        """
-        Run the event_based_risk calculator and aggregate the results
-        """
+    def gen_args(self):
         oq = self.oqparam
         correl_model = readinput.get_correl_model(oq)
-        self.A = len(self.assetcol)
-        self.E = len(self.datastore['events'])
-        logging.info('Populating the risk inputs')
-        rlzs_by_tr_id = self.rlzs_assoc.get_rlzs_by_grp_id()
-        num_rlzs = {t: len(rlzs) for t, rlzs in rlzs_by_tr_id.items()}
-        num_assets = {sid: len(self.assets_by_site[sid])
-                      for sid in self.sitecol.sids}
-        all_ruptures = []
-        preprecalc = getattr(self.precalc, 'precalc', None)
-        if preprecalc:  # the ruptures are already in memory
-            for grp_id, sesruptures in preprecalc.result.items():
-                for sr in sesruptures:
-                    sr.set_weight(num_rlzs, num_assets)
-                    all_ruptures.append(sr)
-        else:  # read the ruptures from the datastore
-            for serial in self.datastore['sescollection']:
-                rup = self.datastore['sescollection/' + serial]
-                rup.set_weight(num_rlzs, num_assets)
-                all_ruptures.append(rup)
-        all_ruptures.sort(key=operator.attrgetter('serial'))
-
         if not oq.minimum_intensity:
             # infer it from the risk models if not directly set in job.ini
             oq.minimum_intensity = self.riskmodel.get_min_iml()
@@ -727,23 +714,35 @@ class EbriskCalculator(base.RiskCalculator):
                          'you may want to set a minimum_intensity')
         else:
             logging.info('minimum_intensity=%s', oq.minimum_intensity)
+        imts = list(oq.imtls)
+        monitor = self.monitor.new(maximum_distance=oq.maximum_distance)
+        for sm_id in range(len(self.csm.source_models)):
+            ssm = self.csm.get_model(sm_id)
+            yield (ssm, self.sitecol, self.assetcol, self.riskmodel, imts,
+                   min_iml, oq.truncation_level, correl_model, monitor)
 
-        eps = None
-        with self.monitor('building riskinputs', autoflush=True):
-            riskinputs = self.riskmodel.build_inputs_from_ruptures(
-                list(oq.imtls), self.sitecol.complete, all_ruptures,
-                oq.truncation_level, correl_model, min_iml, eps,
-                oq.concurrent_tasks or 1)
+    def execute(self):
+        """
+        Run the calculator and aggregate the results
+        """
+        with self.monitor('sending sources', autoflush=True):
             res = starmap(
-                self.core_task.__func__,
-                ((riskinput, self.riskmodel, self.rlzs_assoc,
-                  self.assetcol, self.monitor.new('task'))
-                 for riskinput in riskinputs)).submit_all()
-        losses = res.reduce()
+                self.core_task.__func__, self.gen_args()
+            ).submit_all()
+        with self.monitor('aggregating losses', autoflush=True):
+            losses = res.reduce()
         self.save_data_transfer(res)
         return losses
 
     def post_execute(self, losses):
-        self.datastore['losses_by_taxon'] = losses
-        logging.info('Saved %s losses by taxonomy', losses.shape)
-            
+        T, L = len(self.assetcol.taxonomies), len(self.riskmodel.lti)
+        # compute the total number of realizations for all source models
+        R = sum(losses[sm_id].shape[-1] for sm_id in losses)
+        all_losses = numpy.zeros((T, L, R), F64)
+        start = 0
+        for sm_id in sorted(losses):
+            newstart = start + losses[sm_id].shape[-1]
+            all_losses[:, :, start:newstart] = losses[sm_id]
+            start = newstart
+        self.datastore['losses_by_taxon'] = all_losses
+        logging.info('Saved %s losses by taxonomy', all_losses.shape)
