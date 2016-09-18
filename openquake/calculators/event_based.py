@@ -225,7 +225,7 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
         List of commonlib.source.Source tuples
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param rlzs_by_gsim:
+    :param gsims:
         a list of GSIMs for the current tectonic region model
     :param monitor:
         monitor instance
@@ -266,8 +266,7 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
         for ebr in build_eb_ruptures(
-                src, num_occ_by_rup, rupture_filter,
-                monitor.random_seed, rup_mon):
+                src, num_occ_by_rup, rupture_filter, monitor.seed, rup_mon):
             nsites = len(ebr.indices)
             try:
                 rate = ebr.rupture.occurrence_rate
