@@ -30,7 +30,7 @@ import random
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import decode, raise_
+from openquake.baselib.python3compat import decode
 from openquake.baselib.general import groupby, block_splitter, group_array
 from openquake.commonlib import logictree, sourceconverter
 from openquake.commonlib import nrml, node, parallel
@@ -41,6 +41,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
+
 
 class LtRealization(object):
     """
@@ -602,6 +603,17 @@ class CompositeSourceModel(collections.Sequence):
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples,
             [sm.get_skeleton() for sm in self.source_models])
+
+    def get_model(self, sm_id):
+        """
+        Extract a CompositeSourceModel instance containing the single
+        model of index `sm_id`.
+        """
+        new = self.__class__(
+            self.gsim_lt, self.source_model_lt,
+            [self.source_models[sm_id]], set_weight=False)
+        new.sm_id = sm_id
+        return new
 
     def filter(self, sitecol, ss_filter):
         """
