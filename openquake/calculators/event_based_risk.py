@@ -682,7 +682,7 @@ def compute_losses(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
     T, L, R = (len(assetcol.taxonomies), len(riskmodel.lti),
                len(rlzs_assoc.realizations))
     losses = numpy.zeros((T, L, R), F64)
-    for src_group in ssm.source_groups:
+    for src_group in ssm.src_groups:
         ri = riskinput.RiskInputFromRuptures(
             imts, sitecol, ruptures_by_grp[src_group.id],
             trunc_level, correl_model, min_iml,
@@ -715,9 +715,21 @@ class EbriskCalculator(base.RiskCalculator):
         else:
             logging.info('minimum_intensity=%s', oq.minimum_intensity)
         imts = list(oq.imtls)
-        monitor = self.monitor.new(maximum_distance=oq.maximum_distance)
+        # generate unique seeds for each rupture with numpy.arange
+        n = sum(sg.tot_ruptures() for sg in self.csm.src_groups)
+        rup_serial = numpy.arange(n, dtype=numpy.uint32)
+        start = 0
+        for src in self.csm.get_sources():
+            nr = src.num_ruptures
+            src.serial = rup_serial[start:start + nr]
+            start += nr
         for sm_id in range(len(self.csm.source_models)):
             ssm = self.csm.get_model(sm_id)
+            monitor = self.monitor.new(
+                ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
+                maximum_distance=oq.maximum_distance,
+                samples=ssm.source_models[0].samples,
+                seed=ssm.source_model_lt.seed)
             yield (ssm, self.sitecol, self.assetcol, self.riskmodel, imts,
                    min_iml, oq.truncation_level, correl_model, monitor)
 
