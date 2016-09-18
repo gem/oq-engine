@@ -30,7 +30,7 @@ from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
     AccumDict, humansize, block_splitter, groupby)
 from openquake.calculators import base, event_based
-from openquake.commonlib import readinput, parallel, calc
+from openquake.commonlib import readinput, parallel, calc, source
 from openquake.risklib import riskinput, scientific
 from openquake.commonlib.parallel import starmap
 
@@ -679,12 +679,15 @@ def compute_losses(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
     num_events = 0
     for src_group in ssm.src_groups:
         gsims = ssm.gsim_lt.values[src_group.trt]
-        dic = event_based.compute_ruptures(
-            src_group, sitecol, gsims, monitor)
-        ruptures_by_grp += dic
-        [rupts] = dic.values()
-        num_ruptures += len(rupts)
-        num_events += dic.num_events
+        for dic in parallel.apply(
+                event_based.compute_ruptures,
+                (src_group, sitecol, gsims, monitor),
+                maxweight=source.MAXWEIGHT,
+                weight=operator.attrgetter('weight')):
+            ruptures_by_grp += dic
+            [rupts] = dic.values()
+            num_ruptures += len(rupts)
+            num_events += dic.num_events
     rlzs_assoc = ssm.info.get_rlzs_assoc(
         count_ruptures=lambda grp: len(ruptures_by_grp.get(grp.id, 0)))
     allargs = []
