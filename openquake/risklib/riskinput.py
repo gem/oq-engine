@@ -39,6 +39,64 @@ FIELDS = ('site_id', 'lon', 'lat', 'idx', 'taxonomy_id', 'area', 'number',
 by_taxonomy = operator.attrgetter('taxonomy')
 
 
+def agg_prob(acc, prob):
+    """Aggregation function for probabilities"""
+    return 1. - (1. - acc) * (1. - prob)
+
+
+def combine(rlzs_assoc, results, agg=agg_prob):
+    """
+    :param results: a dictionary (src_group_id, gsim) -> floats
+    :param agg: an aggregation function
+    :returns: a dictionary rlz -> aggregated floats
+
+    Example: a case with tectonic region type T1 with GSIMS A, B, C
+    and tectonic region type T2 with GSIMS D, E.
+
+    >> assoc = RlzsAssoc(CompositionInfo([], []))
+    >> assoc.rlzs_assoc = {
+    ... ('T1', 'A'): ['r0', 'r1'],
+    ... ('T1', 'B'): ['r2', 'r3'],
+    ... ('T1', 'C'): ['r4', 'r5'],
+    ... ('T2', 'D'): ['r0', 'r2', 'r4'],
+    ... ('T2', 'E'): ['r1', 'r3', 'r5']}
+    ...
+    >> results = {
+    ... ('T1', 'A'): 0.01,
+    ... ('T1', 'B'): 0.02,
+    ... ('T1', 'C'): 0.03,
+    ... ('T2', 'D'): 0.04,
+    ... ('T2', 'E'): 0.05,}
+    ...
+    >> combinations = assoc.combine(results, operator.add)
+    >> for key, value in sorted(combinations.items()): print key, value
+    r0 0.05
+    r1 0.06
+    r2 0.06
+    r3 0.07
+    r4 0.07
+    r5 0.08
+
+    You can check that all the possible sums are performed:
+
+    r0: 0.01 + 0.04 (T1A + T2D)
+    r1: 0.01 + 0.05 (T1A + T2E)
+    r2: 0.02 + 0.04 (T1B + T2D)
+    r3: 0.02 + 0.05 (T1B + T2E)
+    r4: 0.03 + 0.04 (T1C + T2D)
+    r5: 0.03 + 0.05 (T1C + T2E)
+
+    In reality, the `.combine` method is used with hazard_curves and
+    the aggregation function is the `agg_curves` function, a composition of
+    probability, which however is close to the sum for small probabilities.
+    """
+    ad = {rlz: 0 for rlz in rlzs_assoc.realizations}
+    for key, value in results.items():
+        for rlz in rlzs_assoc.rlzs_assoc[key]:
+            ad[rlz] = agg(ad[rlz], value)
+    return ad
+
+
 class AssetCollection(object):
     D, I, R = len('deductible-'), len('insurance_limit-'), len('retrofitted-')
 
@@ -467,7 +525,7 @@ class RiskInput(object):
         """
         if rlzs_assoc is None:  # case ebr_gmf
             return self.hazard_by_site
-        return [{imt: rlzs_assoc.combine(haz[imt]) for imt in haz}
+        return [{imt: combine(rlzs_assoc, haz[imt]) for imt in haz}
                 for haz in self.hazard_by_site]
 
     def __repr__(self):
