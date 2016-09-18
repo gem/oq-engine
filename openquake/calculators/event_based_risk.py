@@ -37,7 +37,6 @@ from openquake.commonlib.parallel import starmap
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
-MAXWEIGHT = 1000  # 1000 ruptures per task
 
 
 def build_el_dtypes(insured_losses):
@@ -672,8 +671,8 @@ def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     return losses
 
 
-def compute_losses(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
-                   trunc_level, correl_model, monitor):
+def compute_ruptures(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
+                     trunc_level, correl_model, blocksize, monitor):
     ruptures_by_grp = AccumDict()
     num_ruptures = 0
     num_events = 0
@@ -692,7 +691,7 @@ def compute_losses(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
         count_ruptures=lambda grp: len(ruptures_by_grp.get(grp.id, 0)))
     allargs = []
     for src_group in ssm.src_groups:
-        for rupts in block_splitter(ruptures_by_grp[src_group.id], MAXWEIGHT):
+        for rupts in block_splitter(ruptures_by_grp[src_group.id], blocksize):
             ri = riskinput.RiskInputFromRuptures(
                 imts, sitecol, rupts, trunc_level, correl_model, min_iml)
             allargs.append((ri, riskmodel, rlzs_assoc, assetcol, monitor))
@@ -708,7 +707,6 @@ class EbriskCalculator(base.RiskCalculator):
     Event based PSHA calculator generating the total losses by taxonomy
     """
     pre_calculator = None
-    core_task = compute_losses
     is_stochastic = True
 
     def gen_args(self):
@@ -741,7 +739,8 @@ class EbriskCalculator(base.RiskCalculator):
                 samples=ssm.source_models[0].samples,
                 seed=ssm.source_model_lt.seed)
             yield (ssm, self.sitecol, self.assetcol, self.riskmodel, imts,
-                   min_iml, oq.truncation_level, correl_model, monitor)
+                   min_iml, oq.truncation_level, correl_model,
+                   oq.ruptures_per_block, monitor)
 
     def execute(self):
         """
@@ -750,7 +749,7 @@ class EbriskCalculator(base.RiskCalculator):
         pairs = []
         with self.monitor('sending riskinputs', autoflush=True):
             for args in self.gen_args():
-                sm_id, smap = compute_losses(*args)
+                sm_id, smap = compute_ruptures(*args)
                 logging.info(
                     'Generated %d/%d ruptures/events for source model #%d',
                     smap.num_ruptures, smap.num_events, sm_id)
