@@ -27,7 +27,8 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
-from openquake.baselib.general import AccumDict, humansize
+from openquake.baselib.general import (
+    AccumDict, humansize, block_splitter, groupby)
 from openquake.calculators import base, event_based
 from openquake.commonlib import readinput, parallel, calc
 from openquake.risklib import riskinput, scientific
@@ -36,6 +37,7 @@ from openquake.commonlib.parallel import starmap
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+MAXWEIGHT = 1000  # 1000 ruptures per task
 
 
 def build_el_dtypes(insured_losses):
@@ -673,25 +675,27 @@ def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
 def compute_losses(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
                    trunc_level, correl_model, monitor):
     ruptures_by_grp = AccumDict()
+    num_ruptures = 0
+    num_events = 0
     for src_group in ssm.src_groups:
         gsims = ssm.gsim_lt.values[src_group.trt]
-        ruptures_by_grp += event_based.compute_ruptures(
+        dic = event_based.compute_ruptures(
             src_group, sitecol, gsims, monitor)
+        ruptures_by_grp += dic
+        num_ruptures += len(dic.values()[0])
+        num_events += dic.num_events
     rlzs_assoc = ssm.info.get_rlzs_assoc(
         count_ruptures=lambda grp: len(ruptures_by_grp.get(grp.id, 0)))
-    T, L, R = (len(assetcol.taxonomies), len(riskmodel.lti),
-               len(rlzs_assoc.realizations))
-    losses = numpy.zeros((T, L, R), F64)
+    allargs = []
     for src_group in ssm.src_groups:
-        ruptures = ruptures_by_grp[src_group.id]
-        if not ruptures:
-            continue
-        ri = riskinput.RiskInputFromRuptures(
-            imts, sitecol, ruptures, trunc_level, correl_model, min_iml,
-            epsilons=None, eids=None)
-        losses += losses_by_taxonomy(
-            ri, riskmodel, rlzs_assoc, assetcol, monitor)
-    return AccumDict({ssm.sm_id: losses})
+        for rupts in block_splitter(ruptures_by_grp[src_group.id], MAXWEIGHT):
+            ri = riskinput.RiskInputFromRuptures(
+                imts, sitecol, rupts, trunc_level, correl_model, min_iml)
+            allargs.append((ri, riskmodel, rlzs_assoc, assetcol, monitor))
+    smap = starmap(losses_by_taxonomy, allargs)
+    smap.num_ruptures = num_ruptures
+    smap.num_events = num_events
+    return {ssm.sm_id: smap}
 
 
 @base.calculators.add('ebrisk')
@@ -743,10 +747,17 @@ class EbriskCalculator(base.RiskCalculator):
             res = starmap(
                 self.core_task.__func__, self.gen_args()
             ).submit_all()
-        with self.monitor('aggregating losses', autoflush=True):
-            losses = res.reduce()
+        with self.monitor('sending riskinputs', autoflush=True):
+            pairs = res.reduce(self.send_risk, [])
         self.save_data_transfer(res)
-        return losses
+        return groupby(pairs, operator.itemgetter(0),
+                       lambda rows: sum(sum(row[1]) for row in rows))
+
+    def send_risk(self, acc, dic):
+        [(sm_id, smap)] = dic.items()
+        logging.info('Generated %d/%d ruptures/events for source model #%d',
+                     smap.num_ruptures, smap.num_events, sm_id)
+        return acc + [(sm_id, smap.submit_all())]
 
     def post_execute(self, losses):
         T, L = len(self.assetcol.taxonomies), len(self.riskmodel.lti)
