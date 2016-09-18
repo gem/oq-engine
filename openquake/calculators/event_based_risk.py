@@ -677,17 +677,17 @@ def compute_losses(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
     ruptures_by_grp = AccumDict()
     num_ruptures = 0
     num_events = 0
+    allargs = []
     for src_group in ssm.src_groups:
         gsims = ssm.gsim_lt.values[src_group.trt]
-        for dic in parallel.apply(
-                event_based.compute_ruptures,
-                (src_group, sitecol, gsims, monitor),
-                maxweight=source.MAXWEIGHT,
-                weight=operator.attrgetter('weight')):
-            ruptures_by_grp += dic
-            [rupts] = dic.values()
-            num_ruptures += len(rupts)
-            num_events += dic.num_events
+        for block in block_splitter(
+                src_group, source.MAXWEIGHT, operator.attrgetter('weight')):
+            allargs.append((block, sitecol, gsims, monitor))
+    for dic in parallel.starmap(event_based.compute_ruptures, allargs):
+        ruptures_by_grp += dic
+        [rupts] = dic.values()
+        num_ruptures += len(rupts)
+        num_events += dic.num_events
     rlzs_assoc = ssm.info.get_rlzs_assoc(
         count_ruptures=lambda grp: len(ruptures_by_grp.get(grp.id, 0)))
     allargs = []
