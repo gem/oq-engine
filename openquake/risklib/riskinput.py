@@ -136,7 +136,7 @@ class AssetCollection(object):
     def __getitem__(self, indices):
         if isinstance(indices, int):  # single asset
             a = self.array[indices]
-            values = {lt: a['value-' + lt] for lt in self.loss_types}
+            values = {lt: a['value-' + str(lt)] for lt in self.loss_types}
             if 'occupants' in self.array.dtype.names:
                 values['occupants_' + str(self.time_event)] = a['occupants']
             return riskmodels.Asset(
