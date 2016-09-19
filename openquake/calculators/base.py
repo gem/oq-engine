@@ -32,6 +32,7 @@ from openquake.hazardlib import __version__ as hazardlib_version
 from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
+from openquake.hazardlib.calc.filters import SourceSitesFilter
 from openquake.risklib import riskinput, __version__ as engine_version
 from openquake.commonlib import readinput, riskmodels, datastore, source
 from openquake.commonlib.oqvalidation import OqParam
@@ -49,6 +50,12 @@ calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
 Site = collections.namedtuple('Site', 'sid lon lat')
 
 F32 = numpy.float32
+
+def is_small(sitecol):
+    """
+    Returns True if the site collection contains up to 10 sites
+    """
+    return len(sitecol) <= 10
 
 
 class InvalidCalculationID(Exception):
@@ -76,7 +83,8 @@ PRECALC_MAP = dict(
     classical_damage=['classical'],
     event_based=['event_based_risk'],
     event_based_risk=['event_based'],
-    ucerf_classical=['ucerf_psha'])
+    ucerf_classical=['ucerf_psha'],
+    ebrisk=['event_based'])
 
 
 def set_array(longarray, shortarray):
@@ -182,7 +190,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             if pre_execute:
                 self.pre_execute()
             self.result = self.execute()
-            if self.result:
+            if self.result is not None:
                 self.post_execute(self.result)
             self.before_export()
             exported = self.export(kw.get('exports', ''))
@@ -261,7 +269,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 self._export(('uhs', fmt), exported)
 
         if self.close:  # in the engine we close later
-            self.result.clear()
+            self.result = None
             try:
                 self.datastore.close()
             except (RuntimeError, ValueError):
@@ -371,7 +379,13 @@ class HazardCalculator(BaseCalculator):
         if 'source' in self.oqparam.inputs:
             with self.monitor(
                     'reading composite source model', autoflush=True):
-                self.csm = readinput.get_composite_source_model(self.oqparam)
+                csm = readinput.get_composite_source_model(self.oqparam)
+                if is_small(self.sitecol):
+                    # filter the CompositeSourceModel upfront
+                    ss_filter = SourceSitesFilter(self.oqparam.maximum_distance)
+                    self.csm = csm.filter(self.sitecol, ss_filter)
+                else:
+                    self.csm = csm
                 self.datastore['csm_info'] = self.csm.info
                 self.rup_data = {}
         self.init()
