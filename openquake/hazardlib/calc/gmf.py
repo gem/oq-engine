@@ -104,10 +104,10 @@ class GmfComputer(object):
 
     def _compute(self, seed, gsim, num_events, imt):
         """
-        :param seed: a random seed
+        :param seed: a random seed or None
         :param gsim: a GSIM instance
         :param num_events: the number of seismic events
-        :returns: a 32 bit array of shape (num_imts, num_sites, num_events)
+        :returns: a 32 bit array of shape (num_sites, num_events)
         """
         if seed is not None:
             numpy.random.seed(seed)
