@@ -21,11 +21,13 @@ import socket
 import sqlite3
 import os.path
 import logging
+import subprocess
 from multiprocessing.connection import Listener
 from concurrent.futures import ProcessPoolExecutor
 
 from openquake.baselib import sap
 from openquake.commonlib.parallel import safely_call
+from openquake.risklib import valid
 from openquake.engine import config
 from openquake.server.db import actions
 from openquake.server import dbapi
@@ -93,6 +95,18 @@ def get_status(address=None):
         sock.close()
     return 'not-running' if err else 'running'
 
+
+def ensure_on():
+    """
+    Start the DbServer if it is off
+    """
+    if get_status() == 'not-running':
+        if valid.boolean(config.get('dbserver', 'multi_user')):
+            sys.exit('Please start the DbServer: '
+                     'see the documentation for details')
+        # otherwise start the DbServer automatically
+        subprocess.Popen([sys.executable, '-m', 'openquake.server.dbserver',
+                          '-l', 'INFO'])
 
 @sap.Script
 def run_server(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):

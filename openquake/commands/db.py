@@ -21,6 +21,7 @@ import inspect
 from decorator import getfullargspec
 from openquake.baselib import sap
 from openquake.engine import logs
+from openquake.server import dbserver
 from openquake.server.db import actions
 
 commands = {}
@@ -56,6 +57,7 @@ def db(cmd, args=''):
         print('Wrong number of arguments, expected %s, got %s' % (
             commands[cmd], args))
     else:
+        dbserver.ensure_on()
         print(logs.dbcmd(cmd, *convert(args)))
 
 
