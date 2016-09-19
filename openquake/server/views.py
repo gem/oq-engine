@@ -500,8 +500,6 @@ def get_datastore(request, job_id):
     """
     try:
         job = logs.dbcmd('get_job', int(job_id))
-        if not job.status == 'complete':
-            return HttpResponseNotFound()
     except dbapi.NotFound:
         return HttpResponseNotFound()
 
