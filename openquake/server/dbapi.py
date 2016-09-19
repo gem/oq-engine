@@ -334,7 +334,7 @@ class Db(object):
                 return rows[0][0]
             elif kw.get('one'):  # query returning a single row
                 if not rows:
-                    raise NotFound
+                    raise NotFound(args)
                 elif len(rows) > 1:
                     raise TooManyRows('%s, expected 1' % len(rows))
             elif cursor.description is None:
