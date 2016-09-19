@@ -102,6 +102,8 @@ def rst_table(data, header=None, fmt=None):
     b    2    
     ==== =====
     """
+    if header is None and hasattr(data, '_fields'):
+        header = data._fields
     try:
         # see if data is a composite numpy array
         data.dtype.fields

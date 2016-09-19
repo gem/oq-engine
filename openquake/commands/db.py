@@ -20,6 +20,7 @@ import shlex
 import inspect
 from decorator import getfullargspec
 from openquake.baselib import sap
+from openquake.calculators.views import rst_table
 from openquake.engine import logs
 from openquake.server import dbserver
 from openquake.server.db import actions
@@ -58,8 +59,11 @@ def db(cmd, args=''):
             commands[cmd], args))
     else:
         dbserver.ensure_on()
-        print(logs.dbcmd(cmd, *convert(args)))
-
+        res = logs.dbcmd(cmd, *convert(args))
+        if hasattr(res, '_fields'):
+            print(rst_table(res))
+        else:
+            print(res)
 
 db.arg('cmd', 'db command')
 db.arg('args', 'a string of arguments')
