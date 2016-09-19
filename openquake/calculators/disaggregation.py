@@ -33,7 +33,8 @@ from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import parallel
+from openquake.hazardlib.calc.filters import SourceSitesFilter
+from openquake.commonlib import parallel, sourceconverter
 from openquake.commonlib.calc import gen_ruptures_for_site
 from openquake.calculators import base, classical
 
@@ -313,7 +314,13 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                     if (sm_id, sid) in self.bin_edges:
                         bin_edges[sid] = self.bin_edges[sm_id, sid]
 
-                for srcs in split_in_blocks(src_group, nblocks):
+                ss_filter = SourceSitesFilter(oq.maximum_distance)
+                split_sources = []
+                for src in src_group:
+                    for split, _sites in ss_filter(
+                            sourceconverter.split_source(src), sitecol):
+                        split_sources.append(split)
+                for srcs in split_in_blocks(split_sources, nblocks):
                     all_args.append(
                         (sitecol, srcs, src_group.id, self.rlzs_assoc,
                          trt_names, curves_dict, bin_edges, oq, self.monitor))

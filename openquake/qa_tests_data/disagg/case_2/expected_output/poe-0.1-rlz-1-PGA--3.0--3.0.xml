@@ -76,7 +76,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="0,4" value="4.185226E-03"/>
             <prob index="0,5" value="3.769476E-03"/>
             <prob index="0,6" value="1.221457E-03"/>
-            <prob index="0,7" value="5.135893E-04"/>
+            <prob index="0,7" value="5.135892E-04"/>
             <prob index="1,0" value="5.399232E-04"/>
             <prob index="1,1" value="1.079555E-03"/>
             <prob index="1,2" value="2.692462E-03"/>
@@ -108,7 +108,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="4,4" value="1.798934E-03"/>
             <prob index="4,5" value="1.750688E-03"/>
             <prob index="4,6" value="6.221466E-04"/>
-            <prob index="4,7" value="2.920481E-04"/>
+            <prob index="4,7" value="2.920480E-04"/>
             <prob index="5,0" value="2.149823E-04"/>
             <prob index="5,1" value="4.299183E-04"/>
             <prob index="5,2" value="1.074449E-03"/>
@@ -214,7 +214,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="0,2,3" value="1.162878E-03"/>
             <prob index="0,2,4" value="4.631574E-04"/>
             <prob index="0,2,5" value="7.294509E-05"/>
-            <prob index="0,3,0" value="1.811881E-07"/>
+            <prob index="0,3,0" value="1.811843E-07"/>
             <prob index="0,3,1" value="4.393115E-04"/>
             <prob index="0,3,2" value="1.162878E-03"/>
             <prob index="0,3,3" value="1.162878E-03"/>
@@ -240,7 +240,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="0,6,5" value="3.647321E-05"/>
             <prob index="0,7,0" value="0.000000E+00"/>
             <prob index="0,7,1" value="0.000000E+00"/>
-            <prob index="0,7,2" value="8.877559E-05"/>
+            <prob index="0,7,2" value="8.877557E-05"/>
             <prob index="0,7,3" value="2.908462E-04"/>
             <prob index="0,7,4" value="1.158095E-04"/>
             <prob index="0,7,5" value="1.823677E-05"/>
@@ -329,7 +329,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="2,5,4" value="3.945275E-04"/>
             <prob index="2,5,5" value="6.213441E-05"/>
             <prob index="2,6,0" value="0.000000E+00"/>
-            <prob index="2,6,1" value="6.121990E-06"/>
+            <prob index="2,6,1" value="6.121991E-06"/>
             <prob index="2,6,2" value="3.585584E-04"/>
             <prob index="2,6,3" value="3.670092E-04"/>
             <prob index="2,6,4" value="1.461395E-04"/>
@@ -431,7 +431,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="4,6,4" value="9.221025E-05"/>
             <prob index="4,6,5" value="1.452041E-05"/>
             <prob index="4,7,0" value="0.000000E+00"/>
-            <prob index="4,7,1" value="8.392011E-06"/>
+            <prob index="4,7,1" value="8.392009E-06"/>
             <prob index="4,7,2" value="1.145198E-04"/>
             <prob index="4,7,3" value="1.157981E-04"/>
             <prob index="4,7,4" value="4.610619E-05"/>
@@ -527,7 +527,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="6,6,4" value="5.818172E-05"/>
             <prob index="6,6,5" value="9.161781E-06"/>
             <prob index="6,7,0" value="0.000000E+00"/>
-            <prob index="6,7,1" value="1.955401E-05"/>
+            <prob index="6,7,1" value="1.955400E-05"/>
             <prob index="6,7,2" value="7.306523E-05"/>
             <prob index="6,7,3" value="7.306523E-05"/>
             <prob index="6,7,4" value="2.909129E-05"/>
@@ -670,7 +670,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="9,6,3" value="7.323872E-05"/>
             <prob index="9,6,4" value="2.916036E-05"/>
             <prob index="9,6,5" value="4.591778E-06"/>
-            <prob index="9,7,0" value="6.135649E-07"/>
+            <prob index="9,7,0" value="6.135648E-07"/>
             <prob index="9,7,1" value="1.451984E-05"/>
             <prob index="9,7,2" value="3.662003E-05"/>
             <prob index="9,7,3" value="3.662003E-05"/>
@@ -1101,7 +1101,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="0,6,8" value="1.636459E-04"/>
             <prob index="0,6,9" value="1.523616E-04"/>
             <prob index="0,7,0" value="1.303322E-04"/>
-            <prob index="0,7,1" value="3.075092E-04"/>
+            <prob index="0,7,1" value="3.075091E-04"/>
             <prob index="0,7,2" value="1.664378E-04"/>
             <prob index="0,7,3" value="1.690096E-04"/>
             <prob index="0,7,4" value="1.696920E-04"/>
@@ -1120,8 +1120,8 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="0,8,7" value="1.590330E-04"/>
             <prob index="0,8,8" value="1.496515E-04"/>
             <prob index="0,8,9" value="1.355780E-04"/>
-            <prob index="0,9,0" value="1.974611E-04"/>
-            <prob index="0,9,1" value="4.869327E-04"/>
+            <prob index="0,9,0" value="1.974610E-04"/>
+            <prob index="0,9,1" value="4.869326E-04"/>
             <prob index="0,9,2" value="2.778540E-04"/>
             <prob index="0,9,3" value="2.911057E-04"/>
             <prob index="0,9,4" value="2.972998E-04"/>
@@ -1191,7 +1191,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="1,5,8" value="1.329310E-04"/>
             <prob index="1,5,9" value="1.271520E-04"/>
             <prob index="1,6,0" value="1.160039E-04"/>
-            <prob index="1,6,1" value="2.587462E-04"/>
+            <prob index="1,6,1" value="2.587461E-04"/>
             <prob index="1,6,2" value="1.346601E-04"/>
             <prob index="1,6,3" value="1.350082E-04"/>
             <prob index="1,6,4" value="1.350082E-04"/>
@@ -1201,7 +1201,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="1,6,8" value="1.318800E-04"/>
             <prob index="1,6,9" value="1.254013E-04"/>
             <prob index="1,7,0" value="1.114517E-04"/>
-            <prob index="1,7,1" value="2.523165E-04"/>
+            <prob index="1,7,1" value="2.523164E-04"/>
             <prob index="1,7,2" value="1.333659E-04"/>
             <prob index="1,7,3" value="1.346565E-04"/>
             <prob index="1,7,4" value="1.349755E-04"/>
@@ -1222,7 +1222,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="1,8,9" value="1.148972E-04"/>
             <prob index="1,9,0" value="1.784803E-04"/>
             <prob index="1,9,1" value="4.220417E-04"/>
-            <prob index="1,9,2" value="2.339073E-04"/>
+            <prob index="1,9,2" value="2.339072E-04"/>
             <prob index="1,9,3" value="2.422657E-04"/>
             <prob index="1,9,4" value="2.460825E-04"/>
             <prob index="1,9,5" value="2.458597E-04"/>
@@ -1319,16 +1319,16 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="2,8,6" value="1.058981E-04"/>
             <prob index="2,8,7" value="1.043713E-04"/>
             <prob index="2,8,8" value="1.012128E-04"/>
-            <prob index="2,8,9" value="9.583095E-05"/>
+            <prob index="2,8,9" value="9.583096E-05"/>
             <prob index="2,9,0" value="1.573158E-04"/>
             <prob index="2,9,1" value="3.588528E-04"/>
             <prob index="2,9,2" value="1.940911E-04"/>
             <prob index="2,9,3" value="1.991749E-04"/>
             <prob index="2,9,4" value="2.014451E-04"/>
             <prob index="2,9,5" value="2.013136E-04"/>
-            <prob index="2,9,6" value="1.987530E-04"/>
+            <prob index="2,9,6" value="1.987531E-04"/>
             <prob index="2,9,7" value="1.933137E-04"/>
-            <prob index="2,9,8" value="1.843984E-04"/>
+            <prob index="2,9,8" value="1.843985E-04"/>
             <prob index="2,9,9" value="1.716624E-04"/>
             <prob index="3,0,0" value="7.010167E-05"/>
             <prob index="3,0,1" value="1.542308E-04"/>
@@ -1390,7 +1390,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="3,5,7" value="8.518651E-05"/>
             <prob index="3,5,8" value="8.479668E-05"/>
             <prob index="3,5,9" value="8.315097E-05"/>
-            <prob index="3,6,0" value="7.933058E-05"/>
+            <prob index="3,6,0" value="7.933057E-05"/>
             <prob index="3,6,1" value="1.675599E-04"/>
             <prob index="3,6,2" value="8.518651E-05"/>
             <prob index="3,6,3" value="8.518651E-05"/>
@@ -1446,7 +1446,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="4,1,3" value="6.740341E-05"/>
             <prob index="4,1,4" value="6.753338E-05"/>
             <prob index="4,1,5" value="6.752603E-05"/>
-            <prob index="4,1,6" value="6.737394E-05"/>
+            <prob index="4,1,6" value="6.737393E-05"/>
             <prob index="4,1,7" value="6.694296E-05"/>
             <prob index="4,1,8" value="6.597359E-05"/>
             <prob index="4,1,9" value="6.414713E-05"/>
@@ -1459,7 +1459,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="4,2,6" value="6.766664E-05"/>
             <prob index="4,2,7" value="6.751765E-05"/>
             <prob index="4,2,8" value="6.694107E-05"/>
-            <prob index="4,2,9" value="6.557382E-05"/>
+            <prob index="4,2,9" value="6.557381E-05"/>
             <prob index="4,3,0" value="6.450595E-05"/>
             <prob index="4,3,1" value="1.339582E-04"/>
             <prob index="4,3,2" value="6.766664E-05"/>
@@ -1620,7 +1620,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="5,8,7" value="5.348479E-05"/>
             <prob index="5,8,8" value="5.301365E-05"/>
             <prob index="5,8,9" value="5.205208E-05"/>
-            <prob index="5,9,0" value="9.592610E-05"/>
+            <prob index="5,9,0" value="9.592609E-05"/>
             <prob index="5,9,1" value="2.028321E-04"/>
             <prob index="5,9,2" value="1.045002E-04"/>
             <prob index="5,9,3" value="1.054205E-04"/>
