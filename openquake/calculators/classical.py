@@ -328,7 +328,12 @@ class PSHACalculator(base.HazardCalculator):
 
     def gen_args(self, src_groups, oq, monitor):
         """
-        Used in the case of large source model logic trees
+        Used in the case of large source model logic trees.
+
+        :param src_groups: a list of SourceGroup instances
+        :param oq: a :class:`openquake.commonlib.oqvalidation.OqParam` instance
+        :param monitor: a :class:`openquake.baselib.performance.Monitor`
+        :yields: (sources, sites, gsims, monitor) tuples
         """
         ss_filter = (SourceSitesFilter(oq.maximum_distance)
                      if oq.filter_sources else source_site_noop_filter)
