@@ -31,7 +31,6 @@ from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import export, datastore
 from openquake.calculators import base, views
 from openquake.engine import logs, config
-from openquake.server import manage
 
 TERMINATE = valid.boolean(
     config.get('celery', 'terminate_workers_on_revoke') or 'false')
