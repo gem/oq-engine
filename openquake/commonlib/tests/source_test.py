@@ -31,11 +31,10 @@ from openquake.hazardlib import pmf
 from openquake.hazardlib import scalerel
 from openquake.hazardlib import source
 from openquake.hazardlib.tom import PoissonTOM
-
+from openquake.hazardlib.calc.filters import context
 from openquake.commonlib import tests, nrml_examples, readinput
 from openquake.commonlib import sourceconverter as s
-from openquake.commonlib.source import (
-    SourceModelParser, CompositionInfo, context)
+from openquake.commonlib.source import SourceModelParser, CompositionInfo
 from openquake.commonlib import nrml
 from openquake.baselib.general import assert_close
 
