@@ -1,5 +1,7 @@
   [Michele Simionato]
-  * Added a command "oq db" to send commands the engine database (for internal usage)
+  * Made the full datastore downloadable from the WebUI
+  * Added a command "oq db" to send commands the engine database
+    (for internal usage)
   * By default the WebUI now displays only the last 100 calculations
   * Added more validity checks to the disaggregation parameters; split the
     sources even in the disaggregation phase
