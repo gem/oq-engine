@@ -1,4 +1,4 @@
-# Suggested versions for development based oni
+# Suggested versions for development based on
 # Ubuntu 16.04 stack
 # !! update pip first! so wheels will be used !!
 
