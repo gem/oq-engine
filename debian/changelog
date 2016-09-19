@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a command "oq db" to send commands the engine database
   * Added more validity checks to the disaggregation parameters; split the
     sources even in the disaggregation phase
   * Added an optimized event based calculator computing the total losses by
