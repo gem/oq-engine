@@ -34,7 +34,10 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render_to_response
 from django.template import RequestContext
-from django.http import FileResponse
+try:
+    from django.http import FileResponse  # Django >= 1.8
+except ImportError:
+    from django.http import StreamingHttpResponse as FileResponse
 from django.core.servers.basehttp import FileWrapper
 
 
