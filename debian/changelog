@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Added more validity checks to the disaggregation parameters; split the
+    sources even in the disaggregation phase
+  * Added an optimized event based calculator computing the total losses by
+    taxonomy and nothing else
   * Filtered the sources up front when there are few sites (<= 10)
   * Reduced the number of tasks generated when filter_sources is False
   * Saved engine_version and hazardlib_version as attributes of the datastore
