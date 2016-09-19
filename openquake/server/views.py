@@ -28,10 +28,8 @@ except ImportError:
 import re
 
 from xml.parsers.expat import ExpatError
-from django.http import (HttpResponse,
-                         HttpResponseNotFound,
-                         HttpResponseBadRequest,
-                         )
+from django.http import (
+    HttpResponse, HttpResponseNotFound, HttpResponseBadRequest)
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render_to_response
@@ -53,7 +51,10 @@ from openquake.server import executor, utils, dbapi
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
+
+XML = 'application/xml'
 JSON = 'application/json'
+HDF5 = 'application/x-hdf'
 
 DEFAULT_LOG_LEVEL = 'info'
 
@@ -62,8 +63,7 @@ DEFAULT_LOG_LEVEL = 'info'
 #: XML by default.
 DEFAULT_EXPORT_TYPE = 'xml'
 
-EXPORT_CONTENT_TYPE_MAP = dict(xml='application/xml',
-                               geojson='application/json')
+EXPORT_CONTENT_TYPE_MAP = dict(xml=XML, geojson=JSON)
 DEFAULT_CONTENT_TYPE = 'text/plain'
 
 LOGGER = logging.getLogger('openquake.server')
@@ -503,10 +503,9 @@ def get_datastore(request, job_id):
     except dbapi.NotFound:
         return HttpResponseNotFound()
 
-    content_type = 'application/octet-stream'  # or x-hdf5
     fname = job.ds_calc_dir + '.hdf5'
-    response = FileResponse(FileWrapper(open(fname, 'rb')),
-                            content_type=content_type)
+    response = FileResponse(
+        FileWrapper(open(fname, 'rb')), content_type=HDF5)
     response['Content-Disposition'] = 'attachment; filename=%s' % fname
     return response
 
