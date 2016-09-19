@@ -481,7 +481,6 @@ def get_result(request, result_id):
         shutil.rmtree(tmpdir)
 
 
-
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def get_datastore(request, job_id):
@@ -498,14 +497,15 @@ def get_datastore(request, job_id):
     """
     try:
         job = logs.dbcmd('get_job', int(job_id))
-        if not job_status == 'complete':
+        if not job.status == 'complete':
             return HttpResponseNotFound()
     except dbapi.NotFound:
         return HttpResponseNotFound()
 
-    content_type ='application/octet-stream'  # or x-hdf5
+    content_type = 'application/octet-stream'  # or x-hdf5
     # TODO: we should be streaming the datastore, since it may be large
-    data = open(job.ds_calc_dir, 'rb').read()
+    fname = job.ds_calc_dir + '.hdf5'
+    data = open(fname, 'rb').read()
     response = HttpResponse(data, content_type=content_type)
     response['Content-Length'] = len(data)
     response['Content-Disposition'] = 'attachment; filename=%s' % fname
