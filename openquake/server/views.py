@@ -36,6 +36,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.http import FileResponse
+from django.core.servers.basehttp import FileWrapper
+
 
 from openquake.baselib.general import groupby, writetmp
 from openquake.baselib.python3compat import unicode
@@ -503,11 +506,9 @@ def get_datastore(request, job_id):
         return HttpResponseNotFound()
 
     content_type = 'application/octet-stream'  # or x-hdf5
-    # TODO: we should be streaming the datastore, since it may be large
     fname = job.ds_calc_dir + '.hdf5'
-    data = open(fname, 'rb').read()
-    response = HttpResponse(data, content_type=content_type)
-    response['Content-Length'] = len(data)
+    response = FileResponse(FileWrapper(open(fname, 'rb')),
+                            content_type=content_type)
     response['Content-Disposition'] = 'attachment; filename=%s' % fname
     return response
 
