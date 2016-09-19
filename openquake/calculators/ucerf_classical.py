@@ -32,9 +32,8 @@ from openquake.hazardlib.geo.geodetic import min_geodetic_distance
 from openquake.hazardlib.source import PointSource
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
-    get_probability_no_exceedance, hazard_curves_per_trt)
+    get_probability_no_exceedance, pmap_from_grp)
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.risklib import valid
 from openquake.commonlib import parallel, source, readinput
@@ -300,7 +299,7 @@ def ucerf_classical_hazard_by_rupture_set(
 
     else:
         dic[src_group_id] = ProbabilityMap(len(imtls.array), len(gsims))
-    dic.calc_times += monitor.calc_times  # added by hazard_curves_per_trt
+    dic.calc_times += monitor.calc_times  # added by pmap_from_grp
     dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
     return dic
 
@@ -346,17 +345,16 @@ def ucerf_classical_hazard_by_branch(branchnames, ucerf_source, src_group_id,
 
         else:
             dic[src_group_id] = ProbabilityMap(len(imtls.array), len(gsims))
-        dic.calc_times += monitor.calc_times  # added by hazard_curves_per_trt
+        dic.calc_times += monitor.calc_times  # added by pmap_from_grp
         dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
         logging.info('Branch %s', branchname)
         # Get the background point sources
         bckgnd_sources = ucerf_source.get_background_sources(
             branchname, sitecol, max_dist)
         if bckgnd_sources:
-            pmap = hazard_curves_per_trt(
+            pmap = pmap_from_grp(
                 bckgnd_sources,
                 sitecol, imtls, gsims, truncation_level,
-                source_site_filter=source_site_distance_filter(max_dist),
                 maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
             dic[src_group_id] |= pmap
             dic.eff_ruptures[src_group_id] += monitor.eff_ruptures
@@ -449,10 +447,9 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             # parallelize on the background sources, small tasks
             args = (bckgnd_sources, self.sitecol, oq.imtls,
                     gsims, self.oqparam.truncation_level,
-                    source_site_distance_filter(max_dist),
-                    max_dist, (), monitor)
+                    'SourceSitesFilter', max_dist, (), monitor)
             bg_res = parallel.apply(
-                hazard_curves_per_trt, args,
+                pmap_from_grp, args,
                 concurrent_tasks=self.oqparam.concurrent_tasks).submit_all()
 
             # parallelize by rupture subsets
