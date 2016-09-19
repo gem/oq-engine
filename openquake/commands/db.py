@@ -51,8 +51,9 @@ def db(cmd, args=''):
     """
     args = shlex.split(args)
     if cmd not in commands:
-        okcmds = '\n'.join('%s(%s)' % (name, ', '.join(args))
-                           for name, args in sorted(commands.items()))
+        okcmds = '\n'.join(
+            '%s %s' % (name, repr(' '.join(args)) if args else '')
+            for name, args in sorted(commands.items()))
         print('Invalid command "%s": choose one from\n%s' % (cmd, okcmds))
     elif len(args) != len(commands[cmd]):
         print('Wrong number of arguments, expected %s, got %s' % (
