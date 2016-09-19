@@ -344,7 +344,9 @@ class Db(object):
             if kw.get('one'):
                 return Row(colnames, rows[0])
             else:
-                return [Row(colnames, r) for r in rows]
+                tbl = Table([Row(colnames, r) for r in rows])
+                tbl._fields = colnames
+                return tbl
         else:
             return cursor
 
@@ -358,6 +360,11 @@ class Db(object):
                                  table, columns, rows[0])
             cursor.executemany(templ, rows)
         return cursor
+
+
+class Table(list):
+    """Just a list with an attribute _fields"""
+    _fields = []
 
 
 # we cannot use a namedtuple here because one would get a PicklingError:
