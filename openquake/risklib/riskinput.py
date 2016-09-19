@@ -22,7 +22,7 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import zip, decode
+from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import groupby, split_in_blocks, group_array
 from openquake.hazardlib import site, calc
@@ -108,14 +108,11 @@ class AssetCollection(object):
         self.array, self.taxonomies = self.build_asset_collection(
             assets_by_site, time_event)
         fields = self.array.dtype.names
-        self.loss_types = hdf5.array_of_vstr(
-            sorted(f[6:] for f in fields if f.startswith('value-')))
-        self.deduc = hdf5.array_of_vstr(
-            n for n in fields if n.startswith('deductible-'))
-        self.i_lim = hdf5.array_of_vstr(
-            n for n in fields if n.startswith('insurance_limit-'))
-        self.retro = hdf5.array_of_vstr(
-            n for n in fields if n.startswith('retrofitted-'))
+        self.loss_types = sorted(
+            f[6:] for f in fields if f.startswith('value-'))
+        self.deduc = [n for n in fields if n.startswith('deductible-')]
+        self.i_lim = [n for n in fields if n.startswith('insurance_limit-')]
+        self.retro = [n for n in fields if n.startswith('retrofitted-')]
 
     def assets_by_site(self):
         """
@@ -136,7 +133,7 @@ class AssetCollection(object):
     def __getitem__(self, indices):
         if isinstance(indices, int):  # single asset
             a = self.array[indices]
-            values = {lt: a['value-' + decode(lt)] for lt in self.loss_types}
+            values = {lt: a['value-' + lt] for lt in self.loss_types}
             if 'occupants' in self.array.dtype.names:
                 values['occupants_' + str(self.time_event)] = a['occupants']
             return riskmodels.Asset(
@@ -162,8 +159,10 @@ class AssetCollection(object):
     def __toh5__(self):
         attrs = {'time_event': self.time_event or 'None',
                  'time_events': self.time_events,
-                 'loss_types': self.loss_types,
-                 'deduc': self.deduc, 'i_lim': self.i_lim, 'retro': self.retro,
+                 'loss_types': hdf5.array_of_vstr(self.loss_types),
+                 'deduc': hdf5.array_of_vstr(self.deduc),
+                 'i_lim': hdf5.array_of_vstr(self.i_lim),
+                 'retro': hdf5.array_of_vstr(self.retro),
                  'nbytes': self.array.nbytes}
         return dict(array=self.array, taxonomies=self.taxonomies,
                     cost_calculator=self.cc), attrs
