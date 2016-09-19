@@ -363,9 +363,9 @@ def get_dbpath(db):
     :param db: a :class:`openquake.server.dbapi.Db` instance
     :returns: the path to the database file.
     """
-    curs = db('PRAGMA database_list')
+    rows = db('PRAGMA database_list')
     # return a row with fields (id, dbname, dbpath)
-    return curs.fetchall()[0][-1]
+    return rows[0].file
 
 
 # ########################## upgrade operations ########################## #
@@ -560,3 +560,16 @@ def get_results(db, job_id):
                      scalar=True)
     datadir = os.path.dirname(ds_calc_dir)
     return datadir, [output.ds_key for output in get_outputs(db, job_id)]
+
+
+# ############################### db commands ########################### #
+
+def get_longest_jobs(db):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    """
+    query = '''-- completed jobs taking more than one hour
+SELECT id, user_name, julianday(stop_time) - julianday(start_time) AS days
+FROM job WHERE status='complete' AND days > 0.04 ORDER BY days desc'''
+    return db(query)
