@@ -18,7 +18,7 @@
 from __future__ import print_function
 import os
 import operator
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from openquake.risklib import valid
 from openquake.commonlib import datastore
@@ -363,9 +363,9 @@ def get_dbpath(db):
     :param db: a :class:`openquake.server.dbapi.Db` instance
     :returns: the path to the database file.
     """
-    curs = db('PRAGMA database_list')
+    rows = db('PRAGMA database_list')
     # return a row with fields (id, dbname, dbpath)
-    return curs.fetchall()[0][-1]
+    return rows[0].file
 
 
 # ########################## upgrade operations ########################## #
@@ -448,8 +448,20 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     if 'relevant' in request_get_dict:
         relevant = request_get_dict.get('relevant')
         filterdict['relevant'] = valid.boolean(relevant)
-    jobs = db('SELECT *, %s FROM job WHERE ?A ORDER BY id DESC' % JOB_TYPE,
-              filterdict)
+
+    if 'limit' in request_get_dict:
+        limit = int(request_get_dict.get('limit'))
+    else:
+        limit = 100
+
+    if 'start_time' in request_get_dict:
+        start = request_get_dict.get('start_time')  # assume an ISO string
+    else:  # consider only calculations younger than 1 month
+        # ISO string with format YYYY-MM-DD
+        start = (datetime.today() - timedelta(30)).isoformat()[:10]
+    time_filter = "start_time >= '%s'" % start
+    jobs = db('SELECT *, %s FROM job WHERE ?A AND %s ORDER BY id DESC LIMIT %d'
+              % (JOB_TYPE, time_filter, limit), filterdict)
     return [(job.id, job.user_name, job.status, job.job_type,
              job.is_running, job.description) for job in jobs]
 
@@ -559,3 +571,16 @@ def get_results(db, job_id):
                      scalar=True)
     datadir = os.path.dirname(ds_calc_dir)
     return datadir, [output.ds_key for output in get_outputs(db, job_id)]
+
+
+# ############################### db commands ########################### #
+
+def get_longest_jobs(db):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    """
+    query = '''-- completed jobs taking more than one hour
+SELECT id, user_name, julianday(stop_time) - julianday(start_time) AS days
+FROM job WHERE status='complete' AND days > 0.04 ORDER BY days desc'''
+    return db(query)
