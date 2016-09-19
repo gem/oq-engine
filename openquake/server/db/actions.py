@@ -552,9 +552,12 @@ def get_results(db, job_id):
 
 # ############################### db commands ########################### #
 
-def longest_jobs(db):
-    query = '''\
-select id, user_name, julianday(stop_time) - julianday(start_time) as days
-from job where status='complete' and days > 0.04  -- more than 1h
-order by days desc'''
+def get_longest_jobs(db):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    """
+    query = '''-- completed jobs taking more than one hour
+SELECT id, user_name, julianday(stop_time) - julianday(start_time) AS days
+FROM job WHERE status='complete' AND days > 0.04 ORDER BY days desc'''
     return db(query)
