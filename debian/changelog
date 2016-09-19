@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Added a command "oq db" to send commands the engine database
+  * Added a command "oq db" to send commands the engine database (for internal usage)
+  * By default the WebUI now displays only the last 100 calculations
   * Added more validity checks to the disaggregation parameters; split the
     sources even in the disaggregation phase
   * Added an optimized event based calculator computing the total losses by
