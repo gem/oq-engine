@@ -548,3 +548,13 @@ def get_results(db, job_id):
                      scalar=True)
     datadir = os.path.dirname(ds_calc_dir)
     return datadir, [output.ds_key for output in get_outputs(db, job_id)]
+
+
+# ############################### db commands ########################### #
+
+def longest_jobs(db):
+    query = '''\
+select id, user_name, julianday(stop_time) - julianday(start_time) as days
+from job where status='complete' and days > 0.04  -- more than 1h
+order by days desc'''
+    return db(query)
