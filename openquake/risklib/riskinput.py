@@ -22,7 +22,7 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import zip
+from openquake.baselib.python3compat import zip, encode
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import groupby, split_in_blocks, group_array
 from openquake.hazardlib import site, calc
@@ -136,7 +136,7 @@ class AssetCollection(object):
     def __getitem__(self, indices):
         if isinstance(indices, int):  # single asset
             a = self.array[indices]
-            values = {lt: a['value-' + str(lt)] for lt in self.loss_types}
+            values = {lt: a['value-' + encode(lt)] for lt in self.loss_types}
             if 'occupants' in self.array.dtype.names:
                 values['occupants_' + str(self.time_event)] = a['occupants']
             return riskmodels.Asset(
