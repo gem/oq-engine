@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
+import time
 import socket
 import sqlite3
 import os.path
@@ -107,6 +108,16 @@ def ensure_on():
         # otherwise start the DbServer automatically
         subprocess.Popen([sys.executable, '-m', 'openquake.server.dbserver',
                           '-l', 'INFO'])
+
+        # wait for the dbserver to start
+        waiting_seconds = 5
+        while get_status() == 'not-running':
+            if waiting_seconds == 0:
+                sys.exit('The DbServer cannot be started. '
+                         'Please check the configuration')
+            time.sleep(1)
+            waiting_seconds -= 1
+
 
 @sap.Script
 def run_server(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
