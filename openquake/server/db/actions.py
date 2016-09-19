@@ -18,7 +18,7 @@
 from __future__ import print_function
 import os
 import operator
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from openquake.risklib import valid
 from openquake.commonlib import datastore
@@ -448,8 +448,20 @@ def get_calcs(db, request_get_dict, user_name, user_acl_on=False, id=None):
     if 'relevant' in request_get_dict:
         relevant = request_get_dict.get('relevant')
         filterdict['relevant'] = valid.boolean(relevant)
-    jobs = db('SELECT *, %s FROM job WHERE ?A ORDER BY id DESC' % JOB_TYPE,
-              filterdict)
+
+    if 'limit' in request_get_dict:
+        limit = int(request_get_dict.get('limit'))
+    else:
+        limit = 100
+
+    if 'start_time' in request_get_dict:
+        start = request_get_dict.get('start_time')  # assume an ISO string
+    else:  # consider only calculations younger than 1 month
+        # ISO string with format YYYY-MM-DD
+        start = (datetime.today() - timedelta(30)).isoformat()[:10]
+    time_filter = "start_time >= '%s'" % start
+    jobs = db('SELECT *, %s FROM job WHERE ?A AND %s ORDER BY id DESC LIMIT %d'
+              % (JOB_TYPE, time_filter, limit), filterdict)
     return [(job.id, job.user_name, job.status, job.job_type,
              job.is_running, job.description) for job in jobs]
 
