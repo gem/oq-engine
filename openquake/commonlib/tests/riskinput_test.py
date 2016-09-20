@@ -66,10 +66,10 @@ idx:uint32,lon,lat,site_id:uint32,taxonomy_id:uint32:,number:float32:,area:float
         # pickleability
         pickle.loads(pickle.dumps(assetcol))
 
-    def test_get_hazard(self):
+    def test_hazard_getter(self):
         self.assertEqual(len(self.sitecol), 2)
         hazard_by_site = [{}] * 2
         ri = self.riskmodel.build_input(
             hazard_by_site, self.assets_by_site, {})
-        haz = ri.get_hazard(rlzs_assoc)
+        haz = ri.hazard_getter(rlzs_assoc)
         self.assertEqual(len(haz), 2)
