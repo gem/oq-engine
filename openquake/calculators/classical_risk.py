@@ -48,27 +48,27 @@ def classical_risk(riskinput, riskmodel, rlzs_assoc, monitor):
     rlzs = rlzs_assoc.realizations
     result = dict(
         loss_curves=[], loss_maps=[], stat_curves=[], stat_maps=[])
-    for out_by_lr in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor):
-        for (l, r), out in sorted(out_by_lr.items()):
-            for i, asset in enumerate(out.assets):
-                aid = asset.ordinal
-                avg = out.average_losses[i]
-                avg_ins = (out.average_insured_losses[i]
-                           if ins else numpy.nan)
-                lcurve = (
-                    out.loss_curves[i, 0],
-                    out.loss_curves[i, 1], avg)
-                if ins:
-                    lcurve += (
-                        out.insured_curves[i, 0],
-                        out.insured_curves[i, 1], avg_ins)
-                else:
-                    lcurve += (None, None, None)
-                result['loss_curves'].append((l, r, aid, lcurve))
+    for out in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor):
+        l, r = out.lr
+        for i, asset in enumerate(out.assets):
+            aid = asset.ordinal
+            avg = out.average_losses[i]
+            avg_ins = (out.average_insured_losses[i]
+                       if ins else numpy.nan)
+            lcurve = (
+                out.loss_curves[i, 0],
+                out.loss_curves[i, 1], avg)
+            if ins:
+                lcurve += (
+                    out.insured_curves[i, 0],
+                    out.insured_curves[i, 1], avg_ins)
+            else:
+                lcurve += (None, None, None)
+            result['loss_curves'].append((l, r, aid, lcurve))
 
-                # no insured, shape (P, N)
-                result['loss_maps'].append(
-                    (l, r, aid, out.loss_maps[:, i]))
+            # no insured, shape (P, N)
+            result['loss_maps'].append(
+                (l, r, aid, out.loss_maps[:, i]))
 
         # compute statistics
         if len(rlzs) > 1:
