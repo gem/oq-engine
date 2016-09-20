@@ -253,28 +253,6 @@ class RiskModel(object):
         return [lt for lt in self.loss_types
                 if self.risk_functions[lt].imt == imt]
 
-    def out_by_lr(self, assets, hazgetter, epsgetter):
-        """
-        :param assets: an array of assets of homogeneous taxonomy
-        :param hazgetter: an object with a method .get(imt, rlz) -> hazard
-        :param epsgetter: a callable returning epsilons for the given eids
-        :returns: a dictionary (l, r) -> output
-        """
-        out_by_lr = AccumDict()
-        out_by_lr.assets = assets
-        for loss_type in self.loss_types:
-            imt = self.risk_functions[loss_type].imt
-            for rlz in hazgetter.rlzs:
-                r = rlz.ordinal
-                haz = hazgetter.get(imt, rlz)
-                if len(haz) == 0:
-                    continue
-                out = self(loss_type, assets, haz, epsgetter)
-                if out:  # can be None in scenario_risk with no valid values
-                    l = self.compositemodel.lti[loss_type]
-                    out_by_lr[l, r] = out
-        return out_by_lr
-
     def __repr__(self):
         return '<%s%s>' % (self.__class__.__name__, list(self.risk_functions))
 
