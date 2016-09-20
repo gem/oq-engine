@@ -393,7 +393,7 @@ class CompositeRiskModel(collections.Mapping):
         :param assetcol: not None only for event based risk
         """
         mon_hazard = monitor('building hazard')
-        mon_risk = monitor('riskmodel.out_by_lr', measuremem=False)
+        mon_risk = monitor('computing risk', measuremem=False)
         with mon_hazard:
             assets_by_site = (riskinput.assets_by_site if assetcol is None
                               else assetcol.assets_by_site())
@@ -435,7 +435,7 @@ class CompositeRiskModel(collections.Mapping):
 
 class PoeGetter(object):
     """
-    Object with a method .get(imt, rlz) return a ProbabilityMap
+    Object with a method .get(imt, rlz) returning a list of N hazards
     """
     def __init__(self, hazard_by_site, rlzs_assoc):
         self.rlzs_assoc = rlzs_assoc
@@ -450,7 +450,7 @@ class PoeGetter(object):
 
 class GmfGetter(object):
     """
-    Object with a method .get(imt, rlz) return a map of composite arrays
+    Object with a method .get(imt, rlz) returning a list of N composite arrays
     with fields 'gmv', 'eid'.
     """
     def __init__(self, gmfcoll, sids, rlzs):
