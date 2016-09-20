@@ -24,9 +24,9 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import groupby, split_in_blocks, group_array
+from openquake.baselib.general import (
+    groupby, split_in_blocks, group_array, AccumDict)
 from openquake.hazardlib import site, calc
-from openquake.hazardlib.imt import from_string
 from openquake.risklib import scientific, riskmodels
 
 U8 = numpy.uint8
@@ -400,15 +400,28 @@ class CompositeRiskModel(collections.Mapping):
                               else assetcol.assets_by_site())
             hazard_by_site = riskinput.get_hazard(
                 rlzs_assoc, mon_hazard(measuremem=False))
+
+        # group the assets by taxonomy
+        dic = collections.defaultdict(list)
         for i, assets in enumerate(assets_by_site):
-            hazgetter = hazard_by_site[i]
             group = groupby(assets, by_taxonomy)
             for taxonomy in group:
-                with mon_risk:
-                    riskmodel = self[taxonomy]
-                    epsgetter = riskinput.epsilon_getter(
-                        [asset.ordinal for asset in group[taxonomy]])
-                    yield riskmodel.out_by_lr(assets, hazgetter, epsgetter)
+                epsgetter = riskinput.epsilon_getter(
+                    [asset.ordinal for asset in group[taxonomy]])
+                dic[taxonomy].append((i, group[taxonomy], epsgetter))
+
+        with mon_risk:
+            for loss_type in self.loss_types:
+                for rlz in rlzs_assoc.realizations:
+                    for taxonomy in self.taxonomies:
+                        riskmodel = self[taxonomy]
+                        imt = riskmodel.risk_functions[loss_type].imt
+                        for i, assets, epsgetter in dic[taxonomy]:
+                            haz = hazard_by_site[i].get(imt, rlz)
+                            out = riskmodel(loss_type, assets, haz, epsgetter)
+                            if out:  # can be None in scenario_risk sometimes
+                                out.lr = self.lti[loss_type], rlz.ordinal
+                                yield out
         if hasattr(hazard_by_site, 'close'):  # for event based risk
             monitor.gmfbytes = hazard_by_site.close()
 
