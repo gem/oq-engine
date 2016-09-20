@@ -208,7 +208,7 @@ def pmap_from_grp(
 
     :returns: a ProbabilityMap instance
     """
-    if source_site_filter == 'SourceSitesFilter':
+    if source_site_filter == 'SourceSitesFilter':  # default
         source_site_filter = (
             filters.SourceSitesFilter(maximum_distance)
             if maximum_distance else filters.source_site_noop_filter)
