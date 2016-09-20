@@ -23,6 +23,7 @@ urlpatterns = patterns(
     'openquake.server.views',
     url(r'^list$', 'calc'),
     url(r'^(\d+)$', 'calc_info'),
+    url(r'^(\d+)/datastore$', 'get_datastore'),
     url(r'^(\d+)/status$', 'calc'),
     url(r'^(\d+)/results$', 'calc_results'),
     url(r'^(\d+)/traceback$', 'get_traceback'),
