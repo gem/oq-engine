@@ -122,11 +122,11 @@ def _old_loss_curves(asset_values, rcurves, ratios):
                         for avalue, poes in zip(asset_values, rcurves)])
 
 
-def _aggregate_output(output, compositemodel, agg, ass, idx, result, monitor):
+def _aggregate_output(outputs, compositemodel, agg, ass, idx, result, monitor):
     # update the result dictionary and the agg array with each output
-
-    asset_ids = [a.ordinal for a in output.assets]
-    for (l, r), out in sorted(output.items()):
+    for out in outputs:
+        l, r = out.lr
+        asset_ids = [a.ordinal for a in out.assets]
         loss_type = compositemodel.loss_types[l]
         indices = numpy.array([idx[eid] for eid in out.eids])
 
@@ -138,7 +138,7 @@ def _aggregate_output(output, compositemodel, agg, ass, idx, result, monitor):
                 result['IC'][l, r] += dict(
                     zip(asset_ids, cb.build_counts(out.loss_ratios[:, :, 1])))
 
-        for i, asset in enumerate(output.assets):
+        for i, asset in enumerate(out.assets):
             aid = asset.ordinal
             loss_ratios = out.loss_ratios[i]
             losses = loss_ratios * asset.value(loss_type)
@@ -665,8 +665,8 @@ def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     for out in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor, assetcol):
         # NB: out.assets is a non-empty list of assets with the same taxonomy
         t = taxonomy_id[out.assets[0].taxonomy]
-        for l, r in out:
-            losses[t, l, r] += out[l, r].loss
+        l, r = out.lr
+        losses[t, l, r] += out.loss
     return losses
 
 

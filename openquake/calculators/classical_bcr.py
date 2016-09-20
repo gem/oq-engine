@@ -42,12 +42,12 @@ def classical_bcr(riskinput, riskmodel, rlzs_assoc, bcr_dt, monitor):
         :class:`openquake.baselib.performance.Monitor` instance
     """
     result = {}  # (N, R) -> data
-    for out_by_lr in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor):
-        for (l, r), out in sorted(out_by_lr.items()):
-            for asset, (eal_orig, eal_retro, bcr) in zip(out.assets, out.data):
-                aval = asset.value(out.loss_type)
-                result[asset.ordinal, out.loss_type, r] = numpy.array([
-                    (eal_orig * aval, eal_retro * aval, bcr)], bcr_dt)
+    for out in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor):
+        l, r = out.lr
+        for asset, (eal_orig, eal_retro, bcr) in zip(out.assets, out.data):
+            aval = asset.value(out.loss_type)
+            result[asset.ordinal, out.loss_type, r] = numpy.array([
+                (eal_orig * aval, eal_retro * aval, bcr)], bcr_dt)
     return result
 
 
