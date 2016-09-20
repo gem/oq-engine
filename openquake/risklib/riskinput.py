@@ -402,12 +402,12 @@ class CompositeRiskModel(collections.Mapping):
                 rlzs_assoc, mon_hazard(measuremem=False))
         for i, assets in enumerate(assets_by_site):
             hazgetter = hazard_by_site[i]
-            the_assets = groupby(assets, by_taxonomy)
-            for taxonomy, assets in the_assets.items():
-                riskmodel = self[taxonomy]
-                epsgetter = riskinput.epsilon_getter(
-                    [asset.ordinal for asset in assets])
+            group = groupby(assets, by_taxonomy)
+            for taxonomy in group:
                 with mon_risk:
+                    riskmodel = self[taxonomy]
+                    epsgetter = riskinput.epsilon_getter(
+                        [asset.ordinal for asset in group[taxonomy]])
                     yield riskmodel.out_by_lr(assets, hazgetter, epsgetter)
         if hasattr(hazard_by_site, 'close'):  # for event based risk
             monitor.gmfbytes = hazard_by_site.close()
