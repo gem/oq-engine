@@ -696,7 +696,7 @@ def build_riskinputs(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
                 src_group, source.MAXWEIGHT, operator.attrgetter('weight')):
             allargs.append((block, sitecol, gsims, monitor))
     # collect the ruptures
-    for dic in parallel.starmap(event_based.build_riskinputs, allargs):
+    for dic in parallel.starmap(event_based.compute_ruptures, allargs):
         ruptures_by_grp += dic
         [rupts] = dic.values()
         num_ruptures += len(rupts)
@@ -714,7 +714,8 @@ def build_riskinputs(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
     smap = starmap(losses_by_taxonomy, allargs)
     smap.num_ruptures = num_ruptures
     smap.num_events = num_events
-    return ssm.sm_id, smap
+    smap.sm_id = ssm.sm_id
+    return smap
 
 
 @base.calculators.add('ebrisk')
@@ -766,19 +767,20 @@ class EbriskCalculator(base.RiskCalculator):
         """
         Run the calculator and aggregate the results
         """
-        pairs = []
+        smaps = []
         with self.monitor('sending riskinputs', autoflush=True):
             for args in self.gen_args():
-                sm_id, smap = build_riskinputs(*args)
+                smap = build_riskinputs(*args)
                 logging.info(
                     'Generated %d/%d ruptures/events for source model #%d',
-                    smap.num_ruptures, smap.num_events, sm_id)
-                pairs.append((sm_id, smap.submit_all()))
+                    smap.num_ruptures, smap.num_events, smap.sm_id)
+                smap.res = smap.submit_all()
+                smaps.append(smap)
         # collect the losses by source model
-        losses_by_sm = groupby(pairs, operator.itemgetter(0),
-                               lambda grp: sum(sum(pair[1]) for pair in grp))
+        losses_by_sm = groupby(smaps, operator.attrgetter('sm_id'),
+                               lambda grp: sum(sum(smap.res) for smap in grp))
         self.save_data_transfer(
-            parallel.IterResult.sum(pair[1] for pair in pairs))
+            parallel.IterResult.sum(smap.res for smap in smaps))
         return losses_by_sm
 
     def post_execute(self, losses_by_sm):
