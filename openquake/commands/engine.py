@@ -20,8 +20,6 @@ import os
 import sys
 import getpass
 import logging
-import subprocess
-from openquake.risklib import valid
 from openquake.baselib import sap
 from openquake.commonlib import datastore
 from openquake.engine import engine as eng, config, logs
@@ -119,14 +117,8 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     if not os.path.exists(datastore.DATADIR):
         os.makedirs(datastore.DATADIR)
 
-    # check if the DbServer is up
-    if dbserver.get_status() == 'not-running':
-        if valid.boolean(config.get('dbserver', 'multi_user')):
-            sys.exit('Please start the DbServer: '
-                     'see the documentation for details')
-        # otherwise start the DbServer automatically
-        subprocess.Popen([sys.executable, '-m', 'openquake.server.dbserver',
-                          '-l', 'INFO'])
+    dbserver.ensure_on()
+    
     if upgrade_db:
         logs.set_level('info')
         msg = logs.dbcmd('what_if_I_upgrade', 'read_scripts')
