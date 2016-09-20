@@ -26,6 +26,7 @@ from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import groupby, split_in_blocks, group_array
 from openquake.hazardlib import site, calc
+from openquake.hazardlib.imt import from_string
 from openquake.risklib import scientific, riskmodels
 
 U8 = numpy.uint8
@@ -400,14 +401,14 @@ class CompositeRiskModel(collections.Mapping):
             hazard_by_site = riskinput.get_hazard(
                 rlzs_assoc, mon_hazard(measuremem=False))
         for i, assets in enumerate(assets_by_site):
-            hazard = hazard_by_site[i]
+            hazgetter = hazard_by_site[i]
             the_assets = groupby(assets, by_taxonomy)
             for taxonomy, assets in the_assets.items():
                 riskmodel = self[taxonomy]
                 epsgetter = riskinput.epsilon_getter(
                     [asset.ordinal for asset in assets])
                 with mon_risk:
-                    yield riskmodel.out_by_lr(assets, hazard, epsgetter)
+                    yield riskmodel.out_by_lr(assets, hazgetter, epsgetter)
         if hasattr(hazard_by_site, 'close'):  # for event based risk
             monitor.gmfbytes = hazard_by_site.close()
 
@@ -415,6 +416,26 @@ class CompositeRiskModel(collections.Mapping):
         lines = ['%s: %s' % item for item in sorted(self.items())]
         return '<%s(%d, %d)\n%s>' % (
             self.__class__.__name__, len(lines), self.covs, '\n'.join(lines))
+
+
+class PoeGetter(object):
+    def __init__(self, hazard_by_imt, rlzs_assoc):
+        self.rlzs_assoc = rlzs_assoc
+        self.rlzs = rlzs_assoc.realizations
+        self.haz_by_imt = {imt: rlzs_assoc.combine(hazard_by_imt[imt])
+                           for imt in hazard_by_imt}
+
+    def get(self, imt, rlz):
+        return self.haz_by_imt[imt][rlz]
+
+
+class GmfGetter(object):
+    def __init__(self, hazard_by_imt, rlzs):
+        self.rlzs = rlzs
+        self.hazard_by_imt = hazard_by_imt
+
+    def get(self, imt, rlz):
+        return self.haz_by_imt[imt][rlz]
 
 
 class RiskInput(object):
@@ -465,10 +486,7 @@ class RiskInput(object):
         :returns:
             list of hazard dictionaries imt -> rlz -> haz per each site
         """
-        if rlzs_assoc is None:  # case ebr_gmf
-            return self.hazard_by_site
-        return [{imt: rlzs_assoc.combine(haz[imt]) for imt in haz}
-                for haz in self.hazard_by_site]
+        return [PoeGetter(haz, rlzs_assoc) for haz in self.hazard_by_site]
 
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
@@ -642,7 +660,8 @@ class RiskInputFromRuptures(object):
             GmfCollector, self.ses_ruptures, self.sitecol, self.imts,
             rlzs_by_gsim, self.trunc_level, self.correl_model, self.min_iml,
             monitor)
-        return gmfcoll
+        return [GmfGetter(gmfcoll[sid], rlzs_by_gsim.realizations)
+                for sid in sorted(gmfcoll)]
 
     def __repr__(self):
         return '<%s imts=%s, weight=%d>' % (
