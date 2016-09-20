@@ -33,7 +33,6 @@ class DisaggregationTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test_case_1(self):
-        check_platform('trusty', 'xenial')
         self.assert_curves_ok([
             'poe-0.02-rlz-0-PGA-10.1-40.1.xml',
             'poe-0.02-rlz-0-SA(0.025)-10.1-40.1.xml',
@@ -42,7 +41,6 @@ class DisaggregationTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test_case_2(self):
-        check_platform('trusty', 'xenial')  # broken on Ubuntu 12.04
         self.assert_curves_ok(
             ['poe-0.02-rlz-0-PGA--3.0--3.0.xml',
              'poe-0.02-rlz-0-PGA-0.0-0.0.xml',
