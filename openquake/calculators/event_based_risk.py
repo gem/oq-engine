@@ -192,11 +192,9 @@ def event_based_risk(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
         result['AVGLOSS'] = square(L, R, zeroN)
 
     agglosses_mon = monitor('aggregate losses', measuremem=False)
-    for output in riskmodel.gen_outputs(
-            riskinput, rlzs_assoc, monitor, assetcol):
-        with agglosses_mon:
-            _aggregate_output(
-                output, riskmodel, agg, ass, idx, result, monitor)
+    outputs = riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor, assetcol)
+    with agglosses_mon:
+        _aggregate_output(outputs, riskmodel, agg, ass, idx, result, monitor)
     for (l, r) in itertools.product(range(L), range(R)):
         records = [(eids[i], loss) for i, loss in enumerate(agg[:, l, r])
                    if loss.sum() > 0]
@@ -641,7 +639,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.datastore['agg_curve-stats'].attrs['nbytes'] = (
             agg_curve_stats.nbytes)
 
-        
+
 def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     """
     :param riskinput:
