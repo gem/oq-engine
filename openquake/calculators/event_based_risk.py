@@ -671,8 +671,8 @@ def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     return losses
 
 
-def build_riskinputs(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
-                     trunc_level, correl_model, blocksize, monitor):
+def build_starmap(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
+                  trunc_level, correl_model, blocksize, monitor):
     """
     :param ssm: CompositeSourceModel containing a single source model
     :param sitecol: SiteCollection instance
@@ -684,6 +684,7 @@ def build_riskinputs(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
     :param correl_model: the correlation model
     :param blocksize: ruptures per block
     :param monitor: Monitor instance
+    :returns: a starmap object producing the losses by taxonomy
     """
     ruptures_by_grp = AccumDict()
     num_ruptures = 0
@@ -728,7 +729,7 @@ class EbriskCalculator(base.RiskCalculator):
 
     def gen_args(self):
         """
-        Yield the arguments required by build_riskinputs, i.e. the
+        Yield the arguments required by build_starmap, i.e. the
         source models, the asset collection, the riskmodel and others.
         """
         oq = self.oqparam
@@ -770,7 +771,7 @@ class EbriskCalculator(base.RiskCalculator):
         smaps = []
         with self.monitor('sending riskinputs', autoflush=True):
             for args in self.gen_args():
-                smap = build_riskinputs(*args)
+                smap = build_starmap(*args)
                 logging.info(
                     'Generated %d/%d ruptures/events for source model #%d',
                     smap.num_ruptures, smap.num_events, smap.sm_id)
