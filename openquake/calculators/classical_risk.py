@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-import operator
 
 import numpy
 
@@ -28,6 +27,11 @@ from openquake.calculators import base
 
 
 F32 = numpy.float32
+
+
+def by_l_assets(output):
+    # use loss_type index and assets as a composity key
+    return output.lr[0], tuple(output.assets)
 
 
 def classical_risk(riskinput, riskmodel, rlzs_assoc, monitor):
@@ -73,8 +77,7 @@ def classical_risk(riskinput, riskmodel, rlzs_assoc, monitor):
 
         # compute statistics
         if len(rlzs) > 1:
-            for (l, assets), outs in groupby(
-                    outputs, lambda o: (o.lr[0], tuple(o.assets))).items():
+            for (l, assets), outs in groupby(outputs, by_l_assets).items():
                 for out in outs:  # outputs with the same loss type and assets
                     out.weight = rlzs[out.lr[1]].weight
                 curve_resolution = outs[0].loss_curves.shape[-1]

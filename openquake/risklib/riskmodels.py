@@ -212,6 +212,9 @@ class Asset(object):
         return self.calc(loss_type, self.retrofitteds,
                          self.area, self.number)
 
+    def __lt__(self, other):
+        return self.id < other.id
+
     def __repr__(self):
         return '<Asset %s>' % self.id
 
