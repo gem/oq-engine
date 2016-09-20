@@ -30,7 +30,7 @@ import random
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import decode, raise_
+from openquake.baselib.python3compat import decode
 from openquake.baselib.general import groupby, block_splitter, group_array
 from openquake.commonlib import logictree, sourceconverter
 from openquake.commonlib import nrml, node, parallel
@@ -41,6 +41,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
+
 
 class LtRealization(object):
     """
@@ -164,11 +165,6 @@ class SourceModelParser(object):
         return nrml.parse(fname, self.converter)
 
 
-def agg_prob(acc, prob):
-    """Aggregation function for probabilities"""
-    return 1. - (1. - acc) * (1. - prob)
-
-
 class RlzsAssoc(collections.Mapping):
     """
     Realization association class. It should not be instantiated directly,
@@ -199,7 +195,7 @@ class RlzsAssoc(collections.Mapping):
         self.num_samples = csm_info.num_samples
         self.rlzs_assoc = collections.defaultdict(list)
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
-        self.rlzs_by_smodel = [[] for _ in range(len(csm_info.source_models))]
+        self.rlzs_by_smodel = {sm.ordinal: [] for sm in csm_info.source_models}
         self.gsims_by_grp_id = {}
         self.sm_ids = {}
         self.samples = {}
@@ -237,7 +233,7 @@ class RlzsAssoc(collections.Mapping):
     @property
     def realizations(self):
         """Flat list with all the realizations"""
-        return sum(self.rlzs_by_smodel, [])
+        return sum(self.rlzs_by_smodel.values(), [])
 
     def get_rlz(self, rlzstr):
         """
@@ -311,59 +307,6 @@ class RlzsAssoc(collections.Mapping):
         assoc._init()
         return assoc
 
-    # used in riskinput
-    def combine(self, results, agg=agg_prob):
-        """
-        :param results: a dictionary (src_group_id, gsim) -> floats
-        :param agg: an aggregation function
-        :returns: a dictionary rlz -> aggregated floats
-
-        Example: a case with tectonic region type T1 with GSIMS A, B, C
-        and tectonic region type T2 with GSIMS D, E.
-
-        >> assoc = RlzsAssoc(CompositionInfo([], []))
-        >> assoc.rlzs_assoc = {
-        ... ('T1', 'A'): ['r0', 'r1'],
-        ... ('T1', 'B'): ['r2', 'r3'],
-        ... ('T1', 'C'): ['r4', 'r5'],
-        ... ('T2', 'D'): ['r0', 'r2', 'r4'],
-        ... ('T2', 'E'): ['r1', 'r3', 'r5']}
-        ...
-        >> results = {
-        ... ('T1', 'A'): 0.01,
-        ... ('T1', 'B'): 0.02,
-        ... ('T1', 'C'): 0.03,
-        ... ('T2', 'D'): 0.04,
-        ... ('T2', 'E'): 0.05,}
-        ...
-        >> combinations = assoc.combine(results, operator.add)
-        >> for key, value in sorted(combinations.items()): print key, value
-        r0 0.05
-        r1 0.06
-        r2 0.06
-        r3 0.07
-        r4 0.07
-        r5 0.08
-
-        You can check that all the possible sums are performed:
-
-        r0: 0.01 + 0.04 (T1A + T2D)
-        r1: 0.01 + 0.05 (T1A + T2E)
-        r2: 0.02 + 0.04 (T1B + T2D)
-        r3: 0.02 + 0.05 (T1B + T2E)
-        r4: 0.03 + 0.04 (T1C + T2D)
-        r5: 0.03 + 0.05 (T1C + T2E)
-
-        In reality, the `.combine` method is used with hazard_curves and
-        the aggregation function is the `agg_curves` function, a composition of
-        probability, which however is close to the sum for small probabilities.
-        """
-        ad = {rlz: 0 for rlz in self.realizations}
-        for key, value in results.items():
-            for rlz in self.rlzs_assoc[key]:
-                ad[rlz] = agg(ad[rlz], value)
-        return ad
-
     def __iter__(self):
         return iter(self.rlzs_assoc)
 
@@ -383,6 +326,7 @@ class RlzsAssoc(collections.Mapping):
         return '<%s(size=%d, rlzs=%d)\n%s>' % (
             self.__class__.__name__, len(self), len(self.realizations),
             '\n'.join('%s: %s' % pair for pair in pairs))
+
 
 LENGTH = 256
 
@@ -602,6 +546,17 @@ class CompositeSourceModel(collections.Sequence):
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples,
             [sm.get_skeleton() for sm in self.source_models])
+
+    def get_model(self, sm_id):
+        """
+        Extract a CompositeSourceModel instance containing the single
+        model of index `sm_id`.
+        """
+        new = self.__class__(
+            self.gsim_lt, self.source_model_lt,
+            [self.source_models[sm_id]], set_weight=False)
+        new.sm_id = sm_id
+        return new
 
     def filter(self, sitecol, ss_filter):
         """
