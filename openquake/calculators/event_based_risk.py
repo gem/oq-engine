@@ -122,7 +122,7 @@ def _old_loss_curves(asset_values, rcurves, ratios):
                         for avalue, poes in zip(asset_values, rcurves)])
 
 
-def _aggregate_output(outputs, compositemodel, agg, ass, idx, result, monitor):
+def _aggregate(outputs, compositemodel, agg, ass, idx, result, monitor):
     # update the result dictionary and the agg array with each output
     for out in outputs:
         l, r = out.lr
@@ -191,10 +191,8 @@ def event_based_risk(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     if monitor.avg_losses:
         result['AVGLOSS'] = square(L, R, zeroN)
 
-    agglosses_mon = monitor('aggregate losses', measuremem=False)
     outputs = riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor, assetcol)
-    with agglosses_mon:
-        _aggregate_output(outputs, riskmodel, agg, ass, idx, result, monitor)
+    _aggregate(outputs, riskmodel, agg, ass, idx, result, monitor)
     for (l, r) in itertools.product(range(L), range(R)):
         records = [(eids[i], loss) for i, loss in enumerate(agg[:, l, r])
                    if loss.sum() > 0]
