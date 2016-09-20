@@ -24,8 +24,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import (
-    groupby, split_in_blocks, group_array, AccumDict)
+from openquake.baselib.general import groupby, split_in_blocks, group_array
 from openquake.hazardlib import site, calc
 from openquake.risklib import scientific, riskmodels
 
@@ -418,12 +417,14 @@ class CompositeRiskModel(collections.Mapping):
                         imt = riskmodel.risk_functions[loss_type].imt
                         for i, assets, epsgetter in dic[taxonomy]:
                             haz = hazard_by_site[i].get(imt, rlz)
+                            if haz is None:  # no contribution
+                                continue
                             out = riskmodel(loss_type, assets, haz, epsgetter)
                             if out:  # can be None in scenario_risk sometimes
                                 out.lr = self.lti[loss_type], rlz.ordinal
                                 yield out
-        if hasattr(hazard_by_site, 'close'):  # for event based risk
-            monitor.gmfbytes = hazard_by_site.close()
+        if hasattr(hazard_by_site, 'gmfbytes'):  # for event based risk
+            monitor.gmfbytes = hazard_by_site.gmfbytes
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
@@ -435,11 +436,11 @@ class PoeGetter(object):
     def __init__(self, hazard_by_imt, rlzs_assoc):
         self.rlzs_assoc = rlzs_assoc
         self.rlzs = rlzs_assoc.realizations
-        self.haz_by_imt = {imt: rlzs_assoc.combine(hazard_by_imt[imt])
-                           for imt in hazard_by_imt}
+        self.hazard_by_imt = {imt: rlzs_assoc.combine(hazard_by_imt[imt])
+                              for imt in hazard_by_imt}
 
     def get(self, imt, rlz):
-        return self.haz_by_imt[imt][rlz]
+        return self.hazard_by_imt[imt][rlz]
 
 
 class GmfGetter(object):
@@ -448,7 +449,10 @@ class GmfGetter(object):
         self.hazard_by_imt = hazard_by_imt
 
     def get(self, imt, rlz):
-        return self.haz_by_imt[imt][rlz]
+        try:
+            return self.hazard_by_imt[imt][rlz]
+        except KeyError:
+            pass
 
 
 class RiskInput(object):
@@ -617,6 +621,10 @@ class GmfCollector(object):
         return self.close()
 
 
+class List(list):
+    """A list with attributes"""
+
+
 class RiskInputFromRuptures(object):
     """
     Contains all the assets associated to the given IMT and a subsets of
@@ -673,8 +681,10 @@ class RiskInputFromRuptures(object):
             GmfCollector, self.ses_ruptures, self.sitecol, self.imts,
             rlzs_by_gsim, self.trunc_level, self.correl_model, self.min_iml,
             monitor)
-        return [GmfGetter(gmfcoll[sid], rlzs_by_gsim.realizations)
-                for sid in sorted(gmfcoll)]
+        lst = List([GmfGetter(gmfcoll[sid], rlzs_by_gsim.realizations)
+                    for sid in self.sitecol.sids])
+        lst.gmfbytes = gmfcoll.close()
+        return lst
 
     def __repr__(self):
         return '<%s imts=%s, weight=%d>' % (
