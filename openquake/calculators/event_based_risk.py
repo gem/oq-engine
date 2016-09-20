@@ -671,6 +671,9 @@ def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     return losses
 
 
+# TODO: if the number of source models is larger than concurrent_tasks
+# a different strategy should be used; the one used here is good when
+# there are few source models, so that we cannot parallelize on those
 def build_starmap(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
                   trunc_level, correl_model, blocksize, monitor):
     """
