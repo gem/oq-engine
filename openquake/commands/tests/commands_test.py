@@ -33,6 +33,7 @@ from openquake.commands.show import show
 from openquake.commands.show_attrs import show_attrs
 from openquake.commands.export import export
 from openquake.commands.reduce import reduce
+from openquake.commands.db import db
 from openquake.commands.to_shapefile import to_shapefile
 from openquake.commands.from_shapefile import from_shapefile
 from openquake.commands import run
@@ -42,6 +43,7 @@ from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import case_5
 from openquake.calculators.tests import check_platform
+from openquake.server import manage, dbapi
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
 
@@ -314,3 +316,15 @@ class SourceModelShapefileConverterTestCase(unittest.TestCase):
         shpfiles = [os.path.join(self.OUTDIR, f)
                     for f in os.listdir(self.OUTDIR)]
         from_shapefile(os.path.join(self.OUTDIR, 'smc'), shpfiles, True)
+
+
+class DbTestCase(unittest.TestCase):
+    def test_db(self):
+        # the some db commands bypassing the dbserver
+        with Print.patch(), mock.patch(
+                'openquake.engine.logs.dbcmd', manage.dbcmd):
+            db('version_db')
+            try:
+                db('calc_info 1')
+            except dbapi.NotFound:  # happens on an empty db
+                pass
