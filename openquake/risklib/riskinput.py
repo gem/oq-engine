@@ -401,13 +401,14 @@ class CompositeRiskModel(collections.Mapping):
                 rlzs_assoc, mon_hazard(measuremem=False))
 
         # group the assets by taxonomy
-        dic = collections.defaultdict(list)
-        for i, assets in enumerate(assets_by_site):
-            group = groupby(assets, by_taxonomy)
-            for taxonomy in group:
-                epsgetter = riskinput.epsilon_getter(
-                    [asset.ordinal for asset in group[taxonomy]])
-                dic[taxonomy].append((i, group[taxonomy], epsgetter))
+        with monitor('grouping assets by taxonomy'):
+            dic = collections.defaultdict(list)
+            for i, assets in enumerate(assets_by_site):
+                group = groupby(assets, by_taxonomy)
+                for taxonomy in group:
+                    epsgetter = riskinput.epsilon_getter(
+                        [asset.ordinal for asset in group[taxonomy]])
+                    dic[taxonomy].append((i, group[taxonomy], epsgetter))
 
         with mon_risk:
             for loss_type in self.loss_types:
@@ -453,29 +454,18 @@ class GmfGetter(object):
     Object with a method .get(imt, rlz) returning a list of N composite arrays
     with fields 'gmv', 'eid'.
     """
-    def __init__(self, gmfcoll, sids, rlzs):
-        self.gmfcoll = gmfcoll
+    dt = numpy.dtype([('gmv', F32), ('eid', U32)])
+
+    def __init__(self, ddic, sids, imts, rlzs):
+        self.ddic = ddic
         self.sids = sids
         self.rlzs = rlzs
+        self.imti = {imt: i for i, imt in enumerate(imts)}
 
     def get(self, imt, rlz):
-        hazards = []
-        for sid in self.sids:
-            try:
-                haz = self.gmfcoll[sid]
-            except KeyError:
-                hazards.append({})
-                continue
-            try:
-                h = haz[imt]
-            except KeyError:
-                hazards.append({})
-                continue
-            try:
-                hazards.append(h[rlz])
-            except KeyError:
-                hazards.append({})
-        return hazards
+        imti = self.imti[imt]
+        return [numpy.array(self.ddic[sid].get((imti, rlz), []), self.dt)
+                for sid in self.sids]
 
 
 class RiskInput(object):
@@ -599,13 +589,16 @@ class GmfCollector(object):
     """
     An object storing the GMFs per site_id.
     """
-    def __init__(self, imts, rlzs, dstore=None):
+    def __init__(self, imts, rlzs, dstore=None, ddic=True):
         self.imts = imts
         self.rlzs = rlzs
         if dstore is None:
             self.dic = collections.defaultdict(Gmvset)
         else:
             self.dic = dstore
+        self.ddic = ddic
+        if ddic:
+            self._ddic = collections.defaultdict(dict)
         self.nbytes = 0
 
     def close(self):
@@ -613,8 +606,16 @@ class GmfCollector(object):
         return self.nbytes
 
     def save(self, eid, imti, rlz, gmf, sids):
+        key = imti, rlz
         for gmv, sid in zip(gmf, sids):
-            self.dic[sid].append(gmv, eid, rlz.ordinal, imti)
+            if self.ddic:
+                dic = self._ddic[sid]
+                if key in dic:
+                    dic[key].append((gmv, eid))
+                else:
+                    dic[key] = [(gmv, eid)]
+            else:
+                self.dic[sid].append(gmv, eid, rlz.ordinal, imti)
         self.nbytes += gmf.nbytes * 2
 
     def __getitem__(self, sid):
@@ -699,8 +700,9 @@ class RiskInputFromRuptures(object):
         gmfcoll = create(
             GmfCollector, self.ses_ruptures, self.sitecol, self.imts,
             rlzs_by_gsim, self.trunc_level, self.correl_model, self.min_iml,
-            monitor)
-        gg = GmfGetter(gmfcoll, self.sitecol.sids, rlzs_by_gsim.realizations)
+            monitor, True)
+        gg = GmfGetter(gmfcoll._ddic, self.sitecol.sids, self.imts,
+                       rlzs_by_gsim.realizations)
         gg.gmfbytes = gmfcoll.nbytes
         return gg
 
@@ -710,7 +712,7 @@ class RiskInputFromRuptures(object):
 
 
 def create(GmfColl, eb_ruptures, sitecol, imts, rlzs_by_gsim,
-           trunc_level, correl_model, min_iml, monitor=Monitor()):
+           trunc_level, correl_model, min_iml, monitor=Monitor(), ddic=False):
     """
     :param GmfColl: a GmfCollector class to be instantiated
     :param eb_ruptures: a list of EBRuptures with the same src_group_id
@@ -728,7 +730,7 @@ def create(GmfColl, eb_ruptures, sitecol, imts, rlzs_by_gsim,
     sites = sitecol.complete
     samples = rlzs_by_gsim.samples
     gsims = list(rlzs_by_gsim)
-    gmfcoll = GmfColl(imts, rlzs_by_gsim.realizations)
+    gmfcoll = GmfColl(imts, rlzs_by_gsim.realizations, ddic=ddic)
     for ebr in eb_ruptures:
         rup = ebr.rupture
         with ctx_mon:
