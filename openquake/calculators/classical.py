@@ -278,7 +278,7 @@ class PSHACalculator(base.HazardCalculator):
             maximum_distance=oq.maximum_distance,
             poes_disagg=oq.poes_disagg,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
-            random_seed=oq.random_seed)
+            seed=oq.random_seed)
         tiles = [self.sitecol]
         self.num_tiles = 1
         if self.is_tiling():

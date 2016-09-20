@@ -221,6 +221,7 @@ class IterResult(object):
         self.name = taskname
         self.num_tasks = num_tasks
         self.progress = progress
+        self.sent = 0  # set in TaskManager.submit_all
         self.received = []
         if self.num_tasks:
             self.log_percent = self._log_percent()
@@ -279,6 +280,23 @@ class IterResult(object):
             else:
                 acc = agg(acc, result)
         return acc
+
+    @classmethod
+    def sum(cls, iresults):
+        """
+        Sum the data transfer information of a set of results
+        """
+        res = object.__new__(cls)
+        res.received = []
+        res.sent = 0
+        for iresult in iresults:
+            res.received.extend(iresult.received)
+            res.sent += iresult.sent
+            if hasattr(res, 'name'):
+                assert res.name == iresult.name, (res.name, iresult.name)
+            else:
+                res.name = iresult.name
+        return res
 
 
 class TaskManager(object):
