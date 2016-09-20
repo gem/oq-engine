@@ -671,25 +671,41 @@ def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     return losses
 
 
-def compute_ruptures(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
+def build_riskinputs(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
                      trunc_level, correl_model, blocksize, monitor):
+    """
+    :param ssm: CompositeSourceModel containing a single source model
+    :param sitecol: SiteCollection instance
+    :param assetcol: AssetCollection instance
+    :param riskmodel: RiskModel instance
+    :param imts: a list of intensity measure types
+    :param min_iml: a list of minimum intensity levels for each IMT
+    :param trunc_level: the truncations level
+    :param correl_model: the correlation model
+    :param blocksize: ruptures per block
+    :param monitor: Monitor instance
+    """
     ruptures_by_grp = AccumDict()
     num_ruptures = 0
     num_events = 0
     allargs = []
+    # collect the sources
     for src_group in ssm.src_groups:
         gsims = ssm.gsim_lt.values[src_group.trt]
         for block in block_splitter(
                 src_group, source.MAXWEIGHT, operator.attrgetter('weight')):
             allargs.append((block, sitecol, gsims, monitor))
-    for dic in parallel.starmap(event_based.compute_ruptures, allargs):
+    # collect the ruptures
+    for dic in parallel.starmap(event_based.build_riskinputs, allargs):
         ruptures_by_grp += dic
         [rupts] = dic.values()
         num_ruptures += len(rupts)
         num_events += dic.num_events
+    # determine the realizations
     rlzs_assoc = ssm.info.get_rlzs_assoc(
         count_ruptures=lambda grp: len(ruptures_by_grp.get(grp.id, 0)))
     allargs = []
+    # prepare the risk inputs
     for src_group in ssm.src_groups:
         for rupts in block_splitter(ruptures_by_grp[src_group.id], blocksize):
             ri = riskinput.RiskInputFromRuptures(
@@ -710,6 +726,10 @@ class EbriskCalculator(base.RiskCalculator):
     is_stochastic = True
 
     def gen_args(self):
+        """
+        Yield the arguments required by build_riskinputs, i.e. the
+        source models, the asset collection, the riskmodel and others.
+        """
         oq = self.oqparam
         correl_model = readinput.get_correl_model(oq)
         if not oq.minimum_intensity:
@@ -749,11 +769,12 @@ class EbriskCalculator(base.RiskCalculator):
         pairs = []
         with self.monitor('sending riskinputs', autoflush=True):
             for args in self.gen_args():
-                sm_id, smap = compute_ruptures(*args)
+                sm_id, smap = build_riskinputs(*args)
                 logging.info(
                     'Generated %d/%d ruptures/events for source model #%d',
                     smap.num_ruptures, smap.num_events, sm_id)
                 pairs.append((sm_id, smap.submit_all()))
+        # collect the losses by source model
         losses_by_sm = groupby(pairs, operator.itemgetter(0),
                                lambda grp: sum(sum(pair[1]) for pair in grp))
         self.save_data_transfer(
@@ -761,6 +782,9 @@ class EbriskCalculator(base.RiskCalculator):
         return losses_by_sm
 
     def post_execute(self, losses_by_sm):
+        """
+        Save an array of losses by taxonomy of shape (T, L, R).
+        """
         T, L = len(self.assetcol.taxonomies), len(self.riskmodel.lti)
         # compute the total number of realizations for all source models
         R = sum(losses_by_sm[sm_id].shape[-1] for sm_id in losses_by_sm)
