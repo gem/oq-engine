@@ -156,6 +156,12 @@ class EngineServerTestCase(unittest.TestCase):
         # the rupture XML file has a syntax error
         job_id = self.postzip('archive_err_1.zip')
         self.wait()
+
+        # download the datastore, even if incomplete
+        resp = requests.get('http://%s/v1/calc/%s/datastore'
+                            % (self.hostport, job_id))
+        self.assertGreater(len(resp.content), 1000)
+
         tb = self.get('%s/traceback' % job_id)
         if not tb:
             sys.stderr.write('Empty traceback, please check!\n')

@@ -54,23 +54,23 @@ def scenario_risk(riskinput, riskmodel, rlzs_assoc, monitor):
     L = len(riskmodel.loss_types)
     R = len(rlzs_assoc.realizations)
     result = dict(agg=numpy.zeros((E, L, R, 2), F64), avg=[])
-    for out_by_lr in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor):
-        for (l, r), out in sorted(out_by_lr.items()):
-            stats = numpy.zeros((len(out.assets), 4), F32)
-            # this is ugly but using a composite array (i.e.
-            # stats['mean'], stats['stddev'], ...) may return
-            # bogus numbers! even with the SAME version of numpy,
-            # hdf5 and h5py!! the numbers are around 1E-300 and
-            # different on different systems; we found issues
-            # with Ubuntu 12.04 and Red Hat 7 (MS and DV)
-            stats[:, 0] = out.loss_matrix.mean(axis=1)
-            stats[:, 1] = out.loss_matrix.std(ddof=1, axis=1)
-            stats[:, 2] = out.insured_loss_matrix.mean(axis=1)
-            stats[:, 3] = out.insured_loss_matrix.std(ddof=1, axis=1)
-            for asset, stat in zip(out.assets, stats):
-                result['avg'].append((l, r, asset.ordinal, stat))
-            result['agg'][:, l, r, 0] += out.aggregate_losses
-            result['agg'][:, l, r, 1] += out.insured_losses
+    for out in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor):
+        l, r = out.lr
+        stats = numpy.zeros((len(out.assets), 4), F32)
+        # this is ugly but using a composite array (i.e.
+        # stats['mean'], stats['stddev'], ...) may return
+        # bogus numbers! even with the SAME version of numpy,
+        # hdf5 and h5py!! the numbers are around 1E-300 and
+        # different on different systems; we found issues
+        # with Ubuntu 12.04 and Red Hat 7 (MS and DV)
+        stats[:, 0] = out.loss_matrix.mean(axis=1)
+        stats[:, 1] = out.loss_matrix.std(ddof=1, axis=1)
+        stats[:, 2] = out.insured_loss_matrix.mean(axis=1)
+        stats[:, 3] = out.insured_loss_matrix.std(ddof=1, axis=1)
+        for asset, stat in zip(out.assets, stats):
+            result['avg'].append((l, r, asset.ordinal, stat))
+        result['agg'][:, l, r, 0] += out.aggregate_losses
+        result['agg'][:, l, r, 1] += out.insured_losses
     return result
 
 
