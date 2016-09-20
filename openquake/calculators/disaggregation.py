@@ -339,7 +339,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         """
         # build a dictionary rlz.ordinal -> source_model.ordinal
         sm_id = {}
-        for i, rlzs in enumerate(self.rlzs_assoc.rlzs_by_smodel):
+        for i, rlzs in self.rlzs_assoc.rlzs_by_smodel.items():
             for rlz in rlzs:
                 sm_id[rlz.ordinal] = i
 
