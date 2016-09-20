@@ -589,15 +589,15 @@ class GmfCollector(object):
     """
     An object storing the GMFs per site_id.
     """
-    def __init__(self, imts, rlzs, dstore=None, ddic=True):
+    def __init__(self, imts, rlzs, dstore=None, hazgetter=True):
         self.imts = imts
         self.rlzs = rlzs
         if dstore is None:
             self.dic = collections.defaultdict(Gmvset)
         else:
             self.dic = dstore
-        self.ddic = ddic
-        if ddic:
+        self.hazgetter = hazgetter
+        if hazgetter:
             self._ddic = collections.defaultdict(dict)
         self.nbytes = 0
 
@@ -608,7 +608,7 @@ class GmfCollector(object):
     def save(self, eid, imti, rlz, gmf, sids):
         key = imti, rlz
         for gmv, sid in zip(gmf, sids):
-            if self.ddic:
+            if self.hazgetter:
                 dic = self._ddic[sid]
                 if key in dic:
                     dic[key].append((gmv, eid))
@@ -712,7 +712,8 @@ class RiskInputFromRuptures(object):
 
 
 def create(GmfColl, eb_ruptures, sitecol, imts, rlzs_by_gsim,
-           trunc_level, correl_model, min_iml, monitor=Monitor(), ddic=False):
+           trunc_level, correl_model, min_iml, monitor=Monitor(),
+           hazgetter=False):
     """
     :param GmfColl: a GmfCollector class to be instantiated
     :param eb_ruptures: a list of EBRuptures with the same src_group_id
@@ -723,6 +724,7 @@ def create(GmfColl, eb_ruptures, sitecol, imts, rlzs_by_gsim,
     :param correl_model: correlation model instance
     :param min_iml: a dictionary of minimum intensity measure levels
     :param monitor: a monitor instance
+    :param hazgetter: flag which is true only inside an hazard getter
     :returns: a GmfCollector instance
     """
     ctx_mon = monitor('make contexts')
@@ -730,7 +732,7 @@ def create(GmfColl, eb_ruptures, sitecol, imts, rlzs_by_gsim,
     sites = sitecol.complete
     samples = rlzs_by_gsim.samples
     gsims = list(rlzs_by_gsim)
-    gmfcoll = GmfColl(imts, rlzs_by_gsim.realizations, ddic=ddic)
+    gmfcoll = GmfColl(imts, rlzs_by_gsim.realizations, hazgetter=hazgetter)
     for ebr in eb_ruptures:
         rup = ebr.rupture
         with ctx_mon:
