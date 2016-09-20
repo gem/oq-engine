@@ -397,7 +397,7 @@ class CompositeRiskModel(collections.Mapping):
         with mon_hazard:
             assets_by_site = (riskinput.assets_by_site if assetcol is None
                               else assetcol.assets_by_site())
-            hazard_getter = riskinput.get_hazard(
+            hazard_getter = riskinput.hazard_getter(
                 rlzs_assoc, mon_hazard(measuremem=False))
 
         # group the assets by taxonomy
@@ -434,6 +434,9 @@ class CompositeRiskModel(collections.Mapping):
 
 
 class PoeGetter(object):
+    """
+    Object with a method .get(imt, rlz) return a ProbabilityMap
+    """
     def __init__(self, hazard_by_site, rlzs_assoc):
         self.rlzs_assoc = rlzs_assoc
         self.rlzs = rlzs_assoc.realizations
@@ -446,6 +449,10 @@ class PoeGetter(object):
 
 
 class GmfGetter(object):
+    """
+    Object with a method .get(imt, rlz) return a map of composite arrays
+    with fields 'gmv', 'eid'.
+    """
     def __init__(self, gmfcoll, sids, rlzs):
         self.gmfcoll = gmfcoll
         self.sids = sids
@@ -510,7 +517,7 @@ class RiskInput(object):
             [self.eps[aid] for aid in asset_ordinals]
             if self.eps else None)
 
-    def get_hazard(self, rlzs_assoc, monitor=Monitor()):
+    def hazard_getter(self, rlzs_assoc, monitor=Monitor()):
         """
         :param rlzs_assoc:
             :class:`openquake.commonlib.source.RlzsAssoc` instance
@@ -678,7 +685,7 @@ class RiskInputFromRuptures(object):
             return self.eps[aid, [self.eid2idx[eid] for eid in eids]]
         return geteps
 
-    def get_hazard(self, rlzs_assoc, monitor=Monitor()):
+    def hazard_getter(self, rlzs_assoc, monitor=Monitor()):
         """
         :param rlzs_assoc:
             :class:`openquake.commonlib.source.RlzsAssoc` instance
