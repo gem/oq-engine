@@ -667,25 +667,45 @@ def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     return losses
 
 
-def compute_ruptures(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
-                     trunc_level, correl_model, blocksize, monitor):
+# TODO: if the number of source models is larger than concurrent_tasks
+# a different strategy should be used; the one used here is good when
+# there are few source models, so that we cannot parallelize on those
+def build_starmap(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
+                  trunc_level, correl_model, blocksize, monitor):
+    """
+    :param ssm: CompositeSourceModel containing a single source model
+    :param sitecol: SiteCollection instance
+    :param assetcol: AssetCollection instance
+    :param riskmodel: RiskModel instance
+    :param imts: a list of intensity measure types
+    :param min_iml: a list of minimum intensity levels for each IMT
+    :param trunc_level: the truncations level
+    :param correl_model: the correlation model
+    :param blocksize: ruptures per block
+    :param monitor: Monitor instance
+    :returns: a starmap object producing the losses by taxonomy
+    """
     ruptures_by_grp = AccumDict()
     num_ruptures = 0
     num_events = 0
     allargs = []
+    # collect the sources
     for src_group in ssm.src_groups:
         gsims = ssm.gsim_lt.values[src_group.trt]
         for block in block_splitter(
                 src_group, source.MAXWEIGHT, operator.attrgetter('weight')):
             allargs.append((block, sitecol, gsims, monitor))
+    # collect the ruptures
     for dic in parallel.starmap(event_based.compute_ruptures, allargs):
         ruptures_by_grp += dic
         [rupts] = dic.values()
         num_ruptures += len(rupts)
         num_events += dic.num_events
+    # determine the realizations
     rlzs_assoc = ssm.info.get_rlzs_assoc(
         count_ruptures=lambda grp: len(ruptures_by_grp.get(grp.id, 0)))
     allargs = []
+    # prepare the risk inputs
     for src_group in ssm.src_groups:
         for rupts in block_splitter(ruptures_by_grp[src_group.id], blocksize):
             ri = riskinput.RiskInputFromRuptures(
@@ -694,7 +714,8 @@ def compute_ruptures(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
     smap = starmap(losses_by_taxonomy, allargs)
     smap.num_ruptures = num_ruptures
     smap.num_events = num_events
-    return ssm.sm_id, smap
+    smap.sm_id = ssm.sm_id
+    return smap
 
 
 @base.calculators.add('ebrisk')
@@ -706,6 +727,10 @@ class EbriskCalculator(base.RiskCalculator):
     is_stochastic = True
 
     def gen_args(self):
+        """
+        Yield the arguments required by build_starmap, i.e. the
+        source models, the asset collection, the riskmodel and others.
+        """
         oq = self.oqparam
         correl_model = readinput.get_correl_model(oq)
         if not oq.minimum_intensity:
@@ -742,21 +767,26 @@ class EbriskCalculator(base.RiskCalculator):
         """
         Run the calculator and aggregate the results
         """
-        pairs = []
+        smaps = []
         with self.monitor('sending riskinputs', autoflush=True):
             for args in self.gen_args():
-                sm_id, smap = compute_ruptures(*args)
+                smap = build_starmap(*args)
                 logging.info(
                     'Generated %d/%d ruptures/events for source model #%d',
-                    smap.num_ruptures, smap.num_events, sm_id)
-                pairs.append((sm_id, smap.submit_all()))
-        losses_by_sm = groupby(pairs, operator.itemgetter(0),
-                               lambda grp: sum(sum(pair[1]) for pair in grp))
+                    smap.num_ruptures, smap.num_events, smap.sm_id)
+                smap.res = smap.submit_all()
+                smaps.append(smap)
+        # collect the losses by source model
+        losses_by_sm = groupby(smaps, operator.attrgetter('sm_id'),
+                               lambda grp: sum(sum(smap.res) for smap in grp))
         self.save_data_transfer(
-            parallel.IterResult.sum(pair[1] for pair in pairs))
+            parallel.IterResult.sum(smap.res for smap in smaps))
         return losses_by_sm
 
     def post_execute(self, losses_by_sm):
+        """
+        Save an array of losses by taxonomy of shape (T, L, R).
+        """
         T, L = len(self.assetcol.taxonomies), len(self.riskmodel.lti)
         # compute the total number of realizations for all source models
         R = sum(losses_by_sm[sm_id].shape[-1] for sm_id in losses_by_sm)
