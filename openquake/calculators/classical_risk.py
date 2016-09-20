@@ -48,7 +48,8 @@ def classical_risk(riskinput, riskmodel, rlzs_assoc, monitor):
     rlzs = rlzs_assoc.realizations
     result = dict(
         loss_curves=[], loss_maps=[], stat_curves=[], stat_maps=[])
-    for out in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor):
+    outputs = list(riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor))
+    for out in outputs:
         l, r = out.lr
         for i, asset in enumerate(out.assets):
             aid = asset.ordinal
@@ -72,12 +73,10 @@ def classical_risk(riskinput, riskmodel, rlzs_assoc, monitor):
 
         # compute statistics
         if len(rlzs) > 1:
-            for l, lrs in groupby(out_by_lr, operator.itemgetter(0)).items():
-                outs = []
-                for l, r in lrs:
-                    out = out_by_lr[l, r]
-                    out.weight = rlzs[r].weight
-                    outs.append(out)
+            for (l, assets), outs in groupby(
+                    outputs, lambda o: (o.lr[0], tuple(o.assets))).items():
+                for out in outs:  # outputs with the same loss type and assets
+                    out.weight = rlzs[out.lr[1]].weight
                 curve_resolution = outs[0].loss_curves.shape[-1]
                 statsbuilder = scientific.StatsBuilder(
                     oq.quantile_loss_curves,
@@ -85,7 +84,7 @@ def classical_risk(riskinput, riskmodel, rlzs_assoc, monitor):
                     curve_resolution, insured_losses=oq.insured_losses)
                 stats = statsbuilder.build(outs)
                 stat_curves, stat_maps = statsbuilder.get_curves_maps(stats)
-                for i, asset in enumerate(out_by_lr.assets):
+                for i, asset in enumerate(assets):
                     result['stat_curves'].append(
                         (l, asset.ordinal, stat_curves[:, i]))
                     if len(stat_maps):
