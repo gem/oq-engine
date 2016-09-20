@@ -397,7 +397,7 @@ class CompositeRiskModel(collections.Mapping):
         with mon_hazard:
             assets_by_site = (riskinput.assets_by_site if assetcol is None
                               else assetcol.assets_by_site())
-            hazard_by_site = riskinput.get_hazard(
+            hazard_getter = riskinput.get_hazard(
                 rlzs_assoc, mon_hazard(measuremem=False))
 
         # group the assets by taxonomy
@@ -415,16 +415,17 @@ class CompositeRiskModel(collections.Mapping):
                     for taxonomy in self.taxonomies:
                         riskmodel = self[taxonomy]
                         imt = riskmodel.risk_functions[loss_type].imt
+                        hazard = hazard_getter.get(imt, rlz)
                         for i, assets, epsgetter in dic[taxonomy]:
-                            haz = hazard_by_site[i].get(imt, rlz)
-                            if haz is None:  # no contribution
-                                continue
-                            out = riskmodel(loss_type, assets, haz, epsgetter)
-                            if out:  # can be None in scenario_risk sometimes
-                                out.lr = self.lti[loss_type], rlz.ordinal
-                                yield out
-        if hasattr(hazard_by_site, 'gmfbytes'):  # for event based risk
-            monitor.gmfbytes = hazard_by_site.gmfbytes
+                            haz = hazard[i]
+                            if len(haz):
+                                out = riskmodel(
+                                    loss_type, assets, haz, epsgetter)
+                                if out:  # can be None in scenario_risk
+                                    out.lr = self.lti[loss_type], rlz.ordinal
+                                    yield out
+        if hasattr(hazard_getter, 'gmfbytes'):  # for event based risk
+            monitor.gmfbytes = hazard_getter.gmfbytes
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
@@ -433,26 +434,41 @@ class CompositeRiskModel(collections.Mapping):
 
 
 class PoeGetter(object):
-    def __init__(self, hazard_by_imt, rlzs_assoc):
+    def __init__(self, hazard_by_site, rlzs_assoc):
         self.rlzs_assoc = rlzs_assoc
         self.rlzs = rlzs_assoc.realizations
-        self.hazard_by_imt = {imt: rlzs_assoc.combine(hazard_by_imt[imt])
-                              for imt in hazard_by_imt}
+        self.hazard_by_site = [{imt: rlzs_assoc.combine(hazard_by_imt[imt])
+                                for imt in hazard_by_imt}
+                               for hazard_by_imt in hazard_by_site]
 
     def get(self, imt, rlz):
-        return self.hazard_by_imt[imt][rlz]
+        return [haz[imt][rlz] for haz in self.hazard_by_site]
 
 
 class GmfGetter(object):
-    def __init__(self, hazard_by_imt, rlzs):
+    def __init__(self, gmfcoll, sids, rlzs):
+        self.gmfcoll = gmfcoll
+        self.sids = sids
         self.rlzs = rlzs
-        self.hazard_by_imt = hazard_by_imt
 
     def get(self, imt, rlz):
-        try:
-            return self.hazard_by_imt[imt][rlz]
-        except KeyError:
-            pass
+        hazards = []
+        for sid in self.sids:
+            try:
+                haz = self.gmfcoll[sid]
+            except KeyError:
+                hazards.append({})
+                continue
+            try:
+                h = haz[imt]
+            except KeyError:
+                hazards.append({})
+                continue
+            try:
+                hazards.append(h[rlz])
+            except KeyError:
+                hazards.append({})
+        return hazards
 
 
 class RiskInput(object):
@@ -503,7 +519,7 @@ class RiskInput(object):
         :returns:
             list of hazard dictionaries imt -> rlz -> haz per each site
         """
-        return [PoeGetter(haz, rlzs_assoc) for haz in self.hazard_by_site]
+        return PoeGetter(self.hazard_by_site, rlzs_assoc)
 
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
@@ -621,10 +637,6 @@ class GmfCollector(object):
         return self.close()
 
 
-class List(list):
-    """A list with attributes"""
-
-
 class RiskInputFromRuptures(object):
     """
     Contains all the assets associated to the given IMT and a subsets of
@@ -681,10 +693,9 @@ class RiskInputFromRuptures(object):
             GmfCollector, self.ses_ruptures, self.sitecol, self.imts,
             rlzs_by_gsim, self.trunc_level, self.correl_model, self.min_iml,
             monitor)
-        lst = List([GmfGetter(gmfcoll[sid], rlzs_by_gsim.realizations)
-                    for sid in self.sitecol.sids])
-        lst.gmfbytes = gmfcoll.close()
-        return lst
+        gg = GmfGetter(gmfcoll, self.sitecol.sids, rlzs_by_gsim.realizations)
+        gg.gmfbytes = gmfcoll.nbytes
+        return gg
 
     def __repr__(self):
         return '<%s imts=%s, weight=%d>' % (
