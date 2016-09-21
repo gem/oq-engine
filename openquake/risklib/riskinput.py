@@ -24,8 +24,10 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import groupby, split_in_blocks, group_array
+from openquake.baselib.general import (
+    groupby, split_in_blocks, group_array, get_array)
 from openquake.hazardlib import site, calc
+from openquake.hazardlib.imt import from_string
 from openquake.risklib import scientific, riskmodels
 
 U8 = numpy.uint8
@@ -408,8 +410,8 @@ class CompositeRiskModel(collections.Mapping):
         return RiskInput(hazards_by_site, assetcol, eps_dict)
 
     def build_inputs_from_ruptures(
-            self, imts, sitecol, all_ruptures, trunc_level, correl_model,
-            min_iml, eps, hint):
+            self, grp_trti, imts, sitecol, all_ruptures, trunc_level,
+            correl_model, min_iml, eps, hint):
         """
         :param imts: list of intensity measure type strings
         :param sitecol: a SiteCollection instance
@@ -427,13 +429,14 @@ class CompositeRiskModel(collections.Mapping):
         for ses_ruptures in split_in_blocks(
                 all_ruptures, hint or 1, key=by_grp_id,
                 weight=operator.attrgetter('weight')):
+            grp_id = ses_ruptures[0].grp_id
             eids = []
             for sr in ses_ruptures:
                 eids.extend(sr.events['eid'])
             idxs = numpy.arange(start, start + len(eids))
             start += len(eids)
             yield RiskInputFromRuptures(
-                imts, sitecol, ses_ruptures,
+                grp_trti[grp_id], imts, sitecol, ses_ruptures,
                 trunc_level, correl_model, min_iml,
                 eps[:, idxs] if eps is not None else None, eids)
 
@@ -506,7 +509,7 @@ class PoeGetter(object):
         return [haz[imt][rlz] for haz in self.hazard_by_site]
 
 
-class GmfGetter(object):
+class GmfGetterOld(object):
     """
     Object with a method .get(imt, rlz) returning a list of N composite arrays
     with fields 'gmv', 'eid'.
@@ -523,6 +526,46 @@ class GmfGetter(object):
         imti = self.imti[imt]
         return [numpy.array(self.ddic[sid].get((imti, rlz), []), self.dt)
                 for sid in self.sids]
+
+
+class GmfGetter(object):
+    dt = numpy.dtype([('gmv', F32), ('eid', U32)])
+
+    def __init__(self, trti, gsims, ebruptures, sitecol, imts, min_iml,
+                 truncation_level, correlation_model, samples):
+        self.trti = trti
+        self.min_iml = {
+            from_string(imt): min for imt, min in zip(imts, min_iml)}
+        self.samples = samples
+        self.sids = sitecol.sids
+        self.computers = []
+        for ebr in ebruptures:
+            sites = site.FilteredSiteCollection(ebr.indices, sitecol.complete)
+            computer = calc.gmf.GmfComputer(
+                ebr, sites, imts, gsims, truncation_level, correlation_model)
+            self.computers.append(computer)
+        self.gmfbytes = 0
+
+    def get(self, imt, rlz):
+        imt = from_string(imt)
+        min_gmv = self.min_iml[imt]
+        gsim = rlz.gsim_rlz.value[self.trti]
+        gmfdict = collections.defaultdict(list)
+        for computer in self.computers:
+            rup = computer.rupture
+            seed = rup.rupture.seed + rlz.ordinal
+            if self.samples > 1:
+                eids = get_array(rup.events, sample=rlz.sampleid)['eid']
+            else:
+                eids = rup.events['eid']
+            array = computer._compute(seed, gsim, len(eids), imt)  # (n, e)
+            for eid, gmf in zip(eids, array.T):
+                for sid, gmv in zip(computer.sites.sids, gmf):
+                    if gmv > min_gmv:
+                        gmfdict[sid].append((gmv, eid))
+        arrays = [numpy.array(gmfdict[sid], self.dt) for sid in self.sids]
+        self.gmfbytes += sum(a.nbytes for a in arrays)
+        return arrays
 
 
 class RiskInput(object):
@@ -718,11 +761,12 @@ class RiskInputFromRuptures(object):
     :params epsilons: a matrix of epsilons (or None)
     :param eids: an array of event IDs (or None)
     """
-    def __init__(self, imts, sitecol, ses_ruptures,
-                 trunc_level, correl_model, min_iml, epsilons=None, eids=None):
+    def __init__(self, trti, imts, sitecol, ses_ruptures,
+                 trunc_level, correl_model, min_iml, epsilons=None,
+                 eids=None):
         self.sitecol = sitecol
         self.ses_ruptures = numpy.array(ses_ruptures)
-        self.grp_id = ses_ruptures[0].grp_id
+        self.trti = trti
         self.trunc_level = trunc_level
         self.correl_model = correl_model
         self.min_iml = min_iml
@@ -755,14 +799,10 @@ class RiskInputFromRuptures(object):
             lists of N hazard dictionaries imt -> rlz -> Gmvs
         """
         grp_id = self.ses_ruptures[0].grp_id
-        rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
-        gmfcoll = create(
-            GmfCollector, self.ses_ruptures, self.sitecol, self.imts,
-            rlzs_by_gsim, self.trunc_level, self.correl_model, self.min_iml,
-            monitor, True)
-        gg = GmfGetter(gmfcoll._ddic, self.sitecol.sids, self.imts,
-                       rlzs_by_gsim.realizations)
-        gg.gmfbytes = gmfcoll.nbytes
+        gsims = rlzs_assoc.gsims_by_grp_id[grp_id]
+        gg = GmfGetter(self.trti, gsims, self.ses_ruptures, self.sitecol,
+                       self.imts, self.min_iml, self.trunc_level,
+                       self.correl_model, rlzs_assoc.samples[grp_id])
         return gg
 
     def __repr__(self):
