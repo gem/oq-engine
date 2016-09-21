@@ -214,7 +214,7 @@ class RunShowExportTestCase(unittest.TestCase):
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
         with Print.patch() as p:
-            export('hcurves', tempdir, self.calc_id)
+            export('hcurves', self.calc_id, export_dir=tempdir)
         [fname] = os.listdir(tempdir)
         self.assertIn(str(fname), str(p))
         shutil.rmtree(tempdir)
