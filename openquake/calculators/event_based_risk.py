@@ -318,10 +318,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                          'you may want to set a minimum_intensity')
         else:
             logging.info('minimum_intensity=%s', oq.minimum_intensity)
-
+        sg_data = self.datastore['csm_info/sg_data']
+        grp_trti = dict(zip(sg_data['grp_id'], sg_data['trti']))
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = self.riskmodel.build_inputs_from_ruptures(
-                list(oq.imtls), self.sitecol.complete, all_ruptures,
+                grp_trti, list(oq.imtls), self.sitecol.complete, all_ruptures,
                 oq.truncation_level, correl_model, min_iml, eps,
                 oq.concurrent_tasks or 1)
             # NB: I am using generators so that the tasks are submitted one at
@@ -704,12 +705,15 @@ def build_starmap(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
     # determine the realizations
     rlzs_assoc = ssm.info.get_rlzs_assoc(
         count_ruptures=lambda grp: len(ruptures_by_grp.get(grp.id, 0)))
+    grp_trti = {grp: grp for grp in ruptures_by_grp}
     allargs = []
     # prepare the risk inputs
     for src_group in ssm.src_groups:
         for rupts in block_splitter(ruptures_by_grp[src_group.id], blocksize):
+            trti = grp_trti[rupts[0].grp_id]
             ri = riskinput.RiskInputFromRuptures(
-                imts, sitecol, rupts, trunc_level, correl_model, min_iml)
+                trti, imts, sitecol, rupts, trunc_level, correl_model,
+                min_iml)
             allargs.append((ri, riskmodel, rlzs_assoc, assetcol, monitor))
     smap = starmap(losses_by_taxonomy, allargs)
     smap.num_ruptures = num_ruptures
