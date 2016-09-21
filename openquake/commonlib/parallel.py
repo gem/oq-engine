@@ -50,8 +50,8 @@ if OQ_DISTRIBUTE == 'celery':
     from celery.result import ResultSet
     from celery import Celery
     from celery.task import task
-    from openquake.engine.celeryconfig import BROKER_URL
-    app = Celery('openquake', backend='amqp://', broker=BROKER_URL)
+    from openquake.engine.celeryconfig import BROKER_URL, CELERY_RESULT_BACKEND
+    app = Celery('openquake', backend=CELERY_RESULT_BACKEND, broker=BROKER_URL)
 
 elif OQ_DISTRIBUTE == 'ipython':
     import ipyparallel as ipp
