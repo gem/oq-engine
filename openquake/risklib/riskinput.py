@@ -275,6 +275,16 @@ class CompositeRiskModel(collections.Mapping):
                 iml[rf.imt].append(rf.imls[0])
         return {imt: min(iml[imt]) for imt in iml}
 
+    def get_imts(self):
+        """
+        Returns a sorted list of IMTs defined in the underlying models
+        """
+        imts = set()
+        for loss_type in self.loss_types:
+            for taxonomy in self.taxonomies:
+                imts.add(self[taxonomy].risk_functions[loss_type].imt)
+        return sorted(imts)
+
     def build_loss_dtypes(self, conditional_loss_poes, insured_losses=False):
         """
         :param conditional_loss_poes:
@@ -452,9 +462,10 @@ class CompositeRiskModel(collections.Mapping):
         :param monitor: a monitor object used to measure the performance
         :param assetcol: not None only for event based risk
         """
+        mon_context = monitor('building context')
         mon_hazard = monitor('building hazard')
         mon_risk = monitor('computing risk', measuremem=False)
-        with mon_hazard:
+        with mon_context:
             assets_by_site = (riskinput.assets_by_site if assetcol is None
                               else assetcol.assets_by_site())
             hazard_getter = riskinput.hazard_getter(
@@ -469,19 +480,19 @@ class CompositeRiskModel(collections.Mapping):
                     epsgetter = riskinput.epsilon_getter(
                         [asset.ordinal for asset in group[taxonomy]])
                     dic[taxonomy].append((i, group[taxonomy], epsgetter))
-
-        with mon_risk:
+        imts = self.get_imts()
+        for rlz in rlzs_assoc.realizations:
+            with mon_hazard:
+                hazard = {imt: hazard_getter.get(imt, rlz) for imt in imts}
             for loss_type in self.loss_types:
-                for rlz in rlzs_assoc.realizations:
-                    for taxonomy in self.taxonomies:
-                        riskmodel = self[taxonomy]
-                        imt = riskmodel.risk_functions[loss_type].imt
-                        hazard = hazard_getter.get(imt, rlz)
+                for taxonomy in self.taxonomies:
+                    riskmodel = self[taxonomy]
+                    haz = hazard[riskmodel.risk_functions[loss_type].imt]
+                    with mon_risk:
                         for i, assets, epsgetter in dic[taxonomy]:
-                            haz = hazard[i]
-                            if len(haz):
+                            if len(haz[i]):
                                 out = riskmodel(
-                                    loss_type, assets, haz, epsgetter)
+                                    loss_type, assets, haz[i], epsgetter)
                                 if out:  # can be None in scenario_risk
                                     out.lr = self.lti[loss_type], rlz.ordinal
                                     yield out
@@ -534,8 +545,12 @@ class GmfGetter(object):
     def __init__(self, trti, gsims, ebruptures, sitecol, imts, min_iml,
                  truncation_level, correlation_model, samples):
         self.trti = trti
+        self.gsims = gsims
+        self.imts = imts
         self.min_iml = {
             from_string(imt): min for imt, min in zip(imts, min_iml)}
+        self.truncation_level = truncation_level
+        self.correlation_model = correlation_model
         self.samples = samples
         self.sids = sitecol.sids
         self.computers = []
