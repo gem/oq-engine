@@ -26,7 +26,7 @@ import collections
 import numpy
 
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict, split_in_blocks
+from openquake.baselib.general import AccumDict, split_in_blocks, get_array
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import ProbabilityMap
@@ -585,6 +585,11 @@ class EventBasedCalculator(ClassicalCalculator):
         self.save_data_transfer(res)
         if oq.ground_motion_fields and 'gmf_data' in self.datastore:
             self.datastore.set_nbytes('gmf_data')
+            # set some syntethic indicator of the gmvs
+            for sid in self.datastore['gmf_data']:
+                g = get_array(self.datastore['gmf_data/' + sid], imti=0)['gmv']
+                self.datastore['gmf_data/' + sid].attrs['mean'] = g.mean()
+                self.datastore['gmf_data/' + sid].attrs['std'] = g.std(ddof=1)
         return acc
 
     def post_execute(self, result):
