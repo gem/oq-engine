@@ -27,7 +27,7 @@ from openquake.commonlib.export import export as export_
 
 # the export is tested in the demos
 @sap.Script
-def export(datastore_key, export_dir='.', calc_id=-1, exports='csv'):
+def export(datastore_key, calc_id=-1, exports='csv', export_dir='.'):
     """
     Export an output from the datastore.
     """
@@ -47,6 +47,6 @@ def export(datastore_key, export_dir='.', calc_id=-1, exports='csv'):
 
 
 export.arg('datastore_key', 'datastore key')
-export.arg('export_dir', 'export directory')
 export.arg('calc_id', 'number of the calculation', type=int)
 export.opt('exports', 'export formats (comma separated)')
+export.opt('export_dir', 'export directory', '-d')
