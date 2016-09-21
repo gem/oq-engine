@@ -266,6 +266,9 @@ def match(m_templ, *m_args):
     >>> match('SELECT * FROM job WHERE id=?x', 1)
     ('SELECT * FROM job WHERE id=?', (1,))
     """
+    # strip commented lines
+    m_templ = '\n'.join(line for line in m_templ.splitlines()
+                        if not line.lstrip().startswith('--'))
     if not m_args:
         return m_templ, ()
     try:
@@ -323,7 +326,6 @@ class Db(object):
             raise exc.__class__('%s: %s %s' % (exc, templ, args))
         if templ.lstrip().lower().startswith(('select', 'pragma')):
             rows = cursor.fetchall()
-
             if kw.get('scalar'):  # scalar query
                 if not rows:
                     raise NotFound
