@@ -690,8 +690,10 @@ def build_starmap(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
     num_ruptures = 0
     num_events = 0
     allargs = []
+    grp_trti = {}
     # collect the sources
-    for src_group in ssm.src_groups:
+    for trti, src_group in enumerate(ssm.src_groups):
+        grp_trti[src_group.id] = trti
         gsims = ssm.gsim_lt.values[src_group.trt]
         for block in block_splitter(
                 src_group, source.MAXWEIGHT, operator.attrgetter('weight')):
@@ -705,7 +707,6 @@ def build_starmap(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
     # determine the realizations
     rlzs_assoc = ssm.info.get_rlzs_assoc(
         count_ruptures=lambda grp: len(ruptures_by_grp.get(grp.id, 0)))
-    grp_trti = {grp: grp for grp in ruptures_by_grp}
     allargs = []
     # prepare the risk inputs
     for src_group in ssm.src_groups:
