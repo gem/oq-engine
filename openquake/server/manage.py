@@ -28,7 +28,9 @@ from openquake.server.dbapi import Db
 from openquake.engine import logs
 
 db = Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
-        detect_types=sqlite3.PARSE_DECLTYPES)
+        detect_types=sqlite3.PARSE_DECLTYPES, timeout=20)
+# NB: I am increasing the timeout from 5 to 20 seconds to see if the random
+# OperationalError: "database is locked" disappear in the WebUI tests
 
 
 # bypass the DbServer and run the action directly
