@@ -522,26 +522,11 @@ class PoeGetter(object):
         return [haz[imt][rlz] for haz in self.hazard_by_site]
 
 
-class GmfGetterOld(object):
+class GmfGetter(object):
     """
     Object with a method .get(imt, rlz) returning a list of N composite arrays
     with fields 'gmv', 'eid'.
     """
-    dt = numpy.dtype([('gmv', F32), ('eid', U32)])
-
-    def __init__(self, ddic, sids, imts, rlzs):
-        self.ddic = ddic
-        self.sids = sids
-        self.rlzs = rlzs
-        self.imti = {imt: i for i, imt in enumerate(imts)}
-
-    def get(self, imt, rlz):
-        imti = self.imti[imt]
-        return [numpy.array(self.ddic[sid].get((imti, rlz), []), self.dt)
-                for sid in self.sids]
-
-
-class GmfGetter(object):
     dt = numpy.dtype([('gmv', F32), ('eid', U32)])
 
     def __init__(self, gsims, ebruptures, sitecol, imts, min_iml,
