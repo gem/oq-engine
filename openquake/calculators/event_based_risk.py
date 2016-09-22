@@ -714,8 +714,7 @@ def build_starmap(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
         for rupts in block_splitter(ruptures_by_grp[src_group.id], blocksize):
             trt = grp_trt[rupts[0].grp_id]
             ri = riskinput.RiskInputFromRuptures(
-                trt, imts, sitecol, rupts, trunc_level, correl_model,
-                min_iml)
+                trt, imts, sitecol, rupts, trunc_level, correl_model, min_iml)
             allargs.append((ri, riskmodel, rlzs_assoc, assetcol, monitor))
     smap = starmap(losses_by_taxonomy, allargs)
     smap.num_ruptures = num_ruptures
