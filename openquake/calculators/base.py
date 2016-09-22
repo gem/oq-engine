@@ -32,6 +32,7 @@ from openquake.hazardlib import __version__ as hazardlib_version
 from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
+from openquake.hazardlib.calc.filters import SourceSitesFilter
 from openquake.risklib import riskinput, __version__ as engine_version
 from openquake.commonlib import readinput, riskmodels, datastore, source
 from openquake.commonlib.oqvalidation import OqParam
@@ -49,6 +50,12 @@ calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
 Site = collections.namedtuple('Site', 'sid lon lat')
 
 F32 = numpy.float32
+
+def is_small(sitecol):
+    """
+    Returns True if the site collection contains up to 10 sites
+    """
+    return len(sitecol) <= 10
 
 
 class InvalidCalculationID(Exception):
@@ -75,7 +82,9 @@ PRECALC_MAP = dict(
     classical_bcr=['classical'],
     classical_damage=['classical'],
     event_based=['event_based_risk'],
-    event_based_risk=['event_based'])
+    event_based_risk=['event_based'],
+    ucerf_classical=['ucerf_psha'],
+    ebrisk=['event_based'])
 
 
 def set_array(longarray, shortarray):
@@ -181,7 +190,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             if pre_execute:
                 self.pre_execute()
             self.result = self.execute()
-            if self.result:
+            if self.result is not None:
                 self.post_execute(self.result)
             self.before_export()
             exported = self.export(kw.get('exports', ''))
@@ -260,7 +269,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 self._export(('uhs', fmt), exported)
 
         if self.close:  # in the engine we close later
-            self.result.clear()
+            self.result = None
             try:
                 self.datastore.close()
             except (RuntimeError, ValueError):
@@ -341,16 +350,17 @@ class HazardCalculator(BaseCalculator):
         return sum(len(assets) for assets in self.assets_by_site)
 
     def compute_previous(self):
-        self.precalc = calculators[self.pre_calculator](
+        precalc = calculators[self.pre_calculator](
             self.oqparam, self.monitor('precalculator'),
             self.datastore.calc_id)
-        self.precalc.run(close=False)
+        precalc.run(close=False)
         if 'scenario' not in self.oqparam.calculation_mode:
-            self.csm = self.precalc.csm
-        pre_attrs = vars(self.precalc)
+            self.csm = precalc.csm
+        pre_attrs = vars(precalc)
         for name in ('riskmodel', 'assets_by_site'):
             if name in pre_attrs:
-                setattr(self, name, getattr(self.precalc, name))
+                setattr(self, name, getattr(precalc, name))
+        return precalc
 
     def read_previous(self, precalc_id):
         parent = datastore.read(precalc_id)
@@ -369,7 +379,13 @@ class HazardCalculator(BaseCalculator):
         if 'source' in self.oqparam.inputs:
             with self.monitor(
                     'reading composite source model', autoflush=True):
-                self.csm = readinput.get_composite_source_model(self.oqparam)
+                csm = readinput.get_composite_source_model(self.oqparam)
+                if is_small(self.sitecol):
+                    # filter the CompositeSourceModel upfront
+                    ss_filter = SourceSitesFilter(self.oqparam.maximum_distance)
+                    self.csm = csm.filter(self.sitecol, ss_filter)
+                else:
+                    self.csm = csm
                 self.datastore['csm_info'] = self.csm.info
                 self.rup_data = {}
         self.init()
@@ -385,12 +401,11 @@ class HazardCalculator(BaseCalculator):
             # the parameter hazard_calculation_id is only meaningful if
             # there is a precalculator
             precalc_id = self.oqparam.hazard_calculation_id
-            if precalc_id is None:  # recompute everything
-                self.compute_previous()
-            else:  # read previously computed data
-                self.read_previous(precalc_id)
+            self.precalc = (self.compute_previous() if precalc_id is None
+                            else self.read_previous(precalc_id))
             self.init()
         else:  # we are in a basic calculator
+            self.precalc = None
             self.basic_pre_execute()
             if 'source' in self.oqparam.inputs:
                 job_info.update(readinput.get_job_info(
@@ -413,7 +428,11 @@ class HazardCalculator(BaseCalculator):
         To be overridden to initialize the datasets needed by the calculation
         """
         self.random_seed = None
-        if 'csm_info' in self.datastore:
+        if not self.oqparam.imtls:
+            raise ValueError('Missing intensity_measure_types!')
+        if self.precalc:
+            self.rlzs_assoc = self.precalc.rlzs_assoc
+        elif 'csm_info' in self.datastore:
             self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
         else:  # build a fake; used by risk-from-file calculators
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()

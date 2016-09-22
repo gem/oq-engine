@@ -29,9 +29,10 @@ from openquake.baselib.general import AccumDict
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
-from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
-    hazard_curves_per_trt, ProbabilityMap)
+    pmap_from_grp, ProbabilityMap)
+from openquake.hazardlib.calc.filters import (
+    SourceSitesFilter, source_site_noop_filter)
 from openquake.hazardlib.probability_map import PmapStats
 from openquake.commonlib import parallel, datastore, source, calc
 from openquake.calculators import base
@@ -197,13 +198,12 @@ def classical(sources, sitecol, gsims, monitor):
     else:
         dic.bbs = []
     # NB: the source_site_filter below is ESSENTIAL for performance inside
-    # hazard_curves_per_trt, since it reduces the full site collection
+    # pmap_from_grp, since it reduces the full site collection
     # to a filtered one *before* doing the rupture filtering
-    dic[src_group_id] = hazard_curves_per_trt(
+    dic[src_group_id] = pmap_from_grp(
         sources, sitecol, imtls, gsims, truncation_level,
-        source_site_filter=source_site_distance_filter(max_dist),
         maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
-    dic.calc_times = monitor.calc_times  # added by hazard_curves_per_trt
+    dic.calc_times = monitor.calc_times  # added by pmap_from_grp
     dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
     return dic
 
@@ -278,7 +278,7 @@ class PSHACalculator(base.HazardCalculator):
             maximum_distance=oq.maximum_distance,
             poes_disagg=oq.poes_disagg,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
-            random_seed=oq.random_seed)
+            seed=oq.random_seed)
         tiles = [self.sitecol]
         self.num_tiles = 1
         if self.is_tiling():
@@ -288,9 +288,11 @@ class PSHACalculator(base.HazardCalculator):
             logging.info('Generating %d tiles of %d sites each',
                          self.num_tiles, len(tiles[0]))
         with self.monitor('managing sources', autoflush=True):
+            ss_filter = (SourceSitesFilter(oq.maximum_distance)
+                         if oq.filter_sources else source_site_noop_filter)
             srcman = source.SourceManager(
-                self.csm, oq.maximum_distance, oq.concurrent_tasks,
-                self.datastore, monitor, self.random_seed, oq.filter_sources,
+                self.csm, ss_filter, oq.concurrent_tasks,
+                self.datastore, monitor, self.random_seed,
                 num_tiles=self.num_tiles)
             tm = parallel.starmap(
                 self.core_task.__func__, srcman.gen_args(self.sitecol, tiles))

@@ -50,8 +50,8 @@ if OQ_DISTRIBUTE == 'celery':
     from celery.result import ResultSet
     from celery import Celery
     from celery.task import task
-    from openquake.engine.celeryconfig import BROKER_URL
-    app = Celery('openquake', backend='amqp://', broker=BROKER_URL)
+    from openquake.engine.celeryconfig import BROKER_URL, CELERY_RESULT_BACKEND
+    app = Celery('openquake', backend=CELERY_RESULT_BACKEND, broker=BROKER_URL)
 
 elif OQ_DISTRIBUTE == 'ipython':
     import ipyparallel as ipp
@@ -221,6 +221,7 @@ class IterResult(object):
         self.name = taskname
         self.num_tasks = num_tasks
         self.progress = progress
+        self.sent = 0  # set in TaskManager.submit_all
         self.received = []
         if self.num_tasks:
             self.log_percent = self._log_percent()
@@ -269,8 +270,33 @@ class IterResult(object):
             duration = mon.children[0].duration  # the task is the first child
             tup = (mon.task_no, mon.weight, duration)
             data = numpy.array([tup], self.task_data_dt)
-            hdf5.extend3(mon.hdf5path, 'task_' + self.name, data)
+            hdf5.extend3(mon.hdf5path, 'task_info/' + self.name, data)
         mon.flush()
+
+    def reduce(self, agg=operator.add, acc=None):
+        for result in self:
+            if acc is None:  # first time
+                acc = result
+            else:
+                acc = agg(acc, result)
+        return acc
+
+    @classmethod
+    def sum(cls, iresults):
+        """
+        Sum the data transfer information of a set of results
+        """
+        res = object.__new__(cls)
+        res.received = []
+        res.sent = 0
+        for iresult in iresults:
+            res.received.extend(iresult.received)
+            res.sent += iresult.sent
+            if hasattr(res, 'name'):
+                assert res.name == iresult.name, (res.name, iresult.name)
+            else:
+                res.name = iresult.name
+        return res
 
 
 class TaskManager(object):
@@ -396,7 +422,7 @@ class TaskManager(object):
                 idx = self.task_ids.index(task_id)
                 self.task_ids.pop(idx)
                 fut = Future()
-                fut.set_result(result_dict['result'])
+                fut.set_result(result_dict['result'].unpickle())
                 # work around a celery bug
                 del app.backend._cache[task_id]
                 yield fut

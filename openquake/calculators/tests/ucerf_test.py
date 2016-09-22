@@ -39,5 +39,6 @@ class UcerfTestCase(CalculatorTestCase):
             raise unittest.SkipTest  # UCERF requires vlen arrays
         out = self.run_calc(ucerf.__file__, 'job_classical_redux.ini',
                             exports='csv')
-        [fname] = out['hcurves', 'csv']
-        self.assertEqualFiles('expected/hazard_curve.csv', fname)
+        [f1, f2] = out['hcurves', 'csv']
+        self.assertEqualFiles('expected/hazard_curve-rlz-000.csv', f1)
+        self.assertEqualFiles('expected/hazard_curve-rlz-001.csv', f2)

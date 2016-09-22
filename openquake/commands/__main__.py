@@ -18,6 +18,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 import importlib
 
 from openquake.baselib import sap
@@ -29,9 +30,14 @@ from openquake.engine import config
 
 USE_CELERY = valid.boolean(config.get('celery', 'use_celery') or 'false')
 
-if USE_CELERY:
+# the environment variable has the precedence over the configuration file
+if 'OQ_DISTRIBUTE' not in os.environ and USE_CELERY:
     os.environ['OQ_DISTRIBUTE'] = 'celery'
 
+# force cluster users to use `oq engine` so that we have centralized logs
+if USE_CELERY and 'run' in sys.argv:
+    sys.exit('You are on a cluster and you are using oq run?? '
+             'Use oq engine --run instead!')
 
 def oq():
     modnames = ['openquake.commands.%s' % mod[:-3]

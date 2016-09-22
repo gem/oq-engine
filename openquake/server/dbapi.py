@@ -266,6 +266,9 @@ def match(m_templ, *m_args):
     >>> match('SELECT * FROM job WHERE id=?x', 1)
     ('SELECT * FROM job WHERE id=?', (1,))
     """
+    # strip commented lines
+    m_templ = '\n'.join(line for line in m_templ.splitlines()
+                        if not line.lstrip().startswith('--'))
     if not m_args:
         return m_templ, ()
     try:
@@ -323,7 +326,6 @@ class Db(object):
             raise exc.__class__('%s: %s %s' % (exc, templ, args))
         if templ.lstrip().lower().startswith(('select', 'pragma')):
             rows = cursor.fetchall()
-
             if kw.get('scalar'):  # scalar query
                 if not rows:
                     raise NotFound
@@ -334,7 +336,7 @@ class Db(object):
                 return rows[0][0]
             elif kw.get('one'):  # query returning a single row
                 if not rows:
-                    raise NotFound
+                    raise NotFound(args)
                 elif len(rows) > 1:
                     raise TooManyRows('%s, expected 1' % len(rows))
             elif cursor.description is None:
@@ -344,7 +346,9 @@ class Db(object):
             if kw.get('one'):
                 return Row(colnames, rows[0])
             else:
-                return [Row(colnames, r) for r in rows]
+                tbl = Table([Row(colnames, r) for r in rows])
+                tbl._fields = colnames
+                return tbl
         else:
             return cursor
 
@@ -358,6 +362,11 @@ class Db(object):
                                  table, columns, rows[0])
             cursor.executemany(templ, rows)
         return cursor
+
+
+class Table(list):
+    """Just a list with an attribute _fields"""
+    _fields = []
 
 
 # we cannot use a namedtuple here because one would get a PicklingError:
