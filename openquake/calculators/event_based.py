@@ -225,7 +225,7 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
         List of commonlib.source.Source tuples
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param rlzs_by_gsim:
+    :param gsims:
         a list of GSIMs for the current tectonic region model
     :param monitor:
         monitor instance
@@ -266,8 +266,7 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
         for ebr in build_eb_ruptures(
-                src, num_occ_by_rup, rupture_filter,
-                monitor.random_seed, rup_mon):
+                src, num_occ_by_rup, rupture_filter, monitor.seed, rup_mon):
             nsites = len(ebr.indices)
             try:
                 rate = ebr.rupture.occurrence_rate
@@ -322,6 +321,7 @@ def build_eb_ruptures(
     Filter the ruptures stored in the dictionary num_occ_by_rup and
     yield pairs (rupture, <list of associated EBRuptures>)
     """
+    eid = 0
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
         with rup_mon:
             r_sites = rupture_filter(rup)
@@ -336,9 +336,10 @@ def build_eb_ruptures(
         for (sampleid, ses_idx), num_occ in sorted(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
-                # NB: the 0 below is a placeholder; the right eid will be
+                # NB: the eid below is a placeholder; the right eid will be
                 # set later, in EventBasedRuptureCalculator.post_execute
-                events.append((0, ses_idx, occ_no, sampleid))
+                events.append((eid, ses_idx, occ_no, sampleid))
+                eid += 1
         if events:
             yield EBRupture(rup, r_sites.indices,
                             numpy.array(events, event_dt),
@@ -530,6 +531,9 @@ class EventBasedCalculator(ClassicalCalculator):
         sav_mon.flush()
         agg_mon.flush()
         self.datastore.flush()
+        if 'ruptures' in res:
+            vars(EventBasedRuptureCalculator)['save_ruptures'](
+                self, res['ruptures'])
         return acc
 
     def gen_args(self, ebruptures):
@@ -572,11 +576,13 @@ class EventBasedCalculator(ClassicalCalculator):
             calc.check_overflow(self)
 
         L = len(oq.imtls.array)
-        acc = parallel.starmap(
-            self.core_task.__func__, self.gen_args(self.sesruptures)).reduce(
-                agg=self.combine_pmaps_and_save_gmfs,
-                acc={rlz.ordinal: ProbabilityMap(L, 1)
-                     for rlz in self.rlzs_assoc.realizations})
+        res = parallel.starmap(
+            self.core_task.__func__, self.gen_args(self.sesruptures)
+        ).submit_all()
+        acc = functools.reduce(self.combine_pmaps_and_save_gmfs, res, {
+            rlz.ordinal: ProbabilityMap(L, 1)
+            for rlz in self.rlzs_assoc.realizations})
+        self.save_data_transfer(res)
         if oq.ground_motion_fields and 'gmf_data' in self.datastore:
             self.datastore.set_nbytes('gmf_data')
         return acc
@@ -595,7 +601,11 @@ class EventBasedCalculator(ClassicalCalculator):
             # save individual curves
             if self.oqparam.individual_curves:
                 for i in sorted(result):
-                    self.datastore['hcurves/rlz-%03d' % i] = result[i]
+                    key = 'hcurves/rlz-%03d' % i
+                    if result[i]:
+                        self.datastore[key] = result[i]
+                    else:
+                        logging.info('Zero curves for %s', key)
             # compute and save statistics; this is done in process
             # we don't need to parallelize, since event based calculations
             # involves a "small" number of sites (<= 65,536)

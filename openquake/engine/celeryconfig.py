@@ -58,7 +58,7 @@ BROKER_URL = 'amqp://%(user)s:%(password)s@%(host)s:%(port)s/%(vhost)s' % \
 BROKER_POOL_LIMIT = None
 
 # RabbitMQ result backend (default)
-CELERY_RESULT_BACKEND = 'amqp'
+CELERY_RESULT_BACKEND = 'amqp://'
 
 # Redis result backend (works only on Trusty)
 # CELERY_RESULT_BACKEND = 'redis://%(host)s:6379/0' % amqp

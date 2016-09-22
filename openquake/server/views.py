@@ -28,15 +28,18 @@ except ImportError:
 import re
 
 from xml.parsers.expat import ExpatError
-from django.http import (HttpResponse,
-                         HttpResponseNotFound,
-                         HttpResponseBadRequest,
-                         )
+from django.http import (
+    HttpResponse, HttpResponseNotFound, HttpResponseBadRequest)
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.contrib.auth import authenticate, login, logout
+try:
+    from django.http import FileResponse  # Django >= 1.8
+except ImportError:
+    from django.http import StreamingHttpResponse as FileResponse
+from django.core.servers.basehttp import FileWrapper
 
 from openquake.baselib.general import groupby, writetmp
 from openquake.baselib.python3compat import unicode
@@ -51,7 +54,10 @@ from openquake.server import executor, utils, dbapi
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
+
+XML = 'application/xml'
 JSON = 'application/json'
+HDF5 = 'application/x-hdf'
 
 DEFAULT_LOG_LEVEL = 'info'
 
@@ -60,8 +66,7 @@ DEFAULT_LOG_LEVEL = 'info'
 #: XML by default.
 DEFAULT_EXPORT_TYPE = 'xml'
 
-EXPORT_CONTENT_TYPE_MAP = dict(xml='application/xml',
-                               geojson='application/json')
+EXPORT_CONTENT_TYPE_MAP = dict(xml=XML, geojson=JSON)
 DEFAULT_CONTENT_TYPE = 'text/plain'
 
 LOGGER = logging.getLogger('openquake.server')
@@ -523,6 +528,32 @@ def get_result(request, result_id):
         return response
     finally:
         shutil.rmtree(tmpdir)
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def get_datastore(request, job_id):
+    """
+    Download a full datastore file.
+
+    :param request:
+        `django.http.HttpRequest` object.
+    :param job_id:
+        The id of the requested datastore
+    :returns:
+        A `django.http.HttpResponse` containing the content
+        of the requested artifact, if present, else throws a 404
+    """
+    try:
+        job = logs.dbcmd('get_job', int(job_id))
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+
+    fname = job.ds_calc_dir + '.hdf5'
+    response = FileResponse(
+        FileWrapper(open(fname, 'rb')), content_type=HDF5)
+    response['Content-Disposition'] = 'attachment; filename=%s' % fname
+    return response
 
 
 def web_engine(request, **kwargs):

@@ -91,6 +91,8 @@ def show(what, calc_id=-1):
         print('Realizations in order of distance from the mean curves')
         for dist, rlz in sorted(dists):
             print('%s: rmsep=%s' % (rlz, dist))
+    elif view.keyfunc(what) in view:
+        print(view(what, ds))
     elif what in ds:
         obj = ds[what]
         if hasattr(obj, 'value'):  # an array
@@ -98,7 +100,7 @@ def show(what, calc_id=-1):
         else:
             print(obj)
     else:
-        print(view(what, ds))
+        print('%s not found' % what)
 
     ds.close()
 
