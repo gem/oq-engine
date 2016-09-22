@@ -33,7 +33,7 @@ from openquake.hazardlib.calc import disagg, gmf
 from openquake.commonlib.export import export
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib import writers, hazard_writers, util, readinput
-from openquake.risklib.riskinput import create, GmfCollector
+from openquake.risklib.riskinput import GmfGetter
 from openquake.commonlib import calc
 
 F32 = numpy.float32
@@ -743,7 +743,8 @@ def get_rup_idx(ebrup, etag):
 def _calc_gmfs(dstore, serial, eid):
     oq = dstore['oqparam']
     min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    csm_info = dstore['csm_info']
+    rlzs_assoc = csm_info.get_rlzs_assoc()
     rlzs = rlzs_assoc.realizations
     sitecol = dstore['sitecol'].complete
     N = len(sitecol.complete)
@@ -752,17 +753,21 @@ def _calc_gmfs(dstore, serial, eid):
     rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(rup.grp_id)
     gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F64)
                           for rlz in rlzs_by_gsim.realizations])
-    gmfcoll = create(GmfCollector,
-                     [rup], sitecol, list(oq.imtls), rlzs_by_gsim,
-                     oq.truncation_level, correl_model, min_iml)
-    hazard = {sid: gmfcoll[sid] for sid in gmfcoll.dic}
+    for sm in csm_info.source_models:
+        for sg in sm.src_groups:
+            if sg.id == rup.grp_id:
+                break
+    gsims = [dic[sg.trt] for dic in rlzs_assoc.gsim_by_trt]
+    getter = GmfGetter(gsims, [rup], sitecol,
+                       oq.imtls, min_iml, oq.truncation_level,
+                       correl_model, rlzs_assoc.samples[sg.id])
     for imt in oq.imtls:
         gmfa = numpy.zeros(N, gmf_dt)
         for rlzname in gmf_dt.names:
             rlz = rlzs[int(rlzname)]
-            for sid in rup.indices:
-                gmvs = hazard[sid][imt][rlz]['gmv']
-                gmfa[rlzname][sid] = gmvs
+            for sid, data in zip(getter.sids, getter.get(imt, rlz)):
+                if len(data):
+                    gmfa[rlzname][sid] = data['gmv']
         yield gmfa, imt
 
 
