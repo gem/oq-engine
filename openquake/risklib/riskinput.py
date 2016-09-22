@@ -275,13 +275,13 @@ class CompositeRiskModel(collections.Mapping):
                 iml[rf.imt].append(rf.imls[0])
         return {imt: min(iml[imt]) for imt in iml}
 
-    def get_imts(self):
+    def get_imts(self, taxonomies):
         """
         Returns a sorted list of IMTs defined in the underlying models
         """
         imts = set()
         for loss_type in self.loss_types:
-            for taxonomy in self.taxonomies:
+            for taxonomy in taxonomies:
                 imts.add(self[taxonomy].risk_functions[loss_type].imt)
         return sorted(imts)
 
@@ -472,6 +472,7 @@ class CompositeRiskModel(collections.Mapping):
                 rlzs_assoc, mon_hazard(measuremem=False))
 
         # group the assets by taxonomy
+        taxonomies = set()
         with monitor('grouping assets by taxonomy'):
             dic = collections.defaultdict(list)
             for i, assets in enumerate(assets_by_site):
@@ -480,13 +481,14 @@ class CompositeRiskModel(collections.Mapping):
                     epsgetter = riskinput.epsilon_getter(
                         [asset.ordinal for asset in group[taxonomy]])
                     dic[taxonomy].append((i, group[taxonomy], epsgetter))
-        imts = self.get_imts()
+                    taxonomies.add(taxonomy)
+        imts = self.get_imts(taxonomies)
         for rlz in rlzs_assoc.realizations:
             with mon_hazard:
                 hazard = {imt: hazard_getter.get(imt, rlz) for imt in imts}
-            for loss_type in self.loss_types:
-                for taxonomy in self.taxonomies:
-                    riskmodel = self[taxonomy]
+            for taxonomy in sorted(taxonomies):
+                riskmodel = self[taxonomy]
+                for loss_type in self.loss_types:
                     haz = hazard[riskmodel.risk_functions[loss_type].imt]
                     with mon_risk:
                         for i, assets, epsgetter in dic[taxonomy]:
