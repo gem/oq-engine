@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-from contextlib import contextmanager
 import re
 import sys
 import copy
@@ -31,9 +30,8 @@ import random
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import decode, raise_
+from openquake.baselib.python3compat import decode
 from openquake.baselib.general import groupby, block_splitter, group_array
-from openquake.hazardlib.site import Tile
 from openquake.commonlib import logictree, sourceconverter
 from openquake.commonlib import nrml, node, parallel
 
@@ -43,26 +41,6 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
-
-
-@contextmanager
-def context(src):
-    """
-    Used to add the source_id to the error message. To be used as
-
-    with context(src):
-        operation_with(src)
-
-    Typically the operation is filtering a source, that can fail for
-    tricky geometries.
-    """
-    try:
-        yield
-    except:
-        etype, err, tb = sys.exc_info()
-        msg = 'An error occurred with source id=%s. Error: %s'
-        msg %= (src.source_id, err)
-        raise_(etype, msg, tb)
 
 
 class LtRealization(object):
@@ -187,11 +165,6 @@ class SourceModelParser(object):
         return nrml.parse(fname, self.converter)
 
 
-def agg_prob(acc, prob):
-    """Aggregation function for probabilities"""
-    return 1. - (1. - acc) * (1. - prob)
-
-
 class RlzsAssoc(collections.Mapping):
     """
     Realization association class. It should not be instantiated directly,
@@ -222,7 +195,7 @@ class RlzsAssoc(collections.Mapping):
         self.num_samples = csm_info.num_samples
         self.rlzs_assoc = collections.defaultdict(list)
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
-        self.rlzs_by_smodel = [[] for _ in range(len(csm_info.source_models))]
+        self.rlzs_by_smodel = {sm.ordinal: [] for sm in csm_info.source_models}
         self.gsims_by_grp_id = {}
         self.sm_ids = {}
         self.samples = {}
@@ -245,11 +218,13 @@ class RlzsAssoc(collections.Mapping):
             tot_weight = sum(rlz.weight for rlz in self.realizations)
             if tot_weight == 0:
                 raise ValueError('All realizations have zero weight??')
-            elif abs(tot_weight - 1) > 1E-12:  # allow for rounding errors
+            elif abs(tot_weight - 1) > 1E-8:  # allow for rounding errors
+                # 1E-8 is the value that makes the LogicTreeCase2ClassicalPSHA
+                # demo raise no warning (it should NOT raise warnings)
                 logging.warn('Some source models are not contributing, '
                              'weights are being rescaled')
-            for rlz in self.realizations:
-                rlz.weight = rlz.weight / tot_weight
+                for rlz in self.realizations:
+                    rlz.weight = rlz.weight / tot_weight
 
         self.gsims_by_grp_id = groupby(
             self.rlzs_assoc, operator.itemgetter(0),
@@ -258,7 +233,7 @@ class RlzsAssoc(collections.Mapping):
     @property
     def realizations(self):
         """Flat list with all the realizations"""
-        return sum(self.rlzs_by_smodel, [])
+        return sum(self.rlzs_by_smodel.values(), [])
 
     def get_rlz(self, rlzstr):
         """
@@ -332,59 +307,6 @@ class RlzsAssoc(collections.Mapping):
         assoc._init()
         return assoc
 
-    # used in riskinput
-    def combine(self, results, agg=agg_prob):
-        """
-        :param results: a dictionary (src_group_id, gsim) -> floats
-        :param agg: an aggregation function
-        :returns: a dictionary rlz -> aggregated floats
-
-        Example: a case with tectonic region type T1 with GSIMS A, B, C
-        and tectonic region type T2 with GSIMS D, E.
-
-        >> assoc = RlzsAssoc(CompositionInfo([], []))
-        >> assoc.rlzs_assoc = {
-        ... ('T1', 'A'): ['r0', 'r1'],
-        ... ('T1', 'B'): ['r2', 'r3'],
-        ... ('T1', 'C'): ['r4', 'r5'],
-        ... ('T2', 'D'): ['r0', 'r2', 'r4'],
-        ... ('T2', 'E'): ['r1', 'r3', 'r5']}
-        ...
-        >> results = {
-        ... ('T1', 'A'): 0.01,
-        ... ('T1', 'B'): 0.02,
-        ... ('T1', 'C'): 0.03,
-        ... ('T2', 'D'): 0.04,
-        ... ('T2', 'E'): 0.05,}
-        ...
-        >> combinations = assoc.combine(results, operator.add)
-        >> for key, value in sorted(combinations.items()): print key, value
-        r0 0.05
-        r1 0.06
-        r2 0.06
-        r3 0.07
-        r4 0.07
-        r5 0.08
-
-        You can check that all the possible sums are performed:
-
-        r0: 0.01 + 0.04 (T1A + T2D)
-        r1: 0.01 + 0.05 (T1A + T2E)
-        r2: 0.02 + 0.04 (T1B + T2D)
-        r3: 0.02 + 0.05 (T1B + T2E)
-        r4: 0.03 + 0.04 (T1C + T2D)
-        r5: 0.03 + 0.05 (T1C + T2E)
-
-        In reality, the `.combine` method is used with hazard_curves and
-        the aggregation function is the `agg_curves` function, a composition of
-        probability, which however is close to the sum for small probabilities.
-        """
-        ad = {rlz: 0 for rlz in self.realizations}
-        for key, value in results.items():
-            for rlz in self.rlzs_assoc[key]:
-                ad[rlz] = agg(ad[rlz], value)
-        return ad
-
     def __iter__(self):
         return iter(self.rlzs_assoc)
 
@@ -404,6 +326,7 @@ class RlzsAssoc(collections.Mapping):
         return '<%s(size=%d, rlzs=%d)\n%s>' % (
             self.__class__.__name__, len(self), len(self.realizations),
             '\n'.join('%s: %s' % pair for pair in pairs))
+
 
 LENGTH = 256
 
@@ -511,7 +434,6 @@ class CompositionInfo(object):
         trts = set(sg.trt for sg in source_model.src_groups)
         return self.gsim_lt.reduce(trts).get_num_paths()
 
-    # FIXME: this is called several times, both in .init and in .send_sources
     def get_rlzs_assoc(self, count_ruptures=None):
         """
         Return a RlzsAssoc with fields realizations, gsim_by_trt,
@@ -615,7 +537,7 @@ class CompositeSourceModel(collections.Sequence):
         self.gsim_lt = gsim_lt
         self.source_model_lt = source_model_lt
         self.source_models = source_models
-        self.source_info = ()  # set by the SourceFilterSplitter
+        self.source_info = ()
         self.split_map = {}
         if set_weight:
             self.set_weights()
@@ -624,6 +546,48 @@ class CompositeSourceModel(collections.Sequence):
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples,
             [sm.get_skeleton() for sm in self.source_models])
+
+    def get_model(self, sm_id):
+        """
+        Extract a CompositeSourceModel instance containing the single
+        model of index `sm_id`.
+        """
+        new = self.__class__(
+            self.gsim_lt, self.source_model_lt,
+            [self.source_models[sm_id]], set_weight=False)
+        new.sm_id = sm_id
+        return new
+
+    def filter(self, sitecol, ss_filter):
+        """
+        Generate a new CompositeSourceModel by filtering the sources on
+        the given site collection. Warning: this is slow, so use it only
+        for small site collections (i.e. in disaggregation calculations).
+
+        :param sitecol: a SiteCollection instance
+        :para ss_filter: a SourceSitesFilter instance
+        """
+        source_models = []
+        weight = 0
+        idx = 0
+        for sm in self.source_models:
+            src_groups = [copy.copy(src) for src in sm.src_groups]
+            for src_group in src_groups:
+                sources = []
+                for src, sites in ss_filter(src_group.sources, sitecol):
+                    sources.append(src)
+                    src.id = idx
+                    weight += src.weight
+                    idx += 1
+                src_group.sources = sources
+            newsm = SourceModel(sm.name, sm.weight, sm.path, src_groups,
+                                sm.num_gsim_paths, sm.ordinal, sm.samples)
+            source_models.append(newsm)
+        new = self.__class__(self.gsim_lt, self.source_model_lt, source_models,
+                             set_weight=False)
+        new.weight = weight
+        new.filtered_weight = weight
+        return new
 
     @property
     def src_groups(self):
@@ -748,11 +712,11 @@ source_info_dt = numpy.dtype([
 ])
 
 
-def split_filter(src, sites, max_dist, random_seed):
+def split_filter(src, sites, ss_filter, random_seed):
     """
     :param src: an heavy source
     :param sites: the sites affected by the source
-    :param max_dist: maximum distance for the current TRT
+    :param ss_filter: SourceSitesFilter instance
     :random_seed: used only for event based calculations
     :returns:
         a list [(src, sites, split_sources, filter_time, split_time), ...]
@@ -760,16 +724,14 @@ def split_filter(src, sites, max_dist, random_seed):
     t0 = time.time()
     split_sources = []
     start = 0
-    for ss in sourceconverter.split_source(src):
+    for split in sourceconverter.split_source(src):
         if random_seed:
-            nr = ss.num_ruptures
-            ss.serial = src.serial[start:start + nr]
+            nr = split.num_ruptures
+            split.serial = src.serial[start:start + nr]
             start += nr
-        ss.id = src.id
-        with context(ss):
-            s = ss.filter_sites_by_distance_to_source(max_dist, sites)
-        if s is not None:
-            split_sources.append(ss)
+        split.id = src.id
+        if ss_filter.affected(split, sites) is not None:
+            split_sources.append(split)
     return [(src, sites, split_sources, 0, time.time() - t0)]
 
 
@@ -778,23 +740,25 @@ class SourceManager(object):
     Manager associated to a CompositeSourceModel instance.
     Filter and split sources and send them to the worker tasks.
     """
-    def __init__(self, csm, maximum_distance, concurrent_tasks,
-                 dstore, monitor, random_seed=None,
-                 filter_sources=True, num_tiles=1):
+    def __init__(self, csm, ss_filter, concurrent_tasks,
+                 dstore, monitor, random_seed=None, num_tiles=1):
         self.csm = csm
-        self.maximum_distance = maximum_distance
+        self.ss_filter = ss_filter
         self.concurrent_tasks = concurrent_tasks or 1
         self.random_seed = random_seed
         self.dstore = dstore
         self.monitor = monitor
-        self.filter_sources = filter_sources
         self.num_tiles = num_tiles
         self.rlzs_assoc = csm.info.get_rlzs_assoc()
         self.infos = {}  # src_group_id, source_id -> SourceInfo tuple
 
-        self.maxweight = math.ceil(csm.weight / self.concurrent_tasks)
-        if num_tiles > 1:
-            self.maxweight = max(self.maxweight / num_tiles, MAXWEIGHT)
+        maxweight = math.ceil(csm.weight / self.concurrent_tasks / (
+            num_tiles if self.ss_filter.integration_distance else 1))
+        # if there are S filtered sources and there are T tiles, only S/T
+        # sources contribute to a given tile; by reducing the maxweight
+        # by T we generate the same number of "concurrent_tasks" per tile
+        self.maxweight = max(maxweight, MAXWEIGHT)
+        # MAXWEIGHT is the minimal maxweight, needed to avoid too many tasks
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.maxweight)
         if random_seed is not None:
@@ -837,20 +801,25 @@ class SourceManager(object):
 
     def gen_args(self, sitecol, tiles):
         """
-        Yield (sources, sites, rlzs_assoc, monitor) by
+        Yield (sources, sites, gsims, monitor) by
         looping on the tiles and on the source blocks.
         """
+        ntasks = 0
         for src_data in self._gen_src_light(tiles):
             for args in self._gen_args(src_data, tiles):
                 yield args
-        tile = Tile(sitecol, self.maximum_distance)
+                ntasks += 1
+        if ntasks:
+            logging.info('Generated %d tasks from the light sources', ntasks)
+
+        # this blocks for a long time, so it is best to do it later
         ntasks = 0
         for src_data in self._gen_src_heavy(sitecol):
-            for args in self._gen_args(src_data, [tile]):
+            for args in self._gen_args(src_data, [sitecol]):
                 yield args
                 ntasks += 1
         if ntasks:
-            logging.info('Generated %s tasks from the heavy sources', ntasks)
+            logging.info('Generated %d tasks from the heavy sources', ntasks)
 
     def _gen_args(self, src_data, tiles):
         mon = self.monitor.new()
@@ -869,21 +838,17 @@ class SourceManager(object):
 
     def _gen_src_light(self, tiles):
         filter_mon = self.monitor('filtering sources')
-        tiles = [Tile(tile, self.maximum_distance) for tile in tiles]
-        if self.filter_sources and self.num_tiles == 1:
+        if self.ss_filter.integration_distance and self.num_tiles == 1:
             logging.info('Filtering light sources')
         sources = self.csm.get_sources('light', self.maxweight)
         for i, tile in enumerate(tiles):
             data = []
             for src in sources:
-                with filter_mon, context(src):
-                    if self.filter_sources:
-                        ok = src in tile
-                    else:  # accept all sources
-                        ok = True
-                if ok:
+                with filter_mon:
+                    affected = self.ss_filter.affected(src, tile)
+                if affected is not None:
                     data.append((src, i, [], filter_mon.dt, 0))
-                self.csm.filtered_weight += src.weight
+                    self.csm.filtered_weight += src.weight
             filter_mon.flush()
             if len(tiles) > 1:
                 logging.info('Got %d light source(s) from tile %d',
@@ -891,16 +856,12 @@ class SourceManager(object):
             yield data
 
     def _gen_src_heavy(self, sitecol):
+        ss_filter = self.ss_filter
         sources = self.csm.get_sources('heavy', self.maxweight)
         data = []
-        for src in sources:
+        for src, sites in ss_filter(sources, sitecol):
             self.csm.filtered_weight += src.weight
-            with context(src):
-                sites = src.filter_sites_by_distance_to_source(
-                    self.maximum_distance[src.tectonic_region_type], sitecol)
-            if sites is not None:
-                max_dist = self.maximum_distance[src.tectonic_region_type]
-                data.append((src, sites, max_dist, self.random_seed))
+            data.append((src, sites, self.ss_filter, self.random_seed))
         return parallel.starmap(split_filter, data)
 
     def pre_store_source_info(self, dstore):
