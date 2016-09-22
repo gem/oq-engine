@@ -138,6 +138,7 @@ class OqParam(valid.ParamSet):
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     risk_investigation_time = valid.Param(valid.positivefloat, None)
     rupture_mesh_spacing = valid.Param(valid.positivefloat)
+    ruptures_per_block = valid.Param(valid.positiveint, 1000)
     complex_fault_mesh_spacing = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     ses_per_logic_tree_path = valid.Param(valid.positiveint, 1)
@@ -195,6 +196,15 @@ class OqParam(valid.ParamSet):
                 self.check_gsims(gsims)
         elif self.gsim is not None:
             self.check_gsims([self.gsim])
+
+        # checks for disaggregation
+        if self.calculation_mode == 'disaggregation':
+            if not self.individual_curves:
+                raise ValueError(
+                    'For disaggregation the flag `individual_curves` '
+                    'must be true')
+            elif not self.poes_disagg:
+                raise ValueError('poes_disagg must be set in the job.ini file')
 
     def check_gsims(self, gsims):
         """

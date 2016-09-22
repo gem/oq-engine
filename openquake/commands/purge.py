@@ -52,7 +52,11 @@ def purge(calc_id):
                 purge_one(calc_id, user)
     else:
         if calc_id < 0:
-            calc_id = datastore.get_calc_ids()[calc_id]
+            try:
+                calc_id = datastore.get_calc_ids()[calc_id]
+            except IndexError:
+                print('Calculation %d not found' % calc_id)
+                return
         purge_one(calc_id, user)
 
 purge.arg('calc_id', 'calculation ID', type=int)
