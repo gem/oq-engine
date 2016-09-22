@@ -51,6 +51,7 @@ Site = collections.namedtuple('Site', 'sid lon lat')
 
 F32 = numpy.float32
 
+
 def is_small(sitecol):
     """
     Returns True if the site collection contains up to 10 sites
@@ -377,13 +378,13 @@ class HazardCalculator(BaseCalculator):
     def basic_pre_execute(self):
         self.read_risk_data()
         if 'source' in self.oqparam.inputs:
+            self.ss_filter = SourceSitesFilter(self.oqparam.maximum_distance)
             with self.monitor(
                     'reading composite source model', autoflush=True):
                 csm = readinput.get_composite_source_model(self.oqparam)
                 if is_small(self.sitecol):
                     # filter the CompositeSourceModel upfront
-                    ss_filter = SourceSitesFilter(self.oqparam.maximum_distance)
-                    self.csm = csm.filter(self.sitecol, ss_filter)
+                    self.csm = csm.filter(self.sitecol, self.ss_filter)
                 else:
                     self.csm = csm
                 self.datastore['csm_info'] = self.csm.info
@@ -542,14 +543,6 @@ class HazardCalculator(BaseCalculator):
             if self.riskmodel and missing:
                 raise RuntimeError('The exposure contains the taxonomies %s '
                                    'which are not in the risk model' % missing)
-
-    def is_tiling(self):
-        """
-        :returns:
-            True if the calculator produces more than one tile, False otherwise
-        """
-        return (self.oqparam.calculation_mode in ('psha', 'classical') and
-                len(self.sitecol) > self.oqparam.sites_per_tile)
 
     def save_data_transfer(self, iter_result):
         """
