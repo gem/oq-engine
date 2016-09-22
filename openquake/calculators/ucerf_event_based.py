@@ -31,7 +31,7 @@ import numpy
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.risklib import valid
+from openquake.risklib import valid, riskinput
 from openquake.commonlib import readinput, parallel, source, calc
 from openquake.calculators import base, event_based
 
@@ -678,6 +678,7 @@ def compute_ruptures_gmfs_curves(
         Dictionary of rupture instances associated to a TRT ID
     """
     oq = monitor.oqparam
+    correl_model = readinput.get_correl_model(oq)
     imts = list(oq.imtls)
     min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
     integration_distance = oq.maximum_distance[DEFAULT_TRT]
@@ -689,9 +690,9 @@ def compute_ruptures_gmfs_curves(
     res['ruptures'] = rupdic = AccumDict()
     rupdic.num_events = 0
     rupdic.trt = DEFAULT_TRT
+    rlzs_by_grp = rlzs_assoc.get_rlzs_by_grp_id()
     for grp_id, (ltbrid, branch_id, _) in enumerate(branch_info):
         t0 = time.time()
-        rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
         with filter_mon:
             ucerf.update_background_site_filter(
                 branch_id, sitecol, integration_distance)
@@ -725,8 +726,12 @@ def compute_ruptures_gmfs_curves(
                     serial += 1
                     rupdic.num_events += len(events)
         res['ruptures'][grp_id] = ses_ruptures
-        res.update(event_based.compute_gmfs_and_curves(
-            ses_ruptures, sitecol, imts, rlzs_by_gsim, min_iml, monitor))
+        gsims = [dic[DEFAULT_TRT] for dic in rlzs_assoc.gsim_by_trt]
+        gg = riskinput.GmfGetter(gsims, ses_ruptures, sitecol,
+                                 imts, min_iml, oq.truncation_level,
+                                 correl_model, rlzs_assoc.samples[grp_id])
+        rlzs = rlzs_by_grp[grp_id]
+        res.update(event_based.compute_gmfs_and_curves(gg, rlzs, monitor))
         res.calc_times[grp_id] = (ltbrid, time.time() - t0)
     return res
 
