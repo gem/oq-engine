@@ -35,12 +35,13 @@ from openquake.hazardlib import geo
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import readinput, parallel, calc
 from openquake.commonlib.util import max_rel_diff_index, Rupture
-from openquake.risklib.riskinput import create, GmfCollector, str2rsi, rsi2str
+from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 
 # ######################## rupture calculator ############################ #
 
+U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -455,8 +456,11 @@ class EventBasedRuptureCalculator(PSHACalculator):
 
 # ######################## GMF calculator ############################ #
 
-def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_by_gsim,
-                            min_iml, monitor):
+gmv_dt = numpy.dtype(
+    [('gmv', F32), ('eid', U32), ('rlzi', U16), ('imti', U8)])
+
+
+def compute_gmfs_and_curves(getter, rlzs, monitor):
     """
     :param eb_ruptures:
         a list of blocks of EBRuptures of the same SESCollection
@@ -472,27 +476,30 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_by_gsim,
         a dictionary with keys gmfcoll and hcurves
    """
     oq = monitor.oqparam
-    # NB: by construction each block is a non-empty list with
-    # ruptures of the same src_group_id
-    trunc_level = oq.truncation_level
-    correl_model = readinput.get_correl_model(oq)
-    gmfcoll = create(
-        GmfCollector, eb_ruptures, sitecol, imts, rlzs_by_gsim,
-        trunc_level, correl_model, min_iml, monitor)
+    haz = {sid: {} for sid in getter.sids}
+    gmfcoll = {sid: [] for sid in getter.sids}
+    for imti, imt in enumerate(getter.imts):
+        for rlz in rlzs:
+            for sid, gmvs in zip(getter.sids, getter.get(imt, rlz)):
+                if oq.hazard_curves_from_gmfs:
+                    haz[sid][imt, rlz] = gmvs
+                for rec in gmvs:
+                    gmfcoll[sid].append(
+                        (rec['gmv'], rec['eid'], rlz.ordinal, imti))
+    for sid in gmfcoll:
+        gmfcoll[sid] = numpy.array(gmfcoll[sid], gmv_dt)
     result = dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
                   hcurves={})
     if oq.hazard_curves_from_gmfs:
         with monitor('building hazard curves', measuremem=False):
             duration = oq.investigation_time * oq.ses_per_logic_tree_path
-            for sid in gmfcoll.dic:
-                haz_by_imt_rlz = gmfcoll[sid]
-                for imt in haz_by_imt_rlz:
-                    for rlz, gmvs in haz_by_imt_rlz[imt].items():
-                        poes = calc._gmvs_to_haz_curve(
-                            gmvs['gmv'], oq.imtls[imt],
-                            oq.investigation_time, duration)
-                        key = rsi2str(rlz.ordinal, sid, imt)
-                        result['hcurves'][key] = poes
+            for sid, haz_by_imt_rlz in haz.items():
+                for imt, rlz in haz_by_imt_rlz:
+                    gmvs = haz_by_imt_rlz[imt, rlz]['gmv']
+                    poes = calc._gmvs_to_haz_curve(
+                        gmvs, oq.imtls[imt], oq.investigation_time, duration)
+                    key = rsi2str(rlz.ordinal, sid, imt)
+                    result['hcurves'][key] = poes
     return result
 
 
@@ -521,7 +528,8 @@ class EventBasedCalculator(ClassicalCalculator):
         agg_mon = self.monitor('aggregating hcurves')
         if res['gmfcoll'] is not None:
             with sav_mon:
-                res['gmfcoll'].flush(self.datastore)
+                for sid, array in res['gmfcoll'].items():
+                    self.datastore.extend('gmf_data/sid-%04d' % sid, array)
         slicedic = self.oqparam.imtls.slicedic
         with agg_mon:
             for key, poes in res['hcurves'].items():
@@ -546,12 +554,21 @@ class EventBasedCalculator(ClassicalCalculator):
         monitor.oqparam = oq
         imts = list(oq.imtls)
         min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
+        grp_trt = {sg.id: sg.trt for sm in self.csm.info.source_models
+                   for sg in sm.src_groups}
+        rlzs_by_grp = self.rlzs_assoc.get_rlzs_by_grp_id()
+        correl_model = readinput.get_correl_model(oq)
         for block in split_in_blocks(
                 ebruptures, oq.concurrent_tasks or 1,
                 key=operator.attrgetter('grp_id')):
             grp_id = block[0].grp_id
-            rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
-            yield block, self.sitecol, imts, rlzs_by_gsim, min_iml, monitor
+            trt = grp_trt[grp_id]
+            gsims = [dic[trt] for dic in self.rlzs_assoc.gsim_by_trt]
+            samples = self.rlzs_assoc.samples[grp_id]
+            getter = GmfGetter(gsims, block, self.sitecol,
+                               imts, min_iml, oq.truncation_level,
+                               correl_model, samples)
+            yield getter, rlzs_by_grp[grp_id], monitor
 
     def execute(self):
         """
