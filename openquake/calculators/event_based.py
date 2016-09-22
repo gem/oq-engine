@@ -26,7 +26,7 @@ import collections
 import numpy
 
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict, split_in_blocks
+from openquake.baselib.general import AccumDict, split_in_blocks, get_array
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import ProbabilityMap
@@ -583,8 +583,6 @@ class EventBasedCalculator(ClassicalCalculator):
             rlz.ordinal: ProbabilityMap(L, 1)
             for rlz in self.rlzs_assoc.realizations})
         self.save_data_transfer(res)
-        if oq.ground_motion_fields and 'gmf_data' in self.datastore:
-            self.datastore.set_nbytes('gmf_data')
         return acc
 
     def post_execute(self, result):
@@ -617,6 +615,17 @@ class EventBasedCalculator(ClassicalCalculator):
                 if kind == 'mean' and not self.oqparam.mean_hazard_curves:
                     continue
                 self.datastore['hcurves/' + kind] = stat
+
+        if ('gmf_data' in self.datastore and 'nbytes' not
+                in self.datastore['gmf_data'].attrs):
+            self.datastore.set_nbytes('gmf_data')
+            # set some syntethic indicator of the gmvs for debugging purposes
+            for sid in self.datastore['gmf_data']:
+                dset = self.datastore['gmf_data/' + sid]
+                if len(dset) < 100:  # consider only small datasets
+                    gmvs = get_array(dset, imti=0)['gmv']
+                    dset.attrs['mean'] = gmvs.mean()
+                    dset.attrs['std'] = gmvs.std(ddof=1)
 
         if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')

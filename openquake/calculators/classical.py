@@ -24,8 +24,7 @@ import collections
 from functools import partial, reduce
 import numpy
 
-from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -34,13 +33,41 @@ from openquake.hazardlib.calc.hazard_curve import (
 from openquake.hazardlib.calc.filters import (
     SourceSitesFilter, source_site_noop_filter)
 from openquake.hazardlib.probability_map import PmapStats
-from openquake.commonlib import parallel, datastore, source, calc
+from openquake.commonlib import (
+    parallel, datastore, source, calc, sourceconverter)
 from openquake.calculators import base
 
 U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
+
+MAXWEIGHT = 200
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
+
+
+# split (and filter if there are few sites)
+def split_source(src, sites, ss_filter, random_seed):
+    """
+    :param src: an heavy source
+    :param sites: a (filtered) SiteCollection
+    :param ss_filter: a SourceSitesFilter instance
+    :random_seed: used only for event based calculations
+    :returns: a list of split sources
+    """
+    split_sources = []
+    start = 0
+    is_small = len(sites) <= 10
+    for split in sourceconverter.split_source(src):
+        if random_seed:
+            nr = split.num_ruptures
+            split.serial = src.serial[start:start + nr]
+            start += nr
+        if is_small:
+            if ss_filter.affected(split, sites) is not None:
+                split_sources.append(split)
+        else:
+            split_sources.append(split)
+    return split_sources
 
 
 class BBdict(AccumDict):
@@ -224,13 +251,17 @@ class PSHACalculator(base.HazardCalculator):
         :param val: a nested dictionary grp_id -> ProbabilityMap
         """
         with self.monitor('aggregate curves', autoflush=True):
+            [(grp_id, pmap)] = val.items()  # val is a dict of len 1
             if hasattr(val, 'calc_times'):
-                acc.calc_times.extend(val.calc_times)
+                for src_id, nsites, calc_time in val.calc_times:
+                    src_id = src_id.split(':', 1)[0]
+                    info = self.infos[grp_id, src_id]
+                    info.calc_time += calc_time
+                    info.num_sites = max(info.num_sites, nsites)
             if hasattr(val, 'eff_ruptures'):
                 acc.eff_ruptures += val.eff_ruptures
             for bb in getattr(val, 'bbs', []):
                 acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
-            [(grp_id, pmap)] = val.items()  # val is a dict of len 1
             acc[grp_id] |= pmap
         self.datastore.flush()
         return acc
@@ -279,56 +310,84 @@ class PSHACalculator(base.HazardCalculator):
             poes_disagg=oq.poes_disagg,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
             seed=oq.random_seed)
-        tiles = [self.sitecol]
         self.num_tiles = 1
-        if self.is_tiling():
-            hint = math.ceil(len(self.sitecol) / oq.sites_per_tile)
-            tiles = self.sitecol.split_in_tiles(hint)
-            self.num_tiles = len(tiles)
-            logging.info('Generating %d tiles of %d sites each',
-                         self.num_tiles, len(tiles[0]))
+        
         with self.monitor('managing sources', autoflush=True):
-            ss_filter = (SourceSitesFilter(oq.maximum_distance)
-                         if oq.filter_sources else source_site_noop_filter)
-            srcman = source.SourceManager(
-                self.csm, ss_filter, oq.concurrent_tasks,
-                self.datastore, monitor, self.random_seed,
-                num_tiles=self.num_tiles)
-            tm = parallel.starmap(
-                self.core_task.__func__, srcman.gen_args(self.sitecol, tiles))
-            iter_result = tm.submit_all()
-            srcman.pre_store_source_info(self.datastore)
-        pmap_by_grp_id = reduce(self.agg_dicts, iter_result, self.zerodict())
-        self.save_data_transfer(iter_result)
+            src_groups = list(self.csm.src_groups)
+            res = parallel.starmap(
+                self.core_task.__func__, self.gen_args(src_groups, oq, monitor)
+            ).submit_all()
+        acc = reduce(self.agg_dicts, res, self.zerodict())
+        self.save_data_transfer(res)
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(pmap_by_grp_id)
+            self.store_source_info(acc)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
-            partial(self.count_eff_ruptures, pmap_by_grp_id))
+            partial(self.count_eff_ruptures, acc))
         self.datastore['csm_info'] = self.csm.info
-        return pmap_by_grp_id
+        return acc
+
+    def gen_args(self, src_groups, oq, monitor):
+        """
+        Used in the case of large source model logic trees.
+
+        :param src_groups: a list of SourceGroup instances
+        :param oq: a :class:`openquake.commonlib.oqvalidation.OqParam` instance
+        :param monitor: a :class:`openquake.baselib.performance.Monitor`
+        :yields: (sources, sites, gsims, monitor) tuples
+        """
+        ss_filter = (SourceSitesFilter(oq.maximum_distance)
+                     if oq.filter_sources else source_site_noop_filter)
+        ngroups = len(src_groups)
+        logging.info('Considering %d source groups', ngroups)
+        if self.random_seed is not None:
+            self.csm.init_serials()
+        ct = oq.concurrent_tasks or 1
+        if len(self.sitecol) > 10000:  # correction for lots of sites
+            ct *= math.sqrt(len(self.sitecol) / 10000)
+        maxweight = max(math.ceil(self.csm.weight / ct), MAXWEIGHT)
+        logging.info('Using a maxweight of %d', maxweight)
+        nheavy = nlight = 0
+        self.infos = {}
+        for sg in src_groups:
+            gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
+            if oq.poes_disagg:  # only for disaggregation
+                monitor.sm_id = self.rlzs_assoc.sm_ids[sg.id]
+            monitor.seed = self.rlzs_assoc.seed
+            monitor.samples = self.rlzs_assoc.samples[sg.id]
+            light = [src for src in sg.sources if src.weight <= maxweight]
+            for block in block_splitter(
+                    light, maxweight, weight=operator.attrgetter('weight')):
+                for src in block:
+                    self.infos[sg.id, src.source_id] = source.SourceInfo(src)
+                yield block, self.sitecol, gsims, monitor
+                nlight += 1
+            heavy = [src for src in sg.sources if src.weight > maxweight]
+            if not heavy:
+                continue
+            with self.monitor('filter/split heavy sources', autoflush=True):
+                for src, sites in ss_filter(heavy, self.sitecol):
+                    self.infos[sg.id, src.source_id] = source.SourceInfo(src)
+                    sources = split_source(
+                        src, sites, self.ss_filter, self.random_seed)
+                    for block in block_splitter(
+                            sources, maxweight,
+                            weight=operator.attrgetter('weight')):
+                        yield block, sites, gsims, monitor
+                        nheavy += 1
+        logging.info('Sent %d light and %d heavy tasks', nlight, nheavy)
 
     def store_source_info(self, pmap_by_grp_id):
         # save the calculation times per each source
-        calc_times = getattr(pmap_by_grp_id, 'calc_times', [])
-        if calc_times and 'source_info' in self.datastore:
-            sources = self.csm.get_sources()
-            info_dict = {(rec['src_group_id'], rec['source_id']): rec
-                         for rec in self.source_info}
-            for src_idx, dt in calc_times:
-                src = sources[src_idx]
-                info = info_dict[src.src_group_id, encode(src.source_id)]
-                info['cum_calc_time'] += dt
-                info['num_tasks'] += 1
-                if dt > info['max_calc_time']:
-                    info['max_calc_time'] = dt
-
+        if self.infos:
             rows = sorted(
-                info_dict.values(), key=operator.itemgetter(7), reverse=True)
-            array = numpy.zeros(len(rows), source.source_info_dt)
+                self.infos.values(), key=operator.attrgetter('calc_time'),
+                reverse=True)
+            array = numpy.zeros(len(rows), source.SourceInfo.dt)
             for i, row in enumerate(rows):
                 for name in array.dtype.names:
-                    array[i][name] = row[name]
+                    array[i][name] = getattr(row, name)
             self.source_info = array
+        self.infos.clear()
         self.datastore.flush()
 
     def post_execute(self, pmap_by_grp_id):
