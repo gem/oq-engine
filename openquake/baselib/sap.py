@@ -103,7 +103,7 @@ class Script(object):
         self.argdict = OrderedDict(zip(args, alldefaults))
         self.description = descr = func.__doc__ if func.__doc__ else None
         self.parentparser = get_parentparser(parentparser, descr, help)
-        self.names = set()
+        self.names = []
         self.all_arguments = []
         self._group = self.parentparser
         self._argno = 0  # used in the NameError check in the _add method
@@ -129,7 +129,7 @@ class Script(object):
                 'Setting argument %s, but it should be %s' % (name, argname))
         self._group.add_argument(*args, **kw)
         self.all_arguments.append((args, kw))
-        self.names.add(name)
+        self.names.append(name)
         self._argno += 1
 
     def arg(self, name, help, type=None, choices=None, metavar=None,

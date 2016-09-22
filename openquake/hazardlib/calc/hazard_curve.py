@@ -226,7 +226,8 @@ def pmap_from_grp(
                             ctx_mon, pne_mon, disagg_mon)
             # we are attaching the calculation times to the monitor
             # so that oq-lite (and the engine) can store them
-            monitor.calc_times.append((src.id, time.time() - t0))
+            monitor.calc_times.append(
+                (src.source_id, len(s_sites), time.time() - t0))
             # NB: source.id is an integer; it should not be confused
             # with source.source_id, which is a string
         monitor.eff_ruptures = pne_mon.counts  # contributing ruptures
