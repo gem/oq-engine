@@ -420,7 +420,7 @@ class CompositeRiskModel(collections.Mapping):
         return RiskInput(hazards_by_site, assetcol, eps_dict)
 
     def build_inputs_from_ruptures(
-            self, grp_trti, imts, sitecol, all_ruptures, trunc_level,
+            self, grp_trt, imts, sitecol, all_ruptures, trunc_level,
             correl_model, min_iml, eps, hint):
         """
         :param imts: list of intensity measure type strings
@@ -446,7 +446,7 @@ class CompositeRiskModel(collections.Mapping):
             idxs = numpy.arange(start, start + len(eids))
             start += len(eids)
             yield RiskInputFromRuptures(
-                grp_trti[grp_id], imts, sitecol, ses_ruptures,
+                grp_trt[grp_id], imts, sitecol, ses_ruptures,
                 trunc_level, correl_model, min_iml,
                 eps[:, idxs] if eps is not None else None, eids)
 
@@ -542,9 +542,8 @@ class GmfGetterOld(object):
 class GmfGetter(object):
     dt = numpy.dtype([('gmv', F32), ('eid', U32)])
 
-    def __init__(self, trti, gsims, ebruptures, sitecol, imts, min_iml,
+    def __init__(self, gsims, ebruptures, sitecol, imts, min_iml,
                  truncation_level, correlation_model, samples):
-        self.trti = trti
         self.gsims = gsims
         self.imts = imts
         self.min_iml = {
@@ -557,14 +556,15 @@ class GmfGetter(object):
         for ebr in ebruptures:
             sites = site.FilteredSiteCollection(ebr.indices, sitecol.complete)
             computer = calc.gmf.GmfComputer(
-                ebr, sites, imts, gsims, truncation_level, correlation_model)
+                ebr, sites, imts, set(gsims),
+                truncation_level, correlation_model)
             self.computers.append(computer)
         self.gmfbytes = 0
 
     def get(self, imt, rlz):
         imt = from_string(imt)
         min_gmv = self.min_iml[imt]
-        gsim = rlz.gsim_rlz.value[self.trti]
+        gsim = self.gsims[rlz.ordinal]
         gmfdict = collections.defaultdict(list)
         for computer in self.computers:
             rup = computer.rupture
@@ -776,12 +776,12 @@ class RiskInputFromRuptures(object):
     :params epsilons: a matrix of epsilons (or None)
     :param eids: an array of event IDs (or None)
     """
-    def __init__(self, trti, imts, sitecol, ses_ruptures,
+    def __init__(self, trt, imts, sitecol, ses_ruptures,
                  trunc_level, correl_model, min_iml, epsilons=None,
                  eids=None):
         self.sitecol = sitecol
         self.ses_ruptures = numpy.array(ses_ruptures)
-        self.trti = trti
+        self.trt = trt
         self.trunc_level = trunc_level
         self.correl_model = correl_model
         self.min_iml = min_iml
@@ -814,8 +814,8 @@ class RiskInputFromRuptures(object):
             lists of N hazard dictionaries imt -> rlz -> Gmvs
         """
         grp_id = self.ses_ruptures[0].grp_id
-        gsims = rlzs_assoc.gsims_by_grp_id[grp_id]
-        gg = GmfGetter(self.trti, gsims, self.ses_ruptures, self.sitecol,
+        gsims = [dic[self.trt] for dic in rlzs_assoc.gsim_by_trt]
+        gg = GmfGetter(gsims, self.ses_ruptures, self.sitecol,
                        self.imts, self.min_iml, self.trunc_level,
                        self.correl_model, rlzs_assoc.samples[grp_id])
         return gg
