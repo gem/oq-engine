@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import print_function
 import os
 import sys
 import mock
@@ -42,7 +42,6 @@ from openquake.qa_tests_data.classical import case_1
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import case_5
-from openquake.calculators.tests import check_platform
 from openquake.server import manage, dbapi
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
@@ -178,10 +177,9 @@ class RunShowExportTestCase(unittest.TestCase):
         """
         Build a datastore instance to show what it is inside
         """
-        # the tests here gives mysterious core dumps in Ubuntu 16.04,
-        # but only if called together with all other tests with the command
+        # the tests here gave mysterious core dumps in Ubuntu 16.04,
+        # but only when called together with all other tests with the command
         # nosetests openquake/commonlib/
-        check_platform('trusty')
         job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
         with Print.patch() as cls.p:
             calc = run._run(job_ini, 0, False, 'info', None, '', {})
@@ -214,7 +212,7 @@ class RunShowExportTestCase(unittest.TestCase):
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
         with Print.patch() as p:
-            export('hcurves', tempdir, self.calc_id)
+            export('hcurves', self.calc_id, 'csv', tempdir)
         [fname] = os.listdir(tempdir)
         self.assertIn(str(fname), str(p))
         shutil.rmtree(tempdir)
@@ -290,7 +288,7 @@ class SourceModelShapefileConverterTestCase(unittest.TestCase):
     def setUp(self):
         if not hasattr(shapefile, '__version__'):
             # for versions < 1.2.3
-            raise unittest.SkipTest
+            raise unittest.SkipTest('shapefile library too old')
         self.OUTDIR = tempfile.mkdtemp()
 
     def test_roundtrip_invalid(self):
