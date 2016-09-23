@@ -716,7 +716,8 @@ def build_starmap(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
             ri = riskinput.RiskInputFromRuptures(
                 trt, imts, sitecol, rupts, trunc_level, correl_model, min_iml)
             allargs.append((ri, riskmodel, rlzs_assoc, assetcol, monitor))
-    smap = starmap(losses_by_taxonomy, allargs)
+    taskname = '%s#%d' % (losses_by_taxonomy.__name__, ssm.sm_id + 1)
+    smap = starmap(losses_by_taxonomy, allargs, name=taskname)
     smap.num_ruptures = num_ruptures
     smap.num_events = num_events
     smap.sm_id = ssm.sm_id
