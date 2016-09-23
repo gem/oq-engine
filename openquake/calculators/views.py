@@ -171,9 +171,7 @@ def view_times_by_source_class(token, dstore):
     Returns the calculation times depending on the source typology
     """
     totals = sum_tbl(
-        dstore['source_info'], 'source_class',
-        ['filter_time', 'split_time', 'cum_calc_time',
-         'max_calc_time', 'num_tasks'])
+        dstore['source_info'], 'source_class', ['calc_time'])
     return rst_table(totals)
 
 
@@ -244,9 +242,9 @@ def view_ruptures_per_trt(token, dstore):
     tot_weight = 0
     source_info = dstore['source_info'].value
     csm_info = dstore['csm_info']
-    w = groupby(source_info, operator.itemgetter('src_group_id'),
+    w = groupby(source_info, operator.itemgetter('grp_id'),
                 lambda rows: sum(r['weight'] for r in rows))
-    n = groupby(source_info, operator.itemgetter('src_group_id'),
+    n = groupby(source_info, operator.itemgetter('grp_id'),
                 lambda rows: sum(1 for r in rows))
     for i, sm in enumerate(csm_info.source_models):
         for src_group in sm.src_groups:
@@ -672,3 +670,15 @@ def view_task_info(token, dstore):
     if len(data) == 1:
         return 'Not available'
     return rst_table(data)
+
+
+@view.add('task_durations')
+def view_task_durations(token, dstore):
+    """
+    Display the raw task durations. Here is an example of usage::
+
+      $ oq show task_durations:classical
+    """
+    task = token.split(':')[1]  # called as task_duration:task_name
+    array = dstore['task_info/' + task]['duration']
+    return '\n'.join(map(str, array))

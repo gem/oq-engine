@@ -732,7 +732,7 @@ def compute_ruptures_gmfs_curves(
                                  correl_model, rlzs_assoc.samples[grp_id])
         rlzs = rlzs_by_grp[grp_id]
         res.update(event_based.compute_gmfs_and_curves(gg, rlzs, monitor))
-        res.calc_times[grp_id] = (ltbrid, time.time() - t0)
+        res.calc_times[grp_id] = (ltbrid, len(sitecol), time.time() - t0)
     return res
 
 
@@ -797,7 +797,7 @@ class UCERFEventBasedCalculator(event_based.EventBasedCalculator):
         self.save_data_transfer(res)
         self.datastore['csm_info'] = self.csm.info
         self.datastore['source_info'] = numpy.array(
-            self.infos, source.source_info_dt)
+            self.infos, source.SourceInfo.dt)
         if 'gmf_data' in self.datastore:
             self.datastore.set_nbytes('gmf_data')
         return data

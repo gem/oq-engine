@@ -188,8 +188,8 @@ def area_to_point_sources(area_src):
     for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):
         pt = source.PointSource(
             # Generate a new ID and name
-            source_id='%s-%s' % (area_src.source_id, i),
-            name='%s-%s' % (area_src.name, i),
+            source_id='%s:%s' % (area_src.source_id, i),
+            name='%s:%s' % (area_src.name, i),
             tectonic_region_type=area_src.tectonic_region_type,
             mfd=new_mfd,
             rupture_mesh_spacing=area_src.rupture_mesh_spacing,
@@ -221,7 +221,7 @@ def split_fault_source_by_magnitude(src):
         if not rate:  # ignore zero occurency rate
             continue
         new_src = copy.copy(src)
-        new_src.source_id = '%s-%s' % (src.source_id, i)
+        new_src.source_id = '%s:%s' % (src.source_id, i)
         new_src.mfd = mfd.EvenlyDiscretizedMFD(
             min_mag=mag, bin_width=src.mfd.bin_width,
             occurrence_rates=[rate])
@@ -272,7 +272,7 @@ class MultiRuptureSource(object):
         """
         for i, ruptures in enumerate(
                 block_splitter(src.iter_ruptures(), block_size)):
-            yield cls(ruptures, '%s-%s' % (src.source_id, i),
+            yield cls(ruptures, '%s:%s' % (src.source_id, i),
                       src.tectonic_region_type, src.src_group_id)
 
     def __init__(self, ruptures, source_id, tectonic_region_type,
