@@ -33,7 +33,7 @@ from openquake.hazardlib.calc.hazard_curve import ProbabilityMap
 from openquake.hazardlib.probability_map import PmapStats
 from openquake.hazardlib import geo
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import readinput, parallel, calc
+from openquake.commonlib import parallel, calc
 from openquake.commonlib.util import max_rel_diff_index, Rupture
 from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str
 from openquake.calculators import base
@@ -557,7 +557,7 @@ class EventBasedCalculator(ClassicalCalculator):
         grp_trt = {sg.id: sg.trt for sm in self.csm.info.source_models
                    for sg in sm.src_groups}
         rlzs_by_grp = self.rlzs_assoc.get_rlzs_by_grp_id()
-        correl_model = oq.get_correl_model
+        correl_model = oq.get_correl_model()
         for block in split_in_blocks(
                 ebruptures, oq.concurrent_tasks or 1,
                 key=operator.attrgetter('grp_id')):
