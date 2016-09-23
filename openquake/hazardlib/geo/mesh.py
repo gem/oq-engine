@@ -143,6 +143,34 @@ class Mesh(object):
         """
         return self.lons.size
 
+    def __eq__(self, mesh, tol=1.0E-7):
+        """
+        Compares the mesh with another returning True if all elements are
+        equal to within the specific tolerance, False otherwise
+
+        :param mesh:
+            Mesh for comparison as instance of :class:
+            openquake.hazardlib.geo.mesh.Mesh
+
+        :param float tol:
+            Numerical precision for equality
+        """
+        if self.depths is not None:
+            if mesh.depths is not None:
+                # Both meshes have depth values - compare equality
+                return numpy.allclose(self.lons, mesh.lons, atol=tol) and\
+                    numpy.allclose(self.lats, mesh.lats, atol=tol) and\
+                    numpy.allclose(self.depths, mesh.depths, atol=tol)
+            else:
+                # Second mesh missing depths - not equal
+                return False
+        else:
+            if mesh.depths is None:
+                return False
+            else:
+                return numpy.allclose(self.lons, mesh.lons, atol=tol) and\
+                    numpy.allclose(self.lats, mesh.lats, atol=tol)
+
     def get_min_distance(self, mesh):
         """
         Compute and return the minimum distance from the mesh to each point
