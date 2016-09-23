@@ -557,7 +557,7 @@ class EventBasedCalculator(ClassicalCalculator):
         grp_trt = {sg.id: sg.trt for sm in self.csm.info.source_models
                    for sg in sm.src_groups}
         rlzs_by_grp = self.rlzs_assoc.get_rlzs_by_grp_id()
-        correl_model = readinput.get_correl_model(oq)
+        correl_model = oq.get_correl_model
         for block in split_in_blocks(
                 ebruptures, oq.concurrent_tasks or 1,
                 key=operator.attrgetter('grp_id')):
