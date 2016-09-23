@@ -477,14 +477,15 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
     oq = monitor.oqparam
     haz = {sid: {} for sid in getter.sids}
     gmfcoll = {sid: [] for sid in getter.sids}
-    for imti, imt in enumerate(getter.imts):
-        for rlz in rlzs:
-            for sid, gmvs in zip(getter.sids, getter.get(imt, rlz)):
-                if oq.hazard_curves_from_gmfs:
-                    haz[sid][imt, rlz] = gmvs
-                for rec in gmvs:
-                    gmfcoll[sid].append(
-                        (rec['gmv'], rec['eid'], rlz.ordinal, imti))
+    for rlz in rlzs:
+        for sid, gmvdict in zip(getter.sids, getter(rlz)):
+            if gmvdict:
+                for imti, imt in enumerate(getter.imts):
+                    if oq.hazard_curves_from_gmfs:
+                        haz[sid][imt, rlz] = gmvdict[imt]
+                    for rec in gmvdict[imt]:
+                        gmfcoll[sid].append(
+                            (rec['gmv'], rec['eid'], rlz.ordinal, imti))
     for sid in gmfcoll:
         gmfcoll[sid] = numpy.array(gmfcoll[sid], gmv_dt)
     result = dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
@@ -635,13 +636,6 @@ class EventBasedCalculator(ClassicalCalculator):
         if ('gmf_data' in self.datastore and 'nbytes' not
                 in self.datastore['gmf_data'].attrs):
             self.datastore.set_nbytes('gmf_data')
-            # set some syntethic indicator of the gmvs for debugging purposes
-            # for sid in self.datastore['gmf_data']:
-            #    dset = self.datastore['gmf_data/' + sid]
-            #    if len(dset) < 100:  # consider only small datasets
-            #        gmvs = get_array(dset, imti=0)['gmv']
-            #        dset.attrs['mean'] = gmvs.mean()
-            #        dset.attrs['std'] = gmvs.std(ddof=1)
 
         if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
