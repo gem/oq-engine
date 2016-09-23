@@ -546,7 +546,7 @@ class GmfGetter(object):
                 eids = get_array(rup.events, sample=rlz.sampleid)['eid']
             else:
                 eids = rup.events['eid']
-            array = computer.compute(None, gsim, len(eids))  # (i, n, e)
+            array = computer.compute(gsim, len(eids))  # (i, n, e)
             for imti, imt in enumerate(self.imts):
                 min_gmv = self.min_iml[imti]
                 for eid, gmf in zip(eids, array[imti].T):

@@ -188,7 +188,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/gmf-smltp_b1-gsimltp_b1.txt', fname)
 
-    @attr('qa', 'hazard', 'ebrisk')
+    @attr('qa', 'risk', 'ebrisk')
     def test_case_master_ebr(self):
         out = self.run_calc(case_master.__file__, 'job.ini',
                             calculation_mode='ebrisk', exports='csv')
