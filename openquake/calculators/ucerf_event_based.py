@@ -678,7 +678,7 @@ def compute_ruptures_gmfs_curves(
         Dictionary of rupture instances associated to a TRT ID
     """
     oq = monitor.oqparam
-    correl_model = readinput.get_correl_model(oq)
+    correl_model = oq.get_correl_model()
     imts = list(oq.imtls)
     min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
     integration_distance = oq.maximum_distance[DEFAULT_TRT]
