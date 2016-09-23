@@ -18,10 +18,7 @@
 
 from __future__ import division
 import re
-import sys
 import copy
-import math
-import time
 import logging
 import operator
 import collections
@@ -31,9 +28,9 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import groupby, block_splitter, group_array
+from openquake.baselib.general import groupby, group_array
 from openquake.commonlib import logictree, sourceconverter
-from openquake.commonlib import nrml, node, parallel
+from openquake.commonlib import nrml, node
 
 MAXWEIGHT = 200  # tuned by M. Simionato
 MAX_INT = 2 ** 31 - 1
@@ -569,16 +566,13 @@ class CompositeSourceModel(collections.Sequence):
         """
         source_models = []
         weight = 0
-        idx = 0
         for sm in self.source_models:
             src_groups = [copy.copy(src) for src in sm.src_groups]
             for src_group in src_groups:
                 sources = []
                 for src, sites in ss_filter(src_group.sources, sitecol):
                     sources.append(src)
-                    src.id = idx
                     weight += src.weight
-                    idx += 1
                 src_group.sources = sources
             newsm = SourceModel(sm.name, sm.weight, sm.path, src_groups,
                                 sm.num_gsim_paths, sm.ordinal, sm.samples)
@@ -640,6 +634,19 @@ class CompositeSourceModel(collections.Sequence):
                 src_group, key=operator.attrgetter('source_id'))
             self.weight += weight
 
+    def init_serials(self):
+        """
+        Generate unique seeds for each rupture with numpy.arange.
+        This should be called only in event based calculators
+        """
+        n = sum(sg.tot_ruptures() for sg in self.src_groups)
+        rup_serial = numpy.arange(n, dtype=numpy.uint32)
+        start = 0
+        for src in self.get_sources():
+            nr = src.num_ruptures
+            src.serial = rup_serial[start:start + nr]
+            start += nr
+
     def __repr__(self):
         """
         Return a string representation of the composite model
@@ -681,205 +688,20 @@ def collect_source_model_paths(smlt):
 
 # ########################## SourceManager ########################### #
 
-def source_info_iadd(self, other):
-    assert self.src_group_id == other.src_group_id
-    assert self.source_id == other.source_id
-    return self.__class__(
-        self.src_group_id, self.source_id, self.source_class, self.weight,
-        self.sources, self.filter_time + other.filter_time,
-        self.split_time + other.split_time,
-        self.cum_calc_time + other.cum_calc_time,
-        max(self.max_calc_time, other.max_calc_time),
-        self.num_tasks + other.num_tasks,
-    )
+class SourceInfo(object):
+    dt = numpy.dtype([
+        ('grp_id', numpy.uint32),          # 0
+        ('source_id', (bytes, 100)),       # 1
+        ('source_class', (bytes, 30)),     # 2
+        ('weight', numpy.float32),         # 3
+        ('calc_time', numpy.float32),      # 4
+        ('num_sites', numpy.uint32),       # 5
+    ])
 
-SourceInfo = collections.namedtuple(
-    'SourceInfo', 'src_group_id source_id source_class weight sources '
-    'filter_time split_time cum_calc_time max_calc_time num_tasks')
-SourceInfo.__iadd__ = source_info_iadd
-
-source_info_dt = numpy.dtype([
-    ('src_group_id', numpy.uint32),    # 0
-    ('source_id', (bytes, 100)),       # 1
-    ('source_class', (bytes, 30)),     # 2
-    ('weight', numpy.float32),         # 3
-    ('split_num', numpy.uint32),       # 4
-    ('filter_time', numpy.float32),    # 5
-    ('split_time', numpy.float32),     # 6
-    ('cum_calc_time', numpy.float32),  # 7
-    ('max_calc_time', numpy.float32),  # 8
-    ('num_tasks', numpy.uint32),       # 9
-])
-
-
-def split_filter(src, sites, ss_filter, random_seed):
-    """
-    :param src: an heavy source
-    :param sites: the sites affected by the source
-    :param ss_filter: SourceSitesFilter instance
-    :random_seed: used only for event based calculations
-    :returns:
-        a list [(src, sites, split_sources, filter_time, split_time), ...]
-    """
-    t0 = time.time()
-    split_sources = []
-    start = 0
-    for split in sourceconverter.split_source(src):
-        if random_seed:
-            nr = split.num_ruptures
-            split.serial = src.serial[start:start + nr]
-            start += nr
-        split.id = src.id
-        if ss_filter.affected(split, sites) is not None:
-            split_sources.append(split)
-    return [(src, sites, split_sources, 0, time.time() - t0)]
-
-
-class SourceManager(object):
-    """
-    Manager associated to a CompositeSourceModel instance.
-    Filter and split sources and send them to the worker tasks.
-    """
-    def __init__(self, csm, ss_filter, concurrent_tasks,
-                 dstore, monitor, random_seed=None, num_tiles=1):
-        self.csm = csm
-        self.ss_filter = ss_filter
-        self.concurrent_tasks = concurrent_tasks or 1
-        self.random_seed = random_seed
-        self.dstore = dstore
-        self.monitor = monitor
-        self.num_tiles = num_tiles
-        self.rlzs_assoc = csm.info.get_rlzs_assoc()
-        self.infos = {}  # src_group_id, source_id -> SourceInfo tuple
-
-        maxweight = math.ceil(csm.weight / self.concurrent_tasks / (
-            num_tiles if self.ss_filter.integration_distance else 1))
-        # if there are S filtered sources and there are T tiles, only S/T
-        # sources contribute to a given tile; by reducing the maxweight
-        # by T we generate the same number of "concurrent_tasks" per tile
-        self.maxweight = max(maxweight, MAXWEIGHT)
-        # MAXWEIGHT is the minimal maxweight, needed to avoid too many tasks
-        logging.info('Instantiated SourceManager with maxweight=%.1f',
-                     self.maxweight)
-        if random_seed is not None:
-            # generate unique seeds for each rupture with numpy.arange
-            n = sum(sg.tot_ruptures() for sg in self.csm.src_groups)
-            rup_serial = numpy.arange(n, dtype=numpy.uint32)
-            start = 0
-            for src in self.csm.get_sources():
-                nr = src.num_ruptures
-                src.serial = rup_serial[start:start + nr]
-                start += nr
-
-    def _sources_sites(self, src_data, tiles):
-        """
-        :param src_data:
-            a 5-uple (src, sites, split_sources, filter_time, split_time)
-        :param tiles:
-            a list of :class:`openquake.hazardlib.site.Tile` objects
-        :yields:
-            pairs (sources, sitecol)
-        """
-        light = [[] for tile in tiles]
-        for src, sites, sources, filter_time, split_time in src_data:
-            if sources:  # heavy
-                yield sources, sites
-            else:
-                light[sites].append(src)  # sites here is a tile index
-            info = SourceInfo(src.src_group_id, src.source_id,
-                              src.__class__.__name__,
-                              src.weight, len(sources),
-                              filter_time, split_time, 0, 0, 0)
-            key = (src.src_group_id, src.source_id)
-            if key in self.infos:
-                self.infos[key] += info
-            else:
-                self.infos[key] = info
-        # light
-        for sources, sites in zip(light, tiles):
-            yield sources, sites
-
-    def gen_args(self, sitecol, tiles):
-        """
-        Yield (sources, sites, gsims, monitor) by
-        looping on the tiles and on the source blocks.
-        """
-        ntasks = 0
-        for src_data in self._gen_src_light(tiles):
-            for args in self._gen_args(src_data, tiles):
-                yield args
-                ntasks += 1
-        if ntasks:
-            logging.info('Generated %d tasks from the light sources', ntasks)
-
-        # this blocks for a long time, so it is best to do it later
-        ntasks = 0
-        for src_data in self._gen_src_heavy(sitecol):
-            for args in self._gen_args(src_data, [sitecol]):
-                yield args
-                ntasks += 1
-        if ntasks:
-            logging.info('Generated %d tasks from the heavy sources', ntasks)
-
-    def _gen_args(self, src_data, tiles):
-        mon = self.monitor.new()
-        for sources, sites in self._sources_sites(src_data, tiles):
-            for block in block_splitter(
-                    sources, self.maxweight,
-                    operator.attrgetter('weight'),
-                    operator.attrgetter('src_group_id')):
-                grp_id = block[0].src_group_id
-                gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
-                if self.monitor.poes_disagg:  # only for disaggregation
-                    mon.sm_id = self.rlzs_assoc.sm_ids[grp_id]
-                mon.seed = self.rlzs_assoc.seed
-                mon.samples = self.rlzs_assoc.samples[grp_id]
-                yield block, sites, gsims, mon
-
-    def _gen_src_light(self, tiles):
-        filter_mon = self.monitor('filtering sources')
-        if self.ss_filter.integration_distance and self.num_tiles == 1:
-            logging.info('Filtering light sources')
-        sources = self.csm.get_sources('light', self.maxweight)
-        for i, tile in enumerate(tiles):
-            data = []
-            for src in sources:
-                with filter_mon:
-                    affected = self.ss_filter.affected(src, tile)
-                if affected is not None:
-                    data.append((src, i, [], filter_mon.dt, 0))
-                    self.csm.filtered_weight += src.weight
-            filter_mon.flush()
-            if len(tiles) > 1:
-                logging.info('Got %d light source(s) from tile %d',
-                             len(data), i + 1)
-            yield data
-
-    def _gen_src_heavy(self, sitecol):
-        ss_filter = self.ss_filter
-        sources = self.csm.get_sources('heavy', self.maxweight)
-        data = []
-        for src, sites in ss_filter(sources, sitecol):
-            self.csm.filtered_weight += src.weight
-            data.append((src, sites, self.ss_filter, self.random_seed))
-        return parallel.starmap(split_filter, data)
-
-    def pre_store_source_info(self, dstore):
-        """
-        Save the `source_info` array and its attributes in the datastore.
-
-        :param dstore: the datastore
-        """
-        attrs = dstore.hdf5['composite_source_model'].attrs
-        attrs['weight'] = self.csm.weight
-        attrs['filtered_weight'] = self.csm.filtered_weight
-
-        if self.infos:
-            values = list(self.infos.values())
-            values.sort(
-                key=lambda info: info.filter_time + info.split_time,
-                reverse=True)
-            dstore['source_info'] = numpy.array(values, source_info_dt)
-            attrs = dstore['source_info'].attrs
-            attrs['maxweight'] = self.maxweight
-            self.infos.clear()
+    def __init__(self, src, calc_time=0, num_sites=0):
+        self.grp_id = src.src_group_id
+        self.source_id = src.source_id
+        self.source_class = src.__class__.__name__
+        self.weight = src.weight
+        self.calc_time = calc_time
+        self.num_sites = num_sites

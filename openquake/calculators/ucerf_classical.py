@@ -249,7 +249,8 @@ def hazard_curves_per_rupture_subset(rupset_idx, ucerf_source, sites, imtls,
         pmap |= ucerf_poe_map(hdf5, ucerf_source, rupset_idx, sites,
                               imtls, cmaker, truncation_level, bbs,
                               ctx_mon, pne_mon, disagg_mon)
-        monitor.calc_times.append((ucerf_source.id, time.time() - t0))
+        monitor.calc_times.append(
+            (ucerf_source.source_id, len(sites), time.time() - t0))
         monitor.eff_ruptures += pne_mon.counts
     return pmap
 
@@ -388,7 +389,6 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         for ordinal, (name, branch) in enumerate(branches):
             sg = copy.copy(self.src_group)
             sg.id = ordinal
-            sg.sources[0].id = ordinal
 
             # Update the event set
             sg.sources[0].idx_set = sg.sources[0].build_idx_set(branch.value)
@@ -399,8 +399,8 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             self.gsim_lt, self.smlt, source_models, set_weight=False)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
         self.rup_data = {}
-        self.infos = []
         self.num_tiles = 1
+        self.infos = {}
 
     def gen_args(self, branches, ucerf_source, monitor):
         """
@@ -408,6 +408,8 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         """
         for grp_id, branch in enumerate(branches):
             gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
+            self.infos[grp_id, ucerf_source.source_id] = (
+                source.SourceInfo(ucerf_source))
             yield branch, ucerf_source, grp_id, self.sitecol, gsims, monitor
 
     def execute(self):
@@ -438,7 +440,10 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             gsims = self.rlzs_assoc.gsims_by_grp_id[0]
             [(branch_id, branch)] = self.smlt.branches.items()
             branchname = branch.value
-
+            ucerf_source.src_group_id = 0
+            ucerf_source.weight = 1
+            self.infos[0, ucerf_source.source_id] = source.SourceInfo(
+                ucerf_source)
             logging.info('Getting the background point sources')
             with self.monitor('getting background sources', autoflush=True):
                 bckgnd_sources = ucerf_source.get_background_sources(
@@ -464,9 +469,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             # compose probabilities from background sources
             for pmap in bg_res:
                 acc[0] |= pmap
-            with self.monitor('store source_info', autoflush=True):
-                self.store_source_info(acc)
-                self.save_data_transfer(bg_res)
+            self.save_data_transfer(bg_res)
 
         pmap_by_grp_id = functools.reduce(self.agg_dicts, rup_res, acc)
         with self.monitor('store source_info', autoflush=True):
