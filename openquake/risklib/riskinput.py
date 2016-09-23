@@ -25,9 +25,8 @@ from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import (
-    groupby, split_in_blocks, group_array, get_array)
+    groupby, split_in_blocks, get_array)
 from openquake.hazardlib import site, calc
-from openquake.hazardlib.imt import from_string
 from openquake.risklib import scientific, riskmodels
 
 U8 = numpy.uint8
@@ -498,7 +497,8 @@ class CompositeRiskModel(collections.Mapping):
 
 class PoeGetter(object):
     """
-    Object with a method .get(imt, rlz) returning a list of N hazards
+    Callable returning a list of N dictionaries imt -> curve
+    when called on a realization.
     """
     def __init__(self, hazard_by_site, rlzs_assoc):
         self.rlzs_assoc = rlzs_assoc
@@ -514,8 +514,8 @@ class PoeGetter(object):
 
 class GmfGetter(object):
     """
-    Object with a method .get(imt, rlz) returning a list of N composite arrays
-    with fields 'gmv', 'eid'.
+    Callable returning a list of N dictionaries imt -> array(gmv, eid).
+    when called on a realization.
     """
     dt = numpy.dtype([('gmv', F32), ('eid', U32)])
 
@@ -557,7 +557,7 @@ class GmfGetter(object):
                                 dic[imt].append((gmv, eid))
                             else:
                                 dic[imt] = [(gmv, eid)]
-        dicts = []  # a list of dictionaries imt -> gmvs
+        dicts = []  # a list of dictionaries imt -> array(gmv, eid)
         for sid in self.sids:
             dic = gmfdict[sid]
             for imt in dic:
