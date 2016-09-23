@@ -30,9 +30,7 @@ class Leonard2014_SCR(BaseMSRSigma, BaseASRSigma):
 
     def get_std_dev_area(self, mag, rake):
         """
-        Returns standard deviation for area scaling relationship:
-        (+ 1 sigma, - 1 sigma)
-        Note that the distribution is asymmetrical.
+        Returns None for now
         """
         return None
 
@@ -52,10 +50,7 @@ class Leonard2014_SCR(BaseMSRSigma, BaseASRSigma):
 
     def get_std_dev_mag(self, area, rake):
         """
-        Returns standard deviation for area scaling relationship:
-        (+ 1 sigma, - 1 sigma)
-        Note that the distribution is asymmetrical.
-        Rake is ignored.
+        Returns None for now
         """
         return None
 
@@ -83,9 +78,7 @@ class Leonard2014_Interplate(BaseMSRSigma, BaseASRSigma):
 
     def get_std_dev_area(self, mag, rake):
         """
-        Returns standard deviation for area scaling relationship:
-        (median + 1 sigma, median - 1 sigma)
-        
+        Returns None for now
         """
         return None
 
@@ -105,8 +98,6 @@ class Leonard2014_Interplate(BaseMSRSigma, BaseASRSigma):
 
     def get_std_dev_mag(self, area, rake):
         """
-        Returns standard deviation for area scaling relationship:
-        ( + 1 sigma, - 1 sigma)
-        Note that the distribution is asymmetrical.
+        Returns None for now
         """
         return None
