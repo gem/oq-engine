@@ -86,7 +86,7 @@ class GmfComputer(object):
         # level hazardlib rupture object as a .rupture attribute
         if hasattr(rupture, 'rupture'):
             rupture = rupture.rupture
-            self.gsim_salt = collections.Counter({gsim: -1 for gsim in gsims})
+            self.gsim_salt = collections.Counter()
         self.ctx = ContextMaker(gsims).make_contexts(sites, rupture)
 
     def compute(self, gsim, num_events, seed=None):
@@ -97,8 +97,8 @@ class GmfComputer(object):
         :returns: a 32 bit array of shape (num_imts, num_sites, num_events)
         """
         if hasattr(self, 'gsim_salt'):  # when called from the engine
-            self.gsim_salt[gsim] += 1
             seed = (seed or self.rupture.rupture.seed) + self.gsim_salt[gsim]
+            self.gsim_salt[gsim] += 1
         if seed is not None:
             numpy.random.seed(seed)
         result = numpy.zeros(
