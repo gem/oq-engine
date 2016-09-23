@@ -26,7 +26,7 @@ import collections
 import numpy
 
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict, split_in_blocks, get_array
+from openquake.baselib.general import AccumDict, split_in_blocks
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import ProbabilityMap

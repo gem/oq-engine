@@ -779,7 +779,7 @@ class EbriskCalculator(base.RiskCalculator):
                 smap = build_starmap(*args)
                 logging.info(
                     'Generated %d/%d ruptures/events for source model #%d',
-                    smap.num_ruptures, smap.num_events, smap.sm_id)
+                    smap.num_ruptures, smap.num_events, smap.sm_id + 1)
                 smap.res = smap.submit_all()
                 smaps.append(smap)
         # collect the losses by source model
