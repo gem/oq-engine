@@ -89,17 +89,18 @@ class GmfComputer(object):
             self.gsim_salt = collections.Counter({gsim: -1 for gsim in gsims})
         self.ctx = ContextMaker(gsims).make_contexts(sites, rupture)
 
-    def compute(self, seed, gsim, num_events):
+    def compute(self, gsim, num_events, seed=None):
         """
-        :param seed: a random seed or None, if extracted from the rupture
         :param gsim: a GSIM instance
         :param num_events: the number of seismic events
+        :param seed: a random seed or None
         :returns: a 32 bit array of shape (num_imts, num_sites, num_events)
         """
-        if seed is None:
+        if hasattr(self, 'gsim_salt'):  # when called from the engine
             self.gsim_salt[gsim] += 1
-            seed = self.rupture.rupture.seed + self.gsim_salt[gsim]
-        numpy.random.seed(seed)
+            seed = (seed or self.rupture.rupture.seed) + self.gsim_salt[gsim]
+        if seed is not None:
+            numpy.random.seed(seed)
         result = numpy.zeros(
             (len(self.imts), len(self.sites), num_events), numpy.float32)
         for imti, imt in enumerate(self.imts):
@@ -178,40 +179,6 @@ class GmfComputer(object):
 
         return gmf
 
-    # used by the event_based calculators
-    def calcgmfs(self, seed, events, rlzs_by_gsim, min_iml=None):
-        """
-        Yield the ground motion field for each seismic event.
-
-        :param seed:
-            seed for the numpy random number generator
-        :param events:
-            composite array of seismic events (eid, ses, occ, samples)
-        :param rlzs_by_gsim:
-            a dictionary {gsim instance: realizations}
-        :yields:
-            tuples (eid, imti, rlz, gmf_sids)
-        """
-        sids = self.sites.sids
-        imt_range = range(len(self.imts))
-        for i, gsim in enumerate(self.gsims):
-            for j, rlz in enumerate(rlzs_by_gsim[gsim]):
-                if self.samples > 1:
-                    eids = get_array(events, sample=rlz.sampleid)['eid']
-                else:
-                    eids = events['eid']
-                arr = self.compute(seed + j, gsim, len(eids)).transpose(
-                    0, 2, 1)  # array of shape (I, E, S)
-                for imti in imt_range:
-                    for eid, gmf in zip(eids, arr[imti]):
-                        if min_iml is not None:  # is an array
-                            ok = gmf >= min_iml[imti]
-                            gmf_sids = (gmf[ok], sids[ok])
-                        else:
-                            gmf_sids = (gmf, sids)
-                        if len(gmf):
-                            yield eid, imti, rlz, gmf_sids
-
 
 # this is not used in the engine; it is still useful for usage in IPython
 # when demonstrating hazardlib capabilities
@@ -272,7 +239,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
                     for imt in imts)
     gc = GmfComputer(rupture, r_sites, [str(imt) for imt in imts], [gsim],
                      truncation_level, correlation_model)
-    res = gc.compute(seed, gsim, realizations)
+    res = gc.compute(gsim, realizations, seed)
     result = {}
     for imti, imt in enumerate(gc.imts):
         # makes sure the lenght of the arrays in output is the same as sites
