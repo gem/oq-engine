@@ -53,7 +53,7 @@ class GmfComputer(object):
     ground shaking over a set of sites, by randomly sampling a ground
     shaking intensity model.
 
-    :param :class:`openquake.hazardlib.source.rupture.Rupture` rupture:
+    :param rupture:
         Rupture to calculate ground motion fields radiated from.
 
     :param :class:`openquake.hazardlib.site.SiteCollection` sites:
@@ -72,6 +72,17 @@ class GmfComputer(object):
         case non-correlated ground motion fields are calculated.
         Correlation model is not used if ``truncation_level`` is zero.
     """
+    # The GmfComputer is called from the OpenQuake Engine. In that case
+    # the rupture is an higher level containing a
+    # :class:`openquake.hazardlib.source.rupture.Rupture` instance as an
+    # attribute. Then the `.compute(gsim, num_events)` method is called and
+    # a matrix of size (I, N, E) is returned, where I is the number of
+    # IMTs, N the number of affected sites and E the number of events. The
+    # seed is extracted from the underlying rupture and salted in such a
+    # way to produce different numbers even if the method is called twice
+    # with the same `gsim`. This ensures that different GMPE logic tree
+    # realizations produce different numbers even in the case of complex
+    # logic trees.
     def __init__(self, rupture, sites, imts, gsims,
                  truncation_level=None, correlation_model=None, samples=0):
         assert sites, sites
@@ -86,7 +97,7 @@ class GmfComputer(object):
         # level hazardlib rupture object as a .rupture attribute
         if hasattr(rupture, 'rupture'):
             rupture = rupture.rupture
-            self.gsim_salt = collections.Counter()
+            self.salt = collections.Counter()  # associate a salt to the gsims
         self.ctx = ContextMaker(gsims).make_contexts(sites, rupture)
 
     def compute(self, gsim, num_events, seed=None):
@@ -96,9 +107,9 @@ class GmfComputer(object):
         :param seed: a random seed or None
         :returns: a 32 bit array of shape (num_imts, num_sites, num_events)
         """
-        if hasattr(self, 'gsim_salt'):  # when called from the engine
-            seed = (seed or self.rupture.rupture.seed) + self.gsim_salt[gsim]
-            self.gsim_salt[gsim] += 1
+        if hasattr(self, 'salt'):  # when called from the engine
+            seed = (seed or self.rupture.rupture.seed) + self.salt[gsim]
+            self.salt[gsim] += 1
         if seed is not None:
             numpy.random.seed(seed)
         result = numpy.zeros(
