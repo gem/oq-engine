@@ -274,7 +274,7 @@ class PSHACalculator(base.HazardCalculator):
         :param result_dict: a dictionary with keys (grp_id, gsim)
         :param src_group: a SourceGroup instance
         """
-        return (result_dict.eff_ruptures.get(src_group.id, 0) / self.num_tiles)
+        return result_dict.eff_ruptures.get(src_group.id, 0)
 
     def zerodict(self):
         """
@@ -310,8 +310,6 @@ class PSHACalculator(base.HazardCalculator):
             poes_disagg=oq.poes_disagg,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
             seed=oq.random_seed)
-        self.num_tiles = 1
-        
         with self.monitor('managing sources', autoflush=True):
             src_groups = list(self.csm.src_groups)
             res = parallel.starmap(
