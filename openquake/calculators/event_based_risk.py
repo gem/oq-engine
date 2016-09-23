@@ -677,6 +677,7 @@ class EbriskCalculator(base.RiskCalculator):
     """
     pre_calculator = None
     is_stochastic = True
+    compute_ruptures = staticmethod(event_based.compute_ruptures)
 
     # TODO: if the number of source models is larger than concurrent_tasks
     # a different strategy should be used; the one used here is good when
@@ -700,7 +701,7 @@ class EbriskCalculator(base.RiskCalculator):
                     src_group, source.MAXWEIGHT, getweight):
                 allargs.append((block, self.sitecol, gsims, monitor))
         # collect the ruptures
-        for dic in parallel.starmap(event_based.compute_ruptures, allargs):
+        for dic in parallel.starmap(self.compute_ruptures, allargs):
             ruptures_by_grp += dic
             [rupts] = dic.values()
             num_ruptures += len(rupts)
@@ -746,15 +747,7 @@ class EbriskCalculator(base.RiskCalculator):
                          'you may want to set a minimum_intensity')
         else:
             logging.info('minimum_intensity=%s', oq.minimum_intensity)
-        
-        # generate unique seeds for each rupture with numpy.arange
-        n = sum(sg.tot_ruptures() for sg in self.csm.src_groups)
-        rup_serial = numpy.arange(n, dtype=numpy.uint32)
-        start = 0
-        for src in self.csm.get_sources():
-            nr = src.num_ruptures
-            src.serial = rup_serial[start:start + nr]
-            start += nr
+        self.csm.init_serials()
         for sm_id in range(len(self.csm.source_models)):
             ssm = self.csm.get_model(sm_id)
             monitor = self.monitor.new(
@@ -770,8 +763,8 @@ class EbriskCalculator(base.RiskCalculator):
         """
         smaps = []
         with self.monitor('sending riskinputs', autoflush=True):
-            for args in self.gen_args():
-                smap = self.build_starmap(*args)
+            for ssm, mon in self.gen_args():
+                smap = self.build_starmap(ssm, mon)
                 logging.info(
                     'Generated %d/%d ruptures/events for source model #%d',
                     smap.num_ruptures, smap.num_events, smap.sm_id + 1)
