@@ -21,6 +21,7 @@ Module :mod:`~openquake.hazardlib.calc.gmf` exports
 :func:`ground_motion_fields`.
 """
 
+import collections
 import numpy
 import scipy.stats
 
@@ -83,19 +84,22 @@ class GmfComputer(object):
         self.samples = samples
         # `rupture` can be a high level rupture object containing a low
         # level hazardlib rupture object as a .rupture attribute
-        hazrup = getattr(rupture, 'rupture', rupture)
-        self.ctx = ContextMaker(gsims).make_contexts(sites, hazrup)
+        if hasattr(rupture, 'rupture'):
+            rupture = rupture.rupture
+            self.gsim_salt = collections.Counter({gsim: -1 for gsim in gsims})
+        self.ctx = ContextMaker(gsims).make_contexts(sites, rupture)
 
-    # used by the scenario calculators
     def compute(self, seed, gsim, num_events):
         """
-        :param seed: a random seed
+        :param seed: a random seed or None, if extracted from the rupture
         :param gsim: a GSIM instance
         :param num_events: the number of seismic events
         :returns: a 32 bit array of shape (num_imts, num_sites, num_events)
         """
-        if seed is not None:
-            numpy.random.seed(seed)
+        if seed is None:
+            self.gsim_salt[gsim] += 1
+            seed = self.rupture.rupture.seed + self.gsim_salt[gsim]
+        numpy.random.seed(seed)
         result = numpy.zeros(
             (len(self.imts), len(self.sites), num_events), numpy.float32)
         for imti, imt in enumerate(self.imts):
