@@ -34,8 +34,7 @@ class Leonard2014_SCR(BaseMSRSigma, BaseASRSigma):
         (+ 1 sigma, - 1 sigma)
         Note that the distribution is asymmetrical.
         """
-        return (power(10,(mag - 4.08)) - power(10,(mag - 4.19)),
-                power(10,(mag - 4.28)) - power(10,(mag - 4.19)))
+        return None
 
     def get_median_mag(self, area, rake):
         """
@@ -58,8 +57,7 @@ class Leonard2014_SCR(BaseMSRSigma, BaseASRSigma):
         Note that the distribution is asymmetrical.
         Rake is ignored.
         """
-        return ((log10(area) + 4.08 - log10(area) + 4.19),
-                (log10(area) + 4.28 - log10(area) + 4.19))
+        return None
 
 class Leonard2014_Interplate(BaseMSRSigma, BaseASRSigma):
     """
@@ -89,14 +87,7 @@ class Leonard2014_Interplate(BaseMSRSigma, BaseASRSigma):
         (median + 1 sigma, median - 1 sigma)
         
         """
-        if (-45 <= rake <= 45) or (rake >= 135) or (rake <= -135):
-            # strike slip
-            return (power(10,(mag - 3.73)) - power(10,(mag - 3.99)), 
-                    power(10,(mag - 4.25)) - power(10,(mag - 3.99)))
-        else:
-            # Dip slip (thrust or normal), and undefined rake
-            return (power(10,(mag - 3.73)) - power(10,(mag - 4.00)), 
-                    power(10,(mag - 4.33)) - power(10,(mag - 4.00)))
+        return None
 
     def get_median_mag(self, area, rake):
         """
@@ -118,9 +109,4 @@ class Leonard2014_Interplate(BaseMSRSigma, BaseASRSigma):
         ( + 1 sigma, - 1 sigma)
         Note that the distribution is asymmetrical.
         """
-        if (-45 <= rake <= 45) or (rake >= 135) or (rake <= -135):
-            # strike slip
-            return log10(area) + 3.99
-        else:
-            # Dip slip (thrust or normal), and undefined rake
-            return log10(area) + 4.00
+        return None
