@@ -275,16 +275,6 @@ class CompositeRiskModel(collections.Mapping):
                 iml[rf.imt].append(rf.imls[0])
         return {imt: min(iml[imt]) for imt in iml}
 
-    def get_imts(self, taxonomies):
-        """
-        Returns a sorted list of IMTs defined in the underlying models
-        """
-        imts = set()
-        for loss_type in self.loss_types:
-            for taxonomy in taxonomies:
-                imts.add(self[taxonomy].risk_functions[loss_type].imt)
-        return sorted(imts)
-
     def build_loss_dtypes(self, conditional_loss_poes, insured_losses=False):
         """
         :param conditional_loss_poes:
@@ -552,12 +542,11 @@ class GmfGetter(object):
         gmfdict = collections.defaultdict(dict)
         for computer in self.computers:
             rup = computer.rupture
-            seed = rup.rupture.seed + rlz.ordinal
             if self.samples > 1:
                 eids = get_array(rup.events, sample=rlz.sampleid)['eid']
             else:
                 eids = rup.events['eid']
-            array = computer.compute(seed, gsim, len(eids))  # (i, n, e)
+            array = computer.compute(None, gsim, len(eids))  # (i, n, e)
             for imti, imt in enumerate(self.imts):
                 min_gmv = self.min_iml[imti]
                 for eid, gmf in zip(eids, array[imti].T):
