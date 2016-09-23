@@ -482,21 +482,20 @@ class CompositeRiskModel(collections.Mapping):
                         [asset.ordinal for asset in group[taxonomy]])
                     dic[taxonomy].append((i, group[taxonomy], epsgetter))
                     taxonomies.add(taxonomy)
-        imts = self.get_imts(taxonomies)
         for rlz in rlzs_assoc.realizations:
             with mon_hazard:
-                hazard = {imt: hazard_getter.get(imt, rlz) for imt in imts}
+                hazard = hazard_getter(rlz)
             for taxonomy in sorted(taxonomies):
                 riskmodel = self[taxonomy]
-                for loss_type in self.loss_types:
-                    haz = hazard[riskmodel.risk_functions[loss_type].imt]
+                for lt in self.loss_types:
+                    imt = riskmodel.risk_functions[lt].imt
                     with mon_risk:
                         for i, assets, epsgetter in dic[taxonomy]:
-                            if len(haz[i]):
-                                out = riskmodel(
-                                    loss_type, assets, haz[i], epsgetter)
+                            haz = hazard[i].get(imt, ())
+                            if len(haz):
+                                out = riskmodel(lt, assets, haz, epsgetter)
                                 if out:  # can be None in scenario_risk
-                                    out.lr = self.lti[loss_type], rlz.ordinal
+                                    out.lr = self.lti[lt], rlz.ordinal
                                     yield out
         if hasattr(hazard_getter, 'gmfbytes'):  # for event based risk
             monitor.gmfbytes = hazard_getter.gmfbytes
@@ -518,8 +517,9 @@ class PoeGetter(object):
                                 for imt in hazard_by_imt}
                                for hazard_by_imt in hazard_by_site]
 
-    def get(self, imt, rlz):
-        return [haz[imt][rlz] for haz in self.hazard_by_site]
+    def __call__(self, rlz):
+        return [{imt: haz[imt][rlz] for imt in haz}
+                for haz in self.hazard_by_site]
 
 
 class GmfGetter(object):
@@ -533,8 +533,7 @@ class GmfGetter(object):
                  truncation_level, correlation_model, samples):
         self.gsims = gsims
         self.imts = imts
-        self.min_iml = {
-            from_string(imt): min for imt, min in zip(imts, min_iml)}
+        self.min_iml = min_iml
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.samples = samples
@@ -548,11 +547,9 @@ class GmfGetter(object):
             self.computers.append(computer)
         self.gmfbytes = 0
 
-    def get(self, imt, rlz):
-        imt = from_string(imt)
-        min_gmv = self.min_iml[imt]
+    def __call__(self, rlz):
         gsim = self.gsims[rlz.ordinal]
-        gmfdict = collections.defaultdict(list)
+        gmfdict = collections.defaultdict(dict)
         for computer in self.computers:
             rup = computer.rupture
             seed = rup.rupture.seed + rlz.ordinal
@@ -560,14 +557,25 @@ class GmfGetter(object):
                 eids = get_array(rup.events, sample=rlz.sampleid)['eid']
             else:
                 eids = rup.events['eid']
-            array = computer._compute(seed, gsim, len(eids), imt)  # (n, e)
-            for eid, gmf in zip(eids, array.T):
-                for sid, gmv in zip(computer.sites.sids, gmf):
-                    if gmv > min_gmv:
-                        gmfdict[sid].append((gmv, eid))
-        arrays = [numpy.array(gmfdict[sid], self.dt) for sid in self.sids]
-        self.gmfbytes += sum(a.nbytes for a in arrays)
-        return arrays
+            array = computer.compute(seed, gsim, len(eids))  # (i, n, e)
+            for imti, imt in enumerate(self.imts):
+                min_gmv = self.min_iml[imti]
+                for eid, gmf in zip(eids, array[imti].T):
+                    for sid, gmv in zip(computer.sites.sids, gmf):
+                        if gmv > min_gmv:
+                            dic = gmfdict[sid]
+                            if imt in dic:
+                                dic[imt].append((gmv, eid))
+                            else:
+                                dic[imt] = [(gmv, eid)]
+        dicts = []  # a list of dictionaries imt -> gmvs
+        for sid in self.sids:
+            dic = gmfdict[sid]
+            for imt in dic:
+                dic[imt] = arr = numpy.array(dic[imt], self.dt)
+                self.gmfbytes += arr.nbytes
+            dicts.append(dic)
+        return dicts
 
 
 class RiskInput(object):
