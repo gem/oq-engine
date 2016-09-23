@@ -336,17 +336,17 @@ class PSHACalculator(base.HazardCalculator):
         ss_filter = (SourceSitesFilter(oq.maximum_distance)
                      if oq.filter_sources else source_site_noop_filter)
         ngroups = len(src_groups)
-        logging.info('Considering %d source groups', ngroups)
         if self.random_seed is not None:
             self.csm.init_serials()
         ct = oq.concurrent_tasks or 1
-        if len(self.sitecol) > 10000:  # correction for lots of sites
+        if len(self.sitecol) > 10000:  # hackish correction for lots of sites
             ct *= math.sqrt(len(self.sitecol) / 10000)
         maxweight = max(math.ceil(self.csm.weight / ct), MAXWEIGHT)
         logging.info('Using a maxweight of %d', maxweight)
         nheavy = nlight = 0
         self.infos = {}
         for sg in src_groups:
+            logging.info('Sending source group #%d of %d', sg.id + 1, ngroups)
             gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
             if oq.poes_disagg:  # only for disaggregation
                 monitor.sm_id = self.rlzs_assoc.sm_ids[sg.id]
