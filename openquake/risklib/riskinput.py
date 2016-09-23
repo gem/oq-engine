@@ -687,66 +687,6 @@ def rsi2str(rlzi, sid, imt):
     return 'rlz-%04d/sid-%04d/%s' % (rlzi, sid, imt)
 
 
-class GmfCollector(object):
-    """
-    An object storing the GMFs per site_id.
-    """
-    def __init__(self, imts, rlzs, dstore=None, hazgetter=True):
-        self.imts = imts
-        self.rlzs = rlzs
-        if dstore is None:
-            self.dic = collections.defaultdict(Gmvset)
-        else:
-            self.dic = dstore
-        self.hazgetter = hazgetter
-        if hazgetter:
-            self._ddic = collections.defaultdict(dict)
-        self.nbytes = 0
-
-    def close(self):
-        self.dic.clear()
-        return self.nbytes
-
-    def save(self, eid, imti, rlz, gmf, sids):
-        key = imti, rlz
-        for gmv, sid in zip(gmf, sids):
-            if self.hazgetter:
-                dic = self._ddic[sid]
-                if key in dic:
-                    dic[key].append((gmv, eid))
-                else:
-                    dic[key] = [(gmv, eid)]
-            else:
-                self.dic[sid].append(gmv, eid, rlz.ordinal, imti)
-        self.nbytes += gmf.nbytes * 2
-
-    def __getitem__(self, sid):
-        gmvs = self.dic[sid]
-        if hasattr(gmvs, 'value'):
-            gmvs = gmvs.value
-        data = group_array(gmvs, 'imti')
-        hazard = {}  # return a dictionary with all IMTs
-        for imti, imt in enumerate(self.imts):
-            hazard[imt] = {}
-            if imti in data:
-                dic = group_array(data[imti], 'rlzi')
-                for rlz in self.rlzs:
-                    if rlz.ordinal in dic:
-                        hazard[imt][rlz] = dic[rlz.ordinal]
-        return hazard
-
-    def flush(self, dstore):
-        """
-        Save the GMFs on the datastore.
-
-        :returns: the number of bytes saved
-        """
-        for sid, data in self.dic.items():
-            dstore.extend('gmf_data/sid-%04d' % sid, data)
-        dstore.flush()
-        return self.close()
-
-
 class RiskInputFromRuptures(object):
     """
     Contains all the assets associated to the given IMT and a subsets of
@@ -810,41 +750,3 @@ class RiskInputFromRuptures(object):
     def __repr__(self):
         return '<%s imts=%s, weight=%d>' % (
             self.__class__.__name__, self.imts, self.weight)
-
-
-def create(GmfColl, eb_ruptures, sitecol, imts, rlzs_by_gsim,
-           trunc_level, correl_model, min_iml, monitor=Monitor(),
-           hazgetter=False):
-    """
-    :param GmfColl: a GmfCollector class to be instantiated
-    :param eb_ruptures: a list of EBRuptures with the same src_group_id
-    :param sitecol: a SiteCollection instance
-    :param imts: list of IMT strings
-    :param rlzs_by_gsim: a dictionary {gsim: realizations} of the current group
-    :param trunc_level: truncation level
-    :param correl_model: correlation model instance
-    :param min_iml: a dictionary of minimum intensity measure levels
-    :param monitor: a monitor instance
-    :param hazgetter: flag which is true only inside an hazard getter
-    :returns: a GmfCollector instance
-    """
-    ctx_mon = monitor('make contexts')
-    gmf_mon = monitor('compute poes')
-    sites = sitecol.complete
-    samples = rlzs_by_gsim.samples
-    gsims = list(rlzs_by_gsim)
-    gmfcoll = GmfColl(imts, rlzs_by_gsim.realizations, hazgetter=hazgetter)
-    for ebr in eb_ruptures:
-        rup = ebr.rupture
-        with ctx_mon:
-            r_sites = site.FilteredSiteCollection(ebr.indices, sites)
-            computer = calc.gmf.GmfComputer(
-                rup, r_sites, imts, gsims, trunc_level, correl_model, samples)
-        with gmf_mon:
-            data = computer.calcgmfs(
-                rup.seed, ebr.events, rlzs_by_gsim, min_iml)
-            for eid, imti, rlz, gmf_sids in data:
-                gmfcoll.save(eid, imti, rlz, *gmf_sids)
-    for sid in gmfcoll.dic:
-        gmfcoll.dic[sid] = gmfcoll.dic[sid].value
-    return gmfcoll
