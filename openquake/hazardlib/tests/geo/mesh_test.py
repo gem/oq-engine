@@ -173,6 +173,38 @@ class MeshSlicingTestCase(_BaseMeshTestCase):
         self.assertIsInstance(submesh, RectangularMesh)
 
 
+class MeshEqualityTestCase(_BaseMeshTestCase):
+    def test_meshes_equal(self):
+        """
+        Tests if two meshes are equal
+        """
+        mesh1 = self._make_mesh(lons=numpy.array([1., 2., 3., 4.]),
+                                lats=numpy.array([5., 6., 7., 8.]),
+                                depths=numpy.array([0.5, 0.5, 0.5, 0.5]))
+        mesh2 = self._make_mesh(mesh1.lons, mesh1.lats, mesh1.depths)
+        self.assertTrue(mesh1 == mesh2)
+
+    def test_meshes_unequal(self):
+        """
+        Checks unequal meshes
+        """
+        # Test 1 - depths present but values different
+        mesh1 = self._make_mesh(lons=numpy.array([1., 2., 3., 4.]),
+                                lats=numpy.array([5., 6., 7., 8.]),
+                                depths=numpy.array([0.5, 0.5, 0.5, 0.5]))
+        mesh2 = self._make_mesh(lons=numpy.array([1., 2., 3., 4.]),
+                                lats=numpy.array([5.01, 6., 7., 8.3]),
+                                depths=numpy.array([0.5, 0.5, 0.5, 0.5]))
+        self.assertFalse(mesh1 == mesh2)
+        # Test 2 - depths present in the first case, missing in the second
+        mesh3 = self._make_mesh(lons=numpy.array([1., 2., 3., 4.]),
+                                lats=numpy.array([5., 6., 7., 8.]),
+                                depths=None)
+        self.assertFalse(mesh1 == mesh3)
+        # Depths missing in first case, present in the second
+        self.assertFalse(mesh3 == mesh2)
+
+
 class MeshGetMinDistanceTestCase(unittest.TestCase):
     # test case depends on Point.distance() working right
     def _test(self, mesh, target_mesh, expected_distance_indices):
