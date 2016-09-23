@@ -428,8 +428,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
                         events[name][i] = event[name]
                     self.eid += 1
                     i += 1
-                if not self.oqparam.ground_motion_fields:
-                    self.datastore['sescollection/%s' % ebr.serial] = ebr
+                self.datastore['sescollection/%s' % ebr.serial] = ebr
             self.datastore.extend('events', events)
 
     def post_execute(self, result):
