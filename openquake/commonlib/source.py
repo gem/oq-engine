@@ -215,11 +215,9 @@ class RlzsAssoc(collections.Mapping):
             tot_weight = sum(rlz.weight for rlz in self.realizations)
             if tot_weight == 0:
                 raise ValueError('All realizations have zero weight??')
-            elif abs(tot_weight - 1) > 1E-8:  # allow for rounding errors
-                # 1E-8 is the value that makes the LogicTreeCase2ClassicalPSHA
-                # demo raise no warning (it should NOT raise warnings)
-                logging.warn('Some source models are not contributing, '
-                             'weights are being rescaled')
+            elif abs(tot_weight - 1) > 1E-8:
+                # this may happen for rounding errors or because of the
+                # logic tree reduction; we ensure the sum of the weights is 1
                 for rlz in self.realizations:
                     rlz.weight = rlz.weight / tot_weight
 
