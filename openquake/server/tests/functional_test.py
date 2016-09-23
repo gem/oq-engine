@@ -155,6 +155,14 @@ class EngineServerTestCase(unittest.TestCase):
         all_jobs = self.get('list')
         self.assertGreater(len(all_jobs), 0)
 
+        # there is some logic in `core.export_from_db` that it is only
+        # exercised when the export fails
+        datadir, dskeys = actions.get_results(db, job_id)
+        # try to export a non-existing output
+        with self.assertRaises(core.DataStoreExportError) as ctx:
+            core.export_from_db(('XXX', 'csv'), job_id, datadir, '/tmp')
+        self.assertIn('Could not export XXX in csv', str(ctx.exception))
+
     def test_err_1(self):
         # the rupture XML file has a syntax error
         job_id = self.postzip('archive_err_1.zip')
@@ -173,6 +181,7 @@ class EngineServerTestCase(unittest.TestCase):
         # make sure job_id is no more in the list of relevant jobs
         job_ids = [job['id'] for job in self.get('list', relevant=True)]
         self.assertFalse(job_id in job_ids)
+        # NB: the job is invisible but still there
 
     def test_err_2(self):
         # the file logic-tree-source-model.xml is missing
@@ -232,17 +241,3 @@ class EngineServerTestCase(unittest.TestCase):
         resp = self.post_nrml(data)
         self.assertEqual(resp.status_code, 400)
         self.assertEqual(resp.text, 'Please provide the "xml_text" parameter')
-
-
-class ExportTestCase(unittest.TestCase):
-    # there is some logic in `core.export_from_db` that it is only exercised
-    # when the export fails
-    def test_failing_export_from_db(self):
-        # get the latest job and results
-        job_id = actions.get_job_id(db, -1,  getpass.getuser())
-        datadir, dskeys = actions.get_results(db, job_id)
-        # try to export a non-existing output
-        with self.assertRaises(core.DataStoreExportError) as ctx:
-            core.export_from_db(('XXX', 'csv'), job_id, datadir, '/tmp')
-        self.assertIn('Could not export XXX in csv: the datastore is at '
-                      'version', str(ctx.exception))
