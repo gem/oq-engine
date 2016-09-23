@@ -677,7 +677,7 @@ def export_gmf_spec(ekey, dstore, spec):
         etags = build_etags(dstore['events'])
         for eid in eids:
             etag = etags[eid]
-            for gmfa, imt in _calc_gmfs(dstore, util.get_serial(etag), eid):
+            for imt, gmfa in _calc_gmfs(dstore, util.get_serial(etag), eid):
                 dest = dstore.export_path('gmf-%s-%s.csv' % (etag, imt))
                 data = util.compose_arrays(sitemesh, gmfa)
                 writer.save(data, dest)
@@ -761,14 +761,14 @@ def _calc_gmfs(dstore, serial, eid):
     getter = GmfGetter(gsims, [rup], sitecol,
                        oq.imtls, min_iml, oq.truncation_level,
                        correl_model, rlzs_assoc.samples[sg.id])
-    for imt in oq.imtls:
-        gmfa = numpy.zeros(N, gmf_dt)
-        for rlzname in gmf_dt.names:
-            rlz = rlzs[int(rlzname)]
-            for sid, data in zip(getter.sids, getter.get(imt, rlz)):
-                if len(data):
-                    gmfa[rlzname][sid] = data['gmv']
-        yield gmfa, imt
+    array_by_imt = {imt: numpy.zeros(N, gmf_dt) for imt in oq.imtls}
+    for rlzname in gmf_dt.names:
+        rlz = rlzs[int(rlzname)]
+        for sid, gmvdict in zip(getter.sids, getter(rlz)):
+            if len(gmvdict):
+                for imt in oq.imtls:
+                    array_by_imt[imt][rlzname][sid] = gmvdict[imt]['gmv']
+    return sorted(array_by_imt.items())
 
 
 @export.add(('gmf_data', 'csv'))
