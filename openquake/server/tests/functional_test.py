@@ -25,13 +25,16 @@ import os
 import sys
 import json
 import time
+import getpass
 import unittest
 import subprocess
 import tempfile
 import django
 import requests
 from openquake.baselib.general import writetmp
-
+from openquake.engine.export import core
+from openquake.server.db import actions
+from openquake.server.manage import db
 
 if requests.__version__ < '1.0.0':
     requests.Response.text = property(lambda self: self.content)
@@ -230,4 +233,16 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertEqual(resp.text, 'Please provide the "xml_text" parameter')
 
-    # TODO: add more tests for error situations
+
+class ExportTestCase(unittest.TestCase):
+    # there is some logic in `core.export_from_db` that it is only exercised
+    # when the export fails
+    def test_failing_export_from_db(self):
+        # get the latest job and results
+        job_id = actions.get_job_id(db, -1,  getpass.getuser())
+        datadir, dskeys = actions.get_results(db, job_id)
+        # try to export a non-existing output
+        with self.assertRaises(core.DataStoreExportError) as ctx:
+            core.export_from_db(('XXX', 'csv'), job_id, datadir, '/tmp')
+        self.assertIn('Could not export XXX in csv: the datastore is at '
+                      'version', str(ctx.exception))
