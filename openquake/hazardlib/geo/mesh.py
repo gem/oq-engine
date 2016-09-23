@@ -153,7 +153,7 @@ class Mesh(object):
             openquake.hazardlib.geo.mesh.Mesh
 
         :param float tol:
-            Numerical precison for equality
+            Numerical precision for equality
         """
         if self.depths is not None:
             if mesh.depths is not None:

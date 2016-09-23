@@ -40,8 +40,66 @@ class MultiSurface(BaseSurface):
         List of instances of subclasses of
         :class:`~openquake.hazardlib.geo.surface.base.BaseSurface`
         each representing a surface geometry element.
+
+    :param list edge_set:
+        Retains list of upper edges from all of the surfaces, with each
+        edge given as a numpy array of [longitude, latitude, depth]
+
+    :param list cartesian_edges:
+        For GC2, this holds the list of edge sets in an orthographic projection
+        such that the coordinates are all cartesian.
+
+    :param list cartesian_endpoints:
+        For GC2, this hold the list of end-points of the edges in an
+        orthographic projection
+
+    :param proj:
+        For GC2, instance of :class:
+        `~openquake.hazardlib.geo.utils.OrthographicProjection` instantiated
+        with the bounding box limits of the fault
+
+    :param list length_set:
+        List of lengths of upper edges of each surface
+
+    :param list cum_length_set:
+        List of cumulative lengths of edges along fault
+
+    :param dict gc2_config:
+        For GC2, dictionary holding fault specific parameters for GC2
+        configuration
+
+    :param p0:
+        For GC2, reference origin point of the fault
+
+    :param numpy.ndarray gc2t:
+        GC2 T-coordinate
+
+    :param numpy.ndarray gc2u:
+        GC2 U-coordinate
+
+    :param tmp_mesh:
+        If fed with the same mesh twice (e.g. calling get_rx_distance and
+        then get_ry0_distance in sequence) does not repeat GC2 calculations,
+        this hold the last mesh it was fed with
+
+    :param float gc_length:
+        For GC2, determines the length of the fault (km) in its own GC2
+        configuration
     """
-    def __init__(self, surfaces, tol=1.0):
+    def __init__(self, surfaces, tol=0.1):
+        """
+        Instantiate object with list of surfaces
+
+        :param float tol:
+            If surfaces contains an instance of :class:
+            `~openquake.hazardlib.geo.surface.simple_fault.SimpleFaultSurface`
+            or of :class:
+            `~openquake.hazardlib.geo.surface.complex_fault.ComplexFaultSurface`
+            then the surface is downsampled so that only the points
+            representing changes in strike are retained. This parameter sets
+            the tolerance (in degrees) for defining a change in strike
+            direction
+        """
         self.surfaces = surfaces
         self.areas = None
         self.edge_set = self._get_edge_set(tol)
@@ -302,9 +360,11 @@ class MultiSurface(BaseSurface):
                 )
             self.cartesian_edges.append(numpy.column_stack([px, py,
                                                             edges[:, 2]]))
-            # Get surface length vector for the trace
-            lengths = geodetic.geodetic_distance(edges[:-1, 0], edges[:-1, 1],
-                                                 edges[1:, 0], edges[1:, 1])
+            # Get surface length vector for the trace - easier in cartesian
+            lengths = numpy.sqrt((px[:-1] - px[1:]) ** 2. +
+                                 (py[:-1] - py[1:]) ** 2.)
+            #lengths = geodetic.geodetic_distance(edges[:-1, 0], edges[:-1, 1],
+            #                                     edges[1:, 0], edges[1:, 1])
             self.length_set.append(lengths)
             # Get cumulative surface length vector
             self.cum_length_set.append(numpy.hstack([0.,

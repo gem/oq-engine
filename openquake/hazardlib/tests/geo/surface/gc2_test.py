@@ -120,10 +120,7 @@ def _setup_peer_test_bending_fault_config():
 
     # As a set of planes describing a concordant "Frankel Fault"
     # In the Frankel fault each segment is projected to the local dip direction
-    # dipdir1b = (dipdir1 + 180.) % 360.0
     dipdir2b = (dipdir2 + 180.) % 360.0
-    # dipdir3b = (dipdir3 + 180.) % 360.0
-    # dipdir4b = (dipdir4 + 180.) % 360.0
 
     frankel_planes = [
         PlanarSurface.from_corner_points(
