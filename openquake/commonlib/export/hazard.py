@@ -817,7 +817,7 @@ def export_gmf_scenario_hdf5(ekey, dstore):
     imts = list(oq.imtls)
     with hdf5.File(fname, 'w') as f:
         for gsim in gsims:
-            arr = computer.compute(oq.random_seed, gsim, E)
+            arr = computer.compute(gsim, E, oq.random_seed)
             I, S, E = arr.shape  # #IMTs, #sites, #events
             gmfa = numpy.zeros(S, gmf_dt)
             for imti in range(I):
