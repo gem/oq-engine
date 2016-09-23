@@ -292,10 +292,11 @@ class IterResult(object):
         for iresult in iresults:
             res.received.extend(iresult.received)
             res.sent += iresult.sent
+            name = iresult.name.split('#', 1)[0]
             if hasattr(res, 'name'):
-                assert res.name == iresult.name, (res.name, iresult.name)
+                assert res.name.split('#', 1)[0] == name, (res.name, name)
             else:
-                res.name = iresult.name
+                res.name = iresult.name.split('#')[0]
         return res
 
 
