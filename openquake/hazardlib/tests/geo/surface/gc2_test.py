@@ -40,6 +40,7 @@ PNT5 = Point(-65.00000,  0.00000, 0.0)
 AS_ARRAY = numpy.array([[pnt.longitude, pnt.latitude, pnt.depth]
                         for pnt in [PNT1, PNT2, PNT3, PNT4, PNT5]])
 
+
 class CartesianTestingMultiSurface(MultiSurface):
     """
     This test surface is used to verify the values given by Spudich & Chiou

@@ -26,7 +26,7 @@ from scipy.spatial.distance import pdist, squareform
 from openquake.hazardlib.geo.surface.base import (BaseSurface,
                                                   downsample_trace)
 from openquake.hazardlib.geo.mesh import Mesh
-from openquake.hazardlib.geo import utils, geodetic
+from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.surface import (PlanarSurface,
                                              SimpleFaultSurface,
                                              ComplexFaultSurface)
@@ -363,8 +363,6 @@ class MultiSurface(BaseSurface):
             # Get surface length vector for the trace - easier in cartesian
             lengths = numpy.sqrt((px[:-1] - px[1:]) ** 2. +
                                  (py[:-1] - py[1:]) ** 2.)
-            #lengths = geodetic.geodetic_distance(edges[:-1, 0], edges[:-1, 1],
-            #                                     edges[1:, 0], edges[1:, 1])
             self.length_set.append(lengths)
             # Get cumulative surface length vector
             self.cum_length_set.append(numpy.hstack([0.,
