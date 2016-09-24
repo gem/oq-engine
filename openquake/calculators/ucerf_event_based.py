@@ -661,13 +661,11 @@ class UCERFSourceConverter(SourceConverter):
 
 
 def compute_ruptures_gmfs_curves(
-        branch_info, ucerf, sitecol, rlzs_assoc, monitor):
+        source_models, sitecol, rlzs_assoc, monitor):
     """
     Returns the ruptures as a TRT set
-    :param str branch_info:
-        Tuple of (ltbr, branch_id, branch_weight)
-    :param ucerf:
-        Instance of the UCERFSESControl object
+    :param source_models:
+        A list of UCERF source models, one per branch
     :param sitecol:
         Site collection :class:`openquake.hazardlib.site.SiteCollection`
     :param rlzs_assoc:
@@ -691,11 +689,13 @@ def compute_ruptures_gmfs_curves(
     rupdic.num_events = 0
     rupdic.trt = DEFAULT_TRT
     rlzs_by_grp = rlzs_assoc.get_rlzs_by_grp_id()
-    for grp_id, (ltbrid, branch_id, _) in enumerate(branch_info):
+    for grp_id, source_model in enumerate(source_models):
+        [grp] = source_model.src_groups  # one source group per source model
+        [ucerf] = grp  # one source per source group
         t0 = time.time()
         with filter_mon:
             ucerf.update_background_site_filter(
-                branch_id, sitecol, integration_distance)
+                grp.branch_id, sitecol, integration_distance)
 
         # set the seed before calling generate_event_set
         numpy.random.seed(oq.random_seed + grp_id)
@@ -703,7 +703,7 @@ def compute_ruptures_gmfs_curves(
         for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
             with event_mon:
                 rups, n_occs = ucerf.generate_event_set(
-                    branch_id, sitecol, integration_distance)
+                    grp.branch_id, sitecol, integration_distance)
             for i, rup in enumerate(rups):
                 rup.seed = oq.random_seed  # to think
                 rrup = rup.surface.get_min_distance(sitecol.mesh)
@@ -732,7 +732,8 @@ def compute_ruptures_gmfs_curves(
                                  correl_model, rlzs_assoc.samples[grp_id])
         rlzs = rlzs_by_grp[grp_id]
         res.update(event_based.compute_gmfs_and_curves(gg, rlzs, monitor))
-        res.calc_times[grp_id] = (ltbrid, len(sitecol), time.time() - t0)
+        res.calc_times[grp_id] = (source_model.name, len(sitecol),
+                                  time.time() - t0)
     return res
 
 
@@ -747,22 +748,23 @@ class UCERFEventBasedCalculator(event_based.EventBasedCalculator):
         """
         parse the logic tree and source model input
         """
-        self.sitecol = readinput.get_site_collection(self.oqparam)
-        self.gsim_lt = readinput.get_gsim_lt(self.oqparam, [DEFAULT_TRT])
-        self.smlt = readinput.get_source_model_lt(self.oqparam)
+        oq = self.oqparam
+        self.read_risk_data()  # read the site collection
+        self.gsim_lt = readinput.get_gsim_lt(oq, [DEFAULT_TRT])
+        self.smlt = readinput.get_source_model_lt(oq)
         job_info = dict(hostname=socket.gethostname())
         self.datastore.save('job_info', job_info)
         parser = source.SourceModelParser(
-            UCERFSourceConverter(self.oqparam.investigation_time,
-                                 self.oqparam.rupture_mesh_spacing))
-        [self.src_group] = parser.parse_src_groups(
-            self.oqparam.inputs["source_model"])
+            UCERFSourceConverter(oq.investigation_time,
+                                 oq.rupture_mesh_spacing))
+        [src_group] = parser.parse_src_groups(oq.inputs["source_model"])
         branches = sorted(self.smlt.branches.items())
         source_models = []
         num_gsim_paths = self.gsim_lt.get_num_paths()
         for ordinal, (name, branch) in enumerate(branches):
-            sg = copy.copy(self.src_group)
+            sg = copy.copy(src_group)
             sg.id = ordinal
+            sg.branch_id = branch.value
             sm = source.SourceModel(
                 name, branch.weight, [name], [sg], num_gsim_paths, ordinal, 1)
             source_models.append(sm)
@@ -781,13 +783,10 @@ class UCERFEventBasedCalculator(event_based.EventBasedCalculator):
         """
         Run the ucerf calculation
         """
-        id_set = [(key, branch.value, branch.weight)
-                  for key, branch in self.smlt.branches.items()]
-        [ucerf] = self.src_group
         monitor = self.monitor(oqparam=self.oqparam)
         res = parallel.apply(
             compute_ruptures_gmfs_curves,
-            (id_set, ucerf, self.sitecol, self.rlzs_assoc, monitor),
+            (self.csm.source_models, self.sitecol, self.rlzs_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks).submit_all()
         L = len(self.oqparam.imtls.array)
         acc = {rlz.ordinal: ProbabilityMap(L, 1)
