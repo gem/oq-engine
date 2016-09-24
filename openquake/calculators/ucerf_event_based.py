@@ -772,13 +772,16 @@ class UCERFEventBasedCalculator(event_based.EventBasedCalculator):
         branches = sorted(self.smlt.branches.items())
         source_models = []
         num_gsim_paths = self.gsim_lt.get_num_paths()
-        for grp_id, (name, branch) in enumerate(branches):
+        for grp_id, rlz in enumerate(self.smlt):
+            [name] = rlz.lt_path
+            branch = self.smlt.branches[name]
             sg = copy_grp(src_group, grp_id, name, branch.value)
             sm = source.SourceModel(
                 name, branch.weight, [name], [sg], num_gsim_paths, grp_id, 1)
             source_models.append(sm)
         self.csm = source.CompositeSourceModel(
             self.gsim_lt, self.smlt, source_models, set_weight=False)
+        self.datastore['csm_info'] = self.csm.info
         logging.info('Found %d x %d logic tree branches', len(branches),
                      self.gsim_lt.get_num_paths())
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
