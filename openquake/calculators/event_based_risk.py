@@ -782,14 +782,13 @@ class EbriskCalculator(base.RiskCalculator):
         """
         Save an array of losses by taxonomy of shape (T, L, R).
         """
-        T, L = len(self.assetcol.taxonomies), len(self.riskmodel.lti)
         # compute the total number of realizations for all source models
         R = sum(losses_by_sm[sm_id].shape[-1] for sm_id in losses_by_sm)
-        all_losses = numpy.zeros((T, L, R), F64)
+        T, L = len(self.assetcol.taxonomies), len(self.riskmodel.lti)
+        dset = self.datastore.create_dset('losses_by_taxon', F64, (T, L, R))
         start = 0
         for sm_id in sorted(losses_by_sm):
             newstart = start + losses_by_sm[sm_id].shape[-1]
-            all_losses[:, :, start:newstart] = losses_by_sm[sm_id]
+            dset[:, :, start:newstart] = losses_by_sm[sm_id]
             start = newstart
-        self.datastore['losses_by_taxon'] = all_losses
-        logging.info('Saved %s losses by taxonomy', all_losses.shape)
+        logging.info('Saved %s losses by taxonomy', (T, L, R))
