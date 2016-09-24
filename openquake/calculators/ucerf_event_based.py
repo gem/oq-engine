@@ -536,6 +536,7 @@ class UCERFSESControl(object):
         self.background_idx = None
         self.num_ruptures = 0
         self.idx_set = None
+        self.weight = 1  # all branches have the same weight
 
     def get_min_max_mag(self):
         return self.min_mag, None
@@ -732,8 +733,7 @@ def compute_ruptures_gmfs_curves(
                                  correl_model, rlzs_assoc.samples[grp_id])
         rlzs = rlzs_by_grp[grp_id]
         res.update(event_based.compute_gmfs_and_curves(gg, rlzs, monitor))
-        res.calc_times[grp_id] = (source_model.name, len(sitecol),
-                                  time.time() - t0)
+        res.calc_times[grp_id] = (grp.name, len(sitecol), time.time() - t0)
     return res
 
 
@@ -764,6 +764,7 @@ class UCERFEventBasedCalculator(event_based.EventBasedCalculator):
         for ordinal, (name, branch) in enumerate(branches):
             sg = copy.copy(src_group)
             sg.id = ordinal
+            sg.name = name
             sg.branch_id = branch.value
             sm = source.SourceModel(
                 name, branch.weight, [name], [sg], num_gsim_paths, ordinal, 1)
