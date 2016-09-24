@@ -34,7 +34,7 @@ class UCERFRiskCalculator(EbriskCalculator):
     pre_execute = UCERFEventBasedCalculator.__dict__['pre_execute']
 
     def compute_ruptures(self, sources, sitecol, gsims, monitor):
-        [ucerf] = sources  # there is a single source per UCERF branch
+        [src] = sources  # there is a single source per UCERF branch
         integration_distance = monitor.maximum_distance[DEFAULT_TRT]
         res = AccumDict()
         res.calc_times = AccumDict()
@@ -46,17 +46,17 @@ class UCERFRiskCalculator(EbriskCalculator):
 
         t0 = time.time()
         with filter_mon:
-            ucerf.update_background_site_filter(
-                ucerf.branch_id, sitecol, integration_distance)
+            src.update_background_site_filter(
+                src.branch_id, sitecol, integration_distance)
 
         # set the seed before calling generate_event_set
-        numpy.random.seed(monitor.seed + ucerf.src_group_id)
-        ses_ruptures = []
+        numpy.random.seed(monitor.seed + src.src_group_id)
+        ebruptures = []
         eid = 0
         for ses_idx in range(1, monitor.ses_per_logic_tree_path + 1):
             with event_mon:
-                rups, n_occs = ucerf.generate_event_set(
-                    ucerf.branch_id, sitecol, integration_distance)
+                rups, n_occs = src.generate_event_set(
+                    src.branch_id, sitecol, integration_distance)
             for i, rup in enumerate(rups):
                 rup.seed = monitor.seed  # to think
                 rrup = rup.surface.get_min_distance(sitecol.mesh)
@@ -69,14 +69,14 @@ class UCERFRiskCalculator(EbriskCalculator):
                     events.append((eid, ses_idx, j, 0))  # 0 is the sampling ID
                     eid += 1
                 if events:
-                    ses_ruptures.append(
+                    ebruptures.append(
                         event_based.EBRupture(
                             rup, indices,
                             numpy.array(events, event_based.event_dt),
-                            ucerf.source_id, ucerf.src_group_id, serial))
+                            src.source_id, src.src_group_id, serial))
                     serial += 1
                     res.num_events += len(events)
-            res[ucerf.src_group_id] = ses_ruptures
-            res.calc_times[ucerf.src_group_id] = (
-                ucerf.source_id, len(sitecol), time.time() - t0)
+            res[src.src_group_id] = ebruptures
+            res.calc_times[src.src_group_id] = (
+                src.source_id, len(sitecol), time.time() - t0)
         return res
