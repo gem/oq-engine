@@ -659,14 +659,22 @@ def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     lti = riskmodel.lti  # loss type -> index
     L, R = len(lti), len(rlzs_assoc.realizations)
     T = len(assetcol.taxonomies)
+    A = len(assetcol)
     taxonomy_id = {t: i for i, t in enumerate(sorted(assetcol.taxonomies))}
     losses = numpy.zeros((T, L, R), F64)
+    alosses = numpy.zeros((A, L, R), F64)
+    elosses = AccumDict({eid: numpy.zeros((L, R), F64)
+                         for eid in riskinput.eids})
     for out in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor, assetcol):
         # NB: out.assets is a non-empty list of assets with the same taxonomy
         t = taxonomy_id[out.assets[0].taxonomy]
         l, r = out.lr
-        losses[t, l, r] += out.loss
-    return AccumDict(losses=losses, gmfbytes=monitor.gmfbytes)
+        losses[t, l, r] += out.alosses.sum()
+        alosses[:, l, r] += out.alosses
+        for eid, loss in zip(out.eids, out.elosses):
+            elosses[eid][l, r] += loss
+    return AccumDict(losses=losses, alosses=alosses, elosses=elosses,
+                     gmfbytes=monitor.gmfbytes)
 
 
 @base.calculators.add('ebrisk')
@@ -719,8 +727,7 @@ class EbriskCalculator(base.RiskCalculator):
                 ri = riskinput.RiskInputFromRuptures(
                     trt, imts, sitecol, rupts, trunc_level,
                     correl_model, min_iml)
-                allargs.append((ri, riskmodel, rlzs_assoc,
-                                assetcol, monitor))
+                allargs.append((ri, riskmodel, rlzs_assoc, assetcol, monitor))
         taskname = '%s#%d' % (losses_by_taxonomy.__name__, ssm.sm_id + 1)
         smap = starmap(losses_by_taxonomy, allargs, name=taskname)
         attrs = dict(num_ruptures=num_ruptures,

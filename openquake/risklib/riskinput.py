@@ -429,15 +429,13 @@ class CompositeRiskModel(collections.Mapping):
                 all_ruptures, hint or 1, key=by_grp_id,
                 weight=operator.attrgetter('weight')):
             grp_id = ses_ruptures[0].grp_id
-            eids = []
-            for sr in ses_ruptures:
-                eids.extend(sr.events['eid'])
-            idxs = numpy.arange(start, start + len(eids))
-            start += len(eids)
+            num_events = sum(sr.multiplicity for sr in ses_ruptures)
+            idxs = numpy.arange(start, start + num_events)
+            start += num_events
             yield RiskInputFromRuptures(
                 grp_trt[grp_id], imts, sitecol, ses_ruptures,
                 trunc_level, correl_model, min_iml,
-                eps[:, idxs] if eps is not None else None, eids)
+                eps[:, idxs] if eps is not None else None)
 
     def gen_outputs(self, riskinput, rlzs_assoc, monitor,
                     assetcol=None):
@@ -701,8 +699,7 @@ class RiskInputFromRuptures(object):
     :param eids: an array of event IDs (or None)
     """
     def __init__(self, trt, imts, sitecol, ses_ruptures,
-                 trunc_level, correl_model, min_iml, epsilons=None,
-                 eids=None):
+                 trunc_level, correl_model, min_iml, epsilons=None):
         self.sitecol = sitecol
         self.ses_ruptures = numpy.array(ses_ruptures)
         self.trt = trt
@@ -711,10 +708,10 @@ class RiskInputFromRuptures(object):
         self.min_iml = min_iml
         self.weight = sum(sr.weight for sr in ses_ruptures)
         self.imts = imts
-        self.eids = eids  # E events
+        self.eids = numpy.concatenate([r.events['eid'] for r in ses_ruptures])
         if epsilons is not None:
             self.eps = epsilons  # matrix N x E, events in this block
-            self.eid2idx = dict(zip(eids, range(len(eids))))
+            self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
 
     def epsilon_getter(self, asset_ordinals):
         """
