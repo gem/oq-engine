@@ -257,6 +257,13 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
         # shortcut
         numpy.testing.assert_allclose(a, b, rtol, atol)
         return
+    if isinstance(a, (list, tuple)):
+        # another shortcut
+        assert_close_seq(a, b, rtol, atol, a)
+        return
+    if a == b:
+        # another shortcut
+        return
     if hasattr(a, '_slots_'):  # record-like objects
         assert_close_seq(a._slots_, b._slots_, rtol, atol, a)
         for x, y in zip(a._slots_, b._slots_):
@@ -271,8 +278,6 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
         return
     if hasattr(a, '__dict__'):  # objects with an attribute dictionary
         assert_close(vars(a), vars(b), context=a)
-        return
-    if a == b:
         return
     ctx = '' if context is None else 'in context ' + repr(context)
     raise AssertionError('%r != %r %s' % (a, b, ctx))
