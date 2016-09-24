@@ -27,7 +27,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
-    AccumDict, humansize, block_splitter, groupby)
+    AccumDict, humansize, block_splitter, groupby, humansize)
 from openquake.calculators import base, event_based
 from openquake.commonlib import parallel, calc, source
 from openquake.risklib import riskinput, scientific
@@ -666,7 +666,7 @@ def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
         t = taxonomy_id[out.assets[0].taxonomy]
         l, r = out.lr
         losses[t, l, r] += out.loss
-    return losses
+    return AccumDict(losses=losses, gmfbytes=monitor.gmfbytes)
 
 
 @base.calculators.add('ebrisk')
@@ -772,8 +772,9 @@ class EbriskCalculator(base.RiskCalculator):
                 vars(res).update(attrs)
                 allres.append(res)
         # collect the losses by source model
-        losses_by_sm = groupby(allres, operator.attrgetter('sm_id'),
-                               lambda grp: sum(sum(res) for res in grp))
+        losses_by_sm = groupby(
+            allres, operator.attrgetter('sm_id'),
+            lambda grp: sum([sum(res, {}) for res in grp], {}))
         self.save_data_transfer(
             parallel.IterResult.sum(res for res in allres))
         return losses_by_sm
@@ -782,13 +783,23 @@ class EbriskCalculator(base.RiskCalculator):
         """
         Save an array of losses by taxonomy of shape (T, L, R).
         """
+        gmfbytes = sum(losses_by_sm[sm_id]['gmfbytes']
+                       for sm_id in losses_by_sm)
+        logging.info('Generated %s of GMFs', humansize(gmfbytes))
+        self.datastore.save('job_info', {'gmfbytes': gmfbytes})
+        if gmfbytes == 0:
+            raise RuntimeError('No GMFs were generated, perhaps they were '
+                               'all below the minimum_intensity threshold')
+
         # compute the total number of realizations for all source models
-        R = sum(losses_by_sm[sm_id].shape[-1] for sm_id in losses_by_sm)
+        R = sum(losses_by_sm[sm_id]['losses'].shape[-1]
+                for sm_id in losses_by_sm)
         T, L = len(self.assetcol.taxonomies), len(self.riskmodel.lti)
         dset = self.datastore.create_dset('losses_by_taxon', F64, (T, L, R))
         start = 0
         for sm_id in sorted(losses_by_sm):
-            newstart = start + losses_by_sm[sm_id].shape[-1]
-            dset[:, :, start:newstart] = losses_by_sm[sm_id]
+            losses = losses_by_sm[sm_id]['losses']
+            newstart = start + losses.shape[-1]
+            dset[:, :, start:newstart] = losses
             start = newstart
         logging.info('Saved %s losses by taxonomy', (T, L, R))
