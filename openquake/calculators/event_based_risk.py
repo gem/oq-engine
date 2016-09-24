@@ -725,10 +725,10 @@ class EbriskCalculator(base.RiskCalculator):
                                 self.assetcol, monitor))
         taskname = '%s#%d' % (losses_by_taxonomy.__name__, ssm.sm_id + 1)
         smap = starmap(losses_by_taxonomy, allargs, name=taskname)
-        smap.num_ruptures = num_ruptures
-        smap.num_events = num_events
-        smap.sm_id = ssm.sm_id
-        return smap
+        attrs = dict(num_ruptures=num_ruptures,
+                     num_events=num_events,
+                     sm_id=ssm.sm_id)
+        return smap, attrs
 
     def gen_args(self):
         """
@@ -761,20 +761,22 @@ class EbriskCalculator(base.RiskCalculator):
         """
         Run the calculator and aggregate the results
         """
-        smaps = []
+        allres = []
         with self.monitor('sending riskinputs', autoflush=True):
             for ssm, mon in self.gen_args():
-                smap = self.build_starmap(ssm, mon)
+                smap, attrs = self.build_starmap(ssm, mon)
                 logging.info(
                     'Generated %d/%d ruptures/events for source model #%d',
-                    smap.num_ruptures, smap.num_events, smap.sm_id + 1)
-                smap.res = smap.submit_all()
-                smaps.append(smap)
+                    attrs['num_ruptures'], attrs['num_events'],
+                    attrs['sm_id'] + 1)
+                res = smap.submit_all()
+                vars(res).update(attrs)
+                allres.append(res)
         # collect the losses by source model
-        losses_by_sm = groupby(smaps, operator.attrgetter('sm_id'),
-                               lambda grp: sum(sum(smap.res) for smap in grp))
+        losses_by_sm = groupby(allres, operator.attrgetter('sm_id'),
+                               lambda grp: sum(sum(res) for res in grp))
         self.save_data_transfer(
-            parallel.IterResult.sum(smap.res for smap in smaps))
+            parallel.IterResult.sum(res for res in allres))
         return losses_by_sm
 
     def post_execute(self, losses_by_sm):
