@@ -57,7 +57,7 @@ class UCERFRiskCalculator(EbriskCalculator):
             with event_mon:
                 rups, n_occs = src.generate_event_set(
                     src.branch_id, sitecol, integration_distance)
-            for i, rup in enumerate(rups):
+            for rup, n_occ in zip(rups, n_occs):
                 rup.seed = monitor.seed  # to think
                 rrup = rup.surface.get_min_distance(sitecol.mesh)
                 r_sites = sitecol.filter(rrup <= integration_distance)
@@ -65,8 +65,8 @@ class UCERFRiskCalculator(EbriskCalculator):
                     continue
                 indices = r_sites.indices
                 events = []
-                for j in range(n_occs[i]):
-                    events.append((eid, ses_idx, j, 0))  # 0 is the sampling ID
+                for occ in range(n_occ):
+                    events.append((eid, ses_idx, occ, 0))  # 0 is the sampling
                     eid += 1
                 if events:
                     ebruptures.append(
