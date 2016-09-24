@@ -227,6 +227,7 @@ class DataStore(collections.MutableMapping):
         :param shape: shape of the dataset, possibly extendable
         :param compression: the kind of HDF5 compression to use
         :param attrs: dictionary of attributes of the dataset
+        :returns: a HDF5 dataset
         """
         return hdf5.create(
             self.hdf5, key, dtype, shape, compression, fillvalue, attrs)
