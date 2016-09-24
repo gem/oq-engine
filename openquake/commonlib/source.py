@@ -529,7 +529,7 @@ class CompositeSourceModel(collections.Sequence):
         a list of :class:`openquake.commonlib.source.SourceModel` tuples
     """
     def __init__(self, gsim_lt, source_model_lt, source_models,
-                 set_weight=True, num_samples=None):
+                 set_weight=True):
         self.gsim_lt = gsim_lt
         self.source_model_lt = source_model_lt
         self.source_models = source_models
@@ -540,7 +540,7 @@ class CompositeSourceModel(collections.Sequence):
         # must go after set_weights to have the correct .num_ruptures
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
-            num_samples or self.source_model_lt.num_samples,
+            self.source_model_lt.num_samples,
             [sm.get_skeleton() for sm in self.source_models])
 
     def get_model(self, sm_id):
@@ -548,9 +548,11 @@ class CompositeSourceModel(collections.Sequence):
         Extract a CompositeSourceModel instance containing the single
         model of index `sm_id`.
         """
+        sm = self.source_models[sm_id]
+        if self.source_model_lt.num_samples:
+            self.source_model_lt.num_samples = sm.samples
         new = self.__class__(
-            self.gsim_lt, self.source_model_lt,
-            [self.source_models[sm_id]], set_weight=False, num_samples=1)
+            self.gsim_lt, self.source_model_lt, [sm], set_weight=False)
         new.sm_id = sm_id
         return new
 
