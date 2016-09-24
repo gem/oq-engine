@@ -35,8 +35,7 @@ class UCERFRiskCalculator(EbriskCalculator):
 
     def compute_ruptures(self, src_group, sitecol, gsims, monitor):
         [ucerf] = src_group
-        oq = monitor.oqparam
-        integration_distance = oq.maximum_distance[DEFAULT_TRT]
+        integration_distance = monitor.maximum_distance[DEFAULT_TRT]
         res = AccumDict()
         res.calc_times = AccumDict()
         serial = 1
@@ -51,15 +50,15 @@ class UCERFRiskCalculator(EbriskCalculator):
                 ucerf.branch_id, sitecol, integration_distance)
 
         # set the seed before calling generate_event_set
-        numpy.random.seed(oq.random_seed + src_group.id)
+        numpy.random.seed(monitor.seed + src_group.id)
         ses_ruptures = []
         eid = 0
-        for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
+        for ses_idx in range(1, monitor.ses_per_logic_tree_path + 1):
             with event_mon:
                 rups, n_occs = ucerf.generate_event_set(
                     src_group.branch_id, sitecol, integration_distance)
             for i, rup in enumerate(rups):
-                rup.seed = oq.random_seed  # to think
+                rup.seed = monitor.seed  # to think
                 rrup = rup.surface.get_min_distance(sitecol.mesh)
                 r_sites = sitecol.filter(rrup <= integration_distance)
                 if r_sites is None:
