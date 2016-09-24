@@ -696,7 +696,7 @@ def compute_ruptures_gmfs_curves(
         t0 = time.time()
         with filter_mon:
             ucerf.update_background_site_filter(
-                grp.branch_id, sitecol, integration_distance)
+                ucerf.branch_id, sitecol, integration_distance)
 
         # set the seed before calling generate_event_set
         numpy.random.seed(oq.random_seed + grp_id)
@@ -704,7 +704,7 @@ def compute_ruptures_gmfs_curves(
         for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
             with event_mon:
                 rups, n_occs = ucerf.generate_event_set(
-                    grp.branch_id, sitecol, integration_distance)
+                    ucerf.branch_id, sitecol, integration_distance)
             for i, rup in enumerate(rups):
                 rup.seed = oq.random_seed  # to think
                 rrup = rup.surface.get_min_distance(sitecol.mesh)
@@ -733,8 +733,19 @@ def compute_ruptures_gmfs_curves(
                                  correl_model, rlzs_assoc.samples[grp_id])
         rlzs = rlzs_by_grp[grp_id]
         res.update(event_based.compute_gmfs_and_curves(gg, rlzs, monitor))
-        res.calc_times[grp_id] = (grp.name, len(sitecol), time.time() - t0)
+        res.calc_times[grp_id] = (ucerf.source_id, len(sitecol),
+                                  time.time() - t0)
     return res
+
+
+def copy_grp(src_group, grp_id, branch_name, branch_id):
+    src = copy.copy(src_group[0])  # there is single source
+    new = copy.copy(src_group)
+    new.id = src.src_group_id = grp_id
+    src.source_id = branch_name
+    src.branch_id = branch_id
+    new.sources = [src]
+    return new
 
 
 @base.calculators.add('ucerf_event_based')
@@ -761,13 +772,10 @@ class UCERFEventBasedCalculator(event_based.EventBasedCalculator):
         branches = sorted(self.smlt.branches.items())
         source_models = []
         num_gsim_paths = self.gsim_lt.get_num_paths()
-        for ordinal, (name, branch) in enumerate(branches):
-            sg = copy.copy(src_group)
-            sg.id = ordinal
-            sg.name = name
-            sg.branch_id = branch.value
+        for grp_id, (name, branch) in enumerate(branches):
+            sg = copy_grp(src_group, grp_id, name, branch.value)
             sm = source.SourceModel(
-                name, branch.weight, [name], [sg], num_gsim_paths, ordinal, 1)
+                name, branch.weight, [name], [sg], num_gsim_paths, grp_id, 1)
             source_models.append(sm)
         self.csm = source.CompositeSourceModel(
             self.gsim_lt, self.smlt, source_models, set_weight=False)
