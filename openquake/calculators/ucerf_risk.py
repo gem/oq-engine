@@ -33,8 +33,8 @@ class UCERFRiskCalculator(EbriskCalculator):
     """
     pre_execute = UCERFEventBasedCalculator.__dict__['pre_execute']
 
-    def compute_ruptures(self, src_group, sitecol, gsims, monitor):
-        [ucerf] = src_group
+    def compute_ruptures(self, sources, sitecol, gsims, monitor):
+        [ucerf] = sources  # there is a single source per UCERF branch
         integration_distance = monitor.maximum_distance[DEFAULT_TRT]
         res = AccumDict()
         res.calc_times = AccumDict()
@@ -50,13 +50,13 @@ class UCERFRiskCalculator(EbriskCalculator):
                 ucerf.branch_id, sitecol, integration_distance)
 
         # set the seed before calling generate_event_set
-        numpy.random.seed(monitor.seed + src_group.id)
+        numpy.random.seed(monitor.seed + ucerf.src_group_id)
         ses_ruptures = []
         eid = 0
         for ses_idx in range(1, monitor.ses_per_logic_tree_path + 1):
             with event_mon:
                 rups, n_occs = ucerf.generate_event_set(
-                    src_group.branch_id, sitecol, integration_distance)
+                    ucerf.branch_id, sitecol, integration_distance)
             for i, rup in enumerate(rups):
                 rup.seed = monitor.seed  # to think
                 rrup = rup.surface.get_min_distance(sitecol.mesh)
@@ -73,10 +73,10 @@ class UCERFRiskCalculator(EbriskCalculator):
                         event_based.EBRupture(
                             rup, indices,
                             numpy.array(events, event_based.event_dt),
-                            ucerf.source_id, src_group.id, serial))
+                            ucerf.source_id, ucerf.src_group_id, serial))
                     serial += 1
                     res.num_events += len(events)
-            res[src_group.id] = ses_ruptures
-            res.calc_times[src_group.id] = (
-                src_group.name, len(sitecol), time.time() - t0)
+            res[ucerf.src_group_id] = ses_ruptures
+            res.calc_times[ucerf.src_group_id] = (
+                ucerf.source_id, len(sitecol), time.time() - t0)
         return res
