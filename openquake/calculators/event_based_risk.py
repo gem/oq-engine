@@ -681,7 +681,8 @@ class EbriskCalculator(base.RiskCalculator):
     # TODO: if the number of source models is larger than concurrent_tasks
     # a different strategy should be used; the one used here is good when
     # there are few source models, so that we cannot parallelize on those
-    def build_starmap(self, ssm, monitor):
+    def build_starmap(self, ssm, sitecol, assetcol, riskmodel, imts,
+                      trunc_level, correl_model, min_iml, monitor):
         """
         :param ssm: CompositeSourceModel containing a single source model
         :param monitor: Monitor instance
@@ -710,18 +711,16 @@ class EbriskCalculator(base.RiskCalculator):
             count_ruptures=lambda grp: len(ruptures_by_grp.get(grp.id, 0)))
         allargs = []
         # prepare the risk inputs
-        imts = list(self.oqparam.imtls)
-        trunc_level = self.oqparam.truncation_level
         ruptures_per_block = self.oqparam.ruptures_per_block
         for src_group in ssm.src_groups:
             for rupts in block_splitter(
                     ruptures_by_grp[src_group.id], ruptures_per_block):
                 trt = grp_trt[rupts[0].grp_id]
                 ri = riskinput.RiskInputFromRuptures(
-                    trt, imts, self.sitecol, rupts, trunc_level,
-                    self.correl_model, self.min_iml)
-                allargs.append((ri, self.riskmodel, rlzs_assoc,
-                                self.assetcol, monitor))
+                    trt, imts, sitecol, rupts, trunc_level,
+                    correl_model, min_iml)
+                allargs.append((ri, riskmodel, rlzs_assoc,
+                                assetcol, monitor))
         taskname = '%s#%d' % (losses_by_taxonomy.__name__, ssm.sm_id + 1)
         smap = starmap(losses_by_taxonomy, allargs, name=taskname)
         attrs = dict(num_ruptures=num_ruptures,
@@ -735,18 +734,18 @@ class EbriskCalculator(base.RiskCalculator):
         source models, the asset collection, the riskmodel and others.
         """
         oq = self.oqparam
-        self.correl_model = oq.get_correl_model()
+        correl_model = oq.get_correl_model()
         if not oq.minimum_intensity:
             # infer it from the risk models if not directly set in job.ini
             oq.minimum_intensity = self.riskmodel.get_min_iml()
-        self.min_iml = calc.fix_minimum_intensity(
-            oq.minimum_intensity, oq.imtls)
-        if self.min_iml.sum() == 0:
+        min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
+        if min_iml.sum() == 0:
             logging.warn('The GMFs are not filtered: '
                          'you may want to set a minimum_intensity')
         else:
             logging.info('minimum_intensity=%s', oq.minimum_intensity)
         self.csm.init_serials()
+        imts = list(oq.imtls)
         for sm_id in range(len(self.csm.source_models)):
             ssm = self.csm.get_model(sm_id)
             monitor = self.monitor.new(
@@ -754,7 +753,8 @@ class EbriskCalculator(base.RiskCalculator):
                 maximum_distance=oq.maximum_distance,
                 samples=ssm.source_models[0].samples,
                 seed=ssm.source_model_lt.seed)
-            yield ssm, monitor
+            yield (ssm, self.sitecol, self.assetcol, self.riskmodel,
+                   imts, oq.truncation_level, correl_model, min_iml, monitor)
 
     def execute(self):
         """
@@ -762,8 +762,8 @@ class EbriskCalculator(base.RiskCalculator):
         """
         allres = []
         with self.monitor('sending riskinputs', autoflush=True):
-            for ssm, mon in self.gen_args():
-                smap, attrs = self.build_starmap(ssm, mon)
+            for args in self.gen_args():
+                smap, attrs = self.build_starmap(*args)
                 logging.info(
                     'Generated %d/%d ruptures/events for source model #%d',
                     attrs['num_ruptures'], attrs['num_events'],

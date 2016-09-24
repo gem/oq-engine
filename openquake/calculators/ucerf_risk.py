@@ -20,10 +20,62 @@ import time
 import numpy
 
 from openquake.baselib.general import AccumDict
+from openquake.risklib import riskinput
+from openquake.commonlib import parallel
 from openquake.calculators import base, event_based
 from openquake.calculators.ucerf_event_based import (
     UCERFEventBasedCalculator, DEFAULT_TRT)
-from openquake.calculators.event_based_risk import EbriskCalculator
+from openquake.calculators.event_based_risk import (
+    EbriskCalculator, losses_by_taxonomy)
+
+
+def compute_ruptures(sources, sitecol, gsims, monitor):
+    [src] = sources  # there is a single source per UCERF branch
+    integration_distance = monitor.maximum_distance[DEFAULT_TRT]
+    res = AccumDict()
+    res.calc_times = AccumDict()
+    serial = 1
+    filter_mon = monitor('update_background_site_filter', measuremem=False)
+    event_mon = monitor('sampling ruptures', measuremem=False)
+    res.num_events = 0
+    res.trt = DEFAULT_TRT
+
+    t0 = time.time()
+    with filter_mon:
+        src.update_background_site_filter(
+            src.branch_id, sitecol, integration_distance)
+
+    # set the seed before calling generate_event_set
+    numpy.random.seed(monitor.seed + src.src_group_id)
+    ebruptures = []
+    eid = 0
+    for ses_idx in range(1, monitor.ses_per_logic_tree_path + 1):
+        with event_mon:
+            rups, n_occs = src.generate_event_set(
+                src.branch_id, sitecol, integration_distance)
+        for rup, n_occ in zip(rups, n_occs):
+            rup.seed = monitor.seed  # to think
+            rrup = rup.surface.get_min_distance(sitecol.mesh)
+            r_sites = sitecol.filter(rrup <= integration_distance)
+            if r_sites is None:
+                continue
+            indices = r_sites.indices
+            events = []
+            for occ in range(n_occ):
+                events.append((eid, ses_idx, occ, 0))  # 0 is the sampling
+                eid += 1
+            if events:
+                ebruptures.append(
+                    event_based.EBRupture(
+                        rup, indices,
+                        numpy.array(events, event_based.event_dt),
+                        src.source_id, src.src_group_id, serial))
+                serial += 1
+                res.num_events += len(events)
+        res[src.src_group_id] = ebruptures
+        res.calc_times[src.src_group_id] = (
+            src.source_id, len(sitecol), time.time() - t0)
+    return res
 
 
 @base.calculators.add('ucerf_risk')
@@ -32,51 +84,28 @@ class UCERFRiskCalculator(EbriskCalculator):
     Event based risk calculator for UCERF, parallelizing on the source models
     """
     pre_execute = UCERFEventBasedCalculator.__dict__['pre_execute']
+    compute_ruptures = staticmethod(compute_ruptures)
 
-    def compute_ruptures(self, sources, sitecol, gsims, monitor):
-        [src] = sources  # there is a single source per UCERF branch
-        integration_distance = monitor.maximum_distance[DEFAULT_TRT]
-        res = AccumDict()
-        res.calc_times = AccumDict()
-        serial = 1
-        filter_mon = monitor('update_background_site_filter', measuremem=False)
-        event_mon = monitor('sampling ruptures', measuremem=False)
-        res.num_events = 0
-        res.trt = DEFAULT_TRT
 
-        t0 = time.time()
-        with filter_mon:
-            src.update_background_site_filter(
-                src.branch_id, sitecol, integration_distance)
+def compute_losses(ssm, sitecol, assetcol, riskmodel,
+                   imts, trunc_level, correl_model, min_iml, monitor):
+    [grp] = ssm.src_groups
+    [(grp_id, ruptures)] = compute_ruptures(
+        grp, sitecol, None, monitor).items()
+    rlzs_assoc = ssm.info.get_rlzs_assoc()
+    ri = riskinput.RiskInputFromRuptures(
+        DEFAULT_TRT, imts, sitecol, ruptures,
+        trunc_level, correl_model, min_iml)
+    return {grp_id: losses_by_taxonomy(
+        ri, riskmodel, rlzs_assoc, assetcol, monitor)}
 
-        # set the seed before calling generate_event_set
-        numpy.random.seed(monitor.seed + src.src_group_id)
-        ebruptures = []
-        eid = 0
-        for ses_idx in range(1, monitor.ses_per_logic_tree_path + 1):
-            with event_mon:
-                rups, n_occs = src.generate_event_set(
-                    src.branch_id, sitecol, integration_distance)
-            for rup, n_occ in zip(rups, n_occs):
-                rup.seed = monitor.seed  # to think
-                rrup = rup.surface.get_min_distance(sitecol.mesh)
-                r_sites = sitecol.filter(rrup <= integration_distance)
-                if r_sites is None:
-                    continue
-                indices = r_sites.indices
-                events = []
-                for occ in range(n_occ):
-                    events.append((eid, ses_idx, occ, 0))  # 0 is the sampling
-                    eid += 1
-                if events:
-                    ebruptures.append(
-                        event_based.EBRupture(
-                            rup, indices,
-                            numpy.array(events, event_based.event_dt),
-                            src.source_id, src.src_group_id, serial))
-                    serial += 1
-                    res.num_events += len(events)
-            res[src.src_group_id] = ebruptures
-            res.calc_times[src.src_group_id] = (
-                src.source_id, len(sitecol), time.time() - t0)
-        return res
+
+@base.calculators.add('ucerf_risk')
+class UCERFCalculator(EbriskCalculator):
+    """
+    Event based risk calculator for UCERF, parallelizing on the source models
+    """
+    pre_execute = UCERFEventBasedCalculator.__dict__['pre_execute']
+
+    def execute(self):
+        return parallel.starmap(compute_losses, self.gen_args()).reduce()
