@@ -639,6 +639,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.datastore['agg_curve-stats'].attrs['nbytes'] = (
             agg_curve_stats.nbytes)
 
+elt_dt = numpy.dtype([('rup_id', U32), ('loss', F32)])
+
 
 def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     """
@@ -674,6 +676,10 @@ def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
                 avglosses[i, l, r] += loss
         agglosses[l, r] += {eid: loss for eid, loss in
                             zip(out.eids, out.elosses) if loss}
+
+    # convert agglosses into arrays to reduce the data transfer
+    agglosses = {lr: numpy.array(sorted(agglosses[lr].items()), elt_dt)
+                 for lr in agglosses}
     return AccumDict(losses=losses, avglosses=avglosses, agglosses=agglosses,
                      gmfbytes=monitor.gmfbytes)
 
@@ -791,7 +797,6 @@ class EbriskCalculator(base.RiskCalculator):
         self.R = sum(res.num_rlzs for res in allres)
         self.T = len(self.assetcol.taxonomies)
         self.A = len(self.assetcol)
-        self.elt_dt = numpy.dtype([('rup_id', U32), ('loss', F32)])
         dset1 = self.datastore.create_dset(
             'losses_by_taxon', F64, (self.T, self.L, self.R))
         dset2 = self.datastore.create_dset(
@@ -825,11 +830,11 @@ class EbriskCalculator(base.RiskCalculator):
         :param agglosses: a dictionary lr -> {eid: loss}
         :param offset: realization offset
         """
-        for l, r in agglosses:
-            loss_type = self.riskmodel.loss_types[l]
-            key = 'agg_loss_table/rlz-%03d/%s' % (r + offset, loss_type)
-            array = numpy.array(sorted(agglosses[l, r].items()), self.elt_dt)
-            self.datastore.extend(key, array)
+        with self.monitor('saving event loss tables', autoflush=True):
+            for l, r in agglosses:
+                loss_type = self.riskmodel.loss_types[l]
+                key = 'agg_loss_table/rlz-%03d/%s' % (r + offset, loss_type)
+                self.datastore.extend(key, agglosses[l, r])
 
     def post_execute(self, num_events):
         """
