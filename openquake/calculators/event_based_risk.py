@@ -828,7 +828,7 @@ class EbriskCalculator(base.RiskCalculator):
         for l, r in agglosses:
             loss_type = self.riskmodel.loss_types[l]
             key = 'agg_loss_table/rlz-%03d/%s' % (r + offset, loss_type)
-            array = numpy.array(agglosses[l, r].items(), self.elt_dt)
+            array = numpy.array(sorted(agglosses[l, r].items()), self.elt_dt)
             self.datastore.extend(key, array)
 
     def post_execute(self, num_events):
