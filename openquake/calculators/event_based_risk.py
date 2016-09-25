@@ -26,8 +26,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
-from openquake.baselib.general import (
-    AccumDict, humansize, block_splitter, groupby, humansize)
+from openquake.baselib.general import AccumDict, humansize, block_splitter
 from openquake.calculators import base, event_based
 from openquake.commonlib import parallel, calc, source
 from openquake.risklib import riskinput, scientific
@@ -662,19 +661,24 @@ def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     A = len(assetcol)
     taxonomy_id = {t: i for i, t in enumerate(sorted(assetcol.taxonomies))}
     losses = numpy.zeros((T, L, R), F64)
-    alosses = numpy.zeros((A, L, R), F64)
-    elosses = AccumDict({eid: numpy.zeros((L, R), F64)
-                         for eid in riskinput.eids})
+    avglosses = numpy.zeros((A, L, R), F64)
+    agglosses = AccumDict(
+        {lr: AccumDict() for lr in itertools.product(range(L), range(R))})
     for out in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor, assetcol):
         # NB: out.assets is a non-empty list of assets with the same taxonomy
         t = taxonomy_id[out.assets[0].taxonomy]
         l, r = out.lr
         losses[t, l, r] += out.alosses.sum()
-        alosses[:, l, r] += out.alosses
-        for eid, loss in zip(out.eids, out.elosses):
-            elosses[eid][l, r] += loss
-    return AccumDict(losses=losses, alosses=alosses, elosses=elosses,
+        for i, loss in enumerate(out.alosses):
+            if loss:
+                avglosses[i, l, r] += loss
+        agglosses[l, r] += {eid: loss for eid, loss in
+                            zip(out.eids, out.elosses) if loss}
+    return AccumDict(losses=losses, avglosses=avglosses, agglosses=agglosses,
                      gmfbytes=monitor.gmfbytes)
+
+save_ruptures = event_based.EventBasedRuptureCalculator.__dict__[
+    'save_ruptures']
 
 
 @base.calculators.add('ebrisk')
@@ -714,6 +718,9 @@ class EbriskCalculator(base.RiskCalculator):
             [rupts] = dic.values()
             num_ruptures += len(rupts)
             num_events += dic.num_events
+        ruptures_by_grp.num_events = num_events
+        save_ruptures(self, ruptures_by_grp)
+
         # determine the realizations
         rlzs_assoc = ssm.info.get_rlzs_assoc(
             count_ruptures=lambda grp: len(ruptures_by_grp.get(grp.id, 0)))
@@ -732,6 +739,7 @@ class EbriskCalculator(base.RiskCalculator):
         smap = starmap(losses_by_taxonomy, allargs, name=taskname)
         attrs = dict(num_ruptures=num_ruptures,
                      num_events=num_events,
+                     num_rlzs=len(rlzs_assoc.realizations),
                      sm_id=ssm.sm_id)
         return smap, attrs
 
@@ -769,6 +777,7 @@ class EbriskCalculator(base.RiskCalculator):
         """
         allres = []
         with self.monitor('sending riskinputs', autoflush=True):
+            self.eid = 0
             for args in self.gen_args():
                 smap, attrs = self.build_starmap(*args)
                 logging.info(
@@ -778,35 +787,58 @@ class EbriskCalculator(base.RiskCalculator):
                 res = smap.submit_all()
                 vars(res).update(attrs)
                 allres.append(res)
-        # collect the losses by source model
-        losses_by_sm = groupby(
-            allres, operator.attrgetter('sm_id'),
-            lambda grp: sum([sum(res, {}) for res in grp], {}))
-        self.save_data_transfer(
-            parallel.IterResult.sum(res for res in allres))
-        return losses_by_sm
+        self.L = len(self.riskmodel.lti)
+        self.R = sum(res.num_rlzs for res in allres)
+        self.T = len(self.assetcol.taxonomies)
+        self.A = len(self.assetcol)
+        self.elt_dt = numpy.dtype([('rup_id', U32), ('loss', F32)])
+        dset1 = self.datastore.create_dset(
+            'losses_by_taxon', F64, (self.T, self.L, self.R))
+        dset2 = self.datastore.create_dset(
+            'avglosses', F64, (self.A, self.L, self.R))
+        offset = 0
+        num_events = 0
+        self.gmfbytes = 0
+        for res in allres:
+            taxlosses = numpy.zeros((self.T, self.L, res.num_rlzs), F64)
+            avglosses = numpy.zeros((self.A, self.L, res.num_rlzs), F64)
+            for dic in res:
+                taxlosses += dic.pop('losses')
+                avglosses += dic.pop('avglosses')
+                self.gmfbytes += dic.pop('gmfbytes')
+                self.save_agglosses(dic.pop('agglosses'), offset)
+            logging.info(
+                'Saving results for source model #%d, realizations %d:%d',
+                res.sm_id + 1, offset, offset + res.num_rlzs)
+            dset1[:, :, offset:offset + res.num_rlzs] = taxlosses
+            dset2[:, :, offset:offset + res.num_rlzs] = avglosses
+            num_events += res.num_events
+            offset += res.num_rlzs
+        self.save_data_transfer(parallel.IterResult.sum(allres))
+        self.datastore['avglosses'] = avglosses
+        return num_events
 
-    def post_execute(self, losses_by_sm):
+    def save_agglosses(self, agglosses, offset):
+        """
+        Save the event loss tables incrementally.
+
+        :param agglosses: a dictionary lr -> {eid: loss}
+        :param offset: realization offset
+        """
+        for l, r in agglosses:
+            loss_type = self.riskmodel.loss_types[l]
+            key = 'agg_loss_table/rlz-%03d/%s' % (r + offset, loss_type)
+            array = numpy.array(agglosses[l, r].items(), self.elt_dt)
+            self.datastore.extend(key, array)
+
+    def post_execute(self, num_events):
         """
         Save an array of losses by taxonomy of shape (T, L, R).
         """
-        gmfbytes = sum(losses_by_sm[sm_id]['gmfbytes']
-                       for sm_id in losses_by_sm)
-        logging.info('Generated %s of GMFs', humansize(gmfbytes))
-        self.datastore.save('job_info', {'gmfbytes': gmfbytes})
-        if gmfbytes == 0:
+        if self.gmfbytes == 0:
             raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')
-
-        # compute the total number of realizations for all source models
-        R = sum(losses_by_sm[sm_id]['losses'].shape[-1]
-                for sm_id in losses_by_sm)
-        T, L = len(self.assetcol.taxonomies), len(self.riskmodel.lti)
-        dset = self.datastore.create_dset('losses_by_taxon', F64, (T, L, R))
-        start = 0
-        for sm_id in sorted(losses_by_sm):
-            losses = losses_by_sm[sm_id]['losses']
-            newstart = start + losses.shape[-1]
-            dset[:, :, start:newstart] = losses
-            start = newstart
-        logging.info('Saved %s losses by taxonomy', (T, L, R))
+        logging.info('Generated %s of GMFs', humansize(self.gmfbytes))
+        self.datastore.save('job_info', {'gmfbytes': self.gmfbytes})
+        logging.info('Saved %s losses by taxonomy', (self.T, self.L, self.R))
+        logging.info('Saved %d event losses', num_events)

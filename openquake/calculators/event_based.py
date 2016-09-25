@@ -413,23 +413,26 @@ class EventBasedRuptureCalculator(PSHACalculator):
 
     def save_ruptures(self, ruptures_by_grp_id):
         """Extend the 'events' dataset with the given ruptures"""
-        n = ruptures_by_grp_id.num_events
         for grp_id, ebrs in ruptures_by_grp_id.items():
-            events = numpy.zeros(n, stored_event_dt)
+            events = []
             i = 0
             for ebr in ebrs:
-                names = ebr.events.dtype.names
                 for event in ebr.events:
                     event['eid'] = self.eid
-                    events['source_id'][i] = ebr.source_id
-                    events['grp_id'][i] = ebr.grp_id
-                    events['rupserial'][i] = ebr.serial
-                    for name in names:
-                        events[name][i] = event[name]
+                    rec = (ebr.serial,
+                           event['eid'],
+                           event['ses'],
+                           event['occ'],
+                           event['sample'],
+                           ebr.grp_id,
+                           ebr.source_id)
+                    events.append(rec)
                     self.eid += 1
                     i += 1
-                self.datastore['sescollection/%s' % ebr.serial] = ebr
-            self.datastore.extend('events', events)
+                if self.oqparam.calculation_mode != 'ebrisk':
+                    self.datastore['sescollection/%s' % ebr.serial] = ebr
+            self.datastore.extend(
+                'events', numpy.array(events, stored_event_dt))
 
     def post_execute(self, result):
         """
