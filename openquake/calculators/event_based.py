@@ -429,7 +429,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
                     events.append(rec)
                     self.eid += 1
                     i += 1
-                if self.oqparam.calculation_mode != 'ebrisk':
+                if self.oqparam.calculation_mode == 'event_based':
                     self.datastore['sescollection/%s' % ebr.serial] = ebr
             self.datastore.extend(
                 'events', numpy.array(events, stored_event_dt))
