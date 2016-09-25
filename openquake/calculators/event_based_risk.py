@@ -663,7 +663,7 @@ def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     A = len(assetcol)
     taxonomy_id = {t: i for i, t in enumerate(sorted(assetcol.taxonomies))}
     losses = numpy.zeros((T, L, R), F64)
-    avglosses = numpy.zeros((A, L, R), F64)
+    avglosses = numpy.zeros((A, L, R), F64) if monitor.avg_losses else None
     agglosses = AccumDict(
         {lr: AccumDict() for lr in itertools.product(range(L), range(R))})
     for out in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor, assetcol):
@@ -671,9 +671,10 @@ def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
         t = taxonomy_id[out.assets[0].taxonomy]
         l, r = out.lr
         losses[t, l, r] += out.alosses.sum()
-        for i, loss in enumerate(out.alosses):
-            if loss:
-                avglosses[i, l, r] += loss
+        if monitor.avg_losses:
+            for i, loss in enumerate(out.alosses):
+                if loss:
+                    avglosses[i, l, r] += loss
         agglosses[l, r] += {eid: loss for eid, loss in
                             zip(out.eids, out.elosses) if loss}
 
@@ -770,6 +771,7 @@ class EbriskCalculator(base.RiskCalculator):
         for sm_id in range(len(self.csm.source_models)):
             ssm = self.csm.get_model(sm_id)
             monitor = self.monitor.new(
+                avg_losses=oq.avg_losses,
                 ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
                 maximum_distance=oq.maximum_distance,
                 samples=ssm.source_models[0].samples,
@@ -808,8 +810,10 @@ class EbriskCalculator(base.RiskCalculator):
             taxlosses = numpy.zeros((self.T, self.L, res.num_rlzs), F64)
             avglosses = numpy.zeros((self.A, self.L, res.num_rlzs), F64)
             for dic in res:
+                avg = dic.pop('avglosses')
+                if avg is not None:
+                    avglosses += avg
                 taxlosses += dic.pop('losses')
-                avglosses += dic.pop('avglosses')
                 self.gmfbytes += dic.pop('gmfbytes')
                 self.save_agglosses(dic.pop('agglosses'), offset)
             logging.info(
