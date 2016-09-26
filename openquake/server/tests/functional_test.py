@@ -144,12 +144,11 @@ class EngineServerTestCase(unittest.TestCase):
         results = self.get('%s/results' % job_id)
         self.assertGreater(len(results), 0)
         for res in results:
-            if res['type'] == 'gmfs':
-                continue  # exporting the GMFs would be too slow
-            etype = res['outtypes'][0]  # get the first export type
-            text = self.get_text(
-                'result/%s' % res['id'], export_type=etype)
-            self.assertGreater(len(text), 0)
+            for etype in res['outtypes']:  # test all export types
+                text = self.get_text(
+                    'result/%s' % res['id'], export_type=etype)
+                print('downloading result/%s' % res['id'], res['type'], etype)
+                self.assertGreater(len(text), 0)
 
         # test no filtering in actions.get_calcs
         all_jobs = self.get('list')
