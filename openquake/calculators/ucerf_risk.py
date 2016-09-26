@@ -78,6 +78,22 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     return res
 
 
+def compute_losses(ssm, sitecol, assetcol, riskmodel,
+                   imts, trunc_level, correl_model, min_iml, monitor):
+    """
+    Compute the losses for a single source model
+    """
+    [grp] = ssm.src_groups
+    [(grp_id, ruptures)] = compute_ruptures(
+        grp, sitecol, None, monitor).items()
+    rlzs_assoc = ssm.info.get_rlzs_assoc()
+    ri = riskinput.RiskInputFromRuptures(
+        DEFAULT_TRT, imts, sitecol, ruptures, trunc_level, correl_model,
+        min_iml)
+    return AccumDict({grp_id: losses_by_taxonomy(
+        ri, riskmodel, rlzs_assoc, assetcol, monitor)})
+
+
 @base.calculators.add('ucerf_risk')
 class UCERFRiskCalculator(EbriskCalculator):
     """
@@ -87,25 +103,15 @@ class UCERFRiskCalculator(EbriskCalculator):
     compute_ruptures = staticmethod(compute_ruptures)
 
 
-def compute_losses(ssm, sitecol, assetcol, riskmodel,
-                   imts, trunc_level, correl_model, min_iml, monitor):
-    [grp] = ssm.src_groups
-    [(grp_id, ruptures)] = compute_ruptures(
-        grp, sitecol, None, monitor).items()
-    rlzs_assoc = ssm.info.get_rlzs_assoc()
-    ri = riskinput.RiskInputFromRuptures(
-        DEFAULT_TRT, imts, sitecol, ruptures,
-        trunc_level, correl_model, min_iml)
-    return {grp_id: losses_by_taxonomy(
-        ri, riskmodel, rlzs_assoc, assetcol, monitor)}
-
-
-@base.calculators.add('ucerf_risk')
-class UCERFCalculator(EbriskCalculator):
+@base.calculators.add('ucerf_risk_fast')
+class UCERFRiskFastCalculator(EbriskCalculator):
     """
     Event based risk calculator for UCERF, parallelizing on the source models
     """
     pre_execute = UCERFEventBasedCalculator.__dict__['pre_execute']
 
     def execute(self):
-        return parallel.starmap(compute_losses, self.gen_args()).reduce()
+        res = parallel.starmap(compute_losses, self.gen_args()).submit_all()
+        losses = sum(res)
+        self.save_data_transfer(res)
+        return losses
