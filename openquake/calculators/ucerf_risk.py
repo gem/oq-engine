@@ -94,8 +94,8 @@ def compute_losses(ssm, sitecol, assetcol, riskmodel,
         grp, sitecol, None, monitor).items()
     rlzs_assoc = ssm.info.get_rlzs_assoc()
     ri = riskinput.RiskInputFromRuptures(
-        DEFAULT_TRT, imts, sitecol, ruptures,
-        trunc_level, correl_model, min_iml)
+        DEFAULT_TRT, imts, sitecol, ruptures, trunc_level, correl_model,
+        min_iml)
     return {grp_id: losses_by_taxonomy(
         ri, riskmodel, rlzs_assoc, assetcol, monitor)}
 
