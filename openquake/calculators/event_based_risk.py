@@ -774,7 +774,7 @@ class EbriskCalculator(base.RiskCalculator):
         # collect the losses by source model
         losses_by_sm = groupby(
             allres, operator.attrgetter('sm_id'),
-            lambda grp: sum([sum(res, {}) for res in grp], {}))
+            lambda grp: sum(sum(res) for res in grp))
         self.save_data_transfer(
             parallel.IterResult.sum(res for res in allres))
         return losses_by_sm
