@@ -750,9 +750,8 @@ def _calc_gmfs(dstore, serial, eid):
     N = len(sitecol.complete)
     rup = dstore['sescollection/' + serial]
     correl_model = readinput.get_correl_model(oq)
-    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(rup.grp_id)
-    gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F64)
-                          for rlz in rlzs_by_gsim.realizations])
+    realizations = rlzs_assoc.get_rlzs_by_grp_id()[rup.grp_id]
+    gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F64) for rlz in realizations])
     for sm in csm_info.source_models:
         for sg in sm.src_groups:
             if sg.id == rup.grp_id:
