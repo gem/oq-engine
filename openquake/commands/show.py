@@ -23,11 +23,22 @@ import logging
 
 from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.baselib import sap
-from openquake.risklib import scientific
+from openquake.risklib import scientific, valid
 from openquake.commonlib import datastore
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import rmsep
+from openquake.engine import config, logs
 from openquake.calculators.views import view
+
+MULTI_USER = valid.boolean(config.get('dbserver', 'multi_user') or 'false')
+if MULTI_USER:
+    # get the datastore of the user who run the job
+    def read(calc_id):
+        job = logs.dbcmd('get_job', calc_id)
+        datadir = os.path.dirname(job.ds_calc_dir)
+        return datastore.read(job.id, datadir=datadir)
+else:  # get the datastore of the current user
+    read = datastore.read
 
 
 def get_hcurves_and_means(dstore):
@@ -77,7 +88,7 @@ def show(what, calc_id=-1):
             print('#%d %s: %s' % row)
         return
 
-    ds = datastore.read(calc_id)
+    ds = read(calc_id)
 
     # this part is experimental
     if what == 'rlzs' and 'hcurves' in ds:
