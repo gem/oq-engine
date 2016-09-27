@@ -33,7 +33,7 @@ from openquake.calculators.views import view
 
 MULTI_USER = valid.boolean(config.get('dbserver', 'multi_user') or 'false')
 if MULTI_USER:
-    # get the datastore of the user who run the job
+    # get the datastore of the user who ran the job
     def read(calc_id):
         job = logs.dbcmd('get_job', calc_id, getpass.getuser())
         datadir = os.path.dirname(job.ds_calc_dir)
