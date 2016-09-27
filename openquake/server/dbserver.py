@@ -110,10 +110,10 @@ def ensure_on():
                           '-l', 'INFO'])
 
         # wait for the dbserver to start
-        waiting_seconds = 5
+        waiting_seconds = 10
         while get_status() == 'not-running':
             if waiting_seconds == 0:
-                sys.exit('The DbServer cannot be started. '
+                sys.exit('The DbServer cannot be started after 10 seconds. '
                          'Please check the configuration')
             time.sleep(1)
             waiting_seconds -= 1
