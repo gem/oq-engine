@@ -19,6 +19,7 @@
 from __future__ import print_function
 import io
 import os
+import getpass
 import logging
 
 from openquake.hazardlib.calc.hazard_curve import zero_curves
@@ -34,7 +35,7 @@ MULTI_USER = valid.boolean(config.get('dbserver', 'multi_user') or 'false')
 if MULTI_USER:
     # get the datastore of the user who run the job
     def read(calc_id):
-        job = logs.dbcmd('get_job', calc_id)
+        job = logs.dbcmd('get_job', calc_id, getpass.getuser())
         datadir = os.path.dirname(job.ds_calc_dir)
         return datastore.read(job.id, datadir=datadir)
 else:  # get the datastore of the current user
