@@ -714,6 +714,7 @@ class EbriskCalculator(base.RiskCalculator):
         grp_trt = {}
         # collect the sources
         maxweight = ssm.get_maxweight(self.oqparam.concurrent_tasks)
+        logging.info('Using a maxweight of %d', maxweight)
         for src_group in ssm.src_groups:
             grp_trt[src_group.id] = trt = src_group.trt
             gsims = ssm.gsim_lt.values[trt]
