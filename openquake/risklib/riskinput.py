@@ -470,8 +470,12 @@ class CompositeRiskModel(collections.Mapping):
                     dic[taxonomy].append((i, group[taxonomy], epsgetter))
                     taxonomies.add(taxonomy)
 
-        grp_id = riskinput.ses_ruptures[0].grp_id
-        for rlz in rlzs_assoc.get_rlzs_by_grp_id()[grp_id]:
+        if hasattr(riskinput, 'ses_ruptures'):  # event based
+            grp_id = riskinput.ses_ruptures[0].grp_id
+            rlzs = rlzs_assoc.get_rlzs_by_grp_id()[grp_id]
+        else:
+            rlzs = rlzs_assoc.realizations
+        for rlz in rlzs:
             with mon_hazard:
                 hazard = hazard_getter(rlz)
             for taxonomy in sorted(taxonomies):
