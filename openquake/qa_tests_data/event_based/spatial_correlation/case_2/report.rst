@@ -2,9 +2,9 @@ Probabilistic Event-Based QA Test with Spatial Correlation, case 2
 ==================================================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_48453.hdf5 Wed Sep  7 16:05:46 2016
-engine_version                                 2.1.0-gitfaa2965        
-hazardlib_version                              0.21.0-git89bccaf       
+gem-tstation:/home/michele/ssd/calc_54428.hdf5 Tue Sep 27 14:07:28 2016
+engine_version                                 2.1.0-git1ca7123        
+hazardlib_version                              0.21.0-git9261682       
 ============================================== ========================
 
 num_sites = 2, sitecol = 785 B
@@ -72,13 +72,13 @@ source_model.xml 0      Active Shallow Crust 1           1            0.025
 Informational data
 ------------------
 ====================================== ============
-compute_ruptures_max_received_per_task 364,266     
+compute_ruptures_max_received_per_task 364,265     
 compute_ruptures_num_tasks             1           
 compute_ruptures_sent.gsims            93          
-compute_ruptures_sent.monitor          845         
+compute_ruptures_sent.monitor          954         
 compute_ruptures_sent.sitecol          453         
-compute_ruptures_sent.sources          1,324       
-compute_ruptures_tot_received          364,266     
+compute_ruptures_sent.sources          1,336       
+compute_ruptures_tot_received          364,265     
 hazard.input_weight                    0.025       
 hazard.n_imts                          1           
 hazard.n_levels                        1           
@@ -89,27 +89,35 @@ hazard.output_weight                   150
 hostname                               gem-tstation
 ====================================== ============
 
+Specific information for event based
+------------------------------------
+======================== ======
+Total number of ruptures 1     
+Total number of events   22,566
+Rupture multiplicity     22,566
+======================== ======
+
 Slowest sources
 ---------------
-============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
-============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            1         PointSource  0.025  0         2.789E-05   0.0        0.068         0.068         1        
-============ ========= ============ ====== ========= =========== ========== ============= ============= =========
+====== ========= ============ ====== ========= =========
+grp_id source_id source_class weight calc_time num_sites
+====== ========= ============ ====== ========= =========
+0      1         PointSource  0.025  0.0       0        
+====== ========= ============ ====== ========= =========
 
 Computation times by source typology
 ------------------------------------
-============ =========== ========== ============= ============= ========= ======
-source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
-============ =========== ========== ============= ============= ========= ======
-PointSource  2.789E-05   0.0        0.068         0.068         1         1     
-============ =========== ========== ============= ============= ========= ======
+============ ========= ======
+source_class calc_time counts
+============ ========= ======
+PointSource  0.0       1     
+============ ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.069 NaN    0.069 0.069 1        
+compute_ruptures   0.025 NaN    0.025 0.025 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -117,12 +125,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-saving ruptures                0.125     0.0       1     
-total compute_ruptures         0.069     0.703     1     
+saving ruptures                0.092     0.0       1     
+total compute_ruptures         0.025     0.254     1     
 reading composite source model 0.004     0.0       1     
-managing sources               0.002     0.0       1     
-store source_info              0.001     0.0       1     
-filtering ruptures             5.429E-04 0.0       1     
-filtering sources              2.789E-05 0.0       1     
-reading site collection        2.503E-05 0.0       1     
+managing sources               5.200E-04 0.0       1     
+store source_info              3.760E-04 0.0       1     
+filtering ruptures             3.421E-04 0.0       1     
+reading site collection        2.694E-05 0.0       1     
 ============================== ========= ========= ======
