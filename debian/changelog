@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized the memory consumption of the event based risk calculators
   * Improved the test coverage of the exports in the WebUI
   * Removed the SourceManager: now the sources are filtered in the workers
     and we do not split in tiles anymore
