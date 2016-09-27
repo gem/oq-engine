@@ -558,9 +558,11 @@ def get_job(db, job_id, username):
         user name
     :returns: the full path to the datastore
     """
-    if job_id < 0:
-        job_id = get_job_id(db, job_id, username)
-    return db('SELECT * FROM job WHERE id=?x', job_id, one=True)
+    job_id = get_job_id(db, job_id, username)
+    if job_id is None:  # get latest
+        return db('SELECT * FROM job ORDER BY id DESC LIMIT 1', one=True)
+    else:
+        return db('SELECT * FROM job WHERE id=?x', job_id, one=True)
 
 
 def get_results(db, job_id):
