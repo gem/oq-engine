@@ -304,8 +304,7 @@ def add_imt(fname, imt):
     return os.path.join(os.path.dirname(fname), newname)
 
 
-def export_hcurves_by_imt_csv(key, kind, rlzs_assoc, fname, sitecol,
-                              curves_by_imt, oq):
+def export_hcurves_by_imt_csv(key, kind, rlzs_assoc, fname, sitecol, pmap, oq):
     """
     Export the curves of the given realization into CSV.
 
@@ -314,11 +313,12 @@ def export_hcurves_by_imt_csv(key, kind, rlzs_assoc, fname, sitecol,
     :param rlzs_assoc: a :class:`openquake.commonlib.source.RlzsAssoc` instance
     :param fname: name of the exported file
     :param sitecol: site collection
-    :param curves_by_imt: dictionary with the curves keyed by IMT
+    :param pmap: a probability map
     :param oq: job.ini parameters
     """
     nsites = len(sitecol)
     fnames = []
+    slicedic = oq.imtls.slicedic
     for imt, imls in oq.imtls.items():
         dest = add_imt(fname, imt)
         lst = [('lon', F32), ('lat', F32)]
@@ -326,7 +326,8 @@ def export_hcurves_by_imt_csv(key, kind, rlzs_assoc, fname, sitecol,
             lst.append((str(iml), F32))
         hcurves = numpy.zeros(nsites, lst)
         for sid, lon, lat in zip(range(nsites), sitecol.lons, sitecol.lats):
-            hcurves[sid] = (lon, lat) + tuple(curves_by_imt[sid][imt])
+            poes = pmap.setdefault(sid, 0).array[slicedic[imt]]
+            hcurves[sid] = (lon, lat) + tuple(poes)
         fnames.append(write_csv(dest, hcurves, comment=_comment(
             rlzs_assoc, kind, oq.investigation_time) + ',imt=%s' % imt))
     return fnames
@@ -750,9 +751,8 @@ def _calc_gmfs(dstore, serial, eid):
     N = len(sitecol.complete)
     rup = dstore['sescollection/' + serial]
     correl_model = oq.get_correl_model()
-    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(rup.grp_id)
-    gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F64)
-                          for rlz in rlzs_by_gsim.realizations])
+    realizations = rlzs_assoc.get_rlzs_by_grp_id()[rup.grp_id]
+    gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F64) for rlz in realizations])
     for sm in csm_info.source_models:
         for sg in sm.src_groups:
             if sg.id == rup.grp_id:
