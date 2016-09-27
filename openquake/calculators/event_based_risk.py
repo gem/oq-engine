@@ -822,7 +822,8 @@ class EbriskCalculator(base.RiskCalculator):
                 'Saving results for source model #%d, realizations %d:%d',
                 res.sm_id + 1, offset, offset + res.num_rlzs)
             dset1[:, :, offset:offset + res.num_rlzs] = taxlosses
-            dset2[:, :, offset:offset + res.num_rlzs] = avglosses
+            if avg_losses:
+                dset2[:, :, offset:offset + res.num_rlzs] = avglosses
             num_events += res.num_events
             offset += res.num_rlzs
         self.save_data_transfer(parallel.IterResult.sum(allres))
