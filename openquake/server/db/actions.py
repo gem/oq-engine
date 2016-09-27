@@ -129,13 +129,12 @@ def get_job_id(db, job_id, username):
     job_id = int(job_id)
     if job_id > 0:
         return job_id
-    my_jobs = db('SELECT id FROM job WHERE user_name=?x ORDER BY id',
-                 username)
-    n = len(my_jobs)
-    if n == 0:  # no jobs
+    joblist = db('SELECT id FROM job WHERE user_name=?x '
+                 'ORDER BY id DESC LIMIT 1', username)
+    if not joblist:  # no jobs
         return
-    else:  # typically job_id is -1
-        return my_jobs[n + job_id].id
+    else:
+        return joblist[0].id
 
 
 def get_calc_id(db, datadir, job_id=None):
@@ -558,11 +557,8 @@ def get_job(db, job_id, username):
         user name
     :returns: the full path to the datastore
     """
-    job_id = get_job_id(db, job_id, username)
-    if job_id is None:  # get latest
-        return db('SELECT * FROM job ORDER BY id DESC LIMIT 1', one=True)
-    else:
-        return db('SELECT * FROM job WHERE id=?x', job_id, one=True)
+    calc_id = get_job_id(db, job_id, username) or job_id
+    return db('SELECT * FROM job WHERE id=?x', calc_id, one=True)
 
 
 def get_results(db, job_id):
