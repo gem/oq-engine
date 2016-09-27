@@ -240,21 +240,6 @@ class RlzsAssoc(collections.Mapping):
             return
         return self.realizations[int(mo.group(1))]
 
-    def get_rlzs_by_gsim(self, grp_id):
-        """
-        Returns an OrderedDict gsim -> rlzs with attributes .realizations,
-        .sm_id, .samples and .seed.
-        """
-        rlzs = set()
-        rlzs_by_gsim = collections.OrderedDict()
-        for gsim in self.gsims_by_grp_id[grp_id]:
-            rlzs_by_gsim[gsim] = self[grp_id, str(gsim)]
-            rlzs.update(rlzs_by_gsim[gsim])
-        rlzs_by_gsim.realizations = sorted(rlzs)
-        rlzs_by_gsim.samples = self.samples[grp_id]
-        rlzs_by_gsim.seed = self.seed
-        return rlzs_by_gsim
-
     def get_rlzs_by_grp_id(self):
         """
         Returns a dictionary grp_id > [sorted rlzs]
