@@ -799,20 +799,22 @@ class EbriskCalculator(base.RiskCalculator):
         self.R = sum(res.num_rlzs for res in allres)
         self.T = len(self.assetcol.taxonomies)
         self.A = len(self.assetcol)
+        avg_losses = self.oqparam.avg_losses
         dset1 = self.datastore.create_dset(
             'losses_by_taxon', F64, (self.T, self.L, self.R))
-        dset2 = self.datastore.create_dset(
-            'avglosses', F64, (self.A, self.L, self.R))
+        if avg_losses:
+            dset2 = self.datastore.create_dset(
+                'avglosses', F64, (self.A, self.L, self.R))
         offset = 0
         num_events = 0
         self.gmfbytes = 0
         for res in allres:
             taxlosses = numpy.zeros((self.T, self.L, res.num_rlzs), F64)
-            avglosses = numpy.zeros((self.A, self.L, res.num_rlzs), F64)
+            if avg_losses:
+                avglosses = numpy.zeros((self.A, self.L, res.num_rlzs), F64)
             for dic in res:
-                avg = dic.pop('avglosses')
-                if avg is not None:
-                    avglosses += avg
+                if avg_losses:
+                    avglosses += dic.pop('avglosses')
                 taxlosses += dic.pop('losses')
                 self.gmfbytes += dic.pop('gmfbytes')
                 self.save_agglosses(dic.pop('agglosses'), offset)
@@ -824,7 +826,8 @@ class EbriskCalculator(base.RiskCalculator):
             num_events += res.num_events
             offset += res.num_rlzs
         self.save_data_transfer(parallel.IterResult.sum(allres))
-        self.datastore['avglosses'] = avglosses
+        if avg_losses:
+            self.datastore['avglosses'] = avglosses
         return num_events
 
     def save_agglosses(self, agglosses, offset):
