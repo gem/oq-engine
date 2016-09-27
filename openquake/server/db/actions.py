@@ -17,7 +17,6 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
 import os
-import getpass
 import operator
 from datetime import datetime, timedelta
 
@@ -549,15 +548,18 @@ def get_result(db, result_id):
     return job.id, job.status, os.path.dirname(job.ds_calc_dir), job.ds_key
 
 
-def get_job(db, job_id):
+def get_job(db, job_id, username):
     """
     :param db:
         a :class:`openquake.server.dbapi.Db` instance
     :param job_id:
         ID of the current job
+    :param username:
+        user name
     :returns: the full path to the datastore
     """
-    job_id = get_job_id(db, job_id, getpass.getuser())
+    if job_id < 0:
+        job_id = get_job_id(db, job_id, username)
     return db('SELECT * FROM job WHERE id=?x', job_id, one=True)
 
 
