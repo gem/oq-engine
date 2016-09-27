@@ -713,11 +713,11 @@ class EbriskCalculator(base.RiskCalculator):
         allargs = []
         grp_trt = {}
         # collect the sources
+        maxweight = ssm.get_maxweight(self.oqparam.concurrent_tasks)
         for src_group in ssm.src_groups:
             grp_trt[src_group.id] = trt = src_group.trt
             gsims = ssm.gsim_lt.values[trt]
-            for block in block_splitter(
-                    src_group, source.MAXWEIGHT, getweight):
+            for block in block_splitter(src_group, maxweight, getweight):
                 allargs.append((block, self.sitecol, gsims, monitor))
         # collect the ruptures
         for dic in parallel.starmap(self.compute_ruptures, allargs):

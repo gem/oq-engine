@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-import math
 import logging
 import operator
 import collections
@@ -41,7 +40,6 @@ U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
 
-MAXWEIGHT = 200
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
@@ -338,10 +336,7 @@ class PSHACalculator(base.HazardCalculator):
         ngroups = len(src_groups)
         if self.random_seed is not None:
             self.csm.init_serials()
-        ct = oq.concurrent_tasks or 1
-        if len(self.sitecol) > 10000:  # hackish correction for lots of sites
-            ct *= math.sqrt(len(self.sitecol) / 10000)
-        maxweight = max(math.ceil(self.csm.weight / ct), MAXWEIGHT)
+        maxweight = self.csm.get_maxweight(oq.concurrent_tasks, self.sitecol)
         logging.info('Using a maxweight of %d', maxweight)
         nheavy = nlight = 0
         self.infos = {}
