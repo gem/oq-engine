@@ -49,6 +49,9 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertIn('classical_tot_received', keys)
         self.assertIn('classical_sent', keys)
 
+        # there is a single source
+        self.assertEqual(len(self.calc.datastore['source_info']), 1)
+
     @attr('qa', 'hazard', 'classical')
     def test_sa_period_too_big(self):
         imtls = '{"SA(4.1)": [0.1, 0.4, 0.6]}'
