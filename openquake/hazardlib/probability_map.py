@@ -173,7 +173,7 @@ class ProbabilityMap(dict):
         curves = numpy.zeros(nsites, imtls.imt_dt)
         for imt in curves.dtype.names:
             curves_by_imt = curves[imt]
-            for i, sid in enumerate(sorted(self)):
+            for sid in self:
                 curves_by_imt[sid] = self[sid].array[imtls.slicedic[imt], idx]
         return curves
 
