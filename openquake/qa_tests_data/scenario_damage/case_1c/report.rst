@@ -2,9 +2,9 @@ Scenario Damage
 ===============
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_48385.hdf5 Wed Sep  7 16:04:05 2016
-engine_version                                 2.1.0-gitfaa2965        
-hazardlib_version                              0.21.0-git89bccaf       
+gem-tstation:/home/michele/ssd/calc_54360.hdf5 Tue Sep 27 14:05:49 2016
+engine_version                                 2.1.0-git1ca7123        
+hazardlib_version                              0.21.0-git9261682       
 ============================================== ========================
 
 num_sites = 1, sitecol = 697 B
@@ -60,19 +60,15 @@ taxonomy mean  stddev min max num_sites num_assets
 Wood     1.000 NaN    1   1   1         1         
 ======== ===== ====== === === ========= ==========
 
-Information about the tasks
----------------------------
-Not available
-
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.007     0.0       1     
+filtering sites         0.008     0.0       1     
 reading exposure        0.003     0.0       1     
 computing gmfs          0.002     0.0       1     
 saving gmfs             0.001     0.0       1     
-building riskinputs     1.259E-04 0.0       1     
-reading site collection 9.990E-05 0.0       1     
+building riskinputs     1.380E-04 0.0       1     
+reading site collection 1.061E-04 0.0       1     
 ======================= ========= ========= ======
