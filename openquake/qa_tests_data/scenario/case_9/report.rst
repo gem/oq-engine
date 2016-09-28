@@ -2,9 +2,9 @@ Scenario QA Test, Case 9, Multiple GSIMs
 ========================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_48394.hdf5 Wed Sep  7 16:04:06 2016
-engine_version                                 2.1.0-gitfaa2965        
-hazardlib_version                              0.21.0-git89bccaf       
+gem-tstation:/home/michele/ssd/calc_54369.hdf5 Tue Sep 27 14:05:50 2016
+engine_version                                 2.1.0-git1ca7123        
+hazardlib_version                              0.21.0-git9261682       
 ============================================== ========================
 
 num_sites = 3, sitecol = 831 B
@@ -45,15 +45,11 @@ Realizations per (TRT, GSIM)
   0,LinLee2008SSlab(): ['<0,b_1~b1,w=0.6>']
   0,YoungsEtAl1997SSlab(): ['<1,b_1~b2,w=0.4>']>
 
-Information about the tasks
----------------------------
-Not available
-
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 filtering sites         0.011     0.0       1     
-reading site collection 2.503E-05 0.0       1     
+reading site collection 2.599E-05 0.0       1     
 ======================= ========= ========= ======
