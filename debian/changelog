@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Improved the test coverage of the exports in the WebUI
+  * Removed the SourceManager: now the sources are filtered in the workers
+    and we do not split in tiles anymore
   * Made the full datastore downloadable from the WebUI
   * Added a command "oq db" to send commands the engine database
     (for internal usage)

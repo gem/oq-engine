@@ -25,13 +25,16 @@ import os
 import sys
 import json
 import time
+import getpass
 import unittest
 import subprocess
 import tempfile
 import django
 import requests
 from openquake.baselib.general import writetmp
-
+from openquake.engine.export import core
+from openquake.server.db import actions
+from openquake.server.manage import db
 
 if requests.__version__ < '1.0.0':
     requests.Response.text = property(lambda self: self.content)
@@ -141,16 +144,23 @@ class EngineServerTestCase(unittest.TestCase):
         results = self.get('%s/results' % job_id)
         self.assertGreater(len(results), 0)
         for res in results:
-            if res['type'] == 'gmfs':
-                continue  # exporting the GMFs would be too slow
-            etype = res['outtypes'][0]  # get the first export type
-            text = self.get_text(
-                'result/%s' % res['id'], export_type=etype)
-            self.assertGreater(len(text), 0)
+            for etype in res['outtypes']:  # test all export types
+                text = self.get_text(
+                    'result/%s' % res['id'], export_type=etype)
+                print('downloading result/%s' % res['id'], res['type'], etype)
+                self.assertGreater(len(text), 0)
 
         # test no filtering in actions.get_calcs
         all_jobs = self.get('list')
         self.assertGreater(len(all_jobs), 0)
+
+        # there is some logic in `core.export_from_db` that it is only
+        # exercised when the export fails
+        datadir, dskeys = actions.get_results(db, job_id)
+        # try to export a non-existing output
+        with self.assertRaises(core.DataStoreExportError) as ctx:
+            core.export_from_db(('XXX', 'csv'), job_id, datadir, '/tmp')
+        self.assertIn('Could not export XXX in csv', str(ctx.exception))
 
     def test_err_1(self):
         # the rupture XML file has a syntax error
@@ -170,6 +180,7 @@ class EngineServerTestCase(unittest.TestCase):
         # make sure job_id is no more in the list of relevant jobs
         job_ids = [job['id'] for job in self.get('list', relevant=True)]
         self.assertFalse(job_id in job_ids)
+        # NB: the job is invisible but still there
 
     def test_err_2(self):
         # the file logic-tree-source-model.xml is missing
@@ -229,5 +240,3 @@ class EngineServerTestCase(unittest.TestCase):
         resp = self.post_nrml(data)
         self.assertEqual(resp.status_code, 400)
         self.assertEqual(resp.text, 'Please provide the "xml_text" parameter')
-
-    # TODO: add more tests for error situations
