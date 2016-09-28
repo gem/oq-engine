@@ -174,7 +174,7 @@ class ProbabilityMap(dict):
         for imt in curves.dtype.names:
             curves_by_imt = curves[imt]
             for i, sid in enumerate(sorted(self)):
-                curves_by_imt[i] = self[sid].array[imtls.slicedic[imt], idx]
+                curves_by_imt[sid] = self[sid].array[imtls.slicedic[imt], idx]
         return curves
 
     def filter(self, sids):
