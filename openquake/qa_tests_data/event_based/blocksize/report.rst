@@ -2,9 +2,9 @@ QA test for blocksize independence (hazard)
 ===========================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_48459.hdf5 Wed Sep  7 16:05:54 2016
-engine_version                                 2.1.0-gitfaa2965        
-hazardlib_version                              0.21.0-git89bccaf       
+gem-tstation:/home/michele/ssd/calc_54434.hdf5 Tue Sep 27 14:07:39 2016
+engine_version                                 2.1.0-git1ca7123        
+hazardlib_version                              0.21.0-git9261682       
 ============================================== ========================
 
 num_sites = 2, sitecol = 785 B
@@ -72,46 +72,54 @@ source_model.xml 0      Active Shallow Crust 3           3            277
 Informational data
 ------------------
 ====================================== ============
-compute_ruptures_max_received_per_task 7,416       
-compute_ruptures_num_tasks             11          
-compute_ruptures_sent.gsims            979         
-compute_ruptures_sent.monitor          10,021      
-compute_ruptures_sent.sitecol          4,983       
-compute_ruptures_sent.sources          503,631     
-compute_ruptures_tot_received          49,261      
-hazard.input_weight                    560         
+compute_ruptures_max_received_per_task 5,006       
+compute_ruptures_num_tasks             2           
+compute_ruptures_sent.gsims            178         
+compute_ruptures_sent.monitor          2,048       
+compute_ruptures_sent.sitecol          906         
+compute_ruptures_sent.sources          49,557      
+compute_ruptures_tot_received          6,747       
+hazard.input_weight                    277         
 hazard.n_imts                          1           
 hazard.n_levels                        4           
 hazard.n_realizations                  1           
 hazard.n_sites                         2           
-hazard.n_sources                       9           
+hazard.n_sources                       3           
 hazard.output_weight                   0.100       
 hostname                               gem-tstation
 ====================================== ============
 
+Specific information for event based
+------------------------------------
+======================== =====
+Total number of ruptures 3    
+Total number of events   3    
+Rupture multiplicity     1.000
+======================== =====
+
 Slowest sources
 ---------------
-============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
-============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            1         AreaSource   175    1,170     0.0         0.498      2.429         0.019         1,170    
-0            2         AreaSource   58     389       0.0         0.183      0.801         0.004         389      
-0            3         AreaSource   44     209       0.0         0.159      0.369         0.003         209      
-============ ========= ============ ====== ========= =========== ========== ============= ============= =========
+====== ========= ============ ====== ========= =========
+grp_id source_id source_class weight calc_time num_sites
+====== ========= ============ ====== ========= =========
+0      2         AreaSource   58     0.0       0        
+0      1         AreaSource   175    0.0       0        
+0      3         AreaSource   44     0.0       0        
+====== ========= ============ ====== ========= =========
 
 Computation times by source typology
 ------------------------------------
-============ =========== ========== ============= ============= ========= ======
-source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
-============ =========== ========== ============= ============= ========= ======
-AreaSource   0.0         0.839      3.599         0.026         1,768     3     
-============ =========== ========== ============= ============= ========= ======
+============ ========= ======
+source_class calc_time counts
+============ ========= ======
+AreaSource   0.0       3     
+============ ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.331 0.149  0.012 0.434 11       
+compute_ruptures   1.391 0.402  1.107 1.676 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -119,12 +127,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         3.640     0.0       11    
-reading composite source model 1.474     0.0       1     
-managing sources               0.603     0.0       1     
-store source_info              0.027     0.0       1     
-saving ruptures                0.012     0.0       11    
-filtering sources              0.002     0.0       2     
-filtering ruptures             8.812E-04 0.0       3     
+total compute_ruptures         2.783     0.0       2     
+reading composite source model 1.443     0.0       1     
+saving ruptures                0.007     0.0       2     
+managing sources               0.002     0.0       1     
+store source_info              0.001     0.0       1     
+filtering ruptures             7.448E-04 0.0       3     
 reading site collection        3.290E-05 0.0       1     
 ============================== ========= ========= ======
