@@ -47,7 +47,7 @@ class LtRealization(object):
     """
     def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight, sampleid):
         self.ordinal = ordinal
-        self.sm_lt_path = sm_lt_path
+        self.sm_lt_path = tuple(sm_lt_path)
         self.gsim_rlz = gsim_rlz
         self.weight = weight
         self.sampleid = sampleid

@@ -2,9 +2,9 @@ Event-based PSHA producing hazard curves only
 =============================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_48451.hdf5 Wed Sep  7 16:05:45 2016
-engine_version                                 2.1.0-gitfaa2965        
-hazardlib_version                              0.21.0-git89bccaf       
+gem-tstation:/home/michele/ssd/calc_54426.hdf5 Tue Sep 27 14:07:28 2016
+engine_version                                 2.1.0-git1ca7123        
+hazardlib_version                              0.21.0-git9261682       
 ============================================== ========================
 
 num_sites = 1, sitecol = 739 B
@@ -88,13 +88,13 @@ filtered_weight 122
 Informational data
 ------------------
 ====================================== ============
-compute_ruptures_max_received_per_task 242,342     
-compute_ruptures_num_tasks             20          
-compute_ruptures_sent.gsims            5,080       
-compute_ruptures_sent.monitor          18,360      
-compute_ruptures_sent.sitecol          8,660       
-compute_ruptures_sent.sources          189,496     
-compute_ruptures_tot_received          2,999,381   
+compute_ruptures_max_received_per_task 2,081,629   
+compute_ruptures_num_tasks             2           
+compute_ruptures_sent.gsims            508         
+compute_ruptures_sent.monitor          2,066       
+compute_ruptures_sent.sitecol          866         
+compute_ruptures_sent.sources          27,604      
+compute_ruptures_tot_received          2,913,396   
 hazard.input_weight                    122         
 hazard.n_imts                          1           
 hazard.n_levels                        5           
@@ -115,26 +115,26 @@ Rupture multiplicity     5.253
 
 Slowest sources
 ---------------
-============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
-============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            1         AreaSource   61     307       0.0         0.125      2.317         0.025         307      
-1            1         AreaSource   61     307       0.0         0.125      1.727         0.026         307      
-============ ========= ============ ====== ========= =========== ========== ============= ============= =========
+====== ========= ============ ====== ========= =========
+grp_id source_id source_class weight calc_time num_sites
+====== ========= ============ ====== ========= =========
+1      1         AreaSource   61     0.0       0        
+0      1         AreaSource   61     0.0       0        
+====== ========= ============ ====== ========= =========
 
 Computation times by source typology
 ------------------------------------
-============ =========== ========== ============= ============= ========= ======
-source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
-============ =========== ========== ============= ============= ========= ======
-AreaSource   0.0         0.250      4.044         0.051         614       2     
-============ =========== ========== ============= ============= ========= ======
+============ ========= ======
+source_class calc_time counts
+============ ========= ======
+AreaSource   0.0       2     
+============ ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.203 0.078  0.008 0.324 20       
+compute_ruptures   1.537 0.258  1.354 1.719 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -142,11 +142,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         4.067     0.0       20    
-saving ruptures                1.473     0.0       20    
-filtering ruptures             0.821     0.0       3,081 
-managing sources               0.183     0.0       1     
-reading composite source model 0.124     0.0       1     
-store source_info              0.007     0.0       1     
-reading site collection        3.219E-05 0.0       1     
+total compute_ruptures         3.073     4.961     2     
+saving ruptures                1.320     0.0       2     
+filtering ruptures             0.571     0.0       3,081 
+reading composite source model 0.115     0.0       1     
+managing sources               0.002     0.0       1     
+store source_info              3.891E-04 0.0       1     
+reading site collection        3.600E-05 0.0       1     
 ============================== ========= ========= ======
