@@ -2,9 +2,9 @@ Classical PSHA-Based Hazard
 ===========================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_48408.hdf5 Wed Sep  7 16:04:08 2016
-engine_version                                 2.1.0-gitfaa2965        
-hazardlib_version                              0.21.0-git89bccaf       
+gem-tstation:/home/michele/ssd/calc_54383.hdf5 Tue Sep 27 14:05:53 2016
+engine_version                                 2.1.0-git1ca7123        
+hazardlib_version                              0.21.0-git9261682       
 ============================================== ========================
 
 num_sites = 1, sitecol = 739 B
@@ -75,13 +75,13 @@ source_model.xml 0      Active Shallow Crust 1           1694         1,694
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,256       
-count_eff_ruptures_num_tasks             13          
-count_eff_ruptures_sent.gsims            1,066       
-count_eff_ruptures_sent.monitor          13,507      
-count_eff_ruptures_sent.sitecol          5,629       
-count_eff_ruptures_sent.sources          14,667      
-count_eff_ruptures_tot_received          16,328      
+count_eff_ruptures_max_received_per_task 1,373       
+count_eff_ruptures_num_tasks             10          
+count_eff_ruptures_sent.gsims            820         
+count_eff_ruptures_sent.monitor          11,560      
+count_eff_ruptures_sent.sitecol          4,330       
+count_eff_ruptures_sent.sources          12,047      
+count_eff_ruptures_tot_received          13,730      
 hazard.input_weight                      1,694       
 hazard.n_imts                            1           
 hazard.n_levels                          20          
@@ -109,25 +109,25 @@ Wood     1.000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-============ ========= ================= ====== ========= =========== ========== ============= ============= =========
-src_group_id source_id source_class      weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
-============ ========= ================= ====== ========= =========== ========== ============= ============= =========
-0            1         SimpleFaultSource 1,694  15        0.0         0.096      0.0           0.0           0        
-============ ========= ================= ====== ========= =========== ========== ============= ============= =========
+====== ========= ================= ====== ========= =========
+grp_id source_id source_class      weight calc_time num_sites
+====== ========= ================= ====== ========= =========
+0      1         SimpleFaultSource 1,694  0.0       0        
+====== ========= ================= ====== ========= =========
 
 Computation times by source typology
 ------------------------------------
-================= =========== ========== ============= ============= ========= ======
-source_class      filter_time split_time cum_calc_time max_calc_time num_tasks counts
-================= =========== ========== ============= ============= ========= ======
-SimpleFaultSource 0.0         0.096      0.0           0.0           0         1     
-================= =========== ========== ============= ============= ========= ======
+================= ========= ======
+source_class      calc_time counts
+================= ========= ======
+SimpleFaultSource 0.0       1     
+================= ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 6.467E-04 1.017E-04 4.420E-04 7.660E-04 13       
+count_eff_ruptures 6.656E-04 1.250E-04 3.712E-04 7.730E-04 10       
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -135,12 +135,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.110     0.0       1     
-reading composite source model 0.011     0.0       1     
-total count_eff_ruptures       0.008     0.0       13    
+managing sources               0.105     0.0       1     
+filter/split heavy sources     0.104     0.0       1     
+reading composite source model 0.012     0.0       1     
+total count_eff_ruptures       0.007     0.0       10    
 reading exposure               0.003     0.0       1     
-aggregate curves               2.017E-04 0.0       13    
-saving probability maps        3.314E-05 0.0       1     
-store source_info              9.060E-06 0.0       1     
-reading site collection        7.868E-06 0.0       1     
+store source_info              7.141E-04 0.0       1     
+aggregate curves               2.503E-04 0.0       10    
+saving probability maps        3.695E-05 0.0       1     
+reading site collection        8.106E-06 0.0       1     
 ============================== ========= ========= ======
