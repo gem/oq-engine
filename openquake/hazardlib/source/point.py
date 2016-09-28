@@ -19,10 +19,13 @@ Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 import math
 
 from openquake.hazardlib.geo import Point
+from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.baselib.slots import with_slots
+
+KM_ONE_DEGREE = 111.32  # km per 1 degree
 
 
 @with_slots
@@ -351,3 +354,17 @@ class PointSource(ParametricSeismicSource):
         return PlanarSurface(self.rupture_mesh_spacing, nodal_plane.strike,
                              nodal_plane.dip, left_top, right_top,
                              right_bottom, left_bottom)
+
+    def bounding_box(self, maximum_distance):
+        """
+        :param maximum_distance: a dictionary tectonic region type -> distance
+        :returns: bounding box obtained by expanding the location
+        """
+        maxdist = maximum_distance[self.tectonic_region_type]
+        max_radius = self._get_max_rupture_projection_radius()
+        lon, lat = self.location.x, self.location.y
+        delta = (maxdist + max_radius) / KM_ONE_DEGREE  # angular distance
+        min_lon, max_lon = lon - delta, lon + delta
+        min_lat, max_lat = lat - delta, lat + delta
+        assert not cross_idl(min_lon, max_lon)
+        return (min_lon, min_lat, max_lon, max_lat)
