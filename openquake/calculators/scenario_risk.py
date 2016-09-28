@@ -96,7 +96,9 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         epsilon_matrix = self.make_eps(
             self.oqparam.number_of_ground_motion_fields)
         self.datastore['etags'], gmfs = calc.get_gmfs(self.datastore)
-        self.riskinputs = self.build_riskinputs(gmfs, epsilon_matrix)
+        hazard_by_rlz = {rlz: gmfs[rlz.ordinal]
+                         for rlz in self.rlzs_assoc.realizations}
+        self.riskinputs = self.build_riskinputs(hazard_by_rlz, epsilon_matrix)
 
     def post_execute(self, result):
         """

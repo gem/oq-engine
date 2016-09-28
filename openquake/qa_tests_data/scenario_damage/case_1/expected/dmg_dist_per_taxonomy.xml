@@ -19,7 +19,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <taxonomy>
                 RM
             </taxonomy>
-            <damage ds="no_damage" mean="7.23792E+02" stddev="6.70151E+02"/>
+            <damage ds="no_damage" mean="7.23793E+02" stddev="6.70151E+02"/>
             <damage ds="LS1" mean="1.75671E+03" stddev="5.36592E+02"/>
             <damage ds="LS2" mean="1.51950E+03" stddev="8.72594E+02"/>
         </DDNode>

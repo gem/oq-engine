@@ -17,46 +17,46 @@ xmlns:gml="http://www.opengis.net/gml"
             assetRef="ant_13_S1"
             >
                 <damage ds="no_damage" mean="2.12900E+03" stddev="0.00000E+00"/>
-                <damage ds="Slight" mean="-1.52361E-11" stddev="3.21321E-11"/>
-                <damage ds="Moderate" mean="1.04533E-12" stddev="2.23325E-12"/>
-                <damage ds="Extensive" mean="-4.35093E-09" stddev="9.05545E-09"/>
-                <damage ds="Collapse" mean="4.36512E-09" stddev="9.08534E-09"/>
+                <damage ds="Slight" mean="-1.52362E-11" stddev="3.21323E-11"/>
+                <damage ds="Moderate" mean="1.04535E-12" stddev="2.23328E-12"/>
+                <damage ds="Extensive" mean="-4.35096E-09" stddev="9.05550E-09"/>
+                <damage ds="Collapse" mean="4.36515E-09" stddev="9.08539E-09"/>
             </asset>
             <asset
             assetRef="ant_13_S2"
             >
                 <damage ds="no_damage" mean="4.60000E+02" stddev="0.00000E+00"/>
-                <damage ds="Slight" mean="-9.25531E-20" stddev="1.97543E-19"/>
-                <damage ds="Moderate" mean="9.14037E-20" stddev="1.95090E-19"/>
-                <damage ds="Extensive" mean="-7.21709E-20" stddev="1.53543E-19"/>
-                <damage ds="Collapse" mean="7.33203E-20" stddev="1.55996E-19"/>
+                <damage ds="Slight" mean="-9.25547E-20" stddev="1.97548E-19"/>
+                <damage ds="Moderate" mean="9.14052E-20" stddev="1.95094E-19"/>
+                <damage ds="Extensive" mean="-7.21719E-20" stddev="1.53545E-19"/>
+                <damage ds="Collapse" mean="7.33214E-20" stddev="1.55999E-19"/>
             </asset>
             <asset
             assetRef="ant_13_S3"
             >
                 <damage ds="no_damage" mean="7.70000E+01" stddev="0.00000E+00"/>
-                <damage ds="Slight" mean="-2.86080E-21" stddev="6.12933E-21"/>
-                <damage ds="Moderate" mean="-6.46735E-20" stddev="1.38100E-19"/>
-                <damage ds="Extensive" mean="6.81626E-20" stddev="1.45582E-19"/>
-                <damage ds="Collapse" mean="7.44008E-33" stddev="1.61585E-32"/>
+                <damage ds="Slight" mean="-2.86086E-21" stddev="6.12949E-21"/>
+                <damage ds="Moderate" mean="-6.46747E-20" stddev="1.38104E-19"/>
+                <damage ds="Extensive" mean="6.81638E-20" stddev="1.45585E-19"/>
+                <damage ds="Collapse" mean="7.44031E-33" stddev="1.61591E-32"/>
             </asset>
             <asset
             assetRef="ant_13_S4"
             >
                 <damage ds="no_damage" mean="1.50000E+01" stddev="0.00000E+00"/>
-                <damage ds="Slight" mean="1.04788E-21" stddev="2.82067E-21"/>
-                <damage ds="Moderate" mean="-1.65733E-23" stddev="4.39873E-23"/>
-                <damage ds="Extensive" mean="1.65733E-23" stddev="4.39873E-23"/>
+                <damage ds="Slight" mean="1.04788E-21" stddev="2.82070E-21"/>
+                <damage ds="Moderate" mean="-1.65734E-23" stddev="4.39877E-23"/>
+                <damage ds="Extensive" mean="1.65734E-23" stddev="4.39877E-23"/>
                 <damage ds="Collapse" mean="2.80260E-44" stddev="8.26766E-44"/>
             </asset>
             <asset
             assetRef="ant_13_S5"
             >
                 <damage ds="no_damage" mean="1.00000E+00" stddev="0.00000E+00"/>
-                <damage ds="Slight" mean="-2.00139E-22" stddev="5.34176E-22"/>
-                <damage ds="Moderate" mean="1.95239E-22" stddev="5.21060E-22"/>
-                <damage ds="Extensive" mean="4.90032E-24" stddev="1.31164E-23"/>
-                <damage ds="Collapse" mean="3.50613E-40" stddev="1.04144E-39"/>
+                <damage ds="Slight" mean="-2.00140E-22" stddev="5.34181E-22"/>
+                <damage ds="Moderate" mean="1.95239E-22" stddev="5.21065E-22"/>
+                <damage ds="Extensive" mean="4.90034E-24" stddev="1.31165E-23"/>
+                <damage ds="Collapse" mean="3.50617E-40" stddev="1.04146E-39"/>
             </asset>
         </DDNode>
     </dmgDistPerAsset>

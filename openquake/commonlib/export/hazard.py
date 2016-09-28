@@ -658,19 +658,20 @@ def export_gmf_spec(ekey, dstore, spec):
     """
     oq = dstore['oqparam']
     eids = numpy.array([int(rid) for rid in spec.split(',')])
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    gsims = [str(rlz.gsim_rlz) for rlz in rlzs]
     sitemesh = get_mesh(dstore['sitecol'])
     writer = writers.CsvWriter(fmt='%.5f')
     if 'scenario' in oq.calculation_mode:
-        etags, gmfs_by_trt_gsim = calc.get_gmfs(dstore)
-        gsims = sorted(gsim for trt, gsim in gmfs_by_trt_gsim)
-        imts = gmfs_by_trt_gsim[0, gsims[0]].dtype.names
-        gmf_dt = numpy.dtype([(str(gsim), F32) for gsim in gsims])
+        etags, gmfs = calc.get_gmfs(dstore)
+        imts = list(oq.imtls)
+        gmf_dt = numpy.dtype([(gsim, F32) for gsim in gsims])
         for eid in eids:
             etag = etags[eid]
             for imt in imts:
                 gmfa = numpy.zeros(len(sitemesh), gmf_dt)
-                for gsim in gsims:
-                    gmfa[str(gsim)] = gmfs_by_trt_gsim[0, gsim][imt][:, eid]
+                for i, gsim in enumerate(gsims):
+                    gmfa[gsim] = gmfs[i][imt][:, eid]
                 dest = dstore.export_path('gmf-%s-%s.csv' % (etag, imt))
                 data = util.compose_arrays(sitemesh, gmfa)
                 writer.save(data, dest)
@@ -775,17 +776,20 @@ def _calc_gmfs(dstore, serial, eid):
 def export_gmf_scenario(ekey, dstore):
     oq = dstore['oqparam']
     if 'scenario' in oq.calculation_mode:
+        imtls = dstore['oqparam'].imtls
+        rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+        gsims = [str(rlz.gsim_rlz) for rlz in rlzs]
         n_gmfs = oq.number_of_ground_motion_fields
         fields = ['%03d' % i for i in range(n_gmfs)]
         dt = numpy.dtype([(f, F32) for f in fields])
-        etags, gmfs_by_trt_gsim = calc.get_gmfs(dstore)
+        etags, gmfs_ = calc.get_gmfs(dstore)
         sitemesh = get_mesh(dstore['sitecol'])
         writer = writers.CsvWriter(fmt='%.5f')
-        for (trt, gsim), gmfs_ in gmfs_by_trt_gsim.items():
-            for imt in gmfs_.dtype.names:
-                gmfs = numpy.zeros(len(gmfs_), dt)
-                for i in range(len(gmfs)):
-                    gmfs[i] = tuple(gmfs_[imt][i])
+        for gsim, gmfa in zip(gsims, gmfs_):  # gmfa of shape (N, E)
+            for imt in imtls:
+                gmfs = numpy.zeros(len(gmfa), dt)
+                for i in range(len(gmfa)):
+                    gmfs[i] = tuple(gmfa[imt][i])
                 dest = dstore.build_fname('gmf', '%s-%s' % (gsim, imt), 'csv')
                 data = util.compose_arrays(sitemesh, gmfs)
                 writer.save(data, dest)
