@@ -2,9 +2,9 @@ oq-test03, depth=15km
 =====================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_48386.hdf5 Wed Sep  7 16:04:05 2016
-engine_version                                 2.1.0-gitfaa2965        
-hazardlib_version                              0.21.0-git89bccaf       
+gem-tstation:/home/michele/ssd/calc_54361.hdf5 Tue Sep 27 14:05:49 2016
+engine_version                                 2.1.0-git1ca7123        
+hazardlib_version                              0.21.0-git9261682       
 ============================================== ========================
 
 num_sites = 1, sitecol = 739 B
@@ -64,10 +64,6 @@ MUR/LWAL/HEX:5 1.000 NaN    1   1   1         1
 *ALL*          5.000 NaN    5   5   1         5         
 ============== ===== ====== === === ========= ==========
 
-Information about the tasks
----------------------------
-Not available
-
 Slowest operations
 ------------------
 ======================= ========= ========= ======
@@ -75,5 +71,5 @@ operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 reading exposure        0.003     0.0       1     
 filtering sites         0.001     0.0       1     
-reading site collection 5.960E-06 0.0       1     
+reading site collection 6.914E-06 0.0       1     
 ======================= ========= ========= ======
