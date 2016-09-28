@@ -307,7 +307,7 @@ def get_gmfs(dstore):
             gmfs_by_imt[imt] = gmfs_by_imt[imt][sitecol.indices]
 
         logging.info('Preparing the risk input')
-        return etags, {(0, 'FromFile'): gmfs_by_imt}
+        return etags, [gmfs_by_imt]
 
     # else from datastore
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
@@ -325,17 +325,15 @@ def get_gmfs(dstore):
     N = len(haz_sitecol.complete)
     imt_dt = numpy.dtype([(str(imt), F32) for imt in oq.imtls])
     E = oq.number_of_ground_motion_fields
-    # build a matrix N x E for each GSIM realization
-    gmfs = {(grp_id, gsim): numpy.zeros((N, E), imt_dt)
-            for grp_id, gsim in rlzs_assoc}
+    # build a matrix R x N x E where R is the number of GSIMs
+    gmfs = numpy.zeros((len(rlzs_assoc), N, E), imt_dt)
     for i, rlz in enumerate(rlzs):
         data = group_array(dstore['gmf_data/%04d' % i], 'sid')
         for sid, array in data.items():
             if sid in risk_indices:
                 for imti, imt in enumerate(oq.imtls):
                     a = get_array(array, imti=imti)
-                    gs = str(rlz.gsim_rlz)
-                    gmfs[0, gs][imt][sid, a['eid']] = a['gmv']
+                    gmfs[imt][i, sid, a['eid']] = a['gmv']
     etags = numpy.array(
         sorted([b'scenario-%010d~ses=1' % i
                 for i in range(oq.number_of_ground_motion_fields)]))
