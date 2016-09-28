@@ -616,7 +616,7 @@ class RiskCalculator(HazardCalculator):
                         for asset in assets:
                             reduced_eps[asset.ordinal] = eps[asset.ordinal]
 
-                # collect the hazards by key into hazards by site
+                # collect the hazards into a list of dicts imt -> rlz
                 hdata = [{imt: {} for imt in imtls} for _ in indices]
                 for rlz, hazards_by_imt in hazards_by_rlz.items():
                     for imt in imtls:
