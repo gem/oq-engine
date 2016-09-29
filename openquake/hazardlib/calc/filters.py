@@ -59,6 +59,10 @@ from contextlib import contextmanager
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.hazardlib.geo.utils import fix_lons_idl
+try:
+    import rtree
+except ImportError:
+    rtree = None
 
 
 @contextmanager
@@ -159,20 +163,23 @@ class RtreeFilter(object):
     """
     Source-sites filter based on the integration distance. Used as follows::
 
-      ss_filter = RtreeFilter(integration_distance)
-      for src, affected_sites in ss_filter(sources, sites):
+      ss_filter = RtreeFilter(sitecol, integration_distance)
+      for src, affected_sites in ss_filter(sources):
          do_something(...)
 
     As a side effect, sets the `.nsites` attribute of the source, i.e. the
     number of sites within the integration distance.
 
+    :param sitecol:
+        :class:`openquake.hazardlib.site.SiteCollection` instance
     :param integration_distance:
         Threshold distance in km, this value gets passed straight to
         :meth:`openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source`
         which is what is actually used for filtering.
     """
     def __init__(self, sitecol, integration_distance):
-        import rtree
+        if rtree is None:
+            raise ImportError('Cannot find the rtree module')
         assert integration_distance, 'Must be set'
         self.integration_distance = integration_distance
         self.sitecol = sitecol
