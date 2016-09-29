@@ -382,8 +382,13 @@ class HazardCalculator(BaseCalculator):
             self.ss_filter = RtreeFilter(self.sitecol, oq.maximum_distance)
             with self.monitor(
                     'reading composite source model', autoflush=True):
-                self.csm = readinput.get_composite_source_model(oq).filter(
-                    self.ss_filter)
+                csm = readinput.get_composite_source_model(oq)
+                if self.is_stochastic:
+                    # initialize the rupture serial numbers before the
+                    # filtering; in this way the serials are independent
+                    # from the site collection
+                    csm.init_serials()
+                self.csm = csm.filter(self.ss_filter)
                 self.datastore['csm_info'] = self.csm.info
                 self.rup_data = {}
         self.init()
