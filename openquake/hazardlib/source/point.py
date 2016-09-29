@@ -19,7 +19,7 @@ Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 import math
 
 from openquake.hazardlib.geo import Point
-from openquake.hazardlib.geo.utils import cross_idl
+from openquake.hazardlib.geo.utils import fix_bb_idl
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
@@ -366,5 +366,4 @@ class PointSource(ParametricSeismicSource):
         delta = (maxdist + max_radius) / KM_ONE_DEGREE  # angular distance
         min_lon, max_lon = lon - delta, lon + delta
         min_lat, max_lat = lat - delta, lat + delta
-        assert not cross_idl(min_lon, max_lon)
-        return (min_lon, min_lat, max_lon, max_lat)
+        return fix_bb_idl((min_lon, min_lat, max_lon, max_lat))
