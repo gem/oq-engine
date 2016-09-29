@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Introduced an RtreeFilter for fast filtering of the sites by point sources,
+  based on the source bounding box
+
   [Graeme Weatherill]
   * Adds/Modifies Ry0 and Rx calculator for multi-surface typology using the Generalized Coordinate System (GC2)
 
