@@ -195,7 +195,7 @@ class RtreeFilter(object):
         if sites is None:
             sites = self.sitecol
         for source in sources:
-            if hasattr(source, 'bounding_box'):  # Rtree filtering
+            if source.__class__.__name__ == 'PointSource':  # Rtree filtering
                 bb = source.bounding_box(self.integration_distance)
                 sids = sorted(self.index.intersection(bb))
                 if len(sids):
