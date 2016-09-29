@@ -555,7 +555,7 @@ class CompositeSourceModel(collections.Sequence):
         new.sm_id = sm_id
         return new
 
-    def filter(self, sitecol, ss_filter):
+    def filter(self, ss_filter):
         """
         Generate a new CompositeSourceModel by filtering the sources on
         the given site collection. Warning: this is slow, so use it only
@@ -570,7 +570,7 @@ class CompositeSourceModel(collections.Sequence):
             src_groups = [copy.copy(src) for src in sm.src_groups]
             for src_group in src_groups:
                 sources = []
-                for src, sites in ss_filter(src_group.sources, sitecol):
+                for src, sites in ss_filter(src_group.sources):
                     sources.append(src)
                     weight += src.weight
                 src_group.sources = sources
