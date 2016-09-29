@@ -187,11 +187,13 @@ class RtreeFilter(object):
         Returns the sites within the integration distance from the source,
         or None.
         """
-        source_sites = list(self([source], sites))
+        source_sites = list(self([source]))
         if source_sites:
             return source_sites[0][1]
 
-    def __call__(self, sources):
+    def __call__(self, sources, sites=None):
+        if sites is None:
+            sites = self.sitecol
         for source in sources:
             if hasattr(source, 'bounding_box'):  # Rtree filtering
                 bb = source.bounding_box(self.integration_distance)
@@ -199,13 +201,14 @@ class RtreeFilter(object):
                 if len(sids):
                     source.nsites = len(sids)
                     yield source, FilteredSiteCollection(
-                        sids, self.sitecol.complete)
+                        sids, sites.complete)
             else:  # normal filtering
                 with context(source):
                     s_sites = source.filter_sites_by_distance_to_source(
-                        self.integration_distance, self.sitecol)
+                        self.integration_distance[source.tectonic_region_type],
+                        sites)
                 if s_sites is not None:
-                    source.nsites = len(sids)
+                    source.nsites = len(s_sites)
                     yield source, s_sites
 
 
