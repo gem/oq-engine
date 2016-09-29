@@ -339,8 +339,6 @@ class PSHACalculator(base.HazardCalculator):
                      if oq.filter_sources else source_site_noop_filter)
         ngroups = len(src_groups)
         logging.info('Considering %d source groups', ngroups)
-        if self.random_seed is not None:
-            self.csm.init_serials()
         ct = oq.concurrent_tasks or 1
         if len(self.sitecol) > 10000:  # correction for lots of sites
             ct *= math.sqrt(len(self.sitecol) / 10000)
