@@ -211,8 +211,7 @@ class RtreeFilter(object):
                 sids = sorted(self.index.intersection(bb))
                 if len(sids):
                     source.nsites = len(sids)
-                    yield source, FilteredSiteCollection(
-                        sids, sites.complete)
+                    yield source, FilteredSiteCollection(sids, sites.complete)
             else:  # normal filtering
                 with context(source):
                     s_sites = source.filter_sites_by_distance_to_source(
