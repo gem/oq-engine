@@ -141,7 +141,7 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
                                          data)
         group = SourceGroup([src], 'test', 'indep', 'mutex')
         crv = pmap_from_grp(group, self.sites, self.imtls,
-                                    gsim_by_trt, truncation_level=None)[0]
+                            gsim_by_trt, truncation_level=None)[0]
         npt.assert_almost_equal(numpy.array([0.35000, 0.32497, 0.10398]),
                                 crv.array[:, 0], decimal=4)
 

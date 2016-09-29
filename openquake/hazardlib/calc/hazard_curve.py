@@ -316,7 +316,7 @@ def calc_hazard_curves_ext(
         groups = SourceGroupCollection([group_tmp])
 
     imtls = DictArray(imtls)
-    pmap = ProbabilityMap()
+    pmap = ProbabilityMap(len(imtls.array), 1)
     # Processing groups
     for group in groups.grp_list:
         indep = group.src_interdep == 'indep'
@@ -356,7 +356,7 @@ def calc_hazard_curves_ext(
                 pmap += pmap_from_grp(
                     tmp_group, sites, imtls, [gsim],
                     truncation_level, source_site_filter)
-    return array_of_curves(pmap, len(sites), imtls)
+    return pmap.convert(imtls, len(sites.complete))
 
 # #########################################################################
 # original implementation by Marco, to be removed if the new one is correct
