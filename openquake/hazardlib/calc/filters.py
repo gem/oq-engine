@@ -177,7 +177,7 @@ class RtreeFilter(object):
         self.integration_distance = integration_distance
         self.sitecol = sitecol
         complete = sitecol.complete
-        complete.lons = fix_lons_idl(complete.lons)
+        complete.lons, self.idl = fix_lons_idl(complete.lons)
         self.index = rtree.index.Index()
         for sid, (lon, lat) in enumerate(zip(complete.lons, complete.lats)):
             self.index.insert(sid, (lon, lat, lon, lat))
@@ -196,7 +196,7 @@ class RtreeFilter(object):
             sites = self.sitecol
         for source in sources:
             if source.__class__.__name__ == 'PointSource':  # Rtree filtering
-                bb = source.bounding_box(self.integration_distance)
+                bb = source.bounding_box(self.integration_distance, self.idl)
                 sids = sorted(self.index.intersection(bb))
                 if len(sids):
                     source.nsites = len(sids)

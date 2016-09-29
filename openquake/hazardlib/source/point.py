@@ -19,7 +19,6 @@ Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 import math
 
 from openquake.hazardlib.geo import Point
-from openquake.hazardlib.geo.utils import fix_bb_idl
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
@@ -355,9 +354,10 @@ class PointSource(ParametricSeismicSource):
                              nodal_plane.dip, left_top, right_top,
                              right_bottom, left_bottom)
 
-    def bounding_box(self, maximum_distance):
+    def bounding_box(self, maximum_distance, cross_idl):
         """
         :param maximum_distance: a dictionary tectonic region type -> distance
+        :param cross_idl: a flag telling if we expect the IDL to be crossed
         :returns: bounding box obtained by expanding the location
         """
         maxdist = maximum_distance[self.tectonic_region_type]
@@ -366,4 +366,7 @@ class PointSource(ParametricSeismicSource):
         delta = (maxdist + max_radius) / KM_ONE_DEGREE  # angular distance
         min_lon, max_lon = lon - delta, lon + delta
         min_lat, max_lat = lat - delta, lat + delta
-        return fix_bb_idl((min_lon, min_lat, max_lon, max_lat))
+        if min_lon < 0 and cross_idl:  # apply IDL fix
+            return max_lon, min_lat, min_lon + 360, max_lat
+        else:
+            return min_lon, min_lat, max_lon, max_lat

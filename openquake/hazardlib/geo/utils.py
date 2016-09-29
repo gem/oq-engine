@@ -445,26 +445,15 @@ def plane_fit(points):
     return ctr, numpy.linalg.svd(M)[0][:, -1]
 
 
-def fix_bb_idl(bb):
-    """
-    Fix a bounding box crossing the International Date Line
-
-    >>> fix_bb_idl((-178, 10, 181, 20))
-    (181, 10, 182, 20)
-    """
-    if cross_idl(bb[0], bb[2]):
-        return (bb[2], bb[1], bb[0] + 360, bb[3])
-    else:
-        return bb
-
-
 def fix_lons_idl(lons):
     """
-    Fix a vector of longitudes crossing the International Date Line
+    Fix a vector of longitudes crossing the International Date Line (if any).
+
+    :returns: the fixed vector and an IDL flag
     """
     if cross_idl(lons.min(), lons.max()):
         new = numpy.array(lons)
         new[new < 0] += 360
-        return new
+        return new, True
     else:
-        return lons
+        return lons, False
