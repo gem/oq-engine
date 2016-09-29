@@ -52,13 +52,6 @@ Site = collections.namedtuple('Site', 'sid lon lat')
 F32 = numpy.float32
 
 
-def is_small(sitecol):
-    """
-    Returns True if the site collection contains up to 10 sites
-    """
-    return len(sitecol) <= 10
-
-
 class InvalidCalculationID(Exception):
     """
     Raised when running a post-calculation on top of an incompatible
