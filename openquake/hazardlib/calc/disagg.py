@@ -150,13 +150,11 @@ def _collect_bins_data(sources, site, imt, iml, gsims,
 
     _next_trt_num = 0
     trt_nums = {}
-
-    sources_sites = ((source, sitecol) for source in sources)
     # here we ignore filtered site collection because either it is the same
     # as the original one (with one site), or the source/rupture is filtered
     # out and doesn't show up in the filter's output
     for src_idx, (source, s_sites) in \
-            enumerate(source_site_filter(sources_sites)):
+            enumerate(source_site_filter(sources, sitecol)):
         try:
             tect_reg = source.tectonic_region_type
             gsim = gsims[tect_reg]
@@ -166,9 +164,8 @@ def _collect_bins_data(sources, site, imt, iml, gsims,
                 _next_trt_num += 1
             tect_reg = trt_nums[tect_reg]
 
-            ruptures_sites = ((rupture, s_sites)
-                              for rupture in source.iter_ruptures())
-            for rupture, r_sites in rupture_site_filter(ruptures_sites):
+            for rupture, r_sites in rupture_site_filter(
+                    source.iter_ruptures(), s_sites):
                 # extract rupture parameters of interest
                 mags.append(rupture.mag)
                 [jb_dist] = rupture.surface.get_joyner_boore_distance(sitemesh)

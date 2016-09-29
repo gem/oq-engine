@@ -81,7 +81,10 @@ class GmfComputer(object):
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.samples = samples
-        self.ctx = ContextMaker(gsims).make_contexts(sites, rupture)
+        # `rupture` can be a high level rupture object containing a low
+        # level hazardlib rupture object as a .rupture attribute
+        hazrup = getattr(rupture, 'rupture', rupture)
+        self.ctx = ContextMaker(gsims).make_contexts(sites, hazrup)
 
     # used by the scenario calculators
     def compute(self, seed, gsim, num_events):
@@ -95,18 +98,29 @@ class GmfComputer(object):
             numpy.random.seed(seed)
         result = numpy.zeros(
             (len(self.imts), len(self.sites), num_events), numpy.float32)
-        sctx, rctx, dctx = self.ctx
+        for imti, imt in enumerate(self.imts):
+            result[imti] = self._compute(None, gsim, num_events, imt)
+        return result
 
+    def _compute(self, seed, gsim, num_events, imt):
+        """
+        :param seed: a random seed or None if the seed is already set
+        :param gsim: a GSIM instance
+        :param num_events: the number of seismic events
+        :param imt: an IMT instance
+        :returns: a 32 bit array of shape (num_sites, num_events)
+        """
+        if seed is not None:
+            numpy.random.seed(seed)
+        sctx, rctx, dctx = self.ctx
         if self.truncation_level == 0:
             assert self.correlation_model is None
-            for imti, imt in enumerate(self.imts):
-                mean, _stddevs = gsim.get_mean_and_stddevs(
-                    sctx, rctx, dctx, imt, stddev_types=[])
-                mean = gsim.to_imt_unit_values(mean)
-                mean.shape += (1, )
-                mean = mean.repeat(num_events, axis=1)
-                result[imti] = mean
-            return result
+            mean, _stddevs = gsim.get_mean_and_stddevs(
+                sctx, rctx, dctx, imt, stddev_types=[])
+            mean = gsim.to_imt_unit_values(mean)
+            mean.shape += (1, )
+            mean = mean.repeat(num_events, axis=1)
+            return mean
         elif self.truncation_level is None:
             distribution = scipy.stats.norm()
         else:
@@ -114,54 +128,51 @@ class GmfComputer(object):
             distribution = scipy.stats.truncnorm(
                 - self.truncation_level, self.truncation_level)
 
-        for imti, imt in enumerate(self.imts):
-            if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == \
-               set([StdDev.TOTAL]):
-                # If the GSIM provides only total standard deviation, we need
-                # to compute mean and total standard deviation at the sites
-                # of interest.
-                # In this case, we also assume no correlation model is used.
-                if self.correlation_model:
-                    raise CorrelationButNoInterIntraStdDevs(
-                        self.correlation_model, gsim)
+        if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == \
+           set([StdDev.TOTAL]):
+            # If the GSIM provides only total standard deviation, we need
+            # to compute mean and total standard deviation at the sites
+            # of interest.
+            # In this case, we also assume no correlation model is used.
+            if self.correlation_model:
+                raise CorrelationButNoInterIntraStdDevs(
+                    self.correlation_model, gsim)
 
-                mean, [stddev_total] = gsim.get_mean_and_stddevs(
-                    sctx, rctx, dctx, imt, [StdDev.TOTAL])
-                stddev_total = stddev_total.reshape(stddev_total.shape + (1, ))
-                mean = mean.reshape(mean.shape + (1, ))
+            mean, [stddev_total] = gsim.get_mean_and_stddevs(
+                sctx, rctx, dctx, imt, [StdDev.TOTAL])
+            stddev_total = stddev_total.reshape(stddev_total.shape + (1, ))
+            mean = mean.reshape(mean.shape + (1, ))
 
-                total_residual = stddev_total * distribution.rvs(
-                    size=(len(self.sites), num_events))
-                gmf = gsim.to_imt_unit_values(mean + total_residual)
-            else:
-                mean, [stddev_inter, stddev_intra] = gsim.get_mean_and_stddevs(
-                    sctx, rctx, dctx, imt,
-                    [StdDev.INTER_EVENT, StdDev.INTRA_EVENT])
-                stddev_intra = stddev_intra.reshape(stddev_intra.shape + (1, ))
-                stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))
-                mean = mean.reshape(mean.shape + (1, ))
+            total_residual = stddev_total * distribution.rvs(
+                size=(len(self.sites), num_events))
+            gmf = gsim.to_imt_unit_values(mean + total_residual)
+        else:
+            mean, [stddev_inter, stddev_intra] = gsim.get_mean_and_stddevs(
+                sctx, rctx, dctx, imt,
+                [StdDev.INTER_EVENT, StdDev.INTRA_EVENT])
+            stddev_intra = stddev_intra.reshape(stddev_intra.shape + (1, ))
+            stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))
+            mean = mean.reshape(mean.shape + (1, ))
 
-                intra_residual = stddev_intra * distribution.rvs(
-                    size=(len(self.sites), num_events))
+            intra_residual = stddev_intra * distribution.rvs(
+                size=(len(self.sites), num_events))
 
-                if self.correlation_model is not None:
-                    ir = self.correlation_model.apply_correlation(
-                        self.sites, imt, intra_residual)
-                    # this fixes a mysterious bug: ir[row] is actually
-                    # a matrix of shape (E, 1) and not a vector of size E
-                    intra_residual = numpy.zeros(ir.shape)
-                    for i, val in numpy.ndenumerate(ir):
-                        intra_residual[i] = val
+            if self.correlation_model is not None:
+                ir = self.correlation_model.apply_correlation(
+                    self.sites, imt, intra_residual)
+                # this fixes a mysterious bug: ir[row] is actually
+                # a matrix of shape (E, 1) and not a vector of size E
+                intra_residual = numpy.zeros(ir.shape)
+                for i, val in numpy.ndenumerate(ir):
+                    intra_residual[i] = val
 
-                inter_residual = stddev_inter * distribution.rvs(
-                    size=num_events)
+            inter_residual = stddev_inter * distribution.rvs(
+                size=num_events)
 
-                gmf = gsim.to_imt_unit_values(
-                    mean + intra_residual + inter_residual)
+            gmf = gsim.to_imt_unit_values(
+                mean + intra_residual + inter_residual)
 
-            result[imti] = gmf
-
-        return result
+        return gmf
 
     # used by the event_based calculators
     def calcgmfs(self, seed, events, rlzs_by_gsim, min_iml=None):
@@ -251,19 +262,18 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         for all sites in the collection. First dimension represents
         sites and second one is for realizations.
     """
-    ruptures_sites = list(rupture_site_filter([(rupture, sites)]))
-    if not ruptures_sites:
+    r_sites = rupture_site_filter.affected(rupture, sites)
+    if r_sites is None:
         return dict((imt, numpy.zeros((len(sites), realizations)))
                     for imt in imts)
-    [(rupture, sites)] = ruptures_sites
-    gc = GmfComputer(rupture, sites, [str(imt) for imt in imts], [gsim],
+    gc = GmfComputer(rupture, r_sites, [str(imt) for imt in imts], [gsim],
                      truncation_level, correlation_model)
     res = gc.compute(seed, gsim, realizations)
     result = {}
     for imti, imt in enumerate(gc.imts):
         # makes sure the lenght of the arrays in output is the same as sites
         if rupture_site_filter is not filters.rupture_site_noop_filter:
-            result[imt] = sites.expand(res[imti], placeholder=0)
+            result[imt] = r_sites.expand(res[imti], placeholder=0)
         else:
             result[imt] = res[imti]
     return result

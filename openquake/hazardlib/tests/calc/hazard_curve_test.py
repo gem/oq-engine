@@ -171,14 +171,15 @@ class HazardCurvesTestCase(unittest.TestCase):
 
 
 class HazardCurvesFiltersTestCase(unittest.TestCase):
-    class SitesCounterSourceFilter(object):
+    class SitesCounterSourceSitesFilter(object):
         def __init__(self, chained_generator):
             self.counts = []
             self.chained_generator = chained_generator
 
-        def __call__(self, sources_sites):
-            for source, sites in self.chained_generator(sources_sites):
-                self.counts.append((source.source_id, list(map(int, sites.vs30))))
+        def __call__(self, sources, sites):
+            for source, sites in self.chained_generator(sources, sites):
+                self.counts.append(
+                    (source.source_id, list(map(int, sites.vs30))))
                 yield source, sites
 
     class SitesCounterRuptureFilter(object):
@@ -186,8 +187,8 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
             self.counts = []
             self.chained_generator = chained_generator
 
-        def __call__(self, ruptures_sites):
-            for rupture, sites in self.chained_generator(ruptures_sites):
+        def __call__(self, ruptures, sites):
+            for rupture, sites in self.chained_generator(ruptures, sites):
                 self.counts.append((rupture.mag, list(map(int, sites.vs30))))
                 yield rupture, sites
 
@@ -248,8 +249,8 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         imts = {'PGA': [0.1, 0.5, 1.3]}
 
         from openquake.hazardlib.calc import filters
-        source_site_filter = self.SitesCounterSourceFilter(
-            filters.source_site_distance_filter(30))
+        source_site_filter = self.SitesCounterSourceSitesFilter(
+            filters.SourceSitesFilter(30))
         calc_hazard_curves(
             sources, sitecol, imts, gsims, truncation_level,
             source_site_filter=source_site_filter)

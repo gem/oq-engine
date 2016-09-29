@@ -82,8 +82,7 @@ def agg_curves(acc, curves):
 
 def calc_hazard_curves(
         sources, sites, imtls, gsim_by_trt, truncation_level=None,
-        source_site_filter=filters.source_site_noop_filter,
-        maximum_distance=None):
+        source_site_filter=filters.source_site_noop_filter):
     """
     Compute hazard curves on a list of sites, given a set of seismic sources
     and a set of ground shaking intensity models (one per tectonic region type
@@ -138,7 +137,7 @@ def calc_hazard_curves(
         sources, operator.attrgetter('tectonic_region_type'))
     pmap = ProbabilityMap(len(imtls.array), 1)
     for trt in sources_by_trt:
-        pmap |= hazard_curves_per_trt(
+        pmap |= pmap_from_grp(
             sources_by_trt[trt], sites, imtls, [gsim_by_trt[trt]],
             truncation_level, source_site_filter)
     return pmap.convert(imtls, len(sites))
@@ -214,10 +213,10 @@ def poe_map(src, s_sites, imtls, cmaker, trunclevel, bbs, rup_indep,
 
 
 # this is used by the engine
-def hazard_curves_per_trt(
+def pmap_from_grp(
         sources, sites, imtls, gsims, truncation_level=None,
-        source_site_filter=filters.source_site_noop_filter,
-        maximum_distance=None, bbs=(), monitor=Monitor()):
+        source_site_filter='SourceSitesFilter', maximum_distance=None, bbs=(),
+        monitor=Monitor()):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
@@ -226,6 +225,10 @@ def hazard_curves_per_trt(
 
     :returns: a ProbabilityMap instance
     """
+    if source_site_filter == 'SourceSitesFilter':  # default
+        source_site_filter = (
+            filters.SourceSitesFilter(maximum_distance)
+            if maximum_distance else filters.source_site_noop_filter)
     if isinstance(sources, SourceGroup):
         group = sources
         sources = group.src_list
@@ -241,13 +244,12 @@ def hazard_curves_per_trt(
     with GroundShakingIntensityModel.forbid_instantiation():
         imtls = DictArray(imtls)
         cmaker = ContextMaker(gsims, maximum_distance)
-        sources_sites = ((source, sites) for source in sources)
         ctx_mon = monitor('making contexts', measuremem=False)
         pne_mon = monitor('computing poes', measuremem=False)
         disagg_mon = monitor('get closest points', measuremem=False)
         monitor.calc_times = []  # pairs (src_id, delta_t)
         pmap = ProbabilityMap(len(imtls.array), len(gsims))
-        for src, s_sites in source_site_filter(sources_sites):
+        for src, s_sites in source_site_filter(sources, sites):
             t0 = time.time()
         poemap = poe_map(src, s_sites, imtls, cmaker, truncation_level, bbs,
                          group.rup_interdep == 'indep',
@@ -260,7 +262,8 @@ def hazard_curves_per_trt(
                 pmap[sid] += poemap[sid] * weight
             # we are attaching the calculation times to the monitor
             # so that oq-lite (and the engine) can store them
-            monitor.calc_times.append((src.id, time.time() - t0))
+            monitor.calc_times.append(
+                (src.source_id, len(s_sites), time.time() - t0))
             # NB: source.id is an integer; it should not be confused
             # with source.source_id, which is a string
         monitor.eff_ruptures = pne_mon.counts  # contributing ruptures

@@ -73,12 +73,10 @@ def stochastic_event_set(
                 raise_(etype, msg, tb)
         return
     # else apply filtering
-    sources_sites = source_site_filter((source, sites) for source in sources)
-    for source, r_sites in sources_sites:
+    for source, s_sites in source_site_filter(sources, sites):
         try:
-            ruptures_sites = rupture_site_filter(
-                (rupture, r_sites) for rupture in source.iter_ruptures())
-            for rupture, _sites in ruptures_sites:
+            for rupture, r_sites in rupture_site_filter(
+                    source.iter_ruptures(), s_sites):
                 for i in range(rupture.sample_number_of_occurrences()):
                     yield rupture
         except Exception as err:

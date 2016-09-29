@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
 """
 Module :mod:`~openquake.hazardlib.calc.filters` contain filter functions for
 calculators.
@@ -51,10 +50,33 @@ should also perform reasonably fast (filtering stage that takes longer than
 the actual calculation on unfiltered collection only decreases performance).
 
 Module :mod:`openquake.hazardlib.calc.filters` exports one distance-based
-filter function of each kind (see :func:`source_site_distance_filter` and
-:func:`rupture_site_distance_filter`) as well as "no operation" filters
+filter function of each kind (see :func:`SourceSitesFilter` and
+:func:`RuptureSitesFilter`) as well as "no operation" filters
 (:func:`source_site_noop_filter` and :func:`rupture_site_noop_filter`).
 """
+import sys
+from contextlib import contextmanager
+from openquake.baselib.python3compat import raise_
+
+
+@contextmanager
+def context(src):
+    """
+    Used to add the source_id to the error message. To be used as
+
+    with context(src):
+        operation_with(src)
+
+    Typically the operation is filtering a source, that can fail for
+    tricky geometries.
+    """
+    try:
+        yield
+    except:
+        etype, err, tb = sys.exc_info()
+        msg = 'An error occurred with source id=%s. Error: %s'
+        msg %= (src.source_id, err)
+        raise_(etype, msg, tb)
 
 
 def filter_sites_by_distance_to_rupture(rupture, integration_distance, sites):
@@ -86,10 +108,16 @@ def filter_sites_by_distance_to_rupture(rupture, integration_distance, sites):
     return sites.filter(jb_dist <= integration_distance)
 
 
-# this is a class because it must be pickleable
-class source_site_distance_filter(object):
+class SourceSitesFilter(object):
     """
-    Source-site filter based on distance.
+    Source-sites filter based on the integration distance. Used as follows::
+
+      ss_filter = SourceSitesFilter(integration_distance)
+      for src, affected_sites in ss_filter(sources, sites):
+         do_something(...)
+
+    As a side effect, sets the `.nsites` attribute of the source, i.e. the
+    number of sites within the integration distance.
 
     :param integration_distance:
         Threshold distance in km, this value gets passed straight to
@@ -97,19 +125,35 @@ class source_site_distance_filter(object):
         which is what is actually used for filtering.
     """
     def __init__(self, integration_distance):
+        assert integration_distance, 'Must be set'
         self.integration_distance = integration_distance
 
-    def __call__(self, sources_sites):
-        for source, sites in sources_sites:
-            s_sites = source.filter_sites_by_distance_to_source(
-                self.integration_distance, sites
-            )
-            if s_sites is None:
-                continue
-            yield source, s_sites
+    def affected(self, source, sites):
+        """
+        Returns the sites within the integration distance from the source,
+        or None.
+        """
+        source_sites = list(self([source], sites))
+        if source_sites:
+            return source_sites[0][1]
+
+    def __call__(self, sources, sites):
+        for source in sources:
+            if hasattr(self.integration_distance, '__getitem__'):
+                # a dictionary trt -> distance
+                trt = source.tectonic_region_type
+                integration_distance = self.integration_distance[trt]
+            else:  # just a distance in km
+                integration_distance = self.integration_distance
+            with context(source):
+                s_sites = source.filter_sites_by_distance_to_source(
+                    integration_distance, sites)
+            if s_sites is not None:
+                source.nsites = len(s_sites)
+                yield source, s_sites
 
 
-class rupture_site_distance_filter(object):
+class RuptureSitesFilter(object):
     """
     Rupture-site filter based on distance.
 
@@ -121,18 +165,39 @@ class rupture_site_distance_filter(object):
     def __init__(self, integration_distance):
         self.integration_distance = integration_distance
 
+    def affected(self, source, sites):
+        """
+        Returns the ruptures within the integration distance from the source,
+        or None.
+        """
+        rupture_sites = list(self([source], sites))
+        if rupture_sites:
+            return rupture_sites[0][1]
+
     def __call__(self, ruptures_sites):
         for rupture, sites in ruptures_sites:
             r_sites = filter_sites_by_distance_to_rupture(
                 rupture, self.integration_distance, sites)
-            if r_sites is None:
-                continue
-            yield rupture, r_sites
+            if r_sites is not None:
+                yield rupture, r_sites
 
 
-#: Transparent source-site "no-op" filter -- behaves like a real filter
-#: but never filters anything out and doesn't have any overhead.
-source_site_noop_filter = lambda sources_sites: sources_sites
+def source_site_noop_filter(sources, sites):
+    """
+    Transparent source-site "no-op" filter -- behaves like a real filter
+    but never filters anything out and doesn't have any overhead.
+    """
+    return ((src, sites) for src in sources)
+source_site_noop_filter.affected = lambda src, sites: sites
+source_site_noop_filter.integration_distance = None
+
 
 #: Rupture-site "no-op" filter, same as :func:`source_site_noop_filter`.
-rupture_site_noop_filter = lambda ruptures_sites: ruptures_sites
+def rupture_site_noop_filter(ruptures, sites):
+    """
+    Transparent rupture-site "no-op" filter -- behaves like a real filter
+    but never filters anything out and doesn't have any overhead.
+    """
+    return ((rup, sites) for rup in ruptures)
+rupture_site_noop_filter.affected = lambda rupture, sites: sites
+rupture_site_noop_filter.integration_distance = None

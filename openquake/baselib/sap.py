@@ -91,7 +91,8 @@ class Script(object):
     registry = {}  # dotname -> function
     # for instance {'openquake.commands.run': run, ...}
 
-    def __init__(self, func, name=None, parentparser=None, help=True):
+    def __init__(self, func, name=None, parentparser=None,
+                 help=True, registry=True):
         self.func = func
         self.name = name or func.__name__
         args, self.varargs, varkw, defaults = inspect.getargspec(func)
@@ -102,12 +103,13 @@ class Script(object):
         self.argdict = OrderedDict(zip(args, alldefaults))
         self.description = descr = func.__doc__ if func.__doc__ else None
         self.parentparser = get_parentparser(parentparser, descr, help)
-        self.names = set()
+        self.names = []
         self.all_arguments = []
         self._group = self.parentparser
         self._argno = 0  # used in the NameError check in the _add method
         self.checked = False  # used in the check_arguments method
-        self.registry['%s.%s' % (func.__module__, func.__name__)] = self
+        if registry:
+            self.registry['%s.%s' % (func.__module__, func.__name__)] = self
 
     def __call__(self, *args):
         return self.func(*args)
@@ -127,7 +129,7 @@ class Script(object):
                 'Setting argument %s, but it should be %s' % (name, argname))
         self._group.add_argument(*args, **kw)
         self.all_arguments.append((args, kw))
-        self.names.add(name)
+        self.names.append(name)
         self._argno += 1
 
     def arg(self, name, help, type=None, choices=None, metavar=None,
@@ -188,6 +190,10 @@ class Script(object):
         Return the help message as a string
         """
         return self.parentparser.format_help()
+
+    def __repr__(self):
+        args = ', '.join(self.names)
+        return '<%s %s(%s)>' % (self.__class__.__name__, self.name, args)
 
 
 def compose(scripts, name='main', description=None, prog=None,
