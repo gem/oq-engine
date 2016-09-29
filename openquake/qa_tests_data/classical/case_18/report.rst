@@ -2,9 +2,9 @@ Demo Classical PSHA for Vancouver Schools
 =========================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_48441.hdf5 Wed Sep  7 16:05:09 2016
-engine_version                                 2.1.0-gitfaa2965        
-hazardlib_version                              0.21.0-git89bccaf       
+gem-tstation:/home/michele/ssd/calc_54416.hdf5 Tue Sep 27 14:06:51 2016
+engine_version                                 2.1.0-git1ca7123        
+hazardlib_version                              0.21.0-git9261682       
 ============================================== ========================
 
 num_sites = 3, sitecol = 831 B
@@ -76,13 +76,13 @@ vancouver_area_source.xml 0      Active Shallow Crust 1           2430         6
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,525       
-count_eff_ruptures_num_tasks             30          
-count_eff_ruptures_sent.gsims            4,798,860   
-count_eff_ruptures_sent.monitor          39,240      
-count_eff_ruptures_sent.sitecol          14,190      
-count_eff_ruptures_sent.sources          41,350      
-count_eff_ruptures_tot_received          45,750      
+count_eff_ruptures_max_received_per_task 1,643       
+count_eff_ruptures_num_tasks             1           
+count_eff_ruptures_sent.gsims            159,956     
+count_eff_ruptures_sent.monitor          1,425       
+count_eff_ruptures_sent.sitecol          473         
+count_eff_ruptures_sent.sources          2,213       
+count_eff_ruptures_tot_received          1,643       
 hazard.input_weight                      60          
 hazard.n_imts                            3           
 hazard.n_levels                          36          
@@ -95,37 +95,37 @@ hostname                                 gem-tstation
 
 Slowest sources
 ---------------
-============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
-============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            VICM      AreaSource   60     30        0.0         0.012      0.0           0.0           0        
-============ ========= ============ ====== ========= =========== ========== ============= ============= =========
+====== ========= ============ ====== ========= =========
+grp_id source_id source_class weight calc_time num_sites
+====== ========= ============ ====== ========= =========
+0      VICM      AreaSource   60     0.0       0        
+====== ========= ============ ====== ========= =========
 
 Computation times by source typology
 ------------------------------------
-============ =========== ========== ============= ============= ========= ======
-source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
-============ =========== ========== ============= ============= ========= ======
-AreaSource   0.0         0.012      0.0           0.0           0         1     
-============ =========== ========== ============= ============= ========= ======
+============ ========= ======
+source_class calc_time counts
+============ ========= ======
+AreaSource   0.0       1     
+============ ========= ======
 
 Information about the tasks
 ---------------------------
-================== ========= ========= ========= ===== =========
-operation-duration mean      stddev    min       max   num_tasks
-count_eff_ruptures 5.950E-04 1.645E-04 4.280E-04 0.001 30       
-================== ========= ========= ========= ===== =========
+================== ===== ====== ===== ===== =========
+operation-duration mean  stddev min   max   num_tasks
+count_eff_ruptures 0.001 NaN    0.001 0.001 1        
+================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.063     0.0       1     
-reading composite source model 0.025     0.0       1     
-total count_eff_ruptures       0.018     0.0       30    
-aggregate curves               5.989E-04 0.0       30    
-reading site collection        9.799E-05 0.0       1     
-saving probability maps        2.694E-05 0.0       1     
-store source_info              1.001E-05 0.0       1     
+reading composite source model 0.024     0.0       1     
+total count_eff_ruptures       0.001     0.0       1     
+managing sources               0.001     0.0       1     
+store source_info              4.549E-04 0.0       1     
+reading site collection        8.798E-05 0.0       1     
+saving probability maps        2.503E-05 0.0       1     
+aggregate curves               1.788E-05 0.0       1     
 ============================== ========= ========= ======
