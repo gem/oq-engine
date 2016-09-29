@@ -175,11 +175,11 @@ class RtreeFilter(object):
         import rtree
         assert integration_distance, 'Must be set'
         self.integration_distance = integration_distance
-        self.complete = sitecol.complete
-        self.complete.lons = fix_lons_idl(self.complete.lons)
+        self.sitecol = sitecol
+        complete = sitecol.complete
+        complete.lons = fix_lons_idl(complete.lons)
         self.index = rtree.index.Index()
-        lonlats = zip(self.complete.lons, self.complete.lats)
-        for sid, (lon, lat) in enumerate(lonlats):
+        for sid, (lon, lat) in enumerate(zip(complete.lons, complete.lats)):
             self.index.insert(sid, (lon, lat, lon, lat))
 
     def affected(self, source, sites):
@@ -191,18 +191,19 @@ class RtreeFilter(object):
         if source_sites:
             return source_sites[0][1]
 
-    def __call__(self, sources, sites):
+    def __call__(self, sources):
         for source in sources:
             if hasattr(source, 'bounding_box'):  # Rtree filtering
                 bb = source.bounding_box(self.integration_distance)
                 sids = sorted(self.index.intersection(bb))
                 if len(sids):
                     source.nsites = len(sids)
-                    yield source, FilteredSiteCollection(sids, self.complete)
+                    yield source, FilteredSiteCollection(
+                        sids, self.sitecol.complete)
             else:  # normal filtering
                 with context(source):
                     s_sites = source.filter_sites_by_distance_to_source(
-                        self.integration_distance, sites)
+                        self.integration_distance, self.sitecol)
                 if s_sites is not None:
                     source.nsites = len(sids)
                     yield source, s_sites
