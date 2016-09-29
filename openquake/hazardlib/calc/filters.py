@@ -161,10 +161,14 @@ class SourceSitesFilter(object):
 
 class RtreeFilter(object):
     """
-    Source-sites filter based on the integration distance. Used as follows::
+    The RtreeFilter uses the rtree library on PointSources and our own
+    SourceSitesFilter on other source typologies. The index is generated
+    at instantiation time and kept in memory, so the filter should be
+    instantiated only once per calculation, after the site collection is
+    known. It should be used as follows::
 
       ss_filter = RtreeFilter(sitecol, integration_distance)
-      for src, affected_sites in ss_filter(sources):
+      for src, sites in ss_filter(sources):
          do_something(...)
 
     As a side effect, sets the `.nsites` attribute of the source, i.e. the
