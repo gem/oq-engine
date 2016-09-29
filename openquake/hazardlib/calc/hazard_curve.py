@@ -347,13 +347,13 @@ def calc_hazard_curves_ext(
                                     weights_by_trt[trt].values(),
                                     False)
             if indep:
-                pmap |= hazard_curves_per_trt(
+                pmap |= pmap_from_grp(
                     tmp_group, sites, imtls, [gsim],
                     truncation_level, source_site_filter)
             else:
                 # Since in this case the probability for each source have
                 # been already accounted we use a weight equal to unity
-                pmap += hazard_curves_per_trt(
+                pmap += pmap_from_grp(
                     tmp_group, sites, imtls, [gsim],
                     truncation_level, source_site_filter)
     return array_of_curves(pmap, len(sites), imtls)
@@ -402,7 +402,7 @@ def _hazard_curves_per_group(
     Compute the hazard curves for a set of sources belonging to the same
     source group. We assume that the group contains sources belonging to the
     same tectonic region.
-    The arguments are the same as in :func:`hazard_curves_per_trt`, except
+    The arguments are the same as in :func:`pmap_from_grp`, except
     for ``group``, which can be either a :class:`SourceGroup` instance or
     a list of seismic sources (instances of subclasses of
     :class:`~openquake.hazardlib.source.base.BaseSeismicSource`).
