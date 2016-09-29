@@ -2,9 +2,9 @@ Scenario Risk for Nepal with 20 assets
 ======================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_48468.hdf5 Wed Sep  7 16:06:20 2016
-engine_version                                 2.1.0-gitfaa2965        
-hazardlib_version                              0.21.0-git89bccaf       
+gem-tstation:/home/michele/ssd/calc_54443.hdf5 Tue Sep 27 14:08:04 2016
+engine_version                                 2.1.0-git1ca7123        
+hazardlib_version                              0.21.0-git9261682       
 ============================================== ========================
 
 num_sites = 20, sitecol = 1.58 KB
@@ -64,10 +64,6 @@ Wood                       1.000 0.0    1   1   8         8
 *ALL*                      1.000 0.0    1   1   20        20        
 ========================== ===== ====== === === ========= ==========
 
-Information about the tasks
----------------------------
-Not available
-
 Slowest operations
 ------------------
 ======================= ========= ========= ======
@@ -77,7 +73,7 @@ reading exposure        0.007     0.0       1
 filtering sites         0.003     0.0       1     
 computing gmfs          0.003     0.0       1     
 saving gmfs             0.001     0.0       1     
-building riskinputs     7.670E-04 0.0       1     
-building epsilons       2.842E-04 0.0       1     
-reading site collection 6.914E-06 0.0       1     
+building riskinputs     7.451E-04 0.0       1     
+building epsilons       3.071E-04 0.0       1     
+reading site collection 5.960E-06 0.0       1     
 ======================= ========= ========= ======

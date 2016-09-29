@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Optimized the memory consumption of the event based risk calculators
+  * Extended the `oq show` command to work in a multi-user environment
   * Improved the test coverage of the exports in the WebUI
   * Removed the SourceManager: now the sources are filtered in the workers
     and we do not split in tiles anymore

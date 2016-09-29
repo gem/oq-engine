@@ -2,9 +2,9 @@ Scenario QA Test 3
 ==================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_48467.hdf5 Wed Sep  7 16:06:20 2016
-engine_version                                 2.1.0-gitfaa2965        
-hazardlib_version                              0.21.0-git89bccaf       
+gem-tstation:/home/michele/ssd/calc_54442.hdf5 Tue Sep 27 14:08:04 2016
+engine_version                                 2.1.0-git1ca7123        
+hazardlib_version                              0.21.0-git9261682       
 ============================================== ========================
 
 num_sites = 4, sitecol = 877 B
@@ -63,20 +63,16 @@ W        1.000 0.0    1   1   2         2
 *ALL*    1.000 0.0    1   1   4         4         
 ======== ===== ====== === === ========= ==========
 
-Information about the tasks
----------------------------
-Not available
-
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-computing gmfs          0.023     0.0       1     
-filtering sites         0.004     0.0       1     
-reading exposure        0.003     0.0       1     
-saving gmfs             0.001     0.0       1     
-building epsilons       4.911E-04 0.0       1     
-building riskinputs     3.600E-04 0.0       1     
-reading site collection 5.007E-06 0.0       1     
+computing gmfs          0.031     0.0       1     
+filtering sites         0.006     0.0       1     
+reading exposure        0.004     0.0       1     
+saving gmfs             0.002     0.0       1     
+building epsilons       6.292E-04 0.0       1     
+building riskinputs     3.440E-04 0.0       1     
+reading site collection 7.153E-06 0.0       1     
 ======================= ========= ========= ======
