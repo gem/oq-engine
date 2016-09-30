@@ -30,8 +30,6 @@ from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.calc.hazard_curve import (
     pmap_from_grp, ProbabilityMap)
-from openquake.hazardlib.calc.filters import (
-    SourceSitesFilter, source_site_noop_filter)
 from openquake.hazardlib.probability_map import PmapStats
 from openquake.commonlib import (
     parallel, datastore, source, calc, sourceconverter)
@@ -46,10 +44,9 @@ HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
 # split (and filter the point sources)
-def split_source(src, sites, ss_filter, random_seed):
+def split_source(src, ss_filter, random_seed):
     """
     :param src: an heavy source
-    :param sites: a (filtered) SiteCollection
     :param ss_filter: a SourceSitesFilter instance
     :random_seed: used only for event based calculations
     :returns: a list of split sources
@@ -62,7 +59,7 @@ def split_source(src, sites, ss_filter, random_seed):
             split.serial = src.serial[start:start + nr]
             start += nr
         if split.__class__.__name__ == 'PointSource':
-            if ss_filter.affected(split, sites) is not None:
+            if ss_filter.affected(split) is not None:
                 split_sources.append(split)
         else:
             split_sources.append(split)
@@ -334,8 +331,6 @@ class PSHACalculator(base.HazardCalculator):
         :param monitor: a :class:`openquake.baselib.performance.Monitor`
         :yields: (sources, sites, gsims, monitor) tuples
         """
-        ss_filter = (SourceSitesFilter(oq.maximum_distance)
-                     if oq.filter_sources else source_site_noop_filter)
         ngroups = len(src_groups)
         logging.info('Considering %d source groups', ngroups)
         ct = oq.concurrent_tasks or 1
@@ -362,10 +357,11 @@ class PSHACalculator(base.HazardCalculator):
             if not heavy:
                 continue
             with self.monitor('filter/split heavy sources', autoflush=True):
-                for src, sites in ss_filter(heavy, self.sitecol):
+                for src in heavy:
+                    sites = self.ss_filter.affected(src)
                     self.infos[sg.id, src.source_id] = source.SourceInfo(src)
                     sources = split_source(
-                        src, sites, self.ss_filter, self.random_seed)
+                        src, self.ss_filter, self.random_seed)
                     for block in block_splitter(
                             sources, maxweight,
                             weight=operator.attrgetter('weight')):
