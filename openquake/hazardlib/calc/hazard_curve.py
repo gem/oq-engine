@@ -251,21 +251,21 @@ def pmap_from_grp(
         pmap = ProbabilityMap(len(imtls.array), len(gsims))
         for src, s_sites in source_site_filter(sources, sites):
             t0 = time.time()
-        poemap = poe_map(src, s_sites, imtls, cmaker, truncation_level, bbs,
-                         group.rup_interdep == 'indep',
-                         ctx_mon, pne_mon, disagg_mon)
-        if src_indep:
-            pmap |= poemap
-        else:  # mutually exclusive probabilities
-            weight = float(group.srcs_weights[src.source_id])
-            for sid in poemap:
-                pmap[sid] += poemap[sid] * weight
-            # we are attaching the calculation times to the monitor
-            # so that oq-lite (and the engine) can store them
-            monitor.calc_times.append(
-                (src.source_id, len(s_sites), time.time() - t0))
-            # NB: source.id is an integer; it should not be confused
-            # with source.source_id, which is a string
+            poemap = poe_map(
+                src, s_sites, imtls, cmaker, truncation_level, bbs,
+                group.rup_interdep == 'indep', ctx_mon, pne_mon, disagg_mon)
+            if src_indep:
+                pmap |= poemap
+            else:  # mutually exclusive probabilities
+                weight = float(group.srcs_weights[src.source_id])
+                for sid in poemap:
+                    pmap[sid] += poemap[sid] * weight
+                # we are attaching the calculation times to the monitor
+                # so that oq-lite (and the engine) can store them
+                monitor.calc_times.append(
+                    (src.source_id, len(s_sites), time.time() - t0))
+                # NB: source.id is an integer; it should not be confused
+                # with source.source_id, which is a string
         monitor.eff_ruptures = pne_mon.counts  # contributing ruptures
         return pmap
 
@@ -574,5 +574,3 @@ def _calc_hazard_curves_ext(
         # Final aggregation
         curves_fin = agg_curves(curves_fin, curves)
     return curves_fin
-
-
