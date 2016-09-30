@@ -356,7 +356,7 @@ class PSHACalculator(base.HazardCalculator):
             heavy = [src for src in sg.sources if src.weight > maxweight]
             if not heavy:
                 continue
-            with self.monitor('filter/split heavy sources', autoflush=True):
+            with self.monitor('split/filter heavy sources', autoflush=True):
                 for src in heavy:
                     sites = self.ss_filter.affected(src)
                     self.infos[sg.id, src.source_id] = source.SourceInfo(src)
