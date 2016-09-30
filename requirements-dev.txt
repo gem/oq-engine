@@ -16,3 +16,4 @@ decorator==4.0.6
 funcsigs==1.0.2
 pbr==1.8.0
 six==1.10.0
+Rtree==0.8.2
