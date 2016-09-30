@@ -576,7 +576,8 @@ class CompositeSourceModel(collections.Sequence):
             newsm = SourceModel(sm.name, sm.weight, sm.path, src_groups,
                                 sm.num_gsim_paths, sm.ordinal, sm.samples)
             source_models.append(newsm)
-        new = self.__class__(self.gsim_lt, self.source_model_lt, source_models)
+        new = self.__class__(self.gsim_lt, self.source_model_lt, source_models,
+                             set_weight=True)
         return new
 
     @property
