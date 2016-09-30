@@ -251,13 +251,13 @@ class RuptureSitesFilter(object):
                 yield rupture, r_sites
 
 
-def source_site_noop_filter(sources, sites):
+def source_site_noop_filter(sources, sites=None):
     """
     Transparent source-site "no-op" filter -- behaves like a real filter
     but never filters anything out and doesn't have any overhead.
     """
     return ((src, sites) for src in sources)
-source_site_noop_filter.affected = lambda src, sites: sites
+source_site_noop_filter.affected = lambda src, sites=None: sites
 source_site_noop_filter.integration_distance = None
 
 
