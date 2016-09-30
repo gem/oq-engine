@@ -22,7 +22,6 @@ Module :mod:`openquake.hazardlib.geo.surface.gridded` defines
 """
 import numpy as np
 
-from openquake.hazardlib.geo.geodetic import min_geodetic_distance
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.surface.base import BaseSurface
@@ -81,10 +80,7 @@ class GriddedSurface(BaseSurface):
         :returns:
             A numpy array of distances in km.
         """
-        return (self.mesh.get_min_distance(mesh))
-        # dists = min_geodetic_distance(mesh.lons, mesh.lats, self.mesh.lons,
-        #                              self.mesh.lats)
-        # return min(dists)
+        return self.mesh.get_min_distance(mesh)
 
     def get_closest_points(self, mesh):
         """

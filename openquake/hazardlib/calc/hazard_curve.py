@@ -40,20 +40,6 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.source.base import SourceGroup, SourceGroupCollection
 
 
-def get_weights(source):
-    """
-    :returns: an array of nr weights, where nr is the number of ruptures
-
-    If the source has no weigths, builds an array of uniform weights,
-    each one with a value of 1 / nr, so that that total sum is 1.
-    """
-    try:
-        return source.weights
-    except AttributeError:
-        nr = source.count_ruptures()
-        return numpy.ones(nr) / nr
-
-
 def zero_curves(num_sites, imtls):
     """
     :param num_sites: the number of sites
@@ -64,6 +50,18 @@ def zero_curves(num_sites, imtls):
     imt_dt = numpy.dtype([(imt, float, 1 if imls is None else len(imls))
                           for imt, imls in imtls.items()])
     return numpy.zeros(num_sites, imt_dt)
+
+
+def rupture_weight_pairs(src):
+    """
+    Generator yielding (rupture, weight) for each rupture in the source
+    """
+    if hasattr(src, 'weights'):
+        for pair in zip(src.iter_ruptures(), src.weights):
+            yield pair
+    weight = 1. / (src.num_ruptures or src.count_ruptures())
+    for rup in src.iter_ruptures():
+        yield rup, weight
 
 
 # old version working only for independent sources
@@ -164,7 +162,7 @@ def poe_map(src, s_sites, imtls, cmaker, trunclevel, bbs, rup_indep,
     pmap = ProbabilityMap.build(
         len(imtls.array), len(cmaker.gsims), s_sites.sids, initvalue=rup_indep)
     try:
-        for rup, weight in zip(src.iter_ruptures(), get_weights(src)):
+        for rup, weight in rupture_weight_pairs(src):
             with ctx_mon:  # compute distances
                 try:
                     sctx, rctx, dctx = cmaker.make_contexts(s_sites, rup)
