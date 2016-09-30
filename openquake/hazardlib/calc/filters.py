@@ -193,7 +193,7 @@ class RtreeFilter(object):
         for sid, (lon, lat) in enumerate(zip(complete.lons, complete.lats)):
             self.index.insert(sid, (lon, lat, lon, lat))
 
-    def affected(self, source, sites):
+    def affected(self, source):
         """
         Returns the sites within the integration distance from the source,
         or None.
