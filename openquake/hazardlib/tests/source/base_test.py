@@ -17,7 +17,6 @@ import unittest
 
 import numpy
 
-from decimal import Decimal
 from openquake.hazardlib import const
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.scalerel.peer import PeerMSR
@@ -189,13 +188,11 @@ class SeismicSourceGroupTestCase(unittest.TestCase):
 
     def test_init3(self):
         # test default weighting
-        grp = SourceGroup(src_list=[self.source, self.source, self.source],
-                          name='',
-                          src_interdep='indep',
-                          rup_interdep='indep',
-                          srcs_weights=[Decimal(0.3333),
-                                        Decimal(0.3334),
-                                        Decimal(0.3333)])
+        SourceGroup(src_list=[self.source, self.source, self.source],
+                    name='',
+                    src_interdep='indep',
+                    rup_interdep='indep',
+                    srcs_weights=[0.3333, 0.3334, 0.3333])
 
     def test_wrong_label(self):
         self.assertRaises(ValueError, SourceGroup, [self.source], 'name',
