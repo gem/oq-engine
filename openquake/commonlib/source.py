@@ -698,10 +698,10 @@ class SourceInfo(object):
         ('num_sites', numpy.uint32),       # 5
     ])
 
-    def __init__(self, src, calc_time=0, num_sites=0):
+    def __init__(self, src, calc_time=0):
         self.grp_id = src.src_group_id
         self.source_id = src.source_id
         self.source_class = src.__class__.__name__
         self.weight = src.weight
+        self.num_sites = src.nsites
         self.calc_time = calc_time
-        self.num_sites = num_sites
