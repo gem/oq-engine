@@ -530,7 +530,7 @@ class CompositeSourceModel(collections.Sequence):
         a list of :class:`openquake.commonlib.source.SourceModel` tuples
     """
     def __init__(self, gsim_lt, source_model_lt, source_models,
-                 set_weight=True):
+                 set_weight=False):
         self.gsim_lt = gsim_lt
         self.source_model_lt = source_model_lt
         self.source_models = source_models
@@ -558,8 +558,7 @@ class CompositeSourceModel(collections.Sequence):
     def filter(self, ss_filter):
         """
         Generate a new CompositeSourceModel by filtering the sources on
-        the given site collection. Warning: this is slow, so use it only
-        for small site collections (i.e. in disaggregation calculations).
+        the given site collection.
 
         :param sitecol: a SiteCollection instance
         :para ss_filter: a SourceSitesFilter instance
@@ -577,10 +576,7 @@ class CompositeSourceModel(collections.Sequence):
             newsm = SourceModel(sm.name, sm.weight, sm.path, src_groups,
                                 sm.num_gsim_paths, sm.ordinal, sm.samples)
             source_models.append(newsm)
-        new = self.__class__(self.gsim_lt, self.source_model_lt, source_models,
-                             set_weight=False)
-        new.weight = weight
-        new.filtered_weight = weight
+        new = self.__class__(self.gsim_lt, self.source_model_lt, source_models)
         return new
 
     @property
@@ -622,7 +618,7 @@ class CompositeSourceModel(collections.Sequence):
         Update the attributes .weight and src.num_ruptures for each TRT model
         .weight of the CompositeSourceModel.
         """
-        self.weight = self.filtered_weight = 0
+        self.weight = 0
         for src_group in self.src_groups:
             weight = 0
             num_ruptures = 0
