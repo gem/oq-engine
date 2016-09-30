@@ -32,8 +32,7 @@ from openquake.hazardlib import __version__ as hazardlib_version
 from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib.calc.filters import (
-    RtreeFilter, source_site_noop_filter)
+from openquake.hazardlib.calc.filters import RtreeFilter
 from openquake.risklib import riskinput, __version__ as engine_version
 from openquake.commonlib import readinput, riskmodels, datastore, source
 from openquake.commonlib.oqvalidation import OqParam
@@ -373,9 +372,7 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         self.read_risk_data()
         if 'source' in oq.inputs:
-            self.ss_filter = (
-                RtreeFilter(self.sitecol, oq.maximum_distance)
-                if oq.filter_sources else source_site_noop_filter)
+            self.ss_filter = RtreeFilter(self.sitecol, oq.maximum_distance)
             with self.monitor(
                     'reading composite source model', autoflush=True):
                 csm = readinput.get_composite_source_model(oq)
