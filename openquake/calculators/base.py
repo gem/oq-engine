@@ -370,20 +370,25 @@ class HazardCalculator(BaseCalculator):
 
     def basic_pre_execute(self):
         oq = self.oqparam
+        mon = self.monitor
         self.read_risk_data()
         if 'source' in oq.inputs:
             self.ss_filter = RtreeFilter(self.sitecol, oq.maximum_distance)
-            with self.monitor(
-                    'reading composite source model', autoflush=True):
+            with mon('reading composite source model', autoflush=True):
                 csm = readinput.get_composite_source_model(oq)
-                if self.is_stochastic:
-                    # initialize the rupture serial numbers before the
-                    # filtering; in this way the serials are independent
-                    # from the site collection
+            if self.is_stochastic:
+                # initialize the rupture serial numbers before the
+                # filtering; in this way the serials are independent
+                # from the site collection
+                with mon('initializing rupture serials', autoflush=True):
                     csm.init_serials()
-                self.csm = csm.filter(self.ss_filter)
-                self.datastore['csm_info'] = self.csm.info
-                self.rup_data = {}
+            with mon('filtering composite source model', autoflush=True):
+                csm = csm.filter(self.ss_filter)
+            with mon('weighting the sources', autoflush=True):
+                csm.set_weights()
+            self.csm = csm
+            self.datastore['csm_info'] = csm.info
+            self.rup_data = {}
         self.init()
 
     def pre_execute(self):
