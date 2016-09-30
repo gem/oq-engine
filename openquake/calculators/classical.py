@@ -45,7 +45,7 @@ MAXWEIGHT = 200
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-# split (and filter if there are few sites)
+# split (and filter the point sources)
 def split_source(src, sites, ss_filter, random_seed):
     """
     :param src: an heavy source
@@ -56,13 +56,12 @@ def split_source(src, sites, ss_filter, random_seed):
     """
     split_sources = []
     start = 0
-    is_small = len(sites) <= 10
     for split in sourceconverter.split_source(src):
         if random_seed:
             nr = split.num_ruptures
             split.serial = src.serial[start:start + nr]
             start += nr
-        if is_small:
+        if split.__class__.__name__ == 'PointSource':
             if ss_filter.affected(split, sites) is not None:
                 split_sources.append(split)
         else:
@@ -320,7 +319,7 @@ class PSHACalculator(base.HazardCalculator):
         acc = reduce(self.agg_dicts, res, self.zerodict())
         self.save_data_transfer(res)
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(acc)
+            self.store_source_info(self.infos)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             partial(self.count_eff_ruptures, acc))
         self.datastore['csm_info'] = self.csm.info
@@ -374,18 +373,19 @@ class PSHACalculator(base.HazardCalculator):
                         nheavy += 1
         logging.info('Sent %d light and %d heavy tasks', nlight, nheavy)
 
-    def store_source_info(self, pmap_by_grp_id):
+    def store_source_info(self, infos):
         # save the calculation times per each source
-        if self.infos:
+        if infos:
             rows = sorted(
-                self.infos.values(), key=operator.attrgetter('calc_time'),
+                infos.values(),
+                key=operator.attrgetter('calc_time'),
                 reverse=True)
             array = numpy.zeros(len(rows), source.SourceInfo.dt)
             for i, row in enumerate(rows):
                 for name in array.dtype.names:
                     array[i][name] = getattr(row, name)
             self.source_info = array
-        self.infos.clear()
+            infos.clear()
         self.datastore.flush()
 
     def post_execute(self, pmap_by_grp_id):
