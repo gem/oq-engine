@@ -41,15 +41,15 @@ class MultiSurface(BaseSurface):
         :class:`~openquake.hazardlib.geo.surface.base.BaseSurface`
         each representing a surface geometry element.
 
-    :param list edge_set:
+    :param edge_set:
         Retains list of upper edges from all of the surfaces, with each
         edge given as a numpy array of [longitude, latitude, depth]
 
-    :param list cartesian_edges:
+    :param cartesian_edges:
         For GC2, this holds the list of edge sets in an orthographic projection
         such that the coordinates are all cartesian.
 
-    :param list cartesian_endpoints:
+    :param cartesian_endpoints:
         For GC2, this hold the list of end-points of the edges in an
         orthographic projection
 
@@ -58,23 +58,23 @@ class MultiSurface(BaseSurface):
         `~openquake.hazardlib.geo.utils.OrthographicProjection` instantiated
         with the bounding box limits of the fault
 
-    :param list length_set:
+    :param length_set:
         List of lengths of upper edges of each surface
 
-    :param list cum_length_set:
+    :param cum_length_set:
         List of cumulative lengths of edges along fault
 
-    :param dict gc2_config:
+    :param gc2_config:
         For GC2, dictionary holding fault specific parameters for GC2
         configuration
 
     :param p0:
         For GC2, reference origin point of the fault
 
-    :param numpy.ndarray gc2t:
+    :param gc2t:
         GC2 T-coordinate
 
-    :param numpy.ndarray gc2u:
+    :param gc2u:
         GC2 U-coordinate
 
     :param tmp_mesh:
@@ -82,7 +82,7 @@ class MultiSurface(BaseSurface):
         then get_ry0_distance in sequence) does not repeat GC2 calculations,
         this hold the last mesh it was fed with
 
-    :param float gc_length:
+    :param gc_length:
         For GC2, determines the length of the fault (km) in its own GC2
         configuration
     """
@@ -444,10 +444,15 @@ class MultiSurface(BaseSurface):
     def _get_ut_i(self, seg, sx, sy):
         """
         Returns the U and T coordinate for a specific trace segment
+
         :param seg:
             End points of the segment edge
-        :param sx, sy:
-            Sites (longitudes and latitudes) rendered into coordinate system
+
+        :param sx:
+            Sites longitudes rendered into coordinate system
+
+        :param sy:
+            Sites latitudes rendered into coordinate system
         """
         p0x, p0y, p1x, p1y = seg[0, 0], seg[0, 1], seg[1, 0], seg[1, 1]
         # Unit vector normal to strike
