@@ -96,7 +96,6 @@ class SourceGroup(object):
 
     def _check_init_variables(self, src_list, name, src_interdep, rup_interdep,
                               srcs_weights, checkw):
-        assert isinstance(src_list, list)
         # check source interdependence
         try:
             assert set(['indep', 'mutex']) & set([src_interdep])
@@ -107,10 +106,7 @@ class SourceGroup(object):
         assert set(['indep', 'mutex']) & set([rup_interdep])
         # check srcs weights defined by the user
         if srcs_weights is not None:
-            if isinstance(srcs_weights, dict):
-                import pdb; pdb.set_trace()
-            # Check weights
-            if checkw:
+            if checkw:  # check weights
                 assert abs(1. - sum(map(float, srcs_weights))) < 1e-6
 
     def __iter__(self):
