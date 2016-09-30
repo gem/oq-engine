@@ -383,8 +383,10 @@ class HazardCalculator(BaseCalculator):
                 with mon('initializing rupture serials', autoflush=True):
                     csm.init_serials()
             with mon('filtering composite source model', autoflush=True):
+                logging.info('filtering composite source model')
                 csm = csm.filter(self.ss_filter)
             with mon('weighting the sources', autoflush=True):
+                logging.info('weighting the sources')
                 csm.set_weights()
             self.csm = csm
             self.datastore['csm_info'] = csm.info
