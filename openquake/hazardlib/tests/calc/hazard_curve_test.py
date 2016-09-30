@@ -48,6 +48,7 @@ class HazardCurvesTestCase(unittest.TestCase):
             self.time_span = time_span
             self.ruptures = ruptures
             self.tectonic_region_type = trt
+            self.num_ruptures = len(ruptures)
             self.id = 0
 
         def iter_ruptures(self):
