@@ -380,14 +380,12 @@ class HazardCalculator(BaseCalculator):
                 # initialize the rupture serial numbers before the
                 # filtering; in this way the serials are independent
                 # from the site collection
-                with mon('initializing rupture serials', autoflush=True):
+                with mon('Initializing rupture serials', autoflush=True):
                     csm.init_serials()
-            with mon('filtering composite source model', autoflush=True):
-                logging.info('filtering composite source model')
+            with mon('Filtering composite source model', autoflush=True):
+                logging.info('Filtering composite source model')
+                # we are also weighting the sources, but weighting is ultrafast
                 csm = csm.filter(self.ss_filter)
-            with mon('weighting the sources', autoflush=True):
-                logging.info('weighting the sources')
-                csm.set_weights()
             self.csm = csm
             self.datastore['csm_info'] = csm.info
             self.rup_data = {}
