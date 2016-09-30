@@ -13,6 +13,7 @@ addons:
 
 install:
   - pip install -r requirements-py35-linux64.txt
+  - pip install Rtree==0.8.2
   - python setup.py develop
 
 script:
