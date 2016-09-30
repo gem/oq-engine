@@ -144,7 +144,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         check_platform('xenial')
         self.assert_stats_ok(case_master, 'job.ini')
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
-        self.assertEqualFiles('expected/portfolio_loss.txt', fname)
+        self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-5)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):
@@ -196,4 +196,5 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
-        self.assertEqualFiles('expected/portfolio_loss_ebr.txt', fname)
+        self.assertEqualFiles(
+            'expected/portfolio_loss_ebr.txt', fname, delta=1E-5)
