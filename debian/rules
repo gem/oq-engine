@@ -14,9 +14,9 @@ export DH_OPTIONS=-v
 
 XENIAL_DEP = python-h5py, python-rtree
 XENIAL_REC =
-TRUSTY_DEP = python-h5py
+TRUSTY_DEP = python-h5py, python-rtree
 TRUSTY_REC =
-PRECISE_DEP = python-h5py (= 2.2.1-1build3~precise03)
+PRECISE_DEP = python-h5py (= 2.2.1-1build3~precise03), python-rtree
 PRECISE_REC =
 
 ifeq ($(shell lsb_release --codename --short),xenial)
