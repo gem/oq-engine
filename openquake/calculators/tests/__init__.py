@@ -42,13 +42,20 @@ def check_platform(*supported):
 
 def columns(line):
     data = []
-    for column in line.split(','):
-        try:
-            floats = list(map(float, column.split(' ')))
-        except ValueError:  # skip header
-            pass
-        else:
-            data.append(numpy.array(floats))
+    if ',' in line:  # csv file
+        for column in line.split(','):
+            try:
+                floats = list(map(float, column.split(' ')))
+            except ValueError:  # skip header
+                pass
+            else:
+                data.append(numpy.array(floats))
+    else:  # txt file
+        for column in line.split(' '):
+            try:
+                data.append(float(column))
+            except ValueError:
+                pass  # ignore nonfloats
     return data
 
 
