@@ -354,10 +354,10 @@ class PointSource(ParametricSeismicSource):
                              nodal_plane.dip, left_top, right_top,
                              right_bottom, left_bottom)
 
-    def bounding_box(self, maximum_distance, cross_idl):
+    def bounding_box(self, maximum_distance, add360):
         """
         :param maximum_distance: a dictionary tectonic region type -> distance
-        :param cross_idl: a flag telling if we expect the IDL to be crossed
+        :param add360: if True, add 360 degrees to the longitudes
         :returns: bounding box obtained by expanding the location
         """
         maxdist = maximum_distance[self.tectonic_region_type]
@@ -366,7 +366,7 @@ class PointSource(ParametricSeismicSource):
         delta = (maxdist + max_radius) / KM_ONE_DEGREE  # angular distance
         min_lon, max_lon = lon - delta, lon + delta
         min_lat, max_lat = lat - delta, lat + delta
-        if min_lon < 0 and cross_idl:  # apply IDL fix
+        if min_lon < 0 and add360:  # apply IDL fix
             return max_lon, min_lat, min_lon + 360, max_lat
         else:
             return min_lon, min_lat, max_lon, max_lat
