@@ -32,7 +32,6 @@ from openquake.baselib.general import groupby, group_array
 from openquake.commonlib import logictree, sourceconverter
 from openquake.commonlib import nrml, node
 
-MAXWEIGHT = 200  # tuned by M. Simionato
 MAX_INT = 2 ** 31 - 1
 U16 = numpy.uint16
 U32 = numpy.uint32
