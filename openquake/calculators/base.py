@@ -382,7 +382,7 @@ class HazardCalculator(BaseCalculator):
                 # from the site collection
                 with mon('Initializing rupture serials', autoflush=True):
                     csm.init_serials()
-            with mon('Filtering composite source model', autoflush=True):
+            with mon('filtering composite source model', autoflush=True):
                 logging.info('Filtering composite source model')
                 # we are also weighting the sources, but weighting is ultrafast
                 csm = csm.filter(self.ss_filter)
