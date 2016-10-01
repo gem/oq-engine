@@ -39,14 +39,14 @@ U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
 
-MAXWEIGHT = 200
+MAXWEIGHT = 200  # tuned by M. Simionato
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-# split (and filter the point sources)
-def split_source(src, ss_filter, random_seed):
+def split_filter_source(src, sites, ss_filter, random_seed):
     """
     :param src: an heavy source
+    :param sites: sites affected by the source
     :param ss_filter: a SourceSitesFilter instance
     :random_seed: used only for event based calculations
     :returns: a list of split sources
@@ -58,10 +58,7 @@ def split_source(src, ss_filter, random_seed):
             nr = split.num_ruptures
             split.serial = src.serial[start:start + nr]
             start += nr
-        if split.__class__.__name__ == 'PointSource':
-            if ss_filter.affected(split) is not None:
-                split_sources.append(split)
-        else:
+        if ss_filter.affected(split) is not None:
             split_sources.append(split)
     return split_sources
 
@@ -360,8 +357,8 @@ class PSHACalculator(base.HazardCalculator):
                 for src in heavy:
                     sites = self.ss_filter.affected(src)
                     self.infos[sg.id, src.source_id] = source.SourceInfo(src)
-                    sources = split_source(
-                        src, self.ss_filter, self.random_seed)
+                    sources = split_filter_source(
+                        src, sites, self.ss_filter, self.random_seed)
                     for block in block_splitter(
                             sources, maxweight,
                             weight=operator.attrgetter('weight')):
