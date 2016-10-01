@@ -357,13 +357,16 @@ class PSHACalculator(base.HazardCalculator):
                 for src in heavy:
                     sites = self.ss_filter.affected(src)
                     self.infos[sg.id, src.source_id] = source.SourceInfo(src)
-                    sources = split_filter_source(
-                        src, sites, self.ss_filter, self.random_seed)
-                    for block in block_splitter(
-                            sources, maxweight,
-                            weight=operator.attrgetter('weight')):
-                        yield block, sites, gsims, monitor
-                        nheavy += 1
+                    if oq.split_sources:
+                        sources = split_filter_source(
+                            src, sites, self.ss_filter, self.random_seed)
+                        for block in block_splitter(
+                                sources, maxweight,
+                                weight=operator.attrgetter('weight')):
+                            yield block, sites, gsims, monitor
+                    else:
+                        yield [src], sites, gsims, monitor
+                    nheavy += 1
         logging.info('Sent %d light and %d heavy tasks', nlight, nheavy)
 
     def store_source_info(self, infos):
