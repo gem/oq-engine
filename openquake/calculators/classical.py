@@ -360,13 +360,16 @@ class PSHACalculator(base.HazardCalculator):
                     if oq.split_sources:
                         sources = split_filter_source(
                             src, sites, self.ss_filter, self.random_seed)
+                        logging.info('Splitting source "%s" in %d',
+                                     src.source_id, len(sources))
                         for block in block_splitter(
                                 sources, maxweight,
                                 weight=operator.attrgetter('weight')):
                             yield block, sites, gsims, monitor
+                            nheavy += 1
                     else:
                         yield [src], sites, gsims, monitor
-                    nheavy += 1
+                        nheavy += 1
         logging.info('Sent %d light and %d heavy tasks', nlight, nheavy)
 
     def store_source_info(self, infos):
