@@ -692,12 +692,14 @@ class SourceInfo(object):
         ('num_ruptures', numpy.uint32),    # 3
         ('calc_time', numpy.float32),      # 4
         ('num_sites', numpy.uint32),       # 5
+        ('num_split',  numpy.uint32),      # 6
     ])
 
-    def __init__(self, src, calc_time=0):
+    def __init__(self, src, calc_time=0, num_split=0):
         self.grp_id = src.src_group_id
         self.source_id = src.source_id
         self.source_class = src.__class__.__name__
         self.num_ruptures = src.num_ruptures
         self.num_sites = src.nsites
         self.calc_time = calc_time
+        self.num_split = num_split
