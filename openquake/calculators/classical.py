@@ -251,6 +251,7 @@ class PSHACalculator(base.HazardCalculator):
                     info = self.infos[grp_id, src_id]
                     info.calc_time += calc_time
                     info.num_sites = max(info.num_sites, nsites)
+                    info.num_split += 1
             if hasattr(val, 'eff_ruptures'):
                 acc.eff_ruptures += val.eff_ruptures
             for bb in getattr(val, 'bbs', []):
@@ -357,18 +358,14 @@ class PSHACalculator(base.HazardCalculator):
                 for src in heavy:
                     sites = self.ss_filter.affected(src)
                     self.infos[sg.id, src.source_id] = source.SourceInfo(src)
-                    if oq.split_sources:
-                        sources = split_filter_source(
-                            src, sites, self.ss_filter, self.random_seed)
-                        logging.info('Splitting source "%s" in %d',
-                                     src.source_id, len(sources))
-                        for block in block_splitter(
-                                sources, maxweight,
-                                weight=operator.attrgetter('weight')):
-                            yield block, sites, gsims, monitor
-                            nheavy += 1
-                    else:
-                        yield [src], sites, gsims, monitor
+                    sources = split_filter_source(
+                        src, sites, self.ss_filter, self.random_seed)
+                    logging.info('Splitting source "%s" in %d',
+                                 src.source_id, len(sources))
+                    for block in block_splitter(
+                            sources, maxweight,
+                            weight=operator.attrgetter('weight')):
+                        yield block, sites, gsims, monitor
                         nheavy += 1
         logging.info('Sent %d light and %d heavy tasks', nlight, nheavy)
 
