@@ -32,7 +32,6 @@ from openquake.baselib.general import groupby, group_array
 from openquake.commonlib import logictree, sourceconverter
 from openquake.commonlib import nrml, node
 
-MAXWEIGHT = 200  # tuned by M. Simionato
 MAX_INT = 2 ** 31 - 1
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -690,7 +689,7 @@ class SourceInfo(object):
         ('grp_id', numpy.uint32),          # 0
         ('source_id', (bytes, 100)),       # 1
         ('source_class', (bytes, 30)),     # 2
-        ('weight', numpy.float32),         # 3
+        ('num_ruptures', numpy.uint32),    # 3
         ('calc_time', numpy.float32),      # 4
         ('num_sites', numpy.uint32),       # 5
     ])
@@ -699,6 +698,6 @@ class SourceInfo(object):
         self.grp_id = src.src_group_id
         self.source_id = src.source_id
         self.source_class = src.__class__.__name__
-        self.weight = src.weight
+        self.num_ruptures = src.num_ruptures
         self.num_sites = src.nsites
         self.calc_time = calc_time
