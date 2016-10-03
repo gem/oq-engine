@@ -30,8 +30,6 @@ from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.calc.hazard_curve import (
     pmap_from_grp, ProbabilityMap)
-from openquake.hazardlib.calc.filters import (
-    SourceSitesFilter, source_site_noop_filter)
 from openquake.hazardlib.probability_map import PmapStats
 from openquake.commonlib import (
     parallel, datastore, source, calc, sourceconverter)
@@ -41,31 +39,26 @@ U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
 
-MAXWEIGHT = 200
+MAXWEIGHT = 200  # tuned by M. Simionato
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-# split (and filter if there are few sites)
-def split_source(src, sites, ss_filter, random_seed):
+def split_filter_source(src, sites, ss_filter, random_seed):
     """
     :param src: an heavy source
-    :param sites: a (filtered) SiteCollection
+    :param sites: sites affected by the source
     :param ss_filter: a SourceSitesFilter instance
     :random_seed: used only for event based calculations
     :returns: a list of split sources
     """
     split_sources = []
     start = 0
-    is_small = len(sites) <= 10
     for split in sourceconverter.split_source(src):
         if random_seed:
             nr = split.num_ruptures
             split.serial = src.serial[start:start + nr]
             start += nr
-        if is_small:
-            if ss_filter.affected(split, sites) is not None:
-                split_sources.append(split)
-        else:
+        if ss_filter.affected(split) is not None:
             split_sources.append(split)
     return split_sources
 
@@ -258,6 +251,7 @@ class PSHACalculator(base.HazardCalculator):
                     info = self.infos[grp_id, src_id]
                     info.calc_time += calc_time
                     info.num_sites = max(info.num_sites, nsites)
+                    info.num_split += 1
             if hasattr(val, 'eff_ruptures'):
                 acc.eff_ruptures += val.eff_ruptures
             for bb in getattr(val, 'bbs', []):
@@ -318,7 +312,7 @@ class PSHACalculator(base.HazardCalculator):
         acc = reduce(self.agg_dicts, res, self.zerodict())
         self.save_data_transfer(res)
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(acc)
+            self.store_source_info(self.infos)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             partial(self.count_eff_ruptures, acc))
         self.datastore['csm_info'] = self.csm.info
@@ -333,11 +327,7 @@ class PSHACalculator(base.HazardCalculator):
         :param monitor: a :class:`openquake.baselib.performance.Monitor`
         :yields: (sources, sites, gsims, monitor) tuples
         """
-        ss_filter = (SourceSitesFilter(oq.maximum_distance)
-                     if oq.filter_sources else source_site_noop_filter)
         ngroups = len(src_groups)
-        if self.random_seed is not None:
-            self.csm.init_serials()
         ct = oq.concurrent_tasks or 1
         if len(self.sitecol) > 10000:  # hackish correction for lots of sites
             ct *= math.sqrt(len(self.sitecol) / 10000)
@@ -363,11 +353,15 @@ class PSHACalculator(base.HazardCalculator):
             heavy = [src for src in sg.sources if src.weight > maxweight]
             if not heavy:
                 continue
-            with self.monitor('filter/split heavy sources', autoflush=True):
-                for src, sites in ss_filter(heavy, self.sitecol):
+            with self.monitor('split/filter heavy sources', autoflush=True):
+                for src in heavy:
+                    sites = self.ss_filter.affected(src)
                     self.infos[sg.id, src.source_id] = source.SourceInfo(src)
-                    sources = split_source(
+                    sources = split_filter_source(
                         src, sites, self.ss_filter, self.random_seed)
+                    logging.info(
+                        'Splitting %s "%s" in %d sources',
+                        src.__class__.__name__, src.source_id, len(sources))
                     for block in block_splitter(
                             sources, maxweight,
                             weight=operator.attrgetter('weight')):
@@ -375,18 +369,19 @@ class PSHACalculator(base.HazardCalculator):
                         nheavy += 1
         logging.info('Sent %d light and %d heavy tasks', nlight, nheavy)
 
-    def store_source_info(self, pmap_by_grp_id):
+    def store_source_info(self, infos):
         # save the calculation times per each source
-        if self.infos:
+        if infos:
             rows = sorted(
-                self.infos.values(), key=operator.attrgetter('calc_time'),
+                infos.values(),
+                key=operator.attrgetter('calc_time'),
                 reverse=True)
             array = numpy.zeros(len(rows), source.SourceInfo.dt)
             for i, row in enumerate(rows):
                 for name in array.dtype.names:
                     array[i][name] = getattr(row, name)
             self.source_info = array
-        self.infos.clear()
+            infos.clear()
         self.datastore.flush()
 
     def post_execute(self, pmap_by_grp_id):

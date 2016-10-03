@@ -264,6 +264,9 @@ class MultiRuptureSource(object):
     :param src_group_id:
         ID of the tectonic region model the source belongs to
     """
+    RUPTURE_WEIGHT = 1
+    weight = source.base.BaseSeismicSource.__dict__['weight']
+
     @classmethod
     def split(cls, src, block_size):
         """
@@ -281,7 +284,7 @@ class MultiRuptureSource(object):
         self.source_id = source_id
         self.tectonic_region_type = tectonic_region_type
         self.src_group_id = src_group_id
-        self.weight = self.num_ruptures = len(ruptures)
+        self.num_ruptures = len(ruptures)
 
     def iter_ruptures(self):
         """Yield the ruptures"""
