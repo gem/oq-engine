@@ -2,9 +2,9 @@ Scenario Damage QA Test 4
 =========================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_48388.hdf5 Wed Sep  7 16:04:05 2016
-engine_version                                 2.1.0-gitfaa2965        
-hazardlib_version                              0.21.0-git89bccaf       
+gem-tstation:/home/michele/ssd/calc_54363.hdf5 Tue Sep 27 14:05:49 2016
+engine_version                                 2.1.0-git1ca7123        
+hazardlib_version                              0.21.0-git9261682       
 ============================================== ========================
 
 num_sites = 3, sitecol = 831 B
@@ -62,16 +62,12 @@ W        1.000 NaN    1   1   1         1
 *ALL*    1.000 0.0    1   1   3         3         
 ======== ===== ====== === === ========= ==========
 
-Information about the tasks
----------------------------
-Not available
-
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.005     0.0       1     
+filtering sites         0.004     0.0       1     
 reading exposure        0.003     0.0       1     
-reading site collection 6.199E-06 0.0       1     
+reading site collection 5.960E-06 0.0       1     
 ======================= ========= ========= ======

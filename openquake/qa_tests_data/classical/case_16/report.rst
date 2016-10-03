@@ -2,9 +2,9 @@ Classical PSHA with non-trivial logic tree (1 source model + 5 (a, b) pairs per 
 ==========================================================================================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_48444.hdf5 Wed Sep  7 16:05:34 2016
-engine_version                                 2.1.0-gitfaa2965        
-hazardlib_version                              0.21.0-git89bccaf       
+gem-tstation:/home/michele/ssd/calc_54419.hdf5 Tue Sep 27 14:07:16 2016
+engine_version                                 2.1.0-git1ca7123        
+hazardlib_version                              0.21.0-git9261682       
 ============================================== ========================
 
 num_sites = 1, sitecol = 739 B
@@ -156,13 +156,13 @@ filtered_weight 506
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,122       
-count_eff_ruptures_num_tasks             22          
-count_eff_ruptures_sent.gsims            2,046       
-count_eff_ruptures_sent.monitor          19,822      
-count_eff_ruptures_sent.sitecol          9,526       
-count_eff_ruptures_sent.sources          64,946      
-count_eff_ruptures_tot_received          24,621      
+count_eff_ruptures_max_received_per_task 1,236       
+count_eff_ruptures_num_tasks             10          
+count_eff_ruptures_sent.gsims            930         
+count_eff_ruptures_sent.monitor          10,180      
+count_eff_ruptures_sent.sitecol          4,330       
+count_eff_ruptures_sent.sources          51,320      
+count_eff_ruptures_tot_received          12,360      
 hazard.input_weight                      506         
 hazard.n_imts                            1           
 hazard.n_levels                          3           
@@ -175,57 +175,56 @@ hostname                                 gem-tstation
 
 Slowest sources
 ---------------
-============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
-============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-7            3         AreaSource   12     0         7.730E-04   0.0        0.0           0.0           0        
-8            4         AreaSource   10     0         7.470E-04   0.0        0.0           0.0           0        
-0            1         AreaSource   8.125  0         7.191E-04   0.0        0.0           0.0           0        
-9            5         AreaSource   9.375  0         7.031E-04   0.0        0.0           0.0           0        
-0            2         AreaSource   11     0         7.010E-04   0.0        0.0           0.0           0        
-1            3         AreaSource   11     0         6.981E-04   0.0        0.0           0.0           0        
-2            4         AreaSource   9.375  0         6.959E-04   0.0        0.0           0.0           0        
-7            1         AreaSource   9.375  0         6.909E-04   0.0        0.0           0.0           0        
-0            3         AreaSource   11     0         6.809E-04   0.0        0.0           0.0           0        
-2            5         AreaSource   10     0         6.771E-04   0.0        0.0           0.0           0        
-7            2         AreaSource   11     0         6.771E-04   0.0        0.0           0.0           0        
-7            4         AreaSource   10     0         6.771E-04   0.0        0.0           0.0           0        
-1            4         AreaSource   9.375  0         6.759E-04   0.0        0.0           0.0           0        
-5            1         AreaSource   9.375  0         6.640E-04   0.0        0.0           0.0           0        
-3            5         AreaSource   9.375  0         6.630E-04   0.0        0.0           0.0           0        
-6            2         AreaSource   11     0         6.630E-04   0.0        0.0           0.0           0        
-5            2         AreaSource   12     0         6.571E-04   0.0        0.0           0.0           0        
-9            1         AreaSource   10     0         6.549E-04   0.0        0.0           0.0           0        
-1            5         AreaSource   9.375  0         6.540E-04   0.0        0.0           0.0           0        
-7            5         AreaSource   10     0         6.530E-04   0.0        0.0           0.0           0        
-============ ========= ============ ====== ========= =========== ========== ============= ============= =========
+====== ========= ============ ====== ========= =========
+grp_id source_id source_class weight calc_time num_sites
+====== ========= ============ ====== ========= =========
+7      5         AreaSource   10     0.0       0        
+0      4         AreaSource   8.125  0.0       0        
+4      2         AreaSource   9.750  0.0       0        
+9      3         AreaSource   11     0.0       0        
+1      1         AreaSource   9.375  0.0       0        
+3      5         AreaSource   9.375  0.0       0        
+2      5         AreaSource   10     0.0       0        
+7      2         AreaSource   11     0.0       0        
+8      3         AreaSource   9.750  0.0       0        
+3      1         AreaSource   8.125  0.0       0        
+2      2         AreaSource   11     0.0       0        
+5      2         AreaSource   12     0.0       0        
+2      1         AreaSource   9.375  0.0       0        
+6      3         AreaSource   11     0.0       0        
+0      3         AreaSource   11     0.0       0        
+7      3         AreaSource   12     0.0       0        
+4      1         AreaSource   9.375  0.0       0        
+8      2         AreaSource   9.750  0.0       0        
+1      2         AreaSource   11     0.0       0        
+3      2         AreaSource   11     0.0       0        
+====== ========= ============ ====== ========= =========
 
 Computation times by source typology
 ------------------------------------
-============ =========== ========== ============= ============= ========= ======
-source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
-============ =========== ========== ============= ============= ========= ======
-AreaSource   0.033       0.0        0.0           0.0           0         50    
-============ =========== ========== ============= ============= ========= ======
+============ ========= ======
+source_class calc_time counts
+============ ========= ======
+AreaSource   0.0       50    
+============ ========= ======
 
 Information about the tasks
 ---------------------------
-================== ========= ========= ========= ========= =========
-operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 8.326E-04 1.227E-04 4.961E-04 9.949E-04 22       
-================== ========= ========= ========= ========= =========
+================== ===== ========= ========= ===== =========
+operation-duration mean  stddev    min       max   num_tasks
+count_eff_ruptures 0.001 1.478E-04 7.319E-04 0.001 10       
+================== ===== ========= ========= ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.192     0.0       1     
-managing sources               0.067     0.0       1     
-filtering sources              0.033     0.0       50    
-total count_eff_ruptures       0.018     0.0       22    
-aggregate curves               4.785E-04 0.0       22    
-saving probability maps        3.099E-05 0.0       1     
-reading site collection        2.694E-05 0.0       1     
-store source_info              1.097E-05 0.0       1     
+reading composite source model 0.292     0.0       1     
+managing sources               0.015     0.0       1     
+total count_eff_ruptures       0.011     0.0       10    
+store source_info              8.080E-04 0.0       1     
+aggregate curves               1.893E-04 0.0       10    
+reading site collection        4.315E-05 0.0       1     
+saving probability maps        2.694E-05 0.0       1     
 ============================== ========= ========= ======
