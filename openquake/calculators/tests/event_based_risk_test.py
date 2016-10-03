@@ -144,7 +144,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         check_platform('xenial')
         self.assert_stats_ok(case_master, 'job.ini')
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
-        self.assertEqualFiles('expected/portfolio_loss.txt', fname)
+        self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-5)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):
@@ -170,15 +170,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fnames = export(('hmaps', 'xml'), self.calc.datastore)
         self.assertEqual(len(fnames), 4)  # 2 IMT x 2 poes
 
-        # export a single rupture
-        [f1, f2] = export(('gmfs:13', 'csv'), self.calc.datastore)
-        self.assertEqualFiles(
-            'expected/gmf-trt=05'
-            '~ses=0001~src=AS_GEAS479~rup=357385-01-PGA.csv', f1)
-        self.assertEqualFiles(
-            'expected/gmf-trt=05'
-            '~ses=0001~src=AS_GEAS479~rup=357385-01-SA(0.5).csv', f2)
-
     @attr('qa', 'hazard', 'event_based')
     def test_case_4a(self):
         # the case of a site_model.xml with 7 sites but only 1 asset
@@ -187,3 +178,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = out['gmf_data', 'txt']
         self.assertEqualFiles(
             'expected/gmf-smltp_b1-gsimltp_b1.txt', fname)
+
+    @attr('qa', 'risk', 'ebrisk')
+    def test_case_master_ebr(self):
+        out = self.run_calc(case_master.__file__, 'job.ini',
+                            calculation_mode='ebrisk', exports='csv')
+        for fname in out['losses_by_taxon', 'csv']:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+
+        fname = writetmp(view('portfolio_loss', self.calc.datastore))
+        self.assertEqualFiles(
+            'expected/portfolio_loss_ebr.txt', fname, delta=1E-5)

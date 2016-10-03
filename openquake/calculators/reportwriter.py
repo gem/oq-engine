@@ -158,6 +158,8 @@ def build_report(job_ini, output_dir=None):
     # the goal is to extract information about the source management only
     with mock.patch.object(PSHACalculator, 'core_task', count_eff_ruptures):
         calc.pre_execute()
+    if hasattr(calc, 'csm'):
+        calc.datastore['csm_info'] = calc.csm.info
     rw = ReportWriter(calc.datastore)
     rw.make_report()
     report = (os.path.join(output_dir, 'report.rst') if output_dir

@@ -22,6 +22,7 @@ import numpy
 
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib import correlation
 from openquake.risklib import valid
 from openquake.commonlib import parallel, logictree
 from openquake.commonlib.riskmodels import get_risk_files
@@ -86,7 +87,6 @@ class OqParam(valid.ParamSet):
     export_dir = valid.Param(valid.utf8, '.')
     export_multi_curves = valid.Param(valid.boolean, False)
     exports = valid.Param(valid.export_formats, ())
-    filter_sources = valid.Param(valid.boolean, True)
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
     ground_motion_correlation_params = valid.Param(valid.dictionary)
@@ -138,6 +138,7 @@ class OqParam(valid.ParamSet):
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     risk_investigation_time = valid.Param(valid.positivefloat, None)
     rupture_mesh_spacing = valid.Param(valid.positivefloat)
+    ruptures_per_block = valid.Param(valid.positiveint, 1000)
     complex_fault_mesh_spacing = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     ses_per_logic_tree_path = valid.Param(valid.positiveint, 1)
@@ -195,6 +196,15 @@ class OqParam(valid.ParamSet):
                 self.check_gsims(gsims)
         elif self.gsim is not None:
             self.check_gsims([self.gsim])
+
+        # checks for disaggregation
+        if self.calculation_mode == 'disaggregation':
+            if not self.individual_curves:
+                raise ValueError(
+                    'For disaggregation the flag `individual_curves` '
+                    'must be true')
+            elif not self.poes_disagg:
+                raise ValueError('poes_disagg must be set in the job.ini file')
 
     def check_gsims(self, gsims):
         """
@@ -311,6 +321,18 @@ class OqParam(valid.ParamSet):
         Return True if there are no intensity measure levels
         """
         return all(numpy.isnan(ls).any() for ls in self.imtls.values())
+
+    def get_correl_model(self):
+        """
+        Return a correlation object. See :mod:`openquake.hazardlib.correlation`
+        for more info.
+        """
+        correl_name = self.ground_motion_correlation_model
+        if correl_name is None:  # no correlation model
+            return
+        correl_model_cls = getattr(
+            correlation, '%sCorrelationModel' % correl_name)
+        return correl_model_cls(**self.ground_motion_correlation_params)
 
     @property
     def job_type(self):

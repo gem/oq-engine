@@ -17,12 +17,13 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from nose.plugins.attrib import attr
+from openquake.commonlib import parallel
+from openquake.commonlib.export import export
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
     case_18, case_19, case_20, case_21, case_22, case_23)
-from openquake.commonlib.export import export
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -43,11 +44,15 @@ class ClassicalTestCase(CalculatorTestCase):
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
             case_1.__file__)
 
-        # make sure we saved the data transfer information in job_info
-        keys = set(self.calc.datastore['job_info'].__dict__)
-        self.assertIn('classical_max_received_per_task', keys)
-        self.assertIn('classical_tot_received', keys)
-        self.assertIn('classical_sent', keys)
+        if parallel.oq_distribute() != 'no':
+            # make sure we saved the data transfer information in job_info
+            keys = set(self.calc.datastore['job_info'].__dict__)
+            self.assertIn('classical_max_received_per_task', keys)
+            self.assertIn('classical_tot_received', keys)
+            self.assertIn('classical_sent', keys)
+
+        # there is a single source
+        self.assertEqual(len(self.calc.datastore['source_info']), 1)
 
     @attr('qa', 'hazard', 'classical')
     def test_sa_period_too_big(self):
