@@ -24,6 +24,8 @@ from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.baselib.slots import with_slots
 
+KM_ONE_DEGREE = 111.32  # km per 1 degree
+
 
 @with_slots
 class PointSource(ParametricSeismicSource):
@@ -351,3 +353,20 @@ class PointSource(ParametricSeismicSource):
         return PlanarSurface(self.rupture_mesh_spacing, nodal_plane.strike,
                              nodal_plane.dip, left_top, right_top,
                              right_bottom, left_bottom)
+
+    def bounding_box(self, maximum_distance, add360):
+        """
+        :param maximum_distance: a dictionary tectonic region type -> distance
+        :param add360: if True, add 360 degrees to the longitudes
+        :returns: bounding box obtained by expanding the location
+        """
+        maxdist = maximum_distance[self.tectonic_region_type]
+        max_radius = self._get_max_rupture_projection_radius()
+        lon, lat = self.location.x, self.location.y
+        delta = (maxdist + max_radius) / KM_ONE_DEGREE  # angular distance
+        min_lon, max_lon = lon - delta, lon + delta
+        min_lat, max_lat = lat - delta, lat + delta
+        if min_lon < 0 and add360:  # apply IDL fix
+            return max_lon, min_lat, min_lon + 360, max_lat
+        else:
+            return min_lon, min_lat, max_lon, max_lat

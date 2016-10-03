@@ -12,13 +12,25 @@ export DISTUTILS_DEBUG=1
 export DH_VERBOSE=1
 export DH_OPTIONS=-v
 
-DEFAULT_DEP = python-h5py (>= 2.2.1)
-PRECISE_DEP = python-h5py (= 2.2.1-1build3~precise03)
+XENIAL_DEP = python-h5py, python-rtree
+XENIAL_REC =
+TRUSTY_DEP = python-h5py, python-rtree
+TRUSTY_REC =
+PRECISE_DEP = python-h5py (= 2.2.1-1build3~precise03), python-rtree
+PRECISE_REC =
 
-ifeq ($(shell lsb_release --codename --short),precise)
-        DEPENDS = -Vdist:Depends="$(PRECISE_DEP)"
+ifeq ($(shell lsb_release --codename --short),xenial)
+	DEPENDS = -Vdist:Depends="$(XENIAL_DEP)"
+	RECOMMENDS = -Vdist:Recommends="$(XENIAL_REC)"
+else ifeq ($(shell lsb_release --codename --short),trusty)
+	DEPENDS = -Vdist:Depends="$(TRUSTY_DEP)"
+	RECOMMENDS = -Vdist:Recommends="$(TRUSTY_REC)"
+else ifeq ($(shell lsb_release --codename --short),precise)
+	DEPENDS = -Vdist:Depends="$(PRECISE_DEP)"
+	RECOMMENDS = -Vdist:Recommends="$(PRECISE_REC)"
 else
-        DEPENDS = -Vdist:Depends="$(DEFAULT_DEP)"
+	DEPENDS = -Vdist:Depends="$(DEFAULT_DEP)"
+	RECOMMENDS = -Vdist:Recommends="$(DEFAULT_REC)"
 endif
 
 %:

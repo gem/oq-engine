@@ -1,6 +1,10 @@
+  [Michele Simionato]
+  * Introduced an RtreeFilter for fast filtering of the sites by point sources,
+    based on the source bounding box
+
   [Graeme Weatherill]
   * Adds/Modifies Ry0 and Rx calculator for multi-surface typology using the Generalized Coordinate System (GC2)
-  
+
   [Michele Simionato]
   * The `SourceSitesFilter` is now used by default in `pmap_from_grp`
   * Added a simple argument parser in baselib

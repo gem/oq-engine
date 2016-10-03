@@ -486,6 +486,7 @@ for name in 'vs30 vs30measured z1pt0 z2pt5 backarc lons lats sids'.split():
     setattr(FilteredSiteCollection, name, prop)
 
 
+# used in plot_tiles.py
 class Tile(object):
     """
     Consider a site collection, find its bounding box and check if a source

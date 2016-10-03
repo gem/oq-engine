@@ -57,6 +57,12 @@ filter function of each kind (see :func:`SourceSitesFilter` and
 import sys
 from contextlib import contextmanager
 from openquake.baselib.python3compat import raise_
+from openquake.hazardlib.site import FilteredSiteCollection
+from openquake.hazardlib.geo.utils import fix_lons_idl
+try:
+    import rtree
+except ImportError:
+    rtree = None
 
 
 @contextmanager
@@ -153,6 +159,69 @@ class SourceSitesFilter(object):
                 yield source, s_sites
 
 
+class RtreeFilter(object):
+    """
+    The RtreeFilter uses the rtree library on PointSources and our own
+    SourceSitesFilter on other source typologies. The index is generated
+    at instantiation time and kept in memory, so the filter should be
+    instantiated only once per calculation, after the site collection is
+    known. It should be used as follows::
+
+      ss_filter = RtreeFilter(sitecol, integration_distance)
+      for src, sites in ss_filter(sources):
+         do_something(...)
+
+    As a side effect, sets the `.nsites` attribute of the source, i.e. the
+    number of sites within the integration distance.
+
+    :param sitecol:
+        :class:`openquake.hazardlib.site.SiteCollection` instance
+    :param integration_distance:
+        Threshold distance in km, this value gets passed straight to
+        :meth:`openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source`
+        which is what is actually used for filtering.
+    """
+    def __init__(self, sitecol, integration_distance):
+        if rtree is None:
+            raise ImportError('Cannot find the rtree module')
+        assert integration_distance, 'Must be set'
+        self.integration_distance = integration_distance
+        self.sitecol = sitecol
+        complete = sitecol.complete
+        complete.lons, self.idl = fix_lons_idl(complete.lons)
+        self.index = rtree.index.Index()
+        for sid, (lon, lat) in enumerate(zip(complete.lons, complete.lats)):
+            self.index.insert(sid, (lon, lat, lon, lat))
+
+    def affected(self, source):
+        """
+        Returns the sites within the integration distance from the source,
+        or None.
+        """
+        source_sites = list(self([source]))
+        if source_sites:
+            return source_sites[0][1]
+
+    def __call__(self, sources, sites=None):
+        if sites is None:
+            sites = self.sitecol
+        for source in sources:
+            if source.__class__.__name__ == 'PointSource':  # Rtree filtering
+                bb = source.bounding_box(self.integration_distance, self.idl)
+                sids = sorted(self.index.intersection(bb))
+                if len(sids):
+                    source.nsites = len(sids)
+                    yield source, FilteredSiteCollection(sids, sites.complete)
+            else:  # normal filtering
+                with context(source):
+                    s_sites = source.filter_sites_by_distance_to_source(
+                        self.integration_distance[source.tectonic_region_type],
+                        sites)
+                if s_sites is not None:
+                    source.nsites = len(s_sites)
+                    yield source, s_sites
+
+
 class RuptureSitesFilter(object):
     """
     Rupture-site filter based on distance.
@@ -182,13 +251,13 @@ class RuptureSitesFilter(object):
                 yield rupture, r_sites
 
 
-def source_site_noop_filter(sources, sites):
+def source_site_noop_filter(sources, sites=None):
     """
     Transparent source-site "no-op" filter -- behaves like a real filter
     but never filters anything out and doesn't have any overhead.
     """
     return ((src, sites) for src in sources)
-source_site_noop_filter.affected = lambda src, sites: sites
+source_site_noop_filter.affected = lambda src, sites=None: sites
 source_site_noop_filter.integration_distance = None
 
 
