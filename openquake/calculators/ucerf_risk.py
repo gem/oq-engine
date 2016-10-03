@@ -30,6 +30,13 @@ from openquake.calculators.event_based_risk import (
 
 
 def compute_ruptures(sources, sitecol, gsims, monitor):
+    """
+    :param sources: a sequence of UCERF sources
+    :param sitecol: a SiteCollection instance
+    :param gsims: a list of GSIMs
+    :param monitor: a Monitor instance
+    :returns: an AccumDict grp_id -> EBRuptures
+    """
     [src] = sources  # there is a single source per UCERF branch
     integration_distance = monitor.maximum_distance[DEFAULT_TRT]
     res = AccumDict()
