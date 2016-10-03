@@ -9,11 +9,13 @@ addons:
   apt:
     packages:
     - git
+    - libspatialindex-dev
 
 install:
   - pip install -r requirements-py35-linux64.txt
+  - pip install Rtree==0.8.2
   - python setup.py develop
-  - git clone --depth=1 https://github.com/gem/oq-hazardlib.git
+  - if [ "$(git ls-remote --heads https://github.com/gem/oq-hazardlib.git ${TRAVIS_BRANCH})" != "" ]; then BRANCH=$TRAVIS_BRANCH; else BRANCH='master'; fi; git clone -b ${BRANCH} --depth=1 https://github.com/gem/oq-hazardlib.git && echo "Running on oq-hazardlib/${BRANCH}"
 
 # We must set the PYTHONPATH to the root oq-engine (insted of oq-engine/openquake) because otherwise
 # the full 'openquake' namespace is overwritten and then hazardlib and baselib are not found

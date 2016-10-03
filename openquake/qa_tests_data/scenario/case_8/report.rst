@@ -2,9 +2,9 @@ Scenario QA Test with AtkinsonBoore2003SInter
 =============================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_48396.hdf5 Wed Sep  7 16:04:06 2016
-engine_version                                 2.1.0-gitfaa2965        
-hazardlib_version                              0.21.0-git89bccaf       
+gem-tstation:/home/michele/ssd/calc_54371.hdf5 Tue Sep 27 14:05:50 2016
+engine_version                                 2.1.0-git1ca7123        
+hazardlib_version                              0.21.0-git9261682       
 ============================================== ========================
 
 num_sites = 2, sitecol = 785 B
@@ -43,15 +43,11 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(size=1, rlzs=1)
   0,AtkinsonBoore2003SInter(): ['<0,b_1~b1,w=1.0>']>
 
-Information about the tasks
----------------------------
-Not available
-
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.007     0.0       1     
+filtering sites         0.008     0.0       1     
 reading site collection 2.599E-05 0.0       1     
 ======================= ========= ========= ======
