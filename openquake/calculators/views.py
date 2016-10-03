@@ -262,7 +262,7 @@ def view_ruptures_per_trt(token, dstore):
     rows = [('#TRT models', num_trts),
             ('#sources', tot_sources),
             ('#eff_ruptures', eff_ruptures),
-            ('filtered_weight', tot_weight)]
+            ('weight', tot_weight)]
     if len(tbl) > 1:
         summary = '\n\n' + rst_table(rows)
     else:
@@ -422,7 +422,7 @@ def view_portfolio_loss(token, dstore):
             dstore['agg_loss_table'], oq.loss_dt())
     array = util.compose_arrays(numpy.array(rlzids), data, 'rlz')
     # this is very sensitive to rounding errors, so I a using a low precision
-    return rst_table(array, fmt='%.4E')
+    return rst_table(array, fmt='%.5E')
 
 
 def sum_table(records):

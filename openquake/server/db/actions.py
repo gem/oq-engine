@@ -129,13 +129,12 @@ def get_job_id(db, job_id, username):
     job_id = int(job_id)
     if job_id > 0:
         return job_id
-    my_jobs = db('SELECT id FROM job WHERE user_name=?x ORDER BY id',
-                 username)
-    n = len(my_jobs)
-    if n == 0:  # no jobs
+    joblist = db('SELECT id FROM job WHERE user_name=?x '
+                 'ORDER BY id DESC LIMIT 1', username)
+    if not joblist:  # no jobs
         return
-    else:  # typically job_id is -1
-        return my_jobs[n + job_id].id
+    else:
+        return joblist[0].id
 
 
 def get_calc_id(db, datadir, job_id=None):
@@ -548,15 +547,18 @@ def get_result(db, result_id):
     return job.id, job.status, os.path.dirname(job.ds_calc_dir), job.ds_key
 
 
-def get_job(db, job_id):
+def get_job(db, job_id, username):
     """
     :param db:
         a :class:`openquake.server.dbapi.Db` instance
     :param job_id:
         ID of the current job
+    :param username:
+        user name
     :returns: the full path to the datastore
     """
-    return db('SELECT * FROM job WHERE id=?x', job_id, one=True)
+    calc_id = get_job_id(db, job_id, username) or job_id
+    return db('SELECT * FROM job WHERE id=?x', calc_id, one=True)
 
 
 def get_results(db, job_id):
@@ -584,3 +586,18 @@ def get_longest_jobs(db):
 SELECT id, user_name, julianday(stop_time) - julianday(start_time) AS days
 FROM job WHERE status='complete' AND days > 0.04 ORDER BY days desc'''
     return db(query)
+
+
+def find(db, description):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :param description:
+        job description, used in a case-insensitive LIKE clause
+    """
+    query = '''-- completed jobs
+SELECT id, description, user_name,
+  (julianday(stop_time) - julianday(start_time)) * 24 AS hours
+FROM job WHERE status='complete' AND description LIKE lower(?x)
+ORDER BY id desc'''
+    return db(query, description.lower())
