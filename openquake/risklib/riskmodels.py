@@ -22,7 +22,7 @@ import functools
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import CallableDict, AccumDict
+from openquake.baselib.general import CallableDict
 from openquake.risklib import utils, scientific, valid
 
 U32 = numpy.uint32
@@ -514,7 +514,7 @@ class ProbabilisticEventBased(RiskModel):
             assets, loss_type, loss_ratios=loss_ratios, eids=eids)
 
 
-@registry.add('ebrisk')
+@registry.add('ebrisk', 'ucerf_risk', 'ucerf_risk_fast')
 class EventBasedReduced(RiskModel):
     """
     Implements the reduced event based riskmodel. This is used by the

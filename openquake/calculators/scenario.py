@@ -39,7 +39,7 @@ class ScenarioCalculator(base.HazardCalculator):
         super(ScenarioCalculator, self).pre_execute()
         oq = self.oqparam
         trunc_level = oq.truncation_level
-        correl_model = readinput.get_correl_model(oq)
+        correl_model = oq.get_correl_model()
         self.datastore['rupture'] = rupture = readinput.get_rupture(oq)
         self.gsims = readinput.get_gsims(oq)
         maxdist = oq.maximum_distance['default']

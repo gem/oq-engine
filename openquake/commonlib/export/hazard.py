@@ -750,7 +750,7 @@ def _calc_gmfs(dstore, serial, eid):
     sitecol = dstore['sitecol'].complete
     N = len(sitecol.complete)
     rup = dstore['sescollection/' + serial]
-    correl_model = readinput.get_correl_model(oq)
+    correl_model = oq.get_correl_model()
     realizations = rlzs_assoc.get_rlzs_by_grp_id()[rup.grp_id]
     gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F64) for rlz in realizations])
     for sm in csm_info.source_models:
@@ -807,7 +807,7 @@ def export_gmf_scenario_hdf5(ekey, dstore):
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     gsims = rlzs_assoc.gsims_by_grp_id[0]  # there is a single grp_id
     E = oq.number_of_ground_motion_fields
-    correl_model = readinput.get_correl_model(oq)
+    correl_model = oq.get_correl_model()
     computer = gmf.GmfComputer(
             dstore['rupture'], dstore['sitecol'], oq.imtls, gsims,
             oq.truncation_level, correl_model)
