@@ -422,7 +422,7 @@ def view_portfolio_loss(token, dstore):
             dstore['losses_by_taxon'], oq.loss_dt())
     array = util.compose_arrays(numpy.array(rlzids), data, 'rlz')
     # this is very sensitive to rounding errors, so I a using a low precision
-    return rst_table(array, fmt='%.4E')
+    return rst_table(array, fmt='%.5E')
 
 
 def sum_table(records):
