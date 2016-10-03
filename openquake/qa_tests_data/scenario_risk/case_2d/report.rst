@@ -2,9 +2,9 @@ scenario hazard
 ===============
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_48469.hdf5 Wed Sep  7 16:06:20 2016
-engine_version                                 2.1.0-gitfaa2965        
-hazardlib_version                              0.21.0-git89bccaf       
+gem-tstation:/home/michele/ssd/calc_54444.hdf5 Tue Sep 27 14:08:04 2016
+engine_version                                 2.1.0-git1ca7123        
+hazardlib_version                              0.21.0-git9261682       
 ============================================== ========================
 
 num_sites = 1, sitecol = 739 B
@@ -58,10 +58,6 @@ taxonomy mean  stddev min max num_sites num_assets
 tax1     1.000 NaN    1   1   1         1         
 ======== ===== ====== === === ========= ==========
 
-Information about the tasks
----------------------------
-Not available
-
 Slowest operations
 ------------------
 ======================= ========= ========= ======
@@ -69,5 +65,5 @@ operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 filtering sites         0.006     0.0       1     
 reading exposure        0.002     0.0       1     
-reading site collection 6.914E-06 0.0       1     
+reading site collection 5.007E-06 0.0       1     
 ======================= ========= ========= ======
