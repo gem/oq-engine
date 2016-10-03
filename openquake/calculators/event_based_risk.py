@@ -704,8 +704,15 @@ class EbriskCalculator(base.RiskCalculator):
                       trunc_level, correl_model, min_iml, monitor):
         """
         :param ssm: CompositeSourceModel containing a single source model
-        :param monitor: Monitor instance
-        :returns: a starmap object producing the losses by taxonomy
+        :param sitecol: a SiteCollection instance
+        :param assetcol: an AssetCollection instance
+        :param riskmodel: a RiskModel instance
+        :param imts: a list of Intensity Measure Types
+        :param trunc_level: truncation level
+        :param correl_model: correlation model
+        :param min_iml: vector of minimum intensities, one per IMT
+        :param monitor: a Monitor instance
+        :returns: a pair (starmap, dictionary)
         """
         ruptures_by_grp = AccumDict()
         num_ruptures = 0
