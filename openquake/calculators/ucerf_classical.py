@@ -442,6 +442,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             branchname = branch.value
             ucerf_source.src_group_id = 0
             ucerf_source.weight = 1
+            ucerf_source.nsites = len(self.sitecol)
             self.infos[0, ucerf_source.source_id] = source.SourceInfo(
                 ucerf_source)
             logging.info('Getting the background point sources')
@@ -473,7 +474,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
 
         pmap_by_grp_id = functools.reduce(self.agg_dicts, rup_res, acc)
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(pmap_by_grp_id)
+            self.store_source_info(self.infos)
             self.save_data_transfer(rup_res)
         self.datastore['csm_info'] = self.csm.info
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(

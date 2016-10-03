@@ -2,9 +2,9 @@ Classical PSHA with NZ NSHM
 ===========================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_48446.hdf5 Wed Sep  7 16:05:34 2016
-engine_version                                 2.1.0-gitfaa2965        
-hazardlib_version                              0.21.0-git89bccaf       
+gem-tstation:/home/michele/ssd/calc_54421.hdf5 Tue Sep 27 14:07:16 2016
+engine_version                                 2.1.0-git1ca7123        
+hazardlib_version                              0.21.0-git9261682       
 ============================================== ========================
 
 num_sites = 1, sitecol = 739 B
@@ -83,47 +83,47 @@ filtered_weight 2.000
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,410       
+count_eff_ruptures_max_received_per_task 1,527       
 count_eff_ruptures_num_tasks             2           
 count_eff_ruptures_sent.gsims            169         
-count_eff_ruptures_sent.monitor          2,398       
+count_eff_ruptures_sent.monitor          2,632       
 count_eff_ruptures_sent.sitecol          866         
-count_eff_ruptures_sent.sources          495,548     
-count_eff_ruptures_tot_received          2,820       
-hazard.input_weight                      3.000       
+count_eff_ruptures_sent.sources          495,576     
+count_eff_ruptures_tot_received          3,054       
+hazard.input_weight                      2.000       
 hazard.n_imts                            1           
 hazard.n_levels                          29          
 hazard.n_realizations                    1           
 hazard.n_sites                           1           
-hazard.n_sources                         4           
+hazard.n_sources                         3           
 hazard.output_weight                     29          
 hostname                                 gem-tstation
 ======================================== ============
 
 Slowest sources
 ---------------
-============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
-src_group_id source_id source_class              weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
-============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
-1            21444     CharacteristicFaultSource 1.000  0         0.002       0.0        0.0           0.0           0        
-0            1         PointSource               0.500  0         7.486E-05   0.0        0.0           0.0           0        
-0            2         PointSource               0.500  0         4.816E-05   0.0        0.0           0.0           0        
-============ ========= ========================= ====== ========= =========== ========== ============= ============= =========
+====== ========= ========================= ====== ========= =========
+grp_id source_id source_class              weight calc_time num_sites
+====== ========= ========================= ====== ========= =========
+0      2         PointSource               0.500  0.0       0        
+0      1         PointSource               0.500  0.0       0        
+1      21444     CharacteristicFaultSource 1.000  0.0       0        
+====== ========= ========================= ====== ========= =========
 
 Computation times by source typology
 ------------------------------------
-========================= =========== ========== ============= ============= ========= ======
-source_class              filter_time split_time cum_calc_time max_calc_time num_tasks counts
-========================= =========== ========== ============= ============= ========= ======
-CharacteristicFaultSource 0.002       0.0        0.0           0.0           0         1     
-PointSource               1.230E-04   0.0        0.0           0.0           0         2     
-========================= =========== ========== ============= ============= ========= ======
+========================= ========= ======
+source_class              calc_time counts
+========================= ========= ======
+CharacteristicFaultSource 0.0       1     
+PointSource               0.0       2     
+========================= ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 7.330E-04 1.738E-04 6.101E-04 8.559E-04 2        
+count_eff_ruptures 8.360E-04 1.472E-04 7.319E-04 9.401E-04 2        
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -131,12 +131,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.202     0.0       1     
-managing sources               0.007     0.0       1     
-filtering sources              0.003     0.0       4     
-total count_eff_ruptures       0.001     0.0       2     
-aggregate curves               4.005E-05 0.0       2     
-reading site collection        3.886E-05 0.0       1     
-saving probability maps        2.480E-05 0.0       1     
-store source_info              8.106E-06 0.0       1     
+reading composite source model 0.196     0.0       1     
+total count_eff_ruptures       0.002     0.0       2     
+managing sources               0.001     0.0       1     
+store source_info              3.941E-04 0.0       1     
+aggregate curves               3.600E-05 0.0       2     
+reading site collection        3.290E-05 0.0       1     
+saving probability maps        2.098E-05 0.0       1     
 ============================== ========= ========= ======
