@@ -24,7 +24,8 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import groupby, split_in_blocks, group_array
+from openquake.baselib.general import (
+    groupby, split_in_blocks, get_array)
 from openquake.hazardlib import site, calc
 from openquake.risklib import scientific, riskmodels
 
@@ -408,8 +409,8 @@ class CompositeRiskModel(collections.Mapping):
         return RiskInput(hazards_by_site, assetcol, eps_dict)
 
     def build_inputs_from_ruptures(
-            self, imts, sitecol, all_ruptures, trunc_level, correl_model,
-            min_iml, eps, hint):
+            self, grp_trt, imts, sitecol, all_ruptures, trunc_level,
+            correl_model, min_iml, eps, hint):
         """
         :param imts: list of intensity measure type strings
         :param sitecol: a SiteCollection instance
@@ -427,13 +428,14 @@ class CompositeRiskModel(collections.Mapping):
         for ses_ruptures in split_in_blocks(
                 all_ruptures, hint or 1, key=by_grp_id,
                 weight=operator.attrgetter('weight')):
+            grp_id = ses_ruptures[0].grp_id
             eids = []
             for sr in ses_ruptures:
                 eids.extend(sr.events['eid'])
             idxs = numpy.arange(start, start + len(eids))
             start += len(eids)
             yield RiskInputFromRuptures(
-                imts, sitecol, ses_ruptures,
+                grp_trt[grp_id], imts, sitecol, ses_ruptures,
                 trunc_level, correl_model, min_iml,
                 eps[:, idxs] if eps is not None else None, eids)
 
@@ -449,15 +451,17 @@ class CompositeRiskModel(collections.Mapping):
         :param monitor: a monitor object used to measure the performance
         :param assetcol: not None only for event based risk
         """
+        mon_context = monitor('building context')
         mon_hazard = monitor('building hazard')
         mon_risk = monitor('computing risk', measuremem=False)
-        with mon_hazard:
+        with mon_context:
             assets_by_site = (riskinput.assets_by_site if assetcol is None
                               else assetcol.assets_by_site())
             hazard_getter = riskinput.hazard_getter(
                 rlzs_assoc, mon_hazard(measuremem=False))
 
         # group the assets by taxonomy
+        taxonomies = set()
         with monitor('grouping assets by taxonomy'):
             dic = collections.defaultdict(list)
             for i, assets in enumerate(assets_by_site):
@@ -466,21 +470,27 @@ class CompositeRiskModel(collections.Mapping):
                     epsgetter = riskinput.epsilon_getter(
                         [asset.ordinal for asset in group[taxonomy]])
                     dic[taxonomy].append((i, group[taxonomy], epsgetter))
+                    taxonomies.add(taxonomy)
 
-        with mon_risk:
-            for loss_type in self.loss_types:
-                for rlz in rlzs_assoc.realizations:
-                    for taxonomy in self.taxonomies:
-                        riskmodel = self[taxonomy]
-                        imt = riskmodel.risk_functions[loss_type].imt
-                        hazard = hazard_getter.get(imt, rlz)
+        if hasattr(riskinput, 'ses_ruptures'):  # event based
+            grp_id = riskinput.ses_ruptures[0].grp_id
+            rlzs = rlzs_assoc.get_rlzs_by_grp_id()[grp_id]
+        else:
+            rlzs = rlzs_assoc.realizations
+        for rlz in rlzs:
+            with mon_hazard:
+                hazard = hazard_getter(rlz)
+            for taxonomy in sorted(taxonomies):
+                riskmodel = self[taxonomy]
+                for lt in self.loss_types:
+                    imt = riskmodel.risk_functions[lt].imt
+                    with mon_risk:
                         for i, assets, epsgetter in dic[taxonomy]:
-                            haz = hazard[i]
+                            haz = hazard[i].get(imt, ())
                             if len(haz):
-                                out = riskmodel(
-                                    loss_type, assets, haz, epsgetter)
+                                out = riskmodel(lt, assets, haz, epsgetter)
                                 if out:  # can be None in scenario_risk
-                                    out.lr = self.lti[loss_type], rlz.ordinal
+                                    out.lr = self.lti[lt], rlz.ordinal
                                     yield out
         if hasattr(hazard_getter, 'gmfbytes'):  # for event based risk
             monitor.gmfbytes = hazard_getter.gmfbytes
@@ -493,7 +503,8 @@ class CompositeRiskModel(collections.Mapping):
 
 class PoeGetter(object):
     """
-    Object with a method .get(imt, rlz) returning a list of N hazards
+    Callable returning a list of N dictionaries imt -> curve
+    when called on a realization.
     """
     def __init__(self, hazard_by_site, rlzs_assoc):
         self.rlzs_assoc = rlzs_assoc
@@ -502,27 +513,64 @@ class PoeGetter(object):
                                 for imt in hazard_by_imt}
                                for hazard_by_imt in hazard_by_site]
 
-    def get(self, imt, rlz):
-        return [haz[imt][rlz] for haz in self.hazard_by_site]
+    def __call__(self, rlz):
+        return [{imt: haz[imt][rlz] for imt in haz}
+                for haz in self.hazard_by_site]
 
 
 class GmfGetter(object):
     """
-    Object with a method .get(imt, rlz) returning a list of N composite arrays
-    with fields 'gmv', 'eid'.
+    Callable returning a list of N dictionaries imt -> array(gmv, eid).
+    when called on a realization.
     """
     dt = numpy.dtype([('gmv', F32), ('eid', U32)])
 
-    def __init__(self, ddic, sids, imts, rlzs):
-        self.ddic = ddic
-        self.sids = sids
-        self.rlzs = rlzs
-        self.imti = {imt: i for i, imt in enumerate(imts)}
+    def __init__(self, gsims, ebruptures, sitecol, imts, min_iml,
+                 truncation_level, correlation_model, samples):
+        self.gsims = gsims
+        self.imts = imts
+        self.min_iml = min_iml
+        self.truncation_level = truncation_level
+        self.correlation_model = correlation_model
+        self.samples = samples
+        self.sids = sitecol.sids
+        self.computers = []
+        for ebr in ebruptures:
+            sites = site.FilteredSiteCollection(ebr.indices, sitecol.complete)
+            computer = calc.gmf.GmfComputer(
+                ebr, sites, imts, set(gsims),
+                truncation_level, correlation_model)
+            self.computers.append(computer)
+        self.gmfbytes = 0
 
-    def get(self, imt, rlz):
-        imti = self.imti[imt]
-        return [numpy.array(self.ddic[sid].get((imti, rlz), []), self.dt)
-                for sid in self.sids]
+    def __call__(self, rlz):
+        gsim = self.gsims[rlz.ordinal]
+        gmfdict = collections.defaultdict(dict)
+        for computer in self.computers:
+            rup = computer.rupture
+            if self.samples > 1:
+                eids = get_array(rup.events, sample=rlz.sampleid)['eid']
+            else:
+                eids = rup.events['eid']
+            array = computer.compute(gsim, len(eids))  # (i, n, e)
+            for imti, imt in enumerate(self.imts):
+                min_gmv = self.min_iml[imti]
+                for eid, gmf in zip(eids, array[imti].T):
+                    for sid, gmv in zip(computer.sites.sids, gmf):
+                        if gmv > min_gmv:
+                            dic = gmfdict[sid]
+                            if imt in dic:
+                                dic[imt].append((gmv, eid))
+                            else:
+                                dic[imt] = [(gmv, eid)]
+        dicts = []  # a list of dictionaries imt -> array(gmv, eid)
+        for sid in self.sids:
+            dic = gmfdict[sid]
+            for imt in dic:
+                dic[imt] = arr = numpy.array(dic[imt], self.dt)
+                self.gmfbytes += arr.nbytes
+            dicts.append(dic)
+        return dicts
 
 
 class RiskInput(object):
@@ -642,66 +690,6 @@ def rsi2str(rlzi, sid, imt):
     return 'rlz-%04d/sid-%04d/%s' % (rlzi, sid, imt)
 
 
-class GmfCollector(object):
-    """
-    An object storing the GMFs per site_id.
-    """
-    def __init__(self, imts, rlzs, dstore=None, hazgetter=True):
-        self.imts = imts
-        self.rlzs = rlzs
-        if dstore is None:
-            self.dic = collections.defaultdict(Gmvset)
-        else:
-            self.dic = dstore
-        self.hazgetter = hazgetter
-        if hazgetter:
-            self._ddic = collections.defaultdict(dict)
-        self.nbytes = 0
-
-    def close(self):
-        self.dic.clear()
-        return self.nbytes
-
-    def save(self, eid, imti, rlz, gmf, sids):
-        key = imti, rlz
-        for gmv, sid in zip(gmf, sids):
-            if self.hazgetter:
-                dic = self._ddic[sid]
-                if key in dic:
-                    dic[key].append((gmv, eid))
-                else:
-                    dic[key] = [(gmv, eid)]
-            else:
-                self.dic[sid].append(gmv, eid, rlz.ordinal, imti)
-        self.nbytes += gmf.nbytes * 2
-
-    def __getitem__(self, sid):
-        gmvs = self.dic[sid]
-        if hasattr(gmvs, 'value'):
-            gmvs = gmvs.value
-        data = group_array(gmvs, 'imti')
-        hazard = {}  # return a dictionary with all IMTs
-        for imti, imt in enumerate(self.imts):
-            hazard[imt] = {}
-            if imti in data:
-                dic = group_array(data[imti], 'rlzi')
-                for rlz in self.rlzs:
-                    if rlz.ordinal in dic:
-                        hazard[imt][rlz] = dic[rlz.ordinal]
-        return hazard
-
-    def flush(self, dstore):
-        """
-        Save the GMFs on the datastore.
-
-        :returns: the number of bytes saved
-        """
-        for sid, data in self.dic.items():
-            dstore.extend('gmf_data/sid-%04d' % sid, data)
-        dstore.flush()
-        return self.close()
-
-
 class RiskInputFromRuptures(object):
     """
     Contains all the assets associated to the given IMT and a subsets of
@@ -718,11 +706,12 @@ class RiskInputFromRuptures(object):
     :params epsilons: a matrix of epsilons (or None)
     :param eids: an array of event IDs (or None)
     """
-    def __init__(self, imts, sitecol, ses_ruptures,
-                 trunc_level, correl_model, min_iml, epsilons=None, eids=None):
+    def __init__(self, trt, imts, sitecol, ses_ruptures,
+                 trunc_level, correl_model, min_iml, epsilons=None,
+                 eids=None):
         self.sitecol = sitecol
         self.ses_ruptures = numpy.array(ses_ruptures)
-        self.grp_id = ses_ruptures[0].grp_id
+        self.trt = trt
         self.trunc_level = trunc_level
         self.correl_model = correl_model
         self.min_iml = min_iml
@@ -755,54 +744,12 @@ class RiskInputFromRuptures(object):
             lists of N hazard dictionaries imt -> rlz -> Gmvs
         """
         grp_id = self.ses_ruptures[0].grp_id
-        rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
-        gmfcoll = create(
-            GmfCollector, self.ses_ruptures, self.sitecol, self.imts,
-            rlzs_by_gsim, self.trunc_level, self.correl_model, self.min_iml,
-            monitor, True)
-        gg = GmfGetter(gmfcoll._ddic, self.sitecol.sids, self.imts,
-                       rlzs_by_gsim.realizations)
-        gg.gmfbytes = gmfcoll.nbytes
+        gsims = [dic[self.trt] for dic in rlzs_assoc.gsim_by_trt]
+        gg = GmfGetter(gsims, self.ses_ruptures, self.sitecol,
+                       self.imts, self.min_iml, self.trunc_level,
+                       self.correl_model, rlzs_assoc.samples[grp_id])
         return gg
 
     def __repr__(self):
         return '<%s imts=%s, weight=%d>' % (
             self.__class__.__name__, self.imts, self.weight)
-
-
-def create(GmfColl, eb_ruptures, sitecol, imts, rlzs_by_gsim,
-           trunc_level, correl_model, min_iml, monitor=Monitor(),
-           hazgetter=False):
-    """
-    :param GmfColl: a GmfCollector class to be instantiated
-    :param eb_ruptures: a list of EBRuptures with the same src_group_id
-    :param sitecol: a SiteCollection instance
-    :param imts: list of IMT strings
-    :param rlzs_by_gsim: a dictionary {gsim: realizations} of the current group
-    :param trunc_level: truncation level
-    :param correl_model: correlation model instance
-    :param min_iml: a dictionary of minimum intensity measure levels
-    :param monitor: a monitor instance
-    :param hazgetter: flag which is true only inside an hazard getter
-    :returns: a GmfCollector instance
-    """
-    ctx_mon = monitor('make contexts')
-    gmf_mon = monitor('compute poes')
-    sites = sitecol.complete
-    samples = rlzs_by_gsim.samples
-    gsims = list(rlzs_by_gsim)
-    gmfcoll = GmfColl(imts, rlzs_by_gsim.realizations, hazgetter=hazgetter)
-    for ebr in eb_ruptures:
-        rup = ebr.rupture
-        with ctx_mon:
-            r_sites = site.FilteredSiteCollection(ebr.indices, sites)
-            computer = calc.gmf.GmfComputer(
-                rup, r_sites, imts, gsims, trunc_level, correl_model, samples)
-        with gmf_mon:
-            data = computer.calcgmfs(
-                rup.seed, ebr.events, rlzs_by_gsim, min_iml)
-            for eid, imti, rlz, gmf_sids in data:
-                gmfcoll.save(eid, imti, rlz, *gmf_sids)
-    for sid in gmfcoll.dic:
-        gmfcoll.dic[sid] = gmfcoll.dic[sid].value
-    return gmfcoll
