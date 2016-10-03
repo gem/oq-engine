@@ -29,7 +29,7 @@ from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
     AccumDict, humansize, block_splitter, groupby)
 from openquake.calculators import base, event_based, classical
-from openquake.commonlib import parallel, calc, source
+from openquake.commonlib import parallel, calc
 from openquake.risklib import riskinput, scientific
 from openquake.commonlib.parallel import starmap
 
