@@ -2,9 +2,9 @@ Classical Hazard QA Test, Case 21
 =================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_48433.hdf5 Wed Sep  7 16:04:55 2016
-engine_version                                 2.1.0-gitfaa2965        
-hazardlib_version                              0.21.0-git89bccaf       
+gem-tstation:/home/michele/ssd/calc_54408.hdf5 Tue Sep 27 14:06:38 2016
+engine_version                                 2.1.0-git1ca7123        
+hazardlib_version                              0.21.0-git9261682       
 ============================================== ========================
 
 num_sites = 1, sitecol = 739 B
@@ -133,33 +133,33 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=27, rlzs=27)
-  0,SadighEtAl1997(): ['<0,b1_mfd1_high_dip_dip30~Sad1997,w=0.0131999998793>']
-  1,SadighEtAl1997(): ['<1,b1_mfd1_high_dip_dip45~Sad1997,w=0.0395999996379>']
-  2,SadighEtAl1997(): ['<2,b1_mfd1_high_dip_dip60~Sad1997,w=0.0131999998793>']
-  3,SadighEtAl1997(): ['<3,b1_mfd1_low_dip_dip30~Sad1997,w=0.0131999998793>']
-  4,SadighEtAl1997(): ['<4,b1_mfd1_low_dip_dip45~Sad1997,w=0.0395999996379>']
-  5,SadighEtAl1997(): ['<5,b1_mfd1_low_dip_dip60~Sad1997,w=0.0131999998793>']
-  6,SadighEtAl1997(): ['<6,b1_mfd1_mid_dip_dip30~Sad1997,w=0.0395999996379>']
-  7,SadighEtAl1997(): ['<7,b1_mfd1_mid_dip_dip45~Sad1997,w=0.118799998914>']
-  8,SadighEtAl1997(): ['<8,b1_mfd1_mid_dip_dip60~Sad1997,w=0.0395999996379>']
-  9,SadighEtAl1997(): ['<9,b1_mfd2_high_dip_dip30~Sad1997,w=0.0136000001296>']
-  10,SadighEtAl1997(): ['<10,b1_mfd2_high_dip_dip45~Sad1997,w=0.0408000013202>']
-  11,SadighEtAl1997(): ['<11,b1_mfd2_high_dip_dip60~Sad1997,w=0.0136000001296>']
-  12,SadighEtAl1997(): ['<12,b1_mfd2_low_dip_dip30~Sad1997,w=0.0136000001296>']
-  13,SadighEtAl1997(): ['<13,b1_mfd2_low_dip_dip45~Sad1997,w=0.0408000013202>']
-  14,SadighEtAl1997(): ['<14,b1_mfd2_low_dip_dip60~Sad1997,w=0.0136000001296>']
-  15,SadighEtAl1997(): ['<15,b1_mfd2_mid_dip_dip30~Sad1997,w=0.0408000013202>']
-  16,SadighEtAl1997(): ['<16,b1_mfd2_mid_dip_dip45~Sad1997,w=0.122400000235>']
-  17,SadighEtAl1997(): ['<17,b1_mfd2_mid_dip_dip60~Sad1997,w=0.0408000013202>']
-  18,SadighEtAl1997(): ['<18,b1_mfd3_high_dip_dip30~Sad1997,w=0.0131999998793>']
-  19,SadighEtAl1997(): ['<19,b1_mfd3_high_dip_dip45~Sad1997,w=0.0395999996379>']
-  20,SadighEtAl1997(): ['<20,b1_mfd3_high_dip_dip60~Sad1997,w=0.0131999998793>']
-  21,SadighEtAl1997(): ['<21,b1_mfd3_low_dip_dip30~Sad1997,w=0.0131999998793>']
-  22,SadighEtAl1997(): ['<22,b1_mfd3_low_dip_dip45~Sad1997,w=0.0395999996379>']
-  23,SadighEtAl1997(): ['<23,b1_mfd3_low_dip_dip60~Sad1997,w=0.0131999998793>']
-  24,SadighEtAl1997(): ['<24,b1_mfd3_mid_dip_dip30~Sad1997,w=0.0395999996379>']
-  25,SadighEtAl1997(): ['<25,b1_mfd3_mid_dip_dip45~Sad1997,w=0.118799998914>']
-  26,SadighEtAl1997(): ['<26,b1_mfd3_mid_dip_dip60~Sad1997,w=0.0395999996379>']>
+  0,SadighEtAl1997(): ['<0,b1_mfd1_high_dip_dip30~Sad1997,w=0.0131999999285>']
+  1,SadighEtAl1997(): ['<1,b1_mfd1_high_dip_dip45~Sad1997,w=0.0395999997854>']
+  2,SadighEtAl1997(): ['<2,b1_mfd1_high_dip_dip60~Sad1997,w=0.0131999999285>']
+  3,SadighEtAl1997(): ['<3,b1_mfd1_low_dip_dip30~Sad1997,w=0.0131999999285>']
+  4,SadighEtAl1997(): ['<4,b1_mfd1_low_dip_dip45~Sad1997,w=0.0395999997854>']
+  5,SadighEtAl1997(): ['<5,b1_mfd1_low_dip_dip60~Sad1997,w=0.0131999999285>']
+  6,SadighEtAl1997(): ['<6,b1_mfd1_mid_dip_dip30~Sad1997,w=0.0395999997854>']
+  7,SadighEtAl1997(): ['<7,b1_mfd1_mid_dip_dip45~Sad1997,w=0.118799999356>']
+  8,SadighEtAl1997(): ['<8,b1_mfd1_mid_dip_dip60~Sad1997,w=0.0395999997854>']
+  9,SadighEtAl1997(): ['<9,b1_mfd2_high_dip_dip30~Sad1997,w=0.0136000001803>']
+  10,SadighEtAl1997(): ['<10,b1_mfd2_high_dip_dip45~Sad1997,w=0.0408000014722>']
+  11,SadighEtAl1997(): ['<11,b1_mfd2_high_dip_dip60~Sad1997,w=0.0136000001803>']
+  12,SadighEtAl1997(): ['<12,b1_mfd2_low_dip_dip30~Sad1997,w=0.0136000001803>']
+  13,SadighEtAl1997(): ['<13,b1_mfd2_low_dip_dip45~Sad1997,w=0.0408000014722>']
+  14,SadighEtAl1997(): ['<14,b1_mfd2_low_dip_dip60~Sad1997,w=0.0136000001803>']
+  15,SadighEtAl1997(): ['<15,b1_mfd2_mid_dip_dip30~Sad1997,w=0.0408000014722>']
+  16,SadighEtAl1997(): ['<16,b1_mfd2_mid_dip_dip45~Sad1997,w=0.122400000691>']
+  17,SadighEtAl1997(): ['<17,b1_mfd2_mid_dip_dip60~Sad1997,w=0.0408000014722>']
+  18,SadighEtAl1997(): ['<18,b1_mfd3_high_dip_dip30~Sad1997,w=0.0131999999285>']
+  19,SadighEtAl1997(): ['<19,b1_mfd3_high_dip_dip45~Sad1997,w=0.0395999997854>']
+  20,SadighEtAl1997(): ['<20,b1_mfd3_high_dip_dip60~Sad1997,w=0.0131999999285>']
+  21,SadighEtAl1997(): ['<21,b1_mfd3_low_dip_dip30~Sad1997,w=0.0131999999285>']
+  22,SadighEtAl1997(): ['<22,b1_mfd3_low_dip_dip45~Sad1997,w=0.0395999997854>']
+  23,SadighEtAl1997(): ['<23,b1_mfd3_low_dip_dip60~Sad1997,w=0.0131999999285>']
+  24,SadighEtAl1997(): ['<24,b1_mfd3_mid_dip_dip30~Sad1997,w=0.0395999997854>']
+  25,SadighEtAl1997(): ['<25,b1_mfd3_mid_dip_dip45~Sad1997,w=0.118799999356>']
+  26,SadighEtAl1997(): ['<26,b1_mfd3_mid_dip_dip60~Sad1997,w=0.0395999997854>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -205,13 +205,13 @@ filtered_weight 8,175
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,127       
+count_eff_ruptures_max_received_per_task 1,246       
 count_eff_ruptures_num_tasks             35          
 count_eff_ruptures_sent.gsims            2,870       
-count_eff_ruptures_sent.monitor          31,815      
+count_eff_ruptures_sent.monitor          35,910      
 count_eff_ruptures_sent.sitecol          15,155      
-count_eff_ruptures_sent.sources          45,375      
-count_eff_ruptures_tot_received          39,423      
+count_eff_ruptures_sent.sources          45,871      
+count_eff_ruptures_tot_received          43,521      
 hazard.input_weight                      8,175       
 hazard.n_imts                            1           
 hazard.n_levels                          4           
@@ -224,44 +224,44 @@ hostname                                 gem-tstation
 
 Slowest sources
 ---------------
-============ ========= ================= ====== ========= =========== ========== ============= ============= =========
-src_group_id source_id source_class      weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
-============ ========= ================= ====== ========= =========== ========== ============= ============= =========
-0            SFLT1     SimpleFaultSource 60     0         0.001       0.0        0.0           0.0           0        
-8            SFLT2     SimpleFaultSource 89     0         0.001       0.0        0.0           0.0           0        
-15           SFLT2     SimpleFaultSource 384    0         0.001       0.0        0.0           0.0           0        
-14           SFLT1     SimpleFaultSource 81     0         0.001       0.0        0.0           0.0           0        
-22           SFLT2     SimpleFaultSource 148    0         0.001       0.0        0.0           0.0           0        
-20           SFLT2     SimpleFaultSource 89     0         0.001       0.0        0.0           0.0           0        
-16           SFLT1     SimpleFaultSource 27     0         0.001       0.0        0.0           0.0           0        
-17           SFLT1     SimpleFaultSource 27     0         0.001       0.0        0.0           0.0           0        
-1            SFLT2     SimpleFaultSource 148    0         0.001       0.0        0.0           0.0           0        
-9            SFLT1     SimpleFaultSource 25     0         0.001       0.0        0.0           0.0           0        
-9            SFLT2     SimpleFaultSource 384    0         0.001       0.0        0.0           0.0           0        
-22           SFLT1     SimpleFaultSource 198    0         0.001       0.0        0.0           0.0           0        
-7            SFLT1     SimpleFaultSource 90     0         0.001       0.0        0.0           0.0           0        
-21           SFLT1     SimpleFaultSource 198    0         0.001       0.0        0.0           0.0           0        
-0            SFLT2     SimpleFaultSource 384    0         0.001       0.0        0.0           0.0           0        
-25           SFLT2     SimpleFaultSource 148    0         0.001       0.0        0.0           0.0           0        
-1            SFLT1     SimpleFaultSource 60     0         0.001       0.0        0.0           0.0           0        
-12           SFLT1     SimpleFaultSource 81     0         0.001       0.0        0.0           0.0           0        
-19           SFLT1     SimpleFaultSource 99     0         0.001       0.0        0.0           0.0           0        
-21           SFLT2     SimpleFaultSource 384    0         0.001       0.0        0.0           0.0           0        
-============ ========= ================= ====== ========= =========== ========== ============= ============= =========
+====== ========= ================= ====== ========= =========
+grp_id source_id source_class      weight calc_time num_sites
+====== ========= ================= ====== ========= =========
+1      SFLT2     SimpleFaultSource 148    0.0       0        
+13     SFLT1     SimpleFaultSource 81     0.0       0        
+9      SFLT2     SimpleFaultSource 384    0.0       0        
+20     SFLT2     SimpleFaultSource 89     0.0       0        
+17     SFLT2     SimpleFaultSource 89     0.0       0        
+14     SFLT1     SimpleFaultSource 81     0.0       0        
+2      SFLT2     SimpleFaultSource 89     0.0       0        
+24     SFLT1     SimpleFaultSource 132    0.0       0        
+22     SFLT1     SimpleFaultSource 198    0.0       0        
+19     SFLT1     SimpleFaultSource 99     0.0       0        
+4      SFLT1     SimpleFaultSource 150    0.0       0        
+1      SFLT1     SimpleFaultSource 60     0.0       0        
+10     SFLT2     SimpleFaultSource 148    0.0       0        
+3      SFLT2     SimpleFaultSource 384    0.0       0        
+12     SFLT1     SimpleFaultSource 81     0.0       0        
+9      SFLT1     SimpleFaultSource 25     0.0       0        
+7      SFLT1     SimpleFaultSource 90     0.0       0        
+11     SFLT2     SimpleFaultSource 89     0.0       0        
+21     SFLT2     SimpleFaultSource 384    0.0       0        
+17     SFLT1     SimpleFaultSource 27     0.0       0        
+====== ========= ================= ====== ========= =========
 
 Computation times by source typology
 ------------------------------------
-================= =========== ========== ============= ============= ========= ======
-source_class      filter_time split_time cum_calc_time max_calc_time num_tasks counts
-================= =========== ========== ============= ============= ========= ======
-SimpleFaultSource 0.064       0.0        0.0           0.0           0         54    
-================= =========== ========== ============= ============= ========= ======
+================= ========= ======
+source_class      calc_time counts
+================= ========= ======
+SimpleFaultSource 0.0       54    
+================= ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 5.589E-04 1.302E-04 3.202E-04 7.420E-04 35       
+count_eff_ruptures 5.743E-04 1.308E-04 3.452E-04 7.582E-04 35       
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -269,12 +269,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.431     0.0       1     
-managing sources               0.094     0.0       1     
-filtering sources              0.064     0.0       54    
-total count_eff_ruptures       0.020     0.0       35    
-aggregate curves               7.415E-04 0.0       35    
-reading site collection        3.505E-05 0.0       1     
+reading composite source model 0.480     0.0       1     
+managing sources               0.037     0.0       1     
+total count_eff_ruptures       0.020     0.402     35    
+store source_info              9.000E-04 0.0       1     
+aggregate curves               8.476E-04 0.0       35    
+reading site collection        3.695E-05 0.0       1     
 saving probability maps        3.099E-05 0.0       1     
-store source_info              9.060E-06 0.0       1     
 ============================== ========= ========= ======
