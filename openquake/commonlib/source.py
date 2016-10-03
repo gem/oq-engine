@@ -207,7 +207,8 @@ class RlzsAssoc(collections.Mapping):
         gsims_by_grp_id.
         """
         if self.num_samples:
-            assert len(self.realizations) == self.num_samples
+            assert len(self.realizations) == self.num_samples, (
+                len(self.realizations), self.num_samples)
             for rlz in self.realizations:
                 rlz.weight = 1. / self.num_samples
         else:
@@ -531,9 +532,11 @@ class CompositeSourceModel(collections.Sequence):
         Extract a CompositeSourceModel instance containing the single
         model of index `sm_id`.
         """
+        sm = self.source_models[sm_id]
+        if self.source_model_lt.num_samples:
+            self.source_model_lt.num_samples = sm.samples
         new = self.__class__(
-            self.gsim_lt, self.source_model_lt,
-            [self.source_models[sm_id]], set_weight=False)
+            self.gsim_lt, self.source_model_lt, [sm], set_weight=False)
         new.sm_id = sm_id
         return new
 
@@ -660,7 +663,7 @@ def collect_source_model_paths(smlt):
         with node.context(smlt, blevel):
             for bset in blevel:
                 for br in bset:
-                    smfname = br.uncertaintyModel.text
+                    smfname = br.uncertaintyModel.text.strip()
                     if smfname:
                         yield smfname
 

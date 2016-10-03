@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
 from __future__ import division
 import logging
 import operator
@@ -30,13 +29,14 @@ from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
     AccumDict, humansize, block_splitter, groupby)
 from openquake.calculators import base, event_based, classical
-from openquake.commonlib import readinput, parallel, calc
+from openquake.commonlib import parallel, calc
 from openquake.risklib import riskinput, scientific
 from openquake.commonlib.parallel import starmap
 
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+getweight = operator.attrgetter('weight')
 
 
 def build_el_dtypes(insured_losses):
@@ -234,7 +234,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Run the event_based_risk calculator and aggregate the results
         """
         oq = self.oqparam
-        correl_model = readinput.get_correl_model(oq)
+        correl_model = oq.get_correl_model()
         self.N = len(self.assetcol)
         self.E = len(self.datastore['events'])
         logging.info('Populating the risk inputs')
@@ -666,62 +666,7 @@ def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
         t = taxonomy_id[out.assets[0].taxonomy]
         l, r = out.lr
         losses[t, l, r] += out.loss
-    return losses
-
-
-# TODO: if the number of source models is larger than concurrent_tasks
-# a different strategy should be used; the one used here is good when
-# there are few source models, so that we cannot parallelize on those
-def build_starmap(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
-                  trunc_level, correl_model, blocksize, monitor):
-    """
-    :param ssm: CompositeSourceModel containing a single source model
-    :param sitecol: SiteCollection instance
-    :param assetcol: AssetCollection instance
-    :param riskmodel: RiskModel instance
-    :param imts: a list of intensity measure types
-    :param min_iml: a list of minimum intensity levels for each IMT
-    :param trunc_level: the truncations level
-    :param correl_model: the correlation model
-    :param blocksize: ruptures per block
-    :param monitor: Monitor instance
-    :returns: a starmap object producing the losses by taxonomy
-    """
-    ruptures_by_grp = AccumDict()
-    num_ruptures = 0
-    num_events = 0
-    allargs = []
-    grp_trt = {}
-    # collect the sources
-    for src_group in ssm.src_groups:
-        grp_trt[src_group.id] = trt = src_group.trt
-        gsims = ssm.gsim_lt.values[trt]
-        for block in block_splitter(
-                src_group, classical.MAXWEIGHT, operator.attrgetter('weight')):
-            allargs.append((block, sitecol, gsims, monitor))
-    # collect the ruptures
-    for dic in parallel.starmap(event_based.compute_ruptures, allargs):
-        ruptures_by_grp += dic
-        [rupts] = dic.values()
-        num_ruptures += len(rupts)
-        num_events += dic.num_events
-    # determine the realizations
-    rlzs_assoc = ssm.info.get_rlzs_assoc(
-        count_ruptures=lambda grp: len(ruptures_by_grp.get(grp.id, 0)))
-    allargs = []
-    # prepare the risk inputs
-    for src_group in ssm.src_groups:
-        for rupts in block_splitter(ruptures_by_grp[src_group.id], blocksize):
-            trt = grp_trt[rupts[0].grp_id]
-            ri = riskinput.RiskInputFromRuptures(
-                trt, imts, sitecol, rupts, trunc_level, correl_model, min_iml)
-            allargs.append((ri, riskmodel, rlzs_assoc, assetcol, monitor))
-    taskname = '%s#%d' % (losses_by_taxonomy.__name__, ssm.sm_id + 1)
-    smap = starmap(losses_by_taxonomy, allargs, name=taskname)
-    smap.num_ruptures = num_ruptures
-    smap.num_events = num_events
-    smap.sm_id = ssm.sm_id
-    return smap
+    return AccumDict(losses=losses, gmfbytes=monitor.gmfbytes)
 
 
 @base.calculators.add('ebrisk')
@@ -731,6 +676,64 @@ class EbriskCalculator(base.RiskCalculator):
     """
     pre_calculator = None
     is_stochastic = True
+    compute_ruptures = staticmethod(event_based.compute_ruptures)
+
+    # TODO: if the number of source models is larger than concurrent_tasks
+    # a different strategy should be used; the one used here is good when
+    # there are few source models, so that we cannot parallelize on those
+    def build_starmap(self, ssm, sitecol, assetcol, riskmodel, imts,
+                      trunc_level, correl_model, min_iml, monitor):
+        """
+        :param ssm: CompositeSourceModel containing a single source model
+        :param sitecol: a SiteCollection instance
+        :param assetcol: an AssetCollection instance
+        :param riskmodel: a RiskModel instance
+        :param imts: a list of Intensity Measure Types
+        :param trunc_level: truncation level
+        :param correl_model: correlation model
+        :param min_iml: vector of minimum intensities, one per IMT
+        :param monitor: a Monitor instance
+        :returns: a pair (starmap, dictionary)
+        """
+        ruptures_by_grp = AccumDict()
+        num_ruptures = 0
+        num_events = 0
+        allargs = []
+        grp_trt = {}
+        # collect the sources
+        for src_group in ssm.src_groups:
+            grp_trt[src_group.id] = trt = src_group.trt
+            gsims = ssm.gsim_lt.values[trt]
+            for block in block_splitter(
+                    src_group, classical.MAXWEIGHT, getweight):
+                allargs.append((block, self.sitecol, gsims, monitor))
+        # collect the ruptures
+        for dic in parallel.starmap(self.compute_ruptures, allargs):
+            ruptures_by_grp += dic
+            [rupts] = dic.values()
+            num_ruptures += len(rupts)
+            num_events += dic.num_events
+        # determine the realizations
+        rlzs_assoc = ssm.info.get_rlzs_assoc(
+            count_ruptures=lambda grp: len(ruptures_by_grp.get(grp.id, 0)))
+        allargs = []
+        # prepare the risk inputs
+        ruptures_per_block = self.oqparam.ruptures_per_block
+        for src_group in ssm.src_groups:
+            for rupts in block_splitter(
+                    ruptures_by_grp[src_group.id], ruptures_per_block):
+                trt = grp_trt[rupts[0].grp_id]
+                ri = riskinput.RiskInputFromRuptures(
+                    trt, imts, sitecol, rupts, trunc_level,
+                    correl_model, min_iml)
+                allargs.append((ri, riskmodel, rlzs_assoc,
+                                assetcol, monitor))
+        taskname = '%s#%d' % (losses_by_taxonomy.__name__, ssm.sm_id + 1)
+        smap = starmap(losses_by_taxonomy, allargs, name=taskname)
+        attrs = dict(num_ruptures=num_ruptures,
+                     num_events=num_events,
+                     sm_id=ssm.sm_id)
+        return smap, attrs
 
     def gen_args(self):
         """
@@ -738,26 +741,18 @@ class EbriskCalculator(base.RiskCalculator):
         source models, the asset collection, the riskmodel and others.
         """
         oq = self.oqparam
-        correl_model = readinput.get_correl_model(oq)
+        correl_model = oq.get_correl_model()
         if not oq.minimum_intensity:
             # infer it from the risk models if not directly set in job.ini
             oq.minimum_intensity = self.riskmodel.get_min_iml()
-        min_iml = calc.fix_minimum_intensity(
-            oq.minimum_intensity, oq.imtls)
+        min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
         if min_iml.sum() == 0:
             logging.warn('The GMFs are not filtered: '
                          'you may want to set a minimum_intensity')
         else:
             logging.info('minimum_intensity=%s', oq.minimum_intensity)
+        self.csm.init_serials()
         imts = list(oq.imtls)
-        # generate unique seeds for each rupture with numpy.arange
-        n = sum(sg.tot_ruptures() for sg in self.csm.src_groups)
-        rup_serial = numpy.arange(n, dtype=numpy.uint32)
-        start = 0
-        for src in self.csm.get_sources():
-            nr = src.num_ruptures
-            src.serial = rup_serial[start:start + nr]
-            start += nr
         for sm_id in range(len(self.csm.source_models)):
             ssm = self.csm.get_model(sm_id)
             monitor = self.monitor.new(
@@ -765,42 +760,53 @@ class EbriskCalculator(base.RiskCalculator):
                 maximum_distance=oq.maximum_distance,
                 samples=ssm.source_models[0].samples,
                 seed=ssm.source_model_lt.seed)
-            yield (ssm, self.sitecol, self.assetcol, self.riskmodel, imts,
-                   min_iml, oq.truncation_level, correl_model,
-                   oq.ruptures_per_block, monitor)
+            yield (ssm, self.sitecol, self.assetcol, self.riskmodel,
+                   imts, oq.truncation_level, correl_model, min_iml, monitor)
 
     def execute(self):
         """
         Run the calculator and aggregate the results
         """
-        smaps = []
+        allres = []
         with self.monitor('sending riskinputs', autoflush=True):
             for args in self.gen_args():
-                smap = build_starmap(*args)
+                smap, attrs = self.build_starmap(*args)
                 logging.info(
                     'Generated %d/%d ruptures/events for source model #%d',
-                    smap.num_ruptures, smap.num_events, smap.sm_id + 1)
-                smap.res = smap.submit_all()
-                smaps.append(smap)
+                    attrs['num_ruptures'], attrs['num_events'],
+                    attrs['sm_id'] + 1)
+                res = smap.submit_all()
+                vars(res).update(attrs)
+                allres.append(res)
         # collect the losses by source model
-        losses_by_sm = groupby(smaps, operator.attrgetter('sm_id'),
-                               lambda grp: sum(sum(smap.res) for smap in grp))
+        losses_by_sm = groupby(
+            allres, operator.attrgetter('sm_id'),
+            lambda grp: sum(sum(res) for res in grp))
         self.save_data_transfer(
-            parallel.IterResult.sum(smap.res for smap in smaps))
+            parallel.IterResult.sum(res for res in allres))
         return losses_by_sm
 
     def post_execute(self, losses_by_sm):
         """
         Save an array of losses by taxonomy of shape (T, L, R).
         """
-        T, L = len(self.assetcol.taxonomies), len(self.riskmodel.lti)
+        gmfbytes = sum(losses_by_sm[sm_id]['gmfbytes']
+                       for sm_id in losses_by_sm)
+        logging.info('Generated %s of GMFs', humansize(gmfbytes))
+        self.datastore.save('job_info', {'gmfbytes': gmfbytes})
+        if gmfbytes == 0:
+            raise RuntimeError('No GMFs were generated, perhaps they were '
+                               'all below the minimum_intensity threshold')
+
         # compute the total number of realizations for all source models
-        R = sum(losses_by_sm[sm_id].shape[-1] for sm_id in losses_by_sm)
-        all_losses = numpy.zeros((T, L, R), F64)
+        R = sum(losses_by_sm[sm_id]['losses'].shape[-1]
+                for sm_id in losses_by_sm)
+        T, L = len(self.assetcol.taxonomies), len(self.riskmodel.lti)
+        dset = self.datastore.create_dset('losses_by_taxon', F64, (T, L, R))
         start = 0
         for sm_id in sorted(losses_by_sm):
-            newstart = start + losses_by_sm[sm_id].shape[-1]
-            all_losses[:, :, start:newstart] = losses_by_sm[sm_id]
+            losses = losses_by_sm[sm_id]['losses']
+            newstart = start + losses.shape[-1]
+            dset[:, :, start:newstart] = losses
             start = newstart
-        self.datastore['losses_by_taxon'] = all_losses
-        logging.info('Saved %s losses by taxonomy', all_losses.shape)
+        logging.info('Saved %s losses by taxonomy', (T, L, R))
