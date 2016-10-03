@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
 from __future__ import division
 import logging
 import operator
@@ -27,14 +26,17 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
-from openquake.baselib.general import AccumDict, humansize
-from openquake.calculators import base
-from openquake.commonlib import readinput, parallel, calc
+from openquake.baselib.general import (
+    AccumDict, humansize, block_splitter, groupby)
+from openquake.calculators import base, event_based, classical
+from openquake.commonlib import parallel, calc
 from openquake.risklib import riskinput, scientific
 from openquake.commonlib.parallel import starmap
 
 U32 = numpy.uint32
 F32 = numpy.float32
+F64 = numpy.float64
+getweight = operator.attrgetter('weight')
 
 
 def build_el_dtypes(insured_losses):
@@ -121,11 +123,11 @@ def _old_loss_curves(asset_values, rcurves, ratios):
                         for avalue, poes in zip(asset_values, rcurves)])
 
 
-def _aggregate_output(output, compositemodel, agg, ass, idx, result, monitor):
+def _aggregate(outputs, compositemodel, agg, ass, idx, result, monitor):
     # update the result dictionary and the agg array with each output
-
-    asset_ids = [a.ordinal for a in output.assets]
-    for (l, r), out in sorted(output.items()):
+    for out in outputs:
+        l, r = out.lr
+        asset_ids = [a.ordinal for a in out.assets]
         loss_type = compositemodel.loss_types[l]
         indices = numpy.array([idx[eid] for eid in out.eids])
 
@@ -137,7 +139,7 @@ def _aggregate_output(output, compositemodel, agg, ass, idx, result, monitor):
                 result['IC'][l, r] += dict(
                     zip(asset_ids, cb.build_counts(out.loss_ratios[:, :, 1])))
 
-        for i, asset in enumerate(output.assets):
+        for i, asset in enumerate(out.assets):
             aid = asset.ordinal
             loss_ratios = out.loss_ratios[i]
             losses = loss_ratios * asset.value(loss_type)
@@ -190,12 +192,8 @@ def event_based_risk(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     if monitor.avg_losses:
         result['AVGLOSS'] = square(L, R, zeroN)
 
-    agglosses_mon = monitor('aggregate losses', measuremem=False)
-    for output in riskmodel.gen_outputs(
-            riskinput, rlzs_assoc, monitor, assetcol):
-        with agglosses_mon:
-            _aggregate_output(
-                output, riskmodel, agg, ass, idx, result, monitor)
+    outputs = riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor, assetcol)
+    _aggregate(outputs, riskmodel, agg, ass, idx, result, monitor)
     for (l, r) in itertools.product(range(L), range(R)):
         records = [(eids[i], loss) for i, loss in enumerate(agg[:, l, r])
                    if loss.sum() > 0]
@@ -236,7 +234,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Run the event_based_risk calculator and aggregate the results
         """
         oq = self.oqparam
-        correl_model = readinput.get_correl_model(oq)
+        correl_model = oq.get_correl_model()
         self.N = len(self.assetcol)
         self.E = len(self.datastore['events'])
         logging.info('Populating the risk inputs')
@@ -314,10 +312,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                          'you may want to set a minimum_intensity')
         else:
             logging.info('minimum_intensity=%s', oq.minimum_intensity)
-
+        csm_info = self.datastore['csm_info']
+        grp_trt = {sg.id: sg.trt for sm in csm_info.source_models
+                   for sg in sm.src_groups}
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = self.riskmodel.build_inputs_from_ruptures(
-                list(oq.imtls), self.sitecol.complete, all_ruptures,
+                grp_trt, list(oq.imtls), self.sitecol.complete, all_ruptures,
                 oq.truncation_level, correl_model, min_iml, eps,
                 oq.concurrent_tasks or 1)
             # NB: I am using generators so that the tasks are submitted one at
@@ -633,3 +633,174 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.datastore['agg_curve-stats'] = agg_curve_stats
         self.datastore['agg_curve-stats'].attrs['nbytes'] = (
             agg_curve_stats.nbytes)
+
+
+def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
+    """
+    :param riskinput:
+        a :class:`openquake.risklib.riskinput.RiskInput` object
+    :param riskmodel:
+        a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
+    :param rlzs_assoc:
+        a class:`openquake.commonlib.source.RlzsAssoc` instance
+    :param assetcol:
+        AssetCollection instance
+    :param monitor:
+        :class:`openquake.baselib.performance.Monitor` instance
+    :returns:
+        a numpy array of shape (T, L, R)
+    """
+    lti = riskmodel.lti  # loss type -> index
+    L, R = len(lti), len(rlzs_assoc.realizations)
+    T = len(assetcol.taxonomies)
+    taxonomy_id = {t: i for i, t in enumerate(sorted(assetcol.taxonomies))}
+    losses = numpy.zeros((T, L, R), F64)
+    for out in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor, assetcol):
+        # NB: out.assets is a non-empty list of assets with the same taxonomy
+        t = taxonomy_id[out.assets[0].taxonomy]
+        l, r = out.lr
+        losses[t, l, r] += out.loss
+    return AccumDict(losses=losses, gmfbytes=monitor.gmfbytes)
+
+
+@base.calculators.add('ebrisk')
+class EbriskCalculator(base.RiskCalculator):
+    """
+    Event based PSHA calculator generating the total losses by taxonomy
+    """
+    pre_calculator = None
+    is_stochastic = True
+    compute_ruptures = staticmethod(event_based.compute_ruptures)
+
+    # TODO: if the number of source models is larger than concurrent_tasks
+    # a different strategy should be used; the one used here is good when
+    # there are few source models, so that we cannot parallelize on those
+    def build_starmap(self, ssm, sitecol, assetcol, riskmodel, imts,
+                      trunc_level, correl_model, min_iml, monitor):
+        """
+        :param ssm: CompositeSourceModel containing a single source model
+        :param sitecol: a SiteCollection instance
+        :param assetcol: an AssetCollection instance
+        :param riskmodel: a RiskModel instance
+        :param imts: a list of Intensity Measure Types
+        :param trunc_level: truncation level
+        :param correl_model: correlation model
+        :param min_iml: vector of minimum intensities, one per IMT
+        :param monitor: a Monitor instance
+        :returns: a pair (starmap, dictionary)
+        """
+        ruptures_by_grp = AccumDict()
+        num_ruptures = 0
+        num_events = 0
+        allargs = []
+        grp_trt = {}
+        # collect the sources
+        for src_group in ssm.src_groups:
+            grp_trt[src_group.id] = trt = src_group.trt
+            gsims = ssm.gsim_lt.values[trt]
+            for block in block_splitter(
+                    src_group, classical.MAXWEIGHT, getweight):
+                allargs.append((block, self.sitecol, gsims, monitor))
+        # collect the ruptures
+        for dic in parallel.starmap(self.compute_ruptures, allargs):
+            ruptures_by_grp += dic
+            [rupts] = dic.values()
+            num_ruptures += len(rupts)
+            num_events += dic.num_events
+        # determine the realizations
+        rlzs_assoc = ssm.info.get_rlzs_assoc(
+            count_ruptures=lambda grp: len(ruptures_by_grp.get(grp.id, 0)))
+        allargs = []
+        # prepare the risk inputs
+        ruptures_per_block = self.oqparam.ruptures_per_block
+        for src_group in ssm.src_groups:
+            for rupts in block_splitter(
+                    ruptures_by_grp[src_group.id], ruptures_per_block):
+                trt = grp_trt[rupts[0].grp_id]
+                ri = riskinput.RiskInputFromRuptures(
+                    trt, imts, sitecol, rupts, trunc_level,
+                    correl_model, min_iml)
+                allargs.append((ri, riskmodel, rlzs_assoc,
+                                assetcol, monitor))
+        taskname = '%s#%d' % (losses_by_taxonomy.__name__, ssm.sm_id + 1)
+        smap = starmap(losses_by_taxonomy, allargs, name=taskname)
+        attrs = dict(num_ruptures=num_ruptures,
+                     num_events=num_events,
+                     sm_id=ssm.sm_id)
+        return smap, attrs
+
+    def gen_args(self):
+        """
+        Yield the arguments required by build_starmap, i.e. the
+        source models, the asset collection, the riskmodel and others.
+        """
+        oq = self.oqparam
+        correl_model = oq.get_correl_model()
+        if not oq.minimum_intensity:
+            # infer it from the risk models if not directly set in job.ini
+            oq.minimum_intensity = self.riskmodel.get_min_iml()
+        min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
+        if min_iml.sum() == 0:
+            logging.warn('The GMFs are not filtered: '
+                         'you may want to set a minimum_intensity')
+        else:
+            logging.info('minimum_intensity=%s', oq.minimum_intensity)
+        self.csm.init_serials()
+        imts = list(oq.imtls)
+        for sm_id in range(len(self.csm.source_models)):
+            ssm = self.csm.get_model(sm_id)
+            monitor = self.monitor.new(
+                ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
+                maximum_distance=oq.maximum_distance,
+                samples=ssm.source_models[0].samples,
+                seed=ssm.source_model_lt.seed)
+            yield (ssm, self.sitecol, self.assetcol, self.riskmodel,
+                   imts, oq.truncation_level, correl_model, min_iml, monitor)
+
+    def execute(self):
+        """
+        Run the calculator and aggregate the results
+        """
+        allres = []
+        with self.monitor('sending riskinputs', autoflush=True):
+            for args in self.gen_args():
+                smap, attrs = self.build_starmap(*args)
+                logging.info(
+                    'Generated %d/%d ruptures/events for source model #%d',
+                    attrs['num_ruptures'], attrs['num_events'],
+                    attrs['sm_id'] + 1)
+                res = smap.submit_all()
+                vars(res).update(attrs)
+                allres.append(res)
+        # collect the losses by source model
+        losses_by_sm = groupby(
+            allres, operator.attrgetter('sm_id'),
+            lambda grp: sum(sum(res) for res in grp))
+        self.save_data_transfer(
+            parallel.IterResult.sum(res for res in allres))
+        return losses_by_sm
+
+    def post_execute(self, losses_by_sm):
+        """
+        Save an array of losses by taxonomy of shape (T, L, R).
+        """
+        gmfbytes = sum(losses_by_sm[sm_id]['gmfbytes']
+                       for sm_id in losses_by_sm)
+        logging.info('Generated %s of GMFs', humansize(gmfbytes))
+        self.datastore.save('job_info', {'gmfbytes': gmfbytes})
+        if gmfbytes == 0:
+            raise RuntimeError('No GMFs were generated, perhaps they were '
+                               'all below the minimum_intensity threshold')
+
+        # compute the total number of realizations for all source models
+        R = sum(losses_by_sm[sm_id]['losses'].shape[-1]
+                for sm_id in losses_by_sm)
+        T, L = len(self.assetcol.taxonomies), len(self.riskmodel.lti)
+        dset = self.datastore.create_dset('losses_by_taxon', F64, (T, L, R))
+        start = 0
+        for sm_id in sorted(losses_by_sm):
+            losses = losses_by_sm[sm_id]['losses']
+            newstart = start + losses.shape[-1]
+            dset[:, :, start:newstart] = losses
+            start = newstart
+        logging.info('Saved %s losses by taxonomy', (T, L, R))

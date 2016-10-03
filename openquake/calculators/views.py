@@ -102,6 +102,8 @@ def rst_table(data, header=None, fmt=None):
     b    2    
     ==== =====
     """
+    if header is None and hasattr(data, '_fields'):
+        header = data._fields
     try:
         # see if data is a composite numpy array
         data.dtype.fields
@@ -169,9 +171,7 @@ def view_times_by_source_class(token, dstore):
     Returns the calculation times depending on the source typology
     """
     totals = sum_tbl(
-        dstore['source_info'], 'source_class',
-        ['filter_time', 'split_time', 'cum_calc_time',
-         'max_calc_time', 'num_tasks'])
+        dstore['source_info'], 'source_class', ['calc_time'])
     return rst_table(totals)
 
 
@@ -239,12 +239,12 @@ def view_ruptures_per_trt(token, dstore):
     num_trts = 0
     tot_sources = 0
     eff_ruptures = 0
-    tot_weight = 0
+    tot_ruptures = 0
     source_info = dstore['source_info'].value
     csm_info = dstore['csm_info']
-    w = groupby(source_info, operator.itemgetter('src_group_id'),
-                lambda rows: sum(r['weight'] for r in rows))
-    n = groupby(source_info, operator.itemgetter('src_group_id'),
+    r = groupby(source_info, operator.itemgetter('grp_id'),
+                lambda rows: sum(r['num_ruptures'] for r in rows))
+    n = groupby(source_info, operator.itemgetter('grp_id'),
                 lambda rows: sum(1 for r in rows))
     for i, sm in enumerate(csm_info.source_models):
         for src_group in sm.src_groups:
@@ -255,14 +255,14 @@ def view_ruptures_per_trt(token, dstore):
                 num_sources = n.get(src_group.id, 0)
                 tot_sources += num_sources
                 eff_ruptures += er
-                weight = w.get(src_group.id, 0)
-                tot_weight += weight
+                ruptures = r.get(src_group.id, 0)
+                tot_ruptures += ruptures
                 tbl.append((sm.name, src_group.id, trt,
-                            num_sources, er, weight))
+                            num_sources, er, ruptures))
     rows = [('#TRT models', num_trts),
             ('#sources', tot_sources),
             ('#eff_ruptures', eff_ruptures),
-            ('filtered_weight', tot_weight)]
+            ('#tot_ruptures', tot_ruptures)]
     if len(tbl) > 1:
         summary = '\n\n' + rst_table(rows)
     else:
@@ -379,18 +379,10 @@ def view_totlosses(token, dstore):
     return rst_table(zero, fmt='%.6E')
 
 
-# for event based risk
-@view.add('portfolio_loss')
-def view_portfolio_loss(token, dstore):
-    """
-    The loss for the full portfolio, for each realization and loss type,
-    extracted from the event loss table.
-    """
-    oq = dstore['oqparam']
-    agg_loss_table = dstore['agg_loss_table']
-    data = numpy.zeros(len(agg_loss_table), oq.loss_dt())
+def portfolio_loss_from_agg_loss_table(agg_loss_table, loss_dt):
+    data = numpy.zeros(len(agg_loss_table), loss_dt)
     rlzids = []
-    for rlz, dset in dstore['agg_loss_table'].items():
+    for rlz, dset in agg_loss_table.items():
         rlzi = int(rlz.split('-')[1])  # rlz-000 -> 0 etc
         rlzids.append(rlzi)
         for loss_type, losses in dset.items():
@@ -400,9 +392,37 @@ def view_portfolio_loss(token, dstore):
                 data[rlzi][loss_type + '_ins'] = loss[1]
             else:
                 data[rlzi][loss_type] = loss
+    return rlzids, data
+
+
+def portfolio_loss_from_losses_by_taxon(losses_by_taxon, loss_dt):
+    R = losses_by_taxon.shape[-1]
+    data = numpy.zeros(R, loss_dt)
+    rlzids = [str(r) for r in range(R)]
+    for r in range(R):
+        for l, lt in enumerate(loss_dt.names):
+            data[r][lt] = losses_by_taxon[:, l, r].sum()
+    return rlzids, data
+
+
+# for event based risk
+@view.add('portfolio_loss')
+def view_portfolio_loss(token, dstore):
+    """
+    The loss for the full portfolio, for each realization and loss type,
+    extracted from the event loss table.
+    """
+    oq = dstore['oqparam']
+    if 'agg_loss_table' in dstore:
+        rlzids, data = portfolio_loss_from_agg_loss_table(
+            dstore['agg_loss_table'], oq.loss_dt())
+    else:
+        oq.insured_losses = False
+        rlzids, data = portfolio_loss_from_losses_by_taxon(
+            dstore['losses_by_taxon'], oq.loss_dt())
     array = util.compose_arrays(numpy.array(rlzids), data, 'rlz')
     # this is very sensitive to rounding errors, so I a using a low precision
-    return rst_table(array, fmt='%.4E')
+    return rst_table(array, fmt='%.5E')
 
 
 def sum_table(records):
@@ -650,3 +670,15 @@ def view_task_info(token, dstore):
     if len(data) == 1:
         return 'Not available'
     return rst_table(data)
+
+
+@view.add('task_durations')
+def view_task_durations(token, dstore):
+    """
+    Display the raw task durations. Here is an example of usage::
+
+      $ oq show task_durations:classical
+    """
+    task = token.split(':')[1]  # called as task_duration:task_name
+    array = dstore['task_info/' + task]['duration']
+    return '\n'.join(map(str, array))

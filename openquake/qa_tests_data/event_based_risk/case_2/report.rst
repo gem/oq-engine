@@ -2,9 +2,9 @@ Event Based Risk QA Test 2
 ==========================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_48418.hdf5 Wed Sep  7 16:04:11 2016
-engine_version                                 2.1.0-gitfaa2965        
-hazardlib_version                              0.21.0-git89bccaf       
+gem-tstation:/home/michele/ssd/calc_54393.hdf5 Tue Sep 27 14:05:56 2016
+engine_version                                 2.1.0-git1ca7123        
+hazardlib_version                              0.21.0-git9261682       
 ============================================== ========================
 
 num_sites = 3, sitecol = 831 B
@@ -74,24 +74,46 @@ source_model.xml 0      Active Shallow Crust 3           8            0.450
 
 Informational data
 ------------------
-====================================== ============
-compute_ruptures_max_received_per_task 9,864       
-compute_ruptures_num_tasks             1           
-compute_ruptures_sent.gsims            89          
-compute_ruptures_sent.monitor          1,136       
-compute_ruptures_sent.sitecol          473         
-compute_ruptures_sent.sources          2,239       
-compute_ruptures_tot_received          9,864       
-hazard.input_weight                    0.450       
-hazard.n_imts                          3           
-hazard.n_levels                        15          
-hazard.n_realizations                  1           
-hazard.n_sites                         3           
-hazard.n_sources                       3           
-hazard.output_weight                   45          
-hostname                               gem-tstation
-require_epsilons                       1           
-====================================== ============
+============================================= ============
+compute_gmfs_and_curves_max_received_per_task 4,351       
+compute_gmfs_and_curves_num_tasks             8           
+compute_gmfs_and_curves_sent.eb_ruptures      15,696      
+compute_gmfs_and_curves_sent.imts             296         
+compute_gmfs_and_curves_sent.min_iml          1,128       
+compute_gmfs_and_curves_sent.monitor          23,656      
+compute_gmfs_and_curves_sent.rlzs_by_gsim     4,072       
+compute_gmfs_and_curves_sent.sitecol          6,648       
+compute_gmfs_and_curves_tot_received          34,079      
+compute_ruptures_max_received_per_task        9,884       
+compute_ruptures_num_tasks                    1           
+compute_ruptures_sent.gsims                   89          
+compute_ruptures_sent.monitor                 1,251       
+compute_ruptures_sent.sitecol                 473         
+compute_ruptures_sent.sources                 2,259       
+compute_ruptures_tot_received                 9,884       
+hazard.input_weight                           0.450       
+hazard.n_imts                                 3           
+hazard.n_levels                               15          
+hazard.n_realizations                         1           
+hazard.n_sites                                3           
+hazard.n_sources                              3           
+hazard.output_weight                          45          
+hostname                                      gem-tstation
+require_epsilons                              1           
+============================================= ============
+
+Specific information for event based
+------------------------------------
+======================== =====
+Total number of ruptures 8    
+Total number of events   26   
+Rupture multiplicity     3.250
+======================== =====
+
+Maximum memory allocated for the GMFs
+-------------------------------------
+The largest GMF block is for src_group_id=0, contains 3 IMT(s), 1 realization(s)
+and has a size of 312 B / num_tasks
 
 Estimated data transfer for the avglosses
 -----------------------------------------
@@ -116,28 +138,28 @@ W        1.000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
-============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            2         PointSource  0.150  0         3.004E-05   0.0        0.006         0.006         1        
-0            3         PointSource  0.150  0         2.599E-05   0.0        0.006         0.006         1        
-0            1         PointSource  0.150  0         5.102E-05   0.0        0.006         0.006         1        
-============ ========= ============ ====== ========= =========== ========== ============= ============= =========
+====== ========= ============ ====== ========= =========
+grp_id source_id source_class weight calc_time num_sites
+====== ========= ============ ====== ========= =========
+0      2         PointSource  0.150  0.0       0        
+0      1         PointSource  0.150  0.0       0        
+0      3         PointSource  0.150  0.0       0        
+====== ========= ============ ====== ========= =========
 
 Computation times by source typology
 ------------------------------------
-============ =========== ========== ============= ============= ========= ======
-source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
-============ =========== ========== ============= ============= ========= ======
-PointSource  1.070E-04   0.0        0.018         0.018         3         3     
-============ =========== ========== ============= ============= ========= ======
+============ ========= ======
+source_class calc_time counts
+============ ========= ======
+PointSource  0.0       3     
+============ ========= ======
 
 Information about the tasks
 ---------------------------
 ======================= ===== ====== ===== ===== =========
 operation-duration      mean  stddev min   max   num_tasks
-compute_gmfs_and_curves 0.007 0.002  0.004 0.008 8        
 compute_ruptures        0.019 NaN    0.019 0.019 1        
+compute_gmfs_and_curves 0.009 0.003  0.004 0.012 8        
 ======================= ===== ====== ===== ===== =========
 
 Slowest operations
@@ -145,18 +167,17 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_gmfs_and_curves  0.055     0.492     8     
-compute poes                   0.032     0.0       8     
-total compute_ruptures         0.019     0.0       1     
-make contexts                  0.013     0.0       8     
+total compute_gmfs_and_curves  0.074     1.926     8     
+compute poes                   0.050     0.0       8     
+total compute_ruptures         0.019     1.578     1     
+make contexts                  0.014     0.0       8     
 saving gmfs                    0.008     0.0       8     
-reading composite source model 0.006     0.0       1     
-reading exposure               0.004     0.0       1     
+reading composite source model 0.005     0.0       1     
+saving ruptures                0.004     0.0       1     
 filtering ruptures             0.004     0.0       8     
-managing sources               0.003     0.0       1     
-saving ruptures                0.002     0.0       1     
-store source_info              0.002     0.0       1     
-filtering sources              1.070E-04 0.0       3     
-reading site collection        3.719E-05 0.0       1     
-aggregating hcurves            3.219E-05 0.0       8     
+reading exposure               0.003     0.0       1     
+managing sources               5.801E-04 0.0       1     
+store source_info              3.841E-04 0.0       1     
+aggregating hcurves            2.933E-05 0.0       8     
+reading site collection        2.909E-05 0.0       1     
 ============================== ========= ========= ======

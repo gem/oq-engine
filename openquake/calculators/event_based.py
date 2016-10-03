@@ -33,14 +33,15 @@ from openquake.hazardlib.calc.hazard_curve import ProbabilityMap
 from openquake.hazardlib.probability_map import PmapStats
 from openquake.hazardlib import geo
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import readinput, parallel, calc
+from openquake.commonlib import parallel, calc
 from openquake.commonlib.util import max_rel_diff_index, Rupture
-from openquake.risklib.riskinput import create, GmfCollector, str2rsi, rsi2str
+from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 
 # ######################## rupture calculator ############################ #
 
+U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -225,7 +226,7 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
         List of commonlib.source.Source tuples
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param rlzs_by_gsim:
+    :param gsims:
         a list of GSIMs for the current tectonic region model
     :param monitor:
         monitor instance
@@ -266,8 +267,7 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
         for ebr in build_eb_ruptures(
-                src, num_occ_by_rup, rupture_filter,
-                monitor.random_seed, rup_mon):
+                src, num_occ_by_rup, rupture_filter, monitor.seed, rup_mon):
             nsites = len(ebr.indices)
             try:
                 rate = ebr.rupture.occurrence_rate
@@ -322,6 +322,7 @@ def build_eb_ruptures(
     Filter the ruptures stored in the dictionary num_occ_by_rup and
     yield pairs (rupture, <list of associated EBRuptures>)
     """
+    eid = 0
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
         with rup_mon:
             r_sites = rupture_filter(rup)
@@ -336,9 +337,10 @@ def build_eb_ruptures(
         for (sampleid, ses_idx), num_occ in sorted(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
-                # NB: the 0 below is a placeholder; the right eid will be
+                # NB: the eid below is a placeholder; the right eid will be
                 # set later, in EventBasedRuptureCalculator.post_execute
-                events.append((0, ses_idx, occ_no, sampleid))
+                events.append((eid, ses_idx, occ_no, sampleid))
+                eid += 1
         if events:
             yield EBRupture(rup, r_sites.indices,
                             numpy.array(events, event_dt),
@@ -426,8 +428,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
                         events[name][i] = event[name]
                     self.eid += 1
                     i += 1
-                if not self.oqparam.ground_motion_fields:
-                    self.datastore['sescollection/%s' % ebr.serial] = ebr
+                self.datastore['sescollection/%s' % ebr.serial] = ebr
             self.datastore.extend('events', events)
 
     def post_execute(self, result):
@@ -454,8 +455,11 @@ class EventBasedRuptureCalculator(PSHACalculator):
 
 # ######################## GMF calculator ############################ #
 
-def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_by_gsim,
-                            min_iml, monitor):
+gmv_dt = numpy.dtype(
+    [('gmv', F32), ('eid', U32), ('rlzi', U16), ('imti', U8)])
+
+
+def compute_gmfs_and_curves(getter, rlzs, monitor):
     """
     :param eb_ruptures:
         a list of blocks of EBRuptures of the same SESCollection
@@ -471,27 +475,31 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_by_gsim,
         a dictionary with keys gmfcoll and hcurves
    """
     oq = monitor.oqparam
-    # NB: by construction each block is a non-empty list with
-    # ruptures of the same src_group_id
-    trunc_level = oq.truncation_level
-    correl_model = readinput.get_correl_model(oq)
-    gmfcoll = create(
-        GmfCollector, eb_ruptures, sitecol, imts, rlzs_by_gsim,
-        trunc_level, correl_model, min_iml, monitor)
+    haz = {sid: {} for sid in getter.sids}
+    gmfcoll = {sid: [] for sid in getter.sids}
+    for rlz in rlzs:
+        for sid, gmvdict in zip(getter.sids, getter(rlz)):
+            if gmvdict:
+                for imti, imt in enumerate(getter.imts):
+                    if oq.hazard_curves_from_gmfs:
+                        haz[sid][imt, rlz] = gmvdict[imt]
+                    for rec in gmvdict[imt]:
+                        gmfcoll[sid].append(
+                            (rec['gmv'], rec['eid'], rlz.ordinal, imti))
+    for sid in gmfcoll:
+        gmfcoll[sid] = numpy.array(gmfcoll[sid], gmv_dt)
     result = dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
                   hcurves={})
     if oq.hazard_curves_from_gmfs:
         with monitor('building hazard curves', measuremem=False):
             duration = oq.investigation_time * oq.ses_per_logic_tree_path
-            for sid in gmfcoll.dic:
-                haz_by_imt_rlz = gmfcoll[sid]
-                for imt in haz_by_imt_rlz:
-                    for rlz, gmvs in haz_by_imt_rlz[imt].items():
-                        poes = calc._gmvs_to_haz_curve(
-                            gmvs['gmv'], oq.imtls[imt],
-                            oq.investigation_time, duration)
-                        key = rsi2str(rlz.ordinal, sid, imt)
-                        result['hcurves'][key] = poes
+            for sid, haz_by_imt_rlz in haz.items():
+                for imt, rlz in haz_by_imt_rlz:
+                    gmvs = haz_by_imt_rlz[imt, rlz]['gmv']
+                    poes = calc._gmvs_to_haz_curve(
+                        gmvs, oq.imtls[imt], oq.investigation_time, duration)
+                    key = rsi2str(rlz.ordinal, sid, imt)
+                    result['hcurves'][key] = poes
     return result
 
 
@@ -520,7 +528,8 @@ class EventBasedCalculator(ClassicalCalculator):
         agg_mon = self.monitor('aggregating hcurves')
         if res['gmfcoll'] is not None:
             with sav_mon:
-                res['gmfcoll'].flush(self.datastore)
+                for sid, array in res['gmfcoll'].items():
+                    self.datastore.extend('gmf_data/sid-%04d' % sid, array)
         slicedic = self.oqparam.imtls.slicedic
         with agg_mon:
             for key, poes in res['hcurves'].items():
@@ -545,12 +554,21 @@ class EventBasedCalculator(ClassicalCalculator):
         monitor.oqparam = oq
         imts = list(oq.imtls)
         min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
+        grp_trt = {sg.id: sg.trt for sm in self.csm.info.source_models
+                   for sg in sm.src_groups}
+        rlzs_by_grp = self.rlzs_assoc.get_rlzs_by_grp_id()
+        correl_model = oq.get_correl_model()
         for block in split_in_blocks(
                 ebruptures, oq.concurrent_tasks or 1,
                 key=operator.attrgetter('grp_id')):
             grp_id = block[0].grp_id
-            rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
-            yield block, self.sitecol, imts, rlzs_by_gsim, min_iml, monitor
+            trt = grp_trt[grp_id]
+            gsims = [dic[trt] for dic in self.rlzs_assoc.gsim_by_trt]
+            samples = self.rlzs_assoc.samples[grp_id]
+            getter = GmfGetter(gsims, block, self.sitecol,
+                               imts, min_iml, oq.truncation_level,
+                               correl_model, samples)
+            yield getter, rlzs_by_grp[grp_id], monitor
 
     def execute(self):
         """
@@ -582,8 +600,6 @@ class EventBasedCalculator(ClassicalCalculator):
             rlz.ordinal: ProbabilityMap(L, 1)
             for rlz in self.rlzs_assoc.realizations})
         self.save_data_transfer(res)
-        if oq.ground_motion_fields and 'gmf_data' in self.datastore:
-            self.datastore.set_nbytes('gmf_data')
         return acc
 
     def post_execute(self, result):
@@ -616,6 +632,10 @@ class EventBasedCalculator(ClassicalCalculator):
                 if kind == 'mean' and not self.oqparam.mean_hazard_curves:
                     continue
                 self.datastore['hcurves/' + kind] = stat
+
+        if ('gmf_data' in self.datastore and 'nbytes' not
+                in self.datastore['gmf_data'].attrs):
+            self.datastore.set_nbytes('gmf_data')
 
         if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
