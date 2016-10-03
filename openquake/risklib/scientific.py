@@ -1155,6 +1155,11 @@ def classical_damage(
 #
 
 
+def cutoff(array, minimum):
+    array[array < minimum] = 0
+    return array
+
+
 def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
     """
     :param vulnerability_function:
