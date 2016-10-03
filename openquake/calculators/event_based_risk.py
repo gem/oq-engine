@@ -29,8 +29,8 @@ from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
     AccumDict, humansize, block_splitter, groupby)
-from openquake.calculators import base, event_based
-from openquake.commonlib import readinput, parallel, calc, source
+from openquake.calculators import base, event_based, classical
+from openquake.commonlib import readinput, parallel, calc
 from openquake.risklib import riskinput, scientific
 from openquake.commonlib.parallel import starmap
 
@@ -697,7 +697,7 @@ def build_starmap(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
         grp_trt[src_group.id] = trt = src_group.trt
         gsims = ssm.gsim_lt.values[trt]
         for block in block_splitter(
-                src_group, source.MAXWEIGHT, operator.attrgetter('weight')):
+                src_group, classical.MAXWEIGHT, operator.attrgetter('weight')):
             allargs.append((block, sitecol, gsims, monitor))
     # collect the ruptures
     for dic in parallel.starmap(event_based.compute_ruptures, allargs):
