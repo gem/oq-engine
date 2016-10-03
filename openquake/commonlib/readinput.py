@@ -31,7 +31,7 @@ from shapely import wkt, geometry
 from openquake.baselib.general import groupby, AccumDict, writetmp
 from openquake.baselib.python3compat import configparser, encode
 from openquake.baselib import hdf5
-from openquake.hazardlib import geo, site, correlation, imt
+from openquake.hazardlib import geo, site, imt
 from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.risklib import riskmodels, riskinput, valid
 from openquake.commonlib import datastore
@@ -305,18 +305,6 @@ def get_gsims(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     return [valid.gsim(str(rlz)) for rlz in get_gsim_lt(oqparam)]
-
-
-def get_correl_model(oqparam):
-    """
-    Return a correlation object. See :mod:`openquake.hazardlib.correlation`
-    for more info.
-    """
-    correl_name = oqparam.ground_motion_correlation_model
-    if correl_name is None:  # no correlation model
-        return
-    correl_model_cls = getattr(correlation, '%sCorrelationModel' % correl_name)
-    return correl_model_cls(**oqparam.ground_motion_correlation_params)
 
 
 def get_rupture(oqparam):
