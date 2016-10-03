@@ -71,7 +71,8 @@ class GriddedSurfaceTestCase(unittest.TestCase):
         self.assertRaises(NotImplementedError, self.surf.get_area)
 
     def test_get_bounding_box(self):
-        pass
+        self.assertEqual((0.0, 1.0, 1.0, 0.0), self.surf.get_bounding_box())
 
     def test_get_middle_point(self):
-        pass
+        raise unittest.SkipTest(
+            'surface.get_middle_point() has to be implemented')
