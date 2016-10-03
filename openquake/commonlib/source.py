@@ -215,11 +215,9 @@ class RlzsAssoc(collections.Mapping):
             tot_weight = sum(rlz.weight for rlz in self.realizations)
             if tot_weight == 0:
                 raise ValueError('All realizations have zero weight??')
-            elif abs(tot_weight - 1) > 1E-8:  # allow for rounding errors
-                # 1E-8 is the value that makes the LogicTreeCase2ClassicalPSHA
-                # demo raise no warning (it should NOT raise warnings)
-                logging.warn('Some source models are not contributing, '
-                             'weights are being rescaled')
+            elif abs(tot_weight - 1) > 1E-8:
+                # this may happen for rounding errors or because of the
+                # logic tree reduction; we ensure the sum of the weights is 1
                 for rlz in self.realizations:
                     rlz.weight = rlz.weight / tot_weight
 
@@ -240,21 +238,6 @@ class RlzsAssoc(collections.Mapping):
         if not mo:
             return
         return self.realizations[int(mo.group(1))]
-
-    def get_rlzs_by_gsim(self, grp_id):
-        """
-        Returns an OrderedDict gsim -> rlzs with attributes .realizations,
-        .sm_id, .samples and .seed.
-        """
-        rlzs = set()
-        rlzs_by_gsim = collections.OrderedDict()
-        for gsim in self.gsims_by_grp_id[grp_id]:
-            rlzs_by_gsim[gsim] = self[grp_id, str(gsim)]
-            rlzs.update(rlzs_by_gsim[gsim])
-        rlzs_by_gsim.realizations = sorted(rlzs)
-        rlzs_by_gsim.samples = self.samples[grp_id]
-        rlzs_by_gsim.seed = self.seed
-        return rlzs_by_gsim
 
     def get_rlzs_by_grp_id(self):
         """
