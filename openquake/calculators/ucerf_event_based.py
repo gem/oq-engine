@@ -738,7 +738,7 @@ def compute_ruptures_gmfs_curves(
     return res
 
 
-def copy_grp(src_group, grp_id, branch_name, branch_id):
+def _copy_grp(src_group, grp_id, branch_name, branch_id):
     src = copy.copy(src_group[0])  # there is single source
     new = copy.copy(src_group)
     new.id = src.src_group_id = grp_id
@@ -775,7 +775,7 @@ class UCERFEventBasedCalculator(event_based.EventBasedCalculator):
         for grp_id, rlz in enumerate(self.smlt):
             [name] = rlz.lt_path
             branch = self.smlt.branches[name]
-            sg = copy_grp(src_group, grp_id, name, branch.value)
+            sg = _copy_grp(src_group, grp_id, name, branch.value)
             sm = source.SourceModel(
                 name, branch.weight, [name], [sg], num_gsim_paths, grp_id, 1)
             source_models.append(sm)
