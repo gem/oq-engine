@@ -28,7 +28,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
     AccumDict, humansize, block_splitter, groupby, humansize)
-from openquake.calculators import base, event_based
+from openquake.calculators import base, event_based, classical
 from openquake.commonlib import parallel, calc, source
 from openquake.risklib import riskinput, scientific
 from openquake.commonlib.parallel import starmap
@@ -698,7 +698,7 @@ class EbriskCalculator(base.RiskCalculator):
             grp_trt[src_group.id] = trt = src_group.trt
             gsims = ssm.gsim_lt.values[trt]
             for block in block_splitter(
-                    src_group, source.MAXWEIGHT, getweight):
+                src_group, classical.MAXWEIGHT, getweight):
                 allargs.append((block, self.sitecol, gsims, monitor))
         # collect the ruptures
         for dic in parallel.starmap(self.compute_ruptures, allargs):
