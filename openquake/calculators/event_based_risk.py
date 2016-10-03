@@ -318,10 +318,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                          'you may want to set a minimum_intensity')
         else:
             logging.info('minimum_intensity=%s', oq.minimum_intensity)
-
+        csm_info = self.datastore['csm_info']
+        grp_trt = {sg.id: sg.trt for sm in csm_info.source_models
+                   for sg in sm.src_groups}
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = self.riskmodel.build_inputs_from_ruptures(
-                list(oq.imtls), self.sitecol.complete, all_ruptures,
+                grp_trt, list(oq.imtls), self.sitecol.complete, all_ruptures,
                 oq.truncation_level, correl_model, min_iml, eps,
                 oq.concurrent_tasks or 1)
             # NB: I am using generators so that the tasks are submitted one at
@@ -689,9 +691,11 @@ def build_starmap(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
     num_ruptures = 0
     num_events = 0
     allargs = []
+    grp_trt = {}
     # collect the sources
     for src_group in ssm.src_groups:
-        gsims = ssm.gsim_lt.values[src_group.trt]
+        grp_trt[src_group.id] = trt = src_group.trt
+        gsims = ssm.gsim_lt.values[trt]
         for block in block_splitter(
                 src_group, classical.MAXWEIGHT, operator.attrgetter('weight')):
             allargs.append((block, sitecol, gsims, monitor))
@@ -708,10 +712,12 @@ def build_starmap(ssm, sitecol, assetcol, riskmodel, imts, min_iml,
     # prepare the risk inputs
     for src_group in ssm.src_groups:
         for rupts in block_splitter(ruptures_by_grp[src_group.id], blocksize):
+            trt = grp_trt[rupts[0].grp_id]
             ri = riskinput.RiskInputFromRuptures(
-                imts, sitecol, rupts, trunc_level, correl_model, min_iml)
+                trt, imts, sitecol, rupts, trunc_level, correl_model, min_iml)
             allargs.append((ri, riskmodel, rlzs_assoc, assetcol, monitor))
-    smap = starmap(losses_by_taxonomy, allargs)
+    taskname = '%s#%d' % (losses_by_taxonomy.__name__, ssm.sm_id + 1)
+    smap = starmap(losses_by_taxonomy, allargs, name=taskname)
     smap.num_ruptures = num_ruptures
     smap.num_events = num_events
     smap.sm_id = ssm.sm_id
@@ -773,7 +779,7 @@ class EbriskCalculator(base.RiskCalculator):
                 smap = build_starmap(*args)
                 logging.info(
                     'Generated %d/%d ruptures/events for source model #%d',
-                    smap.num_ruptures, smap.num_events, smap.sm_id)
+                    smap.num_ruptures, smap.num_events, smap.sm_id + 1)
                 smap.res = smap.submit_all()
                 smaps.append(smap)
         # collect the losses by source model
