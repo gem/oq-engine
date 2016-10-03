@@ -1155,6 +1155,11 @@ def classical_damage(
 #
 
 
+def cutoff(array, minimum):
+    array[array < minimum] = 0
+    return array
+
+
 def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
     """
     :param vulnerability_function:
@@ -1187,7 +1192,7 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
     lrem_po = numpy.empty(lrem.shape)
     for idx, po in enumerate(pos):
         lrem_po[:, idx] = lrem[:, idx] * po  # column * po
-    return numpy.array([loss_ratios, lrem_po.sum(axis=1)])
+    return numpy.array([loss_ratios, cutoff(lrem_po.sum(axis=1), 1E-7)])
 
 
 def conditional_loss_ratio(loss_ratios, poes, probability):
