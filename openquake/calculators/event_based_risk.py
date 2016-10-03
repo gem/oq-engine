@@ -27,9 +27,9 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
-    AccumDict, humansize, block_splitter, groupby, humansize)
+    AccumDict, humansize, block_splitter, groupby)
 from openquake.calculators import base, event_based, classical
-from openquake.commonlib import parallel, calc, source
+from openquake.commonlib import parallel, calc
 from openquake.risklib import riskinput, scientific
 from openquake.commonlib.parallel import starmap
 
@@ -685,8 +685,15 @@ class EbriskCalculator(base.RiskCalculator):
                       trunc_level, correl_model, min_iml, monitor):
         """
         :param ssm: CompositeSourceModel containing a single source model
-        :param monitor: Monitor instance
-        :returns: a starmap object producing the losses by taxonomy
+        :param sitecol: a SiteCollection instance
+        :param assetcol: an AssetCollection instance
+        :param riskmodel: a RiskModel instance
+        :param imts: a list of Intensity Measure Types
+        :param trunc_level: truncation level
+        :param correl_model: correlation model
+        :param min_iml: vector of minimum intensities, one per IMT
+        :param monitor: a Monitor instance
+        :returns: a pair (starmap, dictionary)
         """
         ruptures_by_grp = AccumDict()
         num_ruptures = 0
@@ -698,7 +705,7 @@ class EbriskCalculator(base.RiskCalculator):
             grp_trt[src_group.id] = trt = src_group.trt
             gsims = ssm.gsim_lt.values[trt]
             for block in block_splitter(
-                src_group, classical.MAXWEIGHT, getweight):
+                    src_group, classical.MAXWEIGHT, getweight):
                 allargs.append((block, self.sitecol, gsims, monitor))
         # collect the ruptures
         for dic in parallel.starmap(self.compute_ruptures, allargs):
