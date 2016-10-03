@@ -40,11 +40,10 @@ def classical_damage(riskinput, riskmodel, rlzs_assoc, monitor):
     """
     with monitor:
         result = {i: AccumDict() for i in range(len(rlzs_assoc))}
-        for out_by_lr in riskmodel.gen_outputs(
-                riskinput, rlzs_assoc, monitor):
-            for (l, r), out in sorted(out_by_lr.items()):
-                ordinals = [a.ordinal for a in out.assets]
-                result[r] += dict(zip(ordinals, out.damages))
+        for out in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor):
+            l, r = out.lr
+            ordinals = [a.ordinal for a in out.assets]
+            result[r] += dict(zip(ordinals, out.damages))
     return result
 
 

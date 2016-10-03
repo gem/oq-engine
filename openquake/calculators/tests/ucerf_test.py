@@ -18,6 +18,8 @@
 
 import h5py
 import unittest
+from openquake.baselib.general import writetmp
+from openquake.calculators.views import view
 from openquake.qa_tests_data import ucerf
 from openquake.calculators.tests import CalculatorTestCase
 from nose.plugins.attrib import attr
@@ -42,3 +44,11 @@ class UcerfTestCase(CalculatorTestCase):
         [f1, f2] = out['hcurves', 'csv']
         self.assertEqualFiles('expected/hazard_curve-rlz-000.csv', f1)
         self.assertEqualFiles('expected/hazard_curve-rlz-001.csv', f2)
+
+    @attr('qa', 'risk', 'ucerf')
+    def test_event_based_risk(self):
+        if h5py.__version__ < '2.3.0':
+            raise unittest.SkipTest  # UCERF requires vlen arrays
+        self.run_calc(ucerf.__file__, 'job_ebr.ini')
+        fname = writetmp(view('portfolio_loss', self.calc.datastore))
+        self.assertEqualFiles('expected/portfolio_loss.txt', fname)

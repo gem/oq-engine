@@ -32,7 +32,7 @@ from openquake.hazardlib import __version__ as hazardlib_version
 from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib.calc.filters import SourceSitesFilter
+from openquake.hazardlib.calc.filters import RtreeFilter
 from openquake.risklib import riskinput, __version__ as engine_version
 from openquake.commonlib import readinput, riskmodels, datastore, source
 from openquake.commonlib.oqvalidation import OqParam
@@ -50,12 +50,6 @@ calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
 Site = collections.namedtuple('Site', 'sid lon lat')
 
 F32 = numpy.float32
-
-def is_small(sitecol):
-    """
-    Returns True if the site collection contains up to 10 sites
-    """
-    return len(sitecol) <= 10
 
 
 class InvalidCalculationID(Exception):
@@ -83,7 +77,8 @@ PRECALC_MAP = dict(
     classical_damage=['classical'],
     event_based=['event_based_risk'],
     event_based_risk=['event_based'],
-    ucerf_classical=['ucerf_psha'])
+    ucerf_classical=['ucerf_psha'],
+    ebrisk=['event_based'])
 
 
 def set_array(longarray, shortarray):
@@ -189,7 +184,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             if pre_execute:
                 self.pre_execute()
             self.result = self.execute()
-            if self.result:
+            if self.result is not None:
                 self.post_execute(self.result)
             self.before_export()
             exported = self.export(kw.get('exports', ''))
@@ -268,7 +263,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 self._export(('uhs', fmt), exported)
 
         if self.close:  # in the engine we close later
-            self.result.clear()
+            self.result = None
             try:
                 self.datastore.close()
             except (RuntimeError, ValueError):
@@ -374,19 +369,26 @@ class HazardCalculator(BaseCalculator):
         self.read_risk_data()
 
     def basic_pre_execute(self):
+        oq = self.oqparam
+        mon = self.monitor
         self.read_risk_data()
-        if 'source' in self.oqparam.inputs:
-            with self.monitor(
-                    'reading composite source model', autoflush=True):
-                csm = readinput.get_composite_source_model(self.oqparam)
-                if is_small(self.sitecol):
-                    # filter the CompositeSourceModel upfront
-                    ss_filter = SourceSitesFilter(self.oqparam.maximum_distance)
-                    self.csm = csm.filter(self.sitecol, ss_filter)
-                else:
-                    self.csm = csm
-                self.datastore['csm_info'] = self.csm.info
-                self.rup_data = {}
+        if 'source' in oq.inputs:
+            self.ss_filter = RtreeFilter(self.sitecol, oq.maximum_distance)
+            with mon('reading composite source model', autoflush=True):
+                csm = readinput.get_composite_source_model(oq)
+            if self.is_stochastic:
+                # initialize the rupture serial numbers before the
+                # filtering; in this way the serials are independent
+                # from the site collection
+                with mon('Initializing rupture serials', autoflush=True):
+                    csm.init_serials()
+            with mon('filtering composite source model', autoflush=True):
+                logging.info('Filtering composite source model')
+                # we are also weighting the sources, but weighting is ultrafast
+                csm = csm.filter(self.ss_filter)
+            self.csm = csm
+            self.datastore['csm_info'] = csm.info
+            self.rup_data = {}
         self.init()
 
     def pre_execute(self):
@@ -541,14 +543,6 @@ class HazardCalculator(BaseCalculator):
             if self.riskmodel and missing:
                 raise RuntimeError('The exposure contains the taxonomies %s '
                                    'which are not in the risk model' % missing)
-
-    def is_tiling(self):
-        """
-        :returns:
-            True if the calculator produces more than one tile, False otherwise
-        """
-        return (self.oqparam.calculation_mode in ('psha', 'classical') and
-                len(self.sitecol) > self.oqparam.sites_per_tile)
 
     def save_data_transfer(self, iter_result):
         """

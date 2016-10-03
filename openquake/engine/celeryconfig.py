@@ -57,8 +57,9 @@ BROKER_URL = 'amqp://%(user)s:%(password)s@%(host)s:%(port)s/%(vhost)s' % \
 # See https://bugs.launchpad.net/oq-engine/+bug/1250402
 BROKER_POOL_LIMIT = None
 
-# RabbitMQ result backend (default)
-CELERY_RESULT_BACKEND = 'amqp'
+# AMQP result backend (default)
+CELERY_RESULT_BACKEND = 'rpc://'
+CELERY_RESULT_PERSISTENT = False
 
 # Redis result backend (works only on Trusty)
 # CELERY_RESULT_BACKEND = 'redis://%(host)s:6379/0' % amqp
