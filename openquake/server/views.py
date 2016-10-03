@@ -20,6 +20,7 @@ import shutil
 import json
 import logging
 import os
+import getpass
 import tempfile
 try:
     import urllib.parse as urlparse
@@ -502,7 +503,7 @@ def get_datastore(request, job_id):
         of the requested artifact, if present, else throws a 404
     """
     try:
-        job = logs.dbcmd('get_job', int(job_id))
+        job = logs.dbcmd('get_job', int(job_id), getpass.getuser())
     except dbapi.NotFound:
         return HttpResponseNotFound()
 

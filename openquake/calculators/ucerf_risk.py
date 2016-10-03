@@ -81,7 +81,18 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
 def compute_losses(ssm, sitecol, assetcol, riskmodel,
                    imts, trunc_level, correl_model, min_iml, monitor):
     """
-    Compute the losses for a single source model
+    Compute the losses for a single source model.
+
+    :param ssm: CompositeSourceModel containing a single source model
+    :param sitecol: a SiteCollection instance
+    :param assetcol: an AssetCollection instance
+    :param riskmodel: a RiskModel instance
+    :param imts: a list of Intensity Measure Types
+    :param trunc_level: truncation level
+    :param correl_model: correlation model
+    :param min_iml: vector of minimum intensities, one per IMT
+    :param monitor: a Monitor instance
+    :returns: an AccumDict grp_id -> losses by taxonomy
     """
     [grp] = ssm.src_groups
     [(grp_id, ruptures)] = compute_ruptures(
@@ -112,6 +123,6 @@ class UCERFRiskFastCalculator(EbriskCalculator):
 
     def execute(self):
         res = parallel.starmap(compute_losses, self.gen_args()).submit_all()
-        losses = sum(res)
+        losses = sum(res, AccumDict())
         self.save_data_transfer(res)
         return losses

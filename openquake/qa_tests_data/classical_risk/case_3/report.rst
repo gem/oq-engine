@@ -2,9 +2,9 @@ Classical PSHA - Loss fractions QA test
 =======================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_48380.hdf5 Wed Sep  7 16:04:01 2016
-engine_version                                 2.1.0-gitfaa2965        
-hazardlib_version                              0.21.0-git89bccaf       
+gem-tstation:/home/michele/ssd/calc_54355.hdf5 Tue Sep 27 14:05:46 2016
+engine_version                                 2.1.0-git1ca7123        
+hazardlib_version                              0.21.0-git9261682       
 ============================================== ========================
 
 num_sites = 13, sitecol = 1.26 KB
@@ -70,19 +70,19 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ======
 source_model     grp_id trt                  num_sources eff_ruptures weight
 ================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 2           2132         53    
+source_model.xml 0      Active Shallow Crust 14          25557        638   
 ================ ====== ==================== =========== ============ ======
 
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,226       
-count_eff_ruptures_num_tasks             2           
-count_eff_ruptures_sent.gsims            178         
-count_eff_ruptures_sent.monitor          2,002       
-count_eff_ruptures_sent.sitecol          1,346       
-count_eff_ruptures_sent.sources          3,894       
-count_eff_ruptures_tot_received          2,452       
+count_eff_ruptures_max_received_per_task 1,355       
+count_eff_ruptures_num_tasks             4           
+count_eff_ruptures_sent.gsims            356         
+count_eff_ruptures_sent.monitor          4,520       
+count_eff_ruptures_sent.sitecol          2,692       
+count_eff_ruptures_sent.sources          16,161      
+count_eff_ruptures_tot_received          5,420       
 hazard.input_weight                      845         
 hazard.n_imts                            1           
 hazard.n_levels                          19          
@@ -114,26 +114,38 @@ W        1.000 0.0    1   1   5         5
 
 Slowest sources
 ---------------
-============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-src_group_id source_id source_class weight split_num filter_time split_time cum_calc_time max_calc_time num_tasks
-============ ========= ============ ====== ========= =========== ========== ============= ============= =========
-0            225       AreaSource   13     0         7.071E-04   0.0        0.0           0.0           0        
-0            232       AreaSource   40     0         6.781E-04   0.0        0.0           0.0           0        
-============ ========= ============ ====== ========= =========== ========== ============= ============= =========
+====== ========= ============ ====== ========= =========
+grp_id source_id source_class weight calc_time num_sites
+====== ========= ============ ====== ========= =========
+0      135       AreaSource   82     0.0       0        
+0      101       AreaSource   13     0.0       0        
+0      225       AreaSource   13     0.0       0        
+0      137       AreaSource   51     0.0       0        
+0      253       AreaSource   76     0.0       0        
+0      306       AreaSource   44     0.0       0        
+0      59        AreaSource   18     0.0       0        
+0      42        AreaSource   43     0.0       0        
+0      8         AreaSource   120    0.0       0        
+0      57        AreaSource   21     0.0       0        
+0      359       AreaSource   57     0.0       0        
+0      232       AreaSource   40     0.0       0        
+0      27        AreaSource   37     0.0       0        
+0      299       AreaSource   17     0.0       0        
+====== ========= ============ ====== ========= =========
 
 Computation times by source typology
 ------------------------------------
-============ =========== ========== ============= ============= ========= ======
-source_class filter_time split_time cum_calc_time max_calc_time num_tasks counts
-============ =========== ========== ============= ============= ========= ======
-AreaSource   0.001       0.0        0.0           0.0           0         2     
-============ =========== ========== ============= ============= ========= ======
+============ ========= ======
+source_class calc_time counts
+============ ========= ======
+AreaSource   0.0       14    
+============ ========= ======
 
 Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.002 2.504E-04 0.002 0.002 2        
+count_eff_ruptures 0.002 2.507E-04 0.002 0.002 4        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -141,13 +153,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.902     0.0       1     
-managing sources               0.033     0.0       1     
-filtering sources              0.007     0.0       10    
+reading composite source model 0.916     0.0       1     
+managing sources               0.023     0.0       1     
+total count_eff_ruptures       0.009     2.371     4     
 reading exposure               0.006     0.0       1     
-total count_eff_ruptures       0.004     2.332     2     
-aggregate curves               3.290E-05 0.0       2     
+filter/split heavy sources     0.002     0.0       1     
+store source_info              5.291E-04 0.0       1     
+aggregate curves               6.175E-05 0.0       4     
 saving probability maps        2.098E-05 0.0       1     
-reading site collection        1.287E-05 0.0       1     
-store source_info              7.153E-06 0.0       1     
+reading site collection        1.502E-05 0.0       1     
 ============================== ========= ========= ======
