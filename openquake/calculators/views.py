@@ -239,11 +239,11 @@ def view_ruptures_per_trt(token, dstore):
     num_trts = 0
     tot_sources = 0
     eff_ruptures = 0
-    tot_weight = 0
+    tot_ruptures = 0
     source_info = dstore['source_info'].value
     csm_info = dstore['csm_info']
-    w = groupby(source_info, operator.itemgetter('grp_id'),
-                lambda rows: sum(r['weight'] for r in rows))
+    r = groupby(source_info, operator.itemgetter('grp_id'),
+                lambda rows: sum(r['num_ruptures'] for r in rows))
     n = groupby(source_info, operator.itemgetter('grp_id'),
                 lambda rows: sum(1 for r in rows))
     for i, sm in enumerate(csm_info.source_models):
@@ -255,14 +255,14 @@ def view_ruptures_per_trt(token, dstore):
                 num_sources = n.get(src_group.id, 0)
                 tot_sources += num_sources
                 eff_ruptures += er
-                weight = w.get(src_group.id, 0)
-                tot_weight += weight
+                ruptures = r.get(src_group.id, 0)
+                tot_ruptures += ruptures
                 tbl.append((sm.name, src_group.id, trt,
-                            num_sources, er, weight))
+                            num_sources, er, ruptures))
     rows = [('#TRT models', num_trts),
             ('#sources', tot_sources),
             ('#eff_ruptures', eff_ruptures),
-            ('weight', tot_weight)]
+            ('ruptures', tot_ruptures)]
     if len(tbl) > 1:
         summary = '\n\n' + rst_table(rows)
     else:
