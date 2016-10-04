@@ -89,6 +89,8 @@ SECRET_KEY = 'f_6=^^_0%ygcpgmemxcp0p^xq%47yqe%u9pu!ad*2ym^zt+xq$'
 
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
+    # FIXME: csrf was disabled because ajax_login was failing otherwise. We
+    # should find out how to make it work.
     # 'django.middleware.csrf.CsrfViewMiddleware',
 )
 
