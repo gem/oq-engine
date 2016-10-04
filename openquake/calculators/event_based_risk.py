@@ -878,3 +878,4 @@ class EbriskCalculator(base.RiskCalculator):
         logging.info('Saved %s losses by taxonomy', (self.T, self.L, self.R))
         logging.info('Saved %d event losses', num_events)
         self.datastore.set_nbytes('agg_loss_table')
+        self.datastore.set_nbytes('events')
