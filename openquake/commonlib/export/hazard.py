@@ -33,7 +33,7 @@ from openquake.hazardlib.calc import disagg, gmf
 from openquake.commonlib.export import export
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib import writers, hazard_writers, util, readinput
-from openquake.risklib.riskinput import create, GmfCollector
+from openquake.risklib.riskinput import GmfGetter
 from openquake.commonlib import calc
 
 F32 = numpy.float32
@@ -678,7 +678,7 @@ def export_gmf_spec(ekey, dstore, spec):
         etags = build_etags(dstore['events'])
         for eid in eids:
             etag = etags[eid]
-            for gmfa, imt in _calc_gmfs(dstore, util.get_serial(etag), eid):
+            for imt, gmfa in _calc_gmfs(dstore, util.get_serial(etag), eid):
                 dest = dstore.export_path('gmf-%s-%s.csv' % (etag, imt))
                 data = util.compose_arrays(sitemesh, gmfa)
                 writer.save(data, dest)
@@ -744,27 +744,31 @@ def get_rup_idx(ebrup, etag):
 def _calc_gmfs(dstore, serial, eid):
     oq = dstore['oqparam']
     min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    csm_info = dstore['csm_info']
+    rlzs_assoc = csm_info.get_rlzs_assoc()
     rlzs = rlzs_assoc.realizations
     sitecol = dstore['sitecol'].complete
     N = len(sitecol.complete)
     rup = dstore['sescollection/' + serial]
-    correl_model = readinput.get_correl_model(oq)
-    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(rup.grp_id)
-    gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F64)
-                          for rlz in rlzs_by_gsim.realizations])
-    gmfcoll = create(GmfCollector,
-                     [rup], sitecol, list(oq.imtls), rlzs_by_gsim,
-                     oq.truncation_level, correl_model, min_iml)
-    hazard = {sid: gmfcoll[sid] for sid in gmfcoll.dic}
-    for imt in oq.imtls:
-        gmfa = numpy.zeros(N, gmf_dt)
-        for rlzname in gmf_dt.names:
-            rlz = rlzs[int(rlzname)]
-            for sid in rup.indices:
-                gmvs = hazard[sid][imt][rlz]['gmv']
-                gmfa[rlzname][sid] = gmvs
-        yield gmfa, imt
+    correl_model = oq.get_correl_model()
+    realizations = rlzs_assoc.get_rlzs_by_grp_id()[rup.grp_id]
+    gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F64) for rlz in realizations])
+    for sm in csm_info.source_models:
+        for sg in sm.src_groups:
+            if sg.id == rup.grp_id:
+                break
+    gsims = [dic[sg.trt] for dic in rlzs_assoc.gsim_by_trt]
+    getter = GmfGetter(gsims, [rup], sitecol,
+                       oq.imtls, min_iml, oq.truncation_level,
+                       correl_model, rlzs_assoc.samples[sg.id])
+    array_by_imt = {imt: numpy.zeros(N, gmf_dt) for imt in oq.imtls}
+    for rlzname in gmf_dt.names:
+        rlz = rlzs[int(rlzname)]
+        for sid, gmvdict in zip(getter.sids, getter(rlz)):
+            if len(gmvdict):
+                for imt in oq.imtls:
+                    array_by_imt[imt][rlzname][sid] = gmvdict[imt]['gmv']
+    return sorted(array_by_imt.items())
 
 
 @export.add(('gmf_data', 'csv'))
@@ -803,7 +807,7 @@ def export_gmf_scenario_hdf5(ekey, dstore):
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     gsims = rlzs_assoc.gsims_by_grp_id[0]  # there is a single grp_id
     E = oq.number_of_ground_motion_fields
-    correl_model = readinput.get_correl_model(oq)
+    correl_model = oq.get_correl_model()
     computer = gmf.GmfComputer(
             dstore['rupture'], dstore['sitecol'], oq.imtls, gsims,
             oq.truncation_level, correl_model)
@@ -813,7 +817,7 @@ def export_gmf_scenario_hdf5(ekey, dstore):
     imts = list(oq.imtls)
     with hdf5.File(fname, 'w') as f:
         for gsim in gsims:
-            arr = computer.compute(oq.random_seed, gsim, E)
+            arr = computer.compute(gsim, E, oq.random_seed)
             I, S, E = arr.shape  # #IMTs, #sites, #events
             gmfa = numpy.zeros(S, gmf_dt)
             for imti in range(I):

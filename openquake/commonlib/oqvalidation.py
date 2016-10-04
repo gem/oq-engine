@@ -22,6 +22,7 @@ import numpy
 
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib import correlation
 from openquake.risklib import valid
 from openquake.commonlib import parallel, logictree
 from openquake.commonlib.riskmodels import get_risk_files
@@ -86,7 +87,6 @@ class OqParam(valid.ParamSet):
     export_dir = valid.Param(valid.utf8, '.')
     export_multi_curves = valid.Param(valid.boolean, False)
     exports = valid.Param(valid.export_formats, ())
-    filter_sources = valid.Param(valid.boolean, True)
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
     ground_motion_correlation_params = valid.Param(valid.dictionary)
@@ -321,6 +321,18 @@ class OqParam(valid.ParamSet):
         Return True if there are no intensity measure levels
         """
         return all(numpy.isnan(ls).any() for ls in self.imtls.values())
+
+    def get_correl_model(self):
+        """
+        Return a correlation object. See :mod:`openquake.hazardlib.correlation`
+        for more info.
+        """
+        correl_name = self.ground_motion_correlation_model
+        if correl_name is None:  # no correlation model
+            return
+        correl_model_cls = getattr(
+            correlation, '%sCorrelationModel' % correl_name)
+        return correl_model_cls(**self.ground_motion_correlation_params)
 
     @property
     def job_type(self):
