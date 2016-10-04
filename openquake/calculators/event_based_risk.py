@@ -791,6 +791,7 @@ class EbriskCalculator(base.RiskCalculator):
         """
         Run the calculator and aggregate the results
         """
+        num_rlzs = 0
         allres = []
         with self.monitor('sending riskinputs', autoflush=True):
             self.eid = 0
@@ -803,13 +804,20 @@ class EbriskCalculator(base.RiskCalculator):
                 res = smap.submit_all()
                 vars(res).update(attrs)
                 allres.append(res)
-        num_events = self.save_results(allres)
+                res.rlz_slice = slice(num_rlzs, num_rlzs + res.num_rlzs)
+                num_rlzs += res.num_rlzs
+        num_events = self.save_results(allres, num_rlzs)
         self.save_data_transfer(parallel.IterResult.sum(allres))
         return num_events
 
-    def save_results(self, allres):
+    def save_results(self, allres, num_rlzs):
+        """
+        :param allres: an iterable of result iterators
+        :param num_rlzs: the total number of realizations
+        :returns: the total number of events
+        """
         self.L = len(self.riskmodel.lti)
-        self.R = sum(res.num_rlzs for res in allres)
+        self.R = num_rlzs
         self.T = len(self.assetcol.taxonomies)
         self.A = len(self.assetcol)
         avg_losses = self.oqparam.avg_losses
@@ -818,29 +826,30 @@ class EbriskCalculator(base.RiskCalculator):
         if avg_losses:
             dset2 = self.datastore.create_dset(
                 'avglosses', F64, (self.A, self.L, self.R))
-        offset = 0
         num_events = 0
         self.gmfbytes = 0
         for res in allres:
-            taxlosses = numpy.zeros((self.T, self.L, res.num_rlzs), F64)
+            start, stop = res.rlz_slice.start, res.rlz_slice.stop
+            r = stop - start
+            taxlosses = numpy.zeros((self.T, self.L, r), F64)
             if avg_losses:
-                avglosses = numpy.zeros((self.A, self.L, res.num_rlzs), F64)
+                avglosses = numpy.zeros((self.A, self.L, r), F64)
             for dic in res:
                 if avg_losses:
                     avglosses += dic.pop('avglosses')
                 taxlosses += dic.pop('losses')
                 self.gmfbytes += dic.pop('gmfbytes')
-                self.save_agglosses(dic.pop('agglosses'), offset)
+                self.save_agglosses(dic.pop('agglosses'), start)
             logging.info(
                 'Saving results for source model #%d, realizations %d:%d',
-                res.sm_id + 1, offset, offset + res.num_rlzs)
-            dset1[:, :, offset:offset + res.num_rlzs] = taxlosses
+                res.sm_id + 1, start, stop)
+            dset1[:, :, start:stop] = taxlosses
             if avg_losses:
-                dset2[:, :, offset:offset + res.num_rlzs] = avglosses
+                dset2[:, :, start:stop] = avglosses
             num_events += res.num_events
-            offset += res.num_rlzs
         if avg_losses:
             self.datastore['avglosses'] = avglosses
+        assert stop == num_rlzs, (stop, num_rlzs)  # sanity check
         return num_events
 
     def save_agglosses(self, agglosses, offset):
