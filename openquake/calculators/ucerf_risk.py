@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import time
-import operator
 import numpy
 
 from openquake.baselib.general import AccumDict
@@ -110,14 +109,16 @@ def compute_losses(ssm, sitecol, assetcol, riskmodel,
     [(grp_id, ruptures)] = compute_ruptures(
         grp, sitecol, None, monitor).items()
     rlzs_assoc = ssm.info.get_rlzs_assoc()
+    num_rlzs = len(rlzs_assoc.realizations)
     ri = riskinput.RiskInputFromRuptures(
         DEFAULT_TRT, imts, sitecol, ruptures, trunc_level, correl_model,
         min_iml)
     res = List([losses_by_taxonomy(
         ri, riskmodel, rlzs_assoc, assetcol, monitor)])
-    res.num_rlzs = len(rlzs_assoc.realizations)
     res.sm_id = ssm.sm_id
     res.num_events = len(ri.eids)
+    start = res.sm_id * num_rlzs
+    res.rlz_slice = slice(start, start + num_rlzs)
     return res
 
 
@@ -138,8 +139,8 @@ class UCERFRiskFastCalculator(EbriskCalculator):
     pre_execute = UCERFEventBasedCalculator.__dict__['pre_execute']
 
     def execute(self):
+        num_rlzs = len(self.rlzs_assoc.realizations)
         allres = parallel.starmap(compute_losses, self.gen_args()).submit_all()
-        num_events = self.save_results(
-            sorted(allres, key=operator.attrgetter('sm_id')))
+        num_events = self.save_results(allres, num_rlzs)
         self.save_data_transfer(allres)
         return num_events
