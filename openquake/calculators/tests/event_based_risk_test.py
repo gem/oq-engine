@@ -182,8 +182,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'ebrisk')
     def test_case_master_ebr(self):
         out = self.run_calc(case_master.__file__, 'job.ini',
-                            calculation_mode='ebrisk', exports='csv')
+                            calculation_mode='ebrisk',
+                            insured_losses='false',
+                            exports='csv')
         for fname in out['losses_by_taxon', 'csv']:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+
+        for fname in out['agg_loss_table', 'csv']:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
