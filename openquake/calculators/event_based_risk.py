@@ -803,6 +803,11 @@ class EbriskCalculator(base.RiskCalculator):
                 res = smap.submit_all()
                 vars(res).update(attrs)
                 allres.append(res)
+        num_events = self.save_results(allres)
+        self.save_data_transfer(parallel.IterResult.sum(allres))
+        return num_events
+
+    def save_results(self, allres):
         self.L = len(self.riskmodel.lti)
         self.R = sum(res.num_rlzs for res in allres)
         self.T = len(self.assetcol.taxonomies)
@@ -834,7 +839,6 @@ class EbriskCalculator(base.RiskCalculator):
                 dset2[:, :, offset:offset + res.num_rlzs] = avglosses
             num_events += res.num_events
             offset += res.num_rlzs
-        self.save_data_transfer(parallel.IterResult.sum(allres))
         if avg_losses:
             self.datastore['avglosses'] = avglosses
         return num_events
@@ -856,7 +860,6 @@ class EbriskCalculator(base.RiskCalculator):
         """
         Save an array of losses by taxonomy of shape (T, L, R).
         """
-        return  # TODO: fix this
         if self.gmfbytes == 0:
             raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')
@@ -864,3 +867,4 @@ class EbriskCalculator(base.RiskCalculator):
         self.datastore.save('job_info', {'gmfbytes': self.gmfbytes})
         logging.info('Saved %s losses by taxonomy', (self.T, self.L, self.R))
         logging.info('Saved %d event losses', num_events)
+        self.datastore.set_nbytes('agg_loss_table')
