@@ -840,7 +840,7 @@ class EbriskCalculator(base.RiskCalculator):
                 taxlosses += dic.pop('losses')
                 self.gmfbytes += dic.pop('gmfbytes')
                 self.save_agglosses(dic.pop('agglosses'), start)
-            logging.info(
+            logging.debug(
                 'Saving results for source model #%d, realizations %d:%d',
                 res.sm_id + 1, start, stop)
             dset1[:, :, start:stop] = taxlosses
