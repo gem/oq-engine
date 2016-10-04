@@ -32,7 +32,6 @@ from openquake.baselib.general import groupby, group_array
 from openquake.commonlib import logictree, sourceconverter
 from openquake.commonlib import nrml, node
 
-MAXWEIGHT = 200  # tuned by M. Simionato
 MAX_INT = 2 ** 31 - 1
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -208,18 +207,17 @@ class RlzsAssoc(collections.Mapping):
         gsims_by_grp_id.
         """
         if self.num_samples:
-            assert len(self.realizations) == self.num_samples
+            assert len(self.realizations) == self.num_samples, (
+                len(self.realizations), self.num_samples)
             for rlz in self.realizations:
                 rlz.weight = 1. / self.num_samples
         else:
             tot_weight = sum(rlz.weight for rlz in self.realizations)
             if tot_weight == 0:
                 raise ValueError('All realizations have zero weight??')
-            elif abs(tot_weight - 1) > 1E-8:  # allow for rounding errors
-                # 1E-8 is the value that makes the LogicTreeCase2ClassicalPSHA
-                # demo raise no warning (it should NOT raise warnings)
-                logging.warn('Some source models are not contributing, '
-                             'weights are being rescaled')
+            elif abs(tot_weight - 1) > 1E-8:
+                # this may happen for rounding errors or because of the
+                # logic tree reduction; we ensure the sum of the weights is 1
                 for rlz in self.realizations:
                     rlz.weight = rlz.weight / tot_weight
 
@@ -240,21 +238,6 @@ class RlzsAssoc(collections.Mapping):
         if not mo:
             return
         return self.realizations[int(mo.group(1))]
-
-    def get_rlzs_by_gsim(self, grp_id):
-        """
-        Returns an OrderedDict gsim -> rlzs with attributes .realizations,
-        .sm_id, .samples and .seed.
-        """
-        rlzs = set()
-        rlzs_by_gsim = collections.OrderedDict()
-        for gsim in self.gsims_by_grp_id[grp_id]:
-            rlzs_by_gsim[gsim] = self[grp_id, str(gsim)]
-            rlzs.update(rlzs_by_gsim[gsim])
-        rlzs_by_gsim.realizations = sorted(rlzs)
-        rlzs_by_gsim.samples = self.samples[grp_id]
-        rlzs_by_gsim.seed = self.seed
-        return rlzs_by_gsim
 
     def get_rlzs_by_grp_id(self):
         """
@@ -530,7 +513,7 @@ class CompositeSourceModel(collections.Sequence):
         a list of :class:`openquake.commonlib.source.SourceModel` tuples
     """
     def __init__(self, gsim_lt, source_model_lt, source_models,
-                 set_weight=True):
+                 set_weight=False):
         self.gsim_lt = gsim_lt
         self.source_model_lt = source_model_lt
         self.source_models = source_models
@@ -549,17 +532,18 @@ class CompositeSourceModel(collections.Sequence):
         Extract a CompositeSourceModel instance containing the single
         model of index `sm_id`.
         """
+        sm = self.source_models[sm_id]
+        if self.source_model_lt.num_samples:
+            self.source_model_lt.num_samples = sm.samples
         new = self.__class__(
-            self.gsim_lt, self.source_model_lt,
-            [self.source_models[sm_id]], set_weight=False)
+            self.gsim_lt, self.source_model_lt, [sm], set_weight=False)
         new.sm_id = sm_id
         return new
 
-    def filter(self, sitecol, ss_filter):
+    def filter(self, ss_filter):
         """
         Generate a new CompositeSourceModel by filtering the sources on
-        the given site collection. Warning: this is slow, so use it only
-        for small site collections (i.e. in disaggregation calculations).
+        the given site collection.
 
         :param sitecol: a SiteCollection instance
         :para ss_filter: a SourceSitesFilter instance
@@ -570,7 +554,7 @@ class CompositeSourceModel(collections.Sequence):
             src_groups = [copy.copy(src) for src in sm.src_groups]
             for src_group in src_groups:
                 sources = []
-                for src, sites in ss_filter(src_group.sources, sitecol):
+                for src, sites in ss_filter(src_group.sources):
                     sources.append(src)
                     weight += src.weight
                 src_group.sources = sources
@@ -578,9 +562,7 @@ class CompositeSourceModel(collections.Sequence):
                                 sm.num_gsim_paths, sm.ordinal, sm.samples)
             source_models.append(newsm)
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models,
-                             set_weight=False)
-        new.weight = weight
-        new.filtered_weight = weight
+                             set_weight=True)
         return new
 
     @property
@@ -622,7 +604,7 @@ class CompositeSourceModel(collections.Sequence):
         Update the attributes .weight and src.num_ruptures for each TRT model
         .weight of the CompositeSourceModel.
         """
-        self.weight = self.filtered_weight = 0
+        self.weight = 0
         for src_group in self.src_groups:
             weight = 0
             num_ruptures = 0
@@ -681,7 +663,7 @@ def collect_source_model_paths(smlt):
         with node.context(smlt, blevel):
             for bset in blevel:
                 for br in bset:
-                    smfname = br.uncertaintyModel.text
+                    smfname = br.uncertaintyModel.text.strip()
                     if smfname:
                         yield smfname
 
@@ -693,15 +675,17 @@ class SourceInfo(object):
         ('grp_id', numpy.uint32),          # 0
         ('source_id', (bytes, 100)),       # 1
         ('source_class', (bytes, 30)),     # 2
-        ('weight', numpy.float32),         # 3
+        ('num_ruptures', numpy.uint32),    # 3
         ('calc_time', numpy.float32),      # 4
         ('num_sites', numpy.uint32),       # 5
+        ('num_split',  numpy.uint32),      # 6
     ])
 
-    def __init__(self, src, calc_time=0, num_sites=0):
+    def __init__(self, src, calc_time=0, num_split=0):
         self.grp_id = src.src_group_id
         self.source_id = src.source_id
         self.source_class = src.__class__.__name__
-        self.weight = src.weight
+        self.num_ruptures = src.num_ruptures
+        self.num_sites = src.nsites
         self.calc_time = calc_time
-        self.num_sites = num_sites
+        self.num_split = num_split
