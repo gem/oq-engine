@@ -55,6 +55,7 @@ filter function of each kind (see :func:`SourceSitesFilter` and
 (:func:`source_site_noop_filter` and :func:`rupture_site_noop_filter`).
 """
 import sys
+import logging
 from contextlib import contextmanager
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.site import FilteredSiteCollection
@@ -182,16 +183,17 @@ class RtreeFilter(object):
         which is what is actually used for filtering.
     """
     def __init__(self, sitecol, integration_distance):
-        if rtree is None:
-            raise ImportError('Cannot find the rtree module')
         assert integration_distance, 'Must be set'
         self.integration_distance = integration_distance
         self.sitecol = sitecol
-        complete = sitecol.complete
-        complete.lons, self.idl = fix_lons_idl(complete.lons)
-        self.index = rtree.index.Index()
-        for sid, (lon, lat) in enumerate(zip(complete.lons, complete.lats)):
-            self.index.insert(sid, (lon, lat, lon, lat))
+        if rtree:
+            compl = sitecol.complete
+            compl.lons, self.idl = fix_lons_idl(compl.lons)
+            self.index = rtree.index.Index()
+            for sid, (lon, lat) in enumerate(zip(compl.lons, compl.lats)):
+                self.index.insert(sid, (lon, lat, lon, lat))
+        else:
+            logging.warn('Cannot find the rtree module, using slow filtering')
 
     def affected(self, source):
         """
@@ -206,7 +208,8 @@ class RtreeFilter(object):
         if sites is None:
             sites = self.sitecol
         for source in sources:
-            if source.__class__.__name__ == 'PointSource':  # Rtree filtering
+            if rtree and source.__class__.__name__ == 'PointSource':
+                # Rtree filtering
                 bb = source.bounding_box(self.integration_distance, self.idl)
                 sids = sorted(self.index.intersection(bb))
                 if len(sids):
