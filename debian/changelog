@@ -1,3 +1,7 @@
+  [Paolo Tormene]
+  * Added to the engine server the possibility to log in and out
+    programmatically by means of HTTP POST requests
+
   [Michele Simionato]
   * Optimized the memory consumption of the event based risk calculators
   * Extended the `oq show` command to work in a multi-user environment
