@@ -397,42 +397,43 @@ class EventBasedRuptureCalculator(PSHACalculator):
         :param acc: accumulator dictionary
         :param ruptures_by_grp_id: a nested dictionary grp_id -> ruptures
         """
-        with self.monitor('saving ruptures', autoflush=True):
-            if hasattr(ruptures_by_grp_id, 'calc_times'):
-                acc.calc_times.extend(ruptures_by_grp_id.calc_times)
-            if hasattr(ruptures_by_grp_id, 'eff_ruptures'):
-                acc.eff_ruptures += ruptures_by_grp_id.eff_ruptures
-            acc += ruptures_by_grp_id
-            self.save_ruptures(ruptures_by_grp_id)
-            # save rup_data
-            if len(ruptures_by_grp_id):
-                trt = ruptures_by_grp_id.trt
-                self.rup_data[trt] = self.datastore.extend(
-                        'rup_data/' + trt, ruptures_by_grp_id.rup_data)
+        if hasattr(ruptures_by_grp_id, 'calc_times'):
+            acc.calc_times.extend(ruptures_by_grp_id.calc_times)
+        if hasattr(ruptures_by_grp_id, 'eff_ruptures'):
+            acc.eff_ruptures += ruptures_by_grp_id.eff_ruptures
+        acc += ruptures_by_grp_id
+        self.save_ruptures(ruptures_by_grp_id)
         return acc
 
     def save_ruptures(self, ruptures_by_grp_id):
         """Extend the 'events' dataset with the given ruptures"""
-        for grp_id, ebrs in ruptures_by_grp_id.items():
-            events = []
-            i = 0
-            for ebr in ebrs:
-                for event in ebr.events:
-                    event['eid'] = self.eid
-                    rec = (ebr.serial,
-                           event['eid'],
-                           event['ses'],
-                           event['occ'],
-                           event['sample'],
-                           ebr.grp_id,
-                           ebr.source_id)
-                    events.append(rec)
-                    self.eid += 1
-                    i += 1
-                if self.oqparam.calculation_mode == 'event_based':
-                    self.datastore['sescollection/%s' % ebr.serial] = ebr
-            self.datastore.extend(
-                'events', numpy.array(events, stored_event_dt))
+        with self.monitor('saving ruptures', autoflush=True):
+            for grp_id, ebrs in ruptures_by_grp_id.items():
+                events = []
+                i = 0
+                for ebr in ebrs:
+                    for event in ebr.events:
+                        event['eid'] = self.eid
+                        rec = (ebr.serial,
+                               event['eid'],
+                               event['ses'],
+                               event['occ'],
+                               event['sample'],
+                               ebr.grp_id,
+                               ebr.source_id)
+                        events.append(rec)
+                        self.eid += 1
+                        i += 1
+                    if self.oqparam.calculation_mode == 'event_based':
+                        self.datastore['sescollection/%s' % ebr.serial] = ebr
+                self.datastore.extend(
+                    'events', numpy.array(events, stored_event_dt))
+
+            # save rup_data
+            if hasattr(ruptures_by_grp_id, 'rup_data'):
+                trt = ruptures_by_grp_id.trt
+                self.rup_data[trt] = self.datastore.extend(
+                        'rup_data/' + trt, ruptures_by_grp_id.rup_data)
 
     def post_execute(self, result):
         """
