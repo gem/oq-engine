@@ -6,6 +6,7 @@ oq engine server provides a series of REST API methods for running calculations,
 
 All responses are JSON, unless otherwise noted.
 
+
 #### GET /v1/calc/list
 
 List the available calculations. The [url](#get-v1calccalc_id) in each item of the response can be followed to retrieve complete calculation details.
@@ -33,6 +34,7 @@ Response:
       "is_running": false,
       "url": "http://localhost:8000/v1/calc/3"}]
 
+
 #### GET /v1/calc/:calc_id/status
 
 Return the calculation status (the same content of `/v1/calc/list`) for the given `calc_id`.
@@ -47,6 +49,7 @@ Response:
       "job_type": "hazard",
       "is_running": true,
       "url": "http://localhost:8000/v1/calc/1"}
+
 
 #### GET /v1/calc/:calc_id
 
@@ -81,6 +84,7 @@ Response:
      "uniform_hazard_spectra": false,
      "width_of_mfd_bin": 0.2}
 
+
 #### GET /v1/calc/:calc_id/traceback
 
 Get the calculation traceback for the given `calc_id` as a list of
@@ -92,6 +96,7 @@ Response:
 
 A list of error lines extracted from the log. If the calculation was
 successfull, the list is empty.
+
 
 #### GET /v1/calc/:calc_id/results
 
@@ -189,6 +194,7 @@ a JSON object, containing:
 #### POST /v1/ajax_login/
 
 Attempt to login, given the parameters `username` and `password`
+
 
 #### POST /v1/ajax_logout/
 
