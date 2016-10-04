@@ -20,3 +20,5 @@ http://ftp.openquake.org/python-new-wheels/decorator-4.0.6-py2.py3-none-any.whl
 http://ftp.openquake.org/python-new-wheels/funcsigs-1.0.2-py2.py3-none-any.whl
 http://ftp.openquake.org/python-new-wheels/pbr-1.8.0-py2.py3-none-any.whl
 http://ftp.openquake.org/python-new-wheels/six-1.10.0-py2.py3-none-any.whl
+# Experimental wheel
+http://ftp.openquake.org/python-new-wheels/Rtree-0.8.2-cp27-cp27mu-manylinux1_x86_64.whl
