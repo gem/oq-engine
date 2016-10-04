@@ -106,15 +106,16 @@ def compute_losses(ssm, sitecol, assetcol, riskmodel,
     :returns: a List containing the losses by taxonomy and some attributes
     """
     [grp] = ssm.src_groups
-    [(grp_id, ruptures)] = compute_ruptures(
-        grp, sitecol, None, monitor).items()
+    res = List()
+    res.ruptures_by_grp = compute_ruptures(grp, sitecol, None, monitor)
+    [(grp_id, ruptures)] = res.ruptures_by_grp.items()
     rlzs_assoc = ssm.info.get_rlzs_assoc()
     num_rlzs = len(rlzs_assoc.realizations)
     ri = riskinput.RiskInputFromRuptures(
         DEFAULT_TRT, imts, sitecol, ruptures, trunc_level, correl_model,
         min_iml)
-    res = List([losses_by_taxonomy(
-        ri, riskmodel, rlzs_assoc, assetcol, monitor)])
+    res.append(
+        losses_by_taxonomy(ri, riskmodel, rlzs_assoc, assetcol, monitor))
     res.sm_id = ssm.sm_id
     res.num_events = len(ri.eids)
     start = res.sm_id * num_rlzs

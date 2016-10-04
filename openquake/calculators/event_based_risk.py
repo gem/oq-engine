@@ -846,6 +846,8 @@ class EbriskCalculator(base.RiskCalculator):
             dset1[:, :, start:stop] = taxlosses
             if avg_losses:
                 dset2[:, :, start:stop] = avglosses
+            if hasattr(res, 'ruptures_by_grp'):
+                save_ruptures(self, res.ruptures_by_grp)
             num_events += res.num_events
         if avg_losses:
             self.datastore['avglosses'] = avglosses
