@@ -237,21 +237,15 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.N = len(self.assetcol)
         self.E = len(self.datastore['events'])
         logging.info('Populating the risk inputs')
-        rlzs_by_tr_id = self.rlzs_assoc.get_rlzs_by_grp_id()
-        num_rlzs = {t: len(rlzs) for t, rlzs in rlzs_by_tr_id.items()}
-        num_assets = {sid: len(self.assets_by_site[sid])
-                      for sid in self.sitecol.sids}
         all_ruptures = []
         preprecalc = getattr(self.precalc, 'precalc', None)
         if preprecalc:  # the ruptures are already in memory
             for grp_id, sesruptures in preprecalc.result.items():
                 for sr in sesruptures:
-                    sr.set_weight(num_rlzs, num_assets)
                     all_ruptures.append(sr)
         else:  # read the ruptures from the datastore
             for serial in self.datastore['sescollection']:
                 rup = self.datastore['sescollection/' + serial]
-                rup.set_weight(num_rlzs, num_assets)
                 all_ruptures.append(rup)
         all_ruptures.sort(key=operator.attrgetter('serial'))
         if not self.riskmodel.covs:
