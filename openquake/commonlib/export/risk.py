@@ -182,11 +182,11 @@ def export_agg_losses_ebr(ekey, dstore):
     for rlz in rlzs:
         dest = dstore.build_fname('agg_losses', rlz, 'csv')
         eids = set()
-        for rlzname in agg_losses:
-            for loss_type in agg_losses[rlzname]:
-                dset = agg_losses['%s/%s' % (rlzname, loss_type)]
-                insured_losses = bool(dset.dtype['loss'].shape)
-                eids.update(dset['rup_id'])
+        rlzname = 'rlz-%03d' % rlz.ordinal
+        for loss_type in agg_losses[rlzname]:
+            dset = agg_losses['%s/%s' % (rlzname, loss_type)]
+            insured_losses = bool(dset.dtype['loss'].shape)
+            eids.update(dset['rup_id'])
         eids = sorted(eids)
         eid2idx = dict(zip(eids, range(len(eids))))
         elt = numpy.zeros(len(eids), elt_dt)
