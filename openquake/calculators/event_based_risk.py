@@ -752,7 +752,8 @@ class EbriskCalculator(base.RiskCalculator):
                 allargs.append((ri, riskmodel, rlzs_assoc, assetcol, monitor))
         taskname = '%s#%d' % (losses_by_taxonomy.__name__, ssm.sm_id + 1)
         smap = starmap(losses_by_taxonomy, allargs, name=taskname)
-        attrs = dict(num_ruptures=num_ruptures,
+        attrs = dict(num_ruptures={
+            sg_id: len(rupts) for sg_id, rupts in ruptures_by_grp.items()},
                      num_events=num_events,
                      num_rlzs=len(rlzs_assoc.realizations),
                      sm_id=ssm.sm_id)
@@ -793,19 +794,23 @@ class EbriskCalculator(base.RiskCalculator):
         """
         num_rlzs = 0
         allres = []
+        source_models = self.csm.info.source_models
         with self.monitor('sending riskinputs', autoflush=True):
             self.eid = 0
-            for args in self.gen_args():
+            for i, args in enumerate(self.gen_args()):
                 smap, attrs = self.build_starmap(*args)
                 logging.info(
                     'Generated %d/%d ruptures/events for source model #%d',
-                    attrs['num_ruptures'], attrs['num_events'],
+                    sum(attrs['num_ruptures'].values()), attrs['num_events'],
                     attrs['sm_id'] + 1)
                 res = smap.submit_all()
                 vars(res).update(attrs)
                 allres.append(res)
                 res.rlz_slice = slice(num_rlzs, num_rlzs + res.num_rlzs)
                 num_rlzs += res.num_rlzs
+                for sg in source_models[i].src_groups:
+                    sg.eff_ruptures = res.num_ruptures[sg.id]
+        self.datastore['csm_info'] = self.csm.info
         num_events = self.save_results(allres, num_rlzs)
         self.save_data_transfer(parallel.IterResult.sum(allres))
         return num_events
