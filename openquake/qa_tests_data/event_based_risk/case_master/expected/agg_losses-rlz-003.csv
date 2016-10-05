@@ -1,2 +1,2 @@
 event_tag,event_set,business_interruption,contents,nonstructural,occupants:float32,structural
-trt=02~ses=0002~src=1~rup=522-01,2,5.99129E+02,3.95372E+03,5.32718E+03,1.19826E-02,1.81216E+03
+grp=02~ses=0002~src=1~rup=522-01,2,5.99129E+02,3.95372E+03,5.32718E+03,1.19826E-02,1.81216E+03
