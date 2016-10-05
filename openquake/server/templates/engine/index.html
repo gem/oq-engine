@@ -8,7 +8,6 @@
                     <input type="hidden" name="calculation_type" value="hazard"/>
                     <label for="hazard_archive">Run a Calculation</label>
                     <input id="hazard_archive" type="file" name="archive" style="display: none;" />
-                    <input type="hidden" name="foreign_calculation_id" value=""/>
                     <input type="hidden" name="database" value="openquake2"/>
                   </form>
                 </li>
@@ -81,7 +80,6 @@
               <div class="fileinput-new" data-provides="fileinput" style="margin: 2px 0 2px 0">
                 <span class="btn btn-default btn-sm btn-file"><span class="fileinput-new">Run Risk</span><input type="file" name="archive"/></span>
               </div>
-              <input type="hidden" name="foreign_calculation_id" value=""/>
               <input type="hidden" name="hazard_job_id" value="<%= calc.get('id') %>"/>
               <input type="hidden" name="database" value="openquake2"/>
               </form>
