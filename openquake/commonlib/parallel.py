@@ -39,10 +39,10 @@ from openquake.baselib.general import (
     block_splitter, split_in_blocks, AccumDict, humansize)
 
 executor = ProcessPoolExecutor()
-# the num_tasks_hint is chosen to be 2 times bigger than the name of
+# the num_tasks_hint is chosen to be 3 times bigger than the name of
 # cores; it is a heuristic number to get a good distribution;
 # it has no more significance than that
-executor.num_tasks_hint = executor._max_workers * 2
+executor.num_tasks_hint = executor._max_workers * 3
 
 OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
 
