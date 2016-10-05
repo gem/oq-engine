@@ -183,6 +183,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_master_ebr(self):
         out = self.run_calc(case_master.__file__, 'job.ini',
                             calculation_mode='ebrisk',
+                            investigation_time='1',
                             insured_losses='false',
                             exports='csv')
         for fname in out['losses_by_taxon', 'csv']:
