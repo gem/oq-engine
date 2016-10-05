@@ -633,13 +633,11 @@ class CompositeSourceModel(collections.Sequence):
             src.serial = rup_serial[start:start + nr]
             start += nr
 
-    def get_maxweight(self, concurrent_tasks, sitecol=()):
+    def get_maxweight(self, concurrent_tasks):
         """
         Return an appropriate maxweight for use in the block_splitter
         """
         ct = concurrent_tasks or 1
-        if len(sitecol) > 10000:  # hackish correction for lots of sites
-            ct *= math.sqrt(len(sitecol) / 10000)
         return max(math.ceil(self.weight / ct), MAXWEIGHT)
 
     def __repr__(self):

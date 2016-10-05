@@ -326,7 +326,7 @@ class PSHACalculator(base.HazardCalculator):
         :yields: (sources, sites, gsims, monitor) tuples
         """
         ngroups = len(src_groups)
-        maxweight = self.csm.get_maxweight(oq.concurrent_tasks, self.sitecol)
+        maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
         logging.info('Using a maxweight of %d', maxweight)
         nheavy = nlight = 0
         self.infos = {}
