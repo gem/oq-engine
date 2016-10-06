@@ -483,6 +483,13 @@ class CompositionInfo(object):
                     dic[rlz] = sm.name
         return dic
 
+    def get_sm_by_grp(self):
+        """
+        :returns: a dictionary grp_id -> sm_id
+        """
+        return {grp.id: sm.ordinal for sm in self.source_models
+                for grp in sm.src_groups}
+
     def get_trt(self, src_group_id):
         """
         Return the TRT string for the given src_group_id
