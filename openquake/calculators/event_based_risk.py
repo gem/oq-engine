@@ -790,7 +790,8 @@ class EbriskCalculator(base.RiskCalculator):
         allres = []
         source_models = self.csm.info.source_models
         with self.monitor('sending riskinputs', autoflush=True):
-            self.eid = 0
+            self.sm_by_grp = self.csm.info.get_sm_by_grp()
+            self.eid = collections.Counter()  # sm_id -> event_id
             for i, args in enumerate(self.gen_args()):
                 smap, attrs = self.build_starmap(*args)
                 logging.info(

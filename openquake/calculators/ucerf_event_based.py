@@ -19,12 +19,13 @@
 import os
 import copy
 import time
+import math
 import os.path
 import logging
-import math
 import random
 import socket
 import functools
+import collections
 import h5py
 import numpy
 
@@ -781,13 +782,13 @@ class UCERFEventBasedCalculator(event_based.EventBasedCalculator):
             source_models.append(sm)
         self.csm = source.CompositeSourceModel(
             self.gsim_lt, self.smlt, source_models, set_weight=False)
-        self.datastore['csm_info'] = csm_info = self.csm.info
+        self.datastore['csm_info'] = self.csm.info
         logging.info('Found %d x %d logic tree branches', len(branches),
                      self.gsim_lt.get_num_paths())
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
         self.rup_data = {}
         self.infos = []
-        self.eid = {sm.ordinal: 0 for sm in csm_info.source_models}
+        self.eid = collections.Counter()  # sm_id -> event_id
         self.sm_by_grp = self.csm.info.get_sm_by_grp()
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
