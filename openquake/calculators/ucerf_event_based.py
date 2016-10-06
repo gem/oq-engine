@@ -389,7 +389,7 @@ def prefilter_background_model(hdf5, branch_key, sites, integration_distance,
     """
     Identify those points within the integration distance
     :param sites:
-        Sites for consideration (can be None!)
+        Sites under consideration
     :param float integration_distance:
         Maximum distance from rupture to site for consideration
     :param msr:
@@ -401,9 +401,6 @@ def prefilter_background_model(hdf5, branch_key, sites, integration_distance,
     """
     bg_locations = hdf5["Grid/Locations"][:].astype("float64")
     n_locations = bg_locations.shape[0]
-    if not sites:
-        # Apply no filtering - all sources valid
-        return numpy.ones(n_locations, dtype=bool)
     distances = min_distance(sites.lons, sites.lats,
                              numpy.zeros_like(sites.lons),
                              bg_locations[:, 0],
