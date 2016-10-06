@@ -1,2 +1,2 @@
-trt=00~ses=0237~src=1~rup=725-01~sample=1,0,1.426769E-01
-trt=00~ses=0342~src=1~rup=49-01~sample=1,0,7.652576E-02
+grp=00~ses=0237~src=1~rup=725-01~sample=1,0,1.426769E-01
+grp=00~ses=0342~src=1~rup=49-01~sample=1,0,7.652576E-02

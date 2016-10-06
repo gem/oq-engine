@@ -1,3 +1,3 @@
-trt=00~ses=0130~src=1~rup=7-01~sample=2,0,1.165513E-02
-trt=00~ses=0198~src=1~rup=286-01~sample=2,0,1.665869E-02
-trt=00~ses=0289~src=1~rup=577-01~sample=2,0,2.417892E-02
+grp=00~ses=0130~src=1~rup=7-01~sample=2,0,1.165513E-02
+grp=00~ses=0198~src=1~rup=286-01~sample=2,0,1.665869E-02
+grp=00~ses=0289~src=1~rup=577-01~sample=2,0,2.417892E-02
