@@ -32,7 +32,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
 from openquake.commonlib.export import export
 from openquake.commonlib.writers import write_csv
-from openquake.commonlib import writers, hazard_writers, util, readinput
+from openquake.commonlib import writers, hazard_writers, util
 from openquake.risklib.riskinput import GmfGetter
 from openquake.commonlib import calc
 
@@ -58,17 +58,20 @@ def get_mesh(sitecol, complete=True):
     return mesh
 
 
-def build_etags(stored_events):
+def build_etags(stored_events, sm_ids=()):
     """
     An array of tags for the underlying seismic events
     """
+    sm_ids = sm_ids or sorted(stored_events)
     tags = []
-    for (serial, eid, ses, occ, sampleid, grp_id, source_id) in stored_events:
-        tag = b'grp=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
-            grp_id, ses, source_id, serial, occ)
-        if sampleid > 0:
-            tag += b'~sample=%d' % sampleid
-        tags.append(tag)
+    for sm_id in sm_ids:
+        events = stored_events[sm_id]
+        for (serial, eid, ses, occ, sampleid, grp_id, source_id) in events:
+            tag = b'grp=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
+                grp_id, ses, source_id, serial, occ)
+            if sampleid > 0:
+                tag += b'~sample=%d' % sampleid
+            tags.append(tag)
     return numpy.array(tags)
 
 
