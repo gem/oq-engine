@@ -680,7 +680,6 @@ def compute_ruptures_gmfs_curves(
     res = AccumDict()
     res.calc_times = AccumDict()
     serial = 1
-    filter_mon = monitor('get_background_sids', measuremem=False)
     event_mon = monitor('sampling ruptures', measuremem=False)
     res['ruptures'] = rupdic = AccumDict()
     rupdic.num_events = 0
@@ -690,10 +689,6 @@ def compute_ruptures_gmfs_curves(
         [grp] = source_model.src_groups  # one source group per source model
         [ucerf] = grp  # one source per source group
         t0 = time.time()
-        with filter_mon:
-            ucerf.get_background_sids(
-                ucerf.branch_id, sitecol, integration_distance)
-
         # set the seed before calling generate_event_set
         numpy.random.seed(oq.random_seed + grp_id)
         ses_ruptures = []
