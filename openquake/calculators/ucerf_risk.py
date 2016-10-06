@@ -42,14 +42,14 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     res = AccumDict()
     res.calc_times = AccumDict()
     serial = 1
-    filter_mon = monitor('update_background_site_filter', measuremem=False)
+    filter_mon = monitor('get_background_sids', measuremem=False)
     event_mon = monitor('sampling ruptures', measuremem=False)
     res.num_events = 0
     res.trt = DEFAULT_TRT
 
     t0 = time.time()
     with filter_mon:
-        src.update_background_site_filter(
+        src.get_background_sids(
             src.branch_id, sitecol, integration_distance)
 
     # set the seed before calling generate_event_set
