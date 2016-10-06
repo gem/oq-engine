@@ -1,5 +1,5 @@
-trt=00~ses=0092~src=1~rup=47-01~sample=1,0,2.406177E-01
-trt=00~ses=0230~src=1~rup=5-01~sample=1,0,2.358650E-01
-trt=00~ses=0298~src=1~rup=284-01~sample=1,0,2.692880E-01
-trt=00~ses=0389~src=1~rup=575-01~sample=1,0,3.092037E-01
-trt=00~ses=0566~src=1~rup=76-01~sample=1,0,2.439550E-01
+grp=00~ses=0092~src=1~rup=47-01~sample=1,0,2.406177E-01
+grp=00~ses=0230~src=1~rup=5-01~sample=1,0,2.358650E-01
+grp=00~ses=0298~src=1~rup=284-01~sample=1,0,2.692880E-01
+grp=00~ses=0389~src=1~rup=575-01~sample=1,0,3.092037E-01
+grp=00~ses=0566~src=1~rup=76-01~sample=1,0,2.439550E-01

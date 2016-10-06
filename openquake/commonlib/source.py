@@ -19,6 +19,7 @@
 from __future__ import division
 import re
 import copy
+import math
 import logging
 import operator
 import collections
@@ -32,6 +33,7 @@ from openquake.baselib.general import groupby, group_array
 from openquake.commonlib import logictree, sourceconverter
 from openquake.commonlib import nrml, node
 
+MAXWEIGHT = 200  # tuned by M. Simionato
 MAX_INT = 2 ** 31 - 1
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -538,6 +540,8 @@ class CompositeSourceModel(collections.Sequence):
         new = self.__class__(
             self.gsim_lt, self.source_model_lt, [sm], set_weight=False)
         new.sm_id = sm_id
+        new.weight = sum(src.weight for sg in sm.src_groups
+                         for src in sg.sources)
         return new
 
     def filter(self, ss_filter):
@@ -628,6 +632,15 @@ class CompositeSourceModel(collections.Sequence):
             nr = src.num_ruptures
             src.serial = rup_serial[start:start + nr]
             start += nr
+
+    def get_maxweight(self, concurrent_tasks, sitecol=()):
+        """
+        Return an appropriate maxweight for use in the block_splitter
+        """
+        ct = concurrent_tasks or 1
+        if len(sitecol) > 10000:  # hackish correction for lots of sites
+            ct *= math.sqrt(len(sitecol) / 10000)
+        return max(math.ceil(self.weight / ct), MAXWEIGHT)
 
     def __repr__(self):
         """
