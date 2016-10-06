@@ -19,12 +19,13 @@
 import os
 import copy
 import time
+import math
 import os.path
 import logging
-import math
 import random
 import socket
 import functools
+import collections
 import h5py
 import numpy
 
@@ -778,7 +779,8 @@ class UCERFEventBasedCalculator(event_based.EventBasedCalculator):
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
         self.rup_data = {}
         self.infos = []
-        self.eid = 0
+        self.eid = collections.Counter()  # sm_id -> event_id
+        self.sm_by_grp = self.csm.info.get_sm_by_grp()
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
 
