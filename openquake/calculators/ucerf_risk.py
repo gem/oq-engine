@@ -79,6 +79,10 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     return res
 
 
+class List(list):
+    """Trivial container returned by compute_losses"""
+
+
 def compute_losses(ssm, sitecol, assetcol, riskmodel,
                    imts, trunc_level, correl_model, min_iml, monitor):
     """
@@ -93,17 +97,24 @@ def compute_losses(ssm, sitecol, assetcol, riskmodel,
     :param correl_model: correlation model
     :param min_iml: vector of minimum intensities, one per IMT
     :param monitor: a Monitor instance
-    :returns: an AccumDict grp_id -> losses by taxonomy
+    :returns: a List containing the losses by taxonomy and some attributes
     """
     [grp] = ssm.src_groups
-    [(grp_id, ruptures)] = compute_ruptures(
-        grp, sitecol, None, monitor).items()
+    res = List()
+    res.ruptures_by_grp = compute_ruptures(grp, sitecol, None, monitor)
+    [(grp_id, ruptures)] = res.ruptures_by_grp.items()
     rlzs_assoc = ssm.info.get_rlzs_assoc()
+    num_rlzs = len(rlzs_assoc.realizations)
     ri = riskinput.RiskInputFromRuptures(
         DEFAULT_TRT, imts, sitecol, ruptures, trunc_level, correl_model,
         min_iml)
-    return AccumDict({grp_id: losses_by_taxonomy(
-        ri, riskmodel, rlzs_assoc, assetcol, monitor)})
+    res.append(
+        losses_by_taxonomy(ri, riskmodel, rlzs_assoc, assetcol, monitor))
+    res.sm_id = ssm.sm_id
+    res.num_events = len(ri.eids)
+    start = res.sm_id * num_rlzs
+    res.rlz_slice = slice(start, start + num_rlzs)
+    return res
 
 
 @base.calculators.add('ucerf_risk')
@@ -123,7 +134,8 @@ class UCERFRiskFastCalculator(EbriskCalculator):
     pre_execute = UCERFEventBasedCalculator.__dict__['pre_execute']
 
     def execute(self):
-        res = parallel.starmap(compute_losses, self.gen_args()).submit_all()
-        losses = sum(res)
-        self.save_data_transfer(res)
-        return losses
+        num_rlzs = len(self.rlzs_assoc.realizations)
+        allres = parallel.starmap(compute_losses, self.gen_args()).submit_all()
+        num_events = self.save_results(allres, num_rlzs)
+        self.save_data_transfer(allres)
+        return num_events
