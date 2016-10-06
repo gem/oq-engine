@@ -1,4 +1,10 @@
+  [Paolo Tormene]
+  * Added to the engine server the possibility to log in and out
+    programmatically by means of HTTP POST requests
+
   [Michele Simionato]
+  * Optimized the computation of the event loss table
+  * Introduced two new calculators ucerf_risk and ucerf_risk_fast
   * Optimized the memory consumption of the event based risk calculators
   * Extended the `oq show` command to work in a multi-user environment
   * Improved the test coverage of the exports in the WebUI
