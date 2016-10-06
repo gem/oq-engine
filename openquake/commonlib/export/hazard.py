@@ -607,6 +607,7 @@ def export_gmf(ekey, dstore):
     sitecol = dstore['sitecol']
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     oq = dstore['oqparam']
+    events = dstore['events']
     investigation_time = (None if oq.calculation_mode == 'scenario'
                           else oq.investigation_time)
     fmt = ekey[-1]
@@ -621,8 +622,11 @@ def export_gmf(ekey, dstore):
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
     for sm_id, rlzs in sorted(rlzs_assoc.rlzs_by_smodel.items()):
-        if not n_gmfs:
-            etags = build_etags(dstore['events'], ['sm-%04d' % sm_id])
+        key = 'sm-%04d' % sm_id
+        if not n_gmfs:  # event based
+            if key not in events:  # source model producing zero ruptures
+                continue
+            etags = build_etags(events, [key])
         for rlz in rlzs:
             if n_gmfs:
                 # TODO: change to use the prefix rlz-
