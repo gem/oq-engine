@@ -15,24 +15,16 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-import os
-import re
 from nose.plugins.attrib import attr
 
 from openquake.baselib.general import writetmp
 from openquake.calculators.views import view
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.commonlib.export import export
 from openquake.calculators.tests import check_platform
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_master, case_miriam,
     occupants)
-
-
-def strip_calc_id(fname):
-    name = os.path.basename(fname)
-    return re.sub('_\d+\.', '.', name)
 
 
 class EventBasedRiskTestCase(CalculatorTestCase):
