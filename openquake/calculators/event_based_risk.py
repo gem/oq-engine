@@ -235,7 +235,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         oq = self.oqparam
         correl_model = oq.get_correl_model()
         self.N = len(self.assetcol)
-        self.E = len(self.datastore['events'])
+        self.E = sum(len(v) for v in self.datastore['events'].values())
         logging.info('Populating the risk inputs')
         all_ruptures = []
         preprecalc = getattr(self.precalc, 'precalc', None)
@@ -275,7 +275,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 oq.investigation_time * oq.ses_per_logic_tree_path)
 
         self.N = N = len(self.assetcol)
-        self.E = len(self.datastore['events'])
+        self.E = sum(len(v) for v in self.datastore['events'].values())
 
         # average losses, stored in a composite array of shape N, R
         self.avg_losses = numpy.zeros((N, R), oq.loss_dt())
@@ -790,7 +790,8 @@ class EbriskCalculator(base.RiskCalculator):
         allres = []
         source_models = self.csm.info.source_models
         with self.monitor('sending riskinputs', autoflush=True):
-            self.eid = 0
+            self.sm_by_grp = self.csm.info.get_sm_by_grp()
+            self.eid = collections.Counter()  # sm_id -> event_id
             for i, args in enumerate(self.gen_args()):
                 smap, attrs = self.build_starmap(*args)
                 logging.info(

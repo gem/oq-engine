@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import logging
 import unittest
 import platform
@@ -30,6 +31,11 @@ from openquake.commonlib import readinput, oqvalidation, datastore
 
 class DifferentFiles(Exception):
     pass
+
+
+def strip_calc_id(fname):
+    name = os.path.basename(fname)
+    return re.sub('_\d+\.', '.', name)
 
 
 def check_platform(*supported):
