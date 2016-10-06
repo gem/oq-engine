@@ -533,7 +533,8 @@ class EventBasedCalculator(ClassicalCalculator):
         if res['gmfcoll'] is not None:
             with sav_mon:
                 for sid, array in res['gmfcoll'].items():
-                    self.datastore.extend('gmf_data/sid-%04d' % sid, array)
+                    if len(array):
+                        self.datastore.extend('gmf_data/sid-%04d' % sid, array)
         slicedic = self.oqparam.imtls.slicedic
         with agg_mon:
             for key, poes in res['hcurves'].items():
