@@ -607,7 +607,6 @@ def export_gmf(ekey, dstore):
     sitecol = dstore['sitecol']
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     oq = dstore['oqparam']
-    events = dstore['events']
     investigation_time = (None if oq.calculation_mode == 'scenario'
                           else oq.investigation_time)
     fmt = ekey[-1]
@@ -624,6 +623,7 @@ def export_gmf(ekey, dstore):
     for sm_id, rlzs in sorted(rlzs_assoc.rlzs_by_smodel.items()):
         key = 'sm-%04d' % sm_id
         if not n_gmfs:  # event based
+            events = dstore['events']
             if key not in events:  # source model producing zero ruptures
                 continue
             etags = build_etags(events, [key])
