@@ -65,11 +65,10 @@ class UCERFControl(UCERFSESControl):
         """
         if not self.idx_set:
             self.idx_set = self.build_idx_set(branch_id)
-        self.update_background_site_filter(
+        background_idx = self.get_background_sids(
             branch_id, sites, integration_distance)
 
         with h5py.File(self.source_file, "r") as hdf5:
-            background_idx = np.where(self.background_idx)[0].tolist()
             grid_loc = "/".join(["Grid", self.idx_set["grid_key"]])
             mags = hdf5[grid_loc + "/Magnitude"][:]
             mmax = hdf5[grid_loc + "/MMax"][background_idx]
