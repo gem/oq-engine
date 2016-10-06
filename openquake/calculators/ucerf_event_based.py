@@ -573,7 +573,7 @@ class UCERFSESControl(object):
         Generates the event set corresponding to a particular branch
         """
         idx_set = self.build_idx_set(branch_id)
-        background_idx = self.get_background_sids(
+        background_sids = self.get_background_sids(
             branch_id, sites, integration_distance)
 
         # get rates from file
@@ -599,7 +599,7 @@ class UCERFSESControl(object):
 
             # sample background sources
             background_ruptures, background_n_occ = sample_background_model(
-                hdf5, idx_set["grid_key"], self.tom, background_idx,
+                hdf5, idx_set["grid_key"], self.tom, background_sids,
                 self.min_mag, self.npd, self.hdd, self.usd, self.lsd, self.msr,
                 self.aspect, self.tectonic_region_type)
             ruptures.extend(background_ruptures)
