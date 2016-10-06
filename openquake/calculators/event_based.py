@@ -134,7 +134,7 @@ class EBRupture(object):
         self.source_id = source_id
         self.grp_id = grp_id
         self.serial = serial
-        self.weight = 1
+        self.weight = len(indices) * len(events)
 
     @property
     def etags(self):
