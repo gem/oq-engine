@@ -538,7 +538,7 @@ class UCERFSESControl(object):
         return self.min_mag, None
 
     def get_background_sids(self, branch_key, sites,
-                                      integration_distance=1000.):
+                            integration_distance=1000.):
         """
         We can apply the filtering of the background sites as a pre-processing
         step - this is done here rather than in the sampling of the ruptures
