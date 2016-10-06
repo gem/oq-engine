@@ -6,6 +6,7 @@ oq engine server provides a series of REST API methods for running calculations,
 
 All responses are JSON, unless otherwise noted.
 
+
 #### GET /v1/calc/list
 
 List the available calculations. The [url](#get-v1calccalc_id) in each item of the response can be followed to retrieve complete calculation details.
@@ -33,6 +34,7 @@ Response:
       "is_running": false,
       "url": "http://localhost:8000/v1/calc/3"}]
 
+
 #### GET /v1/calc/:calc_id/status
 
 Return the calculation status (the same content of `/v1/calc/list`) for the given `calc_id`.
@@ -47,6 +49,7 @@ Response:
       "job_type": "hazard",
       "is_running": true,
       "url": "http://localhost:8000/v1/calc/1"}
+
 
 #### GET /v1/calc/:calc_id
 
@@ -81,6 +84,7 @@ Response:
      "uniform_hazard_spectra": false,
      "width_of_mfd_bin": 0.2}
 
+
 #### GET /v1/calc/:calc_id/traceback
 
 Get the calculation traceback for the given `calc_id` as a list of
@@ -92,6 +96,7 @@ Response:
 
 A list of error lines extracted from the log. If the calculation was
 successfull, the list is empty.
+
 
 #### GET /v1/calc/:calc_id/results
 
@@ -148,6 +153,11 @@ Response:
 The number of lines of log
 
 
+#### POST /v1/calc/:calc_id/remove
+
+Remove the calculation specified by the parameter `calc_id`, by setting the field oq_job.relevant to False.
+
+
 #### POST /v1/calc/run
 
 Run a new calculation with the specified job config file, input models, and other parameters.
@@ -159,8 +169,8 @@ Files:
 
 Parameters:
 
-    * hazard_calc: the hazard calculation ID upon which to run the risk calculation; specify this or hazard_result (only for risk calculations)
-    * hazard_result: the hazard results ID upon which to run the risk calculation; specify this or hazard_calc (only for risk calculations)
+    * hazard_job_id: the hazard calculation ID upon which to run the risk calculation; specify this or hazard_result (only for risk calculations)
+    * hazard_result: the hazard results ID upon which to run the risk calculation; specify this or hazard_job_id (only for risk calculations)
 
 Response: Redirects to [/v1/calc/:calc_id](#get-v1calchazardcalc_id), where `calc_id` is the ID of the newly created calculation.
 
@@ -179,3 +189,19 @@ a JSON object, containing:
     * valid: a boolean indicating if the provided text is a valid NRML
     * error_msg: the error message, if any error was found (None otherwise)
     * error_line: line of the given XML where the error was found (None if no error was found or if it was not a validation error)
+
+
+#### POST /v1/ajax_login/
+
+Attempt to login, given the parameters `username` and `password`
+
+
+#### POST /v1/ajax_logout/
+
+Logout
+
+
+#### GET /v1/version/
+
+Return a string with the openquake.engine version
+
