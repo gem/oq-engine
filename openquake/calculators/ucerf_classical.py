@@ -65,17 +65,17 @@ class UCERFControl(UCERFSESControl):
         """
         if not self.idx_set:
             self.idx_set = self.build_idx_set(branch_id)
-        background_idx = self.get_background_sids(
+        background_sids = self.get_background_sids(
             branch_id, sites, integration_distance)
 
         with h5py.File(self.source_file, "r") as hdf5:
             grid_loc = "/".join(["Grid", self.idx_set["grid_key"]])
             mags = hdf5[grid_loc + "/Magnitude"][:]
-            mmax = hdf5[grid_loc + "/MMax"][background_idx]
-            rates = hdf5[grid_loc + "/RateArray"][background_idx, :]
-            locations = hdf5["Grid/Locations"][background_idx, :]
+            mmax = hdf5[grid_loc + "/MMax"][background_sids]
+            rates = hdf5[grid_loc + "/RateArray"][background_sids, :]
+            locations = hdf5["Grid/Locations"][background_sids, :]
             sources = []
-            for i, bg_idx in enumerate(background_idx):
+            for i, bg_idx in enumerate(background_sids):
                 src_id = "_".join([self.idx_set["grid_key"], str(bg_idx)])
                 src_name = "|".join([self.idx_set["total_key"], str(bg_idx)])
                 # Get MFD
