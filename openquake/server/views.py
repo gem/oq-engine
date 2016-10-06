@@ -35,12 +35,12 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.contrib.auth import authenticate, login, logout
 try:
     from django.http import FileResponse  # Django >= 1.8
 except ImportError:
     from django.http import StreamingHttpResponse as FileResponse
 from django.core.servers.basehttp import FileWrapper
-
 
 from openquake.baselib.general import groupby, writetmp
 from openquake.baselib.python3compat import unicode
@@ -132,6 +132,43 @@ def _prepare_job(request, hazard_job_id, candidates):
         return inifiles
     # else extract the files from the archive into temp_dir
     return readinput.extract_from_zip(arch, candidates)
+
+
+# @cross_domain_ajax
+@require_http_methods(['POST'])
+def ajax_login(request):
+    """
+    Accept a POST request to login.
+
+    :param request:
+        `django.http.HttpRequest` object, containing mandatory parameters
+        username and password required.
+    """
+    username = request.POST['username']
+    password = request.POST['password']
+    user = authenticate(username=username, password=password)
+    if user is not None:
+        if user.is_active:
+            login(request, user)
+            return HttpResponse(content='Successful login',
+                                content_type='text/plain', status=200)
+        else:
+            return HttpResponse(content='Disabled account',
+                                content_type='text/plain', status=403)
+    else:
+        return HttpResponse(content='Invalid login',
+                            content_type='text/plain', status=403)
+
+
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def ajax_logout(request):
+    """
+    Accept a POST request to logout.
+    """
+    logout(request)
+    return HttpResponse(content='Successful logout',
+                        content_type='text/plain', status=200)
 
 
 @cross_domain_ajax
@@ -312,6 +349,12 @@ def run_calc(request):
 
     :param request:
         a `django.http.HttpRequest` object.
+        If the request has the attribute `hazard_job_id`, the results of the
+        specified hazard calculations will be re-used as input by the risk
+        calculation.
+        The request also needs to contain the files needed to perform the
+        calculation. They can be uploaded as separate files, or zipped
+        together.
     """
     hazard_job_id = request.POST.get('hazard_job_id')
 
