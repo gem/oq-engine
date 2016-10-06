@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-import math
 import logging
 import operator
 import collections
@@ -39,7 +38,6 @@ U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
 
-MAXWEIGHT = 200  # tuned by M. Simionato
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
@@ -328,16 +326,13 @@ class PSHACalculator(base.HazardCalculator):
         :yields: (sources, sites, gsims, monitor) tuples
         """
         ngroups = len(src_groups)
-        ct = oq.concurrent_tasks or 1
-        if len(self.sitecol) > 10000:  # hackish correction for lots of sites
-            ct *= math.sqrt(len(self.sitecol) / 10000)
-        maxweight = max(math.ceil(self.csm.weight / ct), MAXWEIGHT)
+        maxweight = self.csm.get_maxweight(oq.concurrent_tasks, self.sitecol)
         logging.info('Using a maxweight of %d', maxweight)
         nheavy = nlight = 0
         self.infos = {}
         for sg in src_groups:
-            logging.info('Sending source group #%d (%s) of %d',
-                         sg.id + 1, sg.trt, ngroups)
+            logging.info('Sending source group #%d of %d (%s, %d sources)',
+                         sg.id + 1, ngroups, sg.trt, len(sg.sources))
             gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
             if oq.poes_disagg:  # only for disaggregation
                 monitor.sm_id = self.rlzs_assoc.sm_ids[sg.id]
