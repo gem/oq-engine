@@ -614,41 +614,42 @@ def export_gmf(ekey, dstore):
     if n_gmfs:
         etags = numpy.array(
             sorted([b'scenario-%010d~ses=1' % i for i in range(n_gmfs)]))
-    else:
-        etags = build_etags(dstore['events'])
     gmf_data = dstore['gmf_data']
     nbytes = gmf_data.attrs['nbytes']
     logging.info('Internal size of the GMFs: %s', humansize(nbytes))
     if nbytes > GMF_MAX_SIZE:
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
-    for rlz in rlzs_assoc.realizations:
-        if n_gmfs:
-            # TODO: change to use the prefix rlz-
-            gmf_arr = gmf_data['%04d' % rlz.ordinal].value
-        else:
-            # convert gmf_data in the same format used by scenario
-            arrays = []
-            for sid in sorted(gmf_data):
-                array = get_array(gmf_data[sid].value, rlzi=rlz.ordinal)
-                arr = numpy.zeros(len(array), gmv_dt)
-                arr['sid'] = int(sid[4:])  # has the form 'sid-XXXX'
-                arr['imti'] = array['imti']
-                arr['gmv'] = array['gmv']
-                arr['eid'] = array['eid']
-                arrays.append(arr)
-            gmf_arr = numpy.concatenate(arrays)
-        ruptures = []
-        for eid, gmfa in group_array(gmf_arr, 'eid').items():
-            rup = util.Rupture(etags[eid], sorted(set(gmfa['sid'])))
-            rup.gmfa = gmfa
-            ruptures.append(rup)
-        ruptures.sort(key=operator.attrgetter('etag'))
-        fname = dstore.build_fname('gmf', rlz, fmt)
-        fnames.append(fname)
-        globals()['export_gmf_%s' % fmt](
-            ('gmf', fmt), fname, sitecol, oq.imtls, ruptures, rlz,
-            investigation_time)
+    for sm_id, rlzs in sorted(rlzs_assoc.rlzs_by_smodel.items()):
+        if not n_gmfs:
+            etags = build_etags(dstore['events'], ['sm-%04d' % sm_id])
+        for rlz in rlzs:
+            if n_gmfs:
+                # TODO: change to use the prefix rlz-
+                gmf_arr = gmf_data['%04d' % rlz.ordinal].value
+            else:
+                # convert gmf_data in the same format used by scenario
+                arrays = []
+                for sid in sorted(gmf_data):
+                    array = get_array(gmf_data[sid].value, rlzi=rlz.ordinal)
+                    arr = numpy.zeros(len(array), gmv_dt)
+                    arr['sid'] = int(sid[4:])  # has the form 'sid-XXXX'
+                    arr['imti'] = array['imti']
+                    arr['gmv'] = array['gmv']
+                    arr['eid'] = array['eid']
+                    arrays.append(arr)
+                gmf_arr = numpy.concatenate(arrays)
+            ruptures = []
+            for eid, gmfa in group_array(gmf_arr, 'eid').items():
+                rup = util.Rupture(etags[eid], sorted(set(gmfa['sid'])))
+                rup.gmfa = gmfa
+                ruptures.append(rup)
+            ruptures.sort(key=operator.attrgetter('etag'))
+            fname = dstore.build_fname('gmf', rlz, fmt)
+            fnames.append(fname)
+            globals()['export_gmf_%s' % fmt](
+                ('gmf', fmt), fname, sitecol, oq.imtls, ruptures, rlz,
+                investigation_time)
     return fnames
 
 
