@@ -344,8 +344,8 @@ class PSHACalculator(base.HazardCalculator):
         nheavy = nlight = 0
         self.infos = {}
         for sg in src_groups:
-            logging.info('Sending source group #%d (%s) of %d',
-                         sg.id + 1, sg.trt, ngroups)
+            logging.info('Sending source group #%d of %d (%s, %d sources)',
+                         sg.id + 1, ngroups, sg.trt, len(sg.sources))
             gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
             if oq.poes_disagg:  # only for disaggregation
                 monitor.sm_id = self.rlzs_assoc.sm_ids[sg.id]
