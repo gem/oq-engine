@@ -122,7 +122,7 @@ class CalculatorTestCase(unittest.TestCase):
         columns1 = columns(line1)
         columns2 = columns(line2)
         for c1, c2 in zip(columns1, columns2):
-            numpy.testing.assert_allclose(c1, c2, atol=delta)
+            numpy.testing.assert_allclose(c1, c2, atol=delta, rtol=delta)
 
     def assertEqualFiles(
             self, fname1, fname2, make_comparable=lambda lines: lines,
