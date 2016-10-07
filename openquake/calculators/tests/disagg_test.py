@@ -15,23 +15,27 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
+import sys
 from nose.plugins.attrib import attr
-from openquake.calculators.tests import CalculatorTestCase, check_platform
+from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.disagg import case_1, case_2
 
 
 class DisaggregationTestCase(CalculatorTestCase):
 
     def assert_curves_ok(self, expected, test_dir, delta=None):
-        out = self.run_calc(test_dir, 'job.ini', exports='xml')
+        if sys.platform == 'win32':  # disable concurrency on windows
+            out = self.run_calc(test_dir, 'job.ini', exports='xml',
+                                concurrent_tasks='0')
+        else:
+            out = self.run_calc(test_dir, 'job.ini', exports='xml')
         got = out['disagg', 'xml']
         self.assertEqual(len(expected), len(got))
         for fname, actual in zip(expected, got):
             self.assertEqualFiles(
                 'expected_output/%s' % fname, actual)
 
-    @attr('qa', 'hazard', 'classical')
+    @attr('qa', 'hazard', 'disagg')
     def test_case_1(self):
         self.assert_curves_ok([
             'poe-0.02-rlz-0-PGA-10.1-40.1.xml',
@@ -39,7 +43,7 @@ class DisaggregationTestCase(CalculatorTestCase):
             'poe-0.1-rlz-0-PGA-10.1-40.1.xml',
             'poe-0.1-rlz-0-SA(0.025)-10.1-40.1.xml'], case_1.__file__)
 
-    @attr('qa', 'hazard', 'classical')
+    @attr('qa', 'hazard', 'disagg')
     def test_case_2(self):
         self.assert_curves_ok(
             ['poe-0.02-rlz-0-PGA--3.0--3.0.xml',
