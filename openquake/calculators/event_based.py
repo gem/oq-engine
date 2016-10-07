@@ -134,7 +134,7 @@ class EBRupture(object):
         self.source_id = source_id
         self.grp_id = grp_id
         self.serial = serial
-        self.weight = len(indices) * len(events)  # changed in set_weight
+        self.weight = len(indices) * len(events)
 
     @property
     def etags(self):
@@ -163,19 +163,6 @@ class EBRupture(object):
         How many times the underlying rupture occurs.
         """
         return len(self.events)
-
-    def set_weight(self, num_rlzs_by_grp_id, num_assets_by_site_id):
-        """
-        Set the weight attribute of each rupture with the formula
-        weight = multiplicity * affected_sites * realizations
-
-        :param num_rlzs_by_grp_id: dictionary, possibly empty
-        :param num_assets_by_site_id: dictionary, possibly empty
-        """
-        num_assets = sum(num_assets_by_site_id.get(sid, 1)
-                         for sid in self.indices)
-        self.weight = (len(self.events) * num_assets *
-                       num_rlzs_by_grp_id.get(self.grp_id, 1))
 
     def export(self, mesh):
         """
