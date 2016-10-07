@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the default number of concurrent tasks and increased the
+    relative weight of point sources and area sources
   * Fixed the UCERF event loss table export and added a test for it
   * Optimized the computation of the event loss table
   * Introduced two new calculators ucerf_risk and ucerf_risk_fast
