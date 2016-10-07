@@ -26,7 +26,7 @@ class DisaggregationTestCase(CalculatorTestCase):
     def assert_curves_ok(self, expected, test_dir, delta=None):
         if sys.platform == 'win32':  # disable concurrency on windows
             out = self.run_calc(test_dir, 'job.ini', exports='xml',
-                                concurrent_tasks=0)
+                                concurrent_tasks='0')
         else:
             out = self.run_calc(test_dir, 'job.ini', exports='xml')
         got = out['disagg', 'xml']
