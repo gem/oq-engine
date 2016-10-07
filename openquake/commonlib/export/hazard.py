@@ -32,7 +32,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
 from openquake.commonlib.export import export
 from openquake.commonlib.writers import write_csv
-from openquake.commonlib import writers, hazard_writers, util, readinput
+from openquake.commonlib import writers, hazard_writers, util
 from openquake.risklib.riskinput import GmfGetter
 from openquake.commonlib import calc
 
@@ -58,17 +58,20 @@ def get_mesh(sitecol, complete=True):
     return mesh
 
 
-def build_etags(stored_events):
+def build_etags(stored_events, sm_ids=()):
     """
     An array of tags for the underlying seismic events
     """
+    sm_ids = sm_ids or sorted(stored_events)
     tags = []
-    for (serial, eid, ses, occ, sampleid, grp_id, source_id) in stored_events:
-        tag = b'grp=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
-            grp_id, ses, source_id, serial, occ)
-        if sampleid > 0:
-            tag += b'~sample=%d' % sampleid
-        tags.append(tag)
+    for sm_id in sm_ids:
+        events = stored_events[sm_id]
+        for (serial, ses, occ, sampleid, grp_id, source_id) in events:
+            tag = b'grp=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
+                grp_id, ses, source_id, serial, occ)
+            if sampleid > 0:
+                tag += b'~sample=%d' % sampleid
+            tags.append(tag)
     return numpy.array(tags)
 
 
@@ -611,41 +614,46 @@ def export_gmf(ekey, dstore):
     if n_gmfs:
         etags = numpy.array(
             sorted([b'scenario-%010d~ses=1' % i for i in range(n_gmfs)]))
-    else:
-        etags = build_etags(dstore['events'])
     gmf_data = dstore['gmf_data']
     nbytes = gmf_data.attrs['nbytes']
     logging.info('Internal size of the GMFs: %s', humansize(nbytes))
     if nbytes > GMF_MAX_SIZE:
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
-    for rlz in rlzs_assoc.realizations:
-        if n_gmfs:
-            # TODO: change to use the prefix rlz-
-            gmf_arr = gmf_data['%04d' % rlz.ordinal].value
-        else:
-            # convert gmf_data in the same format used by scenario
-            arrays = []
-            for sid in sorted(gmf_data):
-                array = get_array(gmf_data[sid].value, rlzi=rlz.ordinal)
-                arr = numpy.zeros(len(array), gmv_dt)
-                arr['sid'] = int(sid[4:])  # has the form 'sid-XXXX'
-                arr['imti'] = array['imti']
-                arr['gmv'] = array['gmv']
-                arr['eid'] = array['eid']
-                arrays.append(arr)
-            gmf_arr = numpy.concatenate(arrays)
-        ruptures = []
-        for eid, gmfa in group_array(gmf_arr, 'eid').items():
-            rup = util.Rupture(etags[eid], sorted(set(gmfa['sid'])))
-            rup.gmfa = gmfa
-            ruptures.append(rup)
-        ruptures.sort(key=operator.attrgetter('etag'))
-        fname = dstore.build_fname('gmf', rlz, fmt)
-        fnames.append(fname)
-        globals()['export_gmf_%s' % fmt](
-            ('gmf', fmt), fname, sitecol, oq.imtls, ruptures, rlz,
-            investigation_time)
+    for sm_id, rlzs in sorted(rlzs_assoc.rlzs_by_smodel.items()):
+        key = 'sm-%04d' % sm_id
+        if not n_gmfs:  # event based
+            events = dstore['events']
+            if key not in events:  # source model producing zero ruptures
+                continue
+            etags = build_etags(events, [key])
+        for rlz in rlzs:
+            if n_gmfs:
+                # TODO: change to use the prefix rlz-
+                gmf_arr = gmf_data['%04d' % rlz.ordinal].value
+            else:
+                # convert gmf_data in the same format used by scenario
+                arrays = []
+                for sid in sorted(gmf_data):
+                    array = get_array(gmf_data[sid].value, rlzi=rlz.ordinal)
+                    arr = numpy.zeros(len(array), gmv_dt)
+                    arr['sid'] = int(sid[4:])  # has the form 'sid-XXXX'
+                    arr['imti'] = array['imti']
+                    arr['gmv'] = array['gmv']
+                    arr['eid'] = array['eid']
+                    arrays.append(arr)
+                gmf_arr = numpy.concatenate(arrays)
+            ruptures = []
+            for eid, gmfa in group_array(gmf_arr, 'eid').items():
+                rup = util.Rupture(etags[eid], sorted(set(gmfa['sid'])))
+                rup.gmfa = gmfa
+                ruptures.append(rup)
+            ruptures.sort(key=operator.attrgetter('etag'))
+            fname = dstore.build_fname('gmf', rlz, fmt)
+            fnames.append(fname)
+            globals()['export_gmf_%s' % fmt](
+                ('gmf', fmt), fname, sitecol, oq.imtls, ruptures, rlz,
+                investigation_time)
     return fnames
 
 
