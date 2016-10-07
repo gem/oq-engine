@@ -134,7 +134,8 @@ def _prepare_job(request, hazard_job_id, candidates):
     return readinput.extract_from_zip(arch, candidates)
 
 
-# @cross_domain_ajax
+@csrf_exempt
+@cross_domain_ajax
 @require_http_methods(['POST'])
 def ajax_login(request):
     """
@@ -160,6 +161,7 @@ def ajax_login(request):
                             content_type='text/plain', status=403)
 
 
+@csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
 def ajax_logout(request):
