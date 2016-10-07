@@ -51,7 +51,7 @@ event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
 
 stored_event_dt = numpy.dtype([
-    ('rupserial', U32), ('eid', U32), ('ses', U32), ('occ', U32),
+    ('rupserial', U32), ('ses', U32), ('occ', U32),
     ('sample', U32), ('grp_id', U16), ('source_id', 'S30')])
 
 
@@ -386,7 +386,8 @@ class EventBasedRuptureCalculator(PSHACalculator):
         zd = AccumDict()
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()
-        self.eid = 0
+        self.eid = collections.Counter()  # sm_id -> event_id
+        self.sm_by_grp = self.csm.info.get_sm_by_grp()
         return zd
 
     def agg_dicts(self, acc, ruptures_by_grp_id):
@@ -411,23 +412,25 @@ class EventBasedRuptureCalculator(PSHACalculator):
             for grp_id, ebrs in ruptures_by_grp_id.items():
                 events = []
                 i = 0
+                sm_id = self.sm_by_grp[grp_id]
                 for ebr in ebrs:
                     for event in ebr.events:
-                        event['eid'] = self.eid
+                        event['eid'] = self.eid[sm_id]
                         rec = (ebr.serial,
-                               event['eid'],
                                event['ses'],
                                event['occ'],
                                event['sample'],
                                ebr.grp_id,
                                ebr.source_id)
                         events.append(rec)
-                        self.eid += 1
+                        self.eid[sm_id] += 1
                         i += 1
                     if self.oqparam.calculation_mode == 'event_based':
                         self.datastore['sescollection/%s' % ebr.serial] = ebr
-                self.datastore.extend(
-                    'events', numpy.array(events, stored_event_dt))
+                if events:
+                    ev = 'events/sm-%04d' % sm_id
+                    self.datastore.extend(
+                        ev, numpy.array(events, stored_event_dt))
 
             # save rup_data
             if hasattr(ruptures_by_grp_id, 'rup_data'):
@@ -440,7 +443,8 @@ class EventBasedRuptureCalculator(PSHACalculator):
         Save the SES collection
         """
         nr = sum(len(result[grp_id]) for grp_id in result)
-        logging.info('Saved %d ruptures, %d events', nr, self.eid)
+        logging.info('Saved %d ruptures, %d events',
+                     nr, sum(self.eid.values()))
         if 'sescollection' in self.datastore:
             self.datastore.set_nbytes('sescollection')
         self.datastore.set_nbytes('events')
