@@ -1,10 +1,16 @@
+  [Michele Simionato]
+  * Optimized the saving time of the GMFs
+  * Changed the default number of concurrent tasks and increased the
+    relative weight of point sources and area sources
+  * Fixed the UCERF event loss table export and added a test for it
+  * Optimized the computation of the event loss table
+  * Introduced two new calculators ucerf_risk and ucerf_risk_fast
+
   [Paolo Tormene]
   * Added to the engine server the possibility to log in and out
     programmatically by means of HTTP POST requests
 
   [Michele Simionato]
-  * Optimized the computation of the event loss table
-  * Introduced two new calculators ucerf_risk and ucerf_risk_fast
   * Optimized the memory consumption of the event based risk calculators
   * Extended the `oq show` command to work in a multi-user environment
   * Improved the test coverage of the exports in the WebUI
