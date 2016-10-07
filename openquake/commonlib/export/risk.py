@@ -176,40 +176,45 @@ def export_agg_losses_ebr(ekey, dstore):
     dtlist = [('event_tag', (numpy.string_, 100)), ('event_set', U32)
               ] + oq.loss_dt_list()
     elt_dt = numpy.dtype(dtlist)
-    etags = build_etags(dstore['events'])
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    events = dstore['events']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for rlz in rlzs:
-        dest = dstore.build_fname('agg_losses', rlz, 'csv')
-        eids = set()
-        rlzname = 'rlz-%03d' % rlz.ordinal
-        for loss_type in agg_losses[rlzname]:
-            dset = agg_losses['%s/%s' % (rlzname, loss_type)]
-            insured_losses = bool(dset.dtype['loss'].shape)
-            eids.update(dset['rup_id'])
-        eids = sorted(eids)
-        eid2idx = dict(zip(eids, range(len(eids))))
-        elt = numpy.zeros(len(eids), elt_dt)
-        elt['event_tag'] = etags[eids]
-        elt['event_set'] = numpy.array(
-            [get_ses_idx(etag) for etag in elt['event_tag']], U32)
-        for loss_type in loss_types:
-            elt_lt = elt[loss_type]
-            if insured_losses:
-                elt_lt_ins = elt[loss_type + '_ins']
-            key = 'rlz-%03d/%s' % (rlz.ordinal, loss_type)
-            if key not in agg_losses:  # nothing was saved for this key
-                continue
-            data = agg_losses[key].value
-            for i, eid in numpy.ndenumerate(data['rup_id']):
-                idx = eid2idx[eid]
+    for sm_id, rlzs in sorted(rlzs_assoc.rlzs_by_smodel.items()):
+        key = 'sm-%04d' % sm_id
+        if key not in events:
+            continue
+        etags = build_etags(events, [key])
+        for rlz in rlzs:
+            dest = dstore.build_fname('agg_losses', rlz, 'csv')
+            eids = set()
+            rlzname = 'rlz-%03d' % rlz.ordinal
+            for loss_type in agg_losses[rlzname]:
+                dset = agg_losses['%s/%s' % (rlzname, loss_type)]
+                insured_losses = bool(dset.dtype['loss'].shape)
+                eids.update(dset['rup_id'])
+            eids = sorted(eids)
+            eid2idx = dict(zip(eids, range(len(eids))))
+            elt = numpy.zeros(len(eids), elt_dt)
+            elt['event_tag'] = etags[eids]
+            elt['event_set'] = numpy.array(
+                [get_ses_idx(etag) for etag in elt['event_tag']], U32)
+            for loss_type in loss_types:
+                elt_lt = elt[loss_type]
                 if insured_losses:
-                    elt_lt[idx] = data['loss'][i, 0]
-                    elt_lt_ins[idx] = data['loss'][i, 1]
-                else:
-                    elt_lt[idx] = data['loss'][i]
-        elt.sort(order='event_tag')
-        writer.save(elt, dest)
+                    elt_lt_ins = elt[loss_type + '_ins']
+                key = 'rlz-%03d/%s' % (rlz.ordinal, loss_type)
+                if key not in agg_losses:  # nothing was saved for this key
+                    continue
+                data = agg_losses[key].value
+                for i, eid in numpy.ndenumerate(data['rup_id']):
+                    idx = eid2idx[eid]
+                    if insured_losses:
+                        elt_lt[idx] = data['loss'][i, 0]
+                        elt_lt_ins[idx] = data['loss'][i, 1]
+                    else:
+                        elt_lt[idx] = data['loss'][i]
+            elt.sort(order='event_tag')
+            writer.save(elt, dest)
     return writer.getsaved()
 
 

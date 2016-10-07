@@ -483,6 +483,13 @@ class CompositionInfo(object):
                     dic[rlz] = sm.name
         return dic
 
+    def get_sm_by_grp(self):
+        """
+        :returns: a dictionary grp_id -> sm_id
+        """
+        return {grp.id: sm.ordinal for sm in self.source_models
+                for grp in sm.src_groups}
+
     def get_trt(self, src_group_id):
         """
         Return the TRT string for the given src_group_id
@@ -633,13 +640,11 @@ class CompositeSourceModel(collections.Sequence):
             src.serial = rup_serial[start:start + nr]
             start += nr
 
-    def get_maxweight(self, concurrent_tasks, sitecol=()):
+    def get_maxweight(self, concurrent_tasks):
         """
         Return an appropriate maxweight for use in the block_splitter
         """
         ct = concurrent_tasks or 1
-        if len(sitecol) > 10000:  # hackish correction for lots of sites
-            ct *= math.sqrt(len(sitecol) / 10000)
         return max(math.ceil(self.weight / ct), MAXWEIGHT)
 
     def __repr__(self):
