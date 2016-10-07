@@ -179,7 +179,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         if concurrent_tasks is None:  # use the default
             pass
         elif concurrent_tasks == 0:  # disable distribution temporarily
-            oq_distribute = os.environ['OQ_DISTRIBUTE']
+            oq_distribute = os.environ.get('OQ_DISTRIBUTE')
             os.environ['OQ_DISTRIBUTE'] = 'no'
         elif concurrent_tasks != OqParam.concurrent_tasks.default:
             # use the passed concurrent_tasks over the default
@@ -209,7 +209,10 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 raise
         finally:
             if concurrent_tasks == 0:  # restore OQ_DISTRIBUTE
-                os.environ['OQ_DISTRIBUTE'] = oq_distribute
+                if oq_distribute is None:  # was not set
+                    del os.environ['OQ_DISTRIBUTE']
+                else:
+                    os.environ['OQ_DISTRIBUTE'] = oq_distribute
         return exported
 
     def core_task(*args):
