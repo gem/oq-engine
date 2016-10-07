@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized the saving time of the GMFs
   * Changed the default number of concurrent tasks and increased the
     relative weight of point sources and area sources
   * Fixed the UCERF event loss table export and added a test for it
