@@ -628,21 +628,7 @@ def export_gmf(ekey, dstore):
                 continue
             etags = build_etags(events, [key])
         for rlz in rlzs:
-            if n_gmfs:
-                # TODO: change to use the prefix rlz-
-                gmf_arr = gmf_data['%04d' % rlz.ordinal].value
-            else:
-                # convert gmf_data in the same format used by scenario
-                arrays = []
-                for sid in sorted(gmf_data):
-                    array = get_array(gmf_data[sid].value, rlzi=rlz.ordinal)
-                    arr = numpy.zeros(len(array), gmv_dt)
-                    arr['sid'] = int(sid[4:])  # has the form 'sid-XXXX'
-                    arr['imti'] = array['imti']
-                    arr['gmv'] = array['gmv']
-                    arr['eid'] = array['eid']
-                    arrays.append(arr)
-                gmf_arr = numpy.concatenate(arrays)
+            gmf_arr = gmf_data['%04d' % rlz.ordinal].value
             ruptures = []
             for eid, gmfa in group_array(gmf_arr, 'eid').items():
                 rup = util.Rupture(etags[eid], sorted(set(gmfa['sid'])))
