@@ -66,7 +66,7 @@ def build_etags(stored_events, sm_ids=()):
     tags = []
     for sm_id in sm_ids:
         events = stored_events[sm_id]
-        for (serial, eid, ses, occ, sampleid, grp_id, source_id) in events:
+        for (serial, ses, occ, sampleid, grp_id, source_id) in events:
             tag = b'grp=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
                 grp_id, ses, source_id, serial, occ)
             if sampleid > 0:
