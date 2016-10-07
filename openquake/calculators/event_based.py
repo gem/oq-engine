@@ -51,7 +51,7 @@ event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
 
 stored_event_dt = numpy.dtype([
-    ('rupserial', U32), ('eid', U32), ('ses', U32), ('occ', U32),
+    ('rupserial', U32), ('ses', U32), ('occ', U32),
     ('sample', U32), ('grp_id', U16), ('source_id', 'S30')])
 
 
@@ -417,7 +417,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
                     for event in ebr.events:
                         event['eid'] = self.eid[sm_id]
                         rec = (ebr.serial,
-                               event['eid'],
                                event['ses'],
                                event['occ'],
                                event['sample'],
