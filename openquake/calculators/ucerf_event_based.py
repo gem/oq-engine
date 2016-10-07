@@ -19,12 +19,13 @@
 import os
 import copy
 import time
+import math
 import os.path
 import logging
-import math
 import random
 import socket
 import functools
+import collections
 import h5py
 import numpy
 
@@ -692,6 +693,7 @@ def compute_ruptures_gmfs_curves(
         # set the seed before calling generate_event_set
         numpy.random.seed(oq.random_seed + grp_id)
         ses_ruptures = []
+        eid = 0
         for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
             with event_mon:
                 rups, n_occs = ucerf.generate_event_set(
@@ -705,10 +707,8 @@ def compute_ruptures_gmfs_curves(
                 indices = r_sites.indices
                 events = []
                 for j in range(n_occs[i]):
-                    # NB: the first 0 is a placeholder for the eid that will be
-                    # set later, in EventBasedRuptureCalculator.post_execute;
-                    # the second 0 is the sampling ID
-                    events.append((0, ses_idx, j, 0))
+                    events.append((eid, ses_idx, j, 0))  # 0 is the sampling ID
+                    eid += 1
                 if events:
                     ses_ruptures.append(
                         event_based.EBRupture(
@@ -778,7 +778,8 @@ class UCERFEventBasedCalculator(event_based.EventBasedCalculator):
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
         self.rup_data = {}
         self.infos = []
-        self.eid = 0
+        self.eid = collections.Counter()  # sm_id -> event_id
+        self.sm_by_grp = self.csm.info.get_sm_by_grp()
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
 

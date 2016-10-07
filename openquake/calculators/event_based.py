@@ -51,7 +51,7 @@ event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
 
 stored_event_dt = numpy.dtype([
-    ('rupserial', U32), ('eid', U32), ('ses', U32), ('occ', U32),
+    ('rupserial', U32), ('ses', U32), ('occ', U32),
     ('sample', U32), ('grp_id', U16), ('source_id', 'S30')])
 
 
@@ -134,7 +134,7 @@ class EBRupture(object):
         self.source_id = source_id
         self.grp_id = grp_id
         self.serial = serial
-        self.weight = 1
+        self.weight = len(indices) * len(events)
 
     @property
     def etags(self):
@@ -373,7 +373,8 @@ class EventBasedRuptureCalculator(PSHACalculator):
         zd = AccumDict()
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()
-        self.eid = 0
+        self.eid = collections.Counter()  # sm_id -> event_id
+        self.sm_by_grp = self.csm.info.get_sm_by_grp()
         return zd
 
     def agg_dicts(self, acc, ruptures_by_grp_id):
@@ -398,23 +399,25 @@ class EventBasedRuptureCalculator(PSHACalculator):
             for grp_id, ebrs in ruptures_by_grp_id.items():
                 events = []
                 i = 0
+                sm_id = self.sm_by_grp[grp_id]
                 for ebr in ebrs:
                     for event in ebr.events:
-                        event['eid'] = self.eid
+                        event['eid'] = self.eid[sm_id]
                         rec = (ebr.serial,
-                               event['eid'],
                                event['ses'],
                                event['occ'],
                                event['sample'],
                                ebr.grp_id,
                                ebr.source_id)
                         events.append(rec)
-                        self.eid += 1
+                        self.eid[sm_id] += 1
                         i += 1
                     if self.oqparam.calculation_mode == 'event_based':
                         self.datastore['sescollection/%s' % ebr.serial] = ebr
-                self.datastore.extend(
-                    'events', numpy.array(events, stored_event_dt))
+                if events:
+                    ev = 'events/sm-%04d' % sm_id
+                    self.datastore.extend(
+                        ev, numpy.array(events, stored_event_dt))
 
             # save rup_data
             if hasattr(ruptures_by_grp_id, 'rup_data'):
@@ -427,7 +430,8 @@ class EventBasedRuptureCalculator(PSHACalculator):
         Save the SES collection
         """
         nr = sum(len(result[grp_id]) for grp_id in result)
-        logging.info('Saved %d ruptures, %d events', nr, self.eid)
+        logging.info('Saved %d ruptures, %d events',
+                     nr, sum(self.eid.values()))
         if 'sescollection' in self.datastore:
             self.datastore.set_nbytes('sescollection')
         self.datastore.set_nbytes('events')
@@ -446,8 +450,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
 
 # ######################## GMF calculator ############################ #
 
-gmv_dt = numpy.dtype(
-    [('gmv', F32), ('eid', U32), ('rlzi', U16), ('imti', U8)])
+gmv_dt = numpy.dtype([('sid', U32), ('eid', U32), ('imti', U8), ('gmv', F32)])
 
 
 def compute_gmfs_and_curves(getter, rlzs, monitor):
@@ -467,18 +470,19 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
    """
     oq = monitor.oqparam
     haz = {sid: {} for sid in getter.sids}
-    gmfcoll = {sid: [] for sid in getter.sids}
+    gmfcoll = {}  # rlz -> gmfa
     for rlz in rlzs:
+        gmfcoll[rlz] = []
         for sid, gmvdict in zip(getter.sids, getter(rlz)):
             if gmvdict:
                 for imti, imt in enumerate(getter.imts):
                     if oq.hazard_curves_from_gmfs:
                         haz[sid][imt, rlz] = gmvdict[imt]
                     for rec in gmvdict[imt]:
-                        gmfcoll[sid].append(
-                            (rec['gmv'], rec['eid'], rlz.ordinal, imti))
-    for sid in gmfcoll:
-        gmfcoll[sid] = numpy.array(gmfcoll[sid], gmv_dt)
+                        gmfcoll[rlz].append(
+                            (sid, rec['eid'], imti, rec['gmv']))
+    for rlz in gmfcoll:
+        gmfcoll[rlz] = numpy.array(gmfcoll[rlz], gmv_dt)
     result = dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
                   hcurves={})
     if oq.hazard_curves_from_gmfs:
@@ -519,9 +523,10 @@ class EventBasedCalculator(ClassicalCalculator):
         agg_mon = self.monitor('aggregating hcurves')
         if res['gmfcoll'] is not None:
             with sav_mon:
-                for sid, array in res['gmfcoll'].items():
+                for rlz, array in res['gmfcoll'].items():
                     if len(array):
-                        self.datastore.extend('gmf_data/sid-%04d' % sid, array)
+                        key = 'gmf_data/%04d' % rlz.ordinal
+                        self.datastore.extend(key, array)
         slicedic = self.oqparam.imtls.slicedic
         with agg_mon:
             for key, poes in res['hcurves'].items():
