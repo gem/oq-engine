@@ -27,14 +27,6 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.risklib import valid
 from openquake.commonlib.node import context, striptag
 
-# the following is arbitrary, it is used to decide when to parallelize
-# the filtering (MS)
-MAGNITUDE_FOR_RUPTURE_SPLITTING = 6.5  # given by Marco Pagani
-# NB: the parameter MAGNITUDE_FOR_RUPTURE_SPLITTING cannot go in a
-# configuration file, otherwise the tests will break by changing it;
-# reason: the numbers in the event based calculators depend on the
-# splitting: different sources => different seeds => different numbers
-
 
 class SourceGroup(collections.Sequence):
     """
@@ -241,78 +233,9 @@ def split_fault_source(src):
     # take advantage of the multiple cores; if you split too much,
     # the data transfer will kill you, i.e. multiprocessing/celery
     # will fail to transmit to the workers the generated sources.
-    for s in split_fault_source_by_magnitude(src):
-        if s.mfd.min_mag < MAGNITUDE_FOR_RUPTURE_SPLITTING:
-            s.num_ruptures = s.count_ruptures()
-            yield s  # don't split, there would too many ruptures
-        else:  # split in MultiRuptureSources
-            for ss in SingleRuptureSource.split(s):
-                yield ss
-
-KM_ONE_DEGREE = 111.32  # km per 1 degree
-
-
-class SingleRuptureSource(object):
-    """
-    Fake source class used to encapsule a set of ruptures.
-
-    :param rupture:
-        an instance of :class:`openquake.hazardlib.source.rupture.
-        ParametricProbabilisticRupture`
-    :param source_id:
-        an ID for the SingleRuptureSource
-    :param tectonic_region_type:
-        the tectonic region type
-    :param src_group_id:
-        ID of the tectonic region model the source belongs to
-    """
-    RUPTURE_WEIGHT = 1
-    weight = source.base.BaseSeismicSource.__dict__['weight']
-
-    @classmethod
-    def split(cls, src):
-        """
-        Split the given fault source into SingleRuptureSources depending
-        on the given block size.
-        """
-        for i, rupture in enumerate(src.iter_ruptures()):
-            yield cls(rupture, '%s:%s' % (src.source_id, i),
-                      src.tectonic_region_type, src.src_group_id)
-
-    def __init__(self, rupture, source_id, tectonic_region_type,
-                 src_group_id):
-        self.rupture = rupture
-        self.source_id = source_id
-        self.tectonic_region_type = tectonic_region_type
-        self.src_group_id = src_group_id
-        self.num_ruptures = 1
-
-    def iter_ruptures(self):
-        """Yield the ruptures"""
-        yield self.rupture
-
-    def count_ruptures(self):
-        """Return 1"""
-        return self.num_ruptures
-
-    def filter_sites_by_distance_to_source(self, maxdist, sitecol):
-        """The source has been already filtered, return the sitecol"""
-        return sitecol
-
-    def get_bounding_box(self, maxdist=0):
-        """
-        Return the bounding box of the rupture, enlarged by the integration
-        distance.
-        """
-        mesh = self.rupture.surface.mesh
-        angdist = maxdist / KM_ONE_DEGREE  # angular distance
-        min_lon, min_lat, max_lon, max_lat = (
-            mesh.lons.min(), mesh.lats.min(), mesh.lons.max(), mesh.lats.max())
-        min_lon -= angdist
-        min_lat -= angdist
-        max_lon += angdist
-        max_lat += angdist
-        return min_lon, min_lat, max_lon, max_lat
+    for ss in split_fault_source_by_magnitude(src):
+        ss.num_ruptures = ss.count_ruptures()
+        yield ss
 
 
 def split_source(src):
@@ -325,12 +248,10 @@ def split_source(src):
     """
     if isinstance(src, source.AreaSource):
         for s in area_to_point_sources(src):
-            s.id = src.id
             yield s
     elif isinstance(
             src, (source.SimpleFaultSource, source.ComplexFaultSource)):
         for s in split_fault_source(src):
-            s.id = src.id
             yield s
     else:
         # characteristic and nonparametric sources are not split
