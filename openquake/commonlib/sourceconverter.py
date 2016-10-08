@@ -230,7 +230,7 @@ def split_fault_source_by_magnitude(src):
     return splitlist
 
 
-def split_fault_source(src, block_size):
+def split_fault_source(src):
     """
     Generator splitting a fault source into several fault sources.
 
@@ -246,11 +246,13 @@ def split_fault_source(src, block_size):
             s.num_ruptures = s.count_ruptures()
             yield s  # don't split, there would too many ruptures
         else:  # split in MultiRuptureSources
-            for ss in MultiRuptureSource.split(s, block_size):
+            for ss in SingleRuptureSource.split(s):
                 yield ss
 
+KM_ONE_DEGREE = 111.32  # km per 1 degree
 
-class MultiRuptureSource(object):
+
+class SingleRuptureSource(object):
     """
     Fake source class used to encapsule a set of ruptures.
 
@@ -258,7 +260,7 @@ class MultiRuptureSource(object):
         an instance of :class:`openquake.hazardlib.source.rupture.
         ParametricProbabilisticRupture`
     :param source_id:
-        an ID for the MultiRuptureSource
+        an ID for the SingleRuptureSource
     :param tectonic_region_type:
         the tectonic region type
     :param src_group_id:
@@ -268,39 +270,51 @@ class MultiRuptureSource(object):
     weight = source.base.BaseSeismicSource.__dict__['weight']
 
     @classmethod
-    def split(cls, src, block_size):
+    def split(cls, src):
         """
-        Split the given fault source into MultiRuptureSources depending
+        Split the given fault source into SingleRuptureSources depending
         on the given block size.
         """
-        for i, ruptures in enumerate(
-                block_splitter(src.iter_ruptures(), block_size)):
-            yield cls(ruptures, '%s:%s' % (src.source_id, i),
+        for i, rupture in enumerate(src.iter_ruptures()):
+            yield cls(rupture, '%s:%s' % (src.source_id, i),
                       src.tectonic_region_type, src.src_group_id)
 
-    def __init__(self, ruptures, source_id, tectonic_region_type,
+    def __init__(self, rupture, source_id, tectonic_region_type,
                  src_group_id):
-        self.ruptures = ruptures
+        self.rupture = rupture
         self.source_id = source_id
         self.tectonic_region_type = tectonic_region_type
         self.src_group_id = src_group_id
-        self.num_ruptures = len(ruptures)
 
     def iter_ruptures(self):
         """Yield the ruptures"""
-        for rupture in self.ruptures:
-            yield rupture
+        yield self.rupture
 
     def count_ruptures(self):
-        """Return the block size"""
-        return len(self.ruptures)
+        """Return 1"""
+        return 1
 
     def filter_sites_by_distance_to_source(self, maxdist, sitecol):
         """The source has been already filtered, return the sitecol"""
         return sitecol
 
+    def get_bounding_box(self, maxdist=0):
+        """
+        Return the bounding box of the rupture, enlarged by the integration
+        distance.
+        """
+        mesh = self.rupture.surface.mesh
+        angdist = maxdist / KM_ONE_DEGREE  # angular distance
+        min_lon, min_lat, max_lon, max_lat = (
+            mesh.lons.min(), mesh.lats.min(), mesh.lons.max(), mesh.lats.max())
+        min_lon -= angdist
+        min_lat -= angdist
+        max_lon += angdist
+        max_lat += angdist
+        return min_lon, min_lat, max_lon, max_lat
 
-def split_source(src, block_size=1):
+
+def split_source(src):
     """
     Split an area source into point sources and a fault sources into
     smaller fault sources.
@@ -314,7 +328,7 @@ def split_source(src, block_size=1):
             yield s
     elif isinstance(
             src, (source.SimpleFaultSource, source.ComplexFaultSource)):
-        for s in split_fault_source(src, block_size):
+        for s in split_fault_source(src):
             s.id = src.id
             yield s
     else:
