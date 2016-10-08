@@ -57,13 +57,14 @@ filter function of each kind (see :func:`SourceSitesFilter` and
 import sys
 import logging
 from contextlib import contextmanager
-from openquake.baselib.python3compat import raise_
-from openquake.hazardlib.site import FilteredSiteCollection
-from openquake.hazardlib.geo.utils import fix_lons_idl
+import numpy
 try:
     import rtree
 except ImportError:
     rtree = None
+from openquake.baselib.python3compat import raise_
+from openquake.hazardlib.site import FilteredSiteCollection
+from openquake.hazardlib.geo.utils import fix_lons_idl
 
 
 @contextmanager
@@ -232,7 +233,7 @@ class RtreeFilter(object):
         for source in sources:
             if rtree:  # Rtree filtering
                 box = self.get_affected_box(source)
-                sids = sorted(self.index.intersection(box))
+                sids = numpy.array(sorted(self.index.intersection(box)))
                 if len(sids):
                     source.nsites = len(sids)
                     yield source, FilteredSiteCollection(sids, sites.complete)
