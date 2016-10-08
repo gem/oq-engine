@@ -188,10 +188,9 @@ class RtreeFilter(object):
         self.integration_distance = integration_distance
         self.sitecol = sitecol
         if rtree:
-            compl = sitecol.complete
-            compl.lons, self.idl = fix_lons_idl(compl.lons)
+            sitecol._lons, self.idl = fix_lons_idl(sitecol.lons)
             self.index = rtree.index.Index()
-            for sid, (lon, lat) in enumerate(zip(compl.lons, compl.lats)):
+            for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
                 self.index.insert(sid, (lon, lat, lon, lat))
         else:
             logging.warn('Cannot find the rtree module, using slow filtering')
