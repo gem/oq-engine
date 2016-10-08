@@ -285,6 +285,7 @@ class SingleRuptureSource(object):
         self.source_id = source_id
         self.tectonic_region_type = tectonic_region_type
         self.src_group_id = src_group_id
+        self.num_ruptures = 1
 
     def iter_ruptures(self):
         """Yield the ruptures"""
@@ -292,7 +293,7 @@ class SingleRuptureSource(object):
 
     def count_ruptures(self):
         """Return 1"""
-        return 1
+        return self.num_ruptures
 
     def filter_sites_by_distance_to_source(self, maxdist, sitecol):
         """The source has been already filtered, return the sitecol"""
