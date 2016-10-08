@@ -665,6 +665,8 @@ def view_task_info(token, dstore):
 
     data = ['operation-duration mean stddev min max num_tasks'.split()]
     for task in dstore['task_info']:
+        if task == 'source_ids':
+            continue
         val = dstore['task_info/' + task]['duration']
         data.append(stats(task, val))
     if len(data) == 1:
@@ -682,3 +684,16 @@ def view_task_durations(token, dstore):
     task = token.split(':')[1]  # called as task_duration:task_name
     array = dstore['task_info/' + task]['duration']
     return '\n'.join(map(str, array))
+
+
+@view.add('task_slowest')
+def view_task_slowest(token, dstore):
+    """
+    Display info about the slowest classical task.
+    """
+    i = dstore['task_info/classical']['duration'].argmax()
+    taskno, weight, duration = dstore['task_info/classical'][i]
+    sources = dstore['task_info/source_ids'][taskno - 1].split()
+    srcs = set(src.split(':', 1)[0] for src in sources)
+    return 'taskno=%d, weight=%d, duration=%d s, #sources=%d "%s"' % (
+        taskno, weight, duration, len(srcs), ' '.join(sorted(srcs)))
