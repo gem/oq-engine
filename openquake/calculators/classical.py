@@ -367,9 +367,11 @@ class PSHACalculator(base.HazardCalculator):
                     self.infos[sg.id, src.source_id] = source.SourceInfo(src)
                     sources = split_filter_source(
                         src, sites, self.ss_filter, self.random_seed)
-                    logging.info(
-                        'Splitting %s "%s" in %d sources',
-                        src.__class__.__name__, src.source_id, len(sources))
+                    if len(sources) > 1:
+                        logging.info(
+                            'Splitting %s "%s" in %d sources',
+                            src.__class__.__name__,
+                            src.source_id, len(sources))
                     for block in block_splitter(
                             sources, maxweight,
                             weight=operator.attrgetter('weight')):
