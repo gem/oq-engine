@@ -188,7 +188,9 @@ class RtreeFilter(object):
         self.integration_distance = integration_distance
         self.sitecol = sitecol
         if rtree:
-            sitecol._lons, self.idl = fix_lons_idl(sitecol.lons)
+            fixed_lons, self.idl = fix_lons_idl(sitecol.lons)
+            if self.idl:  # longitudes -> longitudes + 360 degrees
+                sitecol.complete.lons[sitecol.sids] = fixed_lons
             self.index = rtree.index.Index()
             for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
                 self.index.insert(sid, (lon, lat, lon, lat))
@@ -204,8 +206,15 @@ class RtreeFilter(object):
         """
         maxdist = self.integration_distance[src.tectonic_region_type]
         min_lon, min_lat, max_lon, max_lat = src.get_bounding_box(maxdist)
-        if min_lon < 0 and self.idl:  # apply IDL fix
-            return max_lon, min_lat, min_lon + 360, max_lat
+        if self.idl:  # apply IDL fix
+            if min_lon < 0 and max_lon > 0:
+                return max_lon, min_lat, min_lon + 360, max_lat
+            elif min_lon < 0 and max_lon < 0:
+                return min_lon + 360, min_lat, max_lon + 360, max_lat
+            elif min_lon > 0 and max_lon > 0:
+                return min_lon, min_lat, max_lon, max_lat
+            elif min_lon > 0 and max_lon < 0:
+                return max_lon + 360, min_lat, min_lon, max_lat
         else:
             return min_lon, min_lat, max_lon, max_lat
 
