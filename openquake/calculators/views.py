@@ -695,5 +695,5 @@ def view_task_slowest(token, dstore):
     taskno, weight, duration = dstore['task_info/classical'][i]
     sources = dstore['task_info/source_ids'][taskno - 1].split()
     srcs = set(src.split(':', 1)[0] for src in sources)
-    return 'taskno=%d, weight=%d, duration=%d s, #sources=%d "%s"' % (
-        taskno, weight, duration, len(srcs), ' '.join(sorted(srcs)))
+    return 'taskno=%d, weight=%d, duration=%d s, sources="%s"' % (
+        taskno, weight, duration, ' '.join(sorted(srcs)))
