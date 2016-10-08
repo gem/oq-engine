@@ -200,6 +200,7 @@ class RtreeFilter(object):
         Get the enlarged bounding box of a source.
 
         :param src: a source object
+        :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
         """
         maxdist = self.integration_distance[src.tectonic_region_type]
         min_lon, min_lat, max_lon, max_lat = src.get_bounding_box(maxdist)
@@ -207,6 +208,14 @@ class RtreeFilter(object):
             return max_lon, min_lat, min_lon + 360, max_lat
         else:
             return min_lon, min_lat, max_lon, max_lat
+
+    def get_rectangle(self, src):
+        """
+        :param src: a source object
+        :returns: ((min_lon, min_lat), width, height), useful for plotting
+        """
+        min_lon, min_lat, max_lon, max_lat = self.get_affected_box(src)
+        return (min_lon, min_lat), max_lon - min_lon, max_lat - min_lat
 
     def affected(self, source):
         """
