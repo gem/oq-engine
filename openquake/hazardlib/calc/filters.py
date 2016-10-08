@@ -195,6 +195,19 @@ class RtreeFilter(object):
         else:
             logging.warn('Cannot find the rtree module, using slow filtering')
 
+    def get_affected_box(self, src):
+        """
+        Get the enlarged bounding box of a source.
+
+        :param src: a source object
+        """
+        maxdist = self.integration_distance[src.tectonic_region_type]
+        min_lon, min_lat, max_lon, max_lat = src.get_bounding_box(maxdist)
+        if min_lon < 0 and self.idl:  # apply IDL fix
+            return max_lon, min_lat, min_lon + 360, max_lat
+        else:
+            return min_lon, min_lat, max_lon, max_lat
+
     def affected(self, source):
         """
         Returns the sites within the integration distance from the source,
@@ -208,10 +221,9 @@ class RtreeFilter(object):
         if sites is None:
             sites = self.sitecol
         for source in sources:
-            if rtree and source.__class__.__name__ == 'PointSource':
-                # Rtree filtering
-                bb = source.bounding_box(self.integration_distance, self.idl)
-                sids = sorted(self.index.intersection(bb))
+            if rtree:  # Rtree filtering
+                box = self.get_affected_box(source)
+                sids = sorted(self.index.intersection(box))
                 if len(sids):
                     source.nsites = len(sids)
                     yield source, FilteredSiteCollection(sids, sites.complete)
