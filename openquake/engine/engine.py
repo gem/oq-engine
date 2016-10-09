@@ -42,14 +42,14 @@ if USE_CELERY:
 
     def set_concurrent_tasks_default():
         """
-        Set the default for concurrent_tasks to twice the number of workers.
+        Set the default for concurrent_tasks.
         Returns the number of live celery nodes (i.e. the number of machines).
         """
         stats = celery.task.control.inspect(timeout=1).stats()
         if not stats:
             sys.exit("No live compute nodes, aborting calculation")
         num_cores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
-        OqParam.concurrent_tasks.default = num_cores * 3
+        OqParam.concurrent_tasks.default = num_cores * 5
         logs.LOG.info(
             'Using %s, %d cores', ', '.join(sorted(stats)), num_cores)
 
