@@ -22,6 +22,7 @@ TODO: write documentation.
 from __future__ import print_function
 import os
 import sys
+import time
 import socket
 import inspect
 import logging
@@ -532,6 +533,18 @@ def rec_delattr(mon, name):
 
 if OQ_DISTRIBUTE == 'celery':
     safe_task = task(safely_call,  queue='celery')
+
+
+def sleep(x):
+    time.sleep(x)
+
+
+def wakeup_pool():
+    """
+    This is used at startup, to fork the processes before loading any big
+    data structure.
+    """
+    list(starmap(sleep, ((.2,) for _ in range(executor._max_workers))))
 
 
 class Starmap(object):
