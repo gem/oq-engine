@@ -386,6 +386,7 @@ class HazardCalculator(BaseCalculator):
         self.read_risk_data()
         if 'source' in oq.inputs:
             wakeup_pool()  # fork before reading the source model
+            logging.info('Instantiating the source-sites filter')
             self.ss_filter = RtreeFilter(self.sitecol, oq.maximum_distance)
             with mon('reading composite source model', autoflush=True):
                 csm = readinput.get_composite_source_model(oq)
