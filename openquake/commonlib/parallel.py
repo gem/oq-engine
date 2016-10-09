@@ -535,16 +535,18 @@ if OQ_DISTRIBUTE == 'celery':
     safe_task = task(safely_call,  queue='celery')
 
 
-def sleep(x):
-    time.sleep(x)
+def wakeup(sec):
+    """Waiting functions, used to wake up the process pool"""
+    time.sleep(sec)
 
 
 def wakeup_pool():
     """
-    This is used at startup, to fork the processes before loading any big
-    data structure.
+    This is used at startup, only when the ProcessPoolExecutor is used,
+    to fork the processes before loading any big data structure.
     """
-    list(starmap(sleep, ((.2,) for _ in range(executor._max_workers))))
+    if oq_distribute() == 'futures':  # when using the ProcessPoolExecutor
+        list(starmap(wakeup, ((.2,) for _ in range(executor._max_workers))))
 
 
 class Starmap(object):
