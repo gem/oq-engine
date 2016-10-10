@@ -57,13 +57,14 @@ filter function of each kind (see :func:`SourceSitesFilter` and
 import sys
 import logging
 from contextlib import contextmanager
-from openquake.baselib.python3compat import raise_
-from openquake.hazardlib.site import FilteredSiteCollection
-from openquake.hazardlib.geo.utils import fix_lons_idl
+import numpy
 try:
     import rtree
 except ImportError:
     rtree = None
+from openquake.baselib.python3compat import raise_
+from openquake.hazardlib.site import FilteredSiteCollection
+from openquake.hazardlib.geo.utils import fix_lons_idl
 
 
 @contextmanager
@@ -187,13 +188,43 @@ class RtreeFilter(object):
         self.integration_distance = integration_distance
         self.sitecol = sitecol
         if rtree:
-            compl = sitecol.complete
-            compl.lons, self.idl = fix_lons_idl(compl.lons)
+            fixed_lons, self.idl = fix_lons_idl(sitecol.lons)
+            if self.idl:  # longitudes -> longitudes + 360 degrees
+                sitecol.complete.lons[sitecol.sids] = fixed_lons
             self.index = rtree.index.Index()
-            for sid, (lon, lat) in enumerate(zip(compl.lons, compl.lats)):
+            for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
                 self.index.insert(sid, (lon, lat, lon, lat))
         else:
             logging.warn('Cannot find the rtree module, using slow filtering')
+
+    def get_affected_box(self, src):
+        """
+        Get the enlarged bounding box of a source.
+
+        :param src: a source object
+        :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
+        """
+        maxdist = self.integration_distance[src.tectonic_region_type]
+        min_lon, min_lat, max_lon, max_lat = src.get_bounding_box(maxdist)
+        if self.idl:  # apply IDL fix
+            if min_lon < 0 and max_lon > 0:
+                return max_lon, min_lat, min_lon + 360, max_lat
+            elif min_lon < 0 and max_lon < 0:
+                return min_lon + 360, min_lat, max_lon + 360, max_lat
+            elif min_lon > 0 and max_lon > 0:
+                return min_lon, min_lat, max_lon, max_lat
+            elif min_lon > 0 and max_lon < 0:
+                return max_lon + 360, min_lat, min_lon, max_lat
+        else:
+            return min_lon, min_lat, max_lon, max_lat
+
+    def get_rectangle(self, src):
+        """
+        :param src: a source object
+        :returns: ((min_lon, min_lat), width, height), useful for plotting
+        """
+        min_lon, min_lat, max_lon, max_lat = self.get_affected_box(src)
+        return (min_lon, min_lat), max_lon - min_lon, max_lat - min_lat
 
     def affected(self, source):
         """
@@ -208,10 +239,9 @@ class RtreeFilter(object):
         if sites is None:
             sites = self.sitecol
         for source in sources:
-            if rtree and source.__class__.__name__ == 'PointSource':
-                # Rtree filtering
-                bb = source.bounding_box(self.integration_distance, self.idl)
-                sids = sorted(self.index.intersection(bb))
+            if rtree:  # Rtree filtering
+                box = self.get_affected_box(source)
+                sids = numpy.array(sorted(self.index.intersection(box)))
                 if len(sids):
                     source.nsites = len(sids)
                     yield source, FilteredSiteCollection(sids, sites.complete)
