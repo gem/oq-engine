@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
+import os
 import sys
 import abc
 import pdb
@@ -175,8 +176,13 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             logging.info('Using engine version %s', engine_version)
             logging.info('Using hazardlib version %s', hazardlib_version)
             logversion.pop()
-        if (concurrent_tasks is not None and concurrent_tasks !=
-                OqParam.concurrent_tasks.default):
+        if concurrent_tasks is None:  # use the default
+            pass
+        elif concurrent_tasks == 0:  # disable distribution temporarily
+            oq_distribute = os.environ.get('OQ_DISTRIBUTE')
+            os.environ['OQ_DISTRIBUTE'] = 'no'
+        elif concurrent_tasks != OqParam.concurrent_tasks.default:
+            # use the passed concurrent_tasks over the default
             self.oqparam.concurrent_tasks = concurrent_tasks
         self.save_params(**kw)
         exported = {}
@@ -201,6 +207,12 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             else:
                 logging.critical('', exc_info=True)
                 raise
+        finally:
+            if concurrent_tasks == 0:  # restore OQ_DISTRIBUTE
+                if oq_distribute is None:  # was not set
+                    del os.environ['OQ_DISTRIBUTE']
+                else:
+                    os.environ['OQ_DISTRIBUTE'] = oq_distribute
         return exported
 
     def core_task(*args):
