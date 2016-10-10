@@ -37,7 +37,7 @@ from openquake.hazardlib.calc.filters import RtreeFilter
 from openquake.risklib import riskinput, __version__ as engine_version
 from openquake.commonlib import readinput, riskmodels, datastore, source
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.parallel import starmap, executor
+from openquake.commonlib.parallel import starmap, executor, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
 from openquake.commonlib.export import export as exp
 
@@ -385,6 +385,8 @@ class HazardCalculator(BaseCalculator):
         mon = self.monitor
         self.read_risk_data()
         if 'source' in oq.inputs:
+            wakeup_pool()  # fork before reading the source model
+            logging.info('Instantiating the source-sites filter')
             self.ss_filter = RtreeFilter(self.sitecol, oq.maximum_distance)
             with mon('reading composite source model', autoflush=True):
                 csm = readinput.get_composite_source_model(oq)
