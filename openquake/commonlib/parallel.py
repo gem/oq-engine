@@ -317,7 +317,6 @@ class TaskManager(object):
     Progress report is built-in.
     """
     executor = executor
-    progress = staticmethod(logging.info)
     task_ids = []
 
     @classmethod
@@ -382,6 +381,15 @@ class TaskManager(object):
                 self.executor, ProcessPoolExecutor):
             client = ipp.Client()
             self.__class__.executor = client.executor()
+
+    def progress(self, *args):
+        """
+        Log in INFO mode regular tasks and in DEBUG private tasks
+        """
+        if self.name.startswith('_'):
+            logging.debug(*args)
+        else:
+            logging.info(*args)
 
     def submit(self, *args):
         """
