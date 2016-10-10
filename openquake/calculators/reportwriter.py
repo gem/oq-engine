@@ -68,6 +68,7 @@ class ReportWriter(object):
         avglosses_data_transfer='Estimated data transfer for the avglosses',
         exposure_info='Exposure model',
         short_source_info='Slowest sources',
+        task_slowest='Slowest task',
         task_info='Information about the tasks',
         times_by_source_class='Computation times by source typology',
         performance='Slowest operations',
@@ -128,6 +129,8 @@ class ReportWriter(object):
             self.add('times_by_source_class')
         if 'task_info' in ds:
             self.add('task_info')
+            if 'classical' in ds['task_info']:
+                self.add('task_slowest')
         if 'performance_data' in ds:
             self.add('performance')
         return self.text
