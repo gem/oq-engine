@@ -74,6 +74,8 @@ class IMC(ConstantContainer):
     #: Defined at Boore et al. (2006, Bull. Seism. Soc. Am. 96, 1502-1511)
     #: and is used for all the NGA GMPEs.
     RotD50 = 'Average Horizontal (RotD50)'
+    #: 
+    RotD100 = 'Horizontal Maximum Direction (RotD100)'
     #: A randomly chosen horizontal component.
     RANDOM_HORIZONTAL = 'Random horizontal'
     #: The largest value obtained from two perpendicular horizontal
