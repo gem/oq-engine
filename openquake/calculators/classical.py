@@ -235,7 +235,7 @@ def saving_sources_by_task(iterargs, dstore):
     for args in iterargs:
         source_ids.append(' ' .join(src.source_id for src in args[0]))
         yield args
-    dstore['task_info/source_ids'] = numpy.array(source_ids, hdf5.vstr)
+    dstore['source_ids'] = numpy.array(source_ids, hdf5.vstr)
 
 
 @base.calculators.add('psha')
