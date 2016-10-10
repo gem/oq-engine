@@ -221,7 +221,10 @@ class IterResult(object):
         self.futures = futures
         self.name = taskname
         self.num_tasks = num_tasks
-        self.progress = progress
+        if self.name.startswith("_"):  # private task, do not log
+            self.progress = lambda *args: None
+        else:
+            self.progress = progress
         self.sent = 0  # set in TaskManager.submit_all
         self.received = []
         if self.num_tasks:
@@ -468,7 +471,7 @@ class TaskManager(object):
             nargs = ''
         if nargs == 1:
             [args] = self.task_args
-            logging.info('Executing a single task in process')
+            self.progress('Executing a single task in process')
             return IterResult([safely_call(self.task_func, args)], self.name)
         task_no = 0
         for args in self.task_args:
@@ -482,7 +485,7 @@ class TaskManager(object):
                     args[-1].weight = weight
             self.submit(*args)
         if not task_no:
-            logging.info('No %s tasks were submitted', self.name)
+            self.progress('No %s tasks were submitted', self.name)
         ir = IterResult(self._iterfutures(), self.name, task_no, self.progress)
         ir.sent = self.sent  # for information purposes
         if self.sent:
@@ -536,7 +539,7 @@ if OQ_DISTRIBUTE == 'celery':
     safe_task = task(safely_call,  queue='celery')
 
 
-def wakeup(sec):
+def _wakeup(sec):
     """Waiting functions, used to wake up the process pool"""
     time.sleep(sec)
 
@@ -547,7 +550,7 @@ def wakeup_pool():
     to fork the processes before loading any big data structure.
     """
     if oq_distribute() == 'futures':  # when using the ProcessPoolExecutor
-        list(starmap(wakeup, ((.2,) for _ in range(executor._max_workers))))
+        list(starmap(_wakeup, ((.2,) for _ in range(executor._max_workers))))
 
 
 class Starmap(object):
