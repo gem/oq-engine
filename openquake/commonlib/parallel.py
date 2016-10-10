@@ -423,7 +423,7 @@ class TaskManager(object):
                 idx = self.task_ids.index(task_id)
                 self.task_ids.pop(idx)
                 fut = Future()
-                fut.set_result(result_dict['result'].unpickle())
+                fut.set_result(result_dict['result'])
                 # work around a celery bug
                 del app.backend._cache[task_id]
                 yield fut
@@ -467,6 +467,7 @@ class TaskManager(object):
             nargs = ''
         if nargs == 1:
             [args] = self.task_args
+            logging.info('Executing a single task in process')
             return IterResult([safely_call(self.task_func, args)], self.name)
         task_no = 0
         for args in self.task_args:
