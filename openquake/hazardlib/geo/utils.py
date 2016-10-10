@@ -137,7 +137,7 @@ class OrthographicProjection(object):
     of get_orthographic_projection.
     """
     _slots_ = ('west east north south lambda0 phi0 '
-                 'cos_phi0 sin_phi0 sin_pi_over_4').split()
+               'cos_phi0 sin_phi0 sin_pi_over_4').split()
 
     def __init__(self, west, east, north, south):
         self.west = west
@@ -443,3 +443,17 @@ def plane_fit(points):
     x = points - ctr[:, None]
     M = numpy.dot(x, x.T)
     return ctr, numpy.linalg.svd(M)[0][:, -1]
+
+
+def fix_lons_idl(lons):
+    """
+    Fix a vector of longitudes crossing the International Date Line (if any).
+
+    :returns: the fixed vector and an IDL flag
+    """
+    if cross_idl(lons.min(), lons.max()):
+        new = numpy.array(lons)
+        new[new < 0] += 360
+        return new, True
+    else:
+        return lons, False
