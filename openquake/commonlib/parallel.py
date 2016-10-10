@@ -221,8 +221,8 @@ class IterResult(object):
         self.futures = futures
         self.name = taskname
         self.num_tasks = num_tasks
-        if self.name.startswith("_"):  # private task, do not log
-            self.progress = lambda *args: None
+        if self.name.startswith("_"):  # private task, log only in debug
+            self.progress = logging.debug
         else:
             self.progress = progress
         self.sent = 0  # set in TaskManager.submit_all
