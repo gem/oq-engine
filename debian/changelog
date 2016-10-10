@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Added a view `task_slowest` displaying info about the slowest task
+    (only for classical calculations for the moment)
+  * concurrent_tasks=0 disable the concurrency
   * Optimized the saving time of the GMFs
   * Changed the default number of concurrent tasks and increased the
     relative weight of point sources and area sources
