@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Optimized the memory consumption when using a ProcessPoolExecutor (i.e
+    fork before reading the source model) by means of a `wakeup` task
   * Reduced the splitting of the fault sources
   * Added a view `task_slowest` displaying info about the slowest task
     (only for classical calculations for the moment)
