@@ -23,6 +23,7 @@ import collections
 from functools import partial, reduce
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
@@ -226,6 +227,17 @@ def classical(sources, sitecol, gsims, monitor):
     return dic
 
 
+def saving_sources_by_task(iterargs, dstore):
+    """
+    Yield the iterargs again by populating 'task_info/source_ids'
+    """
+    source_ids = []
+    for args in iterargs:
+        source_ids.append(' ' .join(src.source_id for src in args[0]))
+        yield args
+    dstore['source_ids'] = numpy.array(source_ids, hdf5.vstr)
+
+
 @base.calculators.add('psha')
 class PSHACalculator(base.HazardCalculator):
     """
@@ -304,9 +316,10 @@ class PSHACalculator(base.HazardCalculator):
             seed=oq.random_seed)
         with self.monitor('managing sources', autoflush=True):
             src_groups = list(self.csm.src_groups)
+            iterargs = saving_sources_by_task(
+                self.gen_args(src_groups, oq, monitor), self.datastore)
             res = parallel.starmap(
-                self.core_task.__func__, self.gen_args(src_groups, oq, monitor)
-            ).submit_all()
+                self.core_task.__func__, iterargs).submit_all()
         acc = reduce(self.agg_dicts, res, self.zerodict())
         self.save_data_transfer(res)
         with self.monitor('store source_info', autoflush=True):
@@ -354,9 +367,11 @@ class PSHACalculator(base.HazardCalculator):
                     self.infos[sg.id, src.source_id] = source.SourceInfo(src)
                     sources = split_filter_source(
                         src, sites, self.ss_filter, self.random_seed)
-                    logging.info(
-                        'Splitting %s "%s" in %d sources',
-                        src.__class__.__name__, src.source_id, len(sources))
+                    if len(sources) > 1:
+                        logging.info(
+                            'Splitting %s "%s" in %d sources',
+                            src.__class__.__name__,
+                            src.source_id, len(sources))
                     for block in block_splitter(
                             sources, maxweight,
                             weight=operator.attrgetter('weight')):
@@ -466,10 +481,13 @@ class ClassicalCalculator(PSHACalculator):
             pmap_by_grp = {
                 int(group_id): self.datastore['poes/' + group_id]
                 for group_id in self.datastore['poes']}
-            sm = parallel.starmap(build_hcurves_and_stats,
-                                  list(self.gen_args(pmap_by_grp)))
+            res = parallel.starmap(
+                build_hcurves_and_stats,
+                list(self.gen_args(pmap_by_grp))).submit_all()
         with self.monitor('saving hcurves and stats', autoflush=True):
-            return sm.reduce(self.save_hcurves)
+            nbytes = reduce(self.save_hcurves, res, AccumDict())
+            self.save_data_transfer(res)
+            return nbytes
 
     def gen_args(self, pmap_by_grp):
         """
