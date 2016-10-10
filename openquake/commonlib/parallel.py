@@ -22,6 +22,7 @@ TODO: write documentation.
 from __future__ import print_function
 import os
 import sys
+import time
 import socket
 import inspect
 import logging
@@ -220,7 +221,10 @@ class IterResult(object):
         self.futures = futures
         self.name = taskname
         self.num_tasks = num_tasks
-        self.progress = progress
+        if self.name.startswith("_"):  # private task, log only in debug
+            self.progress = logging.debug
+        else:
+            self.progress = progress
         self.sent = 0  # set in TaskManager.submit_all
         self.received = []
         if self.num_tasks:
@@ -467,7 +471,7 @@ class TaskManager(object):
             nargs = ''
         if nargs == 1:
             [args] = self.task_args
-            logging.info('Executing a single task in process')
+            self.progress('Executing a single task in process')
             return IterResult([safely_call(self.task_func, args)], self.name)
         task_no = 0
         for args in self.task_args:
@@ -481,7 +485,7 @@ class TaskManager(object):
                     args[-1].weight = weight
             self.submit(*args)
         if not task_no:
-            logging.info('No %s tasks were submitted', self.name)
+            self.progress('No %s tasks were submitted', self.name)
         ir = IterResult(self._iterfutures(), self.name, task_no, self.progress)
         ir.sent = self.sent  # for information purposes
         if self.sent:
@@ -533,6 +537,20 @@ def rec_delattr(mon, name):
 
 if OQ_DISTRIBUTE == 'celery':
     safe_task = task(safely_call,  queue='celery')
+
+
+def _wakeup(sec):
+    """Waiting functions, used to wake up the process pool"""
+    time.sleep(sec)
+
+
+def wakeup_pool():
+    """
+    This is used at startup, only when the ProcessPoolExecutor is used,
+    to fork the processes before loading any big data structure.
+    """
+    if oq_distribute() == 'futures':  # when using the ProcessPoolExecutor
+        list(starmap(_wakeup, ((.2,) for _ in range(executor._max_workers))))
 
 
 class Starmap(object):
