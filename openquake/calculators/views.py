@@ -665,8 +665,6 @@ def view_task_info(token, dstore):
 
     data = ['operation-duration mean stddev min max num_tasks'.split()]
     for task in dstore['task_info']:
-        if task == 'source_ids':
-            continue
         val = dstore['task_info/' + task]['duration']
         data.append(stats(task, val))
     if len(data) == 1:
