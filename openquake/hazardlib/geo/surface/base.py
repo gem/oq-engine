@@ -491,7 +491,6 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
             Values are floats in decimal degrees.
         """
         mesh = self.get_mesh()
-
         return utils.get_spherical_bounding_box(mesh.lons, mesh.lats)
 
     def get_middle_point(self):

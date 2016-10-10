@@ -22,9 +22,8 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.hazardlib.site import \
-    Site, SiteCollection, FilteredSiteCollection, Tile
+    Site, SiteCollection, FilteredSiteCollection
 from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.tests.source.point_test import make_point_source
 
 assert_eq = numpy.testing.assert_equal
 
@@ -298,27 +297,3 @@ class SitePickleTestCase(unittest.TestCase):
         site1 = Site(point, 760.0, True, 100.0, 5.0)
         site2 = pickle.loads(pickle.dumps(site1))
         self.assertEqual(site1, site2)
-
-
-class TileTestCase(unittest.TestCase):
-    def test_normal(self):
-        lons = [10, -1.2]
-        lats = [20, -3.4]
-        maximum_distance = {'Subduction IntraSlab': 200}
-        sitecol = SiteCollection.from_points(lons, lats, SiteModelParam())
-        tile = Tile(sitecol, maximum_distance)
-        self.assertEqual(repr(tile), '<Tile -1 <= lon <= 10, -3 <= lat <= 20>')
-        src = make_point_source(1, 10)
-        self.assertTrue(src in tile)
-
-    def test_cross_idl(self):
-        lons = [-179.2, 178.0]
-        lats = [3.0, 4.0]
-        maximum_distance = {'Subduction IntraSlab': 200}
-        sitecol = SiteCollection.from_points(lons, lats, SiteModelParam())
-        tile = Tile(sitecol, maximum_distance)
-        self.assertEqual(repr(tile), '<Tile 178 <= lon <= 180, 3 <= lat <= 4>')
-        src = make_point_source(-179.3, 3.5)
-        self.assertTrue(src in tile)
-        src = make_point_source(178.2, 3.5)
-        self.assertTrue(src in tile)
