@@ -249,8 +249,6 @@ class IterResult(object):
                 result = fut.result()
             else:
                 result = fut
-            if self.name == 'build_hcurves_and_stats':
-                import pdb; pdb.set_trace()
             if hasattr(result, 'unpickle'):
                 self.received.append(len(result))
                 val, etype, mon = result.unpickle()
