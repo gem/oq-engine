@@ -479,10 +479,13 @@ class ClassicalCalculator(PSHACalculator):
             pmap_by_grp = {
                 int(group_id): self.datastore['poes/' + group_id]
                 for group_id in self.datastore['poes']}
-            sm = parallel.starmap(build_hcurves_and_stats,
-                                  list(self.gen_args(pmap_by_grp)))
+            res = parallel.starmap(
+                build_hcurves_and_stats,
+                list(self.gen_args(pmap_by_grp))).submit_all()
         with self.monitor('saving hcurves and stats', autoflush=True):
-            return sm.reduce(self.save_hcurves)
+            nbytes = reduce(self.save_hcurves, res, AccumDict())
+            self.save_data_transfer(res)
+            return nbytes
 
     def gen_args(self, pmap_by_grp):
         """
