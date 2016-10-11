@@ -8,9 +8,9 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 
 ## OpenQuake Engine version 2.0.1 (Aki)
 
-Starting from OpenQuake version 2.0.1 we have introduced a "code name" to honour earthquake scientists.
+Starting from OpenQuake version 2.0 we have introduced a "code name" to honour earthquake scientists.
 
-The code name for version 2.0.1 is **Aki**, in memory of [Keiiti Aki](https://en.wikipedia.org/wiki/Keiiti_Aki).
+The code name for version 2.0 is **Aki**, in memory of [Keiiti Aki](https://en.wikipedia.org/wiki/Keiiti_Aki).
 
 ## Documentation
 
