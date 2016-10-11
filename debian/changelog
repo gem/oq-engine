@@ -1,3 +1,7 @@
+  [Jonathan Griffin/Graeme Weatherill]
+  * Adds Leonard (2014) magnitude-area scaling relation
+  * Cleanup of scaling relation test code, removes fragile tests of the get_available_scalerel function
+
   [Michele Simionato]
   * Extended the RtreeFilter to work on all sources; removed the Tile class
   * Introduced an optional RtreeFilter for fast filtering of the sites by
@@ -5,6 +9,7 @@
 
   [Graeme Weatherill]
   * Adds/Modifies Ry0 and Rx calculator for multi-surface typology using the Generalized Coordinate System (GC2)
+  * Implements the European GMPE of Kotha et al. (2016), the SaRotD100 GMPE of Hong & Goda (2007) and the Arias Intensity GMPE of Trvasarou et al. (2003)
 
   [Michele Simionato]
   * The `SourceSitesFilter` is now used by default in `pmap_from_grp`
