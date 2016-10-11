@@ -20,7 +20,7 @@ Another installation option for unsupported Linux systems is provided by the **[
 
 ### Celery support
 
-In the OpenQuake Engine 2.0 Celery isn't needed (and not recommended) on a single machine setup; the OpenQuake Engine is able to use all the available CPU cores even without Celery.
+In the OpenQuake Engine 2.1 Celery isn't needed (and not recommended) on a single machine setup; the OpenQuake Engine is able to use all the available CPU cores even without Celery.
 Celery must be enabled on a cluster / multi node setup. To enable it please refer to the [multiple nodes installation guidelines](installing/cluster.md).
 
 ***
