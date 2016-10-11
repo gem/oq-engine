@@ -113,4 +113,5 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 ![](https://www.globalquakemodel.org/media/sponsor/IRDRICSU.png)
 ![](https://www.globalquakemodel.org/media/sponsor/EERI_GEM.png)
 
+If you would like to help support development of OpenQuake, please contact us at [partnership@globalquakemodel.org](mailto:partnership@globalquakemodel.org).
 For more info visit the GEM website at https://www.globalquakemodel.org/gem/organisation/partners/
