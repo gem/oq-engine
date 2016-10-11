@@ -348,13 +348,15 @@ class CompositionInfo(object):
             'fake', weight,  'b1',
             [sourceconverter.SourceGroup('*', eff_ruptures=1)],
             gsim_lt.get_num_paths(), ordinal=0, samples=1)
-        return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM])
+        return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM],
+                   tot_weight=0)
 
-    def __init__(self, gsim_lt, seed, num_samples, source_models):
+    def __init__(self, gsim_lt, seed, num_samples, source_models, tot_weight):
         self.gsim_lt = gsim_lt
         self.seed = seed
         self.num_samples = num_samples
         self.source_models = source_models
+        self.tot_weight = tot_weight
 
     def __getnewargs__(self):
         # with this CompositionInfo instances will be unpickled correctly
@@ -379,7 +381,8 @@ class CompositionInfo(object):
                 dict(seed=self.seed, num_samples=self.num_samples,
                      trts=hdf5.array_of_vstr(trts),
                      gsim_lt_xml=str(self.gsim_lt),
-                     gsim_fname=self.gsim_lt.fname))
+                     gsim_fname=self.gsim_lt.fname,
+                     tot_weight=self.tot_weight))
 
     def __fromh5__(self, dic, attrs):
         sg_data = group_array(dic['sg_data'], 'sm_id')
@@ -530,11 +533,14 @@ class CompositeSourceModel(collections.Sequence):
         self.split_map = {}
         if set_weight:
             self.set_weights()
+        else:
+            self.weight = 0
         # must go after set_weights to have the correct .num_ruptures
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples,
-            [sm.get_skeleton() for sm in self.source_models])
+            [sm.get_skeleton() for sm in self.source_models],
+            self.weight)
 
     def get_model(self, sm_id):
         """
