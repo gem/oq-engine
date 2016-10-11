@@ -1,8 +1,8 @@
 # Installing the OpenQuake Engine on Ubuntu Linux
 
 The OpenQuake Engine stable tree is available in the form of *deb* binary packages for the following Ubuntu releases:
-- **Ubuntu 14.04** LTS (Trusty) 
 - **Ubuntu 16.04** LTS (Xenial)
+- **Ubuntu 14.04** LTS (Trusty) 
 
 We no longer provide *deb* binary packages for *Ubuntu 12.04* LTS (Precise)".
 
