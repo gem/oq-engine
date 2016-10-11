@@ -33,19 +33,19 @@ class AvailableMSRTestCase(unittest.TestCase):
     verifying the number or set of scaling relations available
     """
     def _test_get_available_scalerel(self):
-        self.assertTrue(len(get_available_scalerel()) > 0)
+        self.assertGreater(len(get_available_scalerel()), 0)
 
     def _test_get_available_magnitude_scalerel(self):
-        self.assertTrue(len(get_available_magnitude_scalerel()) > 0)
+        self.assertGreater(len(get_available_magnitude_scalerel()), 0)
 
     def _test_get_available_sigma_magnitude_scalerel(self):
-        self.assertTrue(len(get_available_sigma_magnitude_scalerel()) > 0)
+        self.assertGreater(len(get_available_sigma_magnitude_scalerel()), 0)
 
     def _test_get_available_area_scalerel(self):
-        self.assertTrue(len(get_available_area_scalerel()) > 0)
+        self.assertGreater(len(get_available_area_scalerel()), 0)
 
     def _test_get_available_sigma_area_scalerel(self):
-        self.assertTrue(len(get_available_sigma_area_scalerel()) > 0)
+        self.assertGreater(len(get_available_sigma_area_scalerel()), 0)
 
 
 class BaseMSRTestCase(unittest.TestCase):
