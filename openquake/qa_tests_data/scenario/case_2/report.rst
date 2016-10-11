@@ -2,9 +2,9 @@ Scenario QA Test, Case 2
 ========================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_54367.hdf5 Tue Sep 27 14:05:50 2016
-engine_version                                 2.1.0-git1ca7123        
-hazardlib_version                              0.21.0-git9261682       
+gem-tstation:/home/michele/ssd/calc_60050.hdf5 Tue Oct 11 06:55:57 2016
+engine_version                                 2.1.0-git4e31fdd        
+hazardlib_version                              0.21.0-gitab31f47       
 ============================================== ========================
 
 num_sites = 3, sitecol = 831 B
@@ -49,5 +49,5 @@ Slowest operations
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 filtering sites         0.009     0.0       1     
-reading site collection 2.599E-05 0.0       1     
+reading site collection 2.694E-05 0.0       1     
 ======================= ========= ========= ======

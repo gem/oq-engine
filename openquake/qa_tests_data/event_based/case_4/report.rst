@@ -2,9 +2,9 @@ Event-Based Hazard QA Test, Case 4
 ==================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_54431.hdf5 Tue Sep 27 14:07:29 2016
-engine_version                                 2.1.0-git1ca7123        
-hazardlib_version                              0.21.0-git9261682       
+gem-tstation:/home/michele/ssd/calc_60114.hdf5 Tue Oct 11 06:58:02 2016
+engine_version                                 2.1.0-git4e31fdd        
+hazardlib_version                              0.21.0-gitab31f47       
 ============================================== ========================
 
 num_sites = 1, sitecol = 739 B
@@ -63,11 +63,11 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ======
-source_model     grp_id trt                  num_sources eff_ruptures weight
-================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 1           10           10    
-================ ====== ==================== =========== ============ ======
+================ ====== ==================== =========== ============ ============
+source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
+================ ====== ==================== =========== ============ ============
+source_model.xml 0      Active Shallow Crust 1           10           10          
+================ ====== ==================== =========== ============ ============
 
 Informational data
 ------------------
@@ -77,7 +77,7 @@ compute_ruptures_num_tasks             1
 compute_ruptures_sent.gsims            82          
 compute_ruptures_sent.monitor          1,016       
 compute_ruptures_sent.sitecol          433         
-compute_ruptures_sent.sources          1,277       
+compute_ruptures_sent.sources          1,275       
 compute_ruptures_tot_received          8,947       
 hazard.input_weight                    10          
 hazard.n_imts                          1           
@@ -93,17 +93,17 @@ Specific information for event based
 ------------------------------------
 ======================== =====
 Total number of ruptures 10   
-Total number of events   44   
-Rupture multiplicity     4.400
+Total number of events   1    
+Rupture multiplicity     0.100
 ======================== =====
 
 Slowest sources
 ---------------
-====== ========= ================= ====== ========= =========
-grp_id source_id source_class      weight calc_time num_sites
-====== ========= ================= ====== ========= =========
-0      1         SimpleFaultSource 10     0.0       0        
-====== ========= ================= ====== ========= =========
+====== ========= ================= ============ ========= ========= =========
+grp_id source_id source_class      num_ruptures calc_time num_sites num_split
+====== ========= ================= ============ ========= ========= =========
+0      1         SimpleFaultSource 10           0.0       1         0        
+====== ========= ================= ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
@@ -117,19 +117,21 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.029 NaN    0.029 0.029 1        
+compute_ruptures   0.028 NaN    0.028 0.028 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-total compute_ruptures         0.029     0.0       1     
-filtering ruptures             0.016     0.0       10    
-reading composite source model 0.006     0.0       1     
-saving ruptures                0.005     0.0       1     
-managing sources               5.329E-04 0.0       1     
-store source_info              3.731E-04 0.0       1     
-reading site collection        2.813E-05 0.0       1     
-============================== ========= ========= ======
+================================ ========= ========= ======
+operation                        time_sec  memory_mb counts
+================================ ========= ========= ======
+total compute_ruptures           0.028     0.0       1     
+filtering ruptures               0.016     0.0       10    
+saving ruptures                  0.009     0.0       1     
+reading composite source model   0.009     0.0       1     
+filtering composite source model 0.003     0.0       1     
+managing sources                 0.002     0.0       1     
+store source_info                7.100E-04 0.0       1     
+Initializing rupture serials     4.101E-05 0.0       1     
+reading site collection          3.505E-05 0.0       1     
+================================ ========= ========= ======

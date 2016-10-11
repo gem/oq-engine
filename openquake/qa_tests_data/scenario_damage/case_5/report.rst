@@ -2,9 +2,9 @@ Calculation of the ground motion fields for a scenario
 ======================================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_54365.hdf5 Tue Sep 27 14:05:50 2016
-engine_version                                 2.1.0-git1ca7123        
-hazardlib_version                              0.21.0-git9261682       
+gem-tstation:/home/michele/ssd/calc_60048.hdf5 Tue Oct 11 06:55:56 2016
+engine_version                                 2.1.0-git4e31fdd        
+hazardlib_version                              0.21.0-gitab31f47       
 ============================================== ========================
 
 num_sites = 7, sitecol = 825 B
