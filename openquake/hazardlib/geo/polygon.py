@@ -115,6 +115,13 @@ class Polygon(object):
         polygon._projection = proj
         return polygon
 
+    def get_bbox(self):
+        """
+        Returns a simple 2D bounding box from the extrema of lons and lats
+        """
+        return (self.lons.min(), self.lats.min(),
+                self.lons.max(), self.lats.max())
+
     def _init_polygon2d(self):
         """
         Spherical bounding box, projection, and Cartesian polygon are all

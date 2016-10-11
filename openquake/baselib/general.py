@@ -227,21 +227,6 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1,
     return block_splitter(items, math.ceil(total_weight / hint), weight, key)
 
 
-def assert_close_seq(seq1, seq2, rtol, atol, context=None):
-    """
-    Compare two sequences of the same length.
-
-    :param seq1: a sequence
-    :param seq2: another sequence
-    :param rtol: relative tolerance
-    :param atol: absolute tolerance
-    """
-    assert len(seq1) == len(seq2), 'Lists of different lenghts: %d != %d' % (
-        len(seq1), len(seq2))
-    for x, y in zip(seq1, seq2):
-        assert_close(x, y, rtol, atol, context)
-
-
 def assert_close(a, b, rtol=1e-07, atol=0, context=None):
     """
     Compare for equality up to a given precision two composite objects
@@ -257,22 +242,31 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
         # shortcut
         numpy.testing.assert_allclose(a, b, rtol, atol)
         return
-    if a == b:  # another shortcut
+    if isinstance(a, (str, bytes, int)):
+        # another shortcut
+        assert a == b
         return
     if hasattr(a, '_slots_'):  # record-like objects
-        assert_close_seq(a._slots_, b._slots_, rtol, atol, a)
-        for x, y in zip(a._slots_, b._slots_):
-            assert_close(getattr(a, x), getattr(b, y), rtol, atol, x)
+        assert a._slots_ == b._slots_
+        for x in a._slots_:
+            assert_close(getattr(a, x), getattr(b, x), rtol, atol, x)
         return
-    if isinstance(a, collections.Mapping):  # dict-like objects
-        assert_close_seq(a.keys(), b.keys(), rtol, atol, a)
-        assert_close_seq(a.values(), b.values(), rtol, atol, a)
-        return
-    if hasattr(a, '__iter__'):  # iterable objects
-        assert_close_seq(list(a), list(b), rtol, atol, a)
+    if hasattr(a, 'keys'):  # dict-like objects
+        assert a.keys() == b.keys()
+        for x in a:
+            assert_close(a[x], b[x], rtol, atol, x)
         return
     if hasattr(a, '__dict__'):  # objects with an attribute dictionary
         assert_close(vars(a), vars(b), context=a)
+        return
+    if hasattr(a, '__iter__'):  # iterable objects
+        xs, ys = list(a), list(b)
+        assert len(xs) == len(ys), ('Lists of different lenghts: %d != %d'
+                                    % (len(xs), len(ys)))
+        for x, y in zip(xs, ys):
+            assert_close(x, y, rtol, atol, x)
+        return
+    if a == b:  # last attempt to avoid raising the exception
         return
     ctx = '' if context is None else 'in context ' + repr(context)
     raise AssertionError('%r != %r %s' % (a, b, ctx))

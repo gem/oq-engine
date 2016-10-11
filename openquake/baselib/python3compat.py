@@ -25,7 +25,6 @@ from __future__ import print_function
 import os
 import sys
 import math
-import numpy
 import importlib
 import subprocess
 
@@ -64,11 +63,16 @@ def decode(val):
 if PY2:
     import cPickle as pickle
     import ConfigParser as configparser
-    from itertools import izip as zip
+    from itertools import izip
 
     range = xrange
     round = round
     unicode = unicode
+
+    def zip(arg, *args):
+        for a in args:
+            assert len(a) == len(arg), (len(a), len(arg))
+        return izip(arg, *args)
 
     # taken from six
     def exec_(_code_, _globs_=None, _locs_=None):
@@ -90,12 +94,17 @@ def raise_(tp, value=None, tb=None):
 
 else:  # Python 3
     import pickle
+    import builtins
     import configparser
     exec_ = eval('exec')
 
-    zip = zip
     range = range
     unicode = str
+
+    def zip(arg, *args):
+        for a in args:
+            assert len(a) == len(arg), (len(a), len(arg))
+        return builtins.zip(arg, *args)
 
     def round(x, d=0):
         p = 10 ** d

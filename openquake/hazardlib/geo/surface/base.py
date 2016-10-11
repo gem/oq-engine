@@ -24,8 +24,80 @@ import abc
 
 import numpy
 import math
-from openquake.hazardlib.geo import geodetic, utils, Point, Line
+from openquake.hazardlib.geo import geodetic, utils, Point, Line,\
+    RectangularMesh
 from openquake.baselib.python3compat import with_metaclass
+
+
+def _find_turning_points(mesh, tol=1.0):
+    """
+    Identifies the turning points in a rectangular mesh based on the
+    deviation in the azimuth between successive points on the upper edge.
+    A turning point is flagged if the change in azimuth change is greater than
+    the specified tolerance (in degrees)
+
+    :param mesh:
+        Mesh for downsampling as instance of :class:
+        openquake.hazardlib.geo.mesh.RectangularMesh
+
+    :param float tol:
+        Maximum difference in azimuth (decimal degrees) between successive
+        points to identify a turning point
+
+    :returns:
+        Column indices of turning points (as numpy array)
+    """
+    assert isinstance(mesh, RectangularMesh)
+    azimuths = geodetic.azimuth(mesh.lons[0, :-1], mesh.lats[0, :-1],
+                                mesh.lons[0, 1:], mesh.lats[0, 1:])
+    naz = len(azimuths)
+    azim = azimuths[0]
+    # Retain initial point
+    idx = [0]
+    for i in range(1, naz):
+        if numpy.fabs(azimuths[i] - azim) > tol:
+            idx.append(i)
+            azim = azimuths[i]
+    # Add on last point - if not already in the set
+    if not idx[-1] == (mesh.lons.shape[1] - 1):
+        idx.append(mesh.lons.shape[1] - 1)
+    return numpy.array(idx)
+
+
+def downsample_mesh(mesh, tol=1.0):
+    """
+    Returns a mesh sampled at a lower resolution - if the difference
+    in azimuth is larger than the specified tolerance a turn is assumed
+
+    :returns:
+        Downsampled mesh as instance of :class:
+        openquake.hazardlib.geo.mesh.RectangularMesh
+    """
+    idx = _find_turning_points(mesh, tol)
+    if mesh.depths is not None:
+        return RectangularMesh(lons=mesh.lons[:, idx],
+                               lats=mesh.lats[:, idx],
+                               depths=mesh.depths[:, idx])
+    else:
+        return RectangularMesh(lons=mesh.lons[:, idx],
+                               lats=mesh.lats[:, idx])
+
+
+def downsample_trace(mesh, tol=1.0):
+    """
+    Downsamples the upper edge of a fault within a rectangular mesh, retaining
+    node points only if changes in direction on the order of tol are found
+
+    :returns:
+        Downsampled edge as a numpy array of [long, lat, depth]
+    """
+    idx = _find_turning_points(mesh, tol)
+    if mesh.depths is not None:
+        return numpy.column_stack([mesh.lons[0, idx],
+                                   mesh.lats[0, idx],
+                                   mesh.depths[0, idx]])
+    else:
+        return numpy.column_stack([mesh.lons[0, idx], mesh.lats[0, idx]])
 
 
 class BaseSurface(with_metaclass(abc.ABCMeta)):
@@ -419,7 +491,6 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
             Values are floats in decimal degrees.
         """
         mesh = self.get_mesh()
-
         return utils.get_spherical_bounding_box(mesh.lons, mesh.lats)
 
     def get_middle_point(self):
