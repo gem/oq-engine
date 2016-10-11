@@ -2,9 +2,9 @@ Scenario Calculation with Simple Fault Rupture
 ==============================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_54445.hdf5 Tue Sep 27 14:08:04 2016
-engine_version                                 2.1.0-git1ca7123        
-hazardlib_version                              0.21.0-git9261682       
+gem-tstation:/home/michele/ssd/calc_60128.hdf5 Tue Oct 11 06:58:47 2016
+engine_version                                 2.1.0-git4e31fdd        
+hazardlib_version                              0.21.0-gitab31f47       
 ============================================== ========================
 
 num_sites = 7, sitecol = 1015 B
@@ -49,6 +49,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.006     0.0       1     
-reading site collection 1.051E-04 0.0       1     
+filtering sites         0.007     0.0       1     
+reading site collection 7.606E-05 0.0       1     
 ======================= ========= ========= ======

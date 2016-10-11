@@ -2,9 +2,9 @@ Ucerf test
 ==========
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_54359.hdf5 Tue Sep 27 14:05:49 2016
-engine_version                                 2.1.0-git1ca7123        
-hazardlib_version                              0.21.0-git9261682       
+gem-tstation:/home/michele/ssd/calc_60042.hdf5 Tue Oct 11 06:55:55 2016
+engine_version                                 2.1.0-git4e31fdd        
+hazardlib_version                              0.21.0-gitab31f47       
 ============================================== ========================
 
 num_sites = 1588, sitecol = 72.04 KB
@@ -28,87 +28,39 @@ master_seed                  0
 
 Input files
 -----------
-======================= ============================================================================================================================================================
-Name                    File                                                                                                                                                        
-======================= ============================================================================================================================================================
-gsim_logic_tree         `gmpe_logic_tree_ucerf_mean.xml <gmpe_logic_tree_ucerf_mean.xml>`_                                                                                          
-job_ini                 `job.ini <job.ini>`_                                                                                                                                        
-sites                   `bay_area.csv <bay_area.csv>`_                                                                                                                              
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2
-                    >`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2
-                    >`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2
-                    >`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2
-                    >`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2
-                    >`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2
-                    >`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2
-                    >`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2
-                    >`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3
-                    >`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3
-                    >`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3
-                    >`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3
-                    >`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3
-                    >`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3
-                    >`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3
-                    >`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3
-                    >`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2
-                    >`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2
-                    >`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2
-                    >`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2
-                    >`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2
-                    >`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2
-                    >`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2
-                    >`_
-source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2
-                     <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2
-                    >`_
-source_model            `dummy_ucerf_bg_source_redux.xml <dummy_ucerf_bg_source_redux.xml>`_                                                                                        
-source_model_logic_tree `dummy_ucerf_smlt_redux.xml <dummy_ucerf_smlt_redux.xml>`_                                                                                                  
-======================= ============================================================================================================================================================
+======================= ==================================================================================================================
+Name                    File                                                                                                              
+======================= ==================================================================================================================
+gsim_logic_tree         `gmpe_logic_tree_ucerf_mean.xml <gmpe_logic_tree_ucerf_mean.xml>`_                                                
+job_ini                 `job.ini <job.ini>`_                                                                                              
+sites                   `bay_area.csv <bay_area.csv>`_                                                                                    
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2>`_
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU3>`_
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
+source                  `DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2 <DsrUni_CharConst_M5Rate6.5_MMaxOff7.6_NoFix_SpatSeisU2>`_
+source_model            `dummy_ucerf_bg_source_redux.xml <dummy_ucerf_bg_source_redux.xml>`_                                              
+source_model_logic_tree `dummy_ucerf_smlt_redux.xml <dummy_ucerf_smlt_redux.xml>`_                                                        
+======================= ==================================================================================================================
 
 Composite source model
 ----------------------
@@ -232,3 +184,11 @@ Informational data
 ======== ============
 hostname gem-tstation
 ======== ============
+
+Slowest operations
+------------------
+======================= ======== ========= ======
+operation               time_sec memory_mb counts
+======================= ======== ========= ======
+reading site collection 0.006    0.0       1     
+======================= ======== ========= ======
