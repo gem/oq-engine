@@ -4,7 +4,7 @@
 
 # GEM Mirror
 # We also provide pre-compiled manylinux1 wheels for
-# h5py, Shapely and psutil
+# h5py, Shapely and Rtree
 
 http://ftp.openquake.org/python-new-wheels/pkgconfig-1.1.0-py3-none-any.whl
 http://ftp.openquake.org/python-new-wheels/Cython-0.23.4-cp35-cp35m-manylinux1_x86_64.whl
