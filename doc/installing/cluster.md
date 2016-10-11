@@ -65,7 +65,7 @@ The required daemons are:
 sudo service openquake-celery start
 ```
 
-The *Celery* daemon is not started at boot by default on the workers node and the *DbServer*, *WebUI* can be disabled on the workers. Have a look at the documentation for [Ubuntu]() or [RedHat] to see how to enable or disable services.
+The *Celery* daemon is not started at boot by default on the workers node and the *DbServer*, *WebUI* can be disabled on the workers. Have a look at the documentation for [Ubuntu](ubuntu.md#configure-the-system-services) or [RedHat](rhel.md#configure-the-system-services) to see how to enable or disable services.
 
 
 ## Network and security considerations
