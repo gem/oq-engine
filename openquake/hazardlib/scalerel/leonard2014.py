@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module :mod:`openquake.hazardlib.scalerel.leonard_2014` implements
+Module :mod:`openquake.hazardlib.scalerel.leonard2014` implements
 :class:`Leonard2014_SCR`
 :class:`Leonard2014_Interplate`
 """
