@@ -510,25 +510,51 @@ class ZhaoEtAl2006SSlabNSHMP2014(ZhaoEtAl2006SSlab):
 
         return mean, stddevs
 
-class ZhaoEtAl2006SInterCascadia(ZhaoEtAl2006Asc):
+
+# Coefficient table taken from Gail Atkinson's "White paper on
+# Proposed Ground-motion Prediction Equations (GMPEs) for 2015
+# National Seismic Hazard Maps" (2012, page 16).
+# Values were interpolated to include all listed periods.
+# MF is the linear multiplicative factor.
+COEFFS_SITE_FACTORS = CoeffsTable(sa_damping=5, table="""\
+    IMT    MF
+    pga    0.50
+    pgv    1.00
+    0.05   0.44
+    0.10   0.44
+    0.15   0.53
+    0.20   0.60
+    0.25   0.72
+    0.30   0.81
+    0.40   1.00
+    0.50   1.01
+    0.60   1.02
+    0.70   1.02
+    0.80   1.03
+    0.90   1.04
+    1.00   1.04
+    1.25   1.19
+    1.50   1.31
+    2.00   1.51
+    2.50   1.34
+    3.00   1.21
+    4.00   1.09
+    5.00   1.00
+    """)
+
+
+class ZhaoEtAl2006SInterCascadia(ZhaoEtAl2006SInter):
     """
-    Implements the interface GMPE developed by John X. Zhao et al modified 
-    by the Japan/Cascadia site factors as proposed by Atkinson, G. M. 
-    (2012). White paper on proposed ground-motion prediction equations 
-    (GMPEs) for 2015 National Seismic Hazard Maps Final Version, 
+    Implements the interface GMPE developed by John X. Zhao et al modified
+    by the Japan/Cascadia site factors as proposed by Atkinson, G. M.
+    (2012). White paper on proposed ground-motion prediction equations
+    (GMPEs) for 2015 National Seismic Hazard Maps Final Version,
     Nov. 2012, 50 pp. This class extends the
     :class:`openquake.hazardlib.gsim.zhao_2006.ZhaoEtAl2006Asc`
     because the equation for subduction interface is obtained from the
     equation for active shallow crust, by removing the faulting style
     term and adding a subduction interface term.
     """
-    #: Supported tectonic region type is subduction interface, this means
-    #: that factors FR, SS and SSL are assumed 0 in equation 1, p. 901.
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
-
-    #: Required rupture parameters are magnitude and focal depth.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
-
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -539,7 +565,7 @@ class ZhaoEtAl2006SInterCascadia(ZhaoEtAl2006Asc):
         # intensity measure type.
         C = self.COEFFS_ASC[imt]
         C_SINTER = self.COEFFS_SINTER[imt]
-        C_SF = self.COEFFS_SITE_FACTORS[imt]
+        C_SF = COEFFS_SITE_FACTORS[imt]
 
         # mean value as given by equation 1, p. 901, without considering the
         # faulting style and intraslab terms (that is FR, SS, SSL = 0) and the
@@ -554,95 +580,29 @@ class ZhaoEtAl2006SInterCascadia(ZhaoEtAl2006Asc):
                                                  W=C_SINTER['WI'],
                                                  mag=rup.mag) +\
             C_SINTER['SI']
-        
-        # convert from cm/s**2 to g
-        mean = np.log(np.exp(mean) * 1e-2 / g)
-        
+
         # multiply by site factor to "convert" Japan values to Cascadia values
-        mean = np.log(np.exp(mean) * C_SF['MF'])
+        # then convert from cm/s**2 to g
+        mean = np.log((np.exp(mean) * C_SF["MF"]) * 1e-2 / g)
 
         stddevs = self._get_stddevs(C['sigma'], C_SINTER['tauI'], stddev_types,
                                     num_sites=len(sites.vs30))
 
         return mean, stddevs
 
-    #: Coefficient table containing subduction interface coefficients,
-    #: taken from table 4, p. 903 (only column SI), and table 6, p. 907
-    #: (only columns QI, WI, TauI)
-    COEFFS_SINTER = CoeffsTable(sa_damping=5, table="""\
-        IMT    SI     QI      WI      tauI
-        pga    0.000  0.0     0.0     0.308
-        0.05   0.000  0.0     0.0     0.343
-        0.10   0.000  0.0     0.0     0.403
-        0.15   0.000 -0.0138  0.0286  0.367
-        0.20   0.000 -0.0256  0.0352  0.328
-        0.25   0.000 -0.0348  0.0403  0.289
-        0.30   0.000 -0.0423  0.0445  0.280
-        0.40  -0.041 -0.0541  0.0511  0.271
-        0.50  -0.053 -0.0632  0.0562  0.277
-        0.60  -0.103 -0.0707  0.0604  0.296
-        0.70  -0.146 -0.0771  0.0639  0.313
-        0.80  -0.164 -0.0825  0.0670  0.329
-        0.90  -0.206 -0.0874  0.0697  0.324
-        1.00  -0.239 -0.0917  0.0721  0.328
-        1.25  -0.256 -0.1009  0.0772  0.339
-        1.50  -0.306 -0.1083  0.0814  0.352
-        2.00  -0.321 -0.1202  0.0880  0.360
-        2.50  -0.337 -0.1293  0.0931  0.356
-        3.00  -0.331 -0.1368  0.0972  0.338
-        4.00  -0.390 -0.1486  0.1038  0.307
-        5.00  -0.498 -0.1578  0.1090  0.272
-        """)
-        
-    # Coefficient table taken from Gail Atkinson's "White paper on
-    # Proposed Ground-motion Prediction Equations (GMPEs) for 2015
-    # National Seismic Hazard Maps" (2012, page 16).
-    # Values were interpolated to include all listed periods.
-    # MF is the linear multiplicative factor.
-    COEFFS_SITE_FACTORS = CoeffsTable(sa_damping=5, table="""\
-        IMT    MF
-        pga    0.50
-        pgv    1.00
-        0.05   0.44
-        0.10   0.44
-        0.15   0.53
-        0.20   0.60
-        0.25   0.72
-        0.30   0.81
-        0.40   1.00
-        0.50   1.01
-        0.60   1.02
-        0.70   1.02
-        0.80   1.03
-        0.90   1.04
-        1.00   1.04
-        1.25   1.19
-        1.50   1.31
-        2.00   1.51
-        2.50   1.34
-        3.00   1.21
-        4.00   1.09
-        5.00   1.00
-        """)
 
-class ZhaoEtAl2006SSlabCascadia(ZhaoEtAl2006Asc):
+class ZhaoEtAl2006SSlabCascadia(ZhaoEtAl2006SSlab):
     """
-    Implements GMPE developed by John X. Zhao et al modified 
-    by the Japan/Cascadia site factors as proposed by Atkinson, G. M. 
-    (2012). White paper on proposed ground-motion prediction equations 
-    (GMPEs) for 2015 National Seismic Hazard Maps Final Version, 
+    Implements GMPE developed by John X. Zhao et al modified
+    by the Japan/Cascadia site factors as proposed by Atkinson, G. M.
+    (2012). White paper on proposed ground-motion prediction equations
+    (GMPEs) for 2015 National Seismic Hazard Maps Final Version,
     Nov. 2012, 50 pp. This class extends the
     :class:`openquake.hazardlib.gsim.zhao_2006.ZhaoEtAl2006Asc`
     because the equation for subduction slab is obtained from the
     equation for active shallow crust, by removing the faulting style
     term and adding subduction slab terms.
     """
-    #: Supported tectonic region type is subduction interface, this means
-    #: that factors FR, SS and SSL are assumed 0 in equation 1, p. 901.
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
-
-    #: Required rupture parameters are magnitude and focal depth.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -654,6 +614,7 @@ class ZhaoEtAl2006SSlabCascadia(ZhaoEtAl2006Asc):
         # intensity measure type.
         C = self.COEFFS_ASC[imt]
         C_SSLAB = self.COEFFS_SSLAB[imt]
+        C_SF = COEFFS_SITE_FACTORS[imt]
 
         # to avoid singularity at 0.0 (in the calculation of the
         # slab correction term), replace 0 values with 0.1
@@ -674,81 +635,11 @@ class ZhaoEtAl2006SSlabCascadia(ZhaoEtAl2006Asc):
                                                  mag=rup.mag) +\
             C_SSLAB['SS'] + self._compute_slab_correction_term(C_SSLAB, d)
 
-        # convert from cm/s**2 to g
-        mean = np.log(np.exp(mean) * 1e-2 / g)
-        
         # multiply by site factor to "convert" Japan values to Cascadia values
-        mean = np.log(np.exp(mean) * C_SF['MF'])
+        # then convert from cm/s**2 to g
+        mean = np.log((np.exp(mean) * C_SF["MF"]) * 1e-2 / g)
 
         stddevs = self._get_stddevs(C['sigma'], C_SSLAB['tauS'], stddev_types,
                                     num_sites=len(sites.vs30))
 
         return mean, stddevs
-
-    def _compute_slab_correction_term(self, C, rrup):
-        """
-        Compute path modification term for slab events, that is
-        the 8-th term in equation 1, p. 901.
-        """
-        slab_term = C['SSL'] * np.log(rrup)
-
-        return slab_term
-
-    #: Coefficient table containing subduction slab coefficients taken from
-    #: table 4, p. 903 (only columns for SS and SSL), and table 6, p. 907
-    #: (only columns for PS, QS, WS, TauS)
-    COEFFS_SSLAB = CoeffsTable(sa_damping=5, table="""\
-        IMT    SS     SSL     PS      QS       WS      tauS
-        pga    2.607 -0.528   0.1392  0.1584  -0.0529  0.321
-        0.05   2.764 -0.551   0.1636  0.1932  -0.0841  0.378
-        0.10   2.156 -0.420   0.1690  0.2057  -0.0877  0.420
-        0.15   2.161 -0.431   0.1669  0.1984  -0.0773  0.372
-        0.20   1.901 -0.372   0.1631  0.1856  -0.0644  0.324
-        0.25   1.814 -0.360   0.1588  0.1714  -0.0515  0.294
-        0.30   2.181 -0.450   0.1544  0.1573  -0.0395  0.284
-        0.40   2.432 -0.506   0.1460  0.1309  -0.0183  0.278
-        0.50   2.629 -0.554   0.1381  0.1078  -0.0008  0.272
-        0.60   2.702 -0.575   0.1307  0.0878   0.0136  0.285
-        0.70   2.654 -0.572   0.1239  0.0705   0.0254  0.290
-        0.80   2.480 -0.540   0.1176  0.0556   0.0352  0.299
-        0.90   2.332 -0.522   0.1116  0.0426   0.0432  0.289
-        1.00   2.233 -0.509   0.1060  0.0314   0.0498  0.286
-        1.25   2.029 -0.469   0.0933  0.0093   0.0612  0.277
-        1.50   1.589 -0.379   0.0821 -0.0062   0.0674  0.282
-        2.00   0.966 -0.248   0.0628 -0.0235   0.0692  0.300
-        2.50   0.789 -0.221   0.0465 -0.0287   0.0622  0.292
-        3.00   1.037 -0.263   0.0322 -0.0261   0.0496  0.274
-        4.00   0.561 -0.169   0.0083 -0.0065   0.0150  0.281
-        5.00   0.225 -0.120  -0.0117  0.0246  -0.0268  0.296
-        """)
-        
-    # Coefficient table taken from Gail Atkinson's "White paper on
-    # Proposed Ground-motion Prediction Equations (GMPEs) for 2015
-    # National Seismic Hazard Maps" (2012, page 16).
-    # Values were interpolated to include all listed periods.
-    # MF is the linear multiplicative factor.
-    COEFFS_SITE_FACTORS = CoeffsTable(sa_damping=5, table="""\
-        IMT    MF
-        pga    0.50
-        pgv    1.00
-        0.05   0.44
-        0.10   0.44
-        0.15   0.53
-        0.20   0.60
-        0.25   0.72
-        0.30   0.81
-        0.40   1.00
-        0.50   1.01
-        0.60   1.02
-        0.70   1.02
-        0.80   1.03
-        0.90   1.04
-        1.00   1.04
-        1.25   1.19
-        1.50   1.31
-        2.00   1.51
-        2.50   1.34
-        3.00   1.21
-        4.00   1.09
-        5.00   1.00
-        """)
