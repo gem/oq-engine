@@ -14,12 +14,12 @@ LOCKDOWN = True
 Upgrade the database to host users and sessions:
 
 ```bash
-python openquake/server/manage.py syncdb
+python -m openquake.server.manage syncdb
 ```
 
 Add a new local superuser:
 ```bash
-python openquake/server/manage.py createsuperuser
+python -m openquake.server.manage createsuperuser
 ```
 
 #### Authentication using PAM
@@ -66,7 +66,7 @@ STATIC_ROOT = '/var/www/webui'
 then collect static files:
 
 ```bash
-python openquake/server/manage.py collectstatic
+python -m openquake.server.manage collectstatic
 ```
 
 *nginx* must be configured to act as a reverse proxy for *gunicorn* and to provide static content. A [sample configuration file](examples/nginx.md) is provided.
