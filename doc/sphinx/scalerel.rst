@@ -21,6 +21,14 @@ CEUS SSC
     :members:
 
 
+--------------------
+Leonard (2014)
+--------------------
+
+.. automodule:: openquake.hazardlib.scalerel.leonard2014
+    :members:
+
+
 ----
 Peer
 ----
