@@ -2,9 +2,9 @@ Classical Hazard QA Test, Case 21
 =================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_54408.hdf5 Tue Sep 27 14:06:38 2016
-engine_version                                 2.1.0-git1ca7123        
-hazardlib_version                              0.21.0-git9261682       
+gem-tstation:/home/michele/ssd/calc_60091.hdf5 Tue Oct 11 06:56:49 2016
+engine_version                                 2.1.0-git4e31fdd        
+hazardlib_version                              0.21.0-gitab31f47       
 ============================================== ========================
 
 num_sites = 1, sitecol = 739 B
@@ -29,35 +29,20 @@ sites_per_tile               10000
 
 Input files
 -----------
-======================= ==================================================================================================
-Name                    File                                                                                              
-======================= ==================================================================================================
-gsim_logic_tree         `gsim_logic_tree.xml <gsim_logic_tree.xml>`_                                                      
-job_ini                 `job.ini <job.ini>`_                                                                              
-source                  `
-                        
-                     <
-                        
-                    >`_
-source                  `
-                        
-                     <
-                        
-                    >`_
-source                  `
-                        
-                     <
-                        
-                    >`_
-source                  `-10.0 <-10.0>`_                                                                                  
-source                  `0.0 <0.0>`_                                                                                      
-source                  `10.0 <10.0>`_                                                                                    
-source                  `30.0 <30.0>`_                                                                                    
-source                  `45.0 <45.0>`_                                                                                    
-source                  `60.0 <60.0>`_                                                                                    
-source                  `source_model.xml <source_model.xml>`_                                                            
-source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_                                      
-======================= ==================================================================================================
+======================= ============================================================
+Name                    File                                                        
+======================= ============================================================
+gsim_logic_tree         `gsim_logic_tree.xml <gsim_logic_tree.xml>`_                
+job_ini                 `job.ini <job.ini>`_                                        
+source                  `-10.0 <-10.0>`_                                            
+source                  `0.0 <0.0>`_                                                
+source                  `10.0 <10.0>`_                                              
+source                  `30.0 <30.0>`_                                              
+source                  `45.0 <45.0>`_                                              
+source                  `60.0 <60.0>`_                                              
+source                  `source_model.xml <source_model.xml>`_                      
+source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
+======================= ============================================================
 
 Composite source model
 ----------------------
@@ -163,55 +148,56 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ======
-source_model     grp_id trt                  num_sources eff_ruptures weight
-================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 2           444          444   
-source_model.xml 1      Active Shallow Crust 2           208          208   
-source_model.xml 2      Active Shallow Crust 2           149          149   
-source_model.xml 3      Active Shallow Crust 2           534          534   
-source_model.xml 4      Active Shallow Crust 2           298          298   
-source_model.xml 5      Active Shallow Crust 2           239          239   
-source_model.xml 6      Active Shallow Crust 2           474          474   
-source_model.xml 7      Active Shallow Crust 2           238          238   
-source_model.xml 8      Active Shallow Crust 2           179          179   
-source_model.xml 9      Active Shallow Crust 2           409          409   
-source_model.xml 10     Active Shallow Crust 2           173          173   
-source_model.xml 11     Active Shallow Crust 2           114          114   
-source_model.xml 12     Active Shallow Crust 2           465          465   
-source_model.xml 13     Active Shallow Crust 2           229          229   
-source_model.xml 14     Active Shallow Crust 2           170          170   
-source_model.xml 15     Active Shallow Crust 2           411          411   
-source_model.xml 16     Active Shallow Crust 2           175          175   
-source_model.xml 17     Active Shallow Crust 2           116          116   
-source_model.xml 18     Active Shallow Crust 2           483          483   
-source_model.xml 19     Active Shallow Crust 2           247          247   
-source_model.xml 20     Active Shallow Crust 2           188          188   
-source_model.xml 21     Active Shallow Crust 2           582          582   
-source_model.xml 22     Active Shallow Crust 2           346          346   
-source_model.xml 23     Active Shallow Crust 2           287          287   
-source_model.xml 24     Active Shallow Crust 2           516          516   
-source_model.xml 25     Active Shallow Crust 2           280          280   
-source_model.xml 26     Active Shallow Crust 2           221          221   
-================ ====== ==================== =========== ============ ======
+================ ====== ==================== =========== ============ ============
+source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
+================ ====== ==================== =========== ============ ============
+source_model.xml 0      Active Shallow Crust 2           444          444         
+source_model.xml 1      Active Shallow Crust 2           208          208         
+source_model.xml 2      Active Shallow Crust 2           149          149         
+source_model.xml 3      Active Shallow Crust 2           534          534         
+source_model.xml 4      Active Shallow Crust 2           298          298         
+source_model.xml 5      Active Shallow Crust 2           239          239         
+source_model.xml 6      Active Shallow Crust 2           474          474         
+source_model.xml 7      Active Shallow Crust 2           238          238         
+source_model.xml 8      Active Shallow Crust 2           179          179         
+source_model.xml 9      Active Shallow Crust 2           409          409         
+source_model.xml 10     Active Shallow Crust 2           173          173         
+source_model.xml 11     Active Shallow Crust 2           114          114         
+source_model.xml 12     Active Shallow Crust 2           465          465         
+source_model.xml 13     Active Shallow Crust 2           229          229         
+source_model.xml 14     Active Shallow Crust 2           170          170         
+source_model.xml 15     Active Shallow Crust 2           411          411         
+source_model.xml 16     Active Shallow Crust 2           175          175         
+source_model.xml 17     Active Shallow Crust 2           116          116         
+source_model.xml 18     Active Shallow Crust 2           483          483         
+source_model.xml 19     Active Shallow Crust 2           247          247         
+source_model.xml 20     Active Shallow Crust 2           188          188         
+source_model.xml 21     Active Shallow Crust 2           582          582         
+source_model.xml 22     Active Shallow Crust 2           346          346         
+source_model.xml 23     Active Shallow Crust 2           287          287         
+source_model.xml 24     Active Shallow Crust 2           516          516         
+source_model.xml 25     Active Shallow Crust 2           280          280         
+source_model.xml 26     Active Shallow Crust 2           221          221         
+================ ====== ==================== =========== ============ ============
 
-=============== =====
-#TRT models     27   
-#sources        54   
-#eff_ruptures   8,175
-filtered_weight 8,175
-=============== =====
+============= =====
+#TRT models   27   
+#sources      54   
+#eff_ruptures 8,175
+#tot_ruptures 8,175
+#tot_weight   8,175
+============= =====
 
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,246       
-count_eff_ruptures_num_tasks             35          
-count_eff_ruptures_sent.gsims            2,870       
-count_eff_ruptures_sent.monitor          35,910      
-count_eff_ruptures_sent.sitecol          15,155      
-count_eff_ruptures_sent.sources          45,871      
-count_eff_ruptures_tot_received          43,521      
+count_eff_ruptures_max_received_per_task 1,243       
+count_eff_ruptures_num_tasks             55          
+count_eff_ruptures_sent.gsims            4,510       
+count_eff_ruptures_sent.monitor          56,430      
+count_eff_ruptures_sent.sitecol          26,407      
+count_eff_ruptures_sent.sources          64,136      
+count_eff_ruptures_tot_received          68,365      
 hazard.input_weight                      8,175       
 hazard.n_imts                            1           
 hazard.n_levels                          4           
@@ -224,30 +210,30 @@ hostname                                 gem-tstation
 
 Slowest sources
 ---------------
-====== ========= ================= ====== ========= =========
-grp_id source_id source_class      weight calc_time num_sites
-====== ========= ================= ====== ========= =========
-1      SFLT2     SimpleFaultSource 148    0.0       0        
-13     SFLT1     SimpleFaultSource 81     0.0       0        
-9      SFLT2     SimpleFaultSource 384    0.0       0        
-20     SFLT2     SimpleFaultSource 89     0.0       0        
-17     SFLT2     SimpleFaultSource 89     0.0       0        
-14     SFLT1     SimpleFaultSource 81     0.0       0        
-2      SFLT2     SimpleFaultSource 89     0.0       0        
-24     SFLT1     SimpleFaultSource 132    0.0       0        
-22     SFLT1     SimpleFaultSource 198    0.0       0        
-19     SFLT1     SimpleFaultSource 99     0.0       0        
-4      SFLT1     SimpleFaultSource 150    0.0       0        
-1      SFLT1     SimpleFaultSource 60     0.0       0        
-10     SFLT2     SimpleFaultSource 148    0.0       0        
-3      SFLT2     SimpleFaultSource 384    0.0       0        
-12     SFLT1     SimpleFaultSource 81     0.0       0        
-9      SFLT1     SimpleFaultSource 25     0.0       0        
-7      SFLT1     SimpleFaultSource 90     0.0       0        
-11     SFLT2     SimpleFaultSource 89     0.0       0        
-21     SFLT2     SimpleFaultSource 384    0.0       0        
-17     SFLT1     SimpleFaultSource 27     0.0       0        
-====== ========= ================= ====== ========= =========
+====== ========= ================= ============ ========= ========= =========
+grp_id source_id source_class      num_ruptures calc_time num_sites num_split
+====== ========= ================= ============ ========= ========= =========
+1      SFLT2     SimpleFaultSource 148          0.0       1         0        
+13     SFLT1     SimpleFaultSource 81           0.0       1         0        
+9      SFLT2     SimpleFaultSource 384          0.0       1         0        
+20     SFLT2     SimpleFaultSource 89           0.0       1         0        
+17     SFLT2     SimpleFaultSource 89           0.0       1         0        
+14     SFLT1     SimpleFaultSource 81           0.0       1         0        
+2      SFLT2     SimpleFaultSource 89           0.0       1         0        
+24     SFLT1     SimpleFaultSource 132          0.0       1         0        
+22     SFLT1     SimpleFaultSource 198          0.0       1         0        
+19     SFLT1     SimpleFaultSource 99           0.0       1         0        
+4      SFLT1     SimpleFaultSource 150          0.0       1         0        
+1      SFLT1     SimpleFaultSource 60           0.0       1         0        
+10     SFLT2     SimpleFaultSource 148          0.0       1         0        
+3      SFLT2     SimpleFaultSource 384          0.0       1         0        
+12     SFLT1     SimpleFaultSource 81           0.0       1         0        
+9      SFLT1     SimpleFaultSource 25           0.0       1         0        
+7      SFLT1     SimpleFaultSource 90           0.0       1         0        
+11     SFLT2     SimpleFaultSource 89           0.0       1         0        
+21     SFLT2     SimpleFaultSource 384          0.0       1         0        
+17     SFLT1     SimpleFaultSource 27           0.0       1         0        
+====== ========= ================= ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
@@ -261,19 +247,21 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 5.743E-04 1.308E-04 3.452E-04 7.582E-04 35       
+count_eff_ruptures 5.466E-04 1.133E-04 3.631E-04 7.660E-04 55       
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-reading composite source model 0.480     0.0       1     
-managing sources               0.037     0.0       1     
-total count_eff_ruptures       0.020     0.402     35    
-store source_info              9.000E-04 0.0       1     
-aggregate curves               8.476E-04 0.0       35    
-reading site collection        3.695E-05 0.0       1     
-saving probability maps        3.099E-05 0.0       1     
-============================== ========= ========= ======
+================================ ========= ========= ======
+operation                        time_sec  memory_mb counts
+================================ ========= ========= ======
+reading composite source model   0.470     0.0       1     
+managing sources                 0.255     0.0       1     
+split/filter heavy sources       0.216     0.0       9     
+filtering composite source model 0.061     0.0       1     
+total count_eff_ruptures         0.030     0.0       55    
+aggregate curves                 0.001     0.0       55    
+store source_info                9.501E-04 0.0       1     
+reading site collection          3.409E-05 0.0       1     
+saving probability maps          2.813E-05 0.0       1     
+================================ ========= ========= ======
