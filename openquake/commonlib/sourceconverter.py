@@ -21,7 +21,6 @@ import copy
 import operator
 import collections
 
-from openquake.baselib.general import block_splitter
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.risklib import valid
@@ -79,7 +78,6 @@ class SourceGroup(collections.Sequence):
             for src in sorted(sources, key=operator.attrgetter('source_id')):
                 self.update(src)
         self.source_model = None  # to be set later, in CompositionInfo
-        self.weight = 1
         self.eff_ruptures = eff_ruptures  # set later nby get_rlzs_assoc
 
     def tot_ruptures(self):
