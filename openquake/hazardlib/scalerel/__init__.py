@@ -32,6 +32,13 @@ from openquake.hazardlib.scalerel.ceus2011 import CEUS2011
 from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.hazardlib.scalerel.wc1994 import WC1994
+from openquake.hazardlib.scalerel.leonard2014 import (Leonard2014_SCR,
+                                                      Leonard2014_Interplate)
+from openquake.hazardlib.scalerel.strasser2010 import (StrasserInterface,
+                                                       StrasserIntraslab)
+from openquake.hazardlib.scalerel.wc1994_qcss import WC1994_QCSS
+
+
 
 
 def _get_available_class(base_class):
