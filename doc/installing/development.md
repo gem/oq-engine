@@ -56,11 +56,12 @@ git clone https://github.com/gem/oq-engine.git
 git clone https://github.com/gem/oq-hazardlib.git
 ```
 
-install the OpenQuake requirements
+install the OpenQuake requirements (from sources)<sup>[1](#note1)</sup>
 
 ```bash
 pip install -r oq-engine/requirements-dev.txt
 ```
+
 
 install OpenQuake itself
 
@@ -84,6 +85,14 @@ To run the OpenQuake Engine tests see the **[testing](../testing.md)** page.
 ## Uninstall the OpenQuake Engine
 
 To uninstall the OpenQuake development make sure that its environment is not loaded typing `deactivate` and the remove the folder where it has been installed: `rm -Rf openquake`.
+
+***
+
+*<a name="note1">[1]</a>: a binary version of the dependencies (that do not require compilers, libs...) can be installed using*
+
+```bash
+pip install -r oq-engine/requirements-py27-linux64.txt
+```
 
 ***
 
