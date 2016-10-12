@@ -53,7 +53,7 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     for ses_idx in range(1, monitor.ses_per_logic_tree_path + 1):
         with event_mon:
             rups, n_occs = src.generate_event_set(
-                src.branch_id, sitecol, integration_distance)
+                sitecol, integration_distance)
         for rup, n_occ in zip(rups, n_occs):
             rup.seed = monitor.seed  # to think
             rrup = rup.surface.get_min_distance(sitecol.mesh)
