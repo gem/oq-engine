@@ -538,8 +538,7 @@ class UCERFSESControl(object):
     def get_min_max_mag(self):
         return self.min_mag, None
 
-    def get_background_sids(self, branch_key, sites,
-                            integration_distance=1000.):
+    def get_background_sids(self, sites, integration_distance=1000.):
         """
         We can apply the filtering of the background sites as a pre-processing
         step - this is done here rather than in the sampling of the ruptures
@@ -568,14 +567,12 @@ class UCERFSESControl(object):
     def __len__(self):
         return 1
 
-    def generate_event_set(self, branch_id, sites=None,
-                           integration_distance=1000.):
+    def generate_event_set(self, sites=None, integration_distance=1000.):
         """
         Generates the event set corresponding to a particular branch
         """
         idx_set = self.build_idx_set()
-        background_sids = self.get_background_sids(
-            branch_id, sites, integration_distance)
+        background_sids = self.get_background_sids(sites, integration_distance)
 
         # get rates from file
         with h5py.File(self.source_file, 'r') as hdf5:
@@ -583,7 +580,7 @@ class UCERFSESControl(object):
             occurrences = self.tom.sample_number_of_occurrences(rates)
             indices = numpy.where(occurrences)[0]
             logging.debug(
-                'Considering "%s", %d ruptures', branch_id, len(indices))
+                'Considering "%s", %d ruptures', self.branch_id, len(indices))
 
             # get ruptures from the indices
             ruptures = []
@@ -696,7 +693,7 @@ def compute_ruptures_gmfs_curves(
         for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
             with event_mon:
                 rups, n_occs = ucerf.generate_event_set(
-                    ucerf.branch_id, sitecol, integration_distance)
+                    sitecol, integration_distance)
             for i, rup in enumerate(rups):
                 rup.seed = oq.random_seed  # to think
                 rrup = rup.surface.get_min_distance(sitecol.mesh)

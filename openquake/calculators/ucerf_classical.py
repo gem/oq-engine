@@ -50,24 +50,15 @@ class UCERFControl(UCERFSESControl):
     Here we add a new method to generate a set of background sources per
     branch
     """
-    def get_background_sources(self, branch_id, sites,
-                               integration_distance=1000.0):
+    def get_background_sources(self, background_sids):
         """
         Turn the background model of a given branch into a set of point sources
 
         :param str branch_id:
             Valid ID of a UCERF branch
-        :param sites:
-            Sites used to filter the model, as instance of
-            openquake.hazardlib.site.SiteCollection
-        :param float integration_distance:
-            Maximum source to site distance (km)
+        :param background_sids:
+            Site IDs affected by the background sources
         """
-        if not self.idx_set:
-            self.idx_set = self.build_idx_set(branch_id)
-        background_sids = self.get_background_sids(
-            branch_id, sites, integration_distance)
-
         with h5py.File(self.source_file, "r") as hdf5:
             grid_loc = "/".join(["Grid", self.idx_set["grid_key"]])
             mags = hdf5[grid_loc + "/Magnitude"][:]
@@ -349,8 +340,8 @@ def ucerf_classical_hazard_by_branch(branchnames, ucerf_source, src_group_id,
         dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
         logging.info('Branch %s', branchname)
         # Get the background point sources
-        bckgnd_sources = ucerf_source.get_background_sources(
-            branchname, sitecol, max_dist)
+        background_sids = ucerf_source.get_background_sids(sitecol, max_dist)
+        bckgnd_sources = ucerf_source.get_background_sources(background_sids)
         if bckgnd_sources:
             pmap = pmap_from_grp(
                 bckgnd_sources,
@@ -448,8 +439,11 @@ class UcerfPSHACalculator(classical.PSHACalculator):
                 ucerf_source)
             logging.info('Getting the background point sources')
             with self.monitor('getting background sources', autoflush=True):
+                ucerf_source.build_idx_set()
+                background_sids = ucerf_source.get_background_sids(
+                    self.sitecol, max_dist)
                 bckgnd_sources = ucerf_source.get_background_sources(
-                    branchname, self.sitecol, max_dist)
+                    background_sids)
 
             # parallelize on the background sources, small tasks
             args = (bckgnd_sources, self.sitecol, oq.imtls,
