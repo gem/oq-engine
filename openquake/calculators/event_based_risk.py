@@ -851,6 +851,7 @@ class EbriskCalculator(base.RiskCalculator):
             num_events += res.num_events
         if avg_losses:
             self.datastore['avglosses'] = avglosses
+        self.datastore['events'].attrs['num_events'] = num_events
         return num_events
 
     def save_agglosses(self, agglosses, offset):
