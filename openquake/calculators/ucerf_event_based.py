@@ -547,7 +547,7 @@ class UCERFSESControl(object):
         """
         self.sites = sites
         self.integration_distance = integration_distance
-        self.idx_set = self.build_idx_set(branch_key)
+        self.idx_set = self.build_idx_set()
         with h5py.File(self.source_file, 'r') as hdf5:
             return prefilter_background_model(
                 hdf5, self.idx_set["grid_key"], self.sites,
@@ -573,7 +573,7 @@ class UCERFSESControl(object):
         """
         Generates the event set corresponding to a particular branch
         """
-        idx_set = self.build_idx_set(branch_id)
+        idx_set = self.build_idx_set()
         background_sids = self.get_background_sids(
             branch_id, sites, integration_distance)
 
@@ -607,15 +607,14 @@ class UCERFSESControl(object):
             rupture_occ.extend(background_n_occ)
         return ruptures, rupture_occ
 
-    @staticmethod
-    def build_idx_set(branch_code):
+    def build_idx_set(self):
         """
         Builds a dictionary of indices based on the branch code
 
         :param str branch_code:
             Code for the branch
         """
-        code_set = branch_code.split("/")
+        code_set = self.branch_id.split("/")
         idx_set = {
             "sec_idx": "/".join([code_set[0], code_set[1], "Sections"]),
             "mag_idx": "/".join([code_set[0], code_set[1], code_set[2],
@@ -625,8 +624,8 @@ class UCERFSESControl(object):
         idx_set["rake_idx"] = "/".join([code_set[0], code_set[1], "Rake"])
         idx_set["msr_idx"] = "-".join([code_set[0], code_set[1], code_set[2]])
         idx_set["geol_idx"] = code_set[0]
-        idx_set["grid_key"] = branch_code.replace("/", "_")
-        idx_set["total_key"] = branch_code.replace("/", "|")
+        idx_set["grid_key"] = self.branch_id.replace("/", "_")
+        idx_set["total_key"] = self.branch_id.replace("/", "|")
         return idx_set
 
 # #################################################################### #
