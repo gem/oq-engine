@@ -567,16 +567,13 @@ class UCERFSESControl(object):
     def __len__(self):
         return 1
 
-    def generate_event_set(self, sites=None, integration_distance=1000.):
+    def generate_event_set(self, background_sids):
         """
         Generates the event set corresponding to a particular branch
         """
-        idx_set = self.build_idx_set()
-        background_sids = self.get_background_sids(sites, integration_distance)
-
         # get rates from file
         with h5py.File(self.source_file, 'r') as hdf5:
-            rates = hdf5[idx_set["rate_idx"]].value
+            rates = hdf5[self.idx_set["rate_idx"]].value
             occurrences = self.tom.sample_number_of_occurrences(rates)
             indices = numpy.where(occurrences)[0]
             logging.debug(
@@ -587,7 +584,7 @@ class UCERFSESControl(object):
             rupture_occ = []
             for idx, n_occ in zip(indices, occurrences[indices]):
                 ucerf_rup, _ = get_ucerf_rupture(
-                    hdf5, idx, idx_set, self.tom, self.sites,
+                    hdf5, idx, self.idx_set, self.tom, self.sites,
                     self.integration_distance, self.mesh_spacing,
                     self.tectonic_region_type)
 
@@ -597,7 +594,7 @@ class UCERFSESControl(object):
 
             # sample background sources
             background_ruptures, background_n_occ = sample_background_model(
-                hdf5, idx_set["grid_key"], self.tom, background_sids,
+                hdf5, self.idx_set["grid_key"], self.tom, background_sids,
                 self.min_mag, self.npd, self.hdd, self.usd, self.lsd, self.msr,
                 self.aspect, self.tectonic_region_type)
             ruptures.extend(background_ruptures)
@@ -690,10 +687,12 @@ def compute_ruptures_gmfs_curves(
         numpy.random.seed(oq.random_seed + grp_id)
         ses_ruptures = []
         eid = 0
+        ucerf.idx_set = ucerf.build_idx_set()
+        background_sids = ucerf.get_background_sids(
+            sitecol, integration_distance)
         for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
             with event_mon:
-                rups, n_occs = ucerf.generate_event_set(
-                    sitecol, integration_distance)
+                rups, n_occs = ucerf.generate_event_set(background_sids)
             for i, rup in enumerate(rups):
                 rup.seed = oq.random_seed  # to think
                 rrup = rup.surface.get_min_distance(sitecol.mesh)
