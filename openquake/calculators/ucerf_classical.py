@@ -99,7 +99,7 @@ class UCERFControl(UCERFSESControl):
         Returns a set of rupture indices
         """
         if not self.idx_set:
-            self.idx_set = self.build_idx_set(branch_id)
+            self.idx_set = self.build_idx_set()
         with h5py.File(self.source_file, "r") as hdf5:
             idxs = np.arange(len(hdf5[self.idx_set["rate_idx"]]))
         logging.info('Found %d ruptures in branch %s', len(idxs), branch_id)
@@ -382,6 +382,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
                                           self.oqparam.rupture_mesh_spacing))
         [self.src_group] = parser.parse_src_groups(
             self.oqparam.inputs["source_model"])
+        [src] = self.src_group
         branches = sorted(self.smlt.branches.items())
         source_models = []
         num_gsim_paths = self.gsim_lt.get_num_paths()
@@ -390,7 +391,8 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             sg.id = ordinal
 
             # Update the event set
-            sg.sources[0].idx_set = sg.sources[0].build_idx_set(branch.value)
+            src.branch_id = branch.value
+            src.idx_set = src.build_idx_set()
             sm = source.SourceModel(
                 name, branch.weight, [name], [sg], num_gsim_paths, ordinal, 1)
             source_models.append(sm)
