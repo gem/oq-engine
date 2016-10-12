@@ -50,10 +50,11 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     numpy.random.seed(monitor.seed + src.src_group_id)
     ebruptures = []
     eid = 0
+    src.build_idx_set()
+    background_sids = src.get_background_sids(sitecol, integration_distance)
     for ses_idx in range(1, monitor.ses_per_logic_tree_path + 1):
         with event_mon:
-            rups, n_occs = src.generate_event_set(
-                sitecol, integration_distance)
+            rups, n_occs = src.generate_event_set(background_sids)
         for rup, n_occ in zip(rups, n_occs):
             rup.seed = monitor.seed  # to think
             rrup = rup.surface.get_min_distance(sitecol.mesh)
