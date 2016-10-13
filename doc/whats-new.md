@@ -14,7 +14,7 @@ bugs were fixed. Over two hundred pull requests were closed in the GEM
 repositories.
 
 For the complete list of changes
-see the changelogs: https://github.com/gem/oq-hazardlib/blob/engine-2.0/debian/changelog and https://github.com/gem/oq engine/blob/engine-2.0/debian/changelog.
+see the changelogs: https://github.com/gem/oq-hazardlib/blob/engine-2.1/debian/changelog and https://github.com/gem/oq-engine/blob/engine-2.1/debian/changelog.
 
 A brief summary follows.
 
