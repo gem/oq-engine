@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * There is now a flag `save_ruptures` that can be turned off on demand;
+    by default the ruptures are always saved in the event based calculators
   * Optimized the memory consumption when using a ProcessPoolExecutor (i.e
     fork before reading the source model) by means of a `wakeup` task
   * Reduced the splitting of the fault sources
