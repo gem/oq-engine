@@ -70,7 +70,7 @@ class GeographicObjects(object):
         return self.objects[index], min_dist
 
 
-def geodetic_distance(lons1, lats1, lons2, lats2):
+def geodetic_distance(lons1, lats1, lons2, lats2, diameter=2*EARTH_RADIUS):
     """
     Calculate the geodetic distance between two points or two collections
     of points.
@@ -90,7 +90,7 @@ def geodetic_distance(lons1, lats1, lons2, lats2):
         + numpy.cos(lats1) * numpy.cos(lats2)
         * numpy.sin((lons1 - lons2) / 2.0) ** 2.0
     ))
-    return (2.0 * EARTH_RADIUS) * distance
+    return diameter * distance
 
 
 def azimuth(lons1, lats1, lons2, lats2):
@@ -216,13 +216,13 @@ def min_distance_to_segment(seglons, seglats, lons, lats):
     return dists
 
 
-def reshape(array, orig_shape):
+def _reshape(array, orig_shape):
     if orig_shape:
         return array.reshape(orig_shape)
     return array[0]  # scalar array
 
 
-def min_geodetic_distance(mlons, mlats, slons, slats):
+def min_geodetic_distance(mlons, mlats, slons, slats, diameter=2*EARTH_RADIUS):
     """
     Same as :func:`min_distance`, but calculates only minimum geodetic distance
     (doesn't accept depth values) and doesn't support ``indices=True`` mode.
@@ -233,14 +233,13 @@ def min_geodetic_distance(mlons, mlats, slons, slats):
     """
     mlons, mlats, slons, slats = _prepare_coords(mlons, mlats, slons, slats)
     orig_shape = slons.shape
-    if slons.ndim == 0:
+    if not orig_shape:
         slons = slons.reshape((1, ))
         slats = slats.reshape((1, ))
     cos_mlats = numpy.cos(mlats)
     cos_slats = numpy.cos(slats)
 
-    result = numpy.fromiter(
-        (
+    result = numpy.array([
             # next five lines are the same as in geodetic_distance()
             numpy.arcsin(numpy.sqrt(
                 numpy.sin((mlats - slats[i]) / 2.0) ** 2.0
@@ -248,14 +247,13 @@ def min_geodetic_distance(mlons, mlats, slons, slats):
                 * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
             )).min()
             for i in range(len(slats))
-        ),
-        dtype=float, count=len(slats)
-    ) * (2 * EARTH_RADIUS)
+        ]) * diameter
 
-    return reshape(result, orig_shape)
+    return _reshape(result, orig_shape)
 
 
-def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
+def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False,
+                 diameter=2*EARTH_RADIUS):
     """
     Calculate the minimum distance between a collection of points and a point.
 
@@ -290,6 +288,12 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
         of those three otherwise.
     """
     assert not indices or mlons.ndim > 0
+    min_idx, min_dst = _min_idx_dst(mlons, mlats, mdepths,
+                                    slons, slats, sdepths, diameter)
+    return min_idx if indices else min_dst
+
+
+def _min_idx_dst(mlons, mlats, mdepths, slons, slats, sdepths, diameter):
     mlons, mlats, slons, slats = _prepare_coords(mlons, mlats, slons, slats)
     mdepths = numpy.array(mdepths, float)
     sdepths = numpy.array(sdepths, float)
@@ -314,16 +318,12 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
             numpy.sin((mlats - slats[i]) / 2.0) ** 2.0
             + cos_mlats * cos_slats[i]
             * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
-        ).clip(-1., 1.)) * (2 * EARTH_RADIUS)) ** 2
-        + (mdepths - sdepths[i]) ** 2
+        )) * diameter) ** 2 + (mdepths - sdepths[i]) ** 2
         for i in range(len(slats))
     ])
-    if not indices:
-        result = numpy.sqrt(dist_squares.min(axis=1))
-    else:
-        result = dist_squares.argmin(axis=1)
-
-    return reshape(result, orig_shape)
+    min_idx = dist_squares.argmin(axis=1)
+    min_dst = numpy.sqrt(dist_squares.min(axis=1))
+    return _reshape(min_idx, orig_shape), _reshape(min_dst, orig_shape)
 
 
 def intervals_between(lon1, lat1, depth1, lon2, lat2, depth2, length):
