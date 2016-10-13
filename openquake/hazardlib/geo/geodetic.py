@@ -319,13 +319,11 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
         for i in range(len(slats))
     )
     if not indices:
-        result = numpy.fromiter((numpy.sqrt(numpy.min(dist_sq))
-                                 for dist_sq in dist_squares),
-                                dtype=float, count=len(slats))
+        result = numpy.array([numpy.sqrt(numpy.min(dist_sq))
+                              for dist_sq in dist_squares])
     else:
-        result = numpy.fromiter((numpy.argmin(dsq, axis=-1)
-                                 for dsq in dist_squares),
-                                dtype=int, count=len(slats))
+        result = numpy.array([numpy.argmin(dsq, axis=-1)
+                              for dsq in dist_squares])
 
     return reshape(result, orig_shape)
 
@@ -373,8 +371,7 @@ def intervals_between(lon1, lat1, depth1, lon2, lat2, depth2, length):
     dist_factor = (length * num_intervals) / total_distance
     return npoints_towards(
         lon1, lat1, depth1, azimuth(lon1, lat1, lon2, lat2),
-        hdist * dist_factor, vdist * dist_factor, num_intervals + 1
-    )
+        hdist * dist_factor, vdist * dist_factor, num_intervals + 1)
 
 
 def npoints_between(lon1, lat1, depth1, lon2, lat2, depth2, npoints):
