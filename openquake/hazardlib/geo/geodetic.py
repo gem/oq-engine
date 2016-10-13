@@ -442,7 +442,6 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
     cos_lat = numpy.cos(rlat)
 
     sin_lats = sin_lat * cos_dists + cos_lat * sin_dists * numpy.cos(tc)
-    sin_lats = sin_lats.clip(-1., 1.)
     lats = numpy.degrees(numpy.arcsin(sin_lats))
 
     dlon = numpy.arctan2(numpy.sin(tc) * sin_dists * cos_lat,
@@ -488,7 +487,6 @@ def point_at(lon, lat, azimuth, distance):
     cos_lat = numpy.cos(lat)
 
     sin_lats = sin_lat * cos_dists + cos_lat * sin_dists * numpy.cos(tc)
-    sin_lats = sin_lats.clip(-1., 1.)
     lats = numpy.degrees(numpy.arcsin(sin_lats))
 
     dlon = numpy.arctan2(numpy.sin(tc) * sin_dists * cos_lat,
@@ -539,7 +537,7 @@ def distance_to_semi_arc(alon, alat, aazimuth, plons, plats):
         t_angle = (azimuth_to_target[idx] - aazimuth + 360) % 360
         angle = numpy.arccos((numpy.sin(numpy.radians(t_angle)) *
                               numpy.sin(distance_to_target /
-                                        EARTH_RADIUS)).clip(-1, 1))
+                                        EARTH_RADIUS)))
         distance[idx] = (numpy.pi / 2 - angle) * EARTH_RADIUS
 
     # Compute the distance between the reference point and the set of sites
@@ -588,7 +586,7 @@ def distance_to_arc(alon, alat, aazimuth, plons, plats):
     # http://en.wikipedia.org/wiki/Spherical_trigonometry#Napier.27s_Pentagon
     angle = numpy.arccos(
         (numpy.sin(numpy.radians(t_angle))
-         * numpy.sin(distance_to_target / EARTH_RADIUS)).clip(-1, 1)
+         * numpy.sin(distance_to_target / EARTH_RADIUS))
     )
     return (numpy.pi / 2 - angle) * EARTH_RADIUS
 
