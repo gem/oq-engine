@@ -89,7 +89,7 @@ def geodetic_distance(lons1, lats1, lons2, lats2):
         numpy.sin((lats1 - lats2) / 2.0) ** 2.0
         + numpy.cos(lats1) * numpy.cos(lats2)
         * numpy.sin((lons1 - lons2) / 2.0) ** 2.0
-    ).clip(-1., 1.))
+    ))
     return (2.0 * EARTH_RADIUS) * distance
 
 
@@ -240,7 +240,7 @@ def min_geodetic_distance(mlons, mlats, slons, slats):
                 numpy.sin((mlats - slats[i]) / 2.0) ** 2.0
                 + cos_mlats * cos_slats[i]
                 * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
-            ).clip(-1., 1.)).min()
+            )).min()
             for i in range(len(slats))
         ),
         dtype=float, count=len(slats)
