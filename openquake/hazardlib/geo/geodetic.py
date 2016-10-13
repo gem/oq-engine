@@ -59,11 +59,7 @@ class GeographicObjects(object):
         :param max_distance: distance in km (or None)
         """
         zeros = numpy.zeros_like(self.lons)
-        # NB: it would be much cleaner if min_distance returned both
-        # the index and the min_dist, but we would need to work at C level :-(
-        index = min_distance(self.lons, self.lats, zeros, lon, lat, 0.,
-                             indices=True)
-        min_dist = min_distance(self.lons, self.lats, zeros, lon, lat, 0.)
+        index, min_dist = _min_idx_dst(self.lons, self.lats, zeros, lon, lat)
         if max_distance is not None:
             if min_dist > max_distance:
                 return None, None
@@ -252,8 +248,7 @@ def min_geodetic_distance(mlons, mlats, slons, slats, diameter=2*EARTH_RADIUS):
     return _reshape(result, orig_shape)
 
 
-def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False,
-                 diameter=2*EARTH_RADIUS):
+def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
     """
     Calculate the minimum distance between a collection of points and a point.
 
@@ -288,12 +283,13 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False,
         of those three otherwise.
     """
     assert not indices or mlons.ndim > 0
-    min_idx, min_dst = _min_idx_dst(mlons, mlats, mdepths,
-                                    slons, slats, sdepths, diameter)
+    min_idx, min_dst = _min_idx_dst(
+        mlons, mlats, mdepths, slons, slats, sdepths)
     return min_idx if indices else min_dst
 
 
-def _min_idx_dst(mlons, mlats, mdepths, slons, slats, sdepths, diameter):
+def _min_idx_dst(mlons, mlats, mdepths, slons, slats, sdepths=0,
+                 diameter=2*EARTH_RADIUS):
     mlons, mlats, slons, slats = _prepare_coords(mlons, mlats, slons, slats)
     mdepths = numpy.array(mdepths, float)
     sdepths = numpy.array(sdepths, float)
