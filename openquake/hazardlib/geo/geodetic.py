@@ -216,6 +216,12 @@ def min_distance_to_segment(seglons, seglats, lons, lats):
     return dists
 
 
+def reshape(array, orig_shape):
+    if orig_shape:
+        return array.reshape(orig_shape)
+    return array[0]  # scalar array
+
+
 def min_geodetic_distance(mlons, mlats, slons, slats):
     """
     Same as :func:`min_distance`, but calculates only minimum geodetic distance
@@ -246,12 +252,7 @@ def min_geodetic_distance(mlons, mlats, slons, slats):
         dtype=float, count=len(slats)
     ) * (2 * EARTH_RADIUS)
 
-    if not orig_shape:
-        # original target point was a scalar, so return scalar as well
-        [result] = result
-        return result
-    else:
-        return result.reshape(orig_shape)
+    return reshape(result, orig_shape)
 
 
 def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
@@ -326,12 +327,7 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
                                  for dsq in dist_squares),
                                 dtype=int, count=len(slats))
 
-    if not orig_shape:
-        # original target point was a scalar, so return scalar as well
-        [result] = result
-        return result
-    else:
-        return result.reshape(orig_shape)
+    return reshape(result, orig_shape)
 
 
 def intervals_between(lon1, lat1, depth1, lon2, lat2, depth2, length):
