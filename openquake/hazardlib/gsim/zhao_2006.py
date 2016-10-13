@@ -510,3 +510,136 @@ class ZhaoEtAl2006SSlabNSHMP2014(ZhaoEtAl2006SSlab):
 
         return mean, stddevs
 
+
+# Coefficient table taken from Gail Atkinson's "White paper on
+# Proposed Ground-motion Prediction Equations (GMPEs) for 2015
+# National Seismic Hazard Maps" (2012, page 16).
+# Values were interpolated to include all listed periods.
+# MF is the linear multiplicative factor.
+COEFFS_SITE_FACTORS = CoeffsTable(sa_damping=5, table="""\
+    IMT    MF
+    pga    0.50
+    pgv    1.00
+    0.05   0.44
+    0.10   0.44
+    0.15   0.53
+    0.20   0.60
+    0.25   0.72
+    0.30   0.81
+    0.40   1.00
+    0.50   1.01
+    0.60   1.02
+    0.70   1.02
+    0.80   1.03
+    0.90   1.04
+    1.00   1.04
+    1.25   1.19
+    1.50   1.31
+    2.00   1.51
+    2.50   1.34
+    3.00   1.21
+    4.00   1.09
+    5.00   1.00
+    """)
+
+
+class ZhaoEtAl2006SInterCascadia(ZhaoEtAl2006SInter):
+    """
+    Implements the interface GMPE developed by John X. Zhao et al modified
+    by the Japan/Cascadia site factors as proposed by Atkinson, G. M.
+    (2012). White paper on proposed ground-motion prediction equations
+    (GMPEs) for 2015 National Seismic Hazard Maps Final Version,
+    Nov. 2012, 50 pp. This class extends the
+    :class:`openquake.hazardlib.gsim.zhao_2006.ZhaoEtAl2006Asc`
+    because the equation for subduction interface is obtained from the
+    equation for active shallow crust, by removing the faulting style
+    term and adding a subduction interface term.
+    """
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        # extracting dictionary of coefficients specific to required
+        # intensity measure type.
+        C = self.COEFFS_ASC[imt]
+        C_SINTER = self.COEFFS_SINTER[imt]
+        C_SF = COEFFS_SITE_FACTORS[imt]
+
+        # mean value as given by equation 1, p. 901, without considering the
+        # faulting style and intraslab terms (that is FR, SS, SSL = 0) and the
+        # inter and intra event terms, plus the magnitude-squared term
+        # correction factor (equation 5 p. 909)
+        mean = self._compute_magnitude_term(C, rup.mag) +\
+            self._compute_distance_term(C, rup.mag, dists.rrup) +\
+            self._compute_focal_depth_term(C, rup.hypo_depth) +\
+            self._compute_site_class_term(C, sites.vs30) + \
+            self._compute_magnitude_squared_term(P=0.0, M=6.3,
+                                                 Q=C_SINTER['QI'],
+                                                 W=C_SINTER['WI'],
+                                                 mag=rup.mag) +\
+            C_SINTER['SI']
+
+        # multiply by site factor to "convert" Japan values to Cascadia values
+        # then convert from cm/s**2 to g
+        mean = np.log((np.exp(mean) * C_SF["MF"]) * 1e-2 / g)
+
+        stddevs = self._get_stddevs(C['sigma'], C_SINTER['tauI'], stddev_types,
+                                    num_sites=len(sites.vs30))
+
+        return mean, stddevs
+
+
+class ZhaoEtAl2006SSlabCascadia(ZhaoEtAl2006SSlab):
+    """
+    Implements GMPE developed by John X. Zhao et al modified
+    by the Japan/Cascadia site factors as proposed by Atkinson, G. M.
+    (2012). White paper on proposed ground-motion prediction equations
+    (GMPEs) for 2015 National Seismic Hazard Maps Final Version,
+    Nov. 2012, 50 pp. This class extends the
+    :class:`openquake.hazardlib.gsim.zhao_2006.ZhaoEtAl2006Asc`
+    because the equation for subduction slab is obtained from the
+    equation for active shallow crust, by removing the faulting style
+    term and adding subduction slab terms.
+    """
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        # extracting dictionary of coefficients specific to required
+        # intensity measure type.
+        C = self.COEFFS_ASC[imt]
+        C_SSLAB = self.COEFFS_SSLAB[imt]
+        C_SF = COEFFS_SITE_FACTORS[imt]
+
+        # to avoid singularity at 0.0 (in the calculation of the
+        # slab correction term), replace 0 values with 0.1
+        d = dists.rrup
+        d[d == 0.0] = 0.1
+
+        # mean value as given by equation 1, p. 901, without considering the
+        # faulting style and intraslab terms (that is FR, SS, SSL = 0) and the
+        # inter and intra event terms, plus the magnitude-squared term
+        # correction factor (equation 5 p. 909)
+        mean = self._compute_magnitude_term(C, rup.mag) +\
+            self._compute_distance_term(C, rup.mag, d) +\
+            self._compute_focal_depth_term(C, rup.hypo_depth) +\
+            self._compute_site_class_term(C, sites.vs30) +\
+            self._compute_magnitude_squared_term(P=C_SSLAB['PS'], M=6.5,
+                                                 Q=C_SSLAB['QS'],
+                                                 W=C_SSLAB['WS'],
+                                                 mag=rup.mag) +\
+            C_SSLAB['SS'] + self._compute_slab_correction_term(C_SSLAB, d)
+
+        # multiply by site factor to "convert" Japan values to Cascadia values
+        # then convert from cm/s**2 to g
+        mean = np.log((np.exp(mean) * C_SF["MF"]) * 1e-2 / g)
+
+        stddevs = self._get_stddevs(C['sigma'], C_SSLAB['tauS'], stddev_types,
+                                    num_sites=len(sites.vs30))
+
+        return mean, stddevs

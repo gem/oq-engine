@@ -479,10 +479,10 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         """
         gsim = GMPETable(gmpe_table=self.TABLE_FILE)
         with self.assertRaises(ValueError) as ve:
-            gsim._return_tables(7.5, imt_module.PGA(), "IMLs")
+            gsim._return_tables(4.5, imt_module.PGA(), "IMLs")
         self.assertEqual(
             str(ve.exception),
-            "Magnitude 7.50 outside of supported range (5.00 to 7.00)")
+            "Magnitude 4.50 outside of supported range (5.00 to 7.00)")
 
     def test_retreival_tables_outside_period_range(self):
         """

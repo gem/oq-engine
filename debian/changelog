@@ -1,3 +1,7 @@
+  [Trevor Allen/Graeme Weatherill]
+  * Adds Geological Survey of Canada magnitude scaling relations for offshore thrust earthquakes
+  * Add site adjusted version of Zhao et al. (2006) for application in Cascadia
+
   [Jonathan Griffin/Graeme Weatherill]
   * Adds Leonard (2014) magnitude-area scaling relation
   * Cleanup of scaling relation test code, removes fragile tests of the get_available_scalerel function

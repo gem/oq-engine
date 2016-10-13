@@ -52,11 +52,20 @@ Strasser et al. 2010
 .. automodule:: openquake.hazardlib.scalerel.strasser2010
     :members:
 
+
 ---------------------------------------------------
 Wells and Coppersmith - Queen Charlotte Strike-Slip
 ---------------------------------------------------
 .. automodule:: openquake.hazardlib.scalerel.wc1994_qcss
     :members:
+
+
+--------------------------------------------
+Geological Survey or Canada Offshore Thrusts
+--------------------------------------------
+.. automodule:: openquake.hazardlib.scalerel.gsc_offshore_thrusts
+    :members:
+
 
 --------------------------
 Abstract base relationship
