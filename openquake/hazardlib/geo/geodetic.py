@@ -39,6 +39,12 @@ class GeographicObjects(object):
     to extract the closest object to a given location by calling the
     method .get_closest(lon, lat).
     """
+    @classmethod
+    def from_mesh(cls, mesh):
+        self = object.__new__(cls)
+        vars(self).update(vars(mesh))
+        return self
+
     def __init__(self, objects, getlon=operator.attrgetter('lon'),
                  getlat=operator.attrgetter('lat')):
         self.objects = list(objects)
@@ -63,7 +69,10 @@ class GeographicObjects(object):
         if max_distance is not None:
             if min_dist > max_distance:
                 return None, None
-        return self.objects[index], min_dist
+        if hasattr(self, 'objects'):
+            return self.objects[index], min_dist
+        else:
+            return index, min_dist
 
 
 def geodetic_distance(lons1, lats1, lons2, lats2, diameter=2*EARTH_RADIUS):
@@ -317,8 +326,8 @@ def _min_idx_dst(mlons, mlats, mdepths, slons, slats, sdepths=0,
         )) * diameter) ** 2 + (mdepths - sdepths[i]) ** 2
         for i in range(len(slats))
     ])
-    min_idx = dist_squares.argmin(axis=1)
-    min_dst = numpy.sqrt(dist_squares.min(axis=1))
+    min_idx = dist_squares.argmin(axis=1)  # (n, m) -> n
+    min_dst = numpy.sqrt(dist_squares.min(axis=1))  # (n, m) -> n
     return _reshape(min_idx, orig_shape), _reshape(min_dst, orig_shape)
 
 
@@ -597,10 +606,10 @@ def _prepare_coords(lons1, lats1, lons2, lats2):
     to numpy arrays of radians. Makes sure that respective coordinates
     in pairs have the same shape.
     """
-    lons1 = numpy.array(numpy.radians(lons1))
-    lats1 = numpy.array(numpy.radians(lats1))
+    lons1 = numpy.radians(lons1)
+    lats1 = numpy.radians(lats1)
     assert lons1.shape == lats1.shape
-    lons2 = numpy.array(numpy.radians(lons2))
-    lats2 = numpy.array(numpy.radians(lats2))
+    lons2 = numpy.radians(lons2)
+    lats2 = numpy.radians(lats2)
     assert lons2.shape == lats2.shape
     return lons1, lats1, lons2, lats2
