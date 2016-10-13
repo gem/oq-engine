@@ -47,8 +47,8 @@ def build_el_dtypes(insured_losses):
         event loss table respectively
     """
     I = insured_losses + 1
-    ela_list = [('rup_id', U32), ('ass_id', U32), ('loss', (F32, I))]
-    elt_list = [('rup_id', U32), ('loss', (F32, I))]
+    ela_list = [('eid', U32), ('ass_id', U32), ('loss', (F32, I))]
+    elt_list = [('eid', U32), ('loss', (F32, I))]
     return numpy.dtype(ela_list), numpy.dtype(elt_list)
 
 
@@ -633,7 +633,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.datastore['agg_curve-stats'].attrs['nbytes'] = (
             agg_curve_stats.nbytes)
 
-elt_dt = numpy.dtype([('rup_id', U32), ('loss', F32)])
+elt_dt = numpy.dtype([('eid', U32), ('loss', F32)])
 
 
 def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
