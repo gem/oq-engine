@@ -727,7 +727,7 @@ def export_gmf_txt(key, dest, sitecol, imts, ruptures, rlz,
     return {key: [dest]}
 
 
-def get_rup_idx(ebrup, etag):
+def get_eidx(ebrup, etag):
     # extract the rupture and the index of the given etag from a collection
     for etag_idx, tag in enumerate(ebrup.etags):
         if tag == etag:
