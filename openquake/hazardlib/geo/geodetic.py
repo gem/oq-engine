@@ -619,39 +619,3 @@ def _prepare_coords(lons1, lats1, lons2, lats2):
     lats2 = numpy.array(numpy.radians(lats2))
     assert lons2.shape == lats2.shape
     return lons1, lats1, lons2, lats2
-
-
-try:
-    from openquake.hazardlib.geo import _geodetic_speedups
-except ImportError:
-    # speedups extension is not available
-    import warnings
-    warnings.warn("geodetic speedups are not available", RuntimeWarning)
-else:
-    from openquake.hazardlib import speedups
-
-    def _c_min_geodetic_distance(mlons, mlats, slons, slats):
-        mlons, mlats, slons, slats = _prepare_coords(mlons, mlats,
-                                                     slons, slats)
-        mdepths = sdepths = numpy.array(0.0)
-        return _geodetic_speedups.min_distance(mlons, mlats, mdepths,
-                                               slons, slats, sdepths,
-                                               indices=False)
-
-    speedups.register(min_geodetic_distance, _c_min_geodetic_distance)
-    del _c_min_geodetic_distance
-
-    def _c_min_distance(mlons, mlats, mdepths,
-                        slons, slats, sdepths, indices=False):
-        assert not indices or mlons.ndim > 0
-        mlons, mlats, slons, slats = _prepare_coords(mlons, mlats,
-                                                     slons, slats)
-        mdepths = numpy.array(mdepths, float)
-        sdepths = numpy.array(sdepths, float)
-        assert mlons.shape == mdepths.shape
-        assert slons.shape == sdepths.shape
-        return _geodetic_speedups.min_distance(mlons, mlats, mdepths,
-                                               slons, slats, sdepths, indices)
-
-    speedups.register(min_distance, _c_min_distance)
-    del _c_min_distance
