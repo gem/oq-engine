@@ -308,7 +308,7 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
     cos_mlats = numpy.cos(mlats)
     cos_slats = numpy.cos(slats)
 
-    dist_squares = (
+    dist_squares = numpy.array([
         # next five lines are the same as in geodetic_distance()
         (numpy.arcsin(numpy.sqrt(
             numpy.sin((mlats - slats[i]) / 2.0) ** 2.0
@@ -317,13 +317,11 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
         ).clip(-1., 1.)) * (2 * EARTH_RADIUS)) ** 2
         + (mdepths - sdepths[i]) ** 2
         for i in range(len(slats))
-    )
+    ])
     if not indices:
-        result = numpy.array([numpy.sqrt(numpy.min(dist_sq))
-                              for dist_sq in dist_squares])
+        result = numpy.sqrt(dist_squares.min(axis=1))
     else:
-        result = numpy.array([numpy.argmin(dsq, axis=-1)
-                              for dsq in dist_squares])
+        result = dist_squares.argmin(axis=1)
 
     return reshape(result, orig_shape)
 
