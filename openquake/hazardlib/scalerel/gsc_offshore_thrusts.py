@@ -173,9 +173,9 @@ class GSCOffshoreThrustsHGT(BaseMSRSigma):
     upper and lower seismogenitc depth of 3 km and 22 km, respectively, with a
     dip of 25 degrees.
     """
-    # Thickness between 23 km lower seismogenic depth and 3 km upper
+    # Thickness between 22 km lower seismogenic depth and 3 km upper
     # seismogenic depth
-    SEIS_WIDTH = 19.0 / sin(radians(25.0))
+    SEIS_WIDTH = 19.0 / sin(radians(25.0))  # 19 = 22 - 3
 
     def get_median_area(self, mag, rake):
         """
