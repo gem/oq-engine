@@ -1,7 +1,7 @@
 Architecture of the OpenQuake Engine v2
 =========================================
 
-The OpenQuake Engine version 2.0 is a complete rewrite of version
+The OpenQuake Engine version 2 is a complete rewrite of version
 1.0, so a new document describing the overall architecture is
 needed. Whereas in the past the Engine was database-centric and
 structured as a Web application with an Object Relational Mapper, now
