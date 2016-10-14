@@ -27,9 +27,9 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.calc import disagg
+from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.calc.filters import SourceSitesFilter
 from openquake.commonlib import parallel, sourceconverter
-from openquake.commonlib.calc import gen_ruptures_for_site
 from openquake.calculators import base, classical
 
 DISAGG_RES_FMT = 'disagg/poe-%(poe)s-rlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
@@ -83,8 +83,10 @@ def compute_disagg(sitecol, sources, src_group_id, rlzs_assoc,
             continue
 
         # generate source, rupture, sites once per site
-        source_ruptures = list(
-            gen_ruptures_for_site(site, sources, max_dist, monitor))
+        sitecol = SiteCollection([site])
+        source_ruptures = [(src, src.iter_ruptures()) for src in sources
+                           if src.filter_sites_by_distance_to_source(
+                                   max_dist, sitecol)]
         if not source_ruptures:
             continue
         with collecting_mon:
