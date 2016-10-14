@@ -20,99 +20,19 @@
 Disaggregation calculator core functionality
 """
 from __future__ import division
-import sys
 import math
 import logging
-from collections import namedtuple
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import raise_
 from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc.filters import SourceSitesFilter
 from openquake.commonlib import parallel, sourceconverter
 from openquake.commonlib.calc import gen_ruptures_for_site
 from openquake.calculators import base, classical
 
 DISAGG_RES_FMT = 'disagg/poe-%(poe)s-rlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
-
-
-# a 6-uple containing float 4 arrays mags, dists, lons, lats,
-# 1 int array trts and a list of dictionaries pnes
-BinData = namedtuple('BinData', 'mags, dists, lons, lats, trts, pnes')
-
-
-def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
-                       rlzs_assoc, gsims, imtls, poes, truncation_level,
-                       n_epsilons, mon):
-    # returns a BinData instance
-    sitecol = SiteCollection([site])
-    mags = []
-    dists = []
-    lons = []
-    lats = []
-    trts = []
-    pnes = []
-    sitemesh = sitecol.mesh
-    make_ctxt = mon('making contexts', measuremem=False)
-    disagg_poe = mon('disaggregate_poe', measuremem=False)
-    cmaker = ContextMaker(gsims)
-    for source, ruptures in source_ruptures:
-        try:
-            tect_reg = trt_num[source.tectonic_region_type]
-            for rupture in ruptures:
-                with make_ctxt:
-                    sctx, rctx, dctx = cmaker.make_contexts(sitecol, rupture)
-                # extract rupture parameters of interest
-                mags.append(rupture.mag)
-                dists.append(dctx.rjb[0])  # single site => single distance
-                [closest_point] = rupture.surface.get_closest_points(sitemesh)
-                lons.append(closest_point.longitude)
-                lats.append(closest_point.latitude)
-                trts.append(tect_reg)
-
-                pne_dict = {}
-                # a dictionary rlz.id, poe, imt_str -> prob_no_exceed
-                for gsim in gsims:
-                    gs = str(gsim)
-                    for imt_str, imls in imtls.items():
-                        imt = from_string(imt_str)
-                        imls = numpy.array(imls[::-1])
-                        for rlz in rlzs_assoc[src_group_id, gs]:
-                            rlzi = rlz.ordinal
-                            curve_poes = curves[rlzi, imt_str][::-1]
-                            for poe in poes:
-                                iml = numpy.interp(poe, curve_poes, imls)
-                                # compute probability of exceeding iml given
-                                # the current rupture and epsilon_bin, that is
-                                # ``P(IMT >= iml | rup, epsilon_bin)``
-                                # for each of the epsilon bins
-                                with disagg_poe:
-                                    [poes_given_rup_eps] = \
-                                        gsim.disaggregate_poe(
-                                            sctx, rctx, dctx, imt, iml,
-                                            truncation_level, n_epsilons)
-                                pne = rupture.get_probability_no_exceedance(
-                                    poes_given_rup_eps)
-                                pne_dict[rlzi, poe, imt_str] = (iml, pne)
-
-                pnes.append(pne_dict)
-        except Exception as err:
-            etype, err, tb = sys.exc_info()
-            msg = 'An error occurred with source id=%s. Error: %s'
-            msg %= (source.source_id, err)
-            raise_(etype, msg, tb)
-
-    return BinData(numpy.array(mags, float),
-                   numpy.array(dists, float),
-                   numpy.array(lons, float),
-                   numpy.array(lats, float),
-                   numpy.array(trts, int),
-                   pnes)
 
 
 def compute_disagg(sitecol, sources, src_group_id, rlzs_assoc,
@@ -168,7 +88,7 @@ def compute_disagg(sitecol, sources, src_group_id, rlzs_assoc,
         if not source_ruptures:
             continue
         with collecting_mon:
-            bdata = _collect_bins_data(
+            bdata = disagg._collect_bins_data(
                 trt_num, source_ruptures, site, curves_dict[sid],
                 src_group_id, rlzs_assoc, gsims, oqparam.imtls,
                 oqparam.poes_disagg, oqparam.truncation_level,
