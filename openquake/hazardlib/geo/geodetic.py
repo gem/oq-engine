@@ -230,7 +230,7 @@ def _reshape(array, orig_shape):
 def min_geodetic_distance(mlons, mlats, slons, slats, diameter=2*EARTH_RADIUS):
     """
     Same as :func:`min_distance`, but calculates only minimum geodetic distance
-    (doesn't accept depth values) and doesn't support ``indices=True`` mode.
+    (doesn't accept depth values).
 
     This is an optimized version of :meth:`min_distance` that is suitable
     for calculating the minimum distance between first mesh and each point
@@ -240,7 +240,7 @@ def min_geodetic_distance(mlons, mlats, slons, slats, diameter=2*EARTH_RADIUS):
     cos_mlats = numpy.cos(mlats)
     cos_slats = numpy.cos(slats)
     if mlons.shape == (4,):  # planar surface to mesh distance
-        result = numpy.zeros((len(mlons), len(slons)))
+        result = numpy.zeros((4, len(slons)))
         for j in range(len(mlons)):
             a = numpy.sin((mlats[j] - slats) / 2.0)
             b = numpy.sin((mlons[j] - slons) / 2.0)
