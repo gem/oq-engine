@@ -19,6 +19,7 @@
 from __future__ import division
 import re
 import copy
+import math
 import logging
 import operator
 import collections
@@ -32,6 +33,7 @@ from openquake.baselib.general import groupby, group_array
 from openquake.commonlib import logictree, sourceconverter
 from openquake.commonlib import nrml, node
 
+MAXWEIGHT = 200  # tuned by M. Simionato
 MAX_INT = 2 ** 31 - 1
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -346,13 +348,15 @@ class CompositionInfo(object):
             'fake', weight,  'b1',
             [sourceconverter.SourceGroup('*', eff_ruptures=1)],
             gsim_lt.get_num_paths(), ordinal=0, samples=1)
-        return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM])
+        return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM],
+                   tot_weight=0)
 
-    def __init__(self, gsim_lt, seed, num_samples, source_models):
+    def __init__(self, gsim_lt, seed, num_samples, source_models, tot_weight):
         self.gsim_lt = gsim_lt
         self.seed = seed
         self.num_samples = num_samples
         self.source_models = source_models
+        self.tot_weight = tot_weight
 
     def __getnewargs__(self):
         # with this CompositionInfo instances will be unpickled correctly
@@ -377,7 +381,8 @@ class CompositionInfo(object):
                 dict(seed=self.seed, num_samples=self.num_samples,
                      trts=hdf5.array_of_vstr(trts),
                      gsim_lt_xml=str(self.gsim_lt),
-                     gsim_fname=self.gsim_lt.fname))
+                     gsim_fname=self.gsim_lt.fname,
+                     tot_weight=self.tot_weight))
 
     def __fromh5__(self, dic, attrs):
         sg_data = group_array(dic['sg_data'], 'sm_id')
@@ -481,6 +486,13 @@ class CompositionInfo(object):
                     dic[rlz] = sm.name
         return dic
 
+    def get_sm_by_grp(self):
+        """
+        :returns: a dictionary grp_id -> sm_id
+        """
+        return {grp.id: sm.ordinal for sm in self.source_models
+                for grp in sm.src_groups}
+
     def get_trt(self, src_group_id):
         """
         Return the TRT string for the given src_group_id
@@ -521,11 +533,14 @@ class CompositeSourceModel(collections.Sequence):
         self.split_map = {}
         if set_weight:
             self.set_weights()
+        else:
+            self.weight = 0
         # must go after set_weights to have the correct .num_ruptures
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples,
-            [sm.get_skeleton() for sm in self.source_models])
+            [sm.get_skeleton() for sm in self.source_models],
+            self.weight)
 
     def get_model(self, sm_id):
         """
@@ -538,6 +553,8 @@ class CompositeSourceModel(collections.Sequence):
         new = self.__class__(
             self.gsim_lt, self.source_model_lt, [sm], set_weight=False)
         new.sm_id = sm_id
+        new.weight = sum(src.weight for sg in sm.src_groups
+                         for src in sg.sources)
         return new
 
     def filter(self, ss_filter):
@@ -628,6 +645,13 @@ class CompositeSourceModel(collections.Sequence):
             nr = src.num_ruptures
             src.serial = rup_serial[start:start + nr]
             start += nr
+
+    def get_maxweight(self, concurrent_tasks):
+        """
+        Return an appropriate maxweight for use in the block_splitter
+        """
+        ct = concurrent_tasks or 1
+        return max(math.ceil(self.weight / ct), MAXWEIGHT)
 
     def __repr__(self):
         """

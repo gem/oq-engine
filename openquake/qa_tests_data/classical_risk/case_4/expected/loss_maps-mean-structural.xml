@@ -33,7 +33,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     81.2985 29.1098
                 </gml:pos>
             </gml:Point>
-            <loss assetRef="a1" value="1.21671E+04"/>
+            <loss assetRef="a1" value="1.21638E+04"/>
         </node>
         <node>
             <gml:Point>
@@ -41,7 +41,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     81.5685 29.5642
                 </gml:pos>
             </gml:Point>
-            <loss assetRef="a6" value="3.35144E+00"/>
+            <loss assetRef="a6" value="3.34942E+00"/>
         </node>
         <node>
             <gml:Point>
@@ -49,7 +49,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     83.0823 27.9006
                 </gml:pos>
             </gml:Point>
-            <loss assetRef="a2" value="5.35607E+06"/>
+            <loss assetRef="a2" value="5.35229E+06"/>
         </node>
         <node>
             <gml:Point>
@@ -57,7 +57,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     83.251 28.3405
                 </gml:pos>
             </gml:Point>
-            <loss assetRef="a3" value="5.59352E+06"/>
+            <loss assetRef="a3" value="5.59166E+06"/>
         </node>
     </lossMap>
 </nrml>

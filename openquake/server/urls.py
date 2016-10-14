@@ -39,10 +39,11 @@ if settings.LOCKDOWN:
     admin.autodiscover()
     urlpatterns += patterns(
         '',
-
         url(r'^admin/', include(admin.site.urls)),
         url(r'^accounts/login/$', 'django.contrib.auth.views.login',
             {'template_name': 'account/login.html'}, name="login"),
         url(r'^accounts/logout/$', 'django.contrib.auth.views.logout',
             {'template_name': 'account/logout.html'}, name="logout"),
+        url(r'^accounts/ajax_login/$', 'openquake.server.views.ajax_login'),
+        url(r'^accounts/ajax_logout/$', 'openquake.server.views.ajax_logout'),
     )

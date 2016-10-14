@@ -2,9 +2,9 @@ event based risk
 ================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_54398.hdf5 Tue Sep 27 14:06:16 2016
-engine_version                                 2.1.0-git1ca7123        
-hazardlib_version                              0.21.0-git9261682       
+gem-tstation:/home/michele/ssd/calc_60081.hdf5 Tue Oct 11 06:56:27 2016
+engine_version                                 2.1.0-git4e31fdd        
+hazardlib_version                              0.21.0-gitab31f47       
 ============================================== ========================
 
 num_sites = 7, sitecol = 1015 B
@@ -79,40 +79,38 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================== ====== ==================== =========== ============ ======
-source_model       grp_id trt                  num_sources eff_ruptures weight
-================== ====== ==================== =========== ============ ======
-source_model_1.xml 0      Active Shallow Crust 1           1            482   
-source_model_1.xml 1      Stable Shallow Crust 1           4            4.000 
-source_model_2.xml 2      Active Shallow Crust 1           4            482   
-================== ====== ==================== =========== ============ ======
+================== ====== ==================== =========== ============ ============
+source_model       grp_id trt                  num_sources eff_ruptures tot_ruptures
+================== ====== ==================== =========== ============ ============
+source_model_1.xml 0      Active Shallow Crust 1           1            482         
+source_model_1.xml 1      Stable Shallow Crust 1           4            4           
+source_model_2.xml 2      Active Shallow Crust 1           4            482         
+================== ====== ==================== =========== ============ ============
 
-=============== ===
-#TRT models     3  
-#sources        3  
-#eff_ruptures   9  
-filtered_weight 968
-=============== ===
+============= ===
+#TRT models   3  
+#sources      3  
+#eff_ruptures 9  
+#tot_ruptures 968
+#tot_weight   969
+============= ===
 
 Informational data
 ------------------
 ============================================= ============
-compute_gmfs_and_curves_max_received_per_task 61,551      
+compute_gmfs_and_curves_max_received_per_task 67,409      
 compute_gmfs_and_curves_num_tasks             9           
-compute_gmfs_and_curves_sent.eb_ruptures      18,577      
-compute_gmfs_and_curves_sent.imts             432         
-compute_gmfs_and_curves_sent.min_iml          1,305       
-compute_gmfs_and_curves_sent.monitor          52,272      
-compute_gmfs_and_curves_sent.rlzs_by_gsim     8,212       
-compute_gmfs_and_curves_sent.sitecol          9,135       
-compute_gmfs_and_curves_tot_received          315,020     
+compute_gmfs_and_curves_sent.getter           40,579      
+compute_gmfs_and_curves_sent.monitor          52,164      
+compute_gmfs_and_curves_sent.rlzs             7,219       
+compute_gmfs_and_curves_tot_received          330,485     
 compute_ruptures_max_received_per_task        7,261       
 compute_ruptures_num_tasks                    8           
 compute_ruptures_sent.gsims                   1,336       
 compute_ruptures_sent.monitor                 12,864      
-compute_ruptures_sent.sitecol                 4,424       
+compute_ruptures_sent.sitecol                 5,576       
 compute_ruptures_sent.sources                 29,196      
-compute_ruptures_tot_received                 30,656      
+compute_ruptures_tot_received                 30,599      
 hazard.input_weight                           969         
 hazard.n_imts                                 4           
 hazard.n_levels                               46          
@@ -124,22 +122,9 @@ hostname                                      gem-tstation
 require_epsilons                              1           
 ============================================= ============
 
-Specific information for event based
-------------------------------------
-======================== ===
-Total number of ruptures 9  
-Total number of events   106
-Rupture multiplicity     11 
-======================== ===
-
-Maximum memory allocated for the GMFs
--------------------------------------
-The largest GMF block is for src_group_id=1, contains 4 IMT(s), 4 realization(s)
-and has a size of 44.19 KB / num_tasks
-
 Estimated data transfer for the avglosses
 -----------------------------------------
-7 asset(s) x 6 realization(s) x 5 loss type(s) x 2 losses x 8 bytes x 20 tasks = 65.62 KB
+7 asset(s) x 6 realization(s) x 5 loss type(s) x 2 losses x 8 bytes x 50 tasks = 164.06 KB
 
 Exposure model
 --------------
@@ -160,14 +145,14 @@ tax3     1.000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-====== ========= ========================= ====== ========= =========
-grp_id source_id source_class              weight calc_time num_sites
-====== ========= ========================= ====== ========= =========
-1      2         SimpleFaultSource         4.000  0.0       0        
-0      1         SimpleFaultSource         482    0.0       0        
-3      2         CharacteristicFaultSource 1.000  0.0       0        
-2      1         SimpleFaultSource         482    0.0       0        
-====== ========= ========================= ====== ========= =========
+====== ========= ========================= ============ ========= ========= =========
+grp_id source_id source_class              num_ruptures calc_time num_sites num_split
+====== ========= ========================= ============ ========= ========= =========
+1      2         SimpleFaultSource         4            0.0       7         0        
+0      1         SimpleFaultSource         482          0.0       7         0        
+3      2         CharacteristicFaultSource 1            0.0       7         0        
+2      1         SimpleFaultSource         482          0.0       7         0        
+====== ========= ========================= ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
@@ -180,30 +165,29 @@ SimpleFaultSource         0.0       3
 
 Information about the tasks
 ---------------------------
-======================= ===== ====== ===== ===== =========
-operation-duration      mean  stddev min   max   num_tasks
-compute_ruptures        0.046 0.025  0.004 0.076 8        
-compute_gmfs_and_curves 0.044 0.018  0.016 0.074 9        
-======================= ===== ====== ===== ===== =========
+================== ===== ====== ===== ===== =========
+operation-duration mean  stddev min   max   num_tasks
+compute_ruptures   0.048 0.028  0.003 0.080 8        
+================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-total compute_gmfs_and_curves  0.392     0.949     9     
-total compute_ruptures         0.370     0.0       8     
-compute poes                   0.227     0.0       9     
-building hazard curves         0.128     0.0       9     
-managing sources               0.106     0.0       1     
-filter/split heavy sources     0.103     0.0       2     
-saving gmfs                    0.037     0.0       9     
-make contexts                  0.024     0.0       9     
-reading composite source model 0.022     0.0       1     
-filtering ruptures             0.017     0.0       9     
-saving ruptures                0.011     0.0       8     
-aggregating hcurves            0.007     0.0       9     
-reading exposure               0.004     0.0       1     
-store source_info              4.370E-04 0.0       1     
-reading site collection        8.106E-06 0.0       1     
-============================== ========= ========= ======
+================================ ========= ========= ======
+operation                        time_sec  memory_mb counts
+================================ ========= ========= ======
+total compute_gmfs_and_curves    0.458     0.887     9     
+total compute_ruptures           0.382     0.0       8     
+managing sources                 0.174     0.0       1     
+split/filter heavy sources       0.169     0.0       2     
+building hazard curves           0.079     0.0       9     
+reading composite source model   0.033     0.0       1     
+saving gmfs                      0.020     0.0       9     
+filtering ruptures               0.020     0.0       9     
+filtering composite source model 0.009     0.0       1     
+saving ruptures                  0.008     0.0       8     
+aggregating hcurves              0.008     0.0       9     
+reading exposure                 0.004     0.0       1     
+store source_info                6.030E-04 0.0       1     
+Initializing rupture serials     5.102E-05 0.0       1     
+reading site collection          6.914E-06 0.0       1     
+================================ ========= ========= ======

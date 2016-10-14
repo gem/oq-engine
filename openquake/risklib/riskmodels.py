@@ -544,11 +544,16 @@ class EventBasedReduced(RiskModel):
             instance with the total losses
         """
         vf = self.risk_functions[loss_type]
-        loss = 0.0  # total loss
+        gmvs, eids = gmvs_eids['gmv'], gmvs_eids['eid']
+        alosses = numpy.zeros(len(assets))
+        elosses = numpy.zeros(len(gmvs))
         for i, asset in enumerate(assets):
-            ratios, _covs, _idxs = vf.interpolate(gmvs_eids['gmv'])
-            loss += ratios.sum() * asset.value(loss_type, self.time_event)
-        return scientific.Output(assets, loss_type, loss=loss)
+            ratios, _covs, idxs = vf.interpolate(gmvs)
+            losses = ratios * asset.value(loss_type, self.time_event)
+            alosses[i] = losses.sum()
+            elosses[idxs] += losses
+        return scientific.Output(
+            assets, loss_type, alosses=alosses, elosses=elosses, eids=eids)
 
 
 @registry.add('classical_bcr')

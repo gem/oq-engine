@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import logging
 import unittest
 import platform
@@ -30,6 +31,11 @@ from openquake.commonlib import readinput, oqvalidation, datastore
 
 class DifferentFiles(Exception):
     pass
+
+
+def strip_calc_id(fname):
+    name = os.path.basename(fname)
+    return re.sub('_\d+\.', '.', name)
 
 
 def check_platform(*supported):
@@ -116,7 +122,7 @@ class CalculatorTestCase(unittest.TestCase):
         columns1 = columns(line1)
         columns2 = columns(line2)
         for c1, c2 in zip(columns1, columns2):
-            numpy.testing.assert_allclose(c1, c2, atol=delta)
+            numpy.testing.assert_allclose(c1, c2, atol=delta, rtol=delta)
 
     def assertEqualFiles(
             self, fname1, fname2, make_comparable=lambda lines: lines,

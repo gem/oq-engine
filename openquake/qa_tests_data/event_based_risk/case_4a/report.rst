@@ -2,9 +2,9 @@ Event Based Hazard
 ==================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_54396.hdf5 Tue Sep 27 14:06:03 2016
-engine_version                                 2.1.0-git1ca7123        
-hazardlib_version                              0.21.0-git9261682       
+gem-tstation:/home/michele/ssd/calc_60079.hdf5 Tue Oct 11 06:56:16 2016
+engine_version                                 2.1.0-git4e31fdd        
+hazardlib_version                              0.21.0-gitab31f47       
 ============================================== ========================
 
 num_sites = 1, sitecol = 739 B
@@ -66,22 +66,22 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ======
-source_model     grp_id trt                  num_sources eff_ruptures weight
-================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 2           5            483   
-================ ====== ==================== =========== ============ ======
+================ ====== ==================== =========== ============ ============
+source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
+================ ====== ==================== =========== ============ ============
+source_model.xml 0      Active Shallow Crust 2           5            483         
+================ ====== ==================== =========== ============ ============
 
 Informational data
 ------------------
 ====================================== ============
-compute_ruptures_max_received_per_task 12,568      
+compute_ruptures_max_received_per_task 12,565      
 compute_ruptures_num_tasks             4           
 compute_ruptures_sent.gsims            328         
 compute_ruptures_sent.monitor          4,320       
-compute_ruptures_sent.sitecol          2,416       
+compute_ruptures_sent.sitecol          2,743       
 compute_ruptures_sent.sources          19,824      
-compute_ruptures_tot_received          23,978      
+compute_ruptures_tot_received          23,985      
 hazard.input_weight                    483         
 hazard.n_imts                          1           
 hazard.n_levels                        11          
@@ -97,8 +97,8 @@ Specific information for event based
 ------------------------------------
 ======================== =====
 Total number of ruptures 5    
-Total number of events   6    
-Rupture multiplicity     1.200
+Total number of events   1    
+Rupture multiplicity     0.200
 ======================== =====
 
 Exposure model
@@ -117,12 +117,12 @@ Wood     1.000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-====== ========= ========================= ====== ========= =========
-grp_id source_id source_class              weight calc_time num_sites
-====== ========= ========================= ====== ========= =========
-0      1         CharacteristicFaultSource 1.000  0.0       0        
-0      3         SimpleFaultSource         482    0.0       0        
-====== ========= ========================= ====== ========= =========
+====== ========= ========================= ============ ========= ========= =========
+grp_id source_id source_class              num_ruptures calc_time num_sites num_split
+====== ========= ========================= ============ ========= ========= =========
+0      1         CharacteristicFaultSource 1            0.0       1         0        
+0      3         SimpleFaultSource         482          0.0       1         0        
+====== ========= ========================= ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
@@ -137,21 +137,23 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.063 0.032  0.024 0.100 4        
+compute_ruptures   0.066 0.032  0.022 0.097 4        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-total compute_ruptures         0.252     0.871     4     
-managing sources               0.062     0.0       1     
-filter/split heavy sources     0.061     0.0       1     
-filtering ruptures             0.031     0.0       5     
-reading composite source model 0.017     0.0       1     
-saving ruptures                0.008     0.0       4     
-reading exposure               0.003     0.0       1     
-store source_info              8.299E-04 0.0       1     
-reading site collection        7.868E-06 0.0       1     
-============================== ========= ========= ======
+================================ ========= ========= ======
+operation                        time_sec  memory_mb counts
+================================ ========= ========= ======
+total compute_ruptures           0.265     1.316     4     
+managing sources                 0.068     0.0       1     
+split/filter heavy sources       0.066     0.0       1     
+filtering ruptures               0.032     0.0       5     
+reading composite source model   0.018     0.0       1     
+saving ruptures                  0.009     0.0       4     
+filtering composite source model 0.004     0.0       1     
+reading exposure                 0.003     0.0       1     
+store source_info                8.180E-04 0.0       1     
+Initializing rupture serials     3.290E-05 0.0       1     
+reading site collection          7.153E-06 0.0       1     
+================================ ========= ========= ======
