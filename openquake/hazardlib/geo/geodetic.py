@@ -65,7 +65,7 @@ class GeographicObjects(object):
         :param max_distance: distance in km (or None)
         """
         zeros = numpy.zeros_like(self.lons)
-        index, min_dist = _min_idx_dst(self.lons, self.lats, zeros, lon, lat)
+        index, min_dist = min_idx_dst(self.lons, self.lats, zeros, lon, lat)
         if max_distance is not None:
             if min_dist > max_distance:
                 return None, None
@@ -250,7 +250,8 @@ def min_geodetic_distance(mlons, mlats, slons, slats, diameter=2*EARTH_RADIUS):
     return result
 
 
-def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
+def min_idx_dst(mlons, mlats, mdepths, slons, slats, sdepths=0,
+                 diameter=2*EARTH_RADIUS):
     """
     Calculate the minimum distance between a collection of points and a point.
 
@@ -271,27 +272,11 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
         Scalars, python lists or tuples or numpy arrays of the same shape,
         representing a second collection: a list of points to find a minimum
         distance from for.
-    :param indices:
-        If ``True`` -- return indices of closest points from first triple
-        of coordinates instead of the actual distances. Indices are always
-        scalar integers -- they represent indices of a point from flattened
-        form of ``mlons``, ``mlats`` and ``mdepths`` that is closest to a
-        point from ``slons``, ``slats`` and ``sdepths``. There is one integer
-        index per point in second triple of coordinates.
     :returns:
-        Minimum distance in km or indices of closest points, depending on
-        ``indices`` parameter. Result value is a scalar if ``slons``, ``slats``
-        and ``sdepths`` are scalars and numpy array of the same shape
-        of those three otherwise.
+        Indices and distances in km of the closest points. The result value is
+        a scalar if ``slons``, ``slats`` and ``sdepths`` are scalars and numpy
+        array of the same shape of those three otherwise.
     """
-    assert not indices or mlons.ndim > 0
-    min_idx, min_dst = _min_idx_dst(
-        mlons, mlats, mdepths, slons, slats, sdepths)
-    return min_idx if indices else min_dst
-
-
-def _min_idx_dst(mlons, mlats, mdepths, slons, slats, sdepths=0,
-                 diameter=2*EARTH_RADIUS):
     mlons, mlats, slons, slats = _prepare_coords(mlons, mlats, slons, slats)
     mdepths = numpy.array(mdepths, float)
     sdepths = numpy.array(sdepths, float)

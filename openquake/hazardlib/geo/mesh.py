@@ -64,6 +64,8 @@ class Mesh(object):
         self.lons = lons
         self.lats = lats
         self.depths = depths
+        self.min_idx = None
+        self.min_dst = None
 
     @classmethod
     def from_points_list(cls, points):
@@ -186,7 +188,8 @@ class Mesh(object):
 
         Uses :func:`openquake.hazardlib.geo.geodetic.min_distance`.
         """
-        return self._geodetic_min_distance(mesh, indices=False)
+        self._geodetic_min_distance(mesh)
+        return self.min_dst
 
     def get_joyner_boore_distance(self, mesh):
         """
@@ -280,17 +283,22 @@ class Mesh(object):
         and uses the same :func:`openquake.hazardlib.geo.geodetic.min_distance`
         internally.
         """
-        idxs = self._geodetic_min_distance(mesh, indices=True)
-        lons = self.lons.take(idxs)
-        lats = self.lats.take(idxs)
-        depths = None if self.depths is None else self.depths.take(idxs)
+        self._geodetic_min_distance(mesh)
+        lons = self.lons.take(self.min_idx)
+        lats = self.lats.take(self.min_idx)
+        if self.depths is None:
+            depths = None
+        else:
+            depths = self.depths.take(self.min_idx)
         return Mesh(lons, lats, depths)
 
-    def _geodetic_min_distance(self, mesh, indices):
+    def _geodetic_min_distance(self, mesh):
         """
         Wrapper around :func:`openquake.hazardlib.geo.geodetic.min_distance`
         for two meshes: either (or both, or neither) can have empty depths.
         """
+        if self.min_dst is not None:
+            return
         if self.depths is None:
             depths1 = numpy.zeros_like(self.lons)
         else:
@@ -299,8 +307,8 @@ class Mesh(object):
             depths2 = numpy.zeros_like(mesh.lons)
         else:
             depths2 = mesh.depths
-        return geodetic.min_distance(self.lons, self.lats, depths1,
-                                     mesh.lons, mesh.lats, depths2, indices)
+        self.min_idx, self.min_dst = geodetic.min_idx_dst(
+            self.lons, self.lats, depths1, mesh.lons, mesh.lats, depths2)
 
     def get_distance_matrix(self):
         """
