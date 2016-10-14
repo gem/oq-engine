@@ -2,9 +2,9 @@ Classical PSHA with non-trivial logic tree (1 source model + 5 (a, b) pairs per 
 ==========================================================================================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_54419.hdf5 Tue Sep 27 14:07:16 2016
-engine_version                                 2.1.0-git1ca7123        
-hazardlib_version                              0.21.0-git9261682       
+gem-tstation:/home/michele/ssd/calc_60102.hdf5 Tue Oct 11 06:57:45 2016
+engine_version                                 2.1.0-git4e31fdd        
+hazardlib_version                              0.21.0-gitab31f47       
 ============================================== ========================
 
 num_sites = 1, sitecol = 739 B
@@ -131,39 +131,40 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ======
-source_model     grp_id trt                  num_sources eff_ruptures weight
-================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 5           1925         48    
-source_model.xml 1      Active Shallow Crust 5           2025         50    
-source_model.xml 2      Active Shallow Crust 5           2135         53    
-source_model.xml 3      Active Shallow Crust 5           2035         50    
-source_model.xml 4      Active Shallow Crust 5           1865         46    
-source_model.xml 5      Active Shallow Crust 5           2085         52    
-source_model.xml 6      Active Shallow Crust 5           2075         51    
-source_model.xml 7      Active Shallow Crust 5           2185         54    
-source_model.xml 8      Active Shallow Crust 5           1905         47    
-source_model.xml 9      Active Shallow Crust 5           2025         50    
-================ ====== ==================== =========== ============ ======
+================ ====== ==================== =========== ============ ============
+source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
+================ ====== ==================== =========== ============ ============
+source_model.xml 0      Active Shallow Crust 5           1925         1,925       
+source_model.xml 1      Active Shallow Crust 5           2025         2,025       
+source_model.xml 2      Active Shallow Crust 5           2135         2,135       
+source_model.xml 3      Active Shallow Crust 5           2035         2,035       
+source_model.xml 4      Active Shallow Crust 5           1865         1,865       
+source_model.xml 5      Active Shallow Crust 5           2085         2,085       
+source_model.xml 6      Active Shallow Crust 5           2075         2,075       
+source_model.xml 7      Active Shallow Crust 5           2185         2,185       
+source_model.xml 8      Active Shallow Crust 5           1905         1,905       
+source_model.xml 9      Active Shallow Crust 5           2025         2,025       
+================ ====== ==================== =========== ============ ============
 
-=============== ======
-#TRT models     10    
-#sources        50    
-#eff_ruptures   20,260
-filtered_weight 506   
-=============== ======
+============= ======
+#TRT models   10    
+#sources      50    
+#eff_ruptures 20,260
+#tot_ruptures 20,260
+#tot_weight   2,026 
+============= ======
 
 Informational data
 ------------------
 ======================================== ============
 count_eff_ruptures_max_received_per_task 1,236       
-count_eff_ruptures_num_tasks             10          
-count_eff_ruptures_sent.gsims            930         
-count_eff_ruptures_sent.monitor          10,180      
-count_eff_ruptures_sent.sitecol          4,330       
-count_eff_ruptures_sent.sources          51,320      
-count_eff_ruptures_tot_received          12,360      
-hazard.input_weight                      506         
+count_eff_ruptures_num_tasks             17          
+count_eff_ruptures_sent.gsims            1,581       
+count_eff_ruptures_sent.monitor          17,306      
+count_eff_ruptures_sent.sitecol          7,361       
+count_eff_ruptures_sent.sources          59,482      
+count_eff_ruptures_tot_received          21,012      
+hazard.input_weight                      2,026       
 hazard.n_imts                            1           
 hazard.n_levels                          3           
 hazard.n_realizations                    10          
@@ -175,30 +176,30 @@ hostname                                 gem-tstation
 
 Slowest sources
 ---------------
-====== ========= ============ ====== ========= =========
-grp_id source_id source_class weight calc_time num_sites
-====== ========= ============ ====== ========= =========
-7      5         AreaSource   10     0.0       0        
-0      4         AreaSource   8.125  0.0       0        
-4      2         AreaSource   9.750  0.0       0        
-9      3         AreaSource   11     0.0       0        
-1      1         AreaSource   9.375  0.0       0        
-3      5         AreaSource   9.375  0.0       0        
-2      5         AreaSource   10     0.0       0        
-7      2         AreaSource   11     0.0       0        
-8      3         AreaSource   9.750  0.0       0        
-3      1         AreaSource   8.125  0.0       0        
-2      2         AreaSource   11     0.0       0        
-5      2         AreaSource   12     0.0       0        
-2      1         AreaSource   9.375  0.0       0        
-6      3         AreaSource   11     0.0       0        
-0      3         AreaSource   11     0.0       0        
-7      3         AreaSource   12     0.0       0        
-4      1         AreaSource   9.375  0.0       0        
-8      2         AreaSource   9.750  0.0       0        
-1      2         AreaSource   11     0.0       0        
-3      2         AreaSource   11     0.0       0        
-====== ========= ============ ====== ========= =========
+====== ========= ============ ============ ========= ========= =========
+grp_id source_id source_class num_ruptures calc_time num_sites num_split
+====== ========= ============ ============ ========= ========= =========
+7      5         AreaSource   425          0.0       1         0        
+0      4         AreaSource   325          0.0       1         0        
+4      2         AreaSource   390          0.0       1         0        
+9      3         AreaSource   450          0.0       1         0        
+1      1         AreaSource   375          0.0       1         0        
+3      5         AreaSource   375          0.0       1         0        
+2      5         AreaSource   425          0.0       1         0        
+7      2         AreaSource   450          0.0       1         0        
+8      3         AreaSource   390          0.0       1         0        
+3      1         AreaSource   325          0.0       1         0        
+2      2         AreaSource   450          0.0       1         0        
+5      2         AreaSource   510          0.0       1         0        
+2      1         AreaSource   375          0.0       1         0        
+6      3         AreaSource   450          0.0       1         0        
+0      3         AreaSource   450          0.0       1         0        
+7      3         AreaSource   510          0.0       1         0        
+4      1         AreaSource   375          0.0       1         0        
+8      2         AreaSource   390          0.0       1         0        
+1      2         AreaSource   450          0.0       1         0        
+3      2         AreaSource   450          0.0       1         0        
+====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
@@ -210,21 +211,22 @@ AreaSource   0.0       50
 
 Information about the tasks
 ---------------------------
-================== ===== ========= ========= ===== =========
-operation-duration mean  stddev    min       max   num_tasks
-count_eff_ruptures 0.001 1.478E-04 7.319E-04 0.001 10       
-================== ===== ========= ========= ===== =========
+================== ========= ========= ========= ===== =========
+operation-duration mean      stddev    min       max   num_tasks
+count_eff_ruptures 9.843E-04 1.587E-04 7.370E-04 0.001 17       
+================== ========= ========= ========= ===== =========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-reading composite source model 0.292     0.0       1     
-managing sources               0.015     0.0       1     
-total count_eff_ruptures       0.011     0.0       10    
-store source_info              8.080E-04 0.0       1     
-aggregate curves               1.893E-04 0.0       10    
-reading site collection        4.315E-05 0.0       1     
-saving probability maps        2.694E-05 0.0       1     
-============================== ========= ========= ======
+================================ ========= ========= ======
+operation                        time_sec  memory_mb counts
+================================ ========= ========= ======
+reading composite source model   0.284     0.0       1     
+filtering composite source model 0.029     0.0       1     
+managing sources                 0.021     0.0       1     
+total count_eff_ruptures         0.017     0.0       17    
+store source_info                8.771E-04 0.0       1     
+aggregate curves                 2.823E-04 0.0       17    
+reading site collection          3.815E-05 0.0       1     
+saving probability maps          2.599E-05 0.0       1     
+================================ ========= ========= ======
