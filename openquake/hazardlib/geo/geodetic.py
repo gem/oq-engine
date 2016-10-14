@@ -239,8 +239,8 @@ def min_geodetic_distance(mlons, mlats, slons, slats, diameter=2*EARTH_RADIUS):
     mlons, mlats, slons, slats = _prepare_coords(mlons, mlats, slons, slats)
     cos_mlats = numpy.cos(mlats)
     cos_slats = numpy.cos(slats)
-    if mlons.shape == (4,):  # planar surface to mesh distance
-        result = numpy.zeros((4, len(slons)))
+    if len(mlons.shape) == 1:
+        result = numpy.zeros((len(mlons), len(slons)))
         for j in range(len(mlons)):
             a = numpy.sin((mlats[j] - slats) / 2.0)
             b = numpy.sin((mlons[j] - slons) / 2.0)
