@@ -727,14 +727,6 @@ def export_gmf_txt(key, dest, sitecol, imts, ruptures, rlz,
     return {key: [dest]}
 
 
-def get_rup_idx(ebrup, etag):
-    # extract the rupture and the index of the given etag from a collection
-    for etag_idx, tag in enumerate(ebrup.etags):
-        if tag == etag:
-            return etag_idx
-    raise ValueError('event tag %s not found in the rupture collection')
-
-
 def _calc_gmfs(dstore, serial, eid):
     oq = dstore['oqparam']
     min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
