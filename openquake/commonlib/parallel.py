@@ -22,6 +22,7 @@ TODO: write documentation.
 from __future__ import print_function
 import os
 import sys
+import time
 import socket
 import inspect
 import logging
@@ -39,10 +40,10 @@ from openquake.baselib.general import (
     block_splitter, split_in_blocks, AccumDict, humansize)
 
 executor = ProcessPoolExecutor()
-# the num_tasks_hint is chosen to be 2 times bigger than the name of
+# the num_tasks_hint is chosen to be 5 times bigger than the name of
 # cores; it is a heuristic number to get a good distribution;
 # it has no more significance than that
-executor.num_tasks_hint = executor._max_workers * 2
+executor.num_tasks_hint = executor._max_workers * 5
 
 OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
 
@@ -220,7 +221,10 @@ class IterResult(object):
         self.futures = futures
         self.name = taskname
         self.num_tasks = num_tasks
-        self.progress = progress
+        if self.name.startswith("_"):  # private task, log only in debug
+            self.progress = logging.debug
+        else:
+            self.progress = progress
         self.sent = 0  # set in TaskManager.submit_all
         self.received = []
         if self.num_tasks:
@@ -313,7 +317,6 @@ class TaskManager(object):
     Progress report is built-in.
     """
     executor = executor
-    progress = staticmethod(logging.info)
     task_ids = []
 
     @classmethod
@@ -379,6 +382,15 @@ class TaskManager(object):
             client = ipp.Client()
             self.__class__.executor = client.executor()
 
+    def progress(self, *args):
+        """
+        Log in INFO mode regular tasks and in DEBUG private tasks
+        """
+        if self.name.startswith('_'):
+            logging.debug(*args)
+        else:
+            logging.info(*args)
+
     def submit(self, *args):
         """
         Submit a function with the given arguments to the process pool
@@ -423,7 +435,7 @@ class TaskManager(object):
                 idx = self.task_ids.index(task_id)
                 self.task_ids.pop(idx)
                 fut = Future()
-                fut.set_result(result_dict['result'].unpickle())
+                fut.set_result(result_dict['result'])
                 # work around a celery bug
                 del app.backend._cache[task_id]
                 yield fut
@@ -467,6 +479,7 @@ class TaskManager(object):
             nargs = ''
         if nargs == 1:
             [args] = self.task_args
+            self.progress('Executing a single task in process')
             return IterResult([safely_call(self.task_func, args)], self.name)
         task_no = 0
         for args in self.task_args:
@@ -480,7 +493,7 @@ class TaskManager(object):
                     args[-1].weight = weight
             self.submit(*args)
         if not task_no:
-            logging.info('No %s tasks were submitted', self.name)
+            self.progress('No %s tasks were submitted', self.name)
         ir = IterResult(self._iterfutures(), self.name, task_no, self.progress)
         ir.sent = self.sent  # for information purposes
         if self.sent:
@@ -532,6 +545,20 @@ def rec_delattr(mon, name):
 
 if OQ_DISTRIBUTE == 'celery':
     safe_task = task(safely_call,  queue='celery')
+
+
+def _wakeup(sec):
+    """Waiting functions, used to wake up the process pool"""
+    time.sleep(sec)
+
+
+def wakeup_pool():
+    """
+    This is used at startup, only when the ProcessPoolExecutor is used,
+    to fork the processes before loading any big data structure.
+    """
+    if oq_distribute() == 'futures':  # when using the ProcessPoolExecutor
+        list(starmap(_wakeup, ((.2,) for _ in range(executor._max_workers))))
 
 
 class Starmap(object):
