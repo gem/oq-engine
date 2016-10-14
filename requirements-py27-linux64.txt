@@ -4,7 +4,7 @@
 
 # GEM Mirror
 # We also provide pre-compiled manylinux1 wheels for
-# h5py, Shapely and psutil
+# h5py, Shapely and Rtree
 
 http://ftp.openquake.org/python-new-wheels/pkgconfig-1.1.0-cp27-none-any.whl
 http://ftp.openquake.org/python-new-wheels/Cython-0.23.4-cp27-cp27mu-manylinux1_x86_64.whl
@@ -24,6 +24,8 @@ http://ftp.openquake.org/python-new-wheels/futures-3.0.5-py2-none-any.whl
 http://ftp.openquake.org/python-new-wheels/Django-1.8.7-py2.py3-none-any.whl
 http://ftp.openquake.org/python-new-wheels/requests-2.9.1-py2.py3-none-any.whl
 http://ftp.openquake.org/python-new-wheels/pyshp-1.2.3-cp27-none-any.whl
+# Experimental wheel
+http://ftp.openquake.org/python-new-wheels/Rtree-0.8.2-cp27-cp27mu-manylinux1_x86_64.whl
 
 # Celery support
 # uncomment the following lines to install celery

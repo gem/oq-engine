@@ -15,13 +15,13 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
 import h5py
 import unittest
 from openquake.baselib.general import writetmp
+from openquake.commonlib.export import export
 from openquake.calculators.views import view
 from openquake.qa_tests_data import ucerf
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from nose.plugins.attrib import attr
 
 
@@ -49,6 +49,12 @@ class UcerfTestCase(CalculatorTestCase):
     def test_event_based_risk(self):
         if h5py.__version__ < '2.3.0':
             raise unittest.SkipTest  # UCERF requires vlen arrays
-        self.run_calc(ucerf.__file__, 'job_ebr.ini')
+        self.run_calc(ucerf.__file__, 'job_ebr.ini',
+                      number_of_logic_tree_samples='2')
+
+        fnames = export(('agg_loss_table', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname)

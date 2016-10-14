@@ -2,9 +2,9 @@ Classical PSHA with GMPE logic tree with multiple tectonic region types
 =======================================================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_54403.hdf5 Tue Sep 27 14:06:22 2016
-engine_version                                 2.1.0-git1ca7123        
-hazardlib_version                              0.21.0-git9261682       
+gem-tstation:/home/michele/ssd/calc_60086.hdf5 Tue Oct 11 06:56:32 2016
+engine_version                                 2.1.0-git4e31fdd        
+hazardlib_version                              0.21.0-gitab31f47       
 ============================================== ========================
 
 num_sites = 3, sitecol = 831 B
@@ -79,21 +79,22 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================== ====== ======================== =========== ============ ======
-source_model       grp_id trt                      num_sources eff_ruptures weight
-================== ====== ======================== =========== ============ ======
-source_model_1.xml 0      Active Shallow Crust     1           15           0.375 
-source_model_1.xml 1      Stable Continental Crust 1           15           0.375 
-source_model_2.xml 2      Active Shallow Crust     1           240          6.000 
-source_model_2.xml 3      Active Shallow Crust     1           240          6.000 
-================== ====== ======================== =========== ============ ======
+================== ====== ======================== =========== ============ ============
+source_model       grp_id trt                      num_sources eff_ruptures tot_ruptures
+================== ====== ======================== =========== ============ ============
+source_model_1.xml 0      Active Shallow Crust     1           15           15          
+source_model_1.xml 1      Stable Continental Crust 1           15           15          
+source_model_2.xml 2      Active Shallow Crust     1           240          240         
+source_model_2.xml 3      Active Shallow Crust     1           240          240         
+================== ====== ======================== =========== ============ ============
 
-=============== ===
-#TRT models     4  
-#sources        4  
-#eff_ruptures   510
-filtered_weight 12 
-=============== ===
+============= ===
+#TRT models   4  
+#sources      4  
+#eff_ruptures 510
+#tot_ruptures 510
+#tot_weight   51 
+============= ===
 
 Informational data
 ------------------
@@ -105,7 +106,7 @@ count_eff_ruptures_sent.monitor          4,956
 count_eff_ruptures_sent.sitecol          1,892       
 count_eff_ruptures_sent.sources          6,318       
 count_eff_ruptures_tot_received          5,816       
-hazard.input_weight                      12          
+hazard.input_weight                      51          
 hazard.n_imts                            2           
 hazard.n_levels                          17          
 hazard.n_realizations                    12          
@@ -117,14 +118,14 @@ hostname                                 gem-tstation
 
 Slowest sources
 ---------------
-====== ========= ============ ====== ========= =========
-grp_id source_id source_class weight calc_time num_sites
-====== ========= ============ ====== ========= =========
-3      1         AreaSource   6.000  0.0       0        
-1      2         PointSource  0.375  0.0       0        
-0      1         PointSource  0.375  0.0       0        
-2      1         AreaSource   6.000  0.0       0        
-====== ========= ============ ====== ========= =========
+====== ========= ============ ============ ========= ========= =========
+grp_id source_id source_class num_ruptures calc_time num_sites num_split
+====== ========= ============ ============ ========= ========= =========
+3      1         AreaSource   240          0.0       3         0        
+1      2         PointSource  15           0.0       3         0        
+0      1         PointSource  15           0.0       3         0        
+2      1         AreaSource   240          0.0       3         0        
+====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
@@ -139,19 +140,20 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 5.610E-04 7.604E-05 4.761E-04 6.611E-04 4        
+count_eff_ruptures 8.335E-04 8.411E-05 7.839E-04 9.592E-04 4        
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-reading composite source model 0.013     0.0       1     
-managing sources               0.003     0.0       1     
-total count_eff_ruptures       0.002     0.0       4     
-store source_info              4.020E-04 0.0       1     
-aggregate curves               6.723E-05 0.0       4     
-reading site collection        2.599E-05 0.0       1     
-saving probability maps        2.003E-05 0.0       1     
-============================== ========= ========= ======
+================================ ========= ========= ======
+operation                        time_sec  memory_mb counts
+================================ ========= ========= ======
+reading composite source model   0.022     0.0       1     
+managing sources                 0.005     0.0       1     
+filtering composite source model 0.005     0.0       1     
+total count_eff_ruptures         0.003     0.0       4     
+store source_info                8.481E-04 0.0       1     
+aggregate curves                 1.152E-04 0.0       4     
+reading site collection          3.815E-05 0.0       1     
+saving probability maps          3.600E-05 0.0       1     
+================================ ========= ========= ======

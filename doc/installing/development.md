@@ -1,6 +1,10 @@
 # Installing the OpenQuake Engine for development
 
 To develop with the OpenQuake Engine and Hazardlib an installation from sources must be performed.
+
+*The source installation will conflict with the package installation, so you
+must remove the openquake package if it was already installed.*
+
 The official supported distributions to develop the OpenQuake Engine and its libraries are
 - Ubuntu 14.04 LTS (Trusty) 
 - Ubuntu 16.04 LTS (Xenial)
@@ -52,11 +56,12 @@ git clone https://github.com/gem/oq-engine.git
 git clone https://github.com/gem/oq-hazardlib.git
 ```
 
-install the OpenQuake requirements
+install the OpenQuake requirements (from sources or [using binary wheels](#note1)<sup>[1](#note1)</sup>
 
 ```bash
 pip install -r oq-engine/requirements-dev.txt
 ```
+
 
 install OpenQuake itself
 
@@ -80,6 +85,16 @@ To run the OpenQuake Engine tests see the **[testing](../testing.md)** page.
 ## Uninstall the OpenQuake Engine
 
 To uninstall the OpenQuake development make sure that its environment is not loaded typing `deactivate` and the remove the folder where it has been installed: `rm -Rf openquake`.
+
+***
+
+### Notes ###
+
+*<a name="note1">[1]</a>: a binary version of the dependencies (that do not require compilers, libs...) can be installed using*
+
+```bash
+pip install -r oq-engine/requirements-py27-linux64.txt
+```
 
 ***
 

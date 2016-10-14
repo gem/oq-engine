@@ -2,9 +2,9 @@ event based risk
 ================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_54394.hdf5 Tue Sep 27 14:05:57 2016
-engine_version                                 2.1.0-git1ca7123        
-hazardlib_version                              0.21.0-git9261682       
+gem-tstation:/home/michele/ssd/calc_60077.hdf5 Tue Oct 11 06:56:09 2016
+engine_version                                 2.1.0-git4e31fdd        
+hazardlib_version                              0.21.0-gitab31f47       
 ============================================== ========================
 
 num_sites = 7, sitecol = 1015 B
@@ -66,22 +66,22 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ======
-source_model     grp_id trt                  num_sources eff_ruptures weight
-================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 1           265          482   
-================ ====== ==================== =========== ============ ======
+================ ====== ==================== =========== ============ ============
+source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
+================ ====== ==================== =========== ============ ============
+source_model.xml 0      Active Shallow Crust 1           265          482         
+================ ====== ==================== =========== ============ ============
 
 Informational data
 ------------------
 ====================================== ============
-compute_ruptures_max_received_per_task 98,837      
+compute_ruptures_max_received_per_task 89,383      
 compute_ruptures_num_tasks             3           
 compute_ruptures_sent.gsims            279         
 compute_ruptures_sent.monitor          2,886       
-compute_ruptures_sent.sitecol          1,659       
+compute_ruptures_sent.sitecol          2,235       
 compute_ruptures_sent.sources          8,233       
-compute_ruptures_tot_received          271,417     
+compute_ruptures_tot_received          249,523     
 hazard.input_weight                    482         
 hazard.n_imts                          1           
 hazard.n_levels                        1           
@@ -93,22 +93,9 @@ hostname                               gem-tstation
 require_epsilons                       1           
 ====================================== ============
 
-Specific information for event based
-------------------------------------
-======================== =====
-Total number of ruptures 265  
-Total number of events   392  
-Rupture multiplicity     1.479
-======================== =====
-
-Maximum memory allocated for the GMFs
--------------------------------------
-The largest GMF block is for src_group_id=0, contains 1 IMT(s), 1 realization(s)
-and has a size of 10.72 KB / num_tasks
-
 Estimated data transfer for the avglosses
 -----------------------------------------
-7 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 20 tasks = 1.09 KB
+7 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 50 tasks = 2.73 KB
 
 Exposure model
 --------------
@@ -126,11 +113,11 @@ tax1     1.000 0.0    1   1   7         7
 
 Slowest sources
 ---------------
-====== ========= ================= ====== ========= =========
-grp_id source_id source_class      weight calc_time num_sites
-====== ========= ================= ====== ========= =========
-0      1         SimpleFaultSource 482    0.0       0        
-====== ========= ================= ====== ========= =========
+====== ========= ================= ============ ========= ========= =========
+grp_id source_id source_class      num_ruptures calc_time num_sites num_split
+====== ========= ================= ============ ========= ========= =========
+0      1         SimpleFaultSource 482          0.0       7         0        
+====== ========= ================= ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
@@ -144,21 +131,23 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.203 0.041  0.170 0.249 3        
+compute_ruptures   0.209 0.050  0.154 0.253 3        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-total compute_ruptures         0.610     3.578     3     
-filtering ruptures             0.470     0.0       265   
-saving ruptures                0.163     0.0       3     
-managing sources               0.065     0.0       1     
-filter/split heavy sources     0.063     0.0       1     
-reading composite source model 0.010     0.0       1     
-reading exposure               0.005     0.0       1     
-store source_info              4.921E-04 0.0       1     
-reading site collection        8.106E-06 0.0       1     
-============================== ========= ========= ======
+================================ ========= ========= ======
+operation                        time_sec  memory_mb counts
+================================ ========= ========= ======
+total compute_ruptures           0.626     3.371     3     
+filtering ruptures               0.474     0.0       265   
+managing sources                 0.087     0.0       1     
+split/filter heavy sources       0.085     0.0       1     
+saving ruptures                  0.010     0.0       3     
+reading composite source model   0.009     0.0       1     
+reading exposure                 0.005     0.0       1     
+filtering composite source model 0.003     0.0       1     
+store source_info                8.502E-04 0.0       1     
+Initializing rupture serials     4.292E-05 0.0       1     
+reading site collection          8.106E-06 0.0       1     
+================================ ========= ========= ======

@@ -2,9 +2,9 @@ Classical Hazard QA Test, Case 20
 =================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_54413.hdf5 Tue Sep 27 14:06:50 2016
-engine_version                                 2.1.0-git1ca7123        
-hazardlib_version                              0.21.0-git9261682       
+gem-tstation:/home/michele/ssd/calc_60096.hdf5 Tue Oct 11 06:57:18 2016
+engine_version                                 2.1.0-git4e31fdd        
+hazardlib_version                              0.21.0-gitab31f47       
 ============================================== ========================
 
 num_sites = 1, sitecol = 739 B
@@ -29,49 +29,14 @@ sites_per_tile               10000
 
 Input files
 -----------
-======================= ==================================================================================================
-Name                    File                                                                                              
-======================= ==================================================================================================
-gsim_logic_tree         `gsim_logic_tree.xml <gsim_logic_tree.xml>`_                                                      
-job_ini                 `job.ini <job.ini>`_                                                                              
-source                  `
-                        
-                     <
-                        
-                    >`_
-source                  `
-                        
-                     <
-                        
-                    >`_
-source                  `
-                        
-                     <
-                        
-                    >`_
-source                  `
-                        
-                     <
-                        
-                    >`_
-source                  `
-                        
-                     <
-                        
-                    >`_
-source                  `
-                        
-                     <
-                        
-                    >`_
-source                  `
-                        
-                     <
-                        
-                    >`_
-source                  `source_model.xml <source_model.xml>`_                                                            
-source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_                                      
-======================= ==================================================================================================
+======================= ============================================================
+Name                    File                                                        
+======================= ============================================================
+gsim_logic_tree         `gsim_logic_tree.xml <gsim_logic_tree.xml>`_                
+job_ini                 `job.ini <job.ini>`_                                        
+source                  `source_model.xml <source_model.xml>`_                      
+source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
+======================= ============================================================
 
 Composite source model
 ----------------------
@@ -132,41 +97,42 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ======
-source_model     grp_id trt                  num_sources eff_ruptures weight
-================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 3           86           86    
-source_model.xml 1      Active Shallow Crust 3           86           86    
-source_model.xml 2      Active Shallow Crust 3           86           86    
-source_model.xml 3      Active Shallow Crust 3           119          119   
-source_model.xml 4      Active Shallow Crust 3           119          119   
-source_model.xml 5      Active Shallow Crust 3           119          119   
-source_model.xml 6      Active Shallow Crust 3           88           88    
-source_model.xml 7      Active Shallow Crust 3           88           88    
-source_model.xml 8      Active Shallow Crust 3           88           88    
-source_model.xml 9      Active Shallow Crust 3           121          121   
-source_model.xml 10     Active Shallow Crust 3           121          121   
-source_model.xml 11     Active Shallow Crust 3           121          121   
-================ ====== ==================== =========== ============ ======
+================ ====== ==================== =========== ============ ============
+source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
+================ ====== ==================== =========== ============ ============
+source_model.xml 0      Active Shallow Crust 3           86           86          
+source_model.xml 1      Active Shallow Crust 3           86           86          
+source_model.xml 2      Active Shallow Crust 3           86           86          
+source_model.xml 3      Active Shallow Crust 3           119          119         
+source_model.xml 4      Active Shallow Crust 3           119          119         
+source_model.xml 5      Active Shallow Crust 3           119          119         
+source_model.xml 6      Active Shallow Crust 3           88           88          
+source_model.xml 7      Active Shallow Crust 3           88           88          
+source_model.xml 8      Active Shallow Crust 3           88           88          
+source_model.xml 9      Active Shallow Crust 3           121          121         
+source_model.xml 10     Active Shallow Crust 3           121          121         
+source_model.xml 11     Active Shallow Crust 3           121          121         
+================ ====== ==================== =========== ============ ============
 
-=============== =====
-#TRT models     12   
-#sources        36   
-#eff_ruptures   1,242
-filtered_weight 1,242
-=============== =====
+============= =====
+#TRT models   12   
+#sources      36   
+#eff_ruptures 1,242
+#tot_ruptures 1,242
+#tot_weight   1,788
+============= =====
 
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,243       
+count_eff_ruptures_max_received_per_task 1,246       
 count_eff_ruptures_num_tasks             12          
 count_eff_ruptures_sent.gsims            984         
 count_eff_ruptures_sent.monitor          12,312      
 count_eff_ruptures_sent.sitecol          5,196       
 count_eff_ruptures_sent.sources          95,252      
-count_eff_ruptures_tot_received          14,916      
-hazard.input_weight                      1,242       
+count_eff_ruptures_tot_received          14,919      
+hazard.input_weight                      1,788       
 hazard.n_imts                            1           
 hazard.n_levels                          4           
 hazard.n_realizations                    12          
@@ -178,30 +144,30 @@ hostname                                 gem-tstation
 
 Slowest sources
 ---------------
-====== ========= ========================= ====== ========= =========
-grp_id source_id source_class              weight calc_time num_sites
-====== ========= ========================= ====== ========= =========
-4      CHAR1     CharacteristicFaultSource 1.000  0.0       0        
-2      CHAR1     CharacteristicFaultSource 1.000  0.0       0        
-9      CHAR1     CharacteristicFaultSource 1.000  0.0       0        
-8      COMFLT1   ComplexFaultSource        29     0.0       0        
-3      COMFLT1   ComplexFaultSource        62     0.0       0        
-4      SFLT1     SimpleFaultSource         56     0.0       0        
-1      SFLT1     SimpleFaultSource         56     0.0       0        
-5      CHAR1     CharacteristicFaultSource 1.000  0.0       0        
-10     CHAR1     CharacteristicFaultSource 1.000  0.0       0        
-9      SFLT1     SimpleFaultSource         58     0.0       0        
-7      SFLT1     SimpleFaultSource         58     0.0       0        
-2      COMFLT1   ComplexFaultSource        29     0.0       0        
-7      COMFLT1   ComplexFaultSource        29     0.0       0        
-1      COMFLT1   ComplexFaultSource        29     0.0       0        
-0      SFLT1     SimpleFaultSource         56     0.0       0        
-8      SFLT1     SimpleFaultSource         58     0.0       0        
-11     COMFLT1   ComplexFaultSource        62     0.0       0        
-6      SFLT1     SimpleFaultSource         58     0.0       0        
-3      SFLT1     SimpleFaultSource         56     0.0       0        
-6      COMFLT1   ComplexFaultSource        29     0.0       0        
-====== ========= ========================= ====== ========= =========
+====== ========= ========================= ============ ========= ========= =========
+grp_id source_id source_class              num_ruptures calc_time num_sites num_split
+====== ========= ========================= ============ ========= ========= =========
+4      CHAR1     CharacteristicFaultSource 1            0.0       1         0        
+2      CHAR1     CharacteristicFaultSource 1            0.0       1         0        
+9      CHAR1     CharacteristicFaultSource 1            0.0       1         0        
+8      COMFLT1   ComplexFaultSource        29           0.0       1         0        
+3      COMFLT1   ComplexFaultSource        62           0.0       1         0        
+4      SFLT1     SimpleFaultSource         56           0.0       1         0        
+1      SFLT1     SimpleFaultSource         56           0.0       1         0        
+5      CHAR1     CharacteristicFaultSource 1            0.0       1         0        
+10     CHAR1     CharacteristicFaultSource 1            0.0       1         0        
+9      SFLT1     SimpleFaultSource         58           0.0       1         0        
+7      SFLT1     SimpleFaultSource         58           0.0       1         0        
+2      COMFLT1   ComplexFaultSource        29           0.0       1         0        
+7      COMFLT1   ComplexFaultSource        29           0.0       1         0        
+1      COMFLT1   ComplexFaultSource        29           0.0       1         0        
+0      SFLT1     SimpleFaultSource         56           0.0       1         0        
+8      SFLT1     SimpleFaultSource         58           0.0       1         0        
+11     COMFLT1   ComplexFaultSource        62           0.0       1         0        
+6      SFLT1     SimpleFaultSource         58           0.0       1         0        
+3      SFLT1     SimpleFaultSource         56           0.0       1         0        
+6      COMFLT1   ComplexFaultSource        29           0.0       1         0        
+====== ========= ========================= ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
@@ -217,19 +183,20 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 8.290E-04 7.764E-05 6.621E-04 9.339E-04 12       
+count_eff_ruptures 8.410E-04 6.147E-05 7.560E-04 9.758E-04 12       
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-reading composite source model 0.812     0.0       1     
-managing sources               0.013     0.0       1     
-total count_eff_ruptures       0.010     0.0       12    
-store source_info              0.001     0.0       1     
-aggregate curves               3.700E-04 0.0       12    
-reading site collection        4.077E-05 0.0       1     
-saving probability maps        3.600E-05 0.0       1     
-============================== ========= ========= ======
+================================ ========= ========= ======
+operation                        time_sec  memory_mb counts
+================================ ========= ========= ======
+reading composite source model   0.817     0.0       1     
+filtering composite source model 0.042     0.0       1     
+managing sources                 0.016     0.0       1     
+total count_eff_ruptures         0.010     0.0       12    
+store source_info                0.001     0.0       1     
+aggregate curves                 3.269E-04 0.0       12    
+reading site collection          3.719E-05 0.0       1     
+saving probability maps          3.505E-05 0.0       1     
+================================ ========= ========= ======
