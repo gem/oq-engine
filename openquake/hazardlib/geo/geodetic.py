@@ -237,10 +237,6 @@ def min_geodetic_distance(mlons, mlats, slons, slats, diameter=2*EARTH_RADIUS):
     of the second mesh when both are defined on the earth surface.
     """
     mlons, mlats, slons, slats = _prepare_coords(mlons, mlats, slons, slats)
-    orig_shape = slons.shape
-    if not orig_shape:
-        slons = slons.reshape((1, ))
-        slats = slats.reshape((1, ))
     cos_mlats = numpy.cos(mlats)
     cos_slats = numpy.cos(slats)
     result = numpy.zeros_like(slons)
@@ -251,7 +247,7 @@ def min_geodetic_distance(mlons, mlats, slons, slats, diameter=2*EARTH_RADIUS):
             + cos_mlats * cos_slats[i]
             * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
         )).min() * diameter
-    return _reshape(result, orig_shape)
+    return result
 
 
 def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
