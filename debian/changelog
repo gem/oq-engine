@@ -1,3 +1,5 @@
+python-oq-engine (2.1.0-0~precise01) precise; urgency=low
+
   [Michele Simionato]
   * There is now a flag `save_ruptures` that can be turned off on demand;
     by default the ruptures are always saved in the event based calculators
@@ -92,6 +94,8 @@
   * Forbidden the reuse of exposure because is was fragile and error prone
   * Fixed a bug with the `realizations` array, which in hazard calculations
     was empty in the datastore
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 14 Oct 2016 11:07:26 +0200
 
 python-oq-engine (2.0.0-0~precise01) precise; urgency=low
 
