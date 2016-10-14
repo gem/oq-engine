@@ -144,7 +144,7 @@ class _BaseDisaggTestCase(unittest.TestCase):
 class CollectBinsDataTestCase(_BaseDisaggTestCase):
     def test_no_filters(self):
         (mags, dists, lons, lats, trts, trt_bins, probs_no_exceed) = \
-            disagg._collect_bins_data(
+            disagg._collect_bins_data_old(
                 self.sources, self.site, self.imt, self.iml, self.gsims,
                 self.truncation_level, n_epsilons=3,
                 source_site_filter=filters.source_site_noop_filter,
@@ -196,7 +196,7 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
                 yield rupture, sites
 
         (mags, dists, lons, lats, trts, trt_bins, probs_no_exceed) = \
-            disagg._collect_bins_data(
+            disagg._collect_bins_data_old(
                 self.sources, self.site, self.imt, self.iml, self.gsims,
                 self.truncation_level, n_epsilons=3,
                 source_site_filter=source_site_filter,
@@ -242,8 +242,8 @@ class DigitizeLonsTestCase(unittest.TestCase):
     def test2(self):
         idx = disagg._digitize_lons(self.lons2, self.bins2)
         expected = numpy.array([0, 0, 1, 1, 2], dtype=int)
-        numpy.testing.assert_equal(idx, expected) 
-        
+        numpy.testing.assert_equal(idx, expected)
+
 
 class DefineBinsTestCase(unittest.TestCase):
     def test(self):
@@ -430,7 +430,7 @@ class DisaggregateTestCase(_BaseDisaggTestCase):
                           array([], dtype=float64), array([], dtype=int64), [])
 
         with mock.patch(
-            'openquake.hazardlib.calc.disagg._collect_bins_data'
+            'openquake.hazardlib.calc.disagg._collect_bins_data_old'
         ) as cbd:
             with warnings.catch_warnings(record=True) as w:
                 cbd.return_value = fake_bins_data
@@ -471,7 +471,7 @@ class PMFExtractorsTestCase(unittest.TestCase):
                     [  # longitude
                         [  # latitude
                             [  # epsilon
-                                [0.00, 0.20, 0.50], # trt
+                                [0.00, 0.20, 0.50],  # trt
                                 [0.33, 0.44, 0.55],
                                 [0.10, 0.11, 0.12]],
                             [
