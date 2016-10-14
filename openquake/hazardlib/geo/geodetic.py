@@ -243,17 +243,14 @@ def min_geodetic_distance(mlons, mlats, slons, slats, diameter=2*EARTH_RADIUS):
         slats = slats.reshape((1, ))
     cos_mlats = numpy.cos(mlats)
     cos_slats = numpy.cos(slats)
-
-    result = numpy.array([
-            # next five lines are the same as in geodetic_distance()
-            numpy.arcsin(numpy.sqrt(
-                numpy.sin((mlats - slats[i]) / 2.0) ** 2.0
-                + cos_mlats * cos_slats[i]
-                * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
-            )).min()
-            for i in range(len(slats))
-        ]) * diameter
-
+    result = numpy.zeros_like(slons)
+    for i, slat in enumerate(slats):
+        # next five lines are the same as in geodetic_distance()
+        result[i] = numpy.arcsin(numpy.sqrt(
+            numpy.sin((mlats - slat) / 2.0) ** 2.0
+            + cos_mlats * cos_slats[i]
+            * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
+        )).min() * diameter
     return _reshape(result, orig_shape)
 
 
