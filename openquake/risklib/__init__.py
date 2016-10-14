@@ -21,7 +21,7 @@ import sys
 from openquake.baselib.general import search_module, git_suffix
 
 # the version is managed by packager.sh with a sed
-__version__ = '2.1.0'
+__version__ = '2.2.0'
 __version__ += git_suffix(__file__)
 
 path = search_module('openquake.commonlib.general')
