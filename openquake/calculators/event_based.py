@@ -412,7 +412,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
                         events.append(rec)
                         self.eid[sm_id] += 1
                         i += 1
-                    if self.oqparam.calculation_mode == 'event_based':
+                    if self.oqparam.save_ruptures:
                         self.datastore['sescollection/%s' % ebr.serial] = ebr
                 if events:
                     ev = 'events/sm-%04d' % sm_id
