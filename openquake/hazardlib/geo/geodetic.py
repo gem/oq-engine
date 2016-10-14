@@ -241,17 +241,15 @@ def min_geodetic_distance(mlons, mlats, slons, slats, diameter=2*EARTH_RADIUS):
     cos_slats = numpy.cos(slats)
     result = numpy.zeros_like(slons)
     for i, slat in enumerate(slats):
-        # next five lines are the same as in geodetic_distance()
-        result[i] = numpy.arcsin(numpy.sqrt(
-            numpy.sin((mlats - slat) / 2.0) ** 2.0
-            + cos_mlats * cos_slats[i]
-            * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
-        )).min() * diameter
-    return result
+        a = numpy.sin((mlats - slat) / 2.0)
+        b = numpy.sin((mlons - slons[i]) / 2.0)
+        result[i] = numpy.arcsin(
+            numpy.sqrt(a * a + cos_mlats * cos_slats[i] * b * b)).min()
+    return result * diameter
 
 
 def min_idx_dst(mlons, mlats, mdepths, slons, slats, sdepths=0,
-                 diameter=2*EARTH_RADIUS):
+                diameter=2*EARTH_RADIUS):
     """
     Calculate the minimum distance between a collection of points and a point.
 

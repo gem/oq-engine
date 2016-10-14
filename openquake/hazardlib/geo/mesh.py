@@ -173,24 +173,6 @@ class Mesh(object):
                 return numpy.allclose(self.lons, mesh.lons, atol=tol) and\
                     numpy.allclose(self.lats, mesh.lats, atol=tol)
 
-    def get_min_distance(self, mesh):
-        """
-        Compute and return the minimum distance from the mesh to each point
-        in another mesh.
-
-        :returns:
-            numpy array of distances in km of the same shape as ``mesh``.
-
-        Method doesn't make any assumptions on arrangement of the points
-        in either mesh and instead calculates the distance from each point of
-        this mesh to each point of the target mesh and returns the lowest found
-        for each.
-
-        Uses :func:`openquake.hazardlib.geo.geodetic.min_distance`.
-        """
-        self._geodetic_min_distance(mesh)
-        return self.min_dst
-
     def get_joyner_boore_distance(self, mesh):
         """
         Compute and return Joyner-Boore distance to each point of ``mesh``.
@@ -263,13 +245,31 @@ class Mesh(object):
             polygon = polygon.buffer(self.DIST_TOLERANCE, 1)
         mesh_lons, mesh_lats = mesh.lons.take(idxs), mesh.lats.take(idxs)
         mesh_xx, mesh_yy = proj(mesh_lons, mesh_lats)
-        distances_2d = geo_utils.point_to_polygon_distance(polygon,
-                                                           mesh_xx, mesh_yy)
+        distances_2d = geo_utils.point_to_polygon_distance(
+            polygon, mesh_xx, mesh_yy)
 
         # replace geodetic distance values for points-closer-than-the-threshold
         # by more accurate point-to-polygon distance values.
         distances.put(idxs, distances_2d)
         return distances.reshape(mesh.shape)
+
+    def get_min_distance(self, mesh):
+        """
+        Compute and return the minimum distance from the mesh to each point
+        in another mesh.
+
+        :returns:
+            numpy array of distances in km of the same shape as ``mesh``.
+
+        Method doesn't make any assumptions on arrangement of the points
+        in either mesh and instead calculates the distance from each point of
+        this mesh to each point of the target mesh and returns the lowest found
+        for each.
+
+        Uses :func:`openquake.hazardlib.geo.geodetic.min_distance`.
+        """
+        self._set_idx_dst(mesh)
+        return self.min_dst
 
     def get_closest_points(self, mesh):
         """
@@ -278,12 +278,8 @@ class Mesh(object):
         :returns:
             :class:`Mesh` object of the same shape as ``mesh`` with closest
             points from this one at respective indices.
-
-        This method is in general very similar to :meth:`get_min_distance`
-        and uses the same :func:`openquake.hazardlib.geo.geodetic.min_distance`
-        internally.
         """
-        self._geodetic_min_distance(mesh)
+        self._set_idx_dst(mesh)
         lons = self.lons.take(self.min_idx)
         lats = self.lats.take(self.min_idx)
         if self.depths is None:
@@ -292,13 +288,7 @@ class Mesh(object):
             depths = self.depths.take(self.min_idx)
         return Mesh(lons, lats, depths)
 
-    def _geodetic_min_distance(self, mesh):
-        """
-        Wrapper around :func:`openquake.hazardlib.geo.geodetic.min_distance`
-        for two meshes: either (or both, or neither) can have empty depths.
-        """
-        if self.min_dst is not None:
-            return
+    def _set_idx_dst(self, mesh):
         if self.depths is None:
             depths1 = numpy.zeros_like(self.lons)
         else:
@@ -529,8 +519,8 @@ class RectangularMesh(Mesh):
             else:
                 # even number of columns, need to take two middle
                 # points on the middle row
-                lon1, lon2 = self.lons[mid_row][mid_col - 1 : mid_col + 1]
-                lat1, lat2 = self.lats[mid_row][mid_col - 1 : mid_col + 1]
+                lon1, lon2 = self.lons[mid_row][mid_col - 1: mid_col + 1]
+                lat1, lat2 = self.lats[mid_row][mid_col - 1: mid_col + 1]
                 if self.depths is not None:
                     depth1 = self.depths[mid_row][mid_col - 1]
                     depth2 = self.depths[mid_row][mid_col]
@@ -538,8 +528,8 @@ class RectangularMesh(Mesh):
             # there are even number of rows. take the row just above
             # and the one just below the middle and find middle point
             # of each
-            submesh1 = self[mid_row - 1 : mid_row]
-            submesh2 = self[mid_row : mid_row + 1]
+            submesh1 = self[mid_row - 1: mid_row]
+            submesh2 = self[mid_row: mid_row + 1]
             p1, p2 = submesh1.get_middle_point(), submesh2.get_middle_point()
             lon1, lat1, depth1 = p1.longitude, p1.latitude, p1.depth
             lon2, lat2, depth2 = p2.longitude, p2.latitude, p2.depth
@@ -776,10 +766,9 @@ class RectangularMesh(Mesh):
         in a same column), and the mean value (weighted by the mean cell
         length in each column) is returned.
         """
-        assert not 1 in self.lons.shape, (
+        assert 1 not in self.lons.shape, (
             "mean width is only defined for mesh of more than "
-            "one row and more than one column of points"
-        )
+            "one row and more than one column of points")
 
         _, cell_length, cell_width, cell_area = self.get_cell_dimensions()
 

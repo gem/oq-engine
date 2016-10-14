@@ -417,7 +417,6 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
         target_rup = self.surface.get_min_distance(target)
         mesh = RectangularMesh(lons=lons, lats=lats, depths=None)
         mesh_rup = self.surface.get_min_distance(mesh)
-
         target_lons = target.lons
         target_lats = target.lats
         cdpp = numpy.empty(len(target_lons))
@@ -427,10 +426,10 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
 
             cdpp_sites_lats = mesh.lats[(mesh_rup <= target_rup[iloc] + space)
                                         & (mesh_rup >= target_rup[iloc]
-                                           - space)]
+                                        - space)]
             cdpp_sites_lons = mesh.lons[(mesh_rup <= target_rup[iloc] + space)
                                         & (mesh_rup >= target_rup[iloc]
-                                           - space)]
+                                        - space)]
 
             dpp_sum = []
             dpp_target = self.get_dppvalue(Point(target_lon, target_lat))
