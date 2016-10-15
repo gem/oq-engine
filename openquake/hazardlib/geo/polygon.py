@@ -47,6 +47,7 @@ class Polygon(object):
         perimeter intersects itself.
     """
     _slots_ = 'lons lats _bbox _projection _polygon2d'.split()
+    _bbox = None
 
     def __init__(self, points):
         points = utils.clean_points(points)
@@ -60,8 +61,6 @@ class Polygon(object):
         if utils.line_intersects_itself(self.lons, self.lats,
                                         closed_shape=True):
             raise ValueError('polygon perimeter intersects itself')
-
-        self._bbox = None
         self._projection = None
         self._polygon2d = None
 
@@ -109,8 +108,6 @@ class Polygon(object):
         # need to cut off the last point -- it repeats the first one
         polygon.lons, polygon.lats = proj(xx[:-1], yy[:-1], reverse=True)
         # initialize the instance (as constructor would do)
-        polygon._bbox = utils.get_spherical_bounding_box(polygon.lons,
-                                                         polygon.lats)
         polygon._polygon2d = polygon2d
         polygon._projection = proj
         return polygon
