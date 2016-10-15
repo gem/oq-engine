@@ -215,8 +215,8 @@ class GeographicObjectsTest(unittest.TestCase):
 class MinDistanceToSegmentTest(unittest.TestCase):
 
     def setUp(self):
-        self.slons = [-1.2, 1.4]
-        self.slats = [-0.3, 0.5]
+        self.slons = numpy.array([-1.2, 1.4])
+        self.slats = numpy.array([-0.3, 0.5])
 
     def test_one(self):
         # Positive distance halfspace - within segment

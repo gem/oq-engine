@@ -238,8 +238,15 @@ def min_geodetic_distance(mlons, mlats, slons, slats, diameter=2*EARTH_RADIUS):
     return pure_distances(mlons, mlats, slons, slats).min(axis=0) * diameter
 
 
-# distances in units of the Earth diameter
+# used to compute distances site-rupture for all sites
 def pure_distances(mlons, mlats, slons, slats):
+    """
+    :param mlons: array of m longitudes (for the rupture)
+    :param mlats: array of m latitudes (for the rupture)
+    :param slons: array of s longitudes (for the sites)
+    :param slats: array of s latitudes (for the sites)
+    :returns: array of (m, s) distances to be multiplied by the Earth diameter
+    """
     cos_mlats = numpy.cos(mlats)
     cos_slats = numpy.cos(slats)
     result = numpy.zeros((len(mlons), len(slons)))
