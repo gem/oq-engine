@@ -201,14 +201,11 @@ def min_distance_to_segment(seglons, seglats, lons, lats):
     # Now let's compute the distances for the two cases.
     dists = numpy.zeros_like(lons)
     if len(idx_in[0]):
-        dists[idx_in] = distance_to_arc(seglons[0],
-                                        seglats[0],
-                                        seg_azim,
-                                        lons[idx_in],
-                                        lats[idx_in])
+        dists[idx_in] = distance_to_arc(
+            seglons[0], seglats[0], seg_azim, lons[idx_in], lats[idx_in])
     if len(idx_out[0]):
-        dists[idx_out] = (min_geodetic_distance(seglons, seglats,
-                                                lons[idx_out], lats[idx_out]))
+        dists[idx_out] = min_geodetic_distance(
+            seglons, seglats, lons[idx_out], lats[idx_out])
 
     # Finally we correct the sign of the distances in order to make sure that
     # the points on the right semispace defined using as a reference the
@@ -236,24 +233,24 @@ def min_geodetic_distance(mlons, mlats, slons, slats, diameter=2*EARTH_RADIUS):
     for calculating the minimum distance between first mesh and each point
     of the second mesh when both are defined on the earth surface.
     """
-    mlons, mlats, slons, slats = _prepare_coords(mlons, mlats, slons, slats)
+    mlons, mlats, slons, slats = _prepare_coords(
+        mlons.flatten(), mlats.flatten(), slons, slats)
     cos_mlats = numpy.cos(mlats)
     cos_slats = numpy.cos(slats)
-    if len(mlons.shape) == 1:  # fast lane
-        result = numpy.zeros((len(mlons), len(slons)))
-        for j in range(len(mlons)):
-            a = numpy.sin((mlats[j] - slats) / 2.0)
-            b = numpy.sin((mlons[j] - slons) / 2.0)
-            result[j, :] = numpy.arcsin(
-                numpy.sqrt(a * a + cos_mlats[j] * cos_slats * b * b))
-        return result.min(axis=0) * diameter
-    result = numpy.zeros_like(slons)
-    for i, slat in enumerate(slats):
-        a = numpy.sin((mlats - slat) / 2.0)
-        b = numpy.sin((mlons - slons[i]) / 2.0)
-        result[i] = numpy.arcsin(
-            numpy.sqrt(a * a + cos_mlats * cos_slats[i] * b * b)).min()
-    return result * diameter
+    result = numpy.zeros((len(mlons), len(slons)))
+    if len(mlons) < len(slons):  # lots of sites
+        for i in range(len(mlons)):
+            a = numpy.sin((mlats[i] - slats) / 2.0)
+            b = numpy.sin((mlons[i] - slons) / 2.0)
+            result[i, :] = numpy.arcsin(
+                numpy.sqrt(a * a + cos_mlats[i] * cos_slats * b * b))
+    else:  # few sites
+        for j in range(len(slons)):
+            a = numpy.sin((mlats - slats[j]) / 2.0)
+            b = numpy.sin((mlons - slons[j]) / 2.0)
+            result[:, j] = numpy.arcsin(
+                numpy.sqrt(a * a + cos_mlats * cos_slats[j] * b * b))
+    return result.min(axis=0) * diameter
 
 
 def min_idx_dst(mlons, mlats, mdepths, slons, slats, sdepths=0,

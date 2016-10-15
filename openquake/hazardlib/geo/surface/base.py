@@ -411,12 +411,10 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
                                                         azimuth,
                                                         mesh.lons, mesh.lats)
                 else:
-                    tmp = geodetic.min_distance_to_segment([p1.longitude,
-                                                            p2.longitude],
-                                                           [p1.latitude,
-                                                            p2.latitude],
-                                                           mesh.lons,
-                                                           mesh.lats)
+                    tmp = geodetic.min_distance_to_segment(
+                        numpy.array([p1.longitude, p2.longitude]),
+                        numpy.array([p1.latitude, p2.latitude]),
+                        mesh.lons, mesh.lats)
                 # Correcting the sign of the distance
                 if i == 0:
                     tmp *= -1
