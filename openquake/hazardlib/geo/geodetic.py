@@ -235,6 +235,11 @@ def min_geodetic_distance(mlons, mlats, slons, slats, diameter=2*EARTH_RADIUS):
     """
     mlons, mlats, slons, slats = _prepare_coords(
         mlons.flatten(), mlats.flatten(), slons, slats)
+    return pure_distances(mlons, mlats, slons, slats).min(axis=0) * diameter
+
+
+# distances in units of the Earth diameter
+def pure_distances(mlons, mlats, slons, slats):
     cos_mlats = numpy.cos(mlats)
     cos_slats = numpy.cos(slats)
     result = numpy.zeros((len(mlons), len(slons)))
@@ -250,7 +255,7 @@ def min_geodetic_distance(mlons, mlats, slons, slats, diameter=2*EARTH_RADIUS):
             b = numpy.sin((mlons - slons[j]) / 2.0)
             result[:, j] = numpy.arcsin(
                 numpy.sqrt(a * a + cos_mlats * cos_slats[j] * b * b))
-    return result.min(axis=0) * diameter
+    return result
 
 
 def min_idx_dst(mlons, mlats, mdepths, slons, slats, sdepths=0,
@@ -295,20 +300,12 @@ def min_idx_dst(mlons, mlats, mdepths, slons, slats, sdepths=0,
     slats = slats.reshape(-1)
     sdepths = sdepths.reshape(-1)
 
-    cos_mlats = numpy.cos(mlats)
-    cos_slats = numpy.cos(slats)
-
-    dist_squares = numpy.array([
-        # next five lines are the same as in geodetic_distance()
-        (numpy.arcsin(numpy.sqrt(
-            numpy.sin((mlats - slats[i]) / 2.0) ** 2.0
-            + cos_mlats * cos_slats[i]
-            * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
-        )) * diameter) ** 2 + (mdepths - sdepths[i]) ** 2
-        for i in range(len(slats))
-    ])
-    min_idx = dist_squares.argmin(axis=1)  # (n, m) -> n
-    min_dst = numpy.sqrt(dist_squares.min(axis=1))  # (n, m) -> n
+    dst = pure_distances(mlons, mlats, slons, slats) * diameter
+    delta = numpy.array([[mdepth - sdepth for sdepth in sdepths]
+                         for mdepth in mdepths])
+    dist_squares = dst ** 2 + delta ** 2
+    min_idx = dist_squares.argmin(axis=0)  # (m, s) -> s
+    min_dst = numpy.sqrt(dist_squares.min(axis=0))  # (m, s) -> s
     return _reshape(min_idx, orig_shape), _reshape(min_dst, orig_shape)
 
 
