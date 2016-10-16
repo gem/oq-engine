@@ -108,6 +108,8 @@ class Polygon(object):
         # need to cut off the last point -- it repeats the first one
         polygon.lons, polygon.lats = proj(xx[:-1], yy[:-1], reverse=True)
         # initialize the instance (as constructor would do)
+        polygon._bbox = utils.get_spherical_bounding_box(polygon.lons,
+                                                         polygon.lats)
         polygon._polygon2d = polygon2d
         polygon._projection = proj
         return polygon
