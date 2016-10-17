@@ -128,6 +128,12 @@ def safely_call(func, args, pickle=False):
     return res
 
 
+def mkfuture(result):
+    fut = Future()
+    fut.set_result(result)
+    return fut
+
+
 class Pickled(object):
     """
     An utility to manually pickling/unpickling objects.
@@ -425,17 +431,14 @@ class TaskManager(object):
 
         if self.distribute == 'no':
             for result in self.results:
-                fut = Future()
-                fut.set_result(result)
-                yield fut
+                yield mkfuture(result)
 
         elif self.distribute == 'celery':
             rset = ResultSet(self.results)
             for task_id, result_dict in rset.iter_native():
                 idx = self.task_ids.index(task_id)
                 self.task_ids.pop(idx)
-                fut = Future()
-                fut.set_result(result_dict['result'])
+                fut = mkfuture(result_dict['result'])
                 # work around a celery bug
                 del app.backend._cache[task_id]
                 yield fut
@@ -480,8 +483,7 @@ class TaskManager(object):
         if nargs == 1:
             [args] = self.task_args
             self.progress('Executing a single task in process')
-            fut = Future()
-            fut.set_result(safely_call(self.task_func, args))
+            fut = mkfuture(safely_call(self.task_func, args))
             return IterResult([fut], self.name)
         task_no = 0
         for args in self.task_args:
@@ -599,8 +601,9 @@ class Starmap(object):
     def reduce(self, agg=operator.add, acc=None, progress=logging.info):
         if acc is None:
             acc = AccumDict()
+        futures = (mkfuture(res) for res in self.imap)
         for res in IterResult(
-                self.imap, self.func.__name__, self.num_tasks, progress):
+                futures, self.func.__name__, self.num_tasks, progress):
             acc = agg(acc, res)
         return acc
 
