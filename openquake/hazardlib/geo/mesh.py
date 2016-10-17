@@ -64,8 +64,6 @@ class Mesh(object):
         self.lons = lons
         self.lats = lats
         self.depths = depths
-        self.min_idx = None
-        self.min_dst = None
 
     @classmethod
     def from_points_list(cls, points):
@@ -268,8 +266,7 @@ class Mesh(object):
 
         Uses :func:`openquake.hazardlib.geo.geodetic.min_distance`.
         """
-        self._set_idx_dst(mesh)
-        return self.min_dst
+        return self._min_idx_dst(mesh)[1]
 
     def get_closest_points(self, mesh):
         """
@@ -279,16 +276,16 @@ class Mesh(object):
             :class:`Mesh` object of the same shape as ``mesh`` with closest
             points from this one at respective indices.
         """
-        self._set_idx_dst(mesh)
-        lons = self.lons.take(self.min_idx)
-        lats = self.lats.take(self.min_idx)
+        min_idx, min_dst = self._min_idx_dst(mesh)
+        lons = self.lons.take(min_idx)
+        lats = self.lats.take(min_idx)
         if self.depths is None:
             depths = None
         else:
-            depths = self.depths.take(self.min_idx)
+            depths = self.depths.take(min_idx)
         return Mesh(lons, lats, depths)
 
-    def _set_idx_dst(self, mesh):
+    def _min_idx_dst(self, mesh):
         if self.depths is None:
             depths1 = numpy.zeros_like(self.lons)
         else:
@@ -297,7 +294,7 @@ class Mesh(object):
             depths2 = numpy.zeros_like(mesh.lons)
         else:
             depths2 = mesh.depths
-        self.min_idx, self.min_dst = geodetic.min_idx_dst(
+        return geodetic.min_idx_dst(
             self.lons, self.lats, depths1, mesh.lons, mesh.lats, depths2)
 
     def get_distance_matrix(self):

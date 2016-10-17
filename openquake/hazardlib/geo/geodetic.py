@@ -39,12 +39,6 @@ class GeographicObjects(object):
     to extract the closest object to a given location by calling the
     method .get_closest(lon, lat).
     """
-    @classmethod
-    def from_mesh(cls, mesh):
-        self = object.__new__(cls)
-        vars(self).update(vars(mesh))
-        return self
-
     def __init__(self, objects, getlon=operator.attrgetter('lon'),
                  getlat=operator.attrgetter('lat')):
         self.objects = list(objects)
@@ -69,10 +63,7 @@ class GeographicObjects(object):
         if max_distance is not None:
             if min_dist > max_distance:
                 return None, None
-        if hasattr(self, 'objects'):
-            return self.objects[index], min_dist
-        else:
-            return index, min_dist
+        return self.objects[index], min_dist
 
 
 def geodetic_distance(lons1, lats1, lons2, lats2, diameter=2*EARTH_RADIUS):
