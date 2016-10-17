@@ -22,19 +22,93 @@
 extracting a specific PMF from the result of :func:`disaggregation`.
 """
 from __future__ import division
-from openquake.baselib.python3compat import range
 import sys
 import numpy
 import warnings
 import collections
-from openquake.baselib.python3compat import raise_
 
+from openquake.baselib.python3compat import raise_, range
 from openquake.hazardlib.calc import filters
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box, cross_idl
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import ContextMaker
+
+# a 6-uple containing float 4 arrays mags, dists, lons, lats,
+# 1 int array trts and a list of dictionaries pnes
+BinData = collections.namedtuple(
+    'BinData', 'mags, dists, lons, lats, trts, pnes')
+
+
+def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
+                       rlzs_assoc, gsims, imtls, poes, truncation_level,
+                       n_epsilons, mon):
+    # returns a BinData instance
+    sitecol = SiteCollection([site])
+    mags = []
+    dists = []
+    lons = []
+    lats = []
+    trts = []
+    pnes = []
+    sitemesh = sitecol.mesh
+    make_ctxt = mon('making contexts', measuremem=False)
+    disagg_poe = mon('disaggregate_poe', measuremem=False)
+    cmaker = ContextMaker(gsims)
+    for source, ruptures in source_ruptures:
+        try:
+            tect_reg = trt_num[source.tectonic_region_type]
+            for rupture in ruptures:
+                with make_ctxt:
+                    sctx, rctx, dctx = cmaker.make_contexts(sitecol, rupture)
+                # extract rupture parameters of interest
+                mags.append(rupture.mag)
+                dists.append(dctx.rjb[0])  # single site => single distance
+                [closest_point] = rupture.surface.get_closest_points(sitemesh)
+                lons.append(closest_point.longitude)
+                lats.append(closest_point.latitude)
+                trts.append(tect_reg)
+
+                pne_dict = {}
+                # a dictionary rlz.id, poe, imt_str -> prob_no_exceed
+                for gsim in gsims:
+                    gs = str(gsim)
+                    for imt_str, imls in imtls.items():
+                        imt = from_string(imt_str)
+                        imls = numpy.array(imls[::-1])
+                        for rlz in rlzs_assoc[src_group_id, gs]:
+                            rlzi = rlz.ordinal
+                            curve_poes = curves[rlzi, imt_str][::-1]
+                            for poe in poes:
+                                iml = numpy.interp(poe, curve_poes, imls)
+                                # compute probability of exceeding iml given
+                                # the current rupture and epsilon_bin, that is
+                                # ``P(IMT >= iml | rup, epsilon_bin)``
+                                # for each of the epsilon bins
+                                with disagg_poe:
+                                    [poes_given_rup_eps] = \
+                                        gsim.disaggregate_poe(
+                                            sctx, rctx, dctx, imt, iml,
+                                            truncation_level, n_epsilons)
+                                pne = rupture.get_probability_no_exceedance(
+                                    poes_given_rup_eps)
+                                pne_dict[rlzi, poe, imt_str] = (iml, pne)
+
+                pnes.append(pne_dict)
+        except Exception as err:
+            etype, err, tb = sys.exc_info()
+            msg = 'An error occurred with source id=%s. Error: %s'
+            msg %= (source.source_id, err)
+            raise_(etype, msg, tb)
+
+    return BinData(numpy.array(mags, float),
+                   numpy.array(dists, float),
+                   numpy.array(lons, float),
+                   numpy.array(lats, float),
+                   numpy.array(trts, int),
+                   pnes)
 
 
 def disaggregation(
@@ -110,9 +184,9 @@ def disaggregation(
         of the result tuple. The matrix can be used directly by pmf-extractor
         functions.
     """
-    bins_data = _collect_bins_data(sources, site, imt, iml, gsims,
-                                   truncation_level, n_epsilons,
-                                   source_site_filter, rupture_site_filter)
+    bins_data = _collect_bins_data_old(sources, site, imt, iml, gsims,
+                                       truncation_level, n_epsilons,
+                                       source_site_filter, rupture_site_filter)
     if all(len(x) == 0 for x in bins_data):
         # No ruptures have contributed to the hazard level at this site.
         warnings.warn(
@@ -128,9 +202,10 @@ def disaggregation(
     return bin_edges, diss_matrix
 
 
-def _collect_bins_data(sources, site, imt, iml, gsims,
-                       truncation_level, n_epsilons,
-                       source_site_filter, rupture_site_filter):
+# TODO: remove the duplication
+def _collect_bins_data_old(sources, site, imt, iml, gsims,
+                           truncation_level, n_epsilons,
+                           source_site_filter, rupture_site_filter):
     """
     Extract values of magnitude, distance, closest point, tectonic region
     types and PoE distribution.
@@ -206,7 +281,6 @@ def _collect_bins_data(sources, site, imt, iml, gsims,
     ]
 
     return (mags, dists, lons, lats, tect_reg_types, trt_bins, probs_no_exceed)
-
 
 def _define_bins(bins_data, mag_bin_width, dist_bin_width,
                  coord_bin_width, truncation_level, n_epsilons):
