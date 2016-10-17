@@ -210,7 +210,7 @@ class HeaderTranslator(object):
 
     >>> htranslator = HeaderTranslator(
     ...     '(asset_ref):\|S100',
-    ...     '(rup_id):uint32',
+    ...     '(eid):uint32',
     ...     '(taxonomy):object')
     >>> htranslator.write('asset_ref:|S100 value:5'.split())
     ['asset_ref', 'value:5']
@@ -261,7 +261,7 @@ htranslator = HeaderTranslator(
     '(asset_ref):\|S100',
     '(event_tag):\|S100',
     '(event_set):uint32',
-    '(rup_id):uint32',
+    '(eid):uint32',
     '(taxonomy):\|S100',
     '(rupserial):uint32',
     '(multiplicity):uint16',
