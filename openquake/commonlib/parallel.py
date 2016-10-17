@@ -23,6 +23,7 @@ from __future__ import print_function
 import os
 import sys
 import time
+import signal
 import socket
 import inspect
 import logging
@@ -32,7 +33,6 @@ import functools
 import multiprocessing.dummy
 from concurrent.futures import as_completed, ProcessPoolExecutor, Future
 import numpy
-
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
@@ -550,6 +550,13 @@ if OQ_DISTRIBUTE == 'celery':
 
 def _wakeup(sec):
     """Waiting functions, used to wake up the process pool"""
+    try:
+        import prctl
+    except ImportError:
+        pass
+    else:
+        # if the parent dies, the children die
+        prctl.set_pdeathsig(signal.SIGKILL)
     time.sleep(sec)
     return os.getpid()
 
