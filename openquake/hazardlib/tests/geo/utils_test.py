@@ -21,8 +21,6 @@ import shapely.geometry
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo import utils
 
-from openquake.hazardlib.tests import speedups_on_off
-
 
 class CleanPointTestCase(unittest.TestCase):
     def test_exact_duplicates(self):
@@ -48,7 +46,7 @@ class LineIntersectsItselfTestCase(unittest.TestCase):
 
     def test_doesnt_intersect(self):
         lons = [-1, -2, -3, -5]
-        lats = [ 0,  2,  4,  6]
+        lats = [0,  2,  4,  6]
         self.assertEqual(False, self.func(lons, lats))
         self.assertEqual(False, self.func(lons, lats, closed_shape=True))
 
@@ -79,6 +77,7 @@ class LineIntersectsItselfTestCase(unittest.TestCase):
         lons = [178, 178, 179, -178]
         lats = [0, 10, 5, 5]
         self.assertEqual(False, self.func(lons, lats))
+
 
 class GetLongitudinalExtentTestCase(unittest.TestCase):
     def test_positive(self):
@@ -331,7 +330,6 @@ class NormalizedTestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(utils.normalized(vv), nn))
 
 
-@speedups_on_off
 class ConvexToPointDistanceTestCase(unittest.TestCase):
     polygon = shapely.geometry.Polygon([
         (0, 0), (1, 0), (1, 1), (0, 1)
