@@ -42,10 +42,11 @@ case "$1" in
     # This package has previously been removed and is now having
     # its configuration purged from the system.
     :
-    for dir in  /etc/openquake /usr/share/openquake/engine /usr/lib/python2.7/dist-packages/openquake/engine /usr/share/doc/${GEM_DEB_PACKAGE} /usr/lib/python2.7/dist-packages/openquake.engine-*egg-info
+    for dir in /usr/share/openquake/engine /usr/lib/python2.7/dist-packages/openquake/engine /usr/share/doc/${GEM_DEB_PACKAGE} /usr/lib/python2.7/dist-packages/openquake.engine-*egg-info
     do
         rm -rf $dir
     done
+    rm -f /etc/openquake/openquake.cfg
     ;;
 esac
 
