@@ -140,12 +140,9 @@ class MinDistanceTest(unittest.TestCase):
                                  for arr in (mlons, mlats, mdepths)]
         slons, slats, sdepths = [numpy.array(arr, float)
                                  for arr in (slons, slats, sdepths)]
-        actual_indices = geodetic.min_distance(mlons, mlats, mdepths,
-                                               slons, slats, sdepths,
-                                               indices=True)
+        actual_indices, dists = geodetic.min_idx_dst(mlons, mlats, mdepths,
+                                                     slons, slats, sdepths)
         numpy.testing.assert_equal(actual_indices, expected_mpoint_indices)
-        dists = geodetic.min_distance(mlons, mlats, mdepths,
-                                      slons, slats, sdepths)
         expected_closest_mlons = mlons.flat[expected_mpoint_indices]
         expected_closest_mlats = mlats.flat[expected_mpoint_indices]
         expected_closest_mdepths = mdepths.flat[expected_mpoint_indices]
@@ -157,18 +154,18 @@ class MinDistanceTest(unittest.TestCase):
         self.assertTrue((dists == expected_distances).all())
 
         # testing min_geodetic_distance with the same lons and lats
-        min_geod_distance = geodetic.min_geodetic_distance(mlons, mlats,
-                                                           slons, slats)
-        min_geo_distance2 = geodetic.min_distance(mlons, mlats, mdepths * 0,
-                                                  slons, slats, sdepths * 0)
-        numpy.testing.assert_almost_equal(min_geod_distance, min_geo_distance2)
+        min_geo_distance = geodetic.min_geodetic_distance(mlons, mlats,
+                                                          slons, slats)
+        min_distance = geodetic.min_idx_dst(mlons, mlats, mdepths * 0,
+                                            slons, slats, sdepths * 0)[1]
+        numpy.testing.assert_almost_equal(min_geo_distance, min_distance)
 
     def test_one_point(self):
         mlons = numpy.array([-0.1, 0.0, 0.1])
         mlats = numpy.array([0.0, 0.0, 0.0])
         mdepths = numpy.array([0.0, 10.0, 20.0])
 
-        self._test(mlons, mlats, mdepths, -0.05, 0.0, 0,
+        self._test(mlons, mlats, mdepths, [-0.05], [0.0], [0],
                    expected_mpoint_indices=0)
         self._test(mlons, mlats, mdepths, [-0.1], [0.0], [20.0],
                    expected_mpoint_indices=1)
@@ -218,8 +215,8 @@ class GeographicObjectsTest(unittest.TestCase):
 class MinDistanceToSegmentTest(unittest.TestCase):
 
     def setUp(self):
-        self.slons = [-1.2, 1.4]
-        self.slats = [-0.3, 0.5]
+        self.slons = numpy.array([-1.2, 1.4])
+        self.slats = numpy.array([-0.3, 0.5])
 
     def test_one(self):
         # Positive distance halfspace - within segment

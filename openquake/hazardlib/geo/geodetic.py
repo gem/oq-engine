@@ -59,18 +59,14 @@ class GeographicObjects(object):
         :param max_distance: distance in km (or None)
         """
         zeros = numpy.zeros_like(self.lons)
-        # NB: it would be much cleaner if min_distance returned both
-        # the index and the min_dist, but we would need to work at C level :-(
-        index = min_distance(self.lons, self.lats, zeros, lon, lat, 0.,
-                             indices=True)
-        min_dist = min_distance(self.lons, self.lats, zeros, lon, lat, 0.)
+        index, min_dist = min_idx_dst(self.lons, self.lats, zeros, lon, lat)
         if max_distance is not None:
             if min_dist > max_distance:
                 return None, None
         return self.objects[index], min_dist
 
 
-def geodetic_distance(lons1, lats1, lons2, lats2):
+def geodetic_distance(lons1, lats1, lons2, lats2, diameter=2*EARTH_RADIUS):
     """
     Calculate the geodetic distance between two points or two collections
     of points.
@@ -90,7 +86,7 @@ def geodetic_distance(lons1, lats1, lons2, lats2):
         + numpy.cos(lats1) * numpy.cos(lats2)
         * numpy.sin((lons1 - lons2) / 2.0) ** 2.0
     ))
-    return (2.0 * EARTH_RADIUS) * distance
+    return diameter * distance
 
 
 def azimuth(lons1, lats1, lons2, lats2):
@@ -196,14 +192,11 @@ def min_distance_to_segment(seglons, seglats, lons, lats):
     # Now let's compute the distances for the two cases.
     dists = numpy.zeros_like(lons)
     if len(idx_in[0]):
-        dists[idx_in] = distance_to_arc(seglons[0],
-                                        seglats[0],
-                                        seg_azim,
-                                        lons[idx_in],
-                                        lats[idx_in])
+        dists[idx_in] = distance_to_arc(
+            seglons[0], seglats[0], seg_azim, lons[idx_in], lats[idx_in])
     if len(idx_out[0]):
-        dists[idx_out] = (min_geodetic_distance(seglons, seglats,
-                                                lons[idx_out], lats[idx_out]))
+        dists[idx_out] = min_geodetic_distance(
+            seglons, seglats, lons[idx_out], lats[idx_out])
 
     # Finally we correct the sign of the distances in order to make sure that
     # the points on the right semispace defined using as a reference the
@@ -216,45 +209,52 @@ def min_distance_to_segment(seglons, seglats, lons, lats):
     return dists
 
 
-def min_geodetic_distance(mlons, mlats, slons, slats):
-    """
-    Same as :func:`min_distance`, but calculates only minimum geodetic distance
-    (doesn't accept depth values) and doesn't support ``indices=True`` mode.
+def _reshape(array, orig_shape):
+    if orig_shape:
+        return array.reshape(orig_shape)
+    return array[0]  # scalar array
 
-    This is an optimized version of :meth:`min_distance` that is suitable
+
+def min_geodetic_distance(mlons, mlats, slons, slats, diameter=2*EARTH_RADIUS):
+    """
+    Small wrapper around :func:`pure_distances`, suitable
     for calculating the minimum distance between first mesh and each point
     of the second mesh when both are defined on the earth surface.
     """
-    mlons, mlats, slons, slats = _prepare_coords(mlons, mlats, slons, slats)
-    orig_shape = slons.shape
-    if slons.ndim == 0:
-        slons = slons.reshape((1, ))
-        slats = slats.reshape((1, ))
+    mlons, mlats, slons, slats = _prepare_coords(
+        mlons.flatten(), mlats.flatten(), slons, slats)
+    return pure_distances(mlons, mlats, slons, slats).min(axis=0) * diameter
+
+
+# used to compute distances site-rupture for all sites
+def pure_distances(mlons, mlats, slons, slats):
+    """
+    :param mlons: array of m longitudes (for the rupture)
+    :param mlats: array of m latitudes (for the rupture)
+    :param slons: array of s longitudes (for the sites)
+    :param slats: array of s latitudes (for the sites)
+    :returns: array of (m, s) distances to be multiplied by the Earth diameter
+    """
     cos_mlats = numpy.cos(mlats)
     cos_slats = numpy.cos(slats)
-
-    result = numpy.fromiter(
-        (
-            # next five lines are the same as in geodetic_distance()
-            numpy.arcsin(numpy.sqrt(
-                numpy.sin((mlats - slats[i]) / 2.0) ** 2.0
-                + cos_mlats * cos_slats[i]
-                * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
-            )).min()
-            for i in range(len(slats))
-        ),
-        dtype=float, count=len(slats)
-    ) * (2 * EARTH_RADIUS)
-
-    if not orig_shape:
-        # original target point was a scalar, so return scalar as well
-        [result] = result
-        return result
-    else:
-        return result.reshape(orig_shape)
+    result = numpy.zeros((len(mlons), len(slons)))
+    if len(mlons) < len(slons):  # lots of sites
+        for i in range(len(mlons)):
+            a = numpy.sin((mlats[i] - slats) / 2.0)
+            b = numpy.sin((mlons[i] - slons) / 2.0)
+            result[i, :] = numpy.arcsin(
+                numpy.sqrt(a * a + cos_mlats[i] * cos_slats * b * b))
+    else:  # few sites
+        for j in range(len(slons)):
+            a = numpy.sin((mlats - slats[j]) / 2.0)
+            b = numpy.sin((mlons - slons[j]) / 2.0)
+            result[:, j] = numpy.arcsin(
+                numpy.sqrt(a * a + cos_mlats * cos_slats[j] * b * b))
+    return result
 
 
-def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
+def min_idx_dst(mlons, mlats, mdepths, slons, slats, sdepths=0,
+                diameter=2*EARTH_RADIUS):
     """
     Calculate the minimum distance between a collection of points and a point.
 
@@ -275,20 +275,11 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
         Scalars, python lists or tuples or numpy arrays of the same shape,
         representing a second collection: a list of points to find a minimum
         distance from for.
-    :param indices:
-        If ``True`` -- return indices of closest points from first triple
-        of coordinates instead of the actual distances. Indices are always
-        scalar integers -- they represent indices of a point from flattened
-        form of ``mlons``, ``mlats`` and ``mdepths`` that is closest to a
-        point from ``slons``, ``slats`` and ``sdepths``. There is one integer
-        index per point in second triple of coordinates.
     :returns:
-        Minimum distance in km or indices of closest points, depending on
-        ``indices`` parameter. Result value is a scalar if ``slons``, ``slats``
-        and ``sdepths`` are scalars and numpy array of the same shape
-        of those three otherwise.
+        Indices and distances in km of the closest points. The result value is
+        a scalar if ``slons``, ``slats`` and ``sdepths`` are scalars and numpy
+        array of the same shape of those three otherwise.
     """
-    assert not indices or mlons.ndim > 0
     mlons, mlats, slons, slats = _prepare_coords(mlons, mlats, slons, slats)
     mdepths = numpy.array(mdepths, float)
     sdepths = numpy.array(sdepths, float)
@@ -304,34 +295,13 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
     slats = slats.reshape(-1)
     sdepths = sdepths.reshape(-1)
 
-    cos_mlats = numpy.cos(mlats)
-    cos_slats = numpy.cos(slats)
-
-    dist_squares = (
-        # next five lines are the same as in geodetic_distance()
-        (numpy.arcsin(numpy.sqrt(
-            numpy.sin((mlats - slats[i]) / 2.0) ** 2.0
-            + cos_mlats * cos_slats[i]
-            * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
-        ).clip(-1., 1.)) * (2 * EARTH_RADIUS)) ** 2
-        + (mdepths - sdepths[i]) ** 2
-        for i in range(len(slats))
-    )
-    if not indices:
-        result = numpy.fromiter((numpy.sqrt(numpy.min(dist_sq))
-                                 for dist_sq in dist_squares),
-                                dtype=float, count=len(slats))
-    else:
-        result = numpy.fromiter((numpy.argmin(dsq, axis=-1)
-                                 for dsq in dist_squares),
-                                dtype=int, count=len(slats))
-
-    if not orig_shape:
-        # original target point was a scalar, so return scalar as well
-        [result] = result
-        return result
-    else:
-        return result.reshape(orig_shape)
+    dst = pure_distances(mlons, mlats, slons, slats) * diameter
+    delta = numpy.array([[mdepth - sdepth for sdepth in sdepths]
+                         for mdepth in mdepths])
+    dist_squares = dst ** 2 + delta ** 2
+    min_idx = dist_squares.argmin(axis=0)  # (m, s) -> s
+    min_dst = numpy.sqrt(dist_squares.min(axis=0))  # (m, s) -> s
+    return _reshape(min_idx, orig_shape), _reshape(min_dst, orig_shape)
 
 
 def intervals_between(lon1, lat1, depth1, lon2, lat2, depth2, length):
@@ -377,8 +347,7 @@ def intervals_between(lon1, lat1, depth1, lon2, lat2, depth2, length):
     dist_factor = (length * num_intervals) / total_distance
     return npoints_towards(
         lon1, lat1, depth1, azimuth(lon1, lat1, lon2, lat2),
-        hdist * dist_factor, vdist * dist_factor, num_intervals + 1
-    )
+        hdist * dist_factor, vdist * dist_factor, num_intervals + 1)
 
 
 def npoints_between(lon1, lat1, depth1, lon2, lat2, depth2, npoints):
@@ -455,7 +424,6 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
     cos_lat = numpy.cos(rlat)
 
     sin_lats = sin_lat * cos_dists + cos_lat * sin_dists * numpy.cos(tc)
-    sin_lats = sin_lats.clip(-1., 1.)
     lats = numpy.degrees(numpy.arcsin(sin_lats))
 
     dlon = numpy.arctan2(numpy.sin(tc) * sin_dists * cos_lat,
@@ -501,7 +469,6 @@ def point_at(lon, lat, azimuth, distance):
     cos_lat = numpy.cos(lat)
 
     sin_lats = sin_lat * cos_dists + cos_lat * sin_dists * numpy.cos(tc)
-    sin_lats = sin_lats.clip(-1., 1.)
     lats = numpy.degrees(numpy.arcsin(sin_lats))
 
     dlon = numpy.arctan2(numpy.sin(tc) * sin_dists * cos_lat,
@@ -552,7 +519,7 @@ def distance_to_semi_arc(alon, alat, aazimuth, plons, plats):
         t_angle = (azimuth_to_target[idx] - aazimuth + 360) % 360
         angle = numpy.arccos((numpy.sin(numpy.radians(t_angle)) *
                               numpy.sin(distance_to_target /
-                                        EARTH_RADIUS)).clip(-1, 1))
+                                        EARTH_RADIUS)))
         distance[idx] = (numpy.pi / 2 - angle) * EARTH_RADIUS
 
     # Compute the distance between the reference point and the set of sites
@@ -601,7 +568,7 @@ def distance_to_arc(alon, alat, aazimuth, plons, plats):
     # http://en.wikipedia.org/wiki/Spherical_trigonometry#Napier.27s_Pentagon
     angle = numpy.arccos(
         (numpy.sin(numpy.radians(t_angle))
-         * numpy.sin(distance_to_target / EARTH_RADIUS)).clip(-1, 1)
+         * numpy.sin(distance_to_target / EARTH_RADIUS))
     )
     return (numpy.pi / 2 - angle) * EARTH_RADIUS
 
@@ -612,10 +579,10 @@ def _prepare_coords(lons1, lats1, lons2, lats2):
     to numpy arrays of radians. Makes sure that respective coordinates
     in pairs have the same shape.
     """
-    lons1 = numpy.array(numpy.radians(lons1))
-    lats1 = numpy.array(numpy.radians(lats1))
+    lons1 = numpy.radians(lons1)
+    lats1 = numpy.radians(lats1)
     assert lons1.shape == lats1.shape
-    lons2 = numpy.array(numpy.radians(lons2))
-    lats2 = numpy.array(numpy.radians(lats2))
+    lons2 = numpy.radians(lons2)
+    lats2 = numpy.radians(lats2)
     assert lons2.shape == lats2.shape
     return lons1, lats1, lons2, lats2
