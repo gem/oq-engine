@@ -247,7 +247,7 @@ class IterResult(object):
 
     def __iter__(self):
         self.received = []
-        for fut in self.futures:
+        for fut in as_completed(self.futures):
             check_mem_usage()  # log a warning if too much memory is used
             if hasattr(fut, 'result'):
                 result = fut.result()
@@ -441,7 +441,7 @@ class TaskManager(object):
                 yield fut
 
         else:  # future interface
-            for fut in as_completed(self.results):
+            for fut in self.results:
                 yield fut
 
     def reduce(self, agg=operator.add, acc=None):
@@ -494,7 +494,8 @@ class TaskManager(object):
             self.submit(*args)
         if not task_no:
             self.progress('No %s tasks were submitted', self.name)
-        ir = IterResult(self._iterfutures(), self.name, task_no, self.progress)
+        ir = IterResult(list(self._iterfutures()), self.name, task_no,
+                        self.progress)
         ir.sent = self.sent  # for information purposes
         if self.sent:
             self.progress('Sent %s of data in %d task(s)',
@@ -550,15 +551,19 @@ if OQ_DISTRIBUTE == 'celery':
 def _wakeup(sec):
     """Waiting functions, used to wake up the process pool"""
     time.sleep(sec)
+    return os.getpid()
 
 
 def wakeup_pool():
     """
     This is used at startup, only when the ProcessPoolExecutor is used,
     to fork the processes before loading any big data structure.
+
+    :returns: the list of PIDs spawned or None
     """
     if oq_distribute() == 'futures':  # when using the ProcessPoolExecutor
-        list(starmap(_wakeup, ((.2,) for _ in range(executor._max_workers))))
+        pids = starmap(_wakeup, ((.2,) for _ in range(executor._max_workers)))
+        return list(pids)
 
 
 class Starmap(object):
