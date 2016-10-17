@@ -74,6 +74,7 @@ def extend3(hdf5path, key, array):
             dset = create(h5, key, array.dtype,
                           shape=(None,) + array.shape[1:])
         extend(dset, array)
+        h5.flush()
 
 
 class LiteralAttrs(object):

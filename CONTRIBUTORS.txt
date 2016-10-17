@@ -25,6 +25,7 @@ Robin Gee               September 2015
 Silvia Canessa          December 2015
 Nick Ackerley           December 2015
 Trevor Allen            July 2016
+Jonathan Griffin        October 2016
 
 Research
 --------

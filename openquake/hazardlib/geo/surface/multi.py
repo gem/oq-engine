@@ -82,7 +82,7 @@ class MultiSurface(BaseSurface):
         then get_ry0_distance in sequence) does not repeat GC2 calculations,
         this hold the last mesh it was fed with
 
-    :param float gc_length:
+    :param gc_length:
         For GC2, determines the length of the fault (km) in its own GC2
         configuration
     """
@@ -447,8 +447,12 @@ class MultiSurface(BaseSurface):
 
         :param seg:
             End points of the segment edge
-        :param sx,sy:
-            Sites (longitudes and latitudes) rendered into coordinate system
+
+        :param sx:
+            Sites longitudes rendered into coordinate system
+
+        :param sy:
+            Sites latitudes rendered into coordinate system
         """
         p0x, p0y, p1x, p1y = seg[0, 0], seg[0, 1], seg[1, 0], seg[1, 1]
         # Unit vector normal to strike

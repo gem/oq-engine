@@ -15,8 +15,37 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
+from openquake.hazardlib.scalerel import (
+    get_available_scalerel,
+    get_available_magnitude_scalerel,
+    get_available_sigma_magnitude_scalerel,
+    get_available_area_scalerel,
+    get_available_sigma_area_scalerel)
+
 from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.scalerel.wc1994 import WC1994
+
+
+class AvailableMSRTestCase(unittest.TestCase):
+    """
+    The scalerel module contains methods to determine the scaling relations
+    contained within. This class tests that all execute - without necessarily
+    verifying the number or set of scaling relations available
+    """
+    def _test_get_available_scalerel(self):
+        self.assertGreater(len(get_available_scalerel()), 0)
+
+    def _test_get_available_magnitude_scalerel(self):
+        self.assertGreater(len(get_available_magnitude_scalerel()), 0)
+
+    def _test_get_available_sigma_magnitude_scalerel(self):
+        self.assertGreater(len(get_available_sigma_magnitude_scalerel()), 0)
+
+    def _test_get_available_area_scalerel(self):
+        self.assertGreater(len(get_available_area_scalerel()), 0)
+
+    def _test_get_available_sigma_area_scalerel(self):
+        self.assertGreater(len(get_available_sigma_area_scalerel()), 0)
 
 
 class BaseMSRTestCase(unittest.TestCase):

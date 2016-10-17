@@ -16,8 +16,6 @@
 import functools
 import pickle
 
-from openquake.hazardlib import speedups
-
 
 def assert_angles_equal(testcase, angle1, angle2, delta):
     if abs(angle1 - angle2) > 180:
@@ -27,31 +25,3 @@ def assert_angles_equal(testcase, angle1, angle2, delta):
 
 def assert_pickleable(obj):
     pickle.loads(pickle.dumps(obj)).assert_equal(obj)
-
-
-def speedups_on_off(cls):
-    """
-    For all the test case methods in the class creates a copy with
-    "_no_speedups" suffix in the name, where runs the same test case
-    but with speedups disabled.
-    """
-
-    def make_no_speedups_on_off(method):
-        @functools.wraps(method)
-        def method2(*args, **kwargs):
-            speedups.disable()
-            try:
-                method(*args, **kwargs)
-            finally:
-                speedups.enable()
-        return method2
-
-    for name, member in list(vars(cls).items()):
-        if not name.startswith('test_'):
-            continue
-        if not callable(member):
-            continue
-        name = '%s_no_speedups' % name
-        setattr(cls, name, make_no_speedups_on_off(member))
-
-    return cls

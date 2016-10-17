@@ -544,6 +544,10 @@ class GMPETable(GMPE):
         :param iml_table:
             Intensity measure level table
         """
+        # do not allow "mag" to exceed maximum table magnitude
+        if mag > self.m_w[-1]:
+            mag = self.m_w[-1]
+
         # Get magnitude values
         if mag < self.m_w[0] or mag > self.m_w[-1]:
             raise ValueError("Magnitude %.2f outside of supported range "

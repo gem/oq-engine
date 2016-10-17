@@ -52,6 +52,8 @@ class ComplexFaultSource(ParametricSeismicSource):
 
     MODIFICATIONS = set(('set_geometry',))
 
+    RUPTURE_WEIGHT = 2.0  # makes ComplexFaultSources heavy
+
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
                  rupture_aspect_ratio, temporal_occurrence_model,

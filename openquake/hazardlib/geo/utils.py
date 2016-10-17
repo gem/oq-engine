@@ -137,7 +137,7 @@ class OrthographicProjection(object):
     of get_orthographic_projection.
     """
     _slots_ = ('west east north south lambda0 phi0 '
-                 'cos_phi0 sin_phi0 sin_pi_over_4').split()
+               'cos_phi0 sin_phi0 sin_pi_over_4').split()
 
     def __init__(self, west, east, north, south):
         self.west = west
@@ -377,27 +377,6 @@ def point_to_polygon_distance(polygon, pxx, pyy):
     return result.reshape(pxx.shape)
 
 
-try:
-    from openquake.hazardlib.geo import _utils_speedups
-except ImportError:
-    # speedups extension is not available
-    import warnings
-    warnings.warn("geoutils speedups are not available", RuntimeWarning)
-else:
-    from openquake.hazardlib import speedups
-
-    def _c_point_to_polygon_distance(polygon, pxx, pyy):
-        pxx = numpy.array(pxx, float)
-        pyy = numpy.array(pyy, float)
-        cxx, cyy = numpy.array(polygon.exterior).transpose()
-        return _utils_speedups.point_to_polygon_distance(
-            cxx, cyy, pxx, pyy
-        )
-
-    speedups.register(point_to_polygon_distance, _c_point_to_polygon_distance)
-    del _c_point_to_polygon_distance
-
-
 def cross_idl(lon1, lon2):
     """
     Return True if two longitude values define line crossing international date
@@ -443,3 +422,17 @@ def plane_fit(points):
     x = points - ctr[:, None]
     M = numpy.dot(x, x.T)
     return ctr, numpy.linalg.svd(M)[0][:, -1]
+
+
+def fix_lons_idl(lons):
+    """
+    Fix a vector of longitudes crossing the International Date Line (if any).
+
+    :returns: the fixed vector and an IDL flag
+    """
+    if cross_idl(lons.min(), lons.max()):
+        new = numpy.array(lons)
+        new[new < 0] += 360
+        return new, True
+    else:
+        return lons, False

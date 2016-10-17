@@ -61,8 +61,10 @@ Built-in GSIMs
     geomatrix_1993
     ghofrani_atkinson_2014
     gsim_table
+    hong_goda_2007
     idriss_2014
     kanno_2006
+    kotha_2016
     lin_lee_2008
     lin_2009
     mcverry_2006
@@ -82,6 +84,7 @@ Built-in GSIMs
     tavakoli_pezeshk_2005
     toro_1997
     toro_2002
+    travasarou_2003
     youngs_1997
     zhao_2006
     zhao_2006_swiss

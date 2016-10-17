@@ -20,7 +20,9 @@ from openquake.hazardlib.gsim.zhao_2006 import (ZhaoEtAl2006Asc,
                                                 ZhaoEtAl2006SInter,
                                                 ZhaoEtAl2006SSlab,
                                                 ZhaoEtAl2006SInterNSHMP2008,
-                                                ZhaoEtAl2006SSlabNSHMP2014)
+                                                ZhaoEtAl2006SSlabNSHMP2014,
+                                                ZhaoEtAl2006SInterCascadia,
+                                                ZhaoEtAl2006SSlabCascadia)
 from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
                                            DistancesContext)
 from openquake.hazardlib.imt import PGA
@@ -152,3 +154,18 @@ class ZhaoEtAl2006SSlabNSHMP2014TestCase(BaseGSIMTestCase):
         self.check('ZHAO06/ZHAO_SSLAB_NSHMP2014_MEAN.csv',
                    max_discrep_percentage=0.52)
 
+
+class ZhaoEtal2006SInterCascadiaTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = ZhaoEtAl2006SInterCascadia
+
+    def test_mean(self):
+        self.check("ZHAO06/Z06_GSC_CASCADIA_SINTER_MEAN.csv",
+                   max_discrep_percentage=0.1)
+
+
+class ZhaoEtal2006SSlabCascadiaTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = ZhaoEtAl2006SSlabCascadia
+
+    def test_mean(self):
+        self.check("ZHAO06/Z06_GSC_CASCADIA_SSLAB_MEAN.csv",
+                   max_discrep_percentage=0.1)
