@@ -17,15 +17,15 @@ sudo add-apt-repository -y ppa:openquake/ppa
 sudo apt-get update
 ```
 
-### Coming from release 1.0
+### Coming from OpenQuake Engine 1.x
 
-If you are upgrading from OpenQuake Engine release 1.*, before you can process you have to run this command:
+If you are upgrading from OpenQuake Engine release 1.x, before you can process you have to run this command:
 ```bash
 sudo apt-get remove --purge python-oq.*
 sudo rm -Rf /usr/openquake
 ```
 
-The following dependencies are not used anymore by the OpenQuake Engine 2.0:
+The following dependencies are not used anymore by the OpenQuake Engine 2:
 - redis-server (used only by the OQ Engine 1.0)
 - postgresql-server and postgis
 - other minor dependencies

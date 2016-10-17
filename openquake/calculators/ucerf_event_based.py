@@ -39,8 +39,7 @@ from openquake.calculators import base, event_based
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.geo.geodetic import (
-    min_distance, min_geodetic_distance)
+from openquake.hazardlib.geo.geodetic import min_idx_dst, min_geodetic_distance
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.tom import PoissonTOM
@@ -402,11 +401,11 @@ def prefilter_background_model(hdf5, branch_key, sites, integration_distance,
     """
     bg_locations = hdf5["Grid/Locations"][:].astype("float64")
     n_locations = bg_locations.shape[0]
-    distances = min_distance(sites.lons, sites.lats,
-                             numpy.zeros_like(sites.lons),
-                             bg_locations[:, 0],
-                             bg_locations[:, 1],
-                             numpy.zeros(n_locations))
+    distances = min_idx_dst(sites.lons, sites.lats,
+                            numpy.zeros_like(sites.lons),
+                            bg_locations[:, 0],
+                            bg_locations[:, 1],
+                            numpy.zeros(n_locations))[1]
     # Add buffer equal to half of length of median area from Mmax
     mmax_areas = msr.get_median_area(
         hdf5["/".join(["Grid", branch_key, "MMax"])][:], 0.0)
