@@ -194,9 +194,7 @@ class GmfComputer(object):
 # this is not used in the engine; it is still useful for usage in IPython
 # when demonstrating hazardlib capabilities
 def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
-                         realizations, correlation_model=None,
-                         rupture_site_filter=filters.rupture_site_noop_filter,
-                         seed=None):
+                         realizations, correlation_model=None, seed=None):
     """
     Given an earthquake rupture, the ground motion field calculator computes
     ground shaking over a set of sites, by randomly sampling a ground shaking
@@ -232,9 +230,6 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         :mod:`openquake.hazardlib.correlation`. Can be ``None``, in which case
         non-correlated ground motion fields are calculated. Correlation model
         is not used if ``truncation_level`` is zero.
-    :param rupture_site_filter:
-        Optional rupture-site filter function. See
-        :mod:`openquake.hazardlib.calc.filters`.
     :param int seed:
         The seed used in the numpy random number generator
     :returns:
@@ -244,18 +239,10 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         for all sites in the collection. First dimension represents
         sites and second one is for realizations.
     """
-    r_sites = rupture_site_filter.affected(rupture, sites)
-    if r_sites is None:
-        return dict((imt, numpy.zeros((len(sites), realizations)))
-                    for imt in imts)
-    gc = GmfComputer(rupture, r_sites, [str(imt) for imt in imts], [gsim],
+    gc = GmfComputer(rupture, sites, [str(imt) for imt in imts], [gsim],
                      truncation_level, correlation_model)
     res = gc.compute(gsim, realizations, seed)
     result = {}
     for imti, imt in enumerate(gc.imts):
-        # makes sure the lenght of the arrays in output is the same as sites
-        if rupture_site_filter is not filters.rupture_site_noop_filter:
-            result[imt] = r_sites.expand(res[imti], placeholder=0)
-        else:
-            result[imt] = res[imti]
+        result[imt] = res[imti]
     return result

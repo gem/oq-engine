@@ -255,35 +255,6 @@ class RtreeFilter(object):
                     yield source, s_sites
 
 
-class RuptureSitesFilter(object):
-    """
-    Rupture-site filter based on distance.
-
-    :param integration_distance:
-        Threshold distance in km, this value gets passed straight to
-        :func:`openquake.hazardlib.calc.filters.filter_sites_by_distance_to_rupture`
-        which is what is actually used for filtering.
-    """
-    def __init__(self, integration_distance):
-        self.integration_distance = integration_distance
-
-    def affected(self, source, sites):
-        """
-        Returns the ruptures within the integration distance from the source,
-        or None.
-        """
-        rupture_sites = list(self([source], sites))
-        if rupture_sites:
-            return rupture_sites[0][1]
-
-    def __call__(self, ruptures_sites):
-        for rupture, sites in ruptures_sites:
-            r_sites = filter_sites_by_distance_to_rupture(
-                rupture, self.integration_distance, sites)
-            if r_sites is not None:
-                yield rupture, r_sites
-
-
 def source_site_noop_filter(sources, sites=None):
     """
     Transparent source-site "no-op" filter -- behaves like a real filter
@@ -292,14 +263,3 @@ def source_site_noop_filter(sources, sites=None):
     return ((src, sites) for src in sources)
 source_site_noop_filter.affected = lambda src, sites=None: sites
 source_site_noop_filter.integration_distance = None
-
-
-#: Rupture-site "no-op" filter, same as :func:`source_site_noop_filter`.
-def rupture_site_noop_filter(ruptures, sites):
-    """
-    Transparent rupture-site "no-op" filter -- behaves like a real filter
-    but never filters anything out and doesn't have any overhead.
-    """
-    return ((rup, sites) for rup in ruptures)
-rupture_site_noop_filter.affected = lambda rupture, sites: sites
-rupture_site_noop_filter.integration_distance = None
