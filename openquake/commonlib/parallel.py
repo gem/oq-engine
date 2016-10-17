@@ -480,7 +480,9 @@ class TaskManager(object):
         if nargs == 1:
             [args] = self.task_args
             self.progress('Executing a single task in process')
-            return IterResult([safely_call(self.task_func, args)], self.name)
+            fut = Future()
+            fut.set_result(safely_call(self.task_func, args))
+            return IterResult([fut], self.name)
         task_no = 0
         for args in self.task_args:
             task_no += 1
