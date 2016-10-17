@@ -263,8 +263,6 @@ class Mesh(object):
         in either mesh and instead calculates the distance from each point of
         this mesh to each point of the target mesh and returns the lowest found
         for each.
-
-        Uses :func:`openquake.hazardlib.geo.geodetic.min_distance`.
         """
         return self._min_idx_dst(mesh)[1]
 

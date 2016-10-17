@@ -217,10 +217,7 @@ def _reshape(array, orig_shape):
 
 def min_geodetic_distance(mlons, mlats, slons, slats, diameter=2*EARTH_RADIUS):
     """
-    Same as :func:`min_distance`, but calculates only minimum geodetic distance
-    (doesn't accept depth values).
-
-    This is an optimized version of :meth:`min_distance` that is suitable
+    Small wrapper around :func:`pure_distances`, suitable
     for calculating the minimum distance between first mesh and each point
     of the second mesh when both are defined on the earth surface.
     """
