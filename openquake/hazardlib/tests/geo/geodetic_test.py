@@ -154,11 +154,11 @@ class MinDistanceTest(unittest.TestCase):
         self.assertTrue((dists == expected_distances).all())
 
         # testing min_geodetic_distance with the same lons and lats
-        min_geod_distance = geodetic.min_geodetic_distance(mlons, mlats,
-                                                           slons, slats)
-        min_geo_distance2 = geodetic.min_idx_dst(mlons, mlats, mdepths * 0,
-                                                 slons, slats, sdepths * 0)[1]
-        numpy.testing.assert_almost_equal(min_geod_distance, min_geo_distance2)
+        min_geo_distance = geodetic.min_geodetic_distance(mlons, mlats,
+                                                          slons, slats)
+        min_distance = geodetic.min_idx_dst(mlons, mlats, mdepths * 0,
+                                            slons, slats, sdepths * 0)[1]
+        numpy.testing.assert_almost_equal(min_geo_distance, min_distance)
 
     def test_one_point(self):
         mlons = numpy.array([-0.1, 0.0, 0.1])
