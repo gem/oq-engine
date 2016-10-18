@@ -344,26 +344,25 @@ class StochasticEventSetCollection(object):
     given source model and GSIM logic tree paths.
     """
     dt = numpy.dtype([
-        ('event_set', U32), ('rupserial', U32), ('magnitude', F64),
+        ('rupserial', U32), ('magnitude', F64),
         ('lon', F32), ('lat', F32), ('depth', F32),
         ('tectonic_region_type', hdf5.vstr),
         ('strike', F64), ('dip', F64), ('rake', F64), ('boundary', hdf5.vstr)])
 
-    def __init__(self, sess):
+    def __init__(self, ruptures):
         data = []
-        for i, ses in enumerate(sess):
-            for rup in ses:
-                point = rup.surface.get_middle_point()
-                multi_lons, multi_lats = rup.surface.get_surface_boundaries()
-                boundary = 'MULTIPOLYGON(%s)' % ','.join(
-                    '((%s))' % ','.join('%s %s' % (lon, lat)
-                                        for lon, lat in zip(lons, lats))
-                    for lons, lats in zip(multi_lons, multi_lats))
-                data.append([(i, rup.serial, rup.mag,
-                              point.x, point.y, point.z,
-                              decode(rup.tectonic_region_type),
-                              rup.surface.get_strike(), rup.surface.get_dip(),
-                              rup.rake, decode(boundary))])
+        for rup in ruptures:
+            point = rup.surface.get_middle_point()
+            multi_lons, multi_lats = rup.surface.get_surface_boundaries()
+            boundary = 'MULTIPOLYGON(%s)' % ','.join(
+                '((%s))' % ','.join('%s %s' % (lon, lat)
+                                    for lon, lat in zip(lons, lats))
+                for lons, lats in zip(multi_lons, multi_lats))
+            data.append([(rup.serial, rup.mag,
+                          point.x, point.y, point.z,
+                          decode(rup.tectonic_region_type),
+                          rup.surface.get_strike(), rup.surface.get_dip(),
+                          rup.rake, decode(boundary))])
         self.data = numpy.array(data, self.dt)
 
     def __str__(self):
