@@ -553,6 +553,37 @@ class PlanarSurface(BaseQuadrilateralSurface):
             mesh.lats
         )
 
+    def get_ry0_distance(self, mesh):
+        """
+        :param mesh:
+            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to calculate
+            Ry0-distance to.
+        :returns:
+            Numpy array of distances in km.
+
+        See also :meth:`superclass method <.base.BaseSurface.get_ry0_distance>`
+        for spec of input and result values.
+
+        This is version specific to the planar surface doesn't make use of the
+        mesh
+        """
+        dst1 = geodetic.distance_to_arc(self.top_left.longitude,
+                                        self.top_left.latitude,
+                                        (self.strike + 90.) % 360,
+                                        mesh.lons, mesh.lats)
+
+        dst2 = geodetic.distance_to_arc(self.top_right.longitude,
+                                        self.top_right.latitude,
+                                        (self.strike + 90.) % 360,
+                                        mesh.lons, mesh.lats)
+        # Find the points on the rupture
+
+        # Get the shortest distance from the two lines
+        idx = numpy.sign(dst1) == numpy.sign(dst2)
+        dst = numpy.zeros_like(dst1)
+        dst[idx] = numpy.fmin(np.abs(dst1[idx]), np.abs(dst2[idx]))
+        return dst
+
     def get_width(self):
         """
         Return surface's width value (in km) as computed in the constructor
