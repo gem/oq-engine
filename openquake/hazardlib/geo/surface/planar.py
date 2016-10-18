@@ -594,3 +594,10 @@ class PlanarSurface(BaseQuadrilateralSurface):
         depth = (self.corner_depths[0] + self.corner_depths[3]) / 2.
 
         return Point(lon, lat, depth)
+
+    def get_surface_boundaries(self):
+        """
+        The corners lons/lats
+        """
+        return [self.corner_lons.take([0, 1, 2, 3, 0])], \
+               [self.corner_lats.take([0, 1, 2, 3, 0])]
