@@ -55,7 +55,8 @@ a "no operation" filter (:func:`source_site_noop_filter`). There are also
 two classes `SourceSitesFilter` and `RtreeFilter` to determine the sites
 affected by a given source: the second one uses an R-tree index and it is
 faster if there are a lot of sources, i.e. if the initial time to prepare
-the index can be compensed.
+the index can be compensed. Finally, there is a function
+`filter_sites_by_distance_to_rupture` based on the Joyner-Boore distance.
 """
 import sys
 import logging
