@@ -209,8 +209,6 @@ def classical(sources, sitecol, gsims, monitor):
         assert src.src_group_id == src_group_id
     trt = sources[0].tectonic_region_type
     max_dist = monitor.maximum_distance[trt]
-
-    dic = AccumDict()
     if monitor.poes_disagg:
         sm_id = monitor.sm_id
         bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
@@ -220,7 +218,9 @@ def classical(sources, sitecol, gsims, monitor):
         sources, sitecol, imtls, gsims, truncation_level,
         maximum_distance=max_dist, bbs=bbs, monitor=monitor)
     pmap.bbs = bbs
+    pmap.grp_id = src_group_id
     return pmap
+
 
 def saving_sources_by_task(iterargs, dstore):
     """
