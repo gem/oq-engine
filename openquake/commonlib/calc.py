@@ -17,20 +17,17 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-import collections
-import itertools
-import operator
 import logging
 import copy
-
+import io
 import numpy
 
+from openquake.baselib import hdf5
+from openquake.baselib.python3compat import decode
 from openquake.baselib.general import get_array, group_array, AccumDict
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc import filters
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.site import SiteCollection
-from openquake.commonlib import readinput, oqvalidation
+from openquake.commonlib import readinput, oqvalidation, writers
 
 
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
@@ -44,10 +41,6 @@ F32 = numpy.float32
 F64 = numpy.float64
 
 # ############## utilities for the classical calculator ############### #
-
-SourceRuptureSites = collections.namedtuple(
-    'SourceRuptureSites',
-    'source rupture sites')
 
 
 # used in classical and event_based calculators
@@ -343,3 +336,37 @@ def check_overflow(calc):
             raise ValueError(
                 'The event based calculator is restricted to '
                 '%d %s, got %d' % (max_[var], var, num_[var]))
+
+
+class StochasticEventSetCollection(object):
+    """
+    Class representing collection of SESs associated to
+    given source model and GSIM logic tree paths.
+    """
+    dt = numpy.dtype([
+        ('event_set', U32), ('rupserial', U32), ('magnitude', F64),
+        ('lon', F32), ('lat', F32), ('depth', F32),
+        ('tectonic_region_type', hdf5.vstr),
+        ('strike', F64), ('dip', F64), ('rake', F64), ('boundary', hdf5.vstr)])
+
+    def __init__(self, sess):
+        data = []
+        for i, ses in enumerate(sess):
+            for rup in ses:
+                point = rup.surface.get_middle_point()
+                multi_lons, multi_lats = rup.surface.get_surface_boundaries()
+                boundary = 'MULTIPOLYGON(%s)' % ','.join(
+                    '((%s))' % ','.join('%s %s' % (lon, lat)
+                                        for lon, lat in zip(lons, lats))
+                    for lons, lats in zip(multi_lons, multi_lats))
+                data.append([(i, rup.serial, rup.mag,
+                              point.x, point.y, point.z,
+                              decode(rup.tectonic_region_type),
+                              rup.surface.get_strike(), rup.surface.get_dip(),
+                              rup.rake, decode(boundary))])
+        self.data = numpy.array(data, self.dt)
+
+    def __str__(self):
+        out = io.StringIO()
+        writers.write_csv(out, self.data, sep='\t')
+        return out.getvalue()
