@@ -201,7 +201,7 @@ def disaggregation(
 # TODO: remove the duplication
 def _collect_bins_data_old(sources, site, imt, iml, gsims,
                            truncation_level, n_epsilons,
-                           source_site_filter):
+                           source_site_filter=filters.source_site_noop_filter):
     """
     Extract values of magnitude, distance, closest point, tectonic region
     types and PoE distribution.

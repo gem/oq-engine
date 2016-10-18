@@ -25,8 +25,6 @@ import collections
 import numpy
 import scipy.stats
 
-from openquake.baselib.python3compat import zip
-from openquake.baselib.general import get_array
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.gsim.base import ContextMaker
@@ -242,7 +240,4 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     gc = GmfComputer(rupture, sites, [str(imt) for imt in imts], [gsim],
                      truncation_level, correlation_model)
     res = gc.compute(gsim, realizations, seed)
-    result = {}
-    for imti, imt in enumerate(gc.imts):
-        result[imt] = res[imti]
-    return result
+    return {imt: res[imti] for imti, imt in enumerate(gc.imts)}

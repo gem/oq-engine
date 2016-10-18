@@ -146,8 +146,7 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
         (mags, dists, lons, lats, trts, trt_bins, probs_no_exceed) = \
             disagg._collect_bins_data_old(
                 self.sources, self.site, self.imt, self.iml, self.gsims,
-                self.truncation_level, n_epsilons=3,
-                source_site_filter=filters.source_site_noop_filter)
+                self.truncation_level, n_epsilons=3)
 
         aae = numpy.testing.assert_array_equal
 
