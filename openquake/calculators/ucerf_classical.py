@@ -241,16 +241,18 @@ def hazard_curves_per_rupture_subset(rupset_idx, ucerf_source, sites, imtls,
     ctx_mon = monitor('making contexts', measuremem=False)
     pne_mon = monitor('computing poes', measuremem=False)
     disagg_mon = monitor('get closest points', measuremem=False)
-    monitor.calc_times = []
     pmap = ProbabilityMap(len(imtls.array), len(gsims))
+    pmap.calc_times = []
+    pmap.eff_ruptures = 0
+    pmap.grp_id = ucerf_source.src_group_id
     with h5py.File(ucerf_source.source_file, "r") as hdf5:
         t0 = time.time()
         pmap |= ucerf_poe_map(hdf5, ucerf_source, rupset_idx, sites,
                               imtls, cmaker, truncation_level, bbs,
                               ctx_mon, pne_mon, disagg_mon)
-        monitor.calc_times.append(
+        pmap.calc_times.append(
             (ucerf_source.source_id, len(sites), time.time() - t0))
-        monitor.eff_ruptures += pne_mon.counts
+        pmap.eff_ruptures += pne_mon.counts
     return pmap
 
 
@@ -279,12 +281,6 @@ def ucerf_classical_hazard_by_rupture_set(
     imtls = monitor.oqparam.imtls
     max_dist = monitor.oqparam.maximum_distance[DEFAULT_TRT]
 
-    dic = AccumDict()
-    dic.bbs = []
-    dic.calc_times = []
-    monitor.eff_ruptures = 0
-    monitor.calc_times = []
-
     # Apply the initial rupture to site filtering
     rupset_idx, s_sites = \
         ucerf_source.filter_sites_by_distance_from_rupture_set(
@@ -292,16 +288,16 @@ def ucerf_classical_hazard_by_rupture_set(
             monitor.oqparam.maximum_distance[DEFAULT_TRT])
 
     if len(s_sites):
-        dic[src_group_id] = hazard_curves_per_rupture_subset(
+        pmap = hazard_curves_per_rupture_subset(
             rupset_idx, ucerf_source, s_sites, imtls, gsims,
-            truncation_level, maximum_distance=max_dist, bbs=dic.bbs,
+            truncation_level, maximum_distance=max_dist, bbs=[],
             monitor=monitor)
-
     else:
-        dic[src_group_id] = ProbabilityMap(len(imtls.array), len(gsims))
-    dic.calc_times += monitor.calc_times  # added by pmap_from_grp
-    dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
-    return dic
+        pmap = ProbabilityMap(len(imtls.array), len(gsims))
+        pmap.calc_times = []
+        pmap.eff_ruptures = {src_group_id: 0}
+    pmap.grp_id = ucerf_source.src_group_id
+    return pmap
 
 
 def ucerf_classical_hazard_by_branch(branchnames, ucerf_source, src_group_id,
