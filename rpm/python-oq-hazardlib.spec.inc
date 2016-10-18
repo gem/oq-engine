@@ -13,6 +13,7 @@ License: AGPLv3
 Group: Applications/Engineering
 BuildRoot: %{_tmppath}/%{oqname}-%{oqversion}-%{oqrelease}-buildroot
 Prefix: %{_prefix}
+BuildArch: noarch
 Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-hazardlib
 
