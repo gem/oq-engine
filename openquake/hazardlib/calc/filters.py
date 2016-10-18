@@ -50,9 +50,12 @@ should also perform reasonably fast (filtering stage that takes longer than
 the actual calculation on unfiltered collection only decreases performance).
 
 Module :mod:`openquake.hazardlib.calc.filters` exports one distance-based
-filter function of each kind (see :func:`SourceSitesFilter` and
-:func:`RuptureSitesFilter`) as well as "no operation" filters
-(:func:`source_site_noop_filter` and :func:`rupture_site_noop_filter`).
+filter function (see :func:`filter_sites_by_distance_to_rupture`) as well as
+a "no operation" filter (:func:`source_site_noop_filter`). There are also
+two classes `SourceSitesFilter` and `RtreeFilter` to determine the sites
+affected by a given source: the second one uses an R-tree index and it is
+faster if there are a lot of sources, i.e. if the initial time to prepare
+the index can be compensed.
 """
 import sys
 import logging
