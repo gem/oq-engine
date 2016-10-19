@@ -16,9 +16,9 @@ This guide may work also on other Linux releases/distributions and with some ada
 
 ## Prerequisites
 
-Before starting knowledge of [Python](https://www.python.org/) (and its virtual environments), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/) are required.
+Knowledge of [Python](https://www.python.org/) (and its virtual environments), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/) are required.
 
-Some prerequisites are needed to build the development environment
+Some software prerequisites are needed to build the development environment
 
 ### Ubuntu
 
