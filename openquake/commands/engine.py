@@ -26,8 +26,6 @@ from openquake.engine import engine as eng, config, logs
 from openquake.engine.export import core
 from openquake.engine.utils import confirm
 from openquake.engine.tools.make_html_report import make_report
-from openquake.commonlib.concurrent_futures_process_mpatch import (
-    concurrent_futures_process_monkeypatch)
 from openquake.server import dbserver
 
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
@@ -59,7 +57,6 @@ def run_job(cfg_file, log_level, log_file, exports='',
         ID of the previous calculation or None
     """
     # if the master dies, automatically kill the workers
-    concurrent_futures_process_monkeypatch()
     job_ini = os.path.abspath(cfg_file)
     job_id, oqparam = eng.job_from_file(
         job_ini, getpass.getuser(), hazard_calculation_id)
