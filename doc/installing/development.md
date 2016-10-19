@@ -16,6 +16,8 @@ This guide may work also on other Linux releases/distributions and with some ada
 
 ## Prerequisites
 
+Before starting knowledge of [Python](https://www.python.org/) (and its virtual environments), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/) are required.
+
 Some prerequisites are needed to build the development environment
 
 ### Ubuntu
@@ -69,6 +71,29 @@ install OpenQuake itself
 pip install -e oq-hazardlib/
 pip install -e oq-engine/
 ```
+
+### Sync the source code with remote
+
+You can pull all the latest changes to the source code running
+
+```bash
+cd oq-engine
+git pull
+cd ..
+
+cd oq-hazardlib
+git pull
+cd ..
+```
+
+`oq-engine` and `oq-hazardlib` must be always synced at the same time.
+
+Make also sure that no new dependencies have been added checking `requirements-dev.txt` in the source code folders or running `pip`
+
+```bash
+pip install -r oq-engine/requirements-dev.txt
+```
+
 
 Now it is possible to run the OpenQuake Engine with `oq engine`. Any change made to the `oq-engine` or `oq-hazardlib` code will be reflected in the environment.
 
