@@ -581,7 +581,7 @@ class PlanarSurface(BaseQuadrilateralSurface):
         # Get the shortest distance from the two lines
         idx = numpy.sign(dst1) == numpy.sign(dst2)
         dst = numpy.zeros_like(dst1)
-        dst[idx] = numpy.fmin(np.abs(dst1[idx]), np.abs(dst2[idx]))
+        dst[idx] = numpy.fmin(numpy.abs(dst1[idx]), numpy.abs(dst2[idx]))
         return dst
 
     def get_width(self):
