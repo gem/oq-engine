@@ -45,9 +45,10 @@ def count_eff_ruptures(sources, sitecol, gsims, monitor):
     a dictionary src_group_id -> num_ruptures. All sources belong to the
     same tectonic region type.
     """
-    grp_id = sources[0].src_group_id
-    acc = AccumDict({grp_id: {}})
-    acc.eff_ruptures = {grp_id: sum(src.num_ruptures for src in sources)}
+    acc = AccumDict()
+    acc.grp_id = sources[0].src_group_id
+    acc.calc_times = []
+    acc.eff_ruptures = {acc.grp_id: sum(src.num_ruptures for src in sources)}
     return acc
 
 
