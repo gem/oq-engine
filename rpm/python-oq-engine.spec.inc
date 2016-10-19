@@ -1,3 +1,4 @@
+%define oqstable ##_stable_##
 %define oqrepo ##_repo_##
 %define oqversion ##_version_##
 %define oqrelease ##_release_##
@@ -5,14 +6,21 @@
 %define oqtimestamp ##_timestamp_##
 %define oquser openquake
 
+
 Summary: Computes hazard, risk and socio-economic impact of earthquakes
 Name: %{oqname}
 Version: %{oqversion}
-Release: %{oqtimestamp}_%{oqrelease}
-Source0: %{oqrepo}-%{oqversion}-%{oqrelease}.tar.gz
 License: AGPLv3
 Group: Applications/Engineering
+%if %{oqstable} == 1
+Release: %{oqrelease}
+Source0: %{oqrepo}-%{oqversion}.tar.gz
+BuildRoot: %{_tmppath}/%{oqname}-%{oqversion}-buildroot
+%else
+Release: %{oqtimestamp}_%{oqrelease}
+Source0: %{oqrepo}-%{oqversion}-%{oqrelease}.tar.gz
 BuildRoot: %{_tmppath}/%{oqname}-%{oqversion}-%{oqrelease}-buildroot
+%endif
 Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: The GEM OpenQuake team <devops@openquake.org>
@@ -55,7 +63,11 @@ getent passwd %{oquser} >/dev/null || \
 exit 0
 
 %prep
+%if %{oqstable} == 1
+%setup -n %{oqrepo}-%{oqversion} -n %{oqrepo}-%{oqversion}
+%else
 %setup -n %{oqrepo}-%{oqversion}-%{oqrelease} -n %{oqrepo}-%{oqversion}-%{oqrelease}
+%endif
 
 %patch1 -p1
 
@@ -106,5 +118,10 @@ rm -rf %{buildroot}
 %{_unitdir}/openquake-celery.service
 
 %changelog
+%if %{oqstable} == 1
+* %(date -d @%{oqtimestamp} '+%a %b %d %Y') GEM Automatic Packager <gem-autopack@openquake.org> %{oqversion}-%{oqrelease}
+– Stable release of %{oqname}
+%else
 * %(date -d @%{oqtimestamp} '+%a %b %d %Y') GEM Automatic Packager <gem-autopack@openquake.org> %{oqversion}-%{oqtimestamp}_%{oqrelease}
 – Unstable release of %{oqname}
+%endif
