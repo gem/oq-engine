@@ -70,6 +70,7 @@ env CFLAGS="$RPM_OPT_FLAGS" python setup.py build
 #nosetests -v -a '!slow' --with-doctest --with-coverage --cover-package=openquake.hazardlib
 
 %install
+sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" openquake/hazardlib/__init__.py
 python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --record=INSTALLED_FILES
 
 %clean
