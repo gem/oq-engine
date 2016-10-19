@@ -6,7 +6,6 @@
 %define oqtimestamp ##_timestamp_##
 %define oquser openquake
 
-
 Summary: Computes hazard, risk and socio-economic impact of earthquakes
 Name: %{oqname}
 Version: %{oqversion}
