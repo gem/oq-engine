@@ -9,7 +9,7 @@ Homepage: http://github.com/gem/oq-hazardlib
 #Vcs-Browser: http://git.debian.org/?p=collab-maint/python-dateutil.git;a=summary
 
 Package: python-oq-hazardlib
-Architecture: any
+Architecture: all
 Conflicts: python-nhlib
 Depends: ${shlibs:Depends}, ${misc:Depends}, ${dist:Depends}, python-numpy, python-scipy, python-shapely, python-psutil, python-decorator
 Description: hazardlib is a library for performing seismic hazard analysis
