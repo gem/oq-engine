@@ -359,12 +359,17 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         rx_distance = numpy.array([4, 5])
         jb_distance = numpy.array([6, 7])
         ry0_distance = numpy.array([8, 9])
+        azimuth = numpy.array([12, 34])
         top_edge_depth = 30
         width = 15
         strike = 60.123
 
         class FakeSurface(object):
             call_counts = collections.Counter()
+
+            def get_azimuth(self):
+                self.call_counts['get_azimuth'] += 1
+                return azimuth
 
             def get_strike(self):
                 self.call_counts['get_strike'] += 1
@@ -451,7 +456,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
 
     def test_all_values(self):
         self.gsim_class.REQUIRES_DISTANCES = set(
-            'rjb rx rrup repi rhypo ry0'.split()
+            'rjb rx rrup repi rhypo ry0 azimuth'.split()
         )
         self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set(
             'mag rake strike dip ztor hypo_lon hypo_lat hypo_depth width'.
@@ -484,6 +489,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertTrue((dctx.rx == [4, 5]).all())
         self.assertTrue((dctx.ry0 == [8, 9]).all())
         self.assertTrue((dctx.rrup == [10, 11]).all())
+        self.assertTrue((dctx.azimuth == [12, 34]).all())
         numpy.testing.assert_almost_equal(dctx.rhypo,
                                           [162.18749272, 802.72247682])
         numpy.testing.assert_almost_equal(dctx.repi,
