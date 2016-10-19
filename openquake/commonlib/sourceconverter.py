@@ -212,9 +212,7 @@ def split_fault_source_by_magnitude(src):
             continue
         new_src = copy.copy(src)
         new_src.source_id = '%s:%s' % (src.source_id, i)
-        new_src.mfd = mfd.EvenlyDiscretizedMFD(
-            min_mag=mag, bin_width=src.mfd.bin_width,
-            occurrence_rates=[rate])
+        new_src.mfd = mfd.ArbitraryMFD([mag], [rate])
         i += 1
         splitlist.append(new_src)
     return splitlist
