@@ -46,7 +46,6 @@ To upgrade from a previous installation you need to manually remove it first
 # default is ~/openquake
 rm -Rf /path/to/previous/installation
 ```
-Different versions can be installed alongside if a unique destination path is provided.
 
 
 ## Run the OpenQuake Engine
