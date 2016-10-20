@@ -1,0 +1,16 @@
+sudo: false
+
+language: python
+
+python:
+ - "2.7"
+
+addons:
+  apt:
+    packages:
+    - git
+
+install:
+  - git clone --depth=1 https://github.com/gem/oq-hazardlib.git
+  - git clone --depth=1 https://github.com/gem/oq-engine.git
+  - PYTHONPATH=$(pwd)/oq-hazardlib:$(pwd)/oq-engine:. nosetests -vx tests
