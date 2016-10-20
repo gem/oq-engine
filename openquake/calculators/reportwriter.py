@@ -45,9 +45,10 @@ def count_eff_ruptures(sources, sitecol, gsims, monitor):
     a dictionary src_group_id -> num_ruptures. All sources belong to the
     same tectonic region type.
     """
-    grp_id = sources[0].src_group_id
-    acc = AccumDict({grp_id: {}})
-    acc.eff_ruptures = {grp_id: sum(src.num_ruptures for src in sources)}
+    acc = AccumDict()
+    acc.grp_id = sources[0].src_group_id
+    acc.calc_times = []
+    acc.eff_ruptures = {acc.grp_id: sum(src.num_ruptures for src in sources)}
     return acc
 
 
@@ -68,6 +69,7 @@ class ReportWriter(object):
         avglosses_data_transfer='Estimated data transfer for the avglosses',
         exposure_info='Exposure model',
         short_source_info='Slowest sources',
+        task_slowest='Slowest task',
         task_info='Information about the tasks',
         times_by_source_class='Computation times by source typology',
         performance='Slowest operations',
@@ -128,6 +130,8 @@ class ReportWriter(object):
             self.add('times_by_source_class')
         if 'task_info' in ds:
             self.add('task_info')
+            if 'classical' in ds['task_info']:
+                self.add('task_slowest')
         if 'performance_data' in ds:
             self.add('performance')
         return self.text
@@ -158,7 +162,7 @@ def build_report(job_ini, output_dir=None):
     # the goal is to extract information about the source management only
     with mock.patch.object(PSHACalculator, 'core_task', count_eff_ruptures):
         calc.pre_execute()
-    if hasattr(calc, 'csm'):
+    if hasattr(calc, '_composite_source_model'):
         calc.datastore['csm_info'] = calc.csm.info
     rw = ReportWriter(calc.datastore)
     rw.make_report()

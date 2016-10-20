@@ -6,7 +6,7 @@ The OpenQuake Engine is available for macOS in the form of **self-installable bi
     - OpenSSL 1.0
     - HDF5 1.8
     - Python 2.7
-    - Python dependencies (pip, numpy, scipy, h5py, django and few more)
+    - Python dependencies (pip, numpy, scipy, h5py, django, shapely, rtree and few more)
 - can be installed without `root` permission (i.e. in the user home)
 - multiple versions can be installed alongside
 - currently does not support Celery (and will never do)
@@ -23,14 +23,14 @@ Requirements are:
 
 ## Install packages from the OpenQuake website
 
-Download the installer from http://www.globalquakemodel.org/pkgs/macos/oq-engine/openquake-setup-macos-2.0.0-1.run using any browser
+Download the installer from http://www.globalquakemodel.org/pkgs/macos/oq-engine/openquake-setup-macos-2.1.0-1.run using any browser
 
 From the Terminal app (or using iTerm) run
 
 ```bash
 cd Downloads
-chmod +x openquake-setup-macos-2.0.0-1.run
-./openquake-setup-macos-2.0.0-1.run
+chmod +x openquake-setup-macos-2.1.0-1.run
+./openquake-setup-macos-2.1.0-1.run
 ```
 then follow the wizard on screen. By default the code is installed in `~/openquake`
 

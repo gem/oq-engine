@@ -17,13 +17,13 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-import math
 import logging
 import operator
 import collections
 from functools import partial, reduce
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
@@ -39,7 +39,6 @@ U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
 
-MAXWEIGHT = 200  # tuned by M. Simionato
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
@@ -210,22 +209,28 @@ def classical(sources, sitecol, gsims, monitor):
         assert src.src_group_id == src_group_id
     trt = sources[0].tectonic_region_type
     max_dist = monitor.maximum_distance[trt]
-
-    dic = AccumDict()
     if monitor.poes_disagg:
         sm_id = monitor.sm_id
-        dic.bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
+        bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
     else:
-        dic.bbs = []
-    # NB: the source_site_filter below is ESSENTIAL for performance inside
-    # pmap_from_grp, since it reduces the full site collection
-    # to a filtered one *before* doing the rupture filtering
-    dic[src_group_id] = pmap_from_grp(
+        bbs = []
+    pmap = pmap_from_grp(
         sources, sitecol, imtls, gsims, truncation_level,
-        maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
-    dic.calc_times = monitor.calc_times  # added by pmap_from_grp
-    dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
-    return dic
+        maximum_distance=max_dist, bbs=bbs, monitor=monitor)
+    pmap.bbs = bbs
+    pmap.grp_id = src_group_id
+    return pmap
+
+
+def saving_sources_by_task(iterargs, dstore):
+    """
+    Yield the iterargs again by populating 'task_info/source_ids'
+    """
+    source_ids = []
+    for args in iterargs:
+        source_ids.append(' ' .join(src.source_id for src in args[0]))
+        yield args
+    dstore['task_sources'] = numpy.array(source_ids, hdf5.vstr)
 
 
 @base.calculators.add('psha')
@@ -236,27 +241,24 @@ class PSHACalculator(base.HazardCalculator):
     core_task = classical
     source_info = datastore.persistent_attribute('source_info')
 
-    def agg_dicts(self, acc, val):
+    def agg_dicts(self, acc, pmap):
         """
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param val: a nested dictionary grp_id -> ProbabilityMap
+        :param pmap: a ProbabilityMap
         """
         with self.monitor('aggregate curves', autoflush=True):
-            [(grp_id, pmap)] = val.items()  # val is a dict of len 1
-            if hasattr(val, 'calc_times'):
-                for src_id, nsites, calc_time in val.calc_times:
-                    src_id = src_id.split(':', 1)[0]
-                    info = self.infos[grp_id, src_id]
-                    info.calc_time += calc_time
-                    info.num_sites = max(info.num_sites, nsites)
-                    info.num_split += 1
-            if hasattr(val, 'eff_ruptures'):
-                acc.eff_ruptures += val.eff_ruptures
-            for bb in getattr(val, 'bbs', []):
+            for src_id, nsites, calc_time in pmap.calc_times:
+                src_id = src_id.split(':', 1)[0]
+                info = self.infos[pmap.grp_id, src_id]
+                info.calc_time += calc_time
+                info.num_sites = max(info.num_sites, nsites)
+                info.num_split += 1
+            acc.eff_ruptures += pmap.eff_ruptures
+            for bb in getattr(pmap, 'bbs', []):  # for disaggregation
                 acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
-            acc[grp_id] |= pmap
+            acc[pmap.grp_id] |= pmap
         self.datastore.flush()
         return acc
 
@@ -306,9 +308,10 @@ class PSHACalculator(base.HazardCalculator):
             seed=oq.random_seed)
         with self.monitor('managing sources', autoflush=True):
             src_groups = list(self.csm.src_groups)
+            iterargs = saving_sources_by_task(
+                self.gen_args(src_groups, oq, monitor), self.datastore)
             res = parallel.starmap(
-                self.core_task.__func__, self.gen_args(src_groups, oq, monitor)
-            ).submit_all()
+                self.core_task.__func__, iterargs).submit_all()
         acc = reduce(self.agg_dicts, res, self.zerodict())
         self.save_data_transfer(res)
         with self.monitor('store source_info', autoflush=True):
@@ -328,16 +331,13 @@ class PSHACalculator(base.HazardCalculator):
         :yields: (sources, sites, gsims, monitor) tuples
         """
         ngroups = len(src_groups)
-        ct = oq.concurrent_tasks or 1
-        if len(self.sitecol) > 10000:  # hackish correction for lots of sites
-            ct *= math.sqrt(len(self.sitecol) / 10000)
-        maxweight = max(math.ceil(self.csm.weight / ct), MAXWEIGHT)
+        maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
         logging.info('Using a maxweight of %d', maxweight)
         nheavy = nlight = 0
         self.infos = {}
         for sg in src_groups:
-            logging.info('Sending source group #%d (%s) of %d',
-                         sg.id + 1, sg.trt, ngroups)
+            logging.info('Sending source group #%d of %d (%s, %d sources)',
+                         sg.id + 1, ngroups, sg.trt, len(sg.sources))
             gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
             if oq.poes_disagg:  # only for disaggregation
                 monitor.sm_id = self.rlzs_assoc.sm_ids[sg.id]
@@ -359,9 +359,11 @@ class PSHACalculator(base.HazardCalculator):
                     self.infos[sg.id, src.source_id] = source.SourceInfo(src)
                     sources = split_filter_source(
                         src, sites, self.ss_filter, self.random_seed)
-                    logging.info(
-                        'Splitting %s "%s" in %d sources',
-                        src.__class__.__name__, src.source_id, len(sources))
+                    if len(sources) > 1:
+                        logging.info(
+                            'Splitting %s "%s" in %d sources',
+                            src.__class__.__name__,
+                            src.source_id, len(sources))
                     for block in block_splitter(
                             sources, maxweight,
                             weight=operator.attrgetter('weight')):
@@ -471,10 +473,13 @@ class ClassicalCalculator(PSHACalculator):
             pmap_by_grp = {
                 int(group_id): self.datastore['poes/' + group_id]
                 for group_id in self.datastore['poes']}
-            sm = parallel.starmap(build_hcurves_and_stats,
-                                  list(self.gen_args(pmap_by_grp)))
+            res = parallel.starmap(
+                build_hcurves_and_stats,
+                list(self.gen_args(pmap_by_grp))).submit_all()
         with self.monitor('saving hcurves and stats', autoflush=True):
-            return sm.reduce(self.save_hcurves)
+            nbytes = reduce(self.save_hcurves, res, AccumDict())
+            self.save_data_transfer(res)
+            return nbytes
 
     def gen_args(self, pmap_by_grp):
         """
