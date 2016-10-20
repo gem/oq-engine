@@ -28,7 +28,7 @@ from nose.plugins.attrib import attr
 class UcerfTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'ucerf')
     def test_event_based(self):
-        if h5py.__version__ < '2.3.0':
+        if h5py.__version__ < '2.6.0':
             raise unittest.SkipTest  # UCERF requires vlen arrays
         out = self.run_calc(ucerf.__file__, 'job.ini', exports='txt')
         num_exported = len(out['gmf_data', 'txt'])
@@ -37,7 +37,7 @@ class UcerfTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'ucerf')
     def test_classical(self):
-        if h5py.__version__ < '2.3.0':
+        if h5py.__version__ < '2.6.0':
             raise unittest.SkipTest  # UCERF requires vlen arrays
         out = self.run_calc(ucerf.__file__, 'job_classical_redux.ini',
                             exports='csv')
@@ -47,7 +47,7 @@ class UcerfTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'ucerf')
     def test_event_based_risk(self):
-        if h5py.__version__ < '2.3.0':
+        if h5py.__version__ < '2.6.0':
             raise unittest.SkipTest  # UCERF requires vlen arrays
         self.run_calc(ucerf.__file__, 'job_ebr.ini',
                       number_of_logic_tree_samples='2')
