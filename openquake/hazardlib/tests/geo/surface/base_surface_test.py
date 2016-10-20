@@ -387,7 +387,7 @@ class GetAzimuthTestCase(unittest.TestCase):
         expected = numpy.array([0, 90, 180])
         azimuths[azimuths>180] = azimuths[azimuths>180]-360
         print expected, azimuths
-        numpy.testing.allclose()
+        numpy.testing.assert_almost_equal(expected, azimuths, 1)
 
     def test_02(self):
         corners = [[(-1.0, 0.0, 0.0), (1.0, 0.0, 0.0)],
@@ -398,4 +398,4 @@ class GetAzimuthTestCase(unittest.TestCase):
                                       Point(-0.1, 0.1)])
         azimuths = surface.get_azimuth(mesh)
         expected = numpy.array([270., 90., 225.])
-        numpy.testing.assert_almost_equal(expected, azimuths, 1e-2)
+        numpy.testing.assert_almost_equal(expected, azimuths, 2)

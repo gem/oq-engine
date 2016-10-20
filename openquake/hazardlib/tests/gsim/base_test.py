@@ -367,7 +367,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         class FakeSurface(object):
             call_counts = collections.Counter()
 
-            def get_azimuth(self):
+            def get_azimuth(self, mesh):
                 self.call_counts['get_azimuth'] += 1
                 return azimuth
 
@@ -498,7 +498,8 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
                          {'get_top_edge_depth': 1, 'get_rx_distance': 1,
                           'get_joyner_boore_distance': 1, 'get_dip': 1,
                           'get_min_distance': 1, 'get_width': 1,
-                          'get_strike': 1, 'get_ry0_distance': 1})
+                          'get_strike': 1, 'get_ry0_distance': 1,
+                          'get_azimuth': 1})
 
     def test_some_values(self):
         self.gsim_class.REQUIRES_DISTANCES = set('rjb rx'.split())
@@ -522,6 +523,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertFalse(hasattr(sctx, 'vs30measured'))
         self.assertFalse(hasattr(sctx, 'z2pt0'))
         self.assertFalse(hasattr(dctx, 'rrup'))
+        self.assertFalse(hasattr(dctx, 'azimuth'))
         self.assertFalse(hasattr(dctx, 'ztor'))
         self.assertFalse(hasattr(dctx, 'width'))
         self.assertEqual(self.fake_surface.call_counts,

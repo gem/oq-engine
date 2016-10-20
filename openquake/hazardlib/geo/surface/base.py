@@ -599,7 +599,6 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
         """
         # Get info about the rupture
         strike = self.get_strike()
-        print strike
         hypocenter = self.get_middle_point()
         # This is the azimuth from the north of each point Vs. the middle of
         # the rupture
