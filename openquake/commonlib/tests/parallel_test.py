@@ -16,9 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import mock
 import unittest
 import numpy
 from openquake.commonlib import parallel
+try:
+    import celery
+except ImportError:
+    celery = None
 
 
 def get_length(data):
@@ -76,3 +81,11 @@ class TaskManagerTestCase(unittest.TestCase):
                       ' by get_len!', res[0])
         self.assertEqual(res[1], RuntimeError)
         self.assertEqual(res[2].operation, mon.operation)
+
+    if celery:
+        def test_received(self):
+            with mock.patch('os.environ', OQ_DISTRIBUTE='celery'):
+                res = parallel.apply(
+                    get_length, (numpy.arange(10),)).submit_all()
+                list(res)  # iterate on the results
+                self.assertGreater(len(res.received), 0)

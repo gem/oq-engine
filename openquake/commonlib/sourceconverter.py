@@ -21,19 +21,10 @@ import copy
 import operator
 import collections
 
-from openquake.baselib.general import block_splitter
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.risklib import valid
 from openquake.commonlib.node import context, striptag
-
-# the following is arbitrary, it is used to decide when to parallelize
-# the filtering (MS)
-MAGNITUDE_FOR_RUPTURE_SPLITTING = 6.5  # given by Marco Pagani
-# NB: the parameter MAGNITUDE_FOR_RUPTURE_SPLITTING cannot go in a
-# configuration file, otherwise the tests will break by changing it;
-# reason: the numbers in the event based calculators depend on the
-# splitting: different sources => different seeds => different numbers
 
 
 class SourceGroup(collections.Sequence):
@@ -87,7 +78,6 @@ class SourceGroup(collections.Sequence):
             for src in sorted(sources, key=operator.attrgetter('source_id')):
                 self.update(src)
         self.source_model = None  # to be set later, in CompositionInfo
-        self.weight = 1
         self.eff_ruptures = eff_ruptures  # set later nby get_rlzs_assoc
 
     def tot_ruptures(self):
@@ -222,15 +212,13 @@ def split_fault_source_by_magnitude(src):
             continue
         new_src = copy.copy(src)
         new_src.source_id = '%s:%s' % (src.source_id, i)
-        new_src.mfd = mfd.EvenlyDiscretizedMFD(
-            min_mag=mag, bin_width=src.mfd.bin_width,
-            occurrence_rates=[rate])
+        new_src.mfd = mfd.ArbitraryMFD([mag], [rate])
         i += 1
         splitlist.append(new_src)
     return splitlist
 
 
-def split_fault_source(src, block_size):
+def split_fault_source(src):
     """
     Generator splitting a fault source into several fault sources.
 
@@ -241,66 +229,12 @@ def split_fault_source(src, block_size):
     # take advantage of the multiple cores; if you split too much,
     # the data transfer will kill you, i.e. multiprocessing/celery
     # will fail to transmit to the workers the generated sources.
-    for s in split_fault_source_by_magnitude(src):
-        if s.mfd.min_mag < MAGNITUDE_FOR_RUPTURE_SPLITTING:
-            s.num_ruptures = s.count_ruptures()
-            yield s  # don't split, there would too many ruptures
-        else:  # split in MultiRuptureSources
-            for ss in MultiRuptureSource.split(s, block_size):
-                yield ss
+    for ss in split_fault_source_by_magnitude(src):
+        ss.num_ruptures = ss.count_ruptures()
+        yield ss
 
 
-class MultiRuptureSource(object):
-    """
-    Fake source class used to encapsule a set of ruptures.
-
-    :param rupture:
-        an instance of :class:`openquake.hazardlib.source.rupture.
-        ParametricProbabilisticRupture`
-    :param source_id:
-        an ID for the MultiRuptureSource
-    :param tectonic_region_type:
-        the tectonic region type
-    :param src_group_id:
-        ID of the tectonic region model the source belongs to
-    """
-    RUPTURE_WEIGHT = 1
-    weight = source.base.BaseSeismicSource.__dict__['weight']
-
-    @classmethod
-    def split(cls, src, block_size):
-        """
-        Split the given fault source into MultiRuptureSources depending
-        on the given block size.
-        """
-        for i, ruptures in enumerate(
-                block_splitter(src.iter_ruptures(), block_size)):
-            yield cls(ruptures, '%s:%s' % (src.source_id, i),
-                      src.tectonic_region_type, src.src_group_id)
-
-    def __init__(self, ruptures, source_id, tectonic_region_type,
-                 src_group_id):
-        self.ruptures = ruptures
-        self.source_id = source_id
-        self.tectonic_region_type = tectonic_region_type
-        self.src_group_id = src_group_id
-        self.num_ruptures = len(ruptures)
-
-    def iter_ruptures(self):
-        """Yield the ruptures"""
-        for rupture in self.ruptures:
-            yield rupture
-
-    def count_ruptures(self):
-        """Return the block size"""
-        return len(self.ruptures)
-
-    def filter_sites_by_distance_to_source(self, maxdist, sitecol):
-        """The source has been already filtered, return the sitecol"""
-        return sitecol
-
-
-def split_source(src, block_size=1):
+def split_source(src):
     """
     Split an area source into point sources and a fault sources into
     smaller fault sources.
@@ -310,12 +244,10 @@ def split_source(src, block_size=1):
     """
     if isinstance(src, source.AreaSource):
         for s in area_to_point_sources(src):
-            s.id = src.id
             yield s
     elif isinstance(
             src, (source.SimpleFaultSource, source.ComplexFaultSource)):
-        for s in split_fault_source(src, block_size):
-            s.id = src.id
+        for s in split_fault_source(src):
             yield s
     else:
         # characteristic and nonparametric sources are not split

@@ -1,3 +1,4 @@
+%define oqstable ##_stable_##
 %define oqrepo ##_repo_##
 %define oqversion ##_version_##
 %define oqrelease ##_release_##
@@ -8,11 +9,17 @@
 Summary: Computes hazard, risk and socio-economic impact of earthquakes
 Name: %{oqname}
 Version: %{oqversion}
-Release: %{oqtimestamp}_%{oqrelease}
-Source0: %{oqrepo}-%{oqversion}-%{oqrelease}.tar.gz
 License: AGPLv3
 Group: Applications/Engineering
+%if %{oqstable} == 1
+Release: %{oqrelease}
+Source0: %{oqrepo}-%{oqversion}.tar.gz
+BuildRoot: %{_tmppath}/%{oqname}-%{oqversion}-buildroot
+%else
+Release: %{oqtimestamp}_%{oqrelease}
+Source0: %{oqrepo}-%{oqversion}-%{oqrelease}.tar.gz
 BuildRoot: %{_tmppath}/%{oqname}-%{oqversion}-%{oqrelease}-buildroot
+%endif
 Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: The GEM OpenQuake team <devops@openquake.org>
@@ -23,7 +30,7 @@ Patch1: openquake.cfg.patch
 Requires(pre): shadow-utils
 
 %define common_deps sudo systemd python numpy scipy python-shapely python-psutil python-decorator python-mock python-futures h5py python-amqp python-celery python-django pyshp python-docutils python-requests python-prctl python-gunicorn rabbitmq-server
-%define oqlib_deps python-oq-hazardlib >= 0.21.0
+%define oqlib_deps python-oq-hazardlib >= 0.22.0
 %define dev_deps python-nose python-coverage
 
 Requires: %{common_deps}
@@ -55,7 +62,11 @@ getent passwd %{oquser} >/dev/null || \
 exit 0
 
 %prep
+%if %{oqstable} == 1
+%setup -n %{oqrepo}-%{oqversion} -n %{oqrepo}-%{oqversion}
+%else
 %setup -n %{oqrepo}-%{oqversion}-%{oqrelease} -n %{oqrepo}-%{oqversion}-%{oqrelease}
+%endif
 
 %patch1 -p1
 
@@ -66,6 +77,7 @@ python setup.py build
 #nosetests -v -a '!slow' --with-doctest --with-coverage --cover-package=openquake.engine
 
 %install
+sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" openquake/risklib/__init__.py
 python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --record=INSTALLED_FILES
 # create directories where the files will be located
 mkdir -p %{buildroot}%{_sysconfdir}/openquake
@@ -106,5 +118,10 @@ rm -rf %{buildroot}
 %{_unitdir}/openquake-celery.service
 
 %changelog
+%if %{oqstable} == 1
+* %(date -d @%{oqtimestamp} '+%a %b %d %Y') GEM Automatic Packager <gem-autopack@openquake.org> %{oqversion}-%{oqrelease}
+– Stable release of %{oqname}
+%else
 * %(date -d @%{oqtimestamp} '+%a %b %d %Y') GEM Automatic Packager <gem-autopack@openquake.org> %{oqversion}-%{oqtimestamp}_%{oqrelease}
 – Unstable release of %{oqname}
+%endif
