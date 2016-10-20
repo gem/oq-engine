@@ -58,7 +58,7 @@ git clone https://github.com/gem/oq-engine.git
 git clone https://github.com/gem/oq-hazardlib.git
 ```
 
-install the OpenQuake requirements (from sources or [using binary wheels](#note1)<sup>[1](#note1)</sup>
+install the OpenQuake requirements (from sources or [using binary wheels](#note1)<sup>[1](#note1)</sup>)
 
 ```bash
 pip install -r oq-engine/requirements-dev.txt
