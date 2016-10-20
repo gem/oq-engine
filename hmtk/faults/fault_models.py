@@ -56,7 +56,7 @@ from math import fabs
 
 from openquake.hazardlib.scalerel import get_available_scalerel
 from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
-from openquake.nrmllib.models import IncrementalMFD
+from hmtk.models import IncrementalMFD
 from hmtk.faults.fault_geometries import (SimpleFaultGeometry,
                                           ComplexFaultGeometry)
 from hmtk.sources.simple_fault_source import mtkSimpleFaultSource
@@ -111,7 +111,7 @@ class RecurrenceBranch(object):
         Weight of recurrence model branch
     :param recurrence:
         Magnitude frquency distribution as instance of
-        :class: openquake.nrmllib.models.IncrementalMFD
+        :class: hmtk.models.IncrementalMFD
     :param float max_mag:
         Maximum magnitude from the magnitude frequency distribution
     :param numpy.ndarray magnitudes:
@@ -146,7 +146,7 @@ class RecurrenceBranch(object):
     def get_recurrence(self, config):
         '''
         Calculates the recurrence model for the given settings as
-        an instance of the openquake.nrmllib.models.IncrementalMFD
+        an instance of the hmtk.models.IncrementalMFD
 
         :param dict config:
             Configuration settings of the magnitude frequency distribution.
@@ -216,7 +216,7 @@ class mtkActiveFault(object):
         hmtk.faults.fault_model.RecurrenceBranch
     :param list mfd_models:
         Magnitude frequency distributions as list of instances of :class:
-        openquake.nrmllib.models.IncrementalMFD
+        hmtk.models.IncrementalMFD
     :param float area:
         Area of fault (km ^ 2)
     :param dict config:
@@ -485,7 +485,7 @@ class mtkActiveFault(object):
             Maximum magnitude of reference mfd
 
         :returns:
-            :class: openquake.nrmllib.models.IncrementalMFD
+            :class: hmtk.models.IncrementalMFD
         '''
         master_mags = np.arange(mmin, mmax + (bin_width / 2.), bin_width)
         master_rates = np.zeros(len(master_mags), dtype=float)

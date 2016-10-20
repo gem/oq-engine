@@ -107,17 +107,16 @@ def _preprocess_gmpes(source_model, gmpes):
     """
     model_regions = [src.tectonic_region_type for src in source_model]
     for key in gmpes.keys():
-        #if not key in model_regions:
-        #    raise ValueError('Region type %s not in source model' % key)
+        # if not key in model_regions:
+        #     raise ValueError('Region type %s not in source model' % key)
         if gmpes[key] in GSIM_MAP.keys():
             gmpes[key] = GSIM_MAP[gmpes[key]]()
         else:
             raise ValueError('GMPE %s not supported!' % gmpes[key])
     for region in model_regions:
-        if not region in gmpes.keys():
+        if region not in gmpes.keys():
             raise ValueError('No GMPE defined for region type %s' % region)
     return gmpes
-
 
 
 def site_array_to_collection(site_array):
@@ -133,13 +132,14 @@ def site_array_to_collection(site_array):
     if n_param != 8:
         raise ValueError('Site array incorrectly formatted!')
     for iloc in range(0, n_sites):
-        site = Site(Point(site_array[iloc, 1], site_array[iloc, 2]), # Location
-                    site_array[iloc, 3], # Vs30
-                    site_array[iloc, 4].astype(bool), # vs30measured
-                    site_array[iloc, 5], # z1pt0
-                    site_array[iloc, 6], # z2pt5
-                    site_array[iloc, 7].astype(bool), # Backarc
-                    site_array[iloc, 0].astype(int)) # ID
+        site = Site(
+            Point(site_array[iloc, 1], site_array[iloc, 2]),  # Location
+            site_array[iloc, 3],  # Vs30
+            site_array[iloc, 4].astype(bool),  # vs30measured
+            site_array[iloc, 5],  # z1pt0
+            site_array[iloc, 6],  # z2pt5
+            site_array[iloc, 7].astype(bool),  # Backarc
+        )
         site_list.append(site)
     return SiteCollection(site_list)
 
@@ -162,12 +162,9 @@ class HMTKHazardCurve(object):
         GMPE truncation level
     :param src_filter:
         Source distance filter
-    :param rup_filter:
-        Rupture distance filter
     """
     def __init__(self, source_model, sites, gmpes, imls, imts,
-        truncation_level=None, source_integration_dist=None,
-        rupture_integration_dist=None):
+                 truncation_level=None, source_integration_dist=None):
         """
         Instatiate and preprocess
         :param float source_integration_dist:
@@ -186,12 +183,6 @@ class HMTKHazardCurve(object):
                 source_integration_dist)
         else:
             self.src_filter = filters.source_site_noop_filter
-        if rupture_integration_dist:
-            self.rup_filter = filters.rupture_site_distance_filter(
-                rupture_integration_dist)
-        else:
-            self.rup_filter = filters.rupture_site_noop_filter
-
         self.preprocess_inputs()
 
     def preprocess_inputs(self):
@@ -216,7 +207,7 @@ class HMTKHazardCurve(object):
         return poe_set
 
     def calculate_hazard(self, num_workers=DEFAULT_WORKERS,
-            num_src_workers=1):
+                         num_src_workers=1):
         """
         Calculates the hazard
         :param int num_workers:
@@ -229,8 +220,7 @@ class HMTKHazardCurve(object):
                                                self.imts,
                                                self.gmpes,
                                                self.truncation_level,
-                                               self.src_filter,
-                                               self.rup_filter)
+                                               self.src_filter)
 
 
 def get_hazard_curve_source(input_set):
