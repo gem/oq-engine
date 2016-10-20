@@ -1,0 +1,11 @@
+event_tag,event_set,structural
+grp=01~ses=0001~src=ltbr0723~rup=16-00,1,1.02708E+06
+grp=01~ses=0001~src=ltbr0723~rup=17-00,1,5.17435E+05
+grp=01~ses=0001~src=ltbr0723~rup=17-02,1,1.35586E+06
+grp=01~ses=0001~src=ltbr0723~rup=24-00,1,1.56092E+05
+grp=01~ses=0001~src=ltbr0723~rup=26-00,1,1.13253E+05
+grp=01~ses=0001~src=ltbr0723~rup=27-00,1,9.81918E+06
+grp=01~ses=0001~src=ltbr0723~rup=4-00,1,3.74045E+06
+grp=01~ses=0001~src=ltbr0723~rup=4-01,1,2.32531E+05
+grp=01~ses=0001~src=ltbr0723~rup=4-02,1,1.19389E+05
+grp=01~ses=0001~src=ltbr0723~rup=4-03,1,2.09764E+05

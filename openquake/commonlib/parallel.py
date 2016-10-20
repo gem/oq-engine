@@ -22,6 +22,8 @@ TODO: write documentation.
 from __future__ import print_function
 import os
 import sys
+import time
+import signal
 import socket
 import inspect
 import logging
@@ -31,7 +33,6 @@ import functools
 import multiprocessing.dummy
 from concurrent.futures import as_completed, ProcessPoolExecutor, Future
 import numpy
-
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
@@ -39,10 +40,10 @@ from openquake.baselib.general import (
     block_splitter, split_in_blocks, AccumDict, humansize)
 
 executor = ProcessPoolExecutor()
-# the num_tasks_hint is chosen to be 2 times bigger than the name of
+# the num_tasks_hint is chosen to be 5 times bigger than the name of
 # cores; it is a heuristic number to get a good distribution;
 # it has no more significance than that
-executor.num_tasks_hint = executor._max_workers * 2
+executor.num_tasks_hint = executor._max_workers * 5
 
 OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
 
@@ -125,6 +126,12 @@ def safely_call(func, args, pickle=False):
     if pickle:  # it is impossible to measure the pickling time :-(
         res = Pickled(res)
     return res
+
+
+def mkfuture(result):
+    fut = Future()
+    fut.set_result(result)
+    return fut
 
 
 class Pickled(object):
@@ -220,7 +227,10 @@ class IterResult(object):
         self.futures = futures
         self.name = taskname
         self.num_tasks = num_tasks
-        self.progress = progress
+        if self.name.startswith("_"):  # private task, log only in debug
+            self.progress = logging.debug
+        else:
+            self.progress = progress
         self.sent = 0  # set in TaskManager.submit_all
         self.received = []
         if self.num_tasks:
@@ -243,7 +253,7 @@ class IterResult(object):
 
     def __iter__(self):
         self.received = []
-        for fut in self.futures:
+        for fut in as_completed(self.futures):
             check_mem_usage()  # log a warning if too much memory is used
             if hasattr(fut, 'result'):
                 result = fut.result()
@@ -313,7 +323,6 @@ class TaskManager(object):
     Progress report is built-in.
     """
     executor = executor
-    progress = staticmethod(logging.info)
     task_ids = []
 
     @classmethod
@@ -379,6 +388,15 @@ class TaskManager(object):
             client = ipp.Client()
             self.__class__.executor = client.executor()
 
+    def progress(self, *args):
+        """
+        Log in INFO mode regular tasks and in DEBUG private tasks
+        """
+        if self.name.startswith('_'):
+            logging.debug(*args)
+        else:
+            logging.info(*args)
+
     def submit(self, *args):
         """
         Submit a function with the given arguments to the process pool
@@ -413,23 +431,20 @@ class TaskManager(object):
 
         if self.distribute == 'no':
             for result in self.results:
-                fut = Future()
-                fut.set_result(result)
-                yield fut
+                yield mkfuture(result)
 
         elif self.distribute == 'celery':
             rset = ResultSet(self.results)
             for task_id, result_dict in rset.iter_native():
                 idx = self.task_ids.index(task_id)
                 self.task_ids.pop(idx)
-                fut = Future()
-                fut.set_result(result_dict['result'].unpickle())
+                fut = mkfuture(result_dict['result'])
                 # work around a celery bug
                 del app.backend._cache[task_id]
                 yield fut
 
         else:  # future interface
-            for fut in as_completed(self.results):
+            for fut in self.results:
                 yield fut
 
     def reduce(self, agg=operator.add, acc=None):
@@ -467,7 +482,9 @@ class TaskManager(object):
             nargs = ''
         if nargs == 1:
             [args] = self.task_args
-            return IterResult([safely_call(self.task_func, args)], self.name)
+            self.progress('Executing a single task in process')
+            fut = mkfuture(safely_call(self.task_func, args))
+            return IterResult([fut], self.name)
         task_no = 0
         for args in self.task_args:
             task_no += 1
@@ -480,8 +497,9 @@ class TaskManager(object):
                     args[-1].weight = weight
             self.submit(*args)
         if not task_no:
-            logging.info('No %s tasks were submitted', self.name)
-        ir = IterResult(self._iterfutures(), self.name, task_no, self.progress)
+            self.progress('No %s tasks were submitted', self.name)
+        ir = IterResult(list(self._iterfutures()), self.name, task_no,
+                        self.progress)
         ir.sent = self.sent  # for information purposes
         if self.sent:
             self.progress('Sent %s of data in %d task(s)',
@@ -534,6 +552,31 @@ if OQ_DISTRIBUTE == 'celery':
     safe_task = task(safely_call,  queue='celery')
 
 
+def _wakeup(sec):
+    """Waiting functions, used to wake up the process pool"""
+    try:
+        import prctl
+    except ImportError:
+        pass
+    else:
+        # if the parent dies, the children die
+        prctl.set_pdeathsig(signal.SIGKILL)
+    time.sleep(sec)
+    return os.getpid()
+
+
+def wakeup_pool():
+    """
+    This is used at startup, only when the ProcessPoolExecutor is used,
+    to fork the processes before loading any big data structure.
+
+    :returns: the list of PIDs spawned or None
+    """
+    if oq_distribute() == 'futures':  # when using the ProcessPoolExecutor
+        pids = starmap(_wakeup, ((.2,) for _ in range(executor._max_workers)))
+        return list(pids)
+
+
 class Starmap(object):
     poolfactory = None  # to be overridden
     pool = None  # to be overridden
@@ -558,8 +601,9 @@ class Starmap(object):
     def reduce(self, agg=operator.add, acc=None, progress=logging.info):
         if acc is None:
             acc = AccumDict()
+        futures = (mkfuture(res) for res in self.imap)
         for res in IterResult(
-                self.imap, self.func.__name__, self.num_tasks, progress):
+                futures, self.func.__name__, self.num_tasks, progress):
             acc = agg(acc, res)
         return acc
 
