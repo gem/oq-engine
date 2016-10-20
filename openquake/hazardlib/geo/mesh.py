@@ -193,9 +193,10 @@ class Mesh(object):
         # the exact distance to enclosing polygon of this mesh and it
         # depends on mesh spacing. but the difference can be neglected
         # if calculated geodetic distance is over some threshold.
-        distances = geodetic.min_geodetic_distance(self.lons, self.lats,
-                                                   mesh.lons, mesh.lats)
-
+        assert len(self.shape) == 2, self.shape
+        # get the highest slice from the 3D mesh
+        distances = geodetic.min_geodetic_distance(
+            self.lons, self.lats, mesh.lons, mesh.lats)
         # here we find the points for which calculated mesh-to-mesh
         # distance is below a threshold. this threshold is arbitrary:
         # lower values increase the maximum possible error, higher

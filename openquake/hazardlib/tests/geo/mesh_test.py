@@ -355,7 +355,6 @@ class MeshJoynerBooreDistanceTestCase(unittest.TestCase):
         lats = lons.transpose() + 1
         depths = lats + 10
         mesh = RectangularMesh(lons, lats, depths)
-
         check = lambda lon, lat, depth, expected_distance, **kwargs: \
             self.assertAlmostEqual(
                 mesh.get_joyner_boore_distance(
