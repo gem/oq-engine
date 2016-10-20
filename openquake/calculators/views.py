@@ -235,7 +235,7 @@ def view_csm_info(token, dstore):
 def view_ruptures_per_trt(token, dstore):
     tbl = []
     header = ('source_model grp_id trt num_sources '
-              'eff_ruptures weight'.split())
+              'eff_ruptures tot_ruptures'.split())
     num_trts = 0
     tot_sources = 0
     eff_ruptures = 0
@@ -262,7 +262,8 @@ def view_ruptures_per_trt(token, dstore):
     rows = [('#TRT models', num_trts),
             ('#sources', tot_sources),
             ('#eff_ruptures', eff_ruptures),
-            ('#tot_ruptures', tot_ruptures)]
+            ('#tot_ruptures', tot_ruptures),
+            ('#tot_weight', csm_info.tot_weight), ]
     if len(tbl) > 1:
         summary = '\n\n' + rst_table(rows)
     else:
@@ -382,7 +383,7 @@ def view_totlosses(token, dstore):
 def portfolio_loss_from_agg_loss_table(agg_loss_table, loss_dt):
     data = numpy.zeros(len(agg_loss_table), loss_dt)
     rlzids = []
-    for rlz, dset in agg_loss_table.items():
+    for rlz, dset in sorted(agg_loss_table.items()):
         rlzi = int(rlz.split('-')[1])  # rlz-000 -> 0 etc
         rlzids.append(rlzi)
         for loss_type, losses in dset.items():
@@ -413,13 +414,13 @@ def view_portfolio_loss(token, dstore):
     extracted from the event loss table.
     """
     oq = dstore['oqparam']
-    if 'agg_loss_table' in dstore:
-        rlzids, data = portfolio_loss_from_agg_loss_table(
-            dstore['agg_loss_table'], oq.loss_dt())
-    else:
+    if 'losses_by_taxon' in dstore:
         oq.insured_losses = False
         rlzids, data = portfolio_loss_from_losses_by_taxon(
             dstore['losses_by_taxon'], oq.loss_dt())
+    else:
+        rlzids, data = portfolio_loss_from_agg_loss_table(
+            dstore['agg_loss_table'], oq.loss_dt())
     array = util.compose_arrays(numpy.array(rlzids), data, 'rlz')
     # this is very sensitive to rounding errors, so I a using a low precision
     return rst_table(array, fmt='%.5E')
@@ -682,3 +683,16 @@ def view_task_durations(token, dstore):
     task = token.split(':')[1]  # called as task_duration:task_name
     array = dstore['task_info/' + task]['duration']
     return '\n'.join(map(str, array))
+
+
+@view.add('task_slowest')
+def view_task_slowest(token, dstore):
+    """
+    Display info about the slowest classical task.
+    """
+    i = dstore['task_info/classical']['duration'].argmax()
+    taskno, weight, duration = dstore['task_info/classical'][i]
+    sources = dstore['task_sources'][taskno - 1].split()
+    srcs = set(src.split(':', 1)[0] for src in sources)
+    return 'taskno=%d, weight=%d, duration=%d s, sources="%s"' % (
+        taskno, weight, duration, ' '.join(sorted(srcs)))

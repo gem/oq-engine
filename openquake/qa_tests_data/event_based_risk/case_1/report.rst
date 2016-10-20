@@ -2,9 +2,9 @@ Event Based Risk QA Test 1
 ==========================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_54400.hdf5 Tue Sep 27 14:06:22 2016
-engine_version                                 2.1.0-git1ca7123        
-hazardlib_version                              0.21.0-git9261682       
+gem-tstation:/home/michele/ssd/calc_60083.hdf5 Tue Oct 11 06:56:30 2016
+engine_version                                 2.1.0-git4e31fdd        
+hazardlib_version                              0.21.0-gitab31f47       
 ============================================== ========================
 
 num_sites = 3, sitecol = 831 B
@@ -70,24 +70,21 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ======
-source_model     grp_id trt                  num_sources eff_ruptures weight
-================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 3           8            0.450 
-================ ====== ==================== =========== ============ ======
+================ ====== ==================== =========== ============ ============
+source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
+================ ====== ==================== =========== ============ ============
+source_model.xml 0      Active Shallow Crust 3           8            18          
+================ ====== ==================== =========== ============ ============
 
 Informational data
 ------------------
 ============================================= ============
-compute_gmfs_and_curves_max_received_per_task 6,277       
+compute_gmfs_and_curves_max_received_per_task 5,950       
 compute_gmfs_and_curves_num_tasks             8           
-compute_gmfs_and_curves_sent.eb_ruptures      15,696      
-compute_gmfs_and_curves_sent.imts             560         
-compute_gmfs_and_curves_sent.min_iml          1,224       
-compute_gmfs_and_curves_sent.monitor          33,216      
-compute_gmfs_and_curves_sent.rlzs_by_gsim     5,520       
-compute_gmfs_and_curves_sent.sitecol          6,648       
-compute_gmfs_and_curves_tot_received          47,307      
+compute_gmfs_and_curves_sent.getter           31,664      
+compute_gmfs_and_curves_sent.monitor          33,120      
+compute_gmfs_and_curves_sent.rlzs             4,664       
+compute_gmfs_and_curves_tot_received          44,120      
 compute_ruptures_max_received_per_task        10,314      
 compute_ruptures_num_tasks                    1           
 compute_ruptures_sent.gsims                   164         
@@ -95,7 +92,7 @@ compute_ruptures_sent.monitor                 1,612
 compute_ruptures_sent.sitecol                 473         
 compute_ruptures_sent.sources                 2,259       
 compute_ruptures_tot_received                 10,314      
-hazard.input_weight                           0.450       
+hazard.input_weight                           1.800       
 hazard.n_imts                                 6           
 hazard.n_levels                               34          
 hazard.n_realizations                         2           
@@ -106,22 +103,9 @@ hostname                                      gem-tstation
 require_epsilons                              1           
 ============================================= ============
 
-Specific information for event based
-------------------------------------
-======================== =====
-Total number of ruptures 8    
-Total number of events   26   
-Rupture multiplicity     3.250
-======================== =====
-
-Maximum memory allocated for the GMFs
--------------------------------------
-The largest GMF block is for src_group_id=0, contains 6 IMT(s), 2 realization(s)
-and has a size of 1.22 KB / num_tasks
-
 Estimated data transfer for the avglosses
 -----------------------------------------
-4 asset(s) x 2 realization(s) x 4 loss type(s) x 1 losses x 8 bytes x 20 tasks = 5 KB
+4 asset(s) x 2 realization(s) x 4 loss type(s) x 1 losses x 8 bytes x 50 tasks = 12.5 KB
 
 Exposure model
 --------------
@@ -142,13 +126,13 @@ W        1.000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-====== ========= ============ ====== ========= =========
-grp_id source_id source_class weight calc_time num_sites
-====== ========= ============ ====== ========= =========
-0      2         PointSource  0.150  0.0       0        
-0      1         PointSource  0.150  0.0       0        
-0      3         PointSource  0.150  0.0       0        
-====== ========= ============ ====== ========= =========
+====== ========= ============ ============ ========= ========= =========
+grp_id source_id source_class num_ruptures calc_time num_sites num_split
+====== ========= ============ ============ ========= ========= =========
+0      2         PointSource  6            0.0       1         0        
+0      1         PointSource  6            0.0       1         0        
+0      3         PointSource  6            0.0       1         0        
+====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
@@ -160,28 +144,27 @@ PointSource  0.0       3
 
 Information about the tasks
 ---------------------------
-======================= ===== ====== ===== ===== =========
-operation-duration      mean  stddev min   max   num_tasks
-compute_ruptures        0.014 NaN    0.014 0.014 1        
-compute_gmfs_and_curves 0.021 0.005  0.011 0.026 8        
-======================= ===== ====== ===== ===== =========
+================== ===== ====== ===== ===== =========
+operation-duration mean  stddev min   max   num_tasks
+compute_ruptures   0.016 NaN    0.016 0.016 1        
+================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-total compute_gmfs_and_curves  0.171     0.016     8     
-compute poes                   0.154     0.0       8     
-total compute_ruptures         0.014     0.0       1     
-make contexts                  0.009     0.0       8     
-reading composite source model 0.005     0.0       1     
-saving ruptures                0.004     0.0       1     
-saving gmfs                    0.004     0.0       8     
-reading exposure               0.003     0.0       1     
-filtering ruptures             0.003     0.0       8     
-managing sources               7.060E-04 0.0       1     
-store source_info              4.351E-04 0.0       1     
-reading site collection        3.099E-05 0.0       1     
-aggregating hcurves            1.597E-05 0.0       8     
-============================== ========= ========= ======
+================================ ========= ========= ======
+operation                        time_sec  memory_mb counts
+================================ ========= ========= ======
+total compute_gmfs_and_curves    0.182     0.188     8     
+total compute_ruptures           0.016     0.0       1     
+saving gmfs                      0.009     0.0       8     
+reading composite source model   0.007     0.0       1     
+filtering composite source model 0.004     0.0       1     
+reading exposure                 0.004     0.0       1     
+filtering ruptures               0.003     0.0       8     
+saving ruptures                  0.003     0.0       1     
+managing sources                 0.002     0.0       1     
+store source_info                7.920E-04 0.0       1     
+Initializing rupture serials     4.196E-05 0.0       1     
+reading site collection          3.695E-05 0.0       1     
+aggregating hcurves              2.623E-05 0.0       8     
+================================ ========= ========= ======

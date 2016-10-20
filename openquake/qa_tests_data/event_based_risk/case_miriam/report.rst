@@ -2,9 +2,9 @@ Virtual Island - City C, 2 SES, grid=0.1
 ========================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_54399.hdf5 Tue Sep 27 14:06:22 2016
-engine_version                                 2.1.0-git1ca7123        
-hazardlib_version                              0.21.0-git9261682       
+gem-tstation:/home/michele/ssd/calc_60082.hdf5 Tue Oct 11 06:56:30 2016
+engine_version                                 2.1.0-git4e31fdd        
+hazardlib_version                              0.21.0-gitab31f47       
 ============================================== ========================
 
 num_sites = 281, sitecol = 37.75 KB
@@ -66,32 +66,29 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ======
-source_model     grp_id trt                  num_sources eff_ruptures weight
-================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 1           44           2,558 
-================ ====== ==================== =========== ============ ======
+================ ====== ==================== =========== ============ ============
+source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
+================ ====== ==================== =========== ============ ============
+source_model.xml 0      Active Shallow Crust 1           44           2,558       
+================ ====== ==================== =========== ============ ============
 
 Informational data
 ------------------
 ============================================= ============
-compute_gmfs_and_curves_max_received_per_task 31,249      
-compute_gmfs_and_curves_num_tasks             15          
-compute_gmfs_and_curves_sent.eb_ruptures      90,782      
-compute_gmfs_and_curves_sent.imts             210         
-compute_gmfs_and_curves_sent.min_iml          1,995       
-compute_gmfs_and_curves_sent.monitor          64,890      
-compute_gmfs_and_curves_sent.rlzs_by_gsim     9,045       
-compute_gmfs_and_curves_sent.sitecol          579,810     
-compute_gmfs_and_curves_tot_received          422,379     
+compute_gmfs_and_curves_max_received_per_task 12,382      
+compute_gmfs_and_curves_num_tasks             44          
+compute_gmfs_and_curves_sent.getter           2,051,793   
+compute_gmfs_and_curves_sent.monitor          189,904     
+compute_gmfs_and_curves_sent.rlzs             22,396      
+compute_gmfs_and_curves_tot_received          387,739     
 compute_ruptures_max_received_per_task        11,355      
-compute_ruptures_num_tasks                    13          
-compute_ruptures_sent.gsims                   1,157       
-compute_ruptures_sent.monitor                 18,587      
-compute_ruptures_sent.sitecol                 502,502     
-compute_ruptures_sent.sources                 1,032,588   
-compute_ruptures_tot_received                 102,673     
-hazard.input_weight                           2,558       
+compute_ruptures_num_tasks                    15          
+compute_ruptures_sent.gsims                   1,335       
+compute_ruptures_sent.monitor                 21,495      
+compute_ruptures_sent.sitecol                 579,810     
+compute_ruptures_sent.sources                 31,324      
+compute_ruptures_tot_received                 89,163      
+hazard.input_weight                           5,116       
 hazard.n_imts                                 1           
 hazard.n_levels                               50          
 hazard.n_realizations                         1           
@@ -102,22 +99,9 @@ hostname                                      gem-tstation
 require_epsilons                              1           
 ============================================= ============
 
-Specific information for event based
-------------------------------------
-======================== =====
-Total number of ruptures 44   
-Total number of events   45   
-Rupture multiplicity     1.023
-======================== =====
-
-Maximum memory allocated for the GMFs
--------------------------------------
-The largest GMF block is for src_group_id=0, contains 1 IMT(s), 1 realization(s)
-and has a size of 49.39 KB / num_tasks
-
 Estimated data transfer for the avglosses
 -----------------------------------------
-548 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 20 tasks = 85.62 KB
+548 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 50 tasks = 214.06 KB
 
 Exposure model
 --------------
@@ -146,11 +130,11 @@ W-SLFB-1   1.265 0.520  1   3   83        105
 
 Slowest sources
 ---------------
-====== ========= ================== ====== ========= =========
-grp_id source_id source_class       weight calc_time num_sites
-====== ========= ================== ====== ========= =========
-0      F         ComplexFaultSource 2,558  0.0       0        
-====== ========= ================== ====== ========= =========
+====== ========= ================== ============ ========= ========= =========
+grp_id source_id source_class       num_ruptures calc_time num_sites num_split
+====== ========= ================== ============ ========= ========= =========
+0      F         ComplexFaultSource 2,558        0.0       281       0        
+====== ========= ================== ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
@@ -162,29 +146,28 @@ ComplexFaultSource 0.0       1
 
 Information about the tasks
 ---------------------------
-======================= ===== ====== ===== ===== =========
-operation-duration      mean  stddev min   max   num_tasks
-compute_ruptures        0.141 0.125  0.005 0.271 13       
-compute_gmfs_and_curves 0.011 0.002  0.006 0.014 15       
-======================= ===== ====== ===== ===== =========
+================== ===== ====== ===== ===== =========
+operation-duration mean  stddev min   max   num_tasks
+compute_ruptures   0.266 0.044  0.199 0.362 15       
+================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-managing sources               2.006     0.0       1     
-filter/split heavy sources     2.002     0.0       1     
-saving gmfs                    1.844     0.0       15    
-total compute_ruptures         1.839     1.184     13    
-reading site collection        0.199     0.0       1     
-total compute_gmfs_and_curves  0.165     0.336     15    
-compute poes                   0.108     0.0       44    
-reading exposure               0.093     0.0       1     
-reading composite source model 0.062     0.0       1     
-saving ruptures                0.035     0.0       13    
-make contexts                  0.027     0.0       44    
-filtering ruptures             0.014     0.0       57    
-store source_info              4.990E-04 0.0       1     
-aggregating hcurves            3.099E-05 0.0       15    
-============================== ========= ========= ======
+================================ ========= ========= ======
+operation                        time_sec  memory_mb counts
+================================ ========= ========= ======
+total compute_ruptures           3.988     0.246     15    
+managing sources                 0.615     0.0       1     
+split/filter heavy sources       0.613     0.0       1     
+total compute_gmfs_and_curves    0.288     0.160     44    
+reading site collection          0.213     0.0       1     
+reading composite source model   0.110     0.0       1     
+reading exposure                 0.094     0.0       1     
+saving gmfs                      0.021     0.0       44    
+saving ruptures                  0.013     0.0       15    
+filtering ruptures               0.012     0.0       57    
+filtering composite source model 0.002     0.0       1     
+store source_info                5.012E-04 0.0       1     
+aggregating hcurves              1.040E-04 0.0       44    
+Initializing rupture serials     2.694E-05 0.0       1     
+================================ ========= ========= ======
