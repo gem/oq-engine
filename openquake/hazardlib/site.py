@@ -25,7 +25,6 @@ from openquake.baselib.python3compat import range
 from openquake.baselib.slots import with_slots
 from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.geo.mesh import Mesh
-from openquake.hazardlib.geo.utils import cross_idl
 
 
 @with_slots

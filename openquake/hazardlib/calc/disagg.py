@@ -44,7 +44,7 @@ BinData = collections.namedtuple(
 
 def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
                        rlzs_assoc, gsims, imtls, poes, truncation_level,
-                       n_epsilons, mon):
+                       n_epsilons, iml_disagg, mon):
     # returns a BinData instance
     sitecol = SiteCollection([site])
     mags = []
@@ -80,9 +80,14 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
                         imls = numpy.array(imls[::-1])
                         for rlz in rlzs_assoc[src_group_id, gs]:
                             rlzi = rlz.ordinal
-                            curve_poes = curves[rlzi, imt_str][::-1]
+                            iml = iml_disagg.get(imt_str)
+                            if iml is None:
+                                curve_poes = curves[rlzi, imt_str][::-1]
                             for poe in poes:
-                                iml = numpy.interp(poe, curve_poes, imls)
+                                if iml is None:
+                                    iml_ = numpy.interp(poe, curve_poes, imls)
+                                else:
+                                    iml_ = iml
                                 # compute probability of exceeding iml given
                                 # the current rupture and epsilon_bin, that is
                                 # ``P(IMT >= iml | rup, epsilon_bin)``
@@ -90,11 +95,11 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
                                 with disagg_poe:
                                     [poes_given_rup_eps] = \
                                         gsim.disaggregate_poe(
-                                            sctx, rctx, dctx, imt, iml,
+                                            sctx, rctx, dctx, imt, iml_,
                                             truncation_level, n_epsilons)
                                 pne = rupture.get_probability_no_exceedance(
                                     poes_given_rup_eps)
-                                pne_dict[rlzi, poe, imt_str] = (iml, pne)
+                                pne_dict[rlzi, poe, imt_str] = (iml_, pne)
 
                 pnes.append(pne_dict)
         except Exception as err:
@@ -281,6 +286,7 @@ def _collect_bins_data_old(sources, site, imt, iml, gsims,
     ]
 
     return (mags, dists, lons, lats, tect_reg_types, trt_bins, probs_no_exceed)
+
 
 def _define_bins(bins_data, mag_bin_width, dist_bin_width,
                  coord_bin_width, truncation_level, n_epsilons):
