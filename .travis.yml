@@ -14,7 +14,7 @@ addons:
 install:
   - git clone --depth=1 https://github.com/gem/oq-hazardlib.git
   - git clone --depth=1 https://github.com/gem/oq-engine.git
-  - sed -i "s/cp27mu/cp27m/g" oq-engine/requirements-py27-linux64.txt
+  - pip install -U pip
   - pip install -r oq-engine/requirements-py27-linux64.txt
 
 script:
