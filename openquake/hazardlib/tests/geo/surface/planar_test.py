@@ -509,21 +509,21 @@ class PlanarSurfaceGetRy0DistanceTestCase(unittest.TestCase):
         sites = Mesh.from_points_list([Point(-0.05, 0.05),
                                        Point(-0.05, -0.05)])
         dists = surface.get_ry0_distance(sites)
-        self.assertTrue(numpy.allclose(dists, numpy.array([0.0, 0.0])))
+        numpy.testing.assert_allclose(dists, numpy.array([0.0, 0.0]))
 
     def test2_sites_parallel_to_fault_ends(self):
         surface = self._test1to7surface()
         sites = Mesh.from_points_list([Point(0.0, 0.05),
                                        Point(-0.10, -0.05)])
         dists = surface.get_ry0_distance(sites)
-        self.assertTrue(numpy.allclose(dists, numpy.array([0.0, 0.0])))
+        numpy.testing.assert_allclose(dists, numpy.array([0.0, 0.0]))
 
     def test3_sites_off_fault_ends(self):
         surface = self._test1to7surface()
         sites = Mesh.from_points_list([Point(0.05, 0.05),
                                        Point(-0.15, -0.05)])
         dists = surface.get_ry0_distance(sites)
-        self.assertTrue(numpy.allclose(dists, 5.55974422 * numpy.ones(2)))
+        numpy.testing.assert_allclose(dists, 5.55974422 * numpy.ones(2))
 
 
 class PlanarSurfaceGetTopEdgeDepthTestCase(unittest.TestCase):
