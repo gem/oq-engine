@@ -94,7 +94,7 @@ def compute_disagg(sitecol, sources, src_group_id, rlzs_assoc,
                 trt_num, source_ruptures, site, curves_dict[sid],
                 src_group_id, rlzs_assoc, gsims, oqparam.imtls,
                 oqparam.poes_disagg, oqparam.truncation_level,
-                oqparam.num_epsilon_bins, monitor)
+                oqparam.num_epsilon_bins, oqparam.iml_disagg, monitor)
 
         if not bdata.pnes:  # no contributions for this site
             continue
