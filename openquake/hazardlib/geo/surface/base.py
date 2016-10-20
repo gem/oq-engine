@@ -595,7 +595,7 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
         :parameter mesh:
             An instance of  :class:`openquake.hazardlib.geo.mesh`
         :return:
-            An instance of :class:`numpy.ndarray`
+            An instance of `numpy.ndarray`
         """
         # Get info about the rupture
         strike = self.get_strike()
