@@ -8,11 +8,14 @@ python:
 addons:
   apt:
     packages:
+    - sed
     - git
 
 install:
-  # clone then run tests
   - git clone --depth=1 https://github.com/gem/oq-hazardlib.git
   - git clone --depth=1 https://github.com/gem/oq-engine.git
-  - pip install -r $(pwd)/oq-engine/requirements-py27-linux64.txt
+  - sed -i "s/cp27mu/cp27m/g" oq-engine/requirements-py27-linux64.txt
+  - pip install -r oq-engine/requirements-py27-linux64.txt
+
+script:
   - PYTHONPATH=$(pwd)/oq-hazardlib:$(pwd)/oq-engine:. nosetests -vx tests
