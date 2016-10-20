@@ -1,0 +1,3 @@
+# !! update pip first! so wheels will be used !!
+
+pyyaml==3.12

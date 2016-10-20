@@ -8,14 +8,19 @@ python:
 addons:
   apt:
     packages:
-    - sed
     - git
 
 install:
+  # Clone oq-hazardlib and oq-engine
   - git clone --depth=1 https://github.com/gem/oq-hazardlib.git
   - git clone --depth=1 https://github.com/gem/oq-engine.git
+  # Make sure pip is up-to-date and has support for wheels
   - pip install -U pip
+  # Install oq-hazardlib and oq-engine dependencies
+  - pip install -r oq-hazardlib/requirements-py27-linux64.txt
   - pip install -r oq-engine/requirements-py27-linux64.txt
+  # Install HMTK extra dependencies
+  - pip install -r requirements-py27-linux64.txt
 
 script:
   - PYTHONPATH=$(pwd)/oq-hazardlib:$(pwd)/oq-engine:. nosetests -vx tests
