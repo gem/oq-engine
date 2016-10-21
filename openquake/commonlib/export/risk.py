@@ -192,9 +192,11 @@ def export_agg_losses_ebr(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for sm_id in sm_ids:
         rlzs = rlzs_assoc.rlzs_by_smodel[sm_id]
-        events = dstore['events/sm-%04d' % sm_id][all_eids]
-        etags = build_etags(events)
-        if not len(etags):
+        try:
+            events = dstore['events/sm-%04d' % sm_id][all_eids]
+        except KeyError:
+            continue
+        if not len(events):
             continue
         for rlz in rlzs:
             exportname = ('agg_losses-sm=%04d-eid=%d' % (sm_id, eid)
