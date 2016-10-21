@@ -6,6 +6,7 @@
     creating the Mesh
 
   [Michele Simionato]
+  * Removed the rupture_site_filter from the calculators
   * Removed the speedups and optimized the distance calculations at the
     numpy level
 

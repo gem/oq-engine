@@ -114,8 +114,7 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
 def disaggregation(
         sources, site, imt, iml, gsims, truncation_level,
         n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width,
-        source_site_filter=filters.source_site_noop_filter,
-        rupture_site_filter=filters.rupture_site_noop_filter):
+        source_site_filter=filters.source_site_noop_filter):
     """
     Compute "Disaggregation" matrix representing conditional probability of an
     intensity mesaure type ``imt`` exceeding, at least once, an intensity
@@ -170,9 +169,6 @@ def disaggregation(
     :param source_site_filter:
         Optional source-site filter function. See
         :mod:`openquake.hazardlib.calc.filters`.
-    :param rupture_site_filter:
-        Optional rupture-site filter function. See
-        :mod:`openquake.hazardlib.calc.filters`.
 
     :returns:
         A tuple of two items. First is itself a tuple of bin edges information
@@ -186,7 +182,7 @@ def disaggregation(
     """
     bins_data = _collect_bins_data_old(sources, site, imt, iml, gsims,
                                        truncation_level, n_epsilons,
-                                       source_site_filter, rupture_site_filter)
+                                       source_site_filter)
     if all(len(x) == 0 for x in bins_data):
         # No ruptures have contributed to the hazard level at this site.
         warnings.warn(
@@ -205,7 +201,7 @@ def disaggregation(
 # TODO: remove the duplication
 def _collect_bins_data_old(sources, site, imt, iml, gsims,
                            truncation_level, n_epsilons,
-                           source_site_filter, rupture_site_filter):
+                           source_site_filter=filters.source_site_noop_filter):
     """
     Extract values of magnitude, distance, closest point, tectonic region
     types and PoE distribution.
@@ -239,8 +235,7 @@ def _collect_bins_data_old(sources, site, imt, iml, gsims,
                 _next_trt_num += 1
             tect_reg = trt_nums[tect_reg]
 
-            for rupture, r_sites in rupture_site_filter(
-                    source.iter_ruptures(), s_sites):
+            for rupture in source.iter_ruptures():
                 # extract rupture parameters of interest
                 mags.append(rupture.mag)
                 [jb_dist] = rupture.surface.get_joyner_boore_distance(sitemesh)
