@@ -156,7 +156,8 @@ class Rupture(object):
     Simplified Rupture class with attributes etag, indices, ses_idx,
     used in export.
     """
-    def __init__(self, etag, indices=None):
+    def __init__(self, eid, etag, indices=None):
+        self.eid = eid
         if isinstance(etag, int):  # scenario
             self.etag = 'scenario-%010d' % etag
             self.indices = indices
