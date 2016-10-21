@@ -45,25 +45,12 @@ def export_csv(ekey, dstore):
     return [write_csv(dstore.export_path(name), array)]
 
 
-def dispatch_on_colon(ekey, dstore):
-    """
-    If the datastore key contains a colon, i.e. it is of the form
-    dskey:spec, then call `export(('<dskey>:', fmt), dstore, spec)`.
+def keyfunc(ekey):
+    fullname, ext = ekey
+    return (fullname.split(':', 1)[0], ext)
 
-    :param ekey:
-        export key of the form (k0, ext) with k0 of the form <dskey>:<spec>
-    :param dstore:
-        datastore instance
+export = CallableDict(keyfunc)
 
-    This function is called only for ekey not present in the datastore.
-    """
-    if ':' not in ekey[0]:
-        raise MissingExporter(ekey)
-    dkey, spec = ekey[0].split(':', 1)
-    return export((dkey + ':', ekey[1]), dstore, spec)
-
-
-export = CallableDict(keymissing=dispatch_on_colon)
 export.from_db = False  # overridden when exporting from db
 
 import_all('openquake.commonlib.export')
