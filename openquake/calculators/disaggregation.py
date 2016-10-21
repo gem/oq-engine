@@ -94,35 +94,26 @@ def compute_disagg(sitecol, sources, src_group_id, rlzs_assoc,
                 trt_num, source_ruptures, site, curves_dict[sid],
                 src_group_id, rlzs_assoc, gsims, oqparam.imtls,
                 oqparam.poes_disagg, oqparam.truncation_level,
-                oqparam.num_epsilon_bins, monitor)
+                oqparam.num_epsilon_bins, oqparam.iml_disagg, monitor)
 
-        if not bdata.pnes:  # no contributions for this site
-            continue
+        for (rlzi, poe, imt), iml_pne_pairs in bdata.pnes.items():
+            # extract the probabilities of non-exceedance for the
+            # given realization, disaggregation PoE, and IMT
+            iml = iml_pne_pairs[0][0]
+            probs = numpy.array([p for (i, p) in iml_pne_pairs], float)
 
-        for poe in oqparam.poes_disagg:
-            for imt in oqparam.imtls:
-                for gsim in gsims:
-                    for rlz in rlzs_assoc[src_group_id, gsim]:
-                        rlzi = rlz.ordinal
-                        # extract the probabilities of non-exceedance for the
-                        # given realization, disaggregation PoE, and IMT
-                        iml_pne_pairs = [pne[rlzi, poe, imt]
-                                         for pne in bdata.pnes]
-                        iml = iml_pne_pairs[0][0]
-                        probs = numpy.array(
-                            [p for (i, p) in iml_pne_pairs], float)
-                        # bins in a format handy for hazardlib
-                        bins = [bdata.mags, bdata.dists,
-                                bdata.lons, bdata.lats,
-                                bdata.trts, None, probs]
+            # bins in a format handy for hazardlib
+            bins = [bdata.mags, bdata.dists,
+                    bdata.lons, bdata.lats,
+                    bdata.trts, None, probs]
 
-                        # call disagg._arrange_data_in_bins
-                        with arranging_mon:
-                            key = (sid, rlzi, poe, imt, iml, trt_names)
-                            matrix = disagg._arrange_data_in_bins(
-                                bins, edges + (trt_names,))
-                            result[key] = numpy.array(
-                                [fn(matrix) for fn in disagg.pmf_map.values()])
+            # call disagg._arrange_data_in_bins
+            with arranging_mon:
+                key = (sid, rlzi, poe, imt, iml, trt_names)
+                matrix = disagg._arrange_data_in_bins(
+                    bins, edges + (trt_names,))
+                result[key] = numpy.array(
+                    [fn(matrix) for fn in disagg.pmf_map.values()])
     return result
 
 
