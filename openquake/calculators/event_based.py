@@ -171,7 +171,7 @@ class EBRupture(object):
         """
         rupture = self.rupture
         for eid, etag in zip(self.eids, self.etags):
-            new = Rupture(eid, etag, self.indices)
+            new = Rupture(self.grp_id, eid, etag, self.indices)
             new.mesh = mesh[self.indices]
             new.etag = etag
             new.rupture = new
