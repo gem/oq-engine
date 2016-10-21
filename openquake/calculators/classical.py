@@ -209,7 +209,7 @@ def classical(sources, sitecol, gsims, monitor):
         assert src.src_group_id == src_group_id
     trt = sources[0].tectonic_region_type
     max_dist = monitor.maximum_distance[trt]
-    if monitor.poes_disagg:
+    if monitor.disagg:
         sm_id = monitor.sm_id
         bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
     else:
@@ -284,7 +284,7 @@ class PSHACalculator(base.HazardCalculator):
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         zd.bb_dict = BBdict()
-        if self.oqparam.poes_disagg:
+        if self.oqparam.poes_disagg or self.oqparam.iml_disagg:
             for sid in self.sitecol.sids:
                 for smodel in self.csm.source_models:
                     zd.bb_dict[smodel.ordinal, sid] = BoundingBox(
@@ -303,7 +303,7 @@ class PSHACalculator(base.HazardCalculator):
             truncation_level=oq.truncation_level,
             imtls=oq.imtls,
             maximum_distance=oq.maximum_distance,
-            poes_disagg=oq.poes_disagg,
+            disagg=oq.poes_disagg or oq.iml_disagg,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
             seed=oq.random_seed)
         with self.monitor('managing sources', autoflush=True):
@@ -339,7 +339,7 @@ class PSHACalculator(base.HazardCalculator):
             logging.info('Sending source group #%d of %d (%s, %d sources)',
                          sg.id + 1, ngroups, sg.trt, len(sg.sources))
             gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
-            if oq.poes_disagg:  # only for disaggregation
+            if oq.poes_disagg or oq.iml_disagg:  # only for disaggregation
                 monitor.sm_id = self.rlzs_assoc.sm_ids[sg.id]
             monitor.seed = self.rlzs_assoc.seed
             monitor.samples = self.rlzs_assoc.samples[sg.id]
