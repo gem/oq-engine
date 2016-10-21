@@ -20,7 +20,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <disaggMatrix
         dims="15"
         iml="1.000000E-01"
-        poE="2.000000E-02"
+        poE="8.790000E-02"
         type="Mag"
         >
             <prob index="0" value="8.867998E-04"/>
@@ -42,7 +42,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <disaggMatrix
         dims="8"
         iml="1.000000E-01"
-        poE="2.000000E-02"
+        poE="8.790000E-02"
         type="Dist"
         >
             <prob index="0" value="2.470323E-03"/>
@@ -57,7 +57,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <disaggMatrix
         dims="2"
         iml="1.000000E-01"
-        poE="2.000000E-02"
+        poE="8.790000E-02"
         type="TRT"
         >
             <prob index="0" value="0.000000E+00"/>
@@ -66,7 +66,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <disaggMatrix
         dims="15,8"
         iml="1.000000E-01"
-        poE="2.000000E-02"
+        poE="8.790000E-02"
         type="Mag,Dist"
         >
             <prob index="0,0" value="4.466773E-04"/>
@@ -193,7 +193,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <disaggMatrix
         dims="15,8,6"
         iml="1.000000E-01"
-        poE="2.000000E-02"
+        poE="8.790000E-02"
         type="Mag,Dist,Eps"
         >
             <prob index="0,0,0" value="0.000000E+00"/>
@@ -920,7 +920,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <disaggMatrix
         dims="10,10"
         iml="1.000000E-01"
-        poE="2.000000E-02"
+        poE="8.790000E-02"
         type="Lon,Lat"
         >
             <prob index="0,0" value="3.868722E-07"/>
@@ -1027,7 +1027,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <disaggMatrix
         dims="15,10,10"
         iml="1.000000E-01"
-        poE="2.000000E-02"
+        poE="8.790000E-02"
         type="Mag,Lon,Lat"
         >
             <prob index="0,0,0" value="0.000000E+00"/>
@@ -2534,7 +2534,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <disaggMatrix
         dims="10,10,2"
         iml="1.000000E-01"
-        poE="2.000000E-02"
+        poE="8.790000E-02"
         type="Lon,Lat,TRT"
         >
             <prob index="0,0,0" value="0.000000E+00"/>
