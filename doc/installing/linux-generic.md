@@ -25,7 +25,7 @@ Requirements are:
 - 4 GB of RAM (8 GB recommended)
 - 1.2 GB of free disk space
 
-## Install packages from the OpenQuake repository
+## Install packages from the OpenQuake website
 
 Download the installer from http://www.globalquakemodel.org/pkgs/linux/oq-engine/openquake-setup-linux64-2.1.0-1.run using any browser
 
@@ -37,6 +37,15 @@ chmod +x openquake-setup-linux64-2.1.0-1.run
 ./openquake-setup-linux64-2.1.0-1.run
 ```
 then follow the wizard on screen. By default the code is installed in `~/openquake`
+
+### Upgrade from a previous installation
+
+To upgrade from a previous installation you need to manually remove it first
+
+```bash
+# default is ~/openquake
+rm -Rf /path/to/previous/installation
+```
 
 
 ## Run the OpenQuake Engine
