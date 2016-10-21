@@ -498,7 +498,8 @@ class TaskManager(object):
             self.submit(*args)
         if not task_no:
             self.progress('No %s tasks were submitted', self.name)
-        ir = IterResult(list(self._iterfutures()), self.name, task_no,
+        # NB: keep self._iterfutures() an iterator, especially with celery!
+        ir = IterResult(self._iterfutures(), self.name, task_no,
                         self.progress)
         ir.sent = self.sent  # for information purposes
         if self.sent:
