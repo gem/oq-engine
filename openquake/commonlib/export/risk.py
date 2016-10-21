@@ -171,21 +171,35 @@ def export_agg_losses_ebr(ekey, dstore):
     :param dstore: datastore object
     """
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
-    agg_losses = dstore[ekey[0]]
+    name, ext = export.keyfunc(ekey)
+    agg_losses = dstore[name]
     oq = dstore['oqparam']
     dtlist = [('event_tag', (numpy.string_, 100)), ('event_set', U32)
               ] + oq.loss_dt_list()
     elt_dt = numpy.dtype(dtlist)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    events = dstore['events']
+    n = ekey[0].count(':')
+    if n == 1:
+        sm_ids = (0,)
+        all_eids = [int(ekey[0].split(':')[1])]
+    elif n == 2:
+        sm_id, eid = map(int, ekey[0].split(':')[1:])
+        sm_ids = (sm_id,)
+        all_eids = [eid]
+    else:
+        sm_ids = sorted(rlzs_assoc.rlzs_by_smodel)
+        all_eids = slice(None)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for sm_id, rlzs in sorted(rlzs_assoc.rlzs_by_smodel.items()):
-        key = 'sm-%04d' % sm_id
-        if key not in events:
+    for sm_id in sm_ids:
+        rlzs = rlzs_assoc.rlzs_by_smodel[sm_id]
+        events = dstore['events/sm-%04d' % sm_id][all_eids]
+        etags = build_etags(events)
+        if not len(etags):
             continue
-        etags = build_etags(events, [key])
         for rlz in rlzs:
-            dest = dstore.build_fname('agg_losses', rlz, 'csv')
+            exportname = ('agg_losses-sm=%04d-eid=%d' % (sm_id, eid)
+                          if n else 'agg_losses')
+            dest = dstore.build_fname(exportname, rlz, 'csv')
             eids = set()
             rlzname = 'rlz-%03d' % rlz.ordinal
             for loss_type in agg_losses[rlzname]:
@@ -195,7 +209,8 @@ def export_agg_losses_ebr(ekey, dstore):
             eids = sorted(eids)
             eid2idx = dict(zip(eids, range(len(eids))))
             elt = numpy.zeros(len(eids), elt_dt)
-            elt['event_tag'] = etags[eids]
+            elt['event_tag'] = build_etags(
+                dstore['events/sm-%04d' % sm_id][eids])
             elt['event_set'] = numpy.array(
                 [get_ses_idx(etag) for etag in elt['event_tag']], U32)
             for loss_type in loss_types:
