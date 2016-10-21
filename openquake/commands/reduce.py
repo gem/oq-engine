@@ -61,7 +61,7 @@ def reduce(fname, reduction_factor):
         print('Extracted %d lines out of %d' % (len(lines), len(all_lines)))
         return
     node = nrml.read(fname)
-    model = node.sourceModel
+    model = node[0]
     if model.tag.endswith('exposureModel'):
         total = len(model.assets)
         model.assets.nodes = random_filter(model.assets, reduction_factor)
