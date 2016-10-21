@@ -164,14 +164,14 @@ class EBRupture(object):
         """
         return len(self.events)
 
-    def export(self, mesh):
+    def export(self, mesh, sm_by_grp):
         """
         Yield :class:`openquake.commonlib.util.Rupture` objects, with all the
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
         for eid, etag in zip(self.eids, self.etags):
-            new = Rupture(self.grp_id, eid, etag, self.indices)
+            new = Rupture(sm_by_grp[self.grp_id], eid, etag, self.indices)
             new.mesh = mesh[self.indices]
             new.etag = etag
             new.rupture = new
