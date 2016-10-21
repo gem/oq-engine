@@ -42,6 +42,31 @@ BinData = collections.namedtuple(
     'BinData', 'mags, dists, lons, lats, trts, pnes')
 
 
+def disagg_poes(iml, poes, curve_poes, imls, gsim, rupture, rlzi,
+                imt, imt_str, sctx, rctx, dctx, truncation_level, n_epsilons,
+                disagg_poe):
+    if iml is None:
+        for poe in poes:
+            iml_ = numpy.interp(poe, curve_poes, imls)
+            # compute probability of exceeding iml given
+            # the current rupture and epsilon_bin, that is
+            # ``P(IMT >= iml | rup, epsilon_bin)``
+            # for each of the epsilon bins
+            with disagg_poe:
+                [poes_given_rup_eps] = gsim.disaggregate_poe(
+                    sctx, rctx, dctx, imt, iml_,
+                    truncation_level, n_epsilons)
+            pne = rupture.get_probability_no_exceedance(poes_given_rup_eps)
+            yield (rlzi, poe, imt_str), (iml_, pne)
+    else:
+        with disagg_poe:
+            [poes_given_rup_eps] = gsim.disaggregate_poe(
+                sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons)
+        pne = rupture.get_probability_no_exceedance(poes_given_rup_eps)
+        poe = round(numpy.interp(iml, imls, curve_poes), 4)
+        yield (rlzi, poe, imt_str), (iml, pne)
+
+
 def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
                        rlzs_assoc, gsims, imtls, poes, truncation_level,
                        n_epsilons, iml_disagg, mon):
@@ -52,7 +77,7 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
     lons = []
     lats = []
     trts = []
-    pnes = []
+    pnes = collections.defaultdict(list)
     sitemesh = sitecol.mesh
     make_ctxt = mon('making contexts', measuremem=False)
     disagg_poe = mon('disaggregate_poe', measuremem=False)
@@ -70,9 +95,7 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
                 lons.append(closest_point.longitude)
                 lats.append(closest_point.latitude)
                 trts.append(tect_reg)
-
-                pne_dict = {}
-                # a dictionary rlz.id, poe, imt_str -> prob_no_exceed
+                # a dictionary rlz.id, poe, imt_str -> (iml, prob_no_exceed)
                 for gsim in gsims:
                     gs = str(gsim)
                     for imt_str, imls in imtls.items():
@@ -81,27 +104,12 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
                         for rlz in rlzs_assoc[src_group_id, gs]:
                             rlzi = rlz.ordinal
                             iml = iml_disagg.get(imt_str)
-                            if iml is None:
-                                curve_poes = curves[rlzi, imt_str][::-1]
-                            for poe in poes:
-                                if iml is None:
-                                    iml_ = numpy.interp(poe, curve_poes, imls)
-                                else:
-                                    iml_ = iml
-                                # compute probability of exceeding iml given
-                                # the current rupture and epsilon_bin, that is
-                                # ``P(IMT >= iml | rup, epsilon_bin)``
-                                # for each of the epsilon bins
-                                with disagg_poe:
-                                    [poes_given_rup_eps] = \
-                                        gsim.disaggregate_poe(
-                                            sctx, rctx, dctx, imt, iml_,
-                                            truncation_level, n_epsilons)
-                                pne = rupture.get_probability_no_exceedance(
-                                    poes_given_rup_eps)
-                                pne_dict[rlzi, poe, imt_str] = (iml_, pne)
-
-                pnes.append(pne_dict)
+                            curve_poes = curves[rlzi, imt_str][::-1]
+                            for k, v in disagg_poes(
+                                    iml, poes, curve_poes, imls, gsim, rupture,
+                                    rlzi, imt, imt_str, sctx, rctx, dctx,
+                                    truncation_level, n_epsilons, disagg_poe):
+                                pnes[k].append(v)
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
