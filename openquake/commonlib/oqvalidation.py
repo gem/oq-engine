@@ -205,8 +205,12 @@ class OqParam(valid.ParamSet):
                 raise ValueError(
                     'For disaggregation the flag `individual_curves` '
                     'must be true')
-            elif not self.poes_disagg:
-                raise ValueError('poes_disagg must be set in the job.ini file')
+            elif not self.poes_disagg and not self.iml_disagg:
+                raise ValueError('poes_disagg or iml_disagg must be set '
+                                 'in the job.ini file')
+            elif self.poes_disagg and self.iml_disagg:
+                raise ValueError('poes_disagg and iml_disagg cannot be both '
+                                 'set in the job.ini file')
 
     def check_gsims(self, gsims):
         """
