@@ -373,3 +373,29 @@ class GetMiddlePointTestCase(unittest.TestCase):
         self.assertTrue(
             Point(0.0, 0.044966, 5.0) == surface.get_middle_point()
         )
+
+
+class GetAzimuthTestCase(unittest.TestCase):
+    def test_01(self):
+        corners = [[(0.0, 0.0, 0.0), (0.0, 0.1, 0.0)],
+                   [(0.0, 0.0, 10.0), (0.0, 0.1, 10.0)]]
+        surface = DummySurface(corners)
+        mesh = Mesh.from_points_list([Point(0.0, 0.2),
+                                      Point(0.1, 0.05),
+                                      Point(0.0, -0.2)])
+        azimuths = surface.get_azimuth(mesh)
+        expected = numpy.array([0, 90, 180])
+        azimuths[azimuths>180] = azimuths[azimuths>180]-360
+        print expected, azimuths
+        numpy.testing.assert_almost_equal(expected, azimuths, 1)
+
+    def test_02(self):
+        corners = [[(-1.0, 0.0, 0.0), (1.0, 0.0, 0.0)],
+                   [(-1.0, 0.0, 10.0), (1.0, 0.0, 10.0)]]
+        surface = DummySurface(corners)
+        mesh = Mesh.from_points_list([Point(0.0, 0.2),
+                                      Point(0.0, -0.2),
+                                      Point(-0.1, 0.1)])
+        azimuths = surface.get_azimuth(mesh)
+        expected = numpy.array([270., 90., 225.])
+        numpy.testing.assert_almost_equal(expected, azimuths, 2)

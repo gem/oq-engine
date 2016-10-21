@@ -359,12 +359,17 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         rx_distance = numpy.array([4, 5])
         jb_distance = numpy.array([6, 7])
         ry0_distance = numpy.array([8, 9])
+        azimuth = numpy.array([12, 34])
         top_edge_depth = 30
         width = 15
         strike = 60.123
 
         class FakeSurface(object):
             call_counts = collections.Counter()
+
+            def get_azimuth(self, mesh):
+                self.call_counts['get_azimuth'] += 1
+                return azimuth
 
             def get_strike(self):
                 self.call_counts['get_strike'] += 1
@@ -451,7 +456,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
 
     def test_all_values(self):
         self.gsim_class.REQUIRES_DISTANCES = set(
-            'rjb rx rrup repi rhypo ry0'.split()
+            'rjb rx rrup repi rhypo ry0 azimuth'.split()
         )
         self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set(
             'mag rake strike dip ztor hypo_lon hypo_lat hypo_depth width'.
@@ -484,6 +489,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertTrue((dctx.rx == [4, 5]).all())
         self.assertTrue((dctx.ry0 == [8, 9]).all())
         self.assertTrue((dctx.rrup == [10, 11]).all())
+        self.assertTrue((dctx.azimuth == [12, 34]).all())
         numpy.testing.assert_almost_equal(dctx.rhypo,
                                           [162.18749272, 802.72247682])
         numpy.testing.assert_almost_equal(dctx.repi,
@@ -492,7 +498,8 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
                          {'get_top_edge_depth': 1, 'get_rx_distance': 1,
                           'get_joyner_boore_distance': 1, 'get_dip': 1,
                           'get_min_distance': 1, 'get_width': 1,
-                          'get_strike': 1, 'get_ry0_distance': 1})
+                          'get_strike': 1, 'get_ry0_distance': 1,
+                          'get_azimuth': 1})
 
     def test_some_values(self):
         self.gsim_class.REQUIRES_DISTANCES = set('rjb rx'.split())
@@ -516,6 +523,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertFalse(hasattr(sctx, 'vs30measured'))
         self.assertFalse(hasattr(sctx, 'z2pt0'))
         self.assertFalse(hasattr(dctx, 'rrup'))
+        self.assertFalse(hasattr(dctx, 'azimuth'))
         self.assertFalse(hasattr(dctx, 'ztor'))
         self.assertFalse(hasattr(dctx, 'width'))
         self.assertEqual(self.fake_surface.call_counts,

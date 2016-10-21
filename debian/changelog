@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Add the azimuth 'distance' parameter
+
   [Graeme Weatherill]
   * Modifies the Ry0 calculator for the planer rupture surface to avoid
     creating the Mesh
