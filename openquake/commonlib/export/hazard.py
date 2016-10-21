@@ -58,20 +58,17 @@ def get_mesh(sitecol, complete=True):
     return mesh
 
 
-def build_etags(stored_events, sm_ids=()):
+def build_etags(events):
     """
     An array of tags for the underlying seismic events
     """
-    sm_ids = sm_ids or sorted(stored_events)
     tags = []
-    for sm_id in sm_ids:
-        events = stored_events[sm_id]
-        for (serial, ses, occ, sampleid, grp_id, source_id) in events:
-            tag = b'grp=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
-                grp_id, ses, source_id, serial, occ)
-            if sampleid > 0:
-                tag += b'~sample=%d' % sampleid
-            tags.append(tag)
+    for (serial, ses, occ, sampleid, grp_id, source_id) in events:
+        tag = b'grp=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
+            grp_id, ses, source_id, serial, occ)
+        if sampleid > 0:
+            tag += b'~sample=%d' % sampleid
+        tags.append(tag)
     return numpy.array(tags)
 
 
@@ -626,7 +623,7 @@ def export_gmf(ekey, dstore):
             events = dstore['events']
             if key not in events:  # source model producing zero ruptures
                 continue
-            etags = build_etags(events, [key])
+            etags = build_etags(events[key])
         for rlz in rlzs:
             gmf_arr = gmf_data['%04d' % rlz.ordinal].value
             ruptures = []
@@ -641,42 +638,6 @@ def export_gmf(ekey, dstore):
                 ('gmf', fmt), fname, sitecol, oq.imtls, ruptures, rlz,
                 investigation_time)
     return fnames
-
-
-@export.add(('gmfs:', 'csv'))
-def export_gmf_spec(ekey, dstore, spec):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    :param spec: a string specifying what to export exactly
-    """
-    oq = dstore['oqparam']
-    eids = numpy.array([int(rid) for rid in spec.split(',')])
-    sitemesh = get_mesh(dstore['sitecol'])
-    writer = writers.CsvWriter(fmt='%.5f')
-    if 'scenario' in oq.calculation_mode:
-        etags, gmfs_by_trt_gsim = calc.get_gmfs(dstore)
-        gsims = sorted(gsim for trt, gsim in gmfs_by_trt_gsim)
-        imts = gmfs_by_trt_gsim[0, gsims[0]].dtype.names
-        gmf_dt = numpy.dtype([(str(gsim), F32) for gsim in gsims])
-        for eid in eids:
-            etag = etags[eid]
-            for imt in imts:
-                gmfa = numpy.zeros(len(sitemesh), gmf_dt)
-                for gsim in gsims:
-                    gmfa[str(gsim)] = gmfs_by_trt_gsim[0, gsim][imt][:, eid]
-                dest = dstore.export_path('gmf-%s-%s.csv' % (etag, imt))
-                data = util.compose_arrays(sitemesh, gmfa)
-                writer.save(data, dest)
-    else:  # event based
-        etags = build_etags(dstore['events'])
-        for eid in eids:
-            etag = etags[eid]
-            for imt, gmfa in _calc_gmfs(dstore, util.get_serial(etag), eid):
-                dest = dstore.export_path('gmf-%s-%s.csv' % (etag, imt))
-                data = util.compose_arrays(sitemesh, gmfa)
-                writer.save(data, dest)
-    return writer.getsaved()
 
 
 def export_gmf_xml(key, dest, sitecol, imts, ruptures, rlz,
