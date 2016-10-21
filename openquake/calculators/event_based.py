@@ -170,8 +170,8 @@ class EBRupture(object):
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
-        for etag in self.etags:
-            new = Rupture(etag, self.indices)
+        for eid, etag in zip(self.eids, self.etags):
+            new = Rupture(eid, etag, self.indices)
             new.mesh = mesh[self.indices]
             new.etag = etag
             new.rupture = new
