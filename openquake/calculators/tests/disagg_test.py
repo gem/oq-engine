@@ -46,16 +46,10 @@ class DisaggregationTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'disagg')
     def test_case_2(self):
         self.assert_curves_ok(
-            ['poe-0.02-rlz-0-PGA--3.0--3.0.xml',
-             'poe-0.02-rlz-0-PGA-0.0-0.0.xml',
-             'poe-0.02-rlz-1-PGA--3.0--3.0.xml',
-             'poe-0.02-rlz-1-PGA-0.0-0.0.xml',
-             'poe-0.02-rlz-2-PGA-0.0-0.0.xml',
-             'poe-0.02-rlz-3-PGA-0.0-0.0.xml',
-             'poe-0.1-rlz-0-PGA--3.0--3.0.xml',
-             'poe-0.1-rlz-0-PGA-0.0-0.0.xml',
-             'poe-0.1-rlz-1-PGA--3.0--3.0.xml',
-             'poe-0.1-rlz-1-PGA-0.0-0.0.xml',
-             'poe-0.1-rlz-2-PGA-0.0-0.0.xml',
-             'poe-0.1-rlz-3-PGA-0.0-0.0.xml'],
+            ['poe-0.0872-rlz-3-PGA-0.0-0.0.xml',
+             'poe-0.0879-rlz-1-PGA--3.0--3.0.xml',
+             'poe-0.0913-rlz-2-PGA-0.0-0.0.xml',
+             'poe-0.0915-rlz-0-PGA--3.0--3.0.xml',
+             'poe-0.0965-rlz-1-PGA-0.0-0.0.xml',
+             'poe-0.1001-rlz-0-PGA-0.0-0.0.xml'],
             case_2.__file__)

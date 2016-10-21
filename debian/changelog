@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Introduced a parameter `iml_disagg` in the disaggregation calculator
+  * Fixed `oq reduce` to preserve the NRML version
   * Fixed a bug when splitting the fault sources by magnitude
 
 python-oq-engine (2.1.0-0~precise01) precise; urgency=low

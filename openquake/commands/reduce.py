@@ -60,7 +60,8 @@ def reduce(fname, reduction_factor):
                 f.write(encode(line))
         print('Extracted %d lines out of %d' % (len(lines), len(all_lines)))
         return
-    model, = nrml.read(fname)
+    node = nrml.read(fname)
+    model = node[0]
     if model.tag.endswith('exposureModel'):
         total = len(model.assets)
         model.assets.nodes = random_filter(model.assets, reduction_factor)
@@ -78,7 +79,7 @@ def reduce(fname, reduction_factor):
     shutil.copy(fname, fname + '.bak')
     print('Copied the original file in %s.bak' % fname)
     with open(fname, 'wb') as f:
-        nrml.write([model], f)
+        nrml.write([model], f, xmlns=node['xmlns'])
     print('Extracted %d nodes out of %d' % (num_nodes, total))
 
 reduce.arg('fname', 'path to the model file')

@@ -98,6 +98,7 @@ class OqParam(valid.ParamSet):
     hazard_maps = valid.Param(valid.boolean, False)
     hypocenter = valid.Param(valid.point3d)
     ignore_missing_costs = valid.Param(valid.namelist, [])
+    iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
     individual_curves = valid.Param(valid.boolean, True)
     inputs = valid.Param(dict, {})
     insured_losses = valid.Param(valid.boolean, False)
@@ -204,8 +205,13 @@ class OqParam(valid.ParamSet):
                 raise ValueError(
                     'For disaggregation the flag `individual_curves` '
                     'must be true')
-            elif not self.poes_disagg:
-                raise ValueError('poes_disagg must be set in the job.ini file')
+            elif not self.poes_disagg and not self.iml_disagg:
+                raise ValueError('poes_disagg or iml_disagg must be set '
+                                 'in the job.ini file')
+            elif self.poes_disagg and self.iml_disagg:
+                logging.warn(
+                    'iml_disagg=%s will not be computed from poes_disagg=%s',
+                    str(self.iml_disagg), self.poes_disagg)
 
     def check_gsims(self, gsims):
         """
