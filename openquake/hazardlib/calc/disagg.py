@@ -42,29 +42,24 @@ BinData = collections.namedtuple(
     'BinData', 'mags, dists, lons, lats, trts, pnes')
 
 
-def disagg_poes(iml, poes, curve_poes, imls, gsim, rupture, rlzi,
-                imt, imt_str, sctx, rctx, dctx, truncation_level, n_epsilons,
-                disagg_poe):
-    if iml is None:
+# yield (rlzi, poe, imt), (iml, pne)
+def _disagg(iml, poes, curve_poes, imls, gsim, rupture, rlzi, imt, imt_str,
+            sctx, rctx, dctx, truncation_level, n_epsilons, disagg_poe):
+    if iml is None:  # compute the IMLs from the given poes
         for poe in poes:
-            iml_ = numpy.interp(poe, curve_poes, imls)
-            # compute probability of exceeding iml given
-            # the current rupture and epsilon_bin, that is
-            # ``P(IMT >= iml | rup, epsilon_bin)``
-            # for each of the epsilon bins
+            iml = numpy.interp(poe, curve_poes, imls)
             with disagg_poe:
                 [poes_given_rup_eps] = gsim.disaggregate_poe(
-                    sctx, rctx, dctx, imt, iml_,
-                    truncation_level, n_epsilons)
+                    sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons)
             pne = rupture.get_probability_no_exceedance(poes_given_rup_eps)
-            yield (rlzi, poe, imt_str), (iml_, pne)
-    else:
+            yield (rlzi, poe, imt_str), (iml, pne)
+    else:  # there is a single IML provided by the user; compute the poe
+        poe = numpy.interp(iml, imls, curve_poes)
         with disagg_poe:
             [poes_given_rup_eps] = gsim.disaggregate_poe(
                 sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons)
         pne = rupture.get_probability_no_exceedance(poes_given_rup_eps)
-        poe = round(numpy.interp(iml, imls, curve_poes), 4)
-        yield (rlzi, poe, imt_str), (iml, pne)
+        yield (rlzi, round(poe, 4), imt_str), (iml, pne)
 
 
 def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
@@ -105,7 +100,7 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
                             rlzi = rlz.ordinal
                             iml = iml_disagg.get(imt_str)
                             curve_poes = curves[rlzi, imt_str][::-1]
-                            for k, v in disagg_poes(
+                            for k, v in _disagg(
                                     iml, poes, curve_poes, imls, gsim, rupture,
                                     rlzi, imt, imt_str, sctx, rctx, dctx,
                                     truncation_level, n_epsilons, disagg_poe):
