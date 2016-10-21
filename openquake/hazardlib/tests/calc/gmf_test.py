@@ -134,15 +134,6 @@ class BaseGMFCalcTestCase(unittest.TestCase):
         self.imt1 = SA(10, 5)
         self.imt2 = PGV()
 
-        def rupture_site_filter(ruptures, sites):
-            [rupture] = ruptures
-            assert rupture is self.rupture
-            assert sites is self.sites
-            yield rupture, sites.filter(sites.vs30measured)
-        rupture_site_filter.affected = (
-            lambda rup, sites: sites.filter(sites.vs30measured))
-        self.rupture_site_filter = rupture_site_filter
-
         self.gsim = FakeGSIMInterIntraStdDevs(self)
         self.total_stddev_gsim = FakeGSIMTotalStdDev(self)
 
@@ -282,60 +273,6 @@ class GMFCalcNoCorrelationTestCase(BaseGMFCalcTestCase):
             self.assertEqual(intensity[5].mean(), self.mean4567)
             self.assertEqual(intensity[6].mean(), self.mean4567)
 
-    def test_filtered_no_truncation(self):
-        numpy.random.seed(17)
-        realizations = 50
-        gmfs = ground_motion_fields(
-            self.rupture, self.sites, [self.imt1, self.imt2],
-            self.gsim, truncation_level=None,
-            realizations=realizations,
-            rupture_site_filter=self.rupture_site_filter
-        )
-
-        for imt in [self.imt1, self.imt2]:
-            intensity = gmfs[imt]
-            self.assertEqual(intensity.shape, (7, realizations))
-            assert_array_equal(
-                intensity[(1 - self.sites.vs30measured).nonzero()], 0
-            )
-            self.assertFalse(
-                (intensity[self.sites.vs30measured.nonzero()] == 0).any()
-            )
-
-    def test_filtered_zero_truncation(self):
-        self.gsim.expect_stddevs = False
-        gmfs = ground_motion_fields(
-            self.rupture, self.sites, [self.imt1, self.imt2], self.gsim,
-            truncation_level=0, rupture_site_filter=self.rupture_site_filter,
-            realizations=100
-        )
-        for intensity in gmfs[self.imt1], gmfs[self.imt2]:
-            for i in range(7):
-                self.assertEqual(intensity[i].std(), 0)
-
-            self.assertEqual(intensity[0].mean(), 0)
-            self.assertEqual(intensity[1].mean(), self.mean2)
-            self.assertEqual(intensity[2].mean(), 0)
-            self.assertEqual(intensity[3].mean(), self.mean4567)
-            self.assertEqual(intensity[4].mean(), 0)
-            self.assertEqual(intensity[5].mean(), self.mean4567)
-            self.assertEqual(intensity[6].mean(), 0)
-
-    def test_filter_all_out(self):
-        def rupture_site_filter(ruptures, sites):
-            return []
-        rupture_site_filter.affected = lambda rup, sites: None
-        for truncation_level in (None, 0, 1.3):
-            gmfs = ground_motion_fields(
-                self.rupture, self.sites, [self.imt1, self.imt2], self.gsim,
-                truncation_level=truncation_level,
-                realizations=123,
-                rupture_site_filter=rupture_site_filter)
-            self.assertEqual(gmfs[self.imt1].shape, (7, 123))
-            self.assertEqual(gmfs[self.imt2].shape, (7, 123))
-            assert_array_equal(gmfs[self.imt1], 0)
-            assert_array_equal(gmfs[self.imt2], 0)
-
 
 class GMFCalcCorrelatedTestCase(BaseGMFCalcTestCase):
     def test_no_truncation(self):
@@ -404,28 +341,3 @@ class GMFCalcCorrelatedTestCase(BaseGMFCalcTestCase):
                 self.rupture, self.sites, [self.imt1], gsim,
                 truncation_level=None, realizations=6000,
                 correlation_model=cormo)
-
-    def test_rupture_site_filtering(self):
-        mean = 10
-        inter = 2
-        intra = 3
-        points = [Point(0, 0), Point(0, 0.05)]
-        sites = [Site(point, mean, False, inter, intra) for point in points]
-        self.sites = SiteCollection(sites)
-
-        def rupture_site_filter(ruptures, sites):
-            yield ruptures[0], sites.filter(sites.mesh.lats == 0)
-        rupture_site_filter.affected = (
-            lambda rup, sites: sites.filter(sites.mesh.lats == 0))
-        numpy.random.seed(37)
-        cormo = JB2009CorrelationModel(vs30_clustering=False)
-        gmfs = ground_motion_fields(
-            self.rupture, self.sites, [self.imt1], self.gsim,
-            truncation_level=None, realizations=1,
-            correlation_model=cormo,
-            rupture_site_filter=rupture_site_filter
-        )
-
-        s1gmf, s2gmf = gmfs[self.imt1]
-        numpy.testing.assert_array_equal(s2gmf, 0)
-        numpy.testing.assert_array_almost_equal(s1gmf, 11.1852253)

@@ -147,9 +147,7 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
             disagg._collect_bins_data_old(
                 self.sources, self.site, self.imt, self.iml, self.gsims,
                 self.truncation_level, n_epsilons=3,
-                source_site_filter=filters.source_site_noop_filter,
-                rupture_site_filter=filters.rupture_site_noop_filter
-                )
+                source_site_filter=filters.source_site_noop_filter)
 
         aae = numpy.testing.assert_array_equal
 
@@ -181,47 +179,6 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
         exp_p_ne = (1 - p_one_more) ** poe
         aae(probs_no_exceed, exp_p_ne)
         self.assertEqual(trt_bins, ['trt1', 'trt2'])
-
-    def test_filters(self):
-        def source_site_filter(sources, sites):
-            for source in sources:
-                if source is self.source2:
-                    continue
-                yield source, sites
-
-        def rupture_site_filter(ruptures, sites):
-            for rupture in ruptures:
-                if rupture.mag < 6:
-                    continue
-                yield rupture, sites
-
-        (mags, dists, lons, lats, trts, trt_bins, probs_no_exceed) = \
-            disagg._collect_bins_data_old(
-                self.sources, self.site, self.imt, self.iml, self.gsims,
-                self.truncation_level, n_epsilons=3,
-                source_site_filter=source_site_filter,
-                rupture_site_filter=rupture_site_filter
-                )
-
-        aae = numpy.testing.assert_array_equal
-
-        aae(mags, [9, 6, 6, 6])
-        aae(dists, [14, 12, 12, 11])
-        aae(lons, [21, 22, 21, 22])
-        aae(lats, [44, 44, 44, 45])
-        aae(trts, [0, 0, 0, 0])
-        poe = numpy.array([
-            [0, 0, 0],
-            [0.3, 0.4, 0.3],
-            [0, 0, 0.1],
-            [0, 0, 0],
-        ])
-        p_one_more = numpy.array(
-            [0.4, 0.1, 0.1, 0.1]
-        ).reshape(4, 1)
-        exp_p_ne = (1 - p_one_more) ** poe
-        aae(probs_no_exceed, exp_p_ne)
-        self.assertEqual(trt_bins, ['trt1'])
 
 
 class DigitizeLonsTestCase(unittest.TestCase):

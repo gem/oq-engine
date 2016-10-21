@@ -130,6 +130,8 @@ def get_distances(rupture, mesh, param='rjb'):
         dist = rupture.hypocenter.distance_to_mesh(mesh, with_depths=False)
     elif param == 'rcdpp':
         dist = rupture.get_cdppvalue(mesh)
+    elif param == 'azimuth':
+        dist = rupture.surface.get_azimuth(mesh)
     else:
         raise ValueError('Unknown distance measure %r' % param)
     return dist
