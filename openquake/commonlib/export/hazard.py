@@ -93,7 +93,8 @@ class SESCollection(object):
     """
     Stochastic Event Set Collection
     """
-    def __init__(self, idx_ses_dict, investigation_time=None):
+    def __init__(self, sm_id, idx_ses_dict, investigation_time=None):
+        self.sm_id = sm_id
         self.idx_ses_dict = idx_ses_dict
         self.investigation_time = investigation_time
 
@@ -110,12 +111,14 @@ def export_ses_xml(ekey, dstore):
     """
     fmt = ekey[-1]
     oq = dstore['oqparam']
+    sm_by_grp = dstore['csm_info'].get_sm_by_grp()
     mesh = get_mesh(dstore['sitecol'])
     ruptures = []
     for serial in dstore['sescollection']:
         sr = dstore['sescollection/' + serial]
         ruptures.extend(sr.export(mesh))
     ses_coll = SESCollection(
+        sm_by_grp[ruptures[0].grp_id],
         groupby(ruptures, operator.attrgetter('ses_idx')),
         oq.investigation_time)
     dest = dstore.export_path('ses.' + fmt)
@@ -129,10 +132,10 @@ def _export_ses_xml(dest, ses_coll):
 
 
 def _export_ses_csv(dest, ses_coll):
-    rows = []
+    rows = [['event_tag', 'sm_id', 'eid']]
     for ses in ses_coll:
         for rup in ses:
-            rows.append([rup.etag, rup.eid])
+            rows.append([rup.etag, ses_coll.sm_id, rup.eid])
     write_csv(dest, sorted(rows, key=operator.itemgetter(0)))
 
 
