@@ -416,15 +416,13 @@ class RectangularMesh(Mesh):
             # a square with side of 10 m around in order to have
             # a proper polygon instead.
             polygon = polygon.buffer(self.DIST_TOLERANCE, 1)
-        mesh_lons, mesh_lats = mesh.lons.take(idxs), mesh.lats.take(idxs)
-        mesh_xx, mesh_yy = proj(mesh_lons, mesh_lats)
-        distances_2d = geo_utils.point_to_polygon_distance(
-            polygon, mesh_xx, mesh_yy)
-
+        mesh_xx, mesh_yy = proj(mesh.lons[idxs], mesh.lats[idxs])
         # replace geodetic distance values for points-closer-than-the-threshold
         # by more accurate point-to-polygon distance values.
-        distances.put(idxs, distances_2d)
-        return distances.reshape(mesh.shape)
+        distances[idxs] = geo_utils.point_to_polygon_distance(
+            polygon, mesh_xx, mesh_yy)
+
+        return distances
 
     def _get_proj_enclosing_polygon(self):
         """
