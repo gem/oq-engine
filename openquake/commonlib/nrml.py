@@ -640,7 +640,7 @@ def read(source, chatty=True, stop=None):
     return nrml
 
 
-def write(nodes, output=sys.stdout, fmt='%10.7E', gml=True, xmlns=None):
+def write(nodes, output=sys.stdout, fmt='%.7E', gml=True, xmlns=None):
     """
     Convert nodes into a NRML file. output must be a file
     object open in write mode. If you want to perform a
@@ -649,6 +649,9 @@ def write(nodes, output=sys.stdout, fmt='%10.7E', gml=True, xmlns=None):
 
     :params nodes: an iterable over Node objects
     :params output: a file-like object in write or read-write mode
+    :param fmt: format used for writing the floats (default '%.7E')
+    :param gml: add the http://www.opengis.net/gml namespace
+    :param xmlns: NRML namespace like http://openquake.org/xmlns/nrml/0.4
     """
     root = Node('nrml', nodes=nodes)
     namespaces = {xmlns or NRML05: ''}
