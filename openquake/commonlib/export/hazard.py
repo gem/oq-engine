@@ -27,6 +27,7 @@ import numpy
 
 from openquake.baselib.general import (
     groupby, humansize, get_array, group_array, DictArray)
+from openquake.baselib.python3compat import decode
 from openquake.baselib import hdf5
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
@@ -93,8 +94,7 @@ class SESCollection(object):
     """
     Stochastic Event Set Collection
     """
-    def __init__(self, sm_id, idx_ses_dict, investigation_time=None):
-        self.sm_id = sm_id
+    def __init__(self, idx_ses_dict, investigation_time=None):
         self.idx_ses_dict = idx_ses_dict
         self.investigation_time = investigation_time
 
@@ -116,9 +116,8 @@ def export_ses_xml(ekey, dstore):
     ruptures = []
     for serial in dstore['sescollection']:
         sr = dstore['sescollection/' + serial]
-        ruptures.extend(sr.export(mesh))
+        ruptures.extend(sr.export(mesh, sm_by_grp))
     ses_coll = SESCollection(
-        sm_by_grp[ruptures[0].grp_id],
         groupby(ruptures, operator.attrgetter('ses_idx')),
         oq.investigation_time)
     dest = dstore.export_path('ses.' + fmt)
@@ -135,7 +134,7 @@ def _export_ses_csv(dest, ses_coll):
     rows = [['event_tag', 'sm_id', 'eid']]
     for ses in ses_coll:
         for rup in ses:
-            rows.append([rup.etag, ses_coll.sm_id, rup.eid])
+            rows.append([decode(rup.etag), rup.sm_id, rup.eid])
     write_csv(dest, sorted(rows, key=operator.itemgetter(0)))
 
 
@@ -631,7 +630,8 @@ def export_gmf(ekey, dstore):
             gmf_arr = gmf_data['%04d' % rlz.ordinal].value
             ruptures = []
             for eid, gmfa in group_array(gmf_arr, 'eid').items():
-                rup = util.Rupture(eid, etags[eid], sorted(set(gmfa['sid'])))
+                rup = util.Rupture(sm_id, eid, etags[eid],
+                                   sorted(set(gmfa['sid'])))
                 rup.gmfa = gmfa
                 ruptures.append(rup)
             ruptures.sort(key=operator.attrgetter('etag'))
