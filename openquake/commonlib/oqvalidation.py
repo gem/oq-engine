@@ -209,8 +209,9 @@ class OqParam(valid.ParamSet):
                 raise ValueError('poes_disagg or iml_disagg must be set '
                                  'in the job.ini file')
             elif self.poes_disagg and self.iml_disagg:
-                raise ValueError('poes_disagg and iml_disagg cannot be both '
-                                 'set in the job.ini file')
+                logging.warn(
+                    'iml_disagg=%s will not be computed from poes_disagg=%s'
+                    % str(self.iml_disagg), self.poes_disagg)
 
     def check_gsims(self, gsims):
         """
