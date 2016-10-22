@@ -28,6 +28,19 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils as geo_utils
 
+mesh_dt = numpy.dtype([('lon', float), ('lat', float), ('depth', float)])
+
+
+def build_array(shape, lons, lats, depths):
+    """
+    Convert the given arrays into a composite numpy array
+    """
+    arr = numpy.zeros(shape, mesh_dt)
+    arr['lon'] = lons
+    arr['lat'] = lats
+    arr['depth'] = depths
+    return arr
+
 
 class Mesh(object):
     """
@@ -51,7 +64,6 @@ class Mesh(object):
     #: Tolerance level to be used in various spatial operations when
     #: approximation is required -- set to 5 meters.
     DIST_TOLERANCE = 0.005
-    mesh_dt = numpy.dtype([('lon', float), ('lat', float), ('depth', float)])
 
     def __init__(self, lons, lats, depths=None):
         assert (isinstance(lons, numpy.ndarray) and
@@ -386,17 +398,6 @@ class Mesh(object):
         # avoid circular imports
         from openquake.hazardlib.geo.polygon import Polygon
         return Polygon._from_2d(polygon2d, proj)
-
-    def to_array(self):
-        """
-        Convert the mesh into a composite numpy array
-        """
-        array = numpy.zeros(self.shape, self.mesh_dt)
-        for idx, lon in numpy.ndenumerate(self.lons):
-            array['lon'][idx] = lon
-            array['lat'][idx] = self.lats[idx]
-            array['depth'][idx] = self.depths[idx]
-        return array
 
 
 class RectangularMesh(Mesh):

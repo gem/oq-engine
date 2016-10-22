@@ -157,6 +157,17 @@ class PlanarSurface(BaseQuadrilateralSurface):
         return cls(mesh_spacing, strike, dip, top_left, top_right,
                    bottom_right, bottom_left)
 
+    @classmethod
+    def from4points(cls, mesh_spacing, mesh):
+        tl, tr, bl, br = mesh
+        return cls.from_corner_points(
+            mesh_spacing,
+            Point(tl['lon'], tl['lat'], tl['depth']),
+            Point(tr['lon'], tr['lat'], tr['depth']),
+            Point(bl['lon'], bl['lat'], bl['depth']),
+            Point(br['lon'], br['lat'], br['depth']),
+        )
+
     def _init_plane(self):
         """
         Prepare everything needed for projecting arbitrary points on a plane
