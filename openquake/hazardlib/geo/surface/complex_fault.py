@@ -48,7 +48,7 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
     def __init__(self, mesh):
         super(ComplexFaultSurface, self).__init__()
         self.mesh = mesh
-        assert not 1 in self.mesh.shape
+        assert 1 not in self.mesh.shape
         self.strike = self.dip = None
 
         # A common user error is to create a ComplexFaultSourceSurface
