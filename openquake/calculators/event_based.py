@@ -25,13 +25,15 @@ import collections
 
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict, split_in_blocks
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
+from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.calc.hazard_curve import ProbabilityMap
 from openquake.hazardlib.probability_map import PmapStats
-from openquake.hazardlib import geo
+from openquake.hazardlib import geo, tom
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import parallel, calc
 from openquake.commonlib.util import max_rel_diff_index, Rupture
@@ -127,6 +129,10 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the tags of the corresponding seismic events.
     """
+    params = ['mag', 'rake', 'tectonic_region_type', 'hypo',
+              'source_class', 'pmf', 'occurrence_rate',
+              'time_span', 'rupture_slip_direction']
+
     def __init__(self, rupture, indices, events, source_id, grp_id, serial):
         self.rupture = rupture
         self.indices = indices
@@ -198,6 +204,47 @@ class EBRupture(object):
             new.bottom_right_corner = None if iffs or ims else (
                 new.lons[3], new.lats[3], new.depths[3])
             yield new
+
+    def __toh5__(self):
+        rup = self.rupture
+        attrs = dict(source_id=self.source_id, grp_id=self.grp_id,
+                     serial=self.serial)
+        for par in self.params:
+            val = getattr(self.rupture, par, None)
+            if val is not None:
+                attrs[par] = val
+        if hasattr(rup, 'temporal_occurrence_model'):
+            attrs['time_span'] = rup.temporal_occurrence_model.time_span
+        #if hasattr(rup, 'pmf'):
+        #    attrs['pmf'] = rup.pmf
+        attrs['hypo'] = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
+        attrs['source_class'] = hdf5.cls2dotname(rup.source_typology)
+        attrs['rupture_class'] = hdf5.cls2dotname(rup.__class__)
+        attrs['surface_class'] = hdf5.cls2dotname(rup.surface.__class__)
+        mesh = self.rupture.surface.mesh.to_array()
+        return dict(indices=self.indices, events=self.events, mesh=mesh), attrs
+
+    def __fromh5__(self, dic, attrs):
+        self.indices = dic['indices']
+        self.events = dic['events']
+        self.rupture = object.__new__(
+            hdf5.dotname2cls(attrs.pop('rupture_class')))
+        self.rupture.surface = surface = object.__new__(
+            hdf5.dotname2cls(attrs.pop('surface_class')))
+        surface.strike = surface.dip = None  # they will be computed
+        m = dic['mesh']
+        self.rupture.surface.mesh = RectangularMesh(
+            m['lon'], m['lat'], m['depth'])
+        time_span = attrs.pop('time_span')
+        if time_span:
+            self.rupture.temporal_occurrence_model = tom.PoissonTOM(time_span)
+        self.rupture.hypocenter = geo.point.Point(*attrs.pop('hypo'))
+        self.rupture.source_typology = hdf5.dotname2cls(
+            attrs.pop('source_class'))
+        self.source_id = attrs.pop('source_id')
+        self.grp_id = attrs.pop('grp_id')
+        self.serial = attrs.pop('serial')
+        vars(self.rupture).update(attrs)
 
     def __lt__(self, other):
         return self.serial < other.serial
