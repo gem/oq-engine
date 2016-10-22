@@ -30,10 +30,11 @@ from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict, split_in_blocks
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
-from openquake.hazardlib.geo.mesh import RectangularMesh
+from openquake.hazardlib.geo.mesh import RectangularMesh, build_array
 from openquake.hazardlib.calc.hazard_curve import ProbabilityMap
 from openquake.hazardlib.probability_map import PmapStats
 from openquake.hazardlib import geo, tom
+from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import parallel, calc
 from openquake.commonlib.util import max_rel_diff_index, Rupture
@@ -221,29 +222,46 @@ class EBRupture(object):
         attrs['source_class'] = hdf5.cls2dotname(rup.source_typology)
         attrs['rupture_class'] = hdf5.cls2dotname(rup.__class__)
         attrs['surface_class'] = hdf5.cls2dotname(rup.surface.__class__)
-        mesh = self.rupture.surface.mesh.to_array()
-        return dict(indices=self.indices, events=self.events, mesh=mesh), attrs
+        mesh = self.rupture.surface.mesh
+        if mesh is None:  # planar surface
+            s = self.rupture.surface
+            shp = (2, 2)
+            arr = build_array(
+                shp,
+                s.corner_lons.reshape(shp),
+                s.corner_lats.reshape(shp),
+                s.corner_depths.reshape(shp))
+            attrs['mesh_spacing'] = s.mesh_spacing
+        else:  # general surface
+            arr = build_array(mesh.shape, mesh.lons, mesh.lats, mesh.depths)
+        return dict(sids=self.indices, events=self.events, mesh=arr), attrs
 
     def __fromh5__(self, dic, attrs):
-        self.indices = dic['indices']
+        self.indices = dic['sids']
         self.events = dic['events']
-        self.rupture = object.__new__(
-            hdf5.dotname2cls(attrs.pop('rupture_class')))
-        self.rupture.surface = surface = object.__new__(
-            hdf5.dotname2cls(attrs.pop('surface_class')))
-        surface.strike = surface.dip = None  # they will be computed
-        m = dic['mesh']
-        self.rupture.surface.mesh = RectangularMesh(
-            m['lon'], m['lat'], m['depth'])
+        surface_class = attrs['surface_class']
+        surface_cls = hdf5.dotname2cls(surface_class)
+        self.rupture = object.__new__(hdf5.dotname2cls(attrs['rupture_class']))
+        self.rupture.surface = surface = object.__new__(surface_cls)
+        m = dic['mesh'].value
+        if 'mesh_spacing' in attrs:  # PlanarSurface
+            self.rupture.surface = (
+                geo.surface.planar.PlanarSurface.from4points(
+                    attrs.pop('mesh_spacing'), m.flatten()))
+        else:  # general surface
+            surface.strike = surface.dip = None  # they will be computed
+            surface.mesh = RectangularMesh(m['lon'], m['lat'], m['depth'])
         time_span = attrs.pop('time_span')
         if time_span:
             self.rupture.temporal_occurrence_model = tom.PoissonTOM(time_span)
-        self.rupture.hypocenter = geo.point.Point(*attrs.pop('hypo'))
+        self.rupture.hypocenter = Point(*attrs.pop('hypo'))
         self.rupture.source_typology = hdf5.dotname2cls(
             attrs.pop('source_class'))
         self.source_id = attrs.pop('source_id')
         self.grp_id = attrs.pop('grp_id')
         self.serial = attrs.pop('serial')
+        del attrs['rupture_class']
+        del attrs['surface_class']
         vars(self.rupture).update(attrs)
 
     def __lt__(self, other):
