@@ -511,24 +511,27 @@ class EBRupture(object):
                 attrs[par] = val
         if hasattr(rup, 'temporal_occurrence_model'):
             attrs['time_span'] = rup.temporal_occurrence_model.time_span
-        #if hasattr(rup, 'pmf'):
-        #    attrs['pmf'] = rup.pmf
+        if hasattr(rup, 'pmf'):
+            attrs['pmf'] = rup.pmf_array()
         attrs['hypo'] = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         attrs['source_class'] = hdf5.cls2dotname(rup.source_typology)
         attrs['rupture_class'] = hdf5.cls2dotname(rup.__class__)
         attrs['surface_class'] = hdf5.cls2dotname(rup.surface.__class__)
-        mesh = self.rupture.surface.mesh
-        if mesh is None:  # planar surface
-            s = self.rupture.surface
-            shp = (2, 2)
-            arr = build_array(
-                shp,
-                s.corner_lons.reshape(shp),
-                s.corner_lats.reshape(shp),
-                s.corner_depths.reshape(shp))
-            attrs['mesh_spacing'] = s.mesh_spacing
-        else:  # general surface
-            arr = build_array(mesh.shape, mesh.lons, mesh.lats, mesh.depths)
+        surface = self.rupture.surface
+        if isinstance(surface, geo.MultiSurface):  # multiplanar surfaces
+            arr = build_array([[s.corner_lons, s.corner_lats, s.corner_depths]
+                               for s in surface.surfaces])
+            arr.reshape((len(surface.surfaces), 2, 2))
+        else:
+            mesh = surface.mesh
+            if mesh is None:  # planar surface
+                arr = build_array([[surface.corner_lons,
+                                    surface.corner_lats,
+                                    surface.corner_depths]])
+                arr.reshape((1, 2, 2))
+                attrs['mesh_spacing'] = surface.mesh_spacing
+            else:  # general surface
+                arr = build_array([[mesh.lons, mesh.lats, mesh.depths]])
         return dict(sids=self.sids, events=self.events, mesh=arr), attrs
 
     def __fromh5__(self, dic, attrs):
@@ -542,11 +545,12 @@ class EBRupture(object):
         m = dic['mesh'].value
         if 'mesh_spacing' in attrs:  # PlanarSurface
             self.rupture.surface = (
-                geo.surface.planar.PlanarSurface.from_array(
+                geo.PlanarSurface.from_array(
                     attrs.pop('mesh_spacing'), m.flatten()))
         else:  # general surface
             surface.strike = surface.dip = None  # they will be computed
-            surface.mesh = RectangularMesh(m['lon'], m['lat'], m['depth'])
+            surface.mesh = RectangularMesh(
+                m['lon'][0], m['lat'][0], m['depth'][0])
         time_span = attrs.pop('time_span')
         if time_span:
             self.rupture.temporal_occurrence_model = tom.PoissonTOM(time_span)
