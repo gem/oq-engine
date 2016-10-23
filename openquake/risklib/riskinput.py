@@ -534,7 +534,7 @@ class GmfGetter(object):
         self.sids = sitecol.sids
         self.computers = []
         for ebr in ebruptures:
-            sites = site.FilteredSiteCollection(ebr.indices, sitecol.complete)
+            sites = site.FilteredSiteCollection(ebr.sids, sitecol.complete)
             computer = calc.gmf.GmfComputer(
                 ebr, sites, imts, set(gsims),
                 truncation_level, correlation_model)
