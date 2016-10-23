@@ -31,6 +31,14 @@ from openquake.hazardlib.geo import utils as geo_utils
 from openquake.baselib.slots import with_slots
 
 
+def _corners(array):
+    # convert a composite array with fields lon, lat, depth into Points
+    points = []
+    for p in array:
+        points.append(Point(p['lon'], p['lat'], p['depth']))
+    return points
+
+
 @with_slots
 class PlanarSurface(BaseQuadrilateralSurface):
     """
@@ -101,7 +109,7 @@ class PlanarSurface(BaseQuadrilateralSurface):
             top_left.depth, top_right.depth,
             bottom_left.depth, bottom_right.depth
         ])
-        # not set the attributes normal, d, uv1, uv2, zero_zero
+        # now set the attributes normal, d, uv1, uv2, zero_zero
         self._init_plane()
         # now we can check surface for validity
         dists, xx, yy = self._project(self.corner_lons, self.corner_lats,
@@ -149,24 +157,19 @@ class PlanarSurface(BaseQuadrilateralSurface):
             An instance of :class:`PlanarSurface`.
         """
         strike = top_left.azimuth(top_right)
-
         dist = top_left.distance(bottom_left)
         vert_dist = bottom_left.depth - top_left.depth
         dip = numpy.degrees(numpy.arcsin(vert_dist / dist))
-
         return cls(mesh_spacing, strike, dip, top_left, top_right,
                    bottom_right, bottom_left)
 
     @classmethod
-    def from4points(cls, mesh_spacing, mesh):
-        tl, tr, bl, br = mesh
-        return cls.from_corner_points(
-            mesh_spacing,
-            Point(tl['lon'], tl['lat'], tl['depth']),
-            Point(tr['lon'], tr['lat'], tr['depth']),
-            Point(bl['lon'], bl['lat'], bl['depth']),
-            Point(br['lon'], br['lat'], br['depth']),
-        )
+    def from_array(cls, mesh_spacing, array):
+        tl, tr, bl, br = _corners(array)
+        strike = tl.azimuth(tr)
+        dip = numpy.degrees(
+            numpy.arcsin((bl.depth - tl.depth) / tl.distance(bl)))
+        return cls(mesh_spacing, strike, dip, tl, tr, br, bl)
 
     def _init_plane(self):
         """
