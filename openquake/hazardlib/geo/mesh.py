@@ -31,14 +31,16 @@ from openquake.hazardlib.geo import utils as geo_utils
 mesh_dt = numpy.dtype([('lon', float), ('lat', float), ('depth', float)])
 
 
-def build_array(shape, lons, lats, depths):
+def build_array(lons_lats_depths):
     """
     Convert the given arrays into a composite numpy array
     """
+    shape = (len(lons_lats_depths),) + lons_lats_depths[0][0].shape
     arr = numpy.zeros(shape, mesh_dt)
-    arr['lon'] = lons
-    arr['lat'] = lats
-    arr['depth'] = depths
+    for i, (lons, lats, depths) in enumerate(lons_lats_depths):
+        arr['lon'][i] = lons
+        arr['lat'][i] = lats
+        arr['depth'][i] = depths
     return arr
 
 
