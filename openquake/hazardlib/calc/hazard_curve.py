@@ -218,17 +218,17 @@ def pmap_from_grp(
         ctx_mon = monitor('making contexts', measuremem=False)
         pne_mon = monitor('computing poes', measuremem=False)
         disagg_mon = monitor('get closest points', measuremem=False)
-        monitor.calc_times = []  # pairs (src_id, delta_t)
         pmap = ProbabilityMap(len(imtls.array), len(gsims))
+        pmap.calc_times = []  # pairs (src_id, delta_t)
+        pmap.grp_id = sources[0].src_group_id
         for src, s_sites in source_site_filter(sources, sites):
             t0 = time.time()
             pmap |= poe_map(src, s_sites, imtls, cmaker, truncation_level, bbs,
                             ctx_mon, pne_mon, disagg_mon)
-            # we are attaching the calculation times to the monitor
-            # so that oq-lite (and the engine) can store them
-            monitor.calc_times.append(
+            # we are attaching the calculation times to the pmap
+            # so that the engine can store them
+            pmap.calc_times.append(
                 (src.source_id, len(s_sites), time.time() - t0))
-            # NB: source.id is an integer; it should not be confused
-            # with source.source_id, which is a string
-        monitor.eff_ruptures = pne_mon.counts  # contributing ruptures
+        # storing the number of contributing ruptures too
+        pmap.eff_ruptures = {pmap.grp_id: pne_mon.counts}
         return pmap

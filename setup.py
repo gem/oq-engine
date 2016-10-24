@@ -58,14 +58,6 @@ suggestions and criticisms from the community are always very welcome.
 Copyright (C) 2014-2016 GEM Foundation
 """
 
-
-geoutils_speedups = Extension('openquake.hazardlib.geo._utils_speedups',
-                              sources=['speedups/geoutilsmodule.c'],
-                              extra_compile_args=['-Wall', '-O2'])
-geodetic_speedups = Extension('openquake.hazardlib.geo._geodetic_speedups',
-                              sources=['speedups/geodeticmodule.c'],
-                              extra_compile_args=['-Wall', '-O2'])
-
 include_dirs = [numpy.get_include()]
 
 setup(
@@ -83,7 +75,6 @@ setup(
         'psutil >= 0.4.1',
         'decorator',
     ],
-    ext_modules=[geodetic_speedups, geoutils_speedups],
     include_dirs=include_dirs,
     scripts=['openquake/hazardlib/tests/gsim/check_gsim.py'],
     author='GEM Foundation',

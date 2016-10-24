@@ -42,9 +42,29 @@ BinData = collections.namedtuple(
     'BinData', 'mags, dists, lons, lats, trts, pnes')
 
 
+# yield (rlzi, poe, imt), (iml, pne)
+def _disagg(iml, poes, curve_poes, imls, gsim, rupture, rlzi, imt, imt_str,
+            sctx, rctx, dctx, truncation_level, n_epsilons, disagg_poe):
+    if iml is None:  # compute the IMLs from the given poes
+        for poe in poes:
+            iml = numpy.interp(poe, curve_poes, imls)
+            with disagg_poe:
+                [poes_given_rup_eps] = gsim.disaggregate_poe(
+                    sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons)
+            pne = rupture.get_probability_no_exceedance(poes_given_rup_eps)
+            yield (rlzi, poe, imt_str), (iml, pne)
+    else:  # there is a single IML provided by the user; compute the poe
+        poe = numpy.interp(iml, imls, curve_poes)
+        with disagg_poe:
+            [poes_given_rup_eps] = gsim.disaggregate_poe(
+                sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons)
+        pne = rupture.get_probability_no_exceedance(poes_given_rup_eps)
+        yield (rlzi, round(poe, 4), imt_str), (iml, pne)
+
+
 def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
                        rlzs_assoc, gsims, imtls, poes, truncation_level,
-                       n_epsilons, mon):
+                       n_epsilons, iml_disagg, mon):
     # returns a BinData instance
     sitecol = SiteCollection([site])
     mags = []
@@ -52,7 +72,7 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
     lons = []
     lats = []
     trts = []
-    pnes = []
+    pnes = collections.defaultdict(list)
     sitemesh = sitecol.mesh
     make_ctxt = mon('making contexts', measuremem=False)
     disagg_poe = mon('disaggregate_poe', measuremem=False)
@@ -70,9 +90,7 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
                 lons.append(closest_point.longitude)
                 lats.append(closest_point.latitude)
                 trts.append(tect_reg)
-
-                pne_dict = {}
-                # a dictionary rlz.id, poe, imt_str -> prob_no_exceed
+                # a dictionary rlz.id, poe, imt_str -> (iml, prob_no_exceed)
                 for gsim in gsims:
                     gs = str(gsim)
                     for imt_str, imls in imtls.items():
@@ -80,23 +98,13 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
                         imls = numpy.array(imls[::-1])
                         for rlz in rlzs_assoc[src_group_id, gs]:
                             rlzi = rlz.ordinal
+                            iml = iml_disagg.get(imt_str)
                             curve_poes = curves[rlzi, imt_str][::-1]
-                            for poe in poes:
-                                iml = numpy.interp(poe, curve_poes, imls)
-                                # compute probability of exceeding iml given
-                                # the current rupture and epsilon_bin, that is
-                                # ``P(IMT >= iml | rup, epsilon_bin)``
-                                # for each of the epsilon bins
-                                with disagg_poe:
-                                    [poes_given_rup_eps] = \
-                                        gsim.disaggregate_poe(
-                                            sctx, rctx, dctx, imt, iml,
-                                            truncation_level, n_epsilons)
-                                pne = rupture.get_probability_no_exceedance(
-                                    poes_given_rup_eps)
-                                pne_dict[rlzi, poe, imt_str] = (iml, pne)
-
-                pnes.append(pne_dict)
+                            for k, v in _disagg(
+                                    iml, poes, curve_poes, imls, gsim, rupture,
+                                    rlzi, imt, imt_str, sctx, rctx, dctx,
+                                    truncation_level, n_epsilons, disagg_poe):
+                                pnes[k].append(v)
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
@@ -114,8 +122,7 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
 def disaggregation(
         sources, site, imt, iml, gsims, truncation_level,
         n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width,
-        source_site_filter=filters.source_site_noop_filter,
-        rupture_site_filter=filters.rupture_site_noop_filter):
+        source_site_filter=filters.source_site_noop_filter):
     """
     Compute "Disaggregation" matrix representing conditional probability of an
     intensity mesaure type ``imt`` exceeding, at least once, an intensity
@@ -170,9 +177,6 @@ def disaggregation(
     :param source_site_filter:
         Optional source-site filter function. See
         :mod:`openquake.hazardlib.calc.filters`.
-    :param rupture_site_filter:
-        Optional rupture-site filter function. See
-        :mod:`openquake.hazardlib.calc.filters`.
 
     :returns:
         A tuple of two items. First is itself a tuple of bin edges information
@@ -186,7 +190,7 @@ def disaggregation(
     """
     bins_data = _collect_bins_data_old(sources, site, imt, iml, gsims,
                                        truncation_level, n_epsilons,
-                                       source_site_filter, rupture_site_filter)
+                                       source_site_filter)
     if all(len(x) == 0 for x in bins_data):
         # No ruptures have contributed to the hazard level at this site.
         warnings.warn(
@@ -205,7 +209,7 @@ def disaggregation(
 # TODO: remove the duplication
 def _collect_bins_data_old(sources, site, imt, iml, gsims,
                            truncation_level, n_epsilons,
-                           source_site_filter, rupture_site_filter):
+                           source_site_filter=filters.source_site_noop_filter):
     """
     Extract values of magnitude, distance, closest point, tectonic region
     types and PoE distribution.
@@ -239,8 +243,7 @@ def _collect_bins_data_old(sources, site, imt, iml, gsims,
                 _next_trt_num += 1
             tect_reg = trt_nums[tect_reg]
 
-            for rupture, r_sites in rupture_site_filter(
-                    source.iter_ruptures(), s_sites):
+            for rupture in source.iter_ruptures():
                 # extract rupture parameters of interest
                 mags.append(rupture.mag)
                 [jb_dist] = rupture.surface.get_joyner_boore_distance(sitemesh)
@@ -281,6 +284,7 @@ def _collect_bins_data_old(sources, site, imt, iml, gsims,
     ]
 
     return (mags, dists, lons, lats, tect_reg_types, trt_bins, probs_no_exceed)
+
 
 def _define_bins(bins_data, mag_bin_width, dist_bin_width,
                  coord_bin_width, truncation_level, n_epsilons):

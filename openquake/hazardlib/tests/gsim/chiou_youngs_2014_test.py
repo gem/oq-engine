@@ -16,16 +16,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.chiou_youngs_2014 import (ChiouYoungs2014,
-                                                        ChiouYoungs2014PEER,
-                                                        ChiouYoungs2014NearFaultEffect)
+from openquake.hazardlib.gsim.chiou_youngs_2014 import (
+    ChiouYoungs2014, ChiouYoungs2014PEER, ChiouYoungs2014NearFaultEffect)
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.calc import ground_motion_fields
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGV
 from openquake.hazardlib.site import Site, SiteCollection
-from openquake.hazardlib.source.rupture import Rupture, ParametricProbabilisticRupture
+from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.geo.line import Line

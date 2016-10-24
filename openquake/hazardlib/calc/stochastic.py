@@ -29,8 +29,7 @@ from openquake.hazardlib.calc import filters
 def stochastic_event_set(
         sources,
         sites=None,
-        source_site_filter=filters.source_site_noop_filter,
-        rupture_site_filter=filters.rupture_site_noop_filter):
+        source_site_filter=filters.source_site_noop_filter):
     """
     Generates a 'Stochastic Event Set' (that is a collection of earthquake
     ruptures) representing a possible *realization* of the seismicity as
@@ -75,8 +74,7 @@ def stochastic_event_set(
     # else apply filtering
     for source, s_sites in source_site_filter(sources, sites):
         try:
-            for rupture, r_sites in rupture_site_filter(
-                    source.iter_ruptures(), s_sites):
+            for rupture in source.iter_ruptures():
                 for i in range(rupture.sample_number_of_occurrences()):
                     yield rupture
         except Exception as err:
