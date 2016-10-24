@@ -44,7 +44,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <damage ds="no_damage" mean="2.12093E+01" stddev="1.79755E-01"/>
             <damage ds="slight" mean="4.68066E-01" stddev="1.06415E-01"/>
             <damage ds="moderate" mean="2.57753E-01" stddev="5.86002E-02"/>
-            <damage ds="extreme" mean="5.37644E-02" stddev="1.22234E-02"/>
+            <damage ds="extreme" mean="5.37644E-02" stddev="1.22233E-02"/>
             <damage ds="complete" mean="1.10691E-02" stddev="2.51657E-03"/>
         </DDNode>
     </dmgDistPerTaxonomy>
