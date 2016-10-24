@@ -21,8 +21,8 @@ import numpy
 
 from openquake.baselib.general import AccumDict
 from openquake.risklib import riskinput
-from openquake.commonlib import parallel
-from openquake.calculators import base, event_based
+from openquake.commonlib import parallel, calc
+from openquake.calculators import base
 from openquake.calculators.ucerf_event_based import (
     UCERFEventBasedCalculator, DEFAULT_TRT)
 from openquake.calculators.event_based_risk import (
@@ -68,9 +68,9 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
                 eid += 1
             if events:
                 ebruptures.append(
-                    event_based.EBRupture(
+                    calc.EBRupture(
                         rup, indices,
-                        numpy.array(events, event_based.event_dt),
+                        numpy.array(events, calc.event_dt),
                         src.source_id, src.src_group_id, serial))
                 serial += 1
                 res.num_events += len(events)
