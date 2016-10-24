@@ -705,9 +705,9 @@ def compute_ruptures_gmfs_curves(
                     eid += 1
                 if events:
                     ses_ruptures.append(
-                        event_based.EBRupture(
+                        calc.EBRupture(
                             rup, indices,
-                            numpy.array(events, event_based.event_dt),
+                            numpy.array(events, calc.event_dt),
                             ucerf.source_id, grp_id, serial))
                     serial += 1
                     rupdic.num_events += len(events)
