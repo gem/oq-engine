@@ -28,6 +28,22 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils as geo_utils
 
+mesh_dt = numpy.dtype([('lon', float), ('lat', float), ('depth', float)])
+
+
+def build_array(lons_lats_depths):
+    """
+    Convert a list of n triples into a composite numpy array with fields
+    lon, lat, depth and shape (n,) + lons.shape.
+    """
+    shape = (len(lons_lats_depths),) + lons_lats_depths[0][0].shape
+    arr = numpy.zeros(shape, mesh_dt)
+    for i, (lons, lats, depths) in enumerate(lons_lats_depths):
+        arr['lon'][i] = lons
+        arr['lat'][i] = lats
+        arr['depth'][i] = depths
+    return arr
+
 
 class Mesh(object):
     """
@@ -548,7 +564,7 @@ class RectangularMesh(Mesh):
         are calculated. Azimuth is always defined in a way that inclination
         angle doesn't exceed 90 degree.
         """
-        assert not 1 in self.lons.shape, (
+        assert 1 not in self.lons.shape, (
             "inclination and azimuth are only defined for mesh of more than "
             "one row and more than one column of points"
         )
