@@ -110,41 +110,40 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         """
         Associate the assets to the sites and build the riskinputs.
         """
-        if 'hazard_curves' in self.oqparam.inputs:  # read hazard from file
-            haz_sitecol, haz_curves = readinput.get_hcurves(self.oqparam)
+        oq = self.oqparam
+        if 'hazard_curves' in oq.inputs:  # read hazard from file
+            haz_sitecol, haz_curves = readinput.get_hcurves(oq)
             self.save_params()
             self.read_exposure()  # define .assets_by_site
             self.load_riskmodel()
             self.assetcol = riskinput.AssetCollection(
                 self.assets_by_site, self.cost_calculator,
-                self.oqparam.time_event)
+                oq.time_event)
             self.sitecol, self.assets_by_site = self.assoc_assets_sites(
                 haz_sitecol)
-            curves_by_trt_gsim = {(0, 'FromFile'): haz_curves}
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
+            [rlz] = self.rlzs_assoc.realizations
+            curves_by_rlz = {rlz: haz_curves}
         else:  # compute hazard or read it from the datastore
             super(ClassicalRiskCalculator, self).pre_execute()
             logging.info('Preparing the risk input')
-            curves_by_trt_gsim = {}
+            curves_by_rlz = {}
             nsites = len(self.sitecol.complete)
-            if 'poes' not in self.datastore:  # when building the short report
+            if 'hcurves' not in self.datastore:  # when building short report
                 return
-            for key in self.datastore['poes']:
-                pmap = self.datastore['poes/' + key]
-                grp_id = int(key)
-                gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
-                for i, gsim in enumerate(gsims):
-                    curves_by_trt_gsim[grp_id, gsim] = pmap.convert(
-                        self.oqparam.imtls, nsites, i)
-        self.riskinputs = self.build_riskinputs(curves_by_trt_gsim)
-        self.monitor.oqparam = self.oqparam
+            for key in self.datastore['hcurves']:
+                pmap = self.datastore['hcurves/' + key]
+                rlz = self.rlzs_assoc.get_rlz(key)
+                curves_by_rlz[rlz] = pmap.convert(oq.imtls, nsites)
+        self.riskinputs = self.build_riskinputs(curves_by_rlz)
+        self.monitor.oqparam = oq
 
         self.N = sum(len(assets) for assets in self.assets_by_site)
         self.L = len(self.riskmodel.loss_types)
         self.R = len(self.rlzs_assoc.realizations)
-        self.I = self.oqparam.insured_losses
-        self.Q1 = len(self.oqparam.quantile_loss_curves) + 1
+        self.I = oq.insured_losses
+        self.Q1 = len(oq.quantile_loss_curves) + 1
 
     def post_execute(self, result):
         """
