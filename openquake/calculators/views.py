@@ -529,7 +529,7 @@ def get_max_gmf_size(dstore):
         grp_id = ebr.grp_id
         n_ruptures[grp_id] += 1
         # there are 4 bytes per float
-        size[grp_id] += (len(ebr.indices) * ebr.multiplicity *
+        size[grp_id] += (len(ebr.sids) * ebr.multiplicity *
                          len(rlzs_by_grp_id[grp_id]) * n_imts) * 4
     [(grp_id, maxsize)] = size.most_common(1)
     return dict(n_imts=n_imts, size=maxsize, n_ruptures=n_ruptures[grp_id],
