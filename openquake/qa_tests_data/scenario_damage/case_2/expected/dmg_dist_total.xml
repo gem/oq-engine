@@ -8,7 +8,7 @@ xmlns:gml="http://www.opengis.net/gml"
             no_damage LS1 LS2
         </damageStates>
         <damage ds="no_damage" mean="2.05480E+03" stddev="1.34681E+03"/>
-        <damage ds="LS1" mean="2.48423E+03" stddev="8.34529E+02"/>
+        <damage ds="LS1" mean="2.48422E+03" stddev="8.34530E+02"/>
         <damage ds="LS2" mean="1.46098E+03" stddev="9.42001E+02"/>
     </totalDmgDist>
 </nrml>
