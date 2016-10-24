@@ -521,14 +521,12 @@ class EBRupture(object):
         if isinstance(surface, geo.MultiSurface):  # multiplanar surfaces
             arr = build_array([[s.corner_lons, s.corner_lats, s.corner_depths]
                                for s in surface.surfaces])
-            arr.reshape((len(surface.surfaces), 2, 2))
         else:
             mesh = surface.mesh
             if mesh is None:  # planar surface
                 arr = build_array([[surface.corner_lons,
                                     surface.corner_lats,
                                     surface.corner_depths]])
-                arr.reshape((1, 2, 2))
                 attrs['mesh_spacing'] = surface.mesh_spacing
             else:  # general surface
                 arr = build_array([[mesh.lons, mesh.lats, mesh.depths]])
