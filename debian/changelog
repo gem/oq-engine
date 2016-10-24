@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Simplified classical_risk (the numbers can be slightly different now)
   * Serialized the ruptures in the HDF5 properly (no pickle)
   * Introduced a parameter `iml_disagg` in the disaggregation calculator
   * Fixed `oq reduce` to preserve the NRML version
