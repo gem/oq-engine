@@ -557,6 +557,8 @@ class EBRupture(object):
         if time_span:
             self.rupture.temporal_occurrence_model = tom.PoissonTOM(time_span)
         self.rupture.surface_nodes = ()
+        if 'rupture_slip_direction' in attrs:
+            logging.error('rupture_slip_direction not implemented yet')
         self.rupture.rupture_slip_direction = None
         self.rupture.hypocenter = Point(*attrs.pop('hypo'))
         self.rupture.source_typology = hdf5.dotname2cls(
