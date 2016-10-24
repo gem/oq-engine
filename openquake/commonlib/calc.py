@@ -519,17 +519,20 @@ class EBRupture(object):
         attrs['surface_class'] = hdf5.cls2dotname(rup.surface.__class__)
         surface = self.rupture.surface
         if isinstance(surface, geo.MultiSurface):  # multiplanar surfaces
+            n = len(surface.surfaces)
             arr = build_array([[s.corner_lons, s.corner_lats, s.corner_depths]
-                               for s in surface.surfaces])
+                               for s in surface.surfaces]).reshape(n, 2, 2)
         else:
             mesh = surface.mesh
             if mesh is None:  # planar surface
                 arr = build_array([[surface.corner_lons,
                                     surface.corner_lats,
-                                    surface.corner_depths]])
+                                    surface.corner_depths]]).reshape(1, 2, 2)
                 attrs['mesh_spacing'] = surface.mesh_spacing
             else:  # general surface
-                arr = build_array([[mesh.lons, mesh.lats, mesh.depths]])
+                shp = (1,) + mesh.lons.shape
+                arr = build_array(
+                    [[mesh.lons, mesh.lats, mesh.depths]]).reshape(shp)
         attrs['nbytes'] = self.sids.nbytes + self.events.nbytes + arr.nbytes
         return dict(sids=self.sids, events=self.events, mesh=arr), attrs
 
