@@ -168,7 +168,7 @@ class PlanarSurface(BaseQuadrilateralSurface):
         """
         :param mesh_spacing: mesh spacing parameter
         :param array: a composite array with fields (lon, lat, depth)
-        ;returns: a :class:`PlanarSurface` instance
+        :returns: a :class:`PlanarSurface` instance
         """
         tl, tr, bl, br = _corners(array)
         strike = tl.azimuth(tr)
