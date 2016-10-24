@@ -55,12 +55,12 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
     core_task = classical_damage
     damages = datastore.persistent_attribute('damages-rlzs')
 
-    def check_poes(self, curves_by_trt_gsim):
+    def check_poes(self, curves_by_rlz):
         """
         Raise an error if one PoE = 1, since it would produce a log(0) in
         :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`
         """
-        for key, curves in curves_by_trt_gsim.items():
+        for rlz, curves in curves_by_rlz.items():
             for imt in self.oqparam.imtls:
                 for sid, poes in enumerate(curves[imt]):
                     if (poes == 1).any():
