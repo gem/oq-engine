@@ -107,10 +107,9 @@ def compute_losses(ssm, sitecol, assetcol, riskmodel,
     rlzs_assoc = ssm.info.get_rlzs_assoc()
     num_rlzs = len(rlzs_assoc.realizations)
     ri = riskinput.RiskInputFromRuptures(
-        DEFAULT_TRT, imts, sitecol, ruptures, trunc_level, correl_model,
-        min_iml)
-    res.append(
-        losses_by_taxonomy(ri, riskmodel, rlzs_assoc, assetcol, monitor))
+        DEFAULT_TRT, rlzs_assoc, imts, sitecol, ruptures, trunc_level,
+        correl_model, min_iml)
+    res.append(losses_by_taxonomy(ri, riskmodel, assetcol, monitor))
     res.sm_id = ssm.sm_id
     res.num_events = len(ri.eids)
     start = res.sm_id * num_rlzs
