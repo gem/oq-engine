@@ -251,7 +251,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
                         self.eid[sm_id] += 1
                         i += 1
                     if self.oqparam.save_ruptures:
-                        self.datastore['sescollection/%s' % ebr.serial] = ebr
+                        self.datastore['ruptures/%s' % ebr.serial] = ebr
                 if events:
                     ev = 'events/sm-%04d' % sm_id
                     self.datastore.extend(
@@ -270,8 +270,8 @@ class EventBasedRuptureCalculator(PSHACalculator):
         nr = sum(len(result[grp_id]) for grp_id in result)
         logging.info('Saved %d ruptures, %d events',
                      nr, sum(self.eid.values()))
-        if 'sescollection' in self.datastore:
-            self.datastore.set_nbytes('sescollection')
+        if 'ruptures' in self.datastore:
+            self.datastore.set_nbytes('ruptures')
         self.datastore.set_nbytes('events')
 
         for dset in self.rup_data.values():
@@ -420,8 +420,8 @@ class EventBasedCalculator(ClassicalCalculator):
                 for sr in sesruptures:
                     self.sesruptures.append(sr)
         else:  # read the ruptures from the datastore
-            for serial in self.datastore['sescollection']:
-                sr = self.datastore['sescollection/' + serial]
+            for serial in self.datastore['ruptures']:
+                sr = self.datastore['ruptures/' + serial]
                 self.sesruptures.append(sr)
         self.sesruptures.sort(key=operator.attrgetter('serial'))
         if self.oqparam.ground_motion_fields:
