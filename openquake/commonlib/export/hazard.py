@@ -103,7 +103,7 @@ class SESCollection(object):
             yield SES(sesruptures, self.investigation_time, idx)
 
 
-@export.add(('sescollection', 'xml'), ('sescollection', 'csv'))
+@export.add(('ruptures', 'xml'), ('ruptures', 'csv'))
 def export_ses_xml(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -114,8 +114,8 @@ def export_ses_xml(ekey, dstore):
     sm_by_grp = dstore['csm_info'].get_sm_by_grp()
     mesh = get_mesh(dstore['sitecol'])
     ruptures = []
-    for serial in dstore['sescollection']:
-        sr = dstore['sescollection/' + serial]
+    for serial in dstore['ruptures']:
+        sr = dstore['ruptures/' + serial]
         ruptures.extend(sr.export(mesh, sm_by_grp))
     ses_coll = SESCollection(
         groupby(ruptures, operator.attrgetter('ses_idx')),
@@ -701,7 +701,7 @@ def _calc_gmfs(dstore, serial, eid):
     rlzs = rlzs_assoc.realizations
     sitecol = dstore['sitecol'].complete
     N = len(sitecol.complete)
-    rup = dstore['sescollection/' + serial]
+    rup = dstore['ruptures/' + serial]
     correl_model = oq.get_correl_model()
     realizations = rlzs_assoc.get_rlzs_by_grp_id()[rup.grp_id]
     gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F64) for rlz in realizations])

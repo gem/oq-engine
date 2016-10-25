@@ -536,8 +536,8 @@ class EBRupture(object):
 
     def __fromh5__(self, dic, attrs):
         attrs = dict(attrs)
-        self.sids = dic['sids']
-        self.events = dic['events']
+        self.sids = dic['sids'].value
+        self.events = dic['events'].value
         surface_class = attrs['surface_class']
         surface_cls = hdf5.dotname2cls(surface_class)
         self.rupture = object.__new__(hdf5.dotname2cls(attrs['rupture_class']))
