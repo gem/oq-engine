@@ -244,8 +244,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 for sr in sesruptures:
                     all_ruptures.append(sr)
         else:  # read the ruptures from the datastore
-            for serial in self.datastore['sescollection']:
-                rup = self.datastore['sescollection/' + serial]
+            for serial in self.datastore['ruptures']:
+                rup = self.datastore['ruptures/' + serial]
                 all_ruptures.append(rup)
         all_ruptures.sort(key=operator.attrgetter('serial'))
         if not self.riskmodel.covs:
