@@ -23,7 +23,7 @@ from openquake.commonlib import datastore
 from openquake.calculators import base, classical_risk
 
 
-def classical_damage(riskinput, riskmodel, rlzs_assoc, monitor):
+def classical_damage(riskinput, riskmodel, monitor):
     """
     Core function for a classical damage computation.
 
@@ -31,16 +31,14 @@ def classical_damage(riskinput, riskmodel, rlzs_assoc, monitor):
         a :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
-    :param rlzs_assoc:
-        associations (grp_id, gsim) -> realizations
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     :returns:
         a nested dictionary rlz_idx -> asset -> <damage array>
     """
     with monitor:
-        result = {i: AccumDict() for i in range(len(rlzs_assoc))}
-        for out in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor):
+        result = {i: AccumDict() for i in range(len(riskinput.rlzs))}
+        for out in riskmodel.gen_outputs(riskinput, monitor):
             l, r = out.lr
             ordinals = [a.ordinal for a in out.assets]
             result[r] += dict(zip(ordinals, out.damages))
