@@ -81,7 +81,7 @@ def expose_outputs(dstore):
     """
     oq = dstore['oqparam']
     exportable = set(ekey[0] for ekey in export.export)
-    # small hack: remove the sescollection outputs from scenario
+    # small hack: remove the ruptures from scenario
     # calculators, as requested by Vitor
     calcmode = oq.calculation_mode
     dskeys = set(dstore) & exportable  # exportable datastore keys
@@ -95,8 +95,8 @@ def expose_outputs(dstore):
         rlzs = []
     if 'realizations' in dskeys and len(rlzs) <= 1:
         dskeys.remove('realizations')  # do not export a single realization
-    if 'sescollection' in dskeys and 'scenario' in calcmode:
-        exportable.remove('sescollection')  # do not export
+    if 'ruptures' in dskeys and 'scenario' in calcmode:
+        exportable.remove('ruptures')  # do not export
     logs.dbcmd('create_outputs', dstore.calc_id, sorted(dskeys))
 
 
