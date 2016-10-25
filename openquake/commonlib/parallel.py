@@ -253,7 +253,7 @@ class IterResult(object):
 
     def __iter__(self):
         self.received = []
-        for fut in as_completed(self.futures):
+        for fut in self.futures:
             check_mem_usage()  # log a warning if too much memory is used
             if hasattr(fut, 'result'):
                 result = fut.result()
@@ -444,7 +444,7 @@ class TaskManager(object):
                 yield fut
 
         else:  # future interface
-            for fut in self.results:
+            for fut in as_completed(self.results):
                 yield fut
 
     def reduce(self, agg=operator.add, acc=None):
@@ -499,7 +499,7 @@ class TaskManager(object):
         if not task_no:
             self.progress('No %s tasks were submitted', self.name)
         # NB: keep self._iterfutures() an iterator, especially with celery!
-        ir = IterResult(list(self._iterfutures()), self.name, task_no,
+        ir = IterResult(self._iterfutures(), self.name, task_no,
                         self.progress)
         ir.sent = self.sent  # for information purposes
         if self.sent:
