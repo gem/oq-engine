@@ -179,14 +179,14 @@ def export_agg_losses_ebr(ekey, dstore):
     elt_dt = numpy.dtype(dtlist)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     n = ekey[0].count(':')
-    if n == 1:
+    if n == 1:  # passed the eid, sm_id assumed to be zero
         sm_ids = (0,)
         all_eids = [int(ekey[0].split(':')[1])]
-    elif n == 2:
+    elif n == 2:  # passed both eid and sm_id
         sm_id, eid = map(int, ekey[0].split(':')[1:])
         sm_ids = (sm_id,)
         all_eids = [eid]
-    else:
+    else:  # eid and sm_id both unspecified, export all
         sm_ids = sorted(rlzs_assoc.rlzs_by_smodel)
         all_eids = slice(None)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
