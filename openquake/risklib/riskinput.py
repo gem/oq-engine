@@ -341,14 +341,15 @@ class CompositeRiskModel(collections.Mapping):
     def __len__(self):
         return len(self._riskmodels)
 
-    def build_input(self, hazards_by_site, assetcol, eps_dict):
+    def build_input(self, rlzs, hazards_by_site, assetcol, eps_dict):
         """
+        :param rlzs: a list of realizations
         :param hazards_by_site: an array of hazards per each site
         :param assetcol: AssetCollection instance
         :param eps_dict: a dictionary of epsilons
         :returns: a :class:`RiskInput` instance
         """
-        return RiskInput(hazards_by_site, assetcol, eps_dict)
+        return RiskInput(rlzs, hazards_by_site, assetcol, eps_dict)
 
     def build_inputs_from_ruptures(
             self, grp_trt, rlzs_assoc, imts, sitecol, all_ruptures,
@@ -509,12 +510,14 @@ class RiskInput(object):
     Contains all the assets and hazard values associated to a given
     imt and site.
 
+    :param rlzs: the realizations
     :param imt_taxonomies: a pair (IMT, taxonomies)
     :param hazard_by_site: array of hazards, one per site
     :param assets_by_site: array of assets, one per site
     :param eps_dict: dictionary of epsilons
     """
-    def __init__(self, hazard_by_site, assets_by_site, eps_dict):
+    def __init__(self, rlzs, hazard_by_site, assets_by_site, eps_dict):
+        self.rlzs = rlzs
         self.hazard_by_site = hazard_by_site
         self.assets_by_site = assets_by_site
         self.eps = eps_dict
