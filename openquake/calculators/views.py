@@ -524,8 +524,8 @@ def get_max_gmf_size(dstore):
     rlzs_by_grp_id = dstore['csm_info'].get_rlzs_assoc().get_rlzs_by_grp_id()
     n_ruptures = collections.Counter()
     size = collections.Counter()  # by grp_id
-    for serial in dstore['sescollection']:
-        ebr = dstore['sescollection/' + serial]
+    for serial in dstore['ruptures']:
+        ebr = dstore['ruptures/' + serial]
         grp_id = ebr.grp_id
         n_ruptures[grp_id] += 1
         # there are 4 bytes per float
@@ -550,7 +550,7 @@ def view_biggest_ebr_gmf(token, dstore):
 
 @view.add('ruptures_events')
 def view_ruptures_events(token, dstore):
-    num_ruptures = len(dstore['sescollection'])
+    num_ruptures = len(dstore['ruptures'])
     num_events = len(dstore['events'])
     mult = round(num_events / num_ruptures, 3)
     lst = [('Total number of ruptures', num_ruptures),
