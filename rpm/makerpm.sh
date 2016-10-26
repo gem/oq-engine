@@ -24,14 +24,24 @@ BASE=$(cd $(dirname $0)/.. && /bin/pwd)
 
 REPO=oq-engine
 BRANCH='HEAD'
+STABLE=0
 EXTRA=''
 
 while (( "$#" )); do
     case "$1" in
         "-h")
             echo "Usage: $0 [-c] [-l] [BRANCH]"
-            echo -e "\nOptions:\n\t-l: build RPM locally\n\t-c: clean build dir before starting a new build"
+            echo -e "\nOptions:\n\t-l: build RPM locally\n\t-c: clean build dir before starting a new build\n\t-r N: make a stable release"
             exit 0
+            ;;
+        "-r")
+            STABLE=1
+            shift
+            if ! [[ $1 =~ ^[0-9]+$ ]] ; then
+               echo "Error: please provide a valid PKG number" >&2; exit 1
+            fi
+            PKG="$1"
+            shift
             ;;
         "-l")
             BUILD=1
@@ -62,14 +72,22 @@ VER=$(cat openquake/risklib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\
 TIME=$(date +"%s")
 echo "$LIB - $BRANCH - $SHA - $VER"
 
-sed "s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_release_##/git${SHA}/g;s/##_timestamp_##/${TIME}/g" rpm/python-${REPO}.spec.inc > build-rpm/SPECS/python-${REPO}.spec
+sed "s/##_stable_##/${STABLE}/g;s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_timestamp_##/${TIME}/g" rpm/python-${REPO}.spec.inc > build-rpm/SPECS/python-${REPO}.spec
 
-git archive --format=tar --prefix=${REPO}-${VER}-git${SHA}/ $BRANCH | gzip -9 > build-rpm/SOURCES/${REPO}-${VER}-git${SHA}.tar.gz
+if [ "$STABLE" == "1" ]; then
+    git archive --format=tar --prefix=${REPO}-${VER}/ $BRANCH | gzip -9 > build-rpm/SOURCES/${REPO}-${VER}.tar.gz
+    sed -i "s/##_release_##/${PKG}/g" build-rpm/SPECS/python-${REPO}.spec
+    OUT=python-${REPO}-${VER}-${PKG}.src.rpm
+else
+    git archive --format=tar --prefix=${REPO}-${VER}-git${SHA}/ $BRANCH | gzip -9 > build-rpm/SOURCES/${REPO}-${VER}-git${SHA}.tar.gz
+    sed -i "s/##_release_##/git${SHA}/g" build-rpm/SPECS/python-${REPO}.spec
+    OUT=python-${REPO}-${VER}-${TIME}_git${SHA}.src.rpm
+fi
 cp debian/patches/openquake.cfg.patch build-rpm/SOURCES
 
 mock -r openquake --buildsrpm --spec build-rpm/SPECS/python-${REPO}.spec --source build-rpm/SOURCES --resultdir=build-rpm/SRPMS/
 if [ "$BUILD" == "1" ]; then
-    mock -r openquake build-rpm/SRPMS/python-${REPO}-${VER}-${TIME}_git${SHA}.src.rpm --resultdir=build-rpm/RPMS $EXTRA
+    mock -r openquake build-rpm/SRPMS/${OUT} --resultdir=build-rpm/RPMS $EXTRA
 fi
 
 cd $CUR

@@ -1,3 +1,12 @@
+  [Michele Simionato]
+  * Now by default we do not save the ruptures anymore
+  * Fixed a memory leak recently introduced in parallel.py
+  * Simplified classical_risk (the numbers can be slightly different now)
+  * Serialized the ruptures in the HDF5 properly (no pickle)
+  * Introduced a parameter `iml_disagg` in the disaggregation calculator
+  * Fixed `oq reduce` to preserve the NRML version
+  * Fixed a bug when splitting the fault sources by magnitude
+
 python-oq-engine (2.1.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]

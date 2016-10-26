@@ -335,7 +335,8 @@ class OqParamTestCase(unittest.TestCase):
                 maximum_distance='400',
                 intensity_measure_types_and_levels="{'PGV': [0.1, 0.2, 0.3]}",
                 uniform_hazard_spectra='1')
-        self.assertIn("poes_disagg must be set", str(ctx.exception))
+        self.assertIn("poes_disagg or iml_disagg must be set",
+                      str(ctx.exception))
         with self.assertRaises(ValueError) as ctx:
             OqParam(
                 calculation_mode='disaggregation',

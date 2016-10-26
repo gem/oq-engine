@@ -209,22 +209,17 @@ def classical(sources, sitecol, gsims, monitor):
         assert src.src_group_id == src_group_id
     trt = sources[0].tectonic_region_type
     max_dist = monitor.maximum_distance[trt]
-
-    dic = AccumDict()
-    if monitor.poes_disagg:
+    if monitor.disagg:
         sm_id = monitor.sm_id
-        dic.bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
+        bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
     else:
-        dic.bbs = []
-    # NB: the source_site_filter below is ESSENTIAL for performance inside
-    # pmap_from_grp, since it reduces the full site collection
-    # to a filtered one *before* doing the rupture filtering
-    dic[src_group_id] = pmap_from_grp(
+        bbs = []
+    pmap = pmap_from_grp(
         sources, sitecol, imtls, gsims, truncation_level,
-        maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
-    dic.calc_times = monitor.calc_times  # added by pmap_from_grp
-    dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
-    return dic
+        maximum_distance=max_dist, bbs=bbs, monitor=monitor)
+    pmap.bbs = bbs
+    pmap.grp_id = src_group_id
+    return pmap
 
 
 def saving_sources_by_task(iterargs, dstore):
@@ -235,7 +230,7 @@ def saving_sources_by_task(iterargs, dstore):
     for args in iterargs:
         source_ids.append(' ' .join(src.source_id for src in args[0]))
         yield args
-    dstore['source_ids'] = numpy.array(source_ids, hdf5.vstr)
+    dstore['task_sources'] = numpy.array(source_ids, hdf5.vstr)
 
 
 @base.calculators.add('psha')
@@ -246,27 +241,24 @@ class PSHACalculator(base.HazardCalculator):
     core_task = classical
     source_info = datastore.persistent_attribute('source_info')
 
-    def agg_dicts(self, acc, val):
+    def agg_dicts(self, acc, pmap):
         """
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param val: a nested dictionary grp_id -> ProbabilityMap
+        :param pmap: a ProbabilityMap
         """
         with self.monitor('aggregate curves', autoflush=True):
-            [(grp_id, pmap)] = val.items()  # val is a dict of len 1
-            if hasattr(val, 'calc_times'):
-                for src_id, nsites, calc_time in val.calc_times:
-                    src_id = src_id.split(':', 1)[0]
-                    info = self.infos[grp_id, src_id]
-                    info.calc_time += calc_time
-                    info.num_sites = max(info.num_sites, nsites)
-                    info.num_split += 1
-            if hasattr(val, 'eff_ruptures'):
-                acc.eff_ruptures += val.eff_ruptures
-            for bb in getattr(val, 'bbs', []):
+            for src_id, nsites, calc_time in pmap.calc_times:
+                src_id = src_id.split(':', 1)[0]
+                info = self.infos[pmap.grp_id, src_id]
+                info.calc_time += calc_time
+                info.num_sites = max(info.num_sites, nsites)
+                info.num_split += 1
+            acc.eff_ruptures += pmap.eff_ruptures
+            for bb in getattr(pmap, 'bbs', []):  # for disaggregation
                 acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
-            acc[grp_id] |= pmap
+            acc[pmap.grp_id] |= pmap
         self.datastore.flush()
         return acc
 
@@ -292,7 +284,7 @@ class PSHACalculator(base.HazardCalculator):
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         zd.bb_dict = BBdict()
-        if self.oqparam.poes_disagg:
+        if self.oqparam.poes_disagg or self.oqparam.iml_disagg:
             for sid in self.sitecol.sids:
                 for smodel in self.csm.source_models:
                     zd.bb_dict[smodel.ordinal, sid] = BoundingBox(
@@ -311,7 +303,7 @@ class PSHACalculator(base.HazardCalculator):
             truncation_level=oq.truncation_level,
             imtls=oq.imtls,
             maximum_distance=oq.maximum_distance,
-            poes_disagg=oq.poes_disagg,
+            disagg=oq.poes_disagg or oq.iml_disagg,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
             seed=oq.random_seed)
         with self.monitor('managing sources', autoflush=True):
@@ -347,7 +339,7 @@ class PSHACalculator(base.HazardCalculator):
             logging.info('Sending source group #%d of %d (%s, %d sources)',
                          sg.id + 1, ngroups, sg.trt, len(sg.sources))
             gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
-            if oq.poes_disagg:  # only for disaggregation
+            if oq.poes_disagg or oq.iml_disagg:  # only for disaggregation
                 monitor.sm_id = self.rlzs_assoc.sm_ids[sg.id]
             monitor.seed = self.rlzs_assoc.seed
             monitor.samples = self.rlzs_assoc.samples[sg.id]
