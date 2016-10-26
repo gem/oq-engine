@@ -23,11 +23,14 @@ import io
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import decode
+from openquake.baselib.python3compat import encode, decode
 from openquake.baselib.general import get_array, group_array, AccumDict
+from openquake.hazardlib.geo.mesh import RectangularMesh, build_array
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib import geo, tom
+from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.commonlib import readinput, oqvalidation, writers
+from openquake.commonlib import readinput, oqvalidation, writers, util
 
 
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
@@ -39,6 +42,12 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+
+event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32),
+                        ('sample', U32)])
+stored_event_dt = numpy.dtype([
+    ('rupserial', U32), ('ses', U32), ('occ', U32),
+    ('sample', U32), ('grp_id', U16), ('source_id', 'S30')])
 
 # ############## utilities for the classical calculator ############### #
 
@@ -251,7 +260,7 @@ def get_gmfs(dstore):
             gmfs_by_imt[imt] = gmfs_by_imt[imt][sitecol.indices]
 
         logging.info('Preparing the risk input')
-        return etags, {(0, 'FromFile'): gmfs_by_imt}
+        return etags, [gmfs_by_imt]
 
     # else from datastore
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
@@ -270,16 +279,14 @@ def get_gmfs(dstore):
     imt_dt = numpy.dtype([(str(imt), F32) for imt in oq.imtls])
     E = oq.number_of_ground_motion_fields
     # build a matrix N x E for each GSIM realization
-    gmfs = {(grp_id, gsim): numpy.zeros((N, E), imt_dt)
-            for grp_id, gsim in rlzs_assoc}
+    gmfs = numpy.zeros((len(rlzs_assoc), N, E), imt_dt)
     for i, rlz in enumerate(rlzs):
         data = group_array(dstore['gmf_data/%04d' % i], 'sid')
         for sid, array in data.items():
             if sid in risk_indices:
                 for imti, imt in enumerate(oq.imtls):
                     a = get_array(array, imti=imti)
-                    gs = str(rlz.gsim_rlz)
-                    gmfs[0, gs][imt][sid, a['eid']] = a['gmv']
+                    gmfs[imt][i, sid, a['eid']] = a['gmv']
     etags = numpy.array(
         sorted([b'scenario-%010d~ses=1' % i
                 for i in range(oq.number_of_ground_motion_fields)]))
@@ -369,3 +376,228 @@ class StochasticEventSetCollection(object):
         out = io.StringIO()
         writers.write_csv(out, self.data, sep='\t')
         return out.getvalue()
+
+
+def get_geom(surface, is_from_fault_source, is_multi_surface):
+    """
+    The following fields can be interpreted different ways,
+    depending on the value of `is_from_fault_source`. If
+    `is_from_fault_source` is True, each of these fields should
+    contain a 2D numpy array (all of the same shape). Each triple
+    of (lon, lat, depth) for a given index represents the node of
+    a rectangular mesh. If `is_from_fault_source` is False, each
+    of these fields should contain a sequence (tuple, list, or
+    numpy array, for example) of 4 values. In order, the triples
+    of (lon, lat, depth) represent top left, top right, bottom
+    left, and bottom right corners of the the rupture's planar
+    surface. Update: There is now a third case. If the rupture
+    originated from a characteristic fault source with a
+    multi-planar-surface geometry, `lons`, `lats`, and `depths`
+    will contain one or more sets of 4 points, similar to how
+    planar surface geometry is stored (see above).
+
+    :param rupture: an instance of :class:`openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
+    :param is_from_fault_source: a boolean
+    :param is_multi_surface: a boolean
+    """
+    if is_from_fault_source:
+        # for simple and complex fault sources,
+        # rupture surface geometry is represented by a mesh
+        surf_mesh = surface.get_mesh()
+        lons = surf_mesh.lons
+        lats = surf_mesh.lats
+        depths = surf_mesh.depths
+    else:
+        if is_multi_surface:
+            # `list` of
+            # openquake.hazardlib.geo.surface.planar.PlanarSurface
+            # objects:
+            surfaces = surface.surfaces
+
+            # lons, lats, and depths are arrays with len == 4*N,
+            # where N is the number of surfaces in the
+            # multisurface for each `corner_*`, the ordering is:
+            #   - top left
+            #   - top right
+            #   - bottom left
+            #   - bottom right
+            lons = numpy.concatenate([x.corner_lons for x in surfaces])
+            lats = numpy.concatenate([x.corner_lats for x in surfaces])
+            depths = numpy.concatenate([x.corner_depths for x in surfaces])
+        else:
+            # For area or point source,
+            # rupture geometry is represented by a planar surface,
+            # defined by 3D corner points
+            lons = numpy.zeros((4))
+            lats = numpy.zeros((4))
+            depths = numpy.zeros((4))
+
+            # NOTE: It is important to maintain the order of these
+            # corner points. TODO: check the ordering
+            for i, corner in enumerate((surface.top_left,
+                                        surface.top_right,
+                                        surface.bottom_left,
+                                        surface.bottom_right)):
+                lons[i] = corner.longitude
+                lats[i] = corner.latitude
+                depths[i] = corner.depth
+    return lons, lats, depths
+
+
+class EBRupture(object):
+    """
+    An event based rupture. It is a wrapper over a hazardlib rupture
+    object, containing an array of site indices affected by the rupture,
+    as well as the tags of the corresponding seismic events.
+    """
+    params = ['mag', 'rake', 'tectonic_region_type', 'hypo',
+              'source_class', 'pmf', 'occurrence_rate',
+              'time_span', 'rupture_slip_direction']
+
+    def __init__(self, rupture, sids, events, source_id, grp_id, serial):
+        self.rupture = rupture
+        self.sids = sids
+        self.events = events
+        self.source_id = source_id
+        self.grp_id = grp_id
+        self.serial = serial
+        self.weight = len(sids) * len(events)
+
+    @property
+    def etags(self):
+        """
+        An array of tags for the underlying seismic events
+        """
+        tags = []
+        for (eid, ses, occ, sampleid) in self.events:
+            tag = 'trt=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
+                self.grp_id, ses, self.source_id, self.serial, occ)
+            if sampleid > 0:
+                tag += '~sample=%d' % sampleid
+            tags.append(encode(tag))
+        return numpy.array(tags)
+
+    @property
+    def eids(self):
+        """
+        An array with the underlying event IDs
+        """
+        return self.events['eid']
+
+    @property
+    def multiplicity(self):
+        """
+        How many times the underlying rupture occurs.
+        """
+        return len(self.events)
+
+    def export(self, mesh):
+        """
+        Yield :class:`openquake.commonlib.util.Rupture` objects, with all the
+        attributes set, suitable for export in XML format.
+        """
+        rupture = self.rupture
+        for etag in self.etags:
+            new = util.Rupture(etag, self.sids)
+            new.mesh = mesh[self.sids]
+            new.etag = etag
+            new.rupture = new
+            new.is_from_fault_source = iffs = isinstance(
+                rupture.surface, (geo.ComplexFaultSurface,
+                                  geo.SimpleFaultSurface))
+            new.is_multi_surface = ims = isinstance(
+                rupture.surface, geo.MultiSurface)
+            new.lons, new.lats, new.depths = get_geom(
+                rupture.surface, iffs, ims)
+            new.surface = rupture.surface
+            new.strike = rupture.surface.get_strike()
+            new.dip = rupture.surface.get_dip()
+            new.rake = rupture.rake
+            new.hypocenter = rupture.hypocenter
+            new.tectonic_region_type = rupture.tectonic_region_type
+            new.magnitude = new.mag = rupture.mag
+            new.top_left_corner = None if iffs or ims else (
+                new.lons[0], new.lats[0], new.depths[0])
+            new.top_right_corner = None if iffs or ims else (
+                new.lons[1], new.lats[1], new.depths[1])
+            new.bottom_left_corner = None if iffs or ims else (
+                new.lons[2], new.lats[2], new.depths[2])
+            new.bottom_right_corner = None if iffs or ims else (
+                new.lons[3], new.lats[3], new.depths[3])
+            yield new
+
+    def __toh5__(self):
+        rup = self.rupture
+        attrs = dict(source_id=self.source_id, grp_id=self.grp_id,
+                     serial=self.serial)
+        for par in self.params:
+            val = getattr(self.rupture, par, None)
+            if val is not None:
+                attrs[par] = val
+        if hasattr(rup, 'temporal_occurrence_model'):
+            attrs['time_span'] = rup.temporal_occurrence_model.time_span
+        if hasattr(rup, 'pmf'):
+            attrs['pmf'] = rup.pmf_array()
+        attrs['hypo'] = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
+        attrs['source_class'] = hdf5.cls2dotname(rup.source_typology)
+        attrs['rupture_class'] = hdf5.cls2dotname(rup.__class__)
+        attrs['surface_class'] = hdf5.cls2dotname(rup.surface.__class__)
+        surface = self.rupture.surface
+        if isinstance(surface, geo.MultiSurface):  # multiplanar surfaces
+            n = len(surface.surfaces)
+            arr = build_array([[s.corner_lons, s.corner_lats, s.corner_depths]
+                               for s in surface.surfaces]).reshape(n, 2, 2)
+        else:
+            mesh = surface.mesh
+            if mesh is None:  # planar surface
+                arr = build_array([[surface.corner_lons,
+                                    surface.corner_lats,
+                                    surface.corner_depths]]).reshape(1, 2, 2)
+                attrs['mesh_spacing'] = surface.mesh_spacing
+            else:  # general surface
+                shp = (1,) + mesh.lons.shape
+                arr = build_array(
+                    [[mesh.lons, mesh.lats, mesh.depths]]).reshape(shp)
+        attrs['nbytes'] = self.sids.nbytes + self.events.nbytes + arr.nbytes
+        return dict(sids=self.sids, events=self.events, mesh=arr), attrs
+
+    def __fromh5__(self, dic, attrs):
+        attrs = dict(attrs)
+        self.sids = dic['sids'].value
+        self.events = dic['events'].value
+        surface_class = attrs['surface_class']
+        surface_cls = hdf5.dotname2cls(surface_class)
+        self.rupture = object.__new__(hdf5.dotname2cls(attrs['rupture_class']))
+        self.rupture.surface = surface = object.__new__(surface_cls)
+        m = dic['mesh'].value
+        if 'mesh_spacing' in attrs:  # PlanarSurface
+            self.rupture.surface = (
+                geo.PlanarSurface.from_array(
+                    attrs.pop('mesh_spacing'), m.flatten()))
+        else:  # general surface
+            surface.strike = surface.dip = None  # they will be computed
+            surface.mesh = RectangularMesh(
+                m['lon'][0], m['lat'][0], m['depth'][0])
+        time_span = attrs.pop('time_span')
+        if time_span:
+            self.rupture.temporal_occurrence_model = tom.PoissonTOM(time_span)
+        self.rupture.surface_nodes = ()
+        if 'rupture_slip_direction' in attrs:
+            logging.error('rupture_slip_direction not implemented yet')
+        self.rupture.rupture_slip_direction = None
+        self.rupture.hypocenter = Point(*attrs.pop('hypo'))
+        self.rupture.source_typology = hdf5.dotname2cls(
+            attrs.pop('source_class'))
+        self.source_id = attrs.pop('source_id')
+        self.grp_id = attrs.pop('grp_id')
+        self.serial = attrs.pop('serial')
+        del attrs['rupture_class']
+        del attrs['surface_class']
+        vars(self.rupture).update(attrs)
+
+    def __lt__(self, other):
+        return self.serial < other.serial
+
+    def __repr__(self):
+        return '<%s #%d, grp_id=%d>' % (self.__class__.__name__,
+                                        self.serial, self.grp_id)
