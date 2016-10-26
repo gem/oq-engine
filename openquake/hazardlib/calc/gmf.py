@@ -26,7 +26,6 @@ import numpy
 import scipy.stats
 
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.calc import filters
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
 

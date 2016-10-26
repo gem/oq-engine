@@ -1,6 +1,9 @@
   [Ozkan Kale, Graeme Weatherill]
   * Implements the Kale et al. (2015) GMPE for Turkey and Iran
 
+  [Michele Simionato]
+  * Fixed a 32 bit issue when the FilteredSiteCollection
+
   [Marco Pagani]
   * Add the azimuth 'distance' parameter
 

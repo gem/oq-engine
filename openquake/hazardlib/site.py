@@ -474,7 +474,7 @@ class FilteredSiteCollection(object):
 
 def _extract_site_param(fsc, name):
     # extract the site parameter 'name' from the filtered site collection
-    return getattr(fsc.complete, name).take(fsc.indices)
+    return getattr(fsc.complete, name)[fsc.indices]
 
 
 # attach a number of properties filtering the arrays

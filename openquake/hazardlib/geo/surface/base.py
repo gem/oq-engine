@@ -272,7 +272,7 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
     """
 
     def __init__(self):
-        self._mesh = None
+        self.mesh = None
 
     def get_min_distance(self, mesh):
         """
@@ -460,13 +460,13 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
             It is required that the mesh is constructed "top-to-bottom".
             That is, the first row of points should be the shallowest.
         """
-        if self._mesh is None:
-            self._mesh = self._create_mesh()
+        if self.mesh is None:
+            self.mesh = self._create_mesh()
             assert (
-                self._mesh.depths is None or len(self._mesh.depths) == 1
-                or self._mesh.depths[0][0] < self._mesh.depths[-1][0]
+                self.mesh.depths is None or len(self.mesh.depths) == 1
+                or self.mesh.depths[0][0] < self.mesh.depths[-1][0]
             ), "the first row of points in the mesh must be the shallowest"
-        return self._mesh
+        return self.mesh
 
     def get_area(self):
         """
