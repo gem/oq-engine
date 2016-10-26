@@ -1,41 +1,45 @@
+import os
+import tempfile
 import unittest
-from openquake.qa_tests_data.classical import case_1, case_4
-from openquake.qa_tests_data.event_based_risk import case_miriam
-from openquake.commonlib import readinput, calc
+import numpy
+from openquake.baselib import hdf5
+from openquake.commonlib import nrml_examples, calc, source
+from openquake.commonlib.sourceconverter import SourceConverter
+
+NRML_DIR = os.path.dirname(nrml_examples.__file__)
+MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'source_model/mixed.xml')
+parser = source.SourceModelParser(SourceConverter(
+    investigation_time=50.,
+    rupture_mesh_spacing=1,  # km
+    complex_fault_mesh_spacing=1,  # km
+    width_of_mfd_bin=1.,  # for Truncated GR MFDs
+    area_source_discretization=1.,  # km
+))
 
 
-def gen_ruptures(src):
-    for i, rup in enumerate(src.iter_ruptures()):
-        rup.serial = src.serial[i]
-        yield rup
+class SerializeRuptureTestCase(unittest.TestCase):
+    def test(self):
+        groups = parser.parse_groups(MIXED_SRC_MODEL)
+        ([point], [cmplx], [area, simple],
+         [char_simple, char_complex, char_multi]) = groups
+        fh, self.path = tempfile.mkstemp(suffix='.hdf5')
+        os.close(fh)
+        print('Writing on %s' % self.path)
+        self.i = 0
+        self.sids = numpy.array([0], numpy.uint32)
+        self.events = numpy.array([(0, 1, 1, 0)], calc.event_dt)
+        self.write_read(point)
+        self.write_read(char_simple)
+        self.write_read(char_complex)
+        self.write_read(char_multi)
 
-
-class StochasticEventSetCollectionTestCase(unittest.TestCase):
-
-    def check(self, pkg, expected):
-        oq = readinput.get_oqparam('job.ini', pkg)
-        csm = readinput.get_composite_source_model(oq)
-        csm.init_serials()
-        [src] = csm.get_sources()
-        sesc = calc.StochasticEventSetCollection(list(gen_ruptures(src))[:3])
-        self.assertEqual(str(sesc), expected)
-
-    def test_point_source(self):
-        self.check(case_1, '''\
-rupserial\tmagnitude\tlon\tlat\tdepth\ttectonic_region_type\tstrike\tdip\trake\tboundary
-0\t4.000000E+00\t0.00000\t0.00000\t4.000000E+00\tactive shallow crust\t0.000000E+00\t9.000000E+01\t0.000000E+00\tMULTIPOLYGON(((0.0 -0.00449660802959,0.0 0.00449660802959,0.0 -0.00449660802959,0.0 0.00449660802959,0.0 -0.00449660802959)))
-''')
-
-    def _test_simple_fault_source(self):
-        self.check(case_4, '')
-
-    def test_complex_fault_source(self):
-        self.check(case_miriam, '''\
-rupserial\tmagnitude\tlon\tlat\tdepth\ttectonic_region_type\tstrike\tdip\trake\tboundary\n0\t5.100000E+00\t-78.78848\t14.80459\t9.583333E+00\tActive Shallow Crust\t3.536375E+02\t8.113641E+01\t1.800000E+02\tMULTIPOLYGON(((-78.79 14.76,-78.8003402907 14.8490839989,-78.7868941663 14.8492561721,-78.7766666668 14.760001911,-78.79 14.76)))\n1\t5.100000E+00\t-78.79876\t14.89375\t9.583333E+00\tActive Shallow Crust\t3.536349E+02\t8.105386E+01\t1.800000E+02\tMULTIPOLYGON(((-78.8003402907 14.8490839989,-78.8106891099 14.9381675351,-78.7971301181 14.938509981,-78.7868941663 14.8492561721,-78.8003402907 14.8490839989)))\n2\t5.100000E+00\t-78.80906\t14.98292\t9.583333E+00\tActive Shallow Crust\t3.536322E+02\t8.097137E+01\t1.800000E+02\tMULTIPOLYGON(((-78.8106891099 14.9381675351,-78.8210465183 15.0272506054,-78.8073745825 15.0277633343,-78.7971301181 14.938509981,-78.8106891099 14.9381675351)))
-''')
-
-    def _test_characteristic_source(self):
-        pass
-
-    def _test_nonparametric_source(self):
-        pass
+    def write_read(self, src):
+        with hdf5.File(self.path, 'r+') as f:
+            for rup in src.iter_ruptures():
+                ebr = calc.EBRupture(
+                    rup, self.sids, self.events, src.source_id, 0, self.i)
+                f[str(self.i)] = ebr
+                self.i += 1
+        with hdf5.File(self.path, 'r') as f:
+            for key in f:
+                f[key]

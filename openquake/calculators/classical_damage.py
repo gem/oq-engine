@@ -23,7 +23,7 @@ from openquake.commonlib import datastore
 from openquake.calculators import base, classical_risk
 
 
-def classical_damage(riskinput, riskmodel, rlzs_assoc, monitor):
+def classical_damage(riskinput, riskmodel, monitor):
     """
     Core function for a classical damage computation.
 
@@ -31,16 +31,14 @@ def classical_damage(riskinput, riskmodel, rlzs_assoc, monitor):
         a :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
-    :param rlzs_assoc:
-        associations (grp_id, gsim) -> realizations
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     :returns:
         a nested dictionary rlz_idx -> asset -> <damage array>
     """
     with monitor:
-        result = {i: AccumDict() for i in range(len(rlzs_assoc))}
-        for out in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor):
+        result = {i: AccumDict() for i in range(len(riskinput.rlzs))}
+        for out in riskmodel.gen_outputs(riskinput, monitor):
             l, r = out.lr
             ordinals = [a.ordinal for a in out.assets]
             result[r] += dict(zip(ordinals, out.damages))
@@ -55,12 +53,12 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
     core_task = classical_damage
     damages = datastore.persistent_attribute('damages-rlzs')
 
-    def check_poes(self, curves_by_trt_gsim):
+    def check_poes(self, curves_by_rlz):
         """
         Raise an error if one PoE = 1, since it would produce a log(0) in
         :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`
         """
-        for key, curves in curves_by_trt_gsim.items():
+        for rlz, curves in curves_by_rlz.items():
             for imt in self.oqparam.imtls:
                 for sid, poes in enumerate(curves[imt]):
                     if (poes == 1).any():

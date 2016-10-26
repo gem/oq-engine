@@ -34,6 +34,16 @@ chmod +x openquake-setup-macos-2.1.0-1.run
 ```
 then follow the wizard on screen. By default the code is installed in `~/openquake`
 
+### Upgrade from a previous installation
+
+To upgrade from a previous installation you need to manually remove it first
+
+```bash
+# default is ~/openquake
+rm -Rf /path/to/previous/installation
+```
+
+
 ## Run the OpenQuake Engine
 
 Before running the OpenQuake Engine its environment must be loaded

@@ -34,7 +34,7 @@ def by_l_assets(output):
     return output.lr[0], tuple(output.assets)
 
 
-def classical_risk(riskinput, riskmodel, rlzs_assoc, monitor):
+def classical_risk(riskinput, riskmodel, monitor):
     """
     Compute and return the average losses for each asset.
 
@@ -42,17 +42,14 @@ def classical_risk(riskinput, riskmodel, rlzs_assoc, monitor):
         a :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
-    :param rlzs_assoc:
-        associations (grp_id, gsim) -> realizations
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
     oq = monitor.oqparam
     ins = oq.insured_losses
-    rlzs = rlzs_assoc.realizations
     result = dict(
         loss_curves=[], loss_maps=[], stat_curves=[], stat_maps=[])
-    outputs = list(riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor))
+    outputs = list(riskmodel.gen_outputs(riskinput, monitor))
     for out in outputs:
         l, r = out.lr
         for i, asset in enumerate(out.assets):
@@ -76,10 +73,10 @@ def classical_risk(riskinput, riskmodel, rlzs_assoc, monitor):
                 (l, r, aid, out.loss_maps[:, i]))
 
         # compute statistics
-        if len(rlzs) > 1:
+        if len(riskinput.rlzs) > 1:
             for (l, assets), outs in groupby(outputs, by_l_assets).items():
                 for out in outs:  # outputs with the same loss type and assets
-                    out.weight = rlzs[out.lr[1]].weight
+                    out.weight = riskinput.rlzs[out.lr[1]].weight
                 curve_resolution = outs[0].loss_curves.shape[-1]
                 statsbuilder = scientific.StatsBuilder(
                     oq.quantile_loss_curves,
@@ -110,41 +107,42 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         """
         Associate the assets to the sites and build the riskinputs.
         """
-        if 'hazard_curves' in self.oqparam.inputs:  # read hazard from file
-            haz_sitecol, haz_curves = readinput.get_hcurves(self.oqparam)
+        oq = self.oqparam
+        if 'hazard_curves' in oq.inputs:  # read hazard from file
+            haz_sitecol, haz_curves = readinput.get_hcurves(oq)
             self.save_params()
             self.read_exposure()  # define .assets_by_site
             self.load_riskmodel()
             self.assetcol = riskinput.AssetCollection(
                 self.assets_by_site, self.cost_calculator,
-                self.oqparam.time_event)
+                oq.time_event)
             self.sitecol, self.assets_by_site = self.assoc_assets_sites(
                 haz_sitecol)
-            curves_by_trt_gsim = {(0, 'FromFile'): haz_curves}
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
+            [rlz] = self.rlzs_assoc.realizations
+            curves_by_rlz = {rlz: haz_curves}
         else:  # compute hazard or read it from the datastore
             super(ClassicalRiskCalculator, self).pre_execute()
             logging.info('Preparing the risk input')
-            curves_by_trt_gsim = {}
+            curves_by_rlz = {}
             nsites = len(self.sitecol.complete)
-            if 'poes' not in self.datastore:  # when building the short report
+            if 'hcurves' not in self.datastore:  # when building short report
                 return
-            for key in self.datastore['poes']:
-                pmap = self.datastore['poes/' + key]
-                grp_id = int(key)
-                gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
-                for i, gsim in enumerate(gsims):
-                    curves_by_trt_gsim[grp_id, gsim] = pmap.convert(
-                        self.oqparam.imtls, nsites, i)
-        self.riskinputs = self.build_riskinputs(curves_by_trt_gsim)
-        self.monitor.oqparam = self.oqparam
+            for key in self.datastore['hcurves']:
+                pmap = self.datastore['hcurves/' + key]
+                rlz = self.rlzs_assoc.get_rlz(key)
+                if rlz is not None:  # can be None if a realization is
+                    # missing; this happen in test_case_5
+                    curves_by_rlz[rlz] = pmap.convert(oq.imtls, nsites)
+        self.riskinputs = self.build_riskinputs(curves_by_rlz)
+        self.monitor.oqparam = oq
 
         self.N = sum(len(assets) for assets in self.assets_by_site)
         self.L = len(self.riskmodel.loss_types)
         self.R = len(self.rlzs_assoc.realizations)
-        self.I = self.oqparam.insured_losses
-        self.Q1 = len(self.oqparam.quantile_loss_curves) + 1
+        self.I = oq.insured_losses
+        self.Q1 = len(oq.quantile_loss_curves) + 1
 
     def post_execute(self, result):
         """

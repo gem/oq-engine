@@ -29,7 +29,7 @@ F32 = numpy.float32
 F64 = numpy.float64  # higher precision to avoid task order dependency
 
 
-def scenario_risk(riskinput, riskmodel, rlzs_assoc, monitor):
+def scenario_risk(riskinput, riskmodel, monitor):
     """
     Core function for a scenario computation.
 
@@ -37,8 +37,6 @@ def scenario_risk(riskinput, riskmodel, rlzs_assoc, monitor):
         a of :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
-    :param rlzs_assoc:
-        a class:`openquake.commonlib.source.RlzsAssoc` instance
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     :returns:
@@ -52,9 +50,9 @@ def scenario_risk(riskinput, riskmodel, rlzs_assoc, monitor):
     """
     E = monitor.oqparam.number_of_ground_motion_fields
     L = len(riskmodel.loss_types)
-    R = len(rlzs_assoc.realizations)
+    R = len(riskinput.rlzs)
     result = dict(agg=numpy.zeros((E, L, R, 2), F64), avg=[])
-    for out in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor):
+    for out in riskmodel.gen_outputs(riskinput, monitor):
         l, r = out.lr
         stats = numpy.zeros((len(out.assets), 4), F32)
         # this is ugly but using a composite array (i.e.
@@ -96,7 +94,9 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         epsilon_matrix = self.make_eps(
             self.oqparam.number_of_ground_motion_fields)
         self.datastore['etags'], gmfs = calc.get_gmfs(self.datastore)
-        self.riskinputs = self.build_riskinputs(gmfs, epsilon_matrix)
+        hazard_by_rlz = {rlz: gmfs[rlz.ordinal]
+                         for rlz in self.rlzs_assoc.realizations}
+        self.riskinputs = self.build_riskinputs(hazard_by_rlz, epsilon_matrix)
 
     def post_execute(self, result):
         """

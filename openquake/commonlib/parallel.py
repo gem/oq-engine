@@ -23,6 +23,7 @@ from __future__ import print_function
 import os
 import sys
 import time
+import signal
 import socket
 import inspect
 import logging
@@ -32,7 +33,6 @@ import functools
 import multiprocessing.dummy
 from concurrent.futures import as_completed, ProcessPoolExecutor, Future
 import numpy
-
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import Monitor, virtual_memory
@@ -126,6 +126,12 @@ def safely_call(func, args, pickle=False):
     if pickle:  # it is impossible to measure the pickling time :-(
         res = Pickled(res)
     return res
+
+
+def mkfuture(result):
+    fut = Future()
+    fut.set_result(result)
+    return fut
 
 
 class Pickled(object):
@@ -425,17 +431,14 @@ class TaskManager(object):
 
         if self.distribute == 'no':
             for result in self.results:
-                fut = Future()
-                fut.set_result(result)
-                yield fut
+                yield mkfuture(result)
 
         elif self.distribute == 'celery':
             rset = ResultSet(self.results)
             for task_id, result_dict in rset.iter_native():
                 idx = self.task_ids.index(task_id)
                 self.task_ids.pop(idx)
-                fut = Future()
-                fut.set_result(result_dict['result'])
+                fut = mkfuture(result_dict['result'])
                 # work around a celery bug
                 del app.backend._cache[task_id]
                 yield fut
@@ -480,7 +483,8 @@ class TaskManager(object):
         if nargs == 1:
             [args] = self.task_args
             self.progress('Executing a single task in process')
-            return IterResult([safely_call(self.task_func, args)], self.name)
+            fut = mkfuture(safely_call(self.task_func, args))
+            return IterResult([fut], self.name)
         task_no = 0
         for args in self.task_args:
             task_no += 1
@@ -494,7 +498,9 @@ class TaskManager(object):
             self.submit(*args)
         if not task_no:
             self.progress('No %s tasks were submitted', self.name)
-        ir = IterResult(self._iterfutures(), self.name, task_no, self.progress)
+        # NB: keep self._iterfutures() an iterator, especially with celery!
+        ir = IterResult(self._iterfutures(), self.name, task_no,
+                        self.progress)
         ir.sent = self.sent  # for information purposes
         if self.sent:
             self.progress('Sent %s of data in %d task(s)',
@@ -549,16 +555,27 @@ if OQ_DISTRIBUTE == 'celery':
 
 def _wakeup(sec):
     """Waiting functions, used to wake up the process pool"""
+    try:
+        import prctl
+    except ImportError:
+        pass
+    else:
+        # if the parent dies, the children die
+        prctl.set_pdeathsig(signal.SIGKILL)
     time.sleep(sec)
+    return os.getpid()
 
 
 def wakeup_pool():
     """
     This is used at startup, only when the ProcessPoolExecutor is used,
     to fork the processes before loading any big data structure.
+
+    :returns: the list of PIDs spawned or None
     """
     if oq_distribute() == 'futures':  # when using the ProcessPoolExecutor
-        list(starmap(_wakeup, ((.2,) for _ in range(executor._max_workers))))
+        pids = starmap(_wakeup, ((.2,) for _ in range(executor._max_workers)))
+        return list(pids)
 
 
 class Starmap(object):
@@ -585,8 +602,9 @@ class Starmap(object):
     def reduce(self, agg=operator.add, acc=None, progress=logging.info):
         if acc is None:
             acc = AccumDict()
+        futures = (mkfuture(res) for res in self.imap)
         for res in IterResult(
-                self.imap, self.func.__name__, self.num_tasks, progress):
+                futures, self.func.__name__, self.num_tasks, progress):
             acc = agg(acc, res)
         return acc
 
