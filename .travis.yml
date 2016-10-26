@@ -20,5 +20,6 @@ install:
 script:
   # FIXME --with-doctest does not work
   # - PYTHONPATH=. nosetests -vsx -a'!slow' --with-xunit --nologcapture
-  - PYTHONPATH=.:$(pwd)/oq-hazardlib nosetests -v -a'!slow'
+  - PYTHONPATH=.:$(pwd)/oq-hazardlib nosetests -vsx -a'!slow'
   - cat /tmp/webui*
+  - PYTHONPATH=.:$(pwd)/oq-hazardlib bin/oq info -r demos/hazard
