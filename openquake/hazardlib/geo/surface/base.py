@@ -272,7 +272,7 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
     """
 
     def __init__(self):
-        self._mesh = None
+        self.mesh = None
 
     def get_min_distance(self, mesh):
         """
@@ -460,13 +460,13 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
             It is required that the mesh is constructed "top-to-bottom".
             That is, the first row of points should be the shallowest.
         """
-        if self._mesh is None:
-            self._mesh = self._create_mesh()
+        if self.mesh is None:
+            self.mesh = self._create_mesh()
             assert (
-                self._mesh.depths is None or len(self._mesh.depths) == 1
-                or self._mesh.depths[0][0] < self._mesh.depths[-1][0]
+                self.mesh.depths is None or len(self.mesh.depths) == 1
+                or self.mesh.depths[0][0] < self.mesh.depths[-1][0]
             ), "the first row of points in the mesh must be the shallowest"
-        return self._mesh
+        return self.mesh
 
     def get_area(self):
         """
@@ -595,3 +595,27 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
                            mesh.lats[y_node][x_node],
                            mesh.depths[y_node][x_node])
         return hypocentre
+
+    def get_azimuth(self, mesh):
+        """
+        This method computes the azimuth of a set of points in a
+        :class:`openquake.hazardlib.geo.mesh` instance. The reference used for
+        the calculation of azimuth is the middle point and the strike of the
+        rupture. The value of azimuth computed corresponds to the angle
+        measured in a clockwise direction from the strike of the rupture.
+
+        :parameter mesh:
+            An instance of  :class:`openquake.hazardlib.geo.mesh`
+        :return:
+            An instance of `numpy.ndarray`
+        """
+        # Get info about the rupture
+        strike = self.get_strike()
+        hypocenter = self.get_middle_point()
+        # This is the azimuth from the north of each point Vs. the middle of
+        # the rupture
+        azim = geodetic.azimuth(hypocenter.longitude, hypocenter.latitude,
+                                mesh.lons, mesh.lats)
+        # Compute the azimuth from the fault strike
+        rel_azi = (azim - strike) % 360
+        return rel_azi

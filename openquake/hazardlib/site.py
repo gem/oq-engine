@@ -25,7 +25,6 @@ from openquake.baselib.python3compat import range
 from openquake.baselib.slots import with_slots
 from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.geo.mesh import Mesh
-from openquake.hazardlib.geo.utils import cross_idl
 
 
 @with_slots
@@ -475,7 +474,7 @@ class FilteredSiteCollection(object):
 
 def _extract_site_param(fsc, name):
     # extract the site parameter 'name' from the filtered site collection
-    return getattr(fsc.complete, name).take(fsc.indices)
+    return getattr(fsc.complete, name)[fsc.indices]
 
 
 # attach a number of properties filtering the arrays

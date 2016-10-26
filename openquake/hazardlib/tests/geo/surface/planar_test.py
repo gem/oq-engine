@@ -101,7 +101,7 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
             self.assertEqual(surface.get_strike(), strike)
             self.assertEqual(surface.dip, dip)
             self.assertEqual(surface.get_dip(), dip)
-            self.assertIsNone(surface._mesh)
+            self.assertIsNone(surface.mesh)
             self.assertAlmostEqual(surface.length, tl.distance(tr), delta=0.2)
             self.assertAlmostEqual(surface.width, tl.distance(bl), delta=0.2)
 
@@ -495,6 +495,35 @@ class PlanarSurfaceGetRXDistanceTestCase(unittest.TestCase):
         sites = Mesh.from_points_list([Point(0.05, 0)])
         self.assertAlmostEqual(surface.get_rx_distance(sites)[0],
                                3.9313415355436705, places=4)
+
+
+class PlanarSurfaceGetRy0DistanceTestCase(unittest.TestCase):
+    def _test1to7surface(self):
+        corners = [Point(0, 0, 8), Point(-0.1, 0, 8),
+                   Point(-0.1, 0, 9), Point(0, 0, 9)]
+        surface = PlanarSurface(1, 270, 90, *corners)
+        return surface
+
+    def test1_sites_within_fault_width(self):
+        surface = self._test1to7surface()
+        sites = Mesh.from_points_list([Point(-0.05, 0.05),
+                                       Point(-0.05, -0.05)])
+        dists = surface.get_ry0_distance(sites)
+        numpy.testing.assert_allclose(dists, numpy.array([0.0, 0.0]))
+
+    def test2_sites_parallel_to_fault_ends(self):
+        surface = self._test1to7surface()
+        sites = Mesh.from_points_list([Point(0.0, 0.05),
+                                       Point(-0.10, -0.05)])
+        dists = surface.get_ry0_distance(sites)
+        numpy.testing.assert_allclose(dists, numpy.array([0.0, 0.0]))
+
+    def test3_sites_off_fault_ends(self):
+        surface = self._test1to7surface()
+        sites = Mesh.from_points_list([Point(0.05, 0.05),
+                                       Point(-0.15, -0.05)])
+        dists = surface.get_ry0_distance(sites)
+        numpy.testing.assert_allclose(dists, 5.55974422 * numpy.ones(2))
 
 
 class PlanarSurfaceGetTopEdgeDepthTestCase(unittest.TestCase):

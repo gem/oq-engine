@@ -1,4 +1,15 @@
   [Michele Simionato]
+  * Fixed a 32 bit issue when the FilteredSiteCollection
+
+  [Marco Pagani]
+  * Add the azimuth 'distance' parameter
+
+  [Graeme Weatherill]
+  * Modifies the Ry0 calculator for the planar rupture to avoid
+    creating the Mesh
+
+  [Michele Simionato]
+  * Removed the rupture_site_filter from the calculators
   * Removed the speedups and optimized the distance calculations at the
     numpy level
 

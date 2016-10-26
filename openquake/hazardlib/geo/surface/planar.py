@@ -31,6 +31,14 @@ from openquake.hazardlib.geo import utils as geo_utils
 from openquake.baselib.slots import with_slots
 
 
+def _corners(array):
+    # convert a composite array with fields lon, lat, depth into Points
+    points = []
+    for p in array:
+        points.append(Point(p['lon'], p['lat'], p['depth']))
+    return points
+
+
 @with_slots
 class PlanarSurface(BaseQuadrilateralSurface):
     """
@@ -101,7 +109,7 @@ class PlanarSurface(BaseQuadrilateralSurface):
             top_left.depth, top_right.depth,
             bottom_left.depth, bottom_right.depth
         ])
-        # not set the attributes normal, d, uv1, uv2, zero_zero
+        # now set the attributes normal, d, uv1, uv2, zero_zero
         self._init_plane()
         # now we can check surface for validity
         dists, xx, yy = self._project(self.corner_lons, self.corner_lats,
@@ -149,13 +157,24 @@ class PlanarSurface(BaseQuadrilateralSurface):
             An instance of :class:`PlanarSurface`.
         """
         strike = top_left.azimuth(top_right)
-
         dist = top_left.distance(bottom_left)
         vert_dist = bottom_left.depth - top_left.depth
         dip = numpy.degrees(numpy.arcsin(vert_dist / dist))
-
         return cls(mesh_spacing, strike, dip, top_left, top_right,
                    bottom_right, bottom_left)
+
+    @classmethod
+    def from_array(cls, mesh_spacing, array):
+        """
+        :param mesh_spacing: mesh spacing parameter
+        :param array: a composite array with fields (lon, lat, depth)
+        :returns: a :class:`PlanarSurface` instance
+        """
+        tl, tr, bl, br = _corners(array)
+        strike = tl.azimuth(tr)
+        dip = numpy.degrees(
+            numpy.arcsin((bl.depth - tl.depth) / tl.distance(bl)))
+        return cls(mesh_spacing, strike, dip, tl, tr, br, bl)
 
     def _init_plane(self):
         """
@@ -552,6 +571,37 @@ class PlanarSurface(BaseQuadrilateralSurface):
             self.corner_lons[0], self.corner_lats[0], self.strike, mesh.lons,
             mesh.lats
         )
+
+    def get_ry0_distance(self, mesh):
+        """
+        :param mesh:
+            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to calculate
+            Ry0-distance to.
+        :returns:
+            Numpy array of distances in km.
+
+        See also :meth:`superclass method <.base.BaseSurface.get_ry0_distance>`
+        for spec of input and result values.
+
+        This is version specific to the planar surface doesn't make use of the
+        mesh
+        """
+        dst1 = geodetic.distance_to_arc(self.top_left.longitude,
+                                        self.top_left.latitude,
+                                        (self.strike + 90.) % 360,
+                                        mesh.lons, mesh.lats)
+
+        dst2 = geodetic.distance_to_arc(self.top_right.longitude,
+                                        self.top_right.latitude,
+                                        (self.strike + 90.) % 360,
+                                        mesh.lons, mesh.lats)
+        # Find the points on the rupture
+
+        # Get the shortest distance from the two lines
+        idx = numpy.sign(dst1) == numpy.sign(dst2)
+        dst = numpy.zeros_like(dst1)
+        dst[idx] = numpy.fmin(numpy.abs(dst1[idx]), numpy.abs(dst2[idx]))
+        return dst
 
     def get_width(self):
         """
