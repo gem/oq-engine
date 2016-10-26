@@ -17,8 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports :class:`KaleEtAlTurkey2015`
-               :class:`KaleEtAlIran2015`.
+Module exports :class:`KaleEtAl2015Turkey`
+               :class:`KaleEtAl2015Iran`.
 """
 from __future__ import division
 
@@ -28,7 +28,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
-class KaleEtAlTurkey2015(GMPE):
+class KaleEtAl2015Turkey(GMPE):
     """
     Implements GMPE developed by O. Kale, S. Akkar, A. Ansari and H. Hamzehloo
     as published in "A ground-motion predictive model for Iran and Turkey for
@@ -103,8 +103,8 @@ class KaleEtAlTurkey2015(GMPE):
         Return standard deviations as defined in p. 971.
         """
         weight = self._compute_weight_std(C, rup.mag)
-        std_intra = weight * C["sd1"] * np.zeros(shape)
-        std_inter = weight * C["sd2"] * np.zeros(shape)
+        std_intra = weight * C["sd1"] * np.ones(shape)
+        std_inter = weight * C["sd2"] * np.ones(shape)
         
         stddevs = []
         for stddev_type in stddev_types:
@@ -116,24 +116,6 @@ class KaleEtAlTurkey2015(GMPE):
             elif stddev_type == const.StdDev.INTER_EVENT:
                 stddevs.append(std_inter)
         return stddevs
-
-#    def _compute_intra_event_std(self, C, mag):
-#        """
-#        Compute intra event standard deviation, equations 8 and 10, page 971.
-#        """
-#        w = self._compute_weight_std(C, mag)
-#        std_intra = w * C['sd1']
-#
-#        return std_intra
-#
-#    def _compute_inter_event_std(self, C, mag):
-#        """
-#        Compute inter event standard deviation, equations 9 and 10, page 971.
-#        """
-#        w = self._compute_weight_std(C, mag)
-#        std_inter = w * C['sd2']
-#
-#        return std_inter
 
     def _compute_weight_std(self, C, mag):
         """
@@ -311,7 +293,7 @@ class KaleEtAlTurkey2015(GMPE):
     }
 
 
-class KaleEtAlIran2015(KaleEtAlTurkey2015):
+class KaleEtAl2015Iran(KaleEtAl2015Turkey):
     """
     Implements GMPE developed by O. Kale, S. Akkar, A. Ansari and H. Hamzehloo
     as published in "A ground-motion predictive model for Iran and Turkey for
@@ -395,7 +377,7 @@ class KaleEtAlIran2015(KaleEtAlTurkey2015):
     #: equation constants (that are IMT independent)
     CONSTS = {
         # coefficients in page 970 and table 4, page 973
-        'c1': 6.75,
+        'c1': 7.0,
         'Vref': 750.0,
         'Vcon': 1000.0,
         'c': 2.5,

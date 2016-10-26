@@ -14,13 +14,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.kale_2015 import (KaleEtAlTurkey2015,
-                                                KaleEtAlIran2015)
+from openquake.hazardlib.gsim.kale_2015 import (KaleEtAl2015Turkey,
+                                                KaleEtAl2015Iran)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
 class KaleEtAlTurkey2015TestCase1(BaseGSIMTestCase):
-    GSIM_CLASS = KaleEtAlTurkey2015
+    GSIM_CLASS = KaleEtAl2015Turkey
 
     # Tables created from Matlab code supplied by the original authors
 
@@ -42,7 +42,7 @@ class KaleEtAlTurkey2015TestCase1(BaseGSIMTestCase):
 
 
 class KaleEtAlIran2015TestCase2(BaseGSIMTestCase):
-    GSIM_CLASS = KaleEtAlIran2015
+    GSIM_CLASS = KaleEtAl2015Iran
 
     # Tables created from Matlab code supplied by the original authors
 
