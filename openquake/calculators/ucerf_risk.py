@@ -21,8 +21,8 @@ import numpy
 
 from openquake.baselib.general import AccumDict
 from openquake.risklib import riskinput
-from openquake.commonlib import parallel
-from openquake.calculators import base, event_based
+from openquake.commonlib import parallel, calc
+from openquake.calculators import base
 from openquake.calculators.ucerf_event_based import (
     UCERFEventBasedCalculator, DEFAULT_TRT)
 from openquake.calculators.event_based_risk import (
@@ -50,10 +50,11 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     numpy.random.seed(monitor.seed + src.src_group_id)
     ebruptures = []
     eid = 0
+    src.build_idx_set()
+    background_sids = src.get_background_sids(sitecol, integration_distance)
     for ses_idx in range(1, monitor.ses_per_logic_tree_path + 1):
         with event_mon:
-            rups, n_occs = src.generate_event_set(
-                src.branch_id, sitecol, integration_distance)
+            rups, n_occs = src.generate_event_set(background_sids)
         for rup, n_occ in zip(rups, n_occs):
             rup.seed = monitor.seed  # to think
             rrup = rup.surface.get_min_distance(sitecol.mesh)
@@ -67,9 +68,9 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
                 eid += 1
             if events:
                 ebruptures.append(
-                    event_based.EBRupture(
+                    calc.EBRupture(
                         rup, indices,
-                        numpy.array(events, event_based.event_dt),
+                        numpy.array(events, calc.event_dt),
                         src.source_id, src.src_group_id, serial))
                 serial += 1
                 res.num_events += len(events)
@@ -106,10 +107,9 @@ def compute_losses(ssm, sitecol, assetcol, riskmodel,
     rlzs_assoc = ssm.info.get_rlzs_assoc()
     num_rlzs = len(rlzs_assoc.realizations)
     ri = riskinput.RiskInputFromRuptures(
-        DEFAULT_TRT, imts, sitecol, ruptures, trunc_level, correl_model,
-        min_iml)
-    res.append(
-        losses_by_taxonomy(ri, riskmodel, rlzs_assoc, assetcol, monitor))
+        DEFAULT_TRT, rlzs_assoc, imts, sitecol, ruptures, trunc_level,
+        correl_model, min_iml)
+    res.append(losses_by_taxonomy(ri, riskmodel, assetcol, monitor))
     res.sm_id = ssm.sm_id
     res.num_events = len(ri.eids)
     start = res.sm_id * num_rlzs

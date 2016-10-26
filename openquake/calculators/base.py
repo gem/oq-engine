@@ -425,18 +425,17 @@ class HazardCalculator(BaseCalculator):
             if 'source' in self.oqparam.inputs:
                 job_info.update(readinput.get_job_info(
                     self.oqparam, self.csm, self.sitecol))
-
         job_info['hostname'] = socket.gethostname()
         if hasattr(self, 'riskmodel'):
             job_info['require_epsilons'] = bool(self.riskmodel.covs)
         self.datastore.save('job_info', job_info)
         self.datastore.flush()
         try:
-            csm_info = self.datastore['csm_info']
+            self.csm_info = self.datastore['csm_info']
         except KeyError:
             pass
         else:
-            csm_info.gsim_lt.check_imts(self.oqparam.imtls)
+            self.csm_info.gsim_lt.check_imts(self.oqparam.imtls)
 
     def init(self):
         """
@@ -596,16 +595,16 @@ class RiskCalculator(HazardCalculator):
                 self.assets_by_site, num_ruptures,
                 oq.master_seed, oq.asset_correlation)
 
-    def build_riskinputs(self, hazards_by_key, eps=numpy.zeros(0)):
+    def build_riskinputs(self, hazards_by_rlz, eps=numpy.zeros(0)):
         """
-        :param hazards_by_key:
-            a dictionary key -> IMT -> array of length num_sites
+        :param hazards_by_rlz:
+            a dictionary rlz -> IMT -> array of length num_sites
         :param eps:
             a matrix of epsilons (possibly empty)
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
-        self.check_poes(hazards_by_key)
+        self.check_poes(hazards_by_rlz)
         imtls = self.oqparam.imtls
         if not set(self.oqparam.risk_imtls) & set(imtls):
             rsk = ', '.join(self.oqparam.risk_imtls)
@@ -614,6 +613,7 @@ class RiskCalculator(HazardCalculator):
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         num_tasks = math.ceil((self.oqparam.concurrent_tasks or 1) /
                               len(imtls))
+        rlzs = sorted(hazards_by_rlz)
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
             idx_weight_pairs = [
@@ -631,16 +631,16 @@ class RiskCalculator(HazardCalculator):
                         for asset in assets:
                             reduced_eps[asset.ordinal] = eps[asset.ordinal]
 
-                # collect the hazards by key into hazards by site
+                # collect the hazards into a list of dicts imt -> rlz
                 hdata = [{imt: {} for imt in imtls} for _ in indices]
-                for key, hazards_by_imt in hazards_by_key.items():
+                for rlz, hazards_by_imt in hazards_by_rlz.items():
                     for imt in imtls:
                         hazards_by_site = hazards_by_imt[imt]
                         for i, haz in enumerate(hazards_by_site[indices]):
-                            hdata[i][imt][key] = haz
+                            hdata[i][imt][rlz] = haz
                 # build the riskinputs
                 ri = self.riskmodel.build_input(
-                    hdata, reduced_assets, reduced_eps)
+                    rlzs, hdata, reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
             assert riskinputs
@@ -657,7 +657,7 @@ class RiskCalculator(HazardCalculator):
         rlz_ids = getattr(self.oqparam, 'rlz_ids', ())
         if rlz_ids:
             self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
-        all_args = ((riskinput, self.riskmodel, self.rlzs_assoc) +
+        all_args = ((riskinput, self.riskmodel) +
                     self.extra_args + (self.monitor,)
                     for riskinput in self.riskinputs)
         res = starmap(self.core_task.__func__, all_args).reduce()
