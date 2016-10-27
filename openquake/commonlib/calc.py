@@ -252,9 +252,10 @@ def make_uhs(pmap, imtls, poes, nsites):
     return uhs
 
 
-def get_gmfs(dstore):
+def get_gmfs(dstore, precalc=None):
     """
     :param dstore: a datastore
+    :param precalc: a scenario calculator with attribute .gmfa
     :returns: a dictionary grp_id, gsid -> gmfa
     """
     oq = dstore['oqparam']
@@ -269,7 +270,6 @@ def get_gmfs(dstore):
         logging.info('Preparing the risk input')
         return etags, [gmfs_by_imt]
 
-    # else from datastore
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     rlzs = rlzs_assoc.realizations
     sitecol = dstore['sitecol']
@@ -285,31 +285,23 @@ def get_gmfs(dstore):
     N = len(haz_sitecol.complete)
     imt_dt = numpy.dtype([(str(imt), F32) for imt in oq.imtls])
     E = oq.number_of_ground_motion_fields
+    etags = numpy.array(sorted(b'scenario-%010d~ses=1' % i for i in range(E)))
     # build a matrix R x N x E where R is the number of GSIMs
     gmfs = numpy.zeros((len(rlzs_assoc), N, E), imt_dt)
-
-    if 'gmf_data' not in dstore:  # generate the gmfs from the rupture
-        gsims = readinput.get_gsims(oq)
-        rupture = dstore['rupture']
-        computer = GmfComputer(
-            rupture, dstore['sitecol'], oq.imtls, gsims,
-            oq.truncation_level, oq.correlation_model)
-        for i, gsim in enumerate(gsims):
-            gmfa = computer.compute(
-                gsim, oq.number_of_ground_motion_fields, oq.random_seed)
+    if precalc:
+        for i, gsim in enumerate(precalc.gsims):
             for imti, imt in enumerate(oq.imtls):
-                gmfs[imt] = gmfa[imti]
-    else:
-        for i, rlz in enumerate(rlzs):
-            data = group_array(dstore['gmf_data/%04d' % i], 'sid')
-            for sid, array in data.items():
-                if sid in risk_indices:
-                    for imti, imt in enumerate(oq.imtls):
-                        a = get_array(array, imti=imti)
-                        gmfs[imt][i, sid, a['eid']] = a['gmv']
-    etags = numpy.array(
-        sorted([b'scenario-%010d~ses=1' % i
-                for i in range(oq.number_of_ground_motion_fields)]))
+                gmfs[imt][i] = precalc.gmfa[gsim][imti]
+        return etags, gmfs
+
+    # else read from the datastore
+    for i, rlz in enumerate(rlzs):
+        data = group_array(dstore['gmf_data/%04d' % i], 'sid')
+        for sid, array in data.items():
+            if sid in risk_indices:
+                for imti, imt in enumerate(oq.imtls):
+                    a = get_array(array, imti=imti)
+                    gmfs[imt][i, sid, a['eid']] = a['gmv']
     return etags, gmfs
 
 
