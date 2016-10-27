@@ -551,7 +551,7 @@ class EBRupture(object):
             surface.strike = surface.dip = None  # they will be computed
             surface.mesh = RectangularMesh(
                 m['lon'][0], m['lat'][0], m['depth'][0])
-        time_span = attrs.pop('time_span')
+        time_span = attrs.pop('time_span', None)
         if time_span:
             self.rupture.temporal_occurrence_model = tom.PoissonTOM(time_span)
         self.rupture.surface_nodes = ()
