@@ -309,7 +309,7 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
         for spec of input and result values.
 
         Base class calls surface mesh's method
-        :meth:`~openquake.hazardlib.geo.mesh.Mesh.get_joyner_boore_distance`.
+        :meth:`~openquake.hazardlib.geo.mesh.RectangularMesh.get_joyner_boore_distance`.
         """
         return self.get_mesh().get_joyner_boore_distance(mesh)
 
