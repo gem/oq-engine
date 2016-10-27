@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Improved the performance of the scenario risk calculators
   * Now by default we do not save the ruptures anymore
   * Fixed a memory leak recently introduced in parallel.py
   * Simplified classical_risk (the numbers can be slightly different now)
