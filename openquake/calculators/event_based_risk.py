@@ -680,6 +680,17 @@ save_ruptures = event_based.EventBasedRuptureCalculator.__dict__[
     'save_ruptures']
 
 
+def make_eps(num_assets, seeds):
+    """
+    Builds a matrix of N x E epsilons suitable for asset_correlation=0
+    """
+    eps = numpy.zeros((num_assets, len(seeds)), F32)
+    for i, seed in enumerate(seeds):
+        numpy.random.seed(seed)
+        eps[:, i] = numpy.random.normal(size=num_assets)
+    return eps
+
+
 @base.calculators.add('ebrisk')
 class EbriskCalculator(base.RiskCalculator):
     """
@@ -738,9 +749,12 @@ class EbriskCalculator(base.RiskCalculator):
             for rupts in block_splitter(
                     ruptures_by_grp[src_group.id], ruptures_per_block):
                 trt = grp_trt[rupts[0].grp_id]
+                seeds = [ebr.rupture.seed for ebr in rupts]
+                logging.info(
+                    'Generating (%d, %d) epsilons', self.A, len(seeds))
                 ri = riskinput.RiskInputFromRuptures(
                     trt, rlzs_assoc, imts, sitecol, rupts, trunc_level,
-                    correl_model, min_iml)
+                    correl_model, min_iml, make_eps(self.A, seeds))
                 allargs.append((ri, riskmodel, assetcol, monitor))
         taskname = '%s#%d' % (losses_by_taxonomy.__name__, ssm.sm_id + 1)
         smap = starmap(losses_by_taxonomy, allargs, name=taskname)
@@ -787,6 +801,8 @@ class EbriskCalculator(base.RiskCalculator):
         num_rlzs = 0
         allres = []
         source_models = self.csm.info.source_models
+        self.T = len(self.assetcol.taxonomies)
+        self.A = len(self.assetcol)
         with self.monitor('sending riskinputs', autoflush=True):
             self.sm_by_grp = self.csm.info.get_sm_by_grp()
             self.eid = collections.Counter()  # sm_id -> event_id
@@ -816,8 +832,6 @@ class EbriskCalculator(base.RiskCalculator):
         """
         self.L = len(self.riskmodel.lti)
         self.R = num_rlzs
-        self.T = len(self.assetcol.taxonomies)
-        self.A = len(self.assetcol)
         avg_losses = self.oqparam.avg_losses
         dset1 = self.datastore.create_dset(
             'losses_by_taxon', F64, (self.T, self.L, self.R))
