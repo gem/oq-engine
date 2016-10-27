@@ -26,7 +26,6 @@ import numpy
 from openquake.baselib.general import get_array, group_array, AccumDict
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput, oqvalidation, util
 
 from openquake.baselib import hdf5
@@ -291,7 +290,7 @@ def get_gmfs(dstore, precalc=None):
     if precalc:
         for i, gsim in enumerate(precalc.gsims):
             for imti, imt in enumerate(oq.imtls):
-                gmfs[imt][i] = precalc.gmfa[gsim][imti]
+                gmfs[imt][i, sitecol.sids] = precalc.gmfa[gsim][imti]
         return etags, gmfs
 
     # else read from the datastore
