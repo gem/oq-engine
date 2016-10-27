@@ -93,10 +93,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         logging.info('Building the epsilons')
         epsilon_matrix = self.make_eps(
             self.oqparam.number_of_ground_motion_fields)
-        logging.info('Reading the GMFs')
-        with self.monitor('reading gmfs', autoflush=True):
-            self.datastore['etags'], gmfs = calc.get_gmfs(
-                self.datastore, self.precalc)
+        self.datastore['etags'], gmfs = calc.get_gmfs(
+            self.datastore, self.precalc)
         hazard_by_rlz = {rlz: gmfs[rlz.ordinal]
                          for rlz in self.rlzs_assoc.realizations}
         self.riskinputs = self.build_riskinputs(hazard_by_rlz, epsilon_matrix)
