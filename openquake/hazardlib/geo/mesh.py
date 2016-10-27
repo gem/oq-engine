@@ -187,86 +187,6 @@ class Mesh(object):
                 return numpy.allclose(self.lons, mesh.lons, atol=tol) and\
                     numpy.allclose(self.lats, mesh.lats, atol=tol)
 
-    def get_joyner_boore_distance(self, mesh):
-        """
-        Compute and return Joyner-Boore distance to each point of ``mesh``.
-        Point's depth is ignored.
-
-        See
-        :meth:`openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_joyner_boore_distance`
-        for definition of this distance.
-
-        :returns:
-            numpy array of distances in km of the same shape as ``mesh``.
-            Distance value is considered to be zero if a point
-            lies inside the polygon enveloping the projection of the mesh
-            or on one of its edges.
-        """
-        # we perform a hybrid calculation (geodetic mesh-to-mesh distance
-        # and distance on the projection plane for close points). first,
-        # we find the closest geodetic distance for each point of target
-        # mesh to this one. in general that distance is greater than
-        # the exact distance to enclosing polygon of this mesh and it
-        # depends on mesh spacing. but the difference can be neglected
-        # if calculated geodetic distance is over some threshold.
-        distances = geodetic.min_geodetic_distance(self.lons, self.lats,
-                                                   mesh.lons.flatten(),
-                                                   mesh.lats.flatten())
-
-        # here we find the points for which calculated mesh-to-mesh
-        # distance is below a threshold. this threshold is arbitrary:
-        # lower values increase the maximum possible error, higher
-        # values reduce the efficiency of that filtering. the maximum
-        # error is equal to the maximum difference between a distance
-        # from site to two adjacent points of the mesh and distance
-        # from site to the line connecting them. thus the error is
-        # a function of distance threshold and mesh spacing. the error
-        # is maximum when the site lies on a perpendicular to the line
-        # connecting points of the mesh and that passes the middle
-        # point between them. the error then can be calculated as
-        # ``err = trsh - d = trsh - \sqrt(trsh^2 - (ms/2)^2)``, where
-        # ``trsh`` and ``d`` are distance to mesh points (the one
-        # we found on the previous step) and distance to the line
-        # connecting them (the actual distance) and ``ms`` is mesh
-        # spacing. the threshold of 40 km gives maximum error of 314
-        # meters for meshes with spacing of 10 km and 5.36 km for
-        # meshes with spacing of 40 km. if mesh spacing is over
-        # ``(trsh / \sqrt(2)) * 2`` then points lying in the middle
-        # of mesh cells (that is inside the polygon) will be filtered
-        # out by the threshold and have positive distance instead of 0.
-        # so for threshold of 40 km mesh spacing should not be more
-        # than 56 km (typical values are 5 to 10 km).
-
-        [idxs] = (distances < 40).nonzero()
-        if not len(idxs):
-            # no point is close enough, return distances as they are
-            return distances
-
-        # for all the points that are closer than the threshold we need
-        # to recalculate the distance and set it to zero, if point falls
-        # inside the enclosing polygon of the mesh. for doing that we
-        # project both this mesh and the points of the second mesh--selected
-        # by distance threshold--to the same Cartesian space, define
-        # minimum shapely polygon enclosing the mesh and calculate point
-        # to polygon distance, which gives the most accurate value
-        # of distance in km (and that value is zero for points inside
-        # the polygon).
-        proj, polygon = self._get_proj_enclosing_polygon()
-        if not isinstance(polygon, shapely.geometry.Polygon):
-            # either line or point is our enclosing polygon. draw
-            # a square with side of 10 m around in order to have
-            # a proper polygon instead.
-            polygon = polygon.buffer(self.DIST_TOLERANCE, 1)
-        mesh_lons, mesh_lats = mesh.lons.take(idxs), mesh.lats.take(idxs)
-        mesh_xx, mesh_yy = proj(mesh_lons, mesh_lats)
-        distances_2d = geo_utils.point_to_polygon_distance(
-            polygon, mesh_xx, mesh_yy)
-
-        # replace geodetic distance values for points-closer-than-the-threshold
-        # by more accurate point-to-polygon distance values.
-        distances.put(idxs, distances_2d)
-        return distances.reshape(mesh.shape)
-
     def get_min_distance(self, mesh):
         """
         Compute and return the minimum distance from the mesh to each point
@@ -442,6 +362,83 @@ class RectangularMesh(Mesh):
         if not depths.any():
             depths = None
         return cls(lons, lats, depths)
+
+    def get_joyner_boore_distance(self, mesh):
+        """
+        Compute and return Joyner-Boore distance to each point of ``mesh``.
+        Point's depth is ignored.
+
+        See
+        :meth:`openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_joyner_boore_distance`
+        for definition of this distance.
+
+        :returns:
+            numpy array of distances in km of the same shape as ``mesh``.
+            Distance value is considered to be zero if a point
+            lies inside the polygon enveloping the projection of the mesh
+            or on one of its edges.
+        """
+        # we perform a hybrid calculation (geodetic mesh-to-mesh distance
+        # and distance on the projection plane for close points). first,
+        # we find the closest geodetic distance for each point of target
+        # mesh to this one. in general that distance is greater than
+        # the exact distance to enclosing polygon of this mesh and it
+        # depends on mesh spacing. but the difference can be neglected
+        # if calculated geodetic distance is over some threshold.
+        # get the highest slice from the 3D mesh
+        distances = geodetic.min_geodetic_distance(
+            self.lons, self.lats, mesh.lons, mesh.lats)
+        # here we find the points for which calculated mesh-to-mesh
+        # distance is below a threshold. this threshold is arbitrary:
+        # lower values increase the maximum possible error, higher
+        # values reduce the efficiency of that filtering. the maximum
+        # error is equal to the maximum difference between a distance
+        # from site to two adjacent points of the mesh and distance
+        # from site to the line connecting them. thus the error is
+        # a function of distance threshold and mesh spacing. the error
+        # is maximum when the site lies on a perpendicular to the line
+        # connecting points of the mesh and that passes the middle
+        # point between them. the error then can be calculated as
+        # ``err = trsh - d = trsh - \sqrt(trsh^2 - (ms/2)^2)``, where
+        # ``trsh`` and ``d`` are distance to mesh points (the one
+        # we found on the previous step) and distance to the line
+        # connecting them (the actual distance) and ``ms`` is mesh
+        # spacing. the threshold of 40 km gives maximum error of 314
+        # meters for meshes with spacing of 10 km and 5.36 km for
+        # meshes with spacing of 40 km. if mesh spacing is over
+        # ``(trsh / \sqrt(2)) * 2`` then points lying in the middle
+        # of mesh cells (that is inside the polygon) will be filtered
+        # out by the threshold and have positive distance instead of 0.
+        # so for threshold of 40 km mesh spacing should not be more
+        # than 56 km (typical values are 5 to 10 km).
+
+        [idxs] = (distances < 40).nonzero()
+        if not len(idxs):
+            # no point is close enough, return distances as they are
+            return distances
+
+        # for all the points that are closer than the threshold we need
+        # to recalculate the distance and set it to zero, if point falls
+        # inside the enclosing polygon of the mesh. for doing that we
+        # project both this mesh and the points of the second mesh--selected
+        # by distance threshold--to the same Cartesian space, define
+        # minimum shapely polygon enclosing the mesh and calculate point
+        # to polygon distance, which gives the most accurate value
+        # of distance in km (and that value is zero for points inside
+        # the polygon).
+        proj, polygon = self._get_proj_enclosing_polygon()
+        if not isinstance(polygon, shapely.geometry.Polygon):
+            # either line or point is our enclosing polygon. draw
+            # a square with side of 10 m around in order to have
+            # a proper polygon instead.
+            polygon = polygon.buffer(self.DIST_TOLERANCE, 1)
+        mesh_xx, mesh_yy = proj(mesh.lons[idxs], mesh.lats[idxs])
+        # replace geodetic distance values for points-closer-than-the-threshold
+        # by more accurate point-to-polygon distance values.
+        distances[idxs] = geo_utils.point_to_polygon_distance(
+            polygon, mesh_xx, mesh_yy)
+
+        return distances
 
     def _get_proj_enclosing_polygon(self):
         """

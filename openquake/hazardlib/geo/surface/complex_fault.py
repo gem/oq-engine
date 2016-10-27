@@ -270,9 +270,9 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
                 (mesh_spacing, mean_width)
             )
 
-        points = list(zip(*[v_edge.resample_to_num_points(num_vert_points).points
-                       for v_edge in vert_edges]))
-        mesh = RectangularMesh.from_points_list(points)
+        points = zip(*[v_edge.resample_to_num_points(num_vert_points).points
+                       for v_edge in vert_edges])
+        mesh = RectangularMesh.from_points_list(list(points))
         assert 1 not in mesh.shape
         return cls(mesh)
 
