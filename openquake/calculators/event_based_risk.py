@@ -763,7 +763,8 @@ class EbriskCalculator(base.RiskCalculator):
                     ruptures_by_grp[src_group.id], ruptures_per_block):
                 n_events = sum(ebr.multiplicity for ebr in rupts)
                 eps = EpsilonMatrix(
-                    len(self.assetcol), seeds[start: start + n_events])
+                    len(self.assetcol), seeds[start: start + n_events]
+                ) if self.riskmodel.covs else None
                 start += n_events
                 ri = riskinput.RiskInputFromRuptures(
                     grp_trt[rupts[0].grp_id], rlzs_assoc, imts, sitecol, rupts,
