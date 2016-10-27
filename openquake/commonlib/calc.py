@@ -26,6 +26,7 @@ import numpy
 from openquake.baselib.general import get_array, group_array, AccumDict
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput, oqvalidation, util
 
 from openquake.baselib import hdf5
@@ -286,13 +287,26 @@ def get_gmfs(dstore):
     E = oq.number_of_ground_motion_fields
     # build a matrix R x N x E where R is the number of GSIMs
     gmfs = numpy.zeros((len(rlzs_assoc), N, E), imt_dt)
-    for i, rlz in enumerate(rlzs):
-        data = group_array(dstore['gmf_data/%04d' % i], 'sid')
-        for sid, array in data.items():
-            if sid in risk_indices:
-                for imti, imt in enumerate(oq.imtls):
-                    a = get_array(array, imti=imti)
-                    gmfs[imt][i, sid, a['eid']] = a['gmv']
+
+    if 'gmf_data' not in dstore:  # generate the gmfs from the rupture
+        gsims = readinput.get_gsims(oq)
+        rupture = dstore['rupture']
+        computer = GmfComputer(
+            rupture, dstore['sitecol'], oq.imtls, gsims,
+            oq.truncation_level, oq.correlation_model)
+        for i, gsim in enumerate(gsims):
+            gmfa = computer.compute(
+                gsim, oq.number_of_ground_motion_fields, oq.random_seed)
+            for imti, imt in enumerate(oq.imtls):
+                gmfs[imt] = gmfa[imti]
+    else:
+        for i, rlz in enumerate(rlzs):
+            data = group_array(dstore['gmf_data/%04d' % i], 'sid')
+            for sid, array in data.items():
+                if sid in risk_indices:
+                    for imti, imt in enumerate(oq.imtls):
+                        a = get_array(array, imti=imti)
+                        gmfs[imt][i, sid, a['eid']] = a['gmv']
     etags = numpy.array(
         sorted([b'scenario-%010d~ses=1' % i
                 for i in range(oq.number_of_ground_motion_fields)]))
