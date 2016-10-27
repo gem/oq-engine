@@ -762,12 +762,12 @@ class EbriskCalculator(base.RiskCalculator):
             for rupts in block_splitter(
                     ruptures_by_grp[src_group.id], ruptures_per_block):
                 n_events = sum(ebr.multiplicity for ebr in rupts)
-                trt = grp_trt[rupts[0].grp_id]
-                eps = EpsilonMatrix(self.A, seeds[start: start + n_events])
+                eps = EpsilonMatrix(
+                    len(self.assetcol), seeds[start: start + n_events])
                 start += n_events
                 ri = riskinput.RiskInputFromRuptures(
-                    trt, rlzs_assoc, imts, sitecol, rupts, trunc_level,
-                    correl_model, min_iml, eps)
+                    grp_trt[rupts[0].grp_id], rlzs_assoc, imts, sitecol, rupts,
+                    trunc_level, correl_model, min_iml, eps)
                 allargs.append((ri, riskmodel, assetcol, monitor))
         taskname = '%s#%d' % (losses_by_taxonomy.__name__, ssm.sm_id + 1)
         smap = starmap(losses_by_taxonomy, allargs, name=taskname)
@@ -814,8 +814,6 @@ class EbriskCalculator(base.RiskCalculator):
         num_rlzs = 0
         allres = []
         source_models = self.csm.info.source_models
-        self.T = len(self.assetcol.taxonomies)
-        self.A = len(self.assetcol)
         with self.monitor('sending riskinputs', autoflush=True):
             self.sm_by_grp = self.csm.info.get_sm_by_grp()
             self.eid = collections.Counter()  # sm_id -> event_id
@@ -843,6 +841,8 @@ class EbriskCalculator(base.RiskCalculator):
         :param num_rlzs: the total number of realizations
         :returns: the total number of events
         """
+        self.T = len(self.assetcol.taxonomies)
+        self.A = len(self.assetcol)
         self.L = len(self.riskmodel.lti)
         self.R = num_rlzs
         avg_losses = self.oqparam.avg_losses
