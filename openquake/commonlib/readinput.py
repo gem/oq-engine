@@ -318,7 +318,9 @@ def get_rupture(oqparam):
     [rup_node] = nrml.read(rup_model)
     conv = sourceconverter.RuptureConverter(
         oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
-    return conv.convert_node(rup_node)
+    rup = conv.convert_node(rup_node)
+    rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
+    return rup
 
 
 def get_source_model_lt(oqparam):
