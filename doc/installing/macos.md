@@ -32,10 +32,10 @@ then follow the wizard on screen. By default the code is installed in `~/openqua
 
 ```bash
 Verifying archive integrity... All good.
-Uncompressing installer for the OpenQuake Engine  100%
-Type the path where you want to install OpenQuake, followed by [ENTER]. Otherwise leave blank, it will be installed in /Users/auser:
-Copying the files in /Users/auser/openquake. Please wait.
-Finalizing the installation. Please wait.
+Uncompressing installer for the OpenQuake Engine  100%  
+Type the path where you want to install OpenQuake, followed by [ENTER]. Otherwise leave blank, it will be installed in /Users/auser/openquake: 
+Creating a new python environment in /Users/auser/openquake. Please wait.
+Installing the files in /Users/auser/openquake. Please wait.
 Installation completed. To enable it run 'source /Users/auser/openquake/env.sh'
 ```
 
