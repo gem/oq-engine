@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <exposureModel
+    category="roads"
+    id="primaryroads"
+    taxonomySource="EMCA-SYNER-G"
+    >
+        
+        <description>
+            exposed primary roads
+        </description>
+        <conversions>
+            <costTypes>
+                <costType name="structural" type="per_asset" unit="USD"/>
+            </costTypes>
+        </conversions>
+        <assets>
+            
+            <asset
+            id="road125"
+            taxonomy="EMCA_PRIM_2L"
+            >
+                
+                <location lat="4.005E+01" lon="7.1681E+01"/>
+                <costs>
+                    
+                    <cost type="structural" value="2.5000000E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="road291"
+            taxonomy="EMCA_PRIM_2L"
+            >
+                
+                <location lat="4.148E+01" lon="7.232E+01"/>
+                <costs>
+                    
+                    <cost type="structural" value="2.5000000E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="road369"
+            taxonomy="EMCA_PRIM_2L"
+            >
+                
+                <location lat="4.051E+01" lon="7.2706E+01"/>
+                <costs>
+                    
+                    <cost type="structural" value="2.5000000E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="road395"
+            taxonomy="EMCA_PRIM_2L"
+            >
+                
+                <location lat="4.029E+01" lon="7.264E+01"/>
+                <costs>
+                    
+                    <cost type="structural" value="2.5000000E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="road685"
+            taxonomy="EMCA_PRIM_2L"
+            >
+                
+                <location lat="4.0690E+01" lon="7.3191E+01"/>
+                <costs>
+                    
+                    <cost type="structural" value="2.5000000E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="road1027"
+            taxonomy="EMCA_PRIM_2L"
+            >
+                
+                <location lat="4.2012E+01" lon="7.4692E+01"/>
+                <costs>
+                    
+                    <cost type="structural" value="2.5000000E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="road1962"
+            taxonomy="EMCA_PRIM_2L"
+            >
+                
+                <location lat="4.297E+01" lon="7.445E+01"/>
+                <costs>
+                    
+                    <cost type="structural" value="2.5000000E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="road2517"
+            taxonomy="EMCA_PRIM_2L"
+            >
+                
+                <location lat="4.2161E+01" lon="7.7529E+01"/>
+                <costs>
+                    
+                    <cost type="structural" value="2.5000000E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="road2544"
+            taxonomy="EMCA_PRIM_2L"
+            >
+                
+                <location lat="4.2393E+01" lon="7.8086E+01"/>
+                <costs>
+                    
+                    <cost type="structural" value="2.5000000E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="road2564"
+            taxonomy="EMCA_PRIM_2L"
+            >
+                
+                <location lat="4.2741E+01" lon="7.8026E+01"/>
+                <costs>
+                    
+                    <cost type="structural" value="2.5000000E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="road2756"
+            taxonomy="EMCA_PRIM_4L"
+            >
+                
+                <location lat="4.098E+01" lon="7.5336E+01"/>
+                <costs>
+                    
+                    <cost type="structural" value="5.6250000E+04"/>
+                </costs>
+            </asset>
+            <asset
+            id="bridge92"
+            taxonomy="concrete_spl"
+            >
+                
+                <location lat="4.2848E+01" lon="7.5334E+01"/>
+                <costs>
+                    
+                    <cost type="structural" value="2.9295959E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="bridge158"
+            taxonomy="steel_spl"
+            >
+                
+                <location lat="4.1913E+01" lon="7.6111E+01"/>
+                <costs>
+                    
+                    <cost type="structural" value="7.6535573E+06"/>
+                </costs>
+            </asset>
+            <asset
+            id="bridge481"
+            taxonomy="steel_spl"
+            >
+                
+                <location lat="4.2848E+01" lon="7.4614E+01"/>
+                <costs>
+                    
+                    <cost type="structural" value="3.3426027E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="bridge574"
+            taxonomy="concrete_spl"
+            >
+                
+                <location lat="4.2572E+01" lon="7.4481E+01"/>
+                <costs>
+                    
+                    <cost type="structural" value="2.0436311E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="bridge685"
+            taxonomy="concrete_spl"
+            >
+                
+              <location lat="4.076E+01" lon="7.509E+01"/>
+                <costs>
+                    
+                    <cost type="structural" value="4.7287091E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="bridge1012"
+            taxonomy="concrete_spl"
+            >
+                
+                <location lat="3.9650E+01" lon="7.0051E+01"/>
+                <costs>
+                    
+                    <cost type="structural" value="2.1858064E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="bridge1269"
+            taxonomy="steel_spl"
+            >
+                
+                <location lat="4.2804E+01" lon="7.4380E+01"/>
+                <costs>
+                    
+                    <cost type="structural" value="5.2398024E+05"/>
+                </costs>
+            </asset>
+        </assets>
+    </exposureModel>
+</nrml>
