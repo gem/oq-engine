@@ -393,9 +393,8 @@ class HazardCalculator(BaseCalculator):
             if self.is_stochastic:
                 # initialize the rupture serial numbers before the
                 # filtering; in this way the serials are independent
-                # from the site collection
-                with mon('Initializing rupture serials', autoflush=True):
-                    csm.init_serials()
+                # from the site collection; this is ultra-fast
+                csm.init_serials()
             with mon('filtering composite source model', autoflush=True):
                 logging.info('Filtering composite source model')
                 # we are also weighting the sources, but weighting is ultrafast
