@@ -160,14 +160,12 @@ def _aggregate(outputs, compositemodel, agg, ass, idx, result, monitor):
             agg[indices, l, r] += losses
 
 
-def event_based_risk(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
+def event_based_risk(riskinput, riskmodel, assetcol, monitor):
     """
     :param riskinput:
         a :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
-    :param rlzs_assoc:
-        a class:`openquake.commonlib.source.RlzsAssoc` instance
     :param assetcol:
         AssetCollection instance
     :param monitor:
@@ -176,7 +174,7 @@ def event_based_risk(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
         a dictionary of numpy arrays of shape (L, R)
     """
     lti = riskmodel.lti  # loss type -> index
-    L, R = len(lti), len(rlzs_assoc.realizations)
+    L, R = len(lti), monitor.R
     I = monitor.insured_losses + 1
     eids = riskinput.eids
     E = len(eids)
@@ -191,7 +189,7 @@ def event_based_risk(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     if monitor.avg_losses:
         result['AVGLOSS'] = square(L, R, zeroN)
 
-    outputs = riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor, assetcol)
+    outputs = riskmodel.gen_outputs(riskinput, monitor, assetcol)
     _aggregate(outputs, riskmodel, agg, ass, idx, result, monitor)
     for (l, r) in itertools.product(range(L), range(R)):
         records = [(eids[i], loss) for i, loss in enumerate(agg[:, l, r])
@@ -270,6 +268,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         mon.avg_losses = self.oqparam.avg_losses
         mon.asset_loss_table = self.oqparam.asset_loss_table
         mon.insured_losses = self.I
+        mon.R = self.R
         mon.ses_ratio = (
             oq.risk_investigation_time or oq.investigation_time) / (
                 oq.investigation_time * oq.ses_per_logic_tree_path)
@@ -316,15 +315,16 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                    for sg in sm.src_groups}
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = self.riskmodel.build_inputs_from_ruptures(
-                grp_trt, list(oq.imtls), self.sitecol.complete, all_ruptures,
+                grp_trt, self.rlzs_assoc, list(oq.imtls),
+                self.sitecol.complete, all_ruptures,
                 oq.truncation_level, correl_model, min_iml, eps,
                 oq.concurrent_tasks or 1)
             # NB: I am using generators so that the tasks are submitted one at
             # the time, without keeping all of the arguments in memory
             res = starmap(
                 self.core_task.__func__,
-                ((riskinput, self.riskmodel, self.rlzs_assoc,
-                  self.assetcol, self.monitor.new('task'))
+                ((riskinput, self.riskmodel, self.assetcol,
+                  self.monitor.new('task'))
                  for riskinput in riskinputs)).submit_all()
         acc = functools.reduce(self.agg, res, AccumDict())
         self.save_data_transfer(res)
@@ -636,14 +636,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 elt_dt = numpy.dtype([('eid', U32), ('loss', F32)])
 
 
-def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
+def losses_by_taxonomy(riskinput, riskmodel, assetcol, monitor):
     """
     :param riskinput:
         a :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
-    :param rlzs_assoc:
-        a class:`openquake.commonlib.source.RlzsAssoc` instance
     :param assetcol:
         AssetCollection instance
     :param monitor:
@@ -652,7 +650,7 @@ def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
         a numpy array of shape (T, L, R)
     """
     lti = riskmodel.lti  # loss type -> index
-    L, R = len(lti), len(rlzs_assoc.realizations)
+    L, R = len(lti), len(riskinput.rlzs)
     T = len(assetcol.taxonomies)
     A = len(assetcol)
     taxonomy_id = {t: i for i, t in enumerate(sorted(assetcol.taxonomies))}
@@ -660,7 +658,7 @@ def losses_by_taxonomy(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     avglosses = numpy.zeros((A, L, R), F64) if monitor.avg_losses else None
     agglosses = AccumDict(
         {lr: AccumDict() for lr in itertools.product(range(L), range(R))})
-    for out in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor, assetcol):
+    for out in riskmodel.gen_outputs(riskinput, monitor, assetcol):
         # NB: out.assets is a non-empty list of assets with the same taxonomy
         t = taxonomy_id[out.assets[0].taxonomy]
         l, r = out.lr
@@ -741,9 +739,9 @@ class EbriskCalculator(base.RiskCalculator):
                     ruptures_by_grp[src_group.id], ruptures_per_block):
                 trt = grp_trt[rupts[0].grp_id]
                 ri = riskinput.RiskInputFromRuptures(
-                    trt, imts, sitecol, rupts, trunc_level,
+                    trt, rlzs_assoc, imts, sitecol, rupts, trunc_level,
                     correl_model, min_iml)
-                allargs.append((ri, riskmodel, rlzs_assoc, assetcol, monitor))
+                allargs.append((ri, riskmodel, assetcol, monitor))
         taskname = '%s#%d' % (losses_by_taxonomy.__name__, ssm.sm_id + 1)
         smap = starmap(losses_by_taxonomy, allargs, name=taskname)
         attrs = dict(num_ruptures={

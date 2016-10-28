@@ -613,6 +613,7 @@ class RiskCalculator(HazardCalculator):
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         num_tasks = math.ceil((self.oqparam.concurrent_tasks or 1) /
                               len(imtls))
+        rlzs = sorted(hazards_by_rlz)
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
             idx_weight_pairs = [
@@ -639,7 +640,7 @@ class RiskCalculator(HazardCalculator):
                             hdata[i][imt][rlz] = haz
                 # build the riskinputs
                 ri = self.riskmodel.build_input(
-                    hdata, reduced_assets, reduced_eps)
+                    rlzs, hdata, reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
             assert riskinputs
@@ -656,7 +657,7 @@ class RiskCalculator(HazardCalculator):
         rlz_ids = getattr(self.oqparam, 'rlz_ids', ())
         if rlz_ids:
             self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
-        all_args = ((riskinput, self.riskmodel, self.rlzs_assoc) +
+        all_args = ((riskinput, self.riskmodel) +
                     self.extra_args + (self.monitor,)
                     for riskinput in self.riskinputs)
         res = starmap(self.core_task.__func__, all_args).reduce()
