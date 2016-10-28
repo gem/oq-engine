@@ -36,7 +36,27 @@ cd Downloads
 chmod +x openquake-setup-linux64-2.1.0-1.run
 ./openquake-setup-linux64-2.1.0-1.run
 ```
-then follow the wizard on screen. By default the code is installed in `~/openquake`
+then follow the wizard on screen. By default the code is installed in `~/openquake`.
+
+```bash
+Verifying archive integrity... All good.
+Uncompressing installer for the OpenQuake Engine  100%
+Type the path where you want to install OpenQuake, followed by [ENTER]. Otherwise leave blank, it will be installed in /home/auser:
+Copying the files in /home/auser/openquake. Please wait.
+Finalizing the installation. Please wait.
+Installation completed. To enable it run 'source /home/auser/openquake/env.sh'
+```
+
+The demo files are located in `~/openquake/share/openquake/engine/demos`.
+
+### Upgrade from a previous installation
+
+To upgrade from a previous installation you need to manually remove it first
+
+```bash
+# default is ~/openquake
+rm -Rf ~/openquake
+```
 
 
 ## Run the OpenQuake Engine
@@ -44,7 +64,8 @@ then follow the wizard on screen. By default the code is installed in `~/openqua
 Before running the OpenQuake Engine its environment must be loaded
 
 ```bash
-source /installation/path/of/openquake/env.sh
+# default is ~/openquake
+source ~/openquake/env.sh
 ```
 
 Continue on [How to run the OpenQuake Engine](../running/unix.md)
