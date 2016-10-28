@@ -81,8 +81,6 @@ def expose_outputs(dstore):
     """
     oq = dstore['oqparam']
     exportable = set(ekey[0] for ekey in export.export)
-    # small hack: remove the ruptures from scenario
-    # calculators, as requested by Vitor
     calcmode = oq.calculation_mode
     dskeys = set(dstore) & exportable  # exportable datastore keys
     if oq.uniform_hazard_spectra:
@@ -96,8 +94,8 @@ def expose_outputs(dstore):
     if 'realizations' in dskeys and len(rlzs) <= 1:
         dskeys.remove('realizations')  # do not export a single realization
     if 'ruptures' in dskeys and 'scenario' in calcmode:
-        exportable.remove('ruptures')  # do not export
-    logs.dbcmd('create_outputs', dstore.calc_id, sorted(dskeys))
+        exportable.remove('ruptures')  # do not export, as requested by Vitor
+    logs.dbcmd('create_outputs', dstore.calc_id, sorted(dskeys & exportable))
 
 
 class MasterKilled(KeyboardInterrupt):
