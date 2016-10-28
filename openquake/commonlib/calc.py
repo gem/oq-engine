@@ -439,7 +439,13 @@ class EBRupture(object):
         self.source_id = source_id
         self.grp_id = grp_id
         self.serial = serial
-        self.weight = len(sids) * len(events)
+
+    @property
+    def weight(self):
+        """
+        Weight of the EBRupture
+        """
+        return len(self.sids) * len(self.events)
 
     @property
     def etags(self):
@@ -516,6 +522,7 @@ class EBRupture(object):
             attrs['time_span'] = rup.temporal_occurrence_model.time_span
         if hasattr(rup, 'pmf'):
             attrs['pmf'] = rup.pmf_array()
+        attrs['seed'] = rup.seed
         attrs['hypo'] = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         attrs['source_class'] = hdf5.cls2dotname(rup.source_typology)
         attrs['rupture_class'] = hdf5.cls2dotname(rup.__class__)
