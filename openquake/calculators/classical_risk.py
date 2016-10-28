@@ -34,7 +34,7 @@ def by_l_assets(output):
     return output.lr[0], tuple(output.assets)
 
 
-def classical_risk(riskinput, riskmodel, rlzs_assoc, monitor):
+def classical_risk(riskinput, riskmodel, monitor):
     """
     Compute and return the average losses for each asset.
 
@@ -42,17 +42,14 @@ def classical_risk(riskinput, riskmodel, rlzs_assoc, monitor):
         a :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
-    :param rlzs_assoc:
-        associations (grp_id, gsim) -> realizations
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
     oq = monitor.oqparam
     ins = oq.insured_losses
-    rlzs = rlzs_assoc.realizations
     result = dict(
         loss_curves=[], loss_maps=[], stat_curves=[], stat_maps=[])
-    outputs = list(riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor))
+    outputs = list(riskmodel.gen_outputs(riskinput, monitor))
     for out in outputs:
         l, r = out.lr
         for i, asset in enumerate(out.assets):
@@ -76,10 +73,10 @@ def classical_risk(riskinput, riskmodel, rlzs_assoc, monitor):
                 (l, r, aid, out.loss_maps[:, i]))
 
         # compute statistics
-        if len(rlzs) > 1:
+        if len(riskinput.rlzs) > 1:
             for (l, assets), outs in groupby(outputs, by_l_assets).items():
                 for out in outs:  # outputs with the same loss type and assets
-                    out.weight = rlzs[out.lr[1]].weight
+                    out.weight = riskinput.rlzs[out.lr[1]].weight
                 curve_resolution = outs[0].loss_curves.shape[-1]
                 statsbuilder = scientific.StatsBuilder(
                     oq.quantile_loss_curves,
@@ -135,7 +132,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             for key in self.datastore['hcurves']:
                 pmap = self.datastore['hcurves/' + key]
                 rlz = self.rlzs_assoc.get_rlz(key)
-                curves_by_rlz[rlz] = pmap.convert(oq.imtls, nsites)
+                if rlz is not None:  # can be None if a realization is
+                    # missing; this happen in test_case_5
+                    curves_by_rlz[rlz] = pmap.convert(oq.imtls, nsites)
         self.riskinputs = self.build_riskinputs(curves_by_rlz)
         self.monitor.oqparam = oq
 
