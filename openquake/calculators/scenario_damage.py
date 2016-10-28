@@ -140,7 +140,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         base.RiskCalculator.pre_execute(self)
         self.monitor.consequence_models = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
-        self.datastore['etags'], gmfs = calc.get_gmfs(self.datastore)
+        self.datastore['etags'], gmfs = calc.get_gmfs(
+            self.datastore, self.precalc)
         rlzs = self.csm_info.get_rlzs_assoc().realizations
         self.riskinputs = self.build_riskinputs(
             {rlz: gmf for rlz, gmf in zip(rlzs, gmfs)})
