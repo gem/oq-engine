@@ -215,7 +215,7 @@ class OqParam(valid.ParamSet):
 
         # checks for ebrisk
         if self.calculation_mode == 'ebrisk' and self.asset_correlation:
-            raise ValueError('assert_correlation != 0 is not supported')
+            raise ValueError('asset_correlation != 0 is not supported')
 
     def check_gsims(self, gsims):
         """
