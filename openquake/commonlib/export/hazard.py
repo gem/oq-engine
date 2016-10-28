@@ -764,7 +764,7 @@ def export_gmf_scenario_hdf5(ekey, dstore):
     E = oq.number_of_ground_motion_fields
     correl_model = oq.get_correl_model()
     computer = gmf.GmfComputer(
-            dstore['rupture'], dstore['sitecol'], oq.imtls, gsims,
+            dstore['ruptures/0'], dstore['sitecol'], oq.imtls, gsims,
             oq.truncation_level, correl_model)
     fname = dstore.export_path('%s.%s' % ekey)
     gmf_dt = numpy.dtype([('%s-%03d' % (imt, eid), F32) for imt in oq.imtls
