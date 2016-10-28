@@ -74,10 +74,12 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         res = collections.defaultdict(list)
         sids = self.sitecol.sids
+        self.gmfa = {}
         with self.monitor('computing gmfs', autoflush=True):
             n = self.oqparam.number_of_ground_motion_fields
             for i, gsim in enumerate(self.gsims):
                 gmfa = self.computer.compute(gsim, n, self.oqparam.random_seed)
+                self.gmfa[gsim] = gmfa
                 for (imti, sid, eid), gmv in numpy.ndenumerate(gmfa):
                     res[i].append((sids[sid], eid, imti, gmv))
             return {rlzi: numpy.array(res[rlzi], gmv_dt) for rlzi in res}
