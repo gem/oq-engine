@@ -104,8 +104,12 @@ class GmfComputer(object):
         :param seed: a random seed or None
         :returns: a 32 bit array of shape (num_imts, num_sites, num_events)
         """
+        try:  # read the seed from self.rupture.rupture if possible
+            seed = seed or self.rupture.rupture.seed
+        except AttributeError:
+            pass
         if hasattr(self, 'salt'):  # when called from the engine
-            seed = (seed or self.rupture.rupture.seed) + self.salt[gsim]
+            seed += self.salt[gsim]
             self.salt[gsim] += 1
         if seed is not None:
             numpy.random.seed(seed)
