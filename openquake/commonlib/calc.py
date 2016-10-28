@@ -439,7 +439,13 @@ class EBRupture(object):
         self.source_id = source_id
         self.grp_id = grp_id
         self.serial = serial
-        self.weight = len(sids) * len(events)
+
+    @property
+    def weight(self):
+        """
+        Weight of the EBRupture
+        """
+        return len(self.sids) * len(self.events)
 
     @property
     def etags(self):
