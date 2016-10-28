@@ -681,6 +681,12 @@ save_ruptures = event_based.EventBasedRuptureCalculator.__dict__[
 
 
 class EpsilonMatrix(object):
+    """
+    Mock-up for a matrix of epsilons of size N x E
+
+    :param num_assets: the number of assets (N)
+    :param seeds: seeds set before calling numpy.random.normal (E)
+    """
     def __init__(self, num_assets, seeds):
         self.num_assets = num_assets
         self.seeds = seeds
@@ -842,10 +848,10 @@ class EbriskCalculator(base.RiskCalculator):
         :param num_rlzs: the total number of realizations
         :returns: the total number of events
         """
-        self.T = len(self.assetcol.taxonomies)
-        self.A = len(self.assetcol)
         self.L = len(self.riskmodel.lti)
         self.R = num_rlzs
+        self.T = len(self.assetcol.taxonomies)
+        self.A = len(self.assetcol)
         avg_losses = self.oqparam.avg_losses
         dset1 = self.datastore.create_dset(
             'losses_by_taxon', F64, (self.T, self.L, self.R))
