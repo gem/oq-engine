@@ -320,7 +320,9 @@ class AbrahamsonEtAl2014(GMPE):
             [0.0, 150, 250, 400, 700, 1000, 2000],
             [C['a43'], C['a43'], C['a44'], C['a45'], C['a46'], C['a46'],
              C['a46']],
-            kind='linear')
+            kind='linear',
+            bounds_error=False,
+            fill_value="extrapolate")
         return f2(vs30) * factor
 
     def _get_regional_term(self, C, imt, vs30, rrup):
