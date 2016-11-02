@@ -529,7 +529,7 @@ class EventBasedReduced(RiskModel):
         self.risk_functions = vulnerability_functions
         self.time_event = time_event
 
-    def __call__(self, loss_type, assets, gmvs_eids, epsgetter=None):
+    def __call__(self, loss_type, assets, gmvs_eids, epsgetter):
         """
         :param str loss_type:
             the loss type considered
@@ -538,7 +538,7 @@ class EventBasedReduced(RiskModel):
         :param gmvs_eids:
            a composite array of E elements with fields 'gmv' and 'eid'
         :param epsgetter:
-           ignored
+           a callable returning the correct epsilons for the given gmvs
         :returns:
             a :class:`openquake.risklib.scientific.Output`
             instance with the total losses
@@ -547,11 +547,20 @@ class EventBasedReduced(RiskModel):
         gmvs, eids = gmvs_eids['gmv'], gmvs_eids['eid']
         alosses = numpy.zeros(len(assets))
         elosses = numpy.zeros(len(gmvs))
+        means, covs, idxs = vf.interpolate(gmvs)
+        e, E = len(means), len(eids)
         for i, asset in enumerate(assets):
-            ratios, _covs, idxs = vf.interpolate(gmvs)
+            epsilons = epsgetter(asset.ordinal, eids)
+            _ratios = (means if epsilons is None
+                       else vf.sample(means, covs, idxs, epsilons))
+            if e < E:
+                ratios = numpy.zeros(E)
+                ratios[idxs] = _ratios
+            else:
+                ratios = _ratios
             losses = ratios * asset.value(loss_type, self.time_event)
             alosses[i] = losses.sum()
-            elosses[idxs] += losses
+            elosses += losses
         return scientific.Output(
             assets, loss_type, alosses=alosses, elosses=elosses, eids=eids)
 
