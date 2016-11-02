@@ -1,5 +1,9 @@
+python-oq-engine (2.1.1-0~precise01) precise; urgency=low
+
   [Michele Simionato]
   * Fixed a bug when splitting the fault sources by magnitude
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 02 Nov 2016 10:41:18 +0100
 
 python-oq-engine (2.1.0-0~precise01) precise; urgency=low
 
