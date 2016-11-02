@@ -100,8 +100,6 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         """
         if not len(fault_trace) >= 2:
             raise ValueError("the fault trace must have at least two points")
-        if not fault_trace.on_surface():
-            raise ValueError("the fault trace must be defined on the surface")
         tlats = [point.latitude for point in fault_trace.points]
         tlons = [point.longitude for point in fault_trace.points]
         if geo_utils.line_intersects_itself(tlons, tlats):
@@ -111,8 +109,6 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         if not lower_seismogenic_depth > upper_seismogenic_depth:
             raise ValueError("lower seismogenic depth must be greater than "
                              "upper seismogenic depth")
-        if not upper_seismogenic_depth >= 0.0:
-            raise ValueError("upper seismo depth must be non-negative")
         if not mesh_spacing > 0.0:
             raise ValueError("mesh spacing must be positive")
 

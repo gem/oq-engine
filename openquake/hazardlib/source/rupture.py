@@ -63,8 +63,7 @@ class Rupture(object):
         Angle describing rupture propagation direction in decimal degrees.
 
     :raises ValueError:
-        If magnitude value is not positive, hypocenter is above the earth
-        surface or tectonic region type is unknown.
+        If magnitude value is not positive, or tectonic region type is unknown.
 
     NB: if you want to convert the rupture into XML, you should set the
     attribute surface_nodes to an appropriate value.
@@ -77,8 +76,6 @@ class Rupture(object):
                  surface_nodes=()):
         if not mag > 0:
             raise ValueError('magnitude must be positive')
-        if not hypocenter.depth > 0:
-            raise ValueError('rupture hypocenter must have positive depth')
         NodalPlane.check_rake(rake)
         self.tectonic_region_type = tectonic_region_type
         self.rake = rake

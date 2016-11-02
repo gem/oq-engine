@@ -37,8 +37,7 @@ class PointSource(ParametricSeismicSource):
         Maximum depth an earthquake rupture can reach, in km.
     :param location:
         :class:`~openquake.hazardlib.geo.point.Point` object
-        representing the location
-        of the seismic source. The depth value of that point is ignored.
+        representing the location of the seismic source. 
     :param nodal_plane_distribution:
         :class:`~openquake.hazardlib.pmf.PMF` object with values
         that are instances
@@ -54,7 +53,7 @@ class PointSource(ParametricSeismicSource):
     for description of other parameters.
 
     :raises ValueError:
-        If upper seismogenic depth is negative or below lower seismogenic
+        If upper seismogenic depth is below lower seismogenic
         depth,  if one or more of hypocenter depth values is shallower
         than upper seismogenic depth or deeper than lower seismogenic depth.
     """
@@ -78,9 +77,6 @@ class PointSource(ParametricSeismicSource):
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
             temporal_occurrence_model)
-
-        if upper_seismogenic_depth < 0:
-            raise ValueError('upper seismogenic depth must be non-negative')
 
         if not lower_seismogenic_depth > upper_seismogenic_depth:
             raise ValueError('lower seismogenic depth must be below '
