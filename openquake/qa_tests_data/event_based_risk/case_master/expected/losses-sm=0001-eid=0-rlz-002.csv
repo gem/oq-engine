@@ -1,0 +1,2 @@
+event_tag,event_set,business_interruption,contents,nonstructural,occupants:float32,structural
+grp=02~ses=0002~src=1~rup=522-01,2,3.51066E+01,4.65164E+02,7.47452E+02,7.02132E-04,1.06639E+02
