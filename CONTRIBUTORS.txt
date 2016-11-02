@@ -29,6 +29,7 @@ Matteo Nastasi          November 2012
 Michele Simionato       December 2012
 Daniele Viganò          April 2013
 Paolo Tormene           October 2013
+Robin Gee               November 2016
 
 Project management
 ------------------
