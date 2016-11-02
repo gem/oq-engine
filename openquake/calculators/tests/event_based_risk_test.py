@@ -85,7 +85,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             'No GMFs were generated, perhaps they were all below the '
             'minimum_intensity threshold')
 
-    @attr('qa', 'risk', 'event_based_risk')
+    @attr('qa', 'risk', 'ebrisk')
     def test_case_2bis(self):
         # test for a single realization
         out = self.run_calc(case_2.__file__, 'job_loss.ini', exports='csv',
