@@ -123,15 +123,6 @@ class SiteCollection(object):
     Instances of this class are intended to represent a large collection
     of sites in a most efficient way in terms of memory usage.
 
-    .. note::
-
-        Because calculations assume that :class:`Sites <Site>` are on the
-        Earth's surface, all `depth` information in a :class:`SiteCollection`
-        is discarded. The collection `mesh` will only contain lon and lat. So
-        even if a :class:`SiteCollection` is created from sites containing
-        `depth` in their geometry, iterating over the collection will yield
-        :class:`Sites <Site>` with a reference depth of 0.0.
-
     :param sites:
         A list of instances of :class:`Site` class.
     """
@@ -139,6 +130,7 @@ class SiteCollection(object):
         ('sids', numpy.uint32),
         ('lons', numpy.float64),
         ('lats', numpy.float64),
+        ('depths', numpy.float64),
         ('_vs30', numpy.float64),
         ('_vs30measured', numpy.bool),
         ('_z1pt0', numpy.float64),
@@ -148,7 +140,7 @@ class SiteCollection(object):
     _slots_ = dtype.names
 
     @classmethod
-    def from_points(cls, lons, lats, sitemodel):
+    def from_points(cls, lons, lats, depths, sitemodel):
         """
         Build the site collection from
 
@@ -156,6 +148,8 @@ class SiteCollection(object):
             a sequence of longitudes
         :param lats:
             a sequence of latitudes
+        :param depths:
+            a sequence of depths
         :param sitemodel:
             an object containing the attributes
             reference_vs30_value,
@@ -164,13 +158,15 @@ class SiteCollection(object):
             reference_depth_to_2pt5km_per_sec,
             reference_backarc
         """
-        assert len(lons) == len(lats), (len(lons), len(lats))
+        assert len(lons) == len(lats) == len(depths), (len(lons), len(lats),
+            len(depths))
         self = cls.__new__(cls)
         self.complete = self
         self.total_sites = len(lons)
         self.sids = numpy.arange(len(lons), dtype=numpy.uint32)
         self.lons = numpy.array(lons)
         self.lats = numpy.array(lats)
+        self.depths = numpy.array(depths)
         self._vs30 = sitemodel.reference_vs30_value
         self._vs30measured = sitemodel.reference_vs30_type == 'measured'
         self._z1pt0 = sitemodel.reference_depth_to_1pt0km_per_sec
@@ -184,6 +180,7 @@ class SiteCollection(object):
         self.sids = numpy.zeros(n, dtype=int)
         self.lons = numpy.zeros(n, dtype=float)
         self.lats = numpy.zeros(n, dtype=float)
+        self.depths = numpy.zeros(n, dtype=float)
         self._vs30 = numpy.zeros(n, dtype=float)
         self._vs30measured = numpy.zeros(n, dtype=bool)
         self._z1pt0 = numpy.zeros(n, dtype=float)
@@ -194,6 +191,7 @@ class SiteCollection(object):
             self.sids[i] = i
             self.lons[i] = sites[i].location.longitude
             self.lats[i] = sites[i].location.latitude
+            self.depths[i] = sites[i].location.depth
             self._vs30[i] = sites[i].vs30
             self._vs30measured[i] = sites[i].vs30measured
             self._z1pt0[i] = sites[i].z1pt0
@@ -207,7 +205,7 @@ class SiteCollection(object):
         # subsequent calculation. note that this doesn't protect arrays from
         # being changed by calling itemset()
         for arr in (self._vs30, self._vs30measured, self._z1pt0, self._z2pt5,
-                    self.lons, self.lats, self._backarc, self.sids):
+                    self.lons, self.lats, self.depths, self._backarc, self.sids):
             arr.flags.writeable = False
 
     def __toh5__(self):
@@ -225,8 +223,8 @@ class SiteCollection(object):
 
     @property
     def mesh(self):
-        """Return a mesh with the given lons and lats"""
-        return Mesh(self.lons, self.lats, depths=None)
+        """Return a mesh with the given lons, lats, and depths"""
+        return Mesh(self.lons, self.lats, self.depths)
 
     @property
     def indices(self):
@@ -248,6 +246,7 @@ class SiteCollection(object):
             sc.sids = self.sids[indices]
             sc.lons = self.lons[indices]
             sc.lats = self.lats[indices]
+            sc.depths = self.depths[indices]
             sc._vs30 = _extract(self._vs30, indices)
             sc._vs30measured = _extract(self._vs30measured, indices)
             sc._z1pt0 = _extract(self._z1pt0, indices)
@@ -363,8 +362,8 @@ class FilteredSiteCollection(object):
 
     @property
     def mesh(self):
-        """Return a mesh with the given lons and lats"""
-        return Mesh(self.lons, self.lats, depths=None)
+        """Return a mesh with the given lons, lats, and depths"""
+        return Mesh(self.lons, self.lats, self.depths)
 
     def filter(self, mask):
         """
@@ -478,7 +477,8 @@ def _extract_site_param(fsc, name):
 
 
 # attach a number of properties filtering the arrays
-for name in 'vs30 vs30measured z1pt0 z2pt5 backarc lons lats sids'.split():
+for name in 'vs30 vs30measured z1pt0 z2pt5 backarc lons lats depths\
+    sids'.split():
     prop = property(
         lambda fsc, name=name: _extract_site_param(fsc, name),
         doc='Extract %s array from FilteredSiteCollection' % name)
