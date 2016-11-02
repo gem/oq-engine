@@ -240,22 +240,21 @@ def export_ass_losses_ebr(ekey, dstore):
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     n = ekey[0].count(':')
     if n == 1:  # passed the eid, sm_id assumed to be zero
-        sm_ids = (0,)
-        all_eids = [int(ekey[0].split(':')[1])]
+        sm_ids, eid = (0,), int(ekey[0].split(':')[1])
     elif n == 2:  # passed both eid and sm_id
         sm_id, eid = map(int, ekey[0].split(':')[1:])
         sm_ids = (sm_id,)
-        all_eids = [eid]
     else:  # eid and sm_id both unspecified, export all
         sm_ids = sorted(rlzs_assoc.rlzs_by_smodel)
-        all_eids = slice(None)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for sm_id in sm_ids:
         rlzs = rlzs_assoc.rlzs_by_smodel[sm_id]
         try:
-            events = dstore['events/sm-%04d' % sm_id][all_eids]
+            events = dstore['events/sm-%04d' % sm_id]
         except KeyError:
             continue
+        if n:
+            events = events[[eid]]
         if not len(events):
             continue
         for rlz in rlzs:
@@ -268,7 +267,7 @@ def export_ass_losses_ebr(ekey, dstore):
                 dset = ass_losses['%s/%s' % (rlzname, loss_type)]
                 insured_losses = bool(dset.dtype['loss'].shape)
                 eids.update(dset['eid'])
-            eids = sorted(eids)
+            eids = [eid] if n else sorted(eids)
             eid2idx = dict(zip(eids, range(len(eids))))
             elt = numpy.zeros(len(eids), elt_dt)
             elt['event_tag'] = build_etags(
