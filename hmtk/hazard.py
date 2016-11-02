@@ -50,11 +50,9 @@
 """
 Simple utilities to run hazard calculations from within the toolkit
 """
-import sys
 import numpy as np
 import multiprocessing
 from collections import OrderedDict
-#from openquake.hazardlib.calc.hazard_curve import hazard_curves
 from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim import get_available_gsims
@@ -62,7 +60,6 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib import imt
 from openquake.hazardlib.geo.point import Point
-from hmtk.sources.source_model import mtkSourceModel
 
 DEFAULT_WORKERS = multiprocessing.cpu_count()
 GSIM_MAP = get_available_gsims()
@@ -82,11 +79,11 @@ def _check_supported_imts(imts):
             raise ValueError('IMT %s not supported in OpenQuake!' % imtx)
     return output_imts
 
+
 def _check_imts_imls(imts, imls):
     """
     Pre-process IMTS and IMLs, returning a corresponding IMT dictionary
     """
-    #imts = _check_supported_imts(imts)
     n_imts = len(imts)
     if len(imls) == 1:
         # Fixed IMLs
@@ -99,6 +96,7 @@ def _check_imts_imls(imts, imls):
         raise ValueError('Number of IML sets must be 1 or equal '
                          'to number of IMTs')
     return imts
+
 
 def _preprocess_gmpes(source_model, gmpes):
     """
@@ -179,8 +177,8 @@ class HMTKHazardCurve(object):
         self.imts = imts
         self.truncation_level = truncation_level
         if source_integration_dist:
-            self.src_filter = filters.source_site_distance_filter(
-                source_integration_dist)
+            self.src_filter = filters.RtreeFilter(
+                sites, source_integration_dist)
         else:
             self.src_filter = filters.source_site_noop_filter
         self.preprocess_inputs()
@@ -227,21 +225,18 @@ def get_hazard_curve_source(input_set):
     """
     From a dictionary input set returns hazard curves
     """
-    try:
-        cmaker = ContextMaker(
-            [input_set["gsims"][key] for key in input_set["gsims"]],
-            None)
-        for rupture, r_sites in input_set["ruptures_sites"]:
-            gsim = input_set["gsims"][rupture.tectonic_region_type]
-            sctx, rctx, dctx = cmaker.make_contexts(r_sites, rupture)
-            for iimt in input_set["imts"]:
-                poes = gsim.get_poes(sctx, rctx, dctx, imt.from_string(iimt),
-                                     input_set["imts"][iimt],
-                                     input_set["truncation_level"])
-                pno = rupture.get_probability_no_exceedance(poes)
-                input_set["curves"][iimt] *= r_sites.expand(pno, placeholder=1)
-    except Exception, err:
-        pass
+    cmaker = ContextMaker(
+        [input_set["gsims"][key] for key in input_set["gsims"]],
+        None)
+    for rupture, r_sites in input_set["ruptures_sites"]:
+        gsim = input_set["gsims"][rupture.tectonic_region_type]
+        sctx, rctx, dctx = cmaker.make_contexts(r_sites, rupture)
+        for iimt in input_set["imts"]:
+            poes = gsim.get_poes(sctx, rctx, dctx, imt.from_string(iimt),
+                                 input_set["imts"][iimt],
+                                 input_set["truncation_level"])
+            pno = rupture.get_probability_no_exceedance(poes)
+            input_set["curves"][iimt][r_sites.sids] *= pno
     for iimt in input_set["imts"]:
         input_set["curves"][iimt] = 1 - input_set["curves"][iimt]
     return input_set["curves"]
@@ -252,11 +247,10 @@ class HMTKHazardCurveParallelSource(HMTKHazardCurve):
     Runs the PSHA calculation parallelising by source
     """
     def calculate_hazard(self, num_workers=DEFAULT_WORKERS,
-            num_src_workers=1):
+                         num_src_workers=1):
         """
         Executes the hazard calculation, parallelising by source
         """
-        p = multiprocessing.Pool(processes=num_workers)
         poe_set = self._setup_poe_set()
         src_counter = 0
         input_set = []
@@ -278,7 +272,7 @@ class HMTKHazardCurveParallelSource(HMTKHazardCurve):
                 # tools. However, after extensive testing it is shown that
                 # the OpenQuake hazardlib cannot be parallelised safely with
                 # pythons own multiprocessing tools. The function will be
-                # kept in its present form to allow the problem to be 
+                # kept in its present form to allow the problem to be
                 # resolved in future, but there is currently no performance
                 # gain over the non-parallelised version
                 poei = map(get_hazard_curve_source,
@@ -300,9 +294,9 @@ class HMTKHazardCurveParallelSource(HMTKHazardCurve):
         """
         Returns the calculation inputs, checking if sources are missing
         """
-        (s_source, s_sites) = self.src_filter(((source, self.sites)))
-        if not s_source:
-            return None
+        [(s_source, s_sites)] = self.src_filter([source])
+        if s_sites is None:
+            return
 
         inputs = {
             "imts": self.imts,
@@ -310,8 +304,8 @@ class HMTKHazardCurveParallelSource(HMTKHazardCurve):
                       self.gmpes[source.tectonic_region_type]},
             "truncation_level": self.truncation_level,
             "curves": OrderedDict([(imt, np.ones([len(self.sites),
-                                          len(self.imts[imt])]))
-                                          for imt in self.imts])}
+                                                  len(self.imts[imt])]))
+                                   for imt in self.imts])}
         inputs["ruptures_sites"] = [(rupture, s_sites)
-                                     for rupture in source.iter_ruptures()]
+                                    for rupture in source.iter_ruptures()]
         return inputs
