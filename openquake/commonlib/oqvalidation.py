@@ -213,6 +213,10 @@ class OqParam(valid.ParamSet):
                     'iml_disagg=%s will not be computed from poes_disagg=%s',
                     str(self.iml_disagg), self.poes_disagg)
 
+        # checks for ebrisk
+        if self.calculation_mode == 'ebrisk' and self.asset_correlation:
+            raise ValueError('asset_correlation != 0 is not supported')
+
     def check_gsims(self, gsims):
         """
         :param gsims: a sequence of GSIM instances
