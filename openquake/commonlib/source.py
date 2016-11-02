@@ -511,7 +511,7 @@ class CompositionInfo(object):
                 [sg.id for sg in sm.src_groups],
                 sm.weight,
                 self.get_num_rlzs(sm))
-        summary = ['%s, %s, trt=%s, weight=%s: %d realization(s)' % ibm
+        summary = ['%s, %s, grp=%s, weight=%s: %d realization(s)' % ibm
                    for ibm in info_by_model.values()]
         return '<%s\n%s>' % (
             self.__class__.__name__, '\n'.join(summary))
