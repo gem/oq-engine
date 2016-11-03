@@ -242,9 +242,12 @@ class EventBasedRuptureCalculator(PSHACalculator):
 
             # save rup_data
             if hasattr(ruptures_by_grp_id, 'rup_data'):
+                [grp_id] = ruptures_by_grp_id
                 trt = ruptures_by_grp_id.trt
+                sm_id = self.sm_by_grp[grp_id]
+                key = 'rup_data/sm-%04d/%s' % (sm_id, trt)
                 self.rup_data[trt] = self.datastore.extend(
-                        'rup_data/' + trt, ruptures_by_grp_id.rup_data)
+                        key, ruptures_by_grp_id.rup_data)
 
     def post_execute(self, result):
         """
