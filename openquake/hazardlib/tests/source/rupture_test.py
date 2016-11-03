@@ -69,13 +69,6 @@ class RuptureCreationTestCase(unittest.TestCase):
             mag=0
         )
 
-    def test_hypocenter_in_the_air(self):
-        self.assert_failed_creation(
-            Rupture, ValueError,
-            'rupture hypocenter must have positive depth',
-            hypocenter=Point(0, 1, -0.1)
-        )
-
     def test_probabilistic_rupture_negative_occurrence_rate(self):
         self.assert_failed_creation(
             ParametricProbabilisticRupture, ValueError,
