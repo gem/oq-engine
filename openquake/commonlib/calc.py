@@ -19,18 +19,18 @@
 from __future__ import division
 import logging
 import copy
-import io
 import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import encode, decode
 from openquake.baselib.general import get_array, group_array, AccumDict
 from openquake.hazardlib.geo.mesh import RectangularMesh, build_array
+from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, tom
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.commonlib import readinput, oqvalidation, writers, util
+from openquake.commonlib import readinput, oqvalidation, util
 
 
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
@@ -349,37 +349,44 @@ def check_overflow(calc):
                 '%d %s, got %d' % (max_[var], var, num_[var]))
 
 
-class StochasticEventSetCollection(object):
+class RuptureData(object):
     """
-    Class representing collection of SESs associated to
-    given source model and GSIM logic tree paths.
+    Container for information about the ruptures of a given
+    tectonic region type.
     """
-    dt = numpy.dtype([
-        ('rupserial', U32), ('magnitude', F64),
-        ('lon', F32), ('lat', F32), ('depth', F32),
-        ('tectonic_region_type', hdf5.vstr),
-        ('strike', F64), ('dip', F64), ('rake', F64), ('boundary', hdf5.vstr)])
+    def __init__(self, trt, gsims):
+        self.trt = trt
+        self.cmaker = ContextMaker(gsims)
+        self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
+                             set('strike dip rake'.split()))
+        self.dt = numpy.dtype([
+            ('rupserial', U32), ('multiplicity', U16),
+            ('numsites', U32), ('occurrence_rate', F64),
+            ('magnitude', F64), ('lon', F32), ('lat', F32), ('depth', F32),
+            ('strike', F64), ('dip', F64), ('rake', F64),
+            ('boundary', hdf5.vstr)] + [(param, F64) for param in self.params])
 
-    def __init__(self, ruptures):
+    def to_array(self, ebruptures):
         data = []
-        for rup in ruptures:
+        for ebr in ebruptures:
+            rup = ebr.rupture
+            rc = self.cmaker.make_rupture_context(rup)
+            ruptparams = tuple(getattr(rc, param) for param in self.params)
             point = rup.surface.get_middle_point()
             multi_lons, multi_lats = rup.surface.get_surface_boundaries()
             boundary = 'MULTIPOLYGON(%s)' % ','.join(
                 '((%s))' % ','.join('%s %s' % (lon, lat)
                                     for lon, lat in zip(lons, lats))
                 for lons, lats in zip(multi_lons, multi_lats))
-            data.append([(rup.serial, rup.mag,
-                          point.x, point.y, point.z,
-                          decode(rup.tectonic_region_type),
-                          rup.surface.get_strike(), rup.surface.get_dip(),
-                          rup.rake, decode(boundary))])
-        self.data = numpy.array(data, self.dt)
-
-    def __str__(self):
-        out = io.StringIO()
-        writers.write_csv(out, self.data, sep='\t')
-        return out.getvalue()
+            try:
+                rate = ebr.rupture.occurrence_rate
+            except AttributeError:  # for nonparametric sources
+                rate = numpy.nan
+            data.append((ebr.serial, ebr.multiplicity, len(ebr.sids),
+                         rate, rup.mag, point.x, point.y, point.z,
+                         rup.surface.get_strike(), rup.surface.get_dip(),
+                         rup.rake, decode(boundary)) + ruptparams)
+        return numpy.array(data, self.dt)
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface):
