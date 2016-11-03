@@ -105,7 +105,7 @@ class SESCollection(object):
             yield SES(sesruptures, self.investigation_time, idx)
 
 
-@export.add(('ruptures', 'xml'), ('ruptures', 'csv'))
+@export.add(('ruptures', 'xml'))
 def export_ses_xml(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -122,21 +122,28 @@ def export_ses_xml(ekey, dstore):
         groupby(ruptures, operator.attrgetter('ses_idx')),
         oq.investigation_time)
     dest = dstore.export_path('ses.' + fmt)
-    globals()['_export_ses_' + fmt](dest, ses_coll)
+    writer = hazard_writers.SESXMLWriter(dest)
+    writer.serialize(ses_coll)
     return [dest]
 
 
-def _export_ses_xml(dest, ses_coll):
-    writer = hazard_writers.SESXMLWriter(dest)
-    writer.serialize(ses_coll)
-
-
-def _export_ses_csv(dest, ses_coll):
+@export.add(('ruptures', 'csv'))
+def export_ses_csv(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    dest = dstore.export_path('ses.csv')  # TODO: add multiplicity
+    header = ('id mag centroid_lon centroid_lat centroid_depth trt '
+              'strike dip rake boundary').split()
     rows = []
-    for ses in ses_coll:
-        for rup in ses:
-            rows.append([rup.etag])
-    write_csv(dest, sorted(rows, key=operator.itemgetter(0)))
+    for trt in dstore['rup_data']:
+        for r in dstore['rup_data/' + trt]:
+            rows.append(
+                (r['rupserial'], r['mag'], r['lon'], r['lat'], r['depth'],
+                 trt, r['strike'], r['dip'], r['rake'], r['boundary']))
+    writers.write_csv(dest, rows, header=header)
+    return [dest]
 
 
 # #################### export Ground Motion fields ########################## #
