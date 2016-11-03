@@ -62,14 +62,7 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     src_group_id = sources[0].src_group_id
     trt = sources[0].tectonic_region_type
     max_dist = monitor.maximum_distance[trt]
-    cmaker = ContextMaker(gsims)
-    params = sorted(cmaker.REQUIRES_RUPTURE_PARAMETERS)
-    rup_data_dt = numpy.dtype(
-        [('rupserial', U32), ('multiplicity', U16),
-         ('numsites', U32), ('occurrence_rate', F64)] + [
-            (param, F64) for param in params])
     eb_ruptures = []
-    rup_data = []
     calc_times = []
     rup_mon = monitor('filtering ruptures', measuremem=False)
     num_samples = monitor.samples
@@ -92,15 +85,6 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
         # to call sample_ruptures *before* the filtering
         for ebr in build_eb_ruptures(
                 src, num_occ_by_rup, rupture_filter, monitor.seed, rup_mon):
-            nsites = len(ebr.sids)
-            try:
-                rate = ebr.rupture.occurrence_rate
-            except AttributeError:  # for nonparametric sources
-                rate = numpy.nan
-            rc = cmaker.make_rupture_context(ebr.rupture)
-            ruptparams = tuple(getattr(rc, param) for param in params)
-            rup_data.append((ebr.serial, ebr.multiplicity, nsites, rate) +
-                            ruptparams)
             eb_ruptures.append(ebr)
             num_events += ebr.multiplicity
         dt = time.time() - t0
@@ -108,7 +92,7 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     res = AccumDict({src_group_id: eb_ruptures})
     res.num_events = num_events
     res.calc_times = calc_times
-    res.rup_data = numpy.array(rup_data, rup_data_dt)
+    res.rup_data = calc.RuptureData(trt, gsims).to_array(eb_ruptures)
     res.trt = trt
     return res
 
