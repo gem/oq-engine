@@ -480,7 +480,7 @@ class EBRupture(object):
         """
         tags = []
         for (eid, ses, occ, sampleid) in self.events:
-            tag = 'trt=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
+            tag = 'grp=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
                 self.grp_id, ses, self.source_id, self.serial, occ)
             if sampleid > 0:
                 tag += '~sample=%d' % sampleid
@@ -548,6 +548,7 @@ class EBRupture(object):
             attrs['time_span'] = rup.temporal_occurrence_model.time_span
         if hasattr(rup, 'pmf'):
             attrs['pmf'] = rup.pmf_array()
+        attrs['seed'] = rup.seed
         attrs['hypo'] = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         attrs['source_class'] = hdf5.cls2dotname(rup.source_typology)
         attrs['rupture_class'] = hdf5.cls2dotname(rup.__class__)
