@@ -680,6 +680,34 @@ save_ruptures = event_based.EventBasedRuptureCalculator.__dict__[
     'save_ruptures']
 
 
+class EpsilonMatrix(object):
+    """
+    Mock-up for a matrix of epsilons of size N x E
+
+    :param num_assets: the number of assets (N)
+    :param seeds: seeds set before calling numpy.random.normal (E)
+    """
+    def __init__(self, num_assets, seeds):
+        self.num_assets = num_assets
+        self.seeds = seeds
+        self.eps = None
+
+    def make_eps(self):
+        """
+        Builds a matrix of N x E epsilons suitable for asset_correlation=0
+        """
+        eps = numpy.zeros((self.num_assets, len(self.seeds)), F32)
+        for i, seed in enumerate(self.seeds):
+            numpy.random.seed(seed)
+            eps[:, i] = numpy.random.normal(size=self.num_assets)
+        return eps
+
+    def __getitem__(self, item):
+        if self.eps is None:
+            self.eps = self.make_eps()
+        return self.eps[item]
+
+
 @base.calculators.add('ebrisk')
 class EbriskCalculator(base.RiskCalculator):
     """
@@ -726,6 +754,7 @@ class EbriskCalculator(base.RiskCalculator):
             num_ruptures += len(rupts)
             num_events += dic.num_events
         ruptures_by_grp.num_events = num_events
+        seeds = self.oqparam.master_seed + numpy.arange(num_events)
         save_ruptures(self, ruptures_by_grp)
 
         # determine the realizations
@@ -734,13 +763,18 @@ class EbriskCalculator(base.RiskCalculator):
         allargs = []
         # prepare the risk inputs
         ruptures_per_block = self.oqparam.ruptures_per_block
+        start = 0
         for src_group in ssm.src_groups:
             for rupts in block_splitter(
                     ruptures_by_grp[src_group.id], ruptures_per_block):
-                trt = grp_trt[rupts[0].grp_id]
+                n_events = sum(ebr.multiplicity for ebr in rupts)
+                eps = EpsilonMatrix(
+                    len(self.assetcol), seeds[start: start + n_events]
+                ) if self.riskmodel.covs else None
+                start += n_events
                 ri = riskinput.RiskInputFromRuptures(
-                    trt, rlzs_assoc, imts, sitecol, rupts, trunc_level,
-                    correl_model, min_iml)
+                    grp_trt[rupts[0].grp_id], rlzs_assoc, imts, sitecol, rupts,
+                    trunc_level, correl_model, min_iml, eps)
                 allargs.append((ri, riskmodel, assetcol, monitor))
         taskname = '%s#%d' % (losses_by_taxonomy.__name__, ssm.sm_id + 1)
         smap = starmap(losses_by_taxonomy, allargs, name=taskname)
