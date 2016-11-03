@@ -149,6 +149,7 @@ def export_ses_csv(ekey, dstore):
                     rows.append(
                         (etag, r['mag'], r['lon'], r['lat'], r['depth'],
                          trt, r['strike'], r['dip'], r['rake'], r['boundary']))
+    rows.sort(key=operator.itemgetter(0))
     writers.write_csv(dest, rows, header=header)
     return [dest]
 
