@@ -92,7 +92,6 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     res.num_events = num_events
     res.calc_times = calc_times
     res.rup_data = calc.RuptureData(trt, gsims).to_array(eb_ruptures)
-    res.trt = trt
     return res
 
 
@@ -196,6 +195,8 @@ class EventBasedRuptureCalculator(PSHACalculator):
         zd.eff_ruptures = AccumDict()
         self.eid = collections.Counter()  # sm_id -> event_id
         self.sm_by_grp = self.csm.info.get_sm_by_grp()
+        self.grp_trt = {sg.id: sg.trt for sm in self.csm.info.source_models
+                        for sg in sm.src_groups}
         return zd
 
     def agg_dicts(self, acc, ruptures_by_grp_id):
@@ -240,14 +241,13 @@ class EventBasedRuptureCalculator(PSHACalculator):
                     self.datastore.extend(
                         ev, numpy.array(events, calc.stored_event_dt))
 
-            # save rup_data
-            if hasattr(ruptures_by_grp_id, 'rup_data'):
-                [grp_id] = ruptures_by_grp_id
-                trt = ruptures_by_grp_id.trt
-                sm_id = self.sm_by_grp[grp_id]
-                key = 'rup_data/sm-%04d/%s' % (sm_id, trt)
-                self.rup_data[trt] = self.datastore.extend(
-                        key, ruptures_by_grp_id.rup_data)
+                # save rup_data
+                if hasattr(ruptures_by_grp_id, 'rup_data'):
+                    trt = self.grp_trt[grp_id]
+                    sm_id = self.sm_by_grp[grp_id]
+                    key = 'rup_data/sm-%04d/%s' % (sm_id, trt)
+                    self.rup_data[trt] = self.datastore.extend(
+                            key, ruptures_by_grp_id.rup_data)
 
     def post_execute(self, result):
         """
@@ -375,15 +375,15 @@ class EventBasedCalculator(ClassicalCalculator):
         monitor.oqparam = oq
         imts = list(oq.imtls)
         min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
-        grp_trt = {sg.id: sg.trt for sm in self.csm.info.source_models
-                   for sg in sm.src_groups}
+        self.grp_trt = {sg.id: sg.trt for sm in self.csm.info.source_models
+                        for sg in sm.src_groups}
         rlzs_by_grp = self.rlzs_assoc.get_rlzs_by_grp_id()
         correl_model = oq.get_correl_model()
         for block in split_in_blocks(
                 ebruptures, oq.concurrent_tasks or 1,
                 key=operator.attrgetter('grp_id')):
             grp_id = block[0].grp_id
-            trt = grp_trt[grp_id]
+            trt = self.grp_trt[grp_id]
             gsims = [dic[trt] for dic in self.rlzs_assoc.gsim_by_trt]
             samples = self.rlzs_assoc.samples[grp_id]
             getter = GmfGetter(gsims, block, self.sitecol,
