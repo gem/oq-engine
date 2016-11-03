@@ -104,8 +104,12 @@ class GmfComputer(object):
         :param seed: a random seed or None
         :returns: a 32 bit array of shape (num_imts, num_sites, num_events)
         """
+        try:  # read the seed from self.rupture.rupture if possible
+            seed = seed or self.rupture.rupture.seed
+        except AttributeError:
+            pass
         if hasattr(self, 'salt'):  # when called from the engine
-            seed = (seed or self.rupture.rupture.seed) + self.salt[gsim]
+            seed += self.salt[gsim]
             self.salt[gsim] += 1
         if seed is not None:
             numpy.random.seed(seed)
@@ -196,9 +200,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     Given an earthquake rupture, the ground motion field calculator computes
     ground shaking over a set of sites, by randomly sampling a ground shaking
     intensity model. A ground motion field represents a possible 'realization'
-    of the ground shaking due to an earthquake rupture. If a non-trivial
-    filtering function is passed, the final result is expanded and filled
-    with zeros in the places corresponding to the filtered out sites.
+    of the ground shaking due to an earthquake rupture.
 
     .. note::
 

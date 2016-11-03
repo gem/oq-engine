@@ -1,0 +1,11 @@
+================
+Kale et al. 2015
+================
+
+.. module:: openquake.hazardlib.gsim.kale_2015
+
+.. autoclass:: KaleEtAl2015Turkey
+    :members:
+
+.. autoclass:: KaleEtAl2015Iran
+    :members:
