@@ -197,10 +197,6 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got, sorted)
 
-        # this is a case with two different TRTs + 1 empty
-        for fname in out['rup_data', 'csv']:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
-
     @attr('qa', 'hazard', 'event_based')
     def test_case_6(self):
         # 2 models x 3 GMPEs, different weights
