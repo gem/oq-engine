@@ -500,7 +500,10 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
         return mesh.get_middle_point()
 
     def get_surface_boundaries(self):
-        # return [[5 lons]], [[5 lats]]
+        """
+        Returns the boundaries in the same format as a multiplanar
+        surface, with two one-element lists of lons and lats
+        """
         mesh = self.get_mesh()
         lons = numpy.concatenate((mesh.lons[0, :],
                                   mesh.lons[1:, -1],
