@@ -64,14 +64,14 @@ Copyright (C) 2014-2016 GEM Foundation
 %endif
 
 %build
-env CFLAGS="$RPM_OPT_FLAGS" python setup.py build
+python setup.py build
 
 %check
 #nosetests -v -a '!slow' --with-doctest --with-coverage --cover-package=openquake.hazardlib
 
 %install
 sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" openquake/hazardlib/__init__.py
-python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --record=INSTALLED_FILES
+python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --prefix=/opt/openquake/engine --install-scripts=/usr/bin --record=INSTALLED_FILES
 
 %clean
 rm -rf %{buildroot}
