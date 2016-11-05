@@ -102,7 +102,8 @@ def compute_losses(ssm, sitecol, assetcol, riskmodel,
     """
     [grp] = ssm.src_groups
     res = List()
-    res.ruptures_by_grp = compute_ruptures(grp, sitecol, None, monitor)
+    gsims = ssm.gsim_lt.values[DEFAULT_TRT]
+    res.ruptures_by_grp = compute_ruptures(grp, sitecol, gsims, monitor)
     [(grp_id, ruptures)] = res.ruptures_by_grp.items()
     rlzs_assoc = ssm.info.get_rlzs_assoc()
     num_rlzs = len(rlzs_assoc.realizations)
@@ -118,15 +119,6 @@ def compute_losses(ssm, sitecol, assetcol, riskmodel,
 
 
 @base.calculators.add('ucerf_risk')
-class UCERFRiskCalculator(EbriskCalculator):
-    """
-    Event based risk calculator for UCERF, parallelizing on the source models
-    """
-    pre_execute = UCERFEventBasedCalculator.__dict__['pre_execute']
-    compute_ruptures = staticmethod(compute_ruptures)
-
-
-@base.calculators.add('ucerf_risk_fast')
 class UCERFRiskFastCalculator(EbriskCalculator):
     """
     Event based risk calculator for UCERF, parallelizing on the source models
