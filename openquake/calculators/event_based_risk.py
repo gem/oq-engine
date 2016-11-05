@@ -311,11 +311,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         else:
             logging.info('minimum_intensity=%s', oq.minimum_intensity)
         csm_info = self.datastore['csm_info']
-        grp_trt = {sg.id: sg.trt for sm in csm_info.source_models
-                   for sg in sm.src_groups}
+        self.grp_trt = {sg.id: sg.trt for sm in csm_info.source_models
+                        for sg in sm.src_groups}
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = self.riskmodel.build_inputs_from_ruptures(
-                grp_trt, self.rlzs_assoc, list(oq.imtls),
+                self.grp_trt, self.rlzs_assoc, list(oq.imtls),
                 self.sitecol.complete, all_ruptures,
                 oq.truncation_level, correl_model, min_iml, eps,
                 oq.concurrent_tasks or 1)
@@ -738,22 +738,27 @@ class EbriskCalculator(base.RiskCalculator):
         num_ruptures = 0
         num_events = 0
         allargs = []
-        grp_trt = {}
+        self.grp_trt = {}
         # collect the sources
         maxweight = ssm.get_maxweight(self.oqparam.concurrent_tasks)
         logging.info('Using a maxweight of %d', maxweight)
         for src_group in ssm.src_groups:
-            grp_trt[src_group.id] = trt = src_group.trt
+            self.grp_trt[src_group.id] = trt = src_group.trt
             gsims = ssm.gsim_lt.values[trt]
             for block in block_splitter(src_group, maxweight, getweight):
                 allargs.append((block, self.sitecol, gsims, monitor))
         # collect the ruptures
+        rup_data = []
         for dic in parallel.starmap(self.compute_ruptures, allargs):
             ruptures_by_grp += dic
-            [rupts] = dic.values()
+            [(grp_id, rupts)] = dic.items()
+            trt = self.grp_trt[grp_id]
+            gsims = ssm.gsim_lt.values[trt]
+            rup_data.append(calc.RuptureData(trt, gsims).to_array(rupts))
             num_ruptures += len(rupts)
             num_events += dic.num_events
         ruptures_by_grp.num_events = num_events
+        ruptures_by_grp.rup_data = numpy.concatenate(rup_data)
         seeds = self.oqparam.master_seed + numpy.arange(num_events)
         save_ruptures(self, ruptures_by_grp)
 
@@ -773,8 +778,8 @@ class EbriskCalculator(base.RiskCalculator):
                 ) if self.riskmodel.covs else None
                 start += n_events
                 ri = riskinput.RiskInputFromRuptures(
-                    grp_trt[rupts[0].grp_id], rlzs_assoc, imts, sitecol, rupts,
-                    trunc_level, correl_model, min_iml, eps)
+                    self.grp_trt[rupts[0].grp_id], rlzs_assoc, imts, sitecol,
+                    rupts, trunc_level, correl_model, min_iml, eps)
                 allargs.append((ri, riskmodel, assetcol, monitor))
         taskname = '%s#%d' % (losses_by_taxonomy.__name__, ssm.sm_id + 1)
         smap = starmap(losses_by_taxonomy, allargs, name=taskname)
