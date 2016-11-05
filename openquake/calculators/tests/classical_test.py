@@ -19,7 +19,7 @@
 from nose.plugins.attrib import attr
 from openquake.commonlib import parallel
 from openquake.commonlib.export import export
-from openquake.calculators.tests import CalculatorTestCase, check_platform
+from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
@@ -154,7 +154,8 @@ class ClassicalTestCase(CalculatorTestCase):
             case_13.__file__, 'job.ini', exports='csv', poes='0.2',
             hazard_calculation_id=str(self.calc.datastore.calc_id))
         [fname] = out['hmaps', 'csv']
-        self.assertEqualFiles('expected/hazard_map-mean2.csv', fname)
+        self.assertEqualFiles('expected/hazard_map-mean2.csv', fname,
+                              delta=1E-5)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_14(self):
@@ -165,7 +166,6 @@ class ClassicalTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test_case_15(self):  # full enumeration
-        check_platform('xenial', 'trusty')
         self.assert_curves_ok('''\
 hazard_curve-mean.csv
 hazard_curve-smltp_SM1-gsimltp_BA2008_C2003.csv
@@ -190,25 +190,34 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
         # test UHS XML export
         fnames = [f for f in export(('uhs', 'xml'), self.calc.datastore)
                   if 'mean' in f]
-        self.assertEqualFiles('expected/hazard_uhs-mean-0.01.xml', fnames[0])
-        self.assertEqualFiles('expected/hazard_uhs-mean-0.1.xml', fnames[1])
-        self.assertEqualFiles('expected/hazard_uhs-mean-0.2.xml', fnames[2])
+        self.assertEqualFiles('expected/hazard_uhs-mean-0.01.xml', fnames[0],
+                              delta=1E-5)
+        self.assertEqualFiles('expected/hazard_uhs-mean-0.1.xml', fnames[1],
+                              delta=1E-5)
+        self.assertEqualFiles('expected/hazard_uhs-mean-0.2.xml', fnames[2],
+                              delta=1E-5)
 
         # test hmaps geojson export
         fnames = [f for f in export(('hmaps', 'geojson'), self.calc.datastore)
                   if 'mean' in f]
         self.assertEqualFiles(
-            'expected/hazard_map-mean-0.01-PGA.geojson', fnames[0])
+            'expected/hazard_map-mean-0.01-PGA.geojson', fnames[0],
+            delta=1E-5)
         self.assertEqualFiles(
-            'expected/hazard_map-mean-0.01-SA(0.1).geojson', fnames[1])
+            'expected/hazard_map-mean-0.01-SA(0.1).geojson', fnames[1],
+            delta=1E-5)
         self.assertEqualFiles(
-            'expected/hazard_map-mean-0.1-PGA.geojson', fnames[2])
+            'expected/hazard_map-mean-0.1-PGA.geojson', fnames[2],
+            delta=1E-5)
         self.assertEqualFiles(
-            'expected/hazard_map-mean-0.1-SA(0.1).geojson', fnames[3])
+            'expected/hazard_map-mean-0.1-SA(0.1).geojson', fnames[3],
+            delta=1E-5)
         self.assertEqualFiles(
-            'expected/hazard_map-mean-0.2-PGA.geojson', fnames[4])
+            'expected/hazard_map-mean-0.2-PGA.geojson', fnames[4],
+            delta=1E-5)
         self.assertEqualFiles(
-            'expected/hazard_map-mean-0.2-SA(0.1).geojson', fnames[5])
+            'expected/hazard_map-mean-0.2-SA(0.1).geojson', fnames[5],
+            delta=1E-5)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_16(self):   # sampling
