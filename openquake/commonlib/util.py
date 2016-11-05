@@ -144,7 +144,7 @@ def get_ses_idx(etag):
 def get_serial(etag):
     """
     >>> print(get_serial("grp=00~ses=0007~src=1-3~rup=018-01"))
-    018
+    18
     """
     try:
         trt, ses, src, rup = decode(etag).split('~')
