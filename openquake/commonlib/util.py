@@ -146,9 +146,12 @@ def get_serial(etag):
     >>> print(get_serial("grp=00~ses=0007~src=1-3~rup=018-01"))
     018
     """
-    trt, ses, src, rup = decode(etag).split('~')
+    try:
+        trt, ses, src, rup = decode(etag).split('~')
+    except ValueError:
+        trt, ses, src, rup, sample = decode(etag).split('~')
     serial = rup.split('=')[1].split('-')[0]
-    return serial
+    return int(serial)
 
 
 class Rupture(object):
