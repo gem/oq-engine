@@ -58,21 +58,22 @@ def get_mesh(sitecol, complete=True):
     return mesh
 
 
-def build_etags(stored_events, sm_ids=()):
+def build_etag(stored_event):
+    serial, ses, occ, sampleid, grp_id, source_id = stored_event
+    tag = b'grp=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
+        grp_id, ses, source_id, serial, occ)
+    if sampleid > 0:
+        tag += b'~sample=%d' % sampleid
+    return tag
+
+
+def build_etags(stored_events, sm_strings=()):
     """
     An array of tags for the underlying seismic events
     """
-    sm_ids = sm_ids or sorted(stored_events)
-    tags = []
-    for sm_id in sm_ids:
-        events = stored_events[sm_id]
-        for (serial, ses, occ, sampleid, grp_id, source_id) in events:
-            tag = b'grp=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
-                grp_id, ses, source_id, serial, occ)
-            if sampleid > 0:
-                tag += b'~sample=%d' % sampleid
-            tags.append(tag)
-    return numpy.array(tags)
+    sm_strings = sm_strings or sorted(stored_events)
+    return numpy.array([build_etag(ev) for sm in sm_strings
+                        for ev in stored_events[sm]])
 
 
 class SES(object):
@@ -105,7 +106,7 @@ class SESCollection(object):
             yield SES(sesruptures, self.investigation_time, idx)
 
 
-@export.add(('ruptures', 'xml'), ('ruptures', 'csv'))
+@export.add(('ruptures', 'xml'))
 def export_ses_xml(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -122,21 +123,35 @@ def export_ses_xml(ekey, dstore):
         groupby(ruptures, operator.attrgetter('ses_idx')),
         oq.investigation_time)
     dest = dstore.export_path('ses.' + fmt)
-    globals()['_export_ses_' + fmt](dest, ses_coll)
+    writer = hazard_writers.SESXMLWriter(dest)
+    writer.serialize(ses_coll)
     return [dest]
 
 
-def _export_ses_xml(dest, ses_coll):
-    writer = hazard_writers.SESXMLWriter(dest)
-    writer.serialize(ses_coll)
-
-
-def _export_ses_csv(dest, ses_coll):
+@export.add(('ruptures', 'csv'))
+def export_ses_csv(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    if 'events' not in dstore:  # scenario
+        return []
+    dest = dstore.export_path('ses.csv')
+    header = ('id mag centroid_lon centroid_lat centroid_depth trt '
+              'strike dip rake boundary').split()
     rows = []
-    for ses in ses_coll:
-        for rup in ses:
-            rows.append([rup.etag])
-    write_csv(dest, sorted(rows, key=operator.itemgetter(0)))
+    for sm in dstore['events']:
+        etags = build_etags(dstore['events'], [sm])
+        dic = groupby(etags, util.get_serial)
+        for trt in dstore['rup_data/' + sm]:
+            for r in dstore['rup_data/%s/%s' % (sm, trt)]:
+                for etag in dic[r['rupserial']]:
+                    rows.append(
+                        (etag, r['mag'], r['lon'], r['lat'], r['depth'],
+                         trt, r['strike'], r['dip'], r['rake'], r['boundary']))
+    rows.sort(key=operator.itemgetter(0))
+    writers.write_csv(dest, rows, header=header)
+    return [dest]
 
 
 # #################### export Ground Motion fields ########################## #
@@ -859,19 +874,6 @@ def export_disagg_xml(ekey, dstore):
         writer.serialize(data)
         fnames.append(fname)
     return sorted(fnames)
-
-
-@export.add(('rup_data', 'csv'))
-def export_rup_data(ekey, dstore):
-    rupture_data = dstore[ekey[0]]
-    paths = []
-    for trt in sorted(rupture_data):
-        fname = 'rup_data_%s.csv' % trt.lower().replace(' ', '_')
-        data = rupture_data[trt].value
-        data.sort(order='rupserial')
-        if len(data):
-            paths.append(write_csv(dstore.export_path(fname), data))
-    return paths
 
 
 @export.add(('realizations', 'csv'))
