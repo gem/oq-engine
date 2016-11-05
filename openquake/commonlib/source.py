@@ -30,7 +30,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import groupby, group_array
-from openquake.commonlib import logictree, sourceconverter
+from openquake.commonlib import logictree, sourceconverter, InvalidFile
 from openquake.commonlib import nrml, node
 
 MAXWEIGHT = 200  # tuned by M. Simionato
@@ -683,7 +683,13 @@ def collect_source_model_paths(smlt):
 
     :param smlt: source model logic tree file
     """
-    for blevel in nrml.read(smlt).logicTree:
+    n = nrml.read(smlt)
+    try:
+        blevels = n.logicTree
+    except:
+        raise InvalidFile('%s is not a valid source_model_logic_tree file'
+                          % smlt)
+    for blevel in blevels:
         with node.context(smlt, blevel):
             for bset in blevel:
                 for br in bset:
