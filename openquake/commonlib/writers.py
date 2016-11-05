@@ -258,6 +258,8 @@ class HeaderTranslator(object):
         return names
 
 htranslator = HeaderTranslator(
+    '(boundary):object',
+    '(tectonic_region_type):object',
     '(asset_ref):\|S100',
     '(event_tag):\|S100',
     '(event_set):uint32',
@@ -272,6 +274,7 @@ htranslator = HeaderTranslator(
     '(poe-[\d\.]+):float32',
     '(lon):float32',
     '(lat):float32',
+    '(depth):float32',
     '(structural.*):float32',
     '(nonstructural.*):float32',
     '(business_interruption.*):float32',
