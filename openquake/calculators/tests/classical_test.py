@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from nose.plugins.attrib import attr
-from openquake.commonlib import parallel
+from openquake.commonlib import parallel, InvalidFile
 from openquake.commonlib.export import export
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical import (
@@ -53,6 +53,11 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # there is a single source
         self.assertEqual(len(self.calc.datastore['source_info']), 1)
+
+    @attr('qa', 'hazard', 'classical')
+    def test_wrong_smlt(self):
+        with self.assertRaises(InvalidFile):
+            self.run_calc(case_1.__file__, 'job_wrong.ini')
 
     @attr('qa', 'hazard', 'classical')
     def test_sa_period_too_big(self):
