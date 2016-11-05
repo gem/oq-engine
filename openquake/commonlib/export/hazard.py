@@ -128,7 +128,7 @@ def export_ses_xml(ekey, dstore):
     return [dest]
 
 
-@export.add(('ruptures', 'csv'))
+@export.add(('rup_data', 'csv'))
 def export_ses_csv(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
