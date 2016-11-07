@@ -563,7 +563,7 @@ class CompositeSourceModel(collections.Sequence):
         the given site collection.
 
         :param sitecol: a SiteCollection instance
-        :para ss_filter: a SourceSitesFilter instance
+        :para ss_filter: a RtreeFilter instance
         """
         source_models = []
         weight = 0
