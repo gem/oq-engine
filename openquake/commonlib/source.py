@@ -687,7 +687,7 @@ def collect_source_model_paths(smlt):
     try:
         blevels = n.logicTree
     except:
-        raise InvalidFile('%s is not a valid source_model_logic_tree file'
+        raise InvalidFile('%s is not a valid source_model_logic_tree_file'
                           % smlt)
     for blevel in blevels:
         with node.context(smlt, blevel):
