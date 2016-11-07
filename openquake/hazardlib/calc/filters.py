@@ -162,7 +162,10 @@ class RtreeFilter(object):
         :param src: a source object
         :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
         """
-        maxdist = self.integration_distance[src.tectonic_region_type]
+        try:
+            maxdist = self.integration_distance[src.tectonic_region_type]
+        except TypeError:  # passed a scalar, not a dictionary
+            maxdist = self.integration_distance
         min_lon, min_lat, max_lon, max_lat = src.get_bounding_box(maxdist)
         if self.idl:  # apply IDL fix
             if min_lon < 0 and max_lon > 0:

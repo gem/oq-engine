@@ -36,7 +36,7 @@ python-oq-hazardlib (0.21.0-0~precise01) precise; urgency=low
   * Implements the European GMPE of Kotha et al. (2016), the SaRotD100 GMPE of Hong & Goda (2007) and the Arias Intensity GMPE of Trvasarou et al. (2003)
 
   [Michele Simionato]
-  * The `SourceSitesFilter` is now used by default in `pmap_from_grp`
+  * The `RtreeFilter` is now used by default in `pmap_from_grp`
   * Added a simple argument parser in baselib
   * Replaced pydoc.locate with a call to importlib to work around a QGIS issue
   * Fixed the encode/decode functions in baselib.python3compat
