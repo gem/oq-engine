@@ -33,7 +33,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assertEqual(len(expected), len(got))
         for fname, actual in zip(expected, got):
             self.assertEqualFiles(
-                'expected_output/%s' % fname, actual)
+                'expected_output/%s' % fname, actual, delta=1E-6)
 
     @attr('qa', 'hazard', 'disagg')
     def test_case_1(self):
