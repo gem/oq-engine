@@ -684,8 +684,8 @@ class EpsilonMatrix(object):
     """
     Mock-up for a matrix of epsilons of size N x E
 
-    :param num_assets: the number of assets (N)
-    :param seeds: seeds set before calling numpy.random.normal (E)
+    :param num_assets: N assets
+    :param seeds: E seeds, set before calling numpy.random.normal
     """
     def __init__(self, num_assets, seeds):
         self.num_assets = num_assets
