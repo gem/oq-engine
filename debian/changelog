@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Improved error message when the user gives a source model file instead of
+    a source model logic tree file
   * Fixed the management of negative calculation IDs
   * Relaxed the tolerance so that the tests pass on Mac OS X
   * Implemented csv exporter for the ruptures
