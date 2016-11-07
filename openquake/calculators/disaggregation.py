@@ -28,7 +28,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib.calc.filters import SourceSitesFilter
+from openquake.hazardlib.calc.filters import RtreeFilter
 from openquake.commonlib import parallel, sourceconverter
 from openquake.calculators import base, classical
 
@@ -83,18 +83,13 @@ def compute_disagg(sitecol, sources, src_group_id, rlzs_assoc,
             continue
 
         # generate source, rupture, sites once per site
-        sitecol = SiteCollection([site])
-        source_ruptures = [(src, src.iter_ruptures()) for src in sources
-                           if src.filter_sites_by_distance_to_source(
-                                   max_dist, sitecol)]
-        if not source_ruptures:
-            continue
         with collecting_mon:
             bdata = disagg._collect_bins_data(
-                trt_num, source_ruptures, site, curves_dict[sid],
+                trt_num, sources, site, curves_dict[sid],
                 src_group_id, rlzs_assoc, gsims, oqparam.imtls,
                 oqparam.poes_disagg, oqparam.truncation_level,
-                oqparam.num_epsilon_bins, oqparam.iml_disagg, monitor)
+                oqparam.num_epsilon_bins, oqparam.iml_disagg, self.src_filter,
+                monitor)
 
         for (rlzi, poe, imt), iml_pne_pairs in bdata.pnes.items():
             # extract the probabilities of non-exceedance for the
@@ -227,7 +222,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                     if (sm_id, sid) in self.bin_edges:
                         bin_edges[sid] = self.bin_edges[sm_id, sid]
 
-                ss_filter = SourceSitesFilter(oq.maximum_distance)
+                ss_filter = RtreeFilter(oq.maximum_distance)
                 split_sources = []
                 for src in src_group:
                     for split, _sites in ss_filter(
