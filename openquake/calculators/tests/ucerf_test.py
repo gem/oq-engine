@@ -31,10 +31,10 @@ class UcerfTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'ucerf')
     def test_event_based(self):
         check_platform('xenial')
-        out = self.run_calc(ucerf.__file__, 'job.ini', exports='txt')
-        num_exported = len(out['gmf_data', 'txt'])
-        # just check that some realizations are exported
-        self.assertGreaterEqual(num_exported, 1)
+        out = self.run_calc(ucerf.__file__, 'job.ini', exports='csv')
+        [fname] = out['rup_data', 'csv']
+        # just check that we get the expected number of ruptures
+        self.assertEqual(open(fname).read().count('\n'), 918)
 
     @attr('qa', 'hazard', 'ucerf')
     def test_classical(self):
