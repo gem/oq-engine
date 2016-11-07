@@ -130,11 +130,11 @@ def get_job_id(db, job_id, username):
     if job_id > 0:
         return job_id
     joblist = db('SELECT id FROM job WHERE user_name=?x '
-                 'ORDER BY id DESC LIMIT 1', username)
+                 'ORDER BY id DESC LIMIT ?x', username, - job_id)
     if not joblist:  # no jobs
         return
     else:
-        return joblist[0].id
+        return joblist[-1].id
 
 
 def get_calc_id(db, datadir, job_id=None):
