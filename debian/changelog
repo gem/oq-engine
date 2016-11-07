@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Relaxed the tolerance so that the tests pass on Mac OS X
   * Implemented csv exporter for the ruptures
   * Optimized the epsilon generation in the ebrisk calculator for
     asset_correlation=0
