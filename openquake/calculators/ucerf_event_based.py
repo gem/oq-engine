@@ -708,7 +708,6 @@ class UCERFEventBasedCalculator(event_based.EventBasedRuptureCalculator):
 
     def gen_args(self):
         oq = self.oqparam
-        self.csm.init_serials()   # TODO: num_ruptures must be != 0
         for sm_id in range(len(self.csm.source_models)):
             ssm = self.csm.get_model(sm_id)
             monitor = self.monitor.new(
