@@ -725,12 +725,12 @@ class UCERFEventBasedCalculator(event_based.EventBasedRuptureCalculator):
             compute_ruptures, self.gen_args()).submit_all()
         acc = self.zerodict()
         for ruptures_by_grp in res:
+            [(grp_id, ruptures)] = ruptures_by_grp.items()
+            acc.calc_times.extend(ruptures_by_grp.calc_times[grp_id])
             self.save_ruptures(ruptures_by_grp)
         self.save_data_transfer(res)
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.infos)
-        self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
-            functools.partial(self.count_eff_ruptures, acc))
         self.datastore['csm_info'] = self.csm.info
         return acc
 
