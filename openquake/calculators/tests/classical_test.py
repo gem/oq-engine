@@ -17,9 +17,9 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from nose.plugins.attrib import attr
-from openquake.commonlib import parallel
+from openquake.commonlib import parallel, InvalidFile
 from openquake.commonlib.export import export
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, check_platform
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
@@ -53,6 +53,11 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # there is a single source
         self.assertEqual(len(self.calc.datastore['source_info']), 1)
+
+    @attr('qa', 'hazard', 'classical')
+    def test_wrong_smlt(self):
+        with self.assertRaises(InvalidFile):
+            self.run_calc(case_1.__file__, 'job_wrong.ini')
 
     @attr('qa', 'hazard', 'classical')
     def test_sa_period_too_big(self):
@@ -154,7 +159,8 @@ class ClassicalTestCase(CalculatorTestCase):
             case_13.__file__, 'job.ini', exports='csv', poes='0.2',
             hazard_calculation_id=str(self.calc.datastore.calc_id))
         [fname] = out['hmaps', 'csv']
-        self.assertEqualFiles('expected/hazard_map-mean2.csv', fname)
+        self.assertEqualFiles('expected/hazard_map-mean2.csv', fname,
+                              delta=1E-5)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_14(self):
@@ -184,7 +190,10 @@ hazard_uhs-smltp_SM2_a3b1-gsimltp_BA2008_@.csv
 hazard_uhs-smltp_SM2_a3b1-gsimltp_CB2008_@.csv
 hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_@.csv
 hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
-                              case_15.__file__)
+                              case_15.__file__, delta=1E-6)
+
+        # now some tests on the exact numbers
+        check_platform('xenial', 'trusty')
 
         # test UHS XML export
         fnames = [f for f in export(('uhs', 'xml'), self.calc.datastore)
