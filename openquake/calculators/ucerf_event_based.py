@@ -31,7 +31,6 @@ import numpy
 
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip
-from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import valid, riskinput
 from openquake.commonlib import readinput, parallel, source, calc
 from openquake.calculators import base, event_based
@@ -724,7 +723,9 @@ class UCERFEventBasedCalculator(event_based.EventBasedRuptureCalculator):
         """
         res = parallel.starmap(
             compute_ruptures, self.gen_args()).submit_all()
-        acc = functools.reduce(self.agg_dicts, res, self.zerodict())
+        acc = self.zerodict()
+        for ruptures_by_grp in res:
+            self.save_ruptures(ruptures_by_grp)
         self.save_data_transfer(res)
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.infos)
