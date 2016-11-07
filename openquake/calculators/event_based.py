@@ -253,7 +253,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """
         Save the SES collection
         """
-        nr = sum(len(result[grp_id]) for grp_id in result)
+        nr = sum_dict(result)
         logging.info('Saved %d ruptures, %d events',
                      nr, sum(self.eid.values()))
         if 'ruptures' in self.datastore:
@@ -270,6 +270,24 @@ class EventBasedRuptureCalculator(PSHACalculator):
                                          multiplicity=mul)
         if self.rup_data:
             self.datastore.set_nbytes('rup_data')
+
+
+def sum_dict(dic):
+    """
+    Sum by key a dictionary of lists or numbers:
+
+    >>> sum_dict({'a': 1})
+    1
+    >>> sum_dict({'a': [None, None]})
+    2
+    """
+    s = 0
+    for k, v in dic.items():
+        if hasattr(v, '__len__'):
+            s += len(v)
+        else:
+            s += v
+    return s
 
 
 # ######################## GMF calculator ############################ #
