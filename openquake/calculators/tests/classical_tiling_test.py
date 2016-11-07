@@ -45,4 +45,5 @@ class ClassicalTilingTestCase(CalculatorTestCase):
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv,geojson')
         [fname] = out['hmaps', 'csv']
-        self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
+        self.assertEqualFiles(
+            'expected/hazard_map-mean.csv', fname, delta=1E-6)
