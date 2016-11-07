@@ -115,7 +115,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         os.makedirs(datastore.DATADIR)
 
     dbserver.ensure_on()
-    
+
     if upgrade_db:
         logs.set_level('info')
         msg = logs.dbcmd('what_if_I_upgrade', 'read_scripts')
