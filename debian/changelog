@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed excessive strictness when validating `consequenceFunction.id`
   * Added an `ucerf_rupture` calculator able to store seismic events and
     rupture data and reduced the data transfer
 
