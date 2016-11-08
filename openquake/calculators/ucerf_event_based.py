@@ -825,17 +825,20 @@ def compute_losses(ssm, sitecol, assetcol, riskmodel,
     res = List()
     gsims = ssm.gsim_lt.values[DEFAULT_TRT]
     res.ruptures_by_grp = compute_ruptures(grp, sitecol, gsims, monitor)
-    [(grp_id, ruptures)] = res.ruptures_by_grp.items()
+    [(grp_id, ebruptures)] = res.ruptures_by_grp.items()
     rlzs_assoc = ssm.info.get_rlzs_assoc()
     num_rlzs = len(rlzs_assoc.realizations)
     ri = riskinput.RiskInputFromRuptures(
-        DEFAULT_TRT, rlzs_assoc, imts, sitecol, ruptures, trunc_level,
+        DEFAULT_TRT, rlzs_assoc, imts, sitecol, ebruptures, trunc_level,
         correl_model, min_iml)
     res.append(losses_by_taxonomy(ri, riskmodel, assetcol, monitor))
     res.sm_id = ssm.sm_id
     res.num_events = len(ri.eids)
     start = res.sm_id * num_rlzs
     res.rlz_slice = slice(start, start + num_rlzs)
+    # don't return back the ruptures, only the events and rup_data
+    res.ruptures_by_grp[grp_id] = [EBR(ebr.serial, ebr.source_id, ebr.events)
+                                   for ebr in ebruptures]
     return res
 
 
