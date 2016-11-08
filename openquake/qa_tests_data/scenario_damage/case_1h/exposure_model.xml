@@ -14,7 +14,7 @@
     </costTypes>
   </conversions>
   <assets>
-    <asset id="a1" number="1" area="100" taxonomy="tax1" >
+    <asset id="a1" number="1" area="100" taxonomy="tax1+" >
       <location lon="-122.000" lat="38.113" />
       <costs>
         <cost type="structural" value="10000" />
