@@ -4,8 +4,7 @@ include README.md LICENSE CONTRIBUTORS.txt
 recursive-include openquake/server/db *.sql
 recursive-include openquake/server *.html *.css *.png *.js *.map *.ttf
 
-recursive-include openquake/*/tests *.xml *.csv
-recursive-include openquake/*/tests/data *.*
-recursive-include openquake/qa_tests_data *.*
+recursive-include openquake/*/tests *.* README
+recursive-include openquake/qa_tests_data *.* README
 
 recursive-include openquake/commonlib/nrml_examples *.xml *.csv *.geojson
