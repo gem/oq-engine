@@ -55,6 +55,7 @@ from openquake.commonlib.sourceconverter import SourceConverter
 
 # ######################## rupture calculator ############################ #
 
+EBR = collections.namedtuple('EBR', 'serial source_id events')
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -755,6 +756,7 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     # set the seed before calling generate_event_set
     numpy.random.seed(monitor.seed + src.src_group_id)
     ebruptures = []
+    ebrs = []
     eid = 0
     src.build_idx_set()
     background_sids = src.get_background_sids(sitecol, integration_distance)
@@ -773,14 +775,14 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
                 events.append((eid, ses_idx, occ, 0))  # 0 is the sampling
                 eid += 1
             if events:
+                evs = numpy.array(events, calc.event_dt)
+                ebrs.append(EBR(serial, src.source_id, evs))
                 ebruptures.append(
-                    calc.EBRupture(
-                        rup, indices,
-                        numpy.array(events, calc.event_dt),
-                        src.source_id, src.src_group_id, serial))
+                    calc.EBRupture(rup, indices, evs, src.source_id,
+                                   src.src_group_id, serial))
                 serial += 1
                 res.num_events += len(events)
-    res[src.src_group_id] = ebruptures
+    res[src.src_group_id] = ebrs
     res.calc_times[src.src_group_id] = (
         src.source_id, len(sitecol), time.time() - t0)
     res.rup_data = calc.RuptureData(DEFAULT_TRT, gsims).to_array(ebruptures)
