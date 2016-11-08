@@ -723,15 +723,17 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         """
         res = parallel.starmap(compute_events, self.gen_args()).submit_all()
         acc = self.zerodict()
+        num_ruptures = {}
         for ruptures_by_grp in res:
             [(grp_id, ruptures)] = ruptures_by_grp.items()
+            num_ruptures[grp_id] = len(ruptures)
             acc.calc_times.extend(ruptures_by_grp.calc_times[grp_id])
             self.save_ruptures(ruptures_by_grp)
         self.save_data_transfer(res)
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.infos)
         self.datastore['csm_info'] = self.csm.info
-        return acc
+        return num_ruptures
 
 
 def compute_ruptures(sources, sitecol, gsims, monitor):
