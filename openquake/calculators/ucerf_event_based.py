@@ -24,7 +24,6 @@ import os.path
 import logging
 import random
 import socket
-import functools
 import collections
 import h5py
 import numpy
@@ -55,6 +54,7 @@ from openquake.commonlib.sourceconverter import SourceConverter
 
 # ######################## rupture calculator ############################ #
 
+EBR = collections.namedtuple('EBR', 'serial source_id events')
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -662,7 +662,7 @@ def _copy_grp(src_group, grp_id, branch_name, branch_id):
 
 
 @base.calculators.add('ucerf_rupture')
-class UCERFEventBasedCalculator(event_based.EventBasedRuptureCalculator):
+class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
     """
     Event based PSHA calculator generating the ruptures only
     """
@@ -721,8 +721,7 @@ class UCERFEventBasedCalculator(event_based.EventBasedRuptureCalculator):
         """
         Run the ucerf calculation
         """
-        res = parallel.starmap(
-            compute_ruptures, self.gen_args()).submit_all()
+        res = parallel.starmap(compute_events, self.gen_args()).submit_all()
         acc = self.zerodict()
         num_ruptures = {}
         for ruptures_by_grp in res:
@@ -775,11 +774,10 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
                 events.append((eid, ses_idx, occ, 0))  # 0 is the sampling
                 eid += 1
             if events:
+                evs = numpy.array(events, calc.event_dt)
                 ebruptures.append(
-                    calc.EBRupture(
-                        rup, indices,
-                        numpy.array(events, calc.event_dt),
-                        src.source_id, src.src_group_id, serial))
+                    calc.EBRupture(rup, indices, evs, src.source_id,
+                                   src.src_group_id, serial))
                 serial += 1
                 res.num_events += len(events)
     res[src.src_group_id] = ebruptures
@@ -787,6 +785,22 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
         src.source_id, len(sitecol), time.time() - t0)
     res.rup_data = calc.RuptureData(DEFAULT_TRT, gsims).to_array(ebruptures)
     return res
+
+
+def compute_events(sources, sitecol, gsims, monitor):
+    """
+    :param sources: a sequence of UCERF sources
+    :param sitecol: a SiteCollection instance
+    :param gsims: a list of GSIMs
+    :param monitor: a Monitor instance
+    :returns: an AccumDict grp_id -> EBRs
+    """
+    ruptures_by_grp = compute_ruptures(sources, sitecol, gsims, monitor)
+    for grp_id in ruptures_by_grp:
+        ruptures_by_grp[grp_id] = [
+            EBR(ebr.serial, ebr.source_id, ebr.events)
+            for ebr in ruptures_by_grp[grp_id]]
+    return ruptures_by_grp
 
 
 class List(list):
@@ -813,17 +827,20 @@ def compute_losses(ssm, sitecol, assetcol, riskmodel,
     res = List()
     gsims = ssm.gsim_lt.values[DEFAULT_TRT]
     res.ruptures_by_grp = compute_ruptures(grp, sitecol, gsims, monitor)
-    [(grp_id, ruptures)] = res.ruptures_by_grp.items()
+    [(grp_id, ebruptures)] = res.ruptures_by_grp.items()
     rlzs_assoc = ssm.info.get_rlzs_assoc()
     num_rlzs = len(rlzs_assoc.realizations)
     ri = riskinput.RiskInputFromRuptures(
-        DEFAULT_TRT, rlzs_assoc, imts, sitecol, ruptures, trunc_level,
+        DEFAULT_TRT, rlzs_assoc, imts, sitecol, ebruptures, trunc_level,
         correl_model, min_iml)
     res.append(losses_by_taxonomy(ri, riskmodel, assetcol, monitor))
     res.sm_id = ssm.sm_id
     res.num_events = len(ri.eids)
     start = res.sm_id * num_rlzs
     res.rlz_slice = slice(start, start + num_rlzs)
+    # don't return back the ruptures, only the events and rup_data
+    res.ruptures_by_grp[grp_id] = [EBR(ebr.serial, ebr.source_id, ebr.events)
+                                   for ebr in ebruptures]
     return res
 
 
@@ -832,12 +849,12 @@ class UCERFRiskCalculator(EbriskCalculator):
     """
     Event based risk calculator for UCERF, parallelizing on the source models
     """
-    pre_execute = UCERFEventBasedCalculator.__dict__['pre_execute']
+    pre_execute = UCERFRuptureCalculator.__dict__['pre_execute']
 
     def execute(self):
         num_rlzs = len(self.rlzs_assoc.realizations)
         self.grp_trt = {
-            i: DEFAULT_TRT for i in range(len(self.csm.source_models))}
+            sm.ordinal: DEFAULT_TRT for sm in self.csm.source_models}
         allres = parallel.starmap(compute_losses, self.gen_args()).submit_all()
         num_events = self.save_results(allres, num_rlzs)
         self.save_data_transfer(allres)
