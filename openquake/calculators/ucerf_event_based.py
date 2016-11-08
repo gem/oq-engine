@@ -24,7 +24,6 @@ import os.path
 import logging
 import random
 import socket
-import functools
 import collections
 import h5py
 import numpy
@@ -722,8 +721,7 @@ class UCERFEventBasedCalculator(event_based.EventBasedRuptureCalculator):
         """
         Run the ucerf calculation
         """
-        res = parallel.starmap(
-            compute_ruptures, self.gen_args()).submit_all()
+        res = parallel.starmap(compute_events, self.gen_args()).submit_all()
         acc = self.zerodict()
         for ruptures_by_grp in res:
             [(grp_id, ruptures)] = ruptures_by_grp.items()
@@ -756,7 +754,6 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     # set the seed before calling generate_event_set
     numpy.random.seed(monitor.seed + src.src_group_id)
     ebruptures = []
-    ebrs = []
     eid = 0
     src.build_idx_set()
     background_sids = src.get_background_sids(sitecol, integration_distance)
@@ -776,17 +773,28 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
                 eid += 1
             if events:
                 evs = numpy.array(events, calc.event_dt)
-                ebrs.append(EBR(serial, src.source_id, evs))
                 ebruptures.append(
                     calc.EBRupture(rup, indices, evs, src.source_id,
                                    src.src_group_id, serial))
                 serial += 1
                 res.num_events += len(events)
-    res[src.src_group_id] = ebrs
+    res[src.src_group_id] = ebruptures
     res.calc_times[src.src_group_id] = (
         src.source_id, len(sitecol), time.time() - t0)
     res.rup_data = calc.RuptureData(DEFAULT_TRT, gsims).to_array(ebruptures)
     return res
+
+
+def compute_events(sources, sitecol, gsims, monitor):
+    """
+    Returns reduced information about the ruptures
+    """
+    ruptures_by_grp = compute_ruptures(sources, sitecol, gsims, monitor)
+    for grp_id in ruptures_by_grp:
+        ruptures_by_grp[grp_id] = [
+            EBR(ebr.serial, ebr.source_id, ebr.events)
+            for ebr in ruptures_by_grp[grp_id]]
+    return ruptures_by_grp
 
 
 class List(list):
