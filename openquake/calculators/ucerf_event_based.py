@@ -662,7 +662,7 @@ def _copy_grp(src_group, grp_id, branch_name, branch_id):
 
 
 @base.calculators.add('ucerf_rupture')
-class UCERFEventBasedCalculator(event_based.EventBasedRuptureCalculator):
+class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
     """
     Event based PSHA calculator generating the ruptures only
     """
@@ -787,7 +787,11 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
 
 def compute_events(sources, sitecol, gsims, monitor):
     """
-    Returns reduced information about the ruptures
+    :param sources: a sequence of UCERF sources
+    :param sitecol: a SiteCollection instance
+    :param gsims: a list of GSIMs
+    :param monitor: a Monitor instance
+    :returns: an AccumDict grp_id -> EBRs
     """
     ruptures_by_grp = compute_ruptures(sources, sitecol, gsims, monitor)
     for grp_id in ruptures_by_grp:
@@ -840,12 +844,12 @@ class UCERFRiskCalculator(EbriskCalculator):
     """
     Event based risk calculator for UCERF, parallelizing on the source models
     """
-    pre_execute = UCERFEventBasedCalculator.__dict__['pre_execute']
+    pre_execute = UCERFRuptureCalculator.__dict__['pre_execute']
 
     def execute(self):
         num_rlzs = len(self.rlzs_assoc.realizations)
         self.grp_trt = {
-            i: DEFAULT_TRT for i in range(len(self.csm.source_models))}
+            sm.ordinal: DEFAULT_TRT for sm in self.csm.source_models}
         allres = parallel.starmap(compute_losses, self.gen_args()).submit_all()
         num_events = self.save_results(allres, num_rlzs)
         self.save_data_transfer(allres)
