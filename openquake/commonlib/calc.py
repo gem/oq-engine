@@ -358,7 +358,7 @@ class RuptureData(object):
         self.trt = trt
         self.cmaker = ContextMaker(gsims)
         self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
-                             set('mag strike dip rake'.split()))
+                             set('mag strike dip rake hypo_depth'.split()))
         self.dt = numpy.dtype([
             ('rupserial', U32), ('multiplicity', U16),
             ('numsites', U32), ('occurrence_rate', F64),
