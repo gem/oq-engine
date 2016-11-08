@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Added an `ucerf_rupture` calculator able to store seismic events and
+    rupture data and reduced the data transfer
+
   [Daniele Viganò]
   * MANIFEST now includes all files, with any extension located in the
     tests folders. It is now possible to run tests from an installation
