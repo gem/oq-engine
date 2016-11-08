@@ -229,7 +229,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
                                event['ses'],
                                event['occ'],
                                event['sample'],
-                               ebr.grp_id,
+                               grp_id,
                                ebr.source_id)
                         events.append(rec)
                         self.eid[sm_id] += 1
