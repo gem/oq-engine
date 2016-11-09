@@ -2,7 +2,7 @@ Scenario QA Test for contents
 =============================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_66907.hdf5 Wed Nov  9 07:52:12 2016
+gem-tstation:/home/michele/ssd/calc_67012.hdf5 Wed Nov  9 08:16:40 2016
 engine_version                                 2.2.0-git54d01f4        
 hazardlib_version                              0.22.0-git173c60c       
 ============================================== ========================
@@ -67,7 +67,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.007     0.0       1     
-reading exposure        0.004     0.0       1     
-reading site collection 1.097E-05 0.0       1     
+filtering sites         0.005     0.0       1     
+reading exposure        0.003     0.0       1     
+reading site collection 9.060E-06 0.0       1     
 ======================= ========= ========= ======

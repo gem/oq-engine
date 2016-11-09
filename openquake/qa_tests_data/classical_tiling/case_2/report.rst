@@ -2,7 +2,7 @@ Classical Tiling for Turkey reduced
 ===================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_66917.hdf5 Wed Nov  9 07:52:16 2016
+gem-tstation:/home/michele/ssd/calc_67022.hdf5 Wed Nov  9 08:16:44 2016
 engine_version                                 2.2.0-git54d01f4        
 hazardlib_version                              0.22.0-git173c60c       
 ============================================== ========================
@@ -136,7 +136,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ========= ===== =========
 operation-duration mean  stddev    min       max   num_tasks
-count_eff_ruptures 0.001 1.662E-04 9.012E-04 0.001 4        
+count_eff_ruptures 0.001 2.601E-04 7.920E-04 0.001 4        
 ================== ===== ========= ========= ===== =========
 
 Slowest operations
@@ -144,13 +144,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.800     0.0       1     
-managing sources                 0.071     0.0       1     
+reading composite source model   0.796     0.0       1     
+managing sources                 0.069     0.0       1     
 split/filter heavy sources       0.066     0.0       1     
 reading site collection          0.024     0.0       1     
 filtering composite source model 0.023     0.0       1     
 total count_eff_ruptures         0.004     0.0       4     
-store source_info                9.420E-04 0.0       1     
-aggregate curves                 1.113E-04 0.0       4     
-saving probability maps          2.813E-05 0.0       1     
+store source_info                4.289E-04 0.0       1     
+aggregate curves                 5.507E-05 0.0       4     
+saving probability maps          2.289E-05 0.0       1     
 ================================ ========= ========= ======
