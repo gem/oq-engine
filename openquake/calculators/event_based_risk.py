@@ -793,7 +793,7 @@ class EbriskCalculator(base.RiskCalculator):
         for src_group in ssm.src_groups:
             for rupts in block_splitter(
                     ruptures_by_grp[src_group.id], ruptures_per_block):
-                if self.riskmodel.covs is None:
+                if not self.riskmodel.covs:
                     eps = None
                 elif self.oqparam.asset_correlation:
                     eps = EpsilonMatrix1(num_events, self.oqparam.master_seed)
