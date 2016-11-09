@@ -20,6 +20,7 @@
 Module :mod:`openquake.hazardlib.geo.geodetic` contains functions for geodetic
 transformations, optimized for massive calculations.
 """
+from __future__ import division
 
 import operator
 
@@ -416,7 +417,7 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
     hdists = numpy.arange(npoints, dtype=float)
     hdists *= (hdist / EARTH_RADIUS) / (npoints - 1)
     vdists = numpy.arange(npoints, dtype=float)
-    vdists *= float(vdist) / (npoints - 1)
+    vdists *= vdist / (npoints - 1)
 
     sin_dists = numpy.sin(hdists)
     cos_dists = numpy.cos(hdists)
