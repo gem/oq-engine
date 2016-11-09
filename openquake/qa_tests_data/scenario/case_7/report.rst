@@ -2,9 +2,9 @@ Scenario QA Test with No Spatial Correlation
 ============================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_60056.hdf5 Tue Oct 11 06:55:57 2016
-engine_version                                 2.1.0-git4e31fdd        
-hazardlib_version                              0.21.0-gitab31f47       
+gem-tstation:/home/michele/ssd/calc_66946.hdf5 Wed Nov  9 08:14:05 2016
+engine_version                                 2.2.0-git54d01f4        
+hazardlib_version                              0.22.0-git173c60c       
 ============================================== ========================
 
 num_sites = 2, sitecol = 785 B
@@ -48,6 +48,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.008     0.0       1     
-reading site collection 3.695E-05 0.0       1     
+filtering sites         0.007     0.0       1     
+reading site collection 3.099E-05 0.0       1     
 ======================= ========= ========= ======
