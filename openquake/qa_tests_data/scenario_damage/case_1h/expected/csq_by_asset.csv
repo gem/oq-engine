@@ -1,2 +1,2 @@
 asset_ref,taxonomy,lon,lat,structural~mean,structural~stddev
-a1,"tax1",-122.00000,38.11300,2.26318E+03,1.43303E+03
+a1,"tax1+",-122.00000,38.11300,2.26318E+03,1.43303E+03
