@@ -194,8 +194,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
         zd.eff_ruptures = AccumDict()
         self.eid = collections.Counter()  # sm_id -> event_id
         self.sm_by_grp = self.csm.info.get_sm_by_grp()
-        self.grp_trt = {sg.id: sg.trt for sm in self.csm.info.source_models
-                        for sg in sm.src_groups}
+        self.grp_trt = self.csm.info.grp_trt()
         return zd
 
     def agg_dicts(self, acc, ruptures_by_grp_id):
@@ -390,8 +389,7 @@ class EventBasedCalculator(ClassicalCalculator):
         monitor.oqparam = oq
         imts = list(oq.imtls)
         min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
-        self.grp_trt = {sg.id: sg.trt for sm in self.csm.info.source_models
-                        for sg in sm.src_groups}
+        self.grp_trt = self.csm.info.grp_trt()
         rlzs_by_grp = self.rlzs_assoc.get_rlzs_by_grp_id()
         correl_model = oq.get_correl_model()
         for block in split_in_blocks(
