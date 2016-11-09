@@ -2,9 +2,9 @@ QA test for blocksize independence (hazard)
 ===========================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_60117.hdf5 Tue Oct 11 06:58:13 2016
-engine_version                                 2.1.0-git4e31fdd        
-hazardlib_version                              0.21.0-gitab31f47       
+gem-tstation:/home/michele/ssd/calc_67007.hdf5 Wed Nov  9 08:16:12 2016
+engine_version                                 2.2.0-git54d01f4        
+hazardlib_version                              0.22.0-git173c60c       
 ============================================== ========================
 
 num_sites = 2, sitecol = 785 B
@@ -72,13 +72,13 @@ source_model.xml 0      Active Shallow Crust 5           3            13,823
 Informational data
 ------------------
 ====================================== ============
-compute_ruptures_max_received_per_task 9,470       
+compute_ruptures_max_received_per_task 9,948       
 compute_ruptures_num_tasks             9           
 compute_ruptures_sent.gsims            801         
-compute_ruptures_sent.monitor          9,216       
+compute_ruptures_sent.monitor          9,189       
 compute_ruptures_sent.sitecol          4,989       
 compute_ruptures_sent.sources          470,759     
-compute_ruptures_tot_received          42,889      
+compute_ruptures_tot_received          44,802      
 hazard.input_weight                    1,382       
 hazard.n_imts                          1           
 hazard.n_levels                        4           
@@ -93,8 +93,8 @@ Specific information for event based
 ------------------------------------
 ======================== =====
 Total number of ruptures 3    
-Total number of events   1    
-Rupture multiplicity     0.333
+Total number of events   3    
+Rupture multiplicity     1.000
 ======================== =====
 
 Slowest sources
@@ -121,7 +121,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.403 0.286  0.003 0.668 9        
+compute_ruptures   0.385 0.275  0.002 0.652 9        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -129,14 +129,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           3.631     0.836     9     
-reading composite source model   1.669     0.0       1     
-managing sources                 1.242     0.0       1     
-split/filter heavy sources       1.239     0.0       1     
+total compute_ruptures           3.464     0.0       9     
+reading composite source model   1.583     0.0       1     
+managing sources                 1.198     0.0       1     
+split/filter heavy sources       1.194     0.0       1     
 saving ruptures                  0.009     0.0       9     
 filtering composite source model 0.005     0.0       1     
-store source_info                0.001     0.0       1     
-filtering ruptures               9.580E-04 0.0       3     
-reading site collection          3.505E-05 0.0       1     
-Initializing rupture serials     3.481E-05 0.0       1     
+store source_info                9.911E-04 0.0       1     
+filtering ruptures               9.680E-04 0.0       3     
+reading site collection          3.982E-05 0.0       1     
 ================================ ========= ========= ======
