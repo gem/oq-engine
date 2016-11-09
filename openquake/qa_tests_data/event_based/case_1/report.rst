@@ -2,7 +2,7 @@ Event Based QA Test, Case 1
 ===========================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_66905.hdf5 Wed Nov  9 07:52:11 2016
+gem-tstation:/home/michele/ssd/calc_67010.hdf5 Wed Nov  9 08:16:40 2016
 engine_version                                 2.2.0-git54d01f4        
 hazardlib_version                              0.22.0-git173c60c       
 ============================================== ========================
@@ -93,8 +93,8 @@ Specific information for event based
 ------------------------------------
 ======================== =====
 Total number of ruptures 1    
-Total number of events   1    
-Rupture multiplicity     1.000
+Total number of events   2,037
+Rupture multiplicity     2,037
 ======================== =====
 
 Slowest sources
@@ -117,7 +117,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.012 NaN    0.012 0.012 1        
+compute_ruptures   0.019 NaN    0.019 0.019 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -125,12 +125,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
+total compute_ruptures           0.019     0.0       1     
 saving ruptures                  0.013     0.0       1     
-total compute_ruptures           0.012     0.0       1     
 reading composite source model   0.004     0.0       1     
 managing sources                 0.002     0.0       1     
 filtering composite source model 0.002     0.0       1     
-store source_info                7.448E-04 0.0       1     
-filtering ruptures               4.590E-04 0.0       1     
-reading site collection          4.101E-05 0.0       1     
+store source_info                7.730E-04 0.0       1     
+filtering ruptures               6.061E-04 0.0       1     
+reading site collection          3.505E-05 0.0       1     
 ================================ ========= ========= ======
