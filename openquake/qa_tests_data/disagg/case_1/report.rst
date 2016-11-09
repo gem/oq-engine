@@ -2,7 +2,7 @@ QA test for disaggregation case_1, taken from the disagg demo
 =============================================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_66916.hdf5 Wed Nov  9 07:52:14 2016
+gem-tstation:/home/michele/ssd/calc_67021.hdf5 Wed Nov  9 08:16:43 2016
 engine_version                                 2.2.0-git54d01f4        
 hazardlib_version                              0.22.0-git173c60c       
 ============================================== ========================
@@ -115,7 +115,7 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 7.625E-04 6.092E-05 7.100E-04 8.800E-04 6        
+count_eff_ruptures 7.376E-04 1.011E-04 6.139E-04 8.850E-04 6        
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -123,13 +123,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-managing sources                 0.178     0.0       1     
-split/filter heavy sources       0.176     0.0       1     
-reading composite source model   0.061     0.0       1     
+managing sources                 0.174     0.0       1     
+split/filter heavy sources       0.171     0.0       1     
+reading composite source model   0.059     0.0       1     
 filtering composite source model 0.006     0.0       1     
-total count_eff_ruptures         0.005     0.0       6     
-store source_info                0.001     0.0       1     
-aggregate curves                 1.242E-04 0.0       6     
-saving probability maps          4.005E-05 0.0       1     
-reading site collection          3.600E-05 0.0       1     
+total count_eff_ruptures         0.004     0.0       6     
+store source_info                5.970E-04 0.0       1     
+aggregate curves                 8.821E-05 0.0       6     
+reading site collection          2.789E-05 0.0       1     
+saving probability maps          2.718E-05 0.0       1     
 ================================ ========= ========= ======

@@ -2,7 +2,7 @@ Classical PSHA using Area Source
 ================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_66918.hdf5 Wed Nov  9 07:52:17 2016
+gem-tstation:/home/michele/ssd/calc_67023.hdf5 Wed Nov  9 08:16:46 2016
 engine_version                                 2.2.0-git54d01f4        
 hazardlib_version                              0.22.0-git173c60c       
 ============================================== ========================
@@ -111,7 +111,7 @@ Information about the tasks
 ---------------------------
 ================== ========= ====== ========= ========= =========
 operation-duration mean      stddev min       max       num_tasks
-count_eff_ruptures 5.660E-04 NaN    5.660E-04 5.660E-04 1        
+count_eff_ruptures 8.609E-04 NaN    8.609E-04 8.609E-04 1        
 ================== ========= ====== ========= ========= =========
 
 Slowest operations
@@ -119,12 +119,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.070     0.0       1     
+reading composite source model   0.079     0.0       1     
 reading site collection          0.002     0.0       1     
-managing sources                 0.001     0.0       1     
-filtering composite source model 9.599E-04 0.0       1     
-store source_info                6.940E-04 0.0       1     
-total count_eff_ruptures         5.660E-04 0.0       1     
-saving probability maps          3.099E-05 0.0       1     
-aggregate curves                 2.193E-05 0.0       1     
+managing sources                 0.002     0.0       1     
+filtering composite source model 0.001     0.0       1     
+total count_eff_ruptures         8.609E-04 0.0       1     
+store source_info                7.319E-04 0.0       1     
+saving probability maps          3.386E-05 0.0       1     
+aggregate curves                 2.289E-05 0.0       1     
 ================================ ========= ========= ======
