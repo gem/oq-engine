@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Now the ebrisk calculator supports the case of asset_correlation=1 too
+  * Fixed excessive strictness when validating `consequenceFunction.id`
   * Added an `ucerf_rupture` calculator able to store seismic events and
     rupture data and reduced the data transfer
 

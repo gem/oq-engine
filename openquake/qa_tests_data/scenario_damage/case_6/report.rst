@@ -2,9 +2,9 @@ oq-test03, depth=15km
 =====================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_60044.hdf5 Tue Oct 11 06:55:56 2016
-engine_version                                 2.1.0-git4e31fdd        
-hazardlib_version                              0.21.0-gitab31f47       
+gem-tstation:/home/michele/ssd/calc_66934.hdf5 Wed Nov  9 08:14:03 2016
+engine_version                                 2.2.0-git54d01f4        
+hazardlib_version                              0.22.0-git173c60c       
 ============================================== ========================
 
 num_sites = 1, sitecol = 739 B
@@ -71,5 +71,5 @@ operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 reading exposure        0.003     0.0       1     
 filtering sites         0.001     0.0       1     
-reading site collection 7.868E-06 0.0       1     
+reading site collection 6.914E-06 0.0       1     
 ======================= ========= ========= ======

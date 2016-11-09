@@ -2,9 +2,9 @@ Classical PSHA with GMPE logic tree with multiple tectonic region types
 =======================================================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_60086.hdf5 Tue Oct 11 06:56:32 2016
-engine_version                                 2.1.0-git4e31fdd        
-hazardlib_version                              0.21.0-gitab31f47       
+gem-tstation:/home/michele/ssd/calc_66976.hdf5 Wed Nov  9 08:14:39 2016
+engine_version                                 2.2.0-git54d01f4        
+hazardlib_version                              0.22.0-git173c60c       
 ============================================== ========================
 
 num_sites = 3, sitecol = 831 B
@@ -99,13 +99,13 @@ source_model_2.xml 3      Active Shallow Crust     1           240          240
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,454       
+count_eff_ruptures_max_received_per_task 1,473       
 count_eff_ruptures_num_tasks             4           
 count_eff_ruptures_sent.gsims            686         
-count_eff_ruptures_sent.monitor          4,956       
+count_eff_ruptures_sent.monitor          4,944       
 count_eff_ruptures_sent.sitecol          1,892       
 count_eff_ruptures_sent.sources          6,318       
-count_eff_ruptures_tot_received          5,816       
+count_eff_ruptures_tot_received          5,892       
 hazard.input_weight                      51          
 hazard.n_imts                            2           
 hazard.n_levels                          17          
@@ -140,7 +140,7 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 8.335E-04 8.411E-05 7.839E-04 9.592E-04 4        
+count_eff_ruptures 8.325E-04 8.385E-05 7.620E-04 9.439E-04 4        
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -148,12 +148,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.022     0.0       1     
+reading composite source model   0.021     0.0       1     
 managing sources                 0.005     0.0       1     
 filtering composite source model 0.005     0.0       1     
 total count_eff_ruptures         0.003     0.0       4     
-store source_info                8.481E-04 0.0       1     
-aggregate curves                 1.152E-04 0.0       4     
-reading site collection          3.815E-05 0.0       1     
-saving probability maps          3.600E-05 0.0       1     
+store source_info                8.681E-04 0.0       1     
+aggregate curves                 1.059E-04 0.0       4     
+reading site collection          3.791E-05 0.0       1     
+saving probability maps          3.695E-05 0.0       1     
 ================================ ========= ========= ======
