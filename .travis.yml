@@ -8,10 +8,12 @@ python:
 addons:
   apt:
     packages:
+    - sed
     - git
 
 install:
   - pip install -r requirements-py35-linux64.txt
+  - pip install $(sed '1,/^# DO-NOT-DELETE-ME/d' requirements-py35-linux64.txt | tr -d '#')
   - python setup.py develop
   - if [ "$(git ls-remote --heads https://github.com/gem/oq-hazardlib.git ${TRAVIS_BRANCH})" != "" ]; then BRANCH=$TRAVIS_BRANCH; else BRANCH='master'; fi; git clone -b ${BRANCH} --depth=1 https://github.com/gem/oq-hazardlib.git && echo "Running on oq-hazardlib/${BRANCH}"
 

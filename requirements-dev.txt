@@ -26,6 +26,7 @@ Rtree==0.8.2
 # Celery support
 # uncomment the following lines to install celery
 # and its dependencies
+# DO-NOT-DELETE-ME
 #pytz
 #anyjson==0.3.3
 #amqp==1.4.9
