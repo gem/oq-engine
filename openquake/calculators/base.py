@@ -506,7 +506,6 @@ class HazardCalculator(BaseCalculator):
             haz_sitecol = readinput.get_site_collection(oq)
         if haz_sitecol is not None:
             logging.info('Read %d hazard site(s)', len(haz_sitecol))
-
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
         if 'exposure' in oq.inputs:
