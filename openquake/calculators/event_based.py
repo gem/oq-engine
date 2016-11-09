@@ -58,7 +58,7 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     """
     # NB: by construction each block is a non-empty list with
     # sources of the same src_group_id
-    src_group_id = sources[0].src_group_id
+    grp_id = sources[0].src_group_id
     trt = sources[0].tectonic_region_type
     max_dist = monitor.maximum_distance[trt]
     eb_ruptures = []
@@ -88,10 +88,10 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
             num_events += ebr.multiplicity
         dt = time.time() - t0
         calc_times.append((src.id, dt))
-    res = AccumDict({src_group_id: eb_ruptures})
+    res = AccumDict({grp_id: eb_ruptures})
     res.num_events = num_events
     res.calc_times = calc_times
-    res.rup_data = calc.RuptureData(trt, gsims).to_array(eb_ruptures)
+    res.rup_data = {grp_id: calc.RuptureData(trt, gsims).to_array(eb_ruptures)}
     return res
 
 
@@ -172,7 +172,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
         self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
         self.min_iml = calc.fix_minimum_intensity(
             oq.minimum_intensity, oq.imtls)
-        self.rup_data = {}
 
     def count_eff_ruptures(self, ruptures_by_grp_id, src_group):
         """
@@ -241,13 +240,12 @@ class EventBasedRuptureCalculator(PSHACalculator):
                     self.datastore.extend(
                         ev, numpy.array(events, calc.stored_event_dt))
 
-                # save rup_data
-                if hasattr(ruptures_by_grp_id, 'rup_data'):
-                    trt = self.grp_trt[grp_id]
-                    sm_id = self.sm_by_grp[grp_id]
-                    key = 'rup_data/sm-%04d/%s' % (sm_id, trt)
-                    self.rup_data[trt] = self.datastore.extend(
-                            key, ruptures_by_grp_id.rup_data)
+            # save rup_data
+            if hasattr(ruptures_by_grp_id, 'rup_data'):
+                for grp_id, data in sorted(
+                        ruptures_by_grp_id.rup_data.items()):
+                    key = 'rup_data/grp-%02d' % grp_id
+                    self.rup_data = self.datastore.extend(key, data)
 
     def post_execute(self, result):
         """
@@ -260,7 +258,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
             self.datastore.set_nbytes('ruptures')
         self.datastore.set_nbytes('events')
 
-        for dset in self.rup_data.values():
+        for dset in self.datastore['rup_data'].values():
             if len(dset):
                 numsites = dset['numsites']
                 multiplicity = dset['multiplicity']
@@ -268,8 +266,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
                 mul = numpy.average(multiplicity, weights=numsites)
                 self.datastore.set_attrs(dset.name, sites_per_rupture=spr,
                                          multiplicity=mul)
-        if self.rup_data:
-            self.datastore.set_nbytes('rup_data')
+        self.datastore.set_nbytes('rup_data')
 
 
 def sum_dict(dic):

@@ -178,6 +178,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                             investigation_time='1',
                             insured_losses='false',
                             exports='csv')
+
+        # check rup_data is stored correctly
+        fname = writetmp(view('ruptures_events', self.calc.datastore))
+        self.assertEqualFiles('expected/ruptures_events.txt', fname)
+
         for fname in out['losses_by_taxon', 'csv']:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 

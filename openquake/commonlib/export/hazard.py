@@ -139,16 +139,19 @@ def export_ses_csv(ekey, dstore):
     dest = dstore.export_path('ses.csv')
     header = ('id mag centroid_lon centroid_lat centroid_depth trt '
               'strike dip rake boundary').split()
+    csm_info = dstore['csm_info']
+    grp_trt = csm_info.grp_trt()
+    sm_by_grp = csm_info.get_sm_by_grp()
     rows = []
-    for sm in dstore['events']:
+    for grp_id, trt in sorted(grp_trt.items()):
+        sm = 'sm-%04d' % sm_by_grp[grp_id]
         etags = build_etags(dstore['events'], [sm])
         dic = groupby(etags, util.get_serial)
-        for trt in dstore['rup_data/' + sm]:
-            for r in dstore['rup_data/%s/%s' % (sm, trt)]:
-                for etag in dic[r['rupserial']]:
-                    rows.append(
-                        (etag, r['mag'], r['lon'], r['lat'], r['depth'],
-                         trt, r['strike'], r['dip'], r['rake'], r['boundary']))
+        for r in dstore['rup_data/grp-%02d' % grp_id]:
+            for etag in dic[r['rupserial']]:
+                rows.append(
+                    (etag, r['mag'], r['lon'], r['lat'], r['depth'],
+                     trt, r['strike'], r['dip'], r['rake'], r['boundary']))
     rows.sort(key=operator.itemgetter(0))
     writers.write_csv(dest, rows, header=header)
     return [dest]
