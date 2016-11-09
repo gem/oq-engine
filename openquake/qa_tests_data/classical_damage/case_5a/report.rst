@@ -2,9 +2,9 @@ Classical PSHA-Based Hazard
 ===========================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_60066.hdf5 Tue Oct 11 06:56:02 2016
-engine_version                                 2.1.0-git4e31fdd        
-hazardlib_version                              0.21.0-gitab31f47       
+gem-tstation:/home/michele/ssd/calc_66956.hdf5 Wed Nov  9 08:14:09 2016
+engine_version                                 2.2.0-git54d01f4        
+hazardlib_version                              0.22.0-git173c60c       
 ============================================== ========================
 
 num_sites = 1, sitecol = 739 B
@@ -75,13 +75,13 @@ source_model.xml 0      Active Shallow Crust 1           1694         1,694
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,373       
+count_eff_ruptures_max_received_per_task 1,392       
 count_eff_ruptures_num_tasks             10          
 count_eff_ruptures_sent.gsims            820         
-count_eff_ruptures_sent.monitor          11,560      
+count_eff_ruptures_sent.monitor          11,530      
 count_eff_ruptures_sent.sitecol          5,770       
-count_eff_ruptures_sent.sources          12,063      
-count_eff_ruptures_tot_received          13,730      
+count_eff_ruptures_sent.sources          11,748      
+count_eff_ruptures_tot_received          13,920      
 hazard.input_weight                      1,694       
 hazard.n_imts                            1           
 hazard.n_levels                          20          
@@ -127,7 +127,7 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 7.064E-04 6.910E-05 5.851E-04 7.892E-04 10       
+count_eff_ruptures 7.181E-04 5.150E-05 6.421E-04 8.230E-04 10       
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -135,14 +135,14 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-managing sources                 0.128     0.0       1     
-split/filter heavy sources       0.126     0.0       1     
-reading composite source model   0.015     0.0       1     
+managing sources                 0.122     0.0       1     
+split/filter heavy sources       0.121     0.0       1     
+reading composite source model   0.014     0.0       1     
 total count_eff_ruptures         0.007     0.0       10    
 filtering composite source model 0.003     0.0       1     
-reading exposure                 0.003     0.0       1     
-store source_info                4.730E-04 0.0       1     
-aggregate curves                 1.538E-04 0.0       10    
-saving probability maps          2.384E-05 0.0       1     
-reading site collection          7.868E-06 0.0       1     
+reading exposure                 0.002     0.0       1     
+store source_info                4.811E-04 0.0       1     
+aggregate curves                 1.540E-04 0.0       10    
+saving probability maps          2.503E-05 0.0       1     
+reading site collection          8.106E-06 0.0       1     
 ================================ ========= ========= ======

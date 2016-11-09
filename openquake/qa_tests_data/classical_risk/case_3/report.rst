@@ -2,9 +2,9 @@ Classical PSHA - Loss fractions QA test
 =======================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_60038.hdf5 Tue Oct 11 06:55:51 2016
-engine_version                                 2.1.0-git4e31fdd        
-hazardlib_version                              0.21.0-gitab31f47       
+gem-tstation:/home/michele/ssd/calc_66928.hdf5 Wed Nov  9 08:13:59 2016
+engine_version                                 2.2.0-git54d01f4        
+hazardlib_version                              0.22.0-git173c60c       
 ============================================== ========================
 
 num_sites = 13, sitecol = 1.26 KB
@@ -76,13 +76,13 @@ source_model.xml 0      Active Shallow Crust 2           2132         2,132
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,355       
+count_eff_ruptures_max_received_per_task 1,374       
 count_eff_ruptures_num_tasks             2           
 count_eff_ruptures_sent.gsims            178         
-count_eff_ruptures_sent.monitor          2,260       
+count_eff_ruptures_sent.monitor          2,254       
 count_eff_ruptures_sent.sitecol          1,346       
 count_eff_ruptures_sent.sources          3,918       
-count_eff_ruptures_tot_received          2,710       
+count_eff_ruptures_tot_received          2,748       
 hazard.input_weight                      213         
 hazard.n_imts                            1           
 hazard.n_levels                          19          
@@ -133,7 +133,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.002 5.563E-06 0.002 0.002 2        
+count_eff_ruptures 0.002 1.576E-04 0.001 0.002 2        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -141,13 +141,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   1.091     0.0       1     
+reading composite source model   1.011     0.0       1     
 filtering composite source model 0.007     0.0       1     
 reading exposure                 0.006     0.0       1     
-total count_eff_ruptures         0.003     1.953     2     
+total count_eff_ruptures         0.003     1.680     2     
 managing sources                 0.002     0.0       1     
-store source_info                4.170E-04 0.0       1     
-aggregate curves                 3.219E-05 0.0       2     
-saving probability maps          1.907E-05 0.0       1     
-reading site collection          1.407E-05 0.0       1     
+store source_info                3.982E-04 0.0       1     
+aggregate curves                 2.885E-05 0.0       2     
+saving probability maps          1.884E-05 0.0       1     
+reading site collection          1.311E-05 0.0       1     
 ================================ ========= ========= ======
