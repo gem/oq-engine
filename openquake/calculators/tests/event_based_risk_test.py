@@ -77,6 +77,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = writetmp(view('mean_avg_losses', self.calc.datastore))
         self.assertEqualFiles('expected/mean_avg_losses.txt', fname)
 
+        # test the composite_risk_model keys (i.e. slash escaping)
+        crm = sorted(self.calc.datastore['composite_risk_model'])
+        self.assertEqual(crm, ['RC+', 'RM', 'W/1'])
+
         # test the case when all GMFs are filtered out
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_2.__file__, 'job.ini', minimum_intensity='10.0')
