@@ -149,9 +149,10 @@ def export_ses_csv(ekey, dstore):
         dic = groupby(etags, util.get_serial)
         for r in dstore['rup_data/grp-%02d' % grp_id]:
             for etag in dic[r['rupserial']]:
+                boundary = 'MULTIPOLYGON(%s)' % r['boundary']
                 rows.append(
                     (etag, r['mag'], r['lon'], r['lat'], r['depth'],
-                     trt, r['strike'], r['dip'], r['rake'], r['boundary']))
+                     trt, r['strike'], r['dip'], r['rake'], boundary))
     rows.sort(key=operator.itemgetter(0))
     writers.write_csv(dest, rows, header=header)
     return [dest]
