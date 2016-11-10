@@ -78,8 +78,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/mean_avg_losses.txt', fname)
 
         # export a specific eid
-        fnames = export(('ass_loss_table:0', 'csv'), self.calc.datastore)
-        
+        [fname] = export(('ass_loss_table:0', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/losses-eid=0.csv', fname)
+
         # test the case when all GMFs are filtered out
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_2.__file__, 'job.ini', minimum_intensity='10.0')
