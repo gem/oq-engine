@@ -2,9 +2,9 @@ Event Based Risk for Turkey reduced
 ===================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_60080.hdf5 Tue Oct 11 06:56:26 2016
-engine_version                                 2.1.0-git4e31fdd        
-hazardlib_version                              0.21.0-gitab31f47       
+gem-tstation:/home/michele/ssd/calc_66970.hdf5 Wed Nov  9 08:14:32 2016
+engine_version                                 2.2.0-git54d01f4        
+hazardlib_version                              0.22.0-git173c60c       
 ============================================== ========================
 
 num_sites = 14, sitecol = 1.31 KB
@@ -83,19 +83,19 @@ models/src/as_model.xml 5      Active Shallow Crust 7           30           39,
 Informational data
 ------------------
 ============================================= ============
-compute_gmfs_and_curves_max_received_per_task 21,837      
+compute_gmfs_and_curves_max_received_per_task 21,839      
 compute_gmfs_and_curves_num_tasks             30          
-compute_gmfs_and_curves_sent.getter           137,947     
-compute_gmfs_and_curves_sent.monitor          174,540     
+compute_gmfs_and_curves_sent.getter           137,287     
+compute_gmfs_and_curves_sent.monitor          174,600     
 compute_gmfs_and_curves_sent.rlzs             51,630      
-compute_gmfs_and_curves_tot_received          487,998     
-compute_ruptures_max_received_per_task        8,702       
+compute_gmfs_and_curves_tot_received          488,117     
+compute_ruptures_max_received_per_task        9,609       
 compute_ruptures_num_tasks                    50          
 compute_ruptures_sent.gsims                   15,500      
-compute_ruptures_sent.monitor                 98,400      
+compute_ruptures_sent.monitor                 98,250      
 compute_ruptures_sent.sitecol                 67,960      
-compute_ruptures_sent.sources                 465,445     
-compute_ruptures_tot_received                 185,480     
+compute_ruptures_sent.sources                 464,740     
+compute_ruptures_tot_received                 196,075     
 hazard.input_weight                           7,937       
 hazard.n_imts                                 2           
 hazard.n_levels                               91          
@@ -106,6 +106,14 @@ hazard.output_weight                          4,892,160
 hostname                                      gem-tstation
 require_epsilons                              False       
 ============================================= ============
+
+Specific information for event based
+------------------------------------
+======================== =====
+Total number of ruptures 30   
+Total number of events   30   
+Rupture multiplicity     1.000
+======================== =====
 
 Estimated data transfer for the avglosses
 -----------------------------------------
@@ -174,7 +182,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.254 0.250  0.004 0.681 50       
+compute_ruptures   0.253 0.272  0.004 0.916 50       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -182,19 +190,18 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           12        0.504     50    
-reading composite source model   6.323     0.0       1     
-managing sources                 1.676     0.0       1     
-split/filter heavy sources       1.650     0.0       2     
-total compute_gmfs_and_curves    0.453     0.188     30    
-filtering composite source model 0.148     0.0       1     
-saving gmfs                      0.059     0.0       30    
-building hazard curves           0.056     0.0       30    
-saving ruptures                  0.025     0.0       50    
-reading exposure                 0.011     0.0       1     
-filtering ruptures               0.009     0.0       32    
-aggregating hcurves              0.006     0.0       30    
-Initializing rupture serials     0.001     0.0       1     
-store source_info                6.340E-04 0.0       1     
-reading site collection          7.868E-06 0.0       1     
+total compute_ruptures           12        1.285     50    
+reading composite source model   5.887     0.0       1     
+managing sources                 1.357     0.0       1     
+split/filter heavy sources       1.346     0.0       2     
+total compute_gmfs_and_curves    0.461     0.246     30    
+filtering composite source model 0.149     0.0       1     
+saving gmfs                      0.057     0.0       30    
+building hazard curves           0.057     0.0       30    
+saving ruptures                  0.034     0.0       50    
+reading exposure                 0.013     0.0       1     
+filtering ruptures               0.010     0.0       32    
+aggregating hcurves              0.005     0.0       30    
+store source_info                0.001     0.0       1     
+reading site collection          8.106E-06 0.0       1     
 ================================ ========= ========= ======
