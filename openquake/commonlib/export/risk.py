@@ -251,6 +251,7 @@ def export_ass_losses_ebr(ekey, dstore):
         sm_ids = (sm_id,)
     else:  # eid and sm_id both unspecified, exporting nothing
         return []
+    zero = [0, 0] if oq.insured_losses else 0
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for sm_id in sm_ids:
         rlzs = rlzs_assoc.rlzs_by_smodel[sm_id]
@@ -275,7 +276,7 @@ def export_ass_losses_ebr(ekey, dstore):
             elt['aid'] = sorted(losses_by_aid)
             for i, aid in numpy.ndenumerate(elt['aid']):
                 for loss_type in loss_types:
-                    loss = losses_by_aid[aid].get(loss_type, 0)
+                    loss = losses_by_aid[aid].get(loss_type, zero)
                     if oq.insured_losses:
                         elt[loss_type][i] = loss[0]
                         elt[loss_type + '_ins'][i] = loss[1]
