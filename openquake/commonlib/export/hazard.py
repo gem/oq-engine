@@ -103,8 +103,8 @@ class SESCollection(object):
             yield SES(sesruptures, self.investigation_time, idx)
 
 
-@export.add(('ruptures', 'xml'), ('ruptures', 'csv'))
-def export_ses_xml(ekey, dstore):
+@export.add(('ruptures', 'xml'))
+def export_ruptures_xml(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
@@ -121,21 +121,9 @@ def export_ses_xml(ekey, dstore):
         groupby(ruptures, operator.attrgetter('ses_idx')),
         oq.investigation_time)
     dest = dstore.export_path('ses.' + fmt)
-    globals()['_export_ses_' + fmt](dest, ses_coll)
-    return [dest]
-
-
-def _export_ses_xml(dest, ses_coll):
     writer = hazard_writers.SESXMLWriter(dest)
     writer.serialize(ses_coll)
-
-
-def _export_ses_csv(dest, ses_coll):
-    rows = [['event_tag', 'sm_id', 'eid']]
-    for ses in ses_coll:
-        for rup in ses:
-            rows.append([decode(rup.etag), rup.sm_id, rup.eid])
-    write_csv(dest, sorted(rows, key=operator.itemgetter(0)))
+    return [dest]
 
 
 # #################### export Ground Motion fields ########################## #
@@ -824,7 +812,7 @@ def export_disagg_xml(ekey, dstore):
 
 
 @export.add(('rup_data', 'csv'))
-def export_ses_csv(ekey, dstore):
+def export_rup_data_csv(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
