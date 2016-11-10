@@ -376,10 +376,9 @@ class RuptureData(object):
             ruptparams = tuple(getattr(rc, param) for param in self.params)
             point = rup.surface.get_middle_point()
             multi_lons, multi_lats = rup.surface.get_surface_boundaries()
-            boundary = 'MULTIPOLYGON(%s)' % ','.join(
-                '((%s))' % ','.join('%.5f %.5f' % (lon, lat)
-                                    for lon, lat in zip(lons, lats))
-                for lons, lats in zip(multi_lons, multi_lats))
+            boundary = ','.join('((%s))' % ','.join(
+                '%.5f %.5f' % (lon, lat) for lon, lat in zip(lons, lats))
+                                for lons, lats in zip(multi_lons, multi_lats))
             try:
                 rate = ebr.rupture.occurrence_rate
             except AttributeError:  # for nonparametric sources
