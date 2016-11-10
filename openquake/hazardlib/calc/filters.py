@@ -141,14 +141,15 @@ class RtreeFilter(object):
         :meth:`openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source`
         which is what is actually used for filtering.
     """
-    def __init__(self, sitecol, integration_distance):
+    def __init__(self, sitecol, integration_distance, rtree=False):
         assert integration_distance, 'Must be set'
         self.integration_distance = integration_distance
         self.sitecol = sitecol
+        self.rtree = rtree
+        fixed_lons, self.idl = fix_lons_idl(sitecol.lons)
+        if self.idl:  # longitudes -> longitudes + 360 degrees
+            sitecol.complete.lons[sitecol.sids] = fixed_lons
         if rtree:
-            fixed_lons, self.idl = fix_lons_idl(sitecol.lons)
-            if self.idl:  # longitudes -> longitudes + 360 degrees
-                sitecol.complete.lons[sitecol.sids] = fixed_lons
             self.index = rtree.index.Index()
             for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
                 self.index.insert(sid, (lon, lat, lon, lat))
@@ -200,17 +201,21 @@ class RtreeFilter(object):
         if sites is None:
             sites = self.sitecol
         for source in sources:
-            if rtree:  # Rtree filtering
+            if self.rtree:  # Rtree filtering
                 box = self.get_affected_box(source)
                 sids = numpy.array(sorted(self.index.intersection(box)))
                 if len(sids):
                     source.nsites = len(sids)
                     yield source, FilteredSiteCollection(sids, sites.complete)
             else:  # normal filtering
+                try:
+                    maxdist = self.integration_distance[
+                        source.tectonic_region_type]
+                except TypeError:  # passed a scalar, not a dictionary
+                    maxdist = self.integration_distance
                 with context(source):
                     s_sites = source.filter_sites_by_distance_to_source(
-                        self.integration_distance[source.tectonic_region_type],
-                        sites)
+                        maxdist, sites)
                 if s_sites is not None:
                     source.nsites = len(s_sites)
                     yield source, s_sites
