@@ -21,7 +21,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import AccumDict, get_array
+from openquake.baselib.general import AccumDict, get_array, group_array
 from openquake.risklib import scientific
 from openquake.commonlib.export import export
 from openquake.commonlib.export.hazard import build_etags
@@ -224,12 +224,11 @@ def export_agg_losses_ebr(ekey, dstore):
 
 
 def group_by_aid(data, loss_type):
-    return {aid: AccumDict({loss_type: rec[loss_type]})
-            for aid, [rec] in group_array(data, 'ass_id').items()}
+    return {aid: AccumDict({loss_type: rec['loss']})
+            for aid, [rec] in group_array(data, 'aid').items()}
 
 
 # this is used by event_based_risk
-# works only for insured_losses=false
 @export.add(('ass_loss_table', 'csv'))
 def export_ass_losses_ebr(ekey, dstore):
     """
@@ -250,8 +249,8 @@ def export_ass_losses_ebr(ekey, dstore):
     elif n == 2:  # passed both eid and sm_id
         sm_id, eid = map(int, ekey[0].split(':')[1:])
         sm_ids = (sm_id,)
-    else:  # eid and sm_id both unspecified
-        raise RuntimeError('eid not specified')
+    else:  # eid and sm_id both unspecified, exporting nothing
+        return []
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for sm_id in sm_ids:
         rlzs = rlzs_assoc.rlzs_by_smodel[sm_id]
@@ -267,17 +266,22 @@ def export_ass_losses_ebr(ekey, dstore):
             losses_by_aid = AccumDict()
             rlzname = 'rlz-%03d' % rlz.ordinal
             for loss_type in ass_losses[rlzname]:
-                dset = get_array(ass_losses['%s/%s' % (rlzname, loss_type)],
+                data = get_array(ass_losses['%s/%s' % (rlzname, loss_type)],
                                  eid=eid)
-                losses_by_aid += group_by_aid(dset, loss_type)
+                losses_by_aid += group_by_aid(data, loss_type)
             elt = numpy.zeros(len(losses_by_aid), elt_dt)
             elt['event_tag'] = event_tag
             elt['event_set'] = event_set
             elt['aid'] = sorted(losses_by_aid)
-            elt['eid'] = eid
             for i, aid in numpy.ndenumerate(elt['aid']):
                 for loss_type in loss_types:
-                    elt[loss_type][i] = losses_by_aid[aid].get(loss_type, 0)
+                    loss = losses_by_aid[aid].get(loss_type, 0)
+                    if oq.insured_losses:
+                        elt[loss_type][i] = loss[0]
+                        elt[loss_type + '_ins'][i] = loss[1]
+                    else:
+                        elt[loss_type][i] = loss
+
             elt.sort(order='event_tag')
             writer.save(elt, dest)
     return writer.getsaved()
