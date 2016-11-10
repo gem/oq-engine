@@ -2,9 +2,9 @@ Event Based Risk QA Test 1
 ==========================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_60083.hdf5 Tue Oct 11 06:56:30 2016
-engine_version                                 2.1.0-git4e31fdd        
-hazardlib_version                              0.21.0-gitab31f47       
+gem-tstation:/home/michele/ssd/calc_66973.hdf5 Wed Nov  9 08:14:37 2016
+engine_version                                 2.2.0-git54d01f4        
+hazardlib_version                              0.22.0-git173c60c       
 ============================================== ========================
 
 num_sites = 3, sitecol = 831 B
@@ -79,19 +79,19 @@ source_model.xml 0      Active Shallow Crust 3           8            18
 Informational data
 ------------------
 ============================================= ============
-compute_gmfs_and_curves_max_received_per_task 5,950       
+compute_gmfs_and_curves_max_received_per_task 5,949       
 compute_gmfs_and_curves_num_tasks             8           
-compute_gmfs_and_curves_sent.getter           31,664      
-compute_gmfs_and_curves_sent.monitor          33,120      
+compute_gmfs_and_curves_sent.getter           31,488      
+compute_gmfs_and_curves_sent.monitor          33,136      
 compute_gmfs_and_curves_sent.rlzs             4,664       
-compute_gmfs_and_curves_tot_received          44,120      
-compute_ruptures_max_received_per_task        10,314      
+compute_gmfs_and_curves_tot_received          44,136      
+compute_ruptures_max_received_per_task        11,731      
 compute_ruptures_num_tasks                    1           
 compute_ruptures_sent.gsims                   164         
-compute_ruptures_sent.monitor                 1,612       
+compute_ruptures_sent.monitor                 1,609       
 compute_ruptures_sent.sitecol                 473         
 compute_ruptures_sent.sources                 2,259       
-compute_ruptures_tot_received                 10,314      
+compute_ruptures_tot_received                 11,731      
 hazard.input_weight                           1.800       
 hazard.n_imts                                 6           
 hazard.n_levels                               34          
@@ -102,6 +102,14 @@ hazard.output_weight                          204
 hostname                                      gem-tstation
 require_epsilons                              1           
 ============================================= ============
+
+Specific information for event based
+------------------------------------
+======================== =====
+Total number of ruptures 8    
+Total number of events   26   
+Rupture multiplicity     3.250
+======================== =====
 
 Estimated data transfer for the avglosses
 -----------------------------------------
@@ -146,7 +154,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.016 NaN    0.016 0.016 1        
+compute_ruptures   0.017 NaN    0.017 0.017 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -154,17 +162,16 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_gmfs_and_curves    0.182     0.188     8     
-total compute_ruptures           0.016     0.0       1     
-saving gmfs                      0.009     0.0       8     
+total compute_gmfs_and_curves    0.190     0.621     8     
+total compute_ruptures           0.017     0.0       1     
+saving gmfs                      0.010     0.0       8     
 reading composite source model   0.007     0.0       1     
 filtering composite source model 0.004     0.0       1     
 reading exposure                 0.004     0.0       1     
-filtering ruptures               0.003     0.0       8     
+filtering ruptures               0.004     0.0       8     
 saving ruptures                  0.003     0.0       1     
-managing sources                 0.002     0.0       1     
-store source_info                7.920E-04 0.0       1     
-Initializing rupture serials     4.196E-05 0.0       1     
-reading site collection          3.695E-05 0.0       1     
-aggregating hcurves              2.623E-05 0.0       8     
+managing sources                 0.003     0.0       1     
+store source_info                8.430E-04 0.0       1     
+reading site collection          4.196E-05 0.0       1     
+aggregating hcurves              2.193E-05 0.0       8     
 ================================ ========= ========= ======

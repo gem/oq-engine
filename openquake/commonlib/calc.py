@@ -31,6 +31,7 @@ from openquake.hazardlib import geo, tom
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib import readinput, oqvalidation, util
+from openquake.risklib import valid
 
 
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
@@ -47,7 +48,8 @@ event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
 stored_event_dt = numpy.dtype([
     ('rupserial', U32), ('ses', U32), ('occ', U32),
-    ('sample', U32), ('grp_id', U16), ('source_id', 'S30')])
+    ('sample', U32), ('grp_id', U16),
+    ('source_id', 'S%d' % valid.MAX_ID_LENGTH)])
 
 # ############## utilities for the classical calculator ############### #
 
@@ -508,14 +510,14 @@ class EBRupture(object):
         """
         return len(self.events)
 
-    def export(self, mesh):
+    def export(self, mesh, sm_by_grp):
         """
         Yield :class:`openquake.commonlib.util.Rupture` objects, with all the
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
-        for etag in self.etags:
-            new = util.Rupture(etag, self.sids)
+        for eid, etag in zip(self.eids, self.etags):
+            new = util.Rupture(sm_by_grp[self.grp_id], eid, etag, self.sids)
             new.mesh = mesh[self.sids]
             new.etag = etag
             new.rupture = new
