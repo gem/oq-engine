@@ -27,6 +27,7 @@ import numpy
 
 from openquake.baselib.general import (
     groupby, humansize, get_array, group_array, DictArray)
+from openquake.baselib.python3compat import decode
 from openquake.baselib import hdf5
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
@@ -58,22 +59,18 @@ def get_mesh(sitecol, complete=True):
     return mesh
 
 
-def build_etag(stored_event):
-    serial, ses, occ, sampleid, grp_id, source_id = stored_event
-    tag = b'grp=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
-        grp_id, ses, source_id, serial, occ)
-    if sampleid > 0:
-        tag += b'~sample=%d' % sampleid
-    return tag
-
-
-def build_etags(stored_events, sm_strings=()):
+def build_etags(events):
     """
     An array of tags for the underlying seismic events
     """
-    sm_strings = sm_strings or sorted(stored_events)
-    return numpy.array([build_etag(ev) for sm in sm_strings
-                        for ev in stored_events[sm]])
+    tags = []
+    for (serial, ses, occ, sampleid, grp_id, source_id) in events:
+        tag = b'grp=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
+            grp_id, ses, source_id, serial, occ)
+        if sampleid > 0:
+            tag += b'~sample=%d' % sampleid
+        tags.append(tag)
+    return numpy.array(tags)
 
 
 class SES(object):
@@ -107,50 +104,25 @@ class SESCollection(object):
 
 
 @export.add(('ruptures', 'xml'))
-def export_ses_xml(ekey, dstore):
+def export_ruptures_xml(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
     fmt = ekey[-1]
     oq = dstore['oqparam']
+    sm_by_grp = dstore['csm_info'].get_sm_by_grp()
     mesh = get_mesh(dstore['sitecol'])
     ruptures = []
     for serial in dstore['ruptures']:
         sr = dstore['ruptures/' + serial]
-        ruptures.extend(sr.export(mesh))
+        ruptures.extend(sr.export(mesh, sm_by_grp))
     ses_coll = SESCollection(
         groupby(ruptures, operator.attrgetter('ses_idx')),
         oq.investigation_time)
     dest = dstore.export_path('ses.' + fmt)
     writer = hazard_writers.SESXMLWriter(dest)
     writer.serialize(ses_coll)
-    return [dest]
-
-
-@export.add(('rup_data', 'csv'))
-def export_ses_csv(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    if 'events' not in dstore:  # scenario
-        return []
-    dest = dstore.export_path('ses.csv')
-    header = ('id mag centroid_lon centroid_lat centroid_depth trt '
-              'strike dip rake boundary').split()
-    rows = []
-    for sm in dstore['events']:
-        etags = build_etags(dstore['events'], [sm])
-        dic = groupby(etags, util.get_serial)
-        for trt in dstore['rup_data/' + sm]:
-            for r in dstore['rup_data/%s/%s' % (sm, trt)]:
-                for etag in dic[r['rupserial']]:
-                    rows.append(
-                        (etag, r['mag'], r['lon'], r['lat'], r['depth'],
-                         trt, r['strike'], r['dip'], r['rake'], r['boundary']))
-    rows.sort(key=operator.itemgetter(0))
-    writers.write_csv(dest, rows, header=header)
     return [dest]
 
 
@@ -641,15 +613,13 @@ def export_gmf(ekey, dstore):
             events = dstore['events']
             if key not in events:  # source model producing zero ruptures
                 continue
-            etags = build_etags(events, [key])
+            etags = build_etags(events[key])
         for rlz in rlzs:
-            try:
-                gmf_arr = gmf_data['%04d' % rlz.ordinal].value
-            except KeyError:  # there could be realizations with no data
-                continue
+            gmf_arr = gmf_data['%04d' % rlz.ordinal].value
             ruptures = []
             for eid, gmfa in group_array(gmf_arr, 'eid').items():
-                rup = util.Rupture(etags[eid], sorted(set(gmfa['sid'])))
+                rup = util.Rupture(sm_id, eid, etags[eid],
+                                   sorted(set(gmfa['sid'])))
                 rup.gmfa = gmfa
                 ruptures.append(rup)
             ruptures.sort(key=operator.attrgetter('etag'))
@@ -661,43 +631,8 @@ def export_gmf(ekey, dstore):
     return fnames
 
 
-@export.add(('gmfs:', 'csv'))
-def export_gmf_spec(ekey, dstore, spec):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    :param spec: a string specifying what to export exactly
-    """
-    oq = dstore['oqparam']
-    eids = numpy.array([int(rid) for rid in spec.split(',')])
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     gsims = [str(rlz.gsim_rlz) for rlz in rlzs]
-    sitemesh = get_mesh(dstore['sitecol'])
-    writer = writers.CsvWriter(fmt='%.5f')
-    if 'scenario' in oq.calculation_mode:
-        etags, gmfs = calc.get_gmfs(dstore)
-        imts = list(oq.imtls)
-        gmf_dt = numpy.dtype([(gsim, F32) for gsim in gsims])
-        for eid in eids:
-            etag = etags[eid]
-            for imt in imts:
-                gmfa = numpy.zeros(len(sitemesh), gmf_dt)
-                for i, gsim in enumerate(gsims):
-                    gmfa[gsim] = gmfs[i][imt][:, eid]
-                dest = dstore.export_path('gmf-%s-%s.csv' % (etag, imt))
-                data = util.compose_arrays(sitemesh, gmfa)
-                writer.save(data, dest)
-    else:  # event based
-        etags = build_etags(dstore['events'])
-        for eid in eids:
-            etag = etags[eid]
-            for imt, gmfa in _calc_gmfs(dstore, util.get_serial(etag), eid):
-                dest = dstore.export_path('gmf-%s-%s.csv' % (etag, imt))
-                data = util.compose_arrays(sitemesh, gmfa)
-                writer.save(data, dest)
-    return writer.getsaved()
-
-
 def export_gmf_xml(key, dest, sitecol, imts, ruptures, rlz,
                    investigation_time):
     """
@@ -874,6 +809,32 @@ def export_disagg_xml(ekey, dstore):
         writer.serialize(data)
         fnames.append(fname)
     return sorted(fnames)
+
+
+@export.add(('rup_data', 'csv'))
+def export_rup_data_csv(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    if 'events' not in dstore:  # scenario
+        return []
+    dest = dstore.export_path('ses.csv')
+    header = ('id mag centroid_lon centroid_lat centroid_depth trt '
+              'strike dip rake boundary').split()
+    rows = []
+    for sm in dstore['events']:
+        etags = build_etags(dstore['events'][sm])
+        dic = groupby(etags, util.get_serial)
+        for trt in dstore['rup_data/' + sm]:
+            for r in dstore['rup_data/%s/%s' % (sm, trt)]:
+                for etag in dic[r['rupserial']]:
+                    rows.append(
+                        (etag, r['mag'], r['lon'], r['lat'], r['depth'],
+                         trt, r['strike'], r['dip'], r['rake'], r['boundary']))
+    rows.sort(key=operator.itemgetter(0))
+    writers.write_csv(dest, rows, header=header)
+    return [dest]
 
 
 @export.add(('realizations', 'csv'))
