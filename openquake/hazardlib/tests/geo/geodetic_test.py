@@ -131,6 +131,18 @@ class TestDistance(unittest.TestCase):
         distance = geodetic.distance(*(p1 + p2))
         self.assertAlmostEqual(distance, 65.0295143)
 
+    def test_topo(self):
+        p1 = (0, 0, 1)
+        p2 = (0, 0, -1)
+        distance = geodetic.distance(*(p1 + p2))
+        self.assertAlmostEqual(distance, 2.0)
+
+    def test_topo2(self):
+        p1 = (0, 0, 3)
+        p2 = (0.5, -0.3, -2)
+        distance = geodetic.distance(*(p1 + p2))
+        self.assertAlmostEqual(distance, 65.0295143)
+
 
 class MinDistanceTest(unittest.TestCase):
     # test relies on geodetic.distance() to work right
@@ -356,6 +368,31 @@ class NPointsBetweenTest(unittest.TestCase):
         self.assertTrue(numpy.allclose(lats, expected_lats))
         self.assertTrue(numpy.allclose(depths, expected_depths))
 
+    def test_topo(self):
+        lons, lats, depths = geodetic.npoints_between(
+            lon1=40.77, lat1=38.9, depth1=2,
+            lon2=31.14, lat2=46.23, depth2=-4,
+            npoints=7
+        )
+        expected_lons = [40.77, 39.316149154562076, 37.8070559966114,
+                         36.23892429550906, 34.60779411051164,
+                         32.90956020775102, 31.14]
+        expected_lats = [38.9, 40.174608368560094, 41.43033989236144,
+                         42.66557829138413, 43.87856696738466,
+                         45.067397797471415, 46.23]
+        expected_depths = [2, 1, 0, -1, -2, -3, -4]
+        self.assertTrue(numpy.allclose(lons, expected_lons))
+        self.assertTrue(numpy.allclose(lats, expected_lats))
+        self.assertTrue(numpy.allclose(depths, expected_depths))
+        # the last and the first points should be exactly the same as two
+        # original corner points, so no "assertAlmostEqual" for them
+        self.assertEqual(lons[0], 40.77)
+        self.assertEqual(lats[0], 38.9)
+        self.assertEqual(depths[0], 2)
+        self.assertEqual(lons[-1], 31.14)
+        self.assertEqual(lats[-1], 46.23)
+        self.assertEqual(depths[-1], -4)
+
 
 class NPointsTowardsTest(unittest.TestCase):
     # values in this test have not been checked by hand
@@ -405,6 +442,25 @@ class NPointsTowardsTest(unittest.TestCase):
         self.assertEqual(lats[0], 0)
         self.assertEqual(depths[0], 0)
 
+    def test_topo(self):
+        lons, lats, depths = geodetic.npoints_towards(
+            lon=-30.5, lat=23.6, depth=2, azimuth=-100.5,
+            hdist=400, vdist=-4, npoints=5
+        )
+        expected_lons = [-30.5, -31.46375358, -32.42503446,
+                         -33.3837849, -34.33995063]
+        expected_lats = [23.6, 23.43314083, 23.26038177,
+                         23.08178673, 22.8974212]
+        expected_depths = [2, 1, 0, -1, -2]
+        self.assertTrue(numpy.allclose(lons, expected_lons))
+        self.assertTrue(numpy.allclose(lats, expected_lats))
+        self.assertTrue(numpy.allclose(depths, expected_depths))
+        # the first point should be exactly the same
+        # as the original starting point
+        self.assertEqual(lons[0], -30.5)
+        self.assertEqual(lats[0], 23.6)
+        self.assertEqual(depths[0], 2)
+
 
 class IntervalsBetweenTest(unittest.TestCase):
     # values in this test have not been checked by hand
@@ -430,6 +486,32 @@ class IntervalsBetweenTest(unittest.TestCase):
         expected_lons = [10., 10.76308634, 11.52482625, 12.28955192]
         expected_lats = [-4, -0.94915589, 2.10185625, 5.15249576]
         expected_depths = [100, 84.74555236, 69.49110472, 54.23665708]
+        self.assertTrue(numpy.allclose(lons, expected_lons))
+        self.assertTrue(numpy.allclose(lats, expected_lats))
+        self.assertTrue(numpy.allclose(depths, expected_depths))
+
+    def test_round_down_topo(self):
+        lons, lats, depths = geodetic.intervals_between(
+            lon1=0, lat1=0, depth1=0,
+            lon2=0, lat2=0, depth2=-2.9,
+            length=2
+        )
+        expected_lons = [0, 0]
+        expected_lats = [0, 0]
+        expected_depths = [0, -2] 
+        self.assertTrue(numpy.allclose(lons, expected_lons))
+        self.assertTrue(numpy.allclose(lats, expected_lats))
+        self.assertTrue(numpy.allclose(depths, expected_depths))
+
+    def test_round_up_topo(self):
+        lons, lats, depths = geodetic.intervals_between(
+            lon1=0, lat1=0, depth1=0,
+            lon2=0, lat2=0, depth2=-3,
+            length=2
+        )
+        expected_lons = [0, 0, 0]
+        expected_lats = [0, 0, 0]
+        expected_depths = [0, -2, -4]
         self.assertTrue(numpy.allclose(lons, expected_lons))
         self.assertTrue(numpy.allclose(lats, expected_lats))
         self.assertTrue(numpy.allclose(depths, expected_depths))
