@@ -2,9 +2,9 @@ Classical PSHA with NZ NSHM
 ===========================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_60104.hdf5 Tue Oct 11 06:57:46 2016
-engine_version                                 2.1.0-git4e31fdd        
-hazardlib_version                              0.21.0-gitab31f47       
+gem-tstation:/home/michele/ssd/calc_66994.hdf5 Wed Nov  9 08:15:48 2016
+engine_version                                 2.2.0-git54d01f4        
+hazardlib_version                              0.22.0-git173c60c       
 ============================================== ========================
 
 num_sites = 1, sitecol = 739 B
@@ -84,13 +84,13 @@ NSHM_source_model-editedbkgd.xml 1      Subduction Interface 2           2      
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,530       
+count_eff_ruptures_max_received_per_task 1,546       
 count_eff_ruptures_num_tasks             2           
 count_eff_ruptures_sent.gsims            169         
-count_eff_ruptures_sent.monitor          2,632       
+count_eff_ruptures_sent.monitor          2,626       
 count_eff_ruptures_sent.sitecol          866         
-count_eff_ruptures_sent.sources          829,500     
-count_eff_ruptures_tot_received          3,057       
+count_eff_ruptures_sent.sources          829,485     
+count_eff_ruptures_tot_received          3,092       
 hazard.input_weight                      6.000       
 hazard.n_imts                            1           
 hazard.n_levels                          29          
@@ -123,22 +123,22 @@ PointSource               0.0       2
 
 Information about the tasks
 ---------------------------
-================== ========= ========= ========= ===== =========
-operation-duration mean      stddev    min       max   num_tasks
-count_eff_ruptures 9.149E-04 2.092E-04 7.670E-04 0.001 2        
-================== ========= ========= ========= ===== =========
+================== ===== ========= ========= ===== =========
+operation-duration mean  stddev    min       max   num_tasks
+count_eff_ruptures 0.001 3.459E-04 7.789E-04 0.001 2        
+================== ===== ========= ========= ===== =========
 
 Slowest operations
 ------------------
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.218     0.0       1     
+reading composite source model   0.223     0.0       1     
 filtering composite source model 0.004     0.0       1     
 managing sources                 0.002     0.0       1     
-total count_eff_ruptures         0.002     0.258     2     
-store source_info                5.791E-04 0.0       1     
-reading site collection          3.815E-05 0.0       1     
-aggregate curves                 3.719E-05 0.0       2     
-saving probability maps          2.694E-05 0.0       1     
+total count_eff_ruptures         0.002     0.0       2     
+store source_info                5.910E-04 0.0       1     
+aggregate curves                 3.695E-05 0.0       2     
+reading site collection          3.505E-05 0.0       1     
+saving probability maps          2.599E-05 0.0       1     
 ================================ ========= ========= ======

@@ -2,9 +2,9 @@ scenario hazard
 ===============
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_60127.hdf5 Tue Oct 11 06:58:47 2016
-engine_version                                 2.1.0-git4e31fdd        
-hazardlib_version                              0.21.0-gitab31f47       
+gem-tstation:/home/michele/ssd/calc_67017.hdf5 Wed Nov  9 08:16:41 2016
+engine_version                                 2.2.0-git54d01f4        
+hazardlib_version                              0.22.0-git173c60c       
 ============================================== ========================
 
 num_sites = 1, sitecol = 739 B
@@ -65,5 +65,5 @@ operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 filtering sites         0.006     0.0       1     
 reading exposure        0.002     0.0       1     
-reading site collection 8.106E-06 0.0       1     
+reading site collection 5.007E-06 0.0       1     
 ======================= ========= ========= ======
