@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Lowered the limit on the length of source IDs to 60 chars
   * Fixed excessive strictness when validating `consequenceFunction.id`
   * Added an `ucerf_rupture` calculator able to store seismic events and
     rupture data and reduced the data transfer
