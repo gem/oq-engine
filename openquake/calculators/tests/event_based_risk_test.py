@@ -188,6 +188,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fname in out['agg_loss_table', 'csv']:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
+        # export a specific eid
+        fnames = export(('ass_loss_table:0', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+        self.assertEqualFiles('expected/losses-eid=0.csv', fname)
+
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles(
             'expected/portfolio_loss_ebr.txt', fname, delta=1E-5)
