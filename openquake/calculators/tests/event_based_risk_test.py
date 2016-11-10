@@ -77,6 +77,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = writetmp(view('mean_avg_losses', self.calc.datastore))
         self.assertEqualFiles('expected/mean_avg_losses.txt', fname)
 
+        # export a specific eid
+        [fname] = export(('ass_loss_table:0', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/losses-eid=0.csv', fname)
+
         # test the case when all GMFs are filtered out
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_2.__file__, 'job.ini', minimum_intensity='10.0')
@@ -184,6 +188,19 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fname in out['agg_loss_table', 'csv']:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
+        # export a specific eid
+        fnames = export(('ass_loss_table:0', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+        self.assertEqualFiles('expected/losses-eid=0.csv', fname)
+
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles(
             'expected/portfolio_loss_ebr.txt', fname, delta=1E-5)
+
+        # export a specific pair (sm_id, eid)
+        fnames = export(('ass_loss_table:1:0', 'csv'),
+                        self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
