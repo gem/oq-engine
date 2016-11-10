@@ -47,7 +47,7 @@ def build_el_dtypes(insured_losses):
         event loss table respectively
     """
     I = insured_losses + 1
-    ela_list = [('eid', U32), ('ass_id', U32), ('loss', (F32, I))]
+    ela_list = [('eid', U32), ('aid', U32), ('loss', (F32, I))]
     elt_list = [('eid', U32), ('loss', (F32, I))]
     return numpy.dtype(ela_list), numpy.dtype(elt_list)
 
