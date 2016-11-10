@@ -26,7 +26,6 @@ import collections
 import numpy
 
 from openquake.baselib.general import AccumDict, split_in_blocks
-from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.probability_map import ProbabilityMap, PmapStats
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
@@ -62,14 +61,7 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     src_group_id = sources[0].src_group_id
     trt = sources[0].tectonic_region_type
     max_dist = monitor.maximum_distance[trt]
-    cmaker = ContextMaker(gsims)
-    params = sorted(cmaker.REQUIRES_RUPTURE_PARAMETERS)
-    rup_data_dt = numpy.dtype(
-        [('rupserial', U32), ('multiplicity', U16),
-         ('numsites', U32), ('occurrence_rate', F64)] + [
-            (param, F64) for param in params])
     eb_ruptures = []
-    rup_data = []
     calc_times = []
     rup_mon = monitor('filtering ruptures', measuremem=False)
     num_samples = monitor.samples
@@ -92,15 +84,6 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
         # to call sample_ruptures *before* the filtering
         for ebr in build_eb_ruptures(
                 src, num_occ_by_rup, rupture_filter, monitor.seed, rup_mon):
-            nsites = len(ebr.sids)
-            try:
-                rate = ebr.rupture.occurrence_rate
-            except AttributeError:  # for nonparametric sources
-                rate = numpy.nan
-            rc = cmaker.make_rupture_context(ebr.rupture)
-            ruptparams = tuple(getattr(rc, param) for param in params)
-            rup_data.append((ebr.serial, ebr.multiplicity, nsites, rate) +
-                            ruptparams)
             eb_ruptures.append(ebr)
             num_events += ebr.multiplicity
         dt = time.time() - t0
@@ -108,8 +91,7 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     res = AccumDict({src_group_id: eb_ruptures})
     res.num_events = num_events
     res.calc_times = calc_times
-    res.rup_data = numpy.array(rup_data, rup_data_dt)
-    res.trt = trt
+    res.rup_data = calc.RuptureData(trt, gsims).to_array(eb_ruptures)
     return res
 
 
@@ -213,6 +195,8 @@ class EventBasedRuptureCalculator(PSHACalculator):
         zd.eff_ruptures = AccumDict()
         self.eid = collections.Counter()  # sm_id -> event_id
         self.sm_by_grp = self.csm.info.get_sm_by_grp()
+        self.grp_trt = {sg.id: sg.trt for sm in self.csm.info.source_models
+                        for sg in sm.src_groups}
         return zd
 
     def agg_dicts(self, acc, ruptures_by_grp_id):
@@ -245,7 +229,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
                                event['ses'],
                                event['occ'],
                                event['sample'],
-                               ebr.grp_id,
+                               grp_id,
                                ebr.source_id)
                         events.append(rec)
                         self.eid[sm_id] += 1
@@ -257,17 +241,19 @@ class EventBasedRuptureCalculator(PSHACalculator):
                     self.datastore.extend(
                         ev, numpy.array(events, calc.stored_event_dt))
 
-            # save rup_data
-            if hasattr(ruptures_by_grp_id, 'rup_data'):
-                trt = ruptures_by_grp_id.trt
-                self.rup_data[trt] = self.datastore.extend(
-                        'rup_data/' + trt, ruptures_by_grp_id.rup_data)
+                # save rup_data
+                if hasattr(ruptures_by_grp_id, 'rup_data'):
+                    trt = self.grp_trt[grp_id]
+                    sm_id = self.sm_by_grp[grp_id]
+                    key = 'rup_data/sm-%04d/%s' % (sm_id, trt)
+                    self.rup_data[trt] = self.datastore.extend(
+                            key, ruptures_by_grp_id.rup_data)
 
     def post_execute(self, result):
         """
         Save the SES collection
         """
-        nr = sum(len(result[grp_id]) for grp_id in result)
+        nr = sum_dict(result)
         logging.info('Saved %d ruptures, %d events',
                      nr, sum(self.eid.values()))
         if 'ruptures' in self.datastore:
@@ -284,6 +270,24 @@ class EventBasedRuptureCalculator(PSHACalculator):
                                          multiplicity=mul)
         if self.rup_data:
             self.datastore.set_nbytes('rup_data')
+
+
+def sum_dict(dic):
+    """
+    Sum by key a dictionary of lists or numbers:
+
+    >>> sum_dict({'a': 1})
+    1
+    >>> sum_dict({'a': [None, None]})
+    2
+    """
+    s = 0
+    for k, v in dic.items():
+        if hasattr(v, '__len__'):
+            s += len(v)
+        else:
+            s += v
+    return s
 
 
 # ######################## GMF calculator ############################ #
@@ -389,15 +393,15 @@ class EventBasedCalculator(ClassicalCalculator):
         monitor.oqparam = oq
         imts = list(oq.imtls)
         min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
-        grp_trt = {sg.id: sg.trt for sm in self.csm.info.source_models
-                   for sg in sm.src_groups}
+        self.grp_trt = {sg.id: sg.trt for sm in self.csm.info.source_models
+                        for sg in sm.src_groups}
         rlzs_by_grp = self.rlzs_assoc.get_rlzs_by_grp_id()
         correl_model = oq.get_correl_model()
         for block in split_in_blocks(
                 ebruptures, oq.concurrent_tasks or 1,
                 key=operator.attrgetter('grp_id')):
             grp_id = block[0].grp_id
-            trt = grp_trt[grp_id]
+            trt = self.grp_trt[grp_id]
             gsims = [dic[trt] for dic in self.rlzs_assoc.gsim_by_trt]
             samples = self.rlzs_assoc.samples[grp_id]
             getter = GmfGetter(gsims, block, self.sitecol,

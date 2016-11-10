@@ -17,22 +17,22 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-import collections
 import logging
 import copy
-
 import numpy
 
-from openquake.baselib.general import get_array, group_array, AccumDict
-from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.commonlib import readinput, oqvalidation, util
-
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import encode
+from openquake.baselib.python3compat import encode, decode
+from openquake.baselib.general import get_array, group_array, AccumDict
 from openquake.hazardlib.geo.mesh import RectangularMesh, build_array
+from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, tom
 from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.commonlib import readinput, oqvalidation, util
+from openquake.risklib import valid
+
 
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
 # in this way even on 32 bit machines Python will not have to convert
@@ -46,16 +46,12 @@ F64 = numpy.float64
 
 event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
-
 stored_event_dt = numpy.dtype([
     ('rupserial', U32), ('ses', U32), ('occ', U32),
-    ('sample', U32), ('grp_id', U16), ('source_id', 'S30')])
+    ('sample', U32), ('grp_id', U16),
+    ('source_id', 'S%d' % valid.MAX_ID_LENGTH)])
 
 # ############## utilities for the classical calculator ############### #
-
-SourceRuptureSites = collections.namedtuple(
-    'SourceRuptureSites',
-    'source rupture sites')
 
 
 # used in classical and event_based calculators
@@ -285,7 +281,6 @@ def get_gmfs(dstore, precalc=None):
     imt_dt = numpy.dtype([(str(imt), F32) for imt in oq.imtls])
     E = oq.number_of_ground_motion_fields
     etags = numpy.array(sorted(b'scenario-%010d~ses=1' % i for i in range(E)))
-    # build a matrix R x N x E where R is the number of GSIMs
     gmfs = numpy.zeros((len(rlzs_assoc), N, E), imt_dt)
     if precalc:
         for i, gsim in enumerate(precalc.gsims):
@@ -354,6 +349,46 @@ def check_overflow(calc):
             raise ValueError(
                 'The event based calculator is restricted to '
                 '%d %s, got %d' % (max_[var], var, num_[var]))
+
+
+class RuptureData(object):
+    """
+    Container for information about the ruptures of a given
+    tectonic region type.
+    """
+    def __init__(self, trt, gsims):
+        self.trt = trt
+        self.cmaker = ContextMaker(gsims)
+        self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
+                             set('mag strike dip rake hypo_depth'.split()))
+        self.dt = numpy.dtype([
+            ('rupserial', U32), ('multiplicity', U16),
+            ('numsites', U32), ('occurrence_rate', F64),
+            ('mag', F64), ('lon', F32), ('lat', F32), ('depth', F32),
+            ('strike', F64), ('dip', F64), ('rake', F64),
+            ('boundary', hdf5.vstr)] + [(param, F64) for param in self.params])
+
+    def to_array(self, ebruptures):
+        data = []
+        for ebr in ebruptures:
+            rup = ebr.rupture
+            rc = self.cmaker.make_rupture_context(rup)
+            ruptparams = tuple(getattr(rc, param) for param in self.params)
+            point = rup.surface.get_middle_point()
+            multi_lons, multi_lats = rup.surface.get_surface_boundaries()
+            boundary = 'MULTIPOLYGON(%s)' % ','.join(
+                '((%s))' % ','.join('%.5f %.5f' % (lon, lat)
+                                    for lon, lat in zip(lons, lats))
+                for lons, lats in zip(multi_lons, multi_lats))
+            try:
+                rate = ebr.rupture.occurrence_rate
+            except AttributeError:  # for nonparametric sources
+                rate = numpy.nan
+            data.append((ebr.serial, ebr.multiplicity, len(ebr.sids),
+                         rate, rup.mag, point.x, point.y, point.z,
+                         rup.surface.get_strike(), rup.surface.get_dip(),
+                         rup.rake, decode(boundary)) + ruptparams)
+        return numpy.array(data, self.dt)
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface):
