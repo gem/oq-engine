@@ -1,4 +1,15 @@
   [Michele Simionato]
+  * Lowered the limit on the length of source IDs to 60 chars
+  * Fixed excessive strictness when validating `consequenceFunction.id`
+  * Added an `ucerf_rupture` calculator able to store seismic events and
+    rupture data and reduced the data transfer
+
+  [Daniele Viganò]
+  * MANIFEST now includes all files, with any extension located in the
+    tests folders. It is now possible to run tests from an installation
+    made with packages
+
+  [Michele Simionato]
   * Improved error message when the user gives a source model file instead of
     a source model logic tree file
   * Fixed the management of negative calculation IDs

@@ -31,6 +31,7 @@ from openquake.hazardlib import geo, tom
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib import readinput, oqvalidation, util
+from openquake.risklib import valid
 
 
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
@@ -47,7 +48,8 @@ event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
 stored_event_dt = numpy.dtype([
     ('rupserial', U32), ('ses', U32), ('occ', U32),
-    ('sample', U32), ('grp_id', U16), ('source_id', 'S30')])
+    ('sample', U32), ('grp_id', U16),
+    ('source_id', 'S%d' % valid.MAX_ID_LENGTH)])
 
 # ############## utilities for the classical calculator ############### #
 
@@ -358,7 +360,7 @@ class RuptureData(object):
         self.trt = trt
         self.cmaker = ContextMaker(gsims)
         self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
-                             set('mag strike dip rake'.split()))
+                             set('mag strike dip rake hypo_depth'.split()))
         self.dt = numpy.dtype([
             ('rupserial', U32), ('multiplicity', U16),
             ('numsites', U32), ('occurrence_rate', F64),
