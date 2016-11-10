@@ -2,9 +2,9 @@ Ucerf test
 ==========
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_60042.hdf5 Tue Oct 11 06:55:55 2016
-engine_version                                 2.1.0-git4e31fdd        
-hazardlib_version                              0.21.0-gitab31f47       
+gem-tstation:/home/michele/ssd/calc_66932.hdf5 Wed Nov  9 08:14:03 2016
+engine_version                                 2.2.0-git54d01f4        
+hazardlib_version                              0.22.0-git173c60c       
 ============================================== ========================
 
 num_sites = 1588, sitecol = 72.04 KB
@@ -12,7 +12,7 @@ num_sites = 1588, sitecol = 72.04 KB
 Parameters
 ----------
 ============================ ================================
-calculation_mode             'ucerf_event_based'             
+calculation_mode             'ucerf_rupture'                 
 number_of_logic_tree_samples 0                               
 maximum_distance             {u'Active Shallow Crust': 200.0}
 investigation_time           10000.0                         

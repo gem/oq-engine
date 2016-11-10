@@ -47,7 +47,7 @@ def build_el_dtypes(insured_losses):
         event loss table respectively
     """
     I = insured_losses + 1
-    ela_list = [('eid', U32), ('ass_id', U32), ('loss', (F32, I))]
+    ela_list = [('eid', U32), ('aid', U32), ('loss', (F32, I))]
     elt_list = [('eid', U32), ('loss', (F32, I))]
     return numpy.dtype(ela_list), numpy.dtype(elt_list)
 
@@ -658,6 +658,7 @@ def losses_by_taxonomy(riskinput, riskmodel, assetcol, monitor):
     avglosses = numpy.zeros((A, L, R), F64) if monitor.avg_losses else None
     agglosses = AccumDict(
         {lr: AccumDict() for lr in itertools.product(range(L), range(R))})
+    asslosses = collections.defaultdict(list)
     for out in riskmodel.gen_outputs(riskinput, monitor, assetcol):
         # NB: out.assets is a non-empty list of assets with the same taxonomy
         t = taxonomy_id[out.assets[0].taxonomy]
@@ -669,11 +670,14 @@ def losses_by_taxonomy(riskinput, riskmodel, assetcol, monitor):
                     avglosses[i, l, r] += loss
         agglosses[l, r] += {eid: loss for eid, loss in
                             zip(out.eids, out.elosses) if loss}
-
+        if len(out.alt):
+            asslosses[l, r].append(out.alt)
     # convert agglosses into arrays to reduce the data transfer
     agglosses = {lr: numpy.array(sorted(agglosses[lr].items()), elt_dt)
                  for lr in agglosses}
     return AccumDict(losses=losses, avglosses=avglosses, agglosses=agglosses,
+                     asslosses=AccumDict((lr, numpy.concatenate(arrays))
+                                         for lr, arrays in asslosses.items()),
                      gmfbytes=monitor.gmfbytes)
 
 save_ruptures = event_based.EventBasedRuptureCalculator.__dict__[
@@ -901,7 +905,8 @@ class EbriskCalculator(base.RiskCalculator):
                     avglosses += dic.pop('avglosses')
                 taxlosses += dic.pop('losses')
                 self.gmfbytes += dic.pop('gmfbytes')
-                self.save_agglosses(dic.pop('agglosses'), start)
+                self.save_losses(
+                    dic.pop('agglosses'), dic.pop('asslosses'), start)
             logging.debug(
                 'Saving results for source model #%d, realizations %d:%d',
                 res.sm_id + 1, start, stop)
@@ -916,11 +921,12 @@ class EbriskCalculator(base.RiskCalculator):
         self.datastore['events'].attrs['num_events'] = num_events
         return num_events
 
-    def save_agglosses(self, agglosses, offset):
+    def save_losses(self, agglosses, asslosses, offset):
         """
         Save the event loss tables incrementally.
 
-        :param agglosses: a dictionary lr -> {eid: loss}
+        :param agglosses: a dictionary lr -> (eid, loss)
+        :param asslosses: a dictionary lr -> (eid, aid, loss)
         :param offset: realization offset
         """
         with self.monitor('saving event loss tables', autoflush=True):
@@ -928,6 +934,10 @@ class EbriskCalculator(base.RiskCalculator):
                 loss_type = self.riskmodel.loss_types[l]
                 key = 'agg_loss_table/rlz-%03d/%s' % (r + offset, loss_type)
                 self.datastore.extend(key, agglosses[l, r])
+            for l, r in asslosses:
+                loss_type = self.riskmodel.loss_types[l]
+                key = 'ass_loss_table/rlz-%03d/%s' % (r + offset, loss_type)
+                self.datastore.extend(key, asslosses[l, r])
 
     def post_execute(self, num_events):
         """

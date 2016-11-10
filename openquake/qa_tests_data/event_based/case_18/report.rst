@@ -2,9 +2,9 @@ Event-Based Hazard QA Test, Case 18
 ===================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_60115.hdf5 Tue Oct 11 06:58:05 2016
-engine_version                                 2.1.0-git4e31fdd        
-hazardlib_version                              0.21.0-gitab31f47       
+gem-tstation:/home/michele/ssd/calc_67005.hdf5 Wed Nov  9 08:16:06 2016
+engine_version                                 2.2.0-git54d01f4        
+hazardlib_version                              0.22.0-git173c60c       
 ============================================== ========================
 
 num_sites = 1, sitecol = 739 B
@@ -73,13 +73,13 @@ source_model.xml 0      Active Shallow Crust 1           6            3,000
 Informational data
 ------------------
 ====================================== ============
-compute_ruptures_max_received_per_task 7,244       
+compute_ruptures_max_received_per_task 8,433       
 compute_ruptures_num_tasks             1           
 compute_ruptures_sent.gsims            170         
-compute_ruptures_sent.monitor          1,025       
+compute_ruptures_sent.monitor          1,022       
 compute_ruptures_sent.sitecol          577         
 compute_ruptures_sent.sources          13,352      
-compute_ruptures_tot_received          7,244       
+compute_ruptures_tot_received          8,433       
 hazard.input_weight                    900         
 hazard.n_imts                          1           
 hazard.n_levels                        4           
@@ -94,8 +94,8 @@ Specific information for event based
 ------------------------------------
 ======================== =====
 Total number of ruptures 6    
-Total number of events   1    
-Rupture multiplicity     0.167
+Total number of events   6    
+Rupture multiplicity     1.000
 ======================== =====
 
 Slowest sources
@@ -118,7 +118,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   2.850 NaN    2.850 2.850 1        
+compute_ruptures   2.905 NaN    2.905 2.905 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -126,14 +126,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           2.850     0.0       1     
-reading composite source model   0.013     0.0       1     
+total compute_ruptures           2.905     0.152     1     
+reading composite source model   0.014     0.0       1     
 filtering composite source model 0.009     0.0       1     
-saving ruptures                  0.008     0.0       1     
 managing sources                 0.005     0.0       1     
+saving ruptures                  0.003     0.0       1     
 split/filter heavy sources       0.003     0.0       1     
 filtering ruptures               0.001     0.0       6     
-store source_info                9.019E-04 0.0       1     
-Initializing rupture serials     3.910E-05 0.0       1     
-reading site collection          3.600E-05 0.0       1     
+store source_info                8.759E-04 0.0       1     
+reading site collection          3.505E-05 0.0       1     
 ================================ ========= ========= ======
