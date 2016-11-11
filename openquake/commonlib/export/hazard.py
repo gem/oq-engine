@@ -127,15 +127,15 @@ def export_ruptures_xml(ekey, dstore):
 
 
 @export.add(('rup_data', 'csv'))
-def export_ses_csv(ekey, dstore):
+def export_rup_data_csv(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
     if 'events' not in dstore:  # scenario
         return []
-    dest = dstore.export_path('ses.csv')
-    header = ('id mag centroid_lon centroid_lat centroid_depth trt '
+    dest = dstore.export_path('rup_data.csv')
+    header = ('event_tag mag centroid_lon centroid_lat centroid_depth trt '
               'strike dip rake boundary').split()
     csm_info = dstore['csm_info']
     grp_trt = csm_info.grp_trt()
