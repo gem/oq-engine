@@ -26,7 +26,7 @@ from openquake.risklib import scientific
 from openquake.commonlib.export import export
 from openquake.commonlib.export.hazard import build_etags
 from openquake.commonlib import writers, risk_writers
-from openquake.commonlib.util import get_assets, compose_arrays, get_ses_idx
+from openquake.commonlib.util import get_assets, compose_arrays
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
     ExposureData, Site)
@@ -174,13 +174,13 @@ def export_agg_losses_ebr(ekey, dstore):
     name, ext = export.keyfunc(ekey)
     agg_losses = dstore[name]
     oq = dstore['oqparam']
-    all_years = int(oq.investigation_time * oq.ses_per_logic_tree_path)
     dtlist = [('event_tag', (numpy.string_, 100)), ('year', U32)
               ] + oq.loss_dt_list()
     elt_dt = numpy.dtype(dtlist)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     sm_ids = sorted(rlzs_assoc.rlzs_by_smodel)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    numpy.random.seed(oq.random_seed)
     for sm_id in sm_ids:
         rlzs = rlzs_assoc.rlzs_by_smodel[sm_id]
         try:
@@ -202,9 +202,8 @@ def export_agg_losses_ebr(ekey, dstore):
             elt = numpy.zeros(len(eids), elt_dt)
             elt['event_tag'] = build_etags(
                 dstore['events/sm-%04d' % sm_id][eids])
-            numpy.random.seed(oq.random_seed)
-            years = numpy.random.choice(all_years, len(eids))
             # attach a random year label to each event
+            years = numpy.random.choice(int(oq.investigation_time), len(elt))
             elt['year'] = numpy.array(years, U32)
             for loss_type in loss_types:
                 elt_lt = elt[loss_type]
@@ -242,7 +241,6 @@ def export_ass_losses_ebr(ekey, dstore):
     name, ext = export.keyfunc(ekey)
     ass_losses = dstore[name]
     oq = dstore['oqparam']
-    all_years = int(oq.investigation_time * oq.ses_per_logic_tree_path)
     dtlist = [('event_tag', (numpy.string_, 100)), ('year', U32),
               ('aid', U32)] + oq.loss_dt_list()
     elt_dt = numpy.dtype(dtlist)
@@ -257,6 +255,7 @@ def export_ass_losses_ebr(ekey, dstore):
         return []
     zero = [0, 0] if oq.insured_losses else 0
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    numpy.random.seed(oq.random_seed)
     for sm_id in sm_ids:
         rlzs = rlzs_assoc.rlzs_by_smodel[sm_id]
         try:
@@ -275,9 +274,8 @@ def export_ass_losses_ebr(ekey, dstore):
                 losses_by_aid += group_by_aid(data, loss_type)
             elt = numpy.zeros(len(losses_by_aid), elt_dt)
             elt['event_tag'] = event_tag
-            numpy.random.seed(oq.random_seed)
-            years = numpy.random.choice(all_years, len(elt))
             # attach a random year label to each event
+            years = numpy.random.choice(int(oq.investigation_time), len(elt))
             elt['year'] = numpy.array(years, U32)
             elt['aid'] = sorted(losses_by_aid)
             for i, aid in numpy.ndenumerate(elt['aid']):
