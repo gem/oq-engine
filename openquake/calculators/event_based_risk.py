@@ -918,6 +918,8 @@ class EbriskCalculator(base.RiskCalculator):
         """
         Save an array of losses by taxonomy of shape (T, L, R).
         """
+        event_based.EventBasedRuptureCalculator.post_execute.__func__(
+            self, num_events)
         if self.gmfbytes == 0:
             raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')
