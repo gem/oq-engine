@@ -224,6 +224,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
                     for event in ebr.events:
                         event['eid'] = self.eid[sm_id]
                         rec = (ebr.serial,
+                               0,  # year to be set
                                event['ses'],
                                event['occ'],
                                event['sample'],
@@ -250,6 +251,13 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """
         Save the SES collection
         """
+        logging.info('Setting event years')
+        inv_time = int(self.oqparam.investigation_time)
+        numpy.random.seed(self.oqparam.random_seed)
+        for sm in self.datastore['events']:
+            events = self.datastore['events/' + sm]
+            events['year'] = random_years(events, inv_time)
+
         nr = sum_dict(result)
         logging.info('Saved %d ruptures, %d events',
                      nr, sum(self.eid.values()))
@@ -266,6 +274,17 @@ class EventBasedRuptureCalculator(PSHACalculator):
                 self.datastore.set_attrs(dset.name, sites_per_rupture=spr,
                                          multiplicity=mul)
         self.datastore.set_nbytes('rup_data')
+
+
+def random_years(events, investigation_time):
+    """
+    :returns: an array of E randoms years, where E is the number of events
+    """
+    years = numpy.random.choice(investigation_time, len(events))
+    for i, event in enumerate(sorted(events)):
+        idx = event['ses']  # starts from 1
+        years[i] = (idx - 1) * investigation_time + years[i]
+    return years
 
 
 def sum_dict(dic):
