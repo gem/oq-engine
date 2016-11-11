@@ -523,11 +523,14 @@ class EventBasedReduced(RiskModel):
     losses, nor the loss curves. The only output returned is the total loss.
     """
     kind = 'vulnerability'
+    alt_dt = numpy.dtype([('eid', U32), ('aid', U32), ('loss', F32)])
 
-    def __init__(self, taxonomy, vulnerability_functions, time_event):
+    def __init__(self, taxonomy, vulnerability_functions, time_event,
+                 asset_loss_table):
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.time_event = time_event
+        self.asset_loss_table = asset_loss_table
 
     def __call__(self, loss_type, assets, gmvs_eids, epsgetter):
         """
@@ -548,6 +551,7 @@ class EventBasedReduced(RiskModel):
         alosses = numpy.zeros(len(assets))
         elosses = numpy.zeros(len(gmvs))
         means, covs, idxs = vf.interpolate(gmvs)
+        alt = []
         e, E = len(means), len(eids)
         for i, asset in enumerate(assets):
             epsilons = epsgetter(asset.ordinal, eids)
@@ -561,8 +565,13 @@ class EventBasedReduced(RiskModel):
             losses = ratios * asset.value(loss_type, self.time_event)
             alosses[i] = losses.sum()
             elosses += losses
+            if self.asset_loss_table:
+                aid = asset.ordinal
+                for eid, loss in zip(eids, losses):
+                    alt.append((eid, aid, loss))
         return scientific.Output(
-            assets, loss_type, alosses=alosses, elosses=elosses, eids=eids)
+            assets, loss_type, alosses=alosses, elosses=elosses,
+            alt=numpy.array(alt, self.alt_dt), eids=eids)
 
 
 @registry.add('classical_bcr')
