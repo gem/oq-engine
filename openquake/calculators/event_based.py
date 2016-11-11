@@ -282,13 +282,12 @@ def set_random_years(dstore, events_sm, investigation_time):
     SES ordinal and the investigation time.
     """
     events = dstore[events_sm].value
-    serials = sorted(events['rupserial'])
+    sorted_events = sorted(tuple(event) for event in events)
     years = numpy.random.choice(investigation_time, len(events)) + 1
-    to_year = dict(zip(serials, years))
+    year_of = dict(zip(sorted_events, years))
     for event in events:
-        idx = event['ses']  # starts from 1
-        event['year'] = ((idx - 1) * investigation_time
-                         + to_year[event['rupserial']])
+        idx = event['ses'] - 1  # starts from 0
+        event['year'] = idx * investigation_time + year_of[tuple(event)]
     dstore[events_sm] = events
 
 
