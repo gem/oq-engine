@@ -98,6 +98,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = out['agg_loss_table', 'csv']
         self.assertEqualFiles('expected/agg_losses_bis.csv', fname)
 
+    @attr('qa', 'risk', 'ebrisk')
+    def test_case_2_correlation(self):
+        out = self.run_calc(case_2.__file__, 'job_loss.ini', exports='csv',
+                            asset_correlation=1.0)
+        [fname] = out['losses_by_taxon', 'csv']
+        self.assertEqualFiles('expected/losses_by_taxon.csv', fname)
+
     @attr('qa', 'risk', 'event_based_risk')
     def test_missing_taxonomy(self):
         with self.assertRaises(RuntimeError) as ctx:
