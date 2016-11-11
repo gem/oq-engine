@@ -135,7 +135,7 @@ def get_assets(dstore):
 
 def get_ses_idx(etag):
     """
-    >>> get_ses_idx("trt=00~ses=0007~src=1-3~rup=018-01")
+    >>> get_ses_idx("grp=00~ses=0007~src=1-3~rup=018-01")
     7
     """
     return int(decode(etag).split('~')[1][4:])
@@ -143,12 +143,15 @@ def get_ses_idx(etag):
 
 def get_serial(etag):
     """
-    >>> print(get_serial("trt=00~ses=0007~src=1-3~rup=018-01"))
-    018
+    >>> print(get_serial("grp=00~ses=0007~src=1-3~rup=018-01"))
+    18
     """
-    trt, ses, src, rup = decode(etag).split('~')
+    try:
+        trt, ses, src, rup = decode(etag).split('~')
+    except ValueError:
+        trt, ses, src, rup, sample = decode(etag).split('~')
     serial = rup.split('=')[1].split('-')[0]
-    return serial
+    return int(serial)
 
 
 class Rupture(object):
@@ -156,7 +159,9 @@ class Rupture(object):
     Simplified Rupture class with attributes etag, indices, ses_idx,
     used in export.
     """
-    def __init__(self, etag, indices=None):
+    def __init__(self, sm_id, eid, etag, indices=None):
+        self.sm_id = sm_id
+        self.eid = eid
         if isinstance(etag, int):  # scenario
             self.etag = 'scenario-%010d' % etag
             self.indices = indices

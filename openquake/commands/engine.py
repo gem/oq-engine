@@ -115,7 +115,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         os.makedirs(datastore.DATADIR)
 
     dbserver.ensure_on()
-    
+
     if upgrade_db:
         logs.set_level('info')
         msg = logs.dbcmd('what_if_I_upgrade', 'read_scripts')
@@ -213,14 +213,14 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         dskey, calc_id, datadir = logs.dbcmd('get_output', int(output_id))
         for line in core.export_output(
                 dskey, calc_id, datadir, os.path.expanduser(target_dir),
-                exports or 'xml,csv'):
+                exports or 'csv,xml'):
             print(line)
 
     elif export_outputs is not None:
         job_id, target_dir = export_outputs
         hc_id = get_job_id(job_id)
         for line in core.export_outputs(
-                hc_id, os.path.expanduser(target_dir), exports or 'xml,csv'):
+                hc_id, os.path.expanduser(target_dir), exports or 'csv,xml'):
             print(line)
 
     elif delete_uncompleted_calculations:
