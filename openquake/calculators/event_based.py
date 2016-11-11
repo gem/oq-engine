@@ -252,7 +252,8 @@ class EventBasedRuptureCalculator(PSHACalculator):
         Save the SES collection
         """
         logging.info('Setting event years')
-        with self.monitor('setting event years', autoflush=True):
+        with self.monitor('setting event years', measuremem=True,
+                          autoflush=True):
             inv_time = int(self.oqparam.investigation_time)
             numpy.random.seed(self.oqparam.random_seed)
             for sm in sorted(self.datastore['events']):
