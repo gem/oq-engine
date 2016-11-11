@@ -255,8 +255,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
         inv_time = int(self.oqparam.investigation_time)
         numpy.random.seed(self.oqparam.random_seed)
         for sm in self.datastore['events']:
-            events = self.datastore['events/' + sm]
-            events['year'] = random_years(events, inv_time)
+            set_random_years(self.datastore['events/' + sm].value, inv_time)
 
         nr = sum_dict(result)
         logging.info('Saved %d ruptures, %d events',
@@ -276,15 +275,16 @@ class EventBasedRuptureCalculator(PSHACalculator):
         self.datastore.set_nbytes('rup_data')
 
 
-def random_years(events, investigation_time):
+def set_random_years(events, investigation_time):
     """
-    :returns: an array of E randoms years, where E is the number of events
+    Sort the `events` array and attach year labels sensitive to the
+    SES ordinal and the investigation time.
     """
+    events.sort(order='rupserial')
     years = numpy.random.choice(investigation_time, len(events))
-    for i, event in enumerate(sorted(events)):
+    for i, event in numpy.ndenumerate(events):
         idx = event['ses']  # starts from 1
-        years[i] = (idx - 1) * investigation_time + years[i]
-    return years
+        event['year'] = (idx - 1) * investigation_time + years[i]
 
 
 def sum_dict(dic):
