@@ -252,10 +252,11 @@ class EventBasedRuptureCalculator(PSHACalculator):
         Save the SES collection
         """
         logging.info('Setting event years')
-        inv_time = int(self.oqparam.investigation_time)
-        numpy.random.seed(self.oqparam.random_seed)
-        for sm in self.datastore['events']:
-            set_random_years(self.datastore['events/' + sm].value, inv_time)
+        with self.monitor('setting event years'):
+            inv_time = int(self.oqparam.investigation_time)
+            numpy.random.seed(self.oqparam.random_seed)
+            for sm in self.datastore['events']:
+                set_random_years(self.datastore, 'events/' + sm, inv_time)
 
         nr = sum_dict(result)
         logging.info('Saved %d ruptures, %d events',
@@ -275,16 +276,22 @@ class EventBasedRuptureCalculator(PSHACalculator):
         self.datastore.set_nbytes('rup_data')
 
 
-def set_random_years(events, investigation_time):
+def set_random_years(dstore, events_sm, investigation_time):
     """
     Sort the `events` array and attach year labels sensitive to the
     SES ordinal and the investigation time.
     """
-    events.sort(order='rupserial')
-    years = numpy.random.choice(investigation_time, len(events))
-    for i, event in numpy.ndenumerate(events):
+    dt = numpy.dtype([('rupserial', U32), ('year', U32)])
+    events = dstore[events_sm]
+    array = numpy.zeros(len(events), dt)
+    array['rupserial'] = events['rupserial']
+    array['year'] = numpy.random.choice(investigation_time, len(events)) + 1
+    array.sort(order='rupserial')
+    year = array['year']
+    for i, event in enumerate(events):
         idx = event['ses']  # starts from 1
-        event['year'] = (idx - 1) * investigation_time + years[i]
+        year[i] = (idx - 1) * investigation_time + year[i]
+    dstore[events_sm]['year'] = year
 
 
 def sum_dict(dic):
@@ -296,6 +303,8 @@ def sum_dict(dic):
     >>> sum_dict({'a': [None, None]})
     2
     """
+    if isinstance(dic, int):
+        return dic
     s = 0
     for k, v in dic.items():
         if hasattr(v, '__len__'):
