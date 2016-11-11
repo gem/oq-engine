@@ -258,6 +258,7 @@ class HeaderTranslator(object):
         return names
 
 htranslator = HeaderTranslator(
+    '(aid):uint32',
     '(boundary):object',
     '(tectonic_region_type):object',
     '(asset_ref):\|S100',
