@@ -216,7 +216,7 @@ class OqParam(valid.ParamSet):
         # checks for ebrisk
         if (self.calculation_mode == 'ebrisk'
                 and self.asset_correlation not in (0, 1)):
-            raise ValueError('asset_correlation != [0, 1] is not supported')
+            raise ValueError('asset_correlation != {0, 1} is no longer supported')
 
     def check_gsims(self, gsims):
         """
