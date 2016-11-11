@@ -514,7 +514,7 @@ class ProbabilisticEventBased(RiskModel):
             assets, loss_type, loss_ratios=loss_ratios, eids=eids)
 
 
-@registry.add('ebrisk', 'ucerf_risk', 'ucerf_risk_fast')
+@registry.add('ebrisk', 'ucerf_rupture', 'ucerf_risk')
 class EventBasedReduced(RiskModel):
     """
     Implements the reduced event based riskmodel. This is used by the
@@ -523,13 +523,16 @@ class EventBasedReduced(RiskModel):
     losses, nor the loss curves. The only output returned is the total loss.
     """
     kind = 'vulnerability'
+    alt_dt = numpy.dtype([('eid', U32), ('aid', U32), ('loss', F32)])
 
-    def __init__(self, taxonomy, vulnerability_functions, time_event):
+    def __init__(self, taxonomy, vulnerability_functions, time_event,
+                 asset_loss_table):
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.time_event = time_event
+        self.asset_loss_table = asset_loss_table
 
-    def __call__(self, loss_type, assets, gmvs_eids, epsgetter=None):
+    def __call__(self, loss_type, assets, gmvs_eids, epsgetter):
         """
         :param str loss_type:
             the loss type considered
@@ -538,7 +541,7 @@ class EventBasedReduced(RiskModel):
         :param gmvs_eids:
            a composite array of E elements with fields 'gmv' and 'eid'
         :param epsgetter:
-           ignored
+           a callable returning the correct epsilons for the given gmvs
         :returns:
             a :class:`openquake.risklib.scientific.Output`
             instance with the total losses
@@ -547,13 +550,28 @@ class EventBasedReduced(RiskModel):
         gmvs, eids = gmvs_eids['gmv'], gmvs_eids['eid']
         alosses = numpy.zeros(len(assets))
         elosses = numpy.zeros(len(gmvs))
+        means, covs, idxs = vf.interpolate(gmvs)
+        alt = []
+        e, E = len(means), len(eids)
         for i, asset in enumerate(assets):
-            ratios, _covs, idxs = vf.interpolate(gmvs)
+            epsilons = epsgetter(asset.ordinal, eids)
+            _ratios = (means if epsilons is None
+                       else vf.sample(means, covs, idxs, epsilons))
+            if e < E:
+                ratios = numpy.zeros(E)
+                ratios[idxs] = _ratios
+            else:
+                ratios = _ratios
             losses = ratios * asset.value(loss_type, self.time_event)
             alosses[i] = losses.sum()
-            elosses[idxs] += losses
+            elosses += losses
+            if self.asset_loss_table:
+                aid = asset.ordinal
+                for eid, loss in zip(eids, losses):
+                    alt.append((eid, aid, loss))
         return scientific.Output(
-            assets, loss_type, alosses=alosses, elosses=elosses, eids=eids)
+            assets, loss_type, alosses=alosses, elosses=elosses,
+            alt=numpy.array(alt, self.alt_dt), eids=eids)
 
 
 @registry.add('classical_bcr')

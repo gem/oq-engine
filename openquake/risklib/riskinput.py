@@ -658,7 +658,7 @@ class RiskInputFromRuptures(object):
 
     def epsilon_getter(self, asset_ordinals):
         """
-        :param asset_ordina: ordinal of the asset
+        :param asset_ordinals: ordinals of the assets
         :returns: a closure returning an array of epsilons from the event IDs
         """
         if not hasattr(self, 'eps'):

@@ -318,7 +318,9 @@ def get_rupture(oqparam):
     [rup_node] = nrml.read(rup_model)
     conv = sourceconverter.RuptureConverter(
         oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
-    return conv.convert_node(rup_node)
+    rup = conv.convert_node(rup_node)
+    rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
+    return rup
 
 
 def get_source_model_lt(oqparam):
@@ -994,7 +996,7 @@ def get_gmfs_from_txt(oqparam, fname):
                     raise InvalidFile(
                         'The column #%d in %s is expected to contain positive '
                         'floats, got %s instead' % (i + 3, fname, row[i + 2]))
-                gmf_by_imt[imts[i]][lineno - 2] = r_sites.expand(array, 0)
+                gmf_by_imt[imts[i]][lineno - 2][r_sites.sids] = array
             etags.append(row[0])
     if lineno < num_gmfs + 1:
         raise InvalidFile('%s contains %d rows, expected %d' % (

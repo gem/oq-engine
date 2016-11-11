@@ -117,11 +117,9 @@ class ReportWriter(object):
             self.add('ruptures_per_trt')
         if 'scenario' not in oq.calculation_mode:
             self.add('job_info')
-        if 'ruptures' in ds:
+        if 'events' in ds:
             self.add('ruptures_events')
         if oq.calculation_mode in ('event_based_risk',):
-            if 'ruptures' in ds:
-                self.add('biggest_ebr_gmf')
             self.add('avglosses_data_transfer')
         if 'exposure' in oq.inputs:
             self.add('exposure_info')

@@ -2,9 +2,9 @@ QA test for disaggregation case_1, taken from the disagg demo
 =============================================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_60130.hdf5 Tue Oct 11 06:58:48 2016
-engine_version                                 2.1.0-git4e31fdd        
-hazardlib_version                              0.21.0-gitab31f47       
+gem-tstation:/home/michele/ssd/calc_67021.hdf5 Wed Nov  9 08:16:43 2016
+engine_version                                 2.2.0-git54d01f4        
+hazardlib_version                              0.22.0-git173c60c       
 ============================================== ========================
 
 num_sites = 2, sitecol = 785 B
@@ -72,13 +72,13 @@ source_model.xml 0      Active Shallow Crust 4           2236         2,236
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,640       
+count_eff_ruptures_max_received_per_task 1,659       
 count_eff_ruptures_num_tasks             6           
 count_eff_ruptures_sent.gsims            534         
-count_eff_ruptures_sent.monitor          8,520       
+count_eff_ruptures_sent.monitor          8,502       
 count_eff_ruptures_sent.sitecol          3,438       
-count_eff_ruptures_sent.sources          10,372      
-count_eff_ruptures_tot_received          9,836       
+count_eff_ruptures_sent.sources          10,121      
+count_eff_ruptures_tot_received          9,950       
 hazard.input_weight                      1,091       
 hazard.n_imts                            2           
 hazard.n_levels                          38          
@@ -115,7 +115,7 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 7.782E-04 8.845E-05 6.709E-04 9.079E-04 6        
+count_eff_ruptures 7.376E-04 1.011E-04 6.139E-04 8.850E-04 6        
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -123,13 +123,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-managing sources                 0.236     0.0       1     
-split/filter heavy sources       0.234     0.0       1     
-reading composite source model   0.065     0.0       1     
+managing sources                 0.174     0.0       1     
+split/filter heavy sources       0.171     0.0       1     
+reading composite source model   0.059     0.0       1     
 filtering composite source model 0.006     0.0       1     
-total count_eff_ruptures         0.005     0.0       6     
-store source_info                5.801E-04 0.0       1     
-aggregate curves                 9.298E-05 0.0       6     
-reading site collection          4.983E-05 0.0       1     
-saving probability maps          2.503E-05 0.0       1     
+total count_eff_ruptures         0.004     0.0       6     
+store source_info                5.970E-04 0.0       1     
+aggregate curves                 8.821E-05 0.0       6     
+reading site collection          2.789E-05 0.0       1     
+saving probability maps          2.718E-05 0.0       1     
 ================================ ========= ========= ======

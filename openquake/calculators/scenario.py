@@ -20,7 +20,7 @@ import numpy
 
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
-from openquake.commonlib import readinput, source
+from openquake.commonlib import readinput, source, calc
 from openquake.commonlib.export.hazard import gmv_dt
 from openquake.calculators import base
 
@@ -40,16 +40,25 @@ class ScenarioCalculator(base.HazardCalculator):
         oq = self.oqparam
         trunc_level = oq.truncation_level
         correl_model = oq.get_correl_model()
-        self.datastore['rupture'] = rupture = readinput.get_rupture(oq)
+        rup = readinput.get_rupture(oq)
+        rup.seed = self.oqparam.random_seed
         self.gsims = readinput.get_gsims(oq)
         maxdist = oq.maximum_distance['default']
         with self.monitor('filtering sites', autoflush=True):
             self.sitecol = filters.filter_sites_by_distance_to_rupture(
-                rupture, maxdist, self.sitecol)
+                rup, maxdist, self.sitecol)
         if self.sitecol is None:
             raise RuntimeError(
                 'All sites were filtered out! maximum_distance=%s km' %
                 maxdist)
+        # eid, ses, occ, sample
+        events = numpy.array(
+            [(eid, 1, 1, 0)
+             for eid in range(oq.number_of_ground_motion_fields)],
+            calc.event_dt)
+        rupture = calc.EBRupture(
+            rup, self.sitecol.sids, events, 'single_rupture', 0, 0)
+        self.datastore['ruptures/0'] = rupture
         self.computer = GmfComputer(
             rupture, self.sitecol, oq.imtls, self.gsims,
             trunc_level, correl_model)
@@ -67,10 +76,12 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         res = collections.defaultdict(list)
         sids = self.sitecol.sids
+        self.gmfa = {}
         with self.monitor('computing gmfs', autoflush=True):
             n = self.oqparam.number_of_ground_motion_fields
             for i, gsim in enumerate(self.gsims):
-                gmfa = self.computer.compute(gsim, n, self.oqparam.random_seed)
+                gmfa = self.computer.compute(gsim, n)
+                self.gmfa[gsim] = gmfa
                 for (imti, sid, eid), gmv in numpy.ndenumerate(gmfa):
                     res[i].append((sids[sid], eid, imti, gmv))
             return {rlzi: numpy.array(res[rlzi], gmv_dt) for rlzi in res}
