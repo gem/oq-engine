@@ -684,12 +684,13 @@ save_ruptures = event_based.EventBasedRuptureCalculator.__dict__[
     'save_ruptures']
 
 
-class EpsilonMatrix(object):
+class EpsilonMatrix0(object):
     """
-    Mock-up for a matrix of epsilons of size N x E
+    Mock-up for a matrix of epsilons of size N x E,
+    used when asset_correlation=0.
 
-    :param num_assets: the number of assets (N)
-    :param seeds: seeds set before calling numpy.random.normal (E)
+    :param num_assets: N assets
+    :param seeds: E seeds, set before calling numpy.random.normal
     """
     def __init__(self, num_assets, seeds):
         self.num_assets = num_assets
@@ -698,7 +699,7 @@ class EpsilonMatrix(object):
 
     def make_eps(self):
         """
-        Builds a matrix of N x E epsilons suitable for asset_correlation=0
+        Builds a matrix of N x E epsilons
         """
         eps = numpy.zeros((self.num_assets, len(self.seeds)), F32)
         for i, seed in enumerate(self.seeds):
@@ -710,6 +711,26 @@ class EpsilonMatrix(object):
         if self.eps is None:
             self.eps = self.make_eps()
         return self.eps[item]
+
+
+class EpsilonMatrix1(object):
+    """
+    Mock-up for a matrix of epsilons of size N x E,
+    used when asset_correlation=1.
+
+    :param num_events: number of events
+    :param seed: seed used to generate E epsilons
+    """
+    def __init__(self, num_events, seed):
+        self.num_events = num_events
+        self.seed = seed
+        numpy.random.seed(seed)
+        self.eps = numpy.random.normal(size=num_events)
+
+    def __getitem__(self, item):
+        # item[0] is the asset index, item[1] the event index
+        # the epsilons are equal for all assets since asset_correlation=1
+        return self.eps[item[1]]
 
 
 @base.calculators.add('ebrisk')
@@ -776,11 +797,15 @@ class EbriskCalculator(base.RiskCalculator):
         for src_group in ssm.src_groups:
             for rupts in block_splitter(
                     ruptures_by_grp[src_group.id], ruptures_per_block):
-                n_events = sum(ebr.multiplicity for ebr in rupts)
-                eps = EpsilonMatrix(
-                    len(self.assetcol), seeds[start: start + n_events]
-                ) if self.riskmodel.covs else None
-                start += n_events
+                if not self.riskmodel.covs:
+                    eps = None
+                elif self.oqparam.asset_correlation:
+                    eps = EpsilonMatrix1(num_events, self.oqparam.master_seed)
+                else:
+                    n_events = sum(ebr.multiplicity for ebr in rupts)
+                    eps = EpsilonMatrix0(
+                        len(self.assetcol), seeds[start: start + n_events])
+                    start += n_events
                 ri = riskinput.RiskInputFromRuptures(
                     self.grp_trt[rupts[0].grp_id], rlzs_assoc, imts, sitecol,
                     rupts, trunc_level, correl_model, min_iml, eps)
