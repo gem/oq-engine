@@ -255,7 +255,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
         with self.monitor('setting event years'):
             inv_time = int(self.oqparam.investigation_time)
             numpy.random.seed(self.oqparam.random_seed)
-            for sm in self.datastore['events']:
+            for sm in sorted(self.datastore['events']):
                 set_random_years(self.datastore, 'events/' + sm, inv_time)
 
         nr = sum_dict(result)
@@ -281,17 +281,15 @@ def set_random_years(dstore, events_sm, investigation_time):
     Sort the `events` array and attach year labels sensitive to the
     SES ordinal and the investigation time.
     """
-    dt = numpy.dtype([('rupserial', U32), ('year', U32)])
-    events = dstore[events_sm]
-    array = numpy.zeros(len(events), dt)
-    array['rupserial'] = events['rupserial']
-    array['year'] = numpy.random.choice(investigation_time, len(events)) + 1
-    array.sort(order='rupserial')
-    year = array['year']
-    for i, event in enumerate(events):
+    events = dstore[events_sm].value
+    serials = sorted(events['rupserial'])
+    years = numpy.random.choice(investigation_time, len(events)) + 1
+    to_year = dict(zip(serials, years))
+    for event in events:
         idx = event['ses']  # starts from 1
-        year[i] = (idx - 1) * investigation_time + year[i]
-    dstore[events_sm]['year'] = year
+        event['year'] = ((idx - 1) * investigation_time
+                         + to_year[event['rupserial']])
+    dstore[events_sm] = events
 
 
 def sum_dict(dic):
