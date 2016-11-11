@@ -26,7 +26,7 @@ from openquake.risklib import scientific
 from openquake.commonlib.export import export
 from openquake.commonlib.export.hazard import build_etags
 from openquake.commonlib import writers, risk_writers
-from openquake.commonlib.util import get_assets, compose_arrays
+from openquake.commonlib.util import get_assets, compose_arrays, get_ses_idx
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
     ExposureData, Site)
@@ -202,9 +202,7 @@ def export_agg_losses_ebr(ekey, dstore):
             elt = numpy.zeros(len(eids), elt_dt)
             elt['event_tag'] = build_etags(
                 dstore['events/sm-%04d' % sm_id][eids])
-            # attach a random year label to each event
-            years = numpy.random.choice(int(oq.investigation_time), len(elt))
-            elt['year'] = numpy.array(years, U32)
+            set_random_years(elt, int(oq.investigation_time))
             for loss_type in loss_types:
                 elt_lt = elt[loss_type]
                 if insured_losses:
@@ -223,6 +221,16 @@ def export_agg_losses_ebr(ekey, dstore):
             elt.sort(order='event_tag')
             writer.save(elt, dest)
     return writer.getsaved()
+
+
+def set_random_years(losses, investigation_time):
+    """
+    Attach a random year label to each event
+    """
+    years = numpy.random.choice(investigation_time, len(losses))
+    for year, loss in zip(years, losses):
+        idx = get_ses_idx(loss['event_tag'])  # starts from 1
+        loss['year'] = (idx - 1) * investigation_time + year
 
 
 def group_by_aid(data, loss_type):
@@ -274,9 +282,7 @@ def export_ass_losses_ebr(ekey, dstore):
                 losses_by_aid += group_by_aid(data, loss_type)
             elt = numpy.zeros(len(losses_by_aid), elt_dt)
             elt['event_tag'] = event_tag
-            # attach a random year label to each event
-            years = numpy.random.choice(int(oq.investigation_time), len(elt))
-            elt['year'] = numpy.array(years, U32)
+            set_random_years(elt, int(oq.investigation_time))
             elt['aid'] = sorted(losses_by_aid)
             for i, aid in numpy.ndenumerate(elt['aid']):
                 for loss_type in loss_types:
