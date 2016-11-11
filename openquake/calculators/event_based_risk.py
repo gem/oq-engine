@@ -47,7 +47,7 @@ def build_el_dtypes(insured_losses):
         event loss table respectively
     """
     I = insured_losses + 1
-    ela_list = [('eid', U32), ('ass_id', U32), ('loss', (F32, I))]
+    ela_list = [('eid', U32), ('aid', U32), ('loss', (F32, I))]
     elt_list = [('eid', U32), ('loss', (F32, I))]
     return numpy.dtype(ela_list), numpy.dtype(elt_list)
 
@@ -311,11 +311,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         else:
             logging.info('minimum_intensity=%s', oq.minimum_intensity)
         csm_info = self.datastore['csm_info']
-        grp_trt = {sg.id: sg.trt for sm in csm_info.source_models
-                   for sg in sm.src_groups}
+        self.grp_trt = {sg.id: sg.trt for sm in csm_info.source_models
+                        for sg in sm.src_groups}
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = self.riskmodel.build_inputs_from_ruptures(
-                grp_trt, self.rlzs_assoc, list(oq.imtls),
+                self.grp_trt, self.rlzs_assoc, list(oq.imtls),
                 self.sitecol.complete, all_ruptures,
                 oq.truncation_level, correl_model, min_iml, eps,
                 oq.concurrent_tasks or 1)
@@ -658,6 +658,7 @@ def losses_by_taxonomy(riskinput, riskmodel, assetcol, monitor):
     avglosses = numpy.zeros((A, L, R), F64) if monitor.avg_losses else None
     agglosses = AccumDict(
         {lr: AccumDict() for lr in itertools.product(range(L), range(R))})
+    asslosses = collections.defaultdict(list)
     for out in riskmodel.gen_outputs(riskinput, monitor, assetcol):
         # NB: out.assets is a non-empty list of assets with the same taxonomy
         t = taxonomy_id[out.assets[0].taxonomy]
@@ -669,15 +670,67 @@ def losses_by_taxonomy(riskinput, riskmodel, assetcol, monitor):
                     avglosses[i, l, r] += loss
         agglosses[l, r] += {eid: loss for eid, loss in
                             zip(out.eids, out.elosses) if loss}
-
+        if len(out.alt):
+            asslosses[l, r].append(out.alt)
     # convert agglosses into arrays to reduce the data transfer
     agglosses = {lr: numpy.array(sorted(agglosses[lr].items()), elt_dt)
                  for lr in agglosses}
     return AccumDict(losses=losses, avglosses=avglosses, agglosses=agglosses,
+                     asslosses=AccumDict((lr, numpy.concatenate(arrays))
+                                         for lr, arrays in asslosses.items()),
                      gmfbytes=monitor.gmfbytes)
 
 save_ruptures = event_based.EventBasedRuptureCalculator.__dict__[
     'save_ruptures']
+
+
+class EpsilonMatrix0(object):
+    """
+    Mock-up for a matrix of epsilons of size N x E,
+    used when asset_correlation=0.
+
+    :param num_assets: N assets
+    :param seeds: E seeds, set before calling numpy.random.normal
+    """
+    def __init__(self, num_assets, seeds):
+        self.num_assets = num_assets
+        self.seeds = seeds
+        self.eps = None
+
+    def make_eps(self):
+        """
+        Builds a matrix of N x E epsilons
+        """
+        eps = numpy.zeros((self.num_assets, len(self.seeds)), F32)
+        for i, seed in enumerate(self.seeds):
+            numpy.random.seed(seed)
+            eps[:, i] = numpy.random.normal(size=self.num_assets)
+        return eps
+
+    def __getitem__(self, item):
+        if self.eps is None:
+            self.eps = self.make_eps()
+        return self.eps[item]
+
+
+class EpsilonMatrix1(object):
+    """
+    Mock-up for a matrix of epsilons of size N x E,
+    used when asset_correlation=1.
+
+    :param num_events: number of events
+    :param seed: seed used to generate E epsilons
+    """
+    def __init__(self, num_events, seed):
+        self.num_events = num_events
+        self.seed = seed
+        numpy.random.seed(seed)
+        self.eps = numpy.random.normal(size=num_events)
+
+    def __getitem__(self, item):
+        # item[0] is the asset index, item[1] the event index
+        # the epsilons are equal for all assets since asset_correlation=1
+        return self.eps[item[1]]
 
 
 @base.calculators.add('ebrisk')
@@ -710,22 +763,28 @@ class EbriskCalculator(base.RiskCalculator):
         num_ruptures = 0
         num_events = 0
         allargs = []
-        grp_trt = {}
+        self.grp_trt = {}
         # collect the sources
         maxweight = ssm.get_maxweight(self.oqparam.concurrent_tasks)
         logging.info('Using a maxweight of %d', maxweight)
         for src_group in ssm.src_groups:
-            grp_trt[src_group.id] = trt = src_group.trt
+            self.grp_trt[src_group.id] = trt = src_group.trt
             gsims = ssm.gsim_lt.values[trt]
             for block in block_splitter(src_group, maxweight, getweight):
                 allargs.append((block, self.sitecol, gsims, monitor))
         # collect the ruptures
+        rup_data = []
         for dic in parallel.starmap(self.compute_ruptures, allargs):
             ruptures_by_grp += dic
-            [rupts] = dic.values()
+            [(grp_id, rupts)] = dic.items()
+            trt = self.grp_trt[grp_id]
+            gsims = ssm.gsim_lt.values[trt]
+            rup_data.append(calc.RuptureData(trt, gsims).to_array(rupts))
             num_ruptures += len(rupts)
             num_events += dic.num_events
         ruptures_by_grp.num_events = num_events
+        ruptures_by_grp.rup_data = numpy.concatenate(rup_data)
+        seeds = self.oqparam.master_seed + numpy.arange(num_events)
         save_ruptures(self, ruptures_by_grp)
 
         # determine the realizations
@@ -734,13 +793,22 @@ class EbriskCalculator(base.RiskCalculator):
         allargs = []
         # prepare the risk inputs
         ruptures_per_block = self.oqparam.ruptures_per_block
+        start = 0
         for src_group in ssm.src_groups:
             for rupts in block_splitter(
                     ruptures_by_grp[src_group.id], ruptures_per_block):
-                trt = grp_trt[rupts[0].grp_id]
+                if not self.riskmodel.covs:
+                    eps = None
+                elif self.oqparam.asset_correlation:
+                    eps = EpsilonMatrix1(num_events, self.oqparam.master_seed)
+                else:
+                    n_events = sum(ebr.multiplicity for ebr in rupts)
+                    eps = EpsilonMatrix0(
+                        len(self.assetcol), seeds[start: start + n_events])
+                    start += n_events
                 ri = riskinput.RiskInputFromRuptures(
-                    trt, rlzs_assoc, imts, sitecol, rupts, trunc_level,
-                    correl_model, min_iml)
+                    self.grp_trt[rupts[0].grp_id], rlzs_assoc, imts, sitecol,
+                    rupts, trunc_level, correl_model, min_iml, eps)
                 allargs.append((ri, riskmodel, assetcol, monitor))
         taskname = '%s#%d' % (losses_by_taxonomy.__name__, ssm.sm_id + 1)
         smap = starmap(losses_by_taxonomy, allargs, name=taskname)
@@ -837,7 +905,8 @@ class EbriskCalculator(base.RiskCalculator):
                     avglosses += dic.pop('avglosses')
                 taxlosses += dic.pop('losses')
                 self.gmfbytes += dic.pop('gmfbytes')
-                self.save_agglosses(dic.pop('agglosses'), start)
+                self.save_losses(
+                    dic.pop('agglosses'), dic.pop('asslosses'), start)
             logging.debug(
                 'Saving results for source model #%d, realizations %d:%d',
                 res.sm_id + 1, start, stop)
@@ -852,11 +921,12 @@ class EbriskCalculator(base.RiskCalculator):
         self.datastore['events'].attrs['num_events'] = num_events
         return num_events
 
-    def save_agglosses(self, agglosses, offset):
+    def save_losses(self, agglosses, asslosses, offset):
         """
         Save the event loss tables incrementally.
 
-        :param agglosses: a dictionary lr -> {eid: loss}
+        :param agglosses: a dictionary lr -> (eid, loss)
+        :param asslosses: a dictionary lr -> (eid, aid, loss)
         :param offset: realization offset
         """
         with self.monitor('saving event loss tables', autoflush=True):
@@ -864,6 +934,10 @@ class EbriskCalculator(base.RiskCalculator):
                 loss_type = self.riskmodel.loss_types[l]
                 key = 'agg_loss_table/rlz-%03d/%s' % (r + offset, loss_type)
                 self.datastore.extend(key, agglosses[l, r])
+            for l, r in asslosses:
+                loss_type = self.riskmodel.loss_types[l]
+                key = 'ass_loss_table/rlz-%03d/%s' % (r + offset, loss_type)
+                self.datastore.extend(key, asslosses[l, r])
 
     def post_execute(self, num_events):
         """

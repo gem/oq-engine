@@ -2,9 +2,9 @@ SHARE OpenQuake Computational Settings
 ======================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_60105.hdf5 Tue Oct 11 06:57:52 2016
-engine_version                                 2.1.0-git4e31fdd        
-hazardlib_version                              0.21.0-gitab31f47       
+gem-tstation:/home/michele/ssd/calc_66995.hdf5 Wed Nov  9 08:15:53 2016
+engine_version                                 2.2.0-git54d01f4        
+hazardlib_version                              0.22.0-git173c60c       
 ============================================== ========================
 
 num_sites = 1, sitecol = 739 B
@@ -76,13 +76,13 @@ simple_area_source_model.xml 4      Subduction Inslab 1           7770         7
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 2,137       
+count_eff_ruptures_max_received_per_task 2,156       
 count_eff_ruptures_num_tasks             4           
 count_eff_ruptures_sent.gsims            1,232       
-count_eff_ruptures_sent.monitor          7,724       
+count_eff_ruptures_sent.monitor          7,712       
 count_eff_ruptures_sent.sitecol          2,308       
 count_eff_ruptures_sent.sources          85,094      
-count_eff_ruptures_tot_received          8,548       
+count_eff_ruptures_tot_received          8,624       
 hazard.input_weight                      777         
 hazard.n_imts                            3           
 hazard.n_levels                          78          
@@ -113,7 +113,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.002 2.602E-04 0.002 0.002 4        
+count_eff_ruptures 0.002 3.484E-04 0.001 0.002 4        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -121,13 +121,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   4.814     0.0       1     
-managing sources                 0.267     0.0       1     
-split/filter heavy sources       0.265     0.0       1     
+reading composite source model   4.504     0.0       1     
+managing sources                 0.255     0.0       1     
+split/filter heavy sources       0.254     0.0       1     
 filtering composite source model 0.016     0.0       1     
-total count_eff_ruptures         0.008     0.0       4     
-store source_info                4.549E-04 0.0       1     
-aggregate curves                 5.674E-05 0.0       4     
-reading site collection          3.600E-05 0.0       1     
-saving probability maps          2.503E-05 0.0       1     
+total count_eff_ruptures         0.007     0.0       4     
+store source_info                4.950E-04 0.0       1     
+aggregate curves                 5.531E-05 0.0       4     
+reading site collection          3.791E-05 0.0       1     
+saving probability maps          2.098E-05 0.0       1     
 ================================ ========= ========= ======
