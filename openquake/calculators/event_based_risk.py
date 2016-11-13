@@ -224,6 +224,8 @@ class EventBasedStats(object):
         insured = self.oqparam.insured_losses
         if self.oqparam.avg_losses:
             avg_losses = self.datastore['avg_losses-rlzs'].value
+        else:
+            avg_losses = self.avg_losses
         r_curves = self.datastore['rcurves-rlzs'].value
         for loss_type, cbuilder in zip(
                 self.riskmodel.loss_types, self.riskmodel.curve_builders):
@@ -231,13 +233,10 @@ class EventBasedStats(object):
             asset_values = self.vals[loss_type]
             data = []
             for rlz in rlzs:
-                if self.oqparam.avg_losses:
-                    average_losses = avg_losses[loss_type][:, rlz.ordinal]
-                    average_insured_losses = (
-                        avg_losses[loss_type + '_ins'][:, rlz.ordinal]
-                        if insured else None)
-                else:
-                    average_losses = average_insured_losses = None
+                average_losses = avg_losses[loss_type][:, rlz.ordinal]
+                average_insured_losses = (
+                    avg_losses[loss_type + '_ins'][:, rlz.ordinal]
+                    if insured else None)
                 loss_curves = _old_loss_curves(
                     asset_values, rcurves[:, rlz.ordinal, 0], cbuilder.ratios)
                 insured_curves = _old_loss_curves(
@@ -607,6 +606,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         calc.monitor = self.monitor
         calc.assetcol = self.assetcol
         calc.rlzs_assoc = self.rlzs_assoc
+        calc.avg_losses = self.avg_losses
         builder = scientific.StatsBuilder(
             oq.quantile_loss_curves, oq.conditional_loss_poes, [],
             oq.loss_curve_resolution, scientific.normalize_curves_eb,
