@@ -508,8 +508,6 @@ class OqParam(valid.ParamSet):
             if can_write:
                 os.mkdir(self.export_dir)
             return can_write
-        print('isdir=%s, writeable=%s' %
-              (os.path.exists(self.export_dir), os.access(self.export_dir, os.W_OK)))
         return os.path.isdir(self.export_dir) and os.access(
             self.export_dir, os.W_OK)
 
