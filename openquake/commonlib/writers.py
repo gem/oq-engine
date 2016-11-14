@@ -265,6 +265,7 @@ htranslator = HeaderTranslator(
     '(event_tag):\|S100',
     '(event_set):uint32',
     '(eid):uint32',
+    '(year):uint32',
     '(taxonomy):\|S100',
     '(rupserial):uint32',
     '(multiplicity):uint16',

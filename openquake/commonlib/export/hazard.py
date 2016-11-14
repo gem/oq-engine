@@ -27,7 +27,6 @@ import numpy
 
 from openquake.baselib.general import (
     groupby, humansize, get_array, group_array, DictArray)
-from openquake.baselib.python3compat import decode
 from openquake.baselib import hdf5
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
@@ -64,7 +63,7 @@ def build_etags(events):
     An array of tags for the underlying seismic events
     """
     tags = []
-    for (serial, ses, occ, sampleid, grp_id, source_id) in events:
+    for (serial, year, ses, occ, sampleid, grp_id, source_id) in events:
         tag = b'grp=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
             grp_id, ses, source_id, serial, occ)
         if sampleid > 0:
