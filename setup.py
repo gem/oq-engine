@@ -91,7 +91,7 @@ setup(
         'decorator',
         'psutil >= 0.4.1',
     ],
-    scripts=["bin/oq-engine"],
+    scripts=[],
     test_loader='openquake.baselib.runtests:TestLoader',
     test_suite='openquake.risklib,openquake.commonlib,openquake.calculators',
     zip_safe=False,
