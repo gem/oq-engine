@@ -18,7 +18,8 @@ import unittest
 import numpy
 
 from openquake.hazardlib import geo
-from openquake.hazardlib.geo.utils import EARTH_RADIUS, spherical_to_cartesian
+from openquake.hazardlib.geo.utils import spherical_to_cartesian
+from openquake.hazardlib.geo.geodetic import EARTH_RADIUS, EARTH_ELEVATION
 
 
 class PointPointAtTestCase(unittest.TestCase):
@@ -137,8 +138,11 @@ class PointCreationTestCase(unittest.TestCase):
     def test_depth_inside_range(self):
         self.assertRaises(ValueError, geo.Point, 0.0, 0.0, EARTH_RADIUS)
         self.assertRaises(ValueError, geo.Point, 0.0, 0.0, EARTH_RADIUS + 0.1)
+        self.assertRaises(ValueError, geo.Point, 0.0, 0.0, EARTH_ELEVATION)
+        self.assertRaises(ValueError, geo.Point, 0.0, 0.0, EARTH_ELEVATION - 0.1)
 
         geo.Point(0.0, 90.0, EARTH_RADIUS - 0.1)
+        geo.Point(0.0, 90.0, EARTH_ELEVATION + 0.1)
 
 
 class PointFromVectorTestCase(unittest.TestCase):
@@ -219,7 +223,7 @@ class PointCloserThanTestCase(unittest.TestCase):
         numpy.testing.assert_array_equal(closer, [1, 0, 0, 0])
 
     def test_point_topo(self):
-        p = geo.Point(0, 0, -10)
+        p = geo.Point(0, 0, -5)
         mesh = geo.Mesh(numpy.array([0.1, 0.2, 0.3, 0.4]),
                         numpy.array([0., 0., 0., 0.]),
                         depths=None)
@@ -315,12 +319,12 @@ class DistanceToMeshTestCase(unittest.TestCase):
         numpy.testing.assert_array_almost_equal(distances, ed)
 
     def test_point_topo(self):
-        p = geo.Point(0, 0, -10)
+        p = geo.Point(0, 0, -5)
         mesh = geo.Mesh(numpy.array([0.1, 0.2, 0.3, 0.4]),
                         numpy.array([0., 0., 0., 0.]),
                         depths=None)
         distances = p.distance_to_mesh(mesh)
-        ed = [14.95470217, 24.38385672, 34.82510666, 45.58826465]
+        ed = [12.19192836, 22.79413233, 33.73111403, 44.75812634]
         numpy.testing.assert_array_almost_equal(distances, ed)
 
     def test_mesh_depth(self):
