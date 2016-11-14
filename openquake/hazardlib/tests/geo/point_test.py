@@ -32,6 +32,11 @@ class PointPointAtTestCase(unittest.TestCase):
         expected = geo.Point(0.0635916667129, 0.0635916275455, 5.0)
         self.assertEqual(expected, p1.point_at(10.0, -5.0, 45.0))
 
+    def test_point_at_topo(self):
+        p1 = geo.Point(0.0, 0.0, 10.0)
+        expected = geo.Point(0.0635916667129, 0.0635916275455, -5.0)
+        self.assertEqual(expected, p1.point_at(10.0, -15.0, 45.0))
+
 
 class PointAzimuthTestCase(unittest.TestCase):
     def test_azimuth(self):
@@ -213,11 +218,35 @@ class PointCloserThanTestCase(unittest.TestCase):
         closer = p.closer_than(mesh, 15)
         numpy.testing.assert_array_equal(closer, [1, 0, 0, 0])
 
+    def test_point_topo(self):
+        p = geo.Point(0, 0, -10)
+        mesh = geo.Mesh(numpy.array([0.1, 0.2, 0.3, 0.4]),
+                        numpy.array([0., 0., 0., 0.]),
+                        depths=None)
+        closer = p.closer_than(mesh, 30)
+        numpy.testing.assert_array_equal(closer, [1, 1, 0, 0])
+        closer = p.closer_than(mesh, 35)
+        numpy.testing.assert_array_equal(closer, [1, 1, 1, 0])
+        closer = p.closer_than(mesh, 15)
+        numpy.testing.assert_array_equal(closer, [1, 0, 0, 0])
+
     def test_mesh_depth(self):
         p = geo.Point(0.5, -0.5)
         mesh = geo.Mesh(numpy.array([0.5, 0.5, 0.5, 0.5]),
                         numpy.array([-0.5, -0.5, -0.5, -0.5]),
                         numpy.array([0., 1., 2., 3.]))
+        closer = p.closer_than(mesh, 0.1)
+        numpy.testing.assert_array_equal(closer, [1, 0, 0, 0])
+        closer = p.closer_than(mesh, 1.5)
+        numpy.testing.assert_array_equal(closer, [1, 1, 0, 0])
+        closer = p.closer_than(mesh, 3)
+        numpy.testing.assert_array_equal(closer, [1, 1, 1, 1])
+
+    def test_mesh_topo(self):
+        p = geo.Point(0.5, -0.5)
+        mesh = geo.Mesh(numpy.array([0.5, 0.5, 0.5, 0.5]),
+                        numpy.array([-0.5, -0.5, -0.5, -0.5]),
+                        numpy.array([0., -1., -2., -3.]))
         closer = p.closer_than(mesh, 0.1)
         numpy.testing.assert_array_equal(closer, [1, 0, 0, 0])
         closer = p.closer_than(mesh, 1.5)
@@ -239,6 +268,20 @@ class PointCloserThanTestCase(unittest.TestCase):
         closer = p.closer_than(mesh, 60)
         numpy.testing.assert_array_equal(closer, [1, 1, 1, 1, 1, 1])
 
+    def test_both_topo(self):
+        p = geo.Point(3, 7, -1)
+        mesh = geo.Mesh(numpy.array([2.9, 2.9, 3., 3., 3.1, 3.1]),
+                        numpy.array([7., 7.1, 6.9, 7.1, 6.8, 7.2]),
+                        numpy.array([-2., -3., -1., -2., -4., -5.]))
+        closer = p.closer_than(mesh, 10)
+        numpy.testing.assert_array_equal(closer, [0, 0, 0, 0, 0, 0])
+        closer = p.closer_than(mesh, 15)
+        numpy.testing.assert_array_equal(closer, [1, 0, 1, 1, 0, 0])
+        closer = p.closer_than(mesh, 20)
+        numpy.testing.assert_array_equal(closer, [1, 1, 1, 1, 0, 0])
+        closer = p.closer_than(mesh, 30)
+        numpy.testing.assert_array_equal(closer, [1, 1, 1, 1, 1, 1])
+        
 
 class PointWktTestCase(unittest.TestCase):
     def test_point_wkt2d(self):
@@ -271,13 +314,31 @@ class DistanceToMeshTestCase(unittest.TestCase):
         ed = [14.95470217, 24.38385672, 34.82510666, 45.58826465]
         numpy.testing.assert_array_almost_equal(distances, ed)
 
+    def test_point_topo(self):
+        p = geo.Point(0, 0, -10)
+        mesh = geo.Mesh(numpy.array([0.1, 0.2, 0.3, 0.4]),
+                        numpy.array([0., 0., 0., 0.]),
+                        depths=None)
+        distances = p.distance_to_mesh(mesh)
+        ed = [14.95470217, 24.38385672, 34.82510666, 45.58826465]
+        numpy.testing.assert_array_almost_equal(distances, ed)
+
     def test_mesh_depth(self):
         p = geo.Point(0.5, -0.5)
         mesh = geo.Mesh(numpy.array([0.5, 0.5, 0.5, 0.5]),
                         numpy.array([-0.5, -0.5, -0.5, -0.5]),
                         numpy.array([0., 1., 2., 3.]))
         distances = p.distance_to_mesh(mesh)
-        ed = [0, 1, 2, 3]
+        ed = [0., 1., 2., 3.]
+        numpy.testing.assert_array_almost_equal(distances, ed)
+
+    def test_mesh_topo(self):
+        p = geo.Point(0.5, -0.5)
+        mesh = geo.Mesh(numpy.array([0.5, 0.5, 0.5, 0.5]),
+                        numpy.array([-0.5, -0.5, -0.5, -0.5]),
+                        numpy.array([0., -1., -2., -3.]))
+        distances = p.distance_to_mesh(mesh)
+        ed = [0., 1., 2., 3.]
         numpy.testing.assert_array_almost_equal(distances, ed)
 
     def test_both_depths(self):
@@ -289,3 +350,13 @@ class DistanceToMeshTestCase(unittest.TestCase):
         ed = [15.58225761, 26.19968783, 11.16436819, 15.64107148,
               39.71688472, 47.93043417]
         numpy.testing.assert_array_almost_equal(distances, ed)
+
+    def test_both_topo(self):
+        p = geo.Point(0,0,-5)
+        mesh = geo.Mesh(numpy.array([0., 0., 0., 0.]),
+                        numpy.array([0., 0., 0., 0.]),
+                        numpy.array([-1., -1., -1., -1.]))
+        distances = p.distance_to_mesh(mesh)
+        ed = [4., 4., 4., 4.]
+        numpy.testing.assert_array_almost_equal(distances, ed)
+
