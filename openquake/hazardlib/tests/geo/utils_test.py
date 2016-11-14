@@ -254,6 +254,10 @@ class SphericalToCartesianAndBackTestCase(unittest.TestCase):
         self._test((0, 90, 10), (0, 0, 6361))
         self._test(([0], [90], [10]), [(0, 0, 6361)])
 
+    def test_topo(self):
+        self._test((0, 0, -10), (6381, 0, 0))
+        self._test(([0], [0], [-10]), [(6381, 0, 0)])
+
     def test_arrays(self):
         lons = numpy.array([10.0, 20.0, 30.0])
         lats = numpy.array([-10.0, 0.0, 10.0])
