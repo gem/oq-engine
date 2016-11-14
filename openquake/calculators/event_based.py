@@ -224,6 +224,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
                     for event in ebr.events:
                         event['eid'] = self.eid[sm_id]
                         rec = (ebr.serial,
+                               0,  # year to be set
                                event['ses'],
                                event['occ'],
                                event['sample'],
@@ -250,6 +251,14 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """
         Save the SES collection
         """
+        logging.info('Setting event years')
+        with self.monitor('setting event years', measuremem=True,
+                          autoflush=True):
+            inv_time = int(self.oqparam.investigation_time)
+            numpy.random.seed(self.oqparam.random_seed)
+            for sm in sorted(self.datastore['events']):
+                set_random_years(self.datastore, 'events/' + sm, inv_time)
+
         nr = sum_dict(result)
         logging.info('Saved %d ruptures, %d events',
                      nr, sum(self.eid.values()))
@@ -268,6 +277,21 @@ class EventBasedRuptureCalculator(PSHACalculator):
         self.datastore.set_nbytes('rup_data')
 
 
+def set_random_years(dstore, events_sm, investigation_time):
+    """
+    Sort the `events` array and attach year labels sensitive to the
+    SES ordinal and the investigation time.
+    """
+    events = dstore[events_sm].value
+    sorted_events = sorted(tuple(event) for event in events)
+    years = numpy.random.choice(investigation_time, len(events)) + 1
+    year_of = dict(zip(sorted_events, years))
+    for event in events:
+        idx = event['ses'] - 1  # starts from 0
+        event['year'] = idx * investigation_time + year_of[tuple(event)]
+    dstore[events_sm] = events
+
+
 def sum_dict(dic):
     """
     Sum by key a dictionary of lists or numbers:
@@ -277,6 +301,8 @@ def sum_dict(dic):
     >>> sum_dict({'a': [None, None]})
     2
     """
+    if isinstance(dic, int):
+        return dic
     s = 0
     for k, v in dic.items():
         if hasattr(v, '__len__'):
