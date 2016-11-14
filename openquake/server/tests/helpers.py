@@ -34,7 +34,7 @@ from openquake.engine import engine, config
 
 CD = os.path.dirname(__file__)  # current directory
 
-RUNNER = os.path.abspath(os.path.join(CD, '../../../bin/oq-engine'))
+RUNNER = os.path.abspath(os.path.join(CD, '../../../bin/oq'))
 
 DATA_DIR = os.path.abspath(os.path.join(CD, './data'))
 
