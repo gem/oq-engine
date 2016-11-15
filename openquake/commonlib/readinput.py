@@ -547,7 +547,11 @@ def get_risk_model(oqparam):
     """
     rmdict = get_risk_models(oqparam)
     oqparam.set_risk_imtls(rmdict)
-    return riskinput.CompositeRiskModel(oqparam, rmdict)
+    if oqparam.calculation_mode.endswith('_bcr'):
+        retro = get_risk_models(oqparam, 'vulnerability_retrofitted')
+    else:
+        retro = {}
+    return riskinput.CompositeRiskModel(oqparam, rmdict, retro)
 
 # ########################### exposure ############################ #
 
