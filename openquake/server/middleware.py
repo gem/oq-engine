@@ -21,12 +21,15 @@ from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
 from re import compile
 
+try:
+    reverse_login = reverse('login')
+    white_list_paths = (reverse_login,)
+except:  # caused by nosetests3 openquake/server/ --with-doctest (??)
+    reverse_login = None
+    white_list_paths = ()
+
 
 class LoginRequiredMiddleware(object):
-
-    white_list_paths = (
-        reverse('login'),
-    )
 
     white_list = map(
         compile,
@@ -35,7 +38,7 @@ class LoginRequiredMiddleware(object):
             settings,
             "AUTH_EXEMPT_URLS",
             ()))
-    redirect_to = reverse('login')
+    redirect_to = reverse_login
 
     def process_request(self, request):
         if not request.user.is_authenticated():
