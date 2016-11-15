@@ -477,13 +477,13 @@ class HazardCalculator(BaseCalculator):
             return
         self.save_params()  # re-save oqparam
         # save the risk models and loss_ratios in the datastore
-        for taxonomy, rmodel in rm.items():
-            self.datastore['composite_risk_model/' + taxonomy] = (
-                rmodel.risk_functions)
-            if hasattr(rmodel, 'retro_functions'):
-                self.datastore[
-                    'composite_risk_model/%s-retrofitted' % taxonomy] = (
-                        rmodel.retro_functions)
+        self.datastore['composite_risk_model'] = {
+            taxon: rmodel.risk_functions for taxon, rmodel in rm.items()}
+        try:
+            self.datastore['composite_risk_model_retro'] = {
+                taxon: rmodel.retro_functions for taxon, rmodel in rm.items()}
+        except AttributeError:  # no retro_functions
+            pass
         attrs = self.datastore['composite_risk_model'].attrs
         attrs['loss_types'] = hdf5.array_of_vstr(rm.loss_types)
         attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.get_min_iml().items()))
