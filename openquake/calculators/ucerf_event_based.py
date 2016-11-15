@@ -698,7 +698,6 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         logging.info('Found %d x %d logic tree branches', len(branches),
                      self.gsim_lt.get_num_paths())
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
-        self.rup_data = {}
         self.infos = []
         self.eid = collections.Counter()  # sm_id -> event_id
         self.sm_by_grp = self.csm.info.get_sm_by_grp()
@@ -783,7 +782,8 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     res[src.src_group_id] = ebruptures
     res.calc_times[src.src_group_id] = (
         src.source_id, len(sitecol), time.time() - t0)
-    res.rup_data = calc.RuptureData(DEFAULT_TRT, gsims).to_array(ebruptures)
+    res.rup_data = {src.src_group_id:
+                    calc.RuptureData(DEFAULT_TRT, gsims).to_array(ebruptures)}
     return res
 
 
@@ -853,8 +853,7 @@ class UCERFRiskCalculator(EbriskCalculator):
 
     def execute(self):
         num_rlzs = len(self.rlzs_assoc.realizations)
-        self.grp_trt = {
-            sm.ordinal: DEFAULT_TRT for sm in self.csm.source_models}
+        self.grp_trt = self.csm.info.grp_trt()
         allres = parallel.starmap(compute_losses, self.gen_args()).submit_all()
         num_events = self.save_results(allres, num_rlzs)
         self.save_data_transfer(allres)

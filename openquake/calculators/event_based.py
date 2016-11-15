@@ -58,7 +58,7 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     """
     # NB: by construction each block is a non-empty list with
     # sources of the same src_group_id
-    src_group_id = sources[0].src_group_id
+    grp_id = sources[0].src_group_id
     trt = sources[0].tectonic_region_type
     max_dist = monitor.maximum_distance[trt]
     eb_ruptures = []
@@ -88,10 +88,10 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
             num_events += ebr.multiplicity
         dt = time.time() - t0
         calc_times.append((src.id, dt))
-    res = AccumDict({src_group_id: eb_ruptures})
+    res = AccumDict({grp_id: eb_ruptures})
     res.num_events = num_events
     res.calc_times = calc_times
-    res.rup_data = calc.RuptureData(trt, gsims).to_array(eb_ruptures)
+    res.rup_data = {grp_id: calc.RuptureData(trt, gsims).to_array(eb_ruptures)}
     return res
 
 
@@ -172,7 +172,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
         self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
         self.min_iml = calc.fix_minimum_intensity(
             oq.minimum_intensity, oq.imtls)
-        self.rup_data = {}
 
     def count_eff_ruptures(self, ruptures_by_grp_id, src_group):
         """
@@ -195,8 +194,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
         zd.eff_ruptures = AccumDict()
         self.eid = collections.Counter()  # sm_id -> event_id
         self.sm_by_grp = self.csm.info.get_sm_by_grp()
-        self.grp_trt = {sg.id: sg.trt for sm in self.csm.info.source_models
-                        for sg in sm.src_groups}
+        self.grp_trt = self.csm.info.grp_trt()
         return zd
 
     def agg_dicts(self, acc, ruptures_by_grp_id):
@@ -226,6 +224,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
                     for event in ebr.events:
                         event['eid'] = self.eid[sm_id]
                         rec = (ebr.serial,
+                               0,  # year to be set
                                event['ses'],
                                event['occ'],
                                event['sample'],
@@ -241,18 +240,25 @@ class EventBasedRuptureCalculator(PSHACalculator):
                     self.datastore.extend(
                         ev, numpy.array(events, calc.stored_event_dt))
 
-                # save rup_data
-                if hasattr(ruptures_by_grp_id, 'rup_data'):
-                    trt = self.grp_trt[grp_id]
-                    sm_id = self.sm_by_grp[grp_id]
-                    key = 'rup_data/sm-%04d/%s' % (sm_id, trt)
-                    self.rup_data[trt] = self.datastore.extend(
-                            key, ruptures_by_grp_id.rup_data)
+            # save rup_data
+            if hasattr(ruptures_by_grp_id, 'rup_data'):
+                for grp_id, data in sorted(
+                        ruptures_by_grp_id.rup_data.items()):
+                    key = 'rup_data/grp-%02d' % grp_id
+                    self.rup_data = self.datastore.extend(key, data)
 
     def post_execute(self, result):
         """
         Save the SES collection
         """
+        logging.info('Setting event years')
+        with self.monitor('setting event years', measuremem=True,
+                          autoflush=True):
+            inv_time = int(self.oqparam.investigation_time)
+            numpy.random.seed(self.oqparam.random_seed)
+            for sm in sorted(self.datastore['events']):
+                set_random_years(self.datastore, 'events/' + sm, inv_time)
+
         nr = sum_dict(result)
         logging.info('Saved %d ruptures, %d events',
                      nr, sum(self.eid.values()))
@@ -260,7 +266,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
             self.datastore.set_nbytes('ruptures')
         self.datastore.set_nbytes('events')
 
-        for dset in self.rup_data.values():
+        for dset in self.datastore['rup_data'].values():
             if len(dset):
                 numsites = dset['numsites']
                 multiplicity = dset['multiplicity']
@@ -268,8 +274,22 @@ class EventBasedRuptureCalculator(PSHACalculator):
                 mul = numpy.average(multiplicity, weights=numsites)
                 self.datastore.set_attrs(dset.name, sites_per_rupture=spr,
                                          multiplicity=mul)
-        if self.rup_data:
-            self.datastore.set_nbytes('rup_data')
+        self.datastore.set_nbytes('rup_data')
+
+
+def set_random_years(dstore, events_sm, investigation_time):
+    """
+    Sort the `events` array and attach year labels sensitive to the
+    SES ordinal and the investigation time.
+    """
+    events = dstore[events_sm].value
+    sorted_events = sorted(tuple(event) for event in events)
+    years = numpy.random.choice(investigation_time, len(events)) + 1
+    year_of = dict(zip(sorted_events, years))
+    for event in events:
+        idx = event['ses'] - 1  # starts from 0
+        event['year'] = idx * investigation_time + year_of[tuple(event)]
+    dstore[events_sm] = events
 
 
 def sum_dict(dic):
@@ -281,6 +301,8 @@ def sum_dict(dic):
     >>> sum_dict({'a': [None, None]})
     2
     """
+    if isinstance(dic, int):
+        return dic
     s = 0
     for k, v in dic.items():
         if hasattr(v, '__len__'):
@@ -393,8 +415,7 @@ class EventBasedCalculator(ClassicalCalculator):
         monitor.oqparam = oq
         imts = list(oq.imtls)
         min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
-        self.grp_trt = {sg.id: sg.trt for sm in self.csm.info.source_models
-                        for sg in sm.src_groups}
+        self.grp_trt = self.csm.info.grp_trt()
         rlzs_by_grp = self.rlzs_assoc.get_rlzs_by_grp_id()
         correl_model = oq.get_correl_model()
         for block in split_in_blocks(
