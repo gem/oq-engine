@@ -477,8 +477,7 @@ class CompositeRiskModel(collections.Mapping):
             monitor.gmfbytes = hazard_getter.gmfbytes
 
     def __toh5__(self):
-        return self._riskmodels, dict(damage_states=self.damage_states,
-                                      covs=self.covs)
+        return self._riskmodels, dict(covs=self.covs)
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
