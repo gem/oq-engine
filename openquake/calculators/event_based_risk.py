@@ -236,15 +236,7 @@ class EventBasedStats(object):
         ses_ratio = self.oqparam.ses_ratio
         R = len(self.rlzs_assoc.realizations)
         ltypes = self.riskmodel.loss_types
-
-        self.vals = vals = {}  # asset values by loss_type
-        for ltype in ltypes:
-            asset_values = []
-            for assets in self.assetcol.assets_by_site():
-                for asset in assets:
-                    asset_values.append(asset.value(
-                        ltype, self.oqparam.time_event))
-            vals[ltype] = numpy.array(asset_values)
+        self.vals = vals = self.assetcol.values()
 
         # loss curves
         multi_lr_dt = numpy.dtype(
