@@ -165,7 +165,7 @@ class HazardCurvesTestCase(unittest.TestCase):
 
 
 class HazardCurvesFiltersTestCase(unittest.TestCase):
-    class SitesCounterSourceSitesFilter(object):
+    class SitesCounterRtreeFilter(object):
         def __init__(self, chained_generator):
             self.counts = []
             self.chained_generator = chained_generator
@@ -243,8 +243,8 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         imts = {'PGA': [0.1, 0.5, 1.3]}
 
         from openquake.hazardlib.calc import filters
-        source_site_filter = self.SitesCounterSourceSitesFilter(
-            filters.SourceSitesFilter(30))
+        source_site_filter = self.SitesCounterRtreeFilter(
+            filters.RtreeFilter(sitecol, 30))
         calc_hazard_curves(
             sources, sitecol, imts, gsims, truncation_level,
             source_site_filter=source_site_filter)

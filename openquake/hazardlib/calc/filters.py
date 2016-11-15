@@ -51,8 +51,8 @@ the actual calculation on unfiltered collection only decreases performance).
 
 Module :mod:`openquake.hazardlib.calc.filters` exports one distance-based
 filter function (see :func:`filter_sites_by_distance_to_rupture`) as well as
-a "no operation" filter (:func:`source_site_noop_filter`). There are also
-two classes `SourceSitesFilter` and `RtreeFilter` to determine the sites
+a "no operation" filter (:func:`source_site_noop_filter`). There is
+a class `RtreeFilter` to determine the sites
 affected by a given source: the second one uses an R-tree index and it is
 faster if there are a lot of sources, i.e. if the initial time to prepare
 the index can be compensed. Finally, there is a function
@@ -120,55 +120,9 @@ def filter_sites_by_distance_to_rupture(rupture, integration_distance, sites):
     return sites.filter(jb_dist <= integration_distance)
 
 
-class SourceSitesFilter(object):
-    """
-    Source-sites filter based on the integration distance. Used as follows::
-
-      ss_filter = SourceSitesFilter(integration_distance)
-      for src, affected_sites in ss_filter(sources, sites):
-         do_something(...)
-
-    As a side effect, sets the `.nsites` attribute of the source, i.e. the
-    number of sites within the integration distance.
-
-    :param integration_distance:
-        Threshold distance in km, this value gets passed straight to
-        :meth:`openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source`
-        which is what is actually used for filtering.
-    """
-    def __init__(self, integration_distance):
-        assert integration_distance, 'Must be set'
-        self.integration_distance = integration_distance
-
-    def affected(self, source, sites):
-        """
-        Returns the sites within the integration distance from the source,
-        or None.
-        """
-        source_sites = list(self([source], sites))
-        if source_sites:
-            return source_sites[0][1]
-
-    def __call__(self, sources, sites):
-        for source in sources:
-            if hasattr(self.integration_distance, '__getitem__'):
-                # a dictionary trt -> distance
-                trt = source.tectonic_region_type
-                integration_distance = self.integration_distance[trt]
-            else:  # just a distance in km
-                integration_distance = self.integration_distance
-            with context(source):
-                s_sites = source.filter_sites_by_distance_to_source(
-                    integration_distance, sites)
-            if s_sites is not None:
-                source.nsites = len(s_sites)
-                yield source, s_sites
-
-
 class RtreeFilter(object):
     """
-    The RtreeFilter uses the rtree library on PointSources and our own
-    SourceSitesFilter on other source typologies. The index is generated
+    The RtreeFilter uses the rtree library if available. The index is generated
     at instantiation time and kept in memory, so the filter should be
     instantiated only once per calculation, after the site collection is
     known. It should be used as follows::
@@ -186,15 +140,18 @@ class RtreeFilter(object):
         Threshold distance in km, this value gets passed straight to
         :meth:`openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source`
         which is what is actually used for filtering.
+    :param rtree:
+        the rtree module or None if not available
     """
-    def __init__(self, sitecol, integration_distance):
+    def __init__(self, sitecol, integration_distance, rtree=rtree):
         assert integration_distance, 'Must be set'
         self.integration_distance = integration_distance
         self.sitecol = sitecol
+        self.rtree = rtree
+        fixed_lons, self.idl = fix_lons_idl(sitecol.lons)
+        if self.idl:  # longitudes -> longitudes + 360 degrees
+            sitecol.complete.lons[sitecol.sids] = fixed_lons
         if rtree:
-            fixed_lons, self.idl = fix_lons_idl(sitecol.lons)
-            if self.idl:  # longitudes -> longitudes + 360 degrees
-                sitecol.complete.lons[sitecol.sids] = fixed_lons
             self.index = rtree.index.Index()
             for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
                 self.index.insert(sid, (lon, lat, lon, lat))
@@ -208,7 +165,10 @@ class RtreeFilter(object):
         :param src: a source object
         :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
         """
-        maxdist = self.integration_distance[src.tectonic_region_type]
+        try:
+            maxdist = self.integration_distance[src.tectonic_region_type]
+        except TypeError:  # passed a scalar, not a dictionary
+            maxdist = self.integration_distance
         min_lon, min_lat, max_lon, max_lat = src.get_bounding_box(maxdist)
         if self.idl:  # apply IDL fix
             if min_lon < 0 and max_lon > 0:
@@ -243,17 +203,21 @@ class RtreeFilter(object):
         if sites is None:
             sites = self.sitecol
         for source in sources:
-            if rtree:  # Rtree filtering
+            if self.rtree:  # Rtree filtering
                 box = self.get_affected_box(source)
                 sids = numpy.array(sorted(self.index.intersection(box)))
                 if len(sids):
                     source.nsites = len(sids)
                     yield source, FilteredSiteCollection(sids, sites.complete)
             else:  # normal filtering
+                try:
+                    maxdist = self.integration_distance[
+                        source.tectonic_region_type]
+                except TypeError:  # passed a scalar, not a dictionary
+                    maxdist = self.integration_distance
                 with context(source):
                     s_sites = source.filter_sites_by_distance_to_source(
-                        self.integration_distance[source.tectonic_region_type],
-                        sites)
+                        maxdist, sites)
                 if s_sites is not None:
                     source.nsites = len(s_sites)
                     yield source, s_sites
