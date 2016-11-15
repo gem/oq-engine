@@ -28,6 +28,7 @@ from openquake.baselib.general import (
     groupby, split_in_blocks, get_array)
 from openquake.hazardlib import site, calc
 from openquake.risklib import scientific, riskmodels
+from openquake.commonlib.riskmodels import get_risk_models
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -195,19 +196,62 @@ class AssetCollection(object):
 
 class CompositeRiskModel(collections.Mapping):
     """
-    A container (imt, taxonomy) -> riskmodel.
+    A container (imt, taxonomy) -> riskmodel
 
-    :param riskmodels: a dictionary (imt, taxonomy) -> riskmodel
-    :param damage_states: None or a list of damage states
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param rmdict:
+        a dictionary (imt, taxonomy) -> loss_type -> risk_function
     """
-    def __init__(self, riskmodels, damage_states=None):
-        self.damage_states = damage_states  # not None for damage calculations
-        self._riskmodels = riskmodels
+    def __init__(self, oqparam, rmdict):
+        self.damage_states = []
+        self._riskmodels = {}
         self.loss_types = []
         self.curve_builders = []
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
-        self.taxonomies = []  # populated in get_risk_model
+        self.taxonomies = []
+
+        if getattr(oqparam, 'limit_states', []):
+            # classical_damage/scenario_damage calculator
+            if oqparam.calculation_mode in ('classical', 'scenario'):
+                # case when the risk files are in the job_hazard.ini file
+                oqparam.calculation_mode += '_damage'
+            self.damage_states = ['no_damage'] + oqparam.limit_states
+            delattr(oqparam, 'limit_states')
+            for taxonomy, ffs_by_lt in rmdict.items():
+                self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
+                    taxonomy, oqparam, fragility_functions=ffs_by_lt)
+        elif oqparam.calculation_mode.endswith('_bcr'):
+            # classical_bcr calculator
+            retro = get_risk_models(oqparam, 'vulnerability_retrofitted')
+            for (taxonomy, vf_orig), (taxonomy_, vf_retro) in \
+                    zip(rmdict.items(), retro.items()):
+                assert taxonomy == taxonomy_  # same imt and taxonomy
+                self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
+                    taxonomy, oqparam,
+                    vulnerability_functions_orig=vf_orig,
+                    vulnerability_functions_retro=vf_retro)
+        else:
+            # classical, event based and scenario calculators
+            for taxonomy, vfs in rmdict.items():
+                for vf in vfs.values():
+                    # set the seed; this is important for the case of
+                    # VulnerabilityFunctionWithPMF
+                    vf.seed = oqparam.random_seed
+                    self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
+                        taxonomy, oqparam, vulnerability_functions=vfs)
+
+        self.loss_types = self.make_curve_builders(oqparam)
+        taxonomies = set()
+        for taxonomy, riskmodel in self._riskmodels.items():
+            taxonomies.add(taxonomy)
+            riskmodel.compositemodel = self
+            # save the number of nonzero coefficients of variation
+            for vf in riskmodel.risk_functions.values():
+                if hasattr(vf, 'covs') and vf.covs.any():
+                    self.covs += 1
+        self.taxonomies = sorted(taxonomies)
 
     def get_min_iml(self):
         iml = collections.defaultdict(list)
@@ -307,8 +351,8 @@ class CompositeRiskModel(collections.Mapping):
                     loss_type, default_loss_ratios, False,
                     oqparam.conditional_loss_poes, oqparam.insured_losses)
             self.curve_builders.append(cb)
-            self.loss_types.append(loss_type)
             self.lti[loss_type] = l
+        return loss_types
 
     def get_loss_ratios(self):
         """

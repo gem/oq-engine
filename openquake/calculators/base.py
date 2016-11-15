@@ -472,12 +472,10 @@ class HazardCalculator(BaseCalculator):
         The riskmodel can be empty for hazard calculations.
         Save the loss ratios (if any) in the datastore.
         """
-        rmdict = riskmodels.get_risk_models(self.oqparam)
-        if not rmdict:  # can happen only in a hazard calculation
+        self.riskmodel = rm = readinput.get_risk_model(self.oqparam)
+        if not self.riskmodel:  # can happen only in a hazard calculation
             return
-        self.oqparam.set_risk_imtls(rmdict)
         self.save_params()  # re-save oqparam
-        self.riskmodel = rm = readinput.get_risk_model(self.oqparam, rmdict)
         # save the risk models and loss_ratios in the datastore
         for taxonomy, rmodel in rm.items():
             self.datastore['composite_risk_model/' + taxonomy] = (
