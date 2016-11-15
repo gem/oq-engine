@@ -635,6 +635,7 @@ class DictArray(collections.Mapping):
         return carray, {}
 
     def __fromh5__(self, carray, attrs):
+        import pdb; pdb.set_trace()
         self.array = carray[:].view(F64)
         self.imt_dt = dt = numpy.dtype(
             [(str(imt), F64, len(carray[0][imt]))
