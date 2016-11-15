@@ -51,8 +51,10 @@ class AssetCollection(object):
         self.array, self.taxonomies = self.build_asset_collection(
             assets_by_site, time_event)
         fields = self.array.dtype.names
-        self.loss_types = sorted(
-            f[6:] for f in fields if f.startswith('value-'))
+        self.loss_types = [f[6:] for f in fields if f.startswith('value-')]
+        if 'occupants' in fields:
+            self.loss_types.append('occupants')
+        self.loss_types.sort()
         self.deduc = [n for n in fields if n.startswith('deductible-')]
         self.i_lim = [n for n in fields if n.startswith('insurance_limit-')]
         self.retro = [n for n in fields if n.startswith('retrofitted-')]
@@ -69,6 +71,19 @@ class AssetCollection(object):
             assets_by_site[index[ass['site_id']]].append(self[i])
         return numpy.array(assets_by_site)
 
+    def values(self):
+        """
+        :returns: a composite array of asset values by loss type
+        """
+        loss_dt = numpy.dtype([(lt, float) for lt in self.loss_types])
+        vals = numpy.zeros(len(self), loss_dt)  # asset values by loss_type
+        for assets in self.assets_by_site():
+            for asset in assets:
+                for ltype in self.loss_types:
+                    vals[ltype][asset.ordinal] = asset.value(
+                        ltype, self.time_event)
+        return vals
+
     def __iter__(self):
         for i in range(len(self)):
             yield self[i]
@@ -76,7 +91,8 @@ class AssetCollection(object):
     def __getitem__(self, indices):
         if isinstance(indices, int):  # single asset
             a = self.array[indices]
-            values = {lt: a['value-' + lt] for lt in self.loss_types}
+            values = {lt: a['value-' + lt] for lt in self.loss_types
+                      if lt != 'occupants'}
             if 'occupants' in self.array.dtype.names:
                 values['occupants_' + str(self.time_event)] = a['occupants']
             return riskmodels.Asset(
