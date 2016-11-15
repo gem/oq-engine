@@ -773,17 +773,17 @@ class EbriskCalculator(base.RiskCalculator):
             for block in block_splitter(src_group, maxweight, getweight):
                 allargs.append((block, self.sitecol, gsims, monitor))
         # collect the ruptures
-        rup_data = []
+        rup_data = {}
         for dic in parallel.starmap(self.compute_ruptures, allargs):
             ruptures_by_grp += dic
             [(grp_id, rupts)] = dic.items()
             trt = self.grp_trt[grp_id]
             gsims = ssm.gsim_lt.values[trt]
-            rup_data.append(calc.RuptureData(trt, gsims).to_array(rupts))
+            rup_data[grp_id] = calc.RuptureData(trt, gsims).to_array(rupts)
             num_ruptures += len(rupts)
             num_events += dic.num_events
         ruptures_by_grp.num_events = num_events
-        ruptures_by_grp.rup_data = numpy.concatenate(rup_data)
+        ruptures_by_grp.rup_data = rup_data
         seeds = self.oqparam.master_seed + numpy.arange(num_events)
         save_ruptures(self, ruptures_by_grp)
 
@@ -943,6 +943,8 @@ class EbriskCalculator(base.RiskCalculator):
         """
         Save an array of losses by taxonomy of shape (T, L, R).
         """
+        event_based.EventBasedRuptureCalculator.__dict__['post_execute'](
+            self, num_events)
         if self.gmfbytes == 0:
             raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')
