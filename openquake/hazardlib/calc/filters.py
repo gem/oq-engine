@@ -66,6 +66,7 @@ try:
     import rtree
 except ImportError:
     rtree = None
+    logging.warn('Cannot find the rtree module, using slow filtering')
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.hazardlib.geo.utils import fix_lons_idl
@@ -155,8 +156,6 @@ class RtreeFilter(object):
             self.index = rtree.index.Index()
             for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
                 self.index.insert(sid, (lon, lat, lon, lat))
-        else:
-            logging.warn('Cannot find the rtree module, using slow filtering')
 
     def get_affected_box(self, src):
         """
