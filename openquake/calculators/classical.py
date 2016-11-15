@@ -46,7 +46,7 @@ def split_filter_source(src, sites, ss_filter, random_seed):
     """
     :param src: an heavy source
     :param sites: sites affected by the source
-    :param ss_filter: a SourceSitesFilter instance
+    :param ss_filter: a RtreeFilter instance
     :random_seed: used only for event based calculations
     :returns: a list of split sources
     """
