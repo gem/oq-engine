@@ -47,7 +47,8 @@ F64 = numpy.float64
 event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
 stored_event_dt = numpy.dtype([
-    ('rupserial', U32), ('ses', U32), ('occ', U32),
+    ('rupserial', U32), ('year', U32),
+    ('ses', U32), ('occ', U32),
     ('sample', U32), ('grp_id', U16),
     ('source_id', 'S%d' % valid.MAX_ID_LENGTH)])
 
@@ -376,10 +377,9 @@ class RuptureData(object):
             ruptparams = tuple(getattr(rc, param) for param in self.params)
             point = rup.surface.get_middle_point()
             multi_lons, multi_lats = rup.surface.get_surface_boundaries()
-            boundary = 'MULTIPOLYGON(%s)' % ','.join(
-                '((%s))' % ','.join('%.5f %.5f' % (lon, lat)
-                                    for lon, lat in zip(lons, lats))
-                for lons, lats in zip(multi_lons, multi_lats))
+            boundary = ','.join('((%s))' % ','.join(
+                '%.5f %.5f' % (lon, lat) for lon, lat in zip(lons, lats))
+                                for lons, lats in zip(multi_lons, multi_lats))
             try:
                 rate = ebr.rupture.occurrence_rate
             except AttributeError:  # for nonparametric sources
@@ -510,14 +510,14 @@ class EBRupture(object):
         """
         return len(self.events)
 
-    def export(self, mesh):
+    def export(self, mesh, sm_by_grp):
         """
         Yield :class:`openquake.commonlib.util.Rupture` objects, with all the
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
-        for etag in self.etags:
-            new = util.Rupture(etag, self.sids)
+        for eid, etag in zip(self.eids, self.etags):
+            new = util.Rupture(sm_by_grp[self.grp_id], eid, etag, self.sids)
             new.mesh = mesh[self.sids]
             new.etag = etag
             new.rupture = new
