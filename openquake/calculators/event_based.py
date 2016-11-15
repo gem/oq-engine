@@ -30,7 +30,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap, PmapStats
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.commonlib import parallel, calc, util
-from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str
+from openquake.commonlib.riskinput import GmfGetter, str2rsi, rsi2str
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 

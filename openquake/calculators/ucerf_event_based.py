@@ -30,8 +30,8 @@ import numpy
 
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip
-from openquake.risklib import valid, riskinput
-from openquake.commonlib import readinput, parallel, source, calc
+from openquake.risklib import valid
+from openquake.commonlib import readinput, parallel, source, calc, riskinput
 from openquake.calculators import base, event_based
 from openquake.calculators.event_based_risk import (
     EbriskCalculator, losses_by_taxonomy)
