@@ -140,6 +140,8 @@ class RtreeFilter(object):
         Threshold distance in km, this value gets passed straight to
         :meth:`openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source`
         which is what is actually used for filtering.
+    :param rtree:
+        the rtree module or None if not available
     """
     def __init__(self, sitecol, integration_distance, rtree=rtree):
         assert integration_distance, 'Must be set'
