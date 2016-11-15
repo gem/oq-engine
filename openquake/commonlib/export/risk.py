@@ -21,12 +21,12 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, get_array, group_array
 from openquake.risklib import scientific
 from openquake.commonlib.export import export
 from openquake.commonlib.export.hazard import build_etags
 from openquake.commonlib import writers, risk_writers
-from openquake.commonlib.util import get_assets, compose_arrays, get_ses_idx
+from openquake.commonlib.util import get_assets, compose_arrays
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
     ExposureData, Site)
@@ -171,19 +171,23 @@ def export_agg_losses_ebr(ekey, dstore):
     :param dstore: datastore object
     """
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
-    agg_losses = dstore[ekey[0]]
+    name, ext = export.keyfunc(ekey)
+    agg_losses = dstore[name]
     oq = dstore['oqparam']
-    dtlist = [('event_tag', (numpy.string_, 100)), ('event_set', U32)
+    dtlist = [('event_tag', (numpy.string_, 100)), ('year', U32)
               ] + oq.loss_dt_list()
     elt_dt = numpy.dtype(dtlist)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    events = dstore['events']
+    sm_ids = sorted(rlzs_assoc.rlzs_by_smodel)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for sm_id, rlzs in sorted(rlzs_assoc.rlzs_by_smodel.items()):
-        key = 'sm-%04d' % sm_id
-        if key not in events:
+    for sm_id in sm_ids:
+        rlzs = rlzs_assoc.rlzs_by_smodel[sm_id]
+        try:
+            events = dstore['events/sm-%04d' % sm_id]
+        except KeyError:
             continue
-        etags = build_etags(events, [key])
+        if not len(events):
+            continue
         for rlz in rlzs:
             dest = dstore.build_fname('agg_losses', rlz, 'csv')
             eids = set()
@@ -193,11 +197,11 @@ def export_agg_losses_ebr(ekey, dstore):
                 insured_losses = bool(dset.dtype['loss'].shape)
                 eids.update(dset['eid'])
             eids = sorted(eids)
+            rlz_events = events[eids]
             eid2idx = dict(zip(eids, range(len(eids))))
             elt = numpy.zeros(len(eids), elt_dt)
-            elt['event_tag'] = etags[eids]
-            elt['event_set'] = numpy.array(
-                [get_ses_idx(etag) for etag in elt['event_tag']], U32)
+            elt['event_tag'] = build_etags(rlz_events)
+            elt['year'] = rlz_events['year']
             for loss_type in loss_types:
                 elt_lt = elt[loss_type]
                 if insured_losses:
@@ -213,6 +217,70 @@ def export_agg_losses_ebr(ekey, dstore):
                         elt_lt_ins[idx] = data['loss'][i, 1]
                     else:
                         elt_lt[idx] = data['loss'][i]
+            elt.sort(order='event_tag')
+            writer.save(elt, dest)
+    return writer.getsaved()
+
+
+def group_by_aid(data, loss_type):
+    return {aid: AccumDict({loss_type: rec['loss']})
+            for aid, [rec] in group_array(data, 'aid').items()}
+
+
+# this is used by event_based_risk
+@export.add(('ass_loss_table', 'csv'))
+def export_ass_losses_ebr(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
+    name, ext = export.keyfunc(ekey)
+    ass_losses = dstore[name]
+    oq = dstore['oqparam']
+    dtlist = [('event_tag', (numpy.string_, 100)), ('year', U32),
+              ('aid', U32)] + oq.loss_dt_list()
+    elt_dt = numpy.dtype(dtlist)
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    n = ekey[0].count(':')
+    if n == 1:  # passed the eid, sm_id assumed to be zero
+        sm_ids, eid = (0,), int(ekey[0].split(':')[1])
+    elif n == 2:  # passed both eid and sm_id
+        sm_id, eid = map(int, ekey[0].split(':')[1:])
+        sm_ids = (sm_id,)
+    else:  # eid and sm_id both unspecified, exporting nothing
+        return []
+    zero = [0, 0] if oq.insured_losses else 0
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    for sm_id in sm_ids:
+        rlzs = rlzs_assoc.rlzs_by_smodel[sm_id]
+        try:
+            event = dstore['events/sm-%04d' % sm_id][eid]
+        except KeyError:
+            continue
+        [event_tag] = build_etags([event])
+        for rlz in rlzs:
+            exportname = 'losses-sm=%04d-eid=%d' % (sm_id, eid)
+            dest = dstore.build_fname(exportname, rlz, 'csv')
+            losses_by_aid = AccumDict()
+            rlzname = 'rlz-%03d' % rlz.ordinal
+            for loss_type in ass_losses[rlzname]:
+                data = get_array(ass_losses['%s/%s' % (rlzname, loss_type)],
+                                 eid=eid)
+                losses_by_aid += group_by_aid(data, loss_type)
+            elt = numpy.zeros(len(losses_by_aid), elt_dt)
+            elt['event_tag'] = event_tag
+            elt['year'] = event['year']
+            elt['aid'] = sorted(losses_by_aid)
+            for i, aid in numpy.ndenumerate(elt['aid']):
+                for loss_type in loss_types:
+                    loss = losses_by_aid[aid].get(loss_type, zero)
+                    if oq.insured_losses:
+                        elt[loss_type][i] = loss[0]
+                        elt[loss_type + '_ins'][i] = loss[1]
+                    else:
+                        elt[loss_type][i] = loss
+
             elt.sort(order='event_tag')
             writer.save(elt, dest)
     return writer.getsaved()
