@@ -18,8 +18,6 @@ install:
 # We must set the PYTHONPATH to the root oq-engine (insted of oq-engine/openquake) because otherwise
 # the full 'openquake' namespace is overwritten and then hazardlib and baselib are not found
 script:
-  # FIXME --with-doctest does not work
-  # - PYTHONPATH=. nosetests -vsx -a'!slow' --with-xunit --nologcapture
-  - PYTHONPATH=.:$(pwd)/oq-hazardlib nosetests -vsx -a'!slow'
+  - PYTHONPATH=.:$(pwd)/oq-hazardlib nosetests --with-doctest -vsx -a'!slow'
   - cat /tmp/webui*
   - PYTHONPATH=.:$(pwd)/oq-hazardlib bin/oq info -r demos/hazard
