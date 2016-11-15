@@ -91,6 +91,8 @@ def expose_outputs(dstore):
         rlzs = dstore['realizations']
     except KeyError:
         rlzs = []
+    if 'ass_loss_table' in dskeys:
+        dskeys.remove('ass_loss_table')  # export only specific IDs
     if 'realizations' in dskeys and len(rlzs) <= 1:
         dskeys.remove('realizations')  # do not export a single realization
     if 'ruptures' in dskeys and 'scenario' in calcmode:
