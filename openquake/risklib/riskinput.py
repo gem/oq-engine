@@ -22,7 +22,7 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import zip, encode
+from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import (
     groupby, split_in_blocks, get_array)
@@ -221,7 +221,7 @@ def read_composite_risk_model(dstore):
         rmdict[taxo] = {}
         retrodict[taxo] = {}
         for lt in rm:
-            lt = str(lt)
+            lt = str(lt)  # ensure Python 2-3 compatibility
             rf = dstore['composite_risk_model/%s/%s' % (taxo, lt)]
             if lt.endswith('_retrofitted'):
                 # strip _retrofitted, since len('_retrofitted') = 12
