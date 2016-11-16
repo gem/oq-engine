@@ -20,7 +20,6 @@ http://ftp.openquake.org/python-new-wheels/decorator-4.0.10-py2.py3-none-any.whl
 http://ftp.openquake.org/python-new-wheels/funcsigs-1.0.2-py2.py3-none-any.whl
 http://ftp.openquake.org/python-new-wheels/pbr-1.8.0-py2.py3-none-any.whl
 http://ftp.openquake.org/python-new-wheels/six-1.10.0-py2.py3-none-any.whl
-http://ftp.openquake.org/python-new-wheels/futures-3.0.5-py3-none-any.whl
 http://ftp.openquake.org/python-new-wheels/Django-1.8.7-py2.py3-none-any.whl
 http://ftp.openquake.org/python-new-wheels/requests-2.9.1-py2.py3-none-any.whl
 http://ftp.openquake.org/python-new-wheels/pyshp-1.2.3-py3-none-any.whl
