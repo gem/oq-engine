@@ -55,7 +55,7 @@ class Point(object):
                              "the Earth's radius (6371.0 km)")
 
         if not depth > geodetic.EARTH_ELEVATION:
-            raise ValueError("The depth must be greater than the maximum"
+            raise ValueError("The depth must be greater than the maximum "
                              "elevation on Earth's surface (-8.848 km)")
 
         if not -180.0 <= longitude <= 180.0:
