@@ -24,7 +24,6 @@ import operator
 import decimal
 import functools
 import itertools
-import collections
 import numpy
 import h5py
 
@@ -515,43 +514,10 @@ def view_assetcol(token, dstore):
     return write_csv(io.StringIO(), [header] + list(zip(*columns)))
 
 
-def get_max_gmf_size(dstore):
-    """
-    Upper limit for the size of the GMFs
-    """
-    oq = dstore['oqparam']
-    n_imts = len(oq.imtls)
-    rlzs_by_grp_id = dstore['csm_info'].get_rlzs_assoc().get_rlzs_by_grp_id()
-    n_ruptures = collections.Counter()
-    size = collections.Counter()  # by grp_id
-    for serial in dstore['ruptures']:
-        ebr = dstore['ruptures/' + serial]
-        grp_id = ebr.grp_id
-        n_ruptures[grp_id] += 1
-        # there are 4 bytes per float
-        size[grp_id] += (len(ebr.sids) * ebr.multiplicity *
-                         len(rlzs_by_grp_id[grp_id]) * n_imts) * 4
-    [(grp_id, maxsize)] = size.most_common(1)
-    return dict(n_imts=n_imts, size=maxsize, n_ruptures=n_ruptures[grp_id],
-                n_rlzs=len(rlzs_by_grp_id[grp_id]),
-                grp_id=grp_id, humansize=humansize(maxsize))
-
-
-@view.add('biggest_ebr_gmf')
-def view_biggest_ebr_gmf(token, dstore):
-    """
-    Returns the size of the biggest GMF in an event based risk calculation
-    """
-    msg = ('The largest GMF block is for src_group_id=%(grp_id)d, '
-           'contains %(n_imts)d IMT(s), %(n_rlzs)d '
-           'realization(s)\nand has a size of %(humansize)s / num_tasks')
-    return msg % get_max_gmf_size(dstore)
-
-
 @view.add('ruptures_events')
 def view_ruptures_events(token, dstore):
-    num_ruptures = len(dstore['ruptures'])
-    num_events = len(dstore['events'])
+    num_ruptures = sum(len(v) for v in dstore['rup_data'].values())
+    num_events = sum(len(v) for v in dstore['events'].values())
     mult = round(num_events / num_ruptures, 3)
     lst = [('Total number of ruptures', num_ruptures),
            ('Total number of events', num_events),

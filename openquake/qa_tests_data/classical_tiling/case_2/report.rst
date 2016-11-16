@@ -2,9 +2,9 @@ Classical Tiling for Turkey reduced
 ===================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_60131.hdf5 Tue Oct 11 06:58:50 2016
-engine_version                                 2.1.0-git4e31fdd        
-hazardlib_version                              0.21.0-gitab31f47       
+gem-tstation:/home/michele/ssd/calc_67022.hdf5 Wed Nov  9 08:16:44 2016
+engine_version                                 2.2.0-git54d01f4        
+hazardlib_version                              0.22.0-git173c60c       
 ============================================== ========================
 
 num_sites = 83, sitecol = 4.42 KB
@@ -96,13 +96,13 @@ models/src/fsbg_model.xml 9      Active Shallow Crust 2           2061         2
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 2,168       
+count_eff_ruptures_max_received_per_task 2,187       
 count_eff_ruptures_num_tasks             4           
 count_eff_ruptures_sent.gsims            1,240       
-count_eff_ruptures_sent.monitor          7,848       
+count_eff_ruptures_sent.monitor          7,836       
 count_eff_ruptures_sent.sitecol          19,736      
 count_eff_ruptures_sent.sources          22,603      
-count_eff_ruptures_tot_received          8,672       
+count_eff_ruptures_tot_received          8,748       
 hazard.input_weight                      593         
 hazard.n_imts                            2           
 hazard.n_levels                          90          
@@ -136,7 +136,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ========= ===== =========
 operation-duration mean  stddev    min       max   num_tasks
-count_eff_ruptures 0.001 2.301E-04 8.681E-04 0.001 4        
+count_eff_ruptures 0.001 2.601E-04 7.920E-04 0.001 4        
 ================== ===== ========= ========= ===== =========
 
 Slowest operations
@@ -144,13 +144,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.848     0.0       1     
-managing sources                 0.075     0.0       1     
-split/filter heavy sources       0.071     0.0       1     
-filtering composite source model 0.024     0.0       1     
-reading site collection          0.011     0.0       1     
+reading composite source model   0.796     0.0       1     
+managing sources                 0.069     0.0       1     
+split/filter heavy sources       0.066     0.0       1     
+reading site collection          0.024     0.0       1     
+filtering composite source model 0.023     0.0       1     
 total count_eff_ruptures         0.004     0.0       4     
-store source_info                4.349E-04 0.0       1     
-aggregate curves                 6.318E-05 0.0       4     
-saving probability maps          2.098E-05 0.0       1     
+store source_info                4.289E-04 0.0       1     
+aggregate curves                 5.507E-05 0.0       4     
+saving probability maps          2.289E-05 0.0       1     
 ================================ ========= ========= ======

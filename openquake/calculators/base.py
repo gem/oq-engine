@@ -35,7 +35,7 @@ from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import RtreeFilter
 from openquake.risklib import riskinput, __version__ as engine_version
-from openquake.commonlib import readinput, riskmodels, datastore, source
+from openquake.commonlib import readinput, datastore, source
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import starmap, executor, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
@@ -472,21 +472,13 @@ class HazardCalculator(BaseCalculator):
         The riskmodel can be empty for hazard calculations.
         Save the loss ratios (if any) in the datastore.
         """
-        rmdict = riskmodels.get_risk_models(self.oqparam)
-        if not rmdict:  # can happen only in a hazard calculation
+        self.riskmodel = rm = readinput.get_risk_model(self.oqparam)
+        if not self.riskmodel:  # can happen only in a hazard calculation
             return
-        self.oqparam.set_risk_imtls(rmdict)
         self.save_params()  # re-save oqparam
-        self.riskmodel = rm = readinput.get_risk_model(self.oqparam, rmdict)
         # save the risk models and loss_ratios in the datastore
-        for taxonomy, rmodel in rm.items():
-            self.datastore['composite_risk_model/' + taxonomy] = (
-                rmodel.risk_functions)
-            if hasattr(rmodel, 'retro_functions'):
-                self.datastore[
-                    'composite_risk_model/%s-retrofitted' % taxonomy] = (
-                        rmodel.retro_functions)
-        attrs = self.datastore['composite_risk_model'].attrs
+        self.datastore['composite_risk_model'] = rm
+        attrs = self.datastore.getitem('composite_risk_model').attrs
         attrs['loss_types'] = hdf5.array_of_vstr(rm.loss_types)
         attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.get_min_iml().items()))
         if rm.damage_states:
@@ -506,7 +498,6 @@ class HazardCalculator(BaseCalculator):
             haz_sitecol = readinput.get_site_collection(oq)
         if haz_sitecol is not None:
             logging.info('Read %d hazard site(s)', len(haz_sitecol))
-
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
         if 'exposure' in oq.inputs:

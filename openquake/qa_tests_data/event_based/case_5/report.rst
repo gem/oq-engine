@@ -2,9 +2,9 @@ Germany_SHARE Combined Model event_based
 ========================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_60118.hdf5 Tue Oct 11 06:58:42 2016
-engine_version                                 2.1.0-git4e31fdd        
-hazardlib_version                              0.21.0-gitab31f47       
+gem-tstation:/home/michele/ssd/calc_67008.hdf5 Wed Nov  9 08:16:39 2016
+engine_version                                 2.2.0-git54d01f4        
+hazardlib_version                              0.22.0-git173c60c       
 ============================================== ========================
 
 num_sites = 100, sitecol = 5.19 KB
@@ -92,13 +92,13 @@ source_models/fs_bg_source_model.xml 4      Stable Shallow Crust 43          3  
 Informational data
 ------------------
 ====================================== ============
-compute_ruptures_max_received_per_task 27,052      
+compute_ruptures_max_received_per_task 27,224      
 compute_ruptures_num_tasks             19          
 compute_ruptures_sent.gsims            6,626       
-compute_ruptures_sent.monitor          19,684      
+compute_ruptures_sent.monitor          19,627      
 compute_ruptures_sent.sitecol          51,652      
 compute_ruptures_sent.sources          3,510,048   
-compute_ruptures_tot_received          172,580     
+compute_ruptures_tot_received          176,264     
 hazard.input_weight                    34,282      
 hazard.n_imts                          1           
 hazard.n_levels                        1           
@@ -113,8 +113,8 @@ Specific information for event based
 ------------------------------------
 ======================== =====
 Total number of ruptures 5    
-Total number of events   2    
-Rupture multiplicity     0.400
+Total number of events   5    
+Rupture multiplicity     1.000
 ======================== =====
 
 Slowest sources
@@ -158,7 +158,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   2.770 1.827  0.004 4.902 19       
+compute_ruptures   2.654 1.760  0.009 4.726 19       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -166,14 +166,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           52        2.668     19    
-managing sources                 13        0.0       1     
-split/filter heavy sources       13        0.0       1     
-reading composite source model   10        0.0       1     
-filtering composite source model 0.122     0.0       1     
-saving ruptures                  0.011     0.0       19    
+total compute_ruptures           50        1.988     19    
+managing sources                 12        0.0       1     
+split/filter heavy sources       12        0.0       1     
+reading composite source model   9.241     0.0       1     
+filtering composite source model 0.117     0.0       1     
+saving ruptures                  0.012     0.0       19    
 filtering ruptures               0.003     0.0       8     
 store source_info                0.002     0.0       1     
-reading site collection          6.649E-04 0.0       1     
-Initializing rupture serials     3.800E-04 0.0       1     
+reading site collection          4.308E-04 0.0       1     
 ================================ ========= ========= ======

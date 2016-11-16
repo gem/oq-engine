@@ -2,9 +2,9 @@ Scenario QA Test, Case 9, Multiple GSIMs
 ========================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_60052.hdf5 Tue Oct 11 06:55:57 2016
-engine_version                                 2.1.0-git4e31fdd        
-hazardlib_version                              0.21.0-gitab31f47       
+gem-tstation:/home/michele/ssd/calc_66942.hdf5 Wed Nov  9 08:14:04 2016
+engine_version                                 2.2.0-git54d01f4        
+hazardlib_version                              0.22.0-git173c60c       
 ============================================== ========================
 
 num_sites = 3, sitecol = 831 B

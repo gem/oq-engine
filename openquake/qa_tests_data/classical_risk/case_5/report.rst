@@ -2,9 +2,9 @@ Hazard Calculation for end-to-end hazard+risk
 =============================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_60041.hdf5 Tue Oct 11 06:55:55 2016
-engine_version                                 2.1.0-git4e31fdd        
-hazardlib_version                              0.21.0-gitab31f47       
+gem-tstation:/home/michele/ssd/calc_66931.hdf5 Wed Nov  9 08:14:03 2016
+engine_version                                 2.2.0-git54d01f4        
+hazardlib_version                              0.22.0-git173c60c       
 ============================================== ========================
 
 num_sites = 1, sitecol = 739 B
@@ -87,13 +87,13 @@ source_model.xml 1      Subduction Interface 1           23           23
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 1,605       
+count_eff_ruptures_max_received_per_task 1,624       
 count_eff_ruptures_num_tasks             2           
 count_eff_ruptures_sent.gsims            401         
-count_eff_ruptures_sent.monitor          2,776       
+count_eff_ruptures_sent.monitor          2,770       
 count_eff_ruptures_sent.sitecol          866         
 count_eff_ruptures_sent.sources          2,414       
-count_eff_ruptures_tot_received          3,210       
+count_eff_ruptures_tot_received          3,248       
 hazard.input_weight                      4.600       
 hazard.n_imts                            1           
 hazard.n_levels                          50          
@@ -125,7 +125,7 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 7.684E-04 4.451E-05 7.370E-04 7.999E-04 2        
+count_eff_ruptures 8.160E-04 7.772E-05 7.610E-04 8.709E-04 2        
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -137,8 +137,8 @@ reading composite source model   0.006     0.0       1
 managing sources                 0.003     0.0       1     
 filtering composite source model 0.003     0.0       1     
 total count_eff_ruptures         0.002     0.0       2     
-store source_info                8.452E-04 0.0       1     
-aggregate curves                 5.627E-05 0.0       2     
-saving probability maps          3.695E-05 0.0       1     
-reading site collection          3.004E-05 0.0       1     
+store source_info                9.460E-04 0.0       1     
+aggregate curves                 5.507E-05 0.0       2     
+saving probability maps          3.910E-05 0.0       1     
+reading site collection          2.789E-05 0.0       1     
 ================================ ========= ========= ======
