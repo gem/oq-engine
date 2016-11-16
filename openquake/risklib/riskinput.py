@@ -209,6 +209,23 @@ class AssetCollection(object):
         return assetcol, numpy.array(sorted_taxonomies, hdf5.vstr)
 
 
+def get_composite_risk_model(dstore):
+    oqparam = dstore['oqparam']
+    crm = dstore.getitem('composite_risk_model')
+    rmdict, retrodict = {}, {}
+    for taxo, rm in crm.items():
+        rmdict[taxo] = {}
+        retrodict[taxo] = {}
+        for lt in rm:
+            rf = dstore['composite_risk_model/%s/%s' % (taxo, lt)]
+            if lt.endswith('_retrofitted'):
+                # strip _retrofitted, since len('_retrofitted') = 12
+                retrodict[taxo][lt[:-12]] = rf
+            else:
+                rmdict[taxo][lt] = rf
+    return CompositeRiskModel(oqparam, rmdict, retrodict)
+
+
 class CompositeRiskModel(collections.Mapping):
     """
     A container (imt, taxonomy) -> riskmodel
