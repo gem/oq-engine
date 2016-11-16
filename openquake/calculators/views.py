@@ -24,7 +24,6 @@ import operator
 import decimal
 import functools
 import itertools
-import collections
 import numpy
 import h5py
 
