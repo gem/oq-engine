@@ -29,13 +29,8 @@ Patch1: openquake.cfg.patch
 
 Requires(pre): shadow-utils
 
-%define common_deps sudo systemd python numpy scipy python-shapely python-psutil python-decorator python-mock python-futures h5py python-amqp python-celery python-django pyshp python-docutils python-requests python-prctl python-gunicorn rabbitmq-server
-%define oqlib_deps python-oq-hazardlib >= 0.22.0
-%define dev_deps python-nose python-coverage
-
-Requires: %{common_deps}
-Requires: %{oqlib_deps}
-Requires: %{dev_deps}
+Requires: python-oq-libs python-oq-hazardlib >= 0.22.0
+Requires: sudo systemd python rabbitmq-server
 
 # since tests are currently not enabled during the packaging phase, the following build dependencies are not required
 #BuildRequires: %{common_deps}
