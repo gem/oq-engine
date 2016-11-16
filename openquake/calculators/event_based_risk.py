@@ -217,7 +217,7 @@ class EventBasedStats(object):
         N = len(self.assetcol)
         E = sum(len(v) for v in self.datastore['events'].values())
         self.loss_curve_dt, self.loss_maps_dt = (
-            riskmodel.build_loss_dtypes(
+            self.riskmodel.build_loss_dtypes(
                 self.oqparam.conditional_loss_poes,
                 self.oqparam.insured_losses + 1))
 
