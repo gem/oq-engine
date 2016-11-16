@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Stored the disaggregation matrices directly (no pickle)
   * Turned the CompositeRiskModel into a HDF5-serializable object
   * Fixed all doctests for Python 3
 
