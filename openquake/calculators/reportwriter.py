@@ -120,8 +120,6 @@ class ReportWriter(object):
         if 'events' in ds:
             self.add('ruptures_events')
         if oq.calculation_mode in ('event_based_risk',):
-            if 'events' in ds:
-                self.add('biggest_ebr_gmf')
             self.add('avglosses_data_transfer')
         if 'exposure' in oq.inputs:
             self.add('exposure_info')

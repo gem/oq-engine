@@ -24,17 +24,17 @@ import os.path
 import logging
 import random
 import socket
-import functools
 import collections
 import h5py
 import numpy
 
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip
-from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.risklib import valid, riskinput
 from openquake.commonlib import readinput, parallel, source, calc
 from openquake.calculators import base, event_based
+from openquake.calculators.event_based_risk import (
+    EbriskCalculator, losses_by_taxonomy)
 
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.pmf import PMF
@@ -54,6 +54,7 @@ from openquake.commonlib.sourceconverter import SourceConverter
 
 # ######################## rupture calculator ############################ #
 
+EBR = collections.namedtuple('EBR', 'serial source_id events')
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -650,79 +651,6 @@ class UCERFSourceConverter(SourceConverter):
             trt=node["tectonicRegion"])
 
 
-def compute_ruptures_gmfs_curves(
-        source_models, sitecol, rlzs_assoc, monitor):
-    """
-    Returns the ruptures as a TRT set
-    :param source_models:
-        A list of UCERF source models, one per branch
-    :param sitecol:
-        Site collection :class:`openquake.hazardlib.site.SiteCollection`
-    :param rlzs_assoc:
-        Instance of :class:`openquake.commonlib.source.RlzsAssoc`
-    :param monitor:
-        Instance of :class:`openquake.baselib.performance.Monitor`
-    :returns:
-        Dictionary of rupture instances associated to a TRT ID
-    """
-    oq = monitor.oqparam
-    correl_model = oq.get_correl_model()
-    imts = list(oq.imtls)
-    min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
-    integration_distance = oq.maximum_distance[DEFAULT_TRT]
-    res = AccumDict()
-    res.calc_times = AccumDict()
-    serial = 1
-    event_mon = monitor('sampling ruptures', measuremem=False)
-    res['ruptures'] = rupdic = AccumDict()
-    rupdic.num_events = 0
-    rupdic.trt = DEFAULT_TRT
-    rlzs_by_grp = rlzs_assoc.get_rlzs_by_grp_id()
-    for grp_id, source_model in enumerate(source_models):
-        [grp] = source_model.src_groups  # one source group per source model
-        [ucerf] = grp  # one source per source group
-        t0 = time.time()
-        # set the seed before calling generate_event_set
-        numpy.random.seed(oq.random_seed + grp_id)
-        ses_ruptures = []
-        eid = 0
-        ucerf.idx_set = ucerf.build_idx_set()
-        background_sids = ucerf.get_background_sids(
-            sitecol, integration_distance)
-        for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
-            with event_mon:
-                rups, n_occs = ucerf.generate_event_set(background_sids)
-            for i, rup in enumerate(rups):
-                rup.seed = oq.random_seed  # to think
-                rrup = rup.surface.get_min_distance(sitecol.mesh)
-                r_sites = sitecol.filter(rrup <= integration_distance)
-                if r_sites is None:
-                    continue
-                indices = r_sites.indices
-                events = []
-                for j in range(n_occs[i]):
-                    events.append((eid, ses_idx, j, 0))  # 0 is the sampling ID
-                    eid += 1
-                if events:
-                    ses_ruptures.append(
-                        calc.EBRupture(
-                            rup, indices,
-                            numpy.array(events, calc.event_dt),
-                            ucerf.source_id, grp_id, serial))
-                    serial += 1
-                    rupdic.num_events += len(events)
-        res['ruptures'][grp_id] = ses_ruptures
-        gsims = [dic[DEFAULT_TRT] for dic in rlzs_assoc.gsim_by_trt]
-        gg = riskinput.GmfGetter(gsims, ses_ruptures, sitecol,
-                                 imts, min_iml, oq.truncation_level,
-                                 correl_model, rlzs_assoc.samples[grp_id])
-        rlzs = rlzs_by_grp[grp_id]
-        res.update(event_based.compute_gmfs_and_curves(gg, rlzs, monitor))
-        res.calc_times[grp_id] = (ucerf.source_id, len(sitecol),
-                                  time.time() - t0)
-    return res
-
-
 def _copy_grp(src_group, grp_id, branch_name, branch_id):
     src = copy.copy(src_group[0])  # there is single source
     new = copy.copy(src_group)
@@ -733,8 +661,8 @@ def _copy_grp(src_group, grp_id, branch_name, branch_id):
     return new
 
 
-@base.calculators.add('ucerf_event_based')
-class UCERFEventBasedCalculator(event_based.EventBasedCalculator):
+@base.calculators.add('ucerf_rupture')
+class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
     """
     Event based PSHA calculator generating the ruptures only
     """
@@ -770,31 +698,163 @@ class UCERFEventBasedCalculator(event_based.EventBasedCalculator):
         logging.info('Found %d x %d logic tree branches', len(branches),
                      self.gsim_lt.get_num_paths())
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
-        self.rup_data = {}
         self.infos = []
         self.eid = collections.Counter()  # sm_id -> event_id
         self.sm_by_grp = self.csm.info.get_sm_by_grp()
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
 
+    def gen_args(self):
+        oq = self.oqparam
+        for sm_id in range(len(self.csm.source_models)):
+            ssm = self.csm.get_model(sm_id)
+            monitor = self.monitor.new(
+                ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
+                maximum_distance=oq.maximum_distance,
+                samples=ssm.source_models[0].samples,
+                seed=ssm.source_model_lt.seed)
+            gsims = ssm.gsim_lt.values[DEFAULT_TRT]
+            yield ssm.get_sources(), self.sitecol, gsims, monitor
+
     def execute(self):
         """
         Run the ucerf calculation
         """
-        monitor = self.monitor(oqparam=self.oqparam)
-        res = parallel.apply(
-            compute_ruptures_gmfs_curves,
-            (self.csm.source_models, self.sitecol, self.rlzs_assoc, monitor),
-            concurrent_tasks=self.oqparam.concurrent_tasks).submit_all()
-        L = len(self.oqparam.imtls.array)
-        acc = {rlz.ordinal: ProbabilityMap(L, 1)
-               for rlz in self.rlzs_assoc.realizations}
-        data = functools.reduce(
-            self.combine_pmaps_and_save_gmfs, res, AccumDict(acc))
+        res = parallel.starmap(compute_events, self.gen_args()).submit_all()
+        acc = self.zerodict()
+        num_ruptures = {}
+        for ruptures_by_grp in res:
+            [(grp_id, ruptures)] = ruptures_by_grp.items()
+            num_ruptures[grp_id] = len(ruptures)
+            acc.calc_times.extend(ruptures_by_grp.calc_times[grp_id])
+            self.save_ruptures(ruptures_by_grp)
         self.save_data_transfer(res)
+        with self.monitor('store source_info', autoflush=True):
+            self.store_source_info(self.infos)
         self.datastore['csm_info'] = self.csm.info
-        self.datastore['source_info'] = numpy.array(
-            self.infos, source.SourceInfo.dt)
-        if 'gmf_data' in self.datastore:
-            self.datastore.set_nbytes('gmf_data')
-        return data
+        return num_ruptures
+
+
+def compute_ruptures(sources, sitecol, gsims, monitor):
+    """
+    :param sources: a sequence of UCERF sources
+    :param sitecol: a SiteCollection instance
+    :param gsims: a list of GSIMs
+    :param monitor: a Monitor instance
+    :returns: an AccumDict grp_id -> EBRuptures
+    """
+    [src] = sources  # there is a single source per UCERF branch
+    integration_distance = monitor.maximum_distance[DEFAULT_TRT]
+    res = AccumDict()
+    res.calc_times = AccumDict()
+    serial = 1
+    event_mon = monitor('sampling ruptures', measuremem=False)
+    res.num_events = 0
+    res.trt = DEFAULT_TRT
+    t0 = time.time()
+    # set the seed before calling generate_event_set
+    numpy.random.seed(monitor.seed + src.src_group_id)
+    ebruptures = []
+    eid = 0
+    src.build_idx_set()
+    background_sids = src.get_background_sids(sitecol, integration_distance)
+    for ses_idx in range(1, monitor.ses_per_logic_tree_path + 1):
+        with event_mon:
+            rups, n_occs = src.generate_event_set(background_sids)
+        for rup, n_occ in zip(rups, n_occs):
+            rup.seed = monitor.seed  # to think
+            rrup = rup.surface.get_min_distance(sitecol.mesh)
+            r_sites = sitecol.filter(rrup <= integration_distance)
+            if r_sites is None:
+                continue
+            indices = r_sites.indices
+            events = []
+            for occ in range(n_occ):
+                events.append((eid, ses_idx, occ, 0))  # 0 is the sampling
+                eid += 1
+            if events:
+                evs = numpy.array(events, calc.event_dt)
+                ebruptures.append(
+                    calc.EBRupture(rup, indices, evs, src.source_id,
+                                   src.src_group_id, serial))
+                serial += 1
+                res.num_events += len(events)
+    res[src.src_group_id] = ebruptures
+    res.calc_times[src.src_group_id] = (
+        src.source_id, len(sitecol), time.time() - t0)
+    res.rup_data = {src.src_group_id:
+                    calc.RuptureData(DEFAULT_TRT, gsims).to_array(ebruptures)}
+    return res
+
+
+def compute_events(sources, sitecol, gsims, monitor):
+    """
+    :param sources: a sequence of UCERF sources
+    :param sitecol: a SiteCollection instance
+    :param gsims: a list of GSIMs
+    :param monitor: a Monitor instance
+    :returns: an AccumDict grp_id -> EBRs
+    """
+    ruptures_by_grp = compute_ruptures(sources, sitecol, gsims, monitor)
+    for grp_id in ruptures_by_grp:
+        ruptures_by_grp[grp_id] = [
+            EBR(ebr.serial, ebr.source_id, ebr.events)
+            for ebr in ruptures_by_grp[grp_id]]
+    return ruptures_by_grp
+
+
+class List(list):
+    """Trivial container returned by compute_losses"""
+
+
+def compute_losses(ssm, sitecol, assetcol, riskmodel,
+                   imts, trunc_level, correl_model, min_iml, monitor):
+    """
+    Compute the losses for a single source model.
+
+    :param ssm: CompositeSourceModel containing a single source model
+    :param sitecol: a SiteCollection instance
+    :param assetcol: an AssetCollection instance
+    :param riskmodel: a RiskModel instance
+    :param imts: a list of Intensity Measure Types
+    :param trunc_level: truncation level
+    :param correl_model: correlation model
+    :param min_iml: vector of minimum intensities, one per IMT
+    :param monitor: a Monitor instance
+    :returns: a List containing the losses by taxonomy and some attributes
+    """
+    [grp] = ssm.src_groups
+    res = List()
+    gsims = ssm.gsim_lt.values[DEFAULT_TRT]
+    res.ruptures_by_grp = compute_ruptures(grp, sitecol, gsims, monitor)
+    [(grp_id, ebruptures)] = res.ruptures_by_grp.items()
+    rlzs_assoc = ssm.info.get_rlzs_assoc()
+    num_rlzs = len(rlzs_assoc.realizations)
+    ri = riskinput.RiskInputFromRuptures(
+        DEFAULT_TRT, rlzs_assoc, imts, sitecol, ebruptures, trunc_level,
+        correl_model, min_iml)
+    res.append(losses_by_taxonomy(ri, riskmodel, assetcol, monitor))
+    res.sm_id = ssm.sm_id
+    res.num_events = len(ri.eids)
+    start = res.sm_id * num_rlzs
+    res.rlz_slice = slice(start, start + num_rlzs)
+    # don't return back the ruptures, only the events and rup_data
+    res.ruptures_by_grp[grp_id] = [EBR(ebr.serial, ebr.source_id, ebr.events)
+                                   for ebr in ebruptures]
+    return res
+
+
+@base.calculators.add('ucerf_risk')
+class UCERFRiskCalculator(EbriskCalculator):
+    """
+    Event based risk calculator for UCERF, parallelizing on the source models
+    """
+    pre_execute = UCERFRuptureCalculator.__dict__['pre_execute']
+
+    def execute(self):
+        num_rlzs = len(self.rlzs_assoc.realizations)
+        self.grp_trt = self.csm.info.grp_trt()
+        allres = parallel.starmap(compute_losses, self.gen_args()).submit_all()
+        num_events = self.save_results(allres, num_rlzs)
+        self.save_data_transfer(allres)
+        return num_events
