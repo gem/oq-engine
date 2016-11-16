@@ -22,13 +22,12 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import zip
+from openquake.baselib.python3compat import zip, encode
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import (
     groupby, split_in_blocks, get_array)
 from openquake.hazardlib import site, calc
 from openquake.risklib import scientific, riskmodels
-from openquake.commonlib.riskmodels import get_risk_models
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -208,6 +207,28 @@ class AssetCollection(object):
                         value = getattr(asset, name + 's')[lt]
                     record[field] = value
         return assetcol, numpy.array(sorted_taxonomies, hdf5.vstr)
+
+
+def read_composite_risk_model(dstore):
+    """
+    :param dstore: a DataStore instance
+    :returns: a :class:`CompositeRiskModel` instance
+    """
+    oqparam = dstore['oqparam']
+    crm = dstore.getitem('composite_risk_model')
+    rmdict, retrodict = {}, {}
+    for taxo, rm in crm.items():
+        rmdict[taxo] = {}
+        retrodict[taxo] = {}
+        for lt in rm:
+            lt = encode(lt)
+            rf = dstore['composite_risk_model/%s/%s' % (taxo, lt)]
+            if lt.endswith('_retrofitted'):
+                # strip _retrofitted, since len('_retrofitted') = 12
+                retrodict[taxo][lt[:-12]] = rf
+            else:
+                rmdict[taxo][lt] = rf
+    return CompositeRiskModel(oqparam, rmdict, retrodict)
 
 
 class CompositeRiskModel(collections.Mapping):
