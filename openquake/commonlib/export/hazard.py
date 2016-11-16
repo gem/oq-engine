@@ -809,7 +809,7 @@ def export_disagg_xml(ekey, dstore):
     fnames = []
     writercls = hazard_writers.DisaggXMLWriter
     for key in group:
-        matrix = pickle.loads(group[key].value)
+        matrix = dstore['disagg/' + key]
         attrs = group[key].attrs
         rlz = rlzs[attrs['rlzi']]
         poe = attrs['poe']
@@ -830,8 +830,9 @@ def export_disagg_xml(ekey, dstore):
             eps_bin_edges=attrs['eps_bin_edges'],
             tectonic_region_types=attrs['trts'],
         )
-        data = [DisaggMatrix(poe, iml, dim_labels, matrix[i])
-                for i, dim_labels in enumerate(disagg.pmf_map)]
+        data = [
+            DisaggMatrix(poe, iml, dim_labels, matrix['_'.join(dim_labels)])
+            for i, dim_labels in enumerate(disagg.pmf_map)]
         writer.serialize(data)
         fnames.append(fname)
     return sorted(fnames)
@@ -885,7 +886,7 @@ def export_disagg_csv(ekey, dstore):
     group = dstore['disagg']
     fnames = []
     for key in group:
-        matrix = pickle.loads(group[key].value)
+        matrix = dstore['disagg/' + key]
         attrs = group[key].attrs
         rlz = rlzs[attrs['rlzi']]
         poe = attrs['poe']
@@ -907,9 +908,10 @@ def export_disagg_csv(ekey, dstore):
         metadata['Eps'] = attrs['eps_bin_edges']
         metadata['TRT'] = attrs['trts']
         data = {}
-        for i, dim_labels in enumerate(disagg.pmf_map):
-            fname = dstore.export_path(key + '_%s.csv' % '_'.join(dim_labels))
-            data[dim_labels] = poe, iml, matrix[i], fname
+        for dim_labels in disagg.pmf_map:
+            label = '_'.join(dim_labels)
+            fname = dstore.export_path(key + '_%s.csv' % label)
+            data[dim_labels] = poe, iml, matrix[label].value, fname
             fnames.append(fname)
         save_disagg_to_csv(metadata, data)
     return fnames

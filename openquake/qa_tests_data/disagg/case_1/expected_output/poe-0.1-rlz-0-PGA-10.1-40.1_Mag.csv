@@ -1,0 +1,5 @@
+# smlt_path=b1,gsimlt_path=b1,imt=PGA,investigation_time=50.0,lon=10.1,lat=40.1,poe=0.1,iml=0.300492774725
+Mag,poe
+5.5,0.0558110259751
+6.5,0.0322921041577
+7.5,0.0103579119847
