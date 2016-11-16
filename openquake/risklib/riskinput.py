@@ -22,7 +22,7 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import zip
+from openquake.baselib.python3compat import zip, encode
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import (
     groupby, split_in_blocks, get_array)
@@ -209,7 +209,11 @@ class AssetCollection(object):
         return assetcol, numpy.array(sorted_taxonomies, hdf5.vstr)
 
 
-def get_composite_risk_model(dstore):
+def read_composite_risk_model(dstore):
+    """
+    :param dstore: a DataStore instance
+    :returns: a :class:`CompositeRiskModel` instance
+    """
     oqparam = dstore['oqparam']
     crm = dstore.getitem('composite_risk_model')
     rmdict, retrodict = {}, {}
@@ -217,6 +221,7 @@ def get_composite_risk_model(dstore):
         rmdict[taxo] = {}
         retrodict[taxo] = {}
         for lt in rm:
+            lt = encode(lt)
             rf = dstore['composite_risk_model/%s/%s' % (taxo, lt)]
             if lt.endswith('_retrofitted'):
                 # strip _retrofitted, since len('_retrofitted') = 12
