@@ -198,7 +198,7 @@ def poe_map(src, s_sites, imtls, cmaker, trunclevel, bbs,
 # this is used by the engine
 def pmap_from_grp(
         sources, sites, imtls, gsims, truncation_level=None,
-        source_site_filter='SourceSitesFilter', maximum_distance=None, bbs=(),
+        source_site_filter='RtreeFilter', maximum_distance=None, bbs=(),
         monitor=Monitor()):
     """
     Compute the hazard curves for a set of sources belonging to the same
@@ -208,9 +208,9 @@ def pmap_from_grp(
 
     :returns: a ProbabilityMap instance
     """
-    if source_site_filter == 'SourceSitesFilter':  # default
+    if source_site_filter == 'RtreeFilter':  # default
         source_site_filter = (
-            filters.SourceSitesFilter(maximum_distance)
+            filters.RtreeFilter(sites, maximum_distance, rtree=None)
             if maximum_distance else filters.source_site_noop_filter)
     with GroundShakingIntensityModel.forbid_instantiation():
         imtls = DictArray(imtls)
