@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import sys
 from nose.plugins.attrib import attr
-from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
+from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.disagg import case_1, case_2
 
 
