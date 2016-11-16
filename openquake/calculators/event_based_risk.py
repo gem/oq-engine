@@ -29,7 +29,7 @@ from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, humansize, block_splitter
 from openquake.calculators import base, event_based
 from openquake.commonlib import parallel, calc
-from openquake.risklib import riskinput, scientific
+from openquake.risklib import scientific, riskinput
 from openquake.commonlib.parallel import starmap
 
 U32 = numpy.uint32
@@ -206,9 +206,9 @@ def event_based_risk(riskinput, riskmodel, assetcol, monitor):
 
 
 class EventBasedStats(object):
-    def __init__(self, datastore, riskmodel, monitor, avg_losses, result):
+    def __init__(self, datastore, monitor, avg_losses, result):
         self.datastore = datastore
-        self.riskmodel = riskmodel
+        self.riskmodel = riskinput.read_composite_risk_model(datastore)
         self.oqparam = datastore['oqparam']
         self.monitor = monitor
         self.avg_losses = avg_losses
@@ -217,7 +217,7 @@ class EventBasedStats(object):
         N = len(self.assetcol)
         E = sum(len(v) for v in self.datastore['events'].values())
         self.loss_curve_dt, self.loss_maps_dt = (
-            riskmodel.build_loss_dtypes(
+            self.riskmodel.build_loss_dtypes(
                 self.oqparam.conditional_loss_poes,
                 self.oqparam.insured_losses + 1))
 
@@ -599,7 +599,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')
         oq = self.oqparam
-        calc = EventBasedStats(self.datastore, self.riskmodel,
+        calc = EventBasedStats(self.datastore,
                                self.monitor, self.avg_losses, result)
         builder = scientific.StatsBuilder(
             oq.quantile_loss_curves, oq.conditional_loss_poes, [],

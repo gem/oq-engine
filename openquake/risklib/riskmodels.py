@@ -256,6 +256,13 @@ class RiskModel(object):
         return [lt for lt in self.loss_types
                 if self.risk_functions[lt].imt == imt]
 
+    def __toh5__(self):
+        risk_functions = {lt: func for lt, func in self.risk_functions.items()}
+        if hasattr(self, 'retro_functions'):
+            for lt, func in self.retro_functions.items():
+                risk_functions[lt + '_retrofitted'] = func
+        return risk_functions, {}
+
     def __repr__(self):
         return '<%s%s>' % (self.__class__.__name__, list(self.risk_functions))
 
@@ -369,8 +376,8 @@ class Classical(RiskModel):
         self.poes_disagg = poes_disagg
         self.insured_losses = insured_losses
         self.loss_ratios = {
-            lt: vf.mean_loss_ratios_with_steps(lrem_steps_per_interval)
-            for lt, vf in vulnerability_functions.items()}
+            lt: vf.mean_loss_ratios_with_steps(self.lrem_steps_per_interval)
+            for lt, vf in self.risk_functions.items()}
 
     def __call__(self, loss_type, assets, hazard_curve, _eps=None):
         """
@@ -588,7 +595,7 @@ class ClassicalBCR(RiskModel):
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions_orig
         self.retro_functions = vulnerability_functions_retro
-        self.assets = None  # set a __call__ time
+        self.assets = []  # set a __call__ time
         self.interest_rate = interest_rate
         self.asset_life_expectancy = asset_life_expectancy
         self.hazard_imtls = hazard_imtls
