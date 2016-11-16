@@ -219,14 +219,9 @@ class CompositeRiskModel(collections.Mapping):
     :param rmdict:
         a dictionary (imt, taxonomy) -> loss_type -> risk_function
     """
-    def __init__(self, oqparam, rmdict):
+    def __init__(self, oqparam, rmdict, retrodict):
         self.damage_states = []
         self._riskmodels = {}
-        self.loss_types = []
-        self.curve_builders = []
-        self.lti = {}  # loss_type -> idx
-        self.covs = 0  # number of coefficients of variation
-        self.taxonomies = []
 
         if getattr(oqparam, 'limit_states', []):
             # classical_damage/scenario_damage calculator
@@ -240,9 +235,8 @@ class CompositeRiskModel(collections.Mapping):
                     taxonomy, oqparam, fragility_functions=ffs_by_lt)
         elif oqparam.calculation_mode.endswith('_bcr'):
             # classical_bcr calculator
-            retro = get_risk_models(oqparam, 'vulnerability_retrofitted')
             for (taxonomy, vf_orig), (taxonomy_, vf_retro) in \
-                    zip(rmdict.items(), retro.items()):
+                    zip(rmdict.items(), retrodict.items()):
                 assert taxonomy == taxonomy_  # same imt and taxonomy
                 self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
                     taxonomy, oqparam,
@@ -258,6 +252,13 @@ class CompositeRiskModel(collections.Mapping):
                     self._riskmodels[taxonomy] = riskmodels.get_riskmodel(
                         taxonomy, oqparam, vulnerability_functions=vfs)
 
+        self.init(oqparam)
+
+    def init(self, oqparam):
+        self.loss_types = []
+        self.curve_builders = []
+        self.lti = {}  # loss_type -> idx
+        self.covs = 0  # number of coefficients of variation
         self.loss_types = self.make_curve_builders(oqparam)
         taxonomies = set()
         for taxonomy, riskmodel in self._riskmodels.items():
@@ -490,6 +491,9 @@ class CompositeRiskModel(collections.Mapping):
                                     yield out
         if hasattr(hazard_getter, 'gmfbytes'):  # for event based risk
             monitor.gmfbytes = hazard_getter.gmfbytes
+
+    def __toh5__(self):
+        return self._riskmodels, dict(covs=self.covs)
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
