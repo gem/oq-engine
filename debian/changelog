@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Improved the serialization of the CompositeRiskModel
+  * Turned the CompositeRiskModel into a HDF5-serializable object
   * Fixed all doctests for Python 3
 
   [Daniele Viganò]

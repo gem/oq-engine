@@ -257,7 +257,11 @@ class RiskModel(object):
                 if self.risk_functions[lt].imt == imt]
 
     def __toh5__(self):
-        return self.risk_functions, {}
+        risk_functions = {lt: func for lt, func in self.risk_functions.items()}
+        if hasattr(self, 'retro_functions'):
+            for lt, func in self.retro_functions.items():
+                risk_functions[lt + '_retrofitted'] = func
+        return risk_functions, {}
 
     def __repr__(self):
         return '<%s%s>' % (self.__class__.__name__, list(self.risk_functions))
