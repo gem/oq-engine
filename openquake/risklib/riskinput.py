@@ -221,7 +221,7 @@ def read_composite_risk_model(dstore):
         rmdict[taxo] = {}
         retrodict[taxo] = {}
         for lt in rm:
-            lt = encode(lt)
+            lt = str(lt)
             rf = dstore['composite_risk_model/%s/%s' % (taxo, lt)]
             if lt.endswith('_retrofitted'):
                 # strip _retrofitted, since len('_retrofitted') = 12
