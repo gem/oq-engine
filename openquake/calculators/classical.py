@@ -46,7 +46,7 @@ def split_filter_source(src, sites, ss_filter, random_seed):
     """
     :param src: an heavy source
     :param sites: sites affected by the source
-    :param ss_filter: a SourceSitesFilter instance
+    :param ss_filter: a RtreeFilter instance
     :random_seed: used only for event based calculations
     :returns: a list of split sources
     """
@@ -395,13 +395,13 @@ class PSHACalculator(base.HazardCalculator):
         """
         if pmap_by_grp_id.bb_dict:
             self.datastore['bb_dict'] = pmap_by_grp_id.bb_dict
+        grp_trt = self.csm.info.grp_trt()
         with self.monitor('saving probability maps', autoflush=True):
             for grp_id, pmap in pmap_by_grp_id.items():
                 if pmap:  # pmap can be missing if the group is filtered away
                     key = 'poes/%04d' % grp_id
                     self.datastore[key] = pmap
-                    self.datastore.set_attrs(
-                        key, trt=self.csm.info.get_trt(grp_id))
+                    self.datastore.set_attrs(key, trt=grp_trt[grp_id])
             if 'poes' in self.datastore:
                 self.datastore.set_nbytes('poes')
 

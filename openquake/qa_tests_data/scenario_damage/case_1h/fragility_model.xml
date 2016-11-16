@@ -16,7 +16,7 @@ xmlns:gml="http://www.opengis.net/gml"
         </limitStates>
         <fragilityFunction
         format="continuous"
-        id="tax1"
+        id="tax1+"
         shape="logncdf"
         >
             <imls imt="PGA" maxIML="5.0" minIML="0.0" noDamageLimit="0"/>

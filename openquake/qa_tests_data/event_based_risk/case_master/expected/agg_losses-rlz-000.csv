@@ -1,4 +1,4 @@
-event_tag,event_set,business_interruption,contents,nonstructural,occupants:float32,structural
+event_tag,year,business_interruption,contents,nonstructural,occupants:float32,structural
 grp=01~ses=0001~src=2~rup=483-01,1,1.49382E+02,8.56472E+02,1.24607E+03,2.98764E-03,0.00000E+00
 grp=01~ses=0002~src=2~rup=484-01,2,2.57322E+02,1.49833E+03,2.19873E+03,5.14644E-03,4.09412E+02
 grp=01~ses=0002~src=2~rup=485-01,2,1.99195E+02,1.63955E+03,2.78711E+03,3.98390E-03,2.18502E+02
