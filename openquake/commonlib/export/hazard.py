@@ -30,10 +30,10 @@ from openquake.baselib.general import (
 from openquake.baselib import hdf5
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
+from openquake.risklib.riskinput import GmfGetter
 from openquake.commonlib.export import export
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib import writers, hazard_writers, util
-from openquake.commonlib.riskinput import GmfGetter
 from openquake.commonlib import calc
 
 F32 = numpy.float32

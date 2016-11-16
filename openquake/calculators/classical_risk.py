@@ -21,8 +21,8 @@ import logging
 import numpy
 
 from openquake.baselib.general import groupby
-from openquake.risklib import scientific
-from openquake.commonlib import readinput, datastore, source, riskinput
+from openquake.risklib import scientific, riskinput
+from openquake.commonlib import readinput, datastore, source
 from openquake.calculators import base
 
 
