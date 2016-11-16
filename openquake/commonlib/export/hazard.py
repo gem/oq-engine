@@ -874,9 +874,7 @@ def save_disagg_to_csv(metadata, matrices):
             values.append(matrix.flatten())
             values = numpy.array(values).T
 
-        with open(fname, 'w') as f:
-            f.write(header + '\n')
-            numpy.savetxt(f, values, fmt='%s', delimiter=',')
+        writers.write_csv(fname, values, comment=header, fmt='%.5E')
 
 
 @export.add(('disagg', 'csv'))
