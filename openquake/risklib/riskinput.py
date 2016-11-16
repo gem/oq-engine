@@ -28,7 +28,6 @@ from openquake.baselib.general import (
     groupby, split_in_blocks, get_array)
 from openquake.hazardlib import site, calc
 from openquake.risklib import scientific, riskmodels
-from openquake.commonlib.riskmodels import get_risk_models
 
 U8 = numpy.uint8
 U16 = numpy.uint16
