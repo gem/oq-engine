@@ -77,6 +77,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = writetmp(view('mean_avg_losses', self.calc.datastore))
         self.assertEqualFiles('expected/mean_avg_losses.txt', fname)
 
+        # test the composite_risk_model keys (i.e. slash escaping)
+        crm = sorted(self.calc.datastore.getitem('composite_risk_model'))
+        self.assertEqual(crm, ['RC%2B', 'RM', 'W%2F1'])
         # export a specific eid
         [fname] = export(('ass_loss_table:0', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/losses-eid=0.csv', fname)
