@@ -256,6 +256,13 @@ class RiskModel(object):
         return [lt for lt in self.loss_types
                 if self.risk_functions[lt].imt == imt]
 
+    def __toh5__(self):
+        risk_functions = {lt: func for lt, func in self.risk_functions.items()}
+        if hasattr(self, 'retro_functions'):
+            for lt, func in self.retro_functions.items():
+                risk_functions[lt + '_retrofitted'] = func
+        return risk_functions, {}
+
     def __repr__(self):
         return '<%s%s>' % (self.__class__.__name__, list(self.risk_functions))
 
@@ -369,8 +376,8 @@ class Classical(RiskModel):
         self.poes_disagg = poes_disagg
         self.insured_losses = insured_losses
         self.loss_ratios = {
-            lt: vf.mean_loss_ratios_with_steps(lrem_steps_per_interval)
-            for lt, vf in vulnerability_functions.items()}
+            lt: vf.mean_loss_ratios_with_steps(self.lrem_steps_per_interval)
+            for lt, vf in self.risk_functions.items()}
 
     def __call__(self, loss_type, assets, hazard_curve, _eps=None):
         """
@@ -514,7 +521,7 @@ class ProbabilisticEventBased(RiskModel):
             assets, loss_type, loss_ratios=loss_ratios, eids=eids)
 
 
-@registry.add('ebrisk', 'ucerf_risk', 'ucerf_risk_fast')
+@registry.add('ebrisk', 'ucerf_rupture', 'ucerf_risk')
 class EventBasedReduced(RiskModel):
     """
     Implements the reduced event based riskmodel. This is used by the
@@ -523,11 +530,14 @@ class EventBasedReduced(RiskModel):
     losses, nor the loss curves. The only output returned is the total loss.
     """
     kind = 'vulnerability'
+    alt_dt = numpy.dtype([('eid', U32), ('aid', U32), ('loss', F32)])
 
-    def __init__(self, taxonomy, vulnerability_functions, time_event):
+    def __init__(self, taxonomy, vulnerability_functions, time_event,
+                 asset_loss_table):
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.time_event = time_event
+        self.asset_loss_table = asset_loss_table
 
     def __call__(self, loss_type, assets, gmvs_eids, epsgetter):
         """
@@ -548,6 +558,7 @@ class EventBasedReduced(RiskModel):
         alosses = numpy.zeros(len(assets))
         elosses = numpy.zeros(len(gmvs))
         means, covs, idxs = vf.interpolate(gmvs)
+        alt = []
         e, E = len(means), len(eids)
         for i, asset in enumerate(assets):
             epsilons = epsgetter(asset.ordinal, eids)
@@ -561,8 +572,13 @@ class EventBasedReduced(RiskModel):
             losses = ratios * asset.value(loss_type, self.time_event)
             alosses[i] = losses.sum()
             elosses += losses
+            if self.asset_loss_table:
+                aid = asset.ordinal
+                for eid, loss in zip(eids, losses):
+                    alt.append((eid, aid, loss))
         return scientific.Output(
-            assets, loss_type, alosses=alosses, elosses=elosses, eids=eids)
+            assets, loss_type, alosses=alosses, elosses=elosses,
+            alt=numpy.array(alt, self.alt_dt), eids=eids)
 
 
 @registry.add('classical_bcr')
@@ -579,7 +595,7 @@ class ClassicalBCR(RiskModel):
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions_orig
         self.retro_functions = vulnerability_functions_retro
-        self.assets = None  # set a __call__ time
+        self.assets = []  # set a __call__ time
         self.interest_rate = interest_rate
         self.asset_life_expectancy = asset_life_expectancy
         self.hazard_imtls = hazard_imtls
