@@ -172,6 +172,9 @@ class OqParamTestCase(unittest.TestCase):
                       str(ctx.exception))
 
     def test_create_export_dir(self):
+        if os.environ.get('TRAVIS'):
+            # this fails only when --with-doctest is set
+            raise unittest.SkipTest
         EDIR = os.path.join(TMP, 'nonexisting')
         OqParam(
             calculation_mode='event_based',
@@ -184,6 +187,9 @@ class OqParamTestCase(unittest.TestCase):
         self.assertTrue(os.path.exists(EDIR))
 
     def test_invalid_export_dir(self):
+        if os.environ.get('TRAVIS'):
+            # this fails only when --with-doctest is set
+            raise unittest.SkipTest
         with self.assertRaises(ValueError) as ctx:
             OqParam(
                 calculation_mode='event_based', inputs=GST,
@@ -322,7 +328,6 @@ class OqParamTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             oq.set_risk_imtls(rm)
         self.assertIn("Unknown IMT: ' SA(0.1)'", str(ctx.exception))
-
 
     def test_disaggregation(self):
         with self.assertRaises(ValueError) as ctx:

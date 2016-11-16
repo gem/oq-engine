@@ -444,7 +444,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             # parallelize on the background sources, small tasks
             args = (bckgnd_sources, self.sitecol, oq.imtls,
                     gsims, self.oqparam.truncation_level,
-                    'SourceSitesFilter', max_dist, (), monitor)
+                    'RtreeFilter', max_dist, (), monitor)
             bg_res = parallel.apply(
                 pmap_from_grp, args,
                 concurrent_tasks=self.oqparam.concurrent_tasks).submit_all()

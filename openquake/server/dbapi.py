@@ -167,19 +167,19 @@ If a query that should return a scalar returns something else, or if a
 query that should return a row returns a different number of rows,
 appropriate errors are raised:
 
->>> db('SELECT * FROM job WHERE id=?x', 1, scalar=True)
+>>> db('SELECT * FROM job WHERE id=?x', 1, scalar=True) # doctest: +IGNORE_EXCEPTION_DETAIL
 Traceback (most recent call last):
    ...
 TooManyColumns: 2, expected 1
 
->>> db('SELECT * FROM job', None, one=True)
+>>> db('SELECT * FROM job', None, one=True) # doctest: +IGNORE_EXCEPTION_DETAIL
 Traceback (most recent call last):
    ...
 TooManyRows: 3, expected 1
 
 If a row is expected but not found, a NotFound exception is raised:
 
->>> db('SELECT * FROM job WHERE id=?x', None, one=True)
+>>> db('SELECT * FROM job WHERE id=?x', None, one=True) # doctest: +IGNORE_EXCEPTION_DETAIL
 Traceback (most recent call last):
    ...
 NotFound
