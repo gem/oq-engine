@@ -18,7 +18,6 @@
 
 import re
 import os
-import pickle
 import logging
 import operator
 import collections
@@ -754,7 +753,7 @@ def _calc_gmfs(dstore, serial, eid):
 
 
 @export.add(('gmf_data', 'csv'))
-def export_gmf_scenario(ekey, dstore):
+def export_gmf_data_csv(ekey, dstore):
     oq = dstore['oqparam']
     if 'scenario' in oq.calculation_mode:
         imtls = dstore['oqparam'].imtls
@@ -774,11 +773,39 @@ def export_gmf_scenario(ekey, dstore):
                 dest = dstore.build_fname('gmf', '%s-%s' % (gsim, imt), 'csv')
                 data = util.compose_arrays(sitemesh, gmfs)
                 writer.save(data, dest)
+        return writer.getsaved()
     else:  # event based
-        logging.warn('Not exporting the full GMFs for event_based, but you can'
-                     ' specify the rupture ordinals with gmfs:R1,...,Rn')
-        return []
-    return writer.getsaved()
+        rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+        sitecol = dstore['sitecol']
+        fnames = []
+        imts = list(oq.imtls)
+        for sm_id in dstore['gmf_data']:
+            events = dstore['events/' + sm_id]
+            etag = dict(zip(range(len(events)), build_etags(events)))
+            for rlzno in dstore['gmf_data/' + sm_id]:
+                rlz = rlzs[int(rlzno)]
+                smlt_path = '_'.join(rlz.sm_lt_path)
+                gsimlt_path = rlz.gsim_rlz.uid
+                gmf = group_array(dstore['gmf_data/%s/%s' % (sm_id, rlzno)],
+                                  'imti')
+                for imti in gmf:
+                    for eid, array in group_array(gmf[imti], 'eid').items():
+                        imt = imts[imti]
+                        sids = array['sid']
+                        data = zip(sitecol.lons[sids], sitecol.lats[sids],
+                                   array['gmv'])
+                        comment = ('smlt_path=%s, gsimlt_path=%s, '
+                                   'investigation_time=%s, imt=%s' %
+                                   (smlt_path, gsimlt_path,
+                                    oq.investigation_time, imt))
+                        fname = dstore.build_fname(
+                                'gmf', '%s-rlz-%03d-%s' % (
+                                    etag[eid], rlz.ordinal, imt), 'csv')
+                        writers.write_csv(
+                            fname, data, header=['lon', 'lat', 'gmv'],
+                            comment=comment)
+                        fnames.append(fname)
+        return fnames
 
 
 @export.add(('gmf_data', 'hdf5'))
