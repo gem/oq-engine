@@ -849,7 +849,7 @@ def save_disagg_to_csv(metadata, matrices):
         if value is not None and key not in skip_keys)
 
     for disag_type, (poe, iml, matrix, fname) in matrices.items():
-        header = '# %s,poe=%s,iml=%s\n' % (base_header, poe, iml)
+        header = '%s,poe=%s,iml=%s\n' % (base_header, poe, iml)
 
         if disag_type == 'Mag,Lon,Lat':
             matrix = numpy.swapaxes(matrix, 0, 1)
