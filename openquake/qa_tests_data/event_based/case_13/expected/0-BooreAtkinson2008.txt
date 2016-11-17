@@ -1,3 +1,4 @@
+event_tag,site_indices,PGA
 grp=00~ses=0002~src=1~rup=1-01,0,1.439133E-01
 grp=00~ses=0003~src=1~rup=1-01,0,1.341293E-01
 grp=00~ses=0004~src=1~rup=1-01,0,8.788782E-02
