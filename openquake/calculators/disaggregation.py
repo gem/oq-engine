@@ -287,8 +287,8 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         mag, dist, lons, lats, eps = bin_edges
         disp_name = DISAGG_RES_FMT % dict(
             poe=poe, rlz=rlz_id, imt=imt_str, lon=lon, lat=lat)
-
-        self.datastore[disp_name] = matrix
+        self.datastore[disp_name] = {
+            '_'.join(key): mat for key, mat in zip(disagg.pmf_map, matrix)}
         attrs = self.datastore.hdf5[disp_name].attrs
         attrs['rlzi'] = rlz_id
         attrs['imt'] = imt_str

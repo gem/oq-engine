@@ -813,7 +813,7 @@ def export_disagg_xml(ekey, dstore):
     fnames = []
     writercls = hazard_writers.DisaggXMLWriter
     for key in group:
-        matrix = pickle.loads(group[key].value)
+        matrix = dstore['disagg/' + key]
         attrs = group[key].attrs
         rlz = rlzs[attrs['rlzi']]
         poe = attrs['poe']
@@ -834,8 +834,9 @@ def export_disagg_xml(ekey, dstore):
             eps_bin_edges=attrs['eps_bin_edges'],
             tectonic_region_types=attrs['trts'],
         )
-        data = [DisaggMatrix(poe, iml, dim_labels, matrix[i])
-                for i, dim_labels in enumerate(disagg.pmf_map)]
+        data = [
+            DisaggMatrix(poe, iml, dim_labels, matrix['_'.join(dim_labels)])
+            for i, dim_labels in enumerate(disagg.pmf_map)]
         writer.serialize(data)
         fnames.append(fname)
     return sorted(fnames)
