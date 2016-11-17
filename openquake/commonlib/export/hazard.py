@@ -155,6 +155,19 @@ def export_ses_csv(ekey, dstore):
     return [dest]
 
 
+@export.add(('rup_data', 'csv'))
+def export_rup_data(ekey, dstore):
+    rupture_data = dstore[ekey[0]]
+    paths = []
+    for trt in sorted(rupture_data):
+        fname = 'rup_data_%s.csv' % trt.lower().replace(' ', '_')
+        data = rupture_data[trt].value
+        data.sort(order='rupserial')
+        if len(data):
+            paths.append(write_csv(dstore.export_path(fname), data))
+    return paths
+
+
 # #################### export Ground Motion fields ########################## #
 
 class GmfSet(object):
