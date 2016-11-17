@@ -32,8 +32,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
 from openquake.risklib.riskinput import GmfGetter
 from openquake.commonlib.export import export
-from openquake.commonlib import writers, hazard_writers, util
-from openquake.commonlib import calc
+from openquake.commonlib import writers, hazard_writers, calc, util
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -643,7 +642,10 @@ def export_gmf(ekey, dstore):
                 continue
             etags = build_etags(events[key])
         for rlz in rlzs:
-            gmf_arr = gmf_data['%04d' % rlz.ordinal].value
+            try:
+                gmf_arr = gmf_data['%04d' % rlz.ordinal].value
+            except KeyError:  # no GMFs for the given realization
+                continue
             ruptures = []
             for eid, gmfa in group_array(gmf_arr, 'eid').items():
                 rup = util.Rupture(sm_id, eid, etags[eid],
@@ -810,7 +812,7 @@ def export_disagg_xml(ekey, dstore):
     fnames = []
     writercls = hazard_writers.DisaggXMLWriter
     for key in group:
-        matrix = pickle.loads(group[key].value)
+        matrix = dstore['disagg/' + key]
         attrs = group[key].attrs
         rlz = rlzs[attrs['rlzi']]
         poe = attrs['poe']
@@ -831,11 +833,89 @@ def export_disagg_xml(ekey, dstore):
             eps_bin_edges=attrs['eps_bin_edges'],
             tectonic_region_types=attrs['trts'],
         )
-        data = [DisaggMatrix(poe, iml, dim_labels, matrix[i])
-                for i, dim_labels in enumerate(disagg.pmf_map)]
+        data = [
+            DisaggMatrix(poe, iml, dim_labels, matrix['_'.join(dim_labels)])
+            for i, dim_labels in enumerate(disagg.pmf_map)]
         writer.serialize(data)
         fnames.append(fname)
     return sorted(fnames)
+
+
+# adapted from the nrml_converters
+def save_disagg_to_csv(metadata, matrices):
+    """
+    Save disaggregation matrices to multiple .csv files.
+    """
+    skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
+    base_header = ','.join(
+        '%s=%s' % (key, value) for key, value in metadata.items()
+        if value is not None and key not in skip_keys)
+
+    for disag_type, (poe, iml, matrix, fname) in matrices.items():
+        header = '%s,poe=%s,iml=%s\n' % (base_header, poe, iml)
+
+        if disag_type == 'Mag,Lon,Lat':
+            matrix = numpy.swapaxes(matrix, 0, 1)
+            matrix = numpy.swapaxes(matrix, 1, 2)
+            disag_type = 'Lon,Lat,Mag'
+
+        variables = disag_type
+        axis = [metadata[v] for v in variables]
+        header += ','.join(v for v in variables)
+        header += ',poe'
+
+        # compute axis mid points
+        axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype == float
+                else ax for ax in axis]
+
+        values = None
+        if len(axis) == 1:
+            values = numpy.array([axis[0], matrix.flatten()]).T
+        else:
+            grids = numpy.meshgrid(*axis, indexing='ij')
+            values = [g.flatten() for g in grids]
+            values.append(matrix.flatten())
+            values = numpy.array(values).T
+
+        writers.write_csv(fname, values, comment=header, fmt='%.5E')
+
+
+@export.add(('disagg', 'csv'))
+def export_disagg_csv(ekey, dstore):
+    oq = dstore['oqparam']
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    group = dstore['disagg']
+    fnames = []
+    for key in group:
+        matrix = dstore['disagg/' + key]
+        attrs = group[key].attrs
+        rlz = rlzs[attrs['rlzi']]
+        poe = attrs['poe']
+        iml = attrs['iml']
+        imt, sa_period, sa_damping = from_string(attrs['imt'])
+        lon, lat = attrs['location']
+        metadata = collections.OrderedDict()
+        # Loads "disaggMatrices" nodes
+        metadata['smlt_path'] = '_'.join(rlz.sm_lt_path)
+        metadata['gsimlt_path'] = rlz.gsim_rlz.uid
+        metadata['imt'] = imt
+        metadata['investigation_time'] = oq.investigation_time
+        metadata['lon'] = lon
+        metadata['lat'] = lat
+        metadata['Mag'] = attrs['mag_bin_edges']
+        metadata['Dist'] = attrs['dist_bin_edges']
+        metadata['Lon'] = attrs['lon_bin_edges']
+        metadata['Lat'] = attrs['lat_bin_edges']
+        metadata['Eps'] = attrs['eps_bin_edges']
+        metadata['TRT'] = attrs['trts']
+        data = {}
+        for dim_labels in disagg.pmf_map:
+            label = '_'.join(dim_labels)
+            fname = dstore.export_path(key + '_%s.csv' % label)
+            data[dim_labels] = poe, iml, matrix[label].value, fname
+            fnames.append(fname)
+        save_disagg_to_csv(metadata, data)
+    return fnames
 
 
 @export.add(('realizations', 'csv'))
