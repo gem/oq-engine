@@ -32,7 +32,6 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
 from openquake.risklib.riskinput import GmfGetter
 from openquake.commonlib.export import export
-from openquake.commonlib.writers import write_csv
 from openquake.commonlib import writers, hazard_writers, calc, util
 
 F32 = numpy.float32
@@ -308,7 +307,7 @@ def export_hazard_csv(key, dest, sitemesh, pmap,
     :param comment: comment to use as header of the exported CSV file
     """
     curves = convert_to_array(pmap, sitemesh, imtls)
-    write_csv(dest, curves, comment=comment)
+    writers.write_csv(dest, curves, comment=comment)
     return [dest]
 
 
@@ -346,7 +345,7 @@ def export_hcurves_by_imt_csv(key, kind, rlzs_assoc, fname, sitecol, pmap, oq):
         for sid, lon, lat in zip(range(nsites), sitecol.lons, sitecol.lats):
             poes = pmap.setdefault(sid, 0).array[slicedic[imt]]
             hcurves[sid] = (lon, lat) + tuple(poes)
-        fnames.append(write_csv(dest, hcurves, comment=_comment(
+        fnames.append(writers.write_csv(dest, hcurves, comment=_comment(
             rlzs_assoc, kind, oq.investigation_time) + ',imt=%s' % imt))
     return fnames
 
@@ -405,7 +404,7 @@ def export_hcurves_csv(ekey, dstore):
         if key == 'uhs':
             uhs_curves = calc.make_uhs(
                 hcurves, oq.imtls, oq.poes, len(sitemesh))
-            write_csv(
+            writers.write_csv(
                 fname, util.compose_arrays(sitemesh, uhs_curves),
                 comment=comment)
             fnames.append(fname)
@@ -700,13 +699,14 @@ def export_gmf_txt(key, dest, sitecol, imts, ruptures, rlz,
     # the csv file has the form
     # etag,indices,gmvs_imt_1,...,gmvs_imt_N
     rows = []
+    header = ['event_tag', 'site_indices'] + [str(imt) for imt in imts]
     for rupture in ruptures:
         indices = rupture.indices
         gmvs = [F64(a['gmv'])
                 for a in group_array(rupture.gmfa, 'imti').values()]
         row = [rupture.etag, ' '.join(map(str, indices))] + gmvs
         rows.append(row)
-    write_csv(dest, rows)
+    writers.write_csv(dest, rows, header=header)
     return {key: [dest]}
 
 
