@@ -32,9 +32,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
 from openquake.risklib.riskinput import GmfGetter
 from openquake.commonlib.export import export
-from openquake.commonlib.writers import write_csv
-from openquake.commonlib import writers, hazard_writers, util
-from openquake.commonlib import calc
+from openquake.commonlib import writers, hazard_writers, calc, util
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -125,7 +123,7 @@ def export_ruptures_xml(ekey, dstore):
     return [dest]
 
 
-@export.add(('rup_data', 'csv'))
+@export.add(('ses', 'csv'))
 def export_ses_csv(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -153,6 +151,19 @@ def export_ses_csv(ekey, dstore):
     rows.sort(key=operator.itemgetter(0))
     writers.write_csv(dest, rows, header=header)
     return [dest]
+
+
+@export.add(('rup_data', 'csv'))
+def export_rup_data(ekey, dstore):
+    rupture_data = dstore[ekey[0]]
+    paths = []
+    for trt in sorted(rupture_data):
+        fname = 'rup_data_%s.csv' % trt.lower().replace(' ', '_')
+        data = rupture_data[trt].value
+        data.sort(order='rupserial')
+        if len(data):
+            paths.append(write_csv(dstore.export_path(fname), data))
+    return paths
 
 
 # #################### export Ground Motion fields ########################## #
@@ -309,7 +320,7 @@ def export_hazard_csv(key, dest, sitemesh, pmap,
     :param comment: comment to use as header of the exported CSV file
     """
     curves = convert_to_array(pmap, sitemesh, imtls)
-    write_csv(dest, curves, comment=comment)
+    writers.write_csv(dest, curves, comment=comment)
     return [dest]
 
 
@@ -347,7 +358,7 @@ def export_hcurves_by_imt_csv(key, kind, rlzs_assoc, fname, sitecol, pmap, oq):
         for sid, lon, lat in zip(range(nsites), sitecol.lons, sitecol.lats):
             poes = pmap.setdefault(sid, 0).array[slicedic[imt]]
             hcurves[sid] = (lon, lat) + tuple(poes)
-        fnames.append(write_csv(dest, hcurves, comment=_comment(
+        fnames.append(writers.write_csv(dest, hcurves, comment=_comment(
             rlzs_assoc, kind, oq.investigation_time) + ',imt=%s' % imt))
     return fnames
 
@@ -406,7 +417,7 @@ def export_hcurves_csv(ekey, dstore):
         if key == 'uhs':
             uhs_curves = calc.make_uhs(
                 hcurves, oq.imtls, oq.poes, len(sitemesh))
-            write_csv(
+            writers.write_csv(
                 fname, util.compose_arrays(sitemesh, uhs_curves),
                 comment=comment)
             fnames.append(fname)
@@ -644,7 +655,10 @@ def export_gmf(ekey, dstore):
                 continue
             etags = build_etags(events[key])
         for rlz in rlzs:
-            gmf_arr = gmf_data['%04d' % rlz.ordinal].value
+            try:
+                gmf_arr = gmf_data['%04d' % rlz.ordinal].value
+            except KeyError:  # no GMFs for the given realization
+                continue
             ruptures = []
             for eid, gmfa in group_array(gmf_arr, 'eid').items():
                 rup = util.Rupture(sm_id, eid, etags[eid],
@@ -698,13 +712,14 @@ def export_gmf_txt(key, dest, sitecol, imts, ruptures, rlz,
     # the csv file has the form
     # etag,indices,gmvs_imt_1,...,gmvs_imt_N
     rows = []
+    header = ['event_tag', 'site_indices'] + [str(imt) for imt in imts]
     for rupture in ruptures:
         indices = rupture.indices
         gmvs = [F64(a['gmv'])
                 for a in group_array(rupture.gmfa, 'imti').values()]
         row = [rupture.etag, ' '.join(map(str, indices))] + gmvs
         rows.append(row)
-    write_csv(dest, rows)
+    writers.write_csv(dest, rows, header=header)
     return {key: [dest]}
 
 
@@ -810,7 +825,7 @@ def export_disagg_xml(ekey, dstore):
     fnames = []
     writercls = hazard_writers.DisaggXMLWriter
     for key in group:
-        matrix = pickle.loads(group[key].value)
+        matrix = dstore['disagg/' + key]
         attrs = group[key].attrs
         rlz = rlzs[attrs['rlzi']]
         poe = attrs['poe']
@@ -831,11 +846,89 @@ def export_disagg_xml(ekey, dstore):
             eps_bin_edges=attrs['eps_bin_edges'],
             tectonic_region_types=attrs['trts'],
         )
-        data = [DisaggMatrix(poe, iml, dim_labels, matrix[i])
-                for i, dim_labels in enumerate(disagg.pmf_map)]
+        data = [
+            DisaggMatrix(poe, iml, dim_labels, matrix['_'.join(dim_labels)])
+            for i, dim_labels in enumerate(disagg.pmf_map)]
         writer.serialize(data)
         fnames.append(fname)
     return sorted(fnames)
+
+
+# adapted from the nrml_converters
+def save_disagg_to_csv(metadata, matrices):
+    """
+    Save disaggregation matrices to multiple .csv files.
+    """
+    skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
+    base_header = ','.join(
+        '%s=%s' % (key, value) for key, value in metadata.items()
+        if value is not None and key not in skip_keys)
+
+    for disag_type, (poe, iml, matrix, fname) in matrices.items():
+        header = '%s,poe=%s,iml=%s\n' % (base_header, poe, iml)
+
+        if disag_type == 'Mag,Lon,Lat':
+            matrix = numpy.swapaxes(matrix, 0, 1)
+            matrix = numpy.swapaxes(matrix, 1, 2)
+            disag_type = 'Lon,Lat,Mag'
+
+        variables = disag_type
+        axis = [metadata[v] for v in variables]
+        header += ','.join(v for v in variables)
+        header += ',poe'
+
+        # compute axis mid points
+        axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype == float
+                else ax for ax in axis]
+
+        values = None
+        if len(axis) == 1:
+            values = numpy.array([axis[0], matrix.flatten()]).T
+        else:
+            grids = numpy.meshgrid(*axis, indexing='ij')
+            values = [g.flatten() for g in grids]
+            values.append(matrix.flatten())
+            values = numpy.array(values).T
+
+        writers.write_csv(fname, values, comment=header, fmt='%.5E')
+
+
+@export.add(('disagg', 'csv'))
+def export_disagg_csv(ekey, dstore):
+    oq = dstore['oqparam']
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    group = dstore['disagg']
+    fnames = []
+    for key in group:
+        matrix = dstore['disagg/' + key]
+        attrs = group[key].attrs
+        rlz = rlzs[attrs['rlzi']]
+        poe = attrs['poe']
+        iml = attrs['iml']
+        imt, sa_period, sa_damping = from_string(attrs['imt'])
+        lon, lat = attrs['location']
+        metadata = collections.OrderedDict()
+        # Loads "disaggMatrices" nodes
+        metadata['smlt_path'] = '_'.join(rlz.sm_lt_path)
+        metadata['gsimlt_path'] = rlz.gsim_rlz.uid
+        metadata['imt'] = imt
+        metadata['investigation_time'] = oq.investigation_time
+        metadata['lon'] = lon
+        metadata['lat'] = lat
+        metadata['Mag'] = attrs['mag_bin_edges']
+        metadata['Dist'] = attrs['dist_bin_edges']
+        metadata['Lon'] = attrs['lon_bin_edges']
+        metadata['Lat'] = attrs['lat_bin_edges']
+        metadata['Eps'] = attrs['eps_bin_edges']
+        metadata['TRT'] = attrs['trts']
+        data = {}
+        for dim_labels in disagg.pmf_map:
+            label = '_'.join(dim_labels)
+            fname = dstore.export_path(key + '_%s.csv' % label)
+            data[dim_labels] = poe, iml, matrix[label].value, fname
+            fnames.append(fname)
+        save_disagg_to_csv(metadata, data)
+    return fnames
 
 
 @export.add(('realizations', 'csv'))
