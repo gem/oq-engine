@@ -389,7 +389,8 @@ class EventBasedCalculator(ClassicalCalculator):
             with sav_mon:
                 for rlz, array in res['gmfcoll'].items():
                     if len(array):
-                        key = 'gmf_data/%04d' % rlz.ordinal
+                        sm_id = self.sm_id[rlz.sm_lt_path]
+                        key = 'gmf_data/sm-%04d/%04d' % (sm_id, rlz.ordinal)
                         self.datastore.extend(key, array)
         slicedic = self.oqparam.imtls.slicedic
         with agg_mon:
@@ -451,7 +452,8 @@ class EventBasedCalculator(ClassicalCalculator):
         self.sesruptures.sort(key=operator.attrgetter('serial'))
         if self.oqparam.ground_motion_fields:
             calc.check_overflow(self)
-
+        self.sm_id = {sm.path: sm.ordinal
+                      for sm in self.csm.info.source_models}
         L = len(oq.imtls.array)
         res = parallel.starmap(
             self.core_task.__func__, self.gen_args(self.sesruptures)
