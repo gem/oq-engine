@@ -32,11 +32,6 @@ Requires(pre): shadow-utils
 Requires: python-oq-libs python-oq-hazardlib >= 0.22.0
 Requires: sudo systemd python rabbitmq-server
 
-# since tests are currently not enabled during the packaging phase, the following build dependencies are not required
-#BuildRequires: %{common_deps}
-#BuildRequires: %{dev_deps}
-#BuildRequires: %{oqlib_deps}
-
 BuildRequires: systemd python-setuptools
 
 Obsoletes: python-oq-risklib
