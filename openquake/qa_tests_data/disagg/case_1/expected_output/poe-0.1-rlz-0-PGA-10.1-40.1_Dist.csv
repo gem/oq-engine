@@ -1,0 +1,6 @@
+# smlt_path=b1,gsimlt_path=b1,imt=PGA,investigation_time=50.0,lon=10.1,lat=40.1,poe=0.1,iml=0.300492774725
+Dist,poe
+1.25000E+01,9.09802E-02
+3.75000E+01,5.09753E-03
+6.25000E+01,1.66845E-04
+8.75000E+01,0.00000E+00
