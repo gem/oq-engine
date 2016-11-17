@@ -18,7 +18,6 @@
 
 import re
 import os
-import pickle
 import logging
 import operator
 import collections
@@ -162,7 +161,7 @@ def export_rup_data(ekey, dstore):
         data = rupture_data[trt].value
         data.sort(order='rupserial')
         if len(data):
-            paths.append(write_csv(dstore.export_path(fname), data))
+            paths.append(writers.write_csv(dstore.export_path(fname), data))
     return paths
 
 
