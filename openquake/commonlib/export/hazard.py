@@ -123,7 +123,7 @@ def export_ruptures_xml(ekey, dstore):
     return [dest]
 
 
-@export.add(('rup_data', 'csv'))
+@export.add(('ses', 'csv'))
 def export_ses_csv(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -151,6 +151,19 @@ def export_ses_csv(ekey, dstore):
     rows.sort(key=operator.itemgetter(0))
     writers.write_csv(dest, rows, header=header)
     return [dest]
+
+
+@export.add(('rup_data', 'csv'))
+def export_rup_data(ekey, dstore):
+    rupture_data = dstore[ekey[0]]
+    paths = []
+    for trt in sorted(rupture_data):
+        fname = 'rup_data_%s.csv' % trt.lower().replace(' ', '_')
+        data = rupture_data[trt].value
+        data.sort(order='rupserial')
+        if len(data):
+            paths.append(write_csv(dstore.export_path(fname), data))
+    return paths
 
 
 # #################### export Ground Motion fields ########################## #
