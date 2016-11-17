@@ -1,0 +1,4 @@
+# smlt_path=b1,gsimlt_path=b1,imt=SA,investigation_time=50.0,lon=10.1,lat=40.1,poe=0.02,iml=0.600691712418
+Lon,Lat,TRT,poe
+9.75000E+00,3.97500E+01,Active Shallow Crust,1.82739E-02
+1.12500E+01,3.97500E+01,Active Shallow Crust,9.06965E-07
