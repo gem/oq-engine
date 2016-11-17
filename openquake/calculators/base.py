@@ -35,7 +35,7 @@ from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import RtreeFilter
 from openquake.risklib import riskinput, __version__ as engine_version
-from openquake.commonlib import readinput, datastore, source
+from openquake.commonlib import readinput, datastore, source, calc
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import starmap, executor, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
@@ -465,6 +465,20 @@ class HazardCalculator(BaseCalculator):
             self.cost_calculator = readinput.get_cost_calculator(self.oqparam)
             self.sitecol, self.assets_by_site = (
                 readinput.get_sitecol_assets(self.oqparam, self.exposure))
+
+    def get_min_iml(self, oq):
+        # set the minimum_intensity
+        if hasattr(self, 'riskmodel') and not oq.minimum_intensity:
+            # infer it from the risk models if not directly set in job.ini
+            oq.minimum_intensity = self.riskmodel.get_min_iml()
+        min_iml = calc.fix_minimum_intensity(
+            oq.minimum_intensity, oq.imtls)
+        if min_iml.sum() == 0:
+            logging.warn('The GMFs are not filtered: '
+                         'you may want to set a minimum_intensity')
+        else:
+            logging.info('minimum_intensity=%s', oq.minimum_intensity)
+        return min_iml
 
     def load_riskmodel(self):
         """
