@@ -644,7 +644,10 @@ def export_gmf(ekey, dstore):
                 continue
             etags = build_etags(events[key])
         for rlz in rlzs:
-            gmf_arr = gmf_data['%04d' % rlz.ordinal].value
+            try:
+                gmf_arr = gmf_data['%04d' % rlz.ordinal].value
+            except KeyError:  # no GMFs for the given realization
+                continue
             ruptures = []
             for eid, gmfa in group_array(gmf_arr, 'eid').items():
                 rup = util.Rupture(sm_id, eid, etags[eid],
