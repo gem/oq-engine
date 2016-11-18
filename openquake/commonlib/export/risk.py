@@ -245,6 +245,7 @@ def export_ass_losses_ebr(ekey, dstore):
     sm_id, eid = get_sm_id_eid(ekey[0])
     if sm_id is None:
         return []
+    eid = int(eid)
     sm_ids = [sm_id]
     zero = [0, 0] if oq.insured_losses else 0
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
