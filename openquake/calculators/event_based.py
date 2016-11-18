@@ -341,8 +341,11 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
             if gmvdict:
                 for imti, imt in enumerate(getter.imts):
                     if oq.hazard_curves_from_gmfs:
-                        haz[sid][imt, rlz] = gmvdict[imt]
-                    for rec in gmvdict[imt]:
+                        try:
+                            haz[sid][imt, rlz] = gmvdict[imt]
+                        except KeyError:
+                            pass
+                    for rec in gmvdict.get(imt, []):
                         gmfcoll[rlz].append(
                             (sid, rec['eid'], imti, rec['gmv']))
     for rlz in gmfcoll:
