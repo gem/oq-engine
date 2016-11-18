@@ -655,7 +655,7 @@ def export_gmf(ekey, dstore):
             etags = build_etags(events[key])
         for rlz in rlzs:
             try:
-                gmf_arr = gmf_data['%04d' % rlz.ordinal].value
+                gmf_arr = gmf_data['%s/%04d' % (key, rlz.ordinal)].value
             except KeyError:  # no GMFs for the given realization
                 continue
             ruptures = []
@@ -776,7 +776,7 @@ def export_gmf_data_csv(ekey, dstore):
         return writer.getsaved()
     else:  # event based
         rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-        sitecol = dstore['sitecol']
+        sitecol = dstore['sitecol'].complete
         fnames = []
         imts = list(oq.imtls)
         for sm_id in dstore['gmf_data']:
@@ -796,6 +796,7 @@ def export_gmf_data_csv(ekey, dstore):
                                 oq.investigation_time))
                     fname = dstore.build_fname(
                         'gmf', '%s-rlz-%03d' % (etag[eid], rlz.ordinal), 'csv')
+                    logging.info('Exporting %s', fname)
                     writers.write_csv(fname, data, comment=comment)
                     fnames.append(fname)
         return fnames
