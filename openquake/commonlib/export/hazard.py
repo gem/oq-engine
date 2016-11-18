@@ -752,6 +752,26 @@ def _calc_gmfs(dstore, serial, eid):
     return sorted(array_by_imt.items())
 
 
+def get_sm_id_eid(key):
+    """
+    Extracts sm_id and eid from the export key.
+
+    >>> get_sm_id_eid('gmf:1:2')
+    [1, 2]
+    >>> get_sm_id_eid('gmf:3')
+    [0, 3]
+    >>> get_sm_id_eid('gmf')
+    [None, None]
+    """
+    n = key.count(':')
+    if n == 1:  # passed the eid, sm_id assumed to be zero
+        return [0, int(key.split(':')[1])]
+    elif n == 2:  # passed both eid and sm_id
+        return map(int, key.split(':')[1:])
+    else:  # eid and sm_id both unspecified, exporting nothing
+        return [None, None]
+
+
 @export.add(('gmf_data', 'csv'))
 def export_gmf_data_csv(ekey, dstore):
     oq = dstore['oqparam']
@@ -775,26 +795,63 @@ def export_gmf_data_csv(ekey, dstore):
                 writer.save(data, dest)
         return writer.getsaved()
     else:  # event based
-        rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-        sitecol = dstore['sitecol'].complete
+        exporter = GmfExporter(dstore)
+        sm_id, eid = get_sm_id_eid(ekey[0])
+        if sm_id is None:
+            return exporter.export_all()
+        else:
+            return exporter.export_one(sm_id, eid)
+
+
+class GmfExporter(object):
+    def __init__(self, dstore):
+        self.dstore = dstore
+        self.oq = dstore['oqparam']
+        self.rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+        self.sitecol = dstore['sitecol'].complete
+
+    def export_one(self, sm_id, eid):
         fnames = []
-        imts = list(oq.imtls)
-        for sm_id in dstore['gmf_data']:
-            events = dstore['events/' + sm_id]
+        imts = list(self.oq.imtls)
+        event = self.dstore['events/sm-%04d' % sm_id][eid]
+        [etag] = build_etags([event])
+        for rlzno in self.dstore['gmf_data/sm-%04d' % sm_id]:
+            rlz = self.rlzs[int(rlzno)]
+            smlt_path = '_'.join(rlz.sm_lt_path)
+            gsimlt_path = rlz.gsim_rlz.uid
+            logging.info('Exporting GMFs for realization %s', rlz)
+            gmfa = self.dstore['gmf_data/sm-%04d/%s' % (sm_id, rlzno)].value
+            gmf = gmfa[gmfa['eid'] == eid]
+            data = _build_csv_data(gmf, self.sitecol, imts)
+            comment = ('smlt_path=%s, gsimlt_path=%s, '
+                       'investigation_time=%s' %
+                       (smlt_path, gsimlt_path, self.oq.investigation_time))
+            fname = self.dstore.build_fname(
+                'gmf', '%s-rlz-%03d' % (etag, rlz.ordinal), 'csv')
+            logging.info('Exporting %s', fname)
+            writers.write_csv(fname, data, comment=comment)
+            fnames.append(fname)
+        return fnames
+
+    def export_all(self):
+        fnames = []
+        imts = list(self.oq.imtls)
+        for sm_id in self.dstore['gmf_data']:
+            events = self.dstore['events/' + sm_id]
             etag = dict(zip(range(len(events)), build_etags(events)))
-            for rlzno in dstore['gmf_data/' + sm_id]:
-                rlz = rlzs[int(rlzno)]
+            for rlzno in self.dstore['gmf_data/' + sm_id]:
+                rlz = self.rlzs[int(rlzno)]
                 smlt_path = '_'.join(rlz.sm_lt_path)
                 gsimlt_path = rlz.gsim_rlz.uid
                 logging.info('Exporting GMFs for realization %s', rlz)
-                gmf = dstore['gmf_data/%s/%s' % (sm_id, rlzno)].value
+                gmf = self.dstore['gmf_data/%s/%s' % (sm_id, rlzno)].value
                 for eid, array in group_array(gmf, 'eid').items():
-                    data = _build_csv_data(array, sitecol, imts)
+                    data = _build_csv_data(array, self.sitecol, imts)
                     comment = ('smlt_path=%s, gsimlt_path=%s, '
                                'investigation_time=%s' %
                                (smlt_path, gsimlt_path,
-                                oq.investigation_time))
-                    fname = dstore.build_fname(
+                                self.oq.investigation_time))
+                    fname = self.dstore.build_fname(
                         'gmf', '%s-rlz-%03d' % (etag[eid], rlz.ordinal), 'csv')
                     logging.info('Exporting %s', fname)
                     writers.write_csv(fname, data, comment=comment)
