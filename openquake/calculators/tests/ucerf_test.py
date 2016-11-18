@@ -31,8 +31,8 @@ class UcerfTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'ucerf')
     def test_event_based(self):
         check_platform('xenial')
-        out = self.run_calc(ucerf.__file__, 'job.ini', exports='csv')
-        [fname] = out['rup_data', 'csv']
+        self.run_calc(ucerf.__file__, 'job.ini')
+        [fname] = export(('ses', 'csv'), self.calc.datastore)
         # just check that we get the expected number of ruptures
         self.assertEqual(open(fname).read().count('\n'), 918)
 
