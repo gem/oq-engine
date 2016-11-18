@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import sys
+import unittest
 from nose.plugins.attrib import attr
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.disagg import case_1, case_2
@@ -32,8 +33,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         got = out['disagg', fmt]
         self.assertEqual(len(expected), len(got))
         for fname, actual in zip(expected, got):
-            self.assertEqualFiles('expected_output/%s' % fname, actual,
-                                  delta=1E-6)
+            self.assertEqualFiles('expected_output/%s' % fname, actual)
 
     @attr('qa', 'hazard', 'disagg')
     def test_case_1(self):
@@ -75,6 +75,8 @@ class DisaggregationTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'disagg')
     def test_case_2(self):
+        if sys.platform == 'darwin':
+            raise unittest.SkipTest('MacOSX')
         self.assert_curves_ok(
             ['poe-0.0872-rlz-3-PGA-0.0-0.0.xml',
              'poe-0.0879-rlz-1-PGA--3.0--3.0.xml',
