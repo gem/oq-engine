@@ -805,7 +805,7 @@ def export_gmf_data_csv(ekey, dstore):
         elif eid == '*':
             return exporter.export_all()
         else:
-            return exporter.export_one(sm_id, int(eid))
+            return exporter.export_one(int(sm_id), int(eid))
 
 
 class GmfExporter(object):
