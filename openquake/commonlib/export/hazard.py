@@ -786,26 +786,31 @@ def export_gmf_data_csv(ekey, dstore):
                 rlz = rlzs[int(rlzno)]
                 smlt_path = '_'.join(rlz.sm_lt_path)
                 gsimlt_path = rlz.gsim_rlz.uid
-                gmf = group_array(dstore['gmf_data/%s/%s' % (sm_id, rlzno)],
-                                  'imti')
-                for imti in gmf:
-                    for eid, array in group_array(gmf[imti], 'eid').items():
-                        imt = imts[imti]
-                        sids = array['sid']
-                        data = zip(sitecol.lons[sids], sitecol.lats[sids],
-                                   array['gmv'])
-                        comment = ('smlt_path=%s, gsimlt_path=%s, '
-                                   'investigation_time=%s, imt=%s' %
-                                   (smlt_path, gsimlt_path,
-                                    oq.investigation_time, imt))
-                        fname = dstore.build_fname(
-                                'gmf', '%s-rlz-%03d-%s' % (
-                                    etag[eid], rlz.ordinal, imt), 'csv')
-                        writers.write_csv(
-                            fname, data, header=['lon', 'lat', 'gmv'],
-                            comment=comment)
-                        fnames.append(fname)
+                logging.info('Exporting GMFs for realization %s', rlz)
+                gmf = dstore['gmf_data/%s/%s' % (sm_id, rlzno)].value
+                for eid, array in group_array(gmf, 'eid').items():
+                    data = _build_csv_data(array, sitecol, imts)
+                    comment = ('smlt_path=%s, gsimlt_path=%s, '
+                               'investigation_time=%s' %
+                               (smlt_path, gsimlt_path,
+                                oq.investigation_time))
+                    fname = dstore.build_fname(
+                        'gmf', '%s-rlz-%03d' % (etag[eid], rlz.ordinal), 'csv')
+                    writers.write_csv(fname, data, comment=comment)
+                    fnames.append(fname)
         return fnames
+
+
+def _build_csv_data(array, sitecol, imts):
+    # lon, lat, gmv_imt1, ..., gmv_imtN
+    rows = [['lon', 'lat'] + imts]
+    irange = range(len(imts))
+    for sid, data in group_array(array, 'sid').items():
+        dic = dict(zip(data['imti'], data['gmv']))
+        row = ['%.5f' % sitecol.lons[sid], '%.5f' % sitecol.lats[sid]] + [
+            dic.get(imti, 0) for imti in irange]
+        rows.append(row)
+    return rows
 
 
 @export.add(('gmf_data', 'hdf5'))
