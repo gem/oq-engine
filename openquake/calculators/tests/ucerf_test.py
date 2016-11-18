@@ -21,8 +21,7 @@ from openquake.baselib.general import writetmp
 from openquake.commonlib.export import export
 from openquake.calculators.views import view
 from openquake.qa_tests_data import ucerf
-from openquake.calculators.tests import (
-    CalculatorTestCase, strip_calc_id, check_platform)
+from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 
 from nose.plugins.attrib import attr
 
@@ -30,7 +29,8 @@ from nose.plugins.attrib import attr
 class UcerfTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'ucerf')
     def test_event_based(self):
-        check_platform('xenial')
+        if h5py.__version__ < '2.6.0':
+            raise unittest.SkipTest  # UCERF requires vlen arrays
         self.run_calc(ucerf.__file__, 'job.ini')
         [fname] = export(('ses', 'csv'), self.calc.datastore)
         # just check that we get the expected number of ruptures
