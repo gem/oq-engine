@@ -757,15 +757,15 @@ def get_sm_id_eid(key):
     Extracts sm_id and eid from the export key.
 
     >>> get_sm_id_eid('gmf:1:2')
-    [1, '2']
+    ['1', '2']
     >>> get_sm_id_eid('gmf:3')
-    [0, '3']
+    ['0', '3']
     >>> get_sm_id_eid('gmf')
     [None, None]
     """
     n = key.count(':')
     if n == 1:  # passed the eid, sm_id assumed to be zero
-        return [0, key.split(':')[1]]
+        return ['0', key.split(':')[1]]
     elif n == 2:  # passed both eid and sm_id
         return key.split(':')[1:]
     else:  # eid and sm_id both unspecified, exporting nothing
