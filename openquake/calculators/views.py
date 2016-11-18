@@ -28,7 +28,7 @@ import numpy
 import h5py
 
 from openquake.baselib.general import (
-    humansize, groupby, AccumDict, CallableDict)
+    humansize, groupby, group_array, AccumDict, CallableDict)
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.python3compat import unicode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
