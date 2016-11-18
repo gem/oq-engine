@@ -128,7 +128,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/0-SadighEtAl1997.txt', fname, sorted)
 
-        [fname] = out['hcurves', 'csv']
+        [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
