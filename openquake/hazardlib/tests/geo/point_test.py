@@ -309,6 +309,16 @@ class DistanceToMeshTestCase(unittest.TestCase):
               [221.53723588, 146.77568123, 111.19492664]]
         numpy.testing.assert_array_almost_equal(distances, ed)
 
+    # this is the case when computing Repi
+    def test_neglect_depths(self):
+        p = geo.Point(0.5, -0.5, 10)
+        mesh = geo.Mesh(numpy.array([0.5, 0.5, 0.5, 0.5]),
+                        numpy.array([-0.5, -0.5, -0.5, -0.5]),
+                        numpy.array([0., -1., -2., -3.]))
+        distances = p.distance_to_mesh(mesh, with_depths=False)
+        ed = [0, 0, 0, 0]
+        numpy.testing.assert_array_almost_equal(distances, ed)
+
     def test_point_depth(self):
         p = geo.Point(0, 0, 10)
         mesh = geo.Mesh(numpy.array([0.1, 0.2, 0.3, 0.4]),
