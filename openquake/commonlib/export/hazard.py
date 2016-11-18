@@ -655,7 +655,7 @@ def export_gmf(ekey, dstore):
             etags = build_etags(events[key])
         for rlz in rlzs:
             try:
-                gmf_arr = gmf_data['%04d' % rlz.ordinal].value
+                gmf_arr = gmf_data['%s/%04d' % (key, rlz.ordinal)].value
             except KeyError:  # no GMFs for the given realization
                 continue
             ruptures = []
@@ -752,8 +752,28 @@ def _calc_gmfs(dstore, serial, eid):
     return sorted(array_by_imt.items())
 
 
+def get_sm_id_eid(key):
+    """
+    Extracts sm_id and eid from the export key.
+
+    >>> get_sm_id_eid('gmf:1:2')
+    ['1', '2']
+    >>> get_sm_id_eid('gmf:3')
+    ['0', '3']
+    >>> get_sm_id_eid('gmf')
+    [None, None]
+    """
+    n = key.count(':')
+    if n == 1:  # passed the eid, sm_id assumed to be zero
+        return ['0', key.split(':')[1]]
+    elif n == 2:  # passed both eid and sm_id
+        return key.split(':')[1:]
+    else:  # eid and sm_id both unspecified, exporting nothing
+        return [None, None]
+
+
 @export.add(('gmf_data', 'csv'))
-def export_gmf_scenario(ekey, dstore):
+def export_gmf_data_csv(ekey, dstore):
     oq = dstore['oqparam']
     if 'scenario' in oq.calculation_mode:
         imtls = dstore['oqparam'].imtls
@@ -773,11 +793,81 @@ def export_gmf_scenario(ekey, dstore):
                 dest = dstore.build_fname('gmf', '%s-%s' % (gsim, imt), 'csv')
                 data = util.compose_arrays(sitemesh, gmfs)
                 writer.save(data, dest)
+        return writer.getsaved()
     else:  # event based
-        logging.warn('Not exporting the full GMFs for event_based, but you can'
-                     ' specify the rupture ordinals with gmfs:R1,...,Rn')
-        return []
-    return writer.getsaved()
+        exporter = GmfExporter(dstore)
+        sm_id, eid = get_sm_id_eid(ekey[0])
+        if eid is None:
+            logging.info('Exporting only the first event')
+            logging.info('Use the command `oq export gmf_data:*:* %d` '
+                         'to export everything', dstore.calc_id)
+            return exporter.export_one(0, 0)
+        elif eid == '*':
+            return exporter.export_all()
+        else:
+            return exporter.export_one(int(sm_id), int(eid))
+
+
+class GmfExporter(object):
+    def __init__(self, dstore):
+        self.dstore = dstore
+        self.oq = dstore['oqparam']
+        self.rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+        self.sitecol = dstore['sitecol'].complete
+
+    def export_one(self, sm_id, eid):
+        fnames = []
+        imts = list(self.oq.imtls)
+        event = self.dstore['events/sm-%04d' % sm_id][eid]
+        [etag] = build_etags([event])
+        for rlzno in self.dstore['gmf_data/sm-%04d' % sm_id]:
+            rlz = self.rlzs[int(rlzno)]
+            gmfa = self.dstore['gmf_data/sm-%04d/%s' % (sm_id, rlzno)]
+            gmf = gmfa[gmfa['eid'] == eid]
+            data, comment = _build_csv_data(gmf, rlz, self.sitecol, imts,
+                                            self.oq.investigation_time)
+            fname = self.dstore.build_fname(
+                'gmf', '%s-rlz-%03d' % (etag, rlz.ordinal), 'csv')
+            logging.info('Exporting %s', fname)
+            writers.write_csv(fname, data, comment=comment)
+            fnames.append(fname)
+        return fnames
+
+    def export_all(self):
+        fnames = []
+        imts = list(self.oq.imtls)
+        for sm_id in self.dstore['gmf_data']:
+            events = self.dstore['events/' + sm_id]
+            etag = dict(zip(range(len(events)), build_etags(events)))
+            for rlzno in self.dstore['gmf_data/' + sm_id]:
+                rlz = self.rlzs[int(rlzno)]
+                gmf = self.dstore['gmf_data/%s/%s' % (sm_id, rlzno)].value
+                for eid, array in group_array(gmf, 'eid').items():
+                    data, comment = _build_csv_data(
+                        array, rlz, self.sitecol,
+                        imts, self.oq.investigation_time)
+                    fname = self.dstore.build_fname(
+                        'gmf', '%s-rlz-%03d' % (etag[eid], rlz.ordinal), 'csv')
+                    logging.info('Exporting %s', fname)
+                    writers.write_csv(fname, data, comment=comment)
+                    fnames.append(fname)
+        return fnames
+
+
+def _build_csv_data(array, rlz, sitecol, imts, investigation_time):
+    # lon, lat, gmv_imt1, ..., gmv_imtN
+    smlt_path = '_'.join(rlz.sm_lt_path)
+    gsimlt_path = rlz.gsim_rlz.uid
+    comment = ('smlt_path=%s, gsimlt_path=%s, investigation_time=%s' %
+               (smlt_path, gsimlt_path, investigation_time))
+    rows = [['lon', 'lat'] + imts]
+    irange = range(len(imts))
+    for sid, data in group_array(array, 'sid').items():
+        dic = dict(zip(data['imti'], data['gmv']))
+        row = ['%.5f' % sitecol.lons[sid], '%.5f' % sitecol.lats[sid]] + [
+            dic.get(imti, 0) for imti in irange]
+        rows.append(row)
+    return rows, comment
 
 
 @export.add(('gmf_data', 'hdf5'))

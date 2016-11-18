@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib.general import AccumDict, get_array, group_array
 from openquake.risklib import scientific
 from openquake.commonlib.export import export
-from openquake.commonlib.export.hazard import build_etags
+from openquake.commonlib.export.hazard import build_etags, get_sm_id_eid
 from openquake.commonlib import writers, risk_writers
 from openquake.commonlib.util import get_assets, compose_arrays
 from openquake.commonlib.risk_writers import (
@@ -242,14 +242,11 @@ def export_ass_losses_ebr(ekey, dstore):
               ('aid', U32)] + oq.loss_dt_list()
     elt_dt = numpy.dtype(dtlist)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    n = ekey[0].count(':')
-    if n == 1:  # passed the eid, sm_id assumed to be zero
-        sm_ids, eid = (0,), int(ekey[0].split(':')[1])
-    elif n == 2:  # passed both eid and sm_id
-        sm_id, eid = map(int, ekey[0].split(':')[1:])
-        sm_ids = (sm_id,)
-    else:  # eid and sm_id both unspecified, exporting nothing
+    sm_id, eid = get_sm_id_eid(ekey[0])
+    if sm_id is None:
         return []
+    sm_id, eid = int(sm_id), int(eid)
+    sm_ids = [sm_id]
     zero = [0, 0] if oq.insured_losses else 0
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for sm_id in sm_ids:
