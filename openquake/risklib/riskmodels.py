@@ -173,12 +173,24 @@ class Asset(object):
         """
         if loss_type == 'occupants':
             return self.values['occupants_' + str(time_event)]
-        try:
+        try:  # extract from the cache
             val = self._cost[loss_type]
-        except KeyError:
+        except KeyError:  # compute
             val = self.calc(loss_type, self.values, self.area, self.number)
             self._cost[loss_type] = val
         return val
+
+    def ins_values(self, values, loss_type, time_event=None):
+        """
+        :param values: the ground losses
+        :param loss_type: a loss type string
+        :param time_event: time event string or None
+        :returns: the losses of the insurance company
+        """
+        val = self.value(loss_type, time_event)
+        return val * scientific.insured_losses(
+            values / val, self.deductible(loss_type),
+            self.insurance_limit(loss_type))
 
     def deductible(self, loss_type):
         """
