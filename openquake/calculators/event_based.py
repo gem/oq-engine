@@ -501,6 +501,10 @@ class EventBasedCalculator(ClassicalCalculator):
         if ('gmf_data' in self.datastore and 'nbytes' not
                 in self.datastore['gmf_data'].attrs):
             self.datastore.set_nbytes('gmf_data')
+            for sm_id in self.datastore['gmf_data']:
+                for rlzno in self.datastore['gmf_data/' + sm_id]:
+                    self.datastore.set_nbytes(
+                        'gmf_data/%s/%s' % (sm_id, rlzno))
 
         if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
