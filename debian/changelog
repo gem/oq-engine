@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a CSV exporter for the GMFs in the event based calculator
   * Added a CSV exporter for the rup_data output
   * Added a CSV exporter for the disaggregation output
   * Stored the disaggregation matrices directly (no pickle)

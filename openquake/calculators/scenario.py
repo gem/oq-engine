@@ -92,7 +92,7 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         with self.monitor('saving gmfs', autoflush=True):
             for rlzi, gsim in enumerate(self.gsims):
-                rlzstr = 'gmf_data/%04d' % rlzi
+                rlzstr = 'gmf_data/sm-0000/%04d' % rlzi
                 self.datastore[rlzstr] = gmfa_by_rlzi[rlzi]
                 self.datastore.set_attrs(rlzstr, gsim=str(gsim))
             self.datastore.set_nbytes('gmf_data')
