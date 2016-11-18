@@ -767,7 +767,7 @@ def get_sm_id_eid(key):
     if n == 1:  # passed the eid, sm_id assumed to be zero
         return [0, int(key.split(':')[1])]
     elif n == 2:  # passed both eid and sm_id
-        return map(int, key.split(':')[1:])
+        return [int(k) for k in key.split(':')[1:]]
     else:  # eid and sm_id both unspecified, exporting nothing
         return [None, None]
 
