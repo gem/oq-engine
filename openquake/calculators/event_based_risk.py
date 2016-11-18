@@ -927,27 +927,3 @@ class EbriskCalculator(base.RiskCalculator):
         logging.info('Saved %d event losses', num_events)
         self.datastore.set_nbytes('agg_loss_table')
         self.datastore.set_nbytes('events')
-        if 'ass_loss_table' in self.datastore:
-            if self.oqparam.insured_losses:
-                self.datastore['ins_losses'] = self.build_insured_losses(
-                    self.datastore['ass_loss_table'])
-
-    def build_insured_losses(self, ass_losses):
-        N, R = len(self.assetcol), len(self.rlzs_assoc.realizations)
-        time_event = self.oqparam.time_event
-        ses_ratio = self.oqparam.ses_ratio
-        loss_types = [str(lt) for lt in self.oqparam.all_cost_types
-                      if lt != 'occupants']
-        dt = numpy.dtype([(lt, F32) for lt in loss_types])
-        ins_losses = numpy.zeros((N, R), dt)
-        for loss_type in loss_types:
-            ins = ins_losses[loss_type]
-            for rlzname in ass_losses:
-                r = int(rlzname[4:])  # strip rlz-
-                data = group_array(ass_losses['%s/%s' % (rlzname, loss_type)],
-                                   'aid')
-                for aid in data:
-                    ins_values = self.assetcol[int(aid)].ins_values(
-                        data[aid]['loss'], loss_type, time_event)
-                    ins[aid, r] = ins_values.sum() * ses_ratio
-        return ins_losses
