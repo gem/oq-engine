@@ -356,11 +356,10 @@ class DistanceToMeshTestCase(unittest.TestCase):
         numpy.testing.assert_array_almost_equal(distances, ed)
 
     def test_both_topo(self):
-        p = geo.Point(0,0,-5)
-        mesh = geo.Mesh(numpy.array([0., 0., 0., 0.]),
-                        numpy.array([0., 0., 0., 0.]),
-                        numpy.array([-1., -1., -1., -1.]))
+        p = geo.Point(0.5, -0.5, -1)
+        mesh = geo.Mesh(numpy.array([0.5, 0.5, 0.5, 0.5]),
+                        numpy.array([-0.5, -0.5, -0.5, -0.5]),
+                        numpy.array([-1., -2, -3., -4.]))
         distances = p.distance_to_mesh(mesh)
-        ed = [4., 4., 4., 4.]
+        ed = [0., 1., 2., 3.]
         numpy.testing.assert_array_almost_equal(distances, ed)
-
