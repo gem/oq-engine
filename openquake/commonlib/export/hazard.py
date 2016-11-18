@@ -817,15 +817,10 @@ class GmfExporter(object):
         [etag] = build_etags([event])
         for rlzno in self.dstore['gmf_data/sm-%04d' % sm_id]:
             rlz = self.rlzs[int(rlzno)]
-            smlt_path = '_'.join(rlz.sm_lt_path)
-            gsimlt_path = rlz.gsim_rlz.uid
-            logging.info('Exporting GMFs for realization %s', rlz)
-            gmfa = self.dstore['gmf_data/sm-%04d/%s' % (sm_id, rlzno)].value
+            gmfa = self.dstore['gmf_data/sm-%04d/%s' % (sm_id, rlzno)]
             gmf = gmfa[gmfa['eid'] == eid]
-            data = _build_csv_data(gmf, self.sitecol, imts)
-            comment = ('smlt_path=%s, gsimlt_path=%s, '
-                       'investigation_time=%s' %
-                       (smlt_path, gsimlt_path, self.oq.investigation_time))
+            data, comment = _build_csv_data(gmf, rlz, self.sitecol, imts,
+                                            self.oq.investigation_time)
             fname = self.dstore.build_fname(
                 'gmf', '%s-rlz-%03d' % (etag, rlz.ordinal), 'csv')
             logging.info('Exporting %s', fname)
@@ -841,16 +836,11 @@ class GmfExporter(object):
             etag = dict(zip(range(len(events)), build_etags(events)))
             for rlzno in self.dstore['gmf_data/' + sm_id]:
                 rlz = self.rlzs[int(rlzno)]
-                smlt_path = '_'.join(rlz.sm_lt_path)
-                gsimlt_path = rlz.gsim_rlz.uid
-                logging.info('Exporting GMFs for realization %s', rlz)
                 gmf = self.dstore['gmf_data/%s/%s' % (sm_id, rlzno)].value
                 for eid, array in group_array(gmf, 'eid').items():
-                    data = _build_csv_data(array, self.sitecol, imts)
-                    comment = ('smlt_path=%s, gsimlt_path=%s, '
-                               'investigation_time=%s' %
-                               (smlt_path, gsimlt_path,
-                                self.oq.investigation_time))
+                    data, comment = _build_csv_data(
+                        array, rlz, self.sitecol,
+                        imts, self.oq.investigation_time)
                     fname = self.dstore.build_fname(
                         'gmf', '%s-rlz-%03d' % (etag[eid], rlz.ordinal), 'csv')
                     logging.info('Exporting %s', fname)
@@ -859,8 +849,12 @@ class GmfExporter(object):
         return fnames
 
 
-def _build_csv_data(array, sitecol, imts):
+def _build_csv_data(array, rlz, sitecol, imts, investigation_time):
     # lon, lat, gmv_imt1, ..., gmv_imtN
+    smlt_path = '_'.join(rlz.sm_lt_path)
+    gsimlt_path = rlz.gsim_rlz.uid
+    comment = ('smlt_path=%s, gsimlt_path=%s, investigation_time=%s' %
+               (smlt_path, gsimlt_path, investigation_time))
     rows = [['lon', 'lat'] + imts]
     irange = range(len(imts))
     for sid, data in group_array(array, 'sid').items():
@@ -868,7 +862,7 @@ def _build_csv_data(array, sitecol, imts):
         row = ['%.5f' % sitecol.lons[sid], '%.5f' % sitecol.lats[sid]] + [
             dic.get(imti, 0) for imti in irange]
         rows.append(row)
-    return rows
+    return rows, comment
 
 
 @export.add(('gmf_data', 'hdf5'))
