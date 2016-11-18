@@ -291,7 +291,7 @@ def get_gmfs(dstore, precalc=None):
 
     # else read from the datastore
     for i, rlz in enumerate(rlzs):
-        data = group_array(dstore['gmf_data/%04d' % i], 'sid')
+        data = group_array(dstore['gmf_data/sm-0000/%04d' % i], 'sid')
         for sid, array in data.items():
             if sid in risk_indices:
                 for imti, imt in enumerate(oq.imtls):
