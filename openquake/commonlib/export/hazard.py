@@ -757,17 +757,17 @@ def get_sm_id_eid(key):
     Extracts sm_id and eid from the export key.
 
     >>> get_sm_id_eid('gmf:1:2')
-    [1, 2]
+    [1, '2']
     >>> get_sm_id_eid('gmf:3')
-    [0, 3]
+    [0, '3']
     >>> get_sm_id_eid('gmf')
     [None, None]
     """
     n = key.count(':')
     if n == 1:  # passed the eid, sm_id assumed to be zero
-        return [0, int(key.split(':')[1])]
+        return [0, key.split(':')[1]]
     elif n == 2:  # passed both eid and sm_id
-        return [int(k) for k in key.split(':')[1:]]
+        return key.split(':')[1:]
     else:  # eid and sm_id both unspecified, exporting nothing
         return [None, None]
 
@@ -797,10 +797,15 @@ def export_gmf_data_csv(ekey, dstore):
     else:  # event based
         exporter = GmfExporter(dstore)
         sm_id, eid = get_sm_id_eid(ekey[0])
-        if sm_id is None:
+        if eid is None:
+            logging.info('Exporting only the first event')
+            logging.info('Use the command `oq export gmf_data:*:* %d` '
+                         'to export everything', dstore.calc_id)
+            return exporter.export_one(0, 0)
+        elif eid == '*':
             return exporter.export_all()
         else:
-            return exporter.export_one(sm_id, eid)
+            return exporter.export_one(sm_id, int(eid))
 
 
 class GmfExporter(object):
