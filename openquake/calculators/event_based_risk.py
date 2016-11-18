@@ -535,16 +535,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if rlz_ids:
             self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
 
-        if not oq.minimum_intensity:
-            # infer it from the risk models if not directly set in job.ini
-            oq.minimum_intensity = self.riskmodel.get_min_iml()
-        min_iml = calc.fix_minimum_intensity(
-            oq.minimum_intensity, oq.imtls)
-        if min_iml.sum() == 0:
-            logging.warn('The GMFs are not filtered: '
-                         'you may want to set a minimum_intensity')
-        else:
-            logging.info('minimum_intensity=%s', oq.minimum_intensity)
+        min_iml = self.get_min_iml(oq)
         csm_info = self.datastore['csm_info']
         self.grp_trt = {sg.id: sg.trt for sm in csm_info.source_models
                         for sg in sm.src_groups}
@@ -815,15 +806,7 @@ class EbriskCalculator(base.RiskCalculator):
         """
         oq = self.oqparam
         correl_model = oq.get_correl_model()
-        if not oq.minimum_intensity:
-            # infer it from the risk models if not directly set in job.ini
-            oq.minimum_intensity = self.riskmodel.get_min_iml()
-        min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
-        if min_iml.sum() == 0:
-            logging.warn('The GMFs are not filtered: '
-                         'you may want to set a minimum_intensity')
-        else:
-            logging.info('minimum_intensity=%s', oq.minimum_intensity)
+        min_iml = self.get_min_iml(oq)
         self.csm.init_serials()
         imts = list(oq.imtls)
         for sm_id in range(len(self.csm.source_models)):
