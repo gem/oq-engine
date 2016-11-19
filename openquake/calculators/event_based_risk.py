@@ -222,7 +222,7 @@ class EventBasedStats(object):
                 self.oqparam.insured_losses + 1))
 
         if self.oqparam.asset_loss_table:
-            asslt = self.datastore['ass_loss_table']
+            asslt = self.datastore['ass_loss_ratios']
             for rlz, dset in asslt.items():
                 for ds in dset.values():
                     ds.attrs['nonzero_fraction'] = len(ds) / (N * E)
@@ -521,7 +521,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         # average losses, stored in a composite array of shape N, R
         self.avg_losses = numpy.zeros((N, R), oq.loss_dt())
 
-        self.ass_loss_table = square(L, R, lambda: None)
+        self.ass_loss_ratios = square(L, R, lambda: None)
         self.agg_loss_table = square(L, R, lambda: None)
 
         self.ela_dt, self.elt_dt = mon.ela_dt, mon.elt_dt = build_el_dtypes(
@@ -529,8 +529,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         for (l, r) in itertools.product(range(L), range(R)):
             lt = loss_types[l]
             if self.oqparam.asset_loss_table:
-                self.ass_loss_table[l, r] = self.datastore.create_dset(
-                    'ass_loss_table/rlz-%03d/%s' % (r, lt), self.ela_dt)
+                self.ass_loss_ratios[l, r] = self.datastore.create_dset(
+                    'ass_loss_ratios/rlz-%03d/%s' % (r, lt), self.ela_dt)
             self.agg_loss_table[l, r] = self.datastore.create_dset(
                 'agg_loss_table/rlz-%03d/%s' % (r, lt), self.elt_dt)
 
@@ -571,7 +571,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         with self.monitor('saving event loss tables', autoflush=True):
             if self.oqparam.asset_loss_table:
                 for lr, array in sorted(result.pop('ASSLOSS').items()):
-                    hdf5.extend(self.ass_loss_table[lr], array)
+                    hdf5.extend(self.ass_loss_ratios[lr], array)
             for lr, array in sorted(result.pop('AGGLOSS').items()):
                 hdf5.extend(self.agg_loss_table[lr], array)
             self.datastore.hdf5.flush()
@@ -913,7 +913,7 @@ class EbriskCalculator(base.RiskCalculator):
                 self.datastore.extend(key, agglosses[l, r])
             for l, r in asslosses:
                 loss_type = self.riskmodel.loss_types[l]
-                key = 'ass_loss_table/rlz-%03d/%s' % (r + offset, loss_type)
+                key = 'ass_loss_ratios/rlz-%03d/%s' % (r + offset, loss_type)
                 self.datastore.extend(key, asslosses[l, r])
 
     def post_execute(self, num_events):

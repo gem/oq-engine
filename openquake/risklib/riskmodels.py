@@ -574,8 +574,8 @@ class EventBasedReduced(RiskModel):
             elosses += losses
             if self.asset_loss_table:
                 aid = asset.ordinal
-                for eid, loss in zip(eids, losses):
-                    alt.append((eid, aid, loss))
+                for eid, ratio in zip(eids, ratios):
+                    alt.append((eid, aid, ratio))
         return scientific.Output(
             assets, loss_type, alosses=alosses, elosses=elosses,
             alt=numpy.array(alt, self.alt_dt), eids=eids)
