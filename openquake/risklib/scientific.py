@@ -30,7 +30,7 @@ from numpy.testing import assert_equal
 from scipy import interpolate, stats, random
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import CallableDict
+from openquake.baselib.general import CallableDict, group_array
 from openquake.hazardlib.stats import mean_curve, quantile_curve
 from openquake.risklib import utils
 from openquake.baselib.python3compat import with_metaclass
@@ -937,6 +937,23 @@ class CurveBuilder(object):
         self.I = insured_losses + 1
         self.loss_curve_dt, self.loss_maps_dt = build_dtypes(
             C, conditional_loss_poes, insured_losses)
+
+    def __call__(self, assets, ass_loss_ratios, ses_ratio):
+        # returns aids, poes
+        aids = []
+        all_poes = []
+        alr = group_array(ass_loss_ratios, 'aid')
+        for asset in assets:
+            aid = asset.ordinal
+            try:
+                loss_ratios = alr[aid]['loss']  # no loss ratios for aid
+            except KeyError:
+                continue
+            counts = numpy.array([(loss_ratios >= ratio).sum(axis=0)
+                                  for ratio in self.ratios])
+            aids.append(aid)
+            all_poes.append(build_poes(counts, 1. / ses_ratio))
+        return numpy.array(aids), numpy.array(all_poes)
 
     def get_counts(self, N, count_dicts):
         """
