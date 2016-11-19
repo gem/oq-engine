@@ -126,18 +126,8 @@ def _aggregate(outputs, compositemodel, agg, ass, idx, result, monitor):
     # update the result dictionary and the agg array with each output
     for out in outputs:
         l, r = out.lr
-        asset_ids = [a.ordinal for a in out.assets]
         loss_type = compositemodel.loss_types[l]
         indices = numpy.array([idx[eid] for eid in out.eids])
-
-        cb = compositemodel.curve_builders[l]
-        if cb.user_provided:
-            counts_matrix = cb.build_counts(out.loss_ratios[:, :, 0])
-            result['RC'][l, r] += dict(zip(asset_ids, counts_matrix))
-            if monitor.insured_losses:
-                result['IC'][l, r] += dict(
-                    zip(asset_ids, cb.build_counts(out.loss_ratios[:, :, 1])))
-
         for i, asset in enumerate(out.assets):
             aid = asset.ordinal
             loss_ratios = out.loss_ratios[i]
@@ -184,8 +174,7 @@ def event_based_risk(riskinput, riskmodel, assetcol, monitor):
 
     def zeroN():
         return numpy.zeros((monitor.num_assets, I))
-    result = dict(RC=square(L, R, AccumDict), IC=square(L, R, AccumDict),
-                  AGGLOSS=AccumDict(), ASSLOSS=AccumDict())
+    result = dict(AGGLOSS=AccumDict(), ASSLOSS=AccumDict())
     if monitor.avg_losses:
         result['AVGLOSS'] = square(L, R, zeroN)
 
@@ -232,7 +221,7 @@ class EventBasedStats(object):
             for ds in dset.values():
                 ds.attrs['nonzero_fraction'] = len(ds) / E
 
-        insured_losses = self.oqparam.insured_losses
+        I = self.oqparam.insured_losses + 1
         ses_ratio = self.oqparam.ses_ratio
         R = len(self.rlzs_assoc.realizations)
         ltypes = self.riskmodel.loss_types
@@ -243,7 +232,7 @@ class EventBasedStats(object):
             [(ltype, (F32, cbuilder.curve_resolution))
              for ltype, cbuilder in zip(
                 ltypes, self.riskmodel.curve_builders)])
-        rcurves = numpy.zeros((N, R, 2), multi_lr_dt)
+        rcurves = numpy.zeros((N, R, I), multi_lr_dt)
 
         # AVGLOSS
         if self.oqparam.avg_losses:
@@ -261,21 +250,26 @@ class EventBasedStats(object):
 
         # RC, IC
         if self.oqparam.loss_ratios:
+            assets = list(self.assetcol)
             with self.monitor('building rcurves-rlzs'):
-                for (l, r), data in numpy.ndenumerate(result['RC']):
-                    cb = self.riskmodel.curve_builders[l]
-                    if data and cb.user_provided:
-                        # data is a dict asset idx -> counts
-                        lt = self.riskmodel.loss_types[l]
-                        poes = cb.build_poes(N, [data], ses_ratio)
-                        rcurves[lt][:, r, 0] = poes
-                for (l, r), data in numpy.ndenumerate(result['IC']):
-                    cb = self.riskmodel.curve_builders[l]
-                    if data and cb.user_provided and insured_losses:
-                        # data is a dict asset idx -> counts
-                        lt = self.riskmodel.loss_types[l]
-                        poes = cb.build_poes(N, [data], ses_ratio)
-                        rcurves[lt][:, r, 1] = poes
+                for rlzname in self.datastore['ass_loss_ratios']:
+                    r = int(rlzname[4:])  # strip "rlz-"
+                    for cb in self.riskmodel.curve_builders:
+                        try:
+                            data = self.datastore['ass_loss_ratios/%s/%s' %
+                                                  (rlzname, cb.loss_type)]
+                        except KeyError:  # no data for the given rlz, ltype
+                            continue
+                        if cb.user_provided:
+                            aids, curves = cb(assets, data, ses_ratio)
+                            if not len(aids):  # no curve
+                                continue
+                            try:  # with insured losses
+                                A, L, I = curves.shape
+                            except ValueError:  # no insured losses
+                                A, L = curves.shape
+                            rcurves[cb.loss_type][aids, r] = curves.reshape(
+                                A, I, L)
                 self.datastore['rcurves-rlzs'] = rcurves
 
         if self.loss_maps_dt:
