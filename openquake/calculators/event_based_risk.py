@@ -151,7 +151,7 @@ def _aggregate(outputs, compositemodel, agg, ass, idx, result, monitor):
             # asset losses
             if monitor.asset_loss_table:
                 data = [(eid, aid, loss)
-                        for eid, loss in zip(out.eids, losses)
+                        for eid, loss in zip(out.eids, loss_ratios)
                         if loss.sum() > 0]
                 if data:
                     ass[l, r].append(numpy.array(data, monitor.ela_dt))
