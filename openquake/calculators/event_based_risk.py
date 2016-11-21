@@ -26,7 +26,8 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
-from openquake.baselib.general import AccumDict, humansize, block_splitter
+from openquake.baselib.general import (
+    AccumDict, humansize, block_splitter, group_array)
 from openquake.calculators import base, event_based
 from openquake.commonlib import parallel, calc
 from openquake.risklib import scientific, riskinput
@@ -222,7 +223,6 @@ class EventBasedStats(object):
                 ds.attrs['nonzero_fraction'] = len(ds) / E
 
         I = self.oqparam.insured_losses + 1
-        ses_ratio = self.oqparam.ses_ratio
         R = len(self.rlzs_assoc.realizations)
         ltypes = self.riskmodel.loss_types
         self.vals = vals = self.assetcol.values()
@@ -248,43 +248,50 @@ class EventBasedStats(object):
                                 avgloss[i, 1] * avalue)
                 self.datastore['avg_losses-rlzs'] = self.avg_losses
 
-        # RC, IC
         if self.oqparam.loss_ratios:
-            assets = list(self.assetcol)
-            with self.monitor('building rcurves-rlzs'):
-                for rlzname in self.datastore['ass_loss_ratios']:
-                    r = int(rlzname[4:])  # strip "rlz-"
-                    for cb in self.riskmodel.curve_builders:
-                        try:
-                            data = self.datastore['ass_loss_ratios/%s/%s' %
-                                                  (rlzname, cb.loss_type)]
-                        except KeyError:  # no data for the given rlz, ltype
-                            continue
-                        if cb.user_provided:
-                            aids, curves = cb(assets, data, ses_ratio)
-                            if not len(aids):  # no curve
-                                continue
-                            try:  # with insured losses
-                                A, L, I = curves.shape
-                            except ValueError:  # no insured losses
-                                A, L = curves.shape
-                            rcurves[cb.loss_type][aids, r] = curves.reshape(
-                                A, I, L)
-                self.datastore['rcurves-rlzs'] = rcurves
+            self.save_rcurves(rcurves, I)
 
         if self.loss_maps_dt:
-            with self.monitor('building loss_maps-rlzs'):
-                if (self.oqparam.conditional_loss_poes and
-                        'rcurves-rlzs' in self.datastore):
-                    loss_maps = numpy.zeros((N, R), self.loss_maps_dt)
-                    rcurves = self.datastore['rcurves-rlzs']
-                    for cb in self.riskmodel.curve_builders:
-                        if cb.user_provided:
-                            lm = loss_maps[cb.loss_type]
-                            for r, lmaps in cb.build_loss_maps(
-                                    self.assetcol.array, rcurves):
-                                lm[:, r] = lmaps
-                    self.datastore['loss_maps-rlzs'] = loss_maps
+            self.save_loss_maps(N, R)
+
+    def save_rcurves(self, rcurves, I):
+        assets = list(self.assetcol)
+        with self.monitor('building rcurves-rlzs'):
+            for rlzname in self.datastore['ass_loss_ratios']:
+                r = int(rlzname[4:])  # strip "rlz-"
+                for cb in self.riskmodel.curve_builders:
+                    try:
+                        data = self.datastore['ass_loss_ratios/%s/%s' %
+                                              (rlzname, cb.loss_type)].value
+                    except KeyError:  # no data for the given rlz, ltype
+                        continue
+                    if cb.user_provided:
+                        aids, curves = cb(
+                            assets, group_array(data, 'aid'),
+                            self.oqparam.ses_ratio)
+                        if not len(aids):  # no curve
+                            continue
+                        try:  # with insured losses
+                            A, L, I = curves.shape
+                        except ValueError:  # no insured losses
+                            A, L = curves.shape
+                        rcurves[cb.loss_type][aids, r] = curves.reshape(
+                            A, I, L)
+            self.datastore['rcurves-rlzs'] = rcurves
+
+    def save_loss_maps(self, N, R):
+        with self.monitor('building loss_maps-rlzs'):
+            if (self.oqparam.conditional_loss_poes and
+                    'rcurves-rlzs' in self.datastore):
+                loss_maps = numpy.zeros((N, R), self.loss_maps_dt)
+                rcurves = self.datastore['rcurves-rlzs']
+                for cb in self.riskmodel.curve_builders:
+                    if cb.user_provided:
+                        lm = loss_maps[cb.loss_type]
+                        for r, lmaps in cb.build_loss_maps(
+                                self.assetcol.array, rcurves):
+                            lm[:, r] = lmaps
+                self.datastore['loss_maps-rlzs'] = loss_maps
 
     def _collect_all_data(self):
         # called only if 'rcurves-rlzs' in dstore; return a list of outputs
