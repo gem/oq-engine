@@ -173,9 +173,9 @@ class Asset(object):
         """
         if loss_type == 'occupants':
             return self.values['occupants_' + str(time_event)]
-        try:
+        try:  # extract from the cache
             val = self._cost[loss_type]
-        except KeyError:
+        except KeyError:  # compute
             val = self.calc(loss_type, self.values, self.area, self.number)
             self._cost[loss_type] = val
         return val
