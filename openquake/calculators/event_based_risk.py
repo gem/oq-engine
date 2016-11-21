@@ -140,7 +140,7 @@ def _aggregate(outputs, compositemodel, agg, ass, idx, result, monitor):
                     loss_ratios.sum(axis=0) * monitor.ses_ratio)
 
             # asset losses
-            if monitor.asset_loss_table:
+            if monitor.loss_ratios:
                 data = [(eid, aid, loss)
                         for eid, loss in zip(out.eids, loss_ratios)
                         if loss.sum() > 0]
@@ -211,7 +211,7 @@ class EventBasedStats(object):
                 self.oqparam.conditional_loss_poes,
                 self.oqparam.insured_losses + 1))
 
-        if self.oqparam.asset_loss_table:
+        if self.oqparam.loss_ratios:
             asslt = self.datastore['ass_loss_ratios']
             for rlz, dset in asslt.items():
                 for ds in dset.values():
@@ -508,7 +508,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         mon = self.monitor
         mon.num_assets = self.count_assets()
         mon.avg_losses = self.oqparam.avg_losses
-        mon.asset_loss_table = self.oqparam.asset_loss_table
+        mon.loss_ratios = self.oqparam.loss_ratios
         mon.insured_losses = self.I
         mon.R = self.R
         mon.ses_ratio = (
@@ -528,7 +528,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.I)
         for (l, r) in itertools.product(range(L), range(R)):
             lt = loss_types[l]
-            if self.oqparam.asset_loss_table:
+            if self.oqparam.loss_ratios:
                 self.ass_loss_ratios[l, r] = self.datastore.create_dset(
                     'ass_loss_ratios/rlz-%03d/%s' % (r, lt), self.ela_dt)
             self.agg_loss_table[l, r] = self.datastore.create_dset(
@@ -569,7 +569,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         self.gmfbytes += result.pop('gmfbytes')
         with self.monitor('saving event loss tables', autoflush=True):
-            if self.oqparam.asset_loss_table:
+            if self.oqparam.loss_ratios:
                 for lr, array in sorted(result.pop('ASSLOSS').items()):
                     hdf5.extend(self.ass_loss_ratios[lr], array)
             for lr, array in sorted(result.pop('AGGLOSS').items()):
@@ -602,7 +602,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             calc.build_agg_curve_and_stats(builder)
         self.datastore.hdf5.flush()
 
-        if self.oqparam.asset_loss_table:
+        if self.oqparam.loss_ratios:
             pass  # TODO: build specific loss curves
 
         rlzs = self.rlzs_assoc.realizations
