@@ -403,9 +403,10 @@ class FilteredSiteCollection(object):
 
     def __fromh5__(self, array, attrs):
         complete = object.__new__(SiteCollection)
+        complete.complete = complete
+        complete.total_sites = attrs['total_sites']
         for slot in complete._slots_:
             setattr(complete, slot, array[slot])
-        complete.total_sites = attrs['total_sites']
         self.indices = attrs['indices']
         self.complete = complete
 
