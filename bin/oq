@@ -21,8 +21,8 @@ import sys
 import os
 
 if os.path.realpath(__file__) == '/opt/openquake/bin/oq':
-    sys.path.insert(1, '/opt/openquake/lib/python' + sys.version_info[0] +
-                    '.' + sys.version_info[1] + '/site-packages')
+    sys.path.insert(1, '/opt/openquake/lib/python' + str(sys.version_info[0]) +
+                    '.' + str(sys.version_info[1]) + '/site-packages')
 
 import openquake.commands.__main__ as main
 
