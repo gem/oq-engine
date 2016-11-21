@@ -393,6 +393,22 @@ class FilteredSiteCollection(object):
         """Return the number of filtered sites"""
         return len(self.indices)
 
+    def __toh5__(self):
+        n = len(self.complete)
+        array = numpy.zeros(n, self.complete.dtype)
+        for slot in self.complete._slots_:
+            array[slot] = getattr(self.complete, slot)
+        attrs = dict(total_sites=n, indices=self.indices)
+        return array, attrs
+
+    def __fromh5__(self, array, attrs):
+        complete = object.__new__(SiteCollection)
+        for slot in complete._slots_:
+            setattr(complete, slot, array[slot])
+        complete.total_sites = attrs['total_sites']
+        self.indices = attrs['indices']
+        self.complete = complete
+
     def __repr__(self):
         return '<FilteredSiteCollection with %d of %d sites>' % (
             len(self.indices), self.total_sites)
