@@ -1,1 +1,30 @@
-../openquake/commands/__main__.py
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2013-2016 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+import os
+
+if os.path.realpath(__file__) == '/opt/openquake/bin/oq':
+    sys.path.insert(1, '/opt/openquake/lib/python' + sys.version_info[0] +
+                    '.' + sys.version_info[1] + '/site-packages')
+
+import openquake.commands.__main__ as main
+
+if __name__ == '__main__':
+    main.oq()
