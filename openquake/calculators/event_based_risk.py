@@ -225,7 +225,7 @@ class EventBasedStats(object):
         I = self.oqparam.insured_losses + 1
         R = len(self.rlzs_assoc.realizations)
         ltypes = self.riskmodel.loss_types
-        self.vals = vals = self.assetcol.values()
+        self.vals = self.assetcol.values()
 
         # loss curves
         multi_lr_dt = numpy.dtype(
@@ -236,23 +236,25 @@ class EventBasedStats(object):
 
         # AVGLOSS
         if self.oqparam.avg_losses:
-            with self.monitor('building avg_losses-rlzs'):
-                for (l, r), avgloss in numpy.ndenumerate(
-                        result['AVGLOSS']):
-                    lt = self.riskmodel.loss_types[l]
-                    avg_losses_lt = self.avg_losses[lt]
-                    for i, avalue in enumerate(vals[lt]):
-                        avg_losses_lt[i, r] = avgloss[i, 0] * avalue
-                        if self.oqparam.insured_losses:
-                            self.avg_losses[lt + '_ins'][i, r] = (
-                                avgloss[i, 1] * avalue)
-                self.datastore['avg_losses-rlzs'] = self.avg_losses
+            self.save_avg_losses(result['AVGLOSS'])
 
         if self.oqparam.loss_ratios:
             self.save_rcurves(rcurves, I)
 
         if self.loss_maps_dt:
             self.save_loss_maps(N, R)
+
+    def save_avg_losses(self, avg_losses):
+        with self.monitor('building avg_losses-rlzs'):
+            for (l, r), avgloss in numpy.ndenumerate(avg_losses):
+                lt = self.riskmodel.loss_types[l]
+                avg_losses_lt = self.avg_losses[lt]
+                for i, avalue in enumerate(self.vals[lt]):
+                    avg_losses_lt[i, r] = avgloss[i, 0] * avalue
+                    if self.oqparam.insured_losses:
+                        self.avg_losses[lt + '_ins'][i, r] = (
+                            avgloss[i, 1] * avalue)
+            self.datastore['avg_losses-rlzs'] = self.avg_losses
 
     def save_rcurves(self, rcurves, I):
         assets = list(self.assetcol)
@@ -271,10 +273,7 @@ class EventBasedStats(object):
                             self.oqparam.ses_ratio)
                         if not len(aids):  # no curve
                             continue
-                        try:  # with insured losses
-                            A, L, I = curves.shape
-                        except ValueError:  # no insured losses
-                            A, L = curves.shape
+                        A, L = curves.shape[:2]
                         rcurves[cb.loss_type][aids, r] = curves.reshape(
                             A, I, L)
             self.datastore['rcurves-rlzs'] = rcurves
