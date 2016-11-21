@@ -533,11 +533,11 @@ class EventBasedReduced(RiskModel):
     alt_dt = numpy.dtype([('eid', U32), ('aid', U32), ('loss', F32)])
 
     def __init__(self, taxonomy, vulnerability_functions, time_event,
-                 asset_loss_table):
+                 loss_ratios):
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.time_event = time_event
-        self.asset_loss_table = asset_loss_table
+        self.loss_ratios = loss_ratios
 
     def __call__(self, loss_type, assets, gmvs_eids, epsgetter):
         """
@@ -572,7 +572,7 @@ class EventBasedReduced(RiskModel):
             losses = ratios * asset.value(loss_type, self.time_event)
             alosses[i] = losses.sum()
             elosses += losses
-            if self.asset_loss_table:
+            if self.loss_ratios:
                 aid = asset.ordinal
                 for eid, ratio in zip(eids, ratios):
                     alt.append((eid, aid, ratio))
