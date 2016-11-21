@@ -938,6 +938,22 @@ class CurveBuilder(object):
         self.loss_curve_dt, self.loss_maps_dt = build_dtypes(
             C, conditional_loss_poes, insured_losses)
 
+    def __call__(self, assets, ratios_by_aid, ses_ratio):
+        # returns aids, poes
+        aids = []
+        all_poes = []
+        for asset in assets:
+            aid = asset.ordinal
+            try:
+                loss_ratios = ratios_by_aid[aid]['loss']
+            except KeyError:   # no loss ratios
+                continue
+            counts = numpy.array([(loss_ratios >= ratio).sum(axis=0)
+                                  for ratio in self.ratios])
+            aids.append(aid)
+            all_poes.append(build_poes(counts, 1. / ses_ratio))
+        return numpy.array(aids), numpy.array(all_poes)
+
     def get_counts(self, N, count_dicts):
         """
         Return a matrix of shape (N, C), with nonzero entries at
