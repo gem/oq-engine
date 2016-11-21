@@ -21,6 +21,10 @@ import os
 import sys
 import importlib
 
+if os.path.realpath(__file__) == '/opt/openquake/bin/oq':
+    sys.path.insert(1, '/opt/openquake/lib/python' + sys.version_info[0] +
+                    '.' + sys.version_info[1] + '/site-packages')
+
 from openquake.baselib import sap
 from openquake.commonlib import __version__
 from openquake import commands
@@ -38,6 +42,7 @@ if 'OQ_DISTRIBUTE' not in os.environ and USE_CELERY:
 if USE_CELERY and 'run' in sys.argv:
     sys.exit('You are on a cluster and you are using oq run?? '
              'Use oq engine --run instead!')
+
 
 def oq():
     modnames = ['openquake.commands.%s' % mod[:-3]
