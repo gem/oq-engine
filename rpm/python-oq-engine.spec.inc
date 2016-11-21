@@ -68,7 +68,9 @@ python setup.py build
 
 %install
 sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" openquake/risklib/__init__.py
-python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --prefix=/opt/openquake --record=INSTALLED_FILES
+install -p -m 755 -d %{buildroot}%{_bindir}
+install -p -m 755 -d %{buildroot}/opt/openquake/bin
+python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --prefix=/opt/openquake --install-scripts=/opt/openquake/bin --record=INSTALLED_FILES
 ln -sf /opt/openquake/bin/oq %{buildroot}%{_bindir}/oq
 # create directories where the files will be located
 mkdir -p %{buildroot}%{_sysconfdir}/openquake
