@@ -196,12 +196,11 @@ def event_based_risk(riskinput, riskmodel, assetcol, monitor):
 
 
 class EventBasedStats(object):
-    def __init__(self, datastore, monitor, avg_losses, result):
+    def __init__(self, datastore, monitor, result):
         self.datastore = datastore
         self.riskmodel = riskinput.read_composite_risk_model(datastore)
         self.oqparam = datastore['oqparam']
         self.monitor = monitor
-        self.avg_losses = avg_losses
         self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
         self.assetcol = self.datastore['assetcol']
         N = len(self.assetcol)
@@ -226,6 +225,7 @@ class EventBasedStats(object):
         R = len(self.rlzs_assoc.realizations)
         ltypes = self.riskmodel.loss_types
         self.vals = self.assetcol.values()
+        self.avg_losses = numpy.zeros((N, R), self.oqparam.loss_dt())
 
         # loss curves
         multi_lr_dt = numpy.dtype(
@@ -515,11 +515,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             oq.risk_investigation_time or oq.investigation_time) / (
                 oq.investigation_time * oq.ses_per_logic_tree_path)
 
-        self.N = N = len(self.assetcol)
         self.E = sum(len(v) for v in self.datastore['events'].values())
-
-        # average losses, stored in a composite array of shape N, R
-        self.avg_losses = numpy.zeros((N, R), oq.loss_dt())
 
         self.ass_loss_ratios = square(L, R, lambda: None)
         self.agg_loss_table = square(L, R, lambda: None)
@@ -590,8 +586,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')
         oq = self.oqparam
-        calc = EventBasedStats(self.datastore,
-                               self.monitor, self.avg_losses, result)
+        calc = EventBasedStats(self.datastore, self.monitor, result)
         builder = scientific.StatsBuilder(
             oq.quantile_loss_curves, oq.conditional_loss_poes, [],
             oq.loss_curve_resolution, scientific.normalize_curves_eb,
