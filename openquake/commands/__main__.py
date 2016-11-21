@@ -21,10 +21,6 @@ import os
 import sys
 import importlib
 
-if os.path.realpath(__file__) == '/opt/openquake/bin/oq':
-    sys.path.insert(1, '/opt/openquake/lib/python' + sys.version_info[0] +
-                    '.' + sys.version_info[1] + '/site-packages')
-
 from openquake.baselib import sap
 from openquake.commonlib import __version__
 from openquake import commands
