@@ -228,7 +228,7 @@ def group_by_aid(data, loss_type):
 
 
 # this is used by event_based_risk
-@export.add(('ass_loss_table', 'csv'))
+@export.add(('ass_loss_ratios', 'csv'))
 def export_ass_losses_ebr(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -237,6 +237,7 @@ def export_ass_losses_ebr(ekey, dstore):
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     name, ext = export.keyfunc(ekey)
     ass_losses = dstore[name]
+    assetcol = dstore['assetcol']
     oq = dstore['oqparam']
     dtlist = [('event_tag', (numpy.string_, 100)), ('year', U32),
               ('aid', U32)] + oq.loss_dt_list()
@@ -271,7 +272,8 @@ def export_ass_losses_ebr(ekey, dstore):
             elt['aid'] = sorted(losses_by_aid)
             for i, aid in numpy.ndenumerate(elt['aid']):
                 for loss_type in loss_types:
-                    loss = losses_by_aid[aid].get(loss_type, zero)
+                    value = assetcol[int(aid)].value(loss_type, oq.time_event)
+                    loss = value * losses_by_aid[aid].get(loss_type, zero)
                     if oq.insured_losses:
                         elt[loss_type][i] = loss[0]
                         elt[loss_type + '_ins'][i] = loss[1]

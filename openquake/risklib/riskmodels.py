@@ -173,9 +173,9 @@ class Asset(object):
         """
         if loss_type == 'occupants':
             return self.values['occupants_' + str(time_event)]
-        try:
+        try:  # extract from the cache
             val = self._cost[loss_type]
-        except KeyError:
+        except KeyError:  # compute
             val = self.calc(loss_type, self.values, self.area, self.number)
             self._cost[loss_type] = val
         return val
@@ -533,11 +533,11 @@ class EventBasedReduced(RiskModel):
     alt_dt = numpy.dtype([('eid', U32), ('aid', U32), ('loss', F32)])
 
     def __init__(self, taxonomy, vulnerability_functions, time_event,
-                 asset_loss_table):
+                 loss_ratios):
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.time_event = time_event
-        self.asset_loss_table = asset_loss_table
+        self.loss_ratios = loss_ratios
 
     def __call__(self, loss_type, assets, gmvs_eids, epsgetter):
         """
@@ -572,10 +572,10 @@ class EventBasedReduced(RiskModel):
             losses = ratios * asset.value(loss_type, self.time_event)
             alosses[i] = losses.sum()
             elosses += losses
-            if self.asset_loss_table:
+            if self.loss_ratios:
                 aid = asset.ordinal
-                for eid, loss in zip(eids, losses):
-                    alt.append((eid, aid, loss))
+                for eid, ratio in zip(eids, ratios):
+                    alt.append((eid, aid, ratio))
         return scientific.Output(
             assets, loss_type, alosses=alosses, elosses=elosses,
             alt=numpy.array(alt, self.alt_dt), eids=eids)
