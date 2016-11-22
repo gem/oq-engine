@@ -32,7 +32,7 @@ from openquake.baselib.general import groupby, DictArray
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
-
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.imt import from_string
 
 
@@ -113,7 +113,11 @@ def calc_hazard_curves(
         size of each field is given by the number of levels in ``imtls``.
     """
     imtls = DictArray(imtls)
-    sites = source_site_filter.sitecol
+    if hasattr(source_site_filter, 'sitecol'):  # a filter, as it should be
+        sites = source_site_filter.sitecol
+    else:  # backward compatibility, a site collection was passed
+        sites = source_site_filter
+        source_site_filter = SourceFilter(sites, None)
     sources_by_trt = groupby(
         sources, operator.attrgetter('tectonic_region_type'))
     pmap = ProbabilityMap(len(imtls.array), 1)
