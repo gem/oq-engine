@@ -148,10 +148,9 @@ class RtreeFilter(object):
         by default True, i.e. try to use the rtree module if available
     """
     def __init__(self, sitecol, integration_distance, use_rtree=True):
-        assert integration_distance, 'Must be set'
         self.integration_distance = integration_distance
         self.sitecol = sitecol
-        self.use_rtree = use_rtree
+        self.use_rtree = use_rtree and integration_distance
         fixed_lons, self.idl = fix_lons_idl(sitecol.lons)
         if use_rtree:
             self.index = rtree.index.Index()
