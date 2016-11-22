@@ -69,7 +69,7 @@ except ImportError:
     logging.warn('Cannot find the rtree module, using slow filtering')
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.site import FilteredSiteCollection
-from openquake.hazardlib.geo.utils import fix_lons_idl
+from openquake.hazardlib.geo.utils import fix_lons_idl, cross_idl
 
 
 @contextmanager
@@ -133,7 +133,10 @@ class RtreeFilter(object):
          do_something(...)
 
     As a side effect, sets the `.nsites` attribute of the source, i.e. the
-    number of sites within the integration distance.
+    number of sites within the integration distance. Notice that RtreeFilter
+    instances can be pickled, but when unpickled the `use_rtree` flag is set to
+    false and the index is lost: the reason is that libspatialindex indices
+    cannot be properly pickled (https://github.com/Toblerity/rtree/issues/65).
 
     :param sitecol:
         :class:`openquake.hazardlib.site.SiteCollection` instance
@@ -141,20 +144,18 @@ class RtreeFilter(object):
         Threshold distance in km, this value gets passed straight to
         :meth:`openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source`
         which is what is actually used for filtering.
-    :param rtree:
-        the rtree module or None if not available
+    :param use_rtree:
+        by default True, i.e. try to use the rtree module if available
     """
-    def __init__(self, sitecol, integration_distance, rtree=rtree):
+    def __init__(self, sitecol, integration_distance, use_rtree=True):
         assert integration_distance, 'Must be set'
         self.integration_distance = integration_distance
         self.sitecol = sitecol
-        self.rtree = rtree
+        self.use_rtree = use_rtree
         fixed_lons, self.idl = fix_lons_idl(sitecol.lons)
-        if self.idl:  # longitudes -> longitudes + 360 degrees
-            sitecol.complete.lons[sitecol.sids] = fixed_lons
-        if rtree:
+        if use_rtree:
             self.index = rtree.index.Index()
-            for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
+            for sid, lon, lat in zip(sitecol.sids, fixed_lons, sitecol.lats):
                 self.index.insert(sid, (lon, lat, lon, lat))
 
     def get_affected_box(self, src):
@@ -202,7 +203,7 @@ class RtreeFilter(object):
         if sites is None:
             sites = self.sitecol
         for source in sources:
-            if self.rtree:  # Rtree filtering
+            if self.use_rtree:  # Rtree filtering
                 box = self.get_affected_box(source)
                 sids = numpy.array(sorted(self.index.intersection(box)))
                 if len(sids):
@@ -220,6 +221,10 @@ class RtreeFilter(object):
                 if s_sites is not None:
                     source.nsites = len(s_sites)
                     yield source, s_sites
+
+    def __getstate__(self):
+        return dict(integration_distance=self.integration_distance,
+                    sitecol=self.sitecol, use_rtree=False)
 
 
 def source_site_noop_filter(sources, sites=None):

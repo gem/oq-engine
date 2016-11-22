@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Made the RtreeFilter pickleable
   * Made the FilteredSiteCollections serializable to HDF5
 
   [Daniele Viganò]
