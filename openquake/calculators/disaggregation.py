@@ -83,7 +83,7 @@ def compute_disagg(src_filter, sources, src_group_id, rlzs_assoc,
                 trt_num, sources, site, curves_dict[sid],
                 src_group_id, rlzs_assoc, gsims, oqparam.imtls,
                 oqparam.poes_disagg, oqparam.truncation_level,
-                oqparam.num_epsilon_bins, oqparam.iml_disagg, src_filter,
+                oqparam.num_epsilon_bins, oqparam.iml_disagg,
                 monitor)
 
         for (rlzi, poe, imt), iml_pne_pairs in bdata.pnes.items():
