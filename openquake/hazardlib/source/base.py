@@ -149,6 +149,8 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         false negatives (it's better not to filter a site out if there is some
         uncertainty about its distance).
         """
+        if integration_distance is None:  # no filtering
+            return sites
         rup_enc_poly = self.get_rupture_enclosing_polygon(integration_distance)
         return sites.filter(rup_enc_poly.intersects(sites.mesh))
 
