@@ -43,12 +43,12 @@ F64 = numpy.float64
 # ######################## rupture calculator ############################ #
 
 
-def compute_ruptures(sources, sitecol, gsims, monitor):
+def compute_ruptures(sources, src_filter, gsims, monitor):
     """
     :param sources:
         List of commonlib.source.Source tuples
-    :param sitecol:
-        a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :param src_filter:
+        a source site filter
     :param gsims:
         a list of GSIMs for the current tectonic region model
     :param monitor:
@@ -60,7 +60,6 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     # sources of the same src_group_id
     grp_id = sources[0].src_group_id
     trt = sources[0].tectonic_region_type
-    max_dist = monitor.maximum_distance[trt]
     eb_ruptures = []
     calc_times = []
     rup_mon = monitor('filtering ruptures', measuremem=False)
@@ -68,11 +67,11 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     num_events = 0
 
     # Compute and save stochastic event sets
-    for src in sources:
+    for src, s_sites in src_filter(sources):
         t0 = time.time()
-        s_sites = src.filter_sites_by_distance_to_source(max_dist, sitecol)
         if s_sites is None:
             continue
+        max_dist = src_filter.integration_distance[trt]
         rupture_filter = functools.partial(
             filter_sites_by_distance_to_rupture,
             integration_distance=max_dist, sites=s_sites)
