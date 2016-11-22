@@ -34,12 +34,12 @@ from openquake.calculators import base, classical
 DISAGG_RES_FMT = 'disagg/poe-%(poe)s-rlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
 
 
-def compute_disagg(source_filter, sources, src_group_id, rlzs_assoc,
+def compute_disagg(src_filter, sources, src_group_id, rlzs_assoc,
                    trt_names, curves_dict, bin_edges, oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
-    :param source_filter:
+    :param src_filter:
         a :class:`openquake.hazardlib.calc.filter.SourceFilter` instance
     :param sources:
         list of hazardlib source objects
@@ -61,7 +61,7 @@ def compute_disagg(source_filter, sources, src_group_id, rlzs_assoc,
         a dictionary of probability arrays, with composite key
         (sid, rlz.id, poe, imt, iml, trt_names).
     """
-    sitecol = source_filter.sitecol
+    sitecol = src_filter.sitecol
     trt_num = dict((trt, i) for i, trt in enumerate(trt_names))
     gsims = rlzs_assoc.gsims_by_grp_id[src_group_id]
     result = {}  # sid, rlz.id, poe, imt, iml, trt_names -> array
@@ -83,7 +83,7 @@ def compute_disagg(source_filter, sources, src_group_id, rlzs_assoc,
                 trt_num, sources, site, curves_dict[sid],
                 src_group_id, rlzs_assoc, gsims, oqparam.imtls,
                 oqparam.poes_disagg, oqparam.truncation_level,
-                oqparam.num_epsilon_bins, oqparam.iml_disagg, source_filter,
+                oqparam.num_epsilon_bins, oqparam.iml_disagg, src_filter,
                 monitor)
 
         for (rlzi, poe, imt), iml_pne_pairs in bdata.pnes.items():
@@ -217,15 +217,15 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                     if (sm_id, sid) in self.bin_edges:
                         bin_edges[sid] = self.bin_edges[sm_id, sid]
 
-                source_filter = SourceFilter(sitecol, oq.maximum_distance)
+                src_filter = SourceFilter(sitecol, oq.maximum_distance)
                 split_sources = []
                 for src in src_group:
-                    for split, _sites in source_filter(
+                    for split, _sites in src_filter(
                             sourceconverter.split_source(src), sitecol):
                         split_sources.append(split)
                 for srcs in split_in_blocks(split_sources, nblocks):
                     all_args.append(
-                        (source_filter, srcs, src_group.id, self.rlzs_assoc,
+                        (src_filter, srcs, src_group.id, self.rlzs_assoc,
                          trt_names, curves_dict, bin_edges, oq, self.monitor))
 
         results = parallel.starmap(compute_disagg, all_args).reduce(

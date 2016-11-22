@@ -387,7 +387,7 @@ class HazardCalculator(BaseCalculator):
         if 'source' in oq.inputs:
             wakeup_pool()  # fork before reading the source model
             logging.info('Instantiating the source-sites filter')
-            self.source_filter = SourceFilter(self.sitecol, oq.maximum_distance)
+            self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
             with mon('reading composite source model', autoflush=True):
                 csm = readinput.get_composite_source_model(oq)
             if self.is_stochastic:
@@ -398,7 +398,7 @@ class HazardCalculator(BaseCalculator):
             with mon('filtering composite source model', autoflush=True):
                 logging.info('Filtering composite source model')
                 # we are also weighting the sources, but weighting is ultrafast
-                csm = csm.filter(self.source_filter)
+                csm = csm.filter(self.src_filter)
             self.csm = csm
             self.datastore['csm_info'] = csm.info
             self.rup_data = {}
