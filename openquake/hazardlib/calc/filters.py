@@ -144,13 +144,13 @@ class RtreeFilter(object):
     :param rtree:
         the rtree module or None if not available
     """
-    def __init__(self, sitecol, integration_distance, rtree=rtree):
+    def __init__(self, sitecol, integration_distance, use_rtree=True):
         assert integration_distance, 'Must be set'
         self.integration_distance = integration_distance
         self.sitecol = sitecol
-        self.rtree = rtree
+        self.use_rtree = use_rtree
         fixed_lons, self.idl = fix_lons_idl(sitecol.lons)
-        if rtree:
+        if use_rtree:
             self.index = rtree.index.Index()
             for sid, lon, lat in zip(sitecol.sids, fixed_lons, sitecol.lats):
                 self.index.insert(sid, (lon, lat, lon, lat))
@@ -200,7 +200,7 @@ class RtreeFilter(object):
         if sites is None:
             sites = self.sitecol
         for source in sources:
-            if self.rtree:  # Rtree filtering
+            if self.use_rtree:  # Rtree filtering
                 box = self.get_affected_box(source)
                 sids = numpy.array(sorted(self.index.intersection(box)))
                 if len(sids):
