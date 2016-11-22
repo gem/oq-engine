@@ -217,8 +217,8 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                     if (sm_id, sid) in self.bin_edges:
                         bin_edges[sid] = self.bin_edges[sm_id, sid]
 
-                ss_filter = RtreeFilter(
-                    sitecol, oq.maximum_distance, rtree=None)
+                ss_filter = RtreeFilter(sitecol, oq.maximum_distance,
+                                        use_rtree=False)
                 split_sources = []
                 for src in src_group:
                     for split, _sites in ss_filter(
