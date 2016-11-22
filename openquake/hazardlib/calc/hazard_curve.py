@@ -94,7 +94,7 @@ def calc_hazard_curves(
         A sequence of seismic sources objects (instances of subclasses
         of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`).
     :param source_site_filter:
-        A source filter over the sites of interest
+        A source filter over the site collection or the site collection itself
     :param imtls:
         Dictionary mapping intensity measure type strings
         to lists of intensity measure levels.

@@ -69,7 +69,7 @@ except ImportError:
     logging.warn('Cannot find the rtree module, using slow filtering')
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.site import FilteredSiteCollection
-from openquake.hazardlib.geo.utils import fix_lons_idl, cross_idl
+from openquake.hazardlib.geo.utils import fix_lons_idl
 
 
 @contextmanager
@@ -151,8 +151,8 @@ class SourceFilter(object):
         self.integration_distance = integration_distance
         self.sitecol = sitecol
         self.use_rtree = use_rtree and integration_distance
-        fixed_lons, self.idl = fix_lons_idl(sitecol.lons)
-        if use_rtree:
+        if self.use_rtree:
+            fixed_lons, self.idl = fix_lons_idl(sitecol.lons)
             self.index = rtree.index.Index()
             for sid, lon, lat in zip(sitecol.sids, fixed_lons, sitecol.lats):
                 self.index.insert(sid, (lon, lat, lon, lat))
@@ -208,6 +208,8 @@ class SourceFilter(object):
                 if len(sids):
                     source.nsites = len(sids)
                     yield source, FilteredSiteCollection(sids, sites.complete)
+            elif not self.integration_distance:
+                yield source, sites
             else:  # normal filtering
                 try:
                     maxdist = self.integration_distance[
@@ -225,12 +227,4 @@ class SourceFilter(object):
         return dict(integration_distance=self.integration_distance,
                     sitecol=self.sitecol, use_rtree=False)
 
-
-def source_site_noop_filter(sources, sites=None):
-    """
-    Transparent source-site "no-op" filter -- behaves like a real filter
-    but never filters anything out and doesn't have any overhead.
-    """
-    return ((src, sites) for src in sources)
-source_site_noop_filter.affected = lambda src, sites=None: sites
-source_site_noop_filter.integration_distance = None
+source_site_noop_filter = SourceFilter(None, None)
