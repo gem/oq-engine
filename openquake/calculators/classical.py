@@ -42,11 +42,11 @@ F64 = numpy.float64
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-def split_filter_source(src, sites, source_filter, random_seed):
+def split_filter_source(src, sites, src_filter, random_seed):
     """
     :param src: an heavy source
     :param sites: sites affected by the source
-    :param source_filter: a SourceFilter instance
+    :param src_filter: a SourceFilter instance
     :random_seed: used only for event based calculations
     :returns: a list of split sources
     """
@@ -57,7 +57,7 @@ def split_filter_source(src, sites, source_filter, random_seed):
             nr = split.num_ruptures
             split.serial = src.serial[start:start + nr]
             start += nr
-        if source_filter.affected(split) is not None:
+        if src_filter.affected(split) is not None:
             split_sources.append(split)
     return split_sources
 
@@ -188,11 +188,11 @@ class BoundingBox(object):
     __nonzero__ = __bool__
 
 
-def classical(sources, source_filter, gsims, monitor):
+def classical(sources, src_filter, gsims, monitor):
     """
     :param sources:
         a non-empty sequence of sources of homogeneous tectonic region type
-    :param source_filter:
+    :param src_filter:
         source filter
     :param gsims:
         a list of GSIMs for the current tectonic region type
@@ -209,11 +209,11 @@ def classical(sources, source_filter, gsims, monitor):
         assert src.src_group_id == src_group_id
     if monitor.disagg:
         sm_id = monitor.sm_id
-        bbs = [BoundingBox(sm_id, sid) for sid in source_filter.sitecol.sids]
+        bbs = [BoundingBox(sm_id, sid) for sid in src_filter.sitecol.sids]
     else:
         bbs = []
     pmap = pmap_from_grp(
-        sources, source_filter, imtls, gsims, truncation_level,
+        sources, src_filter, imtls, gsims, truncation_level,
         bbs=bbs, monitor=monitor)
     pmap.bbs = bbs
     pmap.grp_id = src_group_id
@@ -346,17 +346,17 @@ class PSHACalculator(base.HazardCalculator):
                     light, maxweight, weight=operator.attrgetter('weight')):
                 for src in block:
                     self.infos[sg.id, src.source_id] = source.SourceInfo(src)
-                yield block, self.source_filter, gsims, monitor
+                yield block, self.src_filter, gsims, monitor
                 nlight += 1
             heavy = [src for src in sg.sources if src.weight > maxweight]
             if not heavy:
                 continue
             with self.monitor('split/filter heavy sources', autoflush=True):
                 for src in heavy:
-                    sites = self.source_filter.affected(src)
+                    sites = self.src_filter.affected(src)
                     self.infos[sg.id, src.source_id] = source.SourceInfo(src)
                     sources = split_filter_source(
-                        src, sites, self.source_filter, self.random_seed)
+                        src, sites, self.src_filter, self.random_seed)
                     if len(sources) > 1:
                         logging.info(
                             'Splitting %s "%s" in %d sources',
@@ -365,7 +365,7 @@ class PSHACalculator(base.HazardCalculator):
                     for block in block_splitter(
                             sources, maxweight,
                             weight=operator.attrgetter('weight')):
-                        yield block, self.source_filter, gsims, monitor
+                        yield block, self.src_filter, gsims, monitor
                         nheavy += 1
         logging.info('Sent %d light and %d heavy tasks', nlight, nheavy)
 
