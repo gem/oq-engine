@@ -136,7 +136,7 @@ def _aggregate(outputs, compositemodel, agg, ass, idx, result, monitor):
 
             # average losses
             if monitor.avg_losses:
-                result['AVGLOSS'][l, r][aid] += (
+                result['avglosses'][l, r][aid] += (
                     loss_ratios.sum(axis=0) * monitor.ses_ratio)
 
             # asset losses
@@ -177,7 +177,7 @@ def event_based_risk(riskinput, riskmodel, assetcol, monitor):
         return numpy.zeros((monitor.num_assets, I))
     result = dict(agglosses=AccumDict(), asslosses=AccumDict())
     if monitor.avg_losses:
-        result['AVGLOSS'] = square(L, R, zeroN)
+        result['avglosses'] = square(L, R, zeroN)
 
     outputs = riskmodel.gen_outputs(riskinput, monitor, assetcol)
     _aggregate(outputs, riskmodel, agg, ass, idx, result, monitor)
@@ -234,9 +234,9 @@ class EventBasedStats(object):
                 ltypes, self.riskmodel.curve_builders)])
         rcurves = numpy.zeros((N, R, I), multi_lr_dt)
 
-        # AVGLOSS
+        # avglosses
         if self.oqparam.avg_losses:
-            self.save_avg_losses(result['AVGLOSS'])
+            self.save_avg_losses(result['avglosses'])
 
         if self.oqparam.loss_ratios:
             self.save_rcurves(rcurves, I)
