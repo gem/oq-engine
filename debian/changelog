@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Used the Rtree filter also in the workers
   * Made the FilteredSiteCollections serializable to HDF5
 
   [Daniele Viganò]

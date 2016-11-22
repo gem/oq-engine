@@ -210,7 +210,7 @@ def pmap_from_grp(
     """
     if source_site_filter == 'RtreeFilter':  # default
         source_site_filter = (
-            filters.RtreeFilter(sites, maximum_distance, rtree=None)
+            filters.RtreeFilter(sites, maximum_distance)
             if maximum_distance else filters.source_site_noop_filter)
     with GroundShakingIntensityModel.forbid_instantiation():
         imtls = DictArray(imtls)
