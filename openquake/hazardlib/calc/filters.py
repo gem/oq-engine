@@ -123,8 +123,8 @@ def filter_sites_by_distance_to_rupture(rupture, integration_distance, sites):
 
 class SourceFilter(object):
     """
-    The SourceFilter uses the rtree library if available. The index is generated
-    at instantiation time and kept in memory, so the filter should be
+    The SourceFilter uses the rtree library if available. The index is
+    generated at instantiation time and kept in memory. The filter should be
     instantiated only once per calculation, after the site collection is
     known. It should be used as follows::
 
@@ -150,7 +150,7 @@ class SourceFilter(object):
     def __init__(self, sitecol, integration_distance, use_rtree=True):
         self.integration_distance = integration_distance
         self.sitecol = sitecol
-        self.use_rtree = use_rtree and integration_distance
+        self.use_rtree = use_rtree and integration_distance and rtree
         if self.use_rtree:
             fixed_lons, self.idl = fix_lons_idl(sitecol.lons)
             self.index = rtree.index.Index()
