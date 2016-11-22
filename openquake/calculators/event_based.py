@@ -43,11 +43,11 @@ F64 = numpy.float64
 # ######################## rupture calculator ############################ #
 
 
-def compute_ruptures(sources, source_filter, gsims, monitor):
+def compute_ruptures(sources, src_filter, gsims, monitor):
     """
     :param sources:
         List of commonlib.source.Source tuples
-    :param source_filter:
+    :param src_filter:
         a source site filter
     :param gsims:
         a list of GSIMs for the current tectonic region model
@@ -67,11 +67,11 @@ def compute_ruptures(sources, source_filter, gsims, monitor):
     num_events = 0
 
     # Compute and save stochastic event sets
-    for src, s_sites in source_filter(sources):
+    for src, s_sites in src_filter(sources):
         t0 = time.time()
         if s_sites is None:
             continue
-        max_dist = source_filter.integration_distance[trt]
+        max_dist = src_filter.integration_distance[trt]
         rupture_filter = functools.partial(
             filter_sites_by_distance_to_rupture,
             integration_distance=max_dist, sites=s_sites)
