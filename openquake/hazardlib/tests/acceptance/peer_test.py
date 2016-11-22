@@ -34,7 +34,6 @@ from openquake.hazardlib.geo import NodalPlane, RectangularMesh, \
 from openquake.hazardlib.scalerel import PeerMSR, PointMSR
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
-from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.tom import PoissonTOM
 
 from openquake.hazardlib.tests.acceptance import _peer_test_data as test_data
@@ -73,7 +72,7 @@ class Set1TestCase(unittest.TestCase):
         imts = {str(test_data.IMT): test_data.SET1_CASE10_IMLS}
 
         curves = calc_hazard_curves(
-            sources, SourceFilter(sites, None), imts, gsims, truncation_level)
+            sources, sites, imts, gsims, truncation_level)
         s1hc, s2hc, s3hc, s4hc = curves[str(test_data.IMT)]
 
         assert_hazard_curve_is(self, s1hc, test_data.SET1_CASE10_SITE1_POES,
@@ -118,7 +117,7 @@ class Set1TestCase(unittest.TestCase):
         imts = {str(test_data.IMT): test_data.SET1_CASE11_IMLS}
 
         curves = calc_hazard_curves(
-            sources, SourceFilter(sites, None), imts, gsims, truncation_level)
+            sources, sites, imts, gsims, truncation_level)
         s1hc, s2hc, s3hc, s4hc = curves[str(test_data.IMT)]
 
         assert_hazard_curve_is(self, s1hc, test_data.SET1_CASE11_SITE1_POES,
@@ -156,7 +155,7 @@ class Set1TestCase(unittest.TestCase):
         imts = {str(test_data.IMT): test_data.SET1_CASE2_IMLS}
 
         curves = calc_hazard_curves(
-            sources, SourceFilter(sites, None), imts, gsims, truncation_level)
+            sources, sites, imts, gsims, truncation_level)
         s1hc, s2hc, s3hc, s4hc, s5hc, s6hc, s7hc = curves[str(test_data.IMT)]
 
         assert_hazard_curve_is(self, s1hc, test_data.SET1_CASE2_SITE1_POES,
@@ -200,7 +199,7 @@ class Set1TestCase(unittest.TestCase):
         imts = {str(test_data.IMT): test_data.SET1_CASE5_IMLS}
 
         curves = calc_hazard_curves(
-            sources, SourceFilter(sites, None), imts, gsims, truncation_level)
+            sources, sites, imts, gsims, truncation_level)
         s1hc, s2hc, s3hc, s4hc, s5hc, s6hc, s7hc = curves[str(test_data.IMT)]
 
         assert_hazard_curve_is(self, s1hc, test_data.SET1_CASE5_SITE1_POES,
@@ -252,7 +251,7 @@ class Set1TestCase(unittest.TestCase):
         imts = {str(test_data.IMT): test_data.SET1_CASE2_IMLS}
 
         curves = calc_hazard_curves(
-            [npss], SourceFilter(sites, None), imts, gsims, truncation_level)
+            [npss], sites, imts, gsims, truncation_level)
         s1hc, s2hc, s3hc, s4hc, s5hc, s6hc, s7hc = curves[str(test_data.IMT)]
 
         assert_hazard_curve_is(self, s1hc, test_data.SET1_CASE2_SITE1_POES,
