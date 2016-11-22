@@ -52,7 +52,7 @@ the actual calculation on unfiltered collection only decreases performance).
 Module :mod:`openquake.hazardlib.calc.filters` exports one distance-based
 filter function (see :func:`filter_sites_by_distance_to_rupture`) as well as
 a "no operation" filter (:func:`source_site_noop_filter`). There is
-a class `RtreeFilter` to determine the sites
+a class `SourceFilter` to determine the sites
 affected by a given source: the second one uses an R-tree index and it is
 faster if there are a lot of sources, i.e. if the initial time to prepare
 the index can be compensed. Finally, there is a function
@@ -121,19 +121,19 @@ def filter_sites_by_distance_to_rupture(rupture, integration_distance, sites):
     return sites.filter(jb_dist <= integration_distance)
 
 
-class RtreeFilter(object):
+class SourceFilter(object):
     """
-    The RtreeFilter uses the rtree library if available. The index is generated
+    The SourceFilter uses the rtree library if available. The index is generated
     at instantiation time and kept in memory, so the filter should be
     instantiated only once per calculation, after the site collection is
     known. It should be used as follows::
 
-      ss_filter = RtreeFilter(sitecol, integration_distance)
+      ss_filter = SourceFilter(sitecol, integration_distance)
       for src, sites in ss_filter(sources):
          do_something(...)
 
     As a side effect, sets the `.nsites` attribute of the source, i.e. the
-    number of sites within the integration distance. Notice that RtreeFilter
+    number of sites within the integration distance. Notice that SourceFilter
     instances can be pickled, but when unpickled the `use_rtree` flag is set to
     false and the index is lost: the reason is that libspatialindex indices
     cannot be properly pickled (https://github.com/Toblerity/rtree/issues/65).

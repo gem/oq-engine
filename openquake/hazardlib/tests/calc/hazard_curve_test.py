@@ -21,7 +21,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
-from openquake.hazardlib.calc.filters import RtreeFilter
+from openquake.hazardlib.calc.filters import SourceFilter
 
 
 class HazardCurvesFiltersTestCase(unittest.TestCase):
@@ -80,7 +80,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
         truncation_level = 1
         imts = {'PGA': [0.1, 0.5, 1.3]}
-        s_filter = RtreeFilter(sitecol, {const.TRT.ACTIVE_SHALLOW_CRUST: 30})
+        s_filter = SourceFilter(sitecol, {const.TRT.ACTIVE_SHALLOW_CRUST: 30})
         result = calc_hazard_curves(
             sources, s_filter, imts, gsims, truncation_level)['PGA']
         # there are two sources and four sites. The first source contains only
