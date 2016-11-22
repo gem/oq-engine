@@ -751,7 +751,7 @@ class EbriskCalculator(base.RiskCalculator):
             self.grp_trt[src_group.id] = trt = src_group.trt
             gsims = ssm.gsim_lt.values[trt]
             for block in block_splitter(src_group, maxweight, getweight):
-                allargs.append((block, self.source_filter, gsims, monitor))
+                allargs.append((block, self.src_filter, gsims, monitor))
         # collect the ruptures
         rup_data = {}
         for dic in parallel.starmap(self.compute_ruptures, allargs):
