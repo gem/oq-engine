@@ -476,10 +476,9 @@ class ClassicalCalculator(PSHACalculator):
             res = parallel.starmap(
                 build_hcurves_and_stats,
                 list(self.gen_args(pmap_by_grp))).submit_all()
-        with self.monitor('saving hcurves and stats', autoflush=True):
-            nbytes = reduce(self.save_hcurves, res, AccumDict())
-            self.save_data_transfer(res)
-            return nbytes
+        nbytes = reduce(self.save_hcurves, res, AccumDict())
+        self.save_data_transfer(res)
+        return nbytes
 
     def gen_args(self, pmap_by_grp):
         """
@@ -506,19 +505,20 @@ class ClassicalCalculator(PSHACalculator):
         :param acc: dictionary kind -> nbytes
         :param pmap_by_kind: a dictionary of ProbabilityMaps
         """
-        oq = self.oqparam
-        for kind in pmap_by_kind:
-            if kind == 'mean' and not oq.mean_hazard_curves:
-                continue  # do not save the mean curves
-            pmap = pmap_by_kind[kind]
-            if pmap:
-                key = 'hcurves/' + kind
-                dset = self.datastore.getitem(key)
-                for sid in pmap:
-                    dset[sid] = pmap[sid].array
-                acc += {kind: pmap.nbytes}
-        self.datastore.flush()
-        return acc
+        with self.monitor('saving hcurves and stats', autoflush=True):
+            oq = self.oqparam
+            for kind in pmap_by_kind:
+                if kind == 'mean' and not oq.mean_hazard_curves:
+                    continue  # do not save the mean curves
+                pmap = pmap_by_kind[kind]
+                if pmap:
+                    key = 'hcurves/' + kind
+                    dset = self.datastore.getitem(key)
+                    for sid in pmap:
+                        dset[sid] = pmap[sid].array
+                    acc += {kind: pmap.nbytes}
+            self.datastore.flush()
+            return acc
 
     def post_execute(self, acc):
         """Save the number of bytes per each dataset"""
