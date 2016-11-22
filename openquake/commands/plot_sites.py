@@ -1,7 +1,7 @@
 from __future__ import division
 from openquake.baselib import sap
 from openquake.commonlib import datastore
-from openquake.hazardlib.calc.filters import RtreeFilter
+from openquake.hazardlib.calc.filters import SourceFilter
 
 
 @sap.Script
@@ -16,7 +16,7 @@ def plot_sites(calc_id):
     sitecol = dstore['sitecol']
     csm = dstore['composite_source_model']
     oq = dstore['oqparam']
-    rfilter = RtreeFilter(sitecol, oq.maximum_distance)
+    rfilter = SourceFilter(sitecol, oq.maximum_distance)
     fig = p.figure()
     ax = fig.add_subplot(111)
     ax.grid(True)
