@@ -175,7 +175,7 @@ def event_based_risk(riskinput, riskmodel, assetcol, monitor):
 
     def zeroN():
         return numpy.zeros((monitor.num_assets, I))
-    result = dict(AGGLOSS=AccumDict(), ASSLOSS=AccumDict())
+    result = dict(agglosses=AccumDict(), asslosses=AccumDict())
     if monitor.avg_losses:
         result['AVGLOSS'] = square(L, R, zeroN)
 
@@ -185,10 +185,10 @@ def event_based_risk(riskinput, riskmodel, assetcol, monitor):
         records = [(eids[i], loss) for i, loss in enumerate(agg[:, l, r])
                    if loss.sum() > 0]
         if records:
-            result['AGGLOSS'][l, r] = numpy.array(records, monitor.elt_dt)
+            result['agglosses'][l, r] = numpy.array(records, monitor.elt_dt)
     for lr in ass:
         if ass[lr]:
-            result['ASSLOSS'][lr] = numpy.concatenate(ass[lr])
+            result['asslosses'][lr] = numpy.concatenate(ass[lr])
 
     # store the size of the GMFs
     result['gmfbytes'] = monitor.gmfbytes
@@ -566,9 +566,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.gmfbytes += result.pop('gmfbytes')
         with self.monitor('saving event loss tables', autoflush=True):
             if self.oqparam.loss_ratios:
-                for lr, array in sorted(result.pop('ASSLOSS').items()):
+                for lr, array in sorted(result.pop('asslosses').items()):
                     hdf5.extend(self.ass_loss_ratios[lr], array)
-            for lr, array in sorted(result.pop('AGGLOSS').items()):
+            for lr, array in sorted(result.pop('agglosses').items()):
                 hdf5.extend(self.agg_loss_table[lr], array)
             self.datastore.hdf5.flush()
         return acc + result
