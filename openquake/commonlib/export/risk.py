@@ -217,7 +217,6 @@ def export_agg_losses_ebr(ekey, dstore):
             rlzname = 'rlz-%03d' % rlz.ordinal
             for loss_type in agg_losses[rlzname]:
                 dset = agg_losses['%s/%s' % (rlzname, loss_type)]
-                insured_losses = bool(dset.dtype['loss'].shape)
                 eids.update(dset['eid'])
             eids = sorted(eids)
             rlz_events = events[eids]
@@ -227,7 +226,7 @@ def export_agg_losses_ebr(ekey, dstore):
             elt['year'] = rlz_events['year']
             for loss_type in loss_types:
                 elt_lt = elt[loss_type]
-                if insured_losses:
+                if oq.insured_losses:
                     elt_lt_ins = elt[loss_type + '_ins']
                 key = 'rlz-%03d/%s' % (rlz.ordinal, loss_type)
                 if key not in agg_losses:  # nothing was saved for this key
@@ -235,7 +234,7 @@ def export_agg_losses_ebr(ekey, dstore):
                 data = agg_losses[key].value
                 for i, eid in numpy.ndenumerate(data['eid']):
                     idx = eid2idx[eid]
-                    if insured_losses:
+                    if oq.insured_losses:
                         elt_lt[idx] = data['loss'][i, 0]
                         elt_lt_ins[idx] = data['loss'][i, 1]
                     else:
