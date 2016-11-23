@@ -27,20 +27,20 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.calc.filters import RtreeFilter
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.commonlib import parallel, sourceconverter
 from openquake.calculators import base, classical
 
 DISAGG_RES_FMT = 'disagg/poe-%(poe)s-rlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
 
 
-def compute_disagg(ss_filter, sources, src_group_id, rlzs_assoc,
+def compute_disagg(src_filter, sources, src_group_id, rlzs_assoc,
                    trt_names, curves_dict, bin_edges, oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
-    :param ss_filter:
-        a :class:`openquake.hazardlib.calc.filter.RtreeFilter` instance
+    :param src_filter:
+        a :class:`openquake.hazardlib.calc.filter.SourceFilter` instance
     :param sources:
         list of hazardlib source objects
     :param src_group_id:
@@ -61,7 +61,7 @@ def compute_disagg(ss_filter, sources, src_group_id, rlzs_assoc,
         a dictionary of probability arrays, with composite key
         (sid, rlz.id, poe, imt, iml, trt_names).
     """
-    sitecol = ss_filter.sitecol
+    sitecol = src_filter.sitecol
     trt_num = dict((trt, i) for i, trt in enumerate(trt_names))
     gsims = rlzs_assoc.gsims_by_grp_id[src_group_id]
     result = {}  # sid, rlz.id, poe, imt, iml, trt_names -> array
@@ -83,7 +83,7 @@ def compute_disagg(ss_filter, sources, src_group_id, rlzs_assoc,
                 trt_num, sources, site, curves_dict[sid],
                 src_group_id, rlzs_assoc, gsims, oqparam.imtls,
                 oqparam.poes_disagg, oqparam.truncation_level,
-                oqparam.num_epsilon_bins, oqparam.iml_disagg, ss_filter,
+                oqparam.num_epsilon_bins, oqparam.iml_disagg,
                 monitor)
 
         for (rlzi, poe, imt), iml_pne_pairs in bdata.pnes.items():
@@ -217,16 +217,15 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                     if (sm_id, sid) in self.bin_edges:
                         bin_edges[sid] = self.bin_edges[sm_id, sid]
 
-                ss_filter = RtreeFilter(
-                    sitecol, oq.maximum_distance, rtree=None)
+                src_filter = SourceFilter(sitecol, oq.maximum_distance)
                 split_sources = []
                 for src in src_group:
-                    for split, _sites in ss_filter(
+                    for split, _sites in src_filter(
                             sourceconverter.split_source(src), sitecol):
                         split_sources.append(split)
                 for srcs in split_in_blocks(split_sources, nblocks):
                     all_args.append(
-                        (ss_filter, srcs, src_group.id, self.rlzs_assoc,
+                        (src_filter, srcs, src_group.id, self.rlzs_assoc,
                          trt_names, curves_dict, bin_edges, oq, self.monitor))
 
         results = parallel.starmap(compute_disagg, all_args).reduce(
@@ -287,8 +286,8 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         mag, dist, lons, lats, eps = bin_edges
         disp_name = DISAGG_RES_FMT % dict(
             poe=poe, rlz=rlz_id, imt=imt_str, lon=lon, lat=lat)
-
-        self.datastore[disp_name] = matrix
+        self.datastore[disp_name] = {
+            '_'.join(key): mat for key, mat in zip(disagg.pmf_map, matrix)}
         attrs = self.datastore.hdf5[disp_name].attrs
         attrs['rlzi'] = rlz_id
         attrs['imt'] = imt_str

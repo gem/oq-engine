@@ -81,7 +81,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         crm = sorted(self.calc.datastore.getitem('composite_risk_model'))
         self.assertEqual(crm, ['RC%2B', 'RM', 'W%2F1'])
         # export a specific eid
-        [fname] = export(('ass_loss_table:0', 'csv'), self.calc.datastore)
+        [fname] = export(('ass_loss_ratios:0', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/losses-eid=0.csv', fname)
 
         # test the case when all GMFs are filtered out
@@ -204,7 +204,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
         # export a specific eid
-        fnames = export(('ass_loss_table:0', 'csv'), self.calc.datastore)
+        fnames = export(('ass_loss_ratios:0', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
@@ -215,7 +215,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             'expected/portfolio_loss_ebr.txt', fname, delta=1E-5)
 
         # export a specific pair (sm_id, eid)
-        fnames = export(('ass_loss_table:1:0', 'csv'),
+        fnames = export(('ass_loss_ratios:1:0', 'csv'),
                         self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
