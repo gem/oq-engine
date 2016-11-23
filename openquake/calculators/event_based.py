@@ -43,12 +43,12 @@ F64 = numpy.float64
 # ######################## rupture calculator ############################ #
 
 
-def compute_ruptures(sources, sitecol, gsims, monitor):
+def compute_ruptures(sources, src_filter, gsims, monitor):
     """
     :param sources:
         List of commonlib.source.Source tuples
-    :param sitecol:
-        a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :param src_filter:
+        a source site filter
     :param gsims:
         a list of GSIMs for the current tectonic region model
     :param monitor:
@@ -60,7 +60,6 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     # sources of the same src_group_id
     grp_id = sources[0].src_group_id
     trt = sources[0].tectonic_region_type
-    max_dist = monitor.maximum_distance[trt]
     eb_ruptures = []
     calc_times = []
     rup_mon = monitor('filtering ruptures', measuremem=False)
@@ -68,11 +67,11 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     num_events = 0
 
     # Compute and save stochastic event sets
-    for src in sources:
+    for src, s_sites in src_filter(sources):
         t0 = time.time()
-        s_sites = src.filter_sites_by_distance_to_source(max_dist, sitecol)
         if s_sites is None:
             continue
+        max_dist = src_filter.integration_distance[trt]
         rupture_filter = functools.partial(
             filter_sites_by_distance_to_rupture,
             integration_distance=max_dist, sites=s_sites)
@@ -341,8 +340,14 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
             if gmvdict:
                 for imti, imt in enumerate(getter.imts):
                     if oq.hazard_curves_from_gmfs:
-                        haz[sid][imt, rlz] = gmvdict[imt]
-                    for rec in gmvdict[imt]:
+                        try:
+                            gmv = gmvdict[imt]
+                        except KeyError:
+                            # no gmv for the given imt, this may happen
+                            pass
+                        else:
+                            haz[sid][imt, rlz] = gmv
+                    for rec in gmvdict.get(imt, []):
                         gmfcoll[rlz].append(
                             (sid, rec['eid'], imti, rec['gmv']))
     for rlz in gmfcoll:
@@ -389,7 +394,8 @@ class EventBasedCalculator(ClassicalCalculator):
             with sav_mon:
                 for rlz, array in res['gmfcoll'].items():
                     if len(array):
-                        key = 'gmf_data/%04d' % rlz.ordinal
+                        sm_id = self.sm_id[rlz.sm_lt_path]
+                        key = 'gmf_data/sm-%04d/%04d' % (sm_id, rlz.ordinal)
                         self.datastore.extend(key, array)
         slicedic = self.oqparam.imtls.slicedic
         with agg_mon:
@@ -451,7 +457,8 @@ class EventBasedCalculator(ClassicalCalculator):
         self.sesruptures.sort(key=operator.attrgetter('serial'))
         if self.oqparam.ground_motion_fields:
             calc.check_overflow(self)
-
+        self.sm_id = {sm.path: sm.ordinal
+                      for sm in self.csm.info.source_models}
         L = len(oq.imtls.array)
         res = parallel.starmap(
             self.core_task.__func__, self.gen_args(self.sesruptures)
@@ -496,6 +503,10 @@ class EventBasedCalculator(ClassicalCalculator):
         if ('gmf_data' in self.datastore and 'nbytes' not
                 in self.datastore['gmf_data'].attrs):
             self.datastore.set_nbytes('gmf_data')
+            for sm_id in self.datastore['gmf_data']:
+                for rlzno in self.datastore['gmf_data/' + sm_id]:
+                    self.datastore.set_nbytes(
+                        'gmf_data/%s/%s' % (sm_id, rlzno))
 
         if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
