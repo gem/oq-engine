@@ -106,13 +106,14 @@ def compactify(array):
     return zeros
 
 
-# this is used by classical_risk, event_based_risk and scenario_risk
+# this is used by event_based_risk and scenario_risk
 @export.add(('avg_losses-rlzs', 'csv'), ('losses_by_asset', 'csv'))
 def export_avg_losses(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
+    1 / 0
     avg_losses = dstore[ekey[0]].value
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = get_assets(dstore)
