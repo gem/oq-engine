@@ -496,6 +496,10 @@ class AccumDict(dict):
     >>> acc['b'] += [2]
     >>> sorted(acc.items())
     [('a', [1]), ('b', [2])]
+
+    The implementation is smart enough to make (deep) copies of the
+    accumulator, therefore each key has a different accumulator, which
+    initially is the empty list (in this case).
     """
     def __init__(self, dic=None, accum=None, **kw):
         if dic:
