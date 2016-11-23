@@ -449,6 +449,27 @@ class EventBasedStats(object):
         if R > 1:
             self.build_agg_curve_stats(builder, agg_curve, loss_curve_dt)
 
+    def build(self):
+        oq = self.datastore['oqparam']
+        builder = scientific.StatsBuilder(
+            oq.quantile_loss_curves, oq.conditional_loss_poes, [],
+            oq.loss_curve_resolution, scientific.normalize_curves_eb,
+            oq.insured_losses)
+
+        # build an aggregate loss curve per realization plus statistics
+        with self.monitor('building agg_curve'):
+            self.build_agg_curve_and_stats(builder)
+
+        rlzs = self.datastore['csm_info'].get_rlzs_assoc().realizations
+        if len(rlzs) > 1:
+            with self.monitor('computing stats'):
+                if 'rcurves-rlzs' in self.datastore:
+                    self.compute_store_stats(rlzs, builder)
+                if oq.avg_losses:  # stats for avg_losses
+                    stats = scientific.SimpleStats(
+                        rlzs, oq.quantile_loss_curves)
+                    stats.compute_and_store('avg_losses', self.datastore)
+
 
 @base.calculators.add('event_based_risk')
 class EventBasedRiskCalculator(base.RiskCalculator):
@@ -588,32 +609,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if self.gmfbytes == 0:
             raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')
-        oq = self.oqparam
-        calc = EventBasedStats(self.datastore, self.monitor, result)
-        builder = scientific.StatsBuilder(
-            oq.quantile_loss_curves, oq.conditional_loss_poes, [],
-            oq.loss_curve_resolution, scientific.normalize_curves_eb,
-            oq.insured_losses)
-
-        # build an aggregate loss curve per realization plus statistics
-        with self.monitor('building agg_curve'):
-            calc.build_agg_curve_and_stats(builder)
-        self.datastore.hdf5.flush()
-
-        if self.oqparam.loss_ratios:
-            pass  # TODO: build specific loss curves
-
-        rlzs = self.rlzs_assoc.realizations
-        if len(rlzs) > 1:
-            with self.monitor('computing stats'):
-                if 'rcurves-rlzs' in self.datastore:
-                    calc.compute_store_stats(rlzs, builder)
-                if oq.avg_losses:  # stats for avg_losses
-                    stats = scientific.SimpleStats(
-                        rlzs, oq.quantile_loss_curves)
-                    stats.compute_and_store('avg_losses', self.datastore)
-
-        self.datastore.hdf5.flush()
+        ebstats = EventBasedStats(self.datastore, self.monitor, result)
+        ebstats.build()
 
 
 elt_dt = numpy.dtype([('eid', U32), ('loss', F32)])
