@@ -33,9 +33,9 @@ from openquake.hazardlib import __version__ as hazardlib_version
 from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib.calc.filters import RtreeFilter
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.risklib import riskinput, __version__ as engine_version
-from openquake.commonlib import readinput, datastore, source
+from openquake.commonlib import readinput, datastore, source, calc
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import starmap, executor, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
@@ -387,7 +387,7 @@ class HazardCalculator(BaseCalculator):
         if 'source' in oq.inputs:
             wakeup_pool()  # fork before reading the source model
             logging.info('Instantiating the source-sites filter')
-            self.ss_filter = RtreeFilter(self.sitecol, oq.maximum_distance)
+            self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
             with mon('reading composite source model', autoflush=True):
                 csm = readinput.get_composite_source_model(oq)
             if self.is_stochastic:
@@ -398,7 +398,7 @@ class HazardCalculator(BaseCalculator):
             with mon('filtering composite source model', autoflush=True):
                 logging.info('Filtering composite source model')
                 # we are also weighting the sources, but weighting is ultrafast
-                csm = csm.filter(self.ss_filter)
+                csm = csm.filter(self.src_filter)
             self.csm = csm
             self.datastore['csm_info'] = csm.info
             self.rup_data = {}
@@ -465,6 +465,20 @@ class HazardCalculator(BaseCalculator):
             self.cost_calculator = readinput.get_cost_calculator(self.oqparam)
             self.sitecol, self.assets_by_site = (
                 readinput.get_sitecol_assets(self.oqparam, self.exposure))
+
+    def get_min_iml(self, oq):
+        # set the minimum_intensity
+        if hasattr(self, 'riskmodel') and not oq.minimum_intensity:
+            # infer it from the risk models if not directly set in job.ini
+            oq.minimum_intensity = self.riskmodel.get_min_iml()
+        min_iml = calc.fix_minimum_intensity(
+            oq.minimum_intensity, oq.imtls)
+        if min_iml.sum() == 0:
+            logging.warn('The GMFs are not filtered: '
+                         'you may want to set a minimum_intensity')
+        else:
+            logging.info('minimum_intensity=%s', oq.minimum_intensity)
+        return min_iml
 
     def load_riskmodel(self):
         """
