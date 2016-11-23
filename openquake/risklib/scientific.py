@@ -1538,12 +1538,10 @@ class SimpleStats(object):
         newshape = list(array.shape)
         newshape[1] = len(self.quantiles) + 1  # number of statistical outputs
         newarray = numpy.zeros(newshape, array.dtype)
-        for field in array.dtype.names:
-            new = newarray[field]
-            data = [array[field][:, i] for i in range(len(self.rlzs))]
-            new[:, 0] = mean_curve(data, weights)
-            for i, q in enumerate(self.quantiles, 1):
-                new[:, i] = quantile_curve(data, q, weights)
+        data = [array[:, i] for i in range(len(self.rlzs))]
+        newarray[:, 0] = mean_curve(data, weights)
+        for i, q in enumerate(self.quantiles, 1):
+            newarray[:, i] = quantile_curve(data, q, weights)
         dstore[newname] = newarray
         dstore[newname].attrs['nbytes'] = newarray.nbytes
         dstore[newname].attrs['statnames'] = hdf5.array_of_vstr(self.names)
