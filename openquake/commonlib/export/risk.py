@@ -106,14 +106,34 @@ def compactify(array):
     return zeros
 
 
-# this is used by event_based_risk and scenario_risk
-@export.add(('avg_losses-rlzs', 'csv'), ('losses_by_asset', 'csv'))
+# this is used by event_based_risk
+@export.add(('avg_losses-rlzs', 'csv'))
 def export_avg_losses(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    1 / 0
+    avg_losses = dstore[ekey[0]].value
+    oq = dstore['oqparam']
+    dt = oq.loss_dt()
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    assets = get_assets(dstore)
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    for rlz in rlzs:
+        losses = avg_losses[:, rlz.ordinal].view(dt).reshape(len(assets))
+        dest = dstore.build_fname('losses_by_asset', rlz, 'csv')
+        data = compose_arrays(assets, losses)
+        writer.save(data, dest)
+    return writer.getsaved()
+
+
+# this is used by scenario_risk
+@export.add(('losses_by_asset', 'csv'))
+def export_losses_by_asset(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
     avg_losses = dstore[ekey[0]].value
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = get_assets(dstore)
@@ -133,12 +153,13 @@ def export_avg_losses_stats(ekey, dstore):
     :param dstore: datastore object
     """
     oq = dstore['oqparam']
+    dt = oq.loss_dt()
     avg_losses = dstore[ekey[0]].value
     quantiles = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     assets = get_assets(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for i, quantile in enumerate(quantiles):
-        losses = avg_losses[:, i]
+        losses = numpy.array([tuple(row) for row in avg_losses[:, i]], dt)
         dest = dstore.build_fname('avg_losses', quantile, 'csv')
         data = compose_arrays(assets, losses)
         writer.save(data, dest)
