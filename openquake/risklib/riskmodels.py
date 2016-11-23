@@ -578,7 +578,7 @@ class EventBasedReduced(RiskModel):
                     alt.append((eid, aid, ratio))
         return scientific.Output(
             assets, loss_type, alosses=alosses, elosses=elosses,
-            alt=numpy.array(alt, self.alt_dt), eids=eids)
+            loss_ratios=ratios, alt=numpy.array(alt, self.alt_dt), eids=eids)
 
 
 @registry.add('classical_bcr')
