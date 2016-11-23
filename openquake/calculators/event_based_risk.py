@@ -221,11 +221,12 @@ class EventBasedStats(object):
             for ds in dset.values():
                 ds.attrs['nonzero_fraction'] = len(ds) / E
 
+        ltypes = self.riskmodel.loss_types
         I = self.oqparam.insured_losses + 1
         R = len(self.rlzs_assoc.realizations)
-        ltypes = self.riskmodel.loss_types
+        L = len(ltypes)
         self.vals = self.assetcol.values()
-        self.avg_losses = numpy.zeros((N, R), self.oqparam.loss_dt())
+        self.datastore.create_dset('avg_losses-rlzs', F32, (N, R, L * I))
 
         # loss curves
         multi_lr_dt = numpy.dtype(
@@ -245,16 +246,15 @@ class EventBasedStats(object):
             self.save_loss_maps(N, R)
 
     def save_avg_losses(self, avg_losses):
+        dset = self.datastore['avg_losses-rlzs']
+        L = len(self.riskmodel.loss_types)
         with self.monitor('building avg_losses-rlzs'):
             for (l, r), avgloss in numpy.ndenumerate(avg_losses):
                 lt = self.riskmodel.loss_types[l]
-                avg_losses_lt = self.avg_losses[lt]
                 for i, avalue in enumerate(self.vals[lt]):
-                    avg_losses_lt[i, r] = avgloss[i, 0] * avalue
+                    dset[i, r, l] = avgloss[i, 0] * avalue
                     if self.oqparam.insured_losses:
-                        self.avg_losses[lt + '_ins'][i, r] = (
-                            avgloss[i, 1] * avalue)
-            self.datastore['avg_losses-rlzs'] = self.avg_losses
+                        dset[i, r, l + L] = avgloss[i, 1] * avalue
 
     def save_rcurves(self, rcurves, I):
         assets = list(self.assetcol)
@@ -296,23 +296,26 @@ class EventBasedStats(object):
         # called only if 'rcurves-rlzs' in dstore; return a list of outputs
         all_data = []
         assets = self.datastore['asset_refs'].value[self.assetcol.array['idx']]
+        A = len(assets)
         rlzs = self.rlzs_assoc.realizations
         insured = self.oqparam.insured_losses
         if self.oqparam.avg_losses:
             avg_losses = self.datastore['avg_losses-rlzs'].value
-        else:
-            avg_losses = self.avg_losses
         r_curves = self.datastore['rcurves-rlzs'].value
-        for loss_type, cbuilder in zip(
-                self.riskmodel.loss_types, self.riskmodel.curve_builders):
+        L = len(self.riskmodel.lti)
+        for l, cbuilder in enumerate(self.riskmodel.curve_builders):
+            loss_type = cbuilder.loss_type
             rcurves = r_curves[loss_type]
             asset_values = self.vals[loss_type]
             data = []
             for rlz in rlzs:
-                average_losses = avg_losses[loss_type][:, rlz.ordinal]
-                average_insured_losses = (
-                    avg_losses[loss_type + '_ins'][:, rlz.ordinal]
-                    if insured else None)
+                if self.oqparam.avg_losses:
+                    average_losses = avg_losses[:, rlz.ordinal, l]
+                    average_insured_losses = (
+                        avg_losses[:, rlz.ordinal, l + L] if insured else None)
+                else:
+                    average_losses = numpy.zeros(A, F32)
+                    average_insured_losses = numpy.zeros(A, F32)
                 loss_curves = _old_loss_curves(
                     asset_values, rcurves[:, rlz.ordinal, 0], cbuilder.ratios)
                 insured_curves = _old_loss_curves(
