@@ -861,17 +861,18 @@ class EbriskCalculator(base.RiskCalculator):
         self.R = num_rlzs
         self.T = len(self.assetcol.taxonomies)
         self.A = len(self.assetcol)
+        self.I = self.oqparam.insured_losses + 1
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
             dset = self.datastore.create_dset(
-                'avglosses', F64, (self.A, self.L, self.R))
+                'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
         num_events = 0
         self.gmfbytes = 0
         for res in allres:
             start, stop = res.rlz_slice.start, res.rlz_slice.stop
             r = stop - start
             if avg_losses:
-                avglosses = numpy.zeros((self.A, self.L, r), F64)
+                avglosses = numpy.zeros((self.A, self.L, r), F32)
             for dic in res:
                 if avg_losses:
                     avglosses += dic.pop('avglosses')
@@ -882,7 +883,7 @@ class EbriskCalculator(base.RiskCalculator):
                 'Saving results for source model #%d, realizations %d:%d',
                 res.sm_id + 1, start, stop)
             if avg_losses:
-                dset[:, :, start:stop] = avglosses
+                dset[:, start:stop, :] = avglosses.transpose(0, 2, 1)
             if hasattr(res, 'ruptures_by_grp'):
                 save_ruptures(self, res.ruptures_by_grp)
             num_events += res.num_events

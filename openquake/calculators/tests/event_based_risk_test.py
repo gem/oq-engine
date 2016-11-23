@@ -197,8 +197,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = writetmp(view('ruptures_events', self.calc.datastore))
         self.assertEqualFiles('expected/ruptures_events.txt', fname)
 
-        for fname in out['losses_by_taxon', 'csv']:
-            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+        # TODO: add a check on avg_losses-stats
 
         for fname in out['agg_loss_table', 'csv']:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)

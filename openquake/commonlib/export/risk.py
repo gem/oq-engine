@@ -120,7 +120,8 @@ def export_avg_losses(ekey, dstore):
     assets = get_assets(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz in rlzs:
-        losses = avg_losses[:, rlz.ordinal].view(dt).reshape(len(assets))
+        losses = numpy.array(
+            [tuple(row) for row in avg_losses[:, rlz.ordinal]], dt)
         dest = dstore.build_fname('losses_by_asset', rlz, 'csv')
         data = compose_arrays(assets, losses)
         writer.save(data, dest)
