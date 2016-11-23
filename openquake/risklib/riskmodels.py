@@ -424,7 +424,8 @@ class Classical(RiskModel):
             loss_maps=values * maps)
 
 
-@registry.add('event_based_risk', 'event_based', 'event_based_rupture')
+@registry.add('event_based_risk', 'event_based', 'event_based_rupture',
+              'ebrisk', 'ucerf_rupture', 'ucerf_risk')
 class ProbabilisticEventBased(RiskModel):
     """
     Implements the Probabilistic Event Based riskmodel
@@ -519,66 +520,6 @@ class ProbabilisticEventBased(RiskModel):
                     asset.insurance_limit(loss_type))
         return scientific.Output(
             assets, loss_type, loss_ratios=loss_ratios, eids=eids)
-
-
-@registry.add('ebrisk', 'ucerf_rupture', 'ucerf_risk')
-class EventBasedReduced(RiskModel):
-    """
-    Implements the reduced event based riskmodel. This is used by the
-    EbrCalculator, a much simplified calculator that ignores asset correlation
-    and insured losses, cannot compute the event loss table, nor the average
-    losses, nor the loss curves. The only output returned is the total loss.
-    """
-    kind = 'vulnerability'
-    alt_dt = numpy.dtype([('eid', U32), ('aid', U32), ('loss', F32)])
-
-    def __init__(self, taxonomy, vulnerability_functions, time_event,
-                 loss_ratios):
-        self.taxonomy = taxonomy
-        self.risk_functions = vulnerability_functions
-        self.time_event = time_event
-        self.loss_ratios = loss_ratios
-
-    def __call__(self, loss_type, assets, gmvs_eids, epsgetter):
-        """
-        :param str loss_type:
-            the loss type considered
-        :param assets:
-           a list of assets on the same site and with the same taxonomy
-        :param gmvs_eids:
-           a composite array of E elements with fields 'gmv' and 'eid'
-        :param epsgetter:
-           a callable returning the correct epsilons for the given gmvs
-        :returns:
-            a :class:`openquake.risklib.scientific.Output`
-            instance with the total losses
-        """
-        vf = self.risk_functions[loss_type]
-        gmvs, eids = gmvs_eids['gmv'], gmvs_eids['eid']
-        alosses = numpy.zeros(len(assets))
-        elosses = numpy.zeros(len(gmvs))
-        means, covs, idxs = vf.interpolate(gmvs)
-        alt = []
-        e, E = len(means), len(eids)
-        for i, asset in enumerate(assets):
-            epsilons = epsgetter(asset.ordinal, eids)
-            _ratios = (means if epsilons is None
-                       else vf.sample(means, covs, idxs, epsilons))
-            if e < E:
-                ratios = numpy.zeros(E)
-                ratios[idxs] = _ratios
-            else:
-                ratios = _ratios
-            losses = ratios * asset.value(loss_type, self.time_event)
-            alosses[i] = losses.sum()
-            elosses += losses
-            if self.loss_ratios:
-                aid = asset.ordinal
-                for eid, ratio in zip(eids, ratios):
-                    alt.append((eid, aid, ratio))
-        return scientific.Output(
-            assets, loss_type, alosses=alosses, elosses=elosses,
-            loss_ratios=ratios, alt=numpy.array(alt, self.alt_dt), eids=eids)
 
 
 @registry.add('classical_bcr')
