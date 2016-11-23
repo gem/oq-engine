@@ -30,9 +30,11 @@ from openquake.commonlib.writers import write_csv
 
 DATADIR = os.environ.get('OQ_DATADIR')
 if not DATADIR:
-    shared_dir = (config.get('directory', 'shared_dir')
-                   or os.path.dirname(os.path.expanduser('~')))
-    DATADIR = os.path.join(shared_dir, getpass.getuser(), 'oqdata')
+    shared_dir = config.get('directory', 'shared_dir')
+    if shared_dir:
+        DATADIR = os.path.join(shared_dir, getpass.getuser(), 'oqdata')
+    else:  # use the home of the user
+        DATADIR = os.path.expanduser('~')
 
 
 def get_nbytes(dset):
