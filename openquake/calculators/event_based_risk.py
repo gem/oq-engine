@@ -618,49 +618,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
 elt_dt = numpy.dtype([('eid', U32), ('loss', F32)])
 
-
-def losses_by_taxonomy(riskinput, riskmodel, assetcol, monitor):
-    """
-    :param riskinput:
-        a :class:`openquake.risklib.riskinput.RiskInput` object
-    :param riskmodel:
-        a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
-    :param assetcol:
-        AssetCollection instance
-    :param monitor:
-        :class:`openquake.baselib.performance.Monitor` instance
-    :returns:
-        a numpy array of shape (T, L, R)
-    """
-    lti = riskmodel.lti  # loss type -> index
-    L, R = len(lti), len(riskinput.rlzs)
-    A = len(assetcol)
-    I = monitor.insured_losses + 1
-    lrs = list(itertools.product(range(L), range(R)))
-    avglosses = AccumDict(
-        {lr: numpy.zeros((A, I), F64) for lr in lrs}
-    ) if monitor.avg_losses else {}
-    agglosses = AccumDict({lr: AccumDict() for lr in lrs})
-    asslosses = collections.defaultdict(list)
-    for out in riskmodel.gen_outputs(riskinput, monitor, assetcol):
-        # NB: out.assets is a non-empty list of assets with the same taxonomy
-        l, r = out.lr
-        if monitor.avg_losses:
-            for i, loss in enumerate(out.alosses):
-                if loss:
-                    avglosses[l, r][i] += loss
-        agglosses[l, r] += {eid: loss for eid, loss in
-                            zip(out.eids, out.elosses) if loss}
-        if len(out.alt):
-            asslosses[l, r].append(out.alt)
-    # convert agglosses into arrays to reduce the data transfer
-    agglosses = {lr: numpy.array(sorted(agglosses[lr].items()), elt_dt)
-                 for lr in agglosses}
-    return AccumDict(avglosses=avglosses, agglosses=agglosses,
-                     asslosses=AccumDict((lr, numpy.concatenate(arrays))
-                                         for lr, arrays in asslosses.items()),
-                     gmfbytes=monitor.gmfbytes)
-
 save_ruptures = event_based.EventBasedRuptureCalculator.__dict__[
     'save_ruptures']
 
@@ -791,8 +748,8 @@ class EbriskCalculator(base.RiskCalculator):
                     self.grp_trt[rupts[0].grp_id], rlzs_assoc, imts, sitecol,
                     rupts, trunc_level, correl_model, min_iml, eps)
                 allargs.append((ri, riskmodel, assetcol, monitor))
-        taskname = '%s#%d' % (losses_by_taxonomy.__name__, ssm.sm_id + 1)
-        smap = starmap(losses_by_taxonomy, allargs, name=taskname)
+        taskname = '%s#%d' % (event_based_risk.__name__, ssm.sm_id + 1)
+        smap = starmap(event_based_risk, allargs, name=taskname)
         attrs = dict(num_ruptures={
             sg_id: len(rupts) for sg_id, rupts in ruptures_by_grp.items()},
                      num_events=num_events,
@@ -814,6 +771,7 @@ class EbriskCalculator(base.RiskCalculator):
         for sm_id in range(len(self.csm.source_models)):
             ssm = self.csm.get_model(sm_id)
             monitor = self.monitor.new(
+                ses_ratio=oq.ses_ratio,
                 ela_dt=ela_dt, elt_dt=elt_dt,
                 loss_ratios=oq.loss_ratios,
                 avg_losses=oq.avg_losses,
