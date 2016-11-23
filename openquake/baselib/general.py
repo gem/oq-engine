@@ -497,9 +497,7 @@ class AccumDict(dict):
     >>> sorted(acc.items())
     [('a', [1]), ('b', [2])]
     """
-    SENTINEL = object()
-
-    def __init__(self, dic=None, accum=SENTINEL, **kw):
+    def __init__(self, dic=None, accum=None, **kw):
         if dic:
             self.update(dic)
         self.update(kw)
@@ -570,10 +568,12 @@ class AccumDict(dict):
         return self * (1. / other)
 
     def __missing__(self, key):
-        if self.accum is not self.SENTINEL:
-            val = self[key] = copy.deepcopy(self.accum)
-            return val
-        raise KeyError(key)
+        if self.accum is None:
+            # no accumulator, accessing a missing key is an error
+            raise KeyError(key)
+        val = self[key] = copy.deepcopy(self.accum)
+        return val
+
 
     def apply(self, func, *extras):
         """
