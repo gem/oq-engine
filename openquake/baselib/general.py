@@ -487,6 +487,15 @@ class AccumDict(dict):
     {'a': 0.48, 'b': 0.6}
     >> 1.2 * prob1
     {'a': 0.48, 'b': 0.6}
+
+    It is very common to use an AccumDict of accumulators; here is an
+    example using the empty list as accumulator:
+
+    >>> acc = AccumDict(accum=[])
+    >>> acc['a'] += [1]
+    >>> acc['b'] += [2]
+    >>> sorted(acc.items())
+    [('a', [1]), ('b', [2])]
     """
     SENTINEL = object()
 
