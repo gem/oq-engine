@@ -634,23 +634,19 @@ def losses_by_taxonomy(riskinput, riskmodel, assetcol, monitor):
     """
     lti = riskmodel.lti  # loss type -> index
     L, R = len(lti), len(riskinput.rlzs)
-    T = len(assetcol.taxonomies)
     A = len(assetcol)
-    taxonomy_id = {t: i for i, t in enumerate(sorted(assetcol.taxonomies))}
-    losses = numpy.zeros((T, L, R), F64)
-    avglosses = numpy.zeros((A, L, R), F64) if monitor.avg_losses else None
-    agglosses = AccumDict(
-        {lr: AccumDict() for lr in itertools.product(range(L), range(R))})
+    lrs = list(itertools.product(range(L), range(R)))
+    avglosses = AccumDict(
+        {lr: numpy.zeros(A, F64) for lr in lrs}) if monitor.avg_losses else {}
+    agglosses = AccumDict({lr: AccumDict() for lr in lrs})
     asslosses = collections.defaultdict(list)
     for out in riskmodel.gen_outputs(riskinput, monitor, assetcol):
         # NB: out.assets is a non-empty list of assets with the same taxonomy
-        t = taxonomy_id[out.assets[0].taxonomy]
         l, r = out.lr
-        losses[t, l, r] += out.alosses.sum()
         if monitor.avg_losses:
             for i, loss in enumerate(out.alosses):
                 if loss:
-                    avglosses[i, l, r] += loss
+                    avglosses[l, r][i] += loss
         agglosses[l, r] += {eid: loss for eid, loss in
                             zip(out.eids, out.elosses) if loss}
         if len(out.alt):
@@ -658,7 +654,7 @@ def losses_by_taxonomy(riskinput, riskmodel, assetcol, monitor):
     # convert agglosses into arrays to reduce the data transfer
     agglosses = {lr: numpy.array(sorted(agglosses[lr].items()), elt_dt)
                  for lr in agglosses}
-    return AccumDict(losses=losses, avglosses=avglosses, agglosses=agglosses,
+    return AccumDict(avglosses=avglosses, agglosses=agglosses,
                      asslosses=AccumDict((lr, numpy.concatenate(arrays))
                                          for lr, arrays in asslosses.items()),
                      gmfbytes=monitor.gmfbytes)
@@ -871,19 +867,16 @@ class EbriskCalculator(base.RiskCalculator):
         for res in allres:
             start, stop = res.rlz_slice.start, res.rlz_slice.stop
             r = stop - start
-            if avg_losses:
-                avglosses = numpy.zeros((self.A, self.L, r), F32)
             for dic in res:
                 if avg_losses:
-                    avglosses += dic.pop('avglosses')
+                    for (l, r), losses in dic.pop('avglosses').items():
+                        dset[:, r, l] += losses
                 self.gmfbytes += dic.pop('gmfbytes')
                 self.save_losses(
                     dic.pop('agglosses'), dic.pop('asslosses'), start)
             logging.debug(
                 'Saving results for source model #%d, realizations %d:%d',
                 res.sm_id + 1, start, stop)
-            if avg_losses:
-                dset[:, start:stop, :] = avglosses.transpose(0, 2, 1)
             if hasattr(res, 'ruptures_by_grp'):
                 save_ruptures(self, res.ruptures_by_grp)
             num_events += res.num_events
