@@ -25,9 +25,14 @@ import numpy
 import h5py
 
 from openquake.baselib import hdf5
+from openquake.commonlib import config
 from openquake.commonlib.writers import write_csv
 
-DATADIR = os.environ.get('OQ_DATADIR', os.path.expanduser('~/oqdata'))
+DATADIR = os.environ.get('OQ_DATADIR')
+if not DATADIR:
+    shared_home = (config.get('directory', 'shared_home')
+                   or os.path.expanduser('~'))
+    DATADIR = os.path.join(shared_home, 'oqdata')
 
 
 def get_nbytes(dset):
