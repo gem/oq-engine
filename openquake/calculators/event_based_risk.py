@@ -635,9 +635,11 @@ def losses_by_taxonomy(riskinput, riskmodel, assetcol, monitor):
     lti = riskmodel.lti  # loss type -> index
     L, R = len(lti), len(riskinput.rlzs)
     A = len(assetcol)
+    I = monitor.I
     lrs = list(itertools.product(range(L), range(R)))
     avglosses = AccumDict(
-        {lr: numpy.zeros(A, F64) for lr in lrs}) if monitor.avg_losses else {}
+        {lr: numpy.zeros((A, I), F64) for lr in lrs}
+    ) if monitor.avg_losses else {}
     agglosses = AccumDict({lr: AccumDict() for lr in lrs})
     asslosses = collections.defaultdict(list)
     for out in riskmodel.gen_outputs(riskinput, monitor, assetcol):
@@ -811,6 +813,7 @@ class EbriskCalculator(base.RiskCalculator):
         for sm_id in range(len(self.csm.source_models)):
             ssm = self.csm.get_model(sm_id)
             monitor = self.monitor.new(
+                I=oq.insured_losses + 1,
                 avg_losses=oq.avg_losses,
                 ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
                 maximum_distance=oq.maximum_distance,
@@ -857,11 +860,11 @@ class EbriskCalculator(base.RiskCalculator):
         self.R = num_rlzs
         self.T = len(self.assetcol.taxonomies)
         self.A = len(self.assetcol)
-        self.I = self.oqparam.insured_losses + 1
+        ins = self.oqparam.insured_losses
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
             dset = self.datastore.create_dset(
-                'avg_losses-rlzs', F32, (self.A, self.R, self.L * self.I))
+                'avg_losses-rlzs', F32, (self.A, self.R, self.L * (ins + 1)))
         num_events = 0
         self.gmfbytes = 0
         for res in allres:
@@ -870,7 +873,9 @@ class EbriskCalculator(base.RiskCalculator):
             for dic in res:
                 if avg_losses:
                     for (l, r), losses in dic.pop('avglosses').items():
-                        dset[:, r, l] += losses
+                        dset[:, r, l] += losses[:, 0]
+                        if ins:
+                            dset[:, r, l + self.L] += losses[:, 1]
                 self.gmfbytes += dic.pop('gmfbytes')
                 self.save_losses(
                     dic.pop('agglosses'), dic.pop('asslosses'), start)
