@@ -166,22 +166,24 @@ def event_based_risk(riskinput, riskmodel, assetcol, monitor):
     """
     lti = riskmodel.lti  # loss type -> index
     L, R = len(lti), monitor.R
+    A = len(assetcol)
     I = monitor.insured_losses + 1
     eids = riskinput.eids
     E = len(eids)
     idx = dict(zip(eids, range(E)))
     agg = numpy.zeros((E, L, R, I), F32)
     ass = collections.defaultdict(list)
+    lrs = list(itertools.product(range(L), range(R)))
 
-    def zeroN():
-        return numpy.zeros((monitor.num_assets, I))
     result = dict(agglosses=AccumDict(), asslosses=AccumDict())
     if monitor.avg_losses:
-        result['avglosses'] = square(L, R, zeroN)
+        result['avglosses'] = AccumDict(
+            {lr: numpy.zeros((A, I), F64) for lr in lrs}
+        ) if monitor.avg_losses else {}
 
     outputs = riskmodel.gen_outputs(riskinput, monitor, assetcol)
     _aggregate(outputs, riskmodel, agg, ass, idx, result, monitor)
-    for (l, r) in itertools.product(range(L), range(R)):
+    for (l, r) in lrs:
         records = [(eids[i], loss) for i, loss in enumerate(agg[:, l, r])
                    if loss.sum() > 0]
         if records:
@@ -249,7 +251,7 @@ class EventBasedStats(object):
         dset = self.datastore['avg_losses-rlzs']
         L = len(self.riskmodel.loss_types)
         with self.monitor('building avg_losses-rlzs'):
-            for (l, r), avgloss in numpy.ndenumerate(avg_losses):
+            for (l, r), avgloss in avg_losses.items():
                 lt = self.riskmodel.loss_types[l]
                 for i, avalue in enumerate(self.vals[lt]):
                     dset[i, r, l] = avgloss[i, 0] * avalue
