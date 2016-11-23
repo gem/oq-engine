@@ -125,10 +125,13 @@ def _old_loss_curves(asset_values, rcurves, ratios):
 
 def _aggregate(outputs, compositemodel, agg, ass, idx, result, monitor):
     # update the result dictionary and the agg array with each output
+    lrs = set()
     for out in outputs:
         l, r = out.lr
+        lrs.add(out.lr)
         loss_type = compositemodel.loss_types[l]
         indices = numpy.array([idx[eid] for eid in out.eids])
+        agglr = agg[l, r]
         for i, asset in enumerate(out.assets):
             aid = asset.ordinal
             loss_ratios = out.loss_ratios[i]
@@ -148,7 +151,8 @@ def _aggregate(outputs, compositemodel, agg, ass, idx, result, monitor):
                     ass[l, r].append(numpy.array(data, monitor.ela_dt))
 
             # agglosses
-            agg[indices, l, r] += losses
+            agglr[indices] += losses
+    return sorted(lrs)
 
 
 def event_based_risk(riskinput, riskmodel, assetcol, monitor):
@@ -164,30 +168,24 @@ def event_based_risk(riskinput, riskmodel, assetcol, monitor):
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
-    lti = riskmodel.lti  # loss type -> index
-    L, R = len(lti), monitor.R
     A = len(assetcol)
     I = monitor.insured_losses + 1
     eids = riskinput.eids
     E = len(eids)
     idx = dict(zip(eids, range(E)))
-    agg = numpy.zeros((E, L, R, I), F32)
-    ass = collections.defaultdict(list)
-    lrs = list(itertools.product(range(L), range(R)))
-
+    agg = AccumDict(accum=numpy.zeros((E, I), F32))
+    ass = AccumDict(accum=[])
     result = dict(agglosses=AccumDict(), asslosses=AccumDict())
     if monitor.avg_losses:
-        result['avglosses'] = AccumDict(
-            {lr: numpy.zeros((A, I), F64) for lr in lrs}
-        ) if monitor.avg_losses else {}
+        result['avglosses'] = AccumDict(accum=numpy.zeros((A, I), F64))
 
     outputs = riskmodel.gen_outputs(riskinput, monitor, assetcol)
-    _aggregate(outputs, riskmodel, agg, ass, idx, result, monitor)
-    for (l, r) in lrs:
-        records = [(eids[i], loss) for i, loss in enumerate(agg[:, l, r])
+    lrs = _aggregate(outputs, riskmodel, agg, ass, idx, result, monitor)
+    for lr in lrs:
+        records = [(eids[i], loss) for i, loss in enumerate(agg[lr])
                    if loss.sum() > 0]
         if records:
-            result['agglosses'][l, r] = numpy.array(records, monitor.elt_dt)
+            result['agglosses'][lr] = numpy.array(records, monitor.elt_dt)
     for lr in ass:
         if ass[lr]:
             result['asslosses'][lr] = numpy.concatenate(ass[lr])
@@ -637,7 +635,7 @@ def losses_by_taxonomy(riskinput, riskmodel, assetcol, monitor):
     lti = riskmodel.lti  # loss type -> index
     L, R = len(lti), len(riskinput.rlzs)
     A = len(assetcol)
-    I = monitor.I
+    I = monitor.insured_losses + 1
     lrs = list(itertools.product(range(L), range(R)))
     avglosses = AccumDict(
         {lr: numpy.zeros((A, I), F64) for lr in lrs}
@@ -812,11 +810,14 @@ class EbriskCalculator(base.RiskCalculator):
         min_iml = self.get_min_iml(oq)
         self.csm.init_serials()
         imts = list(oq.imtls)
+        ela_dt, elt_dt = build_el_dtypes(oq.insured_losses)
         for sm_id in range(len(self.csm.source_models)):
             ssm = self.csm.get_model(sm_id)
             monitor = self.monitor.new(
-                I=oq.insured_losses + 1,
+                ela_dt=ela_dt, elt_dt=elt_dt,
+                loss_ratios=oq.loss_ratios,
                 avg_losses=oq.avg_losses,
+                insured_losses=oq.insured_losses,
                 ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
                 maximum_distance=oq.maximum_distance,
                 samples=ssm.source_models[0].samples,
