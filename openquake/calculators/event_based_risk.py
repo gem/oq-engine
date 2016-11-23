@@ -859,37 +859,30 @@ class EbriskCalculator(base.RiskCalculator):
         self.T = len(self.assetcol.taxonomies)
         self.A = len(self.assetcol)
         avg_losses = self.oqparam.avg_losses
-        dset1 = self.datastore.create_dset(
-            'losses_by_taxon', F64, (self.T, self.L, self.R))
         if avg_losses:
-            dset2 = self.datastore.create_dset(
+            dset = self.datastore.create_dset(
                 'avglosses', F64, (self.A, self.L, self.R))
         num_events = 0
         self.gmfbytes = 0
         for res in allres:
             start, stop = res.rlz_slice.start, res.rlz_slice.stop
             r = stop - start
-            taxlosses = numpy.zeros((self.T, self.L, r), F64)
             if avg_losses:
                 avglosses = numpy.zeros((self.A, self.L, r), F64)
             for dic in res:
                 if avg_losses:
                     avglosses += dic.pop('avglosses')
-                taxlosses += dic.pop('losses')
                 self.gmfbytes += dic.pop('gmfbytes')
                 self.save_losses(
                     dic.pop('agglosses'), dic.pop('asslosses'), start)
             logging.debug(
                 'Saving results for source model #%d, realizations %d:%d',
                 res.sm_id + 1, start, stop)
-            dset1[:, :, start:stop] = taxlosses
             if avg_losses:
-                dset2[:, :, start:stop] = avglosses
+                dset[:, :, start:stop] = avglosses
             if hasattr(res, 'ruptures_by_grp'):
                 save_ruptures(self, res.ruptures_by_grp)
             num_events += res.num_events
-        if avg_losses:
-            self.datastore['avglosses'] = avglosses
         self.datastore['events'].attrs['num_events'] = num_events
         return num_events
 
