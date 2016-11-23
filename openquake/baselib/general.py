@@ -24,6 +24,7 @@ from __future__ import division, print_function
 import os
 import sys
 import imp
+import copy
 import math
 import operator
 import warnings
@@ -487,6 +488,13 @@ class AccumDict(dict):
     >> 1.2 * prob1
     {'a': 0.48, 'b': 0.6}
     """
+    SENTINEL = object()
+
+    def __init__(self, dic=None, accum=SENTINEL, **kw):
+        if dic:
+            self.update(dic)
+        self.update(kw)
+        self.accum = accum
 
     def __iadd__(self, other):
         if hasattr(other, 'items'):
@@ -551,6 +559,12 @@ class AccumDict(dict):
 
     def __truediv__(self, other):
         return self * (1. / other)
+
+    def __missing__(self, key):
+        if self.accum is not self.SENTINEL:
+            val = self[key] = copy.deepcopy(self.accum)
+            return val
+        raise KeyError(key)
 
     def apply(self, func, *extras):
         """
