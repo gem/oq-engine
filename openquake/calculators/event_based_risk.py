@@ -561,8 +561,8 @@ class EbriskCalculator(base.RiskCalculator):
         save_ruptures(self, ruptures_by_grp)
 
         # determine the realizations
-        rlzs_assoc = ssm.info.get_rlzs_assoc(
-            count_ruptures=lambda grp: len(ruptures_by_grp.get(grp.id, 0)))
+        rlzs_assoc = ssm.info.get_rlzs_assoc()
+        # count_ruptures=lambda grp: len(ruptures_by_grp.get(grp.id, 0))
         allargs = []
         # prepare the risk inputs
         ruptures_per_block = self.oqparam.ruptures_per_block
