@@ -390,6 +390,21 @@ class NPointsTowardsTest(unittest.TestCase):
         self.assertTrue(numpy.allclose(lats, expected_lats))
         self.assertTrue(numpy.allclose(depths, expected_depths))
 
+    def test_input_as_int(self):
+        lons, lats, depths = geodetic.npoints_towards(
+            lon=0, lat=0, depth=0, azimuth=0,
+            hdist=0, vdist=5, npoints=7
+        )
+        expected_lons = [0, 0, 0, 0, 0, 0, 0]
+        expected_lats = [0, 0, 0, 0, 0, 0, 0]
+        expected_depths = [0, 0.8333333, 1.6666667, 2.5, 3.3333333, 4.1666667, 5]
+        numpy.testing.assert_almost_equal(lons, expected_lons)
+        numpy.testing.assert_almost_equal(lats, expected_lats)
+        numpy.testing.assert_almost_equal(depths, expected_depths)
+        self.assertEqual(lons[0], 0)
+        self.assertEqual(lats[0], 0)
+        self.assertEqual(depths[0], 0)
+
 
 class IntervalsBetweenTest(unittest.TestCase):
     # values in this test have not been checked by hand

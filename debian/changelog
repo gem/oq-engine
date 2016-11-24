@@ -1,3 +1,13 @@
+  [Michele Simionato]
+  * Added support for AccumDict of accumulators
+  * Made the RtreeFilter pickleable
+  * Made the FilteredSiteCollections serializable to HDF5
+
+  [Daniele Viganò]
+  * MANIFEST now includes all files, with any extension located in the
+    tests folders. It is now possible to run tests from an installation
+    made with packages
+
   [Ozkan Kale, Graeme Weatherill]
   * Implements the Kale et al. (2015) GMPE for Turkey and Iran
 
