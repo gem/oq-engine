@@ -34,7 +34,7 @@ from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box, cross_idl
 from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 
 # a 6-uple containing float 4 arrays mags, dists, lons, lats,
 # 1 int array trts and a list of dictionaries pnes
@@ -62,7 +62,7 @@ def _disagg(iml, poes, curve_poes, imls, gsim, rupture, rlzi, imt, imt_str,
         yield (rlzi, round(poe, 4), imt_str), (iml, pne)
 
 
-def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
+def _collect_bins_data(trt_num, sources, site, curves, src_group_id,
                        rlzs_assoc, gsims, imtls, poes, truncation_level,
                        n_epsilons, iml_disagg, mon):
     # returns a BinData instance
@@ -77,12 +77,16 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
     make_ctxt = mon('making contexts', measuremem=False)
     disagg_poe = mon('disaggregate_poe', measuremem=False)
     cmaker = ContextMaker(gsims)
-    for source, ruptures in source_ruptures:
+    for source in sources:
         try:
             tect_reg = trt_num[source.tectonic_region_type]
-            for rupture in ruptures:
+            for rupture in source.iter_ruptures():
                 with make_ctxt:
-                    sctx, rctx, dctx = cmaker.make_contexts(sitecol, rupture)
+                    try:
+                        sctx, rctx, dctx = cmaker.make_contexts(
+                            sitecol, rupture)
+                    except FarAwayRupture:
+                        continue
                 # extract rupture parameters of interest
                 mags.append(rupture.mag)
                 dists.append(dctx.rjb[0])  # single site => single distance

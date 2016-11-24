@@ -183,6 +183,15 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         arreq(filtered.mesh.lats, [12, 2, 1])
         self.assertIs(filtered.mesh.depths, None)
 
+        # test serialization to hdf5
+        fd, fpath = tempfile.mkstemp(suffix='.hdf5')
+        os.close(fd)
+        with hdf5.File(fpath, 'w') as f:
+            f['sitecol'] = filtered
+            saved = f['sitecol']
+            self.assertEqual(saved, filtered)
+        os.remove(fpath)
+
     def test_filter_all_out(self):
         col = SiteCollection(self.SITES)
         filtered = col.filter(numpy.zeros(len(self.SITES), bool))
@@ -209,37 +218,6 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         arreq(filtered2.indices, [2])
         filtered2 = filtered.filter(numpy.array([True, False, True]))
         arreq(filtered2.indices, [0, 3])
-
-    def test_expand_2d(self):
-        col = SiteCollection(self.SITES).filter(
-            numpy.array([False, True, False, True]))
-        data_condensed = numpy.array([
-            [1, 2, 3],
-            [5, 6, 7],
-        ])
-        data_expanded = col.expand(data_condensed, placeholder=-1)
-        data_expanded_expected = numpy.array([
-            [-1, -1, -1],
-            [1, 2, 3],
-            [-1, -1, -1],
-            [5, 6, 7],
-        ])
-        numpy.testing.assert_array_equal(data_expanded, data_expanded_expected)
-
-    def test_expand_1d(self):
-        col = SiteCollection(self.SITES)
-        col = col.filter(numpy.array([1, 0, 1, 1]))
-        data_condensed = numpy.array([5, 6, 7])
-        data_expanded = col.expand(data_condensed, placeholder=100)
-        data_expanded_expected = numpy.array([5, 100, 6, 7])
-        numpy.testing.assert_array_equal(data_expanded, data_expanded_expected)
-
-    def test_expand_no_filtering(self):
-        col = SiteCollection(self.SITES)
-        data_condensed = numpy.array([3, 2, 1, 0])
-        data_expanded = col.expand(data_condensed, placeholder=100)
-        data_expanded_expected = data_condensed
-        numpy.testing.assert_array_equal(data_expanded, data_expanded_expected)
 
 
 class SiteCollectionIterTestCase(unittest.TestCase):

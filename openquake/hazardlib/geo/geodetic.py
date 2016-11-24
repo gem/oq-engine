@@ -20,6 +20,7 @@
 Module :mod:`openquake.hazardlib.geo.geodetic` contains functions for geodetic
 transformations, optimized for massive calculations.
 """
+from __future__ import division
 
 import operator
 
