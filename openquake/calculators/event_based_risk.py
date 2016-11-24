@@ -412,7 +412,7 @@ class EventBasedStats(object):
             C, oq.conditional_loss_poes, oq.insured_losses)
         lts = self.riskmodel.loss_types
         lr_data = []
-        R = len(agg_loss_table)
+        R = len(self.rlzs_assoc.realizations)
         L = len(self.riskmodel.lti)
         for rlzstr in agg_loss_table:
             r = int(rlzstr[4:])
