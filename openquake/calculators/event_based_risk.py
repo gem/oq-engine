@@ -18,13 +18,10 @@
 from __future__ import division
 import logging
 import operator
-import itertools
-import functools
 import collections
 
 import numpy
 
-from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
     AccumDict, humansize, block_splitter, group_array)
