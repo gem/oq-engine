@@ -92,16 +92,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             'No GMFs were generated, perhaps they were all below the '
             'minimum_intensity threshold')
 
-    @attr('qa', 'risk', 'ebrisk')
-    def test_case_2bis(self):
-        # test for a single realization
-        out = self.run_calc(case_2.__file__, 'job_loss.ini', exports='csv',
-                            concurrent_tasks='0')
-        # this also tests that concurrent_tasks=0 does not give issues
-        [fname] = out['agg_loss_table', 'csv']
-        self.assertEqualFiles('expected/agg_losses_bis.csv', fname)
-
-    @attr('qa', 'risk', 'ebrisk')
+    @attr('qa', 'risk', 'event_based_risk')
     def test_case_2_correlation(self):
         out = self.run_calc(case_2.__file__, 'job_loss.ini', exports='csv',
                             asset_correlation=1.0)
@@ -185,10 +176,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/gmf-smltp_b1-gsimltp_b1.txt', fname)
 
-    @attr('qa', 'risk', 'ebrisk')
+    @attr('qa', 'risk', 'event_based_risk')
     def test_case_master_ebr(self):
         out = self.run_calc(case_master.__file__, 'job.ini',
-                            calculation_mode='ebrisk',
                             investigation_time='1',
                             insured_losses='false',
                             exports='csv')
