@@ -231,7 +231,8 @@ class EventBasedStats(object):
             [(ltype, (F32, cbuilder.curve_resolution))
              for ltype, cbuilder in zip(
                 ltypes, self.riskmodel.curve_builders)])
-        rcurves = numpy.zeros((N, R, I), multi_lr_dt)
+        # TODO: change 2 -> I, then change the exporter
+        rcurves = numpy.zeros((N, R, 2), multi_lr_dt)
 
         if self.oqparam.loss_ratios:
             self.save_rcurves(rcurves, I)
@@ -880,3 +881,6 @@ class EbriskCalculator(base.RiskCalculator):
         logging.info('Saved %d event losses', num_events)
         self.datastore.set_nbytes('agg_loss_table')
         self.datastore.set_nbytes('events')
+
+        ebstats = EventBasedStats(self.datastore, self.monitor)
+        ebstats.build()
