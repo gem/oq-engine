@@ -518,8 +518,8 @@ class EbriskCalculator(base.RiskCalculator):
     # TODO: if the number of source models is larger than concurrent_tasks
     # a different strategy should be used; the one used here is good when
     # there are few source models, so that we cannot parallelize on those
-    def build_starmap(self, ssm, sitecol, assetcol, riskmodel, imts,
-                      trunc_level, correl_model, min_iml, monitor):
+    def build_ruptures(self, ssm, sitecol, assetcol, riskmodel, imts,
+                       trunc_level, correl_model, min_iml, monitor):
         """
         :param ssm: CompositeSourceModel containing a single source model
         :param sitecol: a SiteCollection instance
@@ -595,7 +595,7 @@ class EbriskCalculator(base.RiskCalculator):
 
     def gen_args(self):
         """
-        Yield the arguments required by build_starmap, i.e. the
+        Yield the arguments required by build_ruptures, i.e. the
         source models, the asset collection, the riskmodel and others.
         """
         oq = self.oqparam
@@ -623,6 +623,9 @@ class EbriskCalculator(base.RiskCalculator):
         """
         Run the calculator and aggregate the results
         """
+        if self.oqparam.ground_motion_fields:
+            logging.warn('To store the ground motion fields change to'
+                         'calculation_mode = event_based')
         num_rlzs = 0
         allres = []
         source_models = self.csm.info.source_models
@@ -630,7 +633,7 @@ class EbriskCalculator(base.RiskCalculator):
             self.sm_by_grp = self.csm.info.get_sm_by_grp()
             self.eid = collections.Counter()  # sm_id -> event_id
             for i, args in enumerate(self.gen_args()):
-                smap, attrs = self.build_starmap(*args)
+                smap, attrs = self.build_ruptures(*args)
                 logging.info(
                     'Generated %d/%d ruptures/events for source model #%d',
                     sum(attrs['num_ruptures'].values()), attrs['num_events'],
