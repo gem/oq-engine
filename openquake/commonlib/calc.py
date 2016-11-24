@@ -591,7 +591,11 @@ class EBRupture(object):
         self.rupture = object.__new__(hdf5.dotname2cls(attrs['rupture_class']))
         self.rupture.surface = surface = object.__new__(surface_cls)
         m = dic['mesh'].value
-        if attrs['surface_class'].endswith('MultiSurface'):
+        if surface_class.endswith('PlanarSurface'):
+            mesh_spacing = attrs.pop('mesh_spacing')
+            self.rupture.surface = geo.PlanarSurface.from_array(
+                mesh_spacing, m.flatten())
+        elif surface_class.endswith('MultiSurface'):
             mesh_spacing = attrs.pop('mesh_spacing')
             self.rupture.surface.surfaces = [
                 geo.PlanarSurface.from_array(mesh_spacing, m1.flatten())
