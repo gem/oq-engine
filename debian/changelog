@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a serialization bug for planar surfaces
   * Removed the flag `asset_loss_table`: the loss ratios are
     saved if and only if the `loss_ratios` dictionary is non-empty
   * Added a CSV exporter for the GMFs in the event based calculator

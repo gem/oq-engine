@@ -567,6 +567,7 @@ class EBRupture(object):
             n = len(surface.surfaces)
             arr = build_array([[s.corner_lons, s.corner_lats, s.corner_depths]
                                for s in surface.surfaces]).reshape(n, 2, 2)
+            attrs['mesh_spacing'] = surface.surfaces[0].mesh_spacing
         else:
             mesh = surface.mesh
             if mesh is None:  # planar surface
@@ -590,11 +591,12 @@ class EBRupture(object):
         self.rupture = object.__new__(hdf5.dotname2cls(attrs['rupture_class']))
         self.rupture.surface = surface = object.__new__(surface_cls)
         m = dic['mesh'].value
-        if 'mesh_spacing' in attrs:  # PlanarSurface
-            self.rupture.surface = (
-                geo.PlanarSurface.from_array(
-                    attrs.pop('mesh_spacing'), m.flatten()))
-        else:  # general surface
+        if attrs['surface_class'].endswith('MultiSurface'):
+            mesh_spacing = attrs.pop('mesh_spacing')
+            self.rupture.surface.surfaces = [
+                geo.PlanarSurface.from_array(mesh_spacing, m1.flatten())
+                for m1 in m]
+        else:  # fault surface
             surface.strike = surface.dip = None  # they will be computed
             surface.mesh = RectangularMesh(
                 m['lon'][0], m['lat'][0], m['depth'][0])
