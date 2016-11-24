@@ -561,8 +561,8 @@ class EbriskCalculator(base.RiskCalculator):
         save_ruptures(self, ruptures_by_grp)
 
         # determine the realizations
-        rlzs_assoc = ssm.info.get_rlzs_assoc()
-        # count_ruptures=lambda grp: len(ruptures_by_grp.get(grp.id, 0))
+        rlzs_assoc = ssm.info.get_rlzs_assoc(
+            count_ruptures=lambda grp: len(ruptures_by_grp.get(grp.id, [])))
         allargs = []
         # prepare the risk inputs
         ruptures_per_block = self.oqparam.ruptures_per_block
@@ -669,14 +669,13 @@ class EbriskCalculator(base.RiskCalculator):
         self.gmfbytes = 0
         for res in allres:
             start, stop = res.rlz_slice.start, res.rlz_slice.stop
-            r = stop - start
             for dic in res:
                 if avg_losses:
                     for (l, r), losses in dic.pop('avglosses').items():
-                        vals = self.vals[self.riskmodel.loss_types[l]]
-                        dset[:, r, l] += losses[:, 0] * vals
+                        vs = self.vals[self.riskmodel.loss_types[l]]
+                        dset[:, r + start, l] += losses[:, 0] * vs
                         if ins:
-                            dset[:, r, l + self.L] += losses[:, 1] * vals
+                            dset[:, r + start, l + self.L] += losses[:, 1] * vs
                 self.gmfbytes += dic.pop('gmfbytes')
                 self.save_losses(
                     dic.pop('agglosses'), dic.pop('asslosses'), start)
