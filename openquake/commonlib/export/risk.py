@@ -215,6 +215,8 @@ def export_agg_losses_ebr(ekey, dstore):
             dest = dstore.build_fname('agg_losses', rlz, 'csv')
             eids = set()
             rlzname = 'rlz-%03d' % rlz.ordinal
+            if rlzname not in agg_losses:
+                continue
             for loss_type in agg_losses[rlzname]:
                 dset = agg_losses['%s/%s' % (rlzname, loss_type)]
                 eids.update(dset['eid'])
