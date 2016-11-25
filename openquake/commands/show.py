@@ -28,7 +28,8 @@ from openquake.risklib import scientific, valid
 from openquake.commonlib import datastore
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import rmsep
-from openquake.engine import config, logs
+from openquake.commonlib import config
+from openquake.engine import logs
 from openquake.calculators.views import view
 
 MULTI_USER = valid.boolean(config.get('dbserver', 'multi_user') or 'false')
