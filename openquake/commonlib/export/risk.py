@@ -106,9 +106,31 @@ def compactify(array):
     return zeros
 
 
-# this is used by classical_risk, event_based_risk and scenario_risk
-@export.add(('avg_losses-rlzs', 'csv'), ('losses_by_asset', 'csv'))
+# this is used by event_based_risk
+@export.add(('avg_losses-rlzs', 'csv'))
 def export_avg_losses(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    avg_losses = dstore[ekey[0]].value
+    oq = dstore['oqparam']
+    dt = oq.loss_dt()
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    assets = get_assets(dstore)
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    for rlz in rlzs:
+        losses = numpy.array(
+            [tuple(row) for row in avg_losses[:, rlz.ordinal]], dt)
+        dest = dstore.build_fname('losses_by_asset', rlz, 'csv')
+        data = compose_arrays(assets, losses)
+        writer.save(data, dest)
+    return writer.getsaved()
+
+
+# this is used by scenario_risk
+@export.add(('losses_by_asset', 'csv'))
+def export_losses_by_asset(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
@@ -132,12 +154,13 @@ def export_avg_losses_stats(ekey, dstore):
     :param dstore: datastore object
     """
     oq = dstore['oqparam']
+    dt = oq.loss_dt()
     avg_losses = dstore[ekey[0]].value
     quantiles = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     assets = get_assets(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for i, quantile in enumerate(quantiles):
-        losses = avg_losses[:, i]
+        losses = numpy.array([tuple(row) for row in avg_losses[:, i]], dt)
         dest = dstore.build_fname('avg_losses', quantile, 'csv')
         data = compose_arrays(assets, losses)
         writer.save(data, dest)
@@ -194,7 +217,6 @@ def export_agg_losses_ebr(ekey, dstore):
             rlzname = 'rlz-%03d' % rlz.ordinal
             for loss_type in agg_losses[rlzname]:
                 dset = agg_losses['%s/%s' % (rlzname, loss_type)]
-                insured_losses = bool(dset.dtype['loss'].shape)
                 eids.update(dset['eid'])
             eids = sorted(eids)
             rlz_events = events[eids]
@@ -204,7 +226,7 @@ def export_agg_losses_ebr(ekey, dstore):
             elt['year'] = rlz_events['year']
             for loss_type in loss_types:
                 elt_lt = elt[loss_type]
-                if insured_losses:
+                if oq.insured_losses:
                     elt_lt_ins = elt[loss_type + '_ins']
                 key = 'rlz-%03d/%s' % (rlz.ordinal, loss_type)
                 if key not in agg_losses:  # nothing was saved for this key
@@ -212,7 +234,7 @@ def export_agg_losses_ebr(ekey, dstore):
                 data = agg_losses[key].value
                 for i, eid in numpy.ndenumerate(data['eid']):
                     idx = eid2idx[eid]
-                    if insured_losses:
+                    if oq.insured_losses:
                         elt_lt[idx] = data['loss'][i, 0]
                         elt_lt_ins[idx] = data['loss'][i, 1]
                     else:
