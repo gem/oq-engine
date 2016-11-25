@@ -569,7 +569,7 @@ class EbriskCalculator(base.RiskCalculator):
         start = 0
         for src_group in ssm.src_groups:
             for rupts in block_splitter(
-                    ruptures_by_grp[src_group.id], ruptures_per_block):
+                    ruptures_by_grp.get(src_group.id, []), ruptures_per_block):
                 if not self.riskmodel.covs:
                     eps = None
                 elif self.oqparam.asset_correlation:
@@ -583,6 +583,7 @@ class EbriskCalculator(base.RiskCalculator):
                     self.grp_trt[rupts[0].grp_id], rlzs_assoc, imts, sitecol,
                     rupts, trunc_level, correl_model, min_iml, eps)
                 allargs.append((ri, riskmodel, assetcol, monitor))
+        #import pdb; pdb.set_trace()
         self.vals = self.assetcol.values()
         taskname = '%s#%d' % (event_based_risk.__name__, ssm.sm_id + 1)
         smap = starmap(event_based_risk, allargs, name=taskname)
@@ -601,7 +602,6 @@ class EbriskCalculator(base.RiskCalculator):
         oq = self.oqparam
         correl_model = oq.get_correl_model()
         min_iml = self.get_min_iml(oq)
-        self.csm.init_serials()
         imts = list(oq.imtls)
         ela_dt, elt_dt = build_el_dtypes(oq.insured_losses)
         for sm_id in range(len(self.csm.source_models)):
@@ -644,7 +644,7 @@ class EbriskCalculator(base.RiskCalculator):
                 res.rlz_slice = slice(num_rlzs, num_rlzs + res.num_rlzs)
                 num_rlzs += res.num_rlzs
                 for sg in source_models[i].src_groups:
-                    sg.eff_ruptures = res.num_ruptures[sg.id]
+                    sg.eff_ruptures = res.num_ruptures.get(sg.id, 0)
         self.datastore['csm_info'] = self.csm.info
         num_events = self.save_results(allres, num_rlzs)
         self.save_data_transfer(parallel.IterResult.sum(allres))
