@@ -105,8 +105,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_2_correlation(self):
         out = self.run_calc(case_2.__file__, 'job_loss.ini', exports='csv',
                             asset_correlation=1.0)
-        [fname] = out['losses_by_taxon', 'csv']
-        self.assertEqualFiles('expected/losses_by_taxon.csv', fname)
+        [fname] = out['agg_loss_table', 'csv']
+        self.assertEqualFiles('expected/agg_losses.csv', fname)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_missing_taxonomy(self):
@@ -197,8 +197,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = writetmp(view('ruptures_events', self.calc.datastore))
         self.assertEqualFiles('expected/ruptures_events.txt', fname)
 
-        for fname in out['losses_by_taxon', 'csv']:
-            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+        # TODO: add a check on avg_losses-stats
 
         for fname in out['agg_loss_table', 'csv']:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
