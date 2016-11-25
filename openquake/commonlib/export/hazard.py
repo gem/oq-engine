@@ -587,8 +587,7 @@ def export_hcurves_npz(ekey, dstore):
     mesh = get_mesh(dstore['sitecol'])
     imtls = dstore['oqparam'].imtls
     fname = dstore.export_path('%s.%s' % ekey)
-    dic = {}
-    dic['imtls'] = imtls
+    dic = {'imls-' + imt: imtls[imt] for imt in imtls}
     for dskey in dstore[ekey[0]]:
         curves = dstore['%s/%s' % (ekey[0], dskey)].convert(
             imtls, len(mesh))
