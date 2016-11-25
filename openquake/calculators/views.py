@@ -448,12 +448,12 @@ def sum_table(records):
 # this is used by the ebr calculator
 @view.add('mean_avg_losses')
 def view_mean_avg_losses(token, dstore):
+    dt = dstore['oqparam'].loss_dt()
     try:
         array = dstore['avg_losses-stats']  # shape (N, S)
-        data = array[:, 0]
     except KeyError:
         array = dstore['avg_losses-rlzs']  # shape (N, R)
-        data = array[:, 0]
+    data = numpy.array([tuple(row) for row in array[:, 0]], dt)
     assets = util.get_assets(dstore)
     losses = util.compose_arrays(assets, data)
     losses.sort()
