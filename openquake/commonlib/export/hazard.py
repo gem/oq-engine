@@ -47,7 +47,7 @@ Consider canceling the operation and accessing directly %s.'''
 
 
 def savez(fname, dic):
-    with open(fname, 'w') as f:
+    with open(fname, 'wb') as f:
         numpy.savez_compressed(f, **dic)
 
 
