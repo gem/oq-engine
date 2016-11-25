@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a Python 3 issue in git_suffix
   * Added support for AccumDict of accumulators
   * Made the RtreeFilter pickleable
   * Made the FilteredSiteCollections serializable to HDF5

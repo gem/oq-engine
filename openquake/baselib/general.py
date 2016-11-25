@@ -36,6 +36,7 @@ import collections
 
 import numpy
 from decorator import decorator
+from openquake.baselib.python3compat import decode
 
 F64 = numpy.float64
 
@@ -305,7 +306,7 @@ def git_suffix(fname):
         gh = subprocess.check_output(
             ['git', 'rev-parse', '--short', 'HEAD'],
             stderr=open(os.devnull, 'w'), cwd=os.path.dirname(fname)).strip()
-        gh = "-git" + gh if gh else ''
+        gh = "-git" + decode(gh) if gh else ''
         return gh
     except:
         # trapping everything on purpose; git may not be installed or it
