@@ -26,7 +26,6 @@ import numpy
 
 from openquake.baselib.general import (
     groupby, humansize, get_array, group_array, DictArray)
-from openquake.baselib import hdf5
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
 from openquake.risklib.riskinput import GmfGetter
@@ -45,6 +44,11 @@ GMF_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
 GMF_WARNING = '''\
 There are a lot of ground motion fields; the export will be slow.
 Consider canceling the operation and accessing directly %s.'''
+
+
+def savez(fname, dic):
+    with open(fname, 'w') as f:
+        numpy.savez_compressed(f, **dic)
 
 
 def get_mesh(sitecol, complete=True):
@@ -583,44 +587,47 @@ def _extract(hmap, imt, j):
     return tup
 
 
-@export.add(('hcurves', 'hdf5'))
-def export_hcurves_hdf5(ekey, dstore):
+@export.add(('hcurves', 'npz'))
+def export_hcurves_npz(ekey, dstore):
     mesh = get_mesh(dstore['sitecol'])
     imtls = dstore['oqparam'].imtls
     fname = dstore.export_path('%s.%s' % ekey)
-    with hdf5.File(fname, 'w') as f:
-        f['imtls'] = imtls
-        for dskey in dstore[ekey[0]]:
-            curves = dstore['%s/%s' % (ekey[0], dskey)].convert(
-                imtls, len(mesh))
-            f['%s/%s' % (ekey[0], dskey)] = util.compose_arrays(mesh, curves)
+    dic = {}
+    dic['imtls'] = imtls
+    for dskey in dstore[ekey[0]]:
+        curves = dstore['%s/%s' % (ekey[0], dskey)].convert(
+            imtls, len(mesh))
+        dic[dskey] = util.compose_arrays(mesh, curves)
+    savez(fname, dic)
     return [fname]
 
 
-@export.add(('uhs', 'hdf5'))
-def export_uhs_hdf5(ekey, dstore):
+@export.add(('uhs', 'npz'))
+def export_uhs_npz(ekey, dstore):
     oq = dstore['oqparam']
     mesh = get_mesh(dstore['sitecol'])
     fname = dstore.export_path('%s.%s' % ekey)
-    with hdf5.File(fname, 'w') as f:
-        for dskey in dstore['hcurves']:
-            hcurves = dstore['hcurves/%s' % dskey]
-            uhs_curves = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(mesh))
-            f['uhs/%s' % dskey] = util.compose_arrays(mesh, uhs_curves)
+    dic = {}
+    for dskey in dstore['hcurves']:
+        hcurves = dstore['hcurves/%s' % dskey]
+        uhs_curves = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(mesh))
+        dic[dskey] = util.compose_arrays(mesh, uhs_curves)
+    savez(fname, dic)
     return [fname]
 
 
-@export.add(('hmaps', 'hdf5'))
-def export_hmaps_hdf5(ekey, dstore):
+@export.add(('hmaps', 'npz'))
+def export_hmaps_npz(ekey, dstore):
     oq = dstore['oqparam']
     mesh = get_mesh(dstore['sitecol'])
     pdic = DictArray({imt: oq.poes for imt in oq.imtls})
     fname = dstore.export_path('%s.%s' % ekey)
-    with hdf5.File(fname, 'w') as f:
-        for dskey in dstore['hcurves']:
-            hcurves = dstore['hcurves/%s' % dskey]
-            hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
-            f['hmaps/%s' % dskey] = convert_to_array(hmap, mesh, pdic)
+    dic = {}
+    for dskey in dstore['hcurves']:
+        hcurves = dstore['hcurves/%s' % dskey]
+        hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
+        dic[dskey] = convert_to_array(hmap, mesh, pdic)
+    savez(fname, dic)
     return [fname]
 
 
@@ -870,8 +877,8 @@ def _build_csv_data(array, rlz, sitecol, imts, investigation_time):
     return rows, comment
 
 
-@export.add(('gmf_data', 'hdf5'))
-def export_gmf_scenario_hdf5(ekey, dstore):
+@export.add(('gmf_data', 'npz'))
+def export_gmf_scenario_npz(ekey, dstore):
     # compute the GMFs on the fly from the stored rupture (if any)
     oq = dstore['oqparam']
     if 'scenario' not in oq.calculation_mode:
@@ -889,16 +896,17 @@ def export_gmf_scenario_hdf5(ekey, dstore):
     gmf_dt = numpy.dtype([('%s-%03d' % (imt, eid), F32) for imt in oq.imtls
                           for eid in range(E)])
     imts = list(oq.imtls)
-    with hdf5.File(fname, 'w') as f:
-        for gsim in gsims:
-            arr = computer.compute(gsim, E, oq.random_seed)
-            I, S, E = arr.shape  # #IMTs, #sites, #events
-            gmfa = numpy.zeros(S, gmf_dt)
-            for imti in range(I):
-                for eid in range(E):
-                    field = '%s-%03d' % (imts[imti], eid)
-                    gmfa[field] = arr[imti, :, eid]
-            f[str(gsim)] = util.compose_arrays(sitemesh, gmfa)
+    dic = {}
+    for gsim in gsims:
+        arr = computer.compute(gsim, E, oq.random_seed)
+        I, S, E = arr.shape  # #IMTs, #sites, #events
+        gmfa = numpy.zeros(S, gmf_dt)
+        for imti in range(I):
+            for eid in range(E):
+                field = '%s-%03d' % (imts[imti], eid)
+                gmfa[field] = arr[imti, :, eid]
+        dic[str(gsim)] = util.compose_arrays(sitemesh, gmfa)
+    savez(fname, dic)
     return [fname]
 
 
