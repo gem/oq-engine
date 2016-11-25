@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-import h5py
 import numpy
 import unittest
 from numpy.testing import assert_almost_equal as aae
@@ -148,7 +147,7 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles('LinLee2008SSlab_gmf.xml', f1)
         self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.xml', f2)
 
-        out = self.run_calc(case_9.__file__, 'job.ini', exports='txt,csv,hdf5')
+        out = self.run_calc(case_9.__file__, 'job.ini', exports='txt,csv,npz')
         f1, f2 = out['gmf_data', 'txt']
         self.assertEqualFiles('LinLee2008SSlab_gmf.txt', f1)
         self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.txt', f2)
@@ -157,10 +156,10 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles('gmf-LinLee2008SSlab-PGA.csv', f1)
         self.assertEqualFiles('gmf-YoungsEtAl1997SSlab-PGA.csv', f2)
 
-        # test the HDF5 export
-        [fname] = out['gmf_data', 'hdf5']
-        with h5py.File(fname) as f:
-            self.assertEqual(len(f), 2)  # there are only two datasets
+        # test the .npz export
+        [fname] = out['gmf_data', 'npz']
+        with numpy.load(fname) as f:
+            self.assertEqual(len(f.keys()), 2)  # there are only two datasets
             data1 = f['LinLee2008SSlab()']
             data2 = f['YoungsEtAl1997SSlab()']
             self.assertEqual(
