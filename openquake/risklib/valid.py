@@ -143,7 +143,7 @@ class Choices(Choice):
                     val, self.choices))
         return tuple(values)
 
-export_formats = Choices('', 'xml', 'geojson', 'txt', 'csv', 'hdf5')
+export_formats = Choices('', 'xml', 'geojson', 'txt', 'csv', 'npz')
 
 
 def hazard_id(value):
