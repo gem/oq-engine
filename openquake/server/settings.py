@@ -21,7 +21,7 @@ import getpass
 
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS
 
-from openquake.engine import config
+from openquake.commonlib import config
 
 DB_SECTION = config.get_section('dbserver')
 
