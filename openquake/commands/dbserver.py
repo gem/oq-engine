@@ -18,7 +18,8 @@
 import sys
 from openquake.risklib import valid
 from openquake.baselib import sap
-from openquake.engine import logs, config
+from openquake.engine import logs
+from openquake.commonlib import config
 from openquake.server import dbserver as dbs
 
 
