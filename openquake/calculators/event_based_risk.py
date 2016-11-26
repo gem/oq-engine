@@ -583,7 +583,7 @@ class EbriskCalculator(base.RiskCalculator):
                     self.grp_trt[rupts[0].grp_id], rlzs_assoc, imts, sitecol,
                     rupts, trunc_level, correl_model, min_iml, eps)
                 allargs.append((ri, riskmodel, assetcol, monitor))
-        #import pdb; pdb.set_trace()
+
         self.vals = self.assetcol.values()
         taskname = '%s#%d' % (event_based_risk.__name__, ssm.sm_id + 1)
         smap = starmap(event_based_risk, allargs, name=taskname)
@@ -717,7 +717,6 @@ class EbriskCalculator(base.RiskCalculator):
                                'all below the minimum_intensity threshold')
         logging.info('Generated %s of GMFs', humansize(self.gmfbytes))
         self.datastore.save('job_info', {'gmfbytes': self.gmfbytes})
-        logging.info('Saved %s losses by taxonomy', (self.T, self.L, self.R))
         logging.info('Saved %d event losses', num_events)
         self.datastore.set_nbytes('agg_loss_table')
         self.datastore.set_nbytes('events')

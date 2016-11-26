@@ -258,9 +258,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
             for sm in sorted(self.datastore['events']):
                 set_random_years(self.datastore, 'events/' + sm, inv_time)
 
-        nr = sum_dict(result)
-        logging.info('Saved %d ruptures, %d events',
-                     nr, sum(self.eid.values()))
         if 'ruptures' in self.datastore:
             self.datastore.set_nbytes('ruptures')
         self.datastore.set_nbytes('events')
