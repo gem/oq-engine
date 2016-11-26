@@ -45,6 +45,9 @@ GMF_WARNING = '''\
 There are a lot of ground motion fields; the export will be slow.
 Consider canceling the operation and accessing directly %s.'''
 
+# with compression you can save 60% of space by losing only 10% of saving time
+savez = numpy.savez_compressed
+
 
 def get_mesh(sitecol, complete=True):
     sc = sitecol.complete if complete else sitecol
@@ -595,7 +598,7 @@ def export_hcurves_npz(ekey, dstore):
         curves = dstore['%s/%s' % (ekey[0], dskey)].convert(
             imtls, len(mesh))
         dic[dskey] = util.compose_arrays(mesh, curves)
-    numpy.savez(fname, **dic)
+    savez(fname, **dic)
     return [fname]
 
 
@@ -609,7 +612,7 @@ def export_uhs_npz(ekey, dstore):
         hcurves = dstore['hcurves/%s' % dskey]
         uhs_curves = calc.make_uhs(hcurves, oq.imtls, oq.poes, len(mesh))
         dic[dskey] = util.compose_arrays(mesh, uhs_curves)
-    numpy.savez(fname, **dic)
+    savez(fname, **dic)
     return [fname]
 
 
@@ -624,7 +627,7 @@ def export_hmaps_npz(ekey, dstore):
         hcurves = dstore['hcurves/%s' % dskey]
         hmap = calc.make_hmap(hcurves, oq.imtls, oq.poes)
         dic[dskey] = convert_to_array(hmap, mesh, pdic)
-    numpy.savez(fname, **dic)
+    savez(fname, **dic)
     return [fname]
 
 
@@ -903,7 +906,7 @@ def export_gmf_scenario_npz(ekey, dstore):
                 field = '%s-%03d' % (imts[imti], eid)
                 gmfa[field] = arr[imti, :, eid]
         dic[str(gsim)] = util.compose_arrays(sitemesh, gmfa)
-    numpy.savez(fname, **dic)
+    savez(fname, **dic)
     return [fname]
 
 
