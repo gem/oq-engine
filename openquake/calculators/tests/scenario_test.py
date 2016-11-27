@@ -162,11 +162,8 @@ class ScenarioTestCase(CalculatorTestCase):
             self.assertEqual(len(f.keys()), 2)  # there are only two datasets
             data1 = f['LinLee2008SSlab()']
             data2 = f['YoungsEtAl1997SSlab()']
-            self.assertEqual(
-                data1.dtype.names,
-                ('lon', 'lat', 'PGA-000', 'PGA-001', 'PGA-002', 'PGA-003',
-                 'PGA-004', 'PGA-005', 'PGA-006', 'PGA-007', 'PGA-008',
-                 'PGA-009'))
+            self.assertEqual(data1.dtype.names, ('lon', 'lat', 'PGA'))
             self.assertEqual(data1.shape, (3,))
+            self.assertEqual(data1['PGA'].shape, (3, 10))
             self.assertEqual(data1.dtype.names, data2.dtype.names)
             self.assertEqual(data1.shape, data2.shape)
