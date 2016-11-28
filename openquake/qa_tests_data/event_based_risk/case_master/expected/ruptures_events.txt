@@ -1,0 +1,5 @@
+======================== =====
+Total number of ruptures 4    
+Total number of events   4    
+Rupture multiplicity     1.000
+======================== =====

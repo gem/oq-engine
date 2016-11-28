@@ -42,11 +42,11 @@ F64 = numpy.float64
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-def split_filter_source(src, sites, ss_filter, random_seed):
+def split_filter_source(src, sites, src_filter, random_seed):
     """
     :param src: an heavy source
     :param sites: sites affected by the source
-    :param ss_filter: a SourceSitesFilter instance
+    :param src_filter: a SourceFilter instance
     :random_seed: used only for event based calculations
     :returns: a list of split sources
     """
@@ -57,7 +57,7 @@ def split_filter_source(src, sites, ss_filter, random_seed):
             nr = split.num_ruptures
             split.serial = src.serial[start:start + nr]
             start += nr
-        if ss_filter.affected(split) is not None:
+        if src_filter.affected(split) is not None:
             split_sources.append(split)
     return split_sources
 
@@ -188,12 +188,12 @@ class BoundingBox(object):
     __nonzero__ = __bool__
 
 
-def classical(sources, sitecol, gsims, monitor):
+def classical(sources, src_filter, gsims, monitor):
     """
     :param sources:
         a non-empty sequence of sources of homogeneous tectonic region type
-    :param sitecol:
-        a SiteCollection instance
+    :param src_filter:
+        source filter
     :param gsims:
         a list of GSIMs for the current tectonic region type
     :param monitor:
@@ -207,16 +207,14 @@ def classical(sources, sitecol, gsims, monitor):
     # sanity check: the src_group must be the same for all sources
     for src in sources[1:]:
         assert src.src_group_id == src_group_id
-    trt = sources[0].tectonic_region_type
-    max_dist = monitor.maximum_distance[trt]
     if monitor.disagg:
         sm_id = monitor.sm_id
-        bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
+        bbs = [BoundingBox(sm_id, sid) for sid in src_filter.sitecol.sids]
     else:
         bbs = []
     pmap = pmap_from_grp(
-        sources, sitecol, imtls, gsims, truncation_level,
-        maximum_distance=max_dist, bbs=bbs, monitor=monitor)
+        sources, src_filter, imtls, gsims, truncation_level,
+        bbs=bbs, monitor=monitor)
     pmap.bbs = bbs
     pmap.grp_id = src_group_id
     return pmap
@@ -348,17 +346,17 @@ class PSHACalculator(base.HazardCalculator):
                     light, maxweight, weight=operator.attrgetter('weight')):
                 for src in block:
                     self.infos[sg.id, src.source_id] = source.SourceInfo(src)
-                yield block, self.sitecol, gsims, monitor
+                yield block, self.src_filter, gsims, monitor
                 nlight += 1
             heavy = [src for src in sg.sources if src.weight > maxweight]
             if not heavy:
                 continue
             with self.monitor('split/filter heavy sources', autoflush=True):
                 for src in heavy:
-                    sites = self.ss_filter.affected(src)
+                    sites = self.src_filter.affected(src)
                     self.infos[sg.id, src.source_id] = source.SourceInfo(src)
                     sources = split_filter_source(
-                        src, sites, self.ss_filter, self.random_seed)
+                        src, sites, self.src_filter, self.random_seed)
                     if len(sources) > 1:
                         logging.info(
                             'Splitting %s "%s" in %d sources',
@@ -367,7 +365,7 @@ class PSHACalculator(base.HazardCalculator):
                     for block in block_splitter(
                             sources, maxweight,
                             weight=operator.attrgetter('weight')):
-                        yield block, sites, gsims, monitor
+                        yield block, self.src_filter, gsims, monitor
                         nheavy += 1
         logging.info('Sent %d light and %d heavy tasks', nlight, nheavy)
 
@@ -395,13 +393,13 @@ class PSHACalculator(base.HazardCalculator):
         """
         if pmap_by_grp_id.bb_dict:
             self.datastore['bb_dict'] = pmap_by_grp_id.bb_dict
+        grp_trt = self.csm.info.grp_trt()
         with self.monitor('saving probability maps', autoflush=True):
             for grp_id, pmap in pmap_by_grp_id.items():
                 if pmap:  # pmap can be missing if the group is filtered away
                     key = 'poes/%04d' % grp_id
                     self.datastore[key] = pmap
-                    self.datastore.set_attrs(
-                        key, trt=self.csm.info.get_trt(grp_id))
+                    self.datastore.set_attrs(key, trt=grp_trt[grp_id])
             if 'poes' in self.datastore:
                 self.datastore.set_nbytes('poes')
 
@@ -476,10 +474,9 @@ class ClassicalCalculator(PSHACalculator):
             res = parallel.starmap(
                 build_hcurves_and_stats,
                 list(self.gen_args(pmap_by_grp))).submit_all()
-        with self.monitor('saving hcurves and stats', autoflush=True):
-            nbytes = reduce(self.save_hcurves, res, AccumDict())
-            self.save_data_transfer(res)
-            return nbytes
+        nbytes = reduce(self.save_hcurves, res, AccumDict())
+        self.save_data_transfer(res)
+        return nbytes
 
     def gen_args(self, pmap_by_grp):
         """
@@ -506,19 +503,20 @@ class ClassicalCalculator(PSHACalculator):
         :param acc: dictionary kind -> nbytes
         :param pmap_by_kind: a dictionary of ProbabilityMaps
         """
-        oq = self.oqparam
-        for kind in pmap_by_kind:
-            if kind == 'mean' and not oq.mean_hazard_curves:
-                continue  # do not save the mean curves
-            pmap = pmap_by_kind[kind]
-            if pmap:
-                key = 'hcurves/' + kind
-                dset = self.datastore.getitem(key)
-                for sid in pmap:
-                    dset[sid] = pmap[sid].array
-                acc += {kind: pmap.nbytes}
-        self.datastore.flush()
-        return acc
+        with self.monitor('saving hcurves and stats', autoflush=True):
+            oq = self.oqparam
+            for kind in pmap_by_kind:
+                if kind == 'mean' and not oq.mean_hazard_curves:
+                    continue  # do not save the mean curves
+                pmap = pmap_by_kind[kind]
+                if pmap:
+                    key = 'hcurves/' + kind
+                    dset = self.datastore.getitem(key)
+                    for sid in pmap:
+                        dset[sid] = pmap[sid].array
+                    acc += {kind: pmap.nbytes}
+            self.datastore.flush()
+            return acc
 
     def post_execute(self, acc):
         """Save the number of bytes per each dataset"""

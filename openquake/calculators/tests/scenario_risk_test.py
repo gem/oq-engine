@@ -37,10 +37,6 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/agg.csv', fname)
 
         # check the exported GMFs
-        [gmf1, gmf2] = export(('gmfs:0,1', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/gmf1.csv', gmf1)
-        self.assertEqualFiles('expected/gmf2.csv', gmf2)
-
         [fname] = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf-FromFile-PGA.csv', fname)
 
@@ -113,10 +109,6 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         dstore = self.calc.datastore
         fname = writetmp(view('totlosses', dstore))
         self.assertEqualFiles('expected/totlosses.txt', fname)
-
-        # testing the specific GMF exporter
-        [gmf] = export(('gmfs:0', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/gmf-0-PGA.csv', gmf)
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_1g(self):

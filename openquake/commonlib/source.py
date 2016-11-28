@@ -493,14 +493,15 @@ class CompositionInfo(object):
         return {grp.id: sm.ordinal for sm in self.source_models
                 for grp in sm.src_groups}
 
-    def get_trt(self, src_group_id):
+    def grp_trt(self):
         """
-        Return the TRT string for the given src_group_id
+        :returns: a dictionary grp_id -> TRT string
         """
+        dic = {}
         for smodel in self.source_models:
             for src_group in smodel.src_groups:
-                if src_group.id == src_group_id:
-                    return src_group.trt
+                dic[src_group.id] = src_group.trt
+        return dic
 
     def __repr__(self):
         info_by_model = collections.OrderedDict()
@@ -557,13 +558,13 @@ class CompositeSourceModel(collections.Sequence):
                          for src in sg.sources)
         return new
 
-    def filter(self, ss_filter):
+    def filter(self, src_filter):
         """
         Generate a new CompositeSourceModel by filtering the sources on
         the given site collection.
 
         :param sitecol: a SiteCollection instance
-        :para ss_filter: a SourceSitesFilter instance
+        :para src_filter: a SourceFilter instance
         """
         source_models = []
         weight = 0
@@ -571,7 +572,7 @@ class CompositeSourceModel(collections.Sequence):
             src_groups = [copy.copy(src) for src in sm.src_groups]
             for src_group in src_groups:
                 sources = []
-                for src, sites in ss_filter(src_group.sources):
+                for src, sites in src_filter(src_group.sources):
                     sources.append(src)
                     weight += src.weight
                 src_group.sources = sources

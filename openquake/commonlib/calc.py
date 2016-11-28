@@ -47,7 +47,8 @@ F64 = numpy.float64
 event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
 stored_event_dt = numpy.dtype([
-    ('rupserial', U32), ('ses', U32), ('occ', U32),
+    ('rupserial', U32), ('year', U32),
+    ('ses', U32), ('occ', U32),
     ('sample', U32), ('grp_id', U16),
     ('source_id', 'S%d' % valid.MAX_ID_LENGTH)])
 
@@ -290,7 +291,7 @@ def get_gmfs(dstore, precalc=None):
 
     # else read from the datastore
     for i, rlz in enumerate(rlzs):
-        data = group_array(dstore['gmf_data/%04d' % i], 'sid')
+        data = group_array(dstore['gmf_data/sm-0000/%04d' % i], 'sid')
         for sid, array in data.items():
             if sid in risk_indices:
                 for imti, imt in enumerate(oq.imtls):
@@ -376,10 +377,9 @@ class RuptureData(object):
             ruptparams = tuple(getattr(rc, param) for param in self.params)
             point = rup.surface.get_middle_point()
             multi_lons, multi_lats = rup.surface.get_surface_boundaries()
-            boundary = 'MULTIPOLYGON(%s)' % ','.join(
-                '((%s))' % ','.join('%.5f %.5f' % (lon, lat)
-                                    for lon, lat in zip(lons, lats))
-                for lons, lats in zip(multi_lons, multi_lats))
+            boundary = ','.join('((%s))' % ','.join(
+                '%.5f %.5f' % (lon, lat) for lon, lat in zip(lons, lats))
+                                for lons, lats in zip(multi_lons, multi_lats))
             try:
                 rate = ebr.rupture.occurrence_rate
             except AttributeError:  # for nonparametric sources
@@ -510,14 +510,14 @@ class EBRupture(object):
         """
         return len(self.events)
 
-    def export(self, mesh):
+    def export(self, mesh, sm_by_grp):
         """
         Yield :class:`openquake.commonlib.util.Rupture` objects, with all the
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
-        for etag in self.etags:
-            new = util.Rupture(etag, self.sids)
+        for eid, etag in zip(self.eids, self.etags):
+            new = util.Rupture(sm_by_grp[self.grp_id], eid, etag, self.sids)
             new.mesh = mesh[self.sids]
             new.etag = etag
             new.rupture = new
@@ -567,6 +567,7 @@ class EBRupture(object):
             n = len(surface.surfaces)
             arr = build_array([[s.corner_lons, s.corner_lats, s.corner_depths]
                                for s in surface.surfaces]).reshape(n, 2, 2)
+            attrs['mesh_spacing'] = surface.surfaces[0].mesh_spacing
         else:
             mesh = surface.mesh
             if mesh is None:  # planar surface
@@ -590,11 +591,16 @@ class EBRupture(object):
         self.rupture = object.__new__(hdf5.dotname2cls(attrs['rupture_class']))
         self.rupture.surface = surface = object.__new__(surface_cls)
         m = dic['mesh'].value
-        if 'mesh_spacing' in attrs:  # PlanarSurface
-            self.rupture.surface = (
-                geo.PlanarSurface.from_array(
-                    attrs.pop('mesh_spacing'), m.flatten()))
-        else:  # general surface
+        if surface_class.endswith('PlanarSurface'):
+            mesh_spacing = attrs.pop('mesh_spacing')
+            self.rupture.surface = geo.PlanarSurface.from_array(
+                mesh_spacing, m.flatten())
+        elif surface_class.endswith('MultiSurface'):
+            mesh_spacing = attrs.pop('mesh_spacing')
+            self.rupture.surface.surfaces = [
+                geo.PlanarSurface.from_array(mesh_spacing, m1.flatten())
+                for m1 in m]
+        else:  # fault surface
             surface.strike = surface.dip = None  # they will be computed
             surface.mesh = RectangularMesh(
                 m['lon'][0], m['lat'][0], m['depth'][0])

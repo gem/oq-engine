@@ -18,16 +18,23 @@
 
 import os
 import re
-from openquake.baselib.python3compat import pickle
+import getpass
 import collections
-
 import numpy
 import h5py
 
+from openquake.baselib.python3compat import pickle
 from openquake.baselib import hdf5
+from openquake.commonlib import config
 from openquake.commonlib.writers import write_csv
 
-DATADIR = os.environ.get('OQ_DATADIR', os.path.expanduser('~/oqdata'))
+DATADIR = os.environ.get('OQ_DATADIR')
+if not DATADIR:
+    shared_dir = config.get('directory', 'shared_dir')
+    if shared_dir:
+        DATADIR = os.path.join(shared_dir, getpass.getuser(), 'oqdata')
+    else:  # use the home of the user
+        DATADIR = os.path.join(os.path.expanduser('~'), 'oqdata')
 
 
 def get_nbytes(dset):
