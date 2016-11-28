@@ -50,9 +50,6 @@ Copyright (C) 2010-2016 GEM Foundation
 PY_MODULES = ['openquake.commands.__main__']
 
 setup(
-    entry_points={
-        "console_scripts": ["oq = openquake.commands.__main__:oq"]
-    },
     name="openquake.engine",
     version=version,
     author="GEM Foundation",
@@ -91,7 +88,7 @@ setup(
         'decorator',
         'psutil >= 0.4.1',
     ],
-    scripts=[],
+    scripts=['bin/oq'],
     test_loader='openquake.baselib.runtests:TestLoader',
     test_suite='openquake.risklib,openquake.commonlib,openquake.calculators',
     zip_safe=False,
