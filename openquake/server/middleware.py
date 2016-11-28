@@ -16,13 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import re
+
 from django.conf import settings
 from django.http import HttpResponseRedirect
-from re import compile
 
-EXEMPT_URLS = [compile(settings.LOGIN_URL.lstrip('/'))]
+EXEMPT_URLS = [re.compile(settings.LOGIN_URL.lstrip('/'))]
 if hasattr(settings, 'LOGIN_EXEMPT_URLS'):
-    EXEMPT_URLS += [compile(expr.lstrip('/')) for expr in
+    EXEMPT_URLS += [re.compile(expr.lstrip('/')) for expr in
                     settings.LOGIN_EXEMPT_URLS]
 
 
