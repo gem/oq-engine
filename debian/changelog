@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Exporting in .npz format rather than HDF5
   * Introduced a `shared_dir` parameter in openquake.cfg
   * Fixed a serialization bug for planar surfaces
   * Removed the flag `asset_loss_table`: the loss ratios are
