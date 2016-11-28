@@ -24,7 +24,6 @@ import operator
 import decimal
 import functools
 import itertools
-import collections
 import numpy
 import h5py
 
@@ -449,12 +448,12 @@ def sum_table(records):
 # this is used by the ebr calculator
 @view.add('mean_avg_losses')
 def view_mean_avg_losses(token, dstore):
+    dt = dstore['oqparam'].loss_dt()
     try:
         array = dstore['avg_losses-stats']  # shape (N, S)
-        data = array[:, 0]
     except KeyError:
         array = dstore['avg_losses-rlzs']  # shape (N, R)
-        data = array[:, 0]
+    data = numpy.array([tuple(row) for row in array[:, 0]], dt)
     assets = util.get_assets(dstore)
     losses = util.compose_arrays(assets, data)
     losses.sort()
@@ -517,8 +516,7 @@ def view_assetcol(token, dstore):
 
 @view.add('ruptures_events')
 def view_ruptures_events(token, dstore):
-    num_ruptures = sum(len(v) for sm in dstore['rup_data'].values()
-                       for v in sm.values())
+    num_ruptures = sum(len(v) for v in dstore['rup_data'].values())
     num_events = sum(len(v) for v in dstore['events'].values())
     mult = round(num_events / num_ruptures, 3)
     lst = [('Total number of ruptures', num_ruptures),
