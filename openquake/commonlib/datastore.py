@@ -34,7 +34,7 @@ if not DATADIR:
     if shared_dir:
         DATADIR = os.path.join(shared_dir, getpass.getuser(), 'oqdata')
     else:  # use the home of the user
-        DATADIR = os.path.expanduser('~')
+        DATADIR = os.path.join(os.path.expanduser('~'), 'oqdata')
 
 
 def get_nbytes(dset):
