@@ -893,18 +893,15 @@ def export_gmf_scenario_npz(ekey, dstore):
             dstore['ruptures/0'], dstore['sitecol'], oq.imtls, gsims,
             oq.truncation_level, correl_model)
     fname = dstore.export_path('%s.%s' % ekey)
-    gmf_dt = numpy.dtype([('%s-%03d' % (imt, eid), F32) for imt in oq.imtls
-                          for eid in range(E)])
+    gmf_dt = numpy.dtype([(imt, (F32, E)) for imt in oq.imtls])
     imts = list(oq.imtls)
     dic = {}
     for gsim in gsims:
         arr = computer.compute(gsim, E, oq.random_seed)
         I, S, E = arr.shape  # #IMTs, #sites, #events
         gmfa = numpy.zeros(S, gmf_dt)
-        for imti in range(I):
-            for eid in range(E):
-                field = '%s-%03d' % (imts[imti], eid)
-                gmfa[field] = arr[imti, :, eid]
+        for imti, imt in enumerate(imts):
+            gmfa[imt] = arr[imti]
         dic[str(gsim)] = util.compose_arrays(sitemesh, gmfa)
     savez(fname, **dic)
     return [fname]
