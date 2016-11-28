@@ -34,7 +34,7 @@ from openquake.risklib import valid, riskinput
 from openquake.commonlib import readinput, parallel, source, calc
 from openquake.calculators import base, event_based
 from openquake.calculators.event_based_risk import (
-    EbriskCalculator, losses_by_taxonomy)
+    EbriskCalculator, event_based_risk)
 
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.pmf import PMF
@@ -835,7 +835,7 @@ def compute_losses(ssm, sitecol, assetcol, riskmodel,
     ri = riskinput.RiskInputFromRuptures(
         DEFAULT_TRT, rlzs_assoc, imts, sitecol, ebruptures, trunc_level,
         correl_model, min_iml)
-    res.append(losses_by_taxonomy(ri, riskmodel, assetcol, monitor))
+    res.append(event_based_risk(ri, riskmodel, assetcol, monitor))
     res.sm_id = ssm.sm_id
     res.num_events = len(ri.eids)
     start = res.sm_id * num_rlzs
