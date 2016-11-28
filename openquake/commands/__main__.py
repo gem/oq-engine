@@ -26,7 +26,7 @@ from openquake.commonlib import __version__
 from openquake import commands
 
 from openquake.risklib import valid
-from openquake.engine import config
+from openquake.commonlib import config
 
 USE_CELERY = valid.boolean(config.get('celery', 'use_celery') or 'false')
 

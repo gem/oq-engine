@@ -42,7 +42,7 @@ else:
         sys.modules['openquake'].__dict__["__path__"].insert(
             0, os.path.join(os.path.dirname(__file__), "openquake"))
 
-    from openquake.engine import config
+    from openquake.commonlib import config
 
     config.abort_if_no_config_available()
 
