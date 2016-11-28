@@ -26,9 +26,7 @@ import os
 import sys
 from contextlib import contextmanager
 
-import openquake.engine
-
-OQDIR = os.path.dirname(os.path.dirname(openquake.engine.__path__[0]))
+OQDIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 #: Environment variable name for specifying a custom openquake.cfg.
 #: The file name doesn't matter.
 OQ_CONFIG_FILE_VAR = "OQ_CONFIG_FILE"
