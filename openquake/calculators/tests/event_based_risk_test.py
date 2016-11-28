@@ -77,6 +77,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = writetmp(view('mean_avg_losses', self.calc.datastore))
         self.assertEqualFiles('expected/mean_avg_losses.txt', fname)
 
+        # test the composite_risk_model keys (i.e. slash escaping)
+        crm = sorted(self.calc.datastore.getitem('composite_risk_model'))
+        self.assertEqual(crm, ['RC%2B', 'RM', 'W%2F1'])
+        # export a specific eid
+        [fname] = export(('ass_loss_ratios:0', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/losses-eid=0.csv', fname)
+
         # test the case when all GMFs are filtered out
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_2.__file__, 'job.ini', minimum_intensity='10.0')
@@ -93,6 +100,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # this also tests that concurrent_tasks=0 does not give issues
         [fname] = out['agg_loss_table', 'csv']
         self.assertEqualFiles('expected/agg_losses_bis.csv', fname)
+
+    @attr('qa', 'risk', 'ebrisk')
+    def test_case_2_correlation(self):
+        out = self.run_calc(case_2.__file__, 'job_loss.ini', exports='csv',
+                            asset_correlation=1.0)
+        [fname] = out['agg_loss_table', 'csv']
+        self.assertEqualFiles('expected/agg_losses.csv', fname)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_missing_taxonomy(self):
@@ -178,12 +192,29 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                             investigation_time='1',
                             insured_losses='false',
                             exports='csv')
-        for fname in out['losses_by_taxon', 'csv']:
-            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+
+        # check rup_data is stored correctly
+        fname = writetmp(view('ruptures_events', self.calc.datastore))
+        self.assertEqualFiles('expected/ruptures_events.txt', fname)
+
+        # TODO: add a check on avg_losses-stats
 
         for fname in out['agg_loss_table', 'csv']:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
+        # export a specific eid
+        fnames = export(('ass_loss_ratios:0', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+        self.assertEqualFiles('expected/losses-eid=0.csv', fname)
+
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles(
             'expected/portfolio_loss_ebr.txt', fname, delta=1E-5)
+
+        # export a specific pair (sm_id, eid)
+        fnames = export(('ass_loss_ratios:1:0', 'csv'),
+                        self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
