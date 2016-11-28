@@ -30,7 +30,8 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
 from openquake.risklib.riskinput import GmfGetter
 from openquake.commonlib.export import export
-from openquake.commonlib import writers, hazard_writers, calc, util, parallel
+from openquake.commonlib import (
+    writers, hazard_writers, calc, util, parallel, datastore)
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -585,13 +586,14 @@ def _extract(hmap, imt, j):
     return tup
 
 
-def convert_hcurves(keys, dstore):
-    mesh = get_mesh(dstore['sitecol'])
-    imtls = dstore['oqparam'].imtls
-    dic = {}
-    for key in keys:
-        curves = dstore['hcurves/%s' % key].convert(imtls, len(mesh))
-        dic[key] = util.compose_arrays(mesh, curves)
+def convert_hcurves(keys, calc_id):
+    with datastore.read(calc_id) as dstore:
+        mesh = get_mesh(dstore['sitecol'])
+        imtls = dstore['oqparam'].imtls
+        dic = {}
+        for key in keys:
+            curves = dstore['hcurves/%s' % key].convert(imtls, len(mesh))
+            dic[key] = util.compose_arrays(mesh, curves)
     return dic
 
 
@@ -604,8 +606,9 @@ def export_hcurves_npz(ekey, dstore):
         arr[imt] = imtls[imt]
     dic = dict(imtls=arr[0])
     keys = list(dstore[ekey[0]])
-    dic.update(
-        parallel.Processmap.apply(convert_hcurves, (keys, dstore)).reduce())
+    dstore.close()
+    pmap = parallel.Processmap.apply(convert_hcurves, (keys, dstore.calc_id))
+    dic.update(pmap.reduce())
     savez(fname, **dic)
     return [fname]
 

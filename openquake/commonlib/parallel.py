@@ -580,7 +580,6 @@ def wakeup_pool():
 
 class Starmap(object):
     poolfactory = None  # to be overridden
-    pool = None  # to be overridden
 
     @classmethod
     def apply(cls, func, args, concurrent_tasks=executor._max_workers * 5,
@@ -589,9 +588,7 @@ class Starmap(object):
         return cls(func, (((chunk,) + args[1:]) for chunk in chunks))
 
     def __init__(self, func, iterargs):
-        # build the pool at first instantiation only
-        if self.__class__.pool is None:
-            self.__class__.pool = self.poolfactory()
+        self.pool = self.poolfactory()
         self.func = func
         allargs = list(iterargs)
         self.num_tasks = len(allargs)
@@ -606,6 +603,8 @@ class Starmap(object):
         for res in IterResult(
                 futures, self.func.__name__, self.num_tasks, progress):
             acc = agg(acc, res)
+        if hasattr(self, 'pool'):
+            self.pool.close()
         return acc
 
 
@@ -631,7 +630,6 @@ class Threadmap(Starmap):
     poolfactory = staticmethod(
         # following the same convention of the standard library, num_proc * 5
         lambda: multiprocessing.dummy.Pool(executor._max_workers * 5))
-    pool = None  # built at instantiation time
 
 
 class Processmap(Starmap):
@@ -642,4 +640,3 @@ class Processmap(Starmap):
     >>> c = Processmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
     """
     poolfactory = staticmethod(multiprocessing.Pool)
-    pool = None  # built at instantiation time
