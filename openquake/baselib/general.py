@@ -24,6 +24,7 @@ from __future__ import division, print_function
 import os
 import sys
 import imp
+import copy
 import math
 import operator
 import warnings
@@ -35,6 +36,7 @@ import collections
 
 import numpy
 from decorator import decorator
+from openquake.baselib.python3compat import decode
 
 F64 = numpy.float64
 
@@ -304,7 +306,7 @@ def git_suffix(fname):
         gh = subprocess.check_output(
             ['git', 'rev-parse', '--short', 'HEAD'],
             stderr=open(os.devnull, 'w'), cwd=os.path.dirname(fname)).strip()
-        gh = "-git" + gh if gh else ''
+        gh = "-git" + decode(gh) if gh else ''
         return gh
     except:
         # trapping everything on purpose; git may not be installed or it
@@ -486,7 +488,25 @@ class AccumDict(dict):
     {'a': 0.48, 'b': 0.6}
     >> 1.2 * prob1
     {'a': 0.48, 'b': 0.6}
+
+    It is very common to use an AccumDict of accumulators; here is an
+    example using the empty list as accumulator:
+
+    >>> acc = AccumDict(accum=[])
+    >>> acc['a'] += [1]
+    >>> acc['b'] += [2]
+    >>> sorted(acc.items())
+    [('a', [1]), ('b', [2])]
+
+    The implementation is smart enough to make (deep) copies of the
+    accumulator, therefore each key has a different accumulator, which
+    initially is the empty list (in this case).
     """
+    def __init__(self, dic=None, accum=None, **kw):
+        if dic:
+            self.update(dic)
+        self.update(kw)
+        self.accum = accum
 
     def __iadd__(self, other):
         if hasattr(other, 'items'):
@@ -551,6 +571,14 @@ class AccumDict(dict):
 
     def __truediv__(self, other):
         return self * (1. / other)
+
+    def __missing__(self, key):
+        if self.accum is None:
+            # no accumulator, accessing a missing key is an error
+            raise KeyError(key)
+        val = self[key] = copy.deepcopy(self.accum)
+        return val
+
 
     def apply(self, func, *extras):
         """
