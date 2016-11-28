@@ -29,12 +29,12 @@ import tempfile
 import textwrap
 
 from openquake.baselib.general import writetmp as touch
-
-from openquake.engine import engine, config
+from openquake.commonlib import config
+from openquake.engine import engine
 
 CD = os.path.dirname(__file__)  # current directory
 
-RUNNER = os.path.abspath(os.path.join(CD, '../../../bin/oq-engine'))
+RUNNER = os.path.abspath(os.path.join(CD, '../../../bin/oq'))
 
 DATA_DIR = os.path.abspath(os.path.join(CD, './data'))
 

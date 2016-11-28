@@ -100,7 +100,6 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     Classical Risk calculator
     """
     pre_calculator = 'classical'
-    avg_losses = datastore.persistent_attribute('avg_losses-rlzs')
     core_task = classical_risk
 
     def pre_execute(self):

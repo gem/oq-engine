@@ -71,7 +71,6 @@ class OqParam(valid.ParamSet):
         valid.NoneOr(valid.positivefloat), None)
     asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
     asset_life_expectancy = valid.Param(valid.positivefloat)
-    asset_loss_table = valid.Param(valid.boolean, False)
     avg_losses = valid.Param(valid.boolean, False)
     base_path = valid.Param(valid.utf8, '.')
     calculation_mode = valid.Param(valid.Choice(), '')  # -> get_oqparam
@@ -214,8 +213,9 @@ class OqParam(valid.ParamSet):
                     str(self.iml_disagg), self.poes_disagg)
 
         # checks for ebrisk
-        if self.calculation_mode == 'ebrisk' and self.asset_correlation:
-            raise ValueError('asset_correlation != 0 is not supported')
+        if (self.calculation_mode == 'ebrisk'
+                and self.asset_correlation not in (0, 1)):
+            raise ValueError('asset_correlation != {0, 1} is no longer supported')
 
     def check_gsims(self, gsims):
         """

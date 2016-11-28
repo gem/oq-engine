@@ -28,9 +28,9 @@ from openquake.baselib.performance import Monitor
 from openquake.risklib import valid
 from openquake.commonlib import parallel, readinput
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import export, datastore
+from openquake.commonlib import export, datastore, config
 from openquake.calculators import base, views
-from openquake.engine import logs, config
+from openquake.engine import logs
 
 TERMINATE = valid.boolean(
     config.get('celery', 'terminate_workers_on_revoke') or 'false')
@@ -91,6 +91,8 @@ def expose_outputs(dstore):
         rlzs = dstore['realizations']
     except KeyError:
         rlzs = []
+    if 'ass_loss_ratios' in dskeys:
+        dskeys.remove('ass_loss_ratios')  # export only specific IDs
     if 'realizations' in dskeys and len(rlzs) <= 1:
         dskeys.remove('realizations')  # do not export a single realization
     if 'ruptures' in dskeys and 'scenario' in calcmode:
