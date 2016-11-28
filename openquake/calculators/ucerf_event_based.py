@@ -727,7 +727,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
             [(grp_id, ruptures)] = ruptures_by_grp.items()
             num_ruptures[grp_id] = len(ruptures)
             acc.calc_times.extend(ruptures_by_grp.calc_times[grp_id])
-            self.save_ruptures(ruptures_by_grp)
+            self.save_events(ruptures_by_grp)
         self.save_data_transfer(res)
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.infos)
