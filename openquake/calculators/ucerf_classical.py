@@ -86,7 +86,7 @@ class UCERFControl(UCERFSESControl):
                 sources.append(ps)
         return sources
 
-    def get_rupture_indices(self, branch_id, split=None):
+    def get_rupture_indices(self, branch_id):
         """
         Returns a set of rupture indices
         """
@@ -95,8 +95,7 @@ class UCERFControl(UCERFSESControl):
         with h5py.File(self.source_file, "r") as hdf5:
             idxs = np.arange(len(hdf5[self.idx_set["rate_idx"]]))
         logging.info('Found %d ruptures in branch %s', len(idxs), branch_id)
-        assert split is None, split
-        return np.array_split(idxs, split) if split else idxs
+        return idxs
 
     def filter_sites_by_distance_from_rupture_set(
             self, rupset_idx, sites, max_dist):
