@@ -1,4 +1,9 @@
   [Michele Simionato]
+  * Changed the GMF scenario exporter to avoid generating composite arrays with
+    a large number of fields
+  * Exporting in .npz format rather than HDF5
+  * Introduced a `shared_dir` parameter in openquake.cfg
+  * Fixed a serialization bug for planar surfaces
   * Removed the flag `asset_loss_table`: the loss ratios are
     saved if and only if the `loss_ratios` dictionary is non-empty
   * Added a CSV exporter for the GMFs in the event based calculator
