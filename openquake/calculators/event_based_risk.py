@@ -26,7 +26,7 @@ from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
     AccumDict, humansize, block_splitter, group_array)
 from openquake.calculators import base, event_based
-from openquake.commonlib import parallel, calc
+from openquake.commonlib import parallel, calc, datastore
 from openquake.risklib import scientific, riskinput
 from openquake.commonlib.parallel import starmap
 
@@ -453,8 +453,7 @@ class EventBasedStats(object):
 
 elt_dt = numpy.dtype([('eid', U32), ('loss', F32)])
 
-save_ruptures = event_based.EventBasedRuptureCalculator.__dict__[
-    'save_ruptures']
+save_events = event_based.EventBasedRuptureCalculator.__dict__['save_events']
 
 
 class EpsilonMatrix0(object):
@@ -506,6 +505,43 @@ class EpsilonMatrix1(object):
         return self.eps[item[1]]
 
 
+def calc_ruptures(ssm, src_filter, concurrent_tasks, monitor):
+    """
+    Compute the ruptures from the given source model
+
+    :param ssm: single source model
+    :param src_filter: source filter
+    :param concurrent_tasks: hint for the number of tasks to generate
+    :param monitor: a Monitor instance
+    """
+    ruptures_by_grp = AccumDict()
+    num_ruptures = 0
+    num_events = 0
+    allargs = []
+    # collect the sources
+    maxweight = ssm.get_maxweight(concurrent_tasks)
+    logging.info('Using a maxweight of %d', maxweight)
+    trt_gsims_by_grp = {}
+    for src_group in ssm.src_groups:
+        trt = src_group.trt
+        gsims = ssm.gsim_lt.values[trt]
+        trt_gsims_by_grp[src_group.id] = (trt, gsims)
+        for block in block_splitter(src_group, maxweight, getweight):
+            allargs.append((block, src_filter, gsims, monitor))
+    # collect the ruptures
+    rup_data = {}
+    for dic in parallel.starmap(event_based.compute_ruptures, allargs):
+        ruptures_by_grp += dic
+        [(grp_id, rupts)] = dic.items()
+        trt, gsims = trt_gsims_by_grp[grp_id]
+        rup_data[grp_id] = calc.RuptureData(trt, gsims).to_array(rupts)
+        num_ruptures += len(rupts)
+        num_events += dic.num_events
+    ruptures_by_grp.num_events = num_events
+    ruptures_by_grp.rup_data = rup_data
+    return ruptures_by_grp
+
+
 @base.calculators.add('event_based_risk')
 class EbriskCalculator(base.RiskCalculator):
     """
@@ -518,7 +554,7 @@ class EbriskCalculator(base.RiskCalculator):
     # TODO: if the number of source models is larger than concurrent_tasks
     # a different strategy should be used; the one used here is good when
     # there are few source models, so that we cannot parallelize on those
-    def build_ruptures(self, ssm, sitecol, assetcol, riskmodel, imts,
+    def build_ruptures(self, sm_id, sitecol, assetcol, riskmodel, imts,
                        trunc_level, correl_model, min_iml, monitor):
         """
         :param ssm: CompositeSourceModel containing a single source model
@@ -533,40 +569,37 @@ class EbriskCalculator(base.RiskCalculator):
         :returns: a pair (starmap, dictionary)
         """
         ruptures_by_grp = AccumDict()
-        num_ruptures = 0
-        num_events = 0
-        allargs = []
-        self.grp_trt = {}
-        # collect the sources
-        maxweight = ssm.get_maxweight(self.oqparam.concurrent_tasks)
-        logging.info('Using a maxweight of %d', maxweight)
-        for src_group in ssm.src_groups:
-            self.grp_trt[src_group.id] = trt = src_group.trt
-            gsims = ssm.gsim_lt.values[trt]
-            for block in block_splitter(src_group, maxweight, getweight):
-                allargs.append((block, self.src_filter, gsims, monitor))
-        # collect the ruptures
-        rup_data = {}
-        for dic in parallel.starmap(self.compute_ruptures, allargs):
-            ruptures_by_grp += dic
-            [(grp_id, rupts)] = dic.items()
-            trt = self.grp_trt[grp_id]
-            gsims = ssm.gsim_lt.values[trt]
-            rup_data[grp_id] = calc.RuptureData(trt, gsims).to_array(rupts)
-            num_ruptures += len(rupts)
-            num_events += dic.num_events
-        ruptures_by_grp.num_events = num_events
-        ruptures_by_grp.rup_data = rup_data
-        seeds = self.oqparam.master_seed + numpy.arange(num_events)
-        save_ruptures(self, ruptures_by_grp)
+        hc = self.oqparam.hazard_calculation_id
+        if hc:
+            dstore = datastore.read(hc)
+            if 'ruptures' in dstore:
+                csm_info = dstore['csm_info'].get_info(sm_id)
+                grp_ids = csm_info.get_sm_by_grp()
+                rlzs_assoc = csm_info.get_rlzs_assoc()
+                ruptures_by_grp.update({
+                    grp_id: dstore['ruptures/grp-%02d' % grp_id].values()
+                    for grp_id in grp_ids})
 
-        # determine the realizations
-        rlzs_assoc = ssm.info.get_rlzs_assoc(
-            count_ruptures=lambda grp: len(ruptures_by_grp.get(grp.id, [])))
+        if not ruptures_by_grp:
+            ssm = self.csm.get_model(sm_id)
+            ruptures_by_grp = calc_ruptures(
+                ssm, self.src_filter, self.oqparam.concurrent_tasks, monitor)
+            save_events(self, ruptures_by_grp)
+            csm_info = ssm.info
+            rlzs_assoc = csm_info.get_rlzs_assoc(
+                count_ruptures=lambda grp:
+                len(ruptures_by_grp.get(grp.id, [])))
+
+        num_events = sum(ebr.multiplicity for grp in ruptures_by_grp
+                         for ebr in ruptures_by_grp[grp])
+        # FIXME: it should be random_seed here, not master_seed
+        seeds = self.oqparam.master_seed + numpy.arange(num_events)
+
         allargs = []
         # prepare the risk inputs
         ruptures_per_block = self.oqparam.ruptures_per_block
         start = 0
+        grp_trt = csm_info.grp_trt()
         for src_group in ssm.src_groups:
             for rupts in block_splitter(
                     ruptures_by_grp.get(src_group.id, []), ruptures_per_block):
@@ -580,7 +613,7 @@ class EbriskCalculator(base.RiskCalculator):
                         len(self.assetcol), seeds[start: start + n_events])
                     start += n_events
                 ri = riskinput.RiskInputFromRuptures(
-                    self.grp_trt[rupts[0].grp_id], rlzs_assoc, imts, sitecol,
+                    grp_trt[rupts[0].grp_id], rlzs_assoc, imts, sitecol,
                     rupts, trunc_level, correl_model, min_iml, eps)
                 allargs.append((ri, riskmodel, assetcol, monitor))
 
@@ -604,8 +637,7 @@ class EbriskCalculator(base.RiskCalculator):
         min_iml = self.get_min_iml(oq)
         imts = list(oq.imtls)
         ela_dt, elt_dt = build_el_dtypes(oq.insured_losses)
-        for sm_id in range(len(self.csm.source_models)):
-            ssm = self.csm.get_model(sm_id)
+        for sm in self.csm.source_models:
             monitor = self.monitor.new(
                 ses_ratio=oq.ses_ratio,
                 ela_dt=ela_dt, elt_dt=elt_dt,
@@ -614,9 +646,9 @@ class EbriskCalculator(base.RiskCalculator):
                 insured_losses=oq.insured_losses,
                 ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
                 maximum_distance=oq.maximum_distance,
-                samples=ssm.source_models[0].samples,
-                seed=ssm.source_model_lt.seed)
-            yield (ssm, self.sitecol, self.assetcol, self.riskmodel,
+                samples=sm.samples,
+                seed=self.oqparam.random_seed)
+            yield (sm.ordinal, self.sitecol, self.assetcol, self.riskmodel,
                    imts, oq.truncation_level, correl_model, min_iml, monitor)
 
     def execute(self):
@@ -683,7 +715,7 @@ class EbriskCalculator(base.RiskCalculator):
                 'Saving results for source model #%d, realizations %d:%d',
                 res.sm_id + 1, start, stop)
             if hasattr(res, 'ruptures_by_grp'):
-                save_ruptures(self, res.ruptures_by_grp)
+                save_events(self, res.ruptures_by_grp)
             num_events += res.num_events
         self.datastore['events'].attrs['num_events'] = num_events
         return num_events

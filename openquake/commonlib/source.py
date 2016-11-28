@@ -358,6 +358,15 @@ class CompositionInfo(object):
         self.source_models = source_models
         self.tot_weight = tot_weight
 
+    def get_info(self, sm_id):
+        """
+        Extract a CompositionInfo instance containing the single
+        model of index `sm_id`.
+        """
+        sm = self.source_models[sm_id]
+        return self.__class__(
+            self.gsim_lt, self.seed, self.num_samples, [sm], self.tot_weight)
+
     def __getnewargs__(self):
         # with this CompositionInfo instances will be unpickled correctly
         return self.seed, self.num_samples, self.source_models
