@@ -209,10 +209,10 @@ class EventBasedRuptureCalculator(PSHACalculator):
         if hasattr(ruptures_by_grp_id, 'eff_ruptures'):
             acc.eff_ruptures += ruptures_by_grp_id.eff_ruptures
         acc += ruptures_by_grp_id
-        self.save_ruptures(ruptures_by_grp_id)
+        self.save_events(ruptures_by_grp_id)
         return acc
 
-    def save_ruptures(self, ruptures_by_grp_id):
+    def save_events(self, ruptures_by_grp_id):
         """Extend the 'events' dataset with the given ruptures"""
         with self.monitor('saving ruptures', autoflush=True):
             for grp_id, ebrs in ruptures_by_grp_id.items():
@@ -405,7 +405,7 @@ class EventBasedCalculator(ClassicalCalculator):
         agg_mon.flush()
         self.datastore.flush()
         if 'ruptures' in res:
-            vars(EventBasedRuptureCalculator)['save_ruptures'](
+            vars(EventBasedRuptureCalculator)['save_events'](
                 self, res['ruptures'])
         return acc
 
