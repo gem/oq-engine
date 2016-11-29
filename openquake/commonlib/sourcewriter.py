@@ -468,7 +468,7 @@ def build_source_group_node(source_group):
     """
     Parses a SourceGroup to a Node class
     :param source_group:
-        Instance of :class:openquake.commonlib.source.SourceGroup
+        Instance of :class:openquake.commonlib.sourceconverter.SourceGroup
     :returns:
         Instance of :class: openquake.commonlib.node.Node
     """
