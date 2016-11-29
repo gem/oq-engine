@@ -183,4 +183,4 @@ if LOCKDOWN:
 
     LOGIN_REDIRECT_URL = '/engine'
 
-    AUTH_EXEMPT_URLS = ('/accounts/ajax_login/', )
+    LOGIN_EXEMPT_URLS = ('/accounts/ajax_login/', )
