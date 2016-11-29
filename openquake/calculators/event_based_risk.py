@@ -597,7 +597,9 @@ class EbriskCalculator(base.RiskCalculator):
             logging.warn('To computre the hazard curves change to'
                          'calculation_mode = event_based')
 
-        ruptures_by_grp = event_based.get_ruptures_by_grp(self)
+        ruptures_by_grp = (
+            self.precalc.result if self.precalc
+            else event_based.get_ruptures_by_grp(self.datastore.parent))
         num_rlzs = 0
         allres = []
         source_models = self.csm.info.source_models

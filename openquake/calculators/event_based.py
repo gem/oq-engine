@@ -365,18 +365,16 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
     return result
 
 
-def get_ruptures_by_grp(calc):
+def get_ruptures_by_grp(dstore):
     """
     Extracts the dictionary `ruptures_by_grp` from the given calculator
     """
-    if calc.precalc:  # the ruptures are already in memory
-        ruptures_by_grp = calc.precalc.result
-    else:  # read the ruptures from the datastore
-        ruptures_by_grp = AccumDict(accum=[])
-        for grp in calc.datastore['ruptures']:
-            for serial in calc.datastore['ruptures/' + grp]:
-                sr = calc.datastore['ruptures/%s/%s' % (grp, serial)]
-                ruptures_by_grp += [sr]
+    ruptures_by_grp = AccumDict(accum=[])
+    for grp in dstore['ruptures']:
+        grp_id = int(grp[4:])
+        for serial in dstore['ruptures/' + grp]:
+            sr = dstore['ruptures/%s/%s' % (grp, serial)]
+            ruptures_by_grp[grp_id].append(sr)
     # useful for debugging, the order is not relevant otherwise
     for grp in ruptures_by_grp:
         ruptures_by_grp[grp].sort(key=operator.attrgetter('serial'))
@@ -462,7 +460,8 @@ class EventBasedCalculator(ClassicalCalculator):
         oq = self.oqparam
         if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
             return
-        ruptures_by_grp = get_ruptures_by_grp(self)
+        ruptures_by_grp = (self.precalc.result if self.precalc
+                           else get_ruptures_by_grp(self.datastore.parent))
         if self.oqparam.ground_motion_fields:
             calc.check_overflow(self)
         self.sm_id = {sm.path: sm.ordinal
