@@ -717,7 +717,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
                 samples=ssm.source_models[0].samples,
                 seed=ssm.source_model_lt.seed)
             gsims = ssm.gsim_lt.values[DEFAULT_TRT]
-            yield ssm.get_sources(), self.sitecol, gsims, monitor
+            yield ssm.get_sources(), self.sitecol.complete, gsims, monitor
 
     def execute(self):
         """

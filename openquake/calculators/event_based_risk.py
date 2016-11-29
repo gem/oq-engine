@@ -595,7 +595,7 @@ class EbriskCalculator(base.RiskCalculator):
                 maximum_distance=oq.maximum_distance,
                 samples=sm.samples,
                 seed=self.oqparam.random_seed)
-            yield (sm.ordinal, ruptures_by_grp, self.sitecol,
+            yield (sm.ordinal, ruptures_by_grp, self.sitecol.complete,
                    self.assetcol, self.riskmodel, imts, oq.truncation_level,
                    correl_model, min_iml, monitor)
 
