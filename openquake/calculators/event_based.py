@@ -251,7 +251,8 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """
         Save the SES collection
         """
-        logging.info('Setting event years')
+        num_events = sum_dict(result)
+        logging.info('Setting %d event years', num_events)
         with self.monitor('setting event years', measuremem=True,
                           autoflush=True):
             inv_time = int(self.oqparam.investigation_time)

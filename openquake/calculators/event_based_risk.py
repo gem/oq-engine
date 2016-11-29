@@ -604,10 +604,10 @@ class EbriskCalculator(base.RiskCalculator):
         Run the calculator and aggregate the results
         """
         if self.oqparam.ground_motion_fields:
-            logging.warn('To store the ground motion fields change to'
+            logging.warn('To store the ground motion fields change '
                          'calculation_mode = event_based')
         if self.oqparam.hazard_curves_from_gmfs:
-            logging.warn('To computre the hazard curves change to'
+            logging.warn('To compute the hazard curves change '
                          'calculation_mode = event_based')
 
         ruptures_by_grp = (
@@ -701,9 +701,12 @@ class EbriskCalculator(base.RiskCalculator):
                                'all below the minimum_intensity threshold')
         logging.info('Generated %s of GMFs', humansize(self.gmfbytes))
         self.datastore.save('job_info', {'gmfbytes': self.gmfbytes})
-        logging.info('Saved %d event losses', num_events)
-        self.datastore.set_nbytes('agg_loss_table')
-        self.datastore.set_nbytes('events')
-
-        ebstats = EventBasedStats(self.datastore, self.monitor)
-        ebstats.build()
+        if 'agg_loss_table' not in self.datastore:
+            logging.warning(
+                'No losses were generated: most likely there is an error in y'
+                'our input files or the GMFs were below the minimum intensity')
+        else:
+            self.datastore.set_nbytes('agg_loss_table')
+            # TODO: should I remove ebstats if there is a single realization?
+            ebstats = EventBasedStats(self.datastore, self.monitor)
+            ebstats.build()
