@@ -620,7 +620,6 @@ class EbriskCalculator(base.RiskCalculator):
         allres = []
         source_models = self.csm.info.source_models
         self.sm_by_grp = self.csm.info.get_sm_by_grp()
-        self.eid = collections.Counter()  # sm_id -> event_id
         for i, args in enumerate(self.gen_args(ruptures_by_grp)):
             smap, attrs = self.build_starmap(*args)
             res = smap.submit_all()
