@@ -494,7 +494,6 @@ class CompositeRiskModel(collections.Mapping):
                         [asset.ordinal for asset in group[taxonomy]])
                     dic[taxonomy].append((i, group[taxonomy], epsgetter))
                     taxonomies.add(taxonomy)
-
         for rlz in riskinput.rlzs:
             with mon_hazard:
                 hazard = hazard_getter(rlz)
