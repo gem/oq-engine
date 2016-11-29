@@ -375,9 +375,6 @@ def get_ruptures_by_grp(dstore):
         for serial in dstore['ruptures/' + grp]:
             sr = dstore['ruptures/%s/%s' % (grp, serial)]
             ruptures_by_grp[grp_id].append(sr)
-    # useful for debugging, the order is not relevant otherwise
-    for grp in ruptures_by_grp:
-        ruptures_by_grp[grp].sort(key=operator.attrgetter('serial'))
     return ruptures_by_grp
 
 
