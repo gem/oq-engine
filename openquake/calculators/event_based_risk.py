@@ -496,7 +496,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 rup = self.datastore['ruptures/' + serial]
                 all_ruptures.append(rup)
         all_ruptures.sort(key=operator.attrgetter('serial'))
-        if not self.riskmodel.covs:
+        if oq.ignore_covs or not self.riskmodel.covs:
             # do not generate epsilons
             eps = None
         else:
