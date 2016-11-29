@@ -519,6 +519,19 @@ class EbriskCalculator(base.RiskCalculator):
     def build_starmap(self, sm_id, ruptures_by_grp, sitecol,
                       assetcol, riskmodel, imts, trunc_level, correl_model,
                       min_iml, monitor):
+        """
+        :param sm_id: source model ordinal
+        :param ruptures_by_grp: dictionary of ruptures by src_group_id
+        :param sitecol: a SiteCollection instance
+        :param assetcol: an AssetCollection instance
+        :param riskmodel: a RiskModel instance
+        :param imts: a list of Intensity Measure Types
+        :param trunc_level: truncation level
+        :param correl_model: correlation model
+        :param min_iml: vector of minimum intensities, one per IMT
+        :param monitor: a Monitor instance
+        :returns: a pair (starmap, dictionary of attributes)
+        """
         csm_info = self.csm_info.get_info(sm_id)
         grp_ids = csm_info.get_sm_by_grp()
         rlzs_assoc = csm_info.get_rlzs_assoc(
@@ -600,6 +613,9 @@ class EbriskCalculator(base.RiskCalculator):
         ruptures_by_grp = (
             self.precalc.result if self.precalc
             else event_based.get_ruptures_by_grp(self.datastore.parent))
+        # the ordering of the ruptures is essential for repeatibility
+        for grp in ruptures_by_grp:
+            ruptures_by_grp[grp].sort(key=operator.attrgetter('serial'))
         num_rlzs = 0
         allres = []
         source_models = self.csm.info.source_models
