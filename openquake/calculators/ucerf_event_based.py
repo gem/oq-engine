@@ -657,6 +657,9 @@ def _copy_grp(src_group, grp_id, branch_name, branch_id):
     new.id = src.src_group_id = grp_id
     src.source_id = branch_name
     src.branch_id = branch_id
+    idx_set = src.build_idx_set()
+    with h5py.File(src.source_file, "r") as hdf5:
+        src.num_ruptures = len(hdf5[idx_set["rate_idx"]])
     new.sources = [src]
     return new
 
@@ -756,7 +759,6 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     numpy.random.seed(monitor.seed + src.src_group_id)
     ebruptures = []
     eid = 0
-    src.build_idx_set()
     background_sids = src.get_background_sids(sitecol, integration_distance)
     for ses_idx in range(1, monitor.ses_per_logic_tree_path + 1):
         with event_mon:
