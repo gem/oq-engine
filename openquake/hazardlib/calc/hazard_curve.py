@@ -65,7 +65,7 @@ def agg_curves(acc, curves):
 
 def calc_hazard_curves(
         sources, source_site_filter, imtls, gsim_by_trt,
-        truncation_level=None):
+        truncation_level=None, apply=apply):
     """
     Compute hazard curves on a list of sites, given a set of seismic sources
     and a set of ground shaking intensity models (one per tectonic region type
@@ -106,6 +106,9 @@ def calc_hazard_curves(
     :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
         distribution.
+    :param apply:
+        Application function, for instance parallel.apply; by default use
+        the Python builtin :func:`apply`.
 
     :returns:
         An array of size N, where N is the number of sites, which elements
@@ -122,8 +125,9 @@ def calc_hazard_curves(
         sources, operator.attrgetter('tectonic_region_type'))
     pmap = ProbabilityMap(len(imtls.array), 1)
     for trt in sources_by_trt:
-        pmap |= pmap_from_grp(sources_by_trt[trt], source_site_filter, imtls,
-                              [gsim_by_trt[trt]], truncation_level)
+        pmap |= apply(pmap_from_grp,
+                      (sources_by_trt[trt], source_site_filter, imtls,
+                       [gsim_by_trt[trt]], truncation_level))
     return pmap.convert(imtls, len(sites))
 
 

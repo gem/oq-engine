@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Made calc_hazard_curves parallelizable
   * Fixed a Python 3 issue in git_suffix
   * Added support for AccumDict of accumulators
   * Made the RtreeFilter pickleable
