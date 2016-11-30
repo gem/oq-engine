@@ -38,7 +38,7 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.risklib import valid
 from openquake.commonlib import parallel, source, readinput, logictree
-from openquake.commonlib.sourceconverter import SourceConverter
+from openquake.commonlib.sourceconverter import SourceConverter, SourceModel
 
 from openquake.calculators import base, classical
 from openquake.calculators.ucerf_event_based import (
@@ -364,7 +364,7 @@ def get_source_models(source_model_lt, gsim_lt, src_group):
         [src] = sg
         src.branch_id = rlz.value
         src.idx_set = src.build_idx_set()
-        yield source.SourceModel(
+        yield SourceModel(
             name, rlz.weight / num_samples, [name], [sg],
             num_gsim_paths, i, num_samples)
 
