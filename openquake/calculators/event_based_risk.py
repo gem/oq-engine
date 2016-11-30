@@ -537,8 +537,7 @@ class EbriskCalculator(base.RiskCalculator):
             count_ruptures=lambda grp: len(ruptures_by_grp.get(grp.id, [])))
         num_events = sum(ebr.multiplicity for grp in ruptures_by_grp
                          for ebr in ruptures_by_grp[grp])
-        # FIXME: it should be random_seed here, not master_seed
-        seeds = self.oqparam.master_seed + numpy.arange(num_events)
+        seeds = self.oqparam.random_seed + numpy.arange(num_events)
 
         allargs = []
         # prepare the risk inputs

@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Merged the experimental calculator ebrisk into event_based_risk and
+    used correctly the random_seed for generating the GMFs (not the master_seed)
   * Added a flag `ignore_covs` to ignore the coefficients of variation
   * Changed the GMF scenario exporter to avoid generating composite arrays with
     a large number of fields
