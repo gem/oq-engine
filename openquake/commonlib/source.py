@@ -364,8 +364,9 @@ class CompositionInfo(object):
         model of index `sm_id`.
         """
         sm = self.source_models[sm_id]
+        num_samples = sm.samples if self.num_samples else 0
         return self.__class__(
-            self.gsim_lt, self.seed, sm.samples, [sm], self.tot_weight)
+            self.gsim_lt, self.seed, num_samples, [sm], self.tot_weight)
 
     def __getnewargs__(self):
         # with this CompositionInfo instances will be unpickled correctly
