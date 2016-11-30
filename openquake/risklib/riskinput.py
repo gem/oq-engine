@@ -24,8 +24,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import (
-    groupby, split_in_blocks, get_array)
+from openquake.baselib.general import groupby, get_array
 from openquake.hazardlib import site, calc
 from openquake.risklib import scientific, riskmodels
 

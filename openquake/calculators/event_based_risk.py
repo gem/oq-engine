@@ -18,7 +18,6 @@
 from __future__ import division
 import logging
 import operator
-import collections
 
 import numpy
 
