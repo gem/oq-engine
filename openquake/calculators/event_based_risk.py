@@ -700,11 +700,17 @@ class EbriskCalculator(base.RiskCalculator):
                                'all below the minimum_intensity threshold')
         logging.info('Generated %s of GMFs', humansize(self.gmfbytes))
         self.datastore.save('job_info', {'gmfbytes': self.gmfbytes})
+        if 'ass_loss_ratios' in self.datastore:
+            for rlzname in self.datastore['ass_loss_ratios']:
+                self.datastore.set_nbytes('ass_loss_ratios/' + rlzname)
+            self.datastore.set_nbytes('ass_loss_ratios')
         if 'agg_loss_table' not in self.datastore:
             logging.warning(
                 'No losses were generated: most likely there is an error in y'
                 'our input files or the GMFs were below the minimum intensity')
         else:
+            for rlzname in self.datastore['agg_loss_table']:
+                self.datastore.set_nbytes('agg_loss_table/' + rlzname)
             self.datastore.set_nbytes('agg_loss_table')
             # TODO: should I remove ebstats if there is a single realization?
             ebstats = EventBasedStats(self.datastore, self.monitor)
