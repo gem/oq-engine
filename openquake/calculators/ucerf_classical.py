@@ -377,6 +377,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             [src] = sg
             # Update the event set
             src.src_group_id = sg.id = sm.ordinal
+            src.nsites = len(self.sitecol)
             src.branch_id = sm.name
             src.idx_set = src.build_idx_set()
             source_models.append(sm)
