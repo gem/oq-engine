@@ -209,10 +209,10 @@ class EventBasedRuptureCalculator(PSHACalculator):
         if hasattr(ruptures_by_grp_id, 'eff_ruptures'):
             acc.eff_ruptures += ruptures_by_grp_id.eff_ruptures
         acc += ruptures_by_grp_id
-        self.save_ruptures(ruptures_by_grp_id)
+        self.save_events(ruptures_by_grp_id)
         return acc
 
-    def save_ruptures(self, ruptures_by_grp_id):
+    def save_events(self, ruptures_by_grp_id):
         """Extend the 'events' dataset with the given ruptures"""
         with self.monitor('saving ruptures', autoflush=True):
             for grp_id, ebrs in ruptures_by_grp_id.items():
@@ -233,7 +233,8 @@ class EventBasedRuptureCalculator(PSHACalculator):
                         self.eid[sm_id] += 1
                         i += 1
                     if self.oqparam.save_ruptures:
-                        self.datastore['ruptures/%s' % ebr.serial] = ebr
+                        key = 'ruptures/grp-%02d/%s' % (grp_id, ebr.serial)
+                        self.datastore[key] = ebr
                 if events:
                     ev = 'events/sm-%04d' % sm_id
                     self.datastore.extend(
@@ -250,7 +251,8 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """
         Save the SES collection
         """
-        logging.info('Setting event years')
+        num_events = sum_dict(result)
+        logging.info('Setting %d event years', num_events)
         with self.monitor('setting event years', measuremem=True,
                           autoflush=True):
             inv_time = int(self.oqparam.investigation_time)
@@ -258,9 +260,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
             for sm in sorted(self.datastore['events']):
                 set_random_years(self.datastore, 'events/' + sm, inv_time)
 
-        nr = sum_dict(result)
-        logging.info('Saved %d ruptures, %d events',
-                     nr, sum(self.eid.values()))
         if 'ruptures' in self.datastore:
             self.datastore.set_nbytes('ruptures')
         self.datastore.set_nbytes('events')
@@ -367,6 +366,19 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
     return result
 
 
+def get_ruptures_by_grp(dstore):
+    """
+    Extracts the dictionary `ruptures_by_grp` from the given calculator
+    """
+    ruptures_by_grp = AccumDict(accum=[])
+    for grp in dstore['ruptures']:
+        grp_id = int(grp[4:])  # strip 'grp-'
+        for serial in dstore['ruptures/' + grp]:
+            sr = dstore['ruptures/%s/%s' % (grp, serial)]
+            ruptures_by_grp[grp_id].append(sr)
+    return ruptures_by_grp
+
+
 @base.calculators.add('event_based')
 class EventBasedCalculator(ClassicalCalculator):
     """
@@ -407,13 +419,13 @@ class EventBasedCalculator(ClassicalCalculator):
         agg_mon.flush()
         self.datastore.flush()
         if 'ruptures' in res:
-            vars(EventBasedRuptureCalculator)['save_ruptures'](
+            vars(EventBasedRuptureCalculator)['save_events'](
                 self, res['ruptures'])
         return acc
 
-    def gen_args(self, ebruptures):
+    def gen_args(self, ruptures_by_grp):
         """
-        :param ebruptures: a list of EBRupture objects to be split
+        :param ruptures_by_grp: a dictionary of EBRupture objects
         :yields: the arguments for compute_gmfs_and_curves
         """
         oq = self.oqparam
@@ -424,17 +436,18 @@ class EventBasedCalculator(ClassicalCalculator):
         self.grp_trt = self.csm.info.grp_trt()
         rlzs_by_grp = self.rlzs_assoc.get_rlzs_by_grp_id()
         correl_model = oq.get_correl_model()
-        for block in split_in_blocks(
-                ebruptures, oq.concurrent_tasks or 1,
-                key=operator.attrgetter('grp_id')):
-            grp_id = block[0].grp_id
-            trt = self.grp_trt[grp_id]
-            gsims = [dic[trt] for dic in self.rlzs_assoc.gsim_by_trt]
-            samples = self.rlzs_assoc.samples[grp_id]
-            getter = GmfGetter(gsims, block, self.sitecol,
-                               imts, min_iml, oq.truncation_level,
-                               correl_model, samples)
-            yield getter, rlzs_by_grp[grp_id], monitor
+        for grp_id in ruptures_by_grp:
+            ruptures = ruptures_by_grp[grp_id]
+            if not ruptures:
+                continue
+            for block in split_in_blocks(ruptures, oq.concurrent_tasks or 1):
+                trt = self.grp_trt[grp_id]
+                gsims = [dic[trt] for dic in self.rlzs_assoc.gsim_by_trt]
+                samples = self.rlzs_assoc.samples[grp_id]
+                getter = GmfGetter(gsims, block, self.sitecol,
+                                   imts, min_iml, oq.truncation_level,
+                                   correl_model, samples)
+                yield getter, rlzs_by_grp[grp_id], monitor
 
     def execute(self):
         """
@@ -445,23 +458,15 @@ class EventBasedCalculator(ClassicalCalculator):
         oq = self.oqparam
         if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
             return
-        self.sesruptures = []
-        if self.precalc:  # the ruptures are already in memory
-            for grp_id, sesruptures in self.precalc.result.items():
-                for sr in sesruptures:
-                    self.sesruptures.append(sr)
-        else:  # read the ruptures from the datastore
-            for serial in self.datastore['ruptures']:
-                sr = self.datastore['ruptures/' + serial]
-                self.sesruptures.append(sr)
-        self.sesruptures.sort(key=operator.attrgetter('serial'))
+        ruptures_by_grp = (self.precalc.result if self.precalc
+                           else get_ruptures_by_grp(self.datastore.parent))
         if self.oqparam.ground_motion_fields:
             calc.check_overflow(self)
         self.sm_id = {sm.path: sm.ordinal
                       for sm in self.csm.info.source_models}
         L = len(oq.imtls.array)
         res = parallel.starmap(
-            self.core_task.__func__, self.gen_args(self.sesruptures)
+            self.core_task.__func__, self.gen_args(ruptures_by_grp)
         ).submit_all()
         acc = functools.reduce(self.combine_pmaps_and_save_gmfs, res, {
             rlz.ordinal: ProbabilityMap(L, 1)

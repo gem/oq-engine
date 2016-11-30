@@ -24,8 +24,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import (
-    groupby, split_in_blocks, get_array)
+from openquake.baselib.general import groupby, get_array
 from openquake.hazardlib import site, calc
 from openquake.risklib import scientific, riskmodels
 
@@ -433,37 +432,6 @@ class CompositeRiskModel(collections.Mapping):
         """
         return RiskInput(rlzs, hazards_by_site, assetcol, eps_dict)
 
-    def build_inputs_from_ruptures(
-            self, grp_trt, rlzs_assoc, imts, sitecol, all_ruptures,
-            trunc_level, correl_model, min_iml, eps, hint):
-        """
-        :param grp_trt: a dictionary src_group_id -> tectonic region type
-        :param rlzs_assoc: a RlzsAssoc instance
-        :param imts: list of intensity measure type strings
-        :param sitecol: a SiteCollection instance
-        :param all_ruptures: the complete list of EBRupture instances
-        :param trunc_level: the truncation level (or None)
-        :param correl_model: the correlation model (or None)
-        :param min_iml: an array of minimum IMLs per IMT
-        :param eps: a matrix of epsilons of shape (N, E) or None
-        :param hint: hint for how many blocks to generate
-
-        Yield :class:`RiskInputFromRuptures` instances.
-        """
-        by_grp_id = operator.attrgetter('grp_id')
-        start = 0
-        for ses_ruptures in split_in_blocks(
-                all_ruptures, hint or 1, key=by_grp_id,
-                weight=operator.attrgetter('weight')):
-            grp_id = ses_ruptures[0].grp_id
-            num_events = sum(sr.multiplicity for sr in ses_ruptures)
-            idxs = numpy.arange(start, start + num_events)
-            start += num_events
-            yield RiskInputFromRuptures(
-                grp_trt[grp_id], rlzs_assoc, imts, sitecol, ses_ruptures,
-                trunc_level, correl_model, min_iml,
-                eps[:, idxs] if eps is not None else None)
-
     def gen_outputs(self, riskinput, monitor, assetcol=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
@@ -494,7 +462,6 @@ class CompositeRiskModel(collections.Mapping):
                         [asset.ordinal for asset in group[taxonomy]])
                     dic[taxonomy].append((i, group[taxonomy], epsgetter))
                     taxonomies.add(taxonomy)
-
         for rlz in riskinput.rlzs:
             with mon_hazard:
                 hazard = hazard_getter(rlz)
@@ -724,6 +691,7 @@ class RiskInputFromRuptures(object):
     """
     def __init__(self, trt, rlzs_assoc, imts, sitecol, ses_ruptures,
                  trunc_level, correl_model, min_iml, epsilons=None):
+        assert sitecol is sitecol.complete
         self.imts = imts
         self.sitecol = sitecol
         self.ses_ruptures = numpy.array(ses_ruptures)
