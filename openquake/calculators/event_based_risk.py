@@ -532,7 +532,7 @@ class EbriskCalculator(base.RiskCalculator):
         :returns: a pair (starmap, dictionary of attributes)
         """
         csm_info = self.csm_info.get_info(sm_id)
-        grp_ids = csm_info.get_sm_by_grp()
+        grp_ids = sorted(csm_info.get_sm_by_grp())
         rlzs_assoc = csm_info.get_rlzs_assoc(
             count_ruptures=lambda grp: len(ruptures_by_grp.get(grp.id, [])))
         num_events = sum(ebr.multiplicity for grp in ruptures_by_grp
@@ -545,10 +545,11 @@ class EbriskCalculator(base.RiskCalculator):
         ruptures_per_block = self.oqparam.ruptures_per_block
         start = 0
         grp_trt = csm_info.grp_trt()
+        ignore_covs = self.oqparam.ignore_covs
         for grp_id in grp_ids:
             for rupts in block_splitter(
                     ruptures_by_grp.get(grp_id, []), ruptures_per_block):
-                if not self.riskmodel.covs:
+                if ignore_covs or not self.riskmodel.covs:
                     eps = None
                 elif self.oqparam.asset_correlation:
                     eps = EpsilonMatrix1(num_events, self.oqparam.master_seed)
