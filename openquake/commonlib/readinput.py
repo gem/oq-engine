@@ -401,16 +401,6 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         sm.src_groups = src_groups
         trts = [mod.trt for mod in src_groups]
         source_model_lt.tectonic_region_types.update(trts)
-
-        gsim_file = oqparam.inputs.get('gsim_logic_tree')
-        if gsim_file:  # check TRTs
-            for src_group in src_groups:
-                if src_group.trt not in gsim_lt.values:
-                    raise ValueError(
-                        "Found in %r a tectonic region type %r inconsistent "
-                        "with the ones in %r" % (sm, src_group.trt, gsim_file))
-        else:
-            gsim_lt = logictree.GsimLogicTree.from_(oqparam.gsim)
         logging.info('Processed source model %d with %d gsim path(s)',
                      sm.ordinal + 1, sm.num_gsim_paths)
         yield sm
