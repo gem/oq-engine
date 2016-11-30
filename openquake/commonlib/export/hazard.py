@@ -112,9 +112,10 @@ def export_ruptures_xml(ekey, dstore):
     sm_by_grp = dstore['csm_info'].get_sm_by_grp()
     mesh = get_mesh(dstore['sitecol'])
     ruptures = []
-    for serial in dstore['ruptures']:
-        sr = dstore['ruptures/' + serial]
-        ruptures.extend(sr.export(mesh, sm_by_grp))
+    for grp_id in dstore['ruptures']:
+        for serial in dstore['ruptures/%s' % grp_id]:
+            sr = dstore['ruptures/%s/%s' % (grp_id, serial)]
+            ruptures.extend(sr.export(mesh, sm_by_grp))
     ses_coll = SESCollection(
         groupby(ruptures, operator.attrgetter('ses_idx')),
         oq.investigation_time)
@@ -729,36 +730,6 @@ def export_gmf_txt(key, dest, sitecol, imts, ruptures, rlz,
     return {key: [dest]}
 
 
-def _calc_gmfs(dstore, serial, eid):
-    oq = dstore['oqparam']
-    min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
-    csm_info = dstore['csm_info']
-    rlzs_assoc = csm_info.get_rlzs_assoc()
-    rlzs = rlzs_assoc.realizations
-    sitecol = dstore['sitecol'].complete
-    N = len(sitecol.complete)
-    rup = dstore['ruptures/' + serial]
-    correl_model = oq.get_correl_model()
-    realizations = rlzs_assoc.get_rlzs_by_grp_id()[rup.grp_id]
-    gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F64) for rlz in realizations])
-    for sm in csm_info.source_models:
-        for sg in sm.src_groups:
-            if sg.id == rup.grp_id:
-                break
-    gsims = [dic[sg.trt] for dic in rlzs_assoc.gsim_by_trt]
-    getter = GmfGetter(gsims, [rup], sitecol,
-                       oq.imtls, min_iml, oq.truncation_level,
-                       correl_model, rlzs_assoc.samples[sg.id])
-    array_by_imt = {imt: numpy.zeros(N, gmf_dt) for imt in oq.imtls}
-    for rlzname in gmf_dt.names:
-        rlz = rlzs[int(rlzname)]
-        for sid, gmvdict in zip(getter.sids, getter(rlz)):
-            if len(gmvdict):
-                for imt in oq.imtls:
-                    array_by_imt[imt][rlzname][sid] = gmvdict[imt]['gmv']
-    return sorted(array_by_imt.items())
-
-
 def get_sm_id_eid(key):
     """
     Extracts sm_id and eid from the export key.
@@ -890,7 +861,7 @@ def export_gmf_scenario_npz(ekey, dstore):
     E = oq.number_of_ground_motion_fields
     correl_model = oq.get_correl_model()
     computer = gmf.GmfComputer(
-            dstore['ruptures/0'], dstore['sitecol'], oq.imtls, gsims,
+            dstore['ruptures/grp-00/0'], dstore['sitecol'], oq.imtls, gsims,
             oq.truncation_level, correl_model)
     fname = dstore.export_path('%s.%s' % ekey)
     gmf_dt = numpy.dtype([(imt, (F32, E)) for imt in oq.imtls])
