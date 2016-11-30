@@ -37,7 +37,7 @@ from openquake.hazardlib.calc.hazard_curve import (
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.risklib import valid
-from openquake.commonlib import parallel, source, readinput
+from openquake.commonlib import parallel, source, readinput, logictree
 from openquake.commonlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base, classical
@@ -350,6 +350,25 @@ def ucerf_classical_hazard_by_branch(branchnames, ucerf_source, src_group_id,
     return dic
 
 
+def get_source_models(source_model_lt, gsim_lt, src_group):
+    samples_by_lt_path = source_model_lt.samples_by_lt_path()
+    for i, rlz in enumerate(logictree.get_effective_rlzs(source_model_lt)):
+        smpath = rlz.lt_path
+        num_samples = samples_by_lt_path[smpath]
+        num_gsim_paths = (num_samples if source_model_lt.num_samples
+                          else gsim_lt.get_num_paths())
+        sg = copy.copy(src_group)
+        sg.id = i
+        [name] = rlz.lt_uid
+        # Update the event set
+        [src] = sg
+        src.branch_id = rlz.value
+        src.idx_set = src.build_idx_set()
+        yield source.SourceModel(
+            name, rlz.weight / num_samples, [name], [sg],
+            num_gsim_paths, i, num_samples)
+
+
 @base.calculators.add('ucerf_psha')
 class UcerfPSHACalculator(classical.PSHACalculator):
     """
@@ -371,19 +390,8 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         [self.src_group] = parser.parse_src_groups(
             self.oqparam.inputs["source_model"])
         [src] = self.src_group
-        branches = sorted(self.smlt.branches.items())
-        source_models = []
-        num_gsim_paths = self.gsim_lt.get_num_paths()
-        for ordinal, (name, branch) in enumerate(branches):
-            sg = copy.copy(self.src_group)
-            sg.id = ordinal
-
-            # Update the event set
-            src.branch_id = branch.value
-            src.idx_set = src.build_idx_set()
-            sm = source.SourceModel(
-                name, branch.weight, [name], [sg], num_gsim_paths, ordinal, 1)
-            source_models.append(sm)
+        source_models = list(get_source_models(
+            self.smlt, self.gsim_lt, self.src_group))
         self.csm = source.CompositeSourceModel(
             self.gsim_lt, self.smlt, source_models, set_weight=False)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
