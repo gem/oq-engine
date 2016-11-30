@@ -42,9 +42,9 @@ from openquake.hazardlib.gsim.gsim_table import GMPETable
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo
 from openquake.risklib import valid
-from openquake.commonlib import nrml, writers, source
+from openquake.commonlib import nrml, writers
 from openquake.commonlib.sourceconverter import (
-    split_coords_2d, split_coords_3d)
+    split_coords_2d, split_coords_3d, SourceModel)
 
 from openquake.commonlib.node import (
     node_from_xml, striptag, node_from_elem, Node as N, context)
@@ -573,7 +573,7 @@ class SourceModelLogicTree(object):
             num_samples = samples_by_lt_path[smpath]
             num_gsim_paths = (num_samples if self.num_samples
                               else gsim_lt.get_num_paths())
-            yield source.SourceModel(
+            yield SourceModel(
                 rlz.value, rlz.weight / num_samples, smpath, [],
                 num_gsim_paths, i, num_samples)
 
