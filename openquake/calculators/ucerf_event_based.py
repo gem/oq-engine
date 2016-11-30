@@ -49,7 +49,7 @@ from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 
 from openquake.commonlib.calc import MAX_INT
-from openquake.commonlib.sourceconverter import SourceConverter
+from openquake.commonlib.sourceconverter import SourceConverter, SourceModel
 
 
 # ######################## rupture calculator ############################ #
@@ -692,7 +692,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
             [name] = rlz.lt_path
             branch = self.smlt.branches[name]
             sg = _copy_grp(src_group, grp_id, name, branch.value)
-            sm = source.SourceModel(
+            sm = SourceModel(
                 name, branch.weight, [name], [sg], num_gsim_paths, grp_id, 1)
             source_models.append(sm)
         self.csm = source.CompositeSourceModel(
