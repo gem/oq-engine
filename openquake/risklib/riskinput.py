@@ -723,6 +723,7 @@ class RiskInputFromRuptures(object):
     """
     def __init__(self, trt, rlzs_assoc, imts, sitecol, ses_ruptures,
                  trunc_level, correl_model, min_iml, epsilons=None):
+        assert sitecol is sitecol.complete
         self.imts = imts
         self.sitecol = sitecol
         self.ses_ruptures = numpy.array(ses_ruptures)
