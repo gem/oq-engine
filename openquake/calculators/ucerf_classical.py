@@ -94,7 +94,8 @@ class UCERFControl(UCERFSESControl):
             self.idx_set = self.build_idx_set()
         with h5py.File(self.source_file, "r") as hdf5:
             idxs = np.arange(len(hdf5[self.idx_set["rate_idx"]]))
-        logging.info('Found %d ruptures in branch %s', len(idxs), branch_id)
+        logging.info('Found %d ruptures in %s', len(idxs), self.source_file)
+        logging.info(branch_id)
         return idxs
 
     def filter_sites_by_distance_from_rupture_set(
@@ -291,11 +292,11 @@ def ucerf_classical_hazard_by_rupture_set(
     return pmap
 
 
-def ucerf_classical_hazard_by_branch(branchnames, ucerf_source, src_group_id,
+def ucerf_classical_hazard_by_branch(branchname, ucerf_source, src_group_id,
                                      src_filter, gsims, monitor):
     """
-    :param branchnames:
-        a list of branch names
+    :param branchname:
+        a branch name
     :param ucerf_source:
         a source-like object for the UCERF model
     :param src_group_id:
@@ -316,37 +317,37 @@ def ucerf_classical_hazard_by_branch(branchnames, ucerf_source, src_group_id,
     dic = AccumDict()
     dic.bbs = []
     dic.calc_times = []
-    for branchname in branchnames:
-        # Two step process here - the first generates the hazard curves from
-        # the rupture sets
-        monitor.eff_ruptures = 0
-        # Apply the initial rupture to site filtering
-        rupset_idx = ucerf_source.get_rupture_indices(branchname)
-        rupset_idx, s_sites = \
-            ucerf_source.filter_sites_by_distance_from_rupture_set(
-                rupset_idx, src_filter.sitecol, max_dist)
 
-        if len(s_sites):
-            dic[src_group_id] = hazard_curves_per_rupture_subset(
-                rupset_idx, ucerf_source, src_filter, imtls, gsims,
-                truncation_level, bbs=dic.bbs, monitor=monitor)
+    # Two step process here - the first generates the hazard curves from
+    # the rupture sets
+    monitor.eff_ruptures = 0
+    # Apply the initial rupture to site filtering
+    rupset_idx = ucerf_source.get_rupture_indices(branchname)
+    rupset_idx, s_sites = \
+        ucerf_source.filter_sites_by_distance_from_rupture_set(
+            rupset_idx, src_filter.sitecol, max_dist)
 
-        else:
-            dic[src_group_id] = ProbabilityMap(len(imtls.array), len(gsims))
-        dic.calc_times += monitor.calc_times  # added by pmap_from_grp
-        dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
-        logging.info('Branch %s', branchname)
-        # Get the background point sources
-        background_sids = ucerf_source.get_background_sids(
-            src_filter.sitecol, max_dist)
-        bckgnd_sources = ucerf_source.get_background_sources(background_sids)
-        if bckgnd_sources:
-            pmap = pmap_from_grp(
-                bckgnd_sources, src_filter, imtls, gsims, truncation_level,
-                bbs=dic.bbs, monitor=monitor)
-            dic[src_group_id] |= pmap
-            dic.eff_ruptures[src_group_id] += monitor.eff_ruptures
-            dic.calc_times += monitor.calc_times
+    if len(s_sites):
+        dic[src_group_id] = hazard_curves_per_rupture_subset(
+            rupset_idx, ucerf_source, src_filter, imtls, gsims,
+            truncation_level, bbs=dic.bbs, monitor=monitor)
+
+    else:
+        dic[src_group_id] = ProbabilityMap(len(imtls.array), len(gsims))
+    dic.calc_times += monitor.calc_times  # added by pmap_from_grp
+    dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
+    logging.info('Branch %s', branchname)
+    # Get the background point sources
+    background_sids = ucerf_source.get_background_sids(
+        src_filter.sitecol, max_dist)
+    bckgnd_sources = ucerf_source.get_background_sources(background_sids)
+    if bckgnd_sources:
+        pmap = pmap_from_grp(
+            bckgnd_sources, src_filter, imtls, gsims, truncation_level,
+            bbs=dic.bbs, monitor=monitor)
+        dic[src_group_id] |= pmap
+        dic.eff_ruptures[src_group_id] += monitor.eff_ruptures
+        dic.calc_times += monitor.calc_times
     return dic
 
 
