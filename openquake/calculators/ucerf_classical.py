@@ -37,8 +37,8 @@ from openquake.hazardlib.calc.hazard_curve import (
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.risklib import valid
-from openquake.commonlib import parallel, source, readinput, logictree
-from openquake.commonlib.sourceconverter import SourceConverter, SourceModel
+from openquake.commonlib import parallel, source, readinput
+from openquake.commonlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base, classical
 from openquake.calculators.ucerf_event_based import (
@@ -370,14 +370,13 @@ class UcerfPSHACalculator(classical.PSHACalculator):
                                           self.oqparam.rupture_mesh_spacing))
         [self.src_group] = parser.parse_src_groups(
             self.oqparam.inputs["source_model"])
-        [src] = self.src_group
         source_models = []
         for sm in self.smlt.gen_source_models(self.gsim_lt):
             sg = copy.copy(self.src_group)
             sm.src_groups = [sg]
-            sg.id = sm.ordinal
             [src] = sg
             # Update the event set
+            src.src_group_id = sg.id = sm.ordinal
             src.branch_id = sm.name
             src.idx_set = src.build_idx_set()
             source_models.append(sm)
@@ -394,8 +393,8 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         """
         for grp_id, branch in enumerate(branches):
             gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
-            self.infos[grp_id, ucerf_source.source_id] = (
-                source.SourceInfo(ucerf_source))
+            self.infos[grp_id, ucerf_source.source_id] = source.SourceInfo(
+                ucerf_source)
             yield branch, ucerf_source, grp_id, self.src_filter, gsims, monitor
 
     def execute(self):
