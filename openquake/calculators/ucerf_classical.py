@@ -350,25 +350,6 @@ def ucerf_classical_hazard_by_branch(branchnames, ucerf_source, src_group_id,
     return dic
 
 
-def get_source_models(source_model_lt, gsim_lt, src_group):
-    samples_by_lt_path = source_model_lt.samples_by_lt_path()
-    for i, rlz in enumerate(logictree.get_effective_rlzs(source_model_lt)):
-        smpath = rlz.lt_path
-        num_samples = samples_by_lt_path[smpath]
-        num_gsim_paths = (num_samples if source_model_lt.num_samples
-                          else gsim_lt.get_num_paths())
-        sg = copy.copy(src_group)
-        sg.id = i
-        [name] = rlz.lt_uid
-        # Update the event set
-        [src] = sg
-        src.branch_id = rlz.value
-        src.idx_set = src.build_idx_set()
-        yield SourceModel(
-            name, rlz.weight / num_samples, [name], [sg],
-            num_gsim_paths, i, num_samples)
-
-
 @base.calculators.add('ucerf_psha')
 class UcerfPSHACalculator(classical.PSHACalculator):
     """
@@ -390,8 +371,16 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         [self.src_group] = parser.parse_src_groups(
             self.oqparam.inputs["source_model"])
         [src] = self.src_group
-        source_models = list(get_source_models(
-            self.smlt, self.gsim_lt, self.src_group))
+        source_models = []
+        for sm in self.smlt.gen_source_models(self.gsim_lt):
+            sg = copy.copy(self.src_group)
+            sm.src_groups = [sg]
+            sg.id = sm.ordinal
+            [src] = sg
+            # Update the event set
+            src.branch_id = sm.name
+            src.idx_set = src.build_idx_set()
+            source_models.append(sm)
         self.csm = source.CompositeSourceModel(
             self.gsim_lt, self.smlt, source_models, set_weight=False)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
