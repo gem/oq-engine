@@ -83,4 +83,4 @@ else:
 
     CELERY_ACCEPT_CONTENT = ['pickle', 'json']
 
-    CELERY_IMPORTS = ["openquake.commonlib.parallel"]
+    CELERY_IMPORTS = ["openquake.baselib.parallel"]
