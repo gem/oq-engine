@@ -63,7 +63,7 @@ def get_pstats(pstatfile, n):
     # 1      33.502  commands/run.py:77(_run)
     # 1      33.483  calculators/base.py:110(run)
     # 1      25.166  calculators/classical.py:115(execute)
-    # 1      25.104  commonlib/parallel.py:249(apply_reduce)
+    # 1      25.104  baselib.parallel.py:249(apply_reduce)
     # 1      25.099  calculators/classical.py:41(classical)
     # 1      25.099  hazardlib/calc/hazard_curve.py:164(pmap_from_grp)
     return views.rst_table(rows, header='ncalls cumtime path'.split())
