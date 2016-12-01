@@ -17,7 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from nose.plugins.attrib import attr
-from openquake.commonlib import parallel, InvalidFile
+from openquake.baselib import parallel
+from openquake.commonlib import InvalidFile
 from openquake.commonlib.export import export
 from openquake.calculators.tests import CalculatorTestCase, check_platform
 from openquake.qa_tests_data.classical import (

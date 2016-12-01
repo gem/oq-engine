@@ -45,7 +45,7 @@ from django.core.servers.basehttp import FileWrapper
 from openquake.baselib.general import groupby, writetmp
 from openquake.baselib.python3compat import unicode
 from openquake.commonlib import nrml, readinput, oqvalidation
-from openquake.commonlib.parallel import TaskManager, safely_call
+from openquake.baselib.parallel import TaskManager, safely_call
 from openquake.commonlib.export import export
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
