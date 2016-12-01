@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Moved the parallelization library of the engine into baselib
   * Fixed a Python 3 issue in git_suffix
   * Added support for AccumDict of accumulators
   * Made the RtreeFilter pickleable
