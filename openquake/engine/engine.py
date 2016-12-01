@@ -26,9 +26,9 @@ import traceback
 
 from openquake.baselib.performance import Monitor
 from openquake.risklib import valid
-from openquake.commonlib import parallel, readinput
+from openquake.baselib import parallel
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import export, datastore, config
+from openquake.commonlib import export, datastore, config, readinput
 from openquake.calculators import base, views
 from openquake.engine import logs
 
