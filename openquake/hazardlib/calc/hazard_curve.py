@@ -16,9 +16,41 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-"""
-:mod:`openquake.hazardlib.calc.hazard_curve` implements
-:func:`calc_hazard_curves`.
+""":mod:`openquake.hazardlib.calc.hazard_curve` implements
+:func:`calc_hazard_curves`. Here is an example of a classical PSHA
+parallel calculator computing the hazard curves per each realization in less
+than 20 lines of code:
+
+.. code-block:: python
+
+   import sys
+   import logging
+   from openquake.baselib import parallel
+   from openquake.hazardlib.calc.filters import SourceFilter
+   from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
+   from openquake.commonlib import readinput
+
+
+   def main(job_ini):
+       logging.basicConfig(level=logging.INFO)
+       oq = readinput.get_oqparam(job_ini)
+       sitecol = readinput.get_site_collection(oq)
+       src_filter = SourceFilter(sitecol, oq.maximum_distance)
+       csm = readinput.get_composite_source_model(oq).filter(src_filter)
+       rlzs_assoc = csm.info.get_rlzs_assoc()
+       sources = csm.get_sources()
+       for rlzno, gsim_by_trt in enumerate(rlzs_assoc.gsim_by_trt):
+           hcurves = calc_hazard_curves(sources, src_filter, oq.imtls,
+                                        gsim_by_trt, oq.truncation_level,
+                                        parallel.apply)
+           print('rlzno=%d, hcurves=%r' % (rlzno, hcurves))
+
+   if __name__ == '__main__':
+       main(sys.argv[1])  # path to a job.ini file
+
+NB: the implementation in the engine is smarter and more
+efficient. Here we start a parallel computation per each realization,
+the engine manages all the realizations at once.
 """
 import sys
 import time
