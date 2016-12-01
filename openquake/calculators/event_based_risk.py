@@ -25,9 +25,9 @@ from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
     AccumDict, humansize, block_splitter, group_array)
 from openquake.calculators import base, event_based
-from openquake.commonlib import parallel
+from openquake.baselib import parallel
 from openquake.risklib import scientific, riskinput
-from openquake.commonlib.parallel import starmap
+from openquake.baselib.parallel import starmap
 
 U32 = numpy.uint32
 F32 = numpy.float32
