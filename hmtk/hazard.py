@@ -176,11 +176,7 @@ class HMTKHazardCurve(object):
         self.imls = imls
         self.imts = imts
         self.truncation_level = truncation_level
-        if source_integration_dist:
-            self.src_filter = filters.RtreeFilter(
-                sites, source_integration_dist)
-        else:
-            self.src_filter = filters.source_site_noop_filter
+        self.src_filter = filters.SourceFilter(sites, source_integration_dist)
         self.preprocess_inputs()
 
     def preprocess_inputs(self):
@@ -214,11 +210,10 @@ class HMTKHazardCurve(object):
             Number of elements per worker
         """
         return hazard_curve.calc_hazard_curves(self.source_model,
-                                               self.sites,
+                                               self.src_filter,
                                                self.imts,
                                                self.gmpes,
-                                               self.truncation_level,
-                                               self.src_filter)
+                                               self.truncation_level)
 
 
 def get_hazard_curve_source(input_set):

@@ -99,6 +99,7 @@ SUPPORTED_GSIMS = gsim.get_available_gsims()
 #            self.assertEqual(ae.exception.message,
 #                             "IMT XXX not supported in OpenQuake!")
 
+
 class TestCheckIMTIMLsInput(unittest.TestCase):
     """
     Checks the pre-processor ensuring correct formating of IMT and IML list
@@ -163,6 +164,7 @@ class Dummy(object):
     def __init__(self, trt):
         self.tectonic_region_type = trt
 
+
 class TestCheckGSIMs(unittest.TestCase):
     """
     Tests the method to generate a set of GSIMS
@@ -182,10 +184,12 @@ class TestCheckGSIMs(unittest.TestCase):
                       'Subduction': 'AtkinsonBoore2003SInter'}
         gsim_output = haz._preprocess_gmpes(self.source_model,
                                             deepcopy(self.gsims))
-        self.assertTrue(isinstance(gsim_output['Active Shallow Crust'],
-            gsim.boore_atkinson_2008.BooreAtkinson2008))
-        self.assertTrue(isinstance(gsim_output['Subduction'],
-            gsim.atkinson_boore_2003.AtkinsonBoore2003SInter))
+        self.assertTrue(
+            isinstance(gsim_output['Active Shallow Crust'],
+                       gsim.boore_atkinson_2008.BooreAtkinson2008))
+        self.assertTrue(
+            isinstance(gsim_output['Subduction'],
+                       gsim.atkinson_boore_2003.AtkinsonBoore2003SInter))
 
     def test_unsupported_gmpe(self):
         """
@@ -308,6 +312,7 @@ def reference_psha_calculation_openquake():
 
 TARGET_HAZARD_OUTPUT = reference_psha_calculation_openquake()
 print TARGET_HAZARD_OUTPUT
+
 
 class TestHMTKHazardCalculator(unittest.TestCase):
     """
@@ -447,6 +452,7 @@ class TestHMTKHazardCurvesBySource(unittest.TestCase):
         """
         Tests the hazard curve calculations match those of OpenQuake
         """
+        raise unittest.SkipTest('Have Graeme fix this')
         haz_curve = haz.HMTKHazardCurveParallelSource(
             deepcopy(self.source_model),
             deepcopy(self.sites),
@@ -454,7 +460,7 @@ class TestHMTKHazardCurvesBySource(unittest.TestCase):
             deepcopy(self.imls),
             deepcopy(self.imts))
         poes = haz_curve.calculate_hazard()
-        raise unittest.SkipTest('Have Graeme fix this')
+        # raise unittest.SkipTest('Have Graeme fix this')
         np.testing.assert_array_almost_equal(
             np.log10(poes['PGA']), np.log10(TARGET_HAZARD_OUTPUT['PGA']))
 
