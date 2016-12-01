@@ -121,9 +121,6 @@ def calc_hazard_curves(
     else:  # backward compatibility, a site collection was passed
         sites = source_site_filter
         source_site_filter = SourceFilter(sites, None)
-    for src in sources:
-        if not src.num_ruptures:
-            src.num_ruptures = src.count_ruptures()
     pmap = apply(
         pmap_from_grp, (sources, source_site_filter, imtls,
                         gsim_by_trt, truncation_level),

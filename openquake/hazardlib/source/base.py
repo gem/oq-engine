@@ -50,6 +50,8 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         Determine the source weight from the number of ruptures, by
         multiplying with the scale factor RUPTURE_WEIGHT
         """
+        if not self.num_ruptures:
+            self.num_ruptures = self.count_ruptures()
         return self.num_ruptures * self.RUPTURE_WEIGHT
 
     def __init__(self, source_id, name, tectonic_region_type):
