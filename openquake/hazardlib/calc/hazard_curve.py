@@ -23,14 +23,12 @@
 import sys
 import time
 import operator
-import functools
-import multiprocessing
 import numpy
 
 from openquake.baselib.python3compat import raise_, zip
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import (
-    DictArray, AccumDict, nokey, split_in_blocks, block_splitter)
+from openquake.baselib.general import DictArray
+from openquake.baselib.parallel import Sequential
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
@@ -65,38 +63,9 @@ def agg_curves(acc, curves):
     return new
 
 
-class Apply(object):
-    def __init__(self, task, task_args,
-                 concurrent_tasks=multiprocessing.cpu_count(),
-                 maxweight=None, weight=lambda item: 1,
-                 key=nokey, name=None):
-        self.task = task
-        self.task_args = task_args
-        self.concurrent_tasks = concurrent_tasks or 1
-        self.maxweight = maxweight
-        self.weight = weight
-        self.key = nokey
-
-    def __iter__(self):
-        arg0 = self.task_args[0]
-        args = self.task_args[1:]
-        if self.maxweight:
-            chunks = block_splitter(
-                arg0, self.maxweight, self.weight, self.key)
-        else:
-            chunks = split_in_blocks(
-                arg0, self.concurrent_tasks, self.weight, self.key)
-        for chunk in chunks:
-            yield self.task(*(chunk,) + args)
-
-    def reduce(self, agg=operator.add, acc=None):
-        return functools.reduce(
-            agg, self, AccumDict() if acc is None else acc)
-
-
 def calc_hazard_curves(
         sources, source_site_filter, imtls, gsim_by_trt,
-        truncation_level=None, apply=Apply):
+        truncation_level=None, apply=Sequential.apply):
     """
     Compute hazard curves on a list of sites, given a set of seismic sources
     and a set of ground shaking intensity models (one per tectonic region type

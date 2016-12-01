@@ -16,7 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import ast
+import tempfile
 import importlib
 try:  # with Python 3
     from urllib.parse import quote_plus, unquote_plus
@@ -213,6 +215,14 @@ class File(h5py.File):
     3
     >>> f.close()
     """
+    @classmethod
+    def temporary(cls):
+        fh, path = tempfile.mkstemp(suffix='.hdf5')
+        os.close(fh)
+        self = cls(path, 'w')
+        self.path = path
+        return self
+
     def __setitem__(self, path, obj):
         cls = obj.__class__
         if hasattr(obj, '__toh5__'):
