@@ -27,6 +27,7 @@ import functools
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
 from openquake.baselib.general import DictArray, AccumDict
+from openquake.baselib import parallel
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.geodetic import min_geodetic_distance
 from openquake.hazardlib.source import PointSource
@@ -37,7 +38,7 @@ from openquake.hazardlib.calc.hazard_curve import (
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.risklib import valid
-from openquake.commonlib import parallel, source, readinput
+from openquake.commonlib import source, readinput
 from openquake.commonlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base, classical
