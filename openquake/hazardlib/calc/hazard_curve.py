@@ -108,7 +108,7 @@ def calc_hazard_curves(
         distribution.
     :param apply:
         Application function, for instance `parallel.apply`; by default use
-        the sequential `apply`.
+        the :func:`openquake.baselib.parallel.Sequential.apply`.
 
     :returns:
         An array of size N, where N is the number of sites, which elements

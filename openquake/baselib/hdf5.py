@@ -217,6 +217,11 @@ class File(h5py.File):
     """
     @classmethod
     def temporary(cls):
+        """
+        Returns a temporary hdf5 file, open for writing.
+        The temporary name is stored in the .path attribute.
+        It is the user responsability to remove the file when closed.
+        """
         fh, path = tempfile.mkstemp(suffix='.hdf5')
         os.close(fh)
         self = cls(path, 'w')
