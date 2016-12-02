@@ -264,7 +264,7 @@ class EbrPostCalculator(base.RiskCalculator):
 
     def _collect_all_data(self):
         # called only if 'rcurves-rlzs' in dstore; return a list of outputs
-        all_data = []
+        data_by_lt = {}
         assets = self.datastore['asset_refs'].value[self.assetcol.array['idx']]
         A = len(assets)
         rlzs = self.rlzs_assoc.realizations
@@ -298,8 +298,8 @@ class EbrPostCalculator(base.RiskCalculator):
                     average_losses=average_losses,
                     average_insured_losses=average_insured_losses)
                 data.append(out)
-            all_data.append(data)
-        return all_data
+            data_by_lt[loss_type] = data
+        return data_by_lt
 
     # NB: the HDF5 structure is of kind <output>-stats/structural/mean, ...
     # and must be so for the loss curves, since different loss_types may have
@@ -313,7 +313,8 @@ class EbrPostCalculator(base.RiskCalculator):
         """
         oq = self.oqparam
         ltypes = self.riskmodel.loss_types
-        all_stats = map(builder.build, self._collect_all_data())
+        all_stats = {lt: builder.build(data)
+                     for lt, data in self._collect_all_data().items()}
         if not all_stats:
             return
         N = len(self.assetcol)
@@ -321,7 +322,7 @@ class EbrPostCalculator(base.RiskCalculator):
         loss_curves = numpy.zeros((N, Q1), self.loss_curve_dt)
         if oq.conditional_loss_poes:
             loss_maps = numpy.zeros((N, Q1), self.loss_maps_dt)
-        for stats in all_stats:
+        for stats in all_stats.values():
             # there is one stat for each loss_type
             cb = self.riskmodel.curve_builders[ltypes.index(stats.loss_type)]
             if not cb.user_provided:
@@ -330,7 +331,7 @@ class EbrPostCalculator(base.RiskCalculator):
                 oq.quantile_loss_curves, oq.conditional_loss_poes, [],
                 len(cb.ratios), scientific.normalize_curves_eb,
                 oq.insured_losses)
-            curves, maps = sb.get_curves_maps(stats)  # matrices (Q1, N)
+            curves, maps = sb._get_curves_maps(stats)  # matrices (Q1, N)
             loss_curves[cb.loss_type] = curves.T
             if oq.conditional_loss_poes:
                 loss_maps[cb.loss_type] = maps.T

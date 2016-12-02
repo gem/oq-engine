@@ -83,7 +83,7 @@ def classical_risk(riskinput, riskmodel, monitor):
                     oq.conditional_loss_poes, oq.poes_disagg,
                     curve_resolution, insured_losses=oq.insured_losses)
                 stats = statsbuilder.build(outs)
-                stat_curves, stat_maps = statsbuilder.get_curves_maps(stats)
+                stat_curves, stat_maps = statsbuilder._get_curves_maps(stats)
                 for i, asset in enumerate(assets):
                     result['stat_curves'].append(
                         (l, asset.ordinal, stat_curves[:, i]))
