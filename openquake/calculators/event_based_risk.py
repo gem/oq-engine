@@ -339,7 +339,7 @@ class EbrPostCalculator(base.RiskCalculator):
         if oq.conditional_loss_poes:
             self.datastore['loss_maps-stats'] = loss_maps
 
-    def build_agg_curve_and_stats(self, builder):
+    def build_agg_curve(self):
         """
         Build a single loss curve per realization. It is NOT obtained
         by aggregating the loss curves; instead, it is obtained without
@@ -367,11 +367,7 @@ class EbrPostCalculator(base.RiskCalculator):
         agg_curve = numpy.zeros(R, loss_curve_dt)
         for l, r, name in result:
             agg_curve[lts[l]][name][r] = result[l, r, name]
-        if oq.individual_curves:
-            self.datastore['agg_curve-rlzs'] = agg_curve
-
-        if R > 1:
-            self._build_agg_curve_stats(builder, agg_curve, loss_curve_dt)
+        self.datastore['agg_curve-rlzs'] = agg_curve
 
     def build_stats(self):
         oq = self.datastore['oqparam']
@@ -383,17 +379,14 @@ class EbrPostCalculator(base.RiskCalculator):
         # build an aggregate loss curve per realization plus statistics
         if 'agg_loss_table' in self.datastore:
             with self.monitor('building agg_curve'):
-                self.build_agg_curve_and_stats(builder)
+                self.build_agg_curve()
 
         rlzs = self.datastore['csm_info'].get_rlzs_assoc().realizations
         if len(rlzs) > 1:
             with self.monitor('computing stats'):
                 if 'rcurves-rlzs' in self.datastore:
                     self.compute_store_stats(rlzs, builder)
-                if oq.avg_losses:  # stats for avg_losses
-                    stats = scientific.SimpleStats(
-                        rlzs, oq.quantile_loss_curves)
-                    stats.compute_and_store('avg_losses', self.datastore)
+
 
 elt_dt = numpy.dtype([('eid', U32), ('loss', F32)])
 
