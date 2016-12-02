@@ -154,9 +154,11 @@ def export_avg_losses_stats(ekey, dstore):
     :param dstore: datastore object
     """
     oq = dstore['oqparam']
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     dt = oq.loss_dt()
-    avg_losses = dstore[ekey[0]].value
     quantiles = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
+    stats = scientific.SimpleStats(rlzs, oq.quantile_loss_curves)
+    avg_losses = stats.compute('avg_losses', dstore)  # sequentially
     assets = get_assets(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for i, quantile in enumerate(quantiles):
