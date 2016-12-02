@@ -1710,15 +1710,15 @@ class StatsBuilder(object):
             conditional_loss_poes=self.conditional_loss_poes,
             prefix=prefix)
 
-    def get_curves_maps(self, outputs_by_lt, loss_ratios):
+    def get_curves_maps(self, outputs_by_lt, loss_ratios_by_lt):
         """
         :param outputs_by_lt:
             for each loss type, a list with R outputs
-        :param loss_ratios:
+        :param loss_ratios_by_lt:
             for each loss_type, an array of ratios
         """
         loss_curve_dt, loss_maps_dt = build_loss_dtypes(
-            {lt: len(loss_ratios[lt]) for lt in loss_ratios},
+            {lt: len(loss_ratios_by_lt[lt]) for lt in loss_ratios_by_lt},
             self.conditional_loss_poes, self.insured_losses)
         assets = list(outputs_by_lt.values())[0][0].assets
         N = len(assets)
@@ -1728,11 +1728,9 @@ class StatsBuilder(object):
             loss_maps = numpy.zeros((N, Q1), loss_maps_dt)
         else:
             loss_maps = None
-        for lt in loss_ratios:
-            self.loss_curve_dt, self.loss_maps_dt = build_dtypes(
-                len(loss_ratios[lt]),
-                self.conditional_loss_poes,
-                self.insured_losses)
+        for lt in loss_ratios_by_lt:
+            self.loss_curve_dt = loss_curve_dt[lt]
+            self.loss_maps_dt = loss_maps_dt[lt]
             curves, maps = self._get_curves_maps(self.build(outputs_by_lt[lt]))
             loss_curves[lt] = curves.T
             if self.conditional_loss_poes:
