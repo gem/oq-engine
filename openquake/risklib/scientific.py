@@ -1556,6 +1556,35 @@ class SimpleStats(object):
         dstore[newname].attrs['statnames'] = hdf5.array_of_vstr(self.names)
 
 
+def build_loss_dtypes(loss_ratios, conditional_loss_poes, insured_losses):
+    """
+    :param loss_ratios:
+        dictionary loss_type -> ratios
+    :param conditional_loss_poes:
+        configuration parameter
+    :param insured_losses:
+        configuration parameter
+    :returns:
+       loss_curve_dt and loss_maps_dt
+    """
+    lst = [('poe-%s' % poe, F32) for poe in conditional_loss_poes]
+    if insured_losses:
+        lst += [(name + '_ins', pair) for name, pair in lst]
+    lm_dt = numpy.dtype(lst)
+    lc_list = []
+    lm_list = []
+    for lt in sorted(loss_ratios):
+        C = len(loss_ratios[lt])
+        pairs = [('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)]
+        if insured_losses:
+            pairs += [(name + '_ins', pair) for name, pair in pairs]
+        lc_list.append((lt, numpy.dtype(pairs)))
+        lm_list.append((lt, lm_dt))
+    loss_curve_dt = numpy.dtype(lc_list) if lc_list else None
+    loss_maps_dt = numpy.dtype(lm_list) if lm_list else None
+    return loss_curve_dt, loss_maps_dt
+
+
 class StatsBuilder(object):
     """
     A class to build risk statistics.
@@ -1683,15 +1712,30 @@ class StatsBuilder(object):
 
     def get_curves_maps(self, outputs_by_lt, loss_ratios):
         """
+        :param outputs_by_lt:
+            for each loss type, a list with R outputs
+        :param loss_ratios:
+            for each loss_type, an array of ratios
         """
-        dic = {}
+        loss_curve_dt, loss_maps_dt = build_loss_dtypes(
+            loss_ratios, self.conditional_loss_poes, self.insured_losses)
+        N = len(outputs_by_lt.values()[0][0].assets)
+        Q1 = len(self.mean_quantiles)
+        loss_curves = numpy.zeros((N, Q1), loss_curve_dt)
+        if self.conditional_loss_poes:
+            loss_maps = numpy.zeros((N, Q1), loss_maps_dt)
+        else:
+            loss_maps = None
         for lt in loss_ratios:
             self.loss_curve_dt, self.loss_maps_dt = build_dtypes(
                 len(loss_ratios[lt]),
                 self.conditional_loss_poes,
                 self.insured_losses)
-            dic[lt] = self._get_curves_maps(self.build(outputs_by_lt[lt]))
-        return dic
+            curves, maps = self._get_curves_maps(self.build(outputs_by_lt[lt]))
+            loss_curves[lt] = curves.T
+            if self.conditional_loss_poes:
+                loss_maps[lt] = maps.T
+        return loss_curves, loss_maps
 
     def _get_curves_maps(self, stats):
         """
