@@ -1681,7 +1681,11 @@ class StatsBuilder(object):
             conditional_loss_poes=self.conditional_loss_poes,
             prefix=prefix)
 
-    def get_curves_maps(self, stats):
+    def get_curves_maps(self, outputs_by_lt):
+        return {lt: self._get_curves_maps(self.build(outputs_by_lt[lt]))
+                for lt in outputs_by_lt}
+
+    def _get_curves_maps(self, stats):
         """
         :param stats:
             an object with attributes mean_curves, mean_average_losses,
@@ -1704,7 +1708,7 @@ class StatsBuilder(object):
         for i in range(self.insured_losses + 1):  # insured index
             ins = '_ins' if i else ''
             curves_by_stat = self._loss_curves(
-                stats.assets, stats.mean_curves[i],
+                stats.mean_curves[i],
                 stats.mean_average_losses[i],
                 stats.quantile_curves[i],
                 stats.quantile_average_losses[i])
@@ -1721,8 +1725,7 @@ class StatsBuilder(object):
                         maps[name + ins][aid] = map_
         return curves, maps
 
-    def _loss_curves(self, assets, mean, mean_averages,
-                     quantile, quantile_averages):
+    def _loss_curves(self, mean, mean_averages, quantile, quantile_averages):
         mq_curves = _combine_mq(mean, quantile)  # shape (Q1, N, 2, C)
         mq_avgs = _combine_mq(mean_averages, quantile_averages)  # (Q1, N)
         acc = []
@@ -1761,7 +1764,7 @@ class StatsBuilder(object):
                     average_insured_losses=[average_insured_loss])
                 outputs.append(out)
             stats = self.build(outputs)
-            curves, _maps = self.get_curves_maps(stats)  # shape (Q1, 1)
+            curves, _maps = self._get_curves_maps(stats)  # shape (Q1, 1)
             acs = agg_curve_stats[loss_type]
             for i, statname in enumerate(self.mean_quantiles):
                 for name in acs.dtype.names:
