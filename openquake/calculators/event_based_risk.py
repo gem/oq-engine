@@ -339,52 +339,6 @@ class EbrPostCalculator(base.RiskCalculator):
         if oq.conditional_loss_poes:
             self.datastore['loss_maps-stats'] = loss_maps
 
-    def _build_agg_curve_stats(self, builder, agg_curve, loss_curve_dt):
-        """
-        Build and save `agg_curve-stats` in the HDF5 file.
-
-        :param builder:
-            :class:`openquake.risklib.scientific.StatsBuilder` instance
-        :param agg_curve:
-            array of aggregate curves, one per realization
-        :param loss_curve_dt:
-            numpy dtype for loss curves
-        """
-        rlzs = self.datastore['csm_info'].get_rlzs_assoc().realizations
-        Q1 = len(builder.mean_quantiles)
-        agg_curve_stats = numpy.zeros(Q1, loss_curve_dt)
-        for l, loss_type in enumerate(self.riskmodel.loss_types):
-            agg_curve_lt = agg_curve[loss_type]
-            outputs = []
-            for rlz in rlzs:
-                curve = agg_curve_lt[rlz.ordinal]
-                average_loss = curve['avg']
-                loss_curve = (curve['losses'], curve['poes'])
-                if self.oqparam.insured_losses:
-                    average_insured_loss = curve['avg_ins']
-                    insured_curves = [(curve['losses_ins'], curve['poes_ins'])]
-                else:
-                    average_insured_loss = None
-                    insured_curves = None
-                out = scientific.Output(
-                    [None], loss_type, rlz.ordinal, rlz.weight,
-                    loss_curves=[loss_curve],
-                    insured_curves=insured_curves,
-                    average_losses=[average_loss],
-                    average_insured_losses=[average_insured_loss])
-                outputs.append(out)
-            stats = builder.build(outputs)
-            curves, _maps = builder.get_curves_maps(stats)  # shape (Q1, 1)
-            acs = agg_curve_stats[loss_type]
-            for i, statname in enumerate(builder.mean_quantiles):
-                for name in acs.dtype.names:
-                    acs[name][i] = curves[name][i]
-
-        # saving agg_curve_stats
-        self.datastore['agg_curve-stats'] = agg_curve_stats
-        self.datastore['agg_curve-stats'].attrs['nbytes'] = (
-            agg_curve_stats.nbytes)
-
     def build_agg_curve_and_stats(self, builder):
         """
         Build a single loss curve per realization. It is NOT obtained
