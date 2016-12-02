@@ -192,11 +192,11 @@ def event_based_risk(riskinput, riskmodel, assetcol, monitor):
 
 
 @base.calculators.add('event_based_risk')
-class EventBasedStats(base.RiskCalculator):
+class EbrPostCalculator(base.RiskCalculator):
     pre_calculator = 'ebrisk'
 
     def execute(self):
-        N = len(self.assetcol)
+        A = len(self.assetcol)
         self.loss_curve_dt, self.loss_maps_dt = (
             self.riskmodel.build_loss_dtypes(
                 self.oqparam.conditional_loss_poes,
@@ -213,13 +213,13 @@ class EventBasedStats(base.RiskCalculator):
              for ltype, cbuilder in zip(
                 ltypes, self.riskmodel.curve_builders)])
         # TODO: change 2 -> I, then change the exporter
-        rcurves = numpy.zeros((N, R, 2), multi_lr_dt)
+        rcurves = numpy.zeros((A, R, 2), multi_lr_dt)
 
         if self.oqparam.loss_ratios:
             self.save_rcurves(rcurves, I)
 
         if self.loss_maps_dt:
-            self.save_loss_maps(N, R)
+            self.save_loss_maps(A, R)
 
         self.build_stats()
 
@@ -339,7 +339,7 @@ class EventBasedStats(base.RiskCalculator):
         if oq.conditional_loss_poes:
             self.datastore['loss_maps-stats'] = loss_maps
 
-    def build_agg_curve_stats(self, builder, agg_curve, loss_curve_dt):
+    def _build_agg_curve_stats(self, builder, agg_curve, loss_curve_dt):
         """
         Build and save `agg_curve-stats` in the HDF5 file.
 
@@ -417,7 +417,7 @@ class EventBasedStats(base.RiskCalculator):
             self.datastore['agg_curve-rlzs'] = agg_curve
 
         if R > 1:
-            self.build_agg_curve_stats(builder, agg_curve, loss_curve_dt)
+            self._build_agg_curve_stats(builder, agg_curve, loss_curve_dt)
 
     def build_stats(self):
         oq = self.datastore['oqparam']
@@ -427,8 +427,9 @@ class EventBasedStats(base.RiskCalculator):
             oq.insured_losses)
 
         # build an aggregate loss curve per realization plus statistics
-        with self.monitor('building agg_curve'):
-            self.build_agg_curve_and_stats(builder)
+        if 'agg_loss_table' in self.datastore:
+            with self.monitor('building agg_curve'):
+                self.build_agg_curve_and_stats(builder)
 
         rlzs = self.datastore['csm_info'].get_rlzs_assoc().realizations
         if len(rlzs) > 1:
