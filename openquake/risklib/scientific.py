@@ -1731,25 +1731,23 @@ class StatsBuilder(object):
             acc.append(zip(mq_curve, mq_avg))
         return acc  # (N, Q1) triples
 
-    def build_agg_curve_stats(self, dstore):
+    def build_agg_curve_stats(self, loss_curve_dt, dstore):
         """
         Build an array `agg_curve-stats`.
         """
-        oq = dstore['oqparam']
         rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-        riskmodel = dstore['riskmodel']
-        loss_curve_dt, _ = riskmodel.build_loss_dtypes(
-            oq.conditional_loss_poes, oq.insured_losses + 1)
         Q1 = len(self.mean_quantiles)
         agg_curve_stats = numpy.zeros(Q1, loss_curve_dt)
-        for l, loss_type in enumerate(riskmodel.loss_types):
+        for l, loss_type in enumerate(loss_curve_dt.names):
+            if loss_type.endswith('_ins'):
+                continue
             agg_curve_lt = dstore['agg_curve-rlzs'][loss_type]
             outputs = []
             for rlz in rlzs:
                 curve = agg_curve_lt[rlz.ordinal]
                 average_loss = curve['avg']
                 loss_curve = (curve['losses'], curve['poes'])
-                if self.oqparam.insured_losses:
+                if self.insured_losses:
                     average_insured_loss = curve['avg_ins']
                     insured_curves = [(curve['losses_ins'], curve['poes_ins'])]
                 else:
