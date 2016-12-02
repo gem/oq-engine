@@ -312,29 +312,25 @@ class EbrPostCalculator(base.RiskCalculator):
         :param rlzs: list of realizations
         """
         oq = self.oqparam
-        ltypes = self.riskmodel.loss_types
-        all_stats = {lt: builder.build(data)
-                     for lt, data in self._collect_all_data().items()}
-        if not all_stats:
+        data_by_lt = self._collect_all_data()
+        if not data_by_lt:
             return
         N = len(self.assetcol)
         Q1 = len(oq.quantile_loss_curves) + 1
         loss_curves = numpy.zeros((N, Q1), self.loss_curve_dt)
         if oq.conditional_loss_poes:
             loss_maps = numpy.zeros((N, Q1), self.loss_maps_dt)
-        for stats in all_stats.values():
+        sb = scientific.StatsBuilder(
+            oq.quantile_loss_curves, oq.conditional_loss_poes, [],
+            oq.loss_curve_resolution, scientific.normalize_curves_eb,
+            oq.insured_losses)
+        stats = sb.get_curves_maps(data_by_lt, oq.loss_ratios)
+        for loss_type in stats:
             # there is one stat for each loss_type
-            cb = self.riskmodel.curve_builders[ltypes.index(stats.loss_type)]
-            if not cb.user_provided:
-                continue
-            sb = scientific.StatsBuilder(
-                oq.quantile_loss_curves, oq.conditional_loss_poes, [],
-                len(cb.ratios), scientific.normalize_curves_eb,
-                oq.insured_losses)
-            curves, maps = sb._get_curves_maps(stats)  # matrices (Q1, N)
-            loss_curves[cb.loss_type] = curves.T
+            curves, maps = stats[loss_type]  # matrices (Q1, N)
+            loss_curves[loss_type] = curves.T
             if oq.conditional_loss_poes:
-                loss_maps[cb.loss_type] = maps.T
+                loss_maps[loss_type] = maps.T
 
         self.datastore['loss_curves-stats'] = loss_curves
         if oq.conditional_loss_poes:
