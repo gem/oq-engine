@@ -191,31 +191,16 @@ def event_based_risk(riskinput, riskmodel, assetcol, monitor):
     return result
 
 
-class EventBasedStats(object):
-    def __init__(self, datastore, monitor):
-        self.datastore = datastore
-        self.riskmodel = riskinput.read_composite_risk_model(datastore)
-        self.oqparam = datastore['oqparam']
-        self.monitor = monitor
-        self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
-        self.assetcol = self.datastore['assetcol']
-        N = len(self.assetcol)
-        E = sum(len(v) for v in self.datastore['events'].values())
+@base.calculators.add('event_based_risk')
+class EbrPostCalculator(base.RiskCalculator):
+    pre_calculator = 'ebrisk'
+
+    def execute(self):
+        A = len(self.assetcol)
         self.loss_curve_dt, self.loss_maps_dt = (
             self.riskmodel.build_loss_dtypes(
                 self.oqparam.conditional_loss_poes,
                 self.oqparam.insured_losses + 1))
-
-        if self.oqparam.loss_ratios:
-            asslt = self.datastore['ass_loss_ratios']
-            for rlz, dset in asslt.items():
-                for ds in dset.values():
-                    ds.attrs['nonzero_fraction'] = len(ds) / (N * E)
-
-        agglt = self.datastore['agg_loss_table']
-        for rlz, dset in agglt.items():
-            for ds in dset.values():
-                ds.attrs['nonzero_fraction'] = len(ds) / E
 
         ltypes = self.riskmodel.loss_types
         I = self.oqparam.insured_losses + 1
@@ -228,13 +213,18 @@ class EventBasedStats(object):
              for ltype, cbuilder in zip(
                 ltypes, self.riskmodel.curve_builders)])
         # TODO: change 2 -> I, then change the exporter
-        rcurves = numpy.zeros((N, R, 2), multi_lr_dt)
+        rcurves = numpy.zeros((A, R, 2), multi_lr_dt)
 
         if self.oqparam.loss_ratios:
             self.save_rcurves(rcurves, I)
 
         if self.loss_maps_dt:
-            self.save_loss_maps(N, R)
+            self.save_loss_maps(A, R)
+
+        self.build_stats()
+
+    def post_execute(self):
+        pass
 
     def save_rcurves(self, rcurves, I):
         assets = list(self.assetcol)
@@ -349,7 +339,7 @@ class EventBasedStats(object):
         if oq.conditional_loss_poes:
             self.datastore['loss_maps-stats'] = loss_maps
 
-    def build_agg_curve_stats(self, builder, agg_curve, loss_curve_dt):
+    def _build_agg_curve_stats(self, builder, agg_curve, loss_curve_dt):
         """
         Build and save `agg_curve-stats` in the HDF5 file.
 
@@ -427,9 +417,9 @@ class EventBasedStats(object):
             self.datastore['agg_curve-rlzs'] = agg_curve
 
         if R > 1:
-            self.build_agg_curve_stats(builder, agg_curve, loss_curve_dt)
+            self._build_agg_curve_stats(builder, agg_curve, loss_curve_dt)
 
-    def build(self):
+    def build_stats(self):
         oq = self.datastore['oqparam']
         builder = scientific.StatsBuilder(
             oq.quantile_loss_curves, oq.conditional_loss_poes, [],
@@ -437,8 +427,9 @@ class EventBasedStats(object):
             oq.insured_losses)
 
         # build an aggregate loss curve per realization plus statistics
-        with self.monitor('building agg_curve'):
-            self.build_agg_curve_and_stats(builder)
+        if 'agg_loss_table' in self.datastore:
+            with self.monitor('building agg_curve'):
+                self.build_agg_curve_and_stats(builder)
 
         rlzs = self.datastore['csm_info'].get_rlzs_assoc().realizations
         if len(rlzs) > 1:
@@ -504,7 +495,7 @@ class EpsilonMatrix1(object):
         return self.eps[item[1]]
 
 
-@base.calculators.add('event_based_risk')
+@base.calculators.add('ebrisk')
 class EbriskCalculator(base.RiskCalculator):
     """
     Event based PSHA calculator generating the total losses by taxonomy
@@ -700,10 +691,17 @@ class EbriskCalculator(base.RiskCalculator):
                                'all below the minimum_intensity threshold')
         logging.info('Generated %s of GMFs', humansize(self.gmfbytes))
         self.datastore.save('job_info', {'gmfbytes': self.gmfbytes})
+
+        A, E = len(self.assetcol), num_events
         if 'ass_loss_ratios' in self.datastore:
             for rlzname in self.datastore['ass_loss_ratios']:
                 self.datastore.set_nbytes('ass_loss_ratios/' + rlzname)
             self.datastore.set_nbytes('ass_loss_ratios')
+            asslt = self.datastore['ass_loss_ratios']
+            for rlz, dset in asslt.items():
+                for ds in dset.values():
+                    ds.attrs['nonzero_fraction'] = len(ds) / (A * E)
+
         if 'agg_loss_table' not in self.datastore:
             logging.warning(
                 'No losses were generated: most likely there is an error in y'
@@ -712,6 +710,7 @@ class EbriskCalculator(base.RiskCalculator):
             for rlzname in self.datastore['agg_loss_table']:
                 self.datastore.set_nbytes('agg_loss_table/' + rlzname)
             self.datastore.set_nbytes('agg_loss_table')
-            # TODO: should I remove ebstats if there is a single realization?
-            ebstats = EventBasedStats(self.datastore, self.monitor)
-            ebstats.build()
+            agglt = self.datastore['agg_loss_table']
+            for rlz, dset in agglt.items():
+                for ds in dset.values():
+                    ds.attrs['nonzero_fraction'] = len(ds) / E
