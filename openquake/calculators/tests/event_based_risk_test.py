@@ -51,7 +51,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
-        check_platform('xenial')  # FIXME: remove this line?
         self.assert_stats_ok(case_1, 'job.ini', individual_curves='true')
 
         # make sure the XML and JSON exporters run
