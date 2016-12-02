@@ -1681,9 +1681,17 @@ class StatsBuilder(object):
             conditional_loss_poes=self.conditional_loss_poes,
             prefix=prefix)
 
-    def get_curves_maps(self, outputs_by_lt):
-        return {lt: self._get_curves_maps(self.build(outputs_by_lt[lt]))
-                for lt in outputs_by_lt}
+    def get_curves_maps(self, outputs_by_lt, loss_ratios):
+        """
+        """
+        dic = {}
+        for lt in loss_ratios:
+            self.loss_curve_dt, self.loss_maps_dt = build_dtypes(
+                len(loss_ratios[lt]),
+                self.conditional_loss_poes,
+                self.insured_losses)
+            dic[lt] = self._get_curves_maps(self.build(outputs_by_lt[lt]))
+        return dic
 
     def _get_curves_maps(self, stats):
         """
