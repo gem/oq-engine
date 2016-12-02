@@ -1525,7 +1525,7 @@ class SimpleStats(object):
         self.quantiles = quantiles
         self.names = ['mean'] + ['quantile-%s' % q for q in quantiles]
 
-    def compute_and_store(self, name, dstore):
+    def compute(self, name, dstore):
         """
         Compute mean and quantiles from the data in the datastore
         under the group `<name>-rlzs` and store them under the group
@@ -1533,7 +1533,6 @@ class SimpleStats(object):
         """
         weights = [rlz.weight for rlz in self.rlzs]
         rlzsname = name + '-rlzs'
-        newname = name + '-stats'
         array = dstore[rlzsname].value
         newshape = list(array.shape)
         newshape[1] = len(self.quantiles) + 1  # number of statistical outputs
@@ -1542,6 +1541,16 @@ class SimpleStats(object):
         newarray[:, 0] = mean_curve(data, weights)
         for i, q in enumerate(self.quantiles, 1):
             newarray[:, i] = quantile_curve(data, q, weights)
+        return newarray
+
+    def compute_and_store(self, name, dstore):
+        """
+        Compute mean and quantiles from the data in the datastore
+        under the group `<name>-rlzs` and store them under the group
+        `<name>-stats`. Return the number of bytes stored.
+        """
+        newname = name + '-stats'
+        newarray = self.compute(name, dstore)
         dstore[newname] = newarray
         dstore[newname].attrs['nbytes'] = newarray.nbytes
         dstore[newname].attrs['statnames'] = hdf5.array_of_vstr(self.names)
