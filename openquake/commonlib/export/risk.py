@@ -156,12 +156,11 @@ def export_avg_losses_stats(ekey, dstore):
     oq = dstore['oqparam']
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     dt = oq.loss_dt()
-    quantiles = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     stats = scientific.SimpleStats(rlzs, oq.quantile_loss_curves)
     avg_losses = stats.compute('avg_losses', dstore)  # sequentially
     assets = get_assets(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for i, quantile in enumerate(quantiles):
+    for i, quantile in enumerate(stats.names):
         losses = numpy.array([tuple(row) for row in avg_losses[:, i]], dt)
         dest = dstore.build_fname('avg_losses', quantile, 'csv')
         data = compose_arrays(assets, losses)
@@ -833,9 +832,29 @@ def _gen_writers(dstore, writercls, root):
 
 
 # this is used by event_based_risk
-@export.add(('agg_curve-rlzs', 'xml'), ('agg_curve-stats', 'xml'))
-def export_agg_curve(ekey, dstore):
+@export.add(('agg_curve-rlzs', 'xml'))
+def export_agg_curve_rlzs(ekey, dstore):
     agg_curve = dstore[ekey[0]]
+    fnames = []
+    for writer, (loss_type, poe, r, insflag) in _gen_writers(
+            dstore, risk_writers.AggregateLossCurveXMLWriter, ekey[0]):
+        ins = '_ins' if insflag else ''
+        rec = agg_curve[loss_type][r]
+        curve = AggCurve(rec['losses' + ins], rec['poes' + ins],
+                         rec['avg' + ins], None)
+        writer.serialize(curve)
+        fnames.append(writer._dest)
+    return sorted(fnames)
+
+
+# this is used by event_based_risk
+@export.add(('agg_curve-stats', 'xml'))
+def export_agg_curve_stats(ekey, dstore):
+    oq = dstore['oqparam']
+    sb = scientific.StatsBuilder(
+        oq.quantile_loss_curves, oq.conditional_loss_poes, [],
+        len(cb.ratios), normalize_curves_eb, oq.insured_losses)
+    agg_curve = sb.build_agg_curve_stats(dstore)
     fnames = []
     for writer, (loss_type, poe, r, insflag) in _gen_writers(
             dstore, risk_writers.AggregateLossCurveXMLWriter, ekey[0]):
