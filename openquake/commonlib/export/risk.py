@@ -622,7 +622,7 @@ class Location(object):
 
 def get_loss_maps(dstore):
     if 'loss_maps-rlzs' in dstore:  # classical_risk
-        loss_maps = dstore['loss_maps-rlzs']
+        loss_maps = dstore['loss_maps-rlzs'].value
     else:  # event_based_risk, get them from rcurves-rlzs
         oq = dstore['oqparam']
         assetcol = dstore['assetcol']
