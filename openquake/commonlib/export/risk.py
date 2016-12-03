@@ -464,7 +464,7 @@ def export_damage_total(ekey, dstore):
 def export_loss_maps_csv(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = get_assets(dstore)
-    value = dstore[ekey[0]].value  # matrix N x R or T x R
+    value = get_loss_maps(dstore)  # matrix N x R or T x R
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz, values in zip(rlzs, value.T):
         fname = dstore.build_fname('loss_maps', rlz, ekey[1])
@@ -620,6 +620,27 @@ class Location(object):
         self.wkt = 'POINT(%s %s)' % (x, y)
 
 
+def get_loss_maps(dstore):
+    if 'loss_maps-rlzs' in dstore:  # classical_risk
+        loss_maps = dstore['loss_maps-rlzs']
+    else:  # event_based_risk, get them from rcurves-rlzs
+        oq = dstore['oqparam']
+        assetcol = dstore['assetcol']
+        realizations = dstore['realizations']
+        riskmodel = riskinput.read_composite_risk_model(dstore)
+        _, loss_maps_dt = scientific.build_loss_dtypes(
+            {str(lt): len(oq.loss_ratios[lt]) for lt in oq.loss_ratios},
+            oq.conditional_loss_poes, oq.insured_losses)
+        loss_maps = numpy.zeros(
+            (len(assetcol), len(realizations)), loss_maps_dt)
+        rcurves = dstore['rcurves-rlzs']
+        for cb in riskmodel.curve_builders:
+            if cb.user_provided:
+                for r, lmaps in cb.build_loss_maps(assetcol.array, rcurves):
+                    loss_maps[cb.loss_type][:, r] = lmaps
+    return loss_maps
+
+
 # used by event_based_risk and classical_risk
 @export.add(('loss_maps-rlzs', 'xml'), ('loss_maps-rlzs', 'geojson'))
 def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
@@ -628,7 +649,7 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
     unit_by_lt = cc.units
     unit_by_lt['occupants'] = 'people'
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    loss_maps = dstore[ekey[0]]
+    loss_maps = get_loss_maps(dstore)
     assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
     R = len(rlzs)
