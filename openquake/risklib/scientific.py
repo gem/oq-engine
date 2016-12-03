@@ -1543,18 +1543,6 @@ class SimpleStats(object):
             newarray[:, i] = quantile_curve(data, q, weights)
         return newarray
 
-    def compute_and_store(self, name, dstore):
-        """
-        Compute mean and quantiles from the data in the datastore
-        under the group `<name>-rlzs` and store them under the group
-        `<name>-stats`. Return the number of bytes stored.
-        """
-        newname = name + '-stats'
-        newarray = self.compute(name, dstore)
-        dstore[newname] = newarray
-        dstore[newname].attrs['nbytes'] = newarray.nbytes
-        dstore[newname].attrs['statnames'] = hdf5.array_of_vstr(self.names)
-
 
 def build_loss_dtypes(curve_resolution, conditional_loss_poes, insured_losses):
     """
