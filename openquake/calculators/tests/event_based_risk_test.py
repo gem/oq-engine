@@ -51,8 +51,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
+        # the numbers in the xml and geojson files are extremely sensitive to
+        # the libraries; while waiting for the opt project we skip this test
         check_platform('xenial')
-        self.assert_stats_ok(case_1, 'job.ini')
+        self.assert_stats_ok(case_1, 'job.ini', individual_curves='true')
 
         # make sure the XML and JSON exporters run
         ekeys = [
@@ -108,10 +110,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_3(self):
         # this is a test with statistics and without conditional_loss_poes
-        out = self.run_calc(case_3.__file__, 'job.ini',
-                            exports='xml', individual_curves='false',
-                            concurrent_tasks='4')
-        [fname] = out['agg_curve-stats', 'xml']
+        self.run_calc(case_3.__file__, 'job.ini',
+                      exports='xml', individual_curves='false',
+                      concurrent_tasks='4')
+        [fname] = export(('agg_curve-stats', 'xml'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
     @attr('qa', 'risk', 'event_based_risk')
@@ -119,7 +121,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # Turkey with SHARE logic tree
         out = self.run_calc(case_4.__file__, 'job.ini',
                             exports='csv', individual_curves='true')
-        [fname] = out['avg_losses-stats', 'csv']
+        [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_losses-mean.csv', fname)
 
         fnames = out['agg_loss_table', 'csv']
@@ -138,10 +140,26 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_master(self):
-        check_platform('xenial')
-        self.assert_stats_ok(case_master, 'job.ini')
+        self.assert_stats_ok(case_master, 'job.ini', individual_curves='true')
+
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-5)
+
+        # check rup_data is stored correctly
+        fname = writetmp(view('ruptures_events', self.calc.datastore))
+        self.assertEqualFiles('expected/ruptures_events.txt', fname)
+
+        # export a specific eid
+        fnames = export(('ass_loss_ratios:0', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+        self.assertEqualFiles('expected/losses-eid=0.csv', fname)
+
+        # export a specific pair (sm_id, eid)
+        fnames = export(('ass_loss_ratios:1:0', 'csv'),
+                        self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):
@@ -178,36 +196,3 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = out['gmf_data', 'txt']
         self.assertEqualFiles(
             'expected/gmf-smltp_b1-gsimltp_b1.txt', fname)
-
-    @attr('qa', 'risk', 'event_based_risk')
-    def test_case_master_ebr(self):
-        out = self.run_calc(case_master.__file__, 'job.ini',
-                            investigation_time='1',
-                            insured_losses='false',
-                            exports='csv')
-
-        # check rup_data is stored correctly
-        fname = writetmp(view('ruptures_events', self.calc.datastore))
-        self.assertEqualFiles('expected/ruptures_events.txt', fname)
-
-        # TODO: add a check on avg_losses-stats
-
-        for fname in out['agg_loss_table', 'csv']:
-            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
-
-        # export a specific eid
-        fnames = export(('ass_loss_ratios:0', 'csv'), self.calc.datastore)
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
-
-        self.assertEqualFiles('expected/losses-eid=0.csv', fname)
-
-        fname = writetmp(view('portfolio_loss', self.calc.datastore))
-        self.assertEqualFiles(
-            'expected/portfolio_loss_ebr.txt', fname, delta=1E-5)
-
-        # export a specific pair (sm_id, eid)
-        fnames = export(('ass_loss_ratios:1:0', 'csv'),
-                        self.calc.datastore)
-        for fname in fnames:
-            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
