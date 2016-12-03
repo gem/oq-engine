@@ -305,19 +305,6 @@ class EbrPostCalculator(base.RiskCalculator):
             agg_curve[lts[l]][name][r] = result[l, r, name]
         self.datastore['agg_curve-rlzs'] = agg_curve
 
-    def build_stats(self):
-        oq = self.datastore['oqparam']
-        builder = scientific.StatsBuilder(
-            oq.quantile_loss_curves, oq.conditional_loss_poes, [],
-            oq.loss_curve_resolution, scientific.normalize_curves_eb,
-            oq.insured_losses)
-
-        rlzs = self.datastore['csm_info'].get_rlzs_assoc().realizations
-        if len(rlzs) > 1:
-            with self.monitor('computing stats'):
-                if 'rcurves-rlzs' in self.datastore:
-                    self.compute_store_stats(rlzs, builder)
-
 
 elt_dt = numpy.dtype([('eid', U32), ('loss', F32)])
 
