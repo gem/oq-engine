@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Made the datastore for event based risk calculations much lighter
+    by computing the statistical outputs at export time
   * Now it is possible to post process event based risk outputs with the
     `--hc` option
   * Added a command `oq to_hdf5` to convert .npz files into .hdf5 files
