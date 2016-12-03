@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib.general import AccumDict, get_array, group_array
 from openquake.risklib import scientific, riskinput
 from openquake.commonlib.export import export
-from openquake.commonlib.export.hazard import build_etags, get_sm_id_eid
+from openquake.commonlib.export.hazard import build_etags, get_sm_id_eid, savez
 from openquake.commonlib import writers, risk_writers
 from openquake.commonlib.util import get_assets, compose_arrays
 from openquake.commonlib.risk_writers import (
@@ -892,7 +892,20 @@ def export_agg_curve_stats(ekey, dstore):
     return sorted(fnames)
 
 
-# this is used by classical risk and event_based_risk
+# this is used by event_based_risk
+@export.add(('loss_curves_maps-stats', 'npz'))
+def export_loss_curves_maps_stats(ekey, dstore):
+    oq = dstore['oqparam']
+    fname = dstore.export_path('%s.%s' % ekey)
+    curves, maps = scientific.StatsBuilder(
+        oq.quantile_loss_curves, oq.conditional_loss_poes, [],
+        oq.loss_curve_resolution, scientific.normalize_curves_eb,
+        oq.insured_losses).build_curves_maps_stats(dstore)
+    savez(fname, curves=curves, maps=maps)
+    return [fname]
+
+
+# this is used by classical risk
 @export.add(('loss_curves-stats', 'xml'),
             ('loss_curves-stats', 'geojson'))
 def export_loss_curves_stats(ekey, dstore):
@@ -923,7 +936,7 @@ def export_loss_curves_stats(ekey, dstore):
     return sorted(fnames)
 
 
-# this is used by event_based_risk
+# this is used by event_based_risk to export loss curves
 @export.add(('rcurves-rlzs', 'xml'),
             ('rcurves-rlzs', 'geojson'))
 def export_rcurves_rlzs(ekey, dstore):
