@@ -1,6 +1,7 @@
   [Michele Simionato]
   * Now it is possible to post process event based risk outputs with the
     `--hc` option
+  * Added a command `oq to_hdf5` to convert .npz files into .hdf5 files
   * Moved commonlib.parallel into baselib
   * Merged the experimental calculator ebrisk into event_based_risk and
     used correctly the random_seed for generating the GMFs (not the master_seed)

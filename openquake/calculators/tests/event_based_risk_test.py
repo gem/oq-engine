@@ -51,7 +51,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
-        check_platform('xenial')  # FIXME: remove this line?
+        # the numbers in the xml and geojson files are extremely sensitive to
+        # the libraries; while waiting for the opt project we skip this test
+        check_platform('xenial')
         self.assert_stats_ok(case_1, 'job.ini', individual_curves='true')
 
         # make sure the XML and JSON exporters run
@@ -131,8 +133,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_occupants(self):
         out = self.run_calc(occupants.__file__, 'job.ini',
                             exports='xml', individual_curves='true')
-        fnames = export(('loss_maps-rlzs', 'xml'), self.calc.datastore) \
-                 + out['agg_curve-rlzs', 'xml']
+        fnames = out['loss_maps-rlzs', 'xml'] + out['agg_curve-rlzs', 'xml']
         self.assertEqual(len(fnames), 3)  # 2 loss_maps + 1 agg_curve
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
