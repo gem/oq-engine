@@ -131,7 +131,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_occupants(self):
         out = self.run_calc(occupants.__file__, 'job.ini',
                             exports='xml', individual_curves='true')
-        fnames = out['loss_maps-rlzs', 'xml'] + out['agg_curve-rlzs', 'xml']
+        fnames = export(('loss_maps-rlzs', 'xml'), self.calc.datastore) \
+                 + out['agg_curve-rlzs', 'xml']
         self.assertEqual(len(fnames), 3)  # 2 loss_maps + 1 agg_curve
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
