@@ -197,12 +197,6 @@ class EbrPostCalculator(base.RiskCalculator):
 
     def execute(self):
         A = len(self.assetcol)
-        self.loss_curve_dt, self.loss_maps_dt = (
-            scientific.build_loss_dtypes(
-                self.oqparam.loss_ratios,
-                self.oqparam.conditional_loss_poes,
-                self.oqparam.insured_losses + 1))
-
         ltypes = self.riskmodel.loss_types
         I = self.oqparam.insured_losses + 1
         R = len(self.rlzs_assoc.realizations)
