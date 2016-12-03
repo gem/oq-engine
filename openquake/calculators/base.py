@@ -492,7 +492,6 @@ class HazardCalculator(BaseCalculator):
         # save the risk models and loss_ratios in the datastore
         self.datastore['composite_risk_model'] = rm
         attrs = self.datastore.getitem('composite_risk_model').attrs
-        attrs['loss_types'] = hdf5.array_of_vstr(rm.loss_types)
         attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.get_min_iml().items()))
         if rm.damage_states:
             attrs['damage_states'] = hdf5.array_of_vstr(rm.damage_states)

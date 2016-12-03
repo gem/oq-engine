@@ -111,14 +111,6 @@ def square(L, R, factory):
     return losses
 
 
-def _old_loss_curves(asset_values, rcurves, ratios):
-    # build loss curves in the old format (i.e. (losses, poes)) from
-    # loss curves in the new format (i.e. poes).
-    # shape (N, 2, C)
-    return numpy.array([(avalue * ratios, poes)
-                        for avalue, poes in zip(asset_values, rcurves)])
-
-
 def _aggregate(outputs, compositemodel, agg, ass, idx, result, monitor):
     # update the result dictionary and the agg array with each output
     lrs = set()
@@ -213,11 +205,15 @@ class EbrPostCalculator(base.RiskCalculator):
         if self.oqparam.loss_ratios:
             self.save_rcurves(rcurves, I)
 
-        self.build_stats()
+        # build an aggregate loss curve per realization
+        if 'agg_loss_table' in self.datastore:
+            with self.monitor('building agg_curve'):
+                self.build_agg_curve()
 
     def post_execute(self):
         pass
 
+    # TODO: this part should be parallelized
     def save_rcurves(self, rcurves, I):
         assets = list(self.assetcol)
         with self.monitor('building rcurves-rlzs'):
@@ -279,29 +275,6 @@ class EbrPostCalculator(base.RiskCalculator):
             data_by_lt[loss_type] = data
         return data_by_lt
 
-    # NB: the HDF5 structure is of kind <output>-stats/structural/mean, ...
-    # and must be so for the loss curves, since different loss_types may have
-    # a different discretization. This is not needed for the loss maps, but it
-    # is done anyway for consistency, also because in the future we could
-    # specify different conditional loss poes depending on the loss type
-    def compute_store_stats(self, rlzs, builder):
-        """
-        Compute and store the statistical outputs.
-        :param rlzs: list of realizations
-        """
-        oq = self.oqparam
-        data_by_lt = self._collect_all_data()
-        if not data_by_lt:
-            return
-        sb = scientific.StatsBuilder(
-            oq.quantile_loss_curves, oq.conditional_loss_poes, [],
-            oq.loss_curve_resolution, scientific.normalize_curves_eb,
-            oq.insured_losses)
-        loss_curves, loss_maps = sb.get_curves_maps(data_by_lt, oq.loss_ratios)
-        self.datastore['loss_curves-stats'] = loss_curves
-        if oq.conditional_loss_poes:
-            self.datastore['loss_maps-stats'] = loss_maps
-
     def build_agg_curve(self):
         """
         Build a single loss curve per realization. It is NOT obtained
@@ -338,11 +311,6 @@ class EbrPostCalculator(base.RiskCalculator):
             oq.quantile_loss_curves, oq.conditional_loss_poes, [],
             oq.loss_curve_resolution, scientific.normalize_curves_eb,
             oq.insured_losses)
-
-        # build an aggregate loss curve per realization plus statistics
-        if 'agg_loss_table' in self.datastore:
-            with self.monitor('building agg_curve'):
-                self.build_agg_curve()
 
         rlzs = self.datastore['csm_info'].get_rlzs_assoc().realizations
         if len(rlzs) > 1:

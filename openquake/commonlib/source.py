@@ -398,6 +398,7 @@ class CompositionInfo(object):
         sg_data = group_array(dic['sg_data'], 'sm_id')
         sm_data = dic['sm_data']
         vars(self).update(attrs)
+        self.gsim_fname = decode(self.gsim_fname)
         if self.gsim_fname.endswith('.xml'):
             self.gsim_lt = logictree.GsimLogicTree(
                 self.gsim_fname, sorted(self.trts))

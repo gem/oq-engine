@@ -127,6 +127,7 @@ class AssetCollection(object):
 
     def __fromh5__(self, dic, attrs):
         vars(self).update(attrs)
+        self.loss_types = [str(lt) for lt in attrs['loss_types']]
         self.array = dic['array'].value
         self.taxonomies = dic['taxonomies'].value
         self.cc = dic['cost_calculator']
@@ -454,7 +455,8 @@ class CompositeRiskModel(collections.Mapping):
             monitor.gmfbytes = hazard_getter.gmfbytes
 
     def __toh5__(self):
-        return self._riskmodels, dict(covs=self.covs)
+        loss_types = hdf5.array_of_vstr(self._get_loss_types())
+        return self._riskmodels, dict(covs=self.covs, loss_types=loss_types)
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
