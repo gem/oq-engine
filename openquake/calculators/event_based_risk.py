@@ -236,45 +236,6 @@ class EbrPostCalculator(base.RiskCalculator):
                             A, I, L)
             self.datastore['rcurves-rlzs'] = rcurves
 
-    def _collect_all_data(self):
-        # called only if 'rcurves-rlzs' in dstore; return a list of outputs
-        data_by_lt = {}
-        assets = self.datastore['asset_refs'].value[self.assetcol.array['idx']]
-        A = len(assets)
-        rlzs = self.rlzs_assoc.realizations
-        insured = self.oqparam.insured_losses
-        if self.oqparam.avg_losses:
-            avg_losses = self.datastore['avg_losses-rlzs'].value
-        r_curves = self.datastore['rcurves-rlzs'].value
-        L = len(self.riskmodel.lti)
-        for l, cbuilder in enumerate(self.riskmodel.curve_builders):
-            loss_type = cbuilder.loss_type
-            rcurves = r_curves[loss_type]
-            asset_values = self.vals[loss_type]
-            data = []
-            for rlz in rlzs:
-                if self.oqparam.avg_losses:
-                    average_losses = avg_losses[:, rlz.ordinal, l]
-                    average_insured_losses = (
-                        avg_losses[:, rlz.ordinal, l + L] if insured else None)
-                else:
-                    average_losses = numpy.zeros(A, F32)
-                    average_insured_losses = numpy.zeros(A, F32)
-                loss_curves = _old_loss_curves(
-                    asset_values, rcurves[:, rlz.ordinal, 0], cbuilder.ratios)
-                insured_curves = _old_loss_curves(
-                    asset_values, rcurves[:, rlz.ordinal, 1],
-                    cbuilder.ratios) if insured else None
-                out = scientific.Output(
-                    assets, loss_type, rlz.ordinal, rlz.weight,
-                    loss_curves=loss_curves,
-                    insured_curves=insured_curves,
-                    average_losses=average_losses,
-                    average_insured_losses=average_insured_losses)
-                data.append(out)
-            data_by_lt[loss_type] = data
-        return data_by_lt
-
     def build_agg_curve(self):
         """
         Build a single loss curve per realization. It is NOT obtained
