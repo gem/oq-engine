@@ -957,48 +957,6 @@ class CurveBuilder(object):
             all_poes.append(build_poes(counts, 1. / ses_ratio))
         return numpy.array(aids), numpy.array(all_poes)
 
-    def get_counts(self, N, count_dicts):
-        """
-        Return a matrix of shape (N, C), with nonzero entries at
-        the indices given by the count_dicts
-
-        :param N: the number of assets
-        :param count_dicts: a list of maps asset_idx -> [C indices]
-
-        >>> cb = CurveBuilder('structural', [0.1, 0.2, 0.3, 0.9], True)
-        >>> cb.get_counts(3, [{1: [4, 3, 2, 1]}, {2: [4, 0, 0, 0]},
-        ...                   {1: [1, 0, 0, 0]}, {2: [2, 0, 0, 0]}])
-        array([[0, 0, 0, 0],
-               [5, 3, 2, 1],
-               [6, 0, 0, 0]], dtype=uint32)
-        """
-        counts = numpy.zeros((N, self.curve_resolution), U32)
-        for count_dict in count_dicts:
-            counts[list(count_dict)] += [U32(v) for v in count_dict.values()]
-        return counts
-
-    def build_counts(self, loss_matrix):
-        """
-        :param loss_matrix:
-            a matrix of loss ratios of size N x E, N = #assets, E = #events
-        """
-        counts = self.get_counts(len(loss_matrix), {})
-        for i, loss_ratios in enumerate(loss_matrix):
-            # build the counts for each asset
-            counts[i, :] = numpy.array([(loss_ratios >= ratio).sum()
-                                        for ratio in self.ratios])
-        return counts
-
-    def build_poes(self, N, count_dicts, ses_ratio):
-        """
-        :param N: the number of assets
-        :param count_dicts: a list of maps asset_idx -> [C indices]
-        :param ses_ratio: event based factor
-        """
-        counts_matrix = self.get_counts(N, count_dicts)
-        poes = build_poes(counts_matrix, 1. / ses_ratio)  # shape (N, R)
-        return poes
-
     def _calc_loss_maps(self, asset_values, clp, poe_matrix):
         """
         Compute loss maps from the PoE matrix (i.e. the loss curves).
