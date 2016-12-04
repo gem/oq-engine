@@ -898,23 +898,16 @@ def export_agg_curve_stats(ekey, dstore):
 @export.add(('loss_curves_maps-stats', 'csv'))
 def export_loss_curves_maps_stats(ekey, dstore):
     oq = dstore['oqparam']
-    all_assets = get_assets(dstore)
+    assets = get_assets(dstore)
     quantiles = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     writer = writers.CsvWriter(fmt='%9.6E')
-    data = view('curves_maps_stats', dstore)
-    lc_files = [open(dstore.build_fname('loss_curves', quantile, 'csv'), 'a')
-                for quantile in quantiles]
-    lm_files = [open(dstore.build_fname('loss_maps', quantile, 'csv'), 'a')
-                for quantile in quantiles]
-    for taxo in sorted(data):
-        aids, curves, maps = data[taxo]
-        assets = all_assets[aids]
-        for i, quantile in enumerate(quantiles):
-            array = compose_arrays(assets, curves[:, i])
-            writer.save(array, lc_files[i])
-            if oq.conditional_loss_poes:
-                array = compose_arrays(assets, maps[:, i])
-                writer.save(array, lm_files[i])
+    curves, maps = view('curves_maps_stats', dstore)
+    for i, quantile in enumerate(quantiles):
+        arr = compose_arrays(assets, curves[:, i])
+        writer.save(arr, dstore.build_fname('loss_curves', quantile, 'csv'))
+        if oq.conditional_loss_poes:
+            arr = compose_arrays(assets, maps[:, i])
+            writer.save(arr, dstore.build_fname('loss_maps', quantile, 'csv'))
     return writer.getsaved()
 
 
