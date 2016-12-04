@@ -158,7 +158,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
         # make sure the stat exporter works
-        export(('loss_curves_maps-stats', 'npz'), self.calc.datastore)
+        export(('loss_curves_maps-stats', 'csv'), self.calc.datastore)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):

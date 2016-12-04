@@ -371,9 +371,12 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
     :param comment:
        optional first line starting with a # character
     """
+    close = True
     if len(data) == 0:
         logging.warn('%s is empty', dest)
-    if not hasattr(dest, 'getvalue'):
+    if hasattr(dest, 'write'):  # file-like object
+        close = False
+    elif not hasattr(dest, 'getvalue'):
         # not a StringIO, assume dest is a filename
         dest = open(dest, 'w')
     try:
@@ -410,7 +413,7 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
                                 for col in row) + u'\n')
     if hasattr(dest, 'getvalue'):
         return dest.getvalue()[:-1]  # a newline is strangely added
-    else:
+    elif close:
         dest.close()
     return dest.name
 
@@ -422,7 +425,7 @@ class CsvWriter(object):
     def __init__(self, sep=',', fmt='%12.8E'):
         self.sep = sep
         self.fmt = fmt
-        self.fnames = []
+        self.fnames = set()
 
     def save(self, data, fname, header=None):
         """
@@ -433,7 +436,7 @@ class CsvWriter(object):
         :param header: header to use
         """
         write_csv(fname, data, self.sep, self.fmt, header)
-        self.fnames.append(fname)
+        self.fnames.add(getattr(fname, 'name', fname))
 
     def getsaved(self):
         """

@@ -40,6 +40,7 @@ from openquake.commonlib.writers import (
 FLOAT = (float, numpy.float32, numpy.float64, decimal.Decimal)
 INT = (int, numpy.uint32, numpy.int64)
 F32 = numpy.float32
+U32 = numpy.uint32
 
 # a dictionary of views datastore -> array
 view = CallableDict(keyfunc=lambda s: s.split(':', 1)[0])
@@ -674,8 +675,7 @@ def view_curves_maps_stats(self, dstore):
     oq = dstore['oqparam']
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assetcol = dstore['assetcol']
-    assets = dstore['asset_refs'].value[assetcol.array['idx']]
-    A = len(assets)
+    assets_by_taxo = groupby(assetcol, operator.attrgetter('taxonomy'))
     insured = oq.insured_losses
     if oq.avg_losses:
         avg_losses = dstore['avg_losses-rlzs'].value
@@ -685,41 +685,49 @@ def view_curves_maps_stats(self, dstore):
     vals = assetcol.values()
     default_loss_ratios = numpy.linspace(
         0, 1, oq.loss_curve_resolution + 1)[1:]
-    data_by_lt = {}
-    for l, loss_type in enumerate(loss_types):
-        if loss_type not in vals.dtype.names:
-            continue
-        try:
-            ratios = numpy.array(oq.loss_ratios[loss_type])
-        except KeyError:
-            # FIXME: add a test for this case
-            ratios = default_loss_ratios
-        asset_values = vals[loss_type]
-        data = []
-        for rlz in rlzs:
-            if oq.avg_losses:
-                average_losses = avg_losses[:, rlz.ordinal, l]
-                average_insured_losses = (
-                    avg_losses[:, rlz.ordinal, l + L] if insured else None)
-            else:
-                average_losses = numpy.zeros(A, F32)
-                average_insured_losses = numpy.zeros(A, F32)
-            loss_curves = scientific._old_loss_curves(
-                asset_values, rcurves[:, rlz.ordinal, 0][loss_type], ratios
-            )
-            insured_curves = scientific._old_loss_curves(
-                asset_values, rcurves[:, rlz.ordinal, 1][loss_type], ratios
-            ) if insured else None
-            out = scientific.Output(
-                assets, loss_type, rlz.ordinal, rlz.weight,
-                loss_curves=loss_curves,
-                insured_curves=insured_curves,
-                average_losses=average_losses,
-                average_insured_losses=average_insured_losses)
-            data.append(out)
-        data_by_lt[loss_type] = data
-    stats = scientific.StatsBuilder(
-        oq.quantile_loss_curves, oq.conditional_loss_poes, [],
-        oq.loss_curve_resolution, scientific.normalize_curves_eb,
-        oq.insured_losses)
-    return stats.get_curves_maps(data_by_lt, oq.loss_ratios)
+    result = {}
+    for taxo in sorted(assets_by_taxo):
+        assets = assets_by_taxo[taxo]
+        aids = numpy.array([a.ordinal for a in assets], U32)
+        A = len(assets)
+        data_by_lt = {}
+        for l, loss_type in enumerate(loss_types):
+            if loss_type not in vals.dtype.names:
+                continue
+            try:
+                ratios = numpy.array(oq.loss_ratios[loss_type])
+            except KeyError:
+                # FIXME: add a test for this case
+                ratios = default_loss_ratios
+            asset_values = vals[loss_type][aids]
+            data = []
+            for rlz in rlzs:
+                if oq.avg_losses:
+                    average_losses = avg_losses[aids, rlz.ordinal, l]
+                    average_insured_losses = (
+                        avg_losses[aids, rlz.ordinal, l + L]
+                        if insured else None)
+                else:
+                    average_losses = numpy.zeros(A, F32)
+                    average_insured_losses = numpy.zeros(A, F32)
+                loss_curves = scientific._old_loss_curves(
+                    asset_values, rcurves[aids, rlz.ordinal, 0][loss_type],
+                    ratios)
+                insured_curves = scientific._old_loss_curves(
+                    asset_values, rcurves[aids, rlz.ordinal, 1][loss_type],
+                    ratios) if insured else None
+                out = scientific.Output(
+                    assets, loss_type, rlz.ordinal, rlz.weight,
+                    loss_curves=loss_curves,
+                    insured_curves=insured_curves,
+                    average_losses=average_losses,
+                    average_insured_losses=average_insured_losses)
+                data.append(out)
+            data_by_lt[loss_type] = data
+        stats = scientific.StatsBuilder(
+            oq.quantile_loss_curves, oq.conditional_loss_poes, [],
+            oq.loss_curve_resolution, scientific.normalize_curves_eb,
+            oq.insured_losses)
+        result[taxo] = (aids,) + stats.get_curves_maps(
+            data_by_lt, oq.loss_ratios)
+    return result
