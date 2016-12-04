@@ -411,7 +411,7 @@ class CompositionInfo(object):
                 sourceconverter.SourceGroup(
                     self.trts[trti], id=grp_id, eff_ruptures=effrup)
                 for grp_id, trti, effrup, sm_id in tdata if effrup]
-            path = tuple(decode(rec['path']).split('_'))
+            path = tuple(str(decode(rec['path'])).split('_'))
             trts = set(sg.trt for sg in srcgroups)
             num_gsim_paths = self.gsim_lt.reduce(trts).get_num_paths()
             sm = SourceModel(rec['name'], rec['weight'], path, srcgroups,

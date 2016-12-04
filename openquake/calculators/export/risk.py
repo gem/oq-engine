@@ -23,8 +23,8 @@ import numpy
 
 from openquake.baselib.general import AccumDict, get_array, group_array
 from openquake.risklib import scientific, riskinput
-from openquake.commonlib.export import export
-from openquake.commonlib.export.hazard import build_etags, get_sm_id_eid, savez
+from openquake.calculators.export import export
+from openquake.calculators.export.hazard import build_etags, get_sm_id_eid, savez
 from openquake.commonlib import writers, risk_writers
 from openquake.commonlib.util import get_assets, compose_arrays
 from openquake.commonlib.risk_writers import (

@@ -20,7 +20,7 @@ from nose.plugins.attrib import attr
 from openquake.baselib.general import writetmp
 from openquake.calculators.views import view
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
-from openquake.commonlib.export import export
+from openquake.calculators.export import export
 from openquake.calculators.tests import check_platform
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_master, case_miriam,

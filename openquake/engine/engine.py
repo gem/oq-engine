@@ -28,8 +28,8 @@ from openquake.baselib.performance import Monitor
 from openquake.risklib import valid
 from openquake.baselib import parallel
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import export, datastore, config, readinput
-from openquake.calculators import base, views
+from openquake.commonlib import datastore, config, readinput
+from openquake.calculators import base, views, export
 from openquake.engine import logs
 
 TERMINATE = valid.boolean(
