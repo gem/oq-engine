@@ -97,20 +97,6 @@ def build_agg_curve(lr_data, insured_losses, ses_ratio, curve_resolution, L,
     return result
 
 
-def square(L, R, factory):
-    """
-    :param L: the number of loss types
-    :param R: the number of realizations
-    :param factory: thunk used to initialize the elements
-    :returns: a numpy matrix of shape (L, R)
-    """
-    losses = numpy.zeros((L, R), object)
-    for l in range(L):
-        for r in range(R):
-            losses[l, r] = factory()
-    return losses
-
-
 def _aggregate(outputs, compositemodel, agg, ass, idx, result, monitor):
     # update the result dictionary and the agg array with each output
     lrs = set()
@@ -176,7 +162,7 @@ def event_based_risk(riskinput, riskmodel, assetcol, monitor):
             result['agglosses'][lr] = numpy.array(records, monitor.elt_dt)
     for lr in ass:
         if ass[lr]:
-           result['asslosses'][lr] = numpy.concatenate(ass[lr])
+            result['asslosses'][lr] = numpy.concatenate(ass[lr])
 
     # store the size of the GMFs
     result['gmfbytes'] = monitor.gmfbytes
