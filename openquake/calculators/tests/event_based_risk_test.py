@@ -138,6 +138,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_master(self):
         self.assert_stats_ok(case_master, 'job.ini', individual_curves='true')
 
+        fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-5)
 
