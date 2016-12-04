@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib.general import AccumDict, get_array, group_array
 from openquake.risklib import scientific, riskinput
 from openquake.calculators.export import export
-from openquake.calculators.export.hazard import build_etags, get_sm_id_eid, savez
+from openquake.calculators.export.hazard import build_etags, get_sm_id_eid
 from openquake.commonlib import writers, risk_writers
 from openquake.commonlib.util import get_assets, compose_arrays
 from openquake.commonlib.risk_writers import (
@@ -894,12 +894,27 @@ def export_agg_curve_stats(ekey, dstore):
 
 
 # this is used by event_based_risk
-@export.add(('loss_curves_maps-stats', 'npz'))
+@export.add(('loss_curves_maps-stats', 'csv'))
 def export_loss_curves_maps_stats(ekey, dstore):
-    fname = dstore.export_path('%s.%s' % ekey)
-    curves, maps = view('curves_maps_stats', dstore)
-    savez(fname, curves=curves, maps=maps)
-    return [fname]
+    oq = dstore['oqparam']
+    all_assets = get_assets(dstore)
+    quantiles = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
+    writer = writers.CsvWriter(fmt='%9.6E')
+    data = view('curves_maps_stats', dstore)
+    lc_files = [open(dstore.build_fname('loss_curves', quantile, 'csv'), 'a')
+                for quantile in quantiles]
+    lm_files = [open(dstore.build_fname('loss_maps', quantile, 'csv'), 'a')
+                for quantile in quantiles]
+    for taxo in sorted(data):
+        aids, curves, maps = data[taxo]
+        assets = all_assets[aids]
+        for i, quantile in enumerate(quantiles):
+            array = compose_arrays(assets, curves[:, i])
+            writer.save(array, lc_files[i])
+            if oq.conditional_loss_poes:
+                array = compose_arrays(assets, maps[:, i])
+                writer.save(array, lm_files[i])
+    return writer.getsaved()
 
 
 # this is used by classical risk
