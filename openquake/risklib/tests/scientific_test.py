@@ -246,35 +246,6 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         ])
         aaae(lrem, expected_lrem, decimal=3)
 
-        expected_counts = numpy.matrix([
-            [4, 4, 4, 4, 4],
-            [4, 4, 4, 4, 4],
-            [4, 4, 4, 4, 4],
-            [4, 4, 4, 4, 4],
-            [4, 4, 4, 4, 3],
-            [4, 4, 4, 4, 3],
-            [3, 3, 3, 3, 2],
-            [3, 3, 3, 3, 2],
-            [3, 3, 3, 2, 2],
-            [3, 3, 2, 2, 2],
-            [3, 3, 2, 2, 2],
-            [3, 2, 2, 2, 1],
-            [2, 2, 2, 2, 1],
-            [2, 2, 2, 2, 1],
-            [2, 2, 2, 1, 1],
-            [2, 2, 1, 1, 1],
-            [1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 0],
-            [1, 1, 1, 1, 0],
-            [1, 1, 0, 0, 0]])
-        # this is a test with curve_resolution=5, i.e. with ratios
-        # [0.2, 0.4, 0.6, 0.8, 1.]; for each row in the lrem we
-        # count how many ratios are greater equal than each ratio
-        b = scientific.CurveBuilder('structural', numpy.linspace(0.2, 1, 5),
-                                    user_provided=True)
-        aaae(b.build_counts(expected_lrem), expected_counts)
-
 
 class VulnerabilityFunctionBlockSizeTestCase(unittest.TestCase):
     """
