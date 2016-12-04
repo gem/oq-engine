@@ -26,7 +26,7 @@ from openquake.baselib.general import groupby
 from openquake.baselib.performance import Monitor
 from openquake.commonlib import nrml, readinput
 from openquake.baselib.parallel import get_pickled_sizes
-from openquake.commonlib.export import export
+from openquake.calculators.export import export
 from openquake.calculators import base, reportwriter
 from openquake.calculators.views import view, rst_table
 from openquake.hazardlib import gsim

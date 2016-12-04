@@ -1,18 +1,18 @@
-openquake.commonlib.export package
+openquake.calculators.export package
 ==================================
 
-openquake.commonlib.export.hazard module
+openquake.calculators.export.hazard module
 ----------------------------------------
 
-.. automodule:: openquake.commonlib.export.hazard
+.. automodule:: openquake.calculators.export.hazard
     :members:
     :undoc-members:
     :show-inheritance:
 
-openquake.commonlib.export.risk module
+openquake.calculators.export.risk module
 --------------------------------------
 
-.. automodule:: openquake.commonlib.export.risk
+.. automodule:: openquake.calculators.export.risk
     :members:
     :undoc-members:
     :show-inheritance:
@@ -21,7 +21,7 @@ openquake.commonlib.export.risk module
 Module contents
 ---------------
 
-.. automodule:: openquake.commonlib.export
+.. automodule:: openquake.calculators.export
     :members:
     :undoc-members:
     :show-inheritance:

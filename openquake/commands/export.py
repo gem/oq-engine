@@ -22,7 +22,7 @@ import logging
 
 from openquake.baselib import general, performance, sap
 from openquake.commonlib import datastore
-from openquake.commonlib.export import export as export_
+from openquake.calculators.export import export as export_
 
 
 # the export is tested in the demos

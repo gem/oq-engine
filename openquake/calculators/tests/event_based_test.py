@@ -27,7 +27,7 @@ import numpy.testing
 from openquake.baselib.general import group_array
 from openquake.commonlib.datastore import read
 from openquake.commonlib.util import max_rel_diff_index
-from openquake.commonlib.export import export
+from openquake.calculators.export import export
 from openquake.calculators.event_based import get_mean_curves
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
