@@ -76,7 +76,7 @@ class Output(object):
     A generic container of attributes. Only assets, loss_type, hid and weight
     are always defined.
 
-    :param assets: a list of assets
+    :param assets: a list of assets with the same taxonomy
     :param loss_type: a loss type string
     :param hid: ordinal of the hazard realization (can be None)
     :param weight: weight of the realization (can be None)
@@ -87,6 +87,10 @@ class Output(object):
         self.hid = hid
         self.weight = weight
         vars(self).update(attrs)
+
+    @property
+    def taxonomy(self):
+        return self.assets[0].taxonomy
 
     def __repr__(self):
         return '<%s %s, hid=%s>' % (
