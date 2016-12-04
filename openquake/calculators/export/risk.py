@@ -337,11 +337,12 @@ def export_avglosses_csv(ekey, dstore):
 def export_rcurves(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = get_assets(dstore)
-    curves = compactify(dstore[ekey[0]].value)
+    curves = dstore[ekey[0]].value
     name = ekey[0].split('-')[0]
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz in rlzs:
-        array = compose_arrays(assets, curves[:, rlz.ordinal])
+        # FIXME: export insured values too
+        array = compose_arrays(assets, curves[:, rlz.ordinal, 0])
         path = dstore.build_fname(name, rlz, 'csv')
         writer.save(array, path)
     return writer.getsaved()

@@ -176,7 +176,7 @@ def event_based_risk(riskinput, riskmodel, assetcol, monitor):
             result['agglosses'][lr] = numpy.array(records, monitor.elt_dt)
     for lr in ass:
         if ass[lr]:
-            result['asslosses'][lr] = numpy.concatenate(ass[lr])
+           result['asslosses'][lr] = numpy.concatenate(ass[lr])
 
     # store the size of the GMFs
     result['gmfbytes'] = monitor.gmfbytes
@@ -199,8 +199,7 @@ class EbrPostCalculator(base.RiskCalculator):
             [(ltype, (F32, cbuilder.curve_resolution))
              for ltype, cbuilder in zip(
                 ltypes, self.riskmodel.curve_builders)])
-        # TODO: change 2 -> I, then change the exporter
-        rcurves = numpy.zeros((A, R, 2), multi_lr_dt)
+        rcurves = numpy.zeros((A, R, I), multi_lr_dt)
 
         if self.oqparam.loss_ratios:
             self.save_rcurves(rcurves, I)
