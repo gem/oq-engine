@@ -216,9 +216,7 @@ class EbrPostCalculator(base.RiskCalculator):
                             self.oqparam.ses_ratio)
                         if not len(aids):  # no curve
                             continue
-                        A, L = curves.shape[:2]
-                        rcurves[cb.loss_type][aids, r] = curves.reshape(
-                            A, I, L)
+                        rcurves[cb.loss_type][aids, r] = curves
             self.datastore['rcurves-rlzs'] = rcurves
 
     def build_agg_curve(self):

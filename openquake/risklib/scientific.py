@@ -953,8 +953,13 @@ class CurveBuilder(object):
                 continue
             counts = numpy.array([(loss_ratios >= ratio).sum(axis=0)
                                   for ratio in self.ratios])
+            poes = build_poes(counts, 1. / ses_ratio)
+            try:
+                s2, s1 = poes.shape
+            except ValueError:
+                s2, s1 = poes.shape[0], 1
+            all_poes.append(poes.reshape(s1, s2))
             aids.append(aid)
-            all_poes.append(build_poes(counts, 1. / ses_ratio))
         return numpy.array(aids), numpy.array(all_poes)
 
     def _calc_loss_maps(self, asset_values, clp, poe_matrix):
