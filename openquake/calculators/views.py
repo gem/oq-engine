@@ -726,8 +726,7 @@ def view_curves_maps_stats(self, dstore):
             data_by_lt[loss_type] = data
         stats = scientific.StatsBuilder(
             oq.quantile_loss_curves, oq.conditional_loss_poes, [],
-            oq.loss_curve_resolution, scientific.normalize_curves_eb,
-            oq.insured_losses)
+            oq.loss_curve_resolution, insured_losses=oq.insured_losses)
         result[taxo] = (aids,) + stats.get_curves_maps(
             data_by_lt, oq.loss_ratios)
     return result
