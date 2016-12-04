@@ -22,7 +22,7 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import zip
+from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import groupby, get_array
 from openquake.hazardlib import site, calc
@@ -46,7 +46,7 @@ class AssetCollection(object):
                  time_events=''):
         self.cc = cost_calculator
         self.time_event = time_event
-        self.time_events = hdf5.array_of_vstr(time_events)
+        self.time_events = time_events
         self.array, self.taxonomies = self.build_asset_collection(
             assets_by_site, time_event)
         fields = self.array.dtype.names
@@ -74,7 +74,7 @@ class AssetCollection(object):
         """
         :returns: a composite array of asset values by loss type
         """
-        loss_dt = numpy.dtype([(lt, float) for lt in self.loss_types])
+        loss_dt = numpy.dtype([(str(lt), float) for lt in self.loss_types])
         vals = numpy.zeros(len(self), loss_dt)  # asset values by loss_type
         for assets in self.assets_by_site():
             for asset in assets:
@@ -116,18 +116,20 @@ class AssetCollection(object):
 
     def __toh5__(self):
         attrs = {'time_event': self.time_event or 'None',
-                 'time_events': self.time_events,
-                 'loss_types': hdf5.array_of_vstr(self.loss_types),
-                 'deduc': hdf5.array_of_vstr(self.deduc),
-                 'i_lim': hdf5.array_of_vstr(self.i_lim),
-                 'retro': hdf5.array_of_vstr(self.retro),
+                 'time_events': ' '.join(map(decode, self.time_events)),
+                 'loss_types': ' '.join(self.loss_types),
+                 'deduc': ' '.join(self.deduc),
+                 'i_lim': ' '.join(self.i_lim),
+                 'retro': ' '.join(self.retro),
                  'nbytes': self.array.nbytes}
         return dict(array=self.array, taxonomies=self.taxonomies,
                     cost_calculator=self.cc), attrs
 
     def __fromh5__(self, dic, attrs):
-        vars(self).update(attrs)
-        self.loss_types = [str(lt) for lt in attrs['loss_types']]
+        for name in ('time_events', 'loss_types', 'deduc', 'i_lim', 'retro'):
+            setattr(self, name, attrs[name].split())
+        self.time_event = attrs['time_event']
+        self.nbytes = attrs['nbytes']
         self.array = dic['array'].value
         self.taxonomies = dic['taxonomies'].value
         self.cc = dic['cost_calculator']
