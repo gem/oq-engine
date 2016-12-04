@@ -19,7 +19,7 @@
 from nose.plugins.attrib import attr
 from openquake.baselib import parallel
 from openquake.commonlib import InvalidFile
-from openquake.commonlib.export import export
+from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase, check_platform
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
