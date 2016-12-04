@@ -39,7 +39,7 @@ from openquake.commonlib import readinput, datastore, source, calc
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.baselib.parallel import starmap, executor, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
-from openquake.commonlib.export import export as exp
+from openquake.calculators.export import export as exp
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')

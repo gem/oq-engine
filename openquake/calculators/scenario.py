@@ -21,7 +21,7 @@ import numpy
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput, source, calc
-from openquake.commonlib.export.hazard import gmv_dt
+from openquake.calculators.export.hazard import gmv_dt
 from openquake.calculators import base
 
 
