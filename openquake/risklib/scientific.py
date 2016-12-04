@@ -999,32 +999,6 @@ class CurveBuilder(object):
         poes = build_poes(counts_matrix, 1. / ses_ratio)  # shape (N, R)
         return poes
 
-    def build_loss_curves(self, assetcol, losses_by_aid, ses_ratio):
-        """
-        :param assetcol: asset collection object
-        :param losses_by_aid: a matrix of losses indexed by asset
-        :param ses_ratio: event based factor
-        """
-        lcs = numpy.zeros(len(assetcol), self.loss_curve_dt)
-        zeros = numpy.zeros(self.curve_resolution)
-        for aid, value in enumerate(assetcol[self.loss_type]):
-            for i in range(self.I):
-                ins = '_ins' if i else ''
-                all_losses = losses_by_aid[aid, i]
-                if all_losses is None:  # no losses for the given asset
-                    lcs['losses' + ins][aid] = self.ratios * value
-                    lcs['poes' + ins][aid] = zeros
-                    lcs['avg' + ins][aid] = 0
-                else:  # build the loss curve
-                    the_losses = [loss[i] for loss in all_losses]
-                    losses, poes = event_based(the_losses, ses_ratio,
-                                               self.curve_resolution)
-                    avg = average_loss((losses, poes))
-                    lcs['losses' + ins][aid] = losses
-                    lcs['poes' + ins][aid] = poes
-                    lcs['avg' + ins][aid] = avg
-        return lcs
-
     def _calc_loss_maps(self, asset_values, clp, poe_matrix):
         """
         Compute loss maps from the PoE matrix (i.e. the loss curves).
