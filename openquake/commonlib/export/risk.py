@@ -30,6 +30,7 @@ from openquake.commonlib.util import get_assets, compose_arrays
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
     ExposureData, Site)
+from openquake.calculators.views import view
 
 Output = collections.namedtuple('Output', 'ltype path array')
 F32 = numpy.float32
@@ -895,12 +896,8 @@ def export_agg_curve_stats(ekey, dstore):
 # this is used by event_based_risk
 @export.add(('loss_curves_maps-stats', 'npz'))
 def export_loss_curves_maps_stats(ekey, dstore):
-    oq = dstore['oqparam']
     fname = dstore.export_path('%s.%s' % ekey)
-    curves, maps = scientific.StatsBuilder(
-        oq.quantile_loss_curves, oq.conditional_loss_poes, [],
-        oq.loss_curve_resolution, scientific.normalize_curves_eb,
-        oq.insured_losses).build_curves_maps_stats(dstore)
+    curves, maps = view('curves_maps_stats', dstore)
     savez(fname, curves=curves, maps=maps)
     return [fname]
 

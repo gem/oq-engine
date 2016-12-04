@@ -1809,59 +1809,6 @@ class StatsBuilder(object):
                     acs[name][i] = curves[name][i]
         return agg_curve_stats
 
-    def build_curves_maps_stats(self, dstore):
-        """
-        Returns statistics for loss curves and maps
-        """
-        oq = dstore['oqparam']
-        rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-        assetcol = dstore['assetcol']
-        assets = dstore['asset_refs'].value[assetcol.array['idx']]
-        A = len(assets)
-        insured = oq.insured_losses
-        if oq.avg_losses:
-            avg_losses = dstore['avg_losses-rlzs'].value
-        rcurves = dstore['rcurves-rlzs'].value
-        loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
-        L = len(loss_types)
-        vals = assetcol.values()
-        default_loss_ratios = numpy.linspace(
-            0, 1, oq.loss_curve_resolution + 1)[1:]
-        data_by_lt = {}
-        for l, loss_type in enumerate(loss_types):
-            if loss_type not in vals.dtype.names:
-                continue
-            try:
-                ratios = numpy.array(oq.loss_ratios[loss_type])
-            except KeyError:
-                import pdb; pdb.set_trace()
-                ratios = default_loss_ratios
-            asset_values = vals[loss_type]
-            data = []
-            for rlz in rlzs:
-                if oq.avg_losses:
-                    average_losses = avg_losses[:, rlz.ordinal, l]
-                    average_insured_losses = (
-                        avg_losses[:, rlz.ordinal, l + L] if insured else None)
-                else:
-                    average_losses = numpy.zeros(A, F32)
-                    average_insured_losses = numpy.zeros(A, F32)
-                loss_curves = _old_loss_curves(
-                    asset_values, rcurves[:, rlz.ordinal, 0][loss_type], ratios
-                )
-                insured_curves = _old_loss_curves(
-                    asset_values, rcurves[:, rlz.ordinal, 1][loss_type], ratios
-                ) if insured else None
-                out = Output(
-                    assets, loss_type, rlz.ordinal, rlz.weight,
-                    loss_curves=loss_curves,
-                    insured_curves=insured_curves,
-                    average_losses=average_losses,
-                    average_insured_losses=average_insured_losses)
-                data.append(out)
-            data_by_lt[loss_type] = data
-        return self.get_curves_maps(data_by_lt, oq.loss_ratios)
-
 
 def _old_loss_curves(asset_values, rcurves, ratios):
     # build loss curves in the old format (i.e. (losses, poes)) from
