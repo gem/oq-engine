@@ -1566,8 +1566,8 @@ def build_loss_dtypes(curve_resolution, conditional_loss_poes, insured_losses):
         pairs = [('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)]
         if insured_losses:
             pairs += [(name + '_ins', pair) for name, pair in pairs]
-        lc_list.append((lt, numpy.dtype(pairs)))
-        lm_list.append((lt, lm_dt))
+        lc_list.append((str(lt), numpy.dtype(pairs)))
+        lm_list.append((str(lt), lm_dt))
     loss_curve_dt = numpy.dtype(lc_list) if lc_list else None
     loss_maps_dt = numpy.dtype(lm_list) if lm_list else None
     return loss_curve_dt, loss_maps_dt
@@ -1834,6 +1834,7 @@ class StatsBuilder(object):
             try:
                 ratios = numpy.array(oq.loss_ratios[loss_type])
             except KeyError:
+                import pdb; pdb.set_trace()
                 ratios = default_loss_ratios
             asset_values = vals[loss_type]
             data = []
