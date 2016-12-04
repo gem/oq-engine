@@ -29,7 +29,6 @@ import numpy
 from numpy.testing import assert_equal
 from scipy import interpolate, stats, random
 
-from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.stats import mean_curve, quantile_curve
 from openquake.risklib import utils
@@ -1650,7 +1649,6 @@ class StatsBuilder(object):
             average_ins_losses.append(out.average_insured_losses)
         average_losses = numpy.array(average_losses, F32)
         mean_average_losses = mean_curve(average_losses, weights)
-
         quantile_average_losses = quantile_matrix(
             average_losses, self.quantiles, weights)
         (mean_curves, mean_maps, quantile_curves, quantile_maps) = (
