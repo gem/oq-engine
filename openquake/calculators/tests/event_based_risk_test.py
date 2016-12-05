@@ -20,7 +20,7 @@ from nose.plugins.attrib import attr
 from openquake.baselib.general import writetmp
 from openquake.calculators.views import view
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
-from openquake.commonlib.export import export
+from openquake.calculators.export import export
 from openquake.calculators.tests import check_platform
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_master, case_miriam,
@@ -51,20 +51,15 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
+        self.assert_stats_ok(case_1, 'job.ini', individual_curves='true')
+
         # the numbers in the xml and geojson files are extremely sensitive to
         # the libraries; while waiting for the opt project we skip this test
         check_platform('xenial')
-        self.assert_stats_ok(case_1, 'job.ini', individual_curves='true')
-
-        # make sure the XML and JSON exporters run
         ekeys = [
-            ('loss_curves-stats', 'xml'),
-            ('loss_curves-stats', 'geojson'),
             ('rcurves-rlzs', 'xml'),
             ('rcurves-rlzs', 'geojson'),
 
-            ('loss_maps-stats', 'xml'),
-            ('loss_maps-stats', 'geojson'),
             ('loss_maps-rlzs', 'xml'),
             ('loss_maps-rlzs', 'geojson'),
 
@@ -133,7 +128,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_occupants(self):
         out = self.run_calc(occupants.__file__, 'job.ini',
                             exports='xml', individual_curves='true')
-        fnames = out['loss_maps-rlzs', 'xml'] + out['agg_curve-rlzs', 'xml']
+        fnames = export(('loss_maps-rlzs', 'xml'), self.calc.datastore) + \
+                 out['agg_curve-rlzs', 'xml']
         self.assertEqual(len(fnames), 3)  # 2 loss_maps + 1 agg_curve
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
@@ -141,6 +137,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_master(self):
         self.assert_stats_ok(case_master, 'job.ini', individual_curves='true')
+
+        fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-5)
@@ -160,6 +160,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                         self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+
+        # make sure the stat exporter works
+        export(('loss_curves_maps-stats', 'csv'), self.calc.datastore)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):
