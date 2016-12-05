@@ -1336,11 +1336,11 @@ def quantile_matrix(values, quantiles, weights):
 
 
 def exposure_statistics(
-        loss_curves, map_poes, weights, quantiles):
+        multicurves, map_poes, weights, quantiles):
     """
     Compute exposure statistics for N assets and R realizations.
 
-    :param loss_curves:
+    :param multicurves:
         a list with N loss curves data. Each item holds a 2-tuple with
         1) the loss ratios on which the curves have been defined on
         2) the poes of the R curves
@@ -1358,7 +1358,7 @@ def exposure_statistics(
             3. a numpy array with Q x N quantile loss curves
             4. a numpy array with Q x P quantile map values
     """
-    curve_resolution = len(loss_curves[0][0])
+    curve_resolution = len(multicurves[0].losses)
     map_nr = len(map_poes)
 
     # Collect per-asset statistic along the last dimension of the
@@ -1368,10 +1368,9 @@ def exposure_statistics(
     quantile_curves = numpy.zeros((len(quantiles), 0, 2, curve_resolution))
     quantile_maps = numpy.zeros((len(quantiles), map_nr, 0))
 
-    for loss_ratios, curves_poes in loss_curves:
+    for mcurve in multicurves:
         _mean_curve, _mean_maps, _quantile_curves, _quantile_maps = (
-            asset_statistics(
-                loss_ratios, curves_poes, quantiles, weights, map_poes))
+            mcurve.statistics(quantiles, weights, map_poes))
 
         mean_curves = numpy.vstack(
             (mean_curves, _mean_curve[numpy.newaxis, :]))
@@ -1383,37 +1382,6 @@ def exposure_statistics(
             (quantile_maps, _quantile_maps[:, :, numpy.newaxis]))
 
     return (mean_curves, mean_maps, quantile_curves, quantile_maps)
-
-
-def asset_statistics(
-        losses, curves_poes, quantiles, weights, poes):
-    """
-    Compute output statistics (mean/quantile loss curves and maps)
-    for a single asset
-
-    :param losses:
-       the losses on which the loss curves are defined
-    :param curves_poes:
-       a numpy matrix with the poes of the different curves
-    :param list quantiles:
-       an iterable over the quantile levels to be considered for
-       quantile outputs
-    :param list poes:
-       the poe taken into account for computing loss maps
-    :returns:
-       a tuple with
-       1) mean loss curve
-       2) a list of quantile curves
-       3) mean loss map
-       4) a list of quantile loss maps
-    """
-    mean_curve_ = numpy.array([losses, mean_curve(curves_poes, weights)])
-    mean_map = loss_map_matrix(poes, [mean_curve_]).reshape(len(poes))
-    quantile_curves = numpy.array(
-        [[losses, quantile_curve(curves_poes, quantile, weights)]
-         for quantile in quantiles]).reshape((len(quantiles), 2, len(losses)))
-    quantile_maps = loss_map_matrix(poes, quantile_curves).transpose()
-    return (mean_curve_, mean_map, quantile_curves, quantile_maps)
 
 
 def normalize_curves(curves):
@@ -1519,17 +1487,15 @@ class StatsBuilder(object):
 
     :param quantiles: list of quantile values
     :param conditional_loss_poes: list of conditional loss poes
-    :param poes_disagg: list of poes_disagg
     :param curve_resolution: only meaninful for the event based
     """
     def __init__(self, quantiles,
-                 conditional_loss_poes, poes_disagg,
+                 conditional_loss_poes,
                  curve_resolution=0, _normalize_curves=normalize_curves,
                  insured_losses=False):
         self.quantiles = quantiles
         self.conditional_loss_poes = conditional_loss_poes
         self.curve_resolution = C = curve_resolution
-        self.poes_disagg = poes_disagg
         self.normalize_curves = _normalize_curves
         self.insured_losses = insured_losses
         self.mean_quantiles = ['mean']
@@ -1543,8 +1509,8 @@ class StatsBuilder(object):
         """
         Normalize the loss curves by using the provided normalization function
         """
-        return list(map(self.normalize_curves,
-                        numpy.array(loss_curves).transpose(1, 0, 2, 3)))
+        return [MultiCurve(*self.normalize_curves(curves))
+                for curves in numpy.array(loss_curves).transpose(1, 0, 2, 3)]
 
     def build(self, all_outputs, prefix=''):
         """
@@ -1588,27 +1554,24 @@ class StatsBuilder(object):
         mean_average_losses = mean_curve(average_losses, weights)
         quantile_average_losses = quantile_matrix(
             average_losses, self.quantiles, weights)
-        (mean_curves, mean_maps, quantile_curves, quantile_maps) = (
-            exposure_statistics(
-                self.normalize(loss_curves),
-                self.conditional_loss_poes + self.poes_disagg,
-                weights, self.quantiles))
+        mean_curves, mean_maps, q_curves, q_maps = exposure_statistics(
+            self.normalize(loss_curves),
+            self.conditional_loss_poes, weights, self.quantiles)
         if outputs[0].insured_curves is not None:
             average_ins_losses = numpy.array(average_ins_losses, F32)
-            mean_average_ins_losses = mean_curve(
-                average_ins_losses, weights)
+            mean_average_ins_losses = mean_curve(average_ins_losses, weights)
             quantile_average_ins_losses = quantile_matrix(
                 average_ins_losses, self.quantiles, weights)
             loss_curves = [out.insured_curves for out in outputs]
-            (mean_ins_curves, mean_ins_maps, quantile_ins_curves,
-             quantile_ins_maps) = exposure_statistics(
-                 self.normalize(loss_curves), [], weights, self.quantiles)
+            mean_ins_curves, mean_ins_maps, q_ins_curves, q_ins_maps = (
+                exposure_statistics(
+                    self.normalize(loss_curves), [], weights, self.quantiles))
         else:
             mean_ins_curves = numpy.zeros_like(mean_curves)
             mean_average_ins_losses = numpy.zeros_like(mean_average_losses)
             mean_ins_maps = numpy.zeros_like(mean_maps)
-            quantile_ins_maps = numpy.zeros_like(quantile_maps)
-            quantile_ins_curves = numpy.zeros_like(quantile_curves)
+            q_ins_maps = numpy.zeros_like(q_maps)
+            q_ins_curves = numpy.zeros_like(q_curves)
             quantile_average_ins_losses = numpy.zeros_like(
                 quantile_average_losses)
 
@@ -1623,15 +1586,13 @@ class StatsBuilder(object):
             # P x N matrix
             mean_fractions=[mean_maps[P:, :], mean_ins_maps[P:, :]],
             # P x N matrix
-            quantile_curves=[quantile_curves, quantile_ins_curves],
+            quantile_curves=[q_curves, q_ins_curves],
             # (Q, N, 2, R) matrix
             quantile_average_losses=[quantile_average_losses,
                                      quantile_average_ins_losses],
-            quantile_maps=[quantile_maps[:, 0:P],
-                           quantile_ins_maps[:, 0:P]],
+            quantile_maps=[q_maps[:, 0:P], q_ins_maps[:, 0:P]],
             # Q x P x N matrix
-            quantile_fractions=[quantile_maps[:, P:],
-                                quantile_ins_maps[:, P:]],
+            quantile_fractions=[q_maps[:, P:], q_ins_maps[:, P:]],
             # Q x P x N matrix
             quantiles=self.quantiles,
             conditional_loss_poes=self.conditional_loss_poes,
@@ -1766,3 +1727,40 @@ def _combine_mq(mean, quantile):
     array[0] = mean
     array[1:] = quantile
     return array
+
+
+class MultiCurve(object):
+    """
+    :param losses: an array of C losses
+    :param all_poes: a list of R arrays of C PoEs
+    """
+    def __init__(self, losses, all_poes):
+        self.losses = losses
+        self.all_poes = all_poes
+
+    def statistics(self, quantiles, weights, poes):
+        """
+        Compute output statistics (mean/quantile loss curves and maps)
+        for a single asset
+        :param list quantiles:
+           quantile levels to be considered for quantile outputs
+        : param list weights:
+           realization weights
+        :param list poes:
+           the poe taken into account for computing loss maps
+        :returns:
+           a tuple with
+           1) mean loss curve
+           2) mean loss map
+           3) a list of quantile curves
+           4) a list of quantile loss maps
+        """
+        mean_curve_ = numpy.array(
+            [self.losses, mean_curve(self.all_poes, weights)])
+        mean_map = loss_map_matrix(poes, [mean_curve_]).reshape(len(poes))
+        quantile_curves = numpy.array(
+            [[self.losses, quantile_curve(self.all_poes, quantile, weights)]
+             for quantile in quantiles]).reshape(
+                     (len(quantiles), 2, len(self.losses)))
+        quantile_maps = loss_map_matrix(poes, quantile_curves).transpose()
+        return mean_curve_, mean_map, quantile_curves, quantile_maps
