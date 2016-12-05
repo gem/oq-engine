@@ -1396,11 +1396,11 @@ def quantile_matrix(values, quantiles, weights):
 
 
 def exposure_statistics(
-        loss_curves, map_poes, weights, quantiles):
+        multicurves, map_poes, weights, quantiles):
     """
     Compute exposure statistics for N assets and R realizations.
 
-    :param loss_curves:
+    :param multicurves:
         a list with N loss curves data. Each item holds a 2-tuple with
         1) the loss ratios on which the curves have been defined on
         2) the poes of the R curves
@@ -1418,7 +1418,7 @@ def exposure_statistics(
             3. a numpy array with Q x N quantile loss curves
             4. a numpy array with Q x P quantile map values
     """
-    curve_resolution = len(loss_curves[0][0])
+    curve_resolution = len(multicurves[0].losses)
     map_nr = len(map_poes)
 
     # Collect per-asset statistic along the last dimension of the
@@ -1428,10 +1428,10 @@ def exposure_statistics(
     quantile_curves = numpy.zeros((len(quantiles), 0, 2, curve_resolution))
     quantile_maps = numpy.zeros((len(quantiles), map_nr, 0))
 
-    for loss_ratios, curves_poes in loss_curves:
+    for mcurve in multicurves:
         _mean_curve, _mean_maps, _quantile_curves, _quantile_maps = (
             asset_statistics(
-                loss_ratios, curves_poes, quantiles, weights, map_poes))
+                mcurve.losses, mcurve.all_poes, quantiles, weights, map_poes))
 
         mean_curves = numpy.vstack(
             (mean_curves, _mean_curve[numpy.newaxis, :]))
@@ -1577,8 +1577,8 @@ class StatsBuilder(object):
         """
         Normalize the loss curves by using the provided normalization function
         """
-        return list(map(self.normalize_curves,
-                        numpy.array(loss_curves).transpose(1, 0, 2, 3)))
+        return [MultiCurve(*self.normalize_curves(curves))
+                for curves in numpy.array(loss_curves).transpose(1, 0, 2, 3)]
 
     def build(self, all_outputs, prefix=''):
         """
@@ -1732,3 +1732,9 @@ def _combine_mq(mean, quantile):
     array[0] = mean
     array[1:] = quantile
     return array
+
+
+class MultiCurve(object):
+    def __init__(self, losses, all_poes):
+        self.losses = losses
+        self.all_poes = all_poes
