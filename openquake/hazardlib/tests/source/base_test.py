@@ -133,7 +133,7 @@ class SeismicSourceFilterSitesTestCase(_BaseSeismicSourceTestCase):
             self.assertIs(filtered, None)  # all filtered
 
 
-class SeismicRtreeFilterSitesByRuptureTestCase(
+class SeismicSourceFilterSitesByRuptureTestCase(
         _BaseSeismicSourceTestCase):
     def test(self):
         surface_mesh = RectangularMesh(self.POLYGON.lons.reshape((2, 2)),

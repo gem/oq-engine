@@ -24,7 +24,7 @@ BuildArch: noarch
 Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-hazardlib
 
-%define common_deps python numpy scipy python-shapely python-psutil h5py python-mock python-rtree
+%define common_deps python numpy scipy python-futures python-shapely python-psutil h5py python-mock python-rtree
 %define dev_deps python-nose python-coverage
 Requires: %{common_deps}
 Requires: %{dev_deps}

@@ -185,6 +185,15 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         arreq(filtered.mesh.lats, [12, 2, 1])
         arreq(filtered.mesh.depths, [13, 0, 3])
 
+        # test serialization to hdf5
+        fd, fpath = tempfile.mkstemp(suffix='.hdf5')
+        os.close(fd)
+        with hdf5.File(fpath, 'w') as f:
+            f['sitecol'] = filtered
+            saved = f['sitecol']
+            self.assertEqual(saved, filtered)
+        os.remove(fpath)
+
     def test_filter_all_out(self):
         col = SiteCollection(self.SITES)
         filtered = col.filter(numpy.zeros(len(self.SITES), bool))
