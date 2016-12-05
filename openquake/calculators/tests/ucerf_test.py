@@ -18,7 +18,7 @@
 import h5py
 import unittest
 from openquake.baselib.general import writetmp
-from openquake.commonlib.export import export
+from openquake.calculators.export import export
 from openquake.calculators.views import view
 from openquake.qa_tests_data import ucerf
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id

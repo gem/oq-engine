@@ -26,7 +26,7 @@ import sys
 import zipfile
 import traceback
 
-from openquake.commonlib.export import export
+from openquake.calculators.export import export
 from openquake.commonlib import datastore
 from openquake.engine import logs, __version__
 

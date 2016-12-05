@@ -22,7 +22,7 @@ import numpy
 
 from openquake.baselib.general import groupby
 from openquake.risklib import scientific, riskinput
-from openquake.commonlib import readinput, datastore, source
+from openquake.commonlib import readinput, source
 from openquake.calculators import base
 
 
@@ -83,7 +83,7 @@ def classical_risk(riskinput, riskmodel, monitor):
                     oq.conditional_loss_poes,
                     curve_resolution, insured_losses=oq.insured_losses)
                 stats = statsbuilder.build(outs)
-                stat_curves, stat_maps = statsbuilder.get_curves_maps(stats)
+                stat_curves, stat_maps = statsbuilder._get_curves_maps(stats)
                 for i, asset in enumerate(assets):
                     result['stat_curves'].append(
                         (l, asset.ordinal, stat_curves[:, i]))
@@ -147,9 +147,11 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         """
         Save the losses in a compact form.
         """
-        self.loss_curve_dt, self.loss_maps_dt = (
-            self.riskmodel.build_loss_dtypes(
-                self.oqparam.conditional_loss_poes, self.I))
+        loss_ratios = {cb.loss_type: cb.curve_resolution
+                       for cb in self.riskmodel.curve_builders
+                       if cb.user_provided}
+        self.loss_curve_dt, self.loss_maps_dt = scientific.build_loss_dtypes(
+            loss_ratios, self.oqparam.conditional_loss_poes, self.I)
 
         self.save_loss_curves(result)
         if self.oqparam.conditional_loss_poes:

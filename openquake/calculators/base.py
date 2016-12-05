@@ -39,7 +39,7 @@ from openquake.commonlib import readinput, datastore, source, calc
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.baselib.parallel import starmap, executor, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
-from openquake.commonlib.export import export as exp
+from openquake.calculators.export import export as exp
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -492,7 +492,6 @@ class HazardCalculator(BaseCalculator):
         # save the risk models and loss_ratios in the datastore
         self.datastore['composite_risk_model'] = rm
         attrs = self.datastore.getitem('composite_risk_model').attrs
-        attrs['loss_types'] = hdf5.array_of_vstr(rm.loss_types)
         attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.get_min_iml().items()))
         if rm.damage_states:
             attrs['damage_states'] = hdf5.array_of_vstr(rm.damage_states)
