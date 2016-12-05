@@ -328,8 +328,7 @@ class EbrPostCalculator(base.RiskCalculator):
                 continue
             sb = scientific.StatsBuilder(
                 oq.quantile_loss_curves, oq.conditional_loss_poes, [],
-                len(cb.ratios), scientific.normalize_curves_eb,
-                oq.insured_losses)
+                len(cb.ratios), insured_losses=oq.insured_losses)
             curves, maps = sb.get_curves_maps(stats)  # matrices (Q1, N)
             loss_curves[cb.loss_type] = curves.T
             if oq.conditional_loss_poes:
