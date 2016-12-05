@@ -609,7 +609,7 @@ class Starmap(object):
         return acc
 
 
-class Serialmap(Starmap):
+class Sequential(Starmap):
     """
     A sequential Starmap, useful for debugging purpose.
     """

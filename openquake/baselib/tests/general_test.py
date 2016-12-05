@@ -123,8 +123,8 @@ class BlockSplitterTestCase(unittest.TestCase):
             split_in_blocks([s1, s2, s3, s4, s5], hint=6,
                             weight=attrgetter('weight'),
                             key=attrgetter('typology')))
-        self.assertEqual(list(map(len, blocks)), [2, 1, 1, 1])
-        self.assertEqual([b.weight for b in blocks], [2, 2, 4, 4])
+        self.assertEqual(list(map(len, blocks)), [1, 1, 1, 2])
+        self.assertEqual([b.weight for b in blocks], [2, 4, 4, 2])
 
 
 class SearchModuleTestCase(unittest.TestCase):
