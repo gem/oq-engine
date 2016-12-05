@@ -266,6 +266,7 @@ class OqParam(valid.ParamSet):
 
         risk_investigation_time / investigation_time / ses_per_logic_tree_path
         """
+        assert self.investigation_time, 'investigation_time = 0!'
         return (self.risk_investigation_time or self.investigation_time) / (
             self.investigation_time * self.ses_per_logic_tree_path)
 
