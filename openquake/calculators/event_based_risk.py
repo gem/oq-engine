@@ -56,8 +56,8 @@ def build_agg_curve(cb_inputs, insured_losses, ses_ratio, curve_resolution, L,
     and realization pair.
 
     :param cb_inputs:
-        a list of triples `(cb, r, data)` where `cb` is a curve builder,
-        `r` is the realization index and `data` is an array of kind
+        a list of triples `(cb, rlzname, data)` where `cb` is a curve builder,
+        `rlzname` is a string of kind `rlz-%03d` and `data` is an array of kind
         `(rupture_id, loss)` or `(rupture_id, loss, loss_ins)`
     :param bool insured_losses:
         job.ini configuration parameter
@@ -100,6 +100,12 @@ def build_agg_curve(cb_inputs, insured_losses, ses_ratio, curve_resolution, L,
 
 
 def build_rcurves(cb_inputs, assets, ses_ratio, monitor):
+    """
+    :param cb_inputs: triples `(cb, rlzname, data)`
+    :param assets: full list of assets
+    :param ses_ratio: ses ratio parameter
+    :param monitor: Monitor instance
+    """
     result = {}
     for cb, rlzname, data in cb_inputs:
         aids, curves = cb(assets, group_array(data, 'aid'), ses_ratio)
@@ -208,8 +214,8 @@ class EbrPostCalculator(base.RiskCalculator):
                 ltypes, self.riskmodel.curve_builders)])
         rcurves = numpy.zeros((A, R, I), multi_lr_dt)
 
+        # build rcurves-rlzs
         if self.oqparam.loss_ratios:
-            # build rcurves-rlzs
             assets = list(self.assetcol)
             cb_inputs = self.cb_inputs('ass_loss_ratios')
             mon = self.monitor('build_rcurves')
