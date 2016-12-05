@@ -362,7 +362,7 @@ def extract_from(data, fields):
 
 def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
     """
-    :param dest: destination filename or io.StringIO instance
+    :param dest: file, filename or io.StringIO instance
     :param data: array to save
     :param sep: separator to use (default comma)
     :param fmt: formatting string (default '%12.8E')
@@ -374,7 +374,9 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
     close = True
     if len(data) == 0:
         logging.warn('%s is empty', dest)
-    if hasattr(dest, 'write'):  # file-like object
+    if hasattr(dest, 'write'):
+        # file-like object in append mode
+        # it must be closed by client code
         close = False
     elif not hasattr(dest, 'getvalue'):
         # not a StringIO, assume dest is a filename
