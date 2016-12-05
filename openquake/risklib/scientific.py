@@ -1696,6 +1696,10 @@ def _combine_mq(mean, quantile):
 
 
 class MultiCurve(object):
+    """
+    :param losses: an array of C losses
+    :param all_poes: a list of R arrays of C PoEs
+    """
     def __init__(self, losses, all_poes):
         self.losses = losses
         self.all_poes = all_poes
@@ -1706,13 +1710,15 @@ class MultiCurve(object):
         for a single asset
         :param list quantiles:
            quantile levels to be considered for quantile outputs
+        : param list weights:
+           realization weights
         :param list poes:
            the poe taken into account for computing loss maps
         :returns:
            a tuple with
            1) mean loss curve
-           2) a list of quantile curves
-           3) mean loss map
+           2) mean loss map
+           3) a list of quantile curves
            4) a list of quantile loss maps
         """
         mean_curve_ = numpy.array(
