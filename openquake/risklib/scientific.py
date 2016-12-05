@@ -1430,8 +1430,7 @@ def exposure_statistics(
 
     for mcurve in multicurves:
         _mean_curve, _mean_maps, _quantile_curves, _quantile_maps = (
-            asset_statistics(
-                mcurve.losses, mcurve.all_poes, quantiles, weights, map_poes))
+            mcurve.statistics(quantiles, weights, map_poes))
 
         mean_curves = numpy.vstack(
             (mean_curves, _mean_curve[numpy.newaxis, :]))
@@ -1443,36 +1442,6 @@ def exposure_statistics(
             (quantile_maps, _quantile_maps[:, :, numpy.newaxis]))
 
     return (mean_curves, mean_maps, quantile_curves, quantile_maps)
-
-
-def asset_statistics(losses, curves_poes, quantiles, weights, poes):
-    """
-    Compute output statistics (mean/quantile loss curves and maps)
-    for a single asset
-
-    :param losses:
-       the losses on which the loss curves are defined
-    :param curves_poes:
-       a numpy matrix with the poes of the different curves
-    :param list quantiles:
-       an iterable over the quantile levels to be considered for
-       quantile outputs
-    :param list poes:
-       the poe taken into account for computing loss maps
-    :returns:
-       a tuple with
-       1) mean loss curve
-       2) a list of quantile curves
-       3) mean loss map
-       4) a list of quantile loss maps
-    """
-    mean_curve_ = numpy.array([losses, mean_curve(curves_poes, weights)])
-    mean_map = loss_map_matrix(poes, [mean_curve_]).reshape(len(poes))
-    quantile_curves = numpy.array(
-        [[losses, quantile_curve(curves_poes, quantile, weights)]
-         for quantile in quantiles]).reshape((len(quantiles), 2, len(losses)))
-    quantile_maps = loss_map_matrix(poes, quantile_curves).transpose()
-    return (mean_curve_, mean_map, quantile_curves, quantile_maps)
 
 
 def normalize_curves(curves):
@@ -1734,3 +1703,34 @@ class MultiCurve(object):
     def __init__(self, losses, all_poes):
         self.losses = losses
         self.all_poes = all_poes
+
+    def statistics(self, quantiles, weights, poes):
+        """
+        Compute output statistics (mean/quantile loss curves and maps)
+        for a single asset
+
+        :param losses:
+           the losses on which the loss curves are defined
+        :param curves_poes:
+           a numpy matrix with the poes of the different curves
+        :param list quantiles:
+           an iterable over the quantile levels to be considered for
+           quantile outputs
+        :param list poes:
+           the poe taken into account for computing loss maps
+        :returns:
+           a tuple with
+           1) mean loss curve
+           2) a list of quantile curves
+           3) mean loss map
+           4) a list of quantile loss maps
+        """
+        mean_curve_ = numpy.array(
+            [self.losses, mean_curve(self.all_poes, weights)])
+        mean_map = loss_map_matrix(poes, [mean_curve_]).reshape(len(poes))
+        quantile_curves = numpy.array(
+            [[self.losses, quantile_curve(self.all_poes, quantile, weights)]
+             for quantile in quantiles]).reshape(
+                     (len(quantiles), 2, len(self.losses)))
+        quantile_maps = loss_map_matrix(poes, quantile_curves).transpose()
+        return mean_curve_, mean_map, quantile_curves, quantile_maps
