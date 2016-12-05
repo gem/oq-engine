@@ -1445,8 +1445,7 @@ def exposure_statistics(
     return (mean_curves, mean_maps, quantile_curves, quantile_maps)
 
 
-def asset_statistics(
-        losses, curves_poes, quantiles, weights, poes):
+def asset_statistics(losses, curves_poes, quantiles, weights, poes):
     """
     Compute output statistics (mean/quantile loss curves and maps)
     for a single asset
