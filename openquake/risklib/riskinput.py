@@ -115,6 +115,8 @@ class AssetCollection(object):
         return len(self.array)
 
     def __toh5__(self):
+        # NB: the loss types do not contain spaces, so we can store them
+        # together as a single space-separated string
         attrs = {'time_event': self.time_event or 'None',
                  'time_events': ' '.join(map(decode, self.time_events)),
                  'loss_types': ' '.join(self.loss_types),
