@@ -80,7 +80,7 @@ def classical_risk(riskinput, riskmodel, monitor):
                 curve_resolution = outs[0].loss_curves.shape[-1]
                 statsbuilder = scientific.StatsBuilder(
                     oq.quantile_loss_curves,
-                    oq.conditional_loss_poes, oq.poes_disagg,
+                    oq.conditional_loss_poes,
                     curve_resolution, insured_losses=oq.insured_losses)
                 stats = statsbuilder.build(outs)
                 stat_curves, stat_maps = statsbuilder._get_curves_maps(stats)
