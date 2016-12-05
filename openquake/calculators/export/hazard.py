@@ -29,7 +29,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
 from openquake.risklib.riskinput import GmfGetter
-from openquake.commonlib.export import export
+from openquake.calculators.export import export
 from openquake.commonlib import writers, hazard_writers, calc, util
 
 F32 = numpy.float32
