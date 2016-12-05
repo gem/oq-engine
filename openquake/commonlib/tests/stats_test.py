@@ -91,7 +91,7 @@ class StatsTestCase(unittest.TestCase):
         cls.builder = scientific.StatsBuilder(
             quantiles=[0.1, 0.9],
             conditional_loss_poes=[0.35, 0.24, 0.13],
-            poes_disagg=[], curve_resolution=len(baselosses))
+            curve_resolution=len(baselosses))
         cls.stats = cls.builder.build(outputs)
 
     # TODO: add a test for insured curves and maps
