@@ -1552,17 +1552,15 @@ class StatsBuilder(object):
 
     :param quantiles: list of quantile values
     :param conditional_loss_poes: list of conditional loss poes
-    :param poes_disagg: list of poes_disagg
     :param curve_resolution: only meaninful for the event based
     """
     def __init__(self, quantiles,
-                 conditional_loss_poes, poes_disagg,
+                 conditional_loss_poes,
                  curve_resolution=0, _normalize_curves=normalize_curves,
                  insured_losses=False):
         self.quantiles = quantiles
         self.conditional_loss_poes = conditional_loss_poes
         self.curve_resolution = C = curve_resolution
-        self.poes_disagg = poes_disagg
         self.normalize_curves = _normalize_curves
         self.insured_losses = insured_losses
         self.mean_quantiles = ['mean']
@@ -1625,8 +1623,7 @@ class StatsBuilder(object):
         (mean_curves, mean_maps, quantile_curves, quantile_maps) = (
             exposure_statistics(
                 self.normalize(loss_curves),
-                self.conditional_loss_poes + self.poes_disagg,
-                weights, self.quantiles))
+                self.conditional_loss_poes, weights, self.quantiles))
         if outputs[0].insured_curves is not None:
             average_ins_losses = numpy.array(average_ins_losses, F32)
             mean_average_ins_losses = mean_curve(
