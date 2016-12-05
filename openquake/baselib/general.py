@@ -158,8 +158,14 @@ def ceil(a, b):
     return int(math.ceil(float(a) / b))
 
 
-def block_splitter(items, max_weight, weight=lambda item: 1,
-                   kind=lambda item: 'Unspecified'):
+def nokey(item):
+    """
+    Dummy function to apply to items without a key
+    """
+    return 'Unspecified'
+
+
+def block_splitter(items, max_weight, weight=lambda item: 1, kind=nokey):
     """
     :param items: an iterator over items
     :param max_weight: the max weight to split on
@@ -202,8 +208,7 @@ def block_splitter(items, max_weight, weight=lambda item: 1,
         yield ws
 
 
-def split_in_blocks(sequence, hint, weight=lambda item: 1,
-                    key=lambda item: 'Unspecified'):
+def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
     """
     Split the `sequence` in a number of WeightedSequences close to `hint`.
 
@@ -222,7 +227,7 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1,
     """
     if hint == 0:  # do not split
         return sequence
-    items = list(sequence)
+    items = list(sequence) if key is nokey else sorted(sequence, key=key)
     assert hint > 0, hint
     assert len(items) > 0, len(items)
     total_weight = float(sum(weight(item) for item in items))
