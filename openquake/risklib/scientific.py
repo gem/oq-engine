@@ -1436,8 +1436,7 @@ class SimpleStats(object):
     def compute(self, name, dstore):
         """
         Compute mean and quantiles from the data in the datastore
-        under the group `<name>-rlzs` and store them under the group
-        `<name>-stats`. Return the number of bytes stored.
+        under the group `<name>-rlzs`. Returns an array of shape (N, Q1).
         """
         weights = [rlz.weight for rlz in self.rlzs]
         rlzsname = name + '-rlzs'
@@ -1677,6 +1676,14 @@ class StatsBuilder(object):
     def build_agg_curve_stats(self, loss_curve_dt, dstore):
         """
         Build an array `agg_curve-stats`.
+
+        :param loss_curve_dt:
+            numpy dtype with fields (structural~losses, structural~poes,
+            structural~avg, ...)
+        :param dstore:
+            :class:`openquake.commonlib.datastore.DataStore` instance
+        :returns:
+            an array of size Q1 and dtype loss_curve_dt
         """
         rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
         Q1 = len(self.mean_quantiles)
