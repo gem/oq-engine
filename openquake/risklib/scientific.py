@@ -958,6 +958,8 @@ class CurveBuilder(object):
                 s2, s1 = poes.shape
             except ValueError:
                 s2, s1 = poes.shape[0], 1
+            # ratios (21,), loss_ratios (3, 2), counts (21, 2)
+            # ex. (21, 2) becomes (2, 21) but it not a transpose
             all_poes.append(poes.reshape(s1, s2))
             aids.append(aid)
         return numpy.array(aids), numpy.array(all_poes)
