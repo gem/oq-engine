@@ -366,6 +366,7 @@ class CompositeRiskModel(collections.Mapping):
                     loss_type, default_loss_ratios, False,
                     oqparam.conditional_loss_poes, oqparam.insured_losses)
             self.curve_builders.append(cb)
+            cb.index = l
             self.lti[loss_type] = l
         return loss_types
 
