@@ -49,15 +49,15 @@ def build_el_dtypes(insured_losses):
     return numpy.dtype(ela_list), numpy.dtype(elt_list)
 
 
-def build_agg_curve(lr_data, insured_losses, ses_ratio, curve_resolution, L,
+def build_agg_curve(cb_inputs, insured_losses, ses_ratio, curve_resolution, L,
                     monitor):
     """
     Build the aggregate loss curve in parallel for each loss type
     and realization pair.
 
-    :param lr_data:
-        a list of triples `(l, r, data)` where `l` is the loss type index,
-        `r` is the realization index and `data` is an array of kind
+    :param cb_inputs:
+        a list of triples `(cb, rlzname, data)` where `cb` is a curve builder,
+        `rlzname` is a string of kind `rlz-%03d` and `data` is an array of kind
         `(rupture_id, loss)` or `(rupture_id, loss, loss_ins)`
     :param bool insured_losses:
         job.ini configuration parameter
@@ -73,9 +73,11 @@ def build_agg_curve(lr_data, insured_losses, ses_ratio, curve_resolution, L,
         a dictionary (r, l, i) -> (losses, poes, avg)
     """
     result = {}
-    for l, r, data in lr_data:
+    for cb, rlzname, data in cb_inputs:
         if len(data) == 0:  # realization with no losses
             continue
+        l = cb.index
+        r = int(rlzname[4:])  # strip rlz-
         if insured_losses:
             gloss = data['loss'][:, 0]
             iloss = data['loss'][:, 1]
@@ -94,6 +96,22 @@ def build_agg_curve(lr_data, insured_losses, ses_ratio, curve_resolution, L,
             result[l, r, 'losses_ins'] = losses_ins
             result[l, r, 'poes_ins'] = poes_ins
             result[l, r, 'avg_ins'] = avg_ins
+    return result
+
+
+def build_rcurves(cb_inputs, assets, ses_ratio, monitor):
+    """
+    :param cb_inputs: triples `(cb, rlzname, data)`
+    :param assets: full list of assets
+    :param ses_ratio: ses ratio parameter
+    :param monitor: Monitor instance
+    """
+    result = {}
+    for cb, rlzname, data in cb_inputs:
+        aids, curves = cb(assets, group_array(data, 'aid'), ses_ratio)
+        if len(aids):
+            # strip "rlz-" from rlzname below
+            result[cb.index, int(rlzname[4:])] = aids, curves
     return result
 
 
@@ -173,6 +191,16 @@ def event_based_risk(riskinput, riskmodel, assetcol, monitor):
 class EbrPostCalculator(base.RiskCalculator):
     pre_calculator = 'ebrisk'
 
+    def cb_inputs(self, table):
+        loss_table = self.datastore[table]
+        inputs = []
+        for rlzstr in loss_table:
+            for lt in loss_table[rlzstr]:
+                cb = self.riskmodel.curve_builders[self.riskmodel.lti[lt]]
+                data = loss_table[rlzstr][lt].value
+                inputs.append((cb, rlzstr, data))
+        return inputs
+
     def execute(self):
         A = len(self.assetcol)
         ltypes = self.riskmodel.loss_types
@@ -187,8 +215,18 @@ class EbrPostCalculator(base.RiskCalculator):
                 ltypes, self.riskmodel.curve_builders)])
         rcurves = numpy.zeros((A, R, I), multi_lr_dt)
 
+        # build rcurves-rlzs
         if self.oqparam.loss_ratios:
-            self.save_rcurves(rcurves, I)
+            assets = list(self.assetcol)
+            cb_inputs = self.cb_inputs('ass_loss_ratios')
+            mon = self.monitor('build_rcurves')
+            res = parallel.apply(
+                build_rcurves,
+                (cb_inputs, assets, self.oqparam.ses_ratio, mon)).reduce()
+            for l, r in res:
+                aids, curves = res[l, r]
+                rcurves[ltypes[l]][aids, r] = curves
+            self.datastore['rcurves-rlzs'] = rcurves
 
         # build an aggregate loss curve per realization
         if 'agg_loss_table' in self.datastore:
@@ -198,51 +236,24 @@ class EbrPostCalculator(base.RiskCalculator):
     def post_execute(self):
         pass
 
-    # TODO: this part should be parallelized
-    def save_rcurves(self, rcurves, I):
-        assets = list(self.assetcol)
-        with self.monitor('building rcurves-rlzs'):
-            for rlzname in self.datastore['ass_loss_ratios']:
-                r = int(rlzname[4:])  # strip "rlz-"
-                for cb in self.riskmodel.curve_builders:
-                    try:
-                        data = self.datastore['ass_loss_ratios/%s/%s' %
-                                              (rlzname, cb.loss_type)].value
-                    except KeyError:  # no data for the given rlz, ltype
-                        continue
-                    if cb.user_provided:
-                        aids, curves = cb(
-                            assets, group_array(data, 'aid'),
-                            self.oqparam.ses_ratio)
-                        if not len(aids):  # no curve
-                            continue
-                        rcurves[cb.loss_type][aids, r] = curves
-            self.datastore['rcurves-rlzs'] = rcurves
-
     def build_agg_curve(self):
         """
         Build a single loss curve per realization. It is NOT obtained
         by aggregating the loss curves; instead, it is obtained without
         generating the loss curves, directly from the the aggregate losses.
         """
-        agg_loss_table = self.datastore['agg_loss_table']
         oq = self.oqparam
         C = oq.loss_curve_resolution
         loss_curve_dt, _ = self.riskmodel.build_all_loss_dtypes(
             C, oq.conditional_loss_poes, oq.insured_losses)
         lts = self.riskmodel.loss_types
-        lr_data = []
+        cb_inputs = self.cb_inputs('agg_loss_table')
         R = len(self.rlzs_assoc.realizations)
         L = len(self.riskmodel.lti)
-        for rlzstr in agg_loss_table:
-            r = int(rlzstr[4:])
-            for lt, dset in agg_loss_table[rlzstr].items():
-                l = self.riskmodel.lti[lt]
-                lr_data.append((l, r, dset.value))
         ses_ratio = self.oqparam.ses_ratio
         I = self.oqparam.insured_losses
         result = parallel.apply(
-            build_agg_curve, (lr_data, I, ses_ratio, C, L, self.monitor('')),
+            build_agg_curve, (cb_inputs, I, ses_ratio, C, L, self.monitor('')),
             concurrent_tasks=self.oqparam.concurrent_tasks).reduce()
         agg_curve = numpy.zeros(R, loss_curve_dt)
         for l, r, name in result:
