@@ -339,7 +339,8 @@ class CompositeRiskModel(collections.Mapping):
         default_loss_ratios = numpy.linspace(
             0, 1, oqparam.loss_curve_resolution + 1)[1:]
         loss_types = self._get_loss_types()
-        ses_ratio = oqparam.ses_ratio
+        ses_ratio = oqparam.ses_ratio if oqparam.calculation_mode in (
+            'event_based_risk',) else 1
         for l, loss_type in enumerate(loss_types):
             if oqparam.calculation_mode in ('classical', 'classical_risk'):
                 curve_resolutions = set()
