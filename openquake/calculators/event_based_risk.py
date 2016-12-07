@@ -99,16 +99,15 @@ def build_agg_curve(cb_inputs, insured_losses, ses_ratio, curve_resolution, L,
     return result
 
 
-def build_rcurves(cb_inputs, assets, ses_ratio, monitor):
+def build_rcurves(cb_inputs, assets, monitor):
     """
     :param cb_inputs: triples `(cb, rlzname, data)`
     :param assets: full list of assets
-    :param ses_ratio: ses ratio parameter
     :param monitor: Monitor instance
     """
     result = {}
     for cb, rlzname, data in cb_inputs:
-        aids, curves = cb(assets, group_array(data, 'aid'), ses_ratio)
+        aids, curves = cb(assets, group_array(data, 'aid'))
         if len(aids):
             result[cb.index, int(rlzname[4:])] = aids, curves
     return result
@@ -220,8 +219,7 @@ class EbrPostCalculator(base.RiskCalculator):
             cb_inputs = self.cb_inputs('ass_loss_ratios')
             mon = self.monitor('build_rcurves')
             res = parallel.apply(
-                build_rcurves,
-                (cb_inputs, assets, self.oqparam.ses_ratio, mon)).reduce()
+                build_rcurves, (cb_inputs, assets, mon)).reduce()
             for l, r in res:
                 aids, curves = res[l, r]
                 rcurves[ltypes[l]][aids, r] = curves
