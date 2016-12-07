@@ -968,12 +968,18 @@ class CurveBuilder(object):
             aids.append(aid)
         return numpy.array(aids), numpy.array(all_poes)
 
-    def calc_loss_curve(self, loss_values):
+    def calc_loss_curve(self, losses):
         """
-        :param loss_values: array of shape (E,)
-        :returns: array of shape (2, C) for (losses, poes)
+        :param losses: array of shape (E, I)
+        :returns: array of shape (2, I, C) for (losses, poes)
         """
-        return event_based(loss_values, self.ses_ratio, self.curve_resolution)
+        losses_poes = event_based(losses, self.ses_ratio,
+                                  self.curve_resolution)
+        curve = numpy.zeros(self.I, self.loss_curve_dt)
+        curve['losses'] = losses_poes[0]
+        curve['poes'] = losses_poes[1]
+        curve['avg'] = average_loss(losses_poes)
+        return curve
 
     def _calc_loss_maps(self, asset_values, clp, poe_matrix):
         """
