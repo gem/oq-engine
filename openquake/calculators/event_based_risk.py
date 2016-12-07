@@ -26,7 +26,7 @@ from openquake.baselib.general import (
     AccumDict, humansize, block_splitter, group_array)
 from openquake.calculators import base, event_based
 from openquake.baselib import parallel
-from openquake.risklib import scientific, riskinput
+from openquake.risklib import riskinput, scientific
 from openquake.baselib.parallel import starmap
 
 U32 = numpy.uint32
@@ -49,8 +49,7 @@ def build_el_dtypes(insured_losses):
     return numpy.dtype(ela_list), numpy.dtype(elt_list)
 
 
-def build_agg_curve(cb_inputs, insured_losses, ses_ratio, curve_resolution, L,
-                    monitor):
+def build_agg_curve(cb_inputs, insured_losses, monitor):
     """
     Build the aggregate loss curve in parallel for each loss type
     and realization pair.
@@ -61,12 +60,6 @@ def build_agg_curve(cb_inputs, insured_losses, ses_ratio, curve_resolution, L,
         `(rupture_id, loss)` or `(rupture_id, loss, loss_ins)`
     :param bool insured_losses:
         job.ini configuration parameter
-    :param ses_ratio:
-        a ratio obtained from ses_per_logic_tree_path
-    :param curve_resolution:
-        the number of discretization steps for the loss curve
-    :param L:
-        the number of loss types
     :param monitor:
         a Monitor instance
     :returns:
@@ -78,24 +71,14 @@ def build_agg_curve(cb_inputs, insured_losses, ses_ratio, curve_resolution, L,
             continue
         l = cb.index
         r = int(rlzname[4:])  # strip rlz-
+        lc = cb.calc_loss_curve(data['loss'])
+        result[l, r, 'losses'] = lc['losses'][0]
+        result[l, r, 'poes'] = lc['poes'][0]
+        result[l, r, 'avg'] = lc['avg'][0]
         if insured_losses:
-            gloss = data['loss'][:, 0]
-            iloss = data['loss'][:, 1]
-        else:
-            gloss = data['loss']
-        losses, poes = scientific.event_based(
-            gloss, ses_ratio, curve_resolution)
-        avg = scientific.average_loss((losses, poes))
-        result[l, r, 'losses'] = losses
-        result[l, r, 'poes'] = poes
-        result[l, r, 'avg'] = avg
-        if insured_losses:
-            losses_ins, poes_ins = scientific.event_based(
-                iloss, ses_ratio, curve_resolution)
-            avg_ins = scientific.average_loss((losses_ins, poes_ins))
-            result[l, r, 'losses_ins'] = losses_ins
-            result[l, r, 'poes_ins'] = poes_ins
-            result[l, r, 'avg_ins'] = avg_ins
+            result[l, r, 'losses_ins'] = lc['losses'][1]
+            result[l, r, 'poes_ins'] = lc['poes'][1]
+            result[l, r, 'avg_ins'] = lc['avg'][1]
     return result
 
 
@@ -241,17 +224,16 @@ class EbrPostCalculator(base.RiskCalculator):
         generating the loss curves, directly from the the aggregate losses.
         """
         oq = self.oqparam
-        C = oq.loss_curve_resolution
-        loss_curve_dt, _ = self.riskmodel.build_all_loss_dtypes(
-            C, oq.conditional_loss_poes, oq.insured_losses)
+        cbs = self.riskmodel.curve_builders
+        loss_curve_dt, _ = scientific.build_loss_dtypes(
+            {cb.loss_type: cb.curve_resolution for cb in cbs},
+            oq.conditional_loss_poes, oq.insured_losses)
         lts = self.riskmodel.loss_types
         cb_inputs = self.cb_inputs('agg_loss_table')
         R = len(self.rlzs_assoc.realizations)
-        L = len(self.riskmodel.lti)
-        ses_ratio = self.oqparam.ses_ratio
-        I = self.oqparam.insured_losses
+        ins = self.oqparam.insured_losses
         result = parallel.apply(
-            build_agg_curve, (cb_inputs, I, ses_ratio, C, L, self.monitor('')),
+            build_agg_curve, (cb_inputs, ins, self.monitor('')),
             concurrent_tasks=self.oqparam.concurrent_tasks).reduce()
         agg_curve = numpy.zeros(R, loss_curve_dt)
         for l, r, name in result:
