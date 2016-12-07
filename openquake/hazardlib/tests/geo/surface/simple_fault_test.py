@@ -47,9 +47,6 @@ class SimpleFaultSurfaceCheckFaultDataTestCase(utils.SurfaceTestCase):
                                             0.0, 1.0, 90.0, 1.0)
 
     def test_upper_seismo_depth_range(self):
-        self.assertRaises(ValueError, SimpleFaultSurface.check_fault_data,
-                          self.fault_trace, -0.1, 10.0, 90.0, 1.0)
-
         SimpleFaultSurface.check_fault_data(self.fault_trace,
                                             0.0, 1.0, 90.0, 1.0)
         SimpleFaultSurface.check_fault_data(self.fault_trace,
@@ -61,12 +58,6 @@ class SimpleFaultSurfaceCheckFaultDataTestCase(utils.SurfaceTestCase):
 
         self.assertRaises(ValueError, SimpleFaultSurface.check_fault_data,
                           self.fault_trace, 1.0, 0.9, 90.0, 1.0)
-
-    def test_fault_trace_on_surface(self):
-        fault_trace = Line([Point(0.0, 0.0, 1.0), Point(1.0, 1.0, 0.0)])
-
-        self.assertRaises(ValueError, SimpleFaultSurface.check_fault_data,
-                          fault_trace, 0.0, 1.0, 90.0, 1.0)
 
     def test_mesh_spacing_range(self):
         SimpleFaultSurface.check_fault_data(self.fault_trace,
