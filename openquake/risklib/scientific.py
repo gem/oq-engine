@@ -1513,15 +1513,12 @@ class StatsBuilder(object):
                  insured_losses=False):
         self.quantiles = quantiles
         self.conditional_loss_poes = conditional_loss_poes
-        self.curve_resolution = C = curve_resolution
+        self.curve_resolution = curve_resolution
         self.normalize_curves = _normalize_curves
         self.insured_losses = insured_losses
         self.mean_quantiles = ['mean']
         for q in quantiles:
             self.mean_quantiles.append('quantile-%s' % q)
-
-        self.loss_curve_dt, self.loss_maps_dt = build_dtypes(
-            C, conditional_loss_poes, insured_losses)
 
     def normalize(self, loss_curves):
         """
@@ -1656,10 +1653,13 @@ class StatsBuilder(object):
         """
         Q1 = len(self.mean_quantiles)
         N = len(stats.assets)
-        curves = numpy.zeros((Q1, N), self.loss_curve_dt)
+        C = stats.mean_curves[0].shape[-1]
+        loss_curve_dt, loss_maps_dt = build_dtypes(
+            C, self.conditional_loss_poes, self.insured_losses)
+        curves = numpy.zeros((Q1, N), loss_curve_dt)
         if self.conditional_loss_poes:
-            maps = numpy.zeros((Q1, N), self.loss_maps_dt)
-            poenames = [n for n in self.loss_maps_dt.names
+            maps = numpy.zeros((Q1, N), loss_maps_dt)
+            poenames = [n for n in loss_maps_dt.names
                         if not n.endswith('_ins')]
         else:
             maps = []
