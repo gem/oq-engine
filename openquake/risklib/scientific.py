@@ -942,7 +942,13 @@ class CurveBuilder(object):
             C, conditional_loss_poes, insured_losses)
 
     def __call__(self, assets, ratios_by_aid, ses_ratio):
-        # returns aids, poes
+        """"
+        :param assets: a list of assets
+        :param ratios_by_aid: a dictionary of loss ratios by asset ordinal
+        :param ses_ratio: ses_ratio parameter
+        :returns:
+           two arrays, `aids` of size A, and `all_poes` of shape (A, I, C)
+        """
         aids = []
         all_poes = []
         for asset in assets:
@@ -956,8 +962,8 @@ class CurveBuilder(object):
             poes = build_poes(counts, 1. / ses_ratio)
             if len(poes.shape) == 1:
                 poes = poes[:, None]
-            # ratios (21,), loss_ratios (3, 2), counts (21, 2)
-            # ex. (21, 2) becomes (2, 21)
+            # for instance the ratios can have shape (21,), the loss_ratios
+            # (3, 2), the counts (21, 2) and the transposed poes (2, 21)
             all_poes.append(poes.T)
             aids.append(aid)
         return numpy.array(aids), numpy.array(all_poes)
