@@ -265,7 +265,7 @@ class IterResult(object):
             else:
                 val, etype, mon = result
             if etype:
-                raise etype(val)
+                raise RuntimeError(val)
             if self.num_tasks:
                 next(self.log_percent)
             self.save_task_data(mon)
