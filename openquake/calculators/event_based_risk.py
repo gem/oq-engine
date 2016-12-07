@@ -109,6 +109,7 @@ def build_rcurves(cb_inputs, assets, monitor):
     for cb, rlzname, data in cb_inputs:
         aids, curves = cb(assets, group_array(data, 'aid'))
         if len(aids):
+            # strip "rlz-" from rlzname below
             result[cb.index, int(rlzname[4:])] = aids, curves
     return result
 
