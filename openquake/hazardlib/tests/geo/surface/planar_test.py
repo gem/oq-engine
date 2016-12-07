@@ -144,6 +144,19 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
         self.assertEqual(surf.bottom_left, Point(0, 0, 5))
         self.assertEqual(surf.bottom_right, Point(0, 1, 5))
 
+    def test_vertical_surf_from_corner_points_topo(self):
+        # vertical surface pointing North
+        surf = PlanarSurface.from_corner_points(
+            2., Point(0, 0, -1), Point(0, 1, -1), Point(0, 1, 4), Point(0, 0, 4)
+        )
+        self.assertEqual(surf.mesh_spacing, 2.)
+        self.assertAlmostEqual(surf.strike, 0.)
+        self.assertAlmostEqual(surf.dip, 90.)
+        self.assertEqual(surf.top_left, Point(0, 0, -1))
+        self.assertEqual(surf.top_right, Point(0, 1, -1))
+        self.assertEqual(surf.bottom_left, Point(0, 0, 4))
+        self.assertEqual(surf.bottom_right, Point(0, 1, 4))
+
     def test_inclined_surf_from_corner_points(self):
         # inclined surface (dip = 45) with 45 degrees strike
         surf = PlanarSurface.from_corner_points(
@@ -157,6 +170,20 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
         self.assertEqual(surf.top_right, Point(0.5, 0.5, 0))
         self.assertEqual(surf.bottom_left, Point(0.063592, -0.063592, 10))
         self.assertEqual(surf.bottom_right, Point(0.563593, 0.436408, 10.))
+
+    def test_inclined_surf_from_corner_points_topo(self):
+        # inclined surface (dip = 45) with 45 degrees strike
+        surf = PlanarSurface.from_corner_points(
+            2., Point(0, 0, -1), Point(0.5, 0.5, -1),
+            Point(0.563593, 0.436408, 9.), Point(0.063592, -0.063592, 9)
+        )
+        self.assertEqual(surf.mesh_spacing, 2.)
+        self.assertAlmostEqual(surf.strike, 45., delta=0.1)
+        self.assertAlmostEqual(surf.dip, 45., delta=0.1)
+        self.assertEqual(surf.top_left, Point(0, 0, -1))
+        self.assertEqual(surf.top_right, Point(0.5, 0.5, -1))
+        self.assertEqual(surf.bottom_left, Point(0.063592, -0.063592, 9))
+        self.assertEqual(surf.bottom_right, Point(0.563593, 0.436408, 9.))
 
 
 class PlanarSurfaceProjectTestCase(unittest.TestCase):
@@ -281,6 +308,12 @@ class PlanarSurfaceGetMinDistanceTestCase(unittest.TestCase):
     def test_4(self):
         surface = PlanarSurface(1, 2, 3, *test_data.TEST_7_RUPTURE_2_CORNERS)
         sites = Mesh.from_points_list([Point(-0.3, 0.4)])
+        self.assertAlmostEqual(55.6159556,
+                               surface.get_min_distance(sites)[0], delta=0.6)
+
+    def test_topo(self):
+        surface = PlanarSurface(1, 2, 3, *test_data.TEST_7_RUPTURE_9_CORNERS)
+        sites = Mesh.from_points_list([Point(-0.3, 0.4, -8)])
         self.assertAlmostEqual(55.6159556,
                                surface.get_min_distance(sites)[0], delta=0.6)
 
@@ -431,6 +464,19 @@ class PlanarSurfaceGetClosestPointsTestCase(unittest.TestCase):
         aae(res1.lats, res2.lats, decimal=2)
         aae(res1.depths, res2.depths, decimal=0)
 
+    corners_topo = [Point(-0.1, -0.1, -2), Point(0.1, -0.1, -2),
+                    Point(0.1, 0.1, 0), Point(-0.1, 0.1, 0)]
+    surface_topo = PlanarSurface(10, 90, 45, *corners_topo)
+
+    def test_point_above_surface_topo(self):
+        sites = Mesh.from_points_list([Point(0, 0, -2), Point(-0.03, 0.05, -1.5)])
+        res = self.surface_topo.get_closest_points(sites)
+        self.assertIsInstance(res, Mesh)
+        aae = numpy.testing.assert_almost_equal
+        aae(res.lons, [0, -0.03], decimal=5)
+        aae(res.lats, [-0.00081824,  0.04919223], decimal=5)
+        aae(res.depths, [1.0113781-2., 1.50822185-2.], decimal=5)
+
 
 class PlanarSurfaceGetRXDistanceTestCase(unittest.TestCase):
     def _test1to7surface(self):
@@ -579,4 +625,12 @@ class PlanarSurfaceGetMiddlePointTestCase(unittest.TestCase):
         surface = PlanarSurface(1, 45, 90, *corners)
         self.assertTrue(
             Point(0.0, 0.044966, 5.0) == surface.get_middle_point()
+        )
+
+    def test_topo(self):
+        corners = [Point(0.0, 0.0, 0.0), Point(0.0, 0.089932, 0.0),
+                   Point(0.0, 0.089932, -8.0), Point(0.0, 0.0, -8.0)]
+        surface = PlanarSurface(1, 45, 90, *corners)
+        self.assertTrue(
+            Point(0.0, 0.044966, -4.0) == surface.get_middle_point()
         )
