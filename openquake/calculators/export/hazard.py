@@ -28,7 +28,6 @@ from openquake.baselib.general import (
     groupby, humansize, get_array, group_array, DictArray)
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
-from openquake.risklib.riskinput import GmfGetter
 from openquake.calculators.export import export
 from openquake.commonlib import writers, hazard_writers, calc, util
 
@@ -591,7 +590,7 @@ def export_hcurves_npz(ekey, dstore):
     mesh = get_mesh(dstore['sitecol'])
     imtls = dstore['oqparam'].imtls
     fname = dstore.export_path('%s.%s' % ekey)
-    arr = numpy.zeros(1, imtls.imt_dt)
+    arr = numpy.zeros(1, imtls.dt)
     for imt in imtls:
         arr[imt] = imtls[imt]
     dic = dict(imtls=arr[0])
