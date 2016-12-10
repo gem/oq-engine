@@ -285,7 +285,7 @@ class PointCloserThanTestCase(unittest.TestCase):
         numpy.testing.assert_array_equal(closer, [1, 1, 1, 1, 0, 0])
         closer = p.closer_than(mesh, 30)
         numpy.testing.assert_array_equal(closer, [1, 1, 1, 1, 1, 1])
-        
+
 
 class PointWktTestCase(unittest.TestCase):
     def test_point_wkt2d(self):
@@ -300,7 +300,7 @@ class PointWktTestCase(unittest.TestCase):
 class DistanceToMeshTestCase(unittest.TestCase):
     def test_no_depths(self):
         p = geo.Point(20, 30)
-        mesh = geo.Mesh(numpy.array([[18., 19., 20.,]] * 3),
+        mesh = geo.Mesh(numpy.array([[18., 19., 20.]] * 3),
                         numpy.array([[29.] * 3, [30.] * 3, [31.] * 3]),
                         depths=None)
         distances = p.distance_to_mesh(mesh, with_depths=False)

@@ -56,8 +56,8 @@ class ComplexFaultSurfaceCheckFaultDataTestCase(utils.SurfaceTestCase):
         with self.assertRaises(ValueError) as cm:
             ComplexFaultSurface.from_fault_data(edges, mesh_spacing=10)
         self.assertEqual(
-                'Surface does not conform with Aki & Richards convention',
-                str(cm.exception)
+            'Surface does not conform with Aki & Richards convention',
+            str(cm.exception)
         )
 
     def test_dip_left_of_fault_strike_case2(self):
@@ -76,8 +76,8 @@ class ComplexFaultSurfaceCheckFaultDataTestCase(utils.SurfaceTestCase):
         with self.assertRaises(ValueError) as cm:
             ComplexFaultSurface.from_fault_data(edges, mesh_spacing=10)
         self.assertEqual(
-                'Surface does not conform with Aki & Richards convention',
-                str(cm.exception)
+            'Surface does not conform with Aki & Richards convention',
+            gstr(cm.exception)
         )
 
     def test_dip_left_of_fault_strike_topo(self):
@@ -95,8 +95,8 @@ class ComplexFaultSurfaceCheckFaultDataTestCase(utils.SurfaceTestCase):
         with self.assertRaises(ValueError) as cm:
             ComplexFaultSurface.from_fault_data(edges, mesh_spacing=1)
         self.assertEqual(
-                'Surface does not conform with Aki & Richards convention',
-                str(cm.exception)
+            'Surface does not conform with Aki & Richards convention',
+            str(cm.exception)
         )
 
     def test_invalid_surface_polygon_case1(self):
@@ -107,8 +107,8 @@ class ComplexFaultSurfaceCheckFaultDataTestCase(utils.SurfaceTestCase):
         with self.assertRaises(ValueError) as cm:
             ComplexFaultSurface.from_fault_data(edges, mesh_spacing=10)
         self.assertEqual(
-                'Edges points are not in the right order',
-                str(cm.exception)
+            'Edges points are not in the right order',
+            str(cm.exception)
         )
 
     def test_invalid_surface_polygon_case2(self):
@@ -119,8 +119,8 @@ class ComplexFaultSurfaceCheckFaultDataTestCase(utils.SurfaceTestCase):
         with self.assertRaises(ValueError) as cm:
             ComplexFaultSurface.from_fault_data(edges, mesh_spacing=10)
         self.assertEqual(
-                'Edges points are not in the right order',
-                str(cm.exception)
+            'Edges points are not in the right order',
+            str(cm.exception)
         )
 
     def test_invalid_surface_polygon_case3(self):
@@ -132,8 +132,8 @@ class ComplexFaultSurfaceCheckFaultDataTestCase(utils.SurfaceTestCase):
         with self.assertRaises(ValueError) as cm:
             ComplexFaultSurface.from_fault_data(edges, mesh_spacing=10)
         self.assertEqual(
-                'Edges points are not in the right order',
-                str(cm.exception)
+            'Edges points are not in the right order',
+            str(cm.exception)
         )
 
     def test_invalid_surface_polygon_topo(self):
@@ -144,8 +144,8 @@ class ComplexFaultSurfaceCheckFaultDataTestCase(utils.SurfaceTestCase):
         with self.assertRaises(ValueError) as cm:
             ComplexFaultSurface.from_fault_data(edges, mesh_spacing=1)
         self.assertEqual(
-                'Edges points are not in the right order',
-                str(cm.exception)
+            'Edges points are not in the right order',
+            str(cm.exception)
         )
 
 
@@ -223,7 +223,7 @@ class ComplexFaultFromFaultDataTestCase(utils.SurfaceTestCase):
     def test_surface_crossing_international_date_line(self):
         edge1 = Line([Point(179.95, 0., 0.), Point(-179.95, 0., 0.)])
         edge2 = Line([Point(179.95, 0., 10.), Point(-179.95, 0., 10.)])
-        surface = ComplexFaultSurface.from_fault_data([edge1, edge2], 
+        surface = ComplexFaultSurface.from_fault_data([edge1, edge2],
                                                       mesh_spacing=10.)
         self.assert_mesh_is(surface=surface, expected_mesh=[
             [(179.95, 0., 0.), (-179.95, 0., 0.)],

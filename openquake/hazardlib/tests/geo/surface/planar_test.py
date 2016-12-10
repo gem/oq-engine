@@ -469,7 +469,8 @@ class PlanarSurfaceGetClosestPointsTestCase(unittest.TestCase):
     surface_topo = PlanarSurface(10, 90, 45, *corners_topo)
 
     def test_point_above_surface_topo(self):
-        sites = Mesh.from_points_list([Point(0, 0, -2), Point(-0.03, 0.05, -1.5)])
+        sites = Mesh.from_points_list([Point(0, 0, -2),
+                                       Point(-0.03, 0.05, -1.5)])
         res = self.surface_topo.get_closest_points(sites)
         self.assertIsInstance(res, Mesh)
         aae = numpy.testing.assert_almost_equal

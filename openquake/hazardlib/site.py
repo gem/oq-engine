@@ -159,7 +159,7 @@ class SiteCollection(object):
             reference_backarc
         """
         assert len(lons) == len(lats) == len(depths), (len(lons), len(lats),
-            len(depths))
+                                                       len(depths))
         self = cls.__new__(cls)
         self.complete = self
         self.total_sites = len(lons)
@@ -205,7 +205,8 @@ class SiteCollection(object):
         # subsequent calculation. note that this doesn't protect arrays from
         # being changed by calling itemset()
         for arr in (self._vs30, self._vs30measured, self._z1pt0, self._z2pt5,
-                    self.lons, self.lats, self.depths, self._backarc, self.sids):
+                    self.lons, self.lats, self.depths, self._backarc,
+                    self.sids):
             arr.flags.writeable = False
 
     def __toh5__(self):
@@ -421,7 +422,7 @@ def _extract_site_param(fsc, name):
 
 # attach a number of properties filtering the arrays
 for name in 'vs30 vs30measured z1pt0 z2pt5 backarc lons lats depths\
-    sids'.split():
+sids'.split():
     prop = property(
         lambda fsc, name=name: _extract_site_param(fsc, name),
         doc='Extract %s array from FilteredSiteCollection' % name)

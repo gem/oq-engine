@@ -498,7 +498,7 @@ class IntervalsBetweenTest(unittest.TestCase):
         )
         expected_lons = [0, 0]
         expected_lats = [0, 0]
-        expected_depths = [0, -2] 
+        expected_depths = [0, -2]
         self.assertTrue(numpy.allclose(lons, expected_lons))
         self.assertTrue(numpy.allclose(lats, expected_lats))
         self.assertTrue(numpy.allclose(depths, expected_depths))
