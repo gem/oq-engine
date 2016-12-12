@@ -1482,19 +1482,18 @@ def build_loss_dtypes(curve_resolution, conditional_loss_poes, insured_losses):
     :returns:
        loss_curve_dt and loss_maps_dt
     """
-    lst = [('poe-%s' % poe, F32) for poe in conditional_loss_poes]
-    if insured_losses:
-        lst += [(name + '_ins', pair) for name, pair in lst]
+    I = insured_losses + 1
+    lst = [('poe-%s' % poe, (F32, I)) for poe in conditional_loss_poes]
     lm_dt = numpy.dtype(lst)
     lc_list = []
     lm_list = []
-    for lt in sorted(curve_resolution):
-        C = curve_resolution[lt]
-        pairs = [('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)]
-        if insured_losses:
-            pairs += [(name + '_ins', pair) for name, pair in pairs]
-        lc_list.append((str(lt), numpy.dtype(pairs)))
-        lm_list.append((str(lt), lm_dt))
+    for loss_type in sorted(curve_resolution):
+        C = curve_resolution[loss_type]
+        pairs = [('losses', (F32, (I, C))),
+                 ('poes', (F32, (I, C))),
+                 ('avg', (F32, (I,)))]
+        lc_list.append((str(loss_type), numpy.dtype(pairs)))
+        lm_list.append((str(loss_type), lm_dt))
     loss_curve_dt = numpy.dtype(lc_list) if lc_list else None
     loss_maps_dt = numpy.dtype(lm_list) if lm_list else None
     return loss_curve_dt, loss_maps_dt
