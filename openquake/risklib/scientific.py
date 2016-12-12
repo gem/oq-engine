@@ -940,7 +940,7 @@ class CurveBuilder(object):
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
         self.I = insured_losses + 1
-        self.loss_curve_dt, self.loss_maps_dt = build_dtypes(
+        self.agg_curve_dt, self.loss_maps_dt = build_dtypes(
             C, conditional_loss_poes, insured_losses)
 
     def __call__(self, assets, ratios_by_aid):
@@ -976,7 +976,7 @@ class CurveBuilder(object):
         """
         losses_poes = event_based(losses, self.ses_ratio,
                                   self.curve_resolution)
-        curve = numpy.zeros(self.I, self.loss_curve_dt)
+        curve = numpy.zeros(self.I, self.agg_curve_dt)
         curve['losses'] = losses_poes[0]
         curve['poes'] = losses_poes[1]
         curve['avg'] = average_loss(losses_poes)
@@ -1632,8 +1632,6 @@ class StatsBuilder(object):
         else:
             loss_maps = None
         for lt in loss_ratios_by_lt:
-            self.loss_curve_dt = loss_curve_dt[lt]
-            self.loss_maps_dt = loss_maps_dt[lt]
             C = loss_curve_dt[lt]['losses'].shape[-1]
             curves, maps = self._get_curves_maps(
                 self.build(outputs_by_lt[lt]), C)
@@ -1655,15 +1653,15 @@ class StatsBuilder(object):
             statistical loss curves and maps per asset as composite arrays
             of shape (Q1, N)
         """
-        self.loss_curve_dt, self.loss_maps_dt = build_dtypes(
+        loss_curve_dt, loss_maps_dt = build_dtypes(
             C, self.conditional_loss_poes, self.insured_losses)
 
         Q1 = len(self.mean_quantiles)
         N = len(stats.assets)
-        curves = numpy.zeros((Q1, N), self.loss_curve_dt)
+        curves = numpy.zeros((Q1, N), loss_curve_dt)
         if self.conditional_loss_poes:
-            maps = numpy.zeros((Q1, N), self.loss_maps_dt)
-            poenames = [n for n in self.loss_maps_dt.names
+            maps = numpy.zeros((Q1, N), loss_maps_dt)
+            poenames = [n for n in loss_maps_dt.names
                         if not n.endswith('_ins')]
         else:
             maps = []
