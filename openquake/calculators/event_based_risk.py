@@ -237,7 +237,10 @@ class EbrPostCalculator(base.RiskCalculator):
             concurrent_tasks=self.oqparam.concurrent_tasks).reduce()
         agg_curve = numpy.zeros(R, loss_curve_dt)
         for l, r, name in result:
-            agg_curve[lts[l]][name][r] = result[l, r, name]
+            if name.endswith('_ins'):  # strip _ins
+                agg_curve[lts[l]][name[:-4]][r, 1] = result[l, r, name]
+            else:
+                agg_curve[lts[l]][name][r, 0] = result[l, r, name]
         self.datastore['agg_curve-rlzs'] = agg_curve
 
 
