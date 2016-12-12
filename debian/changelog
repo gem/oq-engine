@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a bug when exporting the uniform hazard spectra in presence of
+    IMTs non spectral acceleration
   * Fixed a bug when computing the loss maps in presence of insurance,
     temporarily introduced in master
   * Made the datastore for event based risk calculations much lighter
