@@ -49,7 +49,7 @@ def build_el_dtypes(insured_losses):
     return numpy.dtype(ela_list), numpy.dtype(elt_list)
 
 
-def build_agg_curve(cb_inputs, insured_losses, monitor):
+def build_agg_curve(cb_inputs, monitor):
     """
     Build the aggregate loss curve in parallel for each loss type
     and realization pair.
@@ -58,8 +58,6 @@ def build_agg_curve(cb_inputs, insured_losses, monitor):
         a list of triples `(cb, rlzname, data)` where `cb` is a curve builder,
         `rlzname` is a string of kind `rlz-%03d` and `data` is an array of kind
         `(rupture_id, loss)` or `(rupture_id, loss, loss_ins)`
-    :param bool insured_losses:
-        job.ini configuration parameter
     :param monitor:
         a Monitor instance
     :returns:
@@ -71,14 +69,7 @@ def build_agg_curve(cb_inputs, insured_losses, monitor):
             continue
         l = cb.index
         r = int(rlzname[4:])  # strip rlz-
-        lc = cb.calc_loss_curve(data['loss'])
-        result[l, r, 'losses'] = lc['losses'][0]
-        result[l, r, 'poes'] = lc['poes'][0]
-        result[l, r, 'avg'] = lc['avg'][0]
-        if insured_losses:
-            result[l, r, 'losses_ins'] = lc['losses'][1]
-            result[l, r, 'poes_ins'] = lc['poes'][1]
-            result[l, r, 'avg_ins'] = lc['avg'][1]
+        result[l, r] = cb.calc_loss_curve(data['loss'])
     return result
 
 
@@ -231,16 +222,12 @@ class EbrPostCalculator(base.RiskCalculator):
         lts = self.riskmodel.loss_types
         cb_inputs = self.cb_inputs('agg_loss_table')
         R = len(self.rlzs_assoc.realizations)
-        ins = self.oqparam.insured_losses
         result = parallel.apply(
-            build_agg_curve, (cb_inputs, ins, self.monitor('')),
+            build_agg_curve, (cb_inputs, self.monitor('')),
             concurrent_tasks=self.oqparam.concurrent_tasks).reduce()
         agg_curve = numpy.zeros(R, loss_curve_dt)
-        for l, r, name in result:
-            if name.endswith('_ins'):  # strip _ins
-                agg_curve[lts[l]][name[:-4]][r, 1] = result[l, r, name]
-            else:
-                agg_curve[lts[l]][name][r, 0] = result[l, r, name]
+        for l, r in result:
+            agg_curve[lts[l]][r] = result[l, r]
         self.datastore['agg_curve-rlzs'] = agg_curve
 
 
