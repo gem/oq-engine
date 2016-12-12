@@ -972,7 +972,7 @@ class CurveBuilder(object):
     def calc_loss_curve(self, losses):
         """
         :param losses: array of shape (E, I)
-        :returns: array of shape (2, I, C) for (losses, poes)
+        :returns: array of length I and dtype loss_curve_dt
         """
         losses_poes = event_based(losses, self.ses_ratio,
                                   self.curve_resolution)
@@ -1643,7 +1643,7 @@ class StatsBuilder(object):
                 loss_maps[lt] = maps.T
         return loss_curves, loss_maps
 
-    def _get_curves_maps(self, stats, C):
+    def _get_curves_maps(self, stats, C=None):
         """
         :param stats:
             an object with attributes mean_curves, mean_average_losses,
@@ -1655,7 +1655,8 @@ class StatsBuilder(object):
             of shape (Q1, N)
         """
         self.loss_curve_dt, self.loss_maps_dt = build_dtypes(
-            C, self.conditional_loss_poes, self.insured_losses)
+            C or self.curve_resolution, self.conditional_loss_poes,
+            self.insured_losses)
 
         Q1 = len(self.mean_quantiles)
         N = len(stats.assets)
