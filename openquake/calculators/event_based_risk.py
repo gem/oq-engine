@@ -215,10 +215,9 @@ class EbrPostCalculator(base.RiskCalculator):
         generating the loss curves, directly from the the aggregate losses.
         """
         oq = self.oqparam
-        cbs = self.riskmodel.curve_builders
-        loss_curve_dt, _ = scientific.build_loss_dtypes(
-            {cb.loss_type: cb.curve_resolution for cb in cbs},
-            oq.conditional_loss_poes, oq.insured_losses)
+        loss_curve_dt, _ = self.riskmodel.build_all_loss_dtypes(
+            oq.loss_curve_resolution, oq.conditional_loss_poes,
+            oq.insured_losses)
         lts = self.riskmodel.loss_types
         cb_inputs = self.cb_inputs('agg_loss_table')
         R = len(self.rlzs_assoc.realizations)

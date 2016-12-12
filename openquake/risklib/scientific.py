@@ -1482,18 +1482,19 @@ def build_loss_dtypes(curve_resolution, conditional_loss_poes, insured_losses):
     :returns:
        loss_curve_dt and loss_maps_dt
     """
-    I = insured_losses + 1
-    lst = [('poe-%s' % poe, (F32, I)) for poe in conditional_loss_poes]
+    lst = [('poe-%s' % poe, F32) for poe in conditional_loss_poes]
+    if insured_losses:
+        lst += [(name + '_ins', pair) for name, pair in lst]
     lm_dt = numpy.dtype(lst)
     lc_list = []
     lm_list = []
-    for loss_type in sorted(curve_resolution):
-        C = curve_resolution[loss_type]
-        pairs = [('losses', (F32, (I, C))),
-                 ('poes', (F32, (I, C))),
-                 ('avg', (F32, (I,)))]
-        lc_list.append((str(loss_type), numpy.dtype(pairs)))
-        lm_list.append((str(loss_type), lm_dt))
+    for lt in sorted(curve_resolution):
+        C = curve_resolution[lt]
+        pairs = [('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)]
+        if insured_losses:
+            pairs += [(name + '_ins', pair) for name, pair in pairs]
+        lc_list.append((str(lt), numpy.dtype(pairs)))
+        lm_list.append((str(lt), lm_dt))
     loss_curve_dt = numpy.dtype(lc_list) if lc_list else None
     loss_maps_dt = numpy.dtype(lm_list) if lm_list else None
     return loss_curve_dt, loss_maps_dt
@@ -1513,12 +1514,15 @@ class StatsBuilder(object):
                  insured_losses=False):
         self.quantiles = quantiles
         self.conditional_loss_poes = conditional_loss_poes
-        self.curve_resolution = curve_resolution
+        self.curve_resolution = C = curve_resolution
         self.normalize_curves = _normalize_curves
         self.insured_losses = insured_losses
         self.mean_quantiles = ['mean']
         for q in quantiles:
             self.mean_quantiles.append('quantile-%s' % q)
+
+        self.loss_curve_dt, self.loss_maps_dt = build_dtypes(
+            C, conditional_loss_poes, insured_losses)
 
     def normalize(self, loss_curves):
         """
@@ -1653,13 +1657,10 @@ class StatsBuilder(object):
         """
         Q1 = len(self.mean_quantiles)
         N = len(stats.assets)
-        C = stats.mean_curves[0].shape[-1]
-        loss_curve_dt, loss_maps_dt = build_dtypes(
-            C, self.conditional_loss_poes, self.insured_losses)
-        curves = numpy.zeros((Q1, N), loss_curve_dt)
+        curves = numpy.zeros((Q1, N), self.loss_curve_dt)
         if self.conditional_loss_poes:
-            maps = numpy.zeros((Q1, N), loss_maps_dt)
-            poenames = [n for n in loss_maps_dt.names
+            maps = numpy.zeros((Q1, N), self.loss_maps_dt)
+            poenames = [n for n in self.loss_maps_dt.names
                         if not n.endswith('_ins')]
         else:
             maps = []
