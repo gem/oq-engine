@@ -1521,9 +1521,6 @@ class StatsBuilder(object):
         for q in quantiles:
             self.mean_quantiles.append('quantile-%s' % q)
 
-        self.loss_curve_dt, self.loss_maps_dt = build_dtypes(
-            C, conditional_loss_poes, insured_losses)
-
     def normalize(self, loss_curves):
         """
         Normalize the loss curves by using the provided normalization function
@@ -1638,13 +1635,15 @@ class StatsBuilder(object):
         for lt in loss_ratios_by_lt:
             self.loss_curve_dt = loss_curve_dt[lt]
             self.loss_maps_dt = loss_maps_dt[lt]
-            curves, maps = self._get_curves_maps(self.build(outputs_by_lt[lt]))
+            C = loss_curve_dt[lt]['losses'].shape[-1]
+            curves, maps = self._get_curves_maps(
+                self.build(outputs_by_lt[lt]), C)
             loss_curves[lt] = curves.T
             if self.conditional_loss_poes:
                 loss_maps[lt] = maps.T
         return loss_curves, loss_maps
 
-    def _get_curves_maps(self, stats):
+    def _get_curves_maps(self, stats, C):
         """
         :param stats:
             an object with attributes mean_curves, mean_average_losses,
@@ -1655,6 +1654,9 @@ class StatsBuilder(object):
             statistical loss curves and maps per asset as composite arrays
             of shape (Q1, N)
         """
+        self.loss_curve_dt, self.loss_maps_dt = build_dtypes(
+            C, self.conditional_loss_poes, self.insured_losses)
+
         Q1 = len(self.mean_quantiles)
         N = len(stats.assets)
         curves = numpy.zeros((Q1, N), self.loss_curve_dt)
@@ -1710,6 +1712,7 @@ class StatsBuilder(object):
         agg_curve_stats = numpy.zeros(Q1, loss_curve_dt)
         for l, loss_type in enumerate(loss_curve_dt.names):
             agg_curve_lt = dstore['agg_curve-rlzs'][loss_type]
+            C = agg_curve_lt['losses'].shape[-1]
             outputs = []
             for rlz in rlzs:
                 curve = agg_curve_lt[rlz.ordinal]
@@ -1729,7 +1732,7 @@ class StatsBuilder(object):
                     average_insured_losses=[average_insured_loss])
                 outputs.append(out)
             stats = self.build(outputs)
-            curves, _maps = self._get_curves_maps(stats)  # shape (Q1, 1)
+            curves, _maps = self._get_curves_maps(stats, C)  # shape (Q1, 1)
             acs = agg_curve_stats[loss_type]
             for i, statname in enumerate(self.mean_quantiles):
                 for name in acs.dtype.names:

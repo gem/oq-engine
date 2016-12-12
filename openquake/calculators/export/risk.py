@@ -879,7 +879,7 @@ def export_agg_curve_stats(ekey, dstore):
         oq.insured_losses)
     riskmodel = riskinput.read_composite_risk_model(dstore)
     loss_curve_dt, _ = riskmodel.build_all_loss_dtypes(
-        oq.loss_curve_resolution, oq.conditional_loss_poes, oq.insured_losses)
+        oq.conditional_loss_poes, oq.insured_losses)
     agg_curve = sb.build_agg_curve_stats(loss_curve_dt, dstore)
     fnames = []
     for writer, (loss_type, poe, r, ins) in _gen_writers(
