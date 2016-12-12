@@ -925,14 +925,16 @@ class CurveBuilder(object):
     by the user or automatically generated (user_provided=False).
     The usage is something like this:
 
-      builder = CurveBuilder(loss_type, loss_ratios, user_provided=True)
+      builder = CurveBuilder(loss_type, loss_ratios, ses_ratio,
+                             user_provided=True)
       counts = builder.build_counts(loss_matrix)
     """
-    def __init__(self, loss_type, loss_ratios, user_provided,
+    def __init__(self, loss_type, loss_ratios, ses_ratio, user_provided,
                  conditional_loss_poes=(), insured_losses=False,
                  curve_resolution=None):
         self.loss_type = loss_type
         self.ratios = numpy.array(loss_ratios, F32)
+        self.ses_ratio = ses_ratio
         self.user_provided = user_provided
         self.curve_resolution = C = curve_resolution or len(loss_ratios)
         self.conditional_loss_poes = conditional_loss_poes
@@ -941,11 +943,10 @@ class CurveBuilder(object):
         self.loss_curve_dt, self.loss_maps_dt = build_dtypes(
             C, conditional_loss_poes, insured_losses)
 
-    def __call__(self, assets, ratios_by_aid, ses_ratio):
+    def __call__(self, assets, ratios_by_aid):
         """"
         :param assets: a list of assets
         :param ratios_by_aid: a dictionary of loss ratios by asset ordinal
-        :param ses_ratio: ses_ratio parameter
         :returns:
            two arrays, `aids` of size A, and `all_poes` of shape (A, I, C)
         """
@@ -959,7 +960,7 @@ class CurveBuilder(object):
                 continue
             counts = numpy.array([(loss_ratios >= ratio).sum(axis=0)
                                   for ratio in self.ratios])
-            poes = build_poes(counts, 1. / ses_ratio)
+            poes = build_poes(counts, 1. / self.ses_ratio)
             if len(poes.shape) == 1:
                 poes = poes[:, None]
             # for instance the ratios can have shape (21,), the loss_ratios
@@ -967,6 +968,19 @@ class CurveBuilder(object):
             all_poes.append(poes.T)
             aids.append(aid)
         return numpy.array(aids), numpy.array(all_poes)
+
+    def calc_loss_curve(self, losses):
+        """
+        :param losses: array of shape (E, I)
+        :returns: array of shape (2, I, C) for (losses, poes)
+        """
+        losses_poes = event_based(losses, self.ses_ratio,
+                                  self.curve_resolution)
+        curve = numpy.zeros(self.I, self.loss_curve_dt)
+        curve['losses'] = losses_poes[0]
+        curve['poes'] = losses_poes[1]
+        curve['avg'] = average_loss(losses_poes)
+        return curve
 
     def _calc_loss_maps(self, asset_values, clp, poe_matrix):
         """
