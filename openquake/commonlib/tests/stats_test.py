@@ -81,6 +81,7 @@ class StatsTestCase(unittest.TestCase):
         outputs = []
         weights = [0.3, 0.7]
         ratios = numpy.array([.10, .14, .17, .20, .21])
+        cls.curve_resolution = len(ratios)
         for i, w in enumerate(weights):
             lc = loss_curves(assets, ratios, i)
             out = scientific.Output(
@@ -90,14 +91,14 @@ class StatsTestCase(unittest.TestCase):
             outputs.append(out)
         cls.builder = scientific.StatsBuilder(
             quantiles=[0.1, 0.9],
-            conditional_loss_poes=[0.35, 0.24, 0.13],
-            curve_resolution=len(ratios))
+            conditional_loss_poes=[0.35, 0.24, 0.13])
         cls.stats = cls.builder.build(outputs)
 
     # TODO: add a test for insured curves and maps
     def test_get_stat_curves_maps(self):
         tempdir = tempfile.mkdtemp()
-        curves, maps = self.builder._get_curves_maps(self.stats)
+        curves, maps = self.builder._get_curves_maps(
+            self.stats, self.curve_resolution)
         # expecting arrays of shape (Q1, N) with Q1=3, N=4
         actual = os.path.join(tempdir, 'expected_loss_curves.csv')
         writers.write_csv(actual, curves, fmt='%05.2f')

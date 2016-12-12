@@ -1510,11 +1510,10 @@ class StatsBuilder(object):
     """
     def __init__(self, quantiles,
                  conditional_loss_poes,
-                 curve_resolution=0, _normalize_curves=normalize_curves,
+                 _normalize_curves=normalize_curves,
                  insured_losses=False):
         self.quantiles = quantiles
         self.conditional_loss_poes = conditional_loss_poes
-        self.curve_resolution = C = curve_resolution
         self.normalize_curves = _normalize_curves
         self.insured_losses = insured_losses
         self.mean_quantiles = ['mean']
@@ -1643,20 +1642,21 @@ class StatsBuilder(object):
                 loss_maps[lt] = maps.T
         return loss_curves, loss_maps
 
-    def _get_curves_maps(self, stats, C=None):
+    def _get_curves_maps(self, stats, C):
         """
         :param stats:
             an object with attributes mean_curves, mean_average_losses,
             mean_maps, quantile_curves, quantile_average_losses,
             quantile_loss_curves, quantile_maps, assets.
             There is also a loss_type attribute which must be always the same.
+        :param C:
+             curve resolution
         :returns:
             statistical loss curves and maps per asset as composite arrays
             of shape (Q1, N)
         """
         self.loss_curve_dt, self.loss_maps_dt = build_dtypes(
-            C or self.curve_resolution, self.conditional_loss_poes,
-            self.insured_losses)
+            C, self.conditional_loss_poes, self.insured_losses)
 
         Q1 = len(self.mean_quantiles)
         N = len(stats.assets)
