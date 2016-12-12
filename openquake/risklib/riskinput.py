@@ -302,6 +302,33 @@ class CompositeRiskModel(collections.Mapping):
                 iml[rf.imt].append(rf.imls[0])
         return {imt: min(iml[imt]) for imt in iml}
 
+    # FIXME: scheduled for removal once we change agg_curve to be built from
+    # the user-provided loss ratios
+    def build_all_loss_dtypes(self, curve_resolution, conditional_loss_poes,
+                              insured_losses=False):
+        """
+        :param conditional_loss_poes:
+            configuration parameter
+        :param insured_losses:
+            configuration parameter
+        :returns:
+           loss_curve_dt and loss_maps_dt
+        """
+        I = insured_losses + 1
+        lst = [('poe-%s' % poe, (F32, I)) for poe in conditional_loss_poes]
+        lm_dt = numpy.dtype(lst)
+        lc_list = []
+        lm_list = []
+        for loss_type in self.loss_types:
+            pairs = [('losses', (F32, (I, curve_resolution))),
+                     ('poes', (F32, (I, curve_resolution))),
+                     ('avg', (F32, (I,)))]
+            lc_list.append((loss_type, numpy.dtype(pairs)))
+            lm_list.append((loss_type, lm_dt))
+        loss_curve_dt = numpy.dtype(lc_list) if lc_list else None
+        loss_maps_dt = numpy.dtype(lm_list) if lm_list else None
+        return loss_curve_dt, loss_maps_dt
+
     def make_curve_builders(self, oqparam):
         """
         Populate the inner lists .loss_types, .curve_builders.
