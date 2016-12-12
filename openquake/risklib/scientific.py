@@ -925,7 +925,8 @@ class CurveBuilder(object):
     by the user or automatically generated (user_provided=False).
     The usage is something like this:
 
-      builder = CurveBuilder(loss_type, loss_ratios, user_provided=True)
+      builder = CurveBuilder(loss_type, loss_ratios, ses_ratio,
+                             user_provided=True)
       counts = builder.build_counts(loss_matrix)
     """
     def __init__(self, loss_type, loss_ratios, ses_ratio, user_provided,
@@ -1712,11 +1713,11 @@ class StatsBuilder(object):
             outputs = []
             for rlz in rlzs:
                 curve = agg_curve_lt[rlz.ordinal]
-                average_loss = curve['avg']
-                loss_curve = (curve['losses'], curve['poes'])
+                average_loss = curve['avg'][0]
+                loss_curve = (curve['losses'][0], curve['poes'][0])
                 if self.insured_losses:
-                    average_insured_loss = curve['avg_ins']
-                    insured_curves = [(curve['losses_ins'], curve['poes_ins'])]
+                    average_insured_loss = curve['avg'][1]
+                    insured_curves = [(curve['losses'][1], curve['poes'][1])]
                 else:
                     average_insured_loss = None
                     insured_curves = None
