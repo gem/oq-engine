@@ -289,7 +289,7 @@ def pmap_from_grp(
 
 
 def calc_hazard_curves_ext(
-        group, source_site_filter, imtls, gsim_by_trt, truncation_level=None,
+        groups, source_site_filter, imtls, gsim_by_trt, truncation_level=None,
         apply=Sequential.apply):
     """
     Compute hazard curves on a list of sites, given a set of seismic source
@@ -302,9 +302,8 @@ def calc_hazard_curves_ext(
     :param group:
         A sequence of groups of seismic sources objects (instances of
         of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`).
-    :param sites:
-        Instance of :class:`~openquake.hazardlib.site.SiteCollection` object,
-        representing sites of interest.
+    :param source_site_filter:
+        A source filter over the site collection or the site collection itself
     :param imtls:
         Dictionary mapping intensity measure type strings
         to lists of intensity measure levels.
@@ -333,6 +332,7 @@ def calc_hazard_curves_ext(
         groups = SourceGroupCollection([group_tmp])
 
     imtls = DictArray(imtls)
+    sitecol = source_site_filter.sitecol
     pmap = ProbabilityMap(len(imtls.array), 1)
     # Processing groups
     for group in groups.grp_list:
@@ -364,12 +364,11 @@ def calc_hazard_curves_ext(
                                     False)
             if indep:
                 pmap |= pmap_from_grp(
-                    tmp_group, sites, imtls, [gsim],
-                    truncation_level, source_site_filter)
+                    tmp_group, source_site_filter, imtls, [gsim],
+                    truncation_level)
             else:
                 # since in this case the probability for each source have
                 # been already accounted, we use a weight equal to unity
                 pmap += pmap_from_grp(
-                    tmp_group, sites, imtls, [gsim],
-                    truncation_level, source_site_filter)
-    return pmap.convert(imtls, len(sites.complete))
+                    tmp_group, sitecol, imtls, [gsim], truncation_level)
+    return pmap.convert(imtls, len(sitecol.complete))

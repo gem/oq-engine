@@ -25,6 +25,7 @@ from openquake.hazardlib.const import TRT
 from openquake.hazardlib.geo.surface import PlanarSurface, SimpleFaultSurface
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.geodetic import point_at
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves_ext
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 from openquake.hazardlib.calc.hazard_curve import pmap_from_grp
@@ -89,7 +90,8 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                               TRT.GEOTHERMAL)
         site = Site(Point(0.0, 0.0), 800, True, z1pt0=100., z2pt5=1.)
         site = Site(Point(0.0, 0.0), 800, True, z1pt0=100., z2pt5=1.)
-        self.sites = SiteCollection([site])
+        s_filter = SourceFilter(SiteCollection([site]), None)
+        self.sites = s_filter
         self.imtls = DictArray({'PGA': [0.01, 0.1, 0.3]})
         self.gsim_by_trt = {TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
 
