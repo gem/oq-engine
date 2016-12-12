@@ -875,8 +875,7 @@ def export_agg_curve_stats(ekey, dstore):
     oq = dstore['oqparam']
     sb = scientific.StatsBuilder(
         oq.quantile_loss_curves, oq.conditional_loss_poes,
-        oq.loss_curve_resolution, scientific.normalize_curves_eb,
-        oq.insured_losses)
+        scientific.normalize_curves_eb, oq.insured_losses)
     riskmodel = riskinput.read_composite_risk_model(dstore)
     loss_curve_dt, _ = riskmodel.build_all_loss_dtypes(
         oq.conditional_loss_poes, oq.insured_losses)
