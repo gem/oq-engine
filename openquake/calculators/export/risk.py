@@ -462,6 +462,7 @@ def export_damage_total(ekey, dstore):
     return sorted(fnames)
 
 
+# used by event_based_risk and classical_risk
 @export.add(('loss_maps-rlzs', 'csv'))
 def export_loss_maps_csv(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
