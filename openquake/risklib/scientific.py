@@ -969,10 +969,10 @@ class CurveBuilder(object):
             aids.append(aid)
         return numpy.array(aids), numpy.array(all_poes)
 
-    def calc_loss_curve(self, losses):
+    def calc_agg_curve(self, losses):
         """
         :param losses: array of shape (E, I)
-        :returns: array of length I and dtype loss_curve_dt
+        :returns: array of length I and dtype agg_curve_dt
         """
         losses_poes = event_based(losses, self.ses_ratio,
                                   self.curve_resolution)
