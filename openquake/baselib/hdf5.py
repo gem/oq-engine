@@ -16,7 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import ast
+import tempfile
 import importlib
 try:  # with Python 3
     from urllib.parse import quote_plus, unquote_plus
@@ -183,6 +185,21 @@ class PickleableSequence(collections.Sequence):
         vars(self).update(attrs)
 
 
+def cls2dotname(cls):
+    """
+    The full Python name (i.e. `pkg.subpkg.mod.cls`) of a class
+    """
+    return '%s.%s' % (cls.__module__, cls.__name__)
+
+
+def dotname2cls(dotname):
+    """
+    The class associated to the given dotname (i.e. `pkg.subpkg.mod.cls`)
+    """
+    modname, clsname = dotname.rsplit('.', 1)
+    return getattr(importlib.import_module(modname), clsname)
+
+
 class File(h5py.File):
     """
     Subclass of :class:`h5py.File` able to store and retrieve objects
@@ -198,11 +215,24 @@ class File(h5py.File):
     3
     >>> f.close()
     """
+    @classmethod
+    def temporary(cls):
+        """
+        Returns a temporary hdf5 file, open for writing.
+        The temporary name is stored in the .path attribute.
+        It is the user responsability to remove the file when closed.
+        """
+        fh, path = tempfile.mkstemp(suffix='.hdf5')
+        os.close(fh)
+        self = cls(path, 'w')
+        self.path = path
+        return self
+
     def __setitem__(self, path, obj):
         cls = obj.__class__
         if hasattr(obj, '__toh5__'):
             obj, attrs = obj.__toh5__()
-            pyclass = '%s.%s' % (cls.__module__, cls.__name__)
+            pyclass = cls2dotname(cls)
         else:
             pyclass = ''
         if isinstance(obj, dict):
@@ -223,12 +253,13 @@ class File(h5py.File):
         h5attrs = h5obj.attrs
         if '__pyclass__' in h5attrs:
             # NB: the `decode` below is needed for Python 3
-            modname, clsname = decode(h5attrs['__pyclass__']).rsplit('.', 1)
-            cls = getattr(importlib.import_module(modname), clsname)
+            cls = dotname2cls(decode(h5attrs['__pyclass__']))
             obj = cls.__new__(cls)
-            if not hasattr(h5obj, 'shape'):  # is group
+            if hasattr(h5obj, 'items'):  # is group
                 h5obj = {unquote_plus(k): self['%s/%s' % (path, k)]
                          for k, v in h5obj.items()}
+            elif hasattr(h5obj, 'value'):
+                h5obj = h5obj.value
             obj.__fromh5__(h5obj, h5attrs)
             return obj
         else:

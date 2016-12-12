@@ -33,6 +33,8 @@ from openquake.hazardlib.near_fault import (get_plane_equation, projection_pp,
                                             isochone_ratio)
 from openquake.baselib.python3compat import with_metaclass
 
+pmf_dt = numpy.dtype([('prob', float), ('occ', numpy.uint32)])
+
 
 @with_slots
 class Rupture(object):
@@ -173,6 +175,12 @@ class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
             source_typology, rupture_slip_direction
         )
         self.pmf = pmf
+
+    def pmf_array(self):
+        """
+        Return a composite array with the Probability Mass Function
+        """
+        return numpy.array(self.data, pmf_dt)
 
     def get_probability_no_exceedance(self, poes):
         """

@@ -16,26 +16,57 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-"""
-:mod:`openquake.hazardlib.calc.hazard_curve` implements
-:func:`calc_hazard_curves`.
+""":mod:`openquake.hazardlib.calc.hazard_curve` implements
+:func:`calc_hazard_curves`. Here is an example of a classical PSHA
+parallel calculator computing the hazard curves per each realization in less
+than 20 lines of code:
+
+.. code-block:: python
+
+   import sys
+   import logging
+   from openquake.baselib import parallel
+   from openquake.hazardlib.calc.filters import SourceFilter
+   from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
+   from openquake.commonlib import readinput
+
+
+   def main(job_ini):
+       logging.basicConfig(level=logging.INFO)
+       oq = readinput.get_oqparam(job_ini)
+       sitecol = readinput.get_site_collection(oq)
+       src_filter = SourceFilter(sitecol, oq.maximum_distance)
+       csm = readinput.get_composite_source_model(oq).filter(src_filter)
+       rlzs_assoc = csm.info.get_rlzs_assoc()
+       sources = csm.get_sources()
+       for rlzno, gsim_by_trt in enumerate(rlzs_assoc.gsim_by_trt):
+           hcurves = calc_hazard_curves(sources, src_filter, oq.imtls,
+                                        gsim_by_trt, oq.truncation_level,
+                                        parallel.apply)
+           print('rlzno=%d, hcurves=%r' % (rlzno, hcurves))
+
+   if __name__ == '__main__':
+       main(sys.argv[1])  # path to a job.ini file
+
+NB: the implementation in the engine is smarter and more
+efficient. Here we start a parallel computation per each realization,
+the engine manages all the realizations at once.
 """
 from __future__ import division
 import sys
 import time
 import operator
 import collections
-
 import numpy
 
 from openquake.baselib.python3compat import raise_, zip
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import groupby, DictArray
+from openquake.baselib.general import DictArray
+from openquake.baselib.parallel import Sequential
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.calc import filters
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
-
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.source.base import SourceGroup, SourceGroupCollection
 
@@ -66,8 +97,8 @@ def rupture_weight_pairs(src):
 
 # old version working only for independent sources
 def calc_hazard_curves(
-        sources, sites, imtls, gsim_by_trt, truncation_level=None,
-        source_site_filter=filters.source_site_noop_filter):
+        sources, source_site_filter, imtls, gsim_by_trt,
+        truncation_level=None, apply=Sequential.apply):
     """
     Compute hazard curves on a list of sites, given a set of seismic sources
     and a set of ground shaking intensity models (one per tectonic region type
@@ -94,9 +125,8 @@ def calc_hazard_curves(
     :param sources:
         A sequence of seismic sources objects (instances of subclasses
         of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`).
-    :param sites:
-        Instance of :class:`~openquake.hazardlib.site.SiteCollection` object,
-        representing sites of interest.
+    :param source_site_filter:
+        A source filter over the site collection or the site collection itself
     :param imtls:
         Dictionary mapping intensity measure type strings
         to lists of intensity measure levels.
@@ -108,9 +138,9 @@ def calc_hazard_curves(
     :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
         distribution.
-    :param source_site_filter:
-        Optional source-site filter function. See
-        :mod:`openquake.hazardlib.calc.filters`.
+    :param apply:
+        Application function, for instance `parallel.apply`; by default use
+        `openquake.baselib.parallel.Sequential.apply`.
 
     :returns:
         An array of size N, where N is the number of sites, which elements
@@ -118,13 +148,17 @@ def calc_hazard_curves(
         size of each field is given by the number of levels in ``imtls``.
     """
     imtls = DictArray(imtls)
-    sources_by_trt = groupby(
-        sources, operator.attrgetter('tectonic_region_type'))
-    pmap = ProbabilityMap(len(imtls.array), 1)
-    for trt in sources_by_trt:
-        pmap |= pmap_from_grp(
-            sources_by_trt[trt], sites, imtls, [gsim_by_trt[trt]],
-            truncation_level, source_site_filter)
+    if hasattr(source_site_filter, 'sitecol'):  # a filter, as it should be
+        sites = source_site_filter.sitecol
+    else:  # backward compatibility, a site collection was passed
+        sites = source_site_filter
+        source_site_filter = SourceFilter(sites, None)
+    pmap = apply(
+        pmap_from_grp, (sources, source_site_filter, imtls,
+                        gsim_by_trt, truncation_level),
+        weight=operator.attrgetter('weight'),
+        key=operator.attrgetter('tectonic_region_type')
+    ).reduce(operator.or_, ProbabilityMap(len(imtls.array), 1))
     return pmap.convert(imtls, len(sites))
 
 
@@ -199,9 +233,8 @@ def poe_map(src, s_sites, imtls, cmaker, trunclevel, bbs, rup_indep,
 
 # this is used by the engine
 def pmap_from_grp(
-        sources, sites, imtls, gsims, truncation_level=None,
-        source_site_filter='SourceSitesFilter', maximum_distance=None, bbs=(),
-        monitor=Monitor()):
+        sources, source_site_filter, imtls, gsims, truncation_level=None,
+        bbs=(), monitor=Monitor()):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
@@ -210,32 +243,34 @@ def pmap_from_grp(
 
     :returns: a ProbabilityMap instance
     """
-    if source_site_filter == 'SourceSitesFilter':  # default
-        source_site_filter = (
-            filters.SourceSitesFilter(maximum_distance)
-            if maximum_distance else filters.source_site_noop_filter)
-
     if isinstance(sources, SourceGroup):
         group = sources
         sources = group.src_list
     else:
         group = SourceGroup(sources, '', 'indep', 'indep')
         sources = group.src_list
-
+    trt = sources[0].tectonic_region_type
+    try:
+        maxdist = source_site_filter.integration_distance[trt]
+    except:
+        maxdist = source_site_filter.integration_distance
+    if hasattr(gsims, 'keys'):
+        gsims = [gsims[trt]]
     # check all the sources belong to the same tectonic region
     trts = set(src.tectonic_region_type for src in sources)
     assert len(trts) == 1, 'Multiple TRTs: %s' % ', '.join(trts)
 
     with GroundShakingIntensityModel.forbid_instantiation():
         imtls = DictArray(imtls)
-        cmaker = ContextMaker(gsims, maximum_distance)
+        cmaker = ContextMaker(gsims, maxdist)
         ctx_mon = monitor('making contexts', measuremem=False)
         pne_mon = monitor('computing poes', measuremem=False)
         disagg_mon = monitor('get closest points', measuremem=False)
-        monitor.calc_times = []  # pairs (src_id, delta_t)
         src_indep = group.src_interdep == 'indep'
         pmap = ProbabilityMap(len(imtls.array), len(gsims))
-        for src, s_sites in source_site_filter(sources, sites):
+        pmap.calc_times = []  # pairs (src_id, delta_t)
+        pmap.grp_id = sources[0].src_group_id
+        for src, s_sites in source_site_filter(sources):
             t0 = time.time()
             poemap = poe_map(
                 src, s_sites, imtls, cmaker, truncation_level, bbs,
@@ -246,18 +281,16 @@ def pmap_from_grp(
                 weight = float(group.srcs_weights[src.source_id])
                 for sid in poemap:
                     pmap[sid] += poemap[sid] * weight
-                # we are attaching the calculation times to the monitor
-                # so that the engine can store them
-                monitor.calc_times.append(
-                    (src.source_id, len(s_sites), time.time() - t0))
-        monitor.eff_ruptures = pne_mon.counts  # contributing ruptures
+            pmap.calc_times.append(
+                (src.source_id, len(s_sites), time.time() - t0))
+        # storing the number of contributing ruptures too
+        pmap.eff_ruptures = {pmap.grp_id: pne_mon.counts}
         return pmap
 
 
 def calc_hazard_curves_ext(
-        groups, sites, imtls, gsim_by_trt, truncation_level=None,
-        source_site_filter=filters.source_site_noop_filter,
-        maximum_distance=None):
+        group, source_site_filter, imtls, gsim_by_trt, truncation_level=None,
+        apply=Sequential.apply):
     """
     Compute hazard curves on a list of sites, given a set of seismic source
     groups and a dictionary of ground shaking intensity models (one per

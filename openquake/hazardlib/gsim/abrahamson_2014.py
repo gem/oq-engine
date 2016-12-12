@@ -316,8 +316,11 @@ class AbrahamsonEtAl2014(GMPE):
         factor = np.log((z10 + 0.01) / (z1ref + 0.01))
         # Here we use a linear interpolation as suggested in the 'Application
         # guidelines' at page 1044
+        # Above 700 m/s the trend is flat, but we extend the Vs30 range to
+        # 6,000 m/s (basically the upper limit for mantle shear wave velocity
+        # on earth) to allow extrapolation without throwing an error.
         f2 = interpolate.interp1d(
-            [0.0, 150, 250, 400, 700, 1000, 2000],
+            [0.0, 150, 250, 400, 700, 1000, 6000],
             [C['a43'], C['a43'], C['a44'], C['a45'], C['a46'], C['a46'],
              C['a46']],
             kind='linear')

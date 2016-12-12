@@ -64,6 +64,7 @@ Built-in GSIMs
     hong_goda_2007
     idriss_2014
     kanno_2006
+    kale_2015
     kotha_2016
     lin_lee_2008
     lin_2009

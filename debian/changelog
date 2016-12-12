@@ -2,6 +2,33 @@
   * Extended the hazard curve calculator to manage mutually exclusive probabilities
 
   [Michele Simionato]
+  * Made calc_hazard_curves parallelizable
+  * Moved the parallelization library of the engine into baselib
+  * Fixed a Python 3 issue in git_suffix
+  * Added support for AccumDict of accumulators
+  * Made the RtreeFilter pickleable
+  * Made the FilteredSiteCollections serializable to HDF5
+
+  [Daniele Viganò]
+  * MANIFEST now includes all files, with any extension located in the
+    tests folders. It is now possible to run tests from an installation
+    made with packages
+
+  [Ozkan Kale, Graeme Weatherill]
+  * Implements the Kale et al. (2015) GMPE for Turkey and Iran
+
+  [Michele Simionato]
+  * Fixed a 32 bit issue when the FilteredSiteCollection
+
+  [Marco Pagani]
+  * Add the azimuth 'distance' parameter
+
+  [Graeme Weatherill]
+  * Modifies the Ry0 calculator for the planar rupture to avoid
+    creating the Mesh
+
+  [Michele Simionato]
+  * Removed the rupture_site_filter from the calculators
   * Removed the speedups and optimized the distance calculations at the
     numpy level
 

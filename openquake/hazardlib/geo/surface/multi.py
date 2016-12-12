@@ -324,6 +324,15 @@ class MultiSurface(BaseSurface):
         idx = dists == numpy.min(dists)
         return numpy.array(self.surfaces)[idx][0].get_middle_point()
 
+    def get_surface_boundaries(self):
+        lons = []
+        lats = []
+        for surf in self.surfaces:
+            lons_surf, lats_surf = surf.get_surface_boundaries()
+            lons.append(lons_surf[0])
+            lats.append(lats_surf[0])
+        return lons, lats
+
     def _get_areas(self):
         """
         Return surface elements area values in a numpy array.

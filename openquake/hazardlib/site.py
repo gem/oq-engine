@@ -25,7 +25,6 @@ from openquake.baselib.python3compat import range
 from openquake.baselib.slots import with_slots
 from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.geo.mesh import Mesh
-from openquake.hazardlib.geo.utils import cross_idl
 
 
 @with_slots
@@ -286,8 +285,6 @@ class SiteCollection(object):
             is returned, or if all the values in ``mask`` are ``False``,
             in which case method returns ``None``. New collection has data
             of only those sites that were marked for inclusion in mask.
-
-        See also :meth:`expand`.
         """
         assert len(mask) == len(self), (len(mask), len(self))
         if mask.all():
@@ -300,15 +297,6 @@ class SiteCollection(object):
         # extract indices of Trues from the mask
         [indices] = mask.nonzero()
         return FilteredSiteCollection(indices, self)
-
-    def expand(self, data, placeholder):
-        """
-        For non-filtered site collections just checks that data
-        has the right number of elements and returns it. It is
-        here just for API compatibility with filtered site collections.
-        """
-        assert len(data) == len(self), (len(data), len(self))
-        return data
 
     def __len__(self):
         """
@@ -383,8 +371,6 @@ class FilteredSiteCollection(object):
             is returned, or if all the values in ``mask`` are ``False``,
             in which case method returns ``None``. New collection has data
             of only those sites that were marked for inclusion in mask.
-
-        See also :meth:`expand`.
         """
         assert len(mask) == len(self), (len(mask), len(self))
         if mask.all():
@@ -393,67 +379,6 @@ class FilteredSiteCollection(object):
             return None
         indices = self.indices.take(mask.nonzero()[0])
         return FilteredSiteCollection(indices, self.complete)
-
-    def expand(self, data, placeholder):
-        """
-        Expand a short array `data` over a filtered site collection of the
-        same length and return a long array of size `total_sites` filled
-        with the placeholder.
-
-        The typical workflow is the following: there is a whole site
-        collection, the one that has an information about all the sites.
-        Then it gets filtered for performing some calculation on a limited
-        set of sites (like for instance filtering sites by their proximity
-        to a rupture). That filtering process can be repeated arbitrary
-        number of times, i.e. a collection that is already filtered can
-        be filtered for further limiting the set of sites to compute on.
-        Then the (supposedly expensive) computation is done on a limited
-        set of sites which still appears as just a :class:`SiteCollection`
-        instance, so that computation code doesn't need to worry about
-        filtering, it just needs to handle site collection objects. The
-        calculation result comes in a form of 1d or 2d numpy array (that
-        is, either one value per site or one 1d array per site) with length
-        equal to number of sites in a filtered collection. That result
-        needs to be expanded to an array of similar structure but the one
-        that holds values for all the sites in the original (unfiltered)
-        collection. This is what :meth:`expand` is for. It creates a result
-        array of ``total_sites`` length and puts values from ``data`` into
-        appropriate places in it remembering indices of sites that were
-        chosen for actual calculation and leaving ``placeholder`` value
-        everywhere else.
-
-        :param data:
-            1d or 2d numpy array with first dimension representing values
-            computed for site from this collection.
-        :param placeholder:
-            A scalar value to be put in result array for those sites that
-            were filtered out and no real calculation was performed for them.
-        :returns:
-            Array of length ``total_sites`` with values from ``data``
-            distributed in the appropriate places.
-        """
-        len_data = data.shape[0]
-        assert len_data == len(self), (len_data, len(self))
-
-        assert len_data <= self.total_sites
-        assert self.indices[-1] < self.total_sites, (
-            self.indices[-1], self.total_sites)
-
-        if data.ndim == 1:
-            # single-dimensional array
-            result = numpy.empty(self.total_sites)
-            result.fill(placeholder)
-            result.put(self.indices, data)
-            return result
-
-        assert data.ndim == 2
-        # two-dimensional array
-        num_values = data.shape[1]
-        result = numpy.empty((self.total_sites, num_values))
-        result.fill(placeholder)
-        for i in range(num_values):
-            result[:, i].put(self.indices, data[:, i])
-        return result
 
     def __iter__(self):
         """
@@ -468,6 +393,23 @@ class FilteredSiteCollection(object):
         """Return the number of filtered sites"""
         return len(self.indices)
 
+    def __toh5__(self):
+        n = len(self.complete)
+        array = numpy.zeros(n, self.complete.dtype)
+        for slot in self.complete._slots_:
+            array[slot] = getattr(self.complete, slot)
+        attrs = dict(total_sites=n, indices=self.indices)
+        return array, attrs
+
+    def __fromh5__(self, array, attrs):
+        complete = object.__new__(SiteCollection)
+        complete.complete = complete
+        complete.total_sites = attrs['total_sites']
+        for slot in complete._slots_:
+            setattr(complete, slot, array[slot])
+        self.indices = attrs['indices']
+        self.complete = complete
+
     def __repr__(self):
         return '<FilteredSiteCollection with %d of %d sites>' % (
             len(self.indices), self.total_sites)
@@ -475,7 +417,7 @@ class FilteredSiteCollection(object):
 
 def _extract_site_param(fsc, name):
     # extract the site parameter 'name' from the filtered site collection
-    return getattr(fsc.complete, name).take(fsc.indices)
+    return getattr(fsc.complete, name)[fsc.indices]
 
 
 # attach a number of properties filtering the arrays
