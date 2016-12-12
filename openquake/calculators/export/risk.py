@@ -859,12 +859,11 @@ def _gen_writers(dstore, writercls, root):
 def export_agg_curve_rlzs(ekey, dstore):
     agg_curve = dstore[ekey[0]]
     fnames = []
-    for writer, (loss_type, poe, r, insflag) in _gen_writers(
+    for writer, (loss_type, poe, r, ins) in _gen_writers(
             dstore, risk_writers.AggregateLossCurveXMLWriter, ekey[0]):
-        ins = '_ins' if insflag else ''
         rec = agg_curve[loss_type][r]
-        curve = AggCurve(rec['losses' + ins], rec['poes' + ins],
-                         rec['avg' + ins], None)
+        curve = AggCurve(rec['losses'][ins], rec['poes'][ins],
+                         rec['avg'][ins], None)
         writer.serialize(curve)
         fnames.append(writer._dest)
     return sorted(fnames)
@@ -883,12 +882,11 @@ def export_agg_curve_stats(ekey, dstore):
         oq.loss_curve_resolution, oq.conditional_loss_poes, oq.insured_losses)
     agg_curve = sb.build_agg_curve_stats(loss_curve_dt, dstore)
     fnames = []
-    for writer, (loss_type, poe, r, insflag) in _gen_writers(
+    for writer, (loss_type, poe, r, ins) in _gen_writers(
             dstore, risk_writers.AggregateLossCurveXMLWriter, ekey[0]):
-        ins = '_ins' if insflag else ''
         rec = agg_curve[loss_type][r]
-        curve = AggCurve(rec['losses' + ins], rec['poes' + ins],
-                         rec['avg' + ins], None)
+        curve = AggCurve(rec['losses'][ins], rec['poes'][ins],
+                         rec['avg'][ins], None)
         writer.serialize(curve)
         fnames.append(writer._dest)
     return sorted(fnames)
