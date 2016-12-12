@@ -25,7 +25,7 @@ import numpy as np
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.surface.base import BaseSurface
-from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.mesh import RectangularMesh
 
 
 class GriddedSurface(BaseSurface):
@@ -56,7 +56,7 @@ class GriddedSurface(BaseSurface):
             :class:`~openquake.hazardlib.geo.surface.gridded.GriddedSurface`
         """
 
-        return cls(Mesh.from_points_list(points))
+        return cls(RectangularMesh.from_points_list([points]))
 
     def get_bounding_box(self):
         """
