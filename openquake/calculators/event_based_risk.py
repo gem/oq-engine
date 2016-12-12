@@ -26,7 +26,7 @@ from openquake.baselib.general import (
     AccumDict, humansize, block_splitter, group_array)
 from openquake.calculators import base, event_based
 from openquake.baselib import parallel
-from openquake.risklib import riskinput, scientific
+from openquake.risklib import riskinput
 from openquake.baselib.parallel import starmap
 
 U32 = numpy.uint32
@@ -69,7 +69,7 @@ def build_agg_curve(cb_inputs, monitor):
             continue
         l = cb.index
         r = int(rlzname[4:])  # strip rlz-
-        result[l, r] = cb.calc_loss_curve(data['loss'])
+        result[l, r] = cb.calc_agg_curve(data['loss'])
     return result
 
 
