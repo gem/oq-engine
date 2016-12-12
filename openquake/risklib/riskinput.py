@@ -314,18 +314,15 @@ class CompositeRiskModel(collections.Mapping):
         :returns:
            loss_curve_dt and loss_maps_dt
         """
-        lst = [('poe-%s' % poe, F32) for poe in conditional_loss_poes]
-        if insured_losses:
-            lst += [(name + '_ins', pair) for name, pair in lst]
+        I = insured_losses + 1
+        lst = [('poe-%s' % poe, (F32, I)) for poe in conditional_loss_poes]
         lm_dt = numpy.dtype(lst)
         lc_list = []
         lm_list = []
         for loss_type in self.loss_types:
-            pairs = [('losses', (F32, curve_resolution)),
-                     ('poes', (F32, curve_resolution)),
-                     ('avg', F32)]
-            if insured_losses:
-                pairs += [(name + '_ins', pair) for name, pair in pairs]
+            pairs = [('losses', (F32, (I, curve_resolution))),
+                     ('poes', (F32, (I, curve_resolution))),
+                     ('avg', (F32, (I,)))]
             lc_list.append((loss_type, numpy.dtype(pairs)))
             lm_list.append((loss_type, lm_dt))
         loss_curve_dt = numpy.dtype(lc_list) if lc_list else None
