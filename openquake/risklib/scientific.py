@@ -1410,7 +1410,7 @@ def normalize_curves_eb(curves):
     non_zero_curves = [(losses, poes)
                        for losses, poes in curves if losses[-1] > 0]
     if not non_zero_curves:  # no damage. all zero curves
-        return curves[0][0], [poes for _losses, poes in curves]
+        return curves[0][0], numpy.array([poes for _losses, poes in curves])
     else:  # standard case
         max_losses = [losses[-1] for losses, _poes in non_zero_curves]
         reference_curve = non_zero_curves[numpy.argmax(max_losses)]
@@ -1422,7 +1422,7 @@ def normalize_curves_eb(curves):
         for cp in curves_poes:
             if numpy.isnan(cp[0]):
                 cp[0] = 0
-    return loss_ratios, curves_poes
+    return loss_ratios, numpy.array(curves_poes)
 
 
 class SimpleStats(object):
@@ -1440,18 +1440,16 @@ class SimpleStats(object):
         self.insured_losses = insured_losses
         self.names = ['mean'] + ['quantile-%s' % q for q in quantiles]
 
-    def compute(self, name, dstore):
+    def compute(self, array):
         """
-        Compute mean and quantiles from the data in the datastore
-        under the group `<name>-rlzs`. Returns an array of shape (N, Q1).
+        Compute mean and quantiles from an array of shape (N, R, ...).
+        Returns an array of shape (N, Q1, ...).
         """
         weights = [rlz['weight'] for rlz in self.rlzs]
-        rlzsname = name + '-rlzs'
-        array = dstore[rlzsname]
         newshape = list(array.shape)
         newshape[1] = len(self.quantiles) + 1  # number of statistical outputs
         newarray = numpy.zeros(newshape, array.dtype)
-        data = numpy.array([array[:, i] for i in range(len(self.rlzs))])
+        data = [array[:, i] for i in range(len(self.rlzs))]
         newarray[:, 0] = mean_curve(data, weights)
         for i, q in enumerate(self.quantiles, 1):
             newarray[:, i] = quantile_curve(data, q, weights)
@@ -1471,17 +1469,16 @@ class SimpleStats(object):
         """
         Q1 = len(self.names)
         agg_curve_stats = numpy.zeros(Q1, loss_curve_dt)
-        agg_poes = self.compute('agg_poes', dstore)
-        agg_losses = dstore['agg_losses'].value
-        agg_avg = self.compute('agg_avg', dstore)
         for l, loss_type in enumerate(loss_curve_dt.names):
-            agg_curve_stats[loss_type]['losses'] = agg_losses[0, l]
-            agg_curve_stats[loss_type]['poes'] = agg_poes[0, :, l]
-            agg_curve_stats[loss_type]['avg'] = agg_avg[0, :, l]
-            if self.insured_losses:
-                agg_curve_stats[loss_type]['losses_ins'] = agg_losses[1, l]
-                agg_curve_stats[loss_type]['poes_ins'] = agg_poes[1, :, l]
-                agg_curve_stats[loss_type]['avg_ins'] = agg_avg[1, :, l]
+            acs = agg_curve_stats[loss_type]
+            data = dstore['agg_curve-rlzs'][loss_type]
+            for i in range(self.insured_losses + 1):
+                ins = '_ins' if i else ''
+                losses, all_poes = normalize_curves_eb(
+                    [(c['losses'], c['poes']) for c in data[i]])
+                acs['losses' + ins] = losses
+                acs['poes' + ins] = self.compute(all_poes.T).T
+                acs['avg' + ins] = self.compute(data['avg'][None, i])[0]
         return agg_curve_stats
 
 

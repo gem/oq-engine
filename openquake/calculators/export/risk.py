@@ -158,7 +158,7 @@ def export_avg_losses_stats(ekey, dstore):
     rlzs = dstore['realizations']
     dt = oq.loss_dt()
     stats = scientific.SimpleStats(rlzs, oq.quantile_loss_curves)
-    avg_losses = stats.compute('avg_losses', dstore)  # sequentially
+    avg_losses = stats.compute(dstore['avg_losses-rlzs'])  # sequentially
     assets = get_assets(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for i, quantile in enumerate(stats.names):
