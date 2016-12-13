@@ -973,23 +973,22 @@ class CurveBuilder(object):
         """
         I = self.insured_losses + 1
         C = self.curve_resolution
-        lp = numpy.zeros((2, C, I), F32)  # losses, poes
-        avg = numpy.zeros(I, F32)
-        if I == 1:
-            losses = losses[:, None]  # extend 1-d
-        lp[:, :, 0] = event_based(losses[:, 0], self.ses_ratio, C)
-        avg[0] = average_loss(lp[:, :, 0])
-        if I == 2:
-            lp[:, :, 1] = event_based(losses[:, 1], self.ses_ratio, C)
-            avg[1] = average_loss(lp[:, :, 1])
         agg_curve_dt = numpy.dtype([('losses', (F32, (I, C))),
                                     ('poes', (F32, (I, C))),
                                     ('avg', (F32, (I,)))])
-        curve = numpy.zeros(1, agg_curve_dt)
-        curve[0]['losses'] = lp[0].T
-        curve[0]['poes'] = lp[1].T
-        curve[0]['avg'] = avg
-        return curve[0]
+        curve = numpy.zeros(1, agg_curve_dt)[0]
+        if I == 1:
+            losses = losses[:, None]  # extend 1-d
+        l0, p0, a0 = event_based(losses[:, 0], self.ses_ratio, C)
+        curve['losses'][0] = l0
+        curve['poes'][0] = p0
+        curve['avg'][0] = a0
+        if I == 2:
+            l1, p1, a1 = event_based(losses[:, 1], self.ses_ratio, C)
+            curve['losses'][1] = l1
+            curve['poes'][1] = p1
+            curve['avg'][1] = a1
+        return curve
 
     def _calc_loss_maps(self, asset_values, clp, poe_matrix):
         """
@@ -1060,7 +1059,7 @@ def event_based(loss_values, ses_ratio, curve_resolution):
 
     :param curve_resolution: The number of points the output curve is
                              defined by
-
+    :returns: Triplet (losses, poes, avg)
     """
     reference_losses = numpy.linspace(
         0, numpy.max(loss_values), curve_resolution)
@@ -1068,8 +1067,9 @@ def event_based(loss_values, ses_ratio, curve_resolution):
     counts = [(loss_values > loss).sum() for loss in reference_losses]
     # NB: (loss_values > loss).sum() is MUCH more efficient than
     # sum(loss_values > loss). Incredibly more efficient in memory.
-    return numpy.array(
-        [reference_losses, build_poes(counts, 1. / ses_ratio)])
+    poes = build_poes(counts, 1. / ses_ratio)
+    avg = average_loss([reference_losses, poes])
+    return reference_losses, poes, avg
 
 
 #
