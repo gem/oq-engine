@@ -933,12 +933,15 @@ class CurveBuilder(object):
                  user_provided, conditional_loss_poes=(),
                  insured_losses=False):
         self.loss_type = loss_type
-        self.curve_resolution = curve_resolution
+        self.curve_resolution = C = curve_resolution
         self.ratios = numpy.array(loss_ratios, F32)
         self.ses_ratio = ses_ratio
         self.user_provided = user_provided
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
+        self.agg_curve_dt = numpy.dtype([('losses', (F32, C)),
+                                         ('poes', (F32, C)),
+                                         ('avg', F32)])
 
     def __call__(self, assets, ratios_by_aid):
         """"
@@ -971,23 +974,11 @@ class CurveBuilder(object):
         :param losses: array of shape (E, I)
         :returns: curve of dtype agg_curve_dt
         """
-        I = self.insured_losses + 1
-        C = self.curve_resolution
-        agg_curve_dt = numpy.dtype([('losses', (F32, (I, C))),
-                                    ('poes', (F32, (I, C))),
-                                    ('avg', (F32, (I,)))])
-        curve = numpy.zeros(1, agg_curve_dt)[0]
-        if I == 1:
-            losses = losses[:, None]  # extend 1-d
-        l0, p0, a0 = event_based(losses[:, 0], self.ses_ratio, C)
-        curve['losses'][0] = l0
-        curve['poes'][0] = p0
-        curve['avg'][0] = a0
-        if I == 2:
-            l1, p1, a1 = event_based(losses[:, 1], self.ses_ratio, C)
-            curve['losses'][1] = l1
-            curve['poes'][1] = p1
-            curve['avg'][1] = a1
+        l, p, a = event_based(losses, self.ses_ratio, self.curve_resolution)
+        curve = numpy.zeros(1, self.agg_curve_dt)[0]
+        curve['losses'] = l
+        curve['poes'] = p
+        curve['avg'] = a
         return curve
 
     def _calc_loss_maps(self, asset_values, clp, poe_matrix):
@@ -1485,7 +1476,8 @@ class SimpleStats(object):
         return newarray
 
 
-def build_loss_dtypes(curve_resolution, conditional_loss_poes, insured_losses):
+def build_loss_dtypes(curve_resolution, conditional_loss_poes,
+                      insured_losses=False):
     """
     :param curve_resolution:
         dictionary loss_type -> curve_resolution
