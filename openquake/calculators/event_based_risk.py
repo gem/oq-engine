@@ -18,7 +18,7 @@
 from __future__ import division
 import logging
 import operator
-import collections
+
 import numpy
 
 from openquake.baselib.python3compat import zip
@@ -220,31 +220,22 @@ class EbrPostCalculator(base.RiskCalculator):
         generating the loss curves, directly from the the aggregate losses.
         """
         oq = self.oqparam
+        cr = {cb.loss_type: cb.curve_resolution
+              for cb in self.riskmodel.curve_builders}
+        loss_curve_dt, _ = scientific.build_loss_dtypes(
+            cr, oq.conditional_loss_poes)
         lts = self.riskmodel.loss_types
-        C = oq.loss_curve_resolution
         cb_inputs = self.cb_inputs('agg_loss_table')
-        R = len(self.rlzs_assoc.realizations)
-        L = len(lts)
         I = oq.insured_losses + 1
+        R = len(self.rlzs_assoc.realizations)
         result = parallel.apply(
             build_agg_curve, (cb_inputs, self.monitor('')),
             concurrent_tasks=self.oqparam.concurrent_tasks).reduce()
-        agg_poes = numpy.zeros((I, R, L, C), F32)
-        agg_losses = numpy.zeros((I, L, C), F32)
-        agg_avg = numpy.zeros((I, R, L), F32)
-        curves = collections.defaultdict(list)
-        for l, r,  i in result:
-            curves[l, i].append(result[l, r, i])
-        for l, i in curves:
-            losses, all_poes = scientific.normalize_curves_eb(
-                [(c['losses'], c['poes']) for c in curves[l, i]])
-            for r, poes in enumerate(all_poes):
-                agg_poes[i, r, l] = poes
-                agg_avg[i, r, l] = curves[l, i][r]['avg']
-            agg_losses[i, l] = losses
-        self.datastore['agg_losses'] = agg_losses
-        self.datastore['agg_poes-rlzs'] = agg_poes
-        self.datastore['agg_avg-rlzs'] = agg_avg
+        agg_curve = numpy.zeros((I, R), loss_curve_dt)
+        for l, r, i in result:
+            agg_curve[lts[l]][i, r] = result[l, r, i]
+        self.datastore['agg_curve-rlzs'] = agg_curve
+
 
 elt_dt = numpy.dtype([('eid', U32), ('loss', F32)])
 
