@@ -246,7 +246,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
     def test_zero_curve(self):
         expected = [0.] * 100
-        losses, poes = scientific.event_based(expected, 1, 11)
+        losses, poes, avg = scientific.event_based(expected, 1, 11)
 
         numpy.testing.assert_allclose([0.] * 11, losses)
         numpy.testing.assert_allclose([0.] * 11, poes, atol=1E-10)
