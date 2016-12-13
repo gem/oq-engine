@@ -872,11 +872,10 @@ def export_agg_curve_rlzs(ekey, dstore):
 @export.add(('agg_curve-stats', 'xml'))
 def export_agg_curve_stats(ekey, dstore):
     oq = dstore['oqparam']
+    rlzs = dstore['realizations']
     riskmodel = riskinput.read_composite_risk_model(dstore)
     cr = {cb.loss_type: cb.curve_resolution for cb in riskmodel.curve_builders}
-    sb = scientific.StatsBuilder(
-        oq.quantile_loss_curves, oq.conditional_loss_poes,
-        scientific.normalize_curves_eb, oq.insured_losses)
+    sb = scientific.SimpleStats(rlzs, oq.quantile_loss_curves)
     loss_curve_dt, _ = scientific.build_loss_dtypes(
         cr, oq.conditional_loss_poes, oq.insured_losses)
     agg_curve = sb.build_agg_curve_stats(loss_curve_dt, dstore)

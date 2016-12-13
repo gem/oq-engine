@@ -1434,9 +1434,10 @@ class SimpleStats(object):
     :param rlzs: a list of realizations
     :param quantiles: a list of floats in the range 0..1
     """
-    def __init__(self, rlzs, quantiles=()):
+    def __init__(self, rlzs, quantiles=(), insured_losses=False):
         self.rlzs = rlzs
         self.quantiles = quantiles
+        self.insured_losses = insured_losses
         self.names = ['mean'] + ['quantile-%s' % q for q in quantiles]
 
     def compute(self, name, dstore):
@@ -1450,11 +1451,38 @@ class SimpleStats(object):
         newshape = list(array.shape)
         newshape[1] = len(self.quantiles) + 1  # number of statistical outputs
         newarray = numpy.zeros(newshape, array.dtype)
-        data = [array[:, i] for i in range(len(self.rlzs))]
+        data = numpy.array([array[:, i] for i in range(len(self.rlzs))])
         newarray[:, 0] = mean_curve(data, weights)
         for i, q in enumerate(self.quantiles, 1):
             newarray[:, i] = quantile_curve(data, q, weights)
         return newarray
+
+    def build_agg_curve_stats(self, loss_curve_dt, dstore):
+        """
+        Build an array `agg_curve-stats`.
+
+        :param loss_curve_dt:
+            numpy dtype with fields (structural~losses, structural~poes,
+            structural~avg, ...)
+        :param dstore:
+            :class:`openquake.commonlib.datastore.DataStore` instance
+        :returns:
+            an array of size Q1 and dtype loss_curve_dt
+        """
+        Q1 = len(self.names)
+        agg_curve_stats = numpy.zeros(Q1, loss_curve_dt)
+        agg_poes = self.compute('agg_poes', dstore)
+        agg_losses = dstore['agg_losses'].value
+        agg_avg = self.compute('agg_avg', dstore)
+        for l, loss_type in enumerate(loss_curve_dt.names):
+            agg_curve_stats[loss_type]['losses'] = agg_losses[0, l]
+            agg_curve_stats[loss_type]['poes'] = agg_poes[0, :, l]
+            agg_curve_stats[loss_type]['avg'] = agg_avg[0, :, l]
+            if self.insured_losses:
+                agg_curve_stats[loss_type]['losses_ins'] = agg_losses[1, l]
+                agg_curve_stats[loss_type]['poes_ins'] = agg_poes[1, :, l]
+                agg_curve_stats[loss_type]['avg_ins'] = agg_avg[1, :, l]
+        return agg_curve_stats
 
 
 def build_loss_dtypes(curve_resolution, conditional_loss_poes,
@@ -1679,50 +1707,6 @@ class StatsBuilder(object):
                 mq_curves.transpose(1, 0, 2, 3), mq_avgs.T):
             acc.append(zip(mq_curve, mq_avg))
         return acc  # (N, Q1) triples
-
-    def build_agg_curve_stats(self, loss_curve_dt, dstore):
-        """
-        Build an array `agg_curve-stats`.
-
-        :param loss_curve_dt:
-            numpy dtype with fields (structural~losses, structural~poes,
-            structural~avg, ...)
-        :param dstore:
-            :class:`openquake.commonlib.datastore.DataStore` instance
-        :returns:
-            an array of size Q1 and dtype loss_curve_dt
-        """
-        rlzs = dstore['realizations']
-        Q1 = len(self.mean_quantiles)
-        agg_curve_stats = numpy.zeros(Q1, loss_curve_dt)
-        for l, loss_type in enumerate(loss_curve_dt.names):
-            agg_curve_lt = dstore['agg_curve-rlzs'][loss_type]
-            C = agg_curve_lt['losses'].shape[-1]
-            outputs = []
-            for r, rlz in enumerate(rlzs):
-                curve = agg_curve_lt[:, r]
-                average_loss = curve['avg'][0]
-                loss_curve = (curve['losses'][0], curve['poes'][0])
-                if self.insured_losses:
-                    average_insured_loss = curve['avg'][1]
-                    insured_curves = [(curve['losses'][1], curve['poes'][1])]
-                else:
-                    average_insured_loss = None
-                    insured_curves = None
-                out = Output(
-                    [None], loss_type, rlz, rlz['weight'],
-                    loss_curves=[loss_curve],
-                    insured_curves=insured_curves,
-                    average_losses=[average_loss],
-                    average_insured_losses=[average_insured_loss])
-                outputs.append(out)
-            stats = self.build(outputs)
-            curves, _maps = self._get_curves_maps(stats, C)  # shape (Q1, 1)
-            acs = agg_curve_stats[loss_type]
-            for i, statname in enumerate(self.mean_quantiles):
-                for name in acs.dtype.names:
-                    acs[name][i] = curves[name][i]
-        return agg_curve_stats
 
 
 def _old_loss_curves(asset_values, rcurves, ratios):
