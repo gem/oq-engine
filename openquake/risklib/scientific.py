@@ -971,14 +971,19 @@ class CurveBuilder(object):
 
     def calc_agg_curve(self, losses):
         """
-        :param losses: array of shape (E, I)
+        :param losses: array of length E
         :returns: curve of dtype agg_curve_dt
         """
-        l, p, a = event_based(losses, self.ses_ratio, self.curve_resolution)
+        reference_losses = numpy.linspace(
+            0, numpy.max(losses), self.curve_resolution)
+        # counts how many loss_values are bigger than the reference loss
+        counts = [(losses > loss).sum() for loss in reference_losses]
+        # NB: (loss_values > loss).sum() is MUCH more efficient than
+        # sum(loss_values > loss). Incredibly more efficient in memory.
         curve = numpy.zeros(1, self.agg_curve_dt)[0]
-        curve['losses'] = l
-        curve['poes'] = p
-        curve['avg'] = a
+        curve['losses'] = reference_losses
+        curve['poes'] = build_poes(counts, 1. / self.ses_ratio)
+        curve['avg'] = average_loss([reference_losses, curve['poes']])
         return curve
 
     def _calc_loss_maps(self, asset_values, clp, poe_matrix):
@@ -1037,30 +1042,6 @@ def build_poes(counts, nses):
     :returns: an array of PoEs
     """
     return 1. - numpy.exp(- numpy.array(counts, F32) / nses)
-
-
-def event_based(loss_values, ses_ratio, curve_resolution):
-    """
-    Compute a loss (or loss ratio) curve.
-
-    :param loss_values: The loss ratios (or the losses) computed by
-                        applying the vulnerability function
-
-    :param ses_ratio: Time representative of the stochastic event set
-
-    :param curve_resolution: The number of points the output curve is
-                             defined by
-    :returns: Triplet (losses, poes, avg)
-    """
-    reference_losses = numpy.linspace(
-        0, numpy.max(loss_values), curve_resolution)
-    # counts how many loss_values are bigger than the reference loss
-    counts = [(loss_values > loss).sum() for loss in reference_losses]
-    # NB: (loss_values > loss).sum() is MUCH more efficient than
-    # sum(loss_values > loss). Incredibly more efficient in memory.
-    poes = build_poes(counts, 1. / ses_ratio)
-    avg = average_loss([reference_losses, poes])
-    return reference_losses, poes, avg
 
 
 #
