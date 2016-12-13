@@ -155,7 +155,7 @@ def export_avg_losses_stats(ekey, dstore):
     :param dstore: datastore object
     """
     oq = dstore['oqparam']
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    rlzs = dstore['realizations']
     dt = oq.loss_dt()
     stats = scientific.SimpleStats(rlzs, oq.quantile_loss_curves)
     avg_losses = stats.compute('avg_losses', dstore)  # sequentially
