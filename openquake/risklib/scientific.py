@@ -1444,9 +1444,9 @@ class SimpleStats(object):
         Compute mean and quantiles from the data in the datastore
         under the group `<name>-rlzs`. Returns an array of shape (N, Q1).
         """
-        weights = [rlz.weight for rlz in self.rlzs]
+        weights = [rlz['weight'] for rlz in self.rlzs]
         rlzsname = name + '-rlzs'
-        array = dstore[rlzsname].value
+        array = dstore[rlzsname]
         newshape = list(array.shape)
         newshape[1] = len(self.quantiles) + 1  # number of statistical outputs
         newarray = numpy.zeros(newshape, array.dtype)
@@ -1692,15 +1692,15 @@ class StatsBuilder(object):
         :returns:
             an array of size Q1 and dtype loss_curve_dt
         """
-        rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+        rlzs = dstore['realizations']
         Q1 = len(self.mean_quantiles)
         agg_curve_stats = numpy.zeros(Q1, loss_curve_dt)
         for l, loss_type in enumerate(loss_curve_dt.names):
             agg_curve_lt = dstore['agg_curve-rlzs'][loss_type]
             C = agg_curve_lt['losses'].shape[-1]
             outputs = []
-            for rlz in rlzs:
-                curve = agg_curve_lt[rlz.ordinal]
+            for r, rlz in enumerate(rlzs):
+                curve = agg_curve_lt[r]
                 average_loss = curve['avg'][0]
                 loss_curve = (curve['losses'][0], curve['poes'][0])
                 if self.insured_losses:
@@ -1710,7 +1710,7 @@ class StatsBuilder(object):
                     average_insured_loss = None
                     insured_curves = None
                 out = Output(
-                    [None], loss_type, rlz.ordinal, rlz.weight,
+                    [None], loss_type, rlz, rlz['weight'],
                     loss_curves=[loss_curve],
                     insured_curves=insured_curves,
                     average_losses=[average_loss],
