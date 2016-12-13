@@ -226,7 +226,6 @@ class EbrPostCalculator(base.RiskCalculator):
         agg_curve = numpy.zeros(R, loss_curve_dt)
         for l, r in result:
             agg_curve[lts[l]][r] = result[l, r]
-        import pdb; pdb.set_trace()
         self.datastore['agg_curve-rlzs'] = agg_curve
 
 
