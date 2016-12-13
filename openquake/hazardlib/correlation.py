@@ -69,14 +69,23 @@ class BaseCorrelationModel(with_metaclass(abc.ABCMeta)):
         :returns:
             Array of the same structure and semantics as ``residuals``
             but with correlations applied.
+
+        NB: the correlation matrix is cached. It is computed only once
+        per IMT for the complete site collection and then the portion
+        corresponding to the sites is multiplied by the residuals.
         """
         # intra-event residual for a single relization is a product
         # of lower-triangle decomposed correlation matrix and vector
         # of N random numbers (where N is equal to number of sites).
         # we need to do that multiplication once per realization
         # with the same matrix and different vectors.
-        corma = self.get_lower_triangle_correlation_matrix(sites, imt)
-        return numpy.dot(corma, residuals)
+        try:
+            corma = self.cache[imt]
+        except KeyError:
+            corma = self.get_lower_triangle_correlation_matrix(
+                sites.complete, imt)
+            self.cache[imt] = corma
+        return numpy.dot(corma[sites.sids], residuals)
 
 
 class JB2009CorrelationModel(BaseCorrelationModel):
@@ -92,7 +101,7 @@ class JB2009CorrelationModel(BaseCorrelationModel):
     """
     def __init__(self, vs30_clustering):
         self.vs30_clustering = vs30_clustering
-        super(JB2009CorrelationModel, self).__init__()
+        self.cache = {}  # imt -> correlation model
 
     def _get_correlation_matrix(self, sites, imt):
         """
