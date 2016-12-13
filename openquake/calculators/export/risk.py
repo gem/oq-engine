@@ -861,9 +861,8 @@ def export_agg_curve_rlzs(ekey, dstore):
     fnames = []
     for writer, (loss_type, poe, r, ins) in _gen_writers(
             dstore, risk_writers.AggregateLossCurveXMLWriter, ekey[0]):
-        rec = agg_curve[loss_type][r]
-        curve = AggCurve(rec['losses'][ins], rec['poes'][ins],
-                         rec['avg'][ins], None)
+        rec = agg_curve[loss_type][ins, r]
+        curve = AggCurve(rec['losses'], rec['poes'], rec['avg'], None)
         writer.serialize(curve)
         fnames.append(writer._dest)
     return sorted(fnames)
