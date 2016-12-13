@@ -929,19 +929,19 @@ class CurveBuilder(object):
                              user_provided=True)
       counts = builder.build_counts(loss_matrix)
     """
-    def __init__(self, loss_type, loss_ratios, ses_ratio, user_provided,
-                 conditional_loss_poes=(), insured_losses=False,
-                 curve_resolution=None):
+    def __init__(self, loss_type, curve_resolution, loss_ratios, ses_ratio,
+                 user_provided, conditional_loss_poes=(),
+                 insured_losses=False):
         self.loss_type = loss_type
+        self.curve_resolution = curve_resolution
         self.ratios = numpy.array(loss_ratios, F32)
         self.ses_ratio = ses_ratio
         self.user_provided = user_provided
-        self.curve_resolution = C = curve_resolution or len(loss_ratios)
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
         self.I = insured_losses + 1
         self.agg_curve_dt, self.loss_maps_dt = build_dtypes(
-            C, conditional_loss_poes, insured_losses)
+            curve_resolution, conditional_loss_poes, insured_losses)
 
     def __call__(self, assets, ratios_by_aid):
         """"
