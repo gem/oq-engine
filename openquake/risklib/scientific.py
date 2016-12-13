@@ -939,9 +939,6 @@ class CurveBuilder(object):
         self.user_provided = user_provided
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
-        self.I = insured_losses + 1
-        self.agg_curve_dt, self.loss_maps_dt = build_dtypes(
-            curve_resolution, conditional_loss_poes, insured_losses)
 
     def __call__(self, assets, ratios_by_aid):
         """"
@@ -972,15 +969,19 @@ class CurveBuilder(object):
     def calc_agg_curve(self, losses):
         """
         :param losses: array of shape (E, I)
-        :returns: array of length I and dtype agg_curve_dt
+        :returns: curve of dtype agg_curve_dt
         """
-        losses_poes = event_based(losses, self.ses_ratio,
-                                  self.curve_resolution)
-        curve = numpy.zeros(self.I, self.agg_curve_dt)
+        I = self.insured_losses + 1
+        C = self.curve_resolution
+        losses_poes = event_based(losses, self.ses_ratio, C)
+        agg_curve_dt = numpy.dtype([('losses', (F32, (I, C))),
+                                    ('poes', (F32, (I, C))),
+                                    ('avg', (F32, (I,)))])
+        curve = numpy.zeros(1, agg_curve_dt)
         curve['losses'] = losses_poes[0]
         curve['poes'] = losses_poes[1]
         curve['avg'] = average_loss(losses_poes)
-        return curve
+        return curve[0]
 
     def _calc_loss_maps(self, asset_values, clp, poe_matrix):
         """
@@ -1007,13 +1008,17 @@ class CurveBuilder(object):
         N = len(assetcol)
         R = rcurves.shape[1]
         if self.user_provided:  # loss_ratios provided
+            lst = [('poe-%s' % poe, F32) for poe in self.conditional_loss_poes]
+            if self.insured_losses:
+                lst += [(name + '_ins', pair) for name, pair in lst]
+            loss_maps_dt = numpy.dtype(lst)
             if self.loss_type == 'occupants':
                 asset_values = assetcol['occupants']
             else:
                 asset_values = assetcol['value-' + self.loss_type]
             curves_lt = rcurves[self.loss_type]
             for rlzi in range(R):
-                loss_maps = numpy.zeros(N, self.loss_maps_dt)
+                loss_maps = numpy.zeros(N, loss_maps_dt)
                 for name in loss_maps.dtype.names:
                     poe, ins = extract_poe_ins(name)
                     loss_maps[name] = self._calc_loss_maps(
