@@ -1700,7 +1700,7 @@ class StatsBuilder(object):
             C = agg_curve_lt['losses'].shape[-1]
             outputs = []
             for r, rlz in enumerate(rlzs):
-                curve = agg_curve_lt[r]
+                curve = agg_curve_lt[:, r]
                 average_loss = curve['avg'][0]
                 loss_curve = (curve['losses'][0], curve['poes'][0])
                 if self.insured_losses:
