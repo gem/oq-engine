@@ -230,9 +230,9 @@ class EbrPostCalculator(base.RiskCalculator):
         result = parallel.apply(
             build_agg_curve, (cb_inputs, self.monitor('')),
             concurrent_tasks=self.oqparam.concurrent_tasks).reduce()
-        agg_curve = numpy.zeros((R, oq.insured_losses + 1), loss_curve_dt)
+        agg_curve = numpy.zeros((oq.insured_losses + 1, R), loss_curve_dt)
         for l, r,  i in result:
-            agg_curve[lts[l]][r, i] = result[l, r, i]
+            agg_curve[lts[l]][i, r] = result[l, r, i]
         self.datastore['agg_curve-rlzs'] = agg_curve
 
 

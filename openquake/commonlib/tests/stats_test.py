@@ -119,30 +119,30 @@ class StatsTestCase(unittest.TestCase):
         dt = numpy.dtype([('losses', (F32, 20)), ('poes', (F32, 20)),
                           ('avg', F32)])
         loss_curve_dt = numpy.dtype([('contents', dt)])
-        array = numpy.zeros((R, I), loss_curve_dt)
+        array = numpy.zeros((I, R), loss_curve_dt)
         ac = array['contents']
-        ac['losses'][0] = [
+        ac['losses'][0, 0] = [
             0.0, 24.29524, 48.59048, 72.88572, 97.18096, 121.4762, 145.77144,
             170.06668, 194.36192, 218.65717, 242.9524, 267.24765, 291.54288,
             315.8381, 340.13336, 364.4286, 388.72385, 413.01907, 437.31433,
             461.60956]
-        ac['poes'][0] = [
+        ac['poes'][0, 0] = [
             0.7274682, 0.7134952, 0.6671289, 0.5725851, 0.5725851, 0.5034147,
             0.39346933, 0.36237186, 0.2591818, 0.2591818, 0.2591818, 0.2591818,
             0.139292, 0.139292, 0.09516257, 0.09516257, 0.048770547,
             0.048770547, 0.048770547, 0.0]
-        ac['avg'][0] = 140.93018
-        ac['losses'][1] = [
+        ac['avg'][0, 0] = 140.93018
+        ac['losses'][0, 1] = [
             0.0, 28.269579, 56.539158, 84.80874, 113.078316, 141.3479,
             169.61748, 197.88705, 226.15663, 254.42621, 282.6958, 310.96536,
             339.23495, 367.50455, 395.7741, 424.0437, 452.31326, 480.58286,
             508.85242, 537.122]
-        ac['poes'][1] = [
+        ac['poes'][0, 1] = [
             0.7134952, 0.7134952, 0.63212055, 0.5276334, 0.4779542,
             0.36237186, 0.32967997, 0.2591818, 0.2591818, 0.2591818,
             0.139292, 0.09516257, 0.09516257, 0.09516257, 0.048770547,
             0.048770547, 0.048770547, 0.048770547, 0.048770547, 0.0]
-        ac['avg'][1] = 136.99948
+        ac['avg'][0, 1] = 136.99948
         dstore = {'agg_curve-rlzs': array, 'realizations': rlzs}
 
         # build the stats
@@ -165,7 +165,8 @@ class StatsTestCase(unittest.TestCase):
 
         # manual computation
         losses, all_poes = scientific.normalize_curves_eb(
-            [(rec['losses'], rec['poes']) for rec in ac[:, 0]])
+            [(rec['losses'], rec['poes']) for rec in ac[0]])
+        dstore['poes-rlzs'] = numpy.array(all_poes).T
         stats = scientific.SimpleStats(
-            rlzs, [0.1, 0.9]).compute('agg_curve', dstore).T
-        import pdb; pdb.set_trace()
+            rlzs, [0.1, 0.9]).compute('poes', dstore)  # Q1, C
+        aaae(stats[:, 0], mean_poes)
