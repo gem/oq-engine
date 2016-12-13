@@ -27,7 +27,7 @@ import numpy.testing
 from openquake.baselib.general import group_array
 from openquake.commonlib.datastore import read
 from openquake.commonlib.util import max_rel_diff_index
-from openquake.commonlib.export import export
+from openquake.calculators.export import export
 from openquake.calculators.event_based import get_mean_curves
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
@@ -257,14 +257,15 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
-    def test_case_17(self):  # oversampling
+    def test_case_17(self):  # oversampling and save_ruptures
         expected = [
             'hazard_curve-rlz-001.csv',
             'hazard_curve-rlz-002.csv',
             'hazard_curve-rlz-003.csv',
             'hazard_curve-rlz-004.csv',
         ]
-        out = self.run_calc(case_17.__file__, 'job.ini', exports='csv')
+        # test --hc functionality, i.e. that the ruptures are read correctly
+        out = self.run_calc(case_17.__file__, 'job.ini,job.ini', exports='csv')
         fnames = out['hcurves', 'csv']
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)

@@ -62,12 +62,12 @@ def asset(ref, value, deductibles=None,
 
 
 # return a matrix N x 2 x R with n=2, R=5
-def loss_curves(assets, baselosses, seed):
+def loss_curves(assets, ratios, seed):
     numpy.random.seed(seed)
     lcs = []
     for asset in assets:
         poes = sorted(numpy.random.rand(5), reverse=True)
-        losses = sorted(baselosses * asset.value('structural') + seed)
+        losses = sorted(ratios * asset.value('structural'))
         lcs.append((losses, poes))
     return numpy.array(lcs)
 
@@ -80,9 +80,10 @@ class StatsTestCase(unittest.TestCase):
         asset_refs = [a.id for a in assets]
         outputs = []
         weights = [0.3, 0.7]
-        baselosses = numpy.array([.10, .14, .17, .20, .21])
+        ratios = numpy.array([.10, .14, .17, .20, .21])
+        cls.curve_resolution = len(ratios)
         for i, w in enumerate(weights):
-            lc = loss_curves(assets, baselosses, i)
+            lc = loss_curves(assets, ratios, i)
             out = scientific.Output(
                 asset_refs, 'structural', weight=w,
                 loss_curves=lc, insured_curves=None,
@@ -90,14 +91,14 @@ class StatsTestCase(unittest.TestCase):
             outputs.append(out)
         cls.builder = scientific.StatsBuilder(
             quantiles=[0.1, 0.9],
-            conditional_loss_poes=[0.35, 0.24, 0.13],
-            poes_disagg=[], curve_resolution=len(baselosses))
+            conditional_loss_poes=[0.35, 0.24, 0.13])
         cls.stats = cls.builder.build(outputs)
 
     # TODO: add a test for insured curves and maps
     def test_get_stat_curves_maps(self):
         tempdir = tempfile.mkdtemp()
-        curves, maps = self.builder.get_curves_maps(self.stats)
+        curves, maps = self.builder._get_curves_maps(
+            self.stats, self.curve_resolution)
         # expecting arrays of shape (Q1, N) with Q1=3, N=4
         actual = os.path.join(tempdir, 'expected_loss_curves.csv')
         writers.write_csv(actual, curves, fmt='%05.2f')
