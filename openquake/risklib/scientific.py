@@ -980,11 +980,11 @@ class CurveBuilder(object):
         counts = [(losses > loss).sum() for loss in reference_losses]
         # NB: (loss_values > loss).sum() is MUCH more efficient than
         # sum(loss_values > loss). Incredibly more efficient in memory.
-        curve = numpy.zeros(1, self.agg_curve_dt)[0]
-        curve['losses'] = reference_losses
-        curve['poes'] = build_poes(counts, 1. / self.ses_ratio)
-        curve['avg'] = average_loss([reference_losses, curve['poes']])
-        return curve
+        curve = numpy.zeros(1, self.agg_curve_dt)
+        curve['losses'][0] = reference_losses
+        curve['poes'][0] = poes = build_poes(counts, 1. / self.ses_ratio)
+        curve['avg'][0] = average_loss([reference_losses, poes])
+        return curve[0]
 
     def _calc_loss_maps(self, asset_values, clp, poe_matrix):
         """
