@@ -20,9 +20,12 @@
 Module :mod:`openquake.hazardlib.geo.surface.gridded` defines
 :class:`GriddedSurface`.
 """
+import numpy as np
 
+from openquake.hazardlib.geo import utils
+from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.surface.base import BaseSurface
-from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.mesh import RectangularMesh
 
 
 class GriddedSurface(BaseSurface):
@@ -52,8 +55,8 @@ class GriddedSurface(BaseSurface):
             An instance of
             :class:`~openquake.hazardlib.geo.surface.gridded.GriddedSurface`
         """
-        
-        return cls(Mesh.from_points_list(points))
+
+        return cls(RectangularMesh.from_points_list([points]))
 
     def get_bounding_box(self):
         """
@@ -64,7 +67,7 @@ class GriddedSurface(BaseSurface):
             northern and southern borders of the bounding box respectively.
             Values are floats in decimal degrees.
         """
-        raise NotImplementedError
+        return utils.get_spherical_bounding_box(self.mesh.lons, self.mesh.lats)
 
     def get_min_distance(self, mesh):
         """
@@ -77,7 +80,7 @@ class GriddedSurface(BaseSurface):
         :returns:
             A numpy array of distances in km.
         """
-        return (self.mesh.get_min_distance(mesh))
+        return self.mesh.get_min_distance(mesh)
 
     def get_closest_points(self, mesh):
         """
@@ -104,7 +107,7 @@ class GriddedSurface(BaseSurface):
             Numpy array of closest distances between the projections of surface
             and each point of the ``mesh`` to the earth surface.
         """
-        raise NotImplementedError
+        return self.mesh.get_joyner_boore_distance(mesh)
 
     def get_rx_distance(self, mesh):
         """
@@ -193,7 +196,12 @@ class GriddedSurface(BaseSurface):
             instance of :class:`openquake.hazardlib.geo.point.Point`
             representing surface middle point.
         """
-        raise NotImplementedError
+        lon_bar = np.mean(self.mesh.lons)
+        lat_bar = np.mean(self.mesh.lats)
+        idx = np.argmin((self.mesh.lons - lon_bar)**2 +
+                        (self.mesh.lats - lat_bar)**2)
+        return Point(self.mesh.lons[idx], self.mesh.lats[idx],
+                     self.mesh.depths[idx])
 
     def get_ry0_distance(self, mesh):
         """

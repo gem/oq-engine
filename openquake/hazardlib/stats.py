@@ -27,7 +27,7 @@ def mean_curve(values, weights=None):
     """
     if weights:
         weights = list(map(float, weights))
-        assert abs(sum(weights) - 1.) < 1E-12, sum(weights) - 1.
+        assert abs(sum(weights) - 1.) < 1E-7, sum(weights) - 1.
     else:
         weights = [1. / len(values)] * len(values)
     if isinstance(values[0], (numpy.ndarray, list, tuple)):  # fast lane
