@@ -63,4 +63,4 @@ export = CallableDict(keyfunc)
 
 export.from_db = False  # overridden when exporting from db
 
-import_all('openquake.commonlib.export')
+import_all('openquake.calculators.export')

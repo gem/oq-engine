@@ -22,10 +22,9 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import zip
+from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import (
-    groupby, split_in_blocks, get_array)
+from openquake.baselib.general import groupby, get_array
 from openquake.hazardlib import site, calc
 from openquake.risklib import scientific, riskmodels
 
@@ -47,7 +46,7 @@ class AssetCollection(object):
                  time_events=''):
         self.cc = cost_calculator
         self.time_event = time_event
-        self.time_events = hdf5.array_of_vstr(time_events)
+        self.time_events = time_events
         self.array, self.taxonomies = self.build_asset_collection(
             assets_by_site, time_event)
         fields = self.array.dtype.names
@@ -75,7 +74,7 @@ class AssetCollection(object):
         """
         :returns: a composite array of asset values by loss type
         """
-        loss_dt = numpy.dtype([(lt, float) for lt in self.loss_types])
+        loss_dt = numpy.dtype([(str(lt), float) for lt in self.loss_types])
         vals = numpy.zeros(len(self), loss_dt)  # asset values by loss_type
         for assets in self.assets_by_site():
             for asset in assets:
@@ -116,18 +115,23 @@ class AssetCollection(object):
         return len(self.array)
 
     def __toh5__(self):
+        # NB: the loss types do not contain spaces, so we can store them
+        # together as a single space-separated string
         attrs = {'time_event': self.time_event or 'None',
-                 'time_events': self.time_events,
-                 'loss_types': hdf5.array_of_vstr(self.loss_types),
-                 'deduc': hdf5.array_of_vstr(self.deduc),
-                 'i_lim': hdf5.array_of_vstr(self.i_lim),
-                 'retro': hdf5.array_of_vstr(self.retro),
+                 'time_events': ' '.join(map(decode, self.time_events)),
+                 'loss_types': ' '.join(self.loss_types),
+                 'deduc': ' '.join(self.deduc),
+                 'i_lim': ' '.join(self.i_lim),
+                 'retro': ' '.join(self.retro),
                  'nbytes': self.array.nbytes}
         return dict(array=self.array, taxonomies=self.taxonomies,
                     cost_calculator=self.cc), attrs
 
     def __fromh5__(self, dic, attrs):
-        vars(self).update(attrs)
+        for name in ('time_events', 'loss_types', 'deduc', 'i_lim', 'retro'):
+            setattr(self, name, attrs[name].split())
+        self.time_event = attrs['time_event']
+        self.nbytes = attrs['nbytes']
         self.array = dic['array'].value
         self.taxonomies = dic['taxonomies'].value
         self.cc = dic['cost_calculator']
@@ -298,63 +302,6 @@ class CompositeRiskModel(collections.Mapping):
                 iml[rf.imt].append(rf.imls[0])
         return {imt: min(iml[imt]) for imt in iml}
 
-    def build_loss_dtypes(self, conditional_loss_poes, insured_losses=False):
-        """
-        :param conditional_loss_poes:
-            configuration parameter
-        :param insured_losses:
-            configuration parameter
-        :returns:
-           loss_curve_dt and loss_maps_dt
-        """
-        lst = [('poe-%s' % poe, F32) for poe in conditional_loss_poes]
-        if insured_losses:
-            lst += [(name + '_ins', pair) for name, pair in lst]
-        lm_dt = numpy.dtype(lst)
-        lc_list = []
-        lm_list = []
-        for cb in (b for b in self.curve_builders if b.user_provided):
-            pairs = [('losses', (F32, cb.curve_resolution)),
-                     ('poes', (F32, cb.curve_resolution)),
-                     ('avg', F32)]
-            if insured_losses:
-                pairs += [(name + '_ins', pair) for name, pair in pairs]
-            lc_list.append((cb.loss_type, numpy.dtype(pairs)))
-            lm_list.append((cb.loss_type, lm_dt))
-        loss_curve_dt = numpy.dtype(lc_list) if lc_list else None
-        loss_maps_dt = numpy.dtype(lm_list) if lm_list else None
-        return loss_curve_dt, loss_maps_dt
-
-    # FIXME: scheduled for removal once we change agg_curve to be built from
-    # the user-provided loss ratios
-    def build_all_loss_dtypes(self, curve_resolution, conditional_loss_poes,
-                              insured_losses=False):
-        """
-        :param conditional_loss_poes:
-            configuration parameter
-        :param insured_losses:
-            configuration parameter
-        :returns:
-           loss_curve_dt and loss_maps_dt
-        """
-        lst = [('poe-%s' % poe, F32) for poe in conditional_loss_poes]
-        if insured_losses:
-            lst += [(name + '_ins', pair) for name, pair in lst]
-        lm_dt = numpy.dtype(lst)
-        lc_list = []
-        lm_list = []
-        for loss_type in self.loss_types:
-            pairs = [('losses', (F32, curve_resolution)),
-                     ('poes', (F32, curve_resolution)),
-                     ('avg', F32)]
-            if insured_losses:
-                pairs += [(name + '_ins', pair) for name, pair in pairs]
-            lc_list.append((loss_type, numpy.dtype(pairs)))
-            lm_list.append((loss_type, lm_dt))
-        loss_curve_dt = numpy.dtype(lc_list) if lc_list else None
-        loss_maps_dt = numpy.dtype(lm_list) if lm_list else None
-        return loss_curve_dt, loss_maps_dt
-
     def make_curve_builders(self, oqparam):
         """
         Populate the inner lists .loss_types, .curve_builders.
@@ -362,6 +309,8 @@ class CompositeRiskModel(collections.Mapping):
         default_loss_ratios = numpy.linspace(
             0, 1, oqparam.loss_curve_resolution + 1)[1:]
         loss_types = self._get_loss_types()
+        ses_ratio = oqparam.ses_ratio if oqparam.calculation_mode in (
+            'event_based_risk',) else 1
         for l, loss_type in enumerate(loss_types):
             if oqparam.calculation_mode in ('classical', 'classical_risk'):
                 curve_resolutions = set()
@@ -377,18 +326,21 @@ class CompositeRiskModel(collections.Mapping):
                     logging.info(
                         'Different num_loss_ratios:\n%s', '\n'.join(lines))
                 cb = scientific.CurveBuilder(
-                    loss_type, ratios, True,
-                    oqparam.conditional_loss_poes, oqparam.insured_losses,
-                    curve_resolution=max(curve_resolutions))
+                    loss_type, max(curve_resolutions), ratios, ses_ratio,
+                    True, oqparam.conditional_loss_poes,
+                    oqparam.insured_losses)
             elif loss_type in oqparam.loss_ratios:  # loss_ratios provided
                 cb = scientific.CurveBuilder(
-                    loss_type, oqparam.loss_ratios[loss_type], True,
+                    loss_type, oqparam.loss_curve_resolution,
+                    oqparam.loss_ratios[loss_type], ses_ratio, True,
                     oqparam.conditional_loss_poes, oqparam.insured_losses)
             else:  # no loss_ratios provided
                 cb = scientific.CurveBuilder(
-                    loss_type, default_loss_ratios, False,
+                    loss_type, oqparam.loss_curve_resolution,
+                    default_loss_ratios, ses_ratio, False,
                     oqparam.conditional_loss_poes, oqparam.insured_losses)
             self.curve_builders.append(cb)
+            cb.index = l
             self.lti[loss_type] = l
         return loss_types
 
@@ -433,37 +385,6 @@ class CompositeRiskModel(collections.Mapping):
         """
         return RiskInput(rlzs, hazards_by_site, assetcol, eps_dict)
 
-    def build_inputs_from_ruptures(
-            self, grp_trt, rlzs_assoc, imts, sitecol, all_ruptures,
-            trunc_level, correl_model, min_iml, eps, hint):
-        """
-        :param grp_trt: a dictionary src_group_id -> tectonic region type
-        :param rlzs_assoc: a RlzsAssoc instance
-        :param imts: list of intensity measure type strings
-        :param sitecol: a SiteCollection instance
-        :param all_ruptures: the complete list of EBRupture instances
-        :param trunc_level: the truncation level (or None)
-        :param correl_model: the correlation model (or None)
-        :param min_iml: an array of minimum IMLs per IMT
-        :param eps: a matrix of epsilons of shape (N, E) or None
-        :param hint: hint for how many blocks to generate
-
-        Yield :class:`RiskInputFromRuptures` instances.
-        """
-        by_grp_id = operator.attrgetter('grp_id')
-        start = 0
-        for ses_ruptures in split_in_blocks(
-                all_ruptures, hint or 1, key=by_grp_id,
-                weight=operator.attrgetter('weight')):
-            grp_id = ses_ruptures[0].grp_id
-            num_events = sum(sr.multiplicity for sr in ses_ruptures)
-            idxs = numpy.arange(start, start + num_events)
-            start += num_events
-            yield RiskInputFromRuptures(
-                grp_trt[grp_id], rlzs_assoc, imts, sitecol, ses_ruptures,
-                trunc_level, correl_model, min_iml,
-                eps[:, idxs] if eps is not None else None)
-
     def gen_outputs(self, riskinput, monitor, assetcol=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
@@ -494,7 +415,6 @@ class CompositeRiskModel(collections.Mapping):
                         [asset.ordinal for asset in group[taxonomy]])
                     dic[taxonomy].append((i, group[taxonomy], epsgetter))
                     taxonomies.add(taxonomy)
-
         for rlz in riskinput.rlzs:
             with mon_hazard:
                 hazard = hazard_getter(rlz)
@@ -514,7 +434,8 @@ class CompositeRiskModel(collections.Mapping):
             monitor.gmfbytes = hazard_getter.gmfbytes
 
     def __toh5__(self):
-        return self._riskmodels, dict(covs=self.covs)
+        loss_types = hdf5.array_of_vstr(self._get_loss_types())
+        return self._riskmodels, dict(covs=self.covs, loss_types=loss_types)
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
@@ -724,6 +645,7 @@ class RiskInputFromRuptures(object):
     """
     def __init__(self, trt, rlzs_assoc, imts, sitecol, ses_ruptures,
                  trunc_level, correl_model, min_iml, epsilons=None):
+        assert sitecol is sitecol.complete
         self.imts = imts
         self.sitecol = sitecol
         self.ses_ruptures = numpy.array(ses_ruptures)
