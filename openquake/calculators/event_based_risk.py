@@ -26,7 +26,7 @@ from openquake.baselib.general import (
     AccumDict, humansize, block_splitter, group_array)
 from openquake.calculators import base, event_based
 from openquake.baselib import parallel
-from openquake.risklib import riskinput
+from openquake.risklib import riskinput, scientific
 from openquake.baselib.parallel import starmap
 
 U32 = numpy.uint32
@@ -69,7 +69,12 @@ def build_agg_curve(cb_inputs, monitor):
             continue
         l = cb.index
         r = int(rlzname[4:])  # strip rlz-
-        result[l, r] = cb.calc_agg_curve(data['loss'])
+        losses = data['loss']
+        if len(losses.shape) == 1:  # no insured losses
+            result[l, r, 0] = cb.calc_agg_curve(losses)
+        else:
+            result[l, r, 0] = cb.calc_agg_curve(losses[:, 0])
+            result[l, r, 1] = cb.calc_agg_curve(losses[:, 1])
     return result
 
 
@@ -215,17 +220,19 @@ class EbrPostCalculator(base.RiskCalculator):
         generating the loss curves, directly from the the aggregate losses.
         """
         oq = self.oqparam
-        loss_curve_dt, _ = self.riskmodel.build_all_loss_dtypes(
-            oq.conditional_loss_poes, oq.insured_losses)
+        cr = {cb.loss_type: cb.curve_resolution
+              for cb in self.riskmodel.curve_builders}
+        loss_curve_dt, _ = scientific.build_loss_dtypes(
+            cr, oq.conditional_loss_poes)
         lts = self.riskmodel.loss_types
         cb_inputs = self.cb_inputs('agg_loss_table')
         R = len(self.rlzs_assoc.realizations)
         result = parallel.apply(
             build_agg_curve, (cb_inputs, self.monitor('')),
             concurrent_tasks=self.oqparam.concurrent_tasks).reduce()
-        agg_curve = numpy.zeros(R, loss_curve_dt)
-        for l, r in result:
-            agg_curve[lts[l]][r] = result[l, r]
+        agg_curve = numpy.zeros((R, oq.insured_losses + 1), loss_curve_dt)
+        for l, r,  i in result:
+            agg_curve[lts[l]][r, i] = result[l, r, i]
         self.datastore['agg_curve-rlzs'] = agg_curve
 
 
