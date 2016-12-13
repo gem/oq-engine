@@ -1514,7 +1514,7 @@ class StatsBuilder(object):
         return [MultiCurve(*self.normalize_curves(curves))
                 for curves in numpy.array(loss_curves).transpose(1, 0, 2, 3)]
 
-    def build(self, all_outputs, prefix=''):
+    def build(self, all_outputs):
         """
         Build all statistics from a set of risk outputs.
 
@@ -1597,8 +1597,7 @@ class StatsBuilder(object):
             quantile_fractions=[q_maps[:, P:], q_ins_maps[:, P:]],
             # Q x P x N matrix
             quantiles=self.quantiles,
-            conditional_loss_poes=self.conditional_loss_poes,
-            prefix=prefix)
+            conditional_loss_poes=self.conditional_loss_poes)
 
     def get_curves_maps(self, outputs_by_lt, loss_ratios_by_lt):
         """
