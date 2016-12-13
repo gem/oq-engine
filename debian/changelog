@@ -1,3 +1,6 @@
+  [Marco Pagani, Michele Simionato]
+  * Extended the hazard curve calculator to manage mutually exclusive probabilities
+
   [Michele Simionato]
   * Made calc_hazard_curves parallelizable
   * Moved the parallelization library of the engine into baselib
