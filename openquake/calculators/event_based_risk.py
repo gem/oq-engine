@@ -183,7 +183,7 @@ class EbrPostCalculator(base.RiskCalculator):
 
         # loss curves
         multi_lr_dt = numpy.dtype(
-            [(ltype, (F32, cbuilder.curve_resolution))
+            [(ltype, (F32, len(cbuilder.ratios)))
              for ltype, cbuilder in zip(
                 ltypes, self.riskmodel.curve_builders)])
         rcurves = numpy.zeros((A, R, I), multi_lr_dt)
