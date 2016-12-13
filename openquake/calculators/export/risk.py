@@ -873,19 +873,21 @@ def export_agg_curve_rlzs(ekey, dstore):
 @export.add(('agg_curve-stats', 'xml'))
 def export_agg_curve_stats(ekey, dstore):
     oq = dstore['oqparam']
+    riskmodel = riskinput.read_composite_risk_model(dstore)
+    cr = {cb.loss_type: cb.curve_resolution for cb in riskmodel.curve_builders}
     sb = scientific.StatsBuilder(
         oq.quantile_loss_curves, oq.conditional_loss_poes,
         scientific.normalize_curves_eb, oq.insured_losses)
-    riskmodel = riskinput.read_composite_risk_model(dstore)
-    loss_curve_dt, _ = riskmodel.build_all_loss_dtypes(
-        oq.conditional_loss_poes, oq.insured_losses)
+    loss_curve_dt, _ = scientific.build_loss_dtypes(
+        cr, oq.conditional_loss_poes, oq.insured_losses)
     agg_curve = sb.build_agg_curve_stats(loss_curve_dt, dstore)
     fnames = []
-    for writer, (loss_type, poe, r, ins) in _gen_writers(
+    for writer, (loss_type, poe, r, insflag) in _gen_writers(
             dstore, risk_writers.AggregateLossCurveXMLWriter, ekey[0]):
         rec = agg_curve[loss_type][r]
-        curve = AggCurve(rec['losses'][ins], rec['poes'][ins],
-                         rec['avg'][ins], None)
+        ins = '_ins' if insflag else ''
+        curve = AggCurve(rec['losses' + ins], rec['poes' + ins],
+                         rec['avg' + ins], None)
         writer.serialize(curve)
         fnames.append(writer._dest)
     return sorted(fnames)
