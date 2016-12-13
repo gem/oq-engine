@@ -1,6 +1,4 @@
   [Michele Simionato]
-  * Changed the computation of the aggregate curves in the event based
-    calculators: now the user-provided loss ratios are honored
   * Fixed a bug when exporting the uniform hazard spectra in presence of
     IMTs non spectral acceleration
   * Fixed a bug when computing the loss maps in presence of insurance,
