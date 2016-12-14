@@ -31,6 +31,7 @@ http://ftp.openquake.org/python-new-wheels/Rtree-0.8.2-cp27-cp27mu-manylinux1_x8
 # Celery support
 # uncomment the following lines to install celery
 # and its dependencies
+# DO-NOT-DELETE-ME
 #pytz
 #http://ftp.openquake.org/python-new-wheels/anyjson-0.3.3-cp27-none-any.whl
 #http://ftp.openquake.org/python-new-wheels/amqp-1.4.9-py2.py3-none-any.whl
