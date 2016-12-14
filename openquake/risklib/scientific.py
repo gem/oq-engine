@@ -1390,14 +1390,6 @@ def exposure_statistics(
     return (mean_curves, mean_maps, quantile_curves, quantile_maps)
 
 
-def normalize_curves(curves):
-    """
-    :param curves: a list of pairs (losses, poes)
-    :returns: first losses, all_poes
-    """
-    return curves[0][0], [poes for _losses, poes in curves]
-
-
 def normalize_curves_eb(curves):
     """
     A more sophisticated version of normalize_curves, used in the event
@@ -1522,11 +1514,9 @@ class StatsBuilder(object):
     """
     def __init__(self, quantiles,
                  conditional_loss_poes,
-                 _normalize_curves=normalize_curves,
                  insured_losses=False):
         self.quantiles = quantiles
         self.conditional_loss_poes = conditional_loss_poes
-        self.normalize_curves = _normalize_curves
         self.insured_losses = insured_losses
         self.mean_quantiles = ['mean']
         for q in quantiles:
@@ -1536,7 +1526,7 @@ class StatsBuilder(object):
         """
         Normalize the loss curves by using the provided normalization function
         """
-        return [MultiCurve(*self.normalize_curves(curves))
+        return [MultiCurve(curves[0][0], [poes for _losses, poes in curves])
                 for curves in numpy.array(loss_curves).transpose(1, 0, 2, 3)]
 
     def build(self, all_outputs):
