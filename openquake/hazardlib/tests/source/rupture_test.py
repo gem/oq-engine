@@ -83,6 +83,10 @@ class RuptureCreationTestCase(unittest.TestCase):
             occurrence_rate=0, temporal_occurrence_model=PoissonTOM(10)
         )
 
+    def test_rupture_topo(self):
+        rupture = make_rupture(Rupture, hypocenter=Point(5, 6, -2))
+        self.assertEqual(rupture.hypocenter.depth, -2)
+
 
 class ParametricProbabilisticRuptureTestCase(unittest.TestCase):
     def test_get_probability_one_or_more(self):
