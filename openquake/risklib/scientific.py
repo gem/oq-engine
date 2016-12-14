@@ -1427,12 +1427,9 @@ def apply_func(f, arraylist, *extra):
     Broadcast statistical functions to composite arrays. Here is an example:
 
     >>> dt = numpy.dtype([('a', (float, 2)), ('b', float)])
-    >>> a = numpy.zeros(2, dt)
-    >>> a[0]['a'] = [1, 2]
-    >>> a[0]['b'] = 3
-    >>> a[1]['a'] = [4, 5]
-    >>> a[1]['b'] = 6
-    >>> apply_func(mean_curve, list(a))
+    >>> a1 = numpy.array([([1, 2], 3)], dt)
+    >>> a2 = numpy.array([([4, 5], 6)], dt)
+    >>> apply_func(mean_curve, [a1, a2])
     array([([2.5, 3.5], 4.5)], 
           dtype=[('a', '<f8', (2,)), ('b', '<f8')])
     """
