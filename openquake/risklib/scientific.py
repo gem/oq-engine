@@ -1417,6 +1417,35 @@ def normalize_curves_eb(curves):
     return loss_ratios, numpy.array(curves_poes)
 
 
+def apply_func(f, arraylist, *extra):
+    """
+    :param f: a callable arraylist -> array (of the same shape and dtype)
+    :param arraylist: a list of arrays of the same shape and dtype
+    :param extra: additional arguments
+    :returns: an array of the same shape and dtype
+
+    Broadcast statistical functions to composite arrays. Here is an example:
+
+    >>> dt = numpy.dtype([('a', (float, 2)), ('b', float)])
+    >>> a = numpy.zeros(2, dt)
+    >>> a[0]['a'] = [1, 2]
+    >>> a[0]['b'] = 3
+    >>> a[1]['a'] = [4, 5]
+    >>> a[1]['b'] = 6
+    >>> apply_func(mean_curve, list(a))
+    array([([2.5, 3.5], 4.5)], 
+          dtype=[('a', '<f8', (2,)), ('b', '<f8')])
+    """
+    dtype = arraylist[0].dtype
+    if dtype.names:  # composite array
+        new = numpy.zeros(1, dtype)
+        for name in dtype.names:
+            new[name] = f([arr[name] for arr in arraylist], *extra)
+        return new
+    else:  # simple array
+        return f(arraylist, *extra)
+
+
 class SimpleStats(object):
     """
     A class to perform statistics on the average losses. The average losses
@@ -1442,9 +1471,9 @@ class SimpleStats(object):
         newshape[1] = len(self.quantiles) + 1  # number of statistical outputs
         newarray = numpy.zeros(newshape, array.dtype)
         data = [array[:, i] for i in range(len(self.rlzs))]
-        newarray[:, 0] = mean_curve(data, weights)
+        newarray[:, 0] = apply_func(mean_curve, data, weights)
         for i, q in enumerate(self.quantiles, 1):
-            newarray[:, i] = quantile_curve(data, q, weights)
+            newarray[:, i] = apply_func(quantile_curve, data, q, weights)
         return newarray
 
     def build_agg_curve_stats(self, loss_curve_dt, dstore):
