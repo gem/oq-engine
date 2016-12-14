@@ -87,15 +87,10 @@ class BaseCorrelationModel(with_metaclass(abc.ABCMeta)):
             self.cache[imt] = corma
         if len(sites.complete) == len(sites):
             return numpy.dot(corma, residuals)
-        # else extract the indices (slow)
-        return numpy.dot(project(corma, sites.sids), residuals)
-
-
-def project(matrix, indices):
-    """
-    Project a matrix on the given indices
-    """
-    return matrix[indices].T[indices].T
+        # this is the fastest way I found
+        res = numpy.sum(corma[sites.sids, sid] * residuals[i]
+                        for i, sid in numpy.ndenumerate(sites.sids))
+        return res
 
 
 class JB2009CorrelationModel(BaseCorrelationModel):
