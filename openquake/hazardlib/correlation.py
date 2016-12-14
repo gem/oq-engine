@@ -85,7 +85,14 @@ class BaseCorrelationModel(with_metaclass(abc.ABCMeta)):
             corma = self.get_lower_triangle_correlation_matrix(
                 sites.complete, imt)
             self.cache[imt] = corma
-        return numpy.dot(corma[sites.sids].T[sites.sids], residuals)
+        return numpy.dot(project(corma, sites.sids), residuals)
+
+
+def project(matrix, indices):
+    """
+    Project a matrix on the given indices
+    """
+    return matrix[indices].T[indices].T
 
 
 class JB2009CorrelationModel(BaseCorrelationModel):
