@@ -1434,8 +1434,9 @@ def apply_func(f, arraylist, *extra):
           dtype=[('a', '<f8', (2,)), ('b', '<f8')])
     """
     dtype = arraylist[0].dtype
+    shape = arraylist[0].shape
     if dtype.names:  # composite array
-        new = numpy.zeros(1, dtype)
+        new = numpy.zeros(shape, dtype)
         for name in dtype.names:
             new[name] = f([arr[name] for arr in arraylist], *extra)
         return new
