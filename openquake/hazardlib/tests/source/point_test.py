@@ -117,6 +117,9 @@ class PointSourceCreationTestCase(unittest.TestCase):
     def test_successfull_creation(self):
         self.make_point_source()
 
+    def test_upper_depth_topo(self):
+        self.make_point_source(upper_seismogenic_depth=-2)
+
 
 class PointSourceIterRupturesTestCase(unittest.TestCase):
     def _get_rupture(self, min_mag, max_mag, hypocenter_depth,
