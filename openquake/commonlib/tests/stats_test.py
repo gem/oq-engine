@@ -90,8 +90,7 @@ class StatsTestCase(unittest.TestCase):
                 loss_curves=lc, insured_curves=None,
                 average_losses=[.1, .12, .13, .9], average_insured_losses=None)
             outputs.append(out)
-        cls.builder = scientific.StatsBuilder(
-            [0.1, 0.9], [0.35, 0.24, 0.13], scientific.normalize_curves_eb)
+        cls.builder = scientific.StatsBuilder([0.1, 0.9], [0.35, 0.24, 0.13])
         cls.stats = cls.builder.build(outputs)
 
     # TODO: add a test for insured curves and maps
@@ -146,8 +145,8 @@ class StatsTestCase(unittest.TestCase):
         dstore = {'agg_curve-rlzs': array, 'realizations': rlzs}
 
         # build the stats
-        acs = self.builder.build_agg_curve_stats(
-            loss_curve_dt, dstore)['contents']
+        builder = scientific.SimpleStats(rlzs, [0.1, 0.9])
+        acs = builder.build_agg_curve_stats(loss_curve_dt, dstore)['contents']
 
         # 0=mean, 1=quantile-0.1 and 2=quantile-0.9
         aaae(acs['avg'], [138.96482849, 136.9994812, 140.14404297])
@@ -162,11 +161,3 @@ class StatsTestCase(unittest.TestCase):
                      0.161121, 0.117227, 0.095978, 0.092226, 0.048771,
                      0.048771, 0.033716, 0.024385, 0.024385, 0.]
         aaae(acs['poes'][0], mean_poes)
-
-        # manual computation
-        losses, all_poes = scientific.normalize_curves_eb(
-            [(rec['losses'], rec['poes']) for rec in ac[0]])
-        dstore['poes-rlzs'] = numpy.array(all_poes).T
-        stats = scientific.SimpleStats(
-            rlzs, [0.1, 0.9]).compute('poes', dstore)  # Q1, C
-        aaae(stats[:, 0], mean_poes)
