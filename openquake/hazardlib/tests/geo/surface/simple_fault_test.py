@@ -59,6 +59,16 @@ class SimpleFaultSurfaceCheckFaultDataTestCase(utils.SurfaceTestCase):
         self.assertRaises(ValueError, SimpleFaultSurface.check_fault_data,
                           self.fault_trace, 1.0, 0.9, 90.0, 1.0)
 
+    def test_fault_trace_horizontal(self):
+        fault_trace = Line([Point(0.0, 0.0, 1.0), Point(1.0, 1.0, 0.0)])
+
+        self.assertRaises(ValueError, SimpleFaultSurface.check_fault_data,
+                          fault_trace, 0.0, 1.0, 90.0, 1.0)
+
+    def test_fault_below_upper_seismo_depth(self):
+        self.assertRaises(ValueError, SimpleFaultSurface.check_fault_data,
+                          self.fault_trace, -1.0, 5, 90.0, 1.0)
+
     def test_mesh_spacing_range(self):
         SimpleFaultSurface.check_fault_data(self.fault_trace,
                                             0.0, 1.0, 90.0, 1.0)
@@ -122,6 +132,17 @@ class SimpleFaultSurfaceGetMeshTestCase(utils.SurfaceTestCase):
                                                    6.0, 90.0, 1.0)
 
         self.assert_mesh_is(fault, test_data.TEST_5_MESH)
+
+    def test_get_mesh_topo(self):
+        p1 = Point(0.0, 0.0, -2.0)
+        p2 = Point(0.0, 0.0359728811759, -2.0)
+        p3 = Point(0.0190775080917, 0.0550503815182, -2.0)
+        p4 = Point(0.03974514139, 0.0723925718856, -2.0)
+
+        fault = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3, p4]),
+                                                   -2.0, 2.0, 90.0, 1.0)
+
+        self.assert_mesh_is(fault, test_data.TEST_TOPO_MESH)
 
 
 class SimpleFaultSurfaceGetStrikeTestCase(utils.SurfaceTestCase):

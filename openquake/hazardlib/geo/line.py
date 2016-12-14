@@ -80,6 +80,16 @@ class Line(object):
         """
         return all(point.on_surface() for point in self.points)
 
+    def horizontal(self):
+        """
+        Check if this line is horizontal (i.e. all depths of points
+        are equal).
+
+        :returns bool:
+            True if this line is horizontal, false otherwise.
+        """
+        return all(p.depth == self[0].depth for p in self)
+
     def average_azimuth(self):
         """
         Calculate and return weighted average azimuth of all line's segments

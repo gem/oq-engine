@@ -100,6 +100,8 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         """
         if not len(fault_trace) >= 2:
             raise ValueError("the fault trace must have at least two points")
+        if not fault_trace.horizontal():
+            raise ValueError("the fault trace must be horizontal")
         tlats = [point.latitude for point in fault_trace.points]
         tlons = [point.longitude for point in fault_trace.points]
         if geo_utils.line_intersects_itself(tlons, tlats):
@@ -109,6 +111,9 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         if not lower_seismogenic_depth > upper_seismogenic_depth:
             raise ValueError("lower seismogenic depth must be greater than "
                              "upper seismogenic depth")
+        if not upper_seismogenic_depth >= fault_trace[0].depth:
+            raise ValueError("upper seismogenic depth must be greater than "
+                             "depth of fault trace")
         if not mesh_spacing > 0.0:
             raise ValueError("mesh spacing must be positive")
 
@@ -120,7 +125,8 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
 
         :param openquake.hazardlib.geo.line.Line fault_trace:
             Geographical line representing the intersection between
-            the fault surface and the earth surface.
+            the fault surface and the earth surface. Line must be
+            horizontal
         :param upper_seismo_depth:
             Minimum depth ruptures can reach, in km (i.e. depth
             to fault's top edge).
@@ -143,8 +149,8 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         # on the top edge compute corresponding point on the bottom edge, then
         # computes equally spaced points between top and bottom points.
 
-        vdist_top = upper_seismogenic_depth
-        vdist_bottom = lower_seismogenic_depth
+        vdist_top = upper_seismogenic_depth - fault_trace[0].depth
+        vdist_bottom = lower_seismogenic_depth - fault_trace[0].depth
 
         hdist_top = vdist_top / math.tan(math.radians(dip))
         hdist_bottom = vdist_bottom / math.tan(math.radians(dip))
