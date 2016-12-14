@@ -197,12 +197,14 @@ class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
         ``p(k|T)`` is given by the constructor's parameter ``pmf``, and
         ``p(X<x|rup)`` is computed as ``1 - poes``.
         """
+        # Converting from 1d to 2d
+        if len(poes.shape) == 1:
+            poes = numpy.reshape(poes, (-1, len(poes)))
         p_kT = numpy.array([float(p) for (p, _) in self.pmf.data])
         prob_no_exceed = numpy.array(
             [v * ((1 - poes) ** i) for i, v in enumerate(p_kT)]
         )
         prob_no_exceed = numpy.sum(prob_no_exceed, axis=0)
-
         return prob_no_exceed
 
     def sample_number_of_occurrences(self):

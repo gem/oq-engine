@@ -21,11 +21,19 @@ from openquake.hazardlib import const
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.source.base import ParametricSeismicSource
+from openquake.hazardlib.source.base import SourceGroup, SourceGroupCollection
 from openquake.hazardlib.geo import Polygon, Point, RectangularMesh
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.site import \
     Site, SiteCollection, FilteredSiteCollection
 from openquake.hazardlib.tom import PoissonTOM
+
+
+class FakeSource(ParametricSeismicSource):
+    MODIFICATIONS = set(())
+    iter_ruptures = None
+    count_ruptures = None
+    get_rupture_enclosing_polygon = None
 
 
 class _BaseSeismicSourceTestCase(unittest.TestCase):
@@ -47,11 +55,6 @@ class _BaseSeismicSourceTestCase(unittest.TestCase):
     ]
 
     def setUp(self):
-        class FakeSource(ParametricSeismicSource):
-            MODIFICATIONS = set(())
-            iter_ruptures = None
-            count_ruptures = None
-            get_rupture_enclosing_polygon = None
         self.source_class = FakeSource
         mfd = EvenlyDiscretizedMFD(min_mag=3, bin_width=1,
                                    occurrence_rates=[5, 6, 7])
@@ -151,3 +154,70 @@ class SeismicSourceFilterSitesByRuptureTestCase(
         )
         numpy.testing.assert_array_equal(filtered.indices,
                                          [0, 1, 2, 3, 4, 5, 6, 7, 8])
+
+
+class SeismicSourceGroupTestCase(unittest.TestCase):
+
+    def setUp(self):
+        # Create a source
+        self.source_class = FakeSource
+        mfd = EvenlyDiscretizedMFD(min_mag=3, bin_width=1,
+                                   occurrence_rates=[5, 6, 7])
+        self.source = FakeSource('source_id', 'name', const.TRT.VOLCANIC,
+                                 mfd=mfd, rupture_mesh_spacing=2,
+                                 magnitude_scaling_relationship=PeerMSR(),
+                                 rupture_aspect_ratio=1,
+                                 temporal_occurrence_model=PoissonTOM(50.))
+
+    def test_init1(self):
+        # test simple instantiation
+        grp = SourceGroup(src_list=[self.source],
+                          name='',
+                          src_interdep='indep',
+                          rup_interdep='indep',
+                          srcs_weights=None)
+        assert(len(grp.src_list) == 1)
+
+    def test_init2(self):
+        # test default weighting
+        grp = SourceGroup(src_list=[self.source, self.source, self.source],
+                          name='',
+                          src_interdep='indep',
+                          rup_interdep='indep',
+                          srcs_weights=None)
+        assert(len(grp.srcs_weights) == 3)
+
+    def test_init3(self):
+        # test default weighting
+        SourceGroup(src_list=[self.source, self.source, self.source],
+                    name='',
+                    src_interdep='indep',
+                    rup_interdep='indep',
+                    srcs_weights=[0.3333, 0.3334, 0.3333])
+
+    def test_wrong_label(self):
+        self.assertRaises(ValueError, SourceGroup, [self.source], 'name',
+                          'aaaa', 'indep', None)
+
+
+class SeismicSourceGroupCollectionTestCase(unittest.TestCase):
+
+    def setUp(self):
+        # Create Source Group
+        self.source_class = FakeSource
+        mfd = EvenlyDiscretizedMFD(min_mag=3, bin_width=1,
+                                   occurrence_rates=[5, 6, 7])
+        source = FakeSource('source_id', 'name', const.TRT.VOLCANIC,
+                            mfd=mfd, rupture_mesh_spacing=2,
+                            magnitude_scaling_relationship=PeerMSR(),
+                            rupture_aspect_ratio=1,
+                            temporal_occurrence_model=PoissonTOM(50.))
+        self.source_group = SourceGroup([source], 'sourcegroup')
+
+    def test_init(self):
+        coll = SourceGroupCollection([self.source_group])
+        assert(len(coll.grp_list) == 1)
+
+    def test_wrong_label(self):
+        self.assertRaises(ValueError, SourceGroup, [self.source_group],
+                          'name', 'aaaa')
