@@ -85,7 +85,7 @@ class BaseCorrelationModel(with_metaclass(abc.ABCMeta)):
             corma = self.get_lower_triangle_correlation_matrix(
                 sites.complete, imt)
             self.cache[imt] = corma
-        return numpy.dot(corma[sites.sids, sites.sids], residuals)
+        return numpy.dot(corma[sites.sids][sites.sids], residuals)
 
 
 class JB2009CorrelationModel(BaseCorrelationModel):
