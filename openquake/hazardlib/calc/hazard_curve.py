@@ -68,7 +68,7 @@ from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.source.base import SourceGroup, BaseSeismicSource
+from openquake.hazardlib.source.base import SourceGroup
 
 
 def zero_curves(num_sites, imtls):
@@ -326,10 +326,9 @@ def calc_hazard_curves_ext(
         size of each field is given by the number of levels in ``imtls``.
     """
     # This is ensuring backward compatibility i.e. processing a list of
-    # sources.
-    if isinstance(groups[0], BaseSeismicSource):
-        group_tmp = SourceGroup(groups, 'src_group', 'indep', 'indep')
-        groups = [group_tmp]
+    # sources
+    if not isinstance(groups[0], SourceGroup):
+        groups = [SourceGroup(groups, 'src_group', 'indep', 'indep')]
 
     imtls = DictArray(imtls)
     sitecol = source_site_filter.sitecol
