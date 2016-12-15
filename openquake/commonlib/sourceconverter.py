@@ -22,7 +22,6 @@ import operator
 import collections
 
 from openquake.hazardlib import geo, mfd, pmf, source
-from openquake.hazardlib.source.base import SourceGroupCollection
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.risklib import valid
 from openquake.commonlib.node import context, striptag
@@ -736,12 +735,6 @@ class SourceConverter(RuptureConverter):
         nps = source.NonParametricSeismicSource(
             node['id'], node['name'], trt, rup_pmf_data)
         return nps
-
-    def convert_sourceGroupCollection(self, node):
-        sgc = SourceGroupCollection([], grp_interdep=node['grp_interdep'])
-        for sg_node in node:
-            sgc.grp_list.append(self.convert_sourceGroup(sg_node))
-        return sgc
 
     def convert_sourceModel(self, node):
         return [self.convert_node(subnode) for subnode in node]
