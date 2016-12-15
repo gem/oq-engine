@@ -26,7 +26,7 @@ def make_figure(curves):
     # installation without matplotlib
     import matplotlib.pyplot as plt
     loss_types = curves.dtype.names
-    I, = curves.dtype[loss_types[0]]['avg'].shape
+    I, R = curves.shape
     num_lt = len(loss_types)
     fig = plt.figure()
     for j, lt in enumerate(loss_types, 1):
@@ -35,8 +35,8 @@ def make_figure(curves):
             ax.grid(True)
             ax.set_ylabel('%s%s' % (lt, '_ins' if i else ''))
             ax.set_ylim([0, 1])
-            for rlzi, c in enumerate(curves[lt]):
-                ax.plot(c['losses'][i], c['poes'][i], label=str(rlzi))
+            for rlzi, c in enumerate(curves[lt][i]):
+                ax.plot(c['losses'], c['poes'], label='rlz-%03d' % rlzi)
     plt.legend()
     return plt
 
