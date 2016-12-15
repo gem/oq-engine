@@ -1496,7 +1496,9 @@ class SimpleStats(object):
                 losses, all_poes = normalize_curves_eb(
                     [(c['losses'], c['poes']) for c in data[i]])
                 acs['losses' + ins] = losses
+                # NB: all_poes.T to compute the stats on the second axis
                 acs['poes' + ins] = self.compute(all_poes.T).T
+                # NB: data['avg'][None, i] adds a first axis with dimension 1
                 acs['avg' + ins] = self.compute(data['avg'][None, i])[0]
         return agg_curve_stats
 
