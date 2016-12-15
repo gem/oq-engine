@@ -335,7 +335,7 @@ def calc_hazard_curves_ext(
     sitecol = source_site_filter.sitecol
     pmap = ProbabilityMap(len(imtls.array), 1)
     # Processing groups
-    for group in groups.grp_list:
+    for group in groups:
         indep = group.src_interdep == 'indep'
         # Prepare a dictionary
         sources_by_trt = collections.defaultdict(list)
