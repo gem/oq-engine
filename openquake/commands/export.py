@@ -18,16 +18,16 @@
 
 from __future__ import print_function
 import os
-import ast
 import logging
 
-from openquake.baselib import general, performance
-from openquake.commonlib import sap, datastore
-from openquake.commonlib.export import export as export_
+from openquake.baselib import general, performance, sap
+from openquake.commonlib import datastore
+from openquake.calculators.export import export as export_
 
 
 # the export is tested in the demos
-def export(datastore_key, export_dir='.', calc_id=-1, exports='csv'):
+@sap.Script
+def export(datastore_key, calc_id=-1, exports='csv', export_dir='.'):
     """
     Export an output from the datastore.
     """
@@ -46,8 +46,7 @@ def export(datastore_key, export_dir='.', calc_id=-1, exports='csv'):
         print(mon)
 
 
-parser = sap.Parser(export)
-parser.arg('datastore_key', 'datastore key')
-parser.arg('export_dir', 'export directory')
-parser.arg('calc_id', 'number of the calculation', type=int)
-parser.opt('exports', 'export formats (comma separated)')
+export.arg('datastore_key', 'datastore key')
+export.arg('calc_id', 'number of the calculation', type=int)
+export.opt('exports', 'export formats (comma separated)')
+export.opt('export_dir', 'export directory', '-d')

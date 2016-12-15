@@ -1,2 +1,2 @@
-lon,lat,BooreAtkinson2008(),ChiouYoungs2008()
+lon,lat,BooreAtkinson2008():float32,ChiouYoungs2008():float32
 -122.00000,38.11300,0.27616,0.31628

@@ -24,10 +24,11 @@ from nose.plugins.attrib import attr
 
 import numpy.testing
 
-from openquake.baselib.general import get_array
+from openquake.baselib.general import group_array
 from openquake.commonlib.datastore import read
 from openquake.commonlib.util import max_rel_diff_index
-from openquake.commonlib.export import export
+from openquake.calculators.export import export
+from openquake.calculators.event_based import get_mean_curves
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_4, case_5, case_6, case_7, case_12,
@@ -89,15 +90,14 @@ class EventBasedTestCase(CalculatorTestCase):
             oq = self.calc.oqparam
             self.assertEqual(list(oq.imtls), ['PGA'])
             dstore = read(self.calc.datastore.calc_id)
-            gmvs = dstore['gmf_data/0000'].value
-            dstore.close()
-            gmvs_site_1 = get_array(gmvs, sid=0, imti=0)['gmv']
-            gmvs_site_2 = get_array(gmvs, sid=1, imti=0)['gmv']
+            gmf = group_array(dstore['gmf_data/sm-0000/0000'], 'sid')
+            gmvs_site_0 = gmf[0]['gmv']
+            gmvs_site_1 = gmf[1]['gmv']
             joint_prob_0_5 = joint_prob_of_occurrence(
-                gmvs_site_1, gmvs_site_2, 0.5, oq.investigation_time,
+                gmvs_site_0, gmvs_site_1, 0.5, oq.investigation_time,
                 oq.ses_per_logic_tree_path)
             joint_prob_1_0 = joint_prob_of_occurrence(
-                gmvs_site_1, gmvs_site_2, 1.0, oq.investigation_time,
+                gmvs_site_0, gmvs_site_1, 1.0, oq.investigation_time,
                 oq.ses_per_logic_tree_path)
 
             p05, p10 = expected[case]
@@ -122,15 +122,19 @@ class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_1(self):
-        out = self.run_calc(case_1.__file__, 'job.ini', exports='csv,txt,xml')
+        out = self.run_calc(case_1.__file__, 'job.ini', exports='txt,xml')
 
         [fname] = out['gmf_data', 'txt']
         self.assertEqualFiles(
             'expected/0-SadighEtAl1997.txt', fname, sorted)
 
-        [fname] = out['hcurves', 'csv']
+        [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
+
+        [fname] = export(('gmf_data:0', 'csv'), self.calc.datastore)
+        self.assertEqualFiles(
+            'expected/gmf-grp=00~ses=0002~src=1~rup=1-01-rlz-000.csv', fname)
 
         [fname] = out['hcurves', 'xml']
         self.assertEqualFiles(
@@ -197,9 +201,8 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got, sorted)
 
-        # this is a case with two different TRTs + 1 empty
-        for fname in out['rup_data', 'csv']:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+        [fname] = export(('ses', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ses.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_6(self):
@@ -226,10 +229,10 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         ]
         out = self.run_calc(case_7.__file__, 'job.ini', exports='csv')
         fnames = out['hcurves', 'csv']
-        mean_eb = self.calc.mean_curves
+        mean_eb = get_mean_curves(self.calc.datastore)
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)
-        mean_cl = self.calc.cl.mean_curves
+        mean_cl = get_mean_curves(self.calc.cl.datastore)
         for imt in mean_cl.dtype.fields:
             reldiff, _index = max_rel_diff_index(
                 mean_cl[imt], mean_eb[imt], min_value=0.1)
@@ -254,21 +257,22 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
-    def test_case_17(self):  # oversampling
+    def test_case_17(self):  # oversampling and save_ruptures
         expected = [
-            'hazard_curve-smltp_b2-gsimltp_b1-ltr_1.csv',
-            'hazard_curve-smltp_b2-gsimltp_b1-ltr_2.csv',
-            'hazard_curve-smltp_b2-gsimltp_b1-ltr_3.csv',
-            'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv',
+            'hazard_curve-rlz-001.csv',
+            'hazard_curve-rlz-002.csv',
+            'hazard_curve-rlz-003.csv',
+            'hazard_curve-rlz-004.csv',
         ]
-        out = self.run_calc(case_17.__file__, 'job.ini', exports='csv')
+        # test --hc functionality, i.e. that the ruptures are read correctly
+        out = self.run_calc(case_17.__file__, 'job.ini,job.ini', exports='csv')
         fnames = out['hcurves', 'csv']
         for exp, got in zip(expected, fnames):
-            self.assertEqualFiles('expected/%s' % exp, got, sorted)
+            self.assertEqualFiles('expected/%s' % exp, got)
 
         # check that a single rupture file is exported even if there are
         # several collections
-        [fname] = export(('sescollection', 'xml'), self.calc.datastore)
+        [fname] = export(('ruptures', 'xml'), self.calc.datastore)
         self.assertEqualFiles('expected/ses.xml', fname)
 
     @attr('qa', 'hazard', 'event_based')

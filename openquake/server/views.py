@@ -20,6 +20,7 @@ import shutil
 import json
 import logging
 import os
+import getpass
 import tempfile
 try:
     import urllib.parse as urlparse
@@ -28,30 +29,36 @@ except ImportError:
 import re
 
 from xml.parsers.expat import ExpatError
-from django.http import (HttpResponse,
-                         HttpResponseNotFound,
-                         HttpResponseBadRequest,
-                         )
+from django.http import (
+    HttpResponse, HttpResponseNotFound, HttpResponseBadRequest)
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.contrib.auth import authenticate, login, logout
+try:
+    from django.http import FileResponse  # Django >= 1.8
+except ImportError:
+    from django.http import StreamingHttpResponse as FileResponse
+from django.core.servers.basehttp import FileWrapper
 
 from openquake.baselib.general import groupby, writetmp
 from openquake.baselib.python3compat import unicode
 from openquake.commonlib import nrml, readinput, oqvalidation
-from openquake.commonlib.parallel import safely_call
-from openquake.commonlib.export import export
+from openquake.baselib.parallel import TaskManager, safely_call
+from openquake.calculators.export import export
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, logs
 from openquake.engine.export.core import DataStoreExportError
-from openquake.server import executor, utils
-from openquake.server.db import models
+from openquake.server import executor, utils, dbapi
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
+
+XML = 'application/xml'
 JSON = 'application/json'
+HDF5 = 'application/x-hdf'
 
 DEFAULT_LOG_LEVEL = 'info'
 
@@ -60,8 +67,7 @@ DEFAULT_LOG_LEVEL = 'info'
 #: XML by default.
 DEFAULT_EXPORT_TYPE = 'xml'
 
-EXPORT_CONTENT_TYPE_MAP = dict(xml='application/xml',
-                               geojson='application/json')
+EXPORT_CONTENT_TYPE_MAP = dict(xml=XML, geojson=JSON)
 DEFAULT_CONTENT_TYPE = 'text/plain'
 
 LOGGER = logging.getLogger('openquake.server')
@@ -126,6 +132,45 @@ def _prepare_job(request, hazard_job_id, candidates):
         return inifiles
     # else extract the files from the archive into temp_dir
     return readinput.extract_from_zip(arch, candidates)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def ajax_login(request):
+    """
+    Accept a POST request to login.
+
+    :param request:
+        `django.http.HttpRequest` object, containing mandatory parameters
+        username and password required.
+    """
+    username = request.POST['username']
+    password = request.POST['password']
+    user = authenticate(username=username, password=password)
+    if user is not None:
+        if user.is_active:
+            login(request, user)
+            return HttpResponse(content='Successful login',
+                                content_type='text/plain', status=200)
+        else:
+            return HttpResponse(content='Disabled account',
+                                content_type='text/plain', status=403)
+    else:
+        return HttpResponse(content='Invalid login',
+                            content_type='text/plain', status=403)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def ajax_logout(request):
+    """
+    Accept a POST request to logout.
+    """
+    logout(request)
+    return HttpResponse(content='Successful logout',
+                        content_type='text/plain', status=200)
 
 
 @cross_domain_ajax
@@ -211,7 +256,7 @@ def calc_info(request, calc_id):
     """
     try:
         info = logs.dbcmd('calc_info', calc_id)
-    except models.NotFound:
+    except dbapi.NotFound:
         return HttpResponseNotFound()
     return HttpResponse(content=json.dumps(info), content_type=JSON)
 
@@ -238,7 +283,7 @@ def calc(request, id=None):
         url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
         response_data.append(
             dict(id=hc_id, owner=owner, status=status, job_type=job_type,
-                 is_running=is_running, description=desc, url=url))
+                 is_running=bool(is_running), description=desc, url=url))
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
@@ -257,7 +302,7 @@ def calc_remove(request, calc_id):
     """
     try:
         logs.dbcmd('set_relevant', calc_id, False)
-    except models.NotFound:
+    except dbapi.NotFound:
         return HttpResponseNotFound()
     return HttpResponse(content=json.dumps([]),
                         content_type=JSON, status=200)
@@ -276,10 +321,10 @@ def get_log_slice(request, calc_id, start, stop):
     Get a slice of the calculation log as a JSON list of rows
     """
     start = start or 0
-    stop = stop or None
+    stop = stop or 0
     try:
         response_data = logs.dbcmd('get_log_slice', calc_id, start, stop)
-    except models.NotFound:
+    except dbapi.NotFound:
         return HttpResponseNotFound()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
@@ -292,7 +337,7 @@ def get_log_size(request, calc_id):
     """
     try:
         response_data = logs.dbcmd('get_log_size', calc_id)
-    except models.NotFound:
+    except dbapi.NotFound:
         return HttpResponseNotFound()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
@@ -306,6 +351,12 @@ def run_calc(request):
 
     :param request:
         a `django.http.HttpRequest` object.
+        If the request has the attribute `hazard_job_id`, the results of the
+        specified hazard calculations will be re-used as input by the risk
+        calculation.
+        The request also needs to contain the files needed to perform the
+        calculation. They can be uploaded as separate files, or zipped
+        together.
     """
     hazard_job_id = request.POST.get('hazard_job_id')
 
@@ -326,7 +377,9 @@ def run_calc(request):
 
     user = utils.get_user_data(request)
     try:
-        job_id, _fut = submit_job(einfo[0], user['name'], hazard_job_id)
+        job_id, fut = submit_job(einfo[0], user['name'], hazard_job_id)
+        # restart the process pool at the end of each job
+        fut .add_done_callback(lambda f: TaskManager.restart())
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = str(exc)
@@ -334,7 +387,7 @@ def run_calc(request):
         response_data = exc_msg.splitlines()
         status = 500
     else:
-        response_data = dict(job_id=job_id, status='executing')
+        response_data = dict(job_id=job_id, status='created')
         status = 200
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=status)
@@ -372,7 +425,7 @@ def calc_results(request, calc_id):
         info = logs.dbcmd('calc_info', calc_id)
         if user['acl_on'] and info['user_name'] != user['name']:
             return HttpResponseNotFound()
-    except models.NotFound:
+    except dbapi.NotFound:
         return HttpResponseNotFound()
     base_url = _get_base_url(request)
 
@@ -411,7 +464,7 @@ def get_traceback(request, calc_id):
     # If the specified calculation doesn't exist throw back a 404.
     try:
         response_data = logs.dbcmd('get_traceback', calc_id)
-    except models.NotFound:
+    except dbapi.NotFound:
         return HttpResponseNotFound()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
@@ -447,7 +500,7 @@ def get_result(request, result_id):
             'get_result', result_id)
         if not job_status == 'complete':
             return HttpResponseNotFound()
-    except models.NotFound:
+    except dbapi.NotFound:
         return HttpResponseNotFound()
 
     etype = request.GET.get('export_type')
@@ -478,6 +531,32 @@ def get_result(request, result_id):
         return response
     finally:
         shutil.rmtree(tmpdir)
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def get_datastore(request, job_id):
+    """
+    Download a full datastore file.
+
+    :param request:
+        `django.http.HttpRequest` object.
+    :param job_id:
+        The id of the requested datastore
+    :returns:
+        A `django.http.HttpResponse` containing the content
+        of the requested artifact, if present, else throws a 404
+    """
+    try:
+        job = logs.dbcmd('get_job', int(job_id), getpass.getuser())
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+
+    fname = job.ds_calc_dir + '.hdf5'
+    response = FileResponse(
+        FileWrapper(open(fname, 'rb')), content_type=HDF5)
+    response['Content-Disposition'] = 'attachment; filename=%s' % fname
+    return response
 
 
 def web_engine(request, **kwargs):

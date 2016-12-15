@@ -15,7 +15,7 @@ An example of running the `AreaSourceClassicalPSHA` demo:
 The output should look something like this:
 
 ```
-[2016-06-14 16:47:35,202 #2 INFO] Using engine version 2.0.0
+[2016-06-14 16:47:35,202 #2 INFO] Using engine version 2
 [2016-06-14 16:47:35,333 #2 INFO] Read 528 hazard site(s)
 [2016-06-14 16:47:35,386 #2 INFO] Parsed 1 sources from /usr/share/openquake/engine/demos/hazard/AreaSourceClassicalPSHA/source_model.xml
 [2016-06-14 16:47:35,491 #2 INFO] Processed source model 1/1 with 1 gsim path(s)

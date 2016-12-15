@@ -4,6 +4,8 @@
 The nodes must all be able to communicate with the OpenQuake Engine *DbServer* and a *RabbitMQ* server.
 Both services run on a single "master" node. It is not necessary and not recommended to run *RabbitMQ* on a worker node and *Celery* on master node.
 
+Running OpenQuake on an *MPI cluster* is currently not supported. See the [FAQ](../faq.md#mpi-support) for more information.
+
 ## Initial install
 On all nodes, install the `python-oq-engine package` as described in OpenQuake Engine installation for [Ubuntu](ubuntu.md) or [RedHat](rhel.md).
 
@@ -65,7 +67,7 @@ The required daemons are:
 sudo service openquake-celery start
 ```
 
-The *Celery* daemon is not started at boot by default on the workers node and the *DbServer*, *WebUI* can be disabled on the workers. Have a look at the documentation for [Ubuntu]() or [RedHat] to see how to enable or disable services.
+The *Celery* daemon is not started at boot by default on the workers node and the *DbServer*, *WebUI* can be disabled on the workers. Have a look at the documentation for [Ubuntu](ubuntu.md#configure-the-system-services) or [RedHat](rhel.md#configure-the-system-services) to see how to enable or disable services.
 
 
 ## Network and security considerations

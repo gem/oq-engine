@@ -1,28 +1,31 @@
 Classical PSHA using Area Source
 ================================
 
-gem-tstation:/home/michele/ssd/calc_22631.hdf5 updated Tue May 31 15:39:20 2016
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_67023.hdf5 Wed Nov  9 08:16:46 2016
+engine_version                                 2.2.0-git54d01f4        
+hazardlib_version                              0.22.0-git173c60c       
+============================================== ========================
 
 num_sites = 6, sitecol = 969 B
 
 Parameters
 ----------
-============================ ===============================
-calculation_mode             'classical'                    
-number_of_logic_tree_samples 0                              
-maximum_distance             {'Active Shallow Crust': 200.0}
-investigation_time           50.0                           
-ses_per_logic_tree_path      1                              
-truncation_level             3.0                            
-rupture_mesh_spacing         2.0                            
-complex_fault_mesh_spacing   2.0                            
-width_of_mfd_bin             0.2                            
-area_source_discretization   5.0                            
-random_seed                  23                             
-master_seed                  0                              
-sites_per_tile               1                              
-engine_version               '2.0.0-git4fb4450'             
-============================ ===============================
+============================ ================================
+calculation_mode             'classical'                     
+number_of_logic_tree_samples 0                               
+maximum_distance             {u'Active Shallow Crust': 200.0}
+investigation_time           50.0                            
+ses_per_logic_tree_path      1                               
+truncation_level             3.0                             
+rupture_mesh_spacing         2.0                             
+complex_fault_mesh_spacing   2.0                             
+width_of_mfd_bin             0.2                             
+area_source_discretization   5.0                             
+random_seed                  23                              
+master_seed                  0                               
+sites_per_tile               1                               
+============================ ================================
 
 Input files
 -----------
@@ -46,7 +49,7 @@ b1        1.000  `source_model.xml <source_model.xml>`_ simple(2)       2/2
 Required parameters per tectonic region type
 --------------------------------------------
 ====== ===================================== =========== ======================= =================
-trt_id gsims                                 distances   siteparams              ruptparams       
+grp_id gsims                                 distances   siteparams              ruptparams       
 ====== ===================================== =========== ======================= =================
 0      BooreAtkinson2008() ChiouYoungs2008() rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
 ====== ===================================== =========== ======================= =================
@@ -62,64 +65,66 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ======
-source_model     trt_id trt                  num_sources eff_ruptures weight
-================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 1           1640         41    
-================ ====== ==================== =========== ============ ======
+================ ====== ==================== =========== ============ ============
+source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
+================ ====== ==================== =========== ============ ============
+source_model.xml 0      Active Shallow Crust 1           1640         1,640       
+================ ====== ==================== =========== ============ ============
 
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 3,436       
-count_eff_ruptures_num_tasks             24          
-count_eff_ruptures_sent.monitor          76,200      
-count_eff_ruptures_sent.rlzs_assoc       22,584      
-count_eff_ruptures_sent.sitecol          10,392      
-count_eff_ruptures_sent.siteidx          120         
-count_eff_ruptures_sent.sources          272,610     
-count_eff_ruptures_tot_received          82,458      
-hazard.input_weight                      41          
+count_eff_ruptures_max_received_per_task 1,838       
+count_eff_ruptures_num_tasks             1           
+count_eff_ruptures_sent.gsims            168         
+count_eff_ruptures_sent.monitor          1,598       
+count_eff_ruptures_sent.sitecol          533         
+count_eff_ruptures_sent.sources          1,957       
+count_eff_ruptures_tot_received          1,838       
+hazard.input_weight                      164         
 hazard.n_imts                            3           
-hazard.n_levels                          19          
+hazard.n_levels                          57          
 hazard.n_realizations                    2           
 hazard.n_sites                           6           
-hazard.n_sources                         0           
+hazard.n_sources                         1           
 hazard.output_weight                     684         
 hostname                                 gem-tstation
 ======================================== ============
 
 Slowest sources
 ---------------
-============ ========= ============ ====== ========= =========== ========== =========
-src_group_id source_id source_class weight split_num filter_time split_time calc_time
-============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   41     205       0.006       0.043      0.0      
-============ ========= ============ ====== ========= =========== ========== =========
+====== ========= ============ ============ ========= ========= =========
+grp_id source_id source_class num_ruptures calc_time num_sites num_split
+====== ========= ============ ============ ========= ========= =========
+0      1         AreaSource   1,640        0.0       6         0        
+====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
-============ =========== ========== ========= ======
-source_class filter_time split_time calc_time counts
-============ =========== ========== ========= ======
-AreaSource   0.006       0.043      0.0       1     
-============ =========== ========== ========= ======
+============ ========= ======
+source_class calc_time counts
+============ ========= ======
+AreaSource   0.0       1     
+============ ========= ======
 
 Information about the tasks
 ---------------------------
-Not available
+================== ========= ====== ========= ========= =========
+operation-duration mean      stddev min       max       num_tasks
+count_eff_ruptures 8.609E-04 NaN    8.609E-04 8.609E-04 1        
+================== ========= ====== ========= ========= =========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-managing sources               0.095     0.0       1     
-reading composite source model 0.044     0.0       1     
-splitting sources              0.043     0.0       1     
-total count_eff_ruptures       0.007     0.0       24    
-filtering sources              0.006     0.0       6     
-store source_info              0.004     0.0       1     
-reading site collection        0.002     0.0       1     
-aggregate curves               2.856E-04 0.0       24    
-============================== ========= ========= ======
+================================ ========= ========= ======
+operation                        time_sec  memory_mb counts
+================================ ========= ========= ======
+reading composite source model   0.079     0.0       1     
+reading site collection          0.002     0.0       1     
+managing sources                 0.002     0.0       1     
+filtering composite source model 0.001     0.0       1     
+total count_eff_ruptures         8.609E-04 0.0       1     
+store source_info                7.319E-04 0.0       1     
+saving probability maps          3.386E-05 0.0       1     
+aggregate curves                 2.289E-05 0.0       1     
+================================ ========= ========= ======

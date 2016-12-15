@@ -17,7 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
-from openquake.commonlib import sap, datastore
+from openquake.baselib import sap
+from openquake.commonlib import datastore
 from openquake.commands.show import get_hcurves_and_means
 
 
@@ -52,6 +53,7 @@ def make_figure(indices, imtls, spec_curves, curves=(), label=''):
     return plt
 
 
+@sap.Script
 def plot(calc_id, other_id=None, sites='0'):
     """
     Hazard curves plotter.
@@ -79,8 +81,6 @@ def plot(calc_id, other_id=None, sites='0'):
         plt = make_figure(valid, oq.imtls, mean1, {'mean': mean2}, 'reference')
     plt.show()
 
-
-parser = sap.Parser(plot)
-parser.arg('calc_id', 'a computation id', type=int)
-parser.arg('other_id', 'optional id of another computation', type=int)
-parser.opt('sites', 'comma-separated string with the site indices')
+plot.arg('calc_id', 'a computation id', type=int)
+plot.arg('other_id', 'optional id of another computation', type=int)
+plot.opt('sites', 'comma-separated string with the site indices')

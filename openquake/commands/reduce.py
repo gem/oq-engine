@@ -22,8 +22,8 @@ import random
 import shutil
 from openquake.risklib import valid
 from openquake.baselib.python3compat import encode
+from openquake.baselib import sap
 from openquake.commonlib import nrml
-from openquake.commonlib import sap
 
 
 def random_filter(objects, reduction_factor, seed=42):
@@ -41,6 +41,7 @@ def random_filter(objects, reduction_factor, seed=42):
     return out
 
 
+@sap.Script
 def reduce(fname, reduction_factor):
     """
     Produce a submodel from `fname` by sampling the nodes randomly.
@@ -59,7 +60,8 @@ def reduce(fname, reduction_factor):
                 f.write(encode(line))
         print('Extracted %d lines out of %d' % (len(lines), len(all_lines)))
         return
-    model, = nrml.read(fname)
+    node = nrml.read(fname)
+    model = node[0]
     if model.tag.endswith('exposureModel'):
         total = len(model.assets)
         model.assets.nodes = random_filter(model.assets, reduction_factor)
@@ -77,11 +79,9 @@ def reduce(fname, reduction_factor):
     shutil.copy(fname, fname + '.bak')
     print('Copied the original file in %s.bak' % fname)
     with open(fname, 'wb') as f:
-        nrml.write([model], f)
+        nrml.write([model], f, xmlns=node['xmlns'])
     print('Extracted %d nodes out of %d' % (num_nodes, total))
 
-
-parser = sap.Parser(reduce)
-parser.arg('fname', 'path to the model file')
-parser.arg('reduction_factor', 'reduction factor in the range 0..1',
+reduce.arg('fname', 'path to the model file')
+reduce.arg('reduction_factor', 'reduction factor in the range 0..1',
            type=valid.probability)

@@ -15,30 +15,34 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import print_function
 import os
 import sys
 import mock
 import shutil
 import tempfile
 import unittest
+import shapefile
 
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import writetmp
 from openquake import commonlib
-from openquake.calculators.tests import check_platform
 from openquake.commands.info import info
 from openquake.commands.tidy import tidy
 from openquake.commands.show import show
 from openquake.commands.show_attrs import show_attrs
 from openquake.commands.export import export
 from openquake.commands.reduce import reduce
+from openquake.commands.db import db
+from openquake.commands.to_shapefile import to_shapefile
+from openquake.commands.from_shapefile import from_shapefile
 from openquake.commands import run
 from openquake.commands.upgrade_nrml import get_vulnerability_functions_04
 from openquake.qa_tests_data.classical import case_1
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import case_5
+from openquake.server import manage, dbapi
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
 
@@ -61,7 +65,7 @@ class Print(object):
 
 class InfoTestCase(unittest.TestCase):
     EXPECTED = '''<CompositionInfo
-b1, x15.xml, trt=[0], weight=1.00: 1 realization(s)>
+b1, x15.xml, grp=[0], weight=1.00: 1 realization(s)>
 See https://github.com/gem/oq-risklib/blob/master/doc/effective-realizations.rst for an explanation
 <RlzsAssoc(size=1, rlzs=1)
 0,AkkarBommer2010(): ['<0,b1~@_AkkarBommer2010_@_@_@_@_@,w=1.0>']>
@@ -72,7 +76,7 @@ attribute       nbytes
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
-            info(None, None, None, None, None, None, path)
+            info(None, None, None, None, None, path)
         self.assertEqual(self.EXPECTED, str(p)[:len(self.EXPECTED)])
 
     # poor man tests: checking that the flags produce a few characters
@@ -98,7 +102,7 @@ attribute       nbytes
             info(None, None, None, True, None, '')
         self.assertGreater(len(str(p)), 10)
 
-    # NB: info --report is tested manually once in a while
+    # NB: info --report is tested in the packager
 
 
 class TidyTestCase(unittest.TestCase):
@@ -122,20 +126,23 @@ class TidyTestCase(unittest.TestCase):
         self.assertEqual(open(fname).read(), '''\
 <?xml version="1.0" encoding="utf-8"?>
 <nrml
-xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns="http://openquake.org/xmlns/nrml/0.4"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <gmfCollection
     gsimTreePath=""
     sourceModelTreePath=""
     >
+        
         <gmfSet
         stochasticEventSetId="1"
         >
+            
             <gmf
             IMT="PGA"
             ruptureId="scenario-0"
             >
+                
                 <node gmv="1.26515E-02" lat="4.35812E+01" lon="1.21248E+01"/>
                 <node gmv="1.24056E-02" lat="4.35812E+01" lon="1.21248E+01"/>
             </gmf>
@@ -170,10 +177,9 @@ class RunShowExportTestCase(unittest.TestCase):
         """
         Build a datastore instance to show what it is inside
         """
-        # the tests here gives mysterious core dumps in Ubuntu 16.04,
-        # but only if called together with all other tests with the command
+        # the tests here gave mysterious core dumps in Ubuntu 16.04,
+        # but only when called together with all other tests with the command
         # nosetests openquake/commonlib/
-        check_platform('trusty')
         job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
         with Print.patch() as cls.p:
             calc = run._run(job_ini, 0, False, 'info', None, '', {})
@@ -201,13 +207,12 @@ class RunShowExportTestCase(unittest.TestCase):
                          self.calc_id, str(p))
         with Print.patch() as p:
             show_attrs('hcurves', self.calc_id)
-        self.assertEqual("imtls [['PGA' '3']\n ['SA(0.1)' '3']]\nnbytes 48",
-                         str(p))
+        self.assertEqual("nbytes 48", str(p))
 
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
         with Print.patch() as p:
-            export('hcurves', tempdir, self.calc_id)
+            export('hcurves', self.calc_id, 'csv', tempdir)
         [fname] = os.listdir(tempdir)
         self.assertIn(str(fname), str(p))
         shutil.rmtree(tempdir)
@@ -273,3 +278,51 @@ class UpgradeNRMLTestCase(unittest.TestCase):
     def test(self):
         get_vulnerability_functions_04(self.vf)
         # NB: look also at nrml.get_vulnerability_functions_04
+
+
+class SourceModelShapefileConverterTestCase(unittest.TestCase):
+    """
+    Simple conversion test for the Source Model to shapefile converter
+    - more tests will follow
+    """
+    def setUp(self):
+        if not hasattr(shapefile, '__version__'):
+            # for versions < 1.2.3
+            raise unittest.SkipTest('shapefile library too old')
+        self.OUTDIR = tempfile.mkdtemp()
+
+    def test_roundtrip_invalid(self):
+        # test the conversion to shapefile and back for an invalid file
+        smc = os.path.join(os.path.dirname(__file__),
+                           "data", "source_model_complete.xml")
+        to_shapefile(os.path.join(self.OUTDIR, 'smc'), smc, False)
+        shpfiles = [os.path.join(self.OUTDIR, f)
+                    for f in os.listdir(self.OUTDIR)]
+        from_shapefile(os.path.join(self.OUTDIR, 'smc'), shpfiles, False)
+
+        # test invalid file
+        with self.assertRaises(Exception) as ctx:
+            to_shapefile(os.path.join(self.OUTDIR, 'smc'), smc, True)
+        self.assertIn('Edges points are not in the right order',
+                      str(ctx.exception))
+
+    def test_roundtrip_valid(self):
+        # test the conversion to shapefile and back for a valid file
+        ssm = os.path.join(os.path.dirname(__file__),
+                           "data", "sample_source_model.xml")
+        to_shapefile(os.path.join(self.OUTDIR, 'smc'), ssm, True)
+        shpfiles = [os.path.join(self.OUTDIR, f)
+                    for f in os.listdir(self.OUTDIR)]
+        from_shapefile(os.path.join(self.OUTDIR, 'smc'), shpfiles, True)
+
+
+class DbTestCase(unittest.TestCase):
+    def test_db(self):
+        # the some db commands bypassing the dbserver
+        with Print.patch(), mock.patch(
+                'openquake.engine.logs.dbcmd', manage.dbcmd):
+            db('version_db')
+            try:
+                db('calc_info 1')
+            except dbapi.NotFound:  # happens on an empty db
+                pass

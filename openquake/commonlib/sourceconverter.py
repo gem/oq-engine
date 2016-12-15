@@ -15,45 +15,120 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
 from __future__ import division
-# Copyright (C) 2015-2016 GEM Foundation
-#
-# OpenQuake is free software: you can redistribute it and/or modify it
-# under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# OpenQuake is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
 import math
 import copy
 import operator
+import collections
 
-from openquake.baselib.general import block_splitter
-from openquake.baselib.performance import Monitor
 from openquake.hazardlib import geo, mfd, pmf, source
-from openquake.hazardlib.source.base import SourceGroup, SourceGroupCollection
+from openquake.hazardlib.source.base import SourceGroupCollection
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.risklib import valid
 from openquake.commonlib.node import context, striptag
-from openquake.commonlib import parallel
 
-# the following is arbitrary, it is used to decide when to parallelize
-# the filtering (MS)
-LOTS_OF_SOURCES_SITES = 1E5  # arbitrary, set by Michele Simionato
-MAGNITUDE_FOR_RUPTURE_SPLITTING = 6.5  # given by Marco Pagani
-# NB: the parameter MAGNITUDE_FOR_RUPTURE_SPLITTING cannot go in a
-# configuration file, otherwise the tests will break by changing it;
-# reason: the numbers in the event based calculators depend on the
-# splitting: different sources => different seeds => different numbers
-POINT_SOURCE_WEIGHT = 1 / 40.
+
+class SourceGroup(collections.Sequence):
+    """
+    A container for the following parameters:
+
+    :param str trt:
+        the tectonic region type all the sources belong to
+    :param list sources:
+        a list of hazardlib source objects
+    :param min_mag:
+        the minimum magnitude among the given sources
+    :param max_mag:
+        the maximum magnitude among the given sources
+    :param id:
+        an optional numeric ID (default None) useful to associate
+        the model to a database object
+    :param eff_ruptures:
+        the number of ruptures contained in the group; if -1,
+        the number is unknown and has to be computed by using
+        get_set_num_ruptures
+    """
+    @classmethod
+    def collect(cls, sources):
+        """
+        :param sources: dictionaries with a key 'tectonicRegion'
+        :returns: an ordered list of SourceGroup instances
+        """
+        source_stats_dict = {}
+        for src in sources:
+            trt = src['tectonicRegion']
+            if trt not in source_stats_dict:
+                source_stats_dict[trt] = SourceGroup(trt)
+            sg = source_stats_dict[trt]
+            if not sg.sources:
+                # we append just one source per SourceGroup, so that
+                # the memory occupation is insignificant
+                sg.sources.append(src)
+
+        # return SourceGroups, ordered by TRT string
+        return sorted(source_stats_dict.values())
+
+    def __init__(self, trt, sources=None,
+                 min_mag=None, max_mag=None, id=0, eff_ruptures=-1):
+        self.trt = trt
+        self.sources = self.src_list = []
+        self.min_mag = min_mag
+        self.max_mag = max_mag
+        self.id = id
+        if sources:
+            for src in sorted(sources, key=operator.attrgetter('source_id')):
+                self.update(src)
+        self.source_model = None  # to be set later, in CompositionInfo
+        self.eff_ruptures = eff_ruptures  # set later nby get_rlzs_assoc
+
+    def tot_ruptures(self):
+        return sum(src.num_ruptures for src in self.sources)
+
+    def update(self, src):
+        """
+        Update the attributes sources, min_mag, max_mag
+        according to the given source.
+
+        :param src:
+            an instance of :class:
+            `openquake.hazardlib.source.base.BaseSeismicSource`
+        """
+        assert src.tectonic_region_type == self.trt, (
+            src.tectonic_region_type, self.trt)
+        self.sources.append(src)
+        min_mag, max_mag = src.get_min_max_mag()
+        prev_min_mag = self.min_mag
+        if prev_min_mag is None or min_mag < prev_min_mag:
+            self.min_mag = min_mag
+        prev_max_mag = self.max_mag
+        if prev_max_mag is None or max_mag > prev_max_mag:
+            self.max_mag = max_mag
+
+    def __repr__(self):
+        return '<%s #%d %s, %d source(s), %d effective rupture(s)>' % (
+            self.__class__.__name__, self.id, self.trt,
+            len(self.sources), self.eff_ruptures)
+
+    def __lt__(self, other):
+        """
+        Make sure there is a precise ordering of SourceGroup objects.
+        Objects with less sources are put first; in case the number
+        of sources is the same, use lexicographic ordering on the trts
+        """
+        num_sources = len(self.sources)
+        other_sources = len(other.sources)
+        if num_sources == other_sources:
+            return self.trt < other.trt
+        return num_sources < other_sources
+
+    def __getitem__(self, i):
+        return self.sources[i]
+
+    def __iter__(self):
+        return iter(self.sources)
+
+    def __len__(self):
+        return len(self.sources)
 
 
 def get_set_num_ruptures(src):
@@ -104,8 +179,8 @@ def area_to_point_sources(area_src):
     for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):
         pt = source.PointSource(
             # Generate a new ID and name
-            source_id='%s-%s' % (area_src.source_id, i),
-            name='%s-%s' % (area_src.name, i),
+            source_id='%s:%s' % (area_src.source_id, i),
+            name='%s:%s' % (area_src.name, i),
             tectonic_region_type=area_src.tectonic_region_type,
             mfd=new_mfd,
             rupture_mesh_spacing=area_src.rupture_mesh_spacing,
@@ -137,16 +212,14 @@ def split_fault_source_by_magnitude(src):
         if not rate:  # ignore zero occurency rate
             continue
         new_src = copy.copy(src)
-        new_src.source_id = '%s-%s' % (src.source_id, i)
-        new_src.mfd = mfd.EvenlyDiscretizedMFD(
-            min_mag=mag, bin_width=src.mfd.bin_width,
-            occurrence_rates=[rate])
+        new_src.source_id = '%s:%s' % (src.source_id, i)
+        new_src.mfd = mfd.ArbitraryMFD([mag], [rate])
         i += 1
         splitlist.append(new_src)
     return splitlist
 
 
-def split_fault_source(src, block_size):
+def split_fault_source(src):
     """
     Generator splitting a fault source into several fault sources.
 
@@ -157,63 +230,12 @@ def split_fault_source(src, block_size):
     # take advantage of the multiple cores; if you split too much,
     # the data transfer will kill you, i.e. multiprocessing/celery
     # will fail to transmit to the workers the generated sources.
-    for s in split_fault_source_by_magnitude(src):
-        if s.mfd.min_mag < MAGNITUDE_FOR_RUPTURE_SPLITTING:
-            s.num_ruptures = s.count_ruptures()
-            yield s  # don't split, there would too many ruptures
-        else:  # split in MultiRuptureSources
-            for ss in MultiRuptureSource.split(s, block_size):
-                yield ss
+    for ss in split_fault_source_by_magnitude(src):
+        ss.num_ruptures = ss.count_ruptures()
+        yield ss
 
 
-class MultiRuptureSource(object):
-    """
-    Fake source class used to encapsule a set of ruptures.
-
-    :param rupture:
-        an instance of :class:`openquake.hazardlib.source.rupture.
-        ParametricProbabilisticRupture`
-    :param source_id:
-        an ID for the MultiRuptureSource
-    :param tectonic_region_type:
-        the tectonic region type
-    :param src_group_id:
-        ID of the tectonic region model the source belongs to
-    """
-    @classmethod
-    def split(cls, src, block_size):
-        """
-        Split the given fault source into MultiRuptureSources depending
-        on the given block size.
-        """
-        for i, ruptures in enumerate(
-                block_splitter(src.iter_ruptures(), block_size)):
-            yield cls(ruptures, '%s-%s' % (src.source_id, i),
-                      src.tectonic_region_type, src.src_group_id)
-
-    def __init__(self, ruptures, source_id, tectonic_region_type,
-                 src_group_id):
-        self.ruptures = ruptures
-        self.source_id = source_id
-        self.tectonic_region_type = tectonic_region_type
-        self.src_group_id = src_group_id
-        self.weight = self.num_ruptures = len(ruptures)
-
-    def iter_ruptures(self):
-        """Yield the ruptures"""
-        for rupture in self.ruptures:
-            yield rupture
-
-    def count_ruptures(self):
-        """Return the block size"""
-        return len(self.ruptures)
-
-    def filter_sites_by_distance_to_source(self, maxdist, sitecol):
-        """The source has been already filtered, return the sitecol"""
-        return sitecol
-
-
-def split_source(src, block_size=1):
+def split_source(src):
     """
     Split an area source into point sources and a fault sources into
     smaller fault sources.
@@ -223,12 +245,10 @@ def split_source(src, block_size=1):
     """
     if isinstance(src, source.AreaSource):
         for s in area_to_point_sources(src):
-            s.id = src.id
             yield s
     elif isinstance(
             src, (source.SimpleFaultSource, source.ComplexFaultSource)):
-        for s in split_fault_source(src, block_size):
-            s.id = src.id
+        for s in split_fault_source(src):
             yield s
     else:
         # characteristic and nonparametric sources are not split
@@ -572,7 +592,7 @@ class SourceConverter(RuptureConverter):
         return source.AreaSource(
             source_id=node['id'],
             name=node['name'],
-            tectonic_region_type=node['tectonicRegion'],
+            tectonic_region_type=node.attrib.get('tectonicRegion'),
             mfd=self.convert_mfdist(node),
             rupture_mesh_spacing=self.rupture_mesh_spacing,
             magnitude_scaling_relationship=msr,
@@ -598,7 +618,7 @@ class SourceConverter(RuptureConverter):
         return source.PointSource(
             source_id=node['id'],
             name=node['name'],
-            tectonic_region_type=node['tectonicRegion'],
+            tectonic_region_type=node.attrib.get('tectonicRegion'),
             mfd=self.convert_mfdist(node),
             rupture_mesh_spacing=self.rupture_mesh_spacing,
             magnitude_scaling_relationship=msr,
@@ -634,7 +654,7 @@ class SourceConverter(RuptureConverter):
             simple = source.SimpleFaultSource(
                 source_id=node['id'],
                 name=node['name'],
-                tectonic_region_type=node['tectonicRegion'],
+                tectonic_region_type=node.attrib.get('tectonicRegion'),
                 mfd=mfd,
                 rupture_mesh_spacing=self.rupture_mesh_spacing,
                 magnitude_scaling_relationship=msr,
@@ -665,7 +685,7 @@ class SourceConverter(RuptureConverter):
             cmplx = source.ComplexFaultSource(
                 source_id=node['id'],
                 name=node['name'],
-                tectonic_region_type=node['tectonicRegion'],
+                tectonic_region_type=node.attrib.get('tectonicRegion'),
                 mfd=mfd,
                 rupture_mesh_spacing=self.complex_fault_mesh_spacing,
                 magnitude_scaling_relationship=msr,
@@ -688,7 +708,7 @@ class SourceConverter(RuptureConverter):
         char = source.CharacteristicFaultSource(
             source_id=node['id'],
             name=node['name'],
-            tectonic_region_type=node['tectonicRegion'],
+            tectonic_region_type=node.attrib.get('tectonicRegion'),
             mfd=self.convert_mfdist(node),
             surface=self.convert_surfaces(node.surface),
             rake=~node.rake,
@@ -706,7 +726,7 @@ class SourceConverter(RuptureConverter):
             a :class:`openquake.hazardlib.source.NonParametricSeismicSource`
             instance
         """
-        trt = node['tectonicRegion']
+        trt = node.attrib.get('tectonicRegion')
         rup_pmf_data = []
         for rupnode in node:
             probs = pmf.PMF(rupnode['probs_occur'])
@@ -717,16 +737,6 @@ class SourceConverter(RuptureConverter):
             node['id'], node['name'], trt, rup_pmf_data)
         return nps
 
-    def convert_sourceGroup(self, node):
-        sg = SourceGroup([],
-                         node['name'],
-                         node['src_interdep'],
-                         node['rup_interdep'],
-                         valid.weights(node['srcs_weights']))
-        for src_node in node:
-            sg.src_list.append(self.convert_node(src_node))
-        return sg
-
     def convert_sourceGroupCollection(self, node):
         sgc = SourceGroupCollection([], grp_interdep=node['grp_interdep'])
         for sg_node in node:
@@ -736,6 +746,42 @@ class SourceConverter(RuptureConverter):
     def convert_sourceModel(self, node):
         return [self.convert_node(subnode) for subnode in node]
 
+    def convert_sourceGroup(self, node):
+        """
+        Convert the given node into a SourceGroup object.
+
+        :param node:
+            a node with tag sourceGroup
+        :returns:
+            a :class:`openquake.commonlib.source.SourceGroup` instance
+            mimicking a :class:`openquake.hazardlib.source.base.SourceGroup`
+        """
+        trt = node['tectonicRegion']
+        srcs_weights = node.attrib.get('srcs_weights')
+        grp_attrs = {k: v for k, v in node.attrib.items()
+                     if k not in ('name', 'src_interdep', 'rup_interdep',
+                                  'srcs_weights')}
+        srcs = []
+        for src_node in node:
+            src = self.convert_node(src_node)
+            # transmit the group attributes to the underlying source
+            for attr, value in grp_attrs.items():
+                if attr == 'tectonicRegion':
+                    src.tectonic_region_type = value
+                else:  # transmit as it is
+                    setattr(src, attr, node[attr])
+            srcs.append(src)
+        sg = SourceGroup(trt, srcs)
+        if srcs_weights is not None:
+            if len(srcs_weights) != len(node):
+                raise ValueError('There are %d srcs_weights but %d source(s)'
+                                 % (len(srcs_weights), len(node)))
+        sg.name = node.attrib.get('name')
+        sg.src_interdep = node.attrib.get('src_interdep')
+        sg.rup_interdep = node.attrib.get('rup_interdep')
+        sg.srcs_weights = srcs_weights
+        return sg
+
 
 def parse_ses_ruptures(fname):
     """
@@ -743,35 +789,3 @@ def parse_ses_ruptures(fname):
     each one containing ruptures with an etag and a seed.
     """
     raise NotImplementedError('parse_ses_ruptures')
-
-
-@parallel.litetask
-def _filter_sources(sources, sitecol, maxdist, monitor):
-    # called by filter_sources
-    srcs = []
-    for src in sources:
-        sites = src.filter_sites_by_distance_to_source(maxdist, sitecol)
-        if sites is not None:
-            srcs.append(src)
-    return srcs
-
-
-def filter_sources(sources, sitecol, maxdist):
-    """
-    Filter a list of hazardlib sources according to the maximum distance.
-
-    :param sources: the original sources
-    :param sitecol: a SiteCollection instance
-    :param maxdist: maximum distance
-    :returns: the filtered sources ordered by source_id
-    """
-    mon = Monitor('filter sources')
-    if len(sources) * len(sitecol) > LOTS_OF_SOURCES_SITES:
-        # filter in parallel on all available cores
-        sources = parallel.TaskManager.apply_reduce(
-            _filter_sources, (sources, sitecol, maxdist, mon),
-            operator.add, [])
-    else:
-        # few sources and sites, filter sequentially on a single core
-        sources = _filter_sources.task_func(sources, sitecol, maxdist, mon)
-    return sorted(sources, key=operator.attrgetter('source_id'))

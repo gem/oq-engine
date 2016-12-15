@@ -4,7 +4,8 @@
   <sourceModel name="Test source model">
     <sourceGroupCollection grp_interdep="indep">
       <sourceGroup name="group1" src_interdep="indep" rup_interdep="mutex"
-                   srcs_weights="0.1 0.2 0.7">
+                   srcs_weights="0.1 0.2 0.7"
+                   tectonicRegion="Stable Continental Crust">
         
         <pointSource id="1" name="point"
                      tectonicRegion="Stable Continental Crust">

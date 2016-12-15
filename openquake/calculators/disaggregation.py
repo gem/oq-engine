@@ -20,108 +20,28 @@
 Disaggregation calculator core functionality
 """
 from __future__ import division
-import sys
 import math
 import logging
-from collections import namedtuple
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import raise_
 from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import parallel
-from openquake.commonlib.calc import gen_ruptures_for_site
+from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.baselib import parallel
+from openquake.commonlib import sourceconverter
 from openquake.calculators import base, classical
 
 DISAGG_RES_FMT = 'disagg/poe-%(poe)s-rlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
 
 
-# a 6-uple containing float 4 arrays mags, dists, lons, lats,
-# 1 int array trts and a list of dictionaries pnes
-BinData = namedtuple('BinData', 'mags, dists, lons, lats, trts, pnes')
-
-
-def _collect_bins_data(trt_num, source_ruptures, site, curves, src_group_id,
-                       rlzs_assoc, gsims, imtls, poes, truncation_level,
-                       n_epsilons, mon):
-    # returns a BinData instance
-    sitecol = SiteCollection([site])
-    mags = []
-    dists = []
-    lons = []
-    lats = []
-    trts = []
-    pnes = []
-    sitemesh = sitecol.mesh
-    make_ctxt = mon('making contexts', measuremem=False)
-    disagg_poe = mon('disaggregate_poe', measuremem=False)
-    cmaker = ContextMaker(gsims)
-    for source, ruptures in source_ruptures:
-        try:
-            tect_reg = trt_num[source.tectonic_region_type]
-            for rupture in ruptures:
-                with make_ctxt:
-                    sctx, rctx, dctx = cmaker.make_contexts(sitecol, rupture)
-                # extract rupture parameters of interest
-                mags.append(rupture.mag)
-                dists.append(dctx.rjb[0])  # single site => single distance
-                [closest_point] = rupture.surface.get_closest_points(sitemesh)
-                lons.append(closest_point.longitude)
-                lats.append(closest_point.latitude)
-                trts.append(tect_reg)
-
-                pne_dict = {}
-                # a dictionary rlz.id, poe, imt_str -> prob_no_exceed
-                for gsim in gsims:
-                    gs = str(gsim)
-                    for imt_str, imls in imtls.items():
-                        imt = from_string(imt_str)
-                        imls = numpy.array(imls[::-1])
-                        for rlz in rlzs_assoc[src_group_id, gs]:
-                            rlzi = rlz.ordinal
-                            curve_poes = curves[rlzi, imt_str][::-1]
-                            for poe in poes:
-                                iml = numpy.interp(poe, curve_poes, imls)
-                                # compute probability of exceeding iml given
-                                # the current rupture and epsilon_bin, that is
-                                # ``P(IMT >= iml | rup, epsilon_bin)``
-                                # for each of the epsilon bins
-                                with disagg_poe:
-                                    [poes_given_rup_eps] = \
-                                        gsim.disaggregate_poe(
-                                            sctx, rctx, dctx, imt, iml,
-                                            truncation_level, n_epsilons)
-                                pne = rupture.get_probability_no_exceedance(
-                                    poes_given_rup_eps)
-                                pne_dict[rlzi, poe, imt_str] = (iml, pne)
-
-                pnes.append(pne_dict)
-        except Exception as err:
-            etype, err, tb = sys.exc_info()
-            msg = 'An error occurred with source id=%s. Error: %s'
-            msg %= (source.source_id, err)
-            raise_(etype, msg, tb)
-
-    return BinData(numpy.array(mags, float),
-                   numpy.array(dists, float),
-                   numpy.array(lons, float),
-                   numpy.array(lats, float),
-                   numpy.array(trts, int),
-                   pnes)
-
-
-@parallel.litetask
-def compute_disagg(sitecol, sources, src_group_id, rlzs_assoc,
+def compute_disagg(src_filter, sources, src_group_id, rlzs_assoc,
                    trt_names, curves_dict, bin_edges, oqparam, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
-    :param sitecol:
-        a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :param src_filter:
+        a :class:`openquake.hazardlib.calc.filter.SourceFilter` instance
     :param sources:
         list of hazardlib source objects
     :param src_group_id:
@@ -142,13 +62,9 @@ def compute_disagg(sitecol, sources, src_group_id, rlzs_assoc,
         a dictionary of probability arrays, with composite key
         (sid, rlz.id, poe, imt, iml, trt_names).
     """
-    trt = sources[0].tectonic_region_type
-    try:
-        max_dist = oqparam.maximum_distance[trt]
-    except KeyError:
-        max_dist = oqparam.maximum_distance['default']
+    sitecol = src_filter.sitecol
     trt_num = dict((trt, i) for i, trt in enumerate(trt_names))
-    gsims = rlzs_assoc.gsims_by_trt_id[src_group_id]
+    gsims = rlzs_assoc.gsims_by_grp_id[src_group_id]
     result = {}  # sid, rlz.id, poe, imt, iml, trt_names -> array
 
     collecting_mon = monitor('collecting bins')
@@ -163,44 +79,32 @@ def compute_disagg(sitecol, sources, src_group_id, rlzs_assoc,
             continue
 
         # generate source, rupture, sites once per site
-        source_ruptures = list(
-            gen_ruptures_for_site(site, sources, max_dist, monitor))
-        if not source_ruptures:
-            continue
         with collecting_mon:
-            bdata = _collect_bins_data(
-                trt_num, source_ruptures, site, curves_dict[sid],
+            bdata = disagg._collect_bins_data(
+                trt_num, sources, site, curves_dict[sid],
                 src_group_id, rlzs_assoc, gsims, oqparam.imtls,
                 oqparam.poes_disagg, oqparam.truncation_level,
-                oqparam.num_epsilon_bins, monitor)
+                oqparam.num_epsilon_bins, oqparam.iml_disagg,
+                monitor)
 
-        if not bdata.pnes:  # no contributions for this site
-            continue
+        for (rlzi, poe, imt), iml_pne_pairs in bdata.pnes.items():
+            # extract the probabilities of non-exceedance for the
+            # given realization, disaggregation PoE, and IMT
+            iml = iml_pne_pairs[0][0]
+            probs = numpy.array([p for (i, p) in iml_pne_pairs], float)
 
-        for poe in oqparam.poes_disagg:
-            for imt in oqparam.imtls:
-                for gsim in gsims:
-                    for rlz in rlzs_assoc[src_group_id, gsim]:
-                        rlzi = rlz.ordinal
-                        # extract the probabilities of non-exceedance for the
-                        # given realization, disaggregation PoE, and IMT
-                        iml_pne_pairs = [pne[rlzi, poe, imt]
-                                         for pne in bdata.pnes]
-                        iml = iml_pne_pairs[0][0]
-                        probs = numpy.array(
-                            [p for (i, p) in iml_pne_pairs], float)
-                        # bins in a format handy for hazardlib
-                        bins = [bdata.mags, bdata.dists,
-                                bdata.lons, bdata.lats,
-                                bdata.trts, None, probs]
+            # bins in a format handy for hazardlib
+            bins = [bdata.mags, bdata.dists,
+                    bdata.lons, bdata.lats,
+                    bdata.trts, None, probs]
 
-                        # call disagg._arrange_data_in_bins
-                        with arranging_mon:
-                            key = (sid, rlzi, poe, imt, iml, trt_names)
-                            matrix = disagg._arrange_data_in_bins(
-                                bins, edges + (trt_names,))
-                            result[key] = numpy.array(
-                                [fn(matrix) for fn in disagg.pmf_map.values()])
+            # call disagg._arrange_data_in_bins
+            with arranging_mon:
+                key = (sid, rlzi, poe, imt, iml, trt_names)
+                matrix = disagg._arrange_data_in_bins(
+                    bins, edges + (trt_names,))
+                result[key] = numpy.array(
+                    [fn(matrix) for fn in disagg.pmf_map.values()])
     return result
 
 
@@ -209,9 +113,9 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
     """
     Classical PSHA disaggregation calculator
     """
-    def post_execute(self, result=None):
-        super(DisaggregationCalculator, self).post_execute(result)
-        self.full_disaggregation(result)
+    def post_execute(self, nbytes_by_kind):
+        """Performs the disaggregation"""
+        self.full_disaggregation()
 
     def agg_result(self, acc, result):
         """
@@ -232,9 +136,17 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         Returns a dictionary {(rlz_id, imt) -> curve}.
         """
         dic = {}
+        imtls = self.oqparam.imtls
         for rlz in self.rlzs_assoc.realizations:
-            poes = self.datastore['hcurves/rlz-%03d' % rlz.ordinal][sid]
-            for imt_str in self.oqparam.imtls:
+            pmap = self.datastore['hcurves/rlz-%03d' % rlz.ordinal]
+            if sid in pmap:
+                poes = pmap[sid].convert(imtls)
+            else:
+                logging.info(
+                    'hazard curve contains all zero probabilities; '
+                    'skipping site %d, rlz=%d', sid, rlz.ordinal)
+                continue
+            for imt_str in imtls:
                 if all(x == 0.0 for x in poes[imt_str]):
                     logging.info(
                         'hazard curve contains all zero probabilities; '
@@ -244,12 +156,13 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                 dic[rlz.ordinal, imt_str] = poes[imt_str]
         return dic
 
-    def full_disaggregation(self, curves_by_trt_gsim):
+    def full_disaggregation(self):
         """
         Run the disaggregation phase after hazard curve finalization.
         """
         oq = self.oqparam
         tl = self.oqparam.truncation_level
+        bb_dict = self.datastore['bb_dict']
         sitecol = self.sitecol
         mag_bin_width = self.oqparam.mag_bin_width
         eps_edges = numpy.linspace(-tl, tl, self.oqparam.num_epsilon_bins + 1)
@@ -272,11 +185,13 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
             logging.info('%d mag bins from %s to %s', len(mag_edges) - 1,
                          min_mag, max_mag)
             for src_group in smodel.src_groups:
+                if src_group.id not in self.rlzs_assoc.gsims_by_grp_id:
+                    continue  # the group has been filtered away
                 for sid, site in zip(sitecol.sids, sitecol):
                     curves = curves_dict[sid]
                     if not curves:
                         continue  # skip zero-valued hazard curves
-                    bb = curves_by_trt_gsim.bb_dict[sm_id, sid]
+                    bb = bb_dict[sm_id, sid]
                     if not bb:
                         logging.info(
                             'location %s was too far, skipping disaggregation',
@@ -303,9 +218,15 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                     if (sm_id, sid) in self.bin_edges:
                         bin_edges[sid] = self.bin_edges[sm_id, sid]
 
-                for srcs in split_in_blocks(src_group, nblocks):
+                src_filter = SourceFilter(sitecol, oq.maximum_distance)
+                split_sources = []
+                for src in src_group:
+                    for split, _sites in src_filter(
+                            sourceconverter.split_source(src), sitecol):
+                        split_sources.append(split)
+                for srcs in split_in_blocks(split_sources, nblocks):
                     all_args.append(
-                        (sitecol, srcs, src_group.id, self.rlzs_assoc,
+                        (src_filter, srcs, src_group.id, self.rlzs_assoc,
                          trt_names, curves_dict, bin_edges, oq, self.monitor))
 
         results = parallel.starmap(compute_disagg, all_args).reduce(
@@ -322,7 +243,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         """
         # build a dictionary rlz.ordinal -> source_model.ordinal
         sm_id = {}
-        for i, rlzs in enumerate(self.rlzs_assoc.rlzs_by_smodel):
+        for i, rlzs in self.rlzs_assoc.rlzs_by_smodel.items():
             for rlz in rlzs:
                 sm_id[rlz.ordinal] = i
 
@@ -366,8 +287,8 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         mag, dist, lons, lats, eps = bin_edges
         disp_name = DISAGG_RES_FMT % dict(
             poe=poe, rlz=rlz_id, imt=imt_str, lon=lon, lat=lat)
-
-        self.datastore[disp_name] = matrix
+        self.datastore[disp_name] = {
+            '_'.join(key): mat for key, mat in zip(disagg.pmf_map, matrix)}
         attrs = self.datastore.hdf5[disp_name].attrs
         attrs['rlzi'] = rlz_id
         attrs['imt'] = imt_str

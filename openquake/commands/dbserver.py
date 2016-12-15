@@ -16,17 +16,14 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import sys
-import subprocess
 from openquake.risklib import valid
-from openquake.commonlib import sap
-from openquake.engine import logs, config
-from openquake.server.dbserver import get_status
+from openquake.baselib import sap
+from openquake.engine import logs
+from openquake.commonlib import config
+from openquake.server import dbserver as dbs
 
 
-def runserver():
-    subprocess.Popen([sys.executable, '-m', 'openquake.server.dbserver'])
-
-
+@sap.Script
 def dbserver(cmd):
     """
     start/stop/restart the database server, or return its status
@@ -34,28 +31,25 @@ def dbserver(cmd):
     if valid.boolean(config.get('dbserver', 'multi_user')):
         sys.exit('oq dbserver only works in single user mode')
 
-    status = get_status()
+    status = dbs.get_status()
     if cmd == 'status':
-        print(status)
+        print('dbserver ' + status)
     elif cmd == 'stop':
         if status == 'running':
             logs.dbcmd('stop')
-            print('stopped')
+            print('dbserver stopped')
         else:
-            print('already stopped')
+            print('dbserver already stopped')
     elif cmd == 'start':
         if status == 'not-running':
-            runserver()
-            print('started')
+            dbs.run_server()
         else:
-            print('already running')
+            print('dbserver already running')
     elif cmd == 'restart':
         if status == 'running':
             logs.dbcmd('stop')
-            print('stopped')
-        runserver()
-        print('started')
+            print('dbserver stopped')
+        dbs.run_server()
 
-parser = sap.Parser(dbserver)
-parser.arg('cmd', 'dbserver command',
-           choices='start stop status restart'.split())
+dbserver.arg('cmd', 'dbserver command',
+             choices='start stop status restart'.split())

@@ -17,26 +17,79 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
+import logging
 import operator
 import collections
-from functools import partial
+from functools import partial, reduce
 import numpy
 
-from openquake.baselib import hdf5
-from openquake.baselib.general import AccumDict
+from openquake.baselib import hdf5, parallel
+from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
-from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
-    hazard_curves_per_trt, zero_curves, zero_maps,
-    array_of_curves, ProbabilityMap)
-from openquake.risklib import scientific
-from openquake.commonlib import parallel, datastore, source, calc
+    pmap_from_grp, ProbabilityMap)
+from openquake.hazardlib.probability_map import PmapStats
+from openquake.commonlib import datastore, source, calc, sourceconverter
 from openquake.calculators import base
 
+U16 = numpy.uint16
+F32 = numpy.float32
+F64 = numpy.float64
 
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
+
+
+def split_filter_source(src, sites, src_filter, random_seed):
+    """
+    :param src: an heavy source
+    :param sites: sites affected by the source
+    :param src_filter: a SourceFilter instance
+    :random_seed: used only for event based calculations
+    :returns: a list of split sources
+    """
+    split_sources = []
+    start = 0
+    for split in sourceconverter.split_source(src):
+        if random_seed:
+            nr = split.num_ruptures
+            split.serial = src.serial[start:start + nr]
+            start += nr
+        if src_filter.affected(split) is not None:
+            split_sources.append(split)
+    return split_sources
+
+
+class BBdict(AccumDict):
+    """
+    A serializable dictionary containing bounding box information
+    """
+    dt = numpy.dtype([('lt_model_id', U16), ('site_id', U16),
+                      ('min_dist', F64), ('max_dist', F64),
+                      ('east', F64), ('west', F64),
+                      ('south', F64), ('north', F64)])
+
+    def __toh5__(self):
+        rows = []
+        for lt_model_id, site_id in self:
+            bb = self[lt_model_id, site_id]
+            rows.append((lt_model_id, site_id, bb.min_dist, bb.max_dist,
+                         bb.east, bb.west, bb.south, bb.north))
+        return numpy.array(rows, self.dt), {}
+
+    def __fromh5__(self, array, attrs):
+        for row in array:
+            lt_model_id = row['lt_model_id']
+            site_id = row['site_id']
+            bb = BoundingBox(lt_model_id, site_id)
+            bb.min_dist = row['min_dist']
+            bb.max_dist = row['max_dist']
+            bb.east = row['east']
+            bb.west = row['west']
+            bb.north = row['north']
+            bb.south = row['south']
+            self[lt_model_id, site_id] = bb
 
 
 # this is needed for the disaggregation
@@ -52,8 +105,8 @@ class BoundingBox(object):
     def __init__(self, lt_model_id, site_id):
         self.lt_model_id = lt_model_id
         self.site_id = site_id
-        self.min_dist = self.max_dist = None
-        self.east = self.west = self.south = self.north = None
+        self.min_dist = self.max_dist = 0
+        self.east = self.west = self.south = self.north = 0
 
     def update(self, dists, lons, lats):
         """
@@ -67,11 +120,11 @@ class BoundingBox(object):
         :param lats:
             a sequence of latitudes
         """
-        if self.min_dist is not None:
+        if self.min_dist:
             dists = [self.min_dist, self.max_dist] + dists
-        if self.west is not None:
+        if self.west:
             lons = [self.west, self.east] + lons
-        if self.south is not None:
+        if self.south:
             lats = [self.south, self.north] + lats
         self.min_dist, self.max_dist = min(dists), max(dists)
         self.west, self.east, self.north, self.south = \
@@ -128,79 +181,81 @@ class BoundingBox(object):
         """
         True if the bounding box is non empty.
         """
-        return (self.min_dist is not None and self.west is not None and
-                self.south is not None)
+        return bool(self.max_dist - self.min_dist or
+                    self.west - self.east or
+                    self.north - self.south)
     __nonzero__ = __bool__
 
 
-@parallel.litetask
-def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
+def classical(sources, src_filter, gsims, monitor):
     """
     :param sources:
         a non-empty sequence of sources of homogeneous tectonic region type
-    :param sitecol:
-        a SiteCollection instance
-    :param siteidx:
-        index of the first site (0 if there is a single tile)
-    :param rlzs_assoc:
-        a RlzsAssoc instance
+    :param src_filter:
+        source filter
+    :param gsims:
+        a list of GSIMs for the current tectonic region type
     :param monitor:
         a monitor instance
     :returns:
         an AccumDict rlz -> curves
     """
-    truncation_level = monitor.oqparam.truncation_level
-    imtls = monitor.oqparam.imtls
+    truncation_level = monitor.truncation_level
+    imtls = monitor.imtls
     src_group_id = sources[0].src_group_id
     # sanity check: the src_group must be the same for all sources
     for src in sources[1:]:
         assert src.src_group_id == src_group_id
-    gsims = rlzs_assoc.gsims_by_trt_id[src_group_id]
-    trt = sources[0].tectonic_region_type
-    max_dist = monitor.oqparam.maximum_distance[trt]
-
-    dic = AccumDict()
-    dic.siteslice = slice(siteidx, siteidx + len(sitecol))
-    if monitor.oqparam.poes_disagg:
-        sm_id = rlzs_assoc.sm_ids[src_group_id]
-        dic.bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
+    if monitor.disagg:
+        sm_id = monitor.sm_id
+        bbs = [BoundingBox(sm_id, sid) for sid in src_filter.sitecol.sids]
     else:
-        dic.bbs = []
-    # NB: the source_site_filter below is ESSENTIAL for performance inside
-    # hazard_curves_per_trt, since it reduces the full site collection
-    # to a filtered one *before* doing the rupture filtering
-    dic[src_group_id] = hazard_curves_per_trt(
-        sources, sitecol, imtls, gsims, truncation_level,
-        source_site_filter=source_site_distance_filter(max_dist),
-        maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
-    dic.calc_times = monitor.calc_times  # added by hazard_curves_per_trt
-    dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
-    return dic
+        bbs = []
+    pmap = pmap_from_grp(
+        sources, src_filter, imtls, gsims, truncation_level,
+        bbs=bbs, monitor=monitor)
+    pmap.bbs = bbs
+    pmap.grp_id = src_group_id
+    return pmap
 
 
-@base.calculators.add('classical')
-class ClassicalCalculator(base.HazardCalculator):
+def saving_sources_by_task(iterargs, dstore):
+    """
+    Yield the iterargs again by populating 'task_info/source_ids'
+    """
+    source_ids = []
+    for args in iterargs:
+        source_ids.append(' ' .join(src.source_id for src in args[0]))
+        yield args
+    dstore['task_sources'] = numpy.array(source_ids, hdf5.vstr)
+
+
+@base.calculators.add('psha')
+class PSHACalculator(base.HazardCalculator):
     """
     Classical PSHA calculator
     """
     core_task = classical
     source_info = datastore.persistent_attribute('source_info')
 
-    def agg_dicts(self, acc, val):
+    def agg_dicts(self, acc, pmap):
         """
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param val: a nested dictionary trt_id -> ProbabilityMap
+        :param pmap: a ProbabilityMap
         """
         with self.monitor('aggregate curves', autoflush=True):
-            if hasattr(val, 'calc_times'):
-                acc.calc_times.extend(val.calc_times)
-            if hasattr(val, 'eff_ruptures'):
-                acc.eff_ruptures += val.eff_ruptures
-            for bb in getattr(val, 'bbs', []):
+            for src_id, nsites, calc_time in pmap.calc_times:
+                src_id = src_id.split(':', 1)[0]
+                info = self.infos[pmap.grp_id, src_id]
+                info.calc_time += calc_time
+                info.num_sites = max(info.num_sites, nsites)
+                info.num_split += 1
+            acc.eff_ruptures += pmap.eff_ruptures
+            for bb in getattr(pmap, 'bbs', []):  # for disaggregation
                 acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
-            acc |= val
+            acc[pmap.grp_id] |= pmap
         self.datastore.flush()
         return acc
 
@@ -209,23 +264,28 @@ class ClassicalCalculator(base.HazardCalculator):
         Returns the number of ruptures in the src_group (after filtering)
         or 0 if the src_group has been filtered away.
 
-        :param result_dict: a dictionary with keys (trt_id, gsim)
+        :param result_dict: a dictionary with keys (grp_id, gsim)
         :param src_group: a SourceGroup instance
         """
-        return (result_dict.eff_ruptures.get(src_group.id, 0) / self.num_tiles)
+        return result_dict.eff_ruptures.get(src_group.id, 0)
 
     def zerodict(self):
         """
-        Initial accumulator, an empty ProbabilityMap
+        Initial accumulator, a dict grp_id -> ProbabilityMap(L, G)
         """
-        zd = ProbabilityMap()
+        zd = AccumDict()
+        num_levels = len(self.oqparam.imtls.array)
+        for grp in self.csm.src_groups:
+            num_gsims = len(self.rlzs_assoc.gsims_by_grp_id[grp.id])
+            zd[grp.id] = ProbabilityMap(num_levels, num_gsims)
         zd.calc_times = []
-        zd.eff_ruptures = AccumDict()  # trt_id -> eff_ruptures
-        zd.bb_dict = {
-            (smodel.ordinal, sid): BoundingBox(smodel.ordinal, sid)
-            for sid in self.sitecol.sids
-            for smodel in self.csm.source_models
-        } if self.oqparam.poes_disagg else {}
+        zd.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
+        zd.bb_dict = BBdict()
+        if self.oqparam.poes_disagg or self.oqparam.iml_disagg:
+            for sid in self.sitecol.sids:
+                for smodel in self.csm.source_models:
+                    zd.bb_dict[smodel.ordinal, sid] = BoundingBox(
+                        smodel.ordinal, sid)
         return zd
 
     def execute(self):
@@ -234,157 +294,230 @@ class ClassicalCalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        monitor = self.monitor.new(self.core_task.__name__)
-        monitor.oqparam = self.oqparam
-        curves_by_trt_id = self.taskman.reduce(self.agg_dicts, self.zerodict())
-        self.save_data_transfer(self.taskman)
+        oq = self.oqparam
+        monitor = self.monitor.new(
+            self.core_task.__name__,
+            truncation_level=oq.truncation_level,
+            imtls=oq.imtls,
+            maximum_distance=oq.maximum_distance,
+            disagg=oq.poes_disagg or oq.iml_disagg,
+            ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
+            seed=oq.random_seed)
+        with self.monitor('managing sources', autoflush=True):
+            src_groups = list(self.csm.src_groups)
+            iterargs = saving_sources_by_task(
+                self.gen_args(src_groups, oq, monitor), self.datastore)
+            res = parallel.starmap(
+                self.core_task.__func__, iterargs).submit_all()
+        acc = reduce(self.agg_dicts, res, self.zerodict())
+        self.save_data_transfer(res)
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(curves_by_trt_id)
+            self.store_source_info(self.infos)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
-            partial(self.count_eff_ruptures, curves_by_trt_id))
+            partial(self.count_eff_ruptures, acc))
         self.datastore['csm_info'] = self.csm.info
-        return curves_by_trt_id
+        return acc
 
-    def store_source_info(self, curves_by_trt_id):
-        # store the information about received data
-        received = self.taskman.received
-        if received:
-            tname = self.taskman.name
-            self.datastore.save('job_info', {
-                tname + '_max_received_per_task': max(received),
-                tname + '_tot_received': sum(received),
-                tname + '_num_tasks': len(received)})
-        # then save the calculation times per each source
-        calc_times = getattr(curves_by_trt_id, 'calc_times', [])
-        if calc_times:
-            sources = self.csm.get_sources()
-            info_dict = {(rec['src_group_id'], rec['source_id']): rec
-                         for rec in self.source_info}
-            for src_idx, dt in calc_times:
-                src = sources[src_idx]
-                info = info_dict[src.src_group_id, src.source_id]
-                info['calc_time'] += dt
+    def gen_args(self, src_groups, oq, monitor):
+        """
+        Used in the case of large source model logic trees.
+
+        :param src_groups: a list of SourceGroup instances
+        :param oq: a :class:`openquake.commonlib.oqvalidation.OqParam` instance
+        :param monitor: a :class:`openquake.baselib.performance.Monitor`
+        :yields: (sources, sites, gsims, monitor) tuples
+        """
+        ngroups = len(src_groups)
+        maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
+        logging.info('Using a maxweight of %d', maxweight)
+        nheavy = nlight = 0
+        self.infos = {}
+        for sg in src_groups:
+            logging.info('Sending source group #%d of %d (%s, %d sources)',
+                         sg.id + 1, ngroups, sg.trt, len(sg.sources))
+            gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
+            if oq.poes_disagg or oq.iml_disagg:  # only for disaggregation
+                monitor.sm_id = self.rlzs_assoc.sm_ids[sg.id]
+            monitor.seed = self.rlzs_assoc.seed
+            monitor.samples = self.rlzs_assoc.samples[sg.id]
+            light = [src for src in sg.sources if src.weight <= maxweight]
+            for block in block_splitter(
+                    light, maxweight, weight=operator.attrgetter('weight')):
+                for src in block:
+                    self.infos[sg.id, src.source_id] = source.SourceInfo(src)
+                yield block, self.src_filter, gsims, monitor
+                nlight += 1
+            heavy = [src for src in sg.sources if src.weight > maxweight]
+            if not heavy:
+                continue
+            with self.monitor('split/filter heavy sources', autoflush=True):
+                for src in heavy:
+                    sites = self.src_filter.affected(src)
+                    self.infos[sg.id, src.source_id] = source.SourceInfo(src)
+                    sources = split_filter_source(
+                        src, sites, self.src_filter, self.random_seed)
+                    if len(sources) > 1:
+                        logging.info(
+                            'Splitting %s "%s" in %d sources',
+                            src.__class__.__name__,
+                            src.source_id, len(sources))
+                    for block in block_splitter(
+                            sources, maxweight,
+                            weight=operator.attrgetter('weight')):
+                        yield block, self.src_filter, gsims, monitor
+                        nheavy += 1
+        logging.info('Sent %d light and %d heavy tasks', nlight, nheavy)
+
+    def store_source_info(self, infos):
+        # save the calculation times per each source
+        if infos:
             rows = sorted(
-                info_dict.values(), key=operator.itemgetter(7), reverse=True)
-            array = numpy.zeros(len(rows), source.source_info_dt)
-            for row in rows:
+                infos.values(),
+                key=operator.attrgetter('calc_time'),
+                reverse=True)
+            array = numpy.zeros(len(rows), source.SourceInfo.dt)
+            for i, row in enumerate(rows):
                 for name in array.dtype.names:
-                    array[name] = row[name]
+                    array[i][name] = getattr(row, name)
             self.source_info = array
-        self.datastore.hdf5.flush()
+            infos.clear()
+        self.datastore.flush()
 
-    def post_execute(self, curves_by_trt_id):
+    def post_execute(self, pmap_by_grp_id):
         """
         Collect the hazard curves by realization and export them.
 
-        :param curves_by_trt_id:
-            a dictionary trt_id -> hazard curves
+        :param pmap_by_grp_id:
+            a dictionary grp_id -> hazard curves
         """
-        nsites = len(self.sitecol)
-        imtls = self.oqparam.imtls
-        curves_by_trt_gsim = {}
-
+        if pmap_by_grp_id.bb_dict:
+            self.datastore['bb_dict'] = pmap_by_grp_id.bb_dict
+        grp_trt = self.csm.info.grp_trt()
         with self.monitor('saving probability maps', autoflush=True):
-            for trt_id in curves_by_trt_id:
-                key = 'poes/%04d' % trt_id
-                self.datastore[key] = curves_by_trt_id[trt_id]
-                self.datastore.set_attrs(
-                    key, trt=self.csm.info.get_trt(trt_id))
-                gsims = self.rlzs_assoc.gsims_by_trt_id[trt_id]
-                for i, gsim in enumerate(gsims):
-                    curves_by_trt_gsim[trt_id, gsim] = (
-                        curves_by_trt_id[trt_id].extract(i))
-            self.datastore.set_nbytes('poes')
+            for grp_id, pmap in pmap_by_grp_id.items():
+                if pmap:  # pmap can be missing if the group is filtered away
+                    key = 'poes/%04d' % grp_id
+                    self.datastore[key] = pmap
+                    self.datastore.set_attrs(key, trt=grp_trt[grp_id])
+            if 'poes' in self.datastore:
+                self.datastore.set_nbytes('poes')
 
-        with self.monitor('combine curves_by_rlz', autoflush=True):
-            curves_by_rlz = self.rlzs_assoc.combine_curves(curves_by_trt_gsim)
 
-        self.save_curves({rlz: array_of_curves(curves, nsites, imtls)
-                          for rlz, curves in curves_by_rlz.items()})
+def build_hcurves_and_stats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
+    """
+    :param pmap_by_grp: dictionary of probability maps by source group ID
+    :param sids: array of site IDs
+    :param pstats: instance of PmapStats
+    :param rlzs_assoc: instance of RlzsAssoc
+    :param monitor: instance of Monitor
+    :returns: a dictionary kind -> ProbabilityMap
 
-    def save_curves(self, curves_by_rlz):
+    The "kind" is a string of the form 'rlz-XXX' or 'mean' of 'quantile-XXX'
+    used to specify the kind of output.
+    """
+    if sum(len(pmap) for pmap in pmap_by_grp.values()) == 0:  # all empty
+        return {}
+    rlzs = rlzs_assoc.realizations
+    with monitor('combine pmaps'):
+        pmap_by_rlz = calc.combine_pmaps(rlzs_assoc, pmap_by_grp)
+    with monitor('compute stats'):
+        pmap_by_kind = dict(
+            pstats.compute(sids, [pmap_by_rlz[rlz] for rlz in rlzs]))
+    if monitor.individual_curves:
+        for rlz in rlzs:
+            pmap_by_kind['rlz-%03d' % rlz.ordinal] = pmap_by_rlz[rlz]
+    return pmap_by_kind
+
+
+@base.calculators.add('classical')
+class ClassicalCalculator(PSHACalculator):
+    """
+    Classical PSHA calculator
+    """
+    pre_calculator = 'psha'
+    core_task = build_hcurves_and_stats
+
+    def execute(self):
         """
-        Save the dictionary curves_by_rlz
+        Builds hcurves and stats from the stored PoEs
         """
+        if 'poes' not in self.datastore:  # for short report
+            return
         oq = self.oqparam
         rlzs = self.rlzs_assoc.realizations
-        nsites = len(self.sitecol)
+
+        # initialize datasets
+        N = len(self.sitecol)
+        L = len(oq.imtls.array)
+        attrs = dict(
+            __pyclass__='openquake.hazardlib.probability_map.ProbabilityMap',
+            sids=numpy.arange(N, dtype=numpy.uint32))
         if oq.individual_curves:
-            with self.monitor('save curves_by_rlz', autoflush=True):
-                for rlz, curves in curves_by_rlz.items():
-                    self.store_curves('rlz-%03d' % rlz.ordinal, curves, rlz)
+            for rlz in rlzs:
+                self.datastore.create_dset(
+                    'hcurves/rlz-%03d' % rlz.ordinal, F32,
+                    (N, L, 1),  attrs=attrs)
+        if oq.mean_hazard_curves:
+            self.datastore.create_dset(
+                'hcurves/mean', F32, (N, L, 1), attrs=attrs)
+        for q in oq.quantile_hazard_curves:
+            self.datastore.create_dset(
+                'hcurves/quantile-%s' % q, F32, (N, L, 1), attrs=attrs)
+        self.datastore.flush()
 
-            if len(rlzs) == 1:  # cannot compute statistics
-                [self.mean_curves] = curves_by_rlz.values()
-                return
+        logging.info('Building hazard curves')
+        with self.monitor('submitting poes', autoflush=True):
+            pmap_by_grp = {
+                int(group_id): self.datastore['poes/' + group_id]
+                for group_id in self.datastore['poes']}
+            res = parallel.starmap(
+                build_hcurves_and_stats,
+                list(self.gen_args(pmap_by_grp))).submit_all()
+        nbytes = reduce(self.save_hcurves, res, AccumDict())
+        self.save_data_transfer(res)
+        return nbytes
 
-        with self.monitor('compute and save statistics', autoflush=True):
-            weights = (None if oq.number_of_logic_tree_samples
-                       else [rlz.weight for rlz in rlzs])
-
-            # mean curves are always computed but stored only on request
-            zc = zero_curves(nsites, oq.imtls)
-            self.mean_curves = numpy.array(zc)
-            for imt in oq.imtls:
-                self.mean_curves[imt] = scientific.mean_curve(
-                    [curves_by_rlz.get(rlz, zc)[imt] for rlz in rlzs], weights)
-
-            self.quantile = {}
-            for q in oq.quantile_hazard_curves:
-                self.quantile[q] = qc = numpy.array(zc)
-                for imt in oq.imtls:
-                    curves = [curves_by_rlz[rlz][imt] for rlz in rlzs]
-                    qc[imt] = scientific.quantile_curve(
-                        curves, q, weights).reshape((nsites, -1))
-
-            if oq.mean_hazard_curves:
-                self.store_curves('mean', self.mean_curves)
-            for q in self.quantile:
-                self.store_curves('quantile-%s' % q, self.quantile[q])
-
-    def hazard_maps(self, curves):
+    def gen_args(self, pmap_by_grp):
         """
-        Compute the hazard maps associated to the curves
+        :param pmap_by_grp: dictionary of ProbabilityMaps keyed by src_grp_id
+        :yields: arguments for the function build_hcurves_and_stats
         """
-        maps = zero_maps(
-            len(self.sitecol), self.oqparam.imtls, self.oqparam.poes)
-        for imt in curves.dtype.fields:
-            # build a matrix of size (N, P)
-            data = calc.compute_hazard_maps(
-                curves[imt], self.oqparam.imtls[imt], self.oqparam.poes)
-            for poe, hmap in zip(self.oqparam.poes, data.T):
-                maps['%s-%s' % (imt, poe)] = hmap
-        return maps
+        monitor = self.monitor.new(
+            'build_hcurves_and_stats',
+            individual_curves=self.oqparam.individual_curves)
+        weights = (None if self.oqparam.number_of_logic_tree_samples
+                   else [rlz.weight for rlz in self.rlzs_assoc.realizations])
+        pstats = PmapStats(self.oqparam.quantile_hazard_curves, weights)
+        num_rlzs = len(self.rlzs_assoc.realizations)
+        for block in self.sitecol.split_in_tiles(num_rlzs):
+            pg = {grp_id: pmap_by_grp[grp_id].filter(block.sids)
+                  for grp_id in pmap_by_grp}
+            yield pg, block.sids, pstats, self.rlzs_assoc, monitor
 
-    def store_curves(self, kind, curves, rlz=None):
+    def save_hcurves(self, acc, pmap_by_kind):
         """
-        Store all kind of curves, optionally computing maps and uhs curves.
+        Works by side effect by saving hcurves and statistics on the
+        datastore; the accumulator stores the number of bytes saved.
 
-        :param kind: the kind of curves to store
-        :param curves: an array of N curves to store
-        :param rlz: hazard realization, if any
+        :param acc: dictionary kind -> nbytes
+        :param pmap_by_kind: a dictionary of ProbabilityMaps
         """
-        oq = self.oqparam
-        self._store('hcurves/' + kind, curves, rlz, nbytes=curves.nbytes)
-        self.datastore['hcurves'].attrs['imtls'] = hdf5.array_of_vstr([
-            (imt, len(imls)) for imt, imls in self.oqparam.imtls.items()])
-        if oq.hazard_maps or oq.uniform_hazard_spectra:
-            # hmaps is a composite array of shape (N, P)
-            hmaps = self.hazard_maps(curves)
-            self._store('hmaps/' + kind, hmaps, rlz,
-                        poes=oq.poes, nbytes=hmaps.nbytes)
+        with self.monitor('saving hcurves and stats', autoflush=True):
+            oq = self.oqparam
+            for kind in pmap_by_kind:
+                if kind == 'mean' and not oq.mean_hazard_curves:
+                    continue  # do not save the mean curves
+                pmap = pmap_by_kind[kind]
+                if pmap:
+                    key = 'hcurves/' + kind
+                    dset = self.datastore.getitem(key)
+                    for sid in pmap:
+                        dset[sid] = pmap[sid].array
+                    acc += {kind: pmap.nbytes}
+            self.datastore.flush()
+            return acc
 
-    def _store(self, name, curves, rlz, **kw):
-        self.datastore.hdf5[name] = curves
-        dset = self.datastore.hdf5[name]
-        if rlz is not None:
-            dset.attrs['uid'] = rlz.uid
-        for k, v in kw.items():
-            dset.attrs[k] = v
-
-
-def nonzero(val):
-    """
-    :returns: the sum of the composite array `val`
-    """
-    return sum(val[k].sum() for k in val.dtype.names)
+    def post_execute(self, acc):
+        """Save the number of bytes per each dataset"""
+        for kind, nbytes in acc.items():
+            self.datastore.getitem('hcurves/' + kind).attrs['nbytes'] = nbytes
