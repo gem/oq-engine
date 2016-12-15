@@ -20,7 +20,6 @@ from __future__ import division
 import os
 import csv
 import gzip
-import math
 import zipfile
 import logging
 import operator
@@ -32,9 +31,9 @@ from shapely import wkt, geometry
 from openquake.baselib.general import groupby, AccumDict, writetmp
 from openquake.baselib.python3compat import configparser, encode
 from openquake.baselib import hdf5
-from openquake.hazardlib import geo, site, correlation, imt
+from openquake.hazardlib import geo, site, imt
 from openquake.hazardlib.calc.hazard_curve import zero_curves
-from openquake.risklib import riskmodels, riskinput, valid
+from openquake.risklib import riskmodels, valid, riskinput
 from openquake.commonlib import datastore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.node import Node, context
@@ -308,18 +307,6 @@ def get_gsims(oqparam):
     return [valid.gsim(str(rlz)) for rlz in get_gsim_lt(oqparam)]
 
 
-def get_correl_model(oqparam):
-    """
-    Return a correlation object. See :mod:`openquake.hazardlib.correlation`
-    for more info.
-    """
-    correl_name = oqparam.ground_motion_correlation_model
-    if correl_name is None:  # no correlation model
-        return
-    correl_model_cls = getattr(correlation, '%sCorrelationModel' % correl_name)
-    return correl_model_cls(**oqparam.ground_motion_correlation_params)
-
-
 def get_rupture(oqparam):
     """
     Returns a hazardlib rupture by reading the `rupture_model` file.
@@ -331,7 +318,9 @@ def get_rupture(oqparam):
     [rup_node] = nrml.read(rup_model)
     conv = sourceconverter.RuptureConverter(
         oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
-    return conv.convert_node(rup_node)
+    rup = conv.convert_node(rup_node)
+    rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
+    return rup
 
 
 def get_source_model_lt(oqparam):
@@ -414,7 +403,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
                     raise
         else:  # just collect the TRT models
             smodel = nrml.read(fname).sourceModel
-            src_groups = source.SourceGroup.collect(smodel)
+            src_groups = sourceconverter.SourceGroup.collect(smodel)
         trts = [mod.trt for mod in src_groups]
         source_model_lt.tectonic_region_types.update(trts)
 
@@ -452,7 +441,7 @@ def get_composite_source_model(oqparam, in_memory=True):
     """
     source_model_lt = get_source_model_lt(oqparam)
     smodels = []
-    trt_id = 0
+    grp_id = 0
     idx = 0
 
     def getid(src):
@@ -465,7 +454,7 @@ def get_composite_source_model(oqparam, in_memory=True):
             oqparam, gsim_lt, source_model_lt, in_memory=in_memory):
         for src_group in source_model.src_groups:
             src_group.sources = sorted(src_group, key=getid)
-            src_group.id = trt_id
+            src_group.id = grp_id
             for src in src_group:
                 # there are two cases depending on the flag in_memory:
                 # 1) src is a hazardlib source and has a src_group_id
@@ -473,24 +462,22 @@ def get_composite_source_model(oqparam, in_memory=True):
                 # 2) src is a Node object, then nothing must be done
                 if isinstance(src, Node):
                     continue
-                src.src_group_id = trt_id
+                src.src_group_id = grp_id
                 src.id = idx
                 idx += 1
-            trt_id += 1
+            grp_id += 1
         smodels.append(source_model)
     csm = source.CompositeSourceModel(
         gsim_lt, source_model_lt, smodels, in_memory)
-    if hasattr(csm, 'weight'):
-        csm.maxweight = math.ceil(csm.weight / (oqparam.concurrent_tasks or 1))
     return csm
 
 
-def get_job_info(oqparam, source_models, sitecol):
+def get_job_info(oqparam, csm, sitecol):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param source_models:
-        a list of :class:`openquake.commonlib.source.SourceModel` tuples
+    :param csm:
+        a :class:`openquake.commonlib.source.CompositeSourceModel` instance
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :returns:
@@ -502,7 +489,7 @@ def get_job_info(oqparam, source_models, sitecol):
     # by the sources; for point sources however a corrective factor
     # given by the parameter `point_source_weight` is applied
     input_weight = sum((src.weight or 0) * src_model.samples
-                       for src_model in source_models
+                       for src_model in csm
                        for src_group in src_model.src_groups
                        for src in src_group)
     imtls = oqparam.imtls
@@ -511,11 +498,10 @@ def get_job_info(oqparam, source_models, sitecol):
     # the imtls object has values [NaN] when the levels are unknown
     # (this is a valid case for the event based hazard calculator)
     n_imts = len(imtls)
-    n_levels = sum(len(ls) if hasattr(ls, '__len__') else 0
-                   for ls in imtls.values()) / float(n_imts)
+    n_levels = len(oqparam.imtls.array)
 
     n_realizations = oqparam.number_of_logic_tree_samples or sum(
-        sm.num_gsim_paths for sm in source_models)
+        sm.num_gsim_paths for sm in csm)
     # NB: in the event based case `n_realizations` can be over-estimated,
     # if the method is called in the pre_execute phase, because
     # some tectonic region types may have no occurrencies.
@@ -532,9 +518,9 @@ def get_job_info(oqparam, source_models, sitecol):
                       oqparam.ses_per_logic_tree_path)
         output_weight *= total_time * NORMALIZATION_FACTOR
     else:
-        output_weight *= n_levels
+        output_weight *= n_levels / n_imts
 
-    n_sources = 0  # to be set later
+    n_sources = csm.get_num_sources()
     info['hazard'] = dict(input_weight=input_weight,
                           output_weight=output_weight,
                           n_imts=n_imts,
@@ -552,58 +538,20 @@ def get_imts(oqparam):
     return list(map(imt.from_string, sorted(oqparam.imtls)))
 
 
-def get_risk_model(oqparam, rmdict):
+def get_risk_model(oqparam):
     """
     Return a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
 
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-   :param rmdict:
-        a dictionary (imt, taxonomy) -> loss_type -> risk_function
     """
-    riskmod = {}  # taxonomy -> riskmodel
-    crm = riskinput.CompositeRiskModel(riskmod)
-    if getattr(oqparam, 'limit_states', []):
-        # classical_damage/scenario_damage calculator
-        if oqparam.calculation_mode in ('classical', 'scenario'):
-            # case when the risk files are in the job_hazard.ini file
-            oqparam.calculation_mode += '_damage'
-        crm.damage_states = ['no_damage'] + oqparam.limit_states
-        delattr(oqparam, 'limit_states')
-        for taxonomy, ffs_by_lt in rmdict.items():
-            riskmod[taxonomy] = riskmodels.get_riskmodel(
-                taxonomy, oqparam, fragility_functions=ffs_by_lt)
-    elif oqparam.calculation_mode.endswith('_bcr'):
-        # classical_bcr calculator
+    rmdict = get_risk_models(oqparam)
+    oqparam.set_risk_imtls(rmdict)
+    if oqparam.calculation_mode.endswith('_bcr'):
         retro = get_risk_models(oqparam, 'vulnerability_retrofitted')
-        for (taxonomy, vf_orig), (taxonomy_, vf_retro) in \
-                zip(rmdict.items(), retro.items()):
-            assert taxonomy == taxonomy_  # same imt and taxonomy
-            riskmod[taxonomy] = riskmodels.get_riskmodel(
-                taxonomy, oqparam,
-                vulnerability_functions_orig=vf_orig,
-                vulnerability_functions_retro=vf_retro)
     else:
-        # classical, event based and scenario calculators
-        for taxonomy, vfs in rmdict.items():
-            for vf in vfs.values():
-                # set the seed; this is important for the case of
-                # VulnerabilityFunctionWithPMF
-                vf.seed = oqparam.random_seed
-            riskmod[taxonomy] = riskmodels.get_riskmodel(
-                taxonomy, oqparam, vulnerability_functions=vfs)
-
-    crm.make_curve_builders(oqparam)
-    taxonomies = set()
-    for taxonomy, riskmodel in riskmod.items():
-        taxonomies.add(taxonomy)
-        riskmodel.compositemodel = crm
-        # save the number of nonzero coefficients of variation
-        for vf in riskmodel.risk_functions.values():
-            if hasattr(vf, 'covs') and vf.covs.any():
-                crm.covs += 1
-    crm.taxonomies = sorted(taxonomies)
-    return crm
+        retro = {}
+    return riskinput.CompositeRiskModel(oqparam, rmdict, retro)
 
 # ########################### exposure ############################ #
 
@@ -1010,7 +958,7 @@ def get_gmfs_from_txt(oqparam, fname):
                     raise InvalidFile(
                         'The column #%d in %s is expected to contain positive '
                         'floats, got %s instead' % (i + 3, fname, row[i + 2]))
-                gmf_by_imt[imts[i]][lineno - 2] = r_sites.expand(array, 0)
+                gmf_by_imt[imts[i]][lineno - 2][r_sites.sids] = array
             etags.append(row[0])
     if lineno < num_gmfs + 1:
         raise InvalidFile('%s contains %d rows, expected %d' % (

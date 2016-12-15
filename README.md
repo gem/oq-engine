@@ -4,11 +4,13 @@
 
 The **OpenQuake Engine** is an open source application that allows users to compute **seismic hazard** and **seismic risk** of earthquakes on a global scale. It runs on Linux, macOS and Windows, on laptops, workstations, standalone servers and multi-node clusters.
 
-[![Build Status](https://ci.openquake.org/job/master_oq-engine/badge/icon)](https://ci.openquake.org/job/master_oq-engine/)
+Jenkins (Python 2): [![Build Status](https://ci.openquake.org/job/master_oq-engine/badge/icon)](https://ci.openquake.org/job/master_oq-engine/)
+
+Travis CI (Python 3): [![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine)
 
 ### Current stable
 
-Current stable version is the **OpenQuake Engine 2.0** 'Aki'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-2.0#openquake-engine.
+Current stable version is the **OpenQuake Engine 2.1** 'Benioff'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-2.1#openquake-engine.
 
 ## Documentation (master tree)
 
@@ -111,4 +113,5 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 ![](https://www.globalquakemodel.org/media/sponsor/IRDRICSU.png)
 ![](https://www.globalquakemodel.org/media/sponsor/EERI_GEM.png)
 
+If you would like to help support development of OpenQuake, please contact us at [partnership@globalquakemodel.org](mailto:partnership@globalquakemodel.org).
 For more info visit the GEM website at https://www.globalquakemodel.org/gem/organisation/partners/

@@ -143,7 +143,7 @@ class Choices(Choice):
                     val, self.choices))
         return tuple(values)
 
-export_formats = Choices('', 'xml', 'geojson', 'txt', 'csv', 'hdf5')
+export_formats = Choices('', 'xml', 'geojson', 'txt', 'csv', 'npz')
 
 
 def hazard_id(value):
@@ -215,7 +215,7 @@ class SimpleId(object):
         raise ValueError(
             "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-" % value)
 
-MAX_ID_LENGTH = 100
+MAX_ID_LENGTH = 60
 ASSET_ID_LENGTH = 100
 
 simple_id = SimpleId(MAX_ID_LENGTH)
@@ -680,7 +680,7 @@ def floatdict(value):
     value = ast.literal_eval(value)
     if isinstance(value, (int, float)):
         return {'default': value}
-    return dict(value)
+    return value
 
 
 # ########################### SOURCES/RUPTURES ############################# #
@@ -852,6 +852,18 @@ def positiveints(value):
             raise ValueError('%d is negative in %r' % (val, value))
     return ints
 
+
+def weights(value):
+    """
+    >>> weights('0.4 0.3')
+    Traceback (most recent call last):
+       ...
+    ValueError: the weights [0.4, 0.3] do not sum up to 1!
+    """
+    ws = probabilities(value)
+    if abs(sum(ws) - 1.) > 1E-12:
+        raise ValueError('the weights %s do not sum up to 1!' % ws)
+    return ws
 
 # ############################## site model ################################ #
 

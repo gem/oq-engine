@@ -6,9 +6,9 @@ To upgrade the OpenQuake Engine and its libraries run
 sudo yum upgrade python-oq-*
 ```
 
-### Coming from release 1.0
+### Coming from OpenQuake Engine 1.x
 
-The following dependencies are not used anymore by the OpenQuake Engine 2.0:
+The following dependencies are not used anymore by the OpenQuake Engine 2:
 - postgresql-server and postgis
 - other minor dependencies
 

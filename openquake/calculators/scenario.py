@@ -18,18 +18,11 @@
 import collections
 import numpy
 
-from openquake.baselib import hdf5
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
-from openquake.commonlib import readinput, source
+from openquake.commonlib import readinput, source, calc
+from openquake.calculators.export.hazard import gmv_dt
 from openquake.calculators import base
-
-U8 = numpy.uint8
-U16 = numpy.uint16
-U32 = numpy.uint32
-F32 = numpy.float32
-
-gmv_dt = numpy.dtype([('sid', U16), ('eid', U32), ('imti', U8), ('gmv', F32)])
 
 
 @base.calculators.add('scenario')
@@ -46,17 +39,26 @@ class ScenarioCalculator(base.HazardCalculator):
         super(ScenarioCalculator, self).pre_execute()
         oq = self.oqparam
         trunc_level = oq.truncation_level
-        correl_model = readinput.get_correl_model(oq)
-        rupture = readinput.get_rupture(oq)
+        correl_model = oq.get_correl_model()
+        rup = readinput.get_rupture(oq)
+        rup.seed = self.oqparam.random_seed
         self.gsims = readinput.get_gsims(oq)
         maxdist = oq.maximum_distance['default']
         with self.monitor('filtering sites', autoflush=True):
             self.sitecol = filters.filter_sites_by_distance_to_rupture(
-                rupture, maxdist, self.sitecol)
+                rup, maxdist, self.sitecol)
         if self.sitecol is None:
             raise RuntimeError(
                 'All sites were filtered out! maximum_distance=%s km' %
                 maxdist)
+        # eid, ses, occ, sample
+        events = numpy.array(
+            [(eid, 1, 1, 0)
+             for eid in range(oq.number_of_ground_motion_fields)],
+            calc.event_dt)
+        rupture = calc.EBRupture(
+            rup, self.sitecol.sids, events, 'single_rupture', 0, 0)
+        self.datastore['ruptures/grp-00/0'] = rupture
         self.computer = GmfComputer(
             rupture, self.sitecol, oq.imtls, self.gsims,
             trunc_level, correl_model)
@@ -74,11 +76,12 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         res = collections.defaultdict(list)
         sids = self.sitecol.sids
+        self.gmfa = {}
         with self.monitor('computing gmfs', autoflush=True):
             n = self.oqparam.number_of_ground_motion_fields
             for i, gsim in enumerate(self.gsims):
-                gmfa = self.computer.compute(
-                    self.oqparam.random_seed, gsim, n)
+                gmfa = self.computer.compute(gsim, n)
+                self.gmfa[gsim] = gmfa
                 for (imti, sid, eid), gmv in numpy.ndenumerate(gmfa):
                     res[i].append((sids[sid], eid, imti, gmv))
             return {rlzi: numpy.array(res[rlzi], gmv_dt) for rlzi in res}
@@ -89,7 +92,7 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         with self.monitor('saving gmfs', autoflush=True):
             for rlzi, gsim in enumerate(self.gsims):
-                rlzstr = 'gmf_data/%04d' % rlzi
+                rlzstr = 'gmf_data/sm-0000/%04d' % rlzi
                 self.datastore[rlzstr] = gmfa_by_rlzi[rlzi]
                 self.datastore.set_attrs(rlzstr, gsim=str(gsim))
             self.datastore.set_nbytes('gmf_data')

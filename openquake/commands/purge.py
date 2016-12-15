@@ -19,23 +19,44 @@
 from __future__ import print_function
 import os
 import re
-from openquake.commonlib import sap, datastore
+import getpass
+from openquake.baselib import sap
+from openquake.commonlib import datastore
+from openquake.engine.logs import dbcmd
 
 
-def purge(calc_id):
+def purge_one(calc_id, user):
     """
-    Remove the given calculation. If calc_id is 0, remove all calculations.
+    Remove one calculation ID from the database and remove its datastore
     """
-    if not calc_id:
-        for fname in os.listdir(datastore.DATADIR):
-            if re.match('calc_\d+\.hdf5', fname):
-                os.remove(os.path.join(datastore.DATADIR, fname))
-                print('Removed %s' % fname)
-    else:
-        hdf5path = datastore.read(calc_id).hdf5path
+    hdf5path = os.path.join(datastore.DATADIR, 'calc_%s.hdf5' % calc_id)
+    err = dbcmd('del_calc', calc_id, user)
+    if err:
+        print(err)
+    if os.path.exists(hdf5path):
         os.remove(hdf5path)
         print('Removed %s' % hdf5path)
 
 
-parser = sap.Parser(purge)
-parser.arg('calc_id', 'calculation ID', type=int)
+@sap.Script
+def purge(calc_id):
+    """
+    Remove the given calculation. If calc_id is 0, remove all calculations.
+    """
+    user = getpass.getuser()
+    if not calc_id:
+        for fname in os.listdir(datastore.DATADIR):
+            mo = re.match('calc_(\d+)\.hdf5', fname)
+            if mo is not None:
+                calc_id = int(mo.group(1))
+                purge_one(calc_id, user)
+    else:
+        if calc_id < 0:
+            try:
+                calc_id = datastore.get_calc_ids()[calc_id]
+            except IndexError:
+                print('Calculation %d not found' % calc_id)
+                return
+        purge_one(calc_id, user)
+
+purge.arg('calc_id', 'calculation ID', type=int)

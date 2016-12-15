@@ -1,28 +1,31 @@
 Classical PSHA with GMPE logic tree with multiple tectonic region types
 =======================================================================
 
-gem-tstation:/home/michele/ssd/calc_22586.hdf5 updated Tue May 31 15:37:27 2016
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_66976.hdf5 Wed Nov  9 08:14:39 2016
+engine_version                                 2.2.0-git54d01f4        
+hazardlib_version                              0.22.0-git173c60c       
+============================================== ========================
 
 num_sites = 3, sitecol = 831 B
 
 Parameters
 ----------
-============================ ==================================================================
-calculation_mode             'classical'                                                       
-number_of_logic_tree_samples 0                                                                 
-maximum_distance             {'Stable Continental Crust': 200.0, 'Active Shallow Crust': 200.0}
-investigation_time           50.0                                                              
-ses_per_logic_tree_path      1                                                                 
-truncation_level             3.0                                                               
-rupture_mesh_spacing         1.0                                                               
-complex_fault_mesh_spacing   1.0                                                               
-width_of_mfd_bin             0.1                                                               
-area_source_discretization   10.0                                                              
-random_seed                  23                                                                
-master_seed                  0                                                                 
-sites_per_tile               10000                                                             
-engine_version               '2.0.0-git4fb4450'                                                
-============================ ==================================================================
+============================ ====================================================================
+calculation_mode             'classical'                                                         
+number_of_logic_tree_samples 0                                                                   
+maximum_distance             {u'Stable Continental Crust': 200.0, u'Active Shallow Crust': 200.0}
+investigation_time           50.0                                                                
+ses_per_logic_tree_path      1                                                                   
+truncation_level             3.0                                                                 
+rupture_mesh_spacing         1.0                                                                 
+complex_fault_mesh_spacing   1.0                                                                 
+width_of_mfd_bin             0.1                                                                 
+area_source_discretization   10.0                                                                
+random_seed                  23                                                                  
+master_seed                  0                                                                   
+sites_per_tile               10000                                                               
+============================ ====================================================================
 
 Input files
 -----------
@@ -31,6 +34,8 @@ Name                    File
 ======================= ============================================================
 gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
 job_ini                 `job.ini <job.ini>`_                                        
+source                  `3.0 1.0 <3.0 1.0>`_                                        
+source                  `3.2 0.8 <3.2 0.8>`_                                        
 source                  `source_model_1.xml <source_model_1.xml>`_                  
 source                  `source_model_2.xml <source_model_2.xml>`_                  
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
@@ -49,7 +54,7 @@ SM2_a3pt2b0pt8 0.250  `source_model_2.xml <source_model_2.xml>`_ complex(2,2)   
 Required parameters per tectonic region type
 --------------------------------------------
 ====== =========================================== ========= ========== =================
-trt_id gsims                                       distances siteparams ruptparams       
+grp_id gsims                                       distances siteparams ruptparams       
 ====== =========================================== ========= ========== =================
 0      BooreAtkinson2008() CampbellBozorgnia2008() rjb rrup  z2pt5 vs30 ztor mag rake dip
 1      Campbell2003() ToroEtAl2002()               rjb rrup             mag              
@@ -74,78 +79,81 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================== ====== ======================== =========== ============ ======
-source_model       trt_id trt                      num_sources eff_ruptures weight
-================== ====== ======================== =========== ============ ======
-source_model_1.xml 0      Active Shallow Crust     1           15           0.375 
-source_model_1.xml 1      Stable Continental Crust 1           15           0.375 
-source_model_2.xml 2      Active Shallow Crust     1           240          6.000 
-source_model_2.xml 3      Active Shallow Crust     1           240          6.000 
-================== ====== ======================== =========== ============ ======
+================== ====== ======================== =========== ============ ============
+source_model       grp_id trt                      num_sources eff_ruptures tot_ruptures
+================== ====== ======================== =========== ============ ============
+source_model_1.xml 0      Active Shallow Crust     1           15           15          
+source_model_1.xml 1      Stable Continental Crust 1           15           15          
+source_model_2.xml 2      Active Shallow Crust     1           240          240         
+source_model_2.xml 3      Active Shallow Crust     1           240          240         
+================== ====== ======================== =========== ============ ============
 
-=============== ===
-#TRT models     4  
-#sources        4  
-#eff_ruptures   510
-filtered_weight 12 
-=============== ===
+============= ===
+#TRT models   4  
+#sources      4  
+#eff_ruptures 510
+#tot_ruptures 510
+#tot_weight   51 
+============= ===
 
 Informational data
 ------------------
 ======================================== ============
-count_eff_ruptures_max_received_per_task 3,231       
-count_eff_ruptures_num_tasks             34          
-count_eff_ruptures_sent.monitor          101,014     
-count_eff_ruptures_sent.rlzs_assoc       70,890      
-count_eff_ruptures_sent.sitecol          16,082      
-count_eff_ruptures_sent.siteidx          170         
-count_eff_ruptures_sent.sources          43,332      
-count_eff_ruptures_tot_received          109,854     
-hazard.input_weight                      12          
+count_eff_ruptures_max_received_per_task 1,473       
+count_eff_ruptures_num_tasks             4           
+count_eff_ruptures_sent.gsims            686         
+count_eff_ruptures_sent.monitor          4,944       
+count_eff_ruptures_sent.sitecol          1,892       
+count_eff_ruptures_sent.sources          6,318       
+count_eff_ruptures_tot_received          5,892       
+hazard.input_weight                      51          
 hazard.n_imts                            2           
-hazard.n_levels                          8.500       
+hazard.n_levels                          17          
 hazard.n_realizations                    12          
 hazard.n_sites                           3           
-hazard.n_sources                         0           
+hazard.n_sources                         4           
 hazard.output_weight                     612         
 hostname                                 gem-tstation
 ======================================== ============
 
 Slowest sources
 ---------------
-============ ========= ============ ====== ========= =========== ========== =========
-src_group_id source_id source_class weight split_num filter_time split_time calc_time
-============ ========= ============ ====== ========= =========== ========== =========
-2            1         AreaSource   6.000  16        0.001       0.003      0.0      
-3            1         AreaSource   6.000  16        8.309E-04   0.002      0.0      
-0            1         PointSource  0.375  1         5.198E-05   0.0        0.0      
-1            2         PointSource  0.375  1         3.695E-05   0.0        0.0      
-============ ========= ============ ====== ========= =========== ========== =========
+====== ========= ============ ============ ========= ========= =========
+grp_id source_id source_class num_ruptures calc_time num_sites num_split
+====== ========= ============ ============ ========= ========= =========
+3      1         AreaSource   240          0.0       3         0        
+1      2         PointSource  15           0.0       3         0        
+0      1         PointSource  15           0.0       3         0        
+2      1         AreaSource   240          0.0       3         0        
+====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
-============ =========== ========== ========= ======
-source_class filter_time split_time calc_time counts
-============ =========== ========== ========= ======
-AreaSource   0.002       0.005      0.0       2     
-PointSource  8.893E-05   0.0        0.0       2     
-============ =========== ========== ========= ======
+============ ========= ======
+source_class calc_time counts
+============ ========= ======
+AreaSource   0.0       2     
+PointSource  0.0       2     
+============ ========= ======
 
 Information about the tasks
 ---------------------------
-Not available
+================== ========= ========= ========= ========= =========
+operation-duration mean      stddev    min       max       num_tasks
+count_eff_ruptures 8.325E-04 8.385E-05 7.620E-04 9.439E-04 4        
+================== ========= ========= ========= ========= =========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-managing sources               0.062     0.0       1     
-reading composite source model 0.014     0.0       1     
-total count_eff_ruptures       0.008     0.0       34    
-store source_info              0.006     0.0       1     
-splitting sources              0.005     0.0       2     
-filtering sources              0.002     0.0       4     
-aggregate curves               6.237E-04 0.0       34    
-reading site collection        3.314E-05 0.0       1     
-============================== ========= ========= ======
+================================ ========= ========= ======
+operation                        time_sec  memory_mb counts
+================================ ========= ========= ======
+reading composite source model   0.021     0.0       1     
+managing sources                 0.005     0.0       1     
+filtering composite source model 0.005     0.0       1     
+total count_eff_ruptures         0.003     0.0       4     
+store source_info                8.681E-04 0.0       1     
+aggregate curves                 1.059E-04 0.0       4     
+reading site collection          3.791E-05 0.0       1     
+saving probability maps          3.695E-05 0.0       1     
+================================ ========= ========= ======

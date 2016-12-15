@@ -19,13 +19,28 @@
 from __future__ import print_function
 import io
 import os
+import getpass
 import logging
 
 from openquake.hazardlib.calc.hazard_curve import zero_curves
-from openquake.commonlib import sap, datastore
+from openquake.baselib import sap
+from openquake.risklib import scientific, valid
+from openquake.commonlib import datastore
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import rmsep
-from openquake.risklib import scientific
+from openquake.commonlib import config
+from openquake.engine import logs
+from openquake.calculators.views import view
+
+MULTI_USER = valid.boolean(config.get('dbserver', 'multi_user') or 'false')
+if MULTI_USER:
+    # get the datastore of the user who ran the job
+    def read(calc_id):
+        job = logs.dbcmd('get_job', calc_id, getpass.getuser())
+        datadir = os.path.dirname(job.ds_calc_dir)
+        return datastore.read(job.id, datadir=datadir)
+else:  # get the datastore of the current user
+    read = datastore.read
 
 
 def get_hcurves_and_means(dstore):
@@ -49,6 +64,7 @@ def get_hcurves_and_means(dstore):
     return curves_by_rlz, mean_curves
 
 
+@sap.Script
 def show(what, calc_id=-1):
     """
     Show the content of a datastore (by default the last one).
@@ -74,7 +90,7 @@ def show(what, calc_id=-1):
             print('#%d %s: %s' % row)
         return
 
-    ds = datastore.read(calc_id)
+    ds = read(calc_id)
 
     # this part is experimental
     if what == 'rlzs' and 'hcurves' in ds:
@@ -88,17 +104,18 @@ def show(what, calc_id=-1):
         print('Realizations in order of distance from the mean curves')
         for dist, rlz in sorted(dists):
             print('%s: rmsep=%s' % (rlz, dist))
-    elif what in datastore.view:
-        print(datastore.view(what, ds))
-    else:
+    elif view.keyfunc(what) in view:
+        print(view(what, ds))
+    elif what in ds:
         obj = ds[what]
         if hasattr(obj, 'value'):  # an array
             print(write_csv(io.StringIO(), obj.value))
         else:
             print(obj)
+    else:
+        print('%s not found' % what)
 
     ds.close()
 
-parser = sap.Parser(show)
-parser.arg('what', 'key or view of the datastore')
-parser.arg('calc_id', 'calculation ID', type=int)
+show.arg('what', 'key or view of the datastore')
+show.arg('calc_id', 'calculation ID', type=int)

@@ -18,7 +18,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </gml:pos>
             </gml:Point>
             <IMLs>
-                0.2 0.63483
+                0.2 0.634829725052
             </IMLs>
         </uhs>
         <uhs>
@@ -28,7 +28,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </gml:pos>
             </gml:Point>
             <IMLs>
-                0.2 0.594249
+                0.2 0.594248574046
             </IMLs>
         </uhs>
         <uhs>
@@ -38,7 +38,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </gml:pos>
             </gml:Point>
             <IMLs>
-                0.2 0.747483
+                0.2 0.747483030542
             </IMLs>
         </uhs>
     </uniformHazardSpectra>

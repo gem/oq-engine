@@ -20,11 +20,12 @@ import os
 import logging
 import numpy
 
-from openquake.baselib import python3compat
+from openquake.baselib import parallel
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib import correlation
 from openquake.risklib import valid
-from openquake.commonlib import parallel, logictree
+from openquake.commonlib import logictree
 from openquake.commonlib.riskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
@@ -71,7 +72,6 @@ class OqParam(valid.ParamSet):
         valid.NoneOr(valid.positivefloat), None)
     asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
     asset_life_expectancy = valid.Param(valid.positivefloat)
-    asset_loss_table = valid.Param(valid.boolean, False)
     avg_losses = valid.Param(valid.boolean, False)
     base_path = valid.Param(valid.utf8, '.')
     calculation_mode = valid.Param(valid.Choice(), '')  # -> get_oqparam
@@ -84,10 +84,9 @@ class OqParam(valid.ParamSet):
     description = valid.Param(valid.utf8_not_empty)
     distance_bin_width = valid.Param(valid.positivefloat)
     mag_bin_width = valid.Param(valid.positivefloat)
-    export_dir = valid.Param(valid.utf8, None)
+    export_dir = valid.Param(valid.utf8, '.')
     export_multi_curves = valid.Param(valid.boolean, False)
     exports = valid.Param(valid.export_formats, ())
-    filter_sources = valid.Param(valid.boolean, True)
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
     ground_motion_correlation_params = valid.Param(valid.dictionary)
@@ -99,6 +98,8 @@ class OqParam(valid.ParamSet):
     hazard_maps = valid.Param(valid.boolean, False)
     hypocenter = valid.Param(valid.point3d)
     ignore_missing_costs = valid.Param(valid.namelist, [])
+    ignore_covs = valid.Param(valid.boolean, False)
+    iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
     individual_curves = valid.Param(valid.boolean, True)
     inputs = valid.Param(dict, {})
     insured_losses = valid.Param(valid.boolean, False)
@@ -119,7 +120,7 @@ class OqParam(valid.ParamSet):
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint)
-    poes = valid.Param(valid.probabilities)
+    poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     quantile_hazard_curves = valid.Param(valid.probabilities, [])
     quantile_loss_curves = valid.Param(valid.probabilities, [])
@@ -138,9 +139,11 @@ class OqParam(valid.ParamSet):
     region_grid_spacing = valid.Param(valid.positivefloat, None)
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     risk_investigation_time = valid.Param(valid.positivefloat, None)
-    rupture_mesh_spacing = valid.Param(valid.positivefloat, None)
+    rupture_mesh_spacing = valid.Param(valid.positivefloat)
+    ruptures_per_block = valid.Param(valid.positiveint, 1000)
     complex_fault_mesh_spacing = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
+    save_ruptures = valid.Param(valid.boolean, False)
     ses_per_logic_tree_path = valid.Param(valid.positiveint, 1)
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     sites_disagg = valid.Param(valid.NoneOr(valid.coordinates), [])
@@ -197,6 +200,26 @@ class OqParam(valid.ParamSet):
         elif self.gsim is not None:
             self.check_gsims([self.gsim])
 
+        # checks for disaggregation
+        if self.calculation_mode == 'disaggregation':
+            if not self.individual_curves:
+                raise ValueError(
+                    'For disaggregation the flag `individual_curves` '
+                    'must be true')
+            elif not self.poes_disagg and not self.iml_disagg:
+                raise ValueError('poes_disagg or iml_disagg must be set '
+                                 'in the job.ini file')
+            elif self.poes_disagg and self.iml_disagg:
+                logging.warn(
+                    'iml_disagg=%s will not be computed from poes_disagg=%s',
+                    str(self.iml_disagg), self.poes_disagg)
+
+        # checks for event_based_risk
+        if (self.calculation_mode == 'event_based_risk'
+                and self.asset_correlation not in (0, 1)):
+            raise ValueError('asset_correlation != {0, 1} is no longer'
+                             ' supported')
+
     def check_gsims(self, gsims):
         """
         :param gsims: a sequence of GSIM instances
@@ -243,6 +266,7 @@ class OqParam(valid.ParamSet):
 
         risk_investigation_time / investigation_time / ses_per_logic_tree_path
         """
+        assert self.investigation_time, 'investigation_time = 0!'
         return (self.risk_investigation_time or self.investigation_time) / (
             self.investigation_time * self.ses_per_logic_tree_path)
 
@@ -294,18 +318,36 @@ class OqParam(valid.ParamSet):
         """
         Return a composite dtype based on the loss types, including occupants
         """
+        return numpy.dtype(self.loss_dt_list(dtype))
+
+    def loss_dt_list(self, dtype=numpy.float32):
+        """
+        Return a data type list [(loss_name, dtype), ...]
+        """
         loss_types = self.all_cost_types
-        dts = [(lt, dtype) for lt in loss_types]
+        dts = [(str(lt), dtype) for lt in loss_types]
         if self.insured_losses:
             for lt in loss_types:
-                dts.append((lt + '_ins', dtype))
-        return python3compat.dtype(dts)
+                dts.append((str(lt) + '_ins', dtype))
+        return dts
 
     def no_imls(self):
         """
         Return True if there are no intensity measure levels
         """
         return all(numpy.isnan(ls).any() for ls in self.imtls.values())
+
+    def get_correl_model(self):
+        """
+        Return a correlation object. See :mod:`openquake.hazardlib.correlation`
+        for more info.
+        """
+        correl_name = self.ground_motion_correlation_model
+        if correl_name is None:  # no correlation model
+            return
+        correl_model_cls = getattr(
+            correlation, '%sCorrelationModel' % correl_name)
+        return correl_model_cls(**self.ground_motion_correlation_params)
 
     @property
     def job_type(self):

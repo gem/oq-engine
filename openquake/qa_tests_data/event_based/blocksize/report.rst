@@ -1,27 +1,30 @@
 QA test for blocksize independence (hazard)
 ===========================================
 
-gem-tstation:/home/michele/ssd/calc_22617.hdf5 updated Tue May 31 15:38:51 2016
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_67007.hdf5 Wed Nov  9 08:16:12 2016
+engine_version                                 2.2.0-git54d01f4        
+hazardlib_version                              0.22.0-git173c60c       
+============================================== ========================
 
 num_sites = 2, sitecol = 785 B
 
 Parameters
 ----------
-============================ ===============================
-calculation_mode             'event_based'                  
-number_of_logic_tree_samples 1                              
-maximum_distance             {'Active Shallow Crust': 400.0}
-investigation_time           5.0                            
-ses_per_logic_tree_path      1                              
-truncation_level             3.0                            
-rupture_mesh_spacing         10.0                           
-complex_fault_mesh_spacing   10.0                           
-width_of_mfd_bin             0.5                            
-area_source_discretization   10.0                           
-random_seed                  1024                           
-master_seed                  0                              
-engine_version               '2.0.0-git4fb4450'             
-============================ ===============================
+============================ ================================
+calculation_mode             'event_based'                   
+number_of_logic_tree_samples 1                               
+maximum_distance             {u'Active Shallow Crust': 400.0}
+investigation_time           5.0                             
+ses_per_logic_tree_path      1                               
+truncation_level             3.0                             
+rupture_mesh_spacing         10.0                            
+complex_fault_mesh_spacing   10.0                            
+width_of_mfd_bin             0.5                             
+area_source_discretization   10.0                            
+random_seed                  1024                            
+master_seed                  0                               
+============================ ================================
 
 Input files
 -----------
@@ -45,7 +48,7 @@ b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1
 Required parameters per tectonic region type
 --------------------------------------------
 ====== ================= =========== ======================= =================
-trt_id gsims             distances   siteparams              ruptparams       
+grp_id gsims             distances   siteparams              ruptparams       
 ====== ================= =========== ======================= =================
 0      ChiouYoungs2008() rx rjb rrup vs30measured vs30 z1pt0 rake dip ztor mag
 ====== ================= =========== ======================= =================
@@ -60,17 +63,31 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ======
-source_model     trt_id trt                  num_sources eff_ruptures weight
-================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 3           3            277   
-================ ====== ==================== =========== ============ ======
+================ ====== ==================== =========== ============ ============
+source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
+================ ====== ==================== =========== ============ ============
+source_model.xml 0      Active Shallow Crust 5           3            13,823      
+================ ====== ==================== =========== ============ ============
 
 Informational data
 ------------------
-======== ============
-hostname gem-tstation
-======== ============
+====================================== ============
+compute_ruptures_max_received_per_task 9,948       
+compute_ruptures_num_tasks             9           
+compute_ruptures_sent.gsims            801         
+compute_ruptures_sent.monitor          9,189       
+compute_ruptures_sent.sitecol          4,989       
+compute_ruptures_sent.sources          470,759     
+compute_ruptures_tot_received          44,802      
+hazard.input_weight                    1,382       
+hazard.n_imts                          1           
+hazard.n_levels                        4           
+hazard.n_realizations                  1           
+hazard.n_sites                         2           
+hazard.n_sources                       5           
+hazard.output_weight                   0.100       
+hostname                               gem-tstation
+====================================== ============
 
 Specific information for event based
 ------------------------------------
@@ -82,49 +99,43 @@ Rupture multiplicity     1.000
 
 Slowest sources
 ---------------
-============ ========= ============ ====== ========= =========== ========== =========
-src_group_id source_id source_class weight split_num filter_time split_time calc_time
-============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   175    1,170     7.520E-04   0.279      2.309    
-0            2         AreaSource   58     389       7.472E-04   0.090      0.698    
-0            3         AreaSource   44     352       7.701E-04   0.074      0.298    
-============ ========= ============ ====== ========= =========== ========== =========
+====== ========= ============ ============ ========= ========= =========
+grp_id source_id source_class num_ruptures calc_time num_sites num_split
+====== ========= ============ ============ ========= ========= =========
+0      8         AreaSource   1,812        0.0       1         0        
+0      2         AreaSource   2,334        0.0       2         0        
+0      9         AreaSource   897          0.0       2         0        
+0      3         AreaSource   1,760        0.0       2         0        
+0      1         AreaSource   7,020        0.0       2         0        
+====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
-============ =========== ========== ========= ======
-source_class filter_time split_time calc_time counts
-============ =========== ========== ========= ======
-AreaSource   0.002       0.443      3.305     3     
-============ =========== ========== ========= ======
+============ ========= ======
+source_class calc_time counts
+============ ========= ======
+AreaSource   0.0       5     
+============ ========= ======
 
 Information about the tasks
 ---------------------------
-================================= ===== ========= ===== ===== =========
-measurement                       mean  stddev    min   max   num_tasks
-compute_ruptures.time_sec         0.166 0.053     0.046 0.253 20       
-compute_ruptures.memory_mb        0.0   0.0       0.0   0.0   20       
-compute_gmfs_and_curves.time_sec  0.002 2.680E-05 0.002 0.002 3        
-compute_gmfs_and_curves.memory_mb 0.0   0.0       0.0   0.0   3        
-================================= ===== ========= ===== ===== =========
+================== ===== ====== ===== ===== =========
+operation-duration mean  stddev min   max   num_tasks
+compute_ruptures   0.385 0.275  0.002 0.652 9        
+================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-total compute_ruptures         3.325     0.0       20    
-reading composite source model 1.614     0.0       1     
-managing sources               0.619     0.0       1     
-splitting sources              0.443     0.0       3     
-store source_info              0.014     0.0       1     
-filtering sources              0.007     0.0       9     
-total compute_gmfs_and_curves  0.007     0.0       3     
-compute poes                   0.004     0.0       3     
-aggregate curves               0.003     0.0       20    
-saving ruptures                0.003     0.0       1     
-make contexts                  0.002     0.0       3     
-saving gmfs                    0.002     0.0       3     
-filtering ruptures             7.961E-04 0.0       3     
-reading site collection        3.886E-05 0.0       1     
-============================== ========= ========= ======
+================================ ========= ========= ======
+operation                        time_sec  memory_mb counts
+================================ ========= ========= ======
+total compute_ruptures           3.464     0.0       9     
+reading composite source model   1.583     0.0       1     
+managing sources                 1.198     0.0       1     
+split/filter heavy sources       1.194     0.0       1     
+saving ruptures                  0.009     0.0       9     
+filtering composite source model 0.005     0.0       1     
+store source_info                9.911E-04 0.0       1     
+filtering ruptures               9.680E-04 0.0       3     
+reading site collection          3.982E-05 0.0       1     
+================================ ========= ========= ======

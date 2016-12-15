@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import mock
 import unittest
 from io import BytesIO
 
@@ -30,11 +31,10 @@ from openquake.hazardlib import pmf
 from openquake.hazardlib import scalerel
 from openquake.hazardlib import source
 from openquake.hazardlib.tom import PoissonTOM
-
+from openquake.hazardlib.calc.filters import context
 from openquake.commonlib import tests, nrml_examples, readinput
 from openquake.commonlib import sourceconverter as s
-from openquake.commonlib.source import (
-    SourceModelParser, DuplicatedID, CompositionInfo)
+from openquake.commonlib.source import SourceModelParser, CompositionInfo
 from openquake.commonlib import nrml
 from openquake.baselib.general import assert_close
 
@@ -79,10 +79,9 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.,  # km
         ))
-        source_nodes = nrml.parse(MIXED_SRC_MODEL).nodes
-        (cls.area, cls.point, cls.simple, cls.cmplx, cls.char_simple,
-         cls.char_complex, cls.char_multi) = map(
-            cls.parser.converter.convert_node, source_nodes)
+        groups = cls.parser.parse_groups(MIXED_SRC_MODEL)
+        ([cls.point], [cls.cmplx], [cls.area, cls.simple],
+         [cls.char_simple, cls.char_complex, cls.char_multi]) = groups
         # the parameters here would typically be specified in the job .ini
         cls.investigation_time = 50.
         cls.rupture_mesh_spacing = 1  # km
@@ -376,8 +375,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             width_of_mfd_bin=0.1,
             area_source_discretization=10,
         ))
-        with self.assertRaises(DuplicatedID):
-            parser.parse_sources(DUPLICATE_ID_SRC_MODEL)
+        with self.assertRaises(nrml.DuplicatedID):
+            parser.parse_groups(DUPLICATE_ID_SRC_MODEL)
 
     def test_raises_useful_error_1(self):
         area_file = BytesIO(b"""\
@@ -534,7 +533,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         msg = ('node simpleFaultSource: hypo_list and slip_list have to be '
                'both given')
         with self.assertRaises(ValueError) as ctx:
-            self.parser.parse_sources(simple_file)
+            self.parser.parse_groups(simple_file)
         self.assertIn(msg, str(ctx.exception))
 
     def test_nonparametric_source_ok(self):
@@ -554,8 +553,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             complex_fault_mesh_spacing=5,  # km
             width_of_mfd_bin=0.1,  # for Truncated GR MFDs
             area_source_discretization=1.)
-        source_nodes = nrml.read(ALT_MFDS_SRC_MODEL).sourceModel
-        [cplx1, sflt1, sflt2] = map(converter.convert_node, source_nodes)
+        grp_nodes = nrml.read(ALT_MFDS_SRC_MODEL).sourceModel.nodes
+        [[sflt1, sflt2], [cplx1]] = map(converter.convert_node, grp_nodes)
         # Check the values
         # Arbitrary MFD
         assert_close(cplx1.mfd.magnitudes, [8.6, 8.8, 9.0])
@@ -572,7 +571,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         self.assertAlmostEqual(sflt2.mfd.char_mag, 7.0)
         self.assertAlmostEqual(sflt2.mfd.char_rate, 0.24615, 5)
         self.assertAlmostEqual(sflt2.mfd.min_mag, 5.0)
- 
+
 
 class AreaToPointsTestCase(unittest.TestCase):
     """
@@ -850,3 +849,77 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         new = object.__new__(CompositionInfo)
         new.__fromh5__(dic, attrs)
         self.assertEqual(repr(new), repr(csm.info))
+
+
+class FilterSourceTestCase(unittest.TestCase):
+    bad_source = BytesIO(b'''\
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel>
+        <simpleFaultSource
+        id="61"
+        name="Great Sumatra Fault Seg 9"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <simpleFaultGeometry>
+                <gml:LineString>
+                    <gml:posList>
+                        100.25937 -0.031671 100.0266 0.405493
+                    </gml:posList>
+                </gml:LineString>
+                <dip>
+                    90.0
+                </dip>
+                <upperSeismoDepth>
+                    0.0
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    15.0
+                </lowerSeismoDepth>
+            </simpleFaultGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                2.0
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="0.1"
+            minMag="6.6"
+            >
+                <occurRates>
+                    0.000159132913052 0.000639357094314 0.00128272504335 0.00128508030857 0.00064288541598 0.00016059924101 2.00336468094e-05
+                </occurRates>
+            </incrementalMFD>
+            <rake>
+                0.0
+            </rake>
+        </simpleFaultSource>
+    </sourceModel>
+</nrml>''')
+
+    def test(self):
+        mod = mock.Mock(
+            reference_vs30_value=760,
+            reference_vs30_type='measured',
+            reference_depth_to_1pt0km_per_sec=100.,
+            reference_depth_to_2pt5km_per_sec=5.0,
+            reference_backarc=False)
+        sitecol = site.SiteCollection.from_points([102.32], [-2.9107], mod)
+        parser = SourceModelParser(s.SourceConverter(
+            investigation_time=50.,
+            rupture_mesh_spacing=1,  # km
+            complex_fault_mesh_spacing=1,  # km
+            width_of_mfd_bin=1.,  # for Truncated GR MFDs
+            area_source_discretization=1.,  # km
+        ))
+        [[src]] = parser.parse_groups(self.bad_source)
+        with self.assertRaises(AttributeError) as ctx, context(src):
+            max_dist = 250
+            # NB: with a distance of 200 km the error does not happen
+            src.filter_sites_by_distance_to_source(max_dist, sitecol)
+        self.assertIn('An error occurred with source id=61',
+                      str(ctx.exception))

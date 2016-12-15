@@ -19,7 +19,8 @@
 import unittest
 import io
 from openquake.baselib.general import writetmp
-from openquake.commonlib.nrml import read, node_to_xml, get_tag_version
+from openquake.commonlib.sourceconverter import SourceConverter
+from openquake.commonlib.nrml import read, parse, node_to_xml, get_tag_version
 
 
 class NrmlTestCase(unittest.TestCase):
@@ -66,20 +67,24 @@ class NrmlTestCase(unittest.TestCase):
 xmlns="http://openquake.org/xmlns/nrml/0.4"
 xmlns:gml="http://www.opengis.net/gml"
 >
+    
     <exposureModel
     category="population"
     id="my_exposure_model_for_population"
     taxonomySource="fake population datasource"
     >
+        
         <description>
             Sample population
         </description>
         <assets>
+            
             <asset
             id="asset_01"
             number="7.000000000E+00"
             taxonomy="IT-PV"
             >
+                
                 <location lat="4.516667000E+01" lon="9.150000000E+00"/>
             </asset>
             <asset
@@ -87,6 +92,7 @@ xmlns:gml="http://www.opengis.net/gml"
             number="7.000000000E+00"
             taxonomy="IT-CE"
             >
+                
                 <location lat="4.512200000E+01" lon="9.153330000E+00"/>
             </asset>
         </assets>
@@ -116,3 +122,66 @@ xmlns:gml="http://www.opengis.net/gml"
             read(fname)
         self.assertIn('Could not convert imt->intensity_measure_type: '
                       "Invalid IMT: 'SA', line 8", str(ctx.exception))
+
+    def test_invalid_srcs_weights_length(self):
+        fname = writetmp('''\
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Classical Hazard QA Test, Case 1 source model"
+    >
+        <sourceGroup
+        name="group 1"
+        tectonicRegion="active shallow crust"
+        srcs_weights="0.5 0.5"
+        >
+            <pointSource
+            id="1"
+            name="point source"
+            >           
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            0.0000000E+00 0.0000000E+00
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        1.0000000E+01
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    PeerMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="1.0000000E+00"
+                minMag="4.0000000E+00"
+                >
+                    <occurRates>
+                        1.0000000E+00
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90" probability="1" rake="0" strike="0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="4" probability="1"/>
+                </hypoDepthDist>
+            </pointSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
+''')
+        converter = SourceConverter(50., 1., 10, 0.1, 10.)
+        with self.assertRaises(ValueError) as ctx:
+            parse(fname, converter)
+        self.assertEqual('There are 2 srcs_weights but 1 source(s)',
+                         str(ctx.exception))

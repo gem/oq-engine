@@ -26,11 +26,11 @@ import traceback
 
 from openquake.baselib.performance import Monitor
 from openquake.risklib import valid
-from openquake.commonlib import parallel, readinput
+from openquake.baselib import parallel
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import export, datastore, views
-from openquake.calculators import base
-from openquake.engine import logs, config
+from openquake.commonlib import datastore, config, readinput
+from openquake.calculators import base, views, export
+from openquake.engine import logs
 
 TERMINATE = valid.boolean(
     config.get('celery', 'terminate_workers_on_revoke') or 'false')
@@ -42,14 +42,14 @@ if USE_CELERY:
 
     def set_concurrent_tasks_default():
         """
-        Set the default for concurrent_tasks to twice the number of workers.
+        Set the default for concurrent_tasks.
         Returns the number of live celery nodes (i.e. the number of machines).
         """
         stats = celery.task.control.inspect(timeout=1).stats()
         if not stats:
             sys.exit("No live compute nodes, aborting calculation")
         num_cores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
-        OqParam.concurrent_tasks.default = 2 * num_cores
+        OqParam.concurrent_tasks.default = num_cores * 5
         logs.LOG.info(
             'Using %s, %d cores', ', '.join(sorted(stats)), num_cores)
 
@@ -81,19 +81,23 @@ def expose_outputs(dstore):
     """
     oq = dstore['oqparam']
     exportable = set(ekey[0] for ekey in export.export)
-    # small hack: remove the sescollection outputs from scenario
-    # calculators, as requested by Vitor
     calcmode = oq.calculation_mode
     dskeys = set(dstore) & exportable  # exportable datastore keys
     if oq.uniform_hazard_spectra:
         dskeys.add('uhs')  # export them
-    if 'hmaps' in dskeys and not oq.hazard_maps:
-        dskeys.remove('hmaps')  # do not export
-    if 'realizations' in dskeys and len(dstore['realizations']) <= 1:
+    if oq.hazard_maps:
+        dskeys.add('hmaps')  # export them
+    try:
+        rlzs = dstore['realizations']
+    except KeyError:
+        rlzs = []
+    if 'ass_loss_ratios' in dskeys:
+        dskeys.remove('ass_loss_ratios')  # export only specific IDs
+    if 'realizations' in dskeys and len(rlzs) <= 1:
         dskeys.remove('realizations')  # do not export a single realization
-    if 'sescollection' in dskeys and 'scenario' in calcmode:
-        exportable.remove('sescollection')  # do not export
-    logs.dbcmd('create_outputs', dstore.calc_id, sorted(dskeys))
+    if 'ruptures' in dskeys and 'scenario' in calcmode:
+        exportable.remove('ruptures')  # do not export, as requested by Vitor
+    logs.dbcmd('create_outputs', dstore.calc_id, sorted(dskeys & exportable))
 
 
 class MasterKilled(KeyboardInterrupt):
@@ -171,14 +175,15 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         calc = base.calculators(oqparam, monitor, calc_id=job_id)
         tb = 'None\n'
         try:
+            logs.dbcmd('set_status', job_id, 'executing')
             _do_run_calc(calc, exports, hazard_calculation_id)
-            logs.dbcmd('finish', job_id, 'complete')
             expose_outputs(calc.datastore)
             records = views.performance_view(calc.datastore)
             logs.dbcmd('save_performance', job_id, records)
             calc.datastore.close()
             logs.LOG.info('Calculation %d finished correctly in %d seconds',
                           job_id, calc.monitor.duration)
+            logs.dbcmd('finish', job_id, 'complete')
         except:
             tb = traceback.format_exc()
             try:
