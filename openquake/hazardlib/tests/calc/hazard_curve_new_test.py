@@ -32,7 +32,7 @@ from openquake.hazardlib.calc.hazard_curve import pmap_from_grp
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.pmf import PMF
-from openquake.hazardlib.source.base import SourceGroup, SourceGroupCollection
+from openquake.hazardlib.source.base import SourceGroup
 
 
 def _create_rupture(distance, magnitude,
@@ -118,9 +118,9 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                 crv, decimal=4)
 
     def test_hazard_curve_B(self):
-        # Test simple calculation using a SourceGroupCollection
+        # Test simple calculation
         group = SourceGroup([self.src2], 'test', 'indep', 'indep')
-        groups = SourceGroupCollection([group])
+        groups = [group]
         curves = calc_hazard_curves_ext(groups,
                                         self.sites,
                                         self.imtls,

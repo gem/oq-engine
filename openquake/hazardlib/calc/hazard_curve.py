@@ -68,7 +68,7 @@ from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.source.base import SourceGroup, SourceGroupCollection
+from openquake.hazardlib.source.base import SourceGroup
 
 
 def zero_curves(num_sites, imtls):
@@ -247,7 +247,7 @@ def pmap_from_grp(
         group = sources
         sources = group.src_list
     else:
-        group = SourceGroup(sources, '', 'indep', 'indep')
+        group = SourceGroup(sources, 'src_group', 'indep', 'indep')
         sources = group.src_list
     trt = sources[0].tectonic_region_type
     try:
@@ -326,16 +326,15 @@ def calc_hazard_curves_ext(
         size of each field is given by the number of levels in ``imtls``.
     """
     # This is ensuring backward compatibility i.e. processing a list of
-    # sources.
-    if not isinstance(groups, SourceGroupCollection):
-        group_tmp = SourceGroup(groups, 1, 'indep', 'indep')
-        groups = SourceGroupCollection([group_tmp])
+    # sources
+    if not isinstance(groups[0], SourceGroup):
+        groups = [SourceGroup(groups, 'src_group', 'indep', 'indep')]
 
     imtls = DictArray(imtls)
     sitecol = source_site_filter.sitecol
     pmap = ProbabilityMap(len(imtls.array), 1)
     # Processing groups
-    for group in groups.grp_list:
+    for group in groups:
         indep = group.src_interdep == 'indep'
         # Prepare a dictionary
         sources_by_trt = collections.defaultdict(list)
