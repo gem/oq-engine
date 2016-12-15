@@ -689,7 +689,7 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
     return sorted(fnames)
 
 
-# used by event_based_risk and classical_risk
+# used by classical_risk
 @export.add(('loss_maps-stats', 'xml'), ('loss_maps-stats', 'geojson'))
 def export_loss_maps_stats_xml_geojson(ekey, dstore):
     loss_maps = dstore[ekey[0]]
