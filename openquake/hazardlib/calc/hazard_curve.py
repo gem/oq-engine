@@ -247,7 +247,7 @@ def pmap_from_grp(
         group = sources
         sources = group.src_list
     else:
-        group = SourceGroup(sources, '', 'indep', 'indep')
+        group = SourceGroup(sources, 'src_group', 'indep', 'indep')
         sources = group.src_list
     trt = sources[0].tectonic_region_type
     try:
@@ -328,7 +328,7 @@ def calc_hazard_curves_ext(
     # This is ensuring backward compatibility i.e. processing a list of
     # sources.
     if isinstance(groups[0], BaseSeismicSource):
-        group_tmp = SourceGroup(groups, 1, 'indep', 'indep')
+        group_tmp = SourceGroup(groups, 'src_group', 'indep', 'indep')
         groups = [group_tmp]
 
     imtls = DictArray(imtls)
