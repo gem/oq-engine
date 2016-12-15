@@ -13,7 +13,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <gmf
             IMT="PGA"
-            ruptureId="trt=00~ses=0011~src=1~rup=706-01"
+            ruptureId="grp=00~ses=0011~src=1~rup=706-01"
             >
                 <node gmv="3.2905376E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
             </gmf>
@@ -24,7 +24,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <gmf
             IMT="PGA"
-            ruptureId="trt=00~ses=0328~src=1~rup=1121-01"
+            ruptureId="grp=00~ses=0328~src=1~rup=1121-01"
             >
                 <node gmv="4.0074384E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
             </gmf>
@@ -35,7 +35,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <gmf
             IMT="PGA"
-            ruptureId="trt=00~ses=0587~src=1~rup=723-01"
+            ruptureId="grp=00~ses=0587~src=1~rup=723-01"
             >
                 <node gmv="3.3172143E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
             </gmf>

@@ -22,7 +22,7 @@ import functools
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import CallableDict, AccumDict
+from openquake.baselib.general import CallableDict
 from openquake.risklib import utils, scientific, valid
 
 U32 = numpy.uint32
@@ -173,9 +173,9 @@ class Asset(object):
         """
         if loss_type == 'occupants':
             return self.values['occupants_' + str(time_event)]
-        try:
+        try:  # extract from the cache
             val = self._cost[loss_type]
-        except KeyError:
+        except KeyError:  # compute
             val = self.calc(loss_type, self.values, self.area, self.number)
             self._cost[loss_type] = val
         return val
@@ -211,6 +211,9 @@ class Asset(object):
             return self.values['occupants_' + str(time_event)]
         return self.calc(loss_type, self.retrofitteds,
                          self.area, self.number)
+
+    def __lt__(self, other):
+        return self.id < other.id
 
     def __repr__(self):
         return '<Asset %s>' % self.id
@@ -253,30 +256,12 @@ class RiskModel(object):
         return [lt for lt in self.loss_types
                 if self.risk_functions[lt].imt == imt]
 
-    def out_by_lr(self, imt, assets, hazard, epsgetter):
-        """
-        :param imt: restrict the risk functions to this IMT
-        :param assets: an array of assets of homogeneous taxonomy
-        :param hazard: a dictionary rlz -> hazard
-        :param epsgetter: a callable returning epsilons for the given eids
-        :returns: a dictionary (l, r) -> output
-        """
-        out_by_lr = AccumDict()
-        out_by_lr.assets = assets
-        loss_types = self.get_loss_types(imt)
-        for rlz in sorted(hazard):
-            haz = hazard[rlz]
-            if len(haz) == 0:
-                continue
-            r = rlz.ordinal
-            for loss_type in loss_types:
-                out = self(loss_type, assets, haz, epsgetter)
-                if out:  # can be None in scenario_risk with no valid values
-                    l = self.compositemodel.lti[loss_type]
-                    out.hid = r
-                    out.weight = rlz.weight
-                    out_by_lr[l, r] = out
-        return out_by_lr
+    def __toh5__(self):
+        risk_functions = {lt: func for lt, func in self.risk_functions.items()}
+        if hasattr(self, 'retro_functions'):
+            for lt, func in self.retro_functions.items():
+                risk_functions[lt + '_retrofitted'] = func
+        return risk_functions, {}
 
     def __repr__(self):
         return '<%s%s>' % (self.__class__.__name__, list(self.risk_functions))
@@ -391,8 +376,8 @@ class Classical(RiskModel):
         self.poes_disagg = poes_disagg
         self.insured_losses = insured_losses
         self.loss_ratios = {
-            lt: vf.mean_loss_ratios_with_steps(lrem_steps_per_interval)
-            for lt, vf in vulnerability_functions.items()}
+            lt: vf.mean_loss_ratios_with_steps(self.lrem_steps_per_interval)
+            for lt, vf in self.risk_functions.items()}
 
     def __call__(self, loss_type, assets, hazard_curve, _eps=None):
         """
@@ -439,7 +424,8 @@ class Classical(RiskModel):
             loss_maps=values * maps)
 
 
-@registry.add('event_based_risk', 'event_based', 'event_based_rupture')
+@registry.add('event_based_risk', 'event_based', 'event_based_rupture',
+              'ebrisk', 'ucerf_rupture', 'ucerf_risk')
 class ProbabilisticEventBased(RiskModel):
     """
     Implements the Probabilistic Event Based riskmodel
@@ -506,7 +492,7 @@ class ProbabilisticEventBased(RiskModel):
         :param assets:
            a list of assets on the same site and with the same taxonomy
         :param gmvs_eids:
-           a pair of arrays of E elements
+           a composite array of E elements with fields 'gmv' and 'eid'
         :param epsgetter:
            a callable returning the correct epsilons for the given gmvs
         :returns:
@@ -514,7 +500,7 @@ class ProbabilisticEventBased(RiskModel):
             `openquake.risklib.scientific.ProbabilisticEventBased.Output`
             instance.
         """
-        gmvs, eids = gmvs_eids
+        gmvs, eids = gmvs_eids['gmv'], gmvs_eids['eid']
         E = len(gmvs)
         I = self.insured_losses + 1
         N = len(assets)
@@ -550,7 +536,7 @@ class ClassicalBCR(RiskModel):
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions_orig
         self.retro_functions = vulnerability_functions_retro
-        self.assets = None  # set a __call__ time
+        self.assets = []  # set a __call__ time
         self.interest_rate = interest_rate
         self.asset_life_expectancy = asset_life_expectancy
         self.hazard_imtls = hazard_imtls
@@ -610,7 +596,7 @@ class Scenario(RiskModel):
         self.time_event = time_event
 
     def __call__(self, loss_type, assets, ground_motion_values, epsgetter):
-        epsilons = epsgetter()
+        epsilons = epsgetter(None, None)
         values = get_values(loss_type, assets, self.time_event)
         ok = ~numpy.isnan(values)
         if not ok.any():

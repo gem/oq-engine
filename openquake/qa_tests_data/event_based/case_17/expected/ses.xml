@@ -10,7 +10,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <rupture
             dip="90.0"
-            id="trt=01~ses=0001~src=2~rup=44-01"
+            id="grp=01~ses=0001~src=2~rup=44-01"
             magnitude="5.8"
             rake="0.0"
             strike="0.0"
@@ -25,7 +25,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="trt=01~ses=0001~src=2~rup=44-02"
+            id="grp=01~ses=0001~src=2~rup=44-02"
             magnitude="5.8"
             rake="0.0"
             strike="0.0"
@@ -40,7 +40,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="trt=01~ses=0001~src=2~rup=45-01"
+            id="grp=01~ses=0001~src=2~rup=45-01"
             magnitude="6.05"
             rake="0.0"
             strike="0.0"
@@ -55,7 +55,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="trt=01~ses=0001~src=2~rup=46-01"
+            id="grp=01~ses=0001~src=2~rup=46-01"
             magnitude="6.3"
             rake="0.0"
             strike="0.0"
@@ -70,7 +70,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="trt=01~ses=0001~src=2~rup=46-01~sample=1"
+            id="grp=01~ses=0001~src=2~rup=46-01~sample=1"
             magnitude="6.3"
             rake="0.0"
             strike="0.0"
@@ -85,7 +85,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="trt=01~ses=0001~src=2~rup=46-02~sample=1"
+            id="grp=01~ses=0001~src=2~rup=46-02~sample=1"
             magnitude="6.3"
             rake="0.0"
             strike="0.0"
@@ -105,7 +105,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <rupture
             dip="90.0"
-            id="trt=01~ses=0002~src=2~rup=44-01"
+            id="grp=01~ses=0002~src=2~rup=44-01"
             magnitude="5.8"
             rake="0.0"
             strike="0.0"
@@ -120,7 +120,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="trt=01~ses=0002~src=2~rup=44-01~sample=2"
+            id="grp=01~ses=0002~src=2~rup=44-01~sample=2"
             magnitude="5.8"
             rake="0.0"
             strike="0.0"
@@ -135,7 +135,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="trt=01~ses=0002~src=2~rup=44-01~sample=3"
+            id="grp=01~ses=0002~src=2~rup=44-01~sample=3"
             magnitude="5.8"
             rake="0.0"
             strike="0.0"
@@ -150,7 +150,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="trt=01~ses=0002~src=2~rup=44-02~sample=3"
+            id="grp=01~ses=0002~src=2~rup=44-02~sample=3"
             magnitude="5.8"
             rake="0.0"
             strike="0.0"
@@ -165,7 +165,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="trt=01~ses=0002~src=2~rup=45-01"
+            id="grp=01~ses=0002~src=2~rup=45-01"
             magnitude="6.05"
             rake="0.0"
             strike="0.0"
@@ -180,7 +180,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="trt=01~ses=0002~src=2~rup=45-01~sample=1"
+            id="grp=01~ses=0002~src=2~rup=45-01~sample=1"
             magnitude="6.05"
             rake="0.0"
             strike="0.0"
@@ -195,7 +195,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="trt=01~ses=0002~src=2~rup=45-02~sample=1"
+            id="grp=01~ses=0002~src=2~rup=45-02~sample=1"
             magnitude="6.05"
             rake="0.0"
             strike="0.0"
@@ -210,7 +210,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="trt=01~ses=0002~src=2~rup=46-01~sample=3"
+            id="grp=01~ses=0002~src=2~rup=46-01~sample=3"
             magnitude="6.3"
             rake="0.0"
             strike="0.0"
@@ -230,7 +230,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <rupture
             dip="90.0"
-            id="trt=01~ses=0003~src=2~rup=44-01"
+            id="grp=01~ses=0003~src=2~rup=44-01"
             magnitude="5.8"
             rake="0.0"
             strike="0.0"
@@ -245,7 +245,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="trt=01~ses=0003~src=2~rup=44-01~sample=2"
+            id="grp=01~ses=0003~src=2~rup=44-01~sample=2"
             magnitude="5.8"
             rake="0.0"
             strike="0.0"
@@ -260,7 +260,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="trt=01~ses=0003~src=2~rup=44-01~sample=3"
+            id="grp=01~ses=0003~src=2~rup=44-01~sample=3"
             magnitude="5.8"
             rake="0.0"
             strike="0.0"
@@ -275,7 +275,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="trt=01~ses=0003~src=2~rup=45-01~sample=1"
+            id="grp=01~ses=0003~src=2~rup=45-01~sample=1"
             magnitude="6.05"
             rake="0.0"
             strike="0.0"
@@ -290,7 +290,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="trt=01~ses=0003~src=2~rup=45-01~sample=3"
+            id="grp=01~ses=0003~src=2~rup=45-01~sample=3"
             magnitude="6.05"
             rake="0.0"
             strike="0.0"
@@ -305,7 +305,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="trt=01~ses=0003~src=2~rup=46-01"
+            id="grp=01~ses=0003~src=2~rup=46-01"
             magnitude="6.3"
             rake="0.0"
             strike="0.0"
@@ -320,7 +320,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="trt=01~ses=0003~src=2~rup=46-01~sample=2"
+            id="grp=01~ses=0003~src=2~rup=46-01~sample=2"
             magnitude="6.3"
             rake="0.0"
             strike="0.0"
@@ -335,7 +335,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="trt=01~ses=0003~src=2~rup=46-01~sample=3"
+            id="grp=01~ses=0003~src=2~rup=46-01~sample=3"
             magnitude="6.3"
             rake="0.0"
             strike="0.0"
@@ -350,7 +350,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="trt=01~ses=0003~src=2~rup=46-02~sample=3"
+            id="grp=01~ses=0003~src=2~rup=46-02~sample=3"
             magnitude="6.3"
             rake="0.0"
             strike="0.0"

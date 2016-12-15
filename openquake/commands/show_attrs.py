@@ -17,10 +17,12 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
-from openquake.commonlib import sap, datastore
+from openquake.baselib import sap
+from openquake.commonlib import datastore
 import h5py
 
 
+@sap.Script
 def show_attrs(key, calc_id=-1):
     """
     Show the attributes of a HDF5 dataset in the datastore.
@@ -38,6 +40,5 @@ def show_attrs(key, calc_id=-1):
     finally:
         ds.close()
 
-parser = sap.Parser(show_attrs)
-parser.arg('key', 'key of the datastore')
-parser.arg('calc_id', 'calculation ID', type=int)
+show_attrs.arg('key', 'key of the datastore')
+show_attrs.arg('calc_id', 'calculation ID', type=int)

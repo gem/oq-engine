@@ -1,28 +1,31 @@
 event based risk
 ================
 
-gem-tstation:/home/michele/ssd/calc_22577.hdf5 updated Tue May 31 15:37:04 2016
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_66967.hdf5 Wed Nov  9 08:14:16 2016
+engine_version                                 2.2.0-git54d01f4        
+hazardlib_version                              0.22.0-git173c60c       
+============================================== ========================
 
 num_sites = 7, sitecol = 1015 B
 
 Parameters
 ----------
-============================ ===============================
-calculation_mode             'event_based_risk'             
-number_of_logic_tree_samples 0                              
-maximum_distance             {'Active Shallow Crust': 200.0}
-investigation_time           10000.0                        
-ses_per_logic_tree_path      1                              
-truncation_level             3.0                            
-rupture_mesh_spacing         2.0                            
-complex_fault_mesh_spacing   2.0                            
-width_of_mfd_bin             0.1                            
-area_source_discretization   None                           
-random_seed                  24                             
-master_seed                  42                             
-avg_losses                   False                          
-engine_version               '2.0.0-git4fb4450'             
-============================ ===============================
+============================ ================================
+calculation_mode             'event_based_risk'              
+number_of_logic_tree_samples 0                               
+maximum_distance             {u'Active Shallow Crust': 200.0}
+investigation_time           10000.0                         
+ses_per_logic_tree_path      1                               
+truncation_level             3.0                             
+rupture_mesh_spacing         2.0                             
+complex_fault_mesh_spacing   2.0                             
+width_of_mfd_bin             0.1                             
+area_source_discretization   None                            
+random_seed                  24                              
+master_seed                  42                              
+avg_losses                   False                           
+============================ ================================
 
 Input files
 -----------
@@ -48,7 +51,7 @@ b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1
 Required parameters per tectonic region type
 --------------------------------------------
 ====== =================== ========= ========== ==========
-trt_id gsims               distances siteparams ruptparams
+grp_id gsims               distances siteparams ruptparams
 ====== =================== ========= ========== ==========
 0      BooreAtkinson2008() rjb       vs30       rake mag  
 ====== =================== ========= ========== ==========
@@ -63,23 +66,29 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ======
-source_model     trt_id trt                  num_sources eff_ruptures weight
-================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 1           265          482   
-================ ====== ==================== =========== ============ ======
+================ ====== ==================== =========== ============ ============
+source_model     grp_id trt                  num_sources eff_ruptures tot_ruptures
+================ ====== ==================== =========== ============ ============
+source_model.xml 0      Active Shallow Crust 1           265          482         
+================ ====== ==================== =========== ============ ============
 
 Informational data
 ------------------
 ====================================== ============
-event_based_risk_max_received_per_task 4,988       
-event_based_risk_num_tasks             22          
-event_based_risk_sent.assetcol         39,314      
-event_based_risk_sent.monitor          57,860      
-event_based_risk_sent.riskinput        390,467     
-event_based_risk_sent.riskmodel        32,758      
-event_based_risk_sent.rlzs_assoc       18,634      
-event_based_risk_tot_received          109,466     
+compute_ruptures_max_received_per_task 125,509     
+compute_ruptures_num_tasks             3           
+compute_ruptures_sent.gsims            279         
+compute_ruptures_sent.monitor          2,877       
+compute_ruptures_sent.sitecol          2,235       
+compute_ruptures_sent.sources          8,065       
+compute_ruptures_tot_received          351,461     
+hazard.input_weight                    482         
+hazard.n_imts                          1           
+hazard.n_levels                        1           
+hazard.n_realizations                  1           
+hazard.n_sites                         7           
+hazard.n_sources                       1           
+hazard.output_weight                   7.000       
 hostname                               gem-tstation
 require_epsilons                       1           
 ====================================== ============
@@ -92,21 +101,18 @@ Total number of events   392
 Rupture multiplicity     1.479
 ======================== =====
 
-Maximum memory allocated for the GMFs
--------------------------------------
-The largest GMF block is for src_group_id=0, contains 1 IMT(s), 1 realization(s)
-and has a size of 10.72 KB / num_tasks
-
 Estimated data transfer for the avglosses
 -----------------------------------------
-7 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 20 tasks = 1.09 KB
+7 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 50 tasks = 2.73 KB
 
 Exposure model
 --------------
-=========== =
-#assets     7
-#taxonomies 1
-=========== =
+=============== ========
+#assets         7       
+#taxonomies     1       
+deductibile     absolute
+insurance_limit absolute
+=============== ========
 
 ======== ===== ====== === === ========= ==========
 taxonomy mean  stddev min max num_sites num_assets
@@ -115,52 +121,40 @@ tax1     1.000 0.0    1   1   7         7
 
 Slowest sources
 ---------------
-============ ========= ================= ====== ========= =========== ========== =========
-src_group_id source_id source_class      weight split_num filter_time split_time calc_time
-============ ========= ================= ====== ========= =========== ========== =========
-0            1         SimpleFaultSource 482    15        0.002       0.037      0.680    
-============ ========= ================= ====== ========= =========== ========== =========
+====== ========= ================= ============ ========= ========= =========
+grp_id source_id source_class      num_ruptures calc_time num_sites num_split
+====== ========= ================= ============ ========= ========= =========
+0      1         SimpleFaultSource 482          0.0       7         0        
+====== ========= ================= ============ ========= ========= =========
 
 Computation times by source typology
 ------------------------------------
-================= =========== ========== ========= ======
-source_class      filter_time split_time calc_time counts
-================= =========== ========== ========= ======
-SimpleFaultSource 0.002       0.037      0.680     1     
-================= =========== ========== ========= ======
+================= ========= ======
+source_class      calc_time counts
+================= ========= ======
+SimpleFaultSource 0.0       1     
+================= ========= ======
 
 Information about the tasks
 ---------------------------
-========================== ===== ====== ===== ===== =========
-measurement                mean  stddev min   max   num_tasks
-compute_ruptures.time_sec  0.049 0.027  0.019 0.105 14       
-compute_ruptures.memory_mb 0.0   0.0    0.0   0.0   14       
-event_based_risk.time_sec  0.045 0.019  0.008 0.084 22       
-event_based_risk.memory_mb 0.045 0.154  0.0   0.660 22       
-========================== ===== ====== ===== ===== =========
+================== ===== ====== ===== ===== =========
+operation-duration mean  stddev min   max   num_tasks
+compute_ruptures   0.284 0.031  0.249 0.308 3        
+================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
-============================== ========= ========= ======
-operation                      time_sec  memory_mb counts
-============================== ========= ========= ======
-total event_based_risk         0.999     0.660     22    
-building hazard                0.915     0.0       22    
-total compute_ruptures         0.685     0.0       14    
-filtering ruptures             0.511     0.0       265   
-make contexts                  0.470     0.0       265   
-compute poes                   0.435     0.0       265   
-saving ruptures                0.210     0.0       1     
-building riskinputs            0.073     0.0       1     
-managing sources               0.066     0.0       1     
-computing riskmodel            0.063     0.0       154   
-splitting sources              0.037     0.0       1     
-aggregate losses               0.021     0.0       154   
-reading composite source model 0.008     0.0       1     
-reading exposure               0.007     0.0       1     
-store source_info              0.007     0.0       1     
-saving event loss tables       0.006     0.0       22    
-aggregate curves               0.004     0.0       14    
-filtering sources              0.002     0.0       1     
-reading site collection        8.106E-06 0.0       1     
-============================== ========= ========= ======
+================================ ========= ========= ======
+operation                        time_sec  memory_mb counts
+================================ ========= ========= ======
+total compute_ruptures           0.852     3.312     3     
+filtering ruptures               0.559     0.0       265   
+managing sources                 0.081     0.0       1     
+split/filter heavy sources       0.079     0.0       1     
+saving ruptures                  0.011     0.0       3     
+reading composite source model   0.009     0.0       1     
+reading exposure                 0.005     0.0       1     
+filtering composite source model 0.003     0.0       1     
+store source_info                7.241E-04 0.0       1     
+reading site collection          9.060E-06 0.0       1     
+================================ ========= ========= ======

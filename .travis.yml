@@ -3,23 +3,21 @@ sudo: false
 language: python
 
 python:
- - "2.7"
+ - "3.5"
 
 addons:
   apt:
     packages:
-    - parallel
+    - git
 
 install:
-  - pip install futures
-  - pip install http://ftp.openquake.org/python-wheels/numpy-1.8.2-cp27-none-linux_x86_64.whl
-  - pip install http://ftp.openquake.org/python-wheels/scipy-0.16.0-cp27-none-linux_x86_64.whl
-  - pip install http://ftp.openquake.org/python-wheels/Cython-0.22.1-cp27-none-linux_x86_64.whl
-  - pip install http://ftp.openquake.org/python-wheels/Shapely-1.5.9-py2-none-any.whl
-  - pip install http://ftp.openquake.org/python-wheels/h5py-2.2.1-cp27-none-linux_x86_64.whl
-  - pip install https://github.com/gem/oq-hazardlib/archive/master.zip
-  - python setup.py install
+  - pip install -r requirements-py35-linux64.txt
+  - python setup.py develop
+  - if [ "$(git ls-remote --heads https://github.com/gem/oq-hazardlib.git ${TRAVIS_BRANCH})" != "" ]; then BRANCH=$TRAVIS_BRANCH; else BRANCH='master'; fi; git clone -b ${BRANCH} --depth=1 https://github.com/gem/oq-hazardlib.git && echo "Running on oq-hazardlib/${BRANCH}"
 
+# We must set the PYTHONPATH to the root oq-engine (insted of oq-engine/openquake) because otherwise
+# the full 'openquake' namespace is overwritten and then hazardlib and baselib are not found
 script:
-  - PYTHONPATH=. nosetests -vsx -a'!slow' --with-xunit --nologcapture --with-doctest
-  - # cd bin; python slowtests ../nosetests.xml
+  - PYTHONPATH=.:$(pwd)/oq-hazardlib nosetests --with-doctest -vsx -a'!slow'
+  - cat /tmp/webui*
+  - PYTHONPATH=.:$(pwd)/oq-hazardlib bin/oq info -r demos/hazard

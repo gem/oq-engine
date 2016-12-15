@@ -25,32 +25,26 @@ import os
 import sys
 import json
 import time
+import getpass
 import unittest
 import subprocess
 import tempfile
-import requests
 import django
+import requests
 from openquake.baselib.general import writetmp
-from openquake.engine import logs, config
-from openquake.server import dbserver
+from openquake.engine.export import core
+from openquake.server.db import actions
+from openquake.server.manage import db
 
 if requests.__version__ < '1.0.0':
     requests.Response.text = property(lambda self: self.content)
-if hasattr(django, 'setup'):
-    django.setup()  # for Django >= 1.7
 
 
 class EngineServerTestCase(unittest.TestCase):
     hostport = 'localhost:8761'
-    dbserverport = '2000'
     datadir = os.path.join(os.path.dirname(__file__), 'data')
 
     # general utilities
-
-    @classmethod
-    def assert_ok(cls, resp):
-        if not resp.text:
-            sys.stderr.write(open(cls.errfname).read())
 
     @classmethod
     def post(cls, path, data=None, **params):
@@ -67,7 +61,9 @@ class EngineServerTestCase(unittest.TestCase):
     def get(cls, path, **params):
         resp = requests.get('http://%s/v1/calc/%s' % (cls.hostport, path),
                             params=params)
-        cls.assert_ok(resp)
+        if not resp.text:
+            sys.stderr.write(open(cls.errfname).read())
+            return {}
         try:
             return json.loads(resp.text)
         except:
@@ -79,7 +75,6 @@ class EngineServerTestCase(unittest.TestCase):
     def get_text(cls, path, **params):
         resp = requests.get('http://%s/v1/calc/%s' % (cls.hostport, path),
                             params=params)
-        cls.assert_ok(resp)
         return resp.text
 
     @classmethod
@@ -92,7 +87,7 @@ class EngineServerTestCase(unittest.TestCase):
             time.sleep(1)
 
     def postzip(self, archive):
-        with open(os.path.join(self.datadir, archive)) as a:
+        with open(os.path.join(self.datadir, archive), 'rb') as a:
             resp = self.post('run', {}, files=dict(archive=a))
         try:
             js = json.loads(resp.text)
@@ -111,8 +106,8 @@ class EngineServerTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if django.get_version() < '1.5':
-            # the WebUI is unsupported
-            raise unittest.SkipTest
+            # Django too old
+            raise unittest.SkipTest('webui tests do not run with Diango < 1.5')
 
         cls.job_ids = []
         env = os.environ.copy()
@@ -120,32 +115,18 @@ class EngineServerTestCase(unittest.TestCase):
         # let's impersonate the user openquake, the one running the WebUI:
         # we need to set LOGNAME on Linux and USERNAME on Windows
         env['LOGNAME'] = env['USERNAME'] = 'openquake'
-        fh, cls.tmpdb = tempfile.mkstemp()
-        sys.stderr.write('sqlite3 %s\n' % cls.tmpdb)
-        os.close(fh)
-        tmpdb = '%s:%s' % (cls.tmpdb, cls.dbserverport)
-        cls.fd, cls.errfname = tempfile.mkstemp()
+        cls.fd, cls.errfname = tempfile.mkstemp(prefix='webui')
         print('Errors saved in %s' % cls.errfname, file=sys.stderr)
-        config.DBS_ADDRESS = ('localhost', int(cls.dbserverport))
-        dbstatus = dbserver.get_status()
-        if dbstatus == 'running':
-            # some test broke before without stopping the dbserver
-            logs.dbcmd('stop')
-        cls.dbs = subprocess.Popen(
-            [sys.executable, '-m', 'openquake.server.dbserver',
-             tmpdb, cls.errfname], env=env, stderr=cls.fd)
         cls.proc = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
-             cls.hostport, '--noreload', '--nothreading', 'tmpdb=' + tmpdb],
+             cls.hostport, '--noreload', '--nothreading'],
             env=env, stderr=cls.fd)  # redirect the server logs
         time.sleep(5)
 
     @classmethod
     def tearDownClass(cls):
         cls.wait()
-        cls.get('list', job_type='hazard', relevant='true')
         cls.proc.kill()
-        cls.dbs.kill()
         os.close(cls.fd)
 
     # tests
@@ -163,17 +144,34 @@ class EngineServerTestCase(unittest.TestCase):
         results = self.get('%s/results' % job_id)
         self.assertGreater(len(results), 0)
         for res in results:
-            if res['type'] == 'gmfs':
-                continue  # exporting the GMFs would be too slow
-            etype = res['outtypes'][0]  # get the first export type
-            text = self.get_text(
-                'result/%s' % res['id'], export_type=etype)
-            self.assertGreater(len(text), 0)
+            for etype in res['outtypes']:  # test all export types
+                text = self.get_text(
+                    'result/%s' % res['id'], export_type=etype)
+                print('downloading result/%s' % res['id'], res['type'], etype)
+                self.assertGreater(len(text), 0)
+
+        # test no filtering in actions.get_calcs
+        all_jobs = self.get('list')
+        self.assertGreater(len(all_jobs), 0)
+
+        # there is some logic in `core.export_from_db` that it is only
+        # exercised when the export fails
+        datadir, dskeys = actions.get_results(db, job_id)
+        # try to export a non-existing output
+        with self.assertRaises(core.DataStoreExportError) as ctx:
+            core.export_from_db(('XXX', 'csv'), job_id, datadir, '/tmp')
+        self.assertIn('Could not export XXX in csv', str(ctx.exception))
 
     def test_err_1(self):
         # the rupture XML file has a syntax error
         job_id = self.postzip('archive_err_1.zip')
         self.wait()
+
+        # download the datastore, even if incomplete
+        resp = requests.get('http://%s/v1/calc/%s/datastore'
+                            % (self.hostport, job_id))
+        self.assertGreater(len(resp.content), 1000)
+
         tb = self.get('%s/traceback' % job_id)
         if not tb:
             sys.stderr.write('Empty traceback, please check!\n')
@@ -182,6 +180,7 @@ class EngineServerTestCase(unittest.TestCase):
         # make sure job_id is no more in the list of relevant jobs
         job_ids = [job['id'] for job in self.get('list', relevant=True)]
         self.assertFalse(job_id in job_ids)
+        # NB: the job is invisible but still there
 
     def test_err_2(self):
         # the file logic-tree-source-model.xml is missing
@@ -241,5 +240,3 @@ class EngineServerTestCase(unittest.TestCase):
         resp = self.post_nrml(data)
         self.assertEqual(resp.status_code, 400)
         self.assertEqual(resp.text, 'Please provide the "xml_text" parameter')
-
-    # TODO: add more tests for error situations

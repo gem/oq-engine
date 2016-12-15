@@ -23,12 +23,10 @@ import cProfile
 import pstats
 import io
 
-from openquake.baselib import performance, general
+from openquake.baselib import performance, general, sap
 from openquake.risklib import valid
-from openquake.commonlib import sap, readinput, datastore, oqvalidation, views
-from openquake.commonlib.concurrent_futures_process_mpatch import (
-    concurrent_futures_process_monkeypatch)
-from openquake.calculators import base
+from openquake.commonlib import readinput, datastore, oqvalidation
+from openquake.calculators import base, views
 CT = oqvalidation.OqParam.concurrent_tasks.default
 
 calc_path = None  # set only when the flag --slowest is given
@@ -65,9 +63,9 @@ def get_pstats(pstatfile, n):
     # 1      33.502  commands/run.py:77(_run)
     # 1      33.483  calculators/base.py:110(run)
     # 1      25.166  calculators/classical.py:115(execute)
-    # 1      25.104  commonlib/parallel.py:249(apply_reduce)
+    # 1      25.104  baselib.parallel.py:249(apply_reduce)
     # 1      25.099  calculators/classical.py:41(classical)
-    # 1      25.099  hazardlib/calc/hazard_curve.py:164(hazard_curves_per_trt)
+    # 1      25.099  hazardlib/calc/hazard_curve.py:164(pmap_from_grp)
     return views.rst_table(rows, header='ncalls cumtime path'.split())
 
 
@@ -93,8 +91,7 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
     logging.basicConfig(level=getattr(logging, loglevel.upper()))
     job_inis = job_ini.split(',')
     assert len(job_inis) in (1, 2), job_inis
-    monitor = performance.Monitor(
-        'total runtime', measuremem=True)
+    monitor = performance.Monitor('complete runtime', measuremem=True)
     if len(job_inis) == 1:  # run hazard or risk
         if hc:
             hc_id = hc[0]
@@ -129,12 +126,12 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
     return calc
 
 
+@sap.Script
 def run(job_ini, slowest, hc, param, concurrent_tasks=CT, exports='',
         loglevel='info', pdb=None):
     """
     Run a calculation.
     """
-    concurrent_futures_process_monkeypatch()
     params = oqvalidation.OqParam.check(
         dict(p.split('=', 1) for p in param or ()))
     if slowest:
@@ -149,17 +146,16 @@ def run(job_ini, slowest, hc, param, concurrent_tasks=CT, exports='',
     else:
         _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params)
 
-parser = sap.Parser(run)
-parser.arg('job_ini', 'calculation configuration file '
-           '(or files, comma-separated)')
-parser.opt('slowest', 'profile and show the slowest operations', type=int)
-parser.opt('hc', 'previous calculation ID', type=valid.hazard_id)
-parser.opt('param', 'override parameter with the syntax NAME=VALUE ...',
-           nargs='+')
-parser.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
-           type=int)
-parser.opt('exports', 'export formats as a comma-separated string',
-           type=valid.export_formats)
-parser.opt('loglevel', 'logging level',
-           choices='debug info warn error critical'.split())
-parser.flg('pdb', 'enable post mortem debugging', '-d')
+run.arg('job_ini', 'calculation configuration file '
+        '(or files, comma-separated)')
+run.opt('slowest', 'profile and show the slowest operations', type=int)
+run.opt('hc', 'previous calculation ID', type=valid.hazard_id)
+run.opt('param', 'override parameter with the syntax NAME=VALUE ...',
+        nargs='+')
+run.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
+        type=int)
+run.opt('exports', 'export formats as a comma-separated string',
+        type=valid.export_formats)
+run.opt('loglevel', 'logging level',
+        choices='debug info warn error critical'.split())
+run.flg('pdb', 'enable post mortem debugging', '-d')
