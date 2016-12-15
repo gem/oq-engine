@@ -155,10 +155,10 @@ def export_avg_losses_stats(ekey, dstore):
     :param dstore: datastore object
     """
     oq = dstore['oqparam']
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    rlzs = dstore['realizations']
     dt = oq.loss_dt()
     stats = scientific.SimpleStats(rlzs, oq.quantile_loss_curves)
-    avg_losses = stats.compute('avg_losses', dstore)  # sequentially
+    avg_losses = stats.compute(dstore['avg_losses-rlzs'])  # sequentially
     assets = get_assets(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for i, quantile in enumerate(stats.names):
@@ -689,7 +689,7 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
     return sorted(fnames)
 
 
-# used by event_based_risk and classical_risk
+# used by classical_risk
 @export.add(('loss_maps-stats', 'xml'), ('loss_maps-stats', 'geojson'))
 def export_loss_maps_stats_xml_geojson(ekey, dstore):
     loss_maps = dstore[ekey[0]]
@@ -861,9 +861,8 @@ def export_agg_curve_rlzs(ekey, dstore):
     fnames = []
     for writer, (loss_type, poe, r, ins) in _gen_writers(
             dstore, risk_writers.AggregateLossCurveXMLWriter, ekey[0]):
-        rec = agg_curve[loss_type][r]
-        curve = AggCurve(rec['losses'][ins], rec['poes'][ins],
-                         rec['avg'][ins], None)
+        rec = agg_curve[loss_type][ins, r]
+        curve = AggCurve(rec['losses'], rec['poes'], rec['avg'], None)
         writer.serialize(curve)
         fnames.append(writer._dest)
     return sorted(fnames)
@@ -873,11 +872,10 @@ def export_agg_curve_rlzs(ekey, dstore):
 @export.add(('agg_curve-stats', 'xml'))
 def export_agg_curve_stats(ekey, dstore):
     oq = dstore['oqparam']
+    rlzs = dstore['realizations']
     riskmodel = riskinput.read_composite_risk_model(dstore)
     cr = {cb.loss_type: cb.curve_resolution for cb in riskmodel.curve_builders}
-    sb = scientific.StatsBuilder(
-        oq.quantile_loss_curves, oq.conditional_loss_poes,
-        scientific.normalize_curves_eb, oq.insured_losses)
+    sb = scientific.SimpleStats(rlzs, oq.quantile_loss_curves)
     loss_curve_dt, _ = scientific.build_loss_dtypes(
         cr, oq.conditional_loss_poes, oq.insured_losses)
     agg_curve = sb.build_agg_curve_stats(loss_curve_dt, dstore)

@@ -205,6 +205,14 @@ class EbrPostCalculator(base.RiskCalculator):
                 rcurves[ltypes[l]][aids, r] = curves
             self.datastore['rcurves-rlzs'] = rcurves
 
+        # build rcurves-stats (sequentially)
+        # this is a fundamental output, being used to compute loss_maps-stats
+        if R > 1:
+            with self.monitor('computing rcurves-stats'):
+                ss = scientific.SimpleStats(self.datastore['realizations'],
+                                            self.oqparam.quantile_loss_curves)
+                self.datastore['rcurves-stats'] = ss.compute(rcurves)
+
         # build an aggregate loss curve per realization
         if 'agg_loss_table' in self.datastore:
             with self.monitor('building agg_curve'):
@@ -226,13 +234,14 @@ class EbrPostCalculator(base.RiskCalculator):
             cr, oq.conditional_loss_poes)
         lts = self.riskmodel.loss_types
         cb_inputs = self.cb_inputs('agg_loss_table')
+        I = oq.insured_losses + 1
         R = len(self.rlzs_assoc.realizations)
         result = parallel.apply(
             build_agg_curve, (cb_inputs, self.monitor('')),
             concurrent_tasks=self.oqparam.concurrent_tasks).reduce()
-        agg_curve = numpy.zeros((R, oq.insured_losses + 1), loss_curve_dt)
-        for l, r,  i in result:
-            agg_curve[lts[l]][r, i] = result[l, r, i]
+        agg_curve = numpy.zeros((I, R), loss_curve_dt)
+        for l, r, i in result:
+            agg_curve[lts[l]][i, r] = result[l, r, i]
         self.datastore['agg_curve-rlzs'] = agg_curve
 
 
