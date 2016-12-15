@@ -21,7 +21,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.source.base import SourceGroup, SourceGroupCollection
+from openquake.hazardlib.source.base import SourceGroup
 from openquake.hazardlib.geo import Polygon, Point, RectangularMesh
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.site import \
@@ -198,26 +198,3 @@ class SeismicSourceGroupTestCase(unittest.TestCase):
     def test_wrong_label(self):
         self.assertRaises(ValueError, SourceGroup, [self.source], 'name',
                           'aaaa', 'indep', None)
-
-
-class SeismicSourceGroupCollectionTestCase(unittest.TestCase):
-
-    def setUp(self):
-        # Create Source Group
-        self.source_class = FakeSource
-        mfd = EvenlyDiscretizedMFD(min_mag=3, bin_width=1,
-                                   occurrence_rates=[5, 6, 7])
-        source = FakeSource('source_id', 'name', const.TRT.VOLCANIC,
-                            mfd=mfd, rupture_mesh_spacing=2,
-                            magnitude_scaling_relationship=PeerMSR(),
-                            rupture_aspect_ratio=1,
-                            temporal_occurrence_model=PoissonTOM(50.))
-        self.source_group = SourceGroup([source], 'sourcegroup')
-
-    def test_init(self):
-        coll = SourceGroupCollection([self.source_group])
-        assert(len(coll.grp_list) == 1)
-
-    def test_wrong_label(self):
-        self.assertRaises(ValueError, SourceGroup, [self.source_group],
-                          'name', 'aaaa')
