@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-import sys
+import re
 import copy
 import math
 import logging
@@ -28,24 +28,17 @@ import random
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import raise_, decode
-from openquake.baselib.general import (
-    AccumDict, groupby, block_splitter, group_array)
-from openquake.hazardlib.site import Tile
-from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.risklib import valid
-from openquake.commonlib import logictree, sourceconverter, parallel
+from openquake.baselib.python3compat import decode
+from openquake.baselib.general import groupby, group_array
+from openquake.commonlib import logictree, sourceconverter, InvalidFile
 from openquake.commonlib import nrml, node
 
+MAXWEIGHT = 200  # tuned by M. Simionato
 MAX_INT = 2 ** 31 - 1
 U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
-
-
-class DuplicatedID(Exception):
-    """Raised when two sources with the same ID are found in a source model"""
 
 
 class LtRealization(object):
@@ -55,7 +48,7 @@ class LtRealization(object):
     """
     def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight, sampleid):
         self.ordinal = ordinal
-        self.sm_lt_path = sm_lt_path
+        self.sm_lt_path = tuple(sm_lt_path)
         self.gsim_rlz = gsim_rlz
         self.weight = weight
         self.sampleid = sampleid
@@ -109,7 +102,8 @@ class SourceModel(object):
         Return an empty copy of the source model, i.e. without sources,
         but with the proper attributes for each SourceGroup contained within.
         """
-        src_groups = [SourceGroup(sg.trt, [], sg.min_mag, sg.max_mag, sg.id)
+        src_groups = [sourceconverter.SourceGroup(
+            sg.trt, [], sg.min_mag, sg.max_mag, sg.id)
                       for sg in self.src_groups]
         return self.__class__(self.name, self.weight, self.path, src_groups,
                               self.num_gsim_paths, self.ordinal, self.samples)
@@ -125,107 +119,6 @@ def capitalize(words):
     return ' '.join(w.capitalize() for w in words.split(' '))
 
 
-class SourceGroup(collections.Sequence):
-    """
-    A container for the following parameters:
-
-    :param str trt:
-        the tectonic region type all the sources belong to
-    :param list sources:
-        a list of hazardlib source objects
-    :param min_mag:
-        the minimum magnitude among the given sources
-    :param max_mag:
-        the maximum magnitude among the given sources
-    :param gsims:
-        the GSIMs associated to tectonic region type
-    :param id:
-        an optional numeric ID (default None) useful to associate
-        the model to a database object
-    """
-    @classmethod
-    def collect(cls, sources):
-        """
-        :param sources: dictionaries with a key 'tectonicRegion'
-        :returns: an ordered list of SourceGroup instances
-        """
-        source_stats_dict = {}
-        for src in sources:
-            trt = src['tectonicRegion']
-            if trt not in source_stats_dict:
-                source_stats_dict[trt] = SourceGroup(trt)
-            sg = source_stats_dict[trt]
-            if not sg.sources:
-                # we append just one source per TRSGodel, so that
-                # the memory occupation is insignificant
-                sg.sources.append(src)
-
-        # return SourceGroups, ordered by TRT string
-        return sorted(source_stats_dict.values())
-
-    def __init__(self, trt, sources=None,
-                 min_mag=None, max_mag=None, id=0, eff_ruptures=-1):
-        self.trt = trt
-        self.sources = sources or []
-        self.min_mag = min_mag
-        self.max_mag = max_mag
-        self.id = id
-        for src in self.sources:
-            self.update(src)
-        self.source_model = None  # to be set later, in CompositionInfo
-        self.weight = 1
-        self.eff_ruptures = eff_ruptures  # set later nby get_rlzs_assoc
-
-    def tot_ruptures(self):
-        return sum(src.num_ruptures for src in self.sources)
-
-    def update(self, src):
-        """
-        Update the attributes sources, min_mag, max_mag
-        according to the given source.
-
-        :param src:
-            an instance of :class:
-            `openquake.hazardlib.source.base.BaseSeismicSource`
-        """
-        assert src.tectonic_region_type == self.trt, (
-            src.tectonic_region_type, self.trt)
-        self.sources.append(src)
-        min_mag, max_mag = src.get_min_max_mag()
-        prev_min_mag = self.min_mag
-        if prev_min_mag is None or min_mag < prev_min_mag:
-            self.min_mag = min_mag
-        prev_max_mag = self.max_mag
-        if prev_max_mag is None or max_mag > prev_max_mag:
-            self.max_mag = max_mag
-
-    def __repr__(self):
-        return '<%s #%d %s, %d source(s), %d effective rupture(s)>' % (
-            self.__class__.__name__, self.id, self.trt,
-            len(self.sources), self.eff_ruptures)
-
-    def __lt__(self, other):
-        """
-        Make sure there is a precise ordering of SourceGroup objects.
-        Objects with less sources are put first; in case the number
-        of sources is the same, use lexicographic ordering on the trts
-        """
-        num_sources = len(self.sources)
-        other_sources = len(other.sources)
-        if num_sources == other_sources:
-            return self.trt < other.trt
-        return num_sources < other_sources
-
-    def __getitem__(self, i):
-        return self.sources[i]
-
-    def __iter__(self):
-        return iter(self.sources)
-
-    def __len__(self):
-        return len(self.sources)
-
-
 class SourceModelParser(object):
     """
     A source model parser featuring a cache.
@@ -235,7 +128,7 @@ class SourceModelParser(object):
     """
     def __init__(self, converter):
         self.converter = converter
-        self.sources = {}  # cache fname -> sources
+        self.groups = {}  # cache fname -> groups
         self.fname_hits = collections.Counter()  # fname -> number of calls
 
     def parse_src_groups(self, fname, apply_uncertainties=None):
@@ -246,57 +139,29 @@ class SourceModelParser(object):
             a function modifying the sources (or None)
         """
         try:
-            sources = self.sources[fname]
+            groups = self.groups[fname]
         except KeyError:
-            sources = self.sources[fname] = self.parse_sources(fname)
+            groups = self.groups[fname] = self.parse_groups(fname)
         # NB: deepcopy is *essential* here
-        sources = [copy.deepcopy(src) for src in sources]
-        for src in sources:
-            if apply_uncertainties:
-                apply_uncertainties(src)
-                src.num_ruptures = src.count_ruptures()
+        groups = [copy.deepcopy(g) for g in groups]
+        for group in groups:
+            for src in group:
+                if apply_uncertainties:
+                    apply_uncertainties(src)
+                    src.num_ruptures = src.count_ruptures()
         self.fname_hits[fname] += 1
+        return groups
 
-        # build ordered SourceGroups
-        trts = {}
-        for src in sources:
-            trt = src.tectonic_region_type
-            if trt not in trts:
-                trts[trt] = SourceGroup(trt)
-            trts[trt].update(src)
-        return sorted(trts.values())
-
-    def parse_sources(self, fname):
+    def parse_groups(self, fname):
         """
-        Parse all the sources and return them ordered by tectonic region type.
+        Parse all the groups and return them ordered by number of sources.
         It does not count the ruptures, so it is relatively fast.
 
         :param fname:
             the full pathname of the source model file
         """
-        sources = []
-        source_ids = set()
-        self.converter.fname = fname
-        src_nodes = nrml.parse(fname).nodes
-        for no, src_node in enumerate(src_nodes, 1):
-            src = self.converter.convert_node(src_node)
-            if not hasattr(src, 'source_id'):  # not a source
-                continue
-            elif src.source_id in source_ids:
-                raise DuplicatedID(
-                    'The source ID %s is duplicated!' % src.source_id)
-            sources.append(src)
-            source_ids.add(src.source_id)
-            if no % 10000 == 0:  # log every 10,000 sources parsed
-                logging.info('Parsed %d sources from %s', no, fname)
-        if no % 10000 != 0:
-            logging.info('Parsed %d sources from %s', no, fname)
-        return sorted(sources, key=operator.attrgetter('tectonic_region_type'))
+        return nrml.parse(fname, self.converter)
 
-
-def agg_prob(acc, prob):
-    """Aggregation function for probabilities"""
-    return 1. - (1. - acc) * (1. - prob)
 
 
 class RlzsAssoc(collections.Mapping):
@@ -305,7 +170,7 @@ class RlzsAssoc(collections.Mapping):
     but only via the method :meth:
     `openquake.commonlib.source.CompositeSourceModel.get_rlzs_assoc`.
 
-    :attr realizations: list of LtRealization objects
+    :attr realizations: list of :class:`LtRealization` objects
     :attr gsim_by_trt: list of dictionaries {trt: gsim}
     :attr rlzs_assoc: dictionary {src_group_id, gsim: rlzs}
     :attr rlzs_by_smodel: list of lists of realizations
@@ -329,8 +194,8 @@ class RlzsAssoc(collections.Mapping):
         self.num_samples = csm_info.num_samples
         self.rlzs_assoc = collections.defaultdict(list)
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
-        self.rlzs_by_smodel = [[] for _ in range(len(csm_info.source_models))]
-        self.gsims_by_trt_id = {}
+        self.rlzs_by_smodel = {sm.ordinal: [] for sm in csm_info.source_models}
+        self.gsims_by_grp_id = {}
         self.sm_ids = {}
         self.samples = {}
         for sm in csm_info.source_models:
@@ -342,47 +207,50 @@ class RlzsAssoc(collections.Mapping):
         """
         Finalize the initialization of the RlzsAssoc object by setting
         the (reduced) weights of the realizations and the attribute
-        gsims_by_trt_id.
+        gsims_by_grp_id.
         """
         if self.num_samples:
-            assert len(self.realizations) == self.num_samples
+            assert len(self.realizations) == self.num_samples, (
+                len(self.realizations), self.num_samples)
             for rlz in self.realizations:
                 rlz.weight = 1. / self.num_samples
         else:
             tot_weight = sum(rlz.weight for rlz in self.realizations)
             if tot_weight == 0:
                 raise ValueError('All realizations have zero weight??')
-            elif abs(tot_weight - 1) > 1E-12:  # allow for rounding errors
-                logging.warn('Some source models are not contributing, '
-                             'weights are being rescaled')
-            for rlz in self.realizations:
-                rlz.weight = rlz.weight / tot_weight
+            elif abs(tot_weight - 1) > 1E-8:
+                # this may happen for rounding errors or because of the
+                # logic tree reduction; we ensure the sum of the weights is 1
+                for rlz in self.realizations:
+                    rlz.weight = rlz.weight / tot_weight
 
-        self.gsims_by_trt_id = groupby(
+        self.gsims_by_grp_id = groupby(
             self.rlzs_assoc, operator.itemgetter(0),
-            lambda group: sorted(gsim for trt_id, gsim in group))
+            lambda group: sorted(gsim for grp_id, gsim in group))
 
     @property
     def realizations(self):
         """Flat list with all the realizations"""
-        return sum(self.rlzs_by_smodel, [])
+        return sum(self.rlzs_by_smodel.values(), [])
 
-    def get_rlzs_by_gsim(self, trt_id):
+    def get_rlz(self, rlzstr):
         """
-        Returns a dictionary gsim -> rlzs
+        Get a Realization instance for a string of the form 'rlz-\d+'
         """
-        return {gsim: self[trt_id, str(gsim)]
-                for gsim in self.gsims_by_trt_id[trt_id]}
+        mo = re.match('rlz-(\d+)', rlzstr)
+        if not mo:
+            return
+        return self.realizations[int(mo.group(1))]
 
-    def get_rlzs_by_trt_id(self):
+    def get_rlzs_by_grp_id(self):
         """
-        Returns a dictionary trt_id > [sorted rlzs]
+        Returns a dictionary grp_id > [sorted rlzs]
         """
-        rlzs_by_trt_id = collections.defaultdict(set)
-        for (trt_id, gsim), rlzs in self.rlzs_assoc.items():
-            rlzs_by_trt_id[trt_id].update(rlzs)
-        return {trt_id: sorted(rlzs)
-                for trt_id, rlzs in rlzs_by_trt_id.items()}
+        rlzs_by_grp_id = collections.defaultdict(set)
+        for (grp_id, gsim), rlzs in self.rlzs_assoc.items():
+            rlzs_by_grp_id[grp_id].update(rlzs)
+        return {grp_id: sorted(rlzs)
+                for grp_id, rlzs in rlzs_by_grp_id.items()}
 
     def _add_realizations(self, idx, lt_model, gsim_lt, gsim_rlzs):
         trts = gsim_lt.tectonic_region_types
@@ -422,71 +290,6 @@ class RlzsAssoc(collections.Mapping):
         assoc._init()
         return assoc
 
-    # used in classical and event_based calculators
-    def combine_curves(self, results):
-        """
-        :param results: dictionary (src_group_id, gsim) -> curves
-        :returns: a dictionary rlz -> aggregate curves
-        """
-        acc = {rlz: ProbabilityMap() for rlz in self.realizations}
-        for key in results:
-            for rlz in self.rlzs_assoc[key]:
-                acc[rlz] |= results[key]
-        return acc
-
-    # used in riskinput
-    def combine(self, results, agg=agg_prob):
-        """
-        :param results: a dictionary (src_group_id, gsim) -> floats
-        :param agg: an aggregation function
-        :returns: a dictionary rlz -> aggregated floats
-
-        Example: a case with tectonic region type T1 with GSIMS A, B, C
-        and tectonic region type T2 with GSIMS D, E.
-
-        >> assoc = RlzsAssoc(CompositionInfo([], []))
-        >> assoc.rlzs_assoc = {
-        ... ('T1', 'A'): ['r0', 'r1'],
-        ... ('T1', 'B'): ['r2', 'r3'],
-        ... ('T1', 'C'): ['r4', 'r5'],
-        ... ('T2', 'D'): ['r0', 'r2', 'r4'],
-        ... ('T2', 'E'): ['r1', 'r3', 'r5']}
-        ...
-        >> results = {
-        ... ('T1', 'A'): 0.01,
-        ... ('T1', 'B'): 0.02,
-        ... ('T1', 'C'): 0.03,
-        ... ('T2', 'D'): 0.04,
-        ... ('T2', 'E'): 0.05,}
-        ...
-        >> combinations = assoc.combine(results, operator.add)
-        >> for key, value in sorted(combinations.items()): print key, value
-        r0 0.05
-        r1 0.06
-        r2 0.06
-        r3 0.07
-        r4 0.07
-        r5 0.08
-
-        You can check that all the possible sums are performed:
-
-        r0: 0.01 + 0.04 (T1A + T2D)
-        r1: 0.01 + 0.05 (T1A + T2E)
-        r2: 0.02 + 0.04 (T1B + T2D)
-        r3: 0.02 + 0.05 (T1B + T2E)
-        r4: 0.03 + 0.04 (T1C + T2D)
-        r5: 0.03 + 0.05 (T1C + T2E)
-
-        In reality, the `combine_curves` method is used with hazard_curves and
-        the aggregation function is the `agg_curves` function, a composition of
-        probability, which however is close to the sum for small probabilities.
-        """
-        ad = {rlz: 0 for rlz in self.realizations}
-        for key, value in results.items():
-            for rlz in self.rlzs_assoc[key]:
-                ad[rlz] = agg(ad[rlz], value)
-        return ad
-
     def __iter__(self):
         return iter(self.rlzs_assoc)
 
@@ -507,6 +310,7 @@ class RlzsAssoc(collections.Mapping):
             self.__class__.__name__, len(self), len(self.realizations),
             '\n'.join('%s: %s' % pair for pair in pairs))
 
+
 LENGTH = 256
 
 source_model_dt = numpy.dtype([
@@ -518,7 +322,7 @@ source_model_dt = numpy.dtype([
 ])
 
 src_group_dt = numpy.dtype(
-    [('trt_id', U32),
+    [('grp_id', U32),
      ('trti', U16),
      ('effrup', I32),
      ('sm_id', U32)])
@@ -542,15 +346,28 @@ class CompositionInfo(object):
         weight = 1
         gsim_lt = gsimlt or logictree.GsimLogicTree.from_('FromFile')
         fakeSM = SourceModel(
-            'fake', weight,  'b1', [SourceGroup('*', eff_ruptures=1)],
+            'fake', weight,  'b1',
+            [sourceconverter.SourceGroup('*', eff_ruptures=1)],
             gsim_lt.get_num_paths(), ordinal=0, samples=1)
-        return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM])
+        return cls(gsim_lt, seed=0, num_samples=0, source_models=[fakeSM],
+                   tot_weight=0)
 
-    def __init__(self, gsim_lt, seed, num_samples, source_models):
+    def __init__(self, gsim_lt, seed, num_samples, source_models, tot_weight):
         self.gsim_lt = gsim_lt
         self.seed = seed
         self.num_samples = num_samples
         self.source_models = source_models
+        self.tot_weight = tot_weight
+
+    def get_info(self, sm_id):
+        """
+        Extract a CompositionInfo instance containing the single
+        model of index `sm_id`.
+        """
+        sm = self.source_models[sm_id]
+        num_samples = sm.samples if self.num_samples else 0
+        return self.__class__(
+            self.gsim_lt, self.seed, num_samples, [sm], self.tot_weight)
 
     def __getnewargs__(self):
         # with this CompositionInfo instances will be unpickled correctly
@@ -575,12 +392,14 @@ class CompositionInfo(object):
                 dict(seed=self.seed, num_samples=self.num_samples,
                      trts=hdf5.array_of_vstr(trts),
                      gsim_lt_xml=str(self.gsim_lt),
-                     gsim_fname=self.gsim_lt.fname))
+                     gsim_fname=self.gsim_lt.fname,
+                     tot_weight=self.tot_weight))
 
     def __fromh5__(self, dic, attrs):
         sg_data = group_array(dic['sg_data'], 'sm_id')
         sm_data = dic['sm_data']
         vars(self).update(attrs)
+        self.gsim_fname = decode(self.gsim_fname)
         if self.gsim_fname.endswith('.xml'):
             self.gsim_lt = logictree.GsimLogicTree(
                 self.gsim_fname, sorted(self.trts))
@@ -590,9 +409,10 @@ class CompositionInfo(object):
         for sm_id, rec in enumerate(sm_data):
             tdata = sg_data[sm_id]
             srcgroups = [
-                SourceGroup(self.trts[trti], id=trt_id, eff_ruptures=effrup)
-                for trt_id, trti, effrup, sm_id in tdata if effrup > 0]
-            path = tuple(rec['path'].split('_'))
+                sourceconverter.SourceGroup(
+                    self.trts[trti], id=grp_id, eff_ruptures=effrup)
+                for grp_id, trti, effrup, sm_id in tdata if effrup]
+            path = tuple(str(decode(rec['path'])).split('_'))
             trts = set(sg.trt for sg in srcgroups)
             num_gsim_paths = self.gsim_lt.reduce(trts).get_num_paths()
             sm = SourceModel(rec['name'], rec['weight'], path, srcgroups,
@@ -611,7 +431,6 @@ class CompositionInfo(object):
         trts = set(sg.trt for sg in source_model.src_groups)
         return self.gsim_lt.reduce(trts).get_num_paths()
 
-    # FIXME: this is called several times, both in .init and in .send_sources
     def get_rlzs_assoc(self, count_ruptures=None):
         """
         Return a RlzsAssoc with fields realizations, gsim_by_trt,
@@ -668,14 +487,33 @@ class CompositionInfo(object):
                 if src_group.id == src_group_id:
                     return smodel
 
-    def get_trt(self, src_group_id):
+    def get_sm_by_rlz(self, realizations):
         """
-        Return the TRT string for the given src_group_id
+        :returns: a dictionary rlz -> source model name
         """
+        dic = {}
+        for sm in self.source_models:
+            for rlz in realizations:
+                if rlz.sm_lt_path == sm.path:
+                    dic[rlz] = sm.name
+        return dic
+
+    def get_sm_by_grp(self):
+        """
+        :returns: a dictionary grp_id -> sm_id
+        """
+        return {grp.id: sm.ordinal for sm in self.source_models
+                for grp in sm.src_groups}
+
+    def grp_trt(self):
+        """
+        :returns: a dictionary grp_id -> TRT string
+        """
+        dic = {}
         for smodel in self.source_models:
             for src_group in smodel.src_groups:
-                if src_group.id == src_group_id:
-                    return src_group.trt
+                dic[src_group.id] = src_group.trt
+        return dic
 
     def __repr__(self):
         info_by_model = collections.OrderedDict()
@@ -686,7 +524,7 @@ class CompositionInfo(object):
                 [sg.id for sg in sm.src_groups],
                 sm.weight,
                 self.get_num_rlzs(sm))
-        summary = ['%s, %s, trt=%s, weight=%s: %d realization(s)' % ibm
+        summary = ['%s, %s, grp=%s, weight=%s: %d realization(s)' % ibm
                    for ibm in info_by_model.values()]
         return '<%s\n%s>' % (
             self.__class__.__name__, '\n'.join(summary))
@@ -700,19 +538,62 @@ class CompositeSourceModel(collections.Sequence):
         a list of :class:`openquake.commonlib.source.SourceModel` tuples
     """
     def __init__(self, gsim_lt, source_model_lt, source_models,
-                 set_weight=True):
+                 set_weight=False):
         self.gsim_lt = gsim_lt
         self.source_model_lt = source_model_lt
         self.source_models = source_models
-        self.source_info = ()  # set by the SourceFilterSplitter
+        self.source_info = ()
         self.split_map = {}
         if set_weight:
             self.set_weights()
+        else:
+            self.weight = 0
         # must go after set_weights to have the correct .num_ruptures
         self.info = CompositionInfo(
             gsim_lt, self.source_model_lt.seed,
             self.source_model_lt.num_samples,
-            [sm.get_skeleton() for sm in self.source_models])
+            [sm.get_skeleton() for sm in self.source_models],
+            self.weight)
+
+    def get_model(self, sm_id):
+        """
+        Extract a CompositeSourceModel instance containing the single
+        model of index `sm_id`.
+        """
+        sm = self.source_models[sm_id]
+        if self.source_model_lt.num_samples:
+            self.source_model_lt.num_samples = sm.samples
+        new = self.__class__(
+            self.gsim_lt, self.source_model_lt, [sm], set_weight=False)
+        new.sm_id = sm_id
+        new.weight = sum(src.weight for sg in sm.src_groups
+                         for src in sg.sources)
+        return new
+
+    def filter(self, src_filter):
+        """
+        Generate a new CompositeSourceModel by filtering the sources on
+        the given site collection.
+
+        :param sitecol: a SiteCollection instance
+        :para src_filter: a SourceFilter instance
+        """
+        source_models = []
+        weight = 0
+        for sm in self.source_models:
+            src_groups = [copy.copy(src) for src in sm.src_groups]
+            for src_group in src_groups:
+                sources = []
+                for src, sites in src_filter(src_group.sources):
+                    sources.append(src)
+                    weight += src.weight
+                src_group.sources = sources
+            newsm = SourceModel(sm.name, sm.weight, sm.path, src_groups,
+                                sm.num_gsim_paths, sm.ordinal, sm.samples)
+            source_models.append(newsm)
+        new = self.__class__(self.gsim_lt, self.source_model_lt, source_models,
+                             set_weight=True)
+        return new
 
     @property
     def src_groups(self):
@@ -723,13 +604,15 @@ class CompositeSourceModel(collections.Sequence):
             for src_group in sm.src_groups:
                 yield src_group
 
-    def get_sources(self, kind='all'):
+    def get_sources(self, kind='all', maxweight=None):
         """
         Extract the sources contained in the source models by optionally
         filtering and splitting them, depending on the passed parameters.
         """
+        if kind != 'all':
+            assert kind in ('light', 'heavy') and maxweight is not None, (
+                kind, maxweight)
         sources = []
-        maxweight = self.maxweight
         for src_group in self.src_groups:
             for src in src_group:
                 if kind == 'all':
@@ -751,7 +634,7 @@ class CompositeSourceModel(collections.Sequence):
         Update the attributes .weight and src.num_ruptures for each TRT model
         .weight of the CompositeSourceModel.
         """
-        self.weight = self.filtered_weight = 0
+        self.weight = 0
         for src_group in self.src_groups:
             weight = 0
             num_ruptures = 0
@@ -762,6 +645,26 @@ class CompositeSourceModel(collections.Sequence):
             src_group.sources = sorted(
                 src_group, key=operator.attrgetter('source_id'))
             self.weight += weight
+
+    def init_serials(self):
+        """
+        Generate unique seeds for each rupture with numpy.arange.
+        This should be called only in event based calculators
+        """
+        n = sum(sg.tot_ruptures() for sg in self.src_groups)
+        rup_serial = numpy.arange(n, dtype=numpy.uint32)
+        start = 0
+        for src in self.get_sources():
+            nr = src.num_ruptures
+            src.serial = rup_serial[start:start + nr]
+            start += nr
+
+    def get_maxweight(self, concurrent_tasks):
+        """
+        Return an appropriate maxweight for use in the block_splitter
+        """
+        ct = concurrent_tasks or 1
+        return max(math.ceil(self.weight / ct), MAXWEIGHT)
 
     def __repr__(self):
         """
@@ -793,196 +696,39 @@ def collect_source_model_paths(smlt):
 
     :param smlt: source model logic tree file
     """
-    for blevel in nrml.read(smlt).logicTree:
+    n = nrml.read(smlt)
+    try:
+        blevels = n.logicTree
+    except:
+        raise InvalidFile('%s is not a valid source_model_logic_tree_file'
+                          % smlt)
+    for blevel in blevels:
         with node.context(smlt, blevel):
             for bset in blevel:
                 for br in bset:
-                    smfname = br.uncertaintyModel.text
+                    smfname = br.uncertaintyModel.text.strip()
                     if smfname:
                         yield smfname
 
 
 # ########################## SourceManager ########################### #
 
-def source_info_iadd(self, other):
-    assert self.src_group_id == other.src_group_id
-    assert self.source_id == other.source_id
-    return self.__class__(
-        self.src_group_id, self.source_id, self.source_class, self.weight,
-        self.sources, self.filter_time + other.filter_time,
-        self.split_time + other.split_time, self.calc_time + other.calc_time)
+class SourceInfo(object):
+    dt = numpy.dtype([
+        ('grp_id', numpy.uint32),          # 0
+        ('source_id', (bytes, 100)),       # 1
+        ('source_class', (bytes, 30)),     # 2
+        ('num_ruptures', numpy.uint32),    # 3
+        ('calc_time', numpy.float32),      # 4
+        ('num_sites', numpy.uint32),       # 5
+        ('num_split',  numpy.uint32),      # 6
+    ])
 
-SourceInfo = collections.namedtuple(
-    'SourceInfo', 'src_group_id source_id source_class weight sources '
-    'filter_time split_time calc_time')
-SourceInfo.__iadd__ = source_info_iadd
-
-source_info_dt = numpy.dtype([
-    ('src_group_id', numpy.uint32),  # 0
-    ('source_id', hdf5.vstr),        # 1
-    ('source_class', hdf5.vstr),     # 2
-    ('weight', numpy.float32),       # 3
-    ('split_num', numpy.uint32),     # 4
-    ('filter_time', numpy.float32),  # 5
-    ('split_time', numpy.float32),   # 6
-    ('calc_time', numpy.float32),    # 7
-])
-
-
-class SourceManager(object):
-    """
-    Manager associated to a CompositeSourceModel instance.
-    Filter and split sources and send them to the worker tasks.
-    """
-    def __init__(self, csm, maximum_distance,
-                 dstore, monitor, random_seed=None,
-                 filter_sources=True, num_tiles=1):
-        self.csm = csm
-        self.maximum_distance = maximum_distance
-        self.random_seed = random_seed
-        self.dstore = dstore
-        self.monitor = monitor
-        self.filter_sources = filter_sources
-        self.num_tiles = num_tiles
-        self.rlzs_assoc = csm.info.get_rlzs_assoc()
-        self.split_map = {}  # src_group_id, source_id -> split sources
-        self.infos = {}  # src_group_id, source_id -> SourceInfo tuple
-        if random_seed is not None:
-            # generate unique seeds for each rupture with numpy.arange
-            self.src_serial = {}
-            n = sum(sg.tot_ruptures() for sg in self.csm.src_groups)
-            rup_serial = numpy.arange(n, dtype=numpy.uint32)
-            start = 0
-            for src in self.csm.get_sources('all'):
-                nr = src.num_ruptures
-                self.src_serial[src.id] = rup_serial[start:start + nr]
-                start += nr
-        # decrease the weight with the number of tiles, to increase
-        # the number of generated tasks; this is an heuristic trick
-        self.maxweight = self.csm.maxweight * math.sqrt(num_tiles) / 2.
-        logging.info('Instantiated SourceManager with maxweight=%.1f',
-                     self.maxweight)
-
-    def get_sources(self, kind, tile):
-        """
-        :param kind: a string 'light', 'heavy' or 'all'
-        :param tile: a :class:`openquake.hazardlib.site.Tile` instance
-        :returns: the sources of the given kind affecting the given tile
-        """
-        filter_mon = self.monitor('filtering sources')
-        split_mon = self.monitor('splitting sources')
-        for src in self.csm.get_sources(kind):
-            filter_time = split_time = 0
-            if self.filter_sources:
-                with filter_mon:
-                    try:
-                        if src not in tile:
-                            continue
-                    except:
-                        etype, err, tb = sys.exc_info()
-                        msg = 'An error occurred with source id=%s: %s'
-                        msg %= (src.source_id, err)
-                        raise_(etype, msg, tb)
-                filter_time = filter_mon.dt
-            if kind == 'heavy':
-                if (src.src_group_id, src.id) not in self.split_map:
-                    logging.info('splitting %s of weight %s',
-                                 src, src.weight)
-                    with split_mon:
-                        sources = list(sourceconverter.split_source(src))
-                        self.split_map[src.src_group_id, src.id] = sources
-                    split_time = split_mon.dt
-                    self.set_serial(src, sources)
-                for ss in self.split_map[src.src_group_id, src.id]:
-                    ss.id = src.id
-                    yield ss
-            else:
-                self.set_serial(src)
-                yield src
-            split_sources = self.split_map.get(
-                (src.src_group_id, src.id), [src])
-            info = SourceInfo(src.src_group_id, src.source_id,
-                              src.__class__.__name__,
-                              src.weight, len(split_sources),
-                              filter_time, split_time, 0)
-            key = (src.src_group_id, src.source_id)
-            if key in self.infos:
-                self.infos[key] += info
-            else:
-                self.infos[key] = info
-
-        filter_mon.flush()
-        split_mon.flush()
-
-    def set_serial(self, src, split_sources=()):
-        """
-        Set a serial number per each rupture in a source, managing also the
-        case of split sources, if any.
-        """
-        if self.random_seed is not None:
-            src.serial = self.src_serial[src.id]
-            if split_sources:
-                start = 0
-                for ss in split_sources:
-                    nr = ss.num_ruptures
-                    ss.serial = src.serial[start:start + nr]
-                    start += nr
-
-    def gen_args(self, tiles):
-        """
-        Yield (sources, sitecol, siteidx, rlzs_assoc, monitor) by
-        looping on the tiles and on the source blocks.
-        """
-        siteidx = 0
-        for i, sitecol in enumerate(tiles, 1):
-            if len(tiles) > 1:
-                logging.info('Processing tile %d', i)
-            tile = Tile(sitecol, self.maximum_distance)
-            for kind in ('light', 'heavy'):
-                if self.filter_sources:
-                    logging.info('Filtering %s sources', kind)
-                sources = list(self.get_sources(kind, tile))
-                if not sources:
-                    continue
-                for src in sources:
-                    self.csm.filtered_weight += src.weight
-                nblocks = 0
-                for block in block_splitter(
-                        sources, self.maxweight,
-                        operator.attrgetter('weight'),
-                        operator.attrgetter('src_group_id')):
-                    yield (block, sitecol, siteidx,
-                           self.rlzs_assoc, self.monitor.new())
-                    nblocks += 1
-                logging.info('Sent %d sources in %d block(s)',
-                             len(sources), nblocks)
-            siteidx += len(sitecol)
-
-    def store_source_info(self, dstore):
-        """
-        Save the `source_info` array and its attributes in the datastore.
-
-        :param dstore: the datastore
-        """
-        if self.infos:
-            values = list(self.infos.values())
-            values.sort(
-                key=lambda info: info.filter_time + info.split_time,
-                reverse=True)
-            dstore['source_info'] = numpy.array(values, source_info_dt)
-            attrs = dstore['source_info'].attrs
-            attrs['maxweight'] = self.csm.maxweight
-            self.infos.clear()
-
-
-@parallel.litetask
-def count_eff_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
-    """
-    Count the number of ruptures contained in the given sources and return
-    a dictionary src_group_id -> num_ruptures. All sources belong to the
-    same tectonic region type.
-    """
-    acc = AccumDict()
-    acc.eff_ruptures = {sources[0].src_group_id:
-                        sum(src.num_ruptures for src in sources)}
-    return acc
+    def __init__(self, src, calc_time=0, num_split=0):
+        self.grp_id = src.src_group_id
+        self.source_id = src.source_id
+        self.source_class = src.__class__.__name__
+        self.num_ruptures = src.num_ruptures
+        self.num_sites = src.nsites
+        self.calc_time = calc_time
+        self.num_split = num_split

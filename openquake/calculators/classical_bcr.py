@@ -18,7 +18,6 @@
 
 import numpy
 
-from openquake.commonlib import parallel
 from openquake.calculators import base, classical_risk
 
 F32 = numpy.float32
@@ -27,8 +26,7 @@ bcr_dt = numpy.dtype([('annual_loss_orig', F32), ('annual_loss_retro', F32),
                       ('bcr', F32)])
 
 
-@parallel.litetask
-def classical_bcr(riskinput, riskmodel, rlzs_assoc, bcr_dt, monitor):
+def classical_bcr(riskinput, riskmodel, bcr_dt, monitor):
     """
     Compute and return the average losses for each asset.
 
@@ -36,20 +34,18 @@ def classical_bcr(riskinput, riskmodel, rlzs_assoc, bcr_dt, monitor):
         a :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
-    :param rlzs_assoc:
-        associations (trt_id, gsim) -> realizations
     :param bcr_dt:
         data type with fields annual_loss_orig, annual_loss_retro, bcr
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
     result = {}  # (N, R) -> data
-    for out_by_lr in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor):
-        for (l, r), out in sorted(out_by_lr.items()):
-            for asset, (eal_orig, eal_retro, bcr) in zip(out.assets, out.data):
-                aval = asset.value(out.loss_type)
-                result[asset.ordinal, out.loss_type, out.hid] = numpy.array([
-                    (eal_orig * aval, eal_retro * aval, bcr)], bcr_dt)
+    for out in riskmodel.gen_outputs(riskinput, monitor):
+        l, r = out.lr
+        for asset, (eal_orig, eal_retro, bcr) in zip(out.assets, out.data):
+            aval = asset.value(out.loss_type)
+            result[asset.ordinal, out.loss_type, r] = numpy.array([
+                (eal_orig * aval, eal_retro * aval, bcr)], bcr_dt)
     return result
 
 

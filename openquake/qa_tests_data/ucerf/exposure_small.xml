@@ -1,0 +1,676 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <exposureModel
+    category="buildings"
+    id="exposure-bay-area"
+    taxonomySource="HAZUS"
+    >
+        
+        <description>
+            Exposure model for the San Francisco Bay Area
+        </description>
+        <conversions>
+            
+            <area type="aggregated" unit="SQFT"/>
+            <costTypes>
+                
+                <costType name="structural" type="aggregated" unit="USD"/>
+                <costType name="contents" type="aggregated" unit="USD"/>
+            </costTypes>
+        </conversions>
+        <assets>
+            
+            <asset
+            area="6196"
+            id="CA-T6081601604-PC-PC2L"
+            number="3.0000000E-01"
+            taxonomy="PC2L-PC"
+            >
+                
+                <location lat="3.7669510E+01" lon="-1.2246909E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="1.0016050E+06"/>
+                    <cost type="contents" value="5.0080200E+05"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="1.7700000E+01" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="17238"
+            id="CA-T6001410200-PC-URML"
+            number="3.7000000E+00"
+            taxonomy="URML-PC"
+            >
+                
+                <location lat="3.7745310E+01" lon="-1.2215717E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="2.3094860E+06"/>
+                    <cost type="contents" value="1.1547430E+06"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="5.0500000E+01" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="1368"
+            id="CA-T6001451704-PC-PC2M"
+            number="1.0000000E-01"
+            taxonomy="PC2M-PC"
+            >
+                
+                <location lat="3.7662120E+01" lon="-1.2179006E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="2.2294800E+05"/>
+                    <cost type="contents" value="1.1147400E+05"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="5.0000000E+00" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="232"
+            id="CA-T6001402700-PC-PC2L"
+            number="1.0000000E-01"
+            taxonomy="PC2L-PC"
+            >
+                
+                <location lat="3.7810390E+01" lon="-1.2227699E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="2.7395000E+04"/>
+                    <cost type="contents" value="1.3697000E+04"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="5.0000000E-01" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="3817282"
+            id="CA-T6095252305-PC-W1"
+            number="1.5176000E+03"
+            taxonomy="W1-PC"
+            >
+                
+                <location lat="3.8219990E+01" lon="-1.2209380E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="4.2533202E+08"/>
+                    <cost type="contents" value="2.1266601E+08"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="4.5054000E+03" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="2313"
+            id="CA-T6013306003-PC-C1M"
+            number="5.0000000E-01"
+            taxonomy="C1M-PC"
+            >
+                
+                <location lat="3.8005330E+01" lon="-1.2179944E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="3.2349600E+05"/>
+                    <cost type="contents" value="1.6174800E+05"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="6.6000000E+00" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="19694"
+            id="CA-T6001403100-PC-URMM"
+            number="1.9000000E+00"
+            taxonomy="URMM-PC"
+            >
+                
+                <location lat="3.7802270E+01" lon="-1.2227550E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="2.9336000E+06"/>
+                    <cost type="contents" value="1.4668000E+06"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="7.8200000E+01" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="11676"
+            id="CA-T6001427700-LC-S4M"
+            number="2.1000000E+00"
+            taxonomy="S4M-LC"
+            >
+                
+                <location lat="3.7768160E+01" lon="-1.2228689E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="1.5580230E+06"/>
+                    <cost type="contents" value="7.7901100E+05"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="2.6300000E+01" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="3586"
+            id="CA-T6097151401-PC-S5L"
+            number="6.0000000E-01"
+            taxonomy="S5L-PC"
+            >
+                
+                <location lat="3.8408260E+01" lon="-1.2268750E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="4.9416000E+05"/>
+                    <cost type="contents" value="2.4708000E+05"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="1.3300000E+01" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="2428"
+            id="CA-T6001420200-PC-C1H"
+            number="4.0000000E-01"
+            taxonomy="C1H-PC"
+            >
+                
+                <location lat="3.7894470E+01" lon="-1.2229747E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="3.3975400E+05"/>
+                    <cost type="contents" value="1.6987700E+05"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="6.1000000E+00" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="72790"
+            id="CA-T6085503123-PC-RM1L"
+            number="9.0000000E+00"
+            taxonomy="RM1L-PC"
+            >
+                
+                <location lat="3.7297690E+01" lon="-1.2187775E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="1.1038462E+07"/>
+                    <cost type="contents" value="5.5192310E+06"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="1.9680000E+02" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="6946"
+            id="CA-T6085503506-PC-S2M"
+            number="7.0000000E-01"
+            taxonomy="S2M-PC"
+            >
+                
+                <location lat="3.7343650E+01" lon="-1.2182724E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="1.1168190E+06"/>
+                    <cost type="contents" value="5.5841000E+05"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="4.6300000E+01" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="27891"
+            id="CA-T6013332000-PC-C2L"
+            number="4.5000000E+00"
+            taxonomy="C2L-PC"
+            >
+                
+                <location lat="3.7981840E+01" lon="-1.2199769E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="4.0237150E+06"/>
+                    <cost type="contents" value="2.0118570E+06"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="8.9000000E+01" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="416"
+            id="CA-T6001421100-PC-C3L"
+            number="1.0000000E-01"
+            taxonomy="C3L-PC"
+            >
+                
+                <location lat="3.7899430E+01" lon="-1.2226619E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="5.6394000E+04"/>
+                    <cost type="contents" value="2.8197000E+04"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="1.3000000E+00" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="6427"
+            id="CA-T6085512042-PC-MH"
+            number="7.0000000E-01"
+            taxonomy="MH-PC"
+            >
+                
+                <location lat="3.7266100E+01" lon="-1.2181451E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="1.0460210E+06"/>
+                    <cost type="contents" value="5.2301000E+05"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="2.8100000E+01" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="6269"
+            id="CA-T6075026401-PC-MH"
+            number="1.8000000E+00"
+            taxonomy="MH-PC"
+            >
+                
+                <location lat="3.7713530E+01" lon="-1.2241128E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="6.8418400E+05"/>
+                    <cost type="contents" value="3.4209200E+05"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="2.0700000E+01" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="1246"
+            id="CA-T6095252704-PC-PC2H"
+            number="2.0000000E-01"
+            taxonomy="PC2H-PC"
+            >
+                
+                <location lat="3.8249100E+01" lon="-1.2201472E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="2.0081900E+05"/>
+                    <cost type="contents" value="1.0040900E+05"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="4.7000000E+00" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="3550"
+            id="CA-T6095252707-PC-C3L"
+            number="6.0000000E-01"
+            taxonomy="C3L-PC"
+            >
+                
+                <location lat="3.8259990E+01" lon="-1.2200119E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="5.4974800E+05"/>
+                    <cost type="contents" value="2.7487400E+05"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="1.2200000E+01" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="2118464"
+            id="CA-T6001438000-PC-W1"
+            number="9.2030000E+02"
+            taxonomy="W1-PC"
+            >
+                
+                <location lat="3.7619080E+01" lon="-1.2202847E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="2.3635379E+08"/>
+                    <cost type="contents" value="1.1817690E+08"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="3.0662000E+03" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="42679"
+            id="CA-T6085504418-PC-RM1L"
+            number="1.4600000E+01"
+            taxonomy="RM1L-PC"
+            >
+                
+                <location lat="3.7432000E+01" lon="-1.2188059E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="5.1139990E+06"/>
+                    <cost type="contents" value="2.5569990E+06"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="1.4240000E+02" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="279"
+            id="CA-T6095252909-PC-S4M"
+            number="1.0000000E-01"
+            taxonomy="S4M-PC"
+            >
+                
+                <location lat="3.8344630E+01" lon="-1.2192496E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="4.1037000E+04"/>
+                    <cost type="contents" value="2.0518000E+04"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="1.1000000E+00" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="169"
+            id="CA-T6085511100-PC-MH"
+            number="1.0000000E-01"
+            taxonomy="MH-PC"
+            >
+                
+                <location lat="3.7445750E+01" lon="-1.2213252E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="1.7256000E+04"/>
+                    <cost type="contents" value="8.6280000E+03"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="6.0000000E-01" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="15999"
+            id="CA-T6001405700-PC-C3L"
+            number="3.6000000E+00"
+            taxonomy="C3L-PC"
+            >
+                
+                <location lat="3.7798230E+01" lon="-1.2222967E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="2.0266040E+06"/>
+                    <cost type="contents" value="1.0133020E+06"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="4.1100000E+01" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="6089"
+            id="CA-T6085508404-PC-S4M"
+            number="6.0000000E-01"
+            taxonomy="S4M-PC"
+            >
+                
+                <location lat="3.7364610E+01" lon="-1.2204164E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="9.3762500E+05"/>
+                    <cost type="contents" value="4.6881200E+05"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="2.0900000E+01" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="30594"
+            id="CA-T6081606000-PC-RM1M"
+            number="3.3000000E+00"
+            taxonomy="RM1M-PC"
+            >
+                
+                <location lat="3.7579730E+01" lon="-1.2233111E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="4.7865140E+06"/>
+                    <cost type="contents" value="2.3932570E+06"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="8.4400000E+01" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="11840"
+            id="CA-T6001431200-PC-C3M"
+            number="1.9000000E+00"
+            taxonomy="C3M-PC"
+            >
+                
+                <location lat="3.7687120E+01" lon="-1.2208345E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="1.6973320E+06"/>
+                    <cost type="contents" value="8.4866600E+05"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="3.2300000E+01" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="8766"
+            id="CA-T6001423300-PC-RM1M"
+            number="2.3000000E+00"
+            taxonomy="RM1M-PC"
+            >
+                
+                <location lat="3.7857330E+01" lon="-1.2228420E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="1.0597150E+06"/>
+                    <cost type="contents" value="5.2985800E+05"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="2.1000000E+01" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="11071"
+            id="CA-T6075020300-PC-C2L"
+            number="2.2000000E+00"
+            taxonomy="C2L-PC"
+            >
+                
+                <location lat="3.7764940E+01" lon="-1.2242943E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="1.5136150E+06"/>
+                    <cost type="contents" value="7.5680700E+05"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="2.1400000E+01" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="27293"
+            id="CA-T6001440335-PC-C2M"
+            number="1.9000000E+00"
+            taxonomy="C2M-PC"
+            >
+                
+                <location lat="3.7591350E+01" lon="-1.2201228E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="4.2836470E+06"/>
+                    <cost type="contents" value="2.1418230E+06"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="1.0870000E+02" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="9217"
+            id="CA-T6001424002-PC-S1M"
+            number="2.6000000E+00"
+            taxonomy="S1M-PC"
+            >
+                
+                <location lat="3.7850480E+01" lon="-1.2228154E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="1.0413700E+06"/>
+                    <cost type="contents" value="5.2068500E+05"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="2.0400000E+01" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="17429"
+            id="CA-T6085500600-PC-S1M"
+            number="1.8000000E+00"
+            taxonomy="S1M-PC"
+            >
+                
+                <location lat="3.7333410E+01" lon="-1.2191453E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="2.6455480E+06"/>
+                    <cost type="contents" value="1.3227740E+06"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="4.5900000E+01" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="716"
+            id="CA-T6001982000-PC-C2H"
+            number="1.0000000E-01"
+            taxonomy="C2H-PC"
+            >
+                
+                <location lat="3.7796160E+01" lon="-1.2229354E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="1.0103700E+05"/>
+                    <cost type="contents" value="5.0519000E+04"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="1.9000000E+00" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="2905"
+            id="CA-T6001425101-LC-S2L"
+            number="1.0000000E-01"
+            taxonomy="S2L-LC"
+            >
+                
+                <location lat="3.7838250E+01" lon="-1.2230541E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="4.6466200E+05"/>
+                    <cost type="contents" value="2.3233100E+05"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="5.1000000E+00" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="50811"
+            id="CA-T6081608502-PC-RM1L"
+            number="9.8000000E+00"
+            taxonomy="RM1L-PC"
+            >
+                
+                <location lat="3.7531730E+01" lon="-1.2228254E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="7.0963340E+06"/>
+                    <cost type="contents" value="3.5481670E+06"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="1.2790000E+02" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="5234"
+            id="CA-T6085500500-PC-S3"
+            number="1.0000000E+00"
+            taxonomy="S3-PC"
+            >
+                
+                <location lat="3.7329950E+01" lon="-1.2192791E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="7.2285800E+05"/>
+                    <cost type="contents" value="3.6142900E+05"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="1.5300000E+01" period="night"/>
+                </occupancies>
+            </asset>
+            <asset
+            area="405"
+            id="CA-T6001442800-PC-URML"
+            number="1.0000000E-01"
+            taxonomy="URML-PC"
+            >
+                
+                <location lat="3.7529360E+01" lon="-1.2199310E+02"/>
+                <costs>
+                    
+                    <cost type="structural" value="6.0375000E+04"/>
+                    <cost type="contents" value="3.0188000E+04"/>
+                </costs>
+                <occupancies>
+                    
+                    <occupancy occupants="1.6000000E+00" period="night"/>
+                </occupancies>
+            </asset>
+        </assets>
+    </exposureModel>
+</nrml>

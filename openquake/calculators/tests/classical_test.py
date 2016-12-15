@@ -17,12 +17,14 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from nose.plugins.attrib import attr
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.baselib import parallel
+from openquake.commonlib import InvalidFile
+from openquake.calculators.export import export
+from openquake.calculators.tests import CalculatorTestCase, check_platform
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
-    case_18, case_19, case_20, case_21, case_22)
-from openquake.commonlib.export import export
+    case_18, case_19, case_20, case_21, case_22, case_23, case_24)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -35,12 +37,28 @@ class ClassicalTestCase(CalculatorTestCase):
         for fname, actual in zip(expected, got):
             self.assertEqualFiles('expected/%s' % fname, actual,
                                   delta=delta)
+        return out
 
     @attr('qa', 'hazard', 'classical')
     def test_case_1(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
             case_1.__file__)
+
+        if parallel.oq_distribute() != 'no':
+            # make sure we saved the data transfer information in job_info
+            keys = set(self.calc.datastore['job_info'].__dict__)
+            self.assertIn('classical_max_received_per_task', keys)
+            self.assertIn('classical_tot_received', keys)
+            self.assertIn('classical_sent', keys)
+
+        # there is a single source
+        self.assertEqual(len(self.calc.datastore['source_info']), 1)
+
+    @attr('qa', 'hazard', 'classical')
+    def test_wrong_smlt(self):
+        with self.assertRaises(InvalidFile):
+            self.run_calc(case_1.__file__, 'job_wrong.ini')
 
     @attr('qa', 'hazard', 'classical')
     def test_sa_period_too_big(self):
@@ -137,6 +155,14 @@ class ClassicalTestCase(CalculatorTestCase):
              'hazard_map-mean.csv'],
             case_13.__file__)
 
+        # test recomputing the hazard maps
+        out = self.run_calc(
+            case_13.__file__, 'job.ini', exports='csv', poes='0.2',
+            hazard_calculation_id=str(self.calc.datastore.calc_id))
+        [fname] = out['hmaps', 'csv']
+        self.assertEqualFiles('expected/hazard_map-mean2.csv', fname,
+                              delta=1E-5)
+
     @attr('qa', 'hazard', 'classical')
     def test_case_14(self):
         self.assert_curves_ok([
@@ -165,7 +191,10 @@ hazard_uhs-smltp_SM2_a3b1-gsimltp_BA2008_@.csv
 hazard_uhs-smltp_SM2_a3b1-gsimltp_CB2008_@.csv
 hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_@.csv
 hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
-                              case_15.__file__)
+                              case_15.__file__, delta=1E-6)
+
+        # now some tests on the exact numbers
+        check_platform('xenial', 'trusty')
 
         # test UHS XML export
         fnames = [f for f in export(('uhs', 'xml'), self.calc.datastore)
@@ -173,6 +202,22 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
         self.assertEqualFiles('expected/hazard_uhs-mean-0.01.xml', fnames[0])
         self.assertEqualFiles('expected/hazard_uhs-mean-0.1.xml', fnames[1])
         self.assertEqualFiles('expected/hazard_uhs-mean-0.2.xml', fnames[2])
+
+        # test hmaps geojson export
+        fnames = [f for f in export(('hmaps', 'geojson'), self.calc.datastore)
+                  if 'mean' in f]
+        self.assertEqualFiles(
+            'expected/hazard_map-mean-0.01-PGA.geojson', fnames[0])
+        self.assertEqualFiles(
+            'expected/hazard_map-mean-0.01-SA(0.1).geojson', fnames[1])
+        self.assertEqualFiles(
+            'expected/hazard_map-mean-0.1-PGA.geojson', fnames[2])
+        self.assertEqualFiles(
+            'expected/hazard_map-mean-0.1-SA(0.1).geojson', fnames[3])
+        self.assertEqualFiles(
+            'expected/hazard_map-mean-0.2-PGA.geojson', fnames[4])
+        self.assertEqualFiles(
+            'expected/hazard_map-mean-0.2-SA(0.1).geojson', fnames[5])
 
     @attr('qa', 'hazard', 'classical')
     def test_case_16(self):   # sampling
@@ -194,11 +239,13 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
 
     @attr('qa', 'hazard', 'classical')
     def test_case_18(self):  # GMPEtable
-        self.assert_curves_ok(
+        out = self.assert_curves_ok(
             ['hazard_curve-mean.csv', 'hazard_map-mean.csv',
              'hazard_uhs-mean.csv'],
             case_18.__file__, delta=1E-7)
         # this also tests that UHS curves are really exported
+        [fname] = out['realizations', 'csv']
+        self.assertEqualFiles('expected/realizations.csv', fname)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_19(self):
@@ -263,3 +310,12 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
     def test_case_22(self):  # crossing date line calculation for Alaska
         self.assert_curves_ok(['hazard_curve-mean.csv'], case_22.__file__,
                               individual_curves='false')
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_23(self):  # filtering away on TRT
+        self.assert_curves_ok(['hazard_curve.csv'], case_23.__file__)
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_24(self):  # UHS
+        self.assert_curves_ok(['hazard_curve.csv', 'hazard_uhs.csv'],
+                              case_24.__file__)

@@ -19,12 +19,11 @@
 import numpy
 
 from openquake.baselib.general import AccumDict
-from openquake.commonlib import parallel, datastore
+from openquake.commonlib import datastore
 from openquake.calculators import base, classical_risk
 
 
-@parallel.litetask
-def classical_damage(riskinput, riskmodel, rlzs_assoc, monitor):
+def classical_damage(riskinput, riskmodel, monitor):
     """
     Core function for a classical damage computation.
 
@@ -32,20 +31,17 @@ def classical_damage(riskinput, riskmodel, rlzs_assoc, monitor):
         a :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
-    :param rlzs_assoc:
-        associations (trt_id, gsim) -> realizations
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     :returns:
         a nested dictionary rlz_idx -> asset -> <damage array>
     """
     with monitor:
-        result = {i: AccumDict() for i in range(len(rlzs_assoc))}
-        for out_by_lr in riskmodel.gen_outputs(
-                riskinput, rlzs_assoc, monitor):
-            for (l, r), out in sorted(out_by_lr.items()):
-                ordinals = [a.ordinal for a in out.assets]
-                result[r] += dict(zip(ordinals, out.damages))
+        result = {i: AccumDict() for i in range(len(riskinput.rlzs))}
+        for out in riskmodel.gen_outputs(riskinput, monitor):
+            l, r = out.lr
+            ordinals = [a.ordinal for a in out.assets]
+            result[r] += dict(zip(ordinals, out.damages))
     return result
 
 
@@ -57,12 +53,12 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
     core_task = classical_damage
     damages = datastore.persistent_attribute('damages-rlzs')
 
-    def check_poes(self, curves_by_trt_gsim):
+    def check_poes(self, curves_by_rlz):
         """
         Raise an error if one PoE = 1, since it would produce a log(0) in
         :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`
         """
-        for key, curves in curves_by_trt_gsim.items():
+        for rlz, curves in curves_by_rlz.items():
             for imt in self.oqparam.imtls:
                 for sid, poes in enumerate(curves[imt]):
                     if (poes == 1).any():

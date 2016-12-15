@@ -57,10 +57,10 @@ openquake.commonlib.oqvalidation module
     :undoc-members:
     :show-inheritance:
 
-openquake.commonlib.parallel module
+openquake.baselib.parallel module
 -----------------------------------
 
-.. automodule:: openquake.commonlib.parallel
+.. automodule:: openquake.baselib.parallel
     :members:
     :undoc-members:
     :show-inheritance:
@@ -73,10 +73,10 @@ openquake.commonlib.readinput module
     :undoc-members:
     :show-inheritance:
 
-openquake.commonlib.reportwriter module
+openquake.calculators.reportwriter module
 ---------------------------------------
 
-.. automodule:: openquake.commonlib.reportwriter
+.. automodule:: openquake.calculators.reportwriter
     :members:
     :undoc-members:
     :show-inheritance:

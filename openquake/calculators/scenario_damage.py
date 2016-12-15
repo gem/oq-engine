@@ -19,7 +19,7 @@
 import itertools
 import numpy
 
-from openquake.commonlib import parallel, riskmodels, calc
+from openquake.commonlib import riskmodels, calc
 from openquake.risklib import scientific
 from openquake.calculators import base
 
@@ -73,8 +73,7 @@ def dist_total(data, multi_stat_dt):
     return out
 
 
-@parallel.litetask
-def scenario_damage(riskinput, riskmodel, rlzs_assoc, monitor):
+def scenario_damage(riskinput, riskmodel, monitor):
     """
     Core function for a damage computation.
 
@@ -82,8 +81,6 @@ def scenario_damage(riskinput, riskmodel, rlzs_assoc, monitor):
         a :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
-    :param rlzs_assoc:
-        a class:`openquake.commonlib.source.RlzsAssoc` instance
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     :returns:
@@ -99,33 +96,32 @@ def scenario_damage(riskinput, riskmodel, rlzs_assoc, monitor):
     """
     c_models = monitor.consequence_models
     L = len(riskmodel.loss_types)
-    R = len(rlzs_assoc.realizations)
+    R = len(riskinput.rlzs)
     D = len(riskmodel.damage_states)
     E = monitor.oqparam.number_of_ground_motion_fields
     T = len(monitor.taxonomies)
     taxo2idx = {taxo: i for i, taxo in enumerate(monitor.taxonomies)}
     result = dict(d_asset=[], d_taxon=numpy.zeros((T, L, R, E, D), F64),
                   c_asset=[], c_taxon=numpy.zeros((T, L, R, E), F64))
-    for out_by_lr in riskmodel.gen_outputs(
-            riskinput, rlzs_assoc, monitor):
-        for (l, r), out in sorted(out_by_lr.items()):
-            c_model = c_models.get(out.loss_type)
-            for asset, fraction in zip(out.assets, out.damages):
-                t = taxo2idx[asset.taxonomy]
-                damages = fraction * asset.number
-                if c_model:  # compute consequences
-                    means = [par[0] for par in c_model[asset.taxonomy].params]
-                    # NB: we add a 0 in front for nodamage state
-                    c_ratio = numpy.dot(fraction, [0] + means)
-                    consequences = c_ratio * asset.value(out.loss_type)
-                    result['c_asset'].append(
-                        (l, r, asset.ordinal,
-                         scientific.mean_std(consequences)))
-                    result['c_taxon'][t, l, r, :] += consequences
-                    # TODO: consequences for the occupants
-                result['d_asset'].append(
-                    (l, r, asset.ordinal, scientific.mean_std(damages)))
-                result['d_taxon'][t, l, r, :] += damages
+    for out in riskmodel.gen_outputs(riskinput, monitor):
+        l, r = out.lr
+        c_model = c_models.get(out.loss_type)
+        for asset, fraction in zip(out.assets, out.damages):
+            t = taxo2idx[asset.taxonomy]
+            damages = fraction * asset.number
+            if c_model:  # compute consequences
+                means = [par[0] for par in c_model[asset.taxonomy].params]
+                # NB: we add a 0 in front for nodamage state
+                c_ratio = numpy.dot(fraction, [0] + means)
+                consequences = c_ratio * asset.value(out.loss_type)
+                result['c_asset'].append(
+                    (l, r, asset.ordinal,
+                     scientific.mean_std(consequences)))
+                result['c_taxon'][t, l, r, :] += consequences
+                # TODO: consequences for the occupants
+            result['d_asset'].append(
+                (l, r, asset.ordinal, scientific.mean_std(damages)))
+            result['d_taxon'][t, l, r, :] += damages
     return result
 
 
@@ -144,8 +140,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         base.RiskCalculator.pre_execute(self)
         self.monitor.consequence_models = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
-        self.datastore['etags'], gmfs = calc.get_gmfs(self.datastore)
-        self.riskinputs = self.build_riskinputs(gmfs)
+        self.datastore['etags'], gmfs = calc.get_gmfs(
+            self.datastore, self.precalc)
+        rlzs = self.csm_info.get_rlzs_assoc().realizations
+        self.riskinputs = self.build_riskinputs(
+            {rlz: gmf for rlz, gmf in zip(rlzs, gmfs)})
         self.monitor.taxonomies = sorted(self.taxonomies)
 
     def post_execute(self, result):

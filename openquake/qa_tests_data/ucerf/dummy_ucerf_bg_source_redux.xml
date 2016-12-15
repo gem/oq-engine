@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <nrml
-xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns="http://openquake.org/xmlns/nrml/0.4"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <sourceModel
     name="DUMMY UCERF MODEL"
     >
         <UCERFSource
-        filename="UCERF_REDUX_MODEL_v2.hdf5"
+        filename="UCERF_REDUX_MODEL_v4.hdf5"
         id="001"
         minMag="5.5"
         tectonicRegion="Active Shallow Crust"

@@ -358,51 +358,6 @@ class HazardCurveWriterSerializeTestCase(HazardCurveWriterTestCase):
         self.assertEqual(expected, actual)
 
 
-class MultiHazardCurveXMLWriterSerializeTestCase(HazardWriterTestCase):
-    """
-    Tests for the `serialize` method of the hazard curve XML writer.
-    """
-
-    def setUp(self):
-        self.data1 = [
-            HazardCurveData(location=Location(38.0, -20.1),
-                            poes=[0.1, 0.2, 0.3]),
-            HazardCurveData(location=Location(38.1, -20.2),
-                            poes=[0.4, 0.5, 0.6]),
-            HazardCurveData(location=Location(38.2, -20.3),
-                            poes=[0.7, 0.8, 0.8]),
-        ]
-
-        self.data2 = [
-            HazardCurveData(location=Location(38.0, -20.1),
-                            poes=[0.01, 0.02, 0.03]),
-            HazardCurveData(location=Location(38.1, -20.2),
-                            poes=[0.04, 0.05, 0.06]),
-            HazardCurveData(location=Location(38.2, -20.3),
-                            poes=[0.07, 0.08, 0.08]),
-        ]
-
-    def test_serialize(self):
-        # Just a basic serialization test
-
-        metadata1 = dict(
-            investigation_time=50, imt='SA', imls=[0.005, 0.007, 0.0098],
-            sa_period=0.025, sa_damping=5.0, smlt_path='b1_b2_b4',
-            gsimlt_path='b1_b4_b5'
-        )
-
-        metadata2 = dict(
-            investigation_time=30, imt='PGA', imls=[0.05, 0.07, 0.8],
-            sa_period=None, sa_damping=None,
-            smlt_path='b1_b2_b4', gsimlt_path='b1_b4_b5'
-        )
-
-        writer = writers.MultiHazardCurveXMLWriter(
-            path, [metadata1, metadata2])
-        writer.serialize([self.data1, self.data2])
-        check_equal(__file__, 'expected_multicurves.xml', path)
-
-
 class EventBasedGMFXMLWriterTestCase(HazardWriterTestCase):
 
     def test_serialize(self):

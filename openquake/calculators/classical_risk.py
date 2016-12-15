@@ -17,22 +17,24 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-import operator
 
 import numpy
 
 from openquake.baselib.general import groupby
-from openquake.hazardlib.calc.hazard_curve import array_of_curves
 from openquake.risklib import scientific, riskinput
-from openquake.commonlib import readinput, parallel, datastore, source
+from openquake.commonlib import readinput, source
 from openquake.calculators import base
 
 
 F32 = numpy.float32
 
 
-@parallel.litetask
-def classical_risk(riskinput, riskmodel, rlzs_assoc, monitor):
+def by_l_assets(output):
+    # use loss_type index and assets as a composity key
+    return output.lr[0], tuple(output.assets)
+
+
+def classical_risk(riskinput, riskmodel, monitor):
     """
     Compute and return the average losses for each asset.
 
@@ -40,50 +42,50 @@ def classical_risk(riskinput, riskmodel, rlzs_assoc, monitor):
         a :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
-    :param rlzs_assoc:
-        associations (trt_id, gsim) -> realizations
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
     oq = monitor.oqparam
     ins = oq.insured_losses
-    R = len(rlzs_assoc.realizations)
     result = dict(
         loss_curves=[], loss_maps=[], stat_curves=[], stat_maps=[])
-    for out_by_lr in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor):
-        for (l, r), out in sorted(out_by_lr.items()):
-            for i, asset in enumerate(out.assets):
-                aid = asset.ordinal
-                avg = out.average_losses[i]
-                avg_ins = (out.average_insured_losses[i]
-                           if ins else numpy.nan)
-                lcurve = (
-                    out.loss_curves[i, 0],
-                    out.loss_curves[i, 1], avg)
-                if ins:
-                    lcurve += (
-                        out.insured_curves[i, 0],
-                        out.insured_curves[i, 1], avg_ins)
-                else:
-                    lcurve += (None, None, None)
-                result['loss_curves'].append((l, r, aid, lcurve))
+    outputs = list(riskmodel.gen_outputs(riskinput, monitor))
+    for out in outputs:
+        l, r = out.lr
+        for i, asset in enumerate(out.assets):
+            aid = asset.ordinal
+            avg = out.average_losses[i]
+            avg_ins = (out.average_insured_losses[i]
+                       if ins else numpy.nan)
+            lcurve = (
+                out.loss_curves[i, 0],
+                out.loss_curves[i, 1], avg)
+            if ins:
+                lcurve += (
+                    out.insured_curves[i, 0],
+                    out.insured_curves[i, 1], avg_ins)
+            else:
+                lcurve += (None, None, None)
+            result['loss_curves'].append((l, r, aid, lcurve))
 
-                # no insured, shape (P, N)
-                result['loss_maps'].append(
-                    (l, r, aid, out.loss_maps[:, i]))
+            # no insured, shape (P, N)
+            result['loss_maps'].append(
+                (l, r, aid, out.loss_maps[:, i]))
 
         # compute statistics
-        if R > 1:
-            for l, lrs in groupby(out_by_lr, operator.itemgetter(0)).items():
-                outs = [out_by_lr[lr] for lr in lrs]
+        if len(riskinput.rlzs) > 1:
+            for (l, assets), outs in groupby(outputs, by_l_assets).items():
+                for out in outs:  # outputs with the same loss type and assets
+                    out.weight = riskinput.rlzs[out.lr[1]].weight
                 curve_resolution = outs[0].loss_curves.shape[-1]
                 statsbuilder = scientific.StatsBuilder(
                     oq.quantile_loss_curves,
-                    oq.conditional_loss_poes, oq.poes_disagg,
-                    curve_resolution, insured_losses=oq.insured_losses)
+                    oq.conditional_loss_poes,
+                    insured_losses=oq.insured_losses)
                 stats = statsbuilder.build(outs)
-                stat_curves, stat_maps = statsbuilder.get_curves_maps(stats)
-                for i, asset in enumerate(out_by_lr.assets):
+                stat_curves, stat_maps = statsbuilder._get_curves_maps(
+                    stats, curve_resolution)
+                for i, asset in enumerate(assets):
                     result['stat_curves'].append(
                         (l, asset.ordinal, stat_curves[:, i]))
                     if len(stat_maps):
@@ -99,54 +101,58 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     Classical Risk calculator
     """
     pre_calculator = 'classical'
-    avg_losses = datastore.persistent_attribute('avg_losses-rlzs')
     core_task = classical_risk
 
     def pre_execute(self):
         """
         Associate the assets to the sites and build the riskinputs.
         """
-        if 'hazard_curves' in self.oqparam.inputs:  # read hazard from file
-            haz_sitecol, haz_curves = readinput.get_hcurves(self.oqparam)
+        oq = self.oqparam
+        if 'hazard_curves' in oq.inputs:  # read hazard from file
+            haz_sitecol, haz_curves = readinput.get_hcurves(oq)
             self.save_params()
             self.read_exposure()  # define .assets_by_site
             self.load_riskmodel()
             self.assetcol = riskinput.AssetCollection(
                 self.assets_by_site, self.cost_calculator,
-                self.oqparam.time_event)
+                oq.time_event)
             self.sitecol, self.assets_by_site = self.assoc_assets_sites(
                 haz_sitecol)
-            curves_by_trt_gsim = {(0, 'FromFile'): haz_curves}
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
+            [rlz] = self.rlzs_assoc.realizations
+            curves_by_rlz = {rlz: haz_curves}
         else:  # compute hazard or read it from the datastore
             super(ClassicalRiskCalculator, self).pre_execute()
             logging.info('Preparing the risk input')
-            curves_by_trt_gsim = {}
+            curves_by_rlz = {}
             nsites = len(self.sitecol.complete)
-            for key in self.datastore['poes']:
-                pmap = self.datastore['poes/' + key]
-                trt_id = int(key)
-                gsims = self.rlzs_assoc.gsims_by_trt_id[trt_id]
-                for i, gsim in enumerate(gsims):
-                    curves_by_trt_gsim[trt_id, gsim] = array_of_curves(
-                        pmap, nsites, self.oqparam.imtls, i)
-        self.riskinputs = self.build_riskinputs(curves_by_trt_gsim)
-        self.monitor.oqparam = self.oqparam
+            if 'hcurves' not in self.datastore:  # when building short report
+                return
+            for key in self.datastore['hcurves']:
+                pmap = self.datastore['hcurves/' + key]
+                rlz = self.rlzs_assoc.get_rlz(key)
+                if rlz is not None:  # can be None if a realization is
+                    # missing; this happen in test_case_5
+                    curves_by_rlz[rlz] = pmap.convert(oq.imtls, nsites)
+        self.riskinputs = self.build_riskinputs(curves_by_rlz)
+        self.monitor.oqparam = oq
 
         self.N = sum(len(assets) for assets in self.assets_by_site)
         self.L = len(self.riskmodel.loss_types)
         self.R = len(self.rlzs_assoc.realizations)
-        self.I = self.oqparam.insured_losses
-        self.Q1 = len(self.oqparam.quantile_loss_curves) + 1
+        self.I = oq.insured_losses
+        self.Q1 = len(oq.quantile_loss_curves) + 1
 
     def post_execute(self, result):
         """
         Save the losses in a compact form.
         """
-        self.loss_curve_dt, self.loss_maps_dt = (
-            self.riskmodel.build_loss_dtypes(
-                self.oqparam.conditional_loss_poes, self.I))
+        loss_ratios = {cb.loss_type: cb.curve_resolution
+                       for cb in self.riskmodel.curve_builders
+                       if cb.user_provided}
+        self.loss_curve_dt, self.loss_maps_dt = scientific.build_loss_dtypes(
+            loss_ratios, self.oqparam.conditional_loss_poes, self.I)
 
         self.save_loss_curves(result)
         if self.oqparam.conditional_loss_poes:

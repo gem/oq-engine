@@ -26,8 +26,7 @@ import logging
 from datetime import datetime
 from contextlib import contextmanager
 from multiprocessing.connection import Client
-from openquake.engine import config
-
+from openquake.commonlib import config
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,

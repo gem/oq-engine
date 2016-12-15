@@ -1,0 +1,53 @@
+{
+    "features": [
+        {
+            "geometry": {
+                "coordinates": [
+                    -0.1,
+                    0.0
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "iml": 0.8
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    0.0,
+                    0.0
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "iml": 0.8
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    0.1,
+                    0.0
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "iml": 0.8
+            },
+            "type": "Feature"
+        }
+    ],
+    "oqmetadata": {
+        "IMT": "SA(0.1)",
+        "gsimTreePath": "",
+        "investigationTime": "50.0",
+        "poE": "0.01",
+        "sourceModelTreePath": ""
+    },
+    "oqnrmlversion": "0.4",
+    "oqtype": "HazardMap",
+    "type": "FeatureCollection"
+}

@@ -15,10 +15,10 @@ Subpackages
 Submodules
 ----------
 
-openquake.engine.config module
+openquake.commonlib.config module
 ------------------------------
 
-.. automodule:: openquake.engine.config
+.. automodule:: openquake.commonlib.config
     :members:
     :undoc-members:
     :show-inheritance:

@@ -19,7 +19,7 @@
 from openquake.calculators import base
 from openquake.commonlib import readinput
 from openquake.hazardlib.calc.gmf import ground_motion_fields
-from openquake.commonlib.export import export
+from openquake.calculators.export import export
 
 
 @base.calculators.add('my_scenario')

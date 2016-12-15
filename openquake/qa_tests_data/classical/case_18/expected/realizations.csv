@@ -1,0 +1,4 @@
+ordinal,uid,model,gsim,weight
+0,b1~b11,vancouver_area_source.xml,GMPETable(gmpe_table='Wcrust_low_rhypo.hdf5'),0.16
+1,b1~b12,vancouver_area_source.xml,GMPETable(gmpe_table='Wcrust_med_rhypo.hdf5'),0.68
+2,b1~b13,vancouver_area_source.xml,GMPETable(gmpe_table='Wcrust_high_rhypo.hdf5'),0.16

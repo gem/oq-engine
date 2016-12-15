@@ -18,21 +18,23 @@
 
 import os
 import re
-from openquake.baselib.python3compat import pickle
+import getpass
 import collections
-
 import numpy
 import h5py
 
+from openquake.baselib.python3compat import pickle
 from openquake.baselib import hdf5
-from openquake.baselib.general import CallableDict
+from openquake.commonlib import config
 from openquake.commonlib.writers import write_csv
 
-
-# a dictionary of views datastore -> array
-view = CallableDict()
-
-DATADIR = os.environ.get('OQ_DATADIR', os.path.expanduser('~/oqdata'))
+DATADIR = os.environ.get('OQ_DATADIR')
+if not DATADIR:
+    shared_dir = config.get('directory', 'shared_dir')
+    if shared_dir:
+        DATADIR = os.path.join(shared_dir, getpass.getuser(), 'oqdata')
+    else:  # use the home of the user
+        DATADIR = os.path.join(os.path.expanduser('~'), 'oqdata')
 
 
 def get_nbytes(dset):
@@ -173,6 +175,12 @@ class DataStore(collections.MutableMapping):
         for name, value in params:
             self.attrs[name] = value
 
+    def getitem(self, name):
+        """
+        Return a dataset by using h5py.File.__getitem__
+        """
+        return h5py.File.__getitem__(self.hdf5, name)
+
     def set_parent(self, parent):
         """
         Give a parent to a datastore and update its .attrs with the parent
@@ -199,8 +207,9 @@ class DataStore(collections.MutableMapping):
         """
         Set the HDF5 attributes of the given key
         """
+        attrs = h5py.File.__getitem__(self.hdf5, key).attrs
         for k, v in kw.items():
-            h5py.File.__getitem__(self.hdf5, key).attrs[k] = v
+            attrs[k] = v
 
     def get_attr(self, key, name, default=None):
         """
@@ -216,23 +225,45 @@ class DataStore(collections.MutableMapping):
                 raise
             return default
 
-    def create_dset(self, key, dtype, size=None, compression=None):
+    def create_dset(self, key, dtype, shape=(None,), compression=None,
+                    fillvalue=0, attrs=None):
         """
         Create a one-dimensional HDF5 dataset.
 
         :param key: name of the dataset
         :param dtype: dtype of the dataset (usually composite)
-        :param size: size of the dataset (if None, the dataset is extendable)
+        :param shape: shape of the dataset, possibly extendable
+        :param compression: the kind of HDF5 compression to use
+        :param attrs: dictionary of attributes of the dataset
+        :returns: a HDF5 dataset
         """
-        return hdf5.Hdf5Dataset.create(
-            self.hdf5, key, dtype, size, compression)
+        return hdf5.create(
+            self.hdf5, key, dtype, shape, compression, fillvalue, attrs)
+
+    def extend(self, key, array):
+        """
+        Extend the dataset associated to the given key; create it if needed
+
+        :param key: name of the dataset
+        :param array: array to store
+        """
+        try:
+            dset = self.hdf5[key]
+        except KeyError:
+            dset = hdf5.create(self.hdf5, key, array.dtype,
+                               shape=(None,) + array.shape[1:])
+        hdf5.extend(dset, array)
+        return dset
 
     def save(self, key, kw):
         """
         Update the object associated to `key` with the `kw` dictionary;
         works for LiteralAttrs objects and automatically flushes.
         """
-        obj = self[key]
+        if key not in self:
+            obj = hdf5.LiteralAttrs()
+        else:
+            obj = self[key]
         vars(obj).update(kw)
         self[key] = obj
         self.flush()
@@ -365,7 +396,7 @@ class DataStore(collections.MutableMapping):
             yield path
 
     def __contains__(self, key):
-        return key in self.hdf5
+        return key in self.hdf5 or self.parent and key in self.parent.hdf5
 
     def __len__(self):
         return sum(1 for f in self)

@@ -1,28 +1,31 @@
 Scenario Risk for Nepal with 20 assets
 ======================================
 
-gem-tstation:/home/michele/ssd/calc_22626.hdf5 updated Tue May 31 15:39:17 2016
+============================================== ========================
+gem-tstation:/home/michele/ssd/calc_67016.hdf5 Wed Nov  9 08:16:41 2016
+engine_version                                 2.2.0-git54d01f4        
+hazardlib_version                              0.22.0-git173c60c       
+============================================== ========================
 
 num_sites = 20, sitecol = 1.58 KB
 
 Parameters
 ----------
-============================ ==================
-calculation_mode             'scenario_risk'   
-number_of_logic_tree_samples 0                 
-maximum_distance             {'default': 500}  
-investigation_time           None              
-ses_per_logic_tree_path      1                 
-truncation_level             3.0               
-rupture_mesh_spacing         15.0              
-complex_fault_mesh_spacing   15.0              
-width_of_mfd_bin             None              
-area_source_discretization   None              
-random_seed                  42                
-master_seed                  0                 
-avg_losses                   False             
-engine_version               '2.0.0-git4fb4450'
-============================ ==================
+============================ =================
+calculation_mode             'scenario_risk'  
+number_of_logic_tree_samples 0                
+maximum_distance             {u'default': 500}
+investigation_time           None             
+ses_per_logic_tree_path      1                
+truncation_level             3.0              
+rupture_mesh_spacing         15.0             
+complex_fault_mesh_spacing   15.0             
+width_of_mfd_bin             None             
+area_source_discretization   None             
+random_seed                  42               
+master_seed                  0                
+avg_losses                   False            
+============================ =================
 
 Input files
 -----------
@@ -45,10 +48,12 @@ Realizations per (TRT, GSIM)
 
 Exposure model
 --------------
-=========== ==
-#assets     20
-#taxonomies 4 
-=========== ==
+=============== ========
+#assets         20      
+#taxonomies     4       
+deductibile     relative
+insurance_limit relative
+=============== ========
 
 ========================== ===== ====== === === ========= ==========
 taxonomy                   mean  stddev min max num_sites num_assets
@@ -59,27 +64,16 @@ Wood                       1.000 0.0    1   1   8         8
 *ALL*                      1.000 0.0    1   1   20        20        
 ========================== ===== ====== === === ========= ==========
 
-Information about the tasks
----------------------------
-======================= ===== ========= ========= ===== =========
-measurement             mean  stddev    min       max   num_tasks
-scenario_risk.time_sec  0.001 2.392E-04 8.042E-04 0.001 20       
-scenario_risk.memory_mb 0.0   0.0       0.0       0.0   20       
-======================= ===== ========= ========= ===== =========
-
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-total scenario_risk     0.023     0.0       20    
-computing riskmodel     0.012     0.0       20    
-reading exposure        0.011     0.0       1     
+reading exposure        0.008     0.0       1     
 filtering sites         0.004     0.0       1     
 computing gmfs          0.003     0.0       1     
-building hazard         0.002     0.0       20    
 saving gmfs             0.001     0.0       1     
-building riskinputs     9.220E-04 0.0       1     
-building epsilons       2.561E-04 0.0       1     
-reading site collection 7.153E-06 0.0       1     
+building riskinputs     8.268E-04 0.0       1     
+building epsilons       3.510E-04 0.0       1     
+reading site collection 6.914E-06 0.0       1     
 ======================= ========= ========= ======

@@ -163,6 +163,10 @@ footer.footer form label {
     color: #fff;
 }
 
+#my-datastore {
+    float: right;
+}
+
 #my-calculations.well {
     background-color: #f5f5f5;
 }
