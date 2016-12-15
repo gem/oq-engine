@@ -667,6 +667,7 @@ def view_task_slowest(token, dstore):
         taskno, weight, duration, ' '.join(sorted(srcs)))
 
 
+# TODO: this could be replaced by a view over rcurves-stats, in theory
 @view.add('curves_maps_stats')
 def view_curves_maps_stats(self, dstore):
     """
