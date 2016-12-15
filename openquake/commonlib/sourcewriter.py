@@ -478,14 +478,6 @@ def build_source_group(source_group):
     return Node('sourceGroup', attrs, nodes=source_nodes)
 
 
-@obj_to_node.add('SourceGroupCollection')
-def build_source_group_collection(source_group_collection):
-    group_nodes = [obj_to_node(sg) for sg in source_group_collection.grp_list]
-    attrs = dict(name=source_group_collection.name,
-                 grp_interdep=source_group_collection.grp_interdep)
-    return Node('sourceGroup', attrs, nodes=group_nodes)
-
-
 # ##################### generic source model writer ####################### #
 
 def write_source_model(dest, groups, name=None):
