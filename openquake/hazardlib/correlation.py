@@ -87,10 +87,15 @@ class BaseCorrelationModel(with_metaclass(abc.ABCMeta)):
             self.cache[imt] = corma
         if len(sites.complete) == len(sites):
             return numpy.dot(corma, residuals)
-        # this is the fastest way I found
-        res = numpy.sum(corma[sites.sids, sid] * residuals[i]
-                        for i, sid in numpy.ndenumerate(sites.sids))
-        return res
+        # it is important to allocate little memory, this is why I am
+        # accumulating below; if S is the length of the complete sitecollection
+        # the correlation matrix has shape (S, S) and the residuals (N, s),
+        # where s is the number of samples
+        acc = numpy.zeros_like(residuals)  # shape (N, s)
+        for i, sid in numpy.ndenumerate(sites.sids):
+            # multiplying shape (N, 1) * (s,) gives (N, s)
+            acc += corma[sites.sids, sid] * residuals[i]
+        return acc
 
 
 class JB2009CorrelationModel(BaseCorrelationModel):
