@@ -70,7 +70,7 @@ class SourceGroup(collections.Sequence):
     def __init__(self, trt, sources=None,
                  min_mag=None, max_mag=None, id=0, eff_ruptures=-1):
         self.trt = trt
-        self.sources = []
+        self.sources = self.src_list = []
         self.min_mag = min_mag
         self.max_mag = max_mag
         self.id = id
@@ -736,6 +736,9 @@ class SourceConverter(RuptureConverter):
             node['id'], node['name'], trt, rup_pmf_data)
         return nps
 
+    def convert_sourceModel(self, node):
+        return [self.convert_node(subnode) for subnode in node]
+
     def convert_sourceGroup(self, node):
         """
         Convert the given node into a SourceGroup object.
@@ -743,13 +746,14 @@ class SourceConverter(RuptureConverter):
         :param node:
             a node with tag sourceGroup
         :returns:
-            a :class:`openquake.commonlib.source.SourceGroup`
-            instance
+            a :class:`openquake.commonlib.source.SourceGroup` instance
+            mimicking a :class:`openquake.hazardlib.source.base.SourceGroup`
         """
         trt = node['tectonicRegion']
         srcs_weights = node.attrib.get('srcs_weights')
         grp_attrs = {k: v for k, v in node.attrib.items()
-                     if k not in ('name', 'src_interdep', 'srcs_weights')}
+                     if k not in ('name', 'src_interdep', 'rup_interdep',
+                                  'srcs_weights')}
         srcs = []
         for src_node in node:
             src = self.convert_node(src_node)
@@ -767,6 +771,7 @@ class SourceConverter(RuptureConverter):
                                  % (len(srcs_weights), len(node)))
         sg.name = node.attrib.get('name')
         sg.src_interdep = node.attrib.get('src_interdep')
+        sg.rup_interdep = node.attrib.get('rup_interdep')
         sg.srcs_weights = srcs_weights
         return sg
 
