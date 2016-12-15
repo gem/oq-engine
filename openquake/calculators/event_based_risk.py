@@ -26,7 +26,7 @@ from openquake.baselib.general import (
     AccumDict, humansize, block_splitter, group_array)
 from openquake.calculators import base, event_based
 from openquake.baselib import parallel
-from openquake.risklib import scientific, riskinput
+from openquake.risklib import riskinput, scientific
 from openquake.baselib.parallel import starmap
 
 U32 = numpy.uint32
@@ -49,8 +49,7 @@ def build_el_dtypes(insured_losses):
     return numpy.dtype(ela_list), numpy.dtype(elt_list)
 
 
-def build_agg_curve(cb_inputs, insured_losses, ses_ratio, curve_resolution, L,
-                    monitor):
+def build_agg_curve(cb_inputs, monitor):
     """
     Build the aggregate loss curve in parallel for each loss type
     and realization pair.
@@ -59,14 +58,6 @@ def build_agg_curve(cb_inputs, insured_losses, ses_ratio, curve_resolution, L,
         a list of triples `(cb, rlzname, data)` where `cb` is a curve builder,
         `rlzname` is a string of kind `rlz-%03d` and `data` is an array of kind
         `(rupture_id, loss)` or `(rupture_id, loss, loss_ins)`
-    :param bool insured_losses:
-        job.ini configuration parameter
-    :param ses_ratio:
-        a ratio obtained from ses_per_logic_tree_path
-    :param curve_resolution:
-        the number of discretization steps for the loss curve
-    :param L:
-        the number of loss types
     :param monitor:
         a Monitor instance
     :returns:
@@ -78,37 +69,24 @@ def build_agg_curve(cb_inputs, insured_losses, ses_ratio, curve_resolution, L,
             continue
         l = cb.index
         r = int(rlzname[4:])  # strip rlz-
-        if insured_losses:
-            gloss = data['loss'][:, 0]
-            iloss = data['loss'][:, 1]
+        losses = data['loss']
+        if len(losses.shape) == 1:  # no insured losses
+            result[l, r, 0] = cb.calc_agg_curve(losses)
         else:
-            gloss = data['loss']
-        losses, poes = scientific.event_based(
-            gloss, ses_ratio, curve_resolution)
-        avg = scientific.average_loss((losses, poes))
-        result[l, r, 'losses'] = losses
-        result[l, r, 'poes'] = poes
-        result[l, r, 'avg'] = avg
-        if insured_losses:
-            losses_ins, poes_ins = scientific.event_based(
-                iloss, ses_ratio, curve_resolution)
-            avg_ins = scientific.average_loss((losses_ins, poes_ins))
-            result[l, r, 'losses_ins'] = losses_ins
-            result[l, r, 'poes_ins'] = poes_ins
-            result[l, r, 'avg_ins'] = avg_ins
+            result[l, r, 0] = cb.calc_agg_curve(losses[:, 0])
+            result[l, r, 1] = cb.calc_agg_curve(losses[:, 1])
     return result
 
 
-def build_rcurves(cb_inputs, assets, ses_ratio, monitor):
+def build_rcurves(cb_inputs, assets, monitor):
     """
     :param cb_inputs: triples `(cb, rlzname, data)`
     :param assets: full list of assets
-    :param ses_ratio: ses ratio parameter
     :param monitor: Monitor instance
     """
     result = {}
     for cb, rlzname, data in cb_inputs:
-        aids, curves = cb(assets, group_array(data, 'aid'), ses_ratio)
+        aids, curves = cb(assets, group_array(data, 'aid'))
         if len(aids):
             # strip "rlz-" from rlzname below
             result[cb.index, int(rlzname[4:])] = aids, curves
@@ -210,7 +188,7 @@ class EbrPostCalculator(base.RiskCalculator):
 
         # loss curves
         multi_lr_dt = numpy.dtype(
-            [(ltype, (F32, cbuilder.curve_resolution))
+            [(ltype, (F32, len(cbuilder.ratios)))
              for ltype, cbuilder in zip(
                 ltypes, self.riskmodel.curve_builders)])
         rcurves = numpy.zeros((A, R, I), multi_lr_dt)
@@ -221,12 +199,19 @@ class EbrPostCalculator(base.RiskCalculator):
             cb_inputs = self.cb_inputs('ass_loss_ratios')
             mon = self.monitor('build_rcurves')
             res = parallel.apply(
-                build_rcurves,
-                (cb_inputs, assets, self.oqparam.ses_ratio, mon)).reduce()
+                build_rcurves, (cb_inputs, assets, mon)).reduce()
             for l, r in res:
                 aids, curves = res[l, r]
                 rcurves[ltypes[l]][aids, r] = curves
             self.datastore['rcurves-rlzs'] = rcurves
+
+        # build rcurves-stats (sequentially)
+        # this is a fundamental output, being used to compute loss_maps-stats
+        if R > 1:
+            with self.monitor('computing rcurves-stats'):
+                ss = scientific.SimpleStats(self.datastore['realizations'],
+                                            self.oqparam.quantile_loss_curves)
+                self.datastore['rcurves-stats'] = ss.compute(rcurves)
 
         # build an aggregate loss curve per realization
         if 'agg_loss_table' in self.datastore:
@@ -243,24 +228,20 @@ class EbrPostCalculator(base.RiskCalculator):
         generating the loss curves, directly from the the aggregate losses.
         """
         oq = self.oqparam
-        C = oq.loss_curve_resolution
-        loss_curve_dt, _ = self.riskmodel.build_all_loss_dtypes(
-            C, oq.conditional_loss_poes, oq.insured_losses)
+        cr = {cb.loss_type: cb.curve_resolution
+              for cb in self.riskmodel.curve_builders}
+        loss_curve_dt, _ = scientific.build_loss_dtypes(
+            cr, oq.conditional_loss_poes)
         lts = self.riskmodel.loss_types
         cb_inputs = self.cb_inputs('agg_loss_table')
+        I = oq.insured_losses + 1
         R = len(self.rlzs_assoc.realizations)
-        L = len(self.riskmodel.lti)
-        ses_ratio = self.oqparam.ses_ratio
-        I = self.oqparam.insured_losses
         result = parallel.apply(
-            build_agg_curve, (cb_inputs, I, ses_ratio, C, L, self.monitor('')),
+            build_agg_curve, (cb_inputs, self.monitor('')),
             concurrent_tasks=self.oqparam.concurrent_tasks).reduce()
-        agg_curve = numpy.zeros(R, loss_curve_dt)
-        for l, r, name in result:
-            if name.endswith('_ins'):
-                agg_curve[lts[l]][name[:-4]][r, 1] = result[l, r, name]
-            else:
-                agg_curve[lts[l]][name][r][0] = result[l, r, name]
+        agg_curve = numpy.zeros((I, R), loss_curve_dt)
+        for l, r, i in result:
+            agg_curve[lts[l]][i, r] = result[l, r, i]
         self.datastore['agg_curve-rlzs'] = agg_curve
 
 
@@ -443,6 +424,9 @@ class EbriskCalculator(base.RiskCalculator):
             for sg in source_models[i].src_groups:
                 sg.eff_ruptures = res.num_ruptures.get(sg.id, 0)
         self.datastore['csm_info'] = self.csm.info
+        self.datastore.flush()  # when killing the computation
+        # the csm_info arrays were stored but not the attributes;
+        # adding the .flush() solved the issue
         num_events = self.save_results(allres, num_rlzs)
         self.save_data_transfer(parallel.IterResult.sum(allres))
         return num_events
