@@ -945,8 +945,13 @@ def export_loss_curves_stats(ekey, dstore):
             ('rcurves-stats', 'xml'),
             ('rcurves-stats', 'geojson'))
 def export_rcurves_rlzs(ekey, dstore):
+    oq = dstore['oqparam']
+    riskmodel = riskinput.read_composite_risk_model(dstore)
     assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
+    suffix = ekey[0].split('-')[1]  # rlzs or stats
+    if oq.avg_losses:
+        acurves = dstore['avg_losses-' + suffix]
     rcurves = dstore[ekey[0]]
     [loss_ratios] = dstore['loss_ratios']
     fnames = []
@@ -957,15 +962,16 @@ def export_rcurves_rlzs(ekey, dstore):
             dstore, writercls, ekey[0]):
         if ltype not in loss_ratios.dtype.names:
             continue  # ignore loss type
-        array = rcurves[ltype][:, r, ins]
+        l = riskmodel.lti[ltype]
+        poes = rcurves[ltype][:, r, ins]
         curves = []
-        for ass, poes in zip(assetcol, array):
+        for aid, ass in enumerate(assetcol):
             loc = Location(ass['lon'], ass['lat'])
             value = (ass['occupants'] if ltype == 'occupants'
                      else ass['value-' + ltype])
             losses = loss_ratios[ltype] * value
-            avg = scientific.average_loss((losses, poes))
-            curve = LossCurve(loc, aref[ass['idx']], poes,
+            avg = acurves[aid, r, l][ins] if oq.avg_losses else -1
+            curve = LossCurve(loc, aref[ass['idx']], poes[aid],
                               losses, loss_ratios[ltype], avg, None)
             curves.append(curve)
         writer.serialize(curves)
