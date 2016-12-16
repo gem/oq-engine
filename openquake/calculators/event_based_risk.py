@@ -444,11 +444,19 @@ class EbriskCalculator(base.RiskCalculator):
         self.R = num_rlzs
         self.T = len(self.assetcol.taxonomies)
         self.A = len(self.assetcol)
-        ins = self.oqparam.insured_losses
+        I = self.oqparam.insured_losses + 1
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
+            # since we are using a composite array the default fillvalue=0 does
+            # not work, we must set fillvalue=None and then set to 0 manually
             dset = self.datastore.create_dset(
-                'avg_losses-rlzs', F32, (self.A, self.R, self.L * (ins + 1)))
+                'avg_losses-rlzs', (F32, (I,)), (self.A, self.R, self.L),
+                fillvalue=None)
+            for a in range(self.A):
+                for r in range(self.R):
+                    for l in range(self.L):
+                        dset[a, r, l] = (0,) if I == 1 else (0, 0)
+
         num_events = 0
         self.gmfbytes = 0
         for res in allres:
@@ -457,9 +465,8 @@ class EbriskCalculator(base.RiskCalculator):
                 if avg_losses:
                     for (l, r), losses in dic.pop('avglosses').items():
                         vs = self.vals[self.riskmodel.loss_types[l]]
-                        dset[:, r + start, l] += losses[:, 0] * vs
-                        if ins:
-                            dset[:, r + start, l + self.L] += losses[:, 1] * vs
+                        for aid in range(self.A):
+                            dset[aid, r + start, l] += losses[aid] * vs[aid]
                 self.gmfbytes += dic.pop('gmfbytes')
                 self.save_losses(
                     dic.pop('agglosses'), dic.pop('asslosses'), start)

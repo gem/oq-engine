@@ -116,7 +116,7 @@ def export_avg_losses(ekey, dstore):
     """
     avg_losses = dstore[ekey[0]].value
     oq = dstore['oqparam']
-    dt = oq.loss_dt()
+    dt = oq.multiloss_dt()
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = get_assets(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
@@ -156,7 +156,7 @@ def export_avg_losses_stats(ekey, dstore):
     """
     oq = dstore['oqparam']
     rlzs = dstore['realizations']
-    dt = oq.loss_dt()
+    dt = oq.multiloss_dt()
     stats = scientific.SimpleStats(rlzs, oq.quantile_loss_curves)
     avg_losses = stats.compute(dstore['avg_losses-rlzs'])  # sequentially
     assets = get_assets(dstore)
