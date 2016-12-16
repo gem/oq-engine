@@ -51,7 +51,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
-        self.assert_stats_ok(case_1, 'job.ini', individual_curves='true')
+        self.assert_stats_ok(case_1, 'job.ini', individual_curves='false')
 
         # the numbers in the xml and geojson files are extremely sensitive to
         # the libraries; while waiting for the opt project we skip this test
