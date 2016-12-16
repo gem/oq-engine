@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <lossMap
+    investigationTime="50.0"
+    lossType="nonstructural"
+    poE="0.1"
+    riskInvestigationTime="50.0"
+    statistics="mean"
+    unit="EUR"
+    >
+        <node>
+            <gml:Point>
+                <gml:pos>
+                    81.2985 29.1098
+                </gml:pos>
+            </gml:Point>
+            <loss assetRef="a0" value="3.86527E+02"/>
+        </node>
+        <node>
+            <gml:Point>
+                <gml:pos>
+                    83.0823 27.9006
+                </gml:pos>
+            </gml:Point>
+            <loss assetRef="a1" value="1.70289E+02"/>
+        </node>
+        <node>
+            <gml:Point>
+                <gml:pos>
+                    85.7477 27.9015
+                </gml:pos>
+            </gml:Point>
+            <loss assetRef="a2" value="3.59846E+01"/>
+            <loss assetRef="a3" value="0.00000E+00"/>
+        </node>
+    </lossMap>
+</nrml>
