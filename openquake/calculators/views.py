@@ -451,7 +451,7 @@ def sum_table(records):
 # this is used by the ebr calculator
 @view.add('mean_avg_losses')
 def view_mean_avg_losses(token, dstore):
-    dt = dstore['oqparam'].loss_dt()
+    dt = dstore['oqparam'].multiloss_dt()
     try:
         array = dstore['avg_losses-stats']  # shape (N, S)
     except KeyError:
@@ -681,7 +681,6 @@ def view_curves_maps_stats(self, dstore):
         avg_losses = dstore['avg_losses-rlzs'].value
     rcurves = dstore['rcurves-rlzs'].value
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
-    L = len(loss_types)
     vals = assetcol.values()
     default_loss_ratios = numpy.linspace(
         0, 1, oq.loss_curve_resolution + 1)[1:]
@@ -699,9 +698,9 @@ def view_curves_maps_stats(self, dstore):
         data = []
         for rlz in rlzs:
             if oq.avg_losses:
-                average_losses = avg_losses[:, rlz.ordinal, l]
-                average_insured_losses = (
-                    avg_losses[:, rlz.ordinal, l + L] if insured else None)
+                alosses = avg_losses[:, rlz.ordinal, l]
+                average_losses = alosses[:, 0]
+                average_insured_losses = alosses[:, 1] if insured else None
             else:
                 average_losses = numpy.zeros(A, F32)
                 average_insured_losses = numpy.zeros(A, F32)
