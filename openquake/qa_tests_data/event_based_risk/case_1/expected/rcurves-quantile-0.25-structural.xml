@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <lossCurves
+    investigationTime="50.0"
+    lossType="structural"
+    quantileValue="0.25"
+    riskInvestigationTime="50.0"
+    statistics="quantile"
+    unit="EUR"
+    >
+        <lossCurve
+        assetRef="a0"
+        >
+            <gml:Point>
+                <gml:pos>
+                    81.2985 29.1098
+                </gml:pos>
+            </gml:Point>
+            <poEs>
+                2.59182E-01 1.39292E-01 4.87705E-02 4.87705E-02 4.87705E-02 4.87705E-02 4.87705E-02 0.00000E+00 0.00000E+00 0.00000E+00
+            </poEs>
+            <losses>
+                3.00000E+02 6.00000E+02 9.00000E+02 1.20000E+03 1.50000E+03 1.80000E+03 2.10000E+03 2.40000E+03 2.70000E+03 3.00000E+03
+            </losses>
+            <lossRatios>
+                0.100 0.200 0.300 0.400 0.500 0.600 0.700 0.800 0.900 1.000
+            </lossRatios>
+            <averageLoss>
+                2.75512E+02
+            </averageLoss>
+        </lossCurve>
+        <lossCurve
+        assetRef="a1"
+        >
+            <gml:Point>
+                <gml:pos>
+                    83.0823 27.9006
+                </gml:pos>
+            </gml:Point>
+            <poEs>
+                0.00000E+00 0.00000E+00 0.00000E+00 0.00000E+00 0.00000E+00 0.00000E+00 0.00000E+00 0.00000E+00 0.00000E+00 0.00000E+00
+            </poEs>
+            <losses>
+                2.00000E+02 4.00000E+02 6.00000E+02 8.00000E+02 1.00000E+03 1.20000E+03 1.40000E+03 1.60000E+03 1.80000E+03 2.00000E+03
+            </losses>
+            <lossRatios>
+                0.100 0.200 0.300 0.400 0.500 0.600 0.700 0.800 0.900 1.000
+            </lossRatios>
+            <averageLoss>
+                6.24332E+01
+            </averageLoss>
+        </lossCurve>
+        <lossCurve
+        assetRef="a2"
+        >
+            <gml:Point>
+                <gml:pos>
+                    85.7477 27.9015
+                </gml:pos>
+            </gml:Point>
+            <poEs>
+                2.59182E-01 1.81269E-01 1.81269E-01 1.81269E-01 1.81269E-01 1.39292E-01 4.87705E-02 4.87705E-02 4.87705E-02 0.00000E+00
+            </poEs>
+            <losses>
+                1.00000E+02 2.00000E+02 3.00000E+02 4.00000E+02 5.00000E+02 6.00000E+02 7.00000E+02 8.00000E+02 9.00000E+02 1.00000E+03
+            </losses>
+            <lossRatios>
+                0.100 0.200 0.300 0.400 0.500 0.600 0.700 0.800 0.900 1.000
+            </lossRatios>
+            <averageLoss>
+                1.55704E+02
+            </averageLoss>
+        </lossCurve>
+        <lossCurve
+        assetRef="a3"
+        >
+            <gml:Point>
+                <gml:pos>
+                    85.7477 27.9015
+                </gml:pos>
+            </gml:Point>
+            <poEs>
+                9.51626E-02 9.51626E-02 4.87705E-02 0.00000E+00 0.00000E+00 0.00000E+00 0.00000E+00 0.00000E+00 0.00000E+00 0.00000E+00
+            </poEs>
+            <losses>
+                5.00000E+02 1.00000E+03 1.50000E+03 2.00000E+03 2.50000E+03 3.00000E+03 3.50000E+03 4.00000E+03 4.50000E+03 5.00000E+03
+            </losses>
+            <lossRatios>
+                0.100 0.200 0.300 0.400 0.500 0.600 0.700 0.800 0.900 1.000
+            </lossRatios>
+            <averageLoss>
+                2.28190E+02
+            </averageLoss>
+        </lossCurve>
+    </lossCurves>
+</nrml>
