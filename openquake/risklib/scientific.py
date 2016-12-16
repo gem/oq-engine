@@ -1640,7 +1640,7 @@ class StatsBuilder(object):
             quantiles=self.quantiles,
             conditional_loss_poes=self.conditional_loss_poes)
 
-    def _get_curves_maps(self, stats, C):
+    def get_curves_maps(self, stats, C):
         """
         :param stats:
             an object with attributes mean_curves, mean_average_losses,
