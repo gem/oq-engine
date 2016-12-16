@@ -1000,32 +1000,29 @@ class CurveBuilder(object):
             curves.append((self.ratios * avalue, poes))
         return loss_map_matrix([clp], curves)[0]
 
-    def build_loss_maps(self, assetcol, rcurves):
+    def build_loss_maps(self, assetvals, rcurves):
         """
         Build loss maps from the risk curves. Yield pairs
         (rlz_ordinal, loss_maps array).
 
-        :param assetcol: asset collection
+        :param assetvals: values of the assets as a composite array
         :param rcurves: array of risk curves of shape (N, R, 2)
         """
-        N = len(assetcol)
+        N = len(assetvals)
         R = rcurves.shape[1]
         if self.user_provided:  # loss_ratios provided
             lst = [('poe-%s' % poe, F32) for poe in self.conditional_loss_poes]
             if self.insured_losses:
                 lst += [(name + '_ins', pair) for name, pair in lst]
             loss_maps_dt = numpy.dtype(lst)
-            if self.loss_type == 'occupants':
-                asset_values = assetcol['occupants']
-            else:
-                asset_values = assetcol['value-' + self.loss_type]
             curves_lt = rcurves[self.loss_type]
+            vals = assetvals[self.loss_type]
             for rlzi in range(R):
                 loss_maps = numpy.zeros(N, loss_maps_dt)
                 for name in loss_maps.dtype.names:
                     poe, ins = extract_poe_ins(name)
                     loss_maps[name] = self._calc_loss_maps(
-                        asset_values, poe, curves_lt[:, rlzi, ins])
+                        vals, poe, curves_lt[:, rlzi, ins])
                 yield rlzi, loss_maps
 
     def __repr__(self):
