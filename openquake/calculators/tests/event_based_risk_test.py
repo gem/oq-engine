@@ -57,16 +57,18 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # the libraries; while waiting for the opt project we skip this test
         check_platform('xenial')
         ekeys = [
-            ('rcurves-rlzs', 'xml'),
-            ('rcurves-rlzs', 'geojson'),
+            ('rcurves-stats', 'xml'),
+            ('rcurves-stats', 'geojson'),
 
-            ('loss_maps-rlzs', 'xml'),
-            ('loss_maps-rlzs', 'geojson'),
+            ('loss_maps-stats', 'xml'),
+            ('loss_maps-stats', 'geojson'),
 
             ('agg_curve-stats', 'xml'),
         ]
         for ekey in ekeys:
-            export(ekey, self.calc.datastore)
+            for fname in export(ekey, self.calc.datastore):
+                self.assertEqualFiles(
+                    'expected/%s' % strip_calc_id(fname), fname)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
@@ -160,9 +162,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                         self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
-
-        # make sure the stat exporter works
-        export(('loss_curves_maps-stats', 'csv'), self.calc.datastore)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):
