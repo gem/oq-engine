@@ -462,11 +462,15 @@ def export_damage_total(ekey, dstore):
     return sorted(fnames)
 
 
+# used by classical_risk and event_based_risk
 @export.add(('loss_maps-rlzs', 'csv'))
 def export_loss_maps_csv(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = get_assets(dstore)
-    value = get_loss_maps(dstore)  # matrix N x R or T x R
+    if 'loss_maps-rlzs' in dstore:
+        value = get_loss_maps(dstore, 'loss_maps-rlzs')
+    else:
+        value = get_loss_maps(dstore, 'rcurves-rlzs')
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz, values in zip(rlzs, value.T):
         fname = dstore.build_fname('loss_maps', rlz, ekey[1])
@@ -622,10 +626,8 @@ class Location(object):
         self.wkt = 'POINT(%s %s)' % (x, y)
 
 
-def get_loss_maps(dstore):
-    if 'loss_maps-rlzs' in dstore:  # classical_risk
-        loss_maps = dstore['loss_maps-rlzs'].value
-    else:  # event_based_risk, get them from rcurves-rlzs
+def get_loss_maps(dstore, name):
+    if name.startswith('rcurves-'):  # event_based_risk
         oq = dstore['oqparam']
         assetcol = dstore['assetcol']
         realizations = dstore['realizations']
@@ -633,13 +635,15 @@ def get_loss_maps(dstore):
         _, loss_maps_dt = scientific.build_loss_dtypes(
             {str(lt): len(oq.loss_ratios[lt]) for lt in oq.loss_ratios},
             oq.conditional_loss_poes, oq.insured_losses)
-        loss_maps = numpy.zeros(
-            (len(assetcol), len(realizations)), loss_maps_dt)
-        rcurves = dstore['rcurves-rlzs']
+        loss_maps = numpy.zeros((len(assetcol), len(realizations)),
+                                loss_maps_dt)
+        rcurves = dstore[name]
         for cb in riskmodel.curve_builders:
-            if cb.user_provided:
+            if cb.loss_type in oq.loss_ratios:
                 for r, lmaps in cb.build_loss_maps(assetcol.array, rcurves):
                     loss_maps[cb.loss_type][:, r] = lmaps
+    else:  # classical_risk
+        loss_maps = dstore[name].value
     return loss_maps
 
 
@@ -651,7 +655,10 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
     unit_by_lt = cc.units
     unit_by_lt['occupants'] = 'people'
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    loss_maps = get_loss_maps(dstore)
+    if 'loss_maps-rlzs' in dstore:
+        loss_maps = get_loss_maps(dstore, 'loss_maps-rlzs')
+    else:
+        loss_maps = get_loss_maps(dstore, 'rcurves-rlzs')
     assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
     R = len(rlzs)
@@ -689,10 +696,13 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
     return sorted(fnames)
 
 
-# used by classical_risk
+# used by classical_risk and event_based_risk
 @export.add(('loss_maps-stats', 'xml'), ('loss_maps-stats', 'geojson'))
 def export_loss_maps_stats_xml_geojson(ekey, dstore):
-    loss_maps = dstore[ekey[0]]
+    if 'loss_maps-rlzs' in dstore:
+        loss_maps = get_loss_maps(dstore, 'loss_maps-stats')
+    else:
+        loss_maps = get_loss_maps(dstore, 'rcurves-stats')
     N, S = loss_maps.shape
     assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
@@ -970,6 +980,7 @@ def export_rcurves_rlzs(ekey, dstore):
             value = (ass['occupants'] if ltype == 'occupants'
                      else ass['value-' + ltype])
             losses = loss_ratios[ltype] * value
+            # -1 means that the average was not computed
             avg = acurves[aid, r, l][ins] if oq.avg_losses else -1
             curve = LossCurve(loc, aref[ass['idx']], poes[aid],
                               losses, loss_ratios[ltype], avg, None)
