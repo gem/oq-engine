@@ -107,23 +107,35 @@ def compactify(array):
     return zeros
 
 
+def _get_triple(longname, array, quantiles, insured):
+    # the array has shape (A, R, L, I)
+    name, kind = longname.split('-')
+    if kind == 'stats':
+        tags = ['mean'] + ['quantile-%s' % q for q in quantiles]
+    else:
+        tags = ['rlz-%03d' % r for r in range(array.shape[1])]
+    for r, tag in enumerate(tags):
+        yield name, tag, array[:, r, :, 0]
+        if insured:
+            yield name + '_ins', tag, array[:, r, :, 1]
+
+
 # this is used by event_based_risk
-@export.add(('avg_losses-rlzs', 'csv'))
+@export.add(('avg_losses-rlzs', 'csv'), ('avg_losses-stats', 'csv'))
 def export_avg_losses(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    avg_losses = dstore[ekey[0]].value
+    avg_losses = dstore[ekey[0]].value  # shape (A, R, L, I)
     oq = dstore['oqparam']
-    dt = oq.multiloss_dt()
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    dt = oq.cost_dt()
     assets = get_assets(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for rlz in rlzs:
-        losses = numpy.array(
-            [tuple(row) for row in avg_losses[:, rlz.ordinal]], dt)
-        dest = dstore.build_fname('losses_by_asset', rlz, 'csv')
+    for name, tag, data in _get_triple(
+            ekey[0], avg_losses, oq.quantile_loss_curves, oq.insured_losses):
+        losses = numpy.array([tuple(row) for row in data], dt)
+        dest = dstore.build_fname(name, tag, 'csv')
         data = compose_arrays(assets, losses)
         writer.save(data, dest)
     return writer.getsaved()
@@ -143,27 +155,6 @@ def export_losses_by_asset(ekey, dstore):
     for rlz in rlzs:
         losses = avg_losses[:, rlz.ordinal]
         dest = dstore.build_fname('losses_by_asset', rlz, 'csv')
-        data = compose_arrays(assets, losses)
-        writer.save(data, dest)
-    return writer.getsaved()
-
-
-@export.add(('avg_losses-stats', 'csv'))
-def export_avg_losses_stats(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    oq = dstore['oqparam']
-    rlzs = dstore['realizations']
-    dt = oq.multiloss_dt()
-    stats = scientific.SimpleStats(rlzs, oq.quantile_loss_curves)
-    avg_losses = stats.compute(dstore['avg_losses-rlzs'])  # sequentially
-    assets = get_assets(dstore)
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for i, quantile in enumerate(stats.names):
-        losses = numpy.array([tuple(row) for row in avg_losses[:, i]], dt)
-        dest = dstore.build_fname('avg_losses', quantile, 'csv')
         data = compose_arrays(assets, losses)
         writer.save(data, dest)
     return writer.getsaved()
