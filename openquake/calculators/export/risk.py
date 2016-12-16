@@ -822,7 +822,14 @@ def get_paths(rlz):
 
 
 def _gen_writers(dstore, writercls, root):
-    # build XMLWriter instances
+    # build Writer instances
+    name = writercls.__name__
+    if 'XML' in name:
+        ext = 'xml'
+    elif 'JSON' in name:
+        ext = 'geojson'
+    else:
+        raise ValueError('Unsupported writer class: %s' % writercls)
     oq = dstore['oqparam']
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     cc = dstore['assetcol/cost_calculator']
@@ -837,7 +844,7 @@ def _gen_writers(dstore, writercls, root):
                             '%s-%s%s%s' %
                             (root[:-5],  # strip -rlzs
                              loss_type, poe_str, '_ins' if ins else ''),
-                            rlz, 'xml')
+                            rlz, ext)
                         yield writercls(
                             dest, oq.investigation_time, poe=poe,
                             loss_type=loss_type, unit=cc.units[loss_type],
@@ -852,7 +859,7 @@ def _gen_writers(dstore, writercls, root):
                         prefix = root[:-6]  # strip -stats
                         key = '%s-%s%s%s' % (statname, loss_type, poe_str,
                                              '_ins' if ins else '')
-                        dest = dstore.build_fname(prefix, key, 'xml')
+                        dest = dstore.build_fname(prefix, key, ext)
                         yield writercls(
                             dest, oq.investigation_time,
                             poe=poe, loss_type=loss_type,
