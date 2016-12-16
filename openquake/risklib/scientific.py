@@ -1643,33 +1643,6 @@ class StatsBuilder(object):
             quantiles=self.quantiles,
             conditional_loss_poes=self.conditional_loss_poes)
 
-    def get_curves_maps(self, outputs_by_lt, loss_ratios_by_lt):
-        """
-        :param outputs_by_lt:
-            for each loss type, a list with R outputs
-        :param loss_ratios_by_lt:
-            for each loss_type, an array of ratios
-        """
-        loss_curve_dt, loss_maps_dt = build_loss_dtypes(
-            {lt: len(loss_ratios_by_lt[lt]) for lt in loss_ratios_by_lt},
-            self.conditional_loss_poes, self.insured_losses)
-        assets = list(outputs_by_lt.values())[0][0].assets
-        N = len(assets)
-        Q1 = len(self.mean_quantiles)
-        loss_curves = numpy.zeros((N, Q1), loss_curve_dt)
-        if self.conditional_loss_poes:
-            loss_maps = numpy.zeros((N, Q1), loss_maps_dt)
-        else:
-            loss_maps = None
-        for lt in loss_ratios_by_lt:
-            C = loss_curve_dt[lt]['losses'].shape[-1]
-            curves, maps = self._get_curves_maps(
-                self.build(outputs_by_lt[lt]), C)
-            loss_curves[lt] = curves.T
-            if self.conditional_loss_poes:
-                loss_maps[lt] = maps.T
-        return loss_curves, loss_maps
-
     def _get_curves_maps(self, stats, C):
         """
         :param stats:
@@ -1723,14 +1696,6 @@ class StatsBuilder(object):
                 mq_curves.transpose(1, 0, 2, 3), mq_avgs.T):
             acc.append(zip(mq_curve, mq_avg))
         return acc  # (N, Q1) triples
-
-
-def _old_loss_curves(asset_values, rcurves, ratios):
-    # build loss curves in the old format (i.e. (losses, poes)) from
-    # loss curves in the new format (i.e. poes).
-    # shape (N, 2, C)
-    return numpy.array([(avalue * ratios, poes)
-                        for avalue, poes in zip(asset_values, rcurves)])
 
 
 def _combine_mq(mean, quantile):
