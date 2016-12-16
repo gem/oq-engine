@@ -1,4 +1,4 @@
 # !! must update pip first! so wheels will be used !!
 
 # GEM Mirror
-http://ftp.openquake.org/python-new-wheels/PyYAML-3.12-cp35-cp35m-manylinux1_x86_64.whl
+http://ftp.openquake.org/wheelhouse/linux/py35/PyYAML-3.12-cp35-cp35m-manylinux1_x86_64.whl
