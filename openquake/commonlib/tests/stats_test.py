@@ -96,7 +96,7 @@ class StatsTestCase(unittest.TestCase):
     # TODO: add a test for insured curves and maps
     def test_get_stat_curves_maps(self):
         tempdir = tempfile.mkdtemp()
-        curves, maps = self.builder._get_curves_maps(
+        curves, maps = self.builder.get_curves_maps(
             self.stats, self.curve_resolution)
         # expecting arrays of shape (Q1, N) with Q1=3, N=4
         actual = os.path.join(tempdir, 'expected_loss_curves.csv')
