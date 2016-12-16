@@ -502,7 +502,6 @@ def export_csq_by_taxon_csv(ekey, dstore):
     return writer.getsaved()
 
 
-# TODO: export loss_maps-stats csv
 @export.add(('csq_total', 'csv'))
 def export_csq_total_csv(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
@@ -899,23 +898,6 @@ def export_agg_curve_stats(ekey, dstore):
         writer.serialize(curve)
         fnames.append(writer._dest)
     return sorted(fnames)
-
-
-# this is used by event_based_risk
-@export.add(('loss_curves_maps-stats', 'csv'))
-def export_loss_curves_maps_stats(ekey, dstore):
-    oq = dstore['oqparam']
-    assets = get_assets(dstore)
-    quantiles = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
-    writer = writers.CsvWriter(fmt='%9.6E')
-    curves, maps = view('curves_maps_stats', dstore)
-    for i, quantile in enumerate(quantiles):
-        arr = compose_arrays(assets, curves[:, i])
-        writer.save(arr, dstore.build_fname('loss_curves', quantile, 'csv'))
-        if oq.conditional_loss_poes:
-            arr = compose_arrays(assets, maps[:, i])
-            writer.save(arr, dstore.build_fname('loss_maps', quantile, 'csv'))
-    return writer.getsaved()
 
 
 # this is used by classical risk
