@@ -941,7 +941,9 @@ def export_loss_curves_stats(ekey, dstore):
 
 # this is used by event_based_risk to export loss curves
 @export.add(('rcurves-rlzs', 'xml'),
-            ('rcurves-rlzs', 'geojson'))
+            ('rcurves-rlzs', 'geojson'),
+            ('rcurves-stats', 'xml'),
+            ('rcurves-stats', 'geojson'))
 def export_rcurves_rlzs(ekey, dstore):
     assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
