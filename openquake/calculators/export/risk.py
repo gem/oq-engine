@@ -30,7 +30,6 @@ from openquake.commonlib.util import get_assets, compose_arrays
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
     ExposureData, Site)
-from openquake.calculators.views import view
 
 Output = collections.namedtuple('Output', 'ltype path array')
 F32 = numpy.float32
@@ -619,18 +618,18 @@ class Location(object):
 def get_loss_maps(dstore, name):
     if name.startswith('rcurves-'):  # event_based_risk
         oq = dstore['oqparam']
-        assetcol = dstore['assetcol']
+        assetvals = dstore['assetcol'].values()
         realizations = dstore['realizations']
         riskmodel = riskinput.read_composite_risk_model(dstore)
         _, loss_maps_dt = scientific.build_loss_dtypes(
             {str(lt): len(oq.loss_ratios[lt]) for lt in oq.loss_ratios},
             oq.conditional_loss_poes, oq.insured_losses)
-        loss_maps = numpy.zeros((len(assetcol), len(realizations)),
+        loss_maps = numpy.zeros((len(assetvals), len(realizations)),
                                 loss_maps_dt)
         rcurves = dstore[name]
         for cb in riskmodel.curve_builders:
             if cb.loss_type in oq.loss_ratios:
-                for r, lmaps in cb.build_loss_maps(assetcol.array, rcurves):
+                for r, lmaps in cb.build_loss_maps(assetvals, rcurves):
                     loss_maps[cb.loss_type][:, r] = lmaps
     else:  # classical_risk
         loss_maps = dstore[name].value
@@ -937,7 +936,7 @@ def export_loss_curves_stats(ekey, dstore):
 def export_rcurves_rlzs(ekey, dstore):
     oq = dstore['oqparam']
     riskmodel = riskinput.read_composite_risk_model(dstore)
-    assetcol = dstore['assetcol/array'].value
+    assetcol = dstore['assetcol']
     aref = dstore['asset_refs'].value
     kind = ekey[0].split('-')[1]  # rlzs or stats
     if oq.avg_losses:
@@ -956,13 +955,11 @@ def export_rcurves_rlzs(ekey, dstore):
         poes = rcurves[ltype][:, r, ins]
         curves = []
         for aid, ass in enumerate(assetcol):
-            loc = Location(ass['lon'], ass['lat'])
-            value = (ass['occupants'] if ltype == 'occupants'
-                     else ass['value-' + ltype])
-            losses = loss_ratios[ltype] * value
+            loc = Location(*ass.location)
+            losses = loss_ratios[ltype] * ass.value(ltype)
             # -1 means that the average was not computed
             avg = acurves[aid, r, l][ins] if oq.avg_losses else -1
-            curve = LossCurve(loc, aref[ass['idx']], poes[aid],
+            curve = LossCurve(loc, aref[ass.id], poes[aid],
                               losses, loss_ratios[ltype], avg, None)
             curves.append(curve)
         writer.serialize(curves)
