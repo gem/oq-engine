@@ -208,9 +208,12 @@ class EbrPostCalculator(base.RiskCalculator):
         # build rcurves-stats (sequentially)
         # this is a fundamental output, being used to compute loss_maps-stats
         if R > 1:
+            ss = scientific.SimpleStats(self.datastore['realizations'],
+                                        self.oqparam.quantile_loss_curves)
+            with self.monitor('computing avg_losses-stats'):
+                self.datastore['avg_losses-stats'] = ss.compute(
+                    self.datastore['avg_losses-rlzs'])
             with self.monitor('computing rcurves-stats'):
-                ss = scientific.SimpleStats(self.datastore['realizations'],
-                                            self.oqparam.quantile_loss_curves)
                 self.datastore['rcurves-stats'] = ss.compute(rcurves)
 
         # build an aggregate loss curve per realization
