@@ -17,39 +17,43 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
+import numpy
 from openquake.baselib import sap
 from openquake.commonlib import datastore
 
 
-def make_figure(curves):
+def make_figure(asset, loss_ratios, rcurves):
     # NB: matplotlib is imported inside, otherwise nosetest would fail in an
     # installation without matplotlib
     import matplotlib.pyplot as plt
-    loss_types = curves.dtype.names
-    I, R = curves.shape
+    loss_types = rcurves.dtype.names
+    S, I = rcurves.shape
     num_lt = len(loss_types)
     fig = plt.figure()
     for j, lt in enumerate(loss_types, 1):
+        losses = asset.value(lt) * numpy.array(loss_ratios[lt])
         for i in range(I):
             ax = fig.add_subplot(num_lt * I, I, i * num_lt + j)
             ax.grid(True)
             ax.set_ylabel('%s%s' % (lt, '_ins' if i else ''))
             ax.set_ylim([0, 1])
-            for rlzi, c in enumerate(curves[lt][i]):
-                ax.plot(c['losses'], c['poes'], label='rlz-%03d' % rlzi)
+            for s, poes in enumerate(rcurves[lt][i]):
+                ax.plot(losses, poes, label=str(s))
     plt.legend()
     return plt
 
 
 @sap.Script
-def plot_ac(calc_id):
+def plot_lc(calc_id, aid):
     """
-    Aggregate loss curves plotter.
+    Plot loss curves given a calculation id and an asset ordinal.
     """
     # read the hazard data
     dstore = datastore.read(calc_id)
-    agg_curve = dstore['agg_curve-rlzs']
-    plt = make_figure(agg_curve)
+    oq = dstore['oqparam']
+    asset = dstore['assetcol'][aid]
+    plt = make_figure(asset, oq.loss_ratios, dstore['rcurves-stats'][aid])
     plt.show()
 
-plot_ac.arg('calc_id', 'a computation id', type=int)
+plot_lc.arg('calc_id', 'a computation id', type=int)
+plot_lc.arg('aid', 'asset ordinal', type=int)
