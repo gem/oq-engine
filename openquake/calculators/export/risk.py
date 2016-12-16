@@ -939,9 +939,9 @@ def export_rcurves_rlzs(ekey, dstore):
     riskmodel = riskinput.read_composite_risk_model(dstore)
     assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
-    suffix = ekey[0].split('-')[1]  # rlzs or stats
+    kind = ekey[0].split('-')[1]  # rlzs or stats
     if oq.avg_losses:
-        acurves = dstore['avg_losses-' + suffix]
+        acurves = dstore['avg_losses-' + kind]
     rcurves = dstore[ekey[0]]
     [loss_ratios] = dstore['loss_ratios']
     fnames = []
