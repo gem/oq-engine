@@ -1,70 +1,40 @@
-{
-    "features": [
-        {
-            "geometry": {
-                "coordinates": [
-                    81.29850006103516,
-                    29.109800338745117
-                ],
-                "type": "Point"
-            },
-            "properties": {
-                "asset_ref": "a0",
-                "loss": 26.825712203979492
-            },
-            "type": "Feature"
-        },
-        {
-            "geometry": {
-                "coordinates": [
-                    83.0822982788086,
-                    27.90060043334961
-                ],
-                "type": "Point"
-            },
-            "properties": {
-                "asset_ref": "a1",
-                "loss": 0.0
-            },
-            "type": "Feature"
-        },
-        {
-            "geometry": {
-                "coordinates": [
-                    85.7477035522461,
-                    27.901500701904297
-                ],
-                "type": "Point"
-            },
-            "properties": {
-                "asset_ref": "a2",
-                "loss": 0.0686812549829483
-            },
-            "type": "Feature"
-        },
-        {
-            "geometry": {
-                "coordinates": [
-                    85.7477035522461,
-                    27.901500701904297
-                ],
-                "type": "Point"
-            },
-            "properties": {
-                "asset_ref": "a3",
-                "loss": 0.0
-            },
-            "type": "Feature"
-        }
-    ],
-    "oqmetadata": {
-        "investigationTime": "50.0",
-        "lossType": "structural",
-        "poE": "0.1",
-        "statistics": "mean",
-        "unit": "EUR"
-    },
-    "oqnrmlversion": "0.4",
-    "oqtype": "LossMap",
-    "type": "FeatureCollection"
-}
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <lossMap
+    investigationTime="50.0"
+    lossType="structural"
+    poE="0.1"
+    riskInvestigationTime="50.0"
+    statistics="mean"
+    unit="EUR"
+    >
+        <node>
+            <gml:Point>
+                <gml:pos>
+                    81.2985 29.1098
+                </gml:pos>
+            </gml:Point>
+            <loss assetRef="a0" value="2.68257E+01"/>
+        </node>
+        <node>
+            <gml:Point>
+                <gml:pos>
+                    83.0823 27.9006
+                </gml:pos>
+            </gml:Point>
+            <loss assetRef="a1" value="0.00000E+00"/>
+        </node>
+        <node>
+            <gml:Point>
+                <gml:pos>
+                    85.7477 27.9015
+                </gml:pos>
+            </gml:Point>
+            <loss assetRef="a2" value="6.86813E-02"/>
+            <loss assetRef="a3" value="0.00000E+00"/>
+        </node>
+    </lossMap>
+</nrml>

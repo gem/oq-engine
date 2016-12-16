@@ -447,8 +447,8 @@ class EbriskCalculator(base.RiskCalculator):
         I = self.oqparam.insured_losses + 1
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
-            # since we are using a composite array the default fillvalue=0 does
-            # not work, we must set fillvalue=None and then set to 0 manually
+            # since we are using a composite array, we must use fillvalue=None
+            # and then set the array to 0 manually (to avoid bogus numbers)
             dset = self.datastore.create_dset(
                 'avg_losses-rlzs', (F32, (I,)), (self.A, self.R, self.L),
                 fillvalue=None)
@@ -463,10 +463,7 @@ class EbriskCalculator(base.RiskCalculator):
             start, stop = res.rlz_slice.start, res.rlz_slice.stop
             for dic in res:
                 if avg_losses:
-                    for (l, r), losses in dic.pop('avglosses').items():
-                        vs = self.vals[self.riskmodel.loss_types[l]]
-                        for aid in range(self.A):
-                            dset[aid, r + start, l] += losses[aid] * vs[aid]
+                    self.save_avg_losses(dset, dic.pop('avglosses'), start)
                 self.gmfbytes += dic.pop('gmfbytes')
                 self.save_losses(
                     dic.pop('agglosses'), dic.pop('asslosses'), start)
@@ -478,6 +475,16 @@ class EbriskCalculator(base.RiskCalculator):
             num_events += res.num_events
         self.datastore['events'].attrs['num_events'] = num_events
         return num_events
+
+    def save_avg_losses(self, dset, dic, start):
+        """
+        Save a dictionary (l, r) -> losses of average losses
+        """
+        with self.monitor('saving avg_losses-rlzs'):
+            for (l, r), losses in dic.items():
+                vs = self.vals[self.riskmodel.loss_types[l]]
+                for aid in range(self.A):
+                    dset[aid, r + start, l] += losses[aid] * vs[aid]
 
     def save_losses(self, agglosses, asslosses, offset):
         """
