@@ -444,7 +444,7 @@ class EbriskCalculator(base.RiskCalculator):
         self.R = num_rlzs
         self.T = len(self.assetcol.taxonomies)
         self.A = len(self.assetcol)
-        I = self.oqparam.insured_losses + 1
+        self.I = I = self.oqparam.insured_losses + 1
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
             # since we are using a composite array, we must use fillvalue=None
@@ -483,8 +483,8 @@ class EbriskCalculator(base.RiskCalculator):
         with self.monitor('saving avg_losses-rlzs'):
             for (l, r), losses in dic.items():
                 vs = self.vals[self.riskmodel.loss_types[l]]
-                for aid in range(self.A):
-                    dset[aid, r + start, l] += losses[aid] * vs[aid]
+                new = numpy.array([losses[:, i] * vs for i in range(self.I)])
+                dset[:, r + start, l] += new.T  # shape (A, I)
 
     def save_losses(self, agglosses, asslosses, offset):
         """
