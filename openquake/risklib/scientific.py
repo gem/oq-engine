@@ -1338,13 +1338,12 @@ def quantile_matrix(values, quantiles, weights):
     return result
 
 
-def exposure_statistics(
-        multicurves, map_poes, weights, quantiles):
+def exposure_statistics(multicurves, map_poes, weights, quantiles):
     """
-    Compute exposure statistics for N assets and R realizations.
+    Compute exposure statistics for A assets and R realizations.
 
     :param multicurves:
-        a list with N loss curves data. Each item holds a 2-tuple with
+        a list with A multi curves. Each multicurve holds
         1) the loss ratios on which the curves have been defined on
         2) the poes of the R curves
     :param map_poes:
@@ -1548,9 +1547,9 @@ class StatsBuilder(object):
         for q in quantiles:
             self.mean_quantiles.append('quantile-%s' % q)
 
-    def normalize(self, loss_curves):
+    def multicurves(self, loss_curves):
         """
-        Normalize the loss curves by using the provided normalization function
+        Convert loss_curves into a list of MultiCurve objects (one per asset)
         """
         return [MultiCurve(curves[0][0], [poes for _losses, poes in curves])
                 for curves in numpy.array(loss_curves).transpose(1, 0, 2, 3)]
@@ -1598,7 +1597,7 @@ class StatsBuilder(object):
         quantile_average_losses = quantile_matrix(
             average_losses, self.quantiles, weights)
         mean_curves, mean_maps, q_curves, q_maps = exposure_statistics(
-            self.normalize(loss_curves),
+            self.multicurves(loss_curves),
             self.conditional_loss_poes, weights, self.quantiles)
         if outputs[0].insured_curves is not None:
             average_ins_losses = numpy.array(average_ins_losses, F32)
@@ -1608,7 +1607,8 @@ class StatsBuilder(object):
             loss_curves = [out.insured_curves for out in outputs]
             mean_ins_curves, mean_ins_maps, q_ins_curves, q_ins_maps = (
                 exposure_statistics(
-                    self.normalize(loss_curves), [], weights, self.quantiles))
+                    self.multicurves(loss_curves), [], weights, self.quantiles)
+            )
         else:
             mean_ins_curves = numpy.zeros_like(mean_curves)
             mean_average_ins_losses = numpy.zeros_like(mean_average_losses)
