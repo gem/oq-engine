@@ -449,13 +449,13 @@ class EbriskCalculator(base.RiskCalculator):
         if avg_losses:
             # since we are using a composite array, we must use fillvalue=None
             # and then set the array to 0 manually (to avoid bogus numbers)
+            zero = numpy.zeros(self.A, (F32, (I,)))
             dset = self.datastore.create_dset(
                 'avg_losses-rlzs', (F32, (I,)), (self.A, self.R, self.L),
                 fillvalue=None)
-            for a in range(self.A):
-                for r in range(self.R):
-                    for l in range(self.L):
-                        dset[a, r, l] = (0,) if I == 1 else (0, 0)
+            for r in range(self.R):
+                for l in range(self.L):
+                    dset[:, r, l] = zero
 
         num_events = 0
         self.gmfbytes = 0
