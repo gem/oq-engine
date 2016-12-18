@@ -959,7 +959,7 @@ def export_rcurves_rlzs(ekey, dstore):
             losses = loss_ratios[ltype] * ass.value(ltype)
             # -1 means that the average was not computed
             avg = acurves[aid, r, l][ins] if oq.avg_losses else -1
-            curve = LossCurve(loc, aref[ass.id], poes[aid],
+            curve = LossCurve(loc, aref[ass.idx], poes[aid],
                               losses, loss_ratios[ltype], avg, None)
             curves.append(curve)
         writer.serialize(curves)
