@@ -1380,7 +1380,7 @@ def normalize_curves_eb(curves):
     return loss_ratios, numpy.array(curves_poes)
 
 
-def apply_stat(f, arraylist, *extra):
+def apply_stat(f, arraylist, *extra, **kw):
     """
     :param f: a callable arraylist -> array (of the same shape and dtype)
     :param arraylist: a list of arrays of the same shape and dtype
@@ -1401,10 +1401,10 @@ def apply_stat(f, arraylist, *extra):
     if dtype.names:  # composite array
         new = numpy.zeros(shape, dtype)
         for name in dtype.names:
-            new[name] = f([arr[name] for arr in arraylist], *extra)
+            new[name] = f([arr[name] for arr in arraylist], *extra, **kw)
         return new
     else:  # simple array
-        return f(arraylist, *extra)
+        return f(arraylist, *extra, **kw)
 
 
 class SimpleStats(object):
@@ -1508,44 +1508,12 @@ def _combine_mq(mean, quantile):
 
 
 def compute_mq(values, weights, quantiles):
+    """
+    :returns: an array of shape (Q1, ...)
+    """
     Q1 = len(quantiles) + 1
     mq = numpy.zeros((Q1, ) + values[0].shape, values[0].dtype)
-    mq[0] = apply_stat(numpy.average, values, weights)
+    mq[0] = apply_stat(numpy.average, values, weights=weights)
     for i, quantile in quantiles:
-        mq[i] = apply_stat(quantile, values, weights, quantiles)
+        mq[i] = apply_stat(quantile_curve, values, weights, quantiles)
     return mq
-
-
-class MultiCurve(object):
-    """
-    :param losses: an array of C losses
-    :param all_poes: a list of R arrays of C PoEs
-    """
-    def __init__(self, losses, all_poes, average_losses=None):
-        self.losses = losses
-        self.all_poes = all_poes
-        if average_losses is None:
-            self.average_losses = [0] * len(all_poes)
-        else:
-            self.average_losses = average_losses
-
-    def statistics(self, quantiles, weights):
-        """
-        Compute output statistics (mean/quantile loss curves and maps)
-        for a single asset
-        :param list quantiles:
-           quantile levels to be considered for quantile outputs
-        : param list weights:
-           realization weights
-        :returns:
-           a tuple with
-           1) mean loss curve
-           2) a list of quantile curves
-        """
-        mean_curve_ = numpy.array(
-            [self.losses, mean_curve(self.all_poes, weights)])
-        quantile_curves = numpy.array(
-            [[self.losses, quantile_curve(self.all_poes, quantile, weights)]
-             for quantile in quantiles]).reshape(
-                     (len(quantiles), 2, len(self.losses)))
-        return mean_curve_, quantile_curves
