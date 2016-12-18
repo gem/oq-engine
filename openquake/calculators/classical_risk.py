@@ -71,18 +71,17 @@ def classical_risk(riskinput, riskmodel, monitor):
         # compute statistics
         if len(riskinput.rlzs) > 1:
             for (l, assets), outs in groupby(outputs, by_l_assets).items():
+                weights = []
                 for out in outs:  # outputs with the same loss type and assets
-                    out.weight = riskinput.rlzs[out.lr[1]].weight
+                    weights.append(riskinput.rlzs[out.lr[1]].weight)
                 for i, asset in enumerate(assets):
                     avg_stat = scientific.compute_mq(
-                        [out.average_losses for out in outs],
-                        oq.quantile_loss_curves,
-                        [out.weight for out in outs])
+                        numpy.array([out.average_losses for out in outs]),
+                        oq.quantile_loss_curves, weights)
                     losses = out.loss_curves[i, 0]
                     poes_stat = scientific.compute_mq(
-                        [out.loss_curves[i, 1] for out in outs],
-                        oq.quantile_loss_curves,
-                        [out.weight for out in outs])
+                        numpy.array([out.loss_curves[i, 1] for out in outs]),
+                        oq.quantile_loss_curves, weights)
                     result['stat_curves'].append(
                         (l, asset.ordinal, losses, poes_stat, avg_stat))
 
@@ -172,15 +171,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             stat_curves = numpy.zeros((self.N, self.Q1), self.loss_curve_dt)
             for l, aid, losses, statcurve, statloss in result['stat_curves']:
                 stat_curves_lt = stat_curves[ltypes[l]]
-                for name in stat_curves_lt.dtype.names:
-                    for s in range(self.Q1):
-                        if name.startswith('avg'):
-                            stat_curves_lt[name][aid, s] = statloss[s]
-                        elif name == 'poes':
-                            base.set_array(stat_curves_lt[name][aid, s],
-                                           statcurve[s])
-                        elif name == 'losses':
-                            base.set_array(stat_curves_lt[name][aid, s],
-                                           losses)
-                            
+                for s in range(self.Q1):
+                    stat_curves_lt['avg'][aid, s] = statloss[s]
+                    base.set_array(stat_curves_lt['poes'][aid, s],
+                                   statcurve[s])
+                    base.set_array(stat_curves_lt['losses'][aid, s], losses)
             self.datastore['loss_curves-stats'] = stat_curves
