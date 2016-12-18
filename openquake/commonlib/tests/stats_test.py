@@ -78,7 +78,7 @@ class StatsTestCase(unittest.TestCase):
     def setUpClass(cls):
         assets = [asset('a1', 101), asset('a2', 151), asset('a3', 91),
                   asset('a4', 81)]
-        asset_refs = [a.id for a in assets]
+        asset_refs = [a.idx for a in assets]
         outputs = []
         weights = [0.3, 0.7]
         ratios = numpy.array([.10, .14, .17, .20, .21])
