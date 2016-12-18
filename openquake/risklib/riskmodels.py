@@ -62,7 +62,7 @@ class CostCalculator(object):
         self.limit_abs = limit_abs
 
     def __call__(self, loss_type, values, area, number):
-        cost = values[loss_type]
+        cost = values.get(loss_type)
         if cost is None:
             return numpy.nan
         cost_type = self.cost_types[loss_type]
@@ -395,19 +395,18 @@ class Classical(RiskModel):
         vf = self.risk_functions[loss_type]
         imls = self.hazard_imtls[vf.imt]
         values = get_values(loss_type, assets)
-        curves = rescale(numpy.array(
+        lrcurves = numpy.array(
             [scientific.classical(
-                vf, imls, hazard_curve, self.lrem_steps_per_interval)] * n),
-                         values)
+                vf, imls, hazard_curve, self.lrem_steps_per_interval)] * n)
+        curves = rescale(lrcurves, values)
         average_losses = utils.numpy_map(scientific.average_loss, curves)
 
-        if self.insured_losses and loss_type != 'occupants':
+        if self.insured_losses:
             deductibles = [a.deductible(loss_type) for a in assets]
             limits = [a.insurance_limit(loss_type) for a in assets]
-
             insured_curves = rescale(
                 utils.numpy_map(scientific.insured_loss_curve,
-                                curves / values, deductibles, limits), values)
+                                lrcurves, deductibles, limits), values)
             average_insured_losses = utils.numpy_map(
                 scientific.average_loss, insured_curves)
         else:
