@@ -322,7 +322,7 @@ class CompositeRiskModel(collections.Mapping):
                         curve_resolutions.add(len(ratios))
                         lines.append('%s %d' % (
                             rm.risk_functions[loss_type], len(ratios)))
-                if len(curve_resolutions) > 1:
+                if len(curve_resolutions) > 1:  # example in test_case_5
                     logging.info(
                         'Different num_loss_ratios:\n%s', '\n'.join(lines))
                 cb = scientific.CurveBuilder(
