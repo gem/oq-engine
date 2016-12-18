@@ -44,7 +44,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
 
         # check loss maps
         clp = self.calc.oqparam.conditional_loss_poes
-        fnames = out['loss_maps-rlzs', 'xml']
+        fnames = export(('loss_maps-rlzs', 'xml'), self.calc.datastore)
         self.assertEqual(len(fnames), 3)  # for 3 conditional loss poes
         for poe, fname in zip(clp, fnames):
             self.assertEqualFiles('expected/loss_map-poe-%s.xml' % poe, fname)
@@ -56,7 +56,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/loss_curves.xml', fname)
 
         clp = self.calc.oqparam.conditional_loss_poes
-        fnames = out['loss_maps-rlzs', 'xml']
+        fnames = export(('loss_maps-rlzs', 'xml'), self.calc.datastore)
         self.assertEqual(len(fnames), 1)  # for 1 conditional loss poe
         for poe, fname in zip(clp, fnames):
             self.assertEqualFiles('expected/loss_map-poe-%s.xml' % poe, fname)
@@ -71,7 +71,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
     def test_case_4(self):
         out = self.run_calc(case_4.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv,xml')
-        fnames = out['loss_maps-rlzs', 'csv']
+        fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_maps-b1,b1.csv', fnames[0])
         self.assertEqualFiles('expected/loss_maps-b1,b2.csv', fnames[1])
 
@@ -79,7 +79,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/loss_curves-000.csv', fnames[0])
         self.assertEqualFiles('expected/loss_curves-001.csv', fnames[1])
 
-        [fname] = out['loss_maps-stats', 'xml']
+        [fname] = export(('loss_maps-stats', 'xml'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_maps-mean-structural.xml', fname)
 
         [fname] = out['loss_curves-stats', 'xml']
