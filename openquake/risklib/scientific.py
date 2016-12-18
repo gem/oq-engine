@@ -1374,12 +1374,10 @@ def exposure_statistics(multicurves, map_poes, weights, quantiles):
             2. a numpy array with Q x N quantile loss curves
     """
     curve_resolution = len(multicurves[0].losses)
-    map_nr = len(map_poes)
 
     # Collect per-asset statistic along the last dimension of the
     # following arrays
     mean_curves = numpy.zeros((0, 2, curve_resolution))
-    mean_maps = numpy.zeros((map_nr, 0))
     quantile_curves = numpy.zeros((len(quantiles), 0, 2, curve_resolution))
 
     for mcurve in multicurves:
