@@ -68,10 +68,6 @@ def classical_risk(riskinput, riskmodel, monitor):
                 lcurve += (None, None, None)
             result['loss_curves'].append((l, r, aid, lcurve))
 
-            # no insured, shape (P, N)
-            result['loss_maps'].append(
-                (l, r, aid, out.loss_maps[:, i]))
-
         # compute statistics
         if len(riskinput.rlzs) > 1:
             for (l, assets), outs in groupby(outputs, by_l_assets).items():
@@ -83,14 +79,10 @@ def classical_risk(riskinput, riskmodel, monitor):
                     oq.conditional_loss_poes,
                     insured_losses=oq.insured_losses)
                 stats = statsbuilder.build(outs)
-                stat_curves, stat_maps = statsbuilder.get_curves_maps(
-                    stats, curve_resolution)
+                stat_curves = statsbuilder.get_curves(stats, curve_resolution)
                 for i, asset in enumerate(assets):
                     result['stat_curves'].append(
                         (l, asset.ordinal, stat_curves[:, i]))
-                    if len(stat_maps):
-                        result['stat_maps'].append(
-                            (l, asset.ordinal, stat_maps[:, i]))
 
     return result
 
@@ -195,20 +187,20 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
         :param result: aggregated result of the task classical_risk
         """
-        ltypes = self.riskmodel.loss_types
+        clp = self.oqparam.conditional_loss_poes
         loss_maps = numpy.zeros((self.N, self.R), self.loss_maps_dt)
-        for l, r, aid, lmaps in result['loss_maps']:
-            loss_maps_lt = loss_maps[ltypes[l]]
-            for i, name in enumerate(loss_maps_lt.dtype.names):
-                loss_maps_lt[name][aid, r] = lmaps[i]
+        for idx, curve in numpy.ndenumerate(
+                self.datastore['loss_curves-rlzs']):
+            for ltype in self.riskmodel.loss_types:
+                loss_maps[ltype][idx] = scientific.loss_maps(clp, curve[ltype])
         self.datastore['loss_maps-rlzs'] = loss_maps
 
         # loss maps stats
         if self.R > 1:
-            stat_maps = numpy.zeros((self.N, self.Q1), self.loss_maps_dt)
-            for l, aid, statmaps in result['stat_maps']:
-                statmaps_lt = stat_maps[ltypes[l]]
-                for name in statmaps_lt.dtype.names:
-                    for s in range(self.Q1):
-                        statmaps_lt[name][aid, s] = statmaps[name][s]
-            self.datastore['loss_maps-stats'] = stat_maps
+            loss_maps = numpy.zeros((self.N, self.R), self.loss_maps_dt)
+            for idx, curve in numpy.ndenumerate(
+                    self.datastore['loss_curves-stats']):
+                for ltype in self.riskmodel.loss_types:
+                    loss_maps[ltype][idx] = (
+                        scientific.loss_maps(clp, curve[ltype]))
+            self.datastore['loss_maps-stats'] = loss_maps
