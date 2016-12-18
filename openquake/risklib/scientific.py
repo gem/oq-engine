@@ -1335,24 +1335,6 @@ def average_loss(losses_poes):
     return numpy.dot(-pairwise_diff(losses), pairwise_mean(poes))
 
 
-def quantile_matrix(values, quantiles, weights):
-    """
-    :param curves:
-        a matrix R x N, where N is the number of assets and R the number
-        of realizations
-    :param quantile:
-        a list of Q quantiles
-    :param weights:
-        a list of R weights
-    :returns:
-        a matrix Q x N
-    """
-    result = numpy.zeros((len(quantiles), values.shape[1]))
-    for i, q in enumerate(quantiles):
-        result[i] = quantile_curve(values, q, weights)
-    return result
-
-
 def normalize_curves_eb(curves):
     """
     A more sophisticated version of normalize_curves, used in the event
@@ -1496,24 +1478,20 @@ def build_loss_dtypes(curve_resolution, conditional_loss_poes,
     return loss_curve_dt, loss_maps_dt
 
 
-def _combine_mq(mean, quantile):
-    # combine mean and quantile into a single array of length Q + 1
-    shape = mean.shape
-    Q = len(quantile)
-    assert quantile.shape[1:] == shape, (quantile.shape[1:], shape)
-    array = numpy.zeros((Q + 1,) + shape)
-    array[0] = mean
-    array[1:] = quantile
-    return array
-
-
-def compute_mq(values, weights, quantiles):
+def compute_mq(values, quantiles, weights):
     """
-    :returns: an array of shape (Q1, ...)
+    :param curves:
+        a matrix R x N, where N is the number of assets and R the number
+        of realizations
+    :param quantile:
+        a list of Q quantiles
+    :param weights:
+        a list of R weights
+    :returns:
+        a matrix (Q + 1) x N
     """
-    Q1 = len(quantiles) + 1
-    mq = numpy.zeros((Q1, ) + values[0].shape, values[0].dtype)
-    mq[0] = apply_stat(numpy.average, values, weights=weights)
-    for i, quantile in quantiles:
-        mq[i] = apply_stat(quantile_curve, values, weights, quantiles)
-    return mq
+    result = numpy.zeros((len(quantiles) + 1, values.shape[1]))
+    result[0] = mean_curve(values, weights)
+    for i, q in enumerate(quantiles, 1):
+        result[i] = quantile_curve(values, q, weights)
+    return result
