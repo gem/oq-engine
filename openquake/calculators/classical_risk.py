@@ -147,8 +147,6 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             loss_ratios, self.oqparam.conditional_loss_poes, self.I)
 
         self.save_loss_curves(result)
-        if self.oqparam.conditional_loss_poes:
-            self.save_loss_maps(result)
 
     def save_loss_curves(self, result):
         """
@@ -180,27 +178,3 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                             base.set_array(stat_curves_lt[name][aid, s],
                                            statcurve[name][s])
             self.datastore['loss_curves-stats'] = stat_curves
-
-    def save_loss_maps(self, result):
-        """
-        Saving loss maps in the datastore.
-
-        :param result: aggregated result of the task classical_risk
-        """
-        clp = self.oqparam.conditional_loss_poes
-        loss_maps = numpy.zeros((self.N, self.R), self.loss_maps_dt)
-        for idx, curve in numpy.ndenumerate(
-                self.datastore['loss_curves-rlzs']):
-            for ltype in self.riskmodel.loss_types:
-                loss_maps[ltype][idx] = scientific.loss_maps(clp, curve[ltype])
-        self.datastore['loss_maps-rlzs'] = loss_maps
-
-        # loss maps stats
-        if self.R > 1:
-            loss_maps = numpy.zeros((self.N, self.R), self.loss_maps_dt)
-            for idx, curve in numpy.ndenumerate(
-                    self.datastore['loss_curves-stats']):
-                for ltype in self.riskmodel.loss_types:
-                    loss_maps[ltype][idx] = (
-                        scientific.loss_maps(clp, curve[ltype]))
-            self.datastore['loss_maps-stats'] = loss_maps
