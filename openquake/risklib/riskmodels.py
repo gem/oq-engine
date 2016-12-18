@@ -407,7 +407,7 @@ class Classical(RiskModel):
 
             insured_curves = rescale(
                 utils.numpy_map(scientific.insured_loss_curve,
-                                curves, deductibles, limits), values)
+                                curves / values, deductibles, limits), values)
             average_insured_losses = utils.numpy_map(
                 scientific.average_loss, insured_curves)
         else:
