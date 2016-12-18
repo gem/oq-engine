@@ -91,25 +91,6 @@ class StatsTestCase(unittest.TestCase):
                 loss_curves=lc, insured_curves=None,
                 average_losses=[.1, .12, .13, .9], average_insured_losses=None)
             outputs.append(out)
-        cls.builder = scientific.StatsBuilder([0.1, 0.9], [0.35, 0.24, 0.13])
-        cls.stats = cls.builder.build(outputs)
-
-    # TODO: add a test for insured curves
-    def test_get_stat_curves_maps(self):
-        tempdir = tempfile.mkdtemp()
-        curves = self.builder.get_curves(self.stats, self.curve_resolution)
-        # expecting arrays of shape (Q1, N) with Q1=3, N=4
-        actual = os.path.join(tempdir, 'expected_loss_curves.csv')
-        writers.write_csv(actual, curves, fmt='%05.2f')
-
-        tests.check_equal(__file__, 'expected_loss_curves.csv', actual)
-        maps = scientific.loss_maps(self.builder.conditional_loss_poes, curves)
-        actual = os.path.join(tempdir, 'expected_loss_maps.csv')
-        writers.write_csv(actual, maps, fmt='%05.2f')
-        tests.check_equal(__file__, 'expected_loss_maps.csv', actual)
-
-        # remove only if the test pass
-        shutil.rmtree(tempdir)
 
     def test_build_agg_curve_stats(self):
         R = 2
