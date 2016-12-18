@@ -358,8 +358,6 @@ class Classical(RiskModel):
         :param lrem_steps_per_interval:
             Configuration parameter
         :param poes_disagg:
-            Configuration parameter
-        :param poes_disagg:
             Probability of Exceedance levels used for disaggregate losses by
             taxonomy.
         :param bool insured_losses:
