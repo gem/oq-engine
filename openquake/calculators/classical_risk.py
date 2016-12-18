@@ -171,7 +171,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             for i, name in enumerate(loss_curves_lt.dtype.names):
                 if name.startswith('avg'):
                     loss_curves_lt[name][aid, r] = lcurve[i]
-                else:
+                else:  # 'losses', 'poes'
                     base.set_array(loss_curves_lt[name][aid, r], lcurve[i])
         self.datastore['loss_curves-rlzs'] = loss_curves
 
