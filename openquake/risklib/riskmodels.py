@@ -394,10 +394,12 @@ class Classical(RiskModel):
         n = len(assets)
         vf = self.risk_functions[loss_type]
         imls = self.hazard_imtls[vf.imt]
-        curves = [scientific.classical(
-            vf, imls, hazard_curve, self.lrem_steps_per_interval)] * n
-        average_losses = utils.numpy_map(scientific.average_loss, curves)
         values = get_values(loss_type, assets)
+        curves = rescale(numpy.array(
+            [scientific.classical(
+                vf, imls, hazard_curve, self.lrem_steps_per_interval)] * n),
+                         values)
+        average_losses = utils.numpy_map(scientific.average_loss, curves)
 
         if self.insured_losses and loss_type != 'occupants':
             deductibles = [a.deductible(loss_type) for a in assets]
@@ -413,10 +415,8 @@ class Classical(RiskModel):
             average_insured_losses = None
 
         return scientific.Output(
-            assets, loss_type,
-            loss_curves=rescale(numpy.array(curves), values),
-            average_losses=values * average_losses,
-            insured_curves=insured_curves,
+            assets, loss_type, loss_curves=curves,
+            average_losses=average_losses, insured_curves=insured_curves,
             average_insured_losses=average_insured_losses)
 
 
