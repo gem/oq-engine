@@ -78,6 +78,7 @@ class StatsTestCase(unittest.TestCase):
     def setUpClass(cls):
         assets = [asset('a1', 101), asset('a2', 151), asset('a3', 91),
                   asset('a4', 81)]
+        cls.values = numpy.array([a.value('structural') for a in assets])
         asset_refs = [a.idx for a in assets]
         outputs = []
         weights = [0.3, 0.7]
@@ -93,17 +94,16 @@ class StatsTestCase(unittest.TestCase):
         cls.builder = scientific.StatsBuilder([0.1, 0.9], [0.35, 0.24, 0.13])
         cls.stats = cls.builder.build(outputs)
 
-    # TODO: add a test for insured curves and maps
+    # TODO: add a test for insured curves
     def test_get_stat_curves_maps(self):
         tempdir = tempfile.mkdtemp()
-        curves, maps = self.builder.get_curves_maps(
-            self.stats, self.curve_resolution)
+        curves = self.builder.get_curves(self.stats, self.curve_resolution)
         # expecting arrays of shape (Q1, N) with Q1=3, N=4
         actual = os.path.join(tempdir, 'expected_loss_curves.csv')
         writers.write_csv(actual, curves, fmt='%05.2f')
 
         tests.check_equal(__file__, 'expected_loss_curves.csv', actual)
-
+        maps = scientific.loss_maps(self.builder.conditional_loss_poes, curves)
         actual = os.path.join(tempdir, 'expected_loss_maps.csv')
         writers.write_csv(actual, maps, fmt='%05.2f')
         tests.check_equal(__file__, 'expected_loss_maps.csv', actual)

@@ -1305,6 +1305,21 @@ def loss_map_matrix(poes, curves):
     ).reshape((len(poes), len(curves)))
 
 
+def loss_maps(poes, curves):
+    """
+    :param poes: a list of conditional loss poes
+    :param curves: an array of loss curves
+    :returns: a composite array of loss maps with the same shape
+    """
+    loss_maps_dt = numpy.dtype([('poe-%s' % poe, F32) for poe in poes])
+    loss_maps = numpy.zeros(curves.shape, loss_maps_dt)
+    for idx, curve in numpy.ndenumerate(curves):
+        for poe in poes:
+            loss_maps['poe-%s' % poe][idx] = conditional_loss_ratio(
+                curve['losses'], curve['poes'], poe)
+    return loss_maps
+
+
 # TODO: remove this from openquake.risklib.qa_tests.bcr_test
 def average_loss(losses_poes):
     """
@@ -1640,12 +1655,12 @@ class StatsBuilder(object):
             quantiles=self.quantiles,
             conditional_loss_poes=self.conditional_loss_poes)
 
-    def get_curves_maps(self, stats, C):
+    def get_curves(self, stats, C):
         """
         :param stats:
             an object with attributes mean_curves, mean_average_losses,
-            mean_maps, quantile_curves, quantile_average_losses,
-            quantile_loss_curves, quantile_maps, assets.
+            quantile_curves, quantile_average_losses, quantile_loss_curves,
+            assets.
             There is also a loss_type attribute which must be always the same.
         :param C:
              curve resolution
@@ -1659,12 +1674,6 @@ class StatsBuilder(object):
         Q1 = len(self.mean_quantiles)
         N = len(stats.assets)
         curves = numpy.zeros((Q1, N), loss_curve_dt)
-        if self.conditional_loss_poes:
-            maps = numpy.zeros((Q1, N), loss_maps_dt)
-            poenames = [n for n in loss_maps_dt.names
-                        if not n.endswith('_ins')]
-        else:
-            maps = []
         for i in range(self.insured_losses + 1):  # insured index
             ins = '_ins' if i else ''
             curves_by_stat = self._loss_curves(
@@ -1677,13 +1686,7 @@ class StatsBuilder(object):
                     curves['losses' + ins][s, aid] = losses_poes[0]
                     curves['poes' + ins][s, aid] = losses_poes[1]
                     curves['avg' + ins][s, aid] = avg
-
-            if self.conditional_loss_poes:
-                mq = _combine_mq(stats.mean_maps[i], stats.quantile_maps[i])
-                for aid, maps_ in enumerate(mq):
-                    for name, map_ in zip(poenames, maps_):
-                        maps[name + ins][aid] = map_
-        return curves, maps
+        return curves
 
     def _loss_curves(self, mean, mean_averages, quantile, quantile_averages):
         mq_curves = _combine_mq(mean, quantile)  # shape (Q1, N, 2, C)

@@ -397,7 +397,6 @@ class Classical(RiskModel):
         curves = [scientific.classical(
             vf, imls, hazard_curve, self.lrem_steps_per_interval)] * n
         average_losses = utils.numpy_map(scientific.average_loss, curves)
-        maps = scientific.loss_map_matrix(self.conditional_loss_poes, curves)
         values = get_values(loss_type, assets)
 
         if self.insured_losses and loss_type != 'occupants':
@@ -418,8 +417,7 @@ class Classical(RiskModel):
             loss_curves=rescale(numpy.array(curves), values),
             average_losses=values * average_losses,
             insured_curves=insured_curves,
-            average_insured_losses=average_insured_losses,
-            loss_maps=values * maps)
+            average_insured_losses=average_insured_losses)
 
 
 @registry.add('event_based_risk', 'event_based', 'event_based_rupture',
