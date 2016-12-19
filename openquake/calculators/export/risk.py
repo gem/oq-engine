@@ -637,7 +637,7 @@ def get_loss_maps(dstore, kind):
                 for r, lmaps in cb.build_loss_maps(assetvals, rcurves):
                     loss_maps[cb.loss_type][:, r] = lmaps
         return loss_maps
-    name = 'loss_curves-%s' % kind
+    name = 'loss_maps-%s' % kind
     if name in dstore:  # classical_risk
         return dstore[name].value
 
