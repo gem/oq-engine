@@ -1305,19 +1305,35 @@ def loss_map_matrix(poes, curves):
     ).reshape((len(poes), len(curves)))
 
 
-def loss_maps(poes, curves):
+def loss_maps(curves, conditional_loss_poes):
     """
-    :param poes: a list of conditional loss poes
     :param curves: an array of loss curves
+    :param conditional_loss_poes: a list of conditional loss poes
     :returns: a composite array of loss maps with the same shape
     """
-    loss_maps_dt = numpy.dtype([('poe-%s' % poe, F32) for poe in poes])
+    loss_maps_dt = numpy.dtype([('poe-%s' % poe, F32)
+                                for poe in conditional_loss_poes])
     loss_maps = numpy.zeros(curves.shape, loss_maps_dt)
     for idx, curve in numpy.ndenumerate(curves):
-        for poe in poes:
+        for poe in conditional_loss_poes:
             loss_maps['poe-%s' % poe][idx] = conditional_loss_ratio(
                 curve['losses'], curve['poes'], poe)
     return loss_maps
+
+
+def broadcast(func, composite_array, *args):
+    """
+    Broadcast an array function over a composite array
+    """
+    dic = {}
+    dtypes = []
+    for name in composite_array.dtype.names:
+        dic[name] = func(composite_array[name], *args)
+        dtypes.append((name, dic[name].dtype))
+    res = numpy.zeros(dic[name].shape, numpy.dtype(dtypes))
+    for name in dic:
+        res[name] = dic[name]
+    return res
 
 
 # TODO: remove this from openquake.risklib.qa_tests.bcr_test
