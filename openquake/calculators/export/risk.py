@@ -621,9 +621,9 @@ def get_loss_maps(dstore, kind):
     :param kind: 'rlzs' or 'stats'
     """
     oq = dstore['oqparam']
-    riskmodel = riskinput.read_composite_risk_model(dstore)
     name = 'rcurves-%s' % kind
     if name in dstore:  # event_based risk
+        riskmodel = riskinput.read_composite_risk_model(dstore)
         assetvals = dstore['assetcol'].values()
         realizations = dstore['realizations']
         _, loss_maps_dt = scientific.build_loss_dtypes(
@@ -639,17 +639,10 @@ def get_loss_maps(dstore, kind):
         return loss_maps
     name = 'loss_curves-%s' % kind
     if name in dstore:  # classical_risk
-        loss_curves = dstore[name].value
-        clp = oq.conditional_loss_poes
-        _, loss_maps_dt = scientific.build_loss_dtypes(
-            {str(cb.loss_type): len(cb.ratios)
-             for cb in riskmodel.curve_builders},
-            oq.conditional_loss_poes)
-        loss_maps = numpy.zeros(loss_curves.shape, loss_maps_dt)
-        for idx, curve in numpy.ndenumerate(loss_curves):
-            for ltype in riskmodel.loss_types:
-                loss_maps[ltype][idx] = scientific.loss_maps(clp, curve[ltype])
-        return loss_maps
+        loss_curves = dstore[name]
+    loss_maps = scientific.broadcast(
+        scientific.loss_maps, loss_curves, oq.conditional_loss_poes)
+    return loss_maps
 
 
 # used by event_based_risk and classical_risk
