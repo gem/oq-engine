@@ -631,7 +631,7 @@ def get_loss_maps(dstore, kind):
         _, loss_maps_dt = scientific.build_loss_dtypes(
             {lt: len(oq.loss_ratios[lt]) for lt in oq.loss_ratios},
             oq.conditional_loss_poes, oq.insured_losses)
-        rcurves = dstore[name]
+        rcurves = dstore[name].value  # to support Ubuntu 14
         A, R, I = rcurves.shape
         ins = ['', '_ins']
         loss_maps = numpy.zeros((A, R), loss_maps_dt)
