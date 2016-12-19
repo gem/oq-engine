@@ -106,7 +106,7 @@ def compactify(array):
     return zeros
 
 
-def _get_triple(longname, array, quantiles, insured):
+def _gen_triple(longname, array, quantiles, insured):
     # the array has shape (A, R, L, I)
     name, kind = longname.split('-')
     if kind == 'stats':
@@ -114,9 +114,12 @@ def _get_triple(longname, array, quantiles, insured):
     else:
         tags = ['rlz-%03d' % r for r in range(array.shape[1])]
     for r, tag in enumerate(tags):
-        yield name, tag, array[:, r, :, 0]
+        avg = array[:, r, :]  # shape (A, L, I)
         if insured:
-            yield name + '_ins', tag, array[:, r, :, 1]
+            data = numpy.concatenate([avg[:, :, 0], avg[:, :, 1]], axis=1)
+        else:
+            data = avg[:, :, 0]
+        yield name, tag, data
 
 
 # this is used by event_based_risk
@@ -128,10 +131,10 @@ def export_avg_losses(ekey, dstore):
     """
     avg_losses = dstore[ekey[0]].value  # shape (A, R, L, I)
     oq = dstore['oqparam']
-    dt = oq.cost_dt()
+    dt = oq.loss_dt()
     assets = get_assets(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for name, tag, data in _get_triple(
+    for name, tag, data in _gen_triple(
             ekey[0], avg_losses, oq.quantile_loss_curves, oq.insured_losses):
         losses = numpy.array([tuple(row) for row in data], dt)
         dest = dstore.build_fname(name, tag, 'csv')
