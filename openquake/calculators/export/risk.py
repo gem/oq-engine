@@ -615,6 +615,10 @@ class Location(object):
         self.wkt = 'POINT(%s %s)' % (x, y)
 
 
+def indices(*sizes):
+    return itertools.product(*map(range, sizes))
+
+
 def get_loss_maps(dstore, kind):
     """
     :param dstore: a DataStore instanc
@@ -623,19 +627,22 @@ def get_loss_maps(dstore, kind):
     oq = dstore['oqparam']
     name = 'rcurves-%s' % kind
     if name in dstore:  # event_based risk
-        riskmodel = riskinput.read_composite_risk_model(dstore)
-        assetvals = dstore['assetcol'].values()
-        realizations = dstore['realizations']
+        values = dstore['assetcol'].values()
         _, loss_maps_dt = scientific.build_loss_dtypes(
-            {str(lt): len(oq.loss_ratios[lt]) for lt in oq.loss_ratios},
+            {lt: len(oq.loss_ratios[lt]) for lt in oq.loss_ratios},
             oq.conditional_loss_poes, oq.insured_losses)
-        loss_maps = numpy.zeros((len(assetvals), len(realizations)),
-                                loss_maps_dt)
         rcurves = dstore[name]
-        for cb in riskmodel.curve_builders:
-            if cb.loss_type in oq.loss_ratios:
-                for r, lmaps in cb.build_loss_maps(assetvals, rcurves):
-                    loss_maps[cb.loss_type][:, r] = lmaps
+        A, R, I = rcurves.shape
+        ins = ['', '_ins']
+        loss_maps = numpy.zeros((A, R), loss_maps_dt)
+        for ltype, lratios in oq.loss_ratios.items():
+            for (a, r, i) in indices(A, R, I):
+                rcurve = rcurves[ltype][a, r, i]
+                losses = numpy.array(lratios) * values[ltype][a]
+                tup = tuple(
+                    scientific.conditional_loss_ratio(losses, rcurve, poe)
+                    for poe in oq.conditional_loss_poes)
+                loss_maps[ltype + ins[i]][a, r] = tup
         return loss_maps
     name = 'loss_curves-%s' % kind
     if name in dstore:  # classical_risk
