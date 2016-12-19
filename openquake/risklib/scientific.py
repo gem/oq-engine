@@ -55,21 +55,6 @@ def build_dtypes(curve_resolution, conditional_loss_poes, insured=False):
     return loss_curve_dt, loss_maps_dt
 
 
-def extract_poe_ins(name):
-    """
-    >>> extract_poe_ins('poe-0.1')
-    (0.1, 0)
-    >>> extract_poe_ins('poe-0.2_ins')
-    (0.2, 1)
-    """
-    ins = 0
-    if name.endswith('_ins'):
-        ins = 1
-        name = name[:-4]
-    poe = float(name[4:])
-    return poe, ins
-
-
 class Output(object):
     """
     A generic container of attributes. Only assets, loss_type, hid and weight
@@ -986,45 +971,6 @@ class CurveBuilder(object):
         curve['avg'][0] = average_loss([reference_losses, poes])
         return curve[0]
 
-    def _calc_loss_maps(self, asset_values, clp, poe_matrix):
-        """
-        Compute loss maps from the PoE matrix (i.e. the loss curves).
-
-        :param asset_values: asset values for the current loss type
-        :param clp: conditional loss PoE
-        :poe_matrix: an N x C matrix of PoEs
-        :returns: a vector of N values
-        """
-        curves = []
-        for avalue, poes in zip(asset_values, poe_matrix):
-            curves.append((self.ratios * avalue, poes))
-        return loss_map_matrix([clp], curves)[0]
-
-    def build_loss_maps(self, assetvals, rcurves):
-        """
-        Build loss maps from the risk curves. Yield pairs
-        (rlz_ordinal, loss_maps array).
-
-        :param assetvals: values of the assets as a composite array
-        :param rcurves: array of risk curves of shape (N, R, 2)
-        """
-        N = len(assetvals)
-        R = rcurves.shape[1]
-        if self.user_provided:  # loss_ratios provided
-            lst = [('poe-%s' % poe, F32) for poe in self.conditional_loss_poes]
-            if self.insured_losses:
-                lst += [(name + '_ins', pair) for name, pair in lst]
-            loss_maps_dt = numpy.dtype(lst)
-            curves_lt = rcurves[self.loss_type]
-            vals = assetvals[self.loss_type]
-            for rlzi in range(R):
-                loss_maps = numpy.zeros(N, loss_maps_dt)
-                for name in loss_maps.dtype.names:
-                    poe, ins = extract_poe_ins(name)
-                    loss_maps[name] = self._calc_loss_maps(
-                        vals, poe, curves_lt[:, rlzi, ins])
-                yield rlzi, loss_maps
-
     def __repr__(self):
         return '<%s %s=%s user_provided=%s>' % (
             self.__class__.__name__, self.loss_type,
@@ -1477,18 +1423,18 @@ def build_loss_dtypes(curve_resolution, conditional_loss_poes,
        loss_curve_dt and loss_maps_dt
     """
     lst = [('poe-%s' % poe, F32) for poe in conditional_loss_poes]
-    if insured_losses:
-        lst += [(name + '_ins', pair) for name, pair in lst]
     lm_dt = numpy.dtype(lst)
     lc_list = []
     lm_list = []
     for lt in sorted(curve_resolution):
         C = curve_resolution[lt]
         pairs = [('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)]
-        if insured_losses:
-            pairs += [(name + '_ins', pair) for name, pair in pairs]
-        lc_list.append((str(lt), numpy.dtype(pairs)))
+        lc_dt = numpy.dtype(pairs)
+        lc_list.append((str(lt), lc_dt))
         lm_list.append((str(lt), lm_dt))
+        if insured_losses:
+            lc_list.append((str(lt) + '_ins', lc_dt))
+            lm_list.append((str(lt) + '_ins', lm_dt))
     loss_curve_dt = numpy.dtype(lc_list) if lc_list else None
     loss_maps_dt = numpy.dtype(lm_list) if lm_list else None
     return loss_curve_dt, loss_maps_dt
