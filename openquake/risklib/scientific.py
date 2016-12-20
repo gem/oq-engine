@@ -1441,7 +1441,7 @@ def build_loss_dtypes(curve_resolution, conditional_loss_poes,
 
 
 # NB: this is a function linear in the array argument
-def compute_mq(array, quantiles, weights):
+def compute_stats(array, quantiles, weights):
     """
     :param array:
         an array of R elements (which can be arrays)
