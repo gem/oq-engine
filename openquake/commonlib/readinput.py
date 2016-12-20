@@ -777,7 +777,7 @@ def get_sitecol_assets(oqparam, exposure):
     assets_by_site = []
     for lonlat in zip(sitecol.lons, sitecol.lats):
         assets = assets_by_loc[lonlat]
-        assets_by_site.append(sorted(assets, key=operator.attrgetter('id')))
+        assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
     return sitecol, numpy.array(assets_by_site)
 
 

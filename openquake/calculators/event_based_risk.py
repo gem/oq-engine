@@ -208,9 +208,12 @@ class EbrPostCalculator(base.RiskCalculator):
         # build rcurves-stats (sequentially)
         # this is a fundamental output, being used to compute loss_maps-stats
         if R > 1:
+            ss = scientific.SimpleStats(self.datastore['realizations'],
+                                        self.oqparam.quantile_loss_curves)
+            with self.monitor('computing avg_losses-stats'):
+                self.datastore['avg_losses-stats'] = ss.compute(
+                    self.datastore['avg_losses-rlzs'])
             with self.monitor('computing rcurves-stats'):
-                ss = scientific.SimpleStats(self.datastore['realizations'],
-                                            self.oqparam.quantile_loss_curves)
                 self.datastore['rcurves-stats'] = ss.compute(rcurves)
 
         # build an aggregate loss curve per realization
@@ -441,22 +444,26 @@ class EbriskCalculator(base.RiskCalculator):
         self.R = num_rlzs
         self.T = len(self.assetcol.taxonomies)
         self.A = len(self.assetcol)
-        ins = self.oqparam.insured_losses
+        self.I = I = self.oqparam.insured_losses + 1
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
+            # since we are using a composite array, we must use fillvalue=None
+            # and then set the array to 0 manually (to avoid bogus numbers)
+            zero = numpy.zeros(self.A, (F32, (I,)))
             dset = self.datastore.create_dset(
-                'avg_losses-rlzs', F32, (self.A, self.R, self.L * (ins + 1)))
+                'avg_losses-rlzs', (F32, (I,)), (self.A, self.R, self.L),
+                fillvalue=None)
+            for r in range(self.R):
+                for l in range(self.L):
+                    dset[:, r, l] = zero
+
         num_events = 0
         self.gmfbytes = 0
         for res in allres:
             start, stop = res.rlz_slice.start, res.rlz_slice.stop
             for dic in res:
                 if avg_losses:
-                    for (l, r), losses in dic.pop('avglosses').items():
-                        vs = self.vals[self.riskmodel.loss_types[l]]
-                        dset[:, r + start, l] += losses[:, 0] * vs
-                        if ins:
-                            dset[:, r + start, l + self.L] += losses[:, 1] * vs
+                    self.save_avg_losses(dset, dic.pop('avglosses'), start)
                 self.gmfbytes += dic.pop('gmfbytes')
                 self.save_losses(
                     dic.pop('agglosses'), dic.pop('asslosses'), start)
@@ -468,6 +475,16 @@ class EbriskCalculator(base.RiskCalculator):
             num_events += res.num_events
         self.datastore['events'].attrs['num_events'] = num_events
         return num_events
+
+    def save_avg_losses(self, dset, dic, start):
+        """
+        Save a dictionary (l, r) -> losses of average losses
+        """
+        with self.monitor('saving avg_losses-rlzs'):
+            for (l, r), losses in dic.items():
+                vs = self.vals[self.riskmodel.loss_types[l]]
+                new = numpy.array([losses[:, i] * vs for i in range(self.I)])
+                dset[:, r + start, l] += new.T  # shape (A, I)
 
     def save_losses(self, agglosses, asslosses, offset):
         """

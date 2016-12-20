@@ -1,4 +1,0 @@
-event_tag,year,business_interruption,contents,nonstructural,occupants:float32,structural,business_interruption_ins,contents_ins,nonstructural_ins,occupants_ins:float32,structural_ins
-grp=01~ses=0001~src=2~rup=483-01,1,1.40335E+02,7.99377E+02,1.16708E+03,2.80669E-03,0.00000E+00,4.20000E+00,4.20000E+00,4.20000E+00,0.00000E+00,0.00000E+00
-grp=01~ses=0002~src=2~rup=484-01,2,2.60030E+02,1.52313E+03,2.23436E+03,5.20059E-03,4.01239E+02,4.20000E+00,4.20000E+00,4.20000E+00,0.00000E+00,1.40000E+00
-grp=01~ses=0002~src=2~rup=485-01,2,2.00771E+02,1.57126E+03,2.68239E+03,4.01542E-03,2.17796E+02,4.20000E+00,3.50000E+00,4.20000E+00,0.00000E+00,1.40000E+00
