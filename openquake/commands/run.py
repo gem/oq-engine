@@ -18,10 +18,10 @@
 
 from __future__ import print_function
 import collections
+import tempfile
 import logging
 import cProfile
 import pstats
-import io
 
 from openquake.baselib import performance, general, sap
 from openquake.risklib import valid
@@ -42,11 +42,12 @@ def get_pstats(pstatfile, n):
     :param pstatfile: path to a .pstat file
     :param n: the maximum number of stats to retrieve
     """
-    stream = io.BytesIO()
-    ps = pstats.Stats(pstatfile, stream=stream)
-    ps.sort_stats('cumtime')
-    ps.print_stats(n)
-    lines = stream.getvalue().splitlines()
+    with tempfile.TemporaryFile(mode='w+') as stream:
+        ps = pstats.Stats(pstatfile, stream=stream)
+        ps.sort_stats('cumtime')
+        ps.print_stats(n)
+        stream.seek(0)
+        lines = list(stream)
     for i, line in enumerate(lines):
         if line.startswith('   ncalls'):
             break

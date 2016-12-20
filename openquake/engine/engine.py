@@ -87,6 +87,10 @@ def expose_outputs(dstore):
         dskeys.add('uhs')  # export them
     if oq.hazard_maps:
         dskeys.add('hmaps')  # export them
+    if 'rcurves-rlzs' in dstore or 'loss_curves-rlzs' in dstore:
+        dskeys.add('loss_maps-rlzs')
+    if 'rcurves-stats' in dstore or 'loss_curves-stats' in dstore:
+        dskeys.add('loss_maps-stats')
     try:
         rlzs = dstore['realizations']
     except KeyError:

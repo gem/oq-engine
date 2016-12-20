@@ -180,7 +180,7 @@ class AssetCollection(object):
         asset_ordinal = 0
         fields = set(asset_dt.fields)
         for sid, assets_ in enumerate(assets_by_site):
-            for asset in sorted(assets_, key=operator.attrgetter('id')):
+            for asset in sorted(assets_, key=operator.attrgetter('idx')):
                 asset.ordinal = asset_ordinal
                 record = assetcol[asset_ordinal]
                 asset_ordinal += 1
@@ -192,7 +192,7 @@ class AssetCollection(object):
                     elif field == 'area':
                         value = asset.area
                     elif field == 'idx':
-                        value = asset.id
+                        value = asset.idx
                     elif field == 'site_id':
                         value = sid
                     elif field == 'lon':
@@ -302,36 +302,6 @@ class CompositeRiskModel(collections.Mapping):
                 iml[rf.imt].append(rf.imls[0])
         return {imt: min(iml[imt]) for imt in iml}
 
-    # FIXME: scheduled for removal once we change agg_curve to be built from
-    # the user-provided loss ratios
-    def build_all_loss_dtypes(self, curve_resolution, conditional_loss_poes,
-                              insured_losses=False):
-        """
-        :param conditional_loss_poes:
-            configuration parameter
-        :param insured_losses:
-            configuration parameter
-        :returns:
-           loss_curve_dt and loss_maps_dt
-        """
-        lst = [('poe-%s' % poe, F32) for poe in conditional_loss_poes]
-        if insured_losses:
-            lst += [(name + '_ins', pair) for name, pair in lst]
-        lm_dt = numpy.dtype(lst)
-        lc_list = []
-        lm_list = []
-        for loss_type in self.loss_types:
-            pairs = [('losses', (F32, curve_resolution)),
-                     ('poes', (F32, curve_resolution)),
-                     ('avg', F32)]
-            if insured_losses:
-                pairs += [(name + '_ins', pair) for name, pair in pairs]
-            lc_list.append((loss_type, numpy.dtype(pairs)))
-            lm_list.append((loss_type, lm_dt))
-        loss_curve_dt = numpy.dtype(lc_list) if lc_list else None
-        loss_maps_dt = numpy.dtype(lm_list) if lm_list else None
-        return loss_curve_dt, loss_maps_dt
-
     def make_curve_builders(self, oqparam):
         """
         Populate the inner lists .loss_types, .curve_builders.
@@ -339,6 +309,8 @@ class CompositeRiskModel(collections.Mapping):
         default_loss_ratios = numpy.linspace(
             0, 1, oqparam.loss_curve_resolution + 1)[1:]
         loss_types = self._get_loss_types()
+        ses_ratio = oqparam.ses_ratio if oqparam.calculation_mode in (
+            'event_based_risk',) else 1
         for l, loss_type in enumerate(loss_types):
             if oqparam.calculation_mode in ('classical', 'classical_risk'):
                 curve_resolutions = set()
@@ -350,20 +322,22 @@ class CompositeRiskModel(collections.Mapping):
                         curve_resolutions.add(len(ratios))
                         lines.append('%s %d' % (
                             rm.risk_functions[loss_type], len(ratios)))
-                if len(curve_resolutions) > 1:
+                if len(curve_resolutions) > 1:  # example in test_case_5
                     logging.info(
                         'Different num_loss_ratios:\n%s', '\n'.join(lines))
                 cb = scientific.CurveBuilder(
-                    loss_type, ratios, True,
-                    oqparam.conditional_loss_poes, oqparam.insured_losses,
-                    curve_resolution=max(curve_resolutions))
+                    loss_type, max(curve_resolutions), ratios, ses_ratio,
+                    True, oqparam.conditional_loss_poes,
+                    oqparam.insured_losses)
             elif loss_type in oqparam.loss_ratios:  # loss_ratios provided
                 cb = scientific.CurveBuilder(
-                    loss_type, oqparam.loss_ratios[loss_type], True,
+                    loss_type, oqparam.loss_curve_resolution,
+                    oqparam.loss_ratios[loss_type], ses_ratio, True,
                     oqparam.conditional_loss_poes, oqparam.insured_losses)
             else:  # no loss_ratios provided
                 cb = scientific.CurveBuilder(
-                    loss_type, default_loss_ratios, False,
+                    loss_type, oqparam.loss_curve_resolution,
+                    default_loss_ratios, ses_ratio, False,
                     oqparam.conditional_loss_poes, oqparam.insured_losses)
             self.curve_builders.append(cb)
             cb.index = l
@@ -606,7 +580,7 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
     eps = numpy.zeros((num_assets, num_samples), numpy.float32)
     for taxonomy, assets in assets_by_taxo.items():
         # the association with the epsilons is done in order
-        assets.sort(key=operator.attrgetter('id'))
+        assets.sort(key=operator.attrgetter('idx'))
         shape = (len(assets), num_samples)
         logging.info('Building %s epsilons for taxonomy %s', shape, taxonomy)
         zeros = numpy.zeros(shape)
