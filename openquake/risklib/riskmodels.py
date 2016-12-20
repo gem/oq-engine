@@ -62,7 +62,7 @@ class CostCalculator(object):
         self.limit_abs = limit_abs
 
     def __call__(self, loss_type, values, area, number):
-        cost = values[loss_type]
+        cost = values.get(loss_type)
         if cost is None:
             return numpy.nan
         cost_type = self.cost_types[loss_type]
@@ -358,8 +358,6 @@ class Classical(RiskModel):
         :param lrem_steps_per_interval:
             Configuration parameter
         :param poes_disagg:
-            Configuration parameter
-        :param poes_disagg:
             Probability of Exceedance levels used for disaggregate losses by
             taxonomy.
         :param bool insured_losses:
@@ -396,19 +394,19 @@ class Classical(RiskModel):
         n = len(assets)
         vf = self.risk_functions[loss_type]
         imls = self.hazard_imtls[vf.imt]
-        curves = [scientific.classical(
-            vf, imls, hazard_curve, self.lrem_steps_per_interval)] * n
-        average_losses = utils.numpy_map(scientific.average_loss, curves)
-        maps = scientific.loss_map_matrix(self.conditional_loss_poes, curves)
         values = get_values(loss_type, assets)
+        lrcurves = numpy.array(
+            [scientific.classical(
+                vf, imls, hazard_curve, self.lrem_steps_per_interval)] * n)
+        curves = rescale(lrcurves, values)
+        average_losses = utils.numpy_map(scientific.average_loss, curves)
 
-        if self.insured_losses and loss_type != 'occupants':
+        if self.insured_losses:
             deductibles = [a.deductible(loss_type) for a in assets]
             limits = [a.insurance_limit(loss_type) for a in assets]
-
             insured_curves = rescale(
                 utils.numpy_map(scientific.insured_loss_curve,
-                                curves, deductibles, limits), values)
+                                lrcurves, deductibles, limits), values)
             average_insured_losses = utils.numpy_map(
                 scientific.average_loss, insured_curves)
         else:
@@ -416,12 +414,9 @@ class Classical(RiskModel):
             average_insured_losses = None
 
         return scientific.Output(
-            assets, loss_type,
-            loss_curves=rescale(numpy.array(curves), values),
-            average_losses=values * average_losses,
-            insured_curves=insured_curves,
-            average_insured_losses=average_insured_losses,
-            loss_maps=values * maps)
+            assets, loss_type, loss_curves=curves,
+            average_losses=average_losses, insured_curves=insured_curves,
+            average_insured_losses=average_insured_losses)
 
 
 @registry.add('event_based_risk', 'event_based', 'event_based_rupture',
