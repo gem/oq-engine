@@ -81,12 +81,12 @@ class ProbabilityCurve(object):
     # used when exporting to HDF5
     def convert(self, imtls, idx=0):
         """
-        Convert a probability curve into a record of dtype `imtls.imt_dt`.
+        Convert a probability curve into a record of dtype `imtls.dt`.
 
         :param imtls: DictArray instance
         :param idx: extract the data corresponding to the given inner index
         """
-        curve = numpy.zeros(1, imtls.imt_dt)
+        curve = numpy.zeros(1, imtls.dt)
         for imt in imtls:
             curve[imt] = self.array[imtls.slicedic[imt], idx]
         return curve[0]
@@ -167,7 +167,7 @@ class ProbabilityMap(dict):
     def convert(self, imtls, nsites=None, idx=0):
         """
         Convert a probability map into a composite array of length `nsites`
-        and dtype `imtls.imt_dt`.
+        and dtype `imtls.dt`.
 
         :param imtls: DictArray instance
         :param nsites: the total number of sites (or None)
@@ -175,7 +175,7 @@ class ProbabilityMap(dict):
         """
         if nsites is None:
             nsites = len(self)
-        curves = numpy.zeros(nsites, imtls.imt_dt)
+        curves = numpy.zeros(nsites, imtls.dt)
         for imt in curves.dtype.names:
             curves_by_imt = curves[imt]
             for sid in self:
