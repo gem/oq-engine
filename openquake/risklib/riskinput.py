@@ -180,7 +180,7 @@ class AssetCollection(object):
         asset_ordinal = 0
         fields = set(asset_dt.fields)
         for sid, assets_ in enumerate(assets_by_site):
-            for asset in sorted(assets_, key=operator.attrgetter('id')):
+            for asset in sorted(assets_, key=operator.attrgetter('idx')):
                 asset.ordinal = asset_ordinal
                 record = assetcol[asset_ordinal]
                 asset_ordinal += 1
@@ -192,7 +192,7 @@ class AssetCollection(object):
                     elif field == 'area':
                         value = asset.area
                     elif field == 'idx':
-                        value = asset.id
+                        value = asset.idx
                     elif field == 'site_id':
                         value = sid
                     elif field == 'lon':
@@ -322,7 +322,7 @@ class CompositeRiskModel(collections.Mapping):
                         curve_resolutions.add(len(ratios))
                         lines.append('%s %d' % (
                             rm.risk_functions[loss_type], len(ratios)))
-                if len(curve_resolutions) > 1:
+                if len(curve_resolutions) > 1:  # example in test_case_5
                     logging.info(
                         'Different num_loss_ratios:\n%s', '\n'.join(lines))
                 cb = scientific.CurveBuilder(
@@ -580,7 +580,7 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
     eps = numpy.zeros((num_assets, num_samples), numpy.float32)
     for taxonomy, assets in assets_by_taxo.items():
         # the association with the epsilons is done in order
-        assets.sort(key=operator.attrgetter('id'))
+        assets.sort(key=operator.attrgetter('idx'))
         shape = (len(assets), num_samples)
         logging.info('Building %s epsilons for taxonomy %s', shape, taxonomy)
         zeros = numpy.zeros(shape)
