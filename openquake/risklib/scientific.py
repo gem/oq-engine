@@ -1000,32 +1000,29 @@ class CurveBuilder(object):
             curves.append((self.ratios * avalue, poes))
         return loss_map_matrix([clp], curves)[0]
 
-    def build_loss_maps(self, assetcol, rcurves):
+    def build_loss_maps(self, assetvals, rcurves):
         """
         Build loss maps from the risk curves. Yield pairs
         (rlz_ordinal, loss_maps array).
 
-        :param assetcol: asset collection
+        :param assetvals: values of the assets as a composite array
         :param rcurves: array of risk curves of shape (N, R, 2)
         """
-        N = len(assetcol)
+        N = len(assetvals)
         R = rcurves.shape[1]
         if self.user_provided:  # loss_ratios provided
             lst = [('poe-%s' % poe, F32) for poe in self.conditional_loss_poes]
             if self.insured_losses:
                 lst += [(name + '_ins', pair) for name, pair in lst]
             loss_maps_dt = numpy.dtype(lst)
-            if self.loss_type == 'occupants':
-                asset_values = assetcol['occupants']
-            else:
-                asset_values = assetcol['value-' + self.loss_type]
             curves_lt = rcurves[self.loss_type]
+            vals = assetvals[self.loss_type]
             for rlzi in range(R):
                 loss_maps = numpy.zeros(N, loss_maps_dt)
                 for name in loss_maps.dtype.names:
                     poe, ins = extract_poe_ins(name)
                     loss_maps[name] = self._calc_loss_maps(
-                        asset_values, poe, curves_lt[:, rlzi, ins])
+                        vals, poe, curves_lt[:, rlzi, ins])
                 yield rlzi, loss_maps
 
     def __repr__(self):
@@ -1341,13 +1338,12 @@ def quantile_matrix(values, quantiles, weights):
     return result
 
 
-def exposure_statistics(
-        multicurves, map_poes, weights, quantiles):
+def exposure_statistics(multicurves, map_poes, weights, quantiles):
     """
-    Compute exposure statistics for N assets and R realizations.
+    Compute exposure statistics for A assets and R realizations.
 
     :param multicurves:
-        a list with N loss curves data. Each item holds a 2-tuple with
+        a list with A multi curves. Each multicurve holds
         1) the loss ratios on which the curves have been defined on
         2) the poes of the R curves
     :param map_poes:
@@ -1551,9 +1547,9 @@ class StatsBuilder(object):
         for q in quantiles:
             self.mean_quantiles.append('quantile-%s' % q)
 
-    def normalize(self, loss_curves):
+    def multicurves(self, loss_curves):
         """
-        Normalize the loss curves by using the provided normalization function
+        Convert loss_curves into a list of MultiCurve objects (one per asset)
         """
         return [MultiCurve(curves[0][0], [poes for _losses, poes in curves])
                 for curves in numpy.array(loss_curves).transpose(1, 0, 2, 3)]
@@ -1601,7 +1597,7 @@ class StatsBuilder(object):
         quantile_average_losses = quantile_matrix(
             average_losses, self.quantiles, weights)
         mean_curves, mean_maps, q_curves, q_maps = exposure_statistics(
-            self.normalize(loss_curves),
+            self.multicurves(loss_curves),
             self.conditional_loss_poes, weights, self.quantiles)
         if outputs[0].insured_curves is not None:
             average_ins_losses = numpy.array(average_ins_losses, F32)
@@ -1611,7 +1607,8 @@ class StatsBuilder(object):
             loss_curves = [out.insured_curves for out in outputs]
             mean_ins_curves, mean_ins_maps, q_ins_curves, q_ins_maps = (
                 exposure_statistics(
-                    self.normalize(loss_curves), [], weights, self.quantiles))
+                    self.multicurves(loss_curves), [], weights, self.quantiles)
+            )
         else:
             mean_ins_curves = numpy.zeros_like(mean_curves)
             mean_average_ins_losses = numpy.zeros_like(mean_average_losses)
@@ -1643,34 +1640,7 @@ class StatsBuilder(object):
             quantiles=self.quantiles,
             conditional_loss_poes=self.conditional_loss_poes)
 
-    def get_curves_maps(self, outputs_by_lt, loss_ratios_by_lt):
-        """
-        :param outputs_by_lt:
-            for each loss type, a list with R outputs
-        :param loss_ratios_by_lt:
-            for each loss_type, an array of ratios
-        """
-        loss_curve_dt, loss_maps_dt = build_loss_dtypes(
-            {lt: len(loss_ratios_by_lt[lt]) for lt in loss_ratios_by_lt},
-            self.conditional_loss_poes, self.insured_losses)
-        assets = list(outputs_by_lt.values())[0][0].assets
-        N = len(assets)
-        Q1 = len(self.mean_quantiles)
-        loss_curves = numpy.zeros((N, Q1), loss_curve_dt)
-        if self.conditional_loss_poes:
-            loss_maps = numpy.zeros((N, Q1), loss_maps_dt)
-        else:
-            loss_maps = None
-        for lt in loss_ratios_by_lt:
-            C = loss_curve_dt[lt]['losses'].shape[-1]
-            curves, maps = self._get_curves_maps(
-                self.build(outputs_by_lt[lt]), C)
-            loss_curves[lt] = curves.T
-            if self.conditional_loss_poes:
-                loss_maps[lt] = maps.T
-        return loss_curves, loss_maps
-
-    def _get_curves_maps(self, stats, C):
+    def get_curves_maps(self, stats, C):
         """
         :param stats:
             an object with attributes mean_curves, mean_average_losses,
@@ -1723,14 +1693,6 @@ class StatsBuilder(object):
                 mq_curves.transpose(1, 0, 2, 3), mq_avgs.T):
             acc.append(zip(mq_curve, mq_avg))
         return acc  # (N, Q1) triples
-
-
-def _old_loss_curves(asset_values, rcurves, ratios):
-    # build loss curves in the old format (i.e. (losses, poes)) from
-    # loss curves in the new format (i.e. poes).
-    # shape (N, 2, C)
-    return numpy.array([(avalue * ratios, poes)
-                        for avalue, poes in zip(asset_values, rcurves)])
 
 
 def _combine_mq(mean, quantile):

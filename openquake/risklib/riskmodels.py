@@ -154,7 +154,7 @@ class Asset(object):
         :param ordinal:
             asset collection ordinal
         """
-        self.id = asset_id
+        self.idx = asset_id
         self.taxonomy = taxonomy
         self.number = number
         self.location = location
@@ -213,10 +213,10 @@ class Asset(object):
                          self.area, self.number)
 
     def __lt__(self, other):
-        return self.id < other.id
+        return self.idx < other.idx
 
     def __repr__(self):
-        return '<Asset %s>' % self.id
+        return '<Asset %s>' % self.idx
 
 
 def get_values(loss_type, assets, time_event=None):
