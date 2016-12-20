@@ -705,6 +705,8 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
 
 
 # used by classical_risk and event_based_risk
+# NB: loss_maps-stats are NOT computed as stats of loss_maps-rlzs,
+# instead they are extracted directly from loss_maps-stats
 @export.add(('loss_maps-stats', 'xml'), ('loss_maps-stats', 'geojson'))
 def export_loss_maps_stats_xml_geojson(ekey, dstore):
     loss_maps = get_loss_maps(dstore, 'stats')
