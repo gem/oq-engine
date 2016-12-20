@@ -1440,20 +1440,20 @@ def build_loss_dtypes(curve_resolution, conditional_loss_poes,
     return loss_curve_dt, loss_maps_dt
 
 
-def compute_mq(values, quantiles, weights):
+# NB: this is a function linear in the array argument
+def compute_mq(array, quantiles, weights):
     """
-    :param curves:
-        a matrix R x N, where N is the number of assets and R the number
-        of realizations
+    :param array:
+        an array of R elements (which can be arrays)
     :param quantile:
         a list of Q quantiles
     :param weights:
         a list of R weights
     :returns:
-        a matrix (Q + 1) x N
+        an array of Q + 1 elements (which can be arrays)
     """
-    result = numpy.zeros((len(quantiles) + 1, values.shape[1]))
-    result[0] = mean_curve(values, weights)
+    result = numpy.zeros((len(quantiles) + 1,) + array.shape[1:], array.dtype)
+    result[0] = mean_curve(array, weights)
     for i, q in enumerate(quantiles, 1):
-        result[i] = quantile_curve(values, q, weights)
+        result[i] = quantile_curve(array, q, weights)
     return result
