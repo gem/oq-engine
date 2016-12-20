@@ -47,8 +47,7 @@ def classical_risk(riskinput, riskmodel, monitor):
     """
     oq = monitor.oqparam
     ins = oq.insured_losses
-    result = dict(
-        loss_curves=[], loss_maps=[], stat_curves=[], stat_maps=[])
+    result = dict(loss_curves=[], stat_curves=[])
     outputs = list(riskmodel.gen_outputs(riskinput, monitor))
     for out in outputs:
         l, r = out.lr
@@ -75,15 +74,15 @@ def classical_risk(riskinput, riskmodel, monitor):
                 for out in outs:  # outputs with the same loss type and assets
                     weights.append(riskinput.rlzs[out.lr[1]].weight)
                 for i, asset in enumerate(assets):
-                    avg_stat = scientific.compute_mq(
+                    avg_stats = scientific.compute_stats(
                         numpy.array([out.average_losses for out in outs]),
                         oq.quantile_loss_curves, weights)
                     losses = out.loss_curves[i, 0]
-                    poes_stat = scientific.compute_mq(
+                    poes_stats = scientific.compute_stats(
                         numpy.array([out.loss_curves[i, 1] for out in outs]),
                         oq.quantile_loss_curves, weights)
                     result['stat_curves'].append(
-                        (l, asset.ordinal, losses, poes_stat, avg_stat))
+                        (l, asset.ordinal, losses, poes_stats, avg_stats))
 
     return result
 
@@ -101,6 +100,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         Associate the assets to the sites and build the riskinputs.
         """
         oq = self.oqparam
+        if oq.insured_losses:
+            raise ValueError(
+                'insured_losses are not supported for classical_risk')
         if 'hazard_curves' in oq.inputs:  # read hazard from file
             haz_sitecol, haz_curves = readinput.get_hcurves(oq)
             self.save_params()
@@ -169,11 +171,10 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         # loss curves stats
         if self.R > 1:
             stat_curves = numpy.zeros((self.N, self.Q1), self.loss_curve_dt)
-            for l, aid, losses, statcurve, statloss in result['stat_curves']:
+            for l, aid, losses, statpoes, statloss in result['stat_curves']:
                 stat_curves_lt = stat_curves[ltypes[l]]
                 for s in range(self.Q1):
                     stat_curves_lt['avg'][aid, s] = statloss[s]
-                    base.set_array(stat_curves_lt['poes'][aid, s],
-                                   statcurve[s])
+                    base.set_array(stat_curves_lt['poes'][aid, s], statpoes[s])
                     base.set_array(stat_curves_lt['losses'][aid, s], losses)
             self.datastore['loss_curves-stats'] = stat_curves
