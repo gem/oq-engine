@@ -71,7 +71,7 @@ def fix_source_node(node):
 if __name__ == '__main__':
     fname = sys.argv[1]
     src_model = node_from_xml(fname).sourceModel
-    for node in src_model:
-        fix_source_node(node)
+    for src_node in src_model:
+        fix_source_node(src_node)
     with open(fname, 'wb') as f:
-        nrml.write([src_model], f)
+        nrml.write([src_model], f, xmlns=nrml.NAMESPACE)

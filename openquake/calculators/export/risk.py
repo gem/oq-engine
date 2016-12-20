@@ -106,6 +106,12 @@ def compactify(array):
     return zeros
 
 
+# helper for exporting the average losses for event_based_risk
+#  _gen_triple('avg_losses-rlzs', array, quantiles, insured)
+# yields ('avg_losses', 'rlz-000', data), ...
+# whereas  _gen_triple('avg_losses-stats', array, quantiles, insured)
+# yields ('avg_losses', 'mean', data), ...
+# the data contains both insured and non-insured losses merged together
 def _gen_triple(longname, array, quantiles, insured):
     # the array has shape (A, R, L, I)
     name, kind = longname.split('-')
@@ -621,7 +627,7 @@ def indices(*sizes):
 
 def get_loss_maps(dstore, kind):
     """
-    :param dstore: a DataStore instanc
+    :param dstore: a DataStore instance
     :param kind: 'rlzs' or 'stats'
     """
     oq = dstore['oqparam']
