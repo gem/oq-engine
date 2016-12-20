@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <aggregateLossCurve
+    investigationTime="50.0"
+    lossType="structural"
+    quantileValue="0.25"
+    riskInvestigationTime="50.0"
+    statistics="quantile"
+    unit="EUR"
+    >
+        <poEs>
+            7.13495E-01 6.13259E-01 4.51188E-01 3.62372E-01 3.62372E-01 2.59182E-01 2.21199E-01 1.81269E-01 1.81269E-01 1.81269E-01 1.39292E-01 1.39292E-01 1.39292E-01 1.39292E-01 1.39292E-01 9.51626E-02 9.51626E-02 1.69192E-02 0.00000E+00 0.00000E+00
+        </poEs>
+        <losses>
+            0.00000E+00 1.39850E+02 2.79699E+02 4.19549E+02 5.59398E+02 6.99248E+02 8.39098E+02 9.78947E+02 1.11880E+03 1.25865E+03 1.39850E+03 1.53835E+03 1.67820E+03 1.81804E+03 1.95789E+03 2.09774E+03 2.23759E+03 2.37744E+03 2.51729E+03 2.65714E+03
+        </losses>
+        <averageLoss>
+            5.87487E+02
+        </averageLoss>
+    </aggregateLossCurve>
+</nrml>
