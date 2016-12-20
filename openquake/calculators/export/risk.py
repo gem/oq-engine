@@ -621,31 +621,41 @@ class Location(object):
         self.wkt = 'POINT(%s %s)' % (x, y)
 
 
+def indices(*sizes):
+    return itertools.product(*map(range, sizes))
+
+
 def get_loss_maps(dstore, kind):
     """
     :param dstore: a DataStore instance
     :param kind: 'rlzs' or 'stats'
     """
+    oq = dstore['oqparam']
     name = 'rcurves-%s' % kind
     if name in dstore:  # event_based risk
-        oq = dstore['oqparam']
-        assetvals = dstore['assetcol'].values()
-        realizations = dstore['realizations']
-        riskmodel = riskinput.read_composite_risk_model(dstore)
+        values = dstore['assetcol'].values()
         _, loss_maps_dt = scientific.build_loss_dtypes(
-            {str(lt): len(oq.loss_ratios[lt]) for lt in oq.loss_ratios},
+            {lt: len(oq.loss_ratios[lt]) for lt in oq.loss_ratios},
             oq.conditional_loss_poes, oq.insured_losses)
-        loss_maps = numpy.zeros((len(assetvals), len(realizations)),
-                                loss_maps_dt)
-        rcurves = dstore[name]
-        for cb in riskmodel.curve_builders:
-            if cb.loss_type in oq.loss_ratios:
-                for r, lmaps in cb.build_loss_maps(assetvals, rcurves):
-                    loss_maps[cb.loss_type][:, r] = lmaps
+        rcurves = dstore[name].value  # to support Ubuntu 14
+        A, R, I = rcurves.shape
+        ins = ['', '_ins']
+        loss_maps = numpy.zeros((A, R), loss_maps_dt)
+        for ltype, lratios in oq.loss_ratios.items():
+            for (a, r, i) in indices(A, R, I):
+                rcurve = rcurves[ltype][a, r, i]
+                losses = numpy.array(lratios) * values[ltype][a]
+                tup = tuple(
+                    scientific.conditional_loss_ratio(losses, rcurve, poe)
+                    for poe in oq.conditional_loss_poes)
+                loss_maps[ltype + ins[i]][a, r] = tup
         return loss_maps
-    name = 'loss_maps-%s' % kind
+    name = 'loss_curves-%s' % kind
     if name in dstore:  # classical_risk
-        return dstore[name].value
+        loss_curves = dstore[name]
+    loss_maps = scientific.broadcast(
+        scientific.loss_maps, loss_curves, oq.conditional_loss_poes)
+    return loss_maps
 
 
 # used by event_based_risk and classical_risk
@@ -695,6 +705,8 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
 
 
 # used by classical_risk and event_based_risk
+# NB: loss_maps-stats are NOT computed as stats of loss_maps-rlzs,
+# instead they are extracted directly from loss_maps-stats
 @export.add(('loss_maps-stats', 'xml'), ('loss_maps-stats', 'geojson'))
 def export_loss_maps_stats_xml_geojson(ekey, dstore):
     loss_maps = get_loss_maps(dstore, 'stats')
