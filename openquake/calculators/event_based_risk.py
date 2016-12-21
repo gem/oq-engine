@@ -24,6 +24,7 @@ import numpy
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
     AccumDict, humansize, block_splitter, group_array)
+from openquake.hazardlib.stats import compute_stats, compute_stats2
 from openquake.calculators import base, event_based
 from openquake.baselib import parallel
 from openquake.risklib import riskinput, scientific
@@ -208,13 +209,14 @@ class EbrPostCalculator(base.RiskCalculator):
         # build rcurves-stats (sequentially)
         # this is a fundamental output, being used to compute loss_maps-stats
         if R > 1:
-            ss = scientific.SimpleStats(self.datastore['realizations'],
-                                        self.oqparam.quantile_loss_curves)
+            weights = self.datastore['realizations']['weight']
+            quantiles = self.oqparam.quantile_loss_curves
             with self.monitor('computing avg_losses-stats'):
-                self.datastore['avg_losses-stats'] = ss.compute(
-                    self.datastore['avg_losses-rlzs'])
+                self.datastore['avg_losses-stats'] = compute_stats2(
+                    self.datastore['avg_losses-rlzs'], quantiles, weights)
             with self.monitor('computing rcurves-stats'):
-                self.datastore['rcurves-stats'] = ss.compute(rcurves)
+                self.datastore['rcurves-stats'] = compute_stats2(
+                    rcurves, quantiles, weights)
 
         # build an aggregate loss curve per realization
         if 'agg_loss_table' in self.datastore:
@@ -248,10 +250,22 @@ class EbrPostCalculator(base.RiskCalculator):
         self.datastore['agg_curve-rlzs'] = agg_curve
 
         if R > 1:  # save stats too
-            rlzs = self.datastore['realizations'].value
-            sb = scientific.SimpleStats(rlzs, oq.quantile_loss_curves)
-            self.datastore['agg_curve-stats'] = sb.build_agg_curve_stats(
-                agg_curve)
+            weights = self.datastore['realizations']['weight']
+            Q1 = len(oq.quantile_loss_curves) + 1
+            agg_curve_stats = numpy.zeros((I, Q1), agg_curve.dtype)
+            for l, loss_type in enumerate(agg_curve.dtype.names):
+                acs = agg_curve_stats[loss_type]
+                data = agg_curve[loss_type]
+                for i in range(I):
+                    losses, all_poes = scientific.normalize_curves_eb(
+                        [(c['losses'], c['poes']) for c in data[i]])
+                    acs['losses'][i] = losses
+                    acs['poes'][i] = compute_stats(
+                        all_poes, oq.quantile_loss_curves, weights)
+                    acs['avg'][i] = compute_stats(
+                        data['avg'][i], oq.quantile_loss_curves, weights)
+
+            self.datastore['agg_curve-stats'] = agg_curve_stats
 
 
 elt_dt = numpy.dtype([('eid', U32), ('loss', F32)])
