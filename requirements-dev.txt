@@ -2,6 +2,7 @@
 # Ubuntu 16.04 stack
 # !! update pip first! so wheels will be used !!
 
+pytz
 setuptools
 pkgconfig
 Cython==0.23.4
@@ -18,16 +19,16 @@ funcsigs==1.0.2
 pbr==1.8.0
 six==1.10.0
 futures==3.0.5
-django==1.8.7
+django==1.8.17
 requests==2.9.1
 pyshp==1.2.3
-# Rtree is currently available only from sources
-Rtree==0.8.2
+# Rtree is optional. No wheels are currently availble on Mac.
+# It requires libspatialindex to be available on the system
+#Rtree==0.8.2
 
 # Celery support
 # uncomment the following lines to install celery
 # and its dependencies
-#pytz
 #anyjson==0.3.3
 #amqp==1.4.9
 #kombu==3.0.33
