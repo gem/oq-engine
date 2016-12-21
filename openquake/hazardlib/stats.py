@@ -104,3 +104,52 @@ def compute_stats(array, quantiles, weights):
         qc = quantile_curve(array, q, weights)
         result[i] = qc[0] if len(qc) == 1 else qc  # this is ugly
     return result
+
+
+# like compute_stats, but on a matrix of shape (N, R)
+def compute_stats2(arrayNR, quantiles, weights):
+    """
+    :param arrayNR:
+        an array of (N, R) elements
+    :param quantile:
+        a list of Q quantiles
+    :param weights:
+        a list of R weights
+    :returns:
+        an array of (N, Q + 1) elements
+    """
+    newshape = list(arrayNR.shape)
+    newshape[1] = len(quantiles) + 1  # number of statistical outputs
+    newarray = numpy.zeros(newshape, arrayNR.dtype)
+    data = [arrayNR[:, i] for i in range(len(weights))]
+    newarray[:, 0] = apply_stat(mean_curve, data, weights)
+    for i, q in enumerate(quantiles, 1):
+        newarray[:, i] = apply_stat(quantile_curve, data, q, weights)
+    return newarray
+
+
+def apply_stat(f, arraylist, *extra, **kw):
+    """
+    :param f: a callable arraylist -> array (of the same shape and dtype)
+    :param arraylist: a list of arrays of the same shape and dtype
+    :param extra: additional arguments
+    :returns: an array of the same shape and dtype
+
+    Broadcast statistical functions to composite arrays. Here is an example:
+
+    >>> dt = numpy.dtype([('a', (float, 2)), ('b', float)])
+    >>> a1 = numpy.array([([1, 2], 3)], dt)
+    >>> a2 = numpy.array([([4, 5], 6)], dt)
+    >>> apply_stat(mean_curve, [a1, a2])
+    array([([2.5, 3.5], 4.5)], 
+          dtype=[('a', '<f8', (2,)), ('b', '<f8')])
+    """
+    dtype = arraylist[0].dtype
+    shape = arraylist[0].shape
+    if dtype.names:  # composite array
+        new = numpy.zeros(shape, dtype)
+        for name in dtype.names:
+            new[name] = f([arr[name] for arr in arraylist], *extra, **kw)
+        return new
+    else:  # simple array
+        return f(arraylist, *extra, **kw)
