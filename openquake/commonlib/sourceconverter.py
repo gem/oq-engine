@@ -205,38 +205,6 @@ def _split_start_stop(n, chunksize):
         start = stop
 
 
-def split_fault_source_by_magnitude(src):
-    """
-    Utility splitting a fault source into fault sources with a single
-    magnitude bin.
-
-    :param src:
-        an instance of :class:`openquake.hazardlib.source.base.SeismicSource`
-    """
-    i = 0
-    splitlist = []
-    mag_rates = [(mag, rate) for (mag, rate) in
-                 src.mfd.get_annual_occurrence_rates() if rate]
-    if len(mag_rates) > 1:  # split by magnitude bin
-        for mag, rate in mag_rates:
-            new_src = copy.copy(src)
-            new_src.source_id = '%s:%s' % (src.source_id, i)
-            new_src.mfd = mfd.ArbitraryMFD([mag], [rate])
-            i += 1
-            splitlist.append(new_src)
-    elif hasattr(src, 'start') and src.num_ruptures > 500:  # split by slice
-        for start, stop in _split_start_stop(src.num_ruptures, 500):
-            new_src = copy.copy(src)
-            new_src.start = start
-            new_src.stop = min(stop, src.num_ruptures)
-            new_src.source_id = '%s:%s' % (src.source_id, i)
-            i += 1
-            splitlist.append(new_src)
-    else:
-        splitlist.append(src)
-    return splitlist
-
-
 def split_fault_source(src):
     """
     Generator splitting a fault source into several fault sources.
@@ -248,9 +216,32 @@ def split_fault_source(src):
     # take advantage of the multiple cores; if you split too much,
     # the data transfer will kill you, i.e. multiprocessing/celery
     # will fail to transmit to the workers the generated sources.
-    for ss in split_fault_source_by_magnitude(src):
-        ss.num_ruptures = ss.count_ruptures()
-        yield ss
+    i = 0
+    splitlist = []
+    mag_rates = [(mag, rate) for (mag, rate) in
+                 src.mfd.get_annual_occurrence_rates() if rate]
+    if len(mag_rates) > 1:  # split by magnitude bin
+        for mag, rate in mag_rates:
+            new_src = copy.copy(src)
+            new_src.source_id = '%s:%s' % (src.source_id, i)
+            new_src.mfd = mfd.ArbitraryMFD([mag], [rate])
+            new_src.num_ruptures = new_src.count_ruptures()
+            i += 1
+            splitlist.append(new_src)
+    elif hasattr(src, 'start') and src.num_ruptures > source.MAXWEIGHT:
+        # split by slice of ruptures
+        for start, stop in _split_start_stop(
+                src.num_ruptures, source.MAXWEIGHT):
+            new_src = copy.copy(src)
+            new_src.start = start
+            new_src.stop = min(stop, src.num_ruptures)
+            new_src.num_ruptures = new_src.stop - new_src.start
+            new_src.source_id = '%s:%s' % (src.source_id, i)
+            i += 1
+            splitlist.append(new_src)
+    else:
+        splitlist.append(src)
+    return splitlist
 
 
 def split_source(src):
