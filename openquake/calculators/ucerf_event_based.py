@@ -622,6 +622,49 @@ class UCERFSESControl(object):
         idx_set["total_key"] = self.branch_id.replace("/", "|")
         return idx_set
 
+class UCERFSESControlTimeDep(UCERFSESControl):
+    """
+    """
+
+    def __init__(self, source_file, id, investigation_time, start_date,
+                 min_mag, npd=NPD, hdd=HDD, aspect=1.5,
+                 upper_seismogenic_depth=0.0, lower_seismogenic_depth=15.0,
+                 msr=WC1994(), mesh_spacing=1.0, trt="Active Shallow Crust",
+                 integration_distance=1000):
+        """
+        Instantiate with new parameter 'start_date'
+        """
+        super(UCERFControlTimeDep, self).__init__(source_file, id, 
+             investigation_time, min_mag, npd, hdd, aspect,
+             upper_seismogenic_depth, lower_seismogenic_depth,
+             msr, mesh_spacing, trt, integration_distance=1000)
+        self.start_date = start_date
+
+    def build_idx_set(self):
+        """
+        Builds a dictionary of indices based on the branch code
+
+        :param str branch_code:
+            Code for the branch
+        """
+        code_set = self.branch_id.split("/")
+        idx_set = {
+            "sec_idx": "/".join([code_set[0], code_set[1], "Sections"]),
+            "mag_idx": "/".join([code_set[0], code_set[1], code_set[2],
+                                 "Magnitude"])}
+        code_set.insert(3, "Rates")
+        idx_set["rate_idx"] = "/".join(code_set)
+        idx_set["rake_idx"] = "/".join([code_set[0], code_set[1], "Rake"])
+        idx_set["msr_idx"] = "-".join([code_set[0], code_set[1], code_set[2]])
+        idx_set["geol_idx"] = code_set[0]
+        grid_key = "_".join(self.branch_id.replace("/", "_").split("_")[:-1])
+        #idx_set["grid_key"] = self.branch_id.replace("/", "_")
+        idx_set["grid_key"] = "_".join(
+            self.branch_id.replace("/", "_").split("_")[:-1]
+            )
+        idx_set["total_key"] = self.branch_id.replace("/", "|")
+        return idx_set
+
 # #################################################################### #
 
 
@@ -636,6 +679,32 @@ class UCERFSourceConverter(SourceConverter):
         """
         dirname = os.path.dirname(self.fname)  # where the source_model_file is
         source_file = os.path.join(dirname, node["filename"])
+        if ("startDate" in node) and ("investigationTime" in node):
+            # Is a time-dependent model - even if rates were originally
+            # poissonian
+            # Verify that the source time span is the same as the TOM time span
+            inv_time = float(node["investigationTime"]) 
+            if inv_time != self.tom.time_span:
+                raise ValueError("Source investigation time (%s) is not "
+                                 "equal to configuration investigation time "
+                                 "(%s)" % (inv_time, self.tom.time_span))
+
+            return UCERFSESControlTimeDep(
+                source_file,
+                node["id"],
+                inv_time,
+                float(node["startDate"]),
+                float(node["minMag"]),
+                npd=self.convert_npdist(node),
+                hdd=self.convert_hpdist(node),
+                aspect=~node.ruptAspectRatio,
+                upper_seismogenic_depth=~node.pointGeometry.upperSeismoDepth,
+                lower_seismogenic_depth=~node.pointGeometry.lowerSeismoDepth,
+                msr=valid.SCALEREL[~node.magScaleRel](),
+                mesh_spacing=self.rupture_mesh_spacing,
+                trt=node["tectonicRegion"])
+
+
         return UCERFSESControl(
             source_file,
             node["id"],
