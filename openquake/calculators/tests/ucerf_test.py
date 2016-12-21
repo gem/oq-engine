@@ -32,7 +32,7 @@ class UcerfTestCase(CalculatorTestCase):
         if h5py.__version__ < '2.6.0':
             raise unittest.SkipTest  # UCERF requires vlen arrays
         self.run_calc(ucerf.__file__, 'job.ini')
-        [fname] = export(('ses', 'csv'), self.calc.datastore)
+        [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         # just check that we get the expected number of ruptures
         self.assertEqual(open(fname).read().count('\n'), 918)
 

@@ -124,7 +124,7 @@ def export_ruptures_xml(ekey, dstore):
     return [dest]
 
 
-@export.add(('ses', 'csv'))
+@export.add(('ruptures', 'csv'))
 def export_ses_csv(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -132,7 +132,7 @@ def export_ses_csv(ekey, dstore):
     """
     if 'events' not in dstore:  # scenario
         return []
-    dest = dstore.export_path('ses.csv')
+    dest = dstore.export_path('ruptures.csv')
     header = ('id mag centroid_lon centroid_lat centroid_depth trt '
               'strike dip rake boundary').split()
     csm_info = dstore['csm_info']
