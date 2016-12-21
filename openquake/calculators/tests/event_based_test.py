@@ -201,8 +201,8 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got, sorted)
 
-        [fname] = export(('ses', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/ses.csv', fname)
+        [fname] = export(('ruptures', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ruptures.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_6(self):
