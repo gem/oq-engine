@@ -253,7 +253,7 @@ def group_by_aid(data, loss_type):
 
 
 # this is used by event_based_risk
-@export.add(('ass_loss_ratios', 'csv'))
+@export.add(('all_loss_ratios', 'csv'))
 def export_ass_losses_ebr(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
