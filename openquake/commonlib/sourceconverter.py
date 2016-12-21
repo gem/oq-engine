@@ -215,19 +215,18 @@ def split_fault_source_by_magnitude(src):
     """
     splitlist = []
     i = 0
-    for mag, rate in src.mfd.get_annual_occurrence_rates():
-        if not rate:  # ignore zero occurency rate
-            continue
-        if hasattr(src, 'start'):  # splittable source
-            for start, stop in split_start_stop(src.num_ruptures, 100):
-                new_src = copy.copy(src)
-                new_src.start = start
-                new_src.stop = stop
-                new_src.source_id = '%s:%s' % (src.source_id, i)
-                new_src.mfd = mfd.ArbitraryMFD([mag], [rate])
-                i += 1
-                splitlist.append(new_src)
-        else:
+    mag_rates = [(mag, rate) for (mag, rate) in
+                 src.mfd.get_annual_occurrence_rates() if rate]
+    if len(mag_rates) == 1 and hasattr(src, 'start'):  # split by slice
+        for start, stop in split_start_stop(src.num_ruptures, 100):
+            new_src = copy.copy(src)
+            new_src.start = start
+            new_src.stop = min(stop, src.num_ruptures)
+            new_src.source_id = '%s:%s' % (src.source_id, i)
+            i += 1
+            splitlist.append(new_src)
+    else:  # split by magnitude bin
+        for mag, rate in mag_rates:
             new_src = copy.copy(src)
             new_src.source_id = '%s:%s' % (src.source_id, i)
             new_src.mfd = mfd.ArbitraryMFD([mag], [rate])
@@ -249,6 +248,7 @@ def split_fault_source(src):
     # will fail to transmit to the workers the generated sources.
     for ss in split_fault_source_by_magnitude(src):
         ss.num_ruptures = ss.count_ruptures()
+        #assert ss.num_ruptures
         yield ss
 
 
