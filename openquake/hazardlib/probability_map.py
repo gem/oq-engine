@@ -16,7 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.baselib.python3compat import zip
-from openquake.hazardlib.stats import mean_quantiles
+from openquake.hazardlib.stats import compute_stats
 import numpy
 
 F64 = numpy.float64
@@ -316,7 +316,7 @@ class PmapStats(object):
             for j, sid in enumerate(sids):
                 if sid in pmap:
                     curves_by_rlz[i][j] = pmap[sid].array[:, 0]
-        mq = mean_quantiles(curves_by_rlz, self.quantiles, self.weights)
+        mq = compute_stats(curves_by_rlz, self.quantiles, self.weights)
         for i, array in enumerate(mq):
             for j, sid in numpy.ndenumerate(sids):
                 stats[sid].array[:, i] = array[j]

@@ -25,10 +25,7 @@ def mean_curve(values, weights=None):
     """
     Compute the mean by using numpy.average on the first axis.
     """
-    if weights:
-        weights = list(map(float, weights))
-        assert abs(sum(weights) - 1.) < 1E-7, sum(weights) - 1.
-    else:
+    if weights is None:
         weights = [1. / len(values)] * len(values)
     if isinstance(values[0], (numpy.ndarray, list, tuple)):  # fast lane
         return numpy.average(values, axis=0, weights=weights)
@@ -70,7 +67,7 @@ def quantile_curve(curves, quantile, weights=None):
 
     # Each curve needs to be associated with a weight
     assert len(weights) == len(curves)
-    weights = numpy.array(weights, dtype=numpy.float64)
+    weights = numpy.array(weights)
 
     result_curve = []
     np_curves = numpy.array(curves).reshape(len(curves), -1)
@@ -89,14 +86,78 @@ def quantile_curve(curves, quantile, weights=None):
         return result_curve
 
 
-def mean_quantiles(curves_by_rlz, quantiles=(), weights=None):
+# NB: this is a function linear in the array argument
+def compute_stats(array, quantiles, weights):
     """
-    :param curves_by_rlz: a list of R arrays of shape N x L
-    :param quantiles: a list of quantile PoEs (can be empty)
-    :param weights: a list of R weights (or None)
-    :returns: a list [mean, quantile...]
+    :param array:
+        an array of R elements (which can be arrays)
+    :param quantiles:
+        a list of Q quantiles
+    :param weights:
+        a list of R weights
+    :returns:
+        an array of Q + 1 elements (which can be arrays)
     """
-    nsites = len(curves_by_rlz[0])
-    return [mean_curve(curves_by_rlz, weights)] + [
-        quantile_curve(curves_by_rlz, q, weights).reshape((nsites, -1))
-        for q in quantiles]
+    result = numpy.zeros((len(quantiles) + 1,) + array.shape[1:], array.dtype)
+    result[0] = mean_curve(array, weights)
+    shp = result[0].shape
+    for i, q in enumerate(quantiles, 1):
+        qc = quantile_curve(array, q, weights)
+        # TODO: try to simplify the ugliness below
+        if isinstance(qc, list) and len(qc) == 1:
+            result[i] = qc[0]
+        elif qc.shape != shp:
+            result[i] = qc.reshape(shp)
+        else:
+            result[i] = qc
+    return result
+
+
+# like compute_stats, but on a matrix of shape (N, R)
+def compute_stats2(arrayNR, quantiles, weights):
+    """
+    :param arrayNR:
+        an array of (N, R) elements
+    :param quantiles:
+        a list of Q quantiles
+    :param weights:
+        a list of R weights
+    :returns:
+        an array of (N, Q + 1) elements
+    """
+    newshape = list(arrayNR.shape)
+    newshape[1] = len(quantiles) + 1  # number of statistical outputs
+    newarray = numpy.zeros(newshape, arrayNR.dtype)
+    data = [arrayNR[:, i] for i in range(len(weights))]
+    newarray[:, 0] = apply_stat(mean_curve, data, weights)
+    for i, q in enumerate(quantiles, 1):
+        newarray[:, i] = apply_stat(quantile_curve, data, q, weights)
+    return newarray
+
+
+def apply_stat(f, arraylist, *extra, **kw):
+    """
+    :param f: a callable arraylist -> array (of the same shape and dtype)
+    :param arraylist: a list of arrays of the same shape and dtype
+    :param extra: additional positional arguments
+    :param kw: keyword arguments
+    :returns: an array of the same shape and dtype
+
+    Broadcast statistical functions to composite arrays. Here is an example:
+
+    >>> dt = numpy.dtype([('a', (float, 2)), ('b', float)])
+    >>> a1 = numpy.array([([1, 2], 3)], dt)
+    >>> a2 = numpy.array([([4, 5], 6)], dt)
+    >>> apply_stat(mean_curve, [a1, a2])
+    array([([2.5, 3.5], 4.5)], 
+          dtype=[('a', '<f8', (2,)), ('b', '<f8')])
+    """
+    dtype = arraylist[0].dtype
+    shape = arraylist[0].shape
+    if dtype.names:  # composite array
+        new = numpy.zeros(shape, dtype)
+        for name in dtype.names:
+            new[name] = f([arr[name] for arr in arraylist], *extra, **kw)
+        return new
+    else:  # simple array
+        return f(arraylist, *extra, **kw)
