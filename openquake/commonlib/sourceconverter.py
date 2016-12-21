@@ -26,6 +26,8 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.risklib import valid
 from openquake.commonlib.node import context, striptag
 
+MAXWEIGHT = 200  # tuned by M. Simionato
+
 
 class SourceGroup(collections.Sequence):
     """
@@ -230,8 +232,7 @@ def split_fault_source(src):
             i += 1
             splitlist.append(new_src)
     elif hasattr(src, 'start'):  # split by slice of ruptures
-        for start, stop in _split_start_stop(
-                src.num_ruptures, source.MAXWEIGHT):
+        for start, stop in _split_start_stop(src.num_ruptures, MAXWEIGHT):
             new_src = copy.copy(src)
             new_src.start = start
             new_src.stop = min(stop, src.num_ruptures)
