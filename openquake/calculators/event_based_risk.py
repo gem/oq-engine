@@ -247,6 +247,12 @@ class EbrPostCalculator(base.RiskCalculator):
             agg_curve[lts[l]][i, r] = result[l, r, i]
         self.datastore['agg_curve-rlzs'] = agg_curve
 
+        if R > 1:  # save stats too
+            rlzs = self.datastore['realizations'].value
+            sb = scientific.SimpleStats(rlzs, oq.quantile_loss_curves)
+            self.datastore['agg_curve-stats'] = sb.build_agg_curve_stats(
+                agg_curve)
+
 
 elt_dt = numpy.dtype([('eid', U32), ('loss', F32)])
 

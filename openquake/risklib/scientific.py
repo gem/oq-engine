@@ -1381,32 +1381,29 @@ class SimpleStats(object):
             newarray[:, i] = apply_stat(quantile_curve, data, q, weights)
         return newarray
 
-    def build_agg_curve_stats(self, loss_curve_dt, dstore):
+    def build_agg_curve_stats(self, agg_curve):
         """
         Build an array `agg_curve-stats`.
 
-        :param loss_curve_dt:
-            numpy dtype with fields (structural~losses, structural~poes,
-            structural~avg, ...)
-        :param dstore:
-            :class:`openquake.commonlib.datastore.DataStore` instance
+        :param agg_curve:
+            an array of R aggregated curves
         :returns:
             an array of size Q1 and dtype loss_curve_dt
         """
+        I = self.insured_losses + 1
         Q1 = len(self.names)
-        agg_curve_stats = numpy.zeros(Q1, loss_curve_dt)
-        for l, loss_type in enumerate(loss_curve_dt.names):
+        agg_curve_stats = numpy.zeros((I, Q1), agg_curve.dtype)
+        for l, loss_type in enumerate(agg_curve.dtype.names):
             acs = agg_curve_stats[loss_type]
-            data = dstore['agg_curve-rlzs'][loss_type]
+            data = agg_curve[loss_type]
             for i in range(self.insured_losses + 1):
-                ins = '_ins' if i else ''
                 losses, all_poes = normalize_curves_eb(
                     [(c['losses'], c['poes']) for c in data[i]])
-                acs['losses' + ins] = losses
+                acs['losses'][i] = losses
                 # NB: all_poes.T to compute the stats on the second axis
-                acs['poes' + ins] = self.compute(all_poes.T).T
+                acs['poes'][i] = self.compute(all_poes.T).T
                 # NB: data['avg'][None, i] adds a first axis with dimension 1
-                acs['avg' + ins] = self.compute(data['avg'][None, i])[0]
+                acs['avg'][i] = self.compute(data['avg'][None, i])[0]
         return agg_curve_stats
 
 
