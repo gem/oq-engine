@@ -196,7 +196,7 @@ class EbrPostCalculator(base.RiskCalculator):
         # build rcurves-rlzs
         if self.oqparam.loss_ratios:
             assets = list(self.assetcol)
-            cb_inputs = self.cb_inputs('ass_loss_ratios')
+            cb_inputs = self.cb_inputs('all_loss_ratios')
             mon = self.monitor('build_rcurves')
             res = parallel.apply(
                 build_rcurves, (cb_inputs, assets, mon)).reduce()
@@ -501,7 +501,7 @@ class EbriskCalculator(base.RiskCalculator):
                 self.datastore.extend(key, agglosses[l, r])
             for l, r in asslosses:
                 loss_type = self.riskmodel.loss_types[l]
-                key = 'ass_loss_ratios/rlz-%03d/%s' % (r + offset, loss_type)
+                key = 'all_loss_ratios/rlz-%03d/%s' % (r + offset, loss_type)
                 self.datastore.extend(key, asslosses[l, r])
 
     def post_execute(self, num_events):
@@ -517,11 +517,11 @@ class EbriskCalculator(base.RiskCalculator):
         self.datastore.save('job_info', {'gmfbytes': self.gmfbytes})
 
         A, E = len(self.assetcol), num_events
-        if 'ass_loss_ratios' in self.datastore:
-            for rlzname in self.datastore['ass_loss_ratios']:
-                self.datastore.set_nbytes('ass_loss_ratios/' + rlzname)
-            self.datastore.set_nbytes('ass_loss_ratios')
-            asslt = self.datastore['ass_loss_ratios']
+        if 'all_loss_ratios' in self.datastore:
+            for rlzname in self.datastore['all_loss_ratios']:
+                self.datastore.set_nbytes('all_loss_ratios/' + rlzname)
+            self.datastore.set_nbytes('all_loss_ratios')
+            asslt = self.datastore['all_loss_ratios']
             for rlz, dset in asslt.items():
                 for ds in dset.values():
                     ds.attrs['nonzero_fraction'] = len(ds) / (A * E)
