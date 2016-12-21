@@ -91,7 +91,7 @@ def compute_stats(array, quantiles, weights):
     """
     :param array:
         an array of R elements (which can be arrays)
-    :param quantile:
+    :param quantiles:
         a list of Q quantiles
     :param weights:
         a list of R weights
@@ -118,7 +118,7 @@ def compute_stats2(arrayNR, quantiles, weights):
     """
     :param arrayNR:
         an array of (N, R) elements
-    :param quantile:
+    :param quantiles:
         a list of Q quantiles
     :param weights:
         a list of R weights
@@ -139,7 +139,8 @@ def apply_stat(f, arraylist, *extra, **kw):
     """
     :param f: a callable arraylist -> array (of the same shape and dtype)
     :param arraylist: a list of arrays of the same shape and dtype
-    :param extra: additional arguments
+    :param extra: additional positional arguments
+    :param kw: keyword arguments
     :returns: an array of the same shape and dtype
 
     Broadcast statistical functions to composite arrays. Here is an example:
