@@ -25,10 +25,7 @@ def mean_curve(values, weights=None):
     """
     Compute the mean by using numpy.average on the first axis.
     """
-    if weights:
-        weights = list(map(float, weights))
-        assert abs(sum(weights) - 1.) < 1E-7, sum(weights) - 1.
-    else:
+    if weights is None:
         weights = [1. / len(values)] * len(values)
     if isinstance(values[0], (numpy.ndarray, list, tuple)):  # fast lane
         return numpy.average(values, axis=0, weights=weights)
@@ -70,7 +67,7 @@ def quantile_curve(curves, quantile, weights=None):
 
     # Each curve needs to be associated with a weight
     assert len(weights) == len(curves)
-    weights = numpy.array(weights, dtype=numpy.float64)
+    weights = numpy.array(weights)
 
     result_curve = []
     np_curves = numpy.array(curves).reshape(len(curves), -1)
@@ -89,14 +86,21 @@ def quantile_curve(curves, quantile, weights=None):
         return result_curve
 
 
-def mean_quantiles(curves_by_rlz, quantiles=(), weights=None):
+# NB: this is a function linear in the array argument
+def compute_stats(array, quantiles, weights):
     """
-    :param curves_by_rlz: a list of R arrays of shape N x L
-    :param quantiles: a list of quantile PoEs (can be empty)
-    :param weights: a list of R weights (or None)
-    :returns: a list [mean, quantile...]
+    :param array:
+        an array of R elements (which can be arrays)
+    :param quantile:
+        a list of Q quantiles
+    :param weights:
+        a list of R weights
+    :returns:
+        an array of Q + 1 elements (which can be arrays)
     """
-    nsites = len(curves_by_rlz[0])
-    return [mean_curve(curves_by_rlz, weights)] + [
-        quantile_curve(curves_by_rlz, q, weights).reshape((nsites, -1))
-        for q in quantiles]
+    result = numpy.zeros((len(quantiles) + 1,) + array.shape[1:], array.dtype)
+    result[0] = mean_curve(array, weights)
+    for i, q in enumerate(quantiles, 1):
+        qc = quantile_curve(array, q, weights)
+        result[i] = qc[0] if len(qc) == 1 else qc  # this is ugly
+    return result
