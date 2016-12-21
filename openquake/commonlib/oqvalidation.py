@@ -20,11 +20,12 @@ import os
 import logging
 import numpy
 
+from openquake.baselib import parallel
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import correlation
 from openquake.risklib import valid
-from openquake.commonlib import parallel, logictree
+from openquake.commonlib import logictree
 from openquake.commonlib.riskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
@@ -97,6 +98,7 @@ class OqParam(valid.ParamSet):
     hazard_maps = valid.Param(valid.boolean, False)
     hypocenter = valid.Param(valid.point3d)
     ignore_missing_costs = valid.Param(valid.namelist, [])
+    ignore_covs = valid.Param(valid.boolean, False)
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
     individual_curves = valid.Param(valid.boolean, True)
     inputs = valid.Param(dict, {})
@@ -212,10 +214,11 @@ class OqParam(valid.ParamSet):
                     'iml_disagg=%s will not be computed from poes_disagg=%s',
                     str(self.iml_disagg), self.poes_disagg)
 
-        # checks for ebrisk
-        if (self.calculation_mode == 'ebrisk'
+        # checks for event_based_risk
+        if (self.calculation_mode == 'event_based_risk'
                 and self.asset_correlation not in (0, 1)):
-            raise ValueError('asset_correlation != {0, 1} is no longer supported')
+            raise ValueError('asset_correlation != {0, 1} is no longer'
+                             ' supported')
 
     def check_gsims(self, gsims):
         """
@@ -263,6 +266,7 @@ class OqParam(valid.ParamSet):
 
         risk_investigation_time / investigation_time / ses_per_logic_tree_path
         """
+        assert self.investigation_time, 'investigation_time = 0!'
         return (self.risk_investigation_time or self.investigation_time) / (
             self.investigation_time * self.ses_per_logic_tree_path)
 
@@ -315,6 +319,14 @@ class OqParam(valid.ParamSet):
         Return a composite dtype based on the loss types, including occupants
         """
         return numpy.dtype(self.loss_dt_list(dtype))
+
+    def multiloss_dt(self, dtype=numpy.float32):
+        """
+        Return a composite dtype based on the loss types, including occupants
+        """
+        I = self.insured_losses + 1
+        return numpy.dtype([(str(lt), (dtype, I))
+                            for lt in self.all_cost_types])
 
     def loss_dt_list(self, dtype=numpy.float32):
         """

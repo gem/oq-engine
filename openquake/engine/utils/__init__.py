@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.baselib.performance import Monitor
-from openquake.commonlib import parallel
+from openquake.baselib import parallel
 from openquake.commonlib import config
 
 SOFT_MEM_LIMIT = int(config.get('memory', 'soft_mem_limit'))

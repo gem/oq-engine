@@ -26,10 +26,10 @@ import traceback
 
 from openquake.baselib.performance import Monitor
 from openquake.risklib import valid
-from openquake.commonlib import parallel, readinput
+from openquake.baselib import parallel
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import export, datastore, config
-from openquake.calculators import base, views
+from openquake.commonlib import datastore, config, readinput
+from openquake.calculators import base, views, export
 from openquake.engine import logs
 
 TERMINATE = valid.boolean(
@@ -87,6 +87,10 @@ def expose_outputs(dstore):
         dskeys.add('uhs')  # export them
     if oq.hazard_maps:
         dskeys.add('hmaps')  # export them
+    if 'rcurves-rlzs' in dstore or 'loss_curves-rlzs' in dstore:
+        dskeys.add('loss_maps-rlzs')
+    if 'rcurves-stats' in dstore or 'loss_curves-stats' in dstore:
+        dskeys.add('loss_maps-stats')
     try:
         rlzs = dstore['realizations']
     except KeyError:

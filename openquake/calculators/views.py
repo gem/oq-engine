@@ -32,12 +32,15 @@ from openquake.baselib.general import (
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.python3compat import unicode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.risklib import scientific
 from openquake.commonlib import util, source
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv, FIVEDIGITS)
 
 FLOAT = (float, numpy.float32, numpy.float64, decimal.Decimal)
 INT = (int, numpy.uint32, numpy.int64)
+F32 = numpy.float32
+U32 = numpy.uint32
 
 # a dictionary of views datastore -> array
 view = CallableDict(keyfunc=lambda s: s.split(':', 1)[0])
@@ -448,7 +451,7 @@ def sum_table(records):
 # this is used by the ebr calculator
 @view.add('mean_avg_losses')
 def view_mean_avg_losses(token, dstore):
-    dt = dstore['oqparam'].loss_dt()
+    dt = dstore['oqparam'].multiloss_dt()
     try:
         array = dstore['avg_losses-stats']  # shape (N, S)
     except KeyError:
