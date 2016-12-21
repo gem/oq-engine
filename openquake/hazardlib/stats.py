@@ -100,9 +100,16 @@ def compute_stats(array, quantiles, weights):
     """
     result = numpy.zeros((len(quantiles) + 1,) + array.shape[1:], array.dtype)
     result[0] = mean_curve(array, weights)
+    shp = result[0].shape
     for i, q in enumerate(quantiles, 1):
         qc = quantile_curve(array, q, weights)
-        result[i] = qc[0] if len(qc) == 1 else qc  # this is ugly
+        # TODO: try to simplify the ugliness below
+        if isinstance(qc, list) and len(qc) == 1:
+            result[i] = qc[0]
+        elif qc.shape != shp:
+            result[i] = qc.reshape(qc)
+        else:
+            result[i] = qc
     return result
 
 
