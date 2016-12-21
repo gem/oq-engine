@@ -1,4 +1,22 @@
   [Michele Simionato]
+  * Turned the loss maps into dynamically generated outputs
+  * Extended the source model writer to serialize the attributes
+    src_interdep, rup_interdep, srcs_weights
+  * Fixed a bug when exporting the uniform hazard spectra in presence of
+    IMTs non spectral acceleration
+  * Fixed a bug when computing the loss maps in presence of insurance,
+    temporarily introduced in master
+  * Made the datastore for event based risk calculations much lighter
+    by computing the statistical outputs at export time
+  * Now it is possible to post process event based risk outputs with the
+    `--hc` option
+  * Added a command `oq to_hdf5` to convert .npz files into .hdf5 files
+  * Moved commonlib.parallel into baselib
+  * Merged the experimental calculator ebrisk into event_based_risk and
+    used correctly the random_seed for generating the GMFs (not the master_seed)
+  * Added a flag `ignore_covs` to ignore the coefficients of variation
+  * Changed the GMF scenario exporter to avoid generating composite arrays with
+    a large number of fields
   * Exporting in .npz format rather than HDF5
   * Introduced a `shared_dir` parameter in openquake.cfg
   * Fixed a serialization bug for planar surfaces
