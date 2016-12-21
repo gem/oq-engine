@@ -163,7 +163,6 @@ class SourceModelParser(object):
         return nrml.parse(fname, self.converter)
 
 
-
 class RlzsAssoc(collections.Mapping):
     """
     Realization association class. It should not be instantiated directly,
