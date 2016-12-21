@@ -21,6 +21,7 @@ import logging
 import numpy
 
 from openquake.baselib.general import groupby
+from openquake.hazardlib.stats import compute_stats
 from openquake.risklib import scientific, riskinput
 from openquake.commonlib import readinput, source
 from openquake.calculators import base
@@ -74,11 +75,11 @@ def classical_risk(riskinput, riskmodel, monitor):
                 for out in outs:  # outputs with the same loss type and assets
                     weights.append(riskinput.rlzs[out.lr[1]].weight)
                 for i, asset in enumerate(assets):
-                    avg_stats = scientific.compute_stats(
+                    avg_stats = compute_stats(
                         numpy.array([out.average_losses for out in outs]),
                         oq.quantile_loss_curves, weights)
                     losses = out.loss_curves[i, 0]
-                    poes_stats = scientific.compute_stats(
+                    poes_stats = compute_stats(
                         numpy.array([out.loss_curves[i, 1] for out in outs]),
                         oq.quantile_loss_curves, weights)
                     result['stat_curves'].append(
