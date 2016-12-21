@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added more functions to compute mean and quantiles
   * Cached the correlation matrix for speed
 
   [Marco Pagani, Michele Simionato]
