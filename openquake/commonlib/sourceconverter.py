@@ -203,7 +203,7 @@ def _split_start_stop(n, chunksize):
     start = 0
     while start < n:
         stop = start + chunksize
-        yield start, stop
+        yield start, min(stop, n)
         start = stop
 
 
@@ -235,8 +235,8 @@ def split_fault_source(src):
         for start, stop in _split_start_stop(src.num_ruptures, MAXWEIGHT):
             new_src = copy.copy(src)
             new_src.start = start
-            new_src.stop = min(stop, src.num_ruptures)
-            new_src.num_ruptures = new_src.stop - new_src.start
+            new_src.stop = stop
+            new_src.num_ruptures = stop - start
             new_src.source_id = '%s:%s' % (src.source_id, i)
             i += 1
             splitlist.append(new_src)
