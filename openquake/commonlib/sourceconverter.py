@@ -197,7 +197,7 @@ def area_to_point_sources(area_src):
         yield pt
 
 
-def split_start_stop(n, chunksize):
+def _split_start_stop(n, chunksize):
     start = 0
     while start < n:
         stop = start + chunksize
@@ -225,7 +225,7 @@ def split_fault_source_by_magnitude(src):
             i += 1
             splitlist.append(new_src)
     elif hasattr(src, 'start'):  # split by slice
-        for start, stop in split_start_stop(src.num_ruptures, 100):
+        for start, stop in _split_start_stop(src.num_ruptures, 500):
             new_src = copy.copy(src)
             new_src.start = start
             new_src.stop = min(stop, src.num_ruptures)
