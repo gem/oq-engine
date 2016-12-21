@@ -197,6 +197,14 @@ def area_to_point_sources(area_src):
         yield pt
 
 
+def split_start_stop(n, chunksize):
+    start = 0
+    while start < n:
+        stop = start + chunksize
+        yield start, stop
+        start = stop
+
+
 def split_fault_source_by_magnitude(src):
     """
     Utility splitting a fault source into fault sources with a single
@@ -210,11 +218,21 @@ def split_fault_source_by_magnitude(src):
     for mag, rate in src.mfd.get_annual_occurrence_rates():
         if not rate:  # ignore zero occurency rate
             continue
-        new_src = copy.copy(src)
-        new_src.source_id = '%s:%s' % (src.source_id, i)
-        new_src.mfd = mfd.ArbitraryMFD([mag], [rate])
-        i += 1
-        splitlist.append(new_src)
+        if hasattr(src, 'start'):  # splittable source
+            for start, stop in split_start_stop(src.num_ruptures, 100):
+                new_src = copy.copy(src)
+                new_src.start = start
+                new_src.stop = stop
+                new_src.source_id = '%s:%s' % (src.source_id, i)
+                new_src.mfd = mfd.ArbitraryMFD([mag], [rate])
+                i += 1
+                splitlist.append(new_src)
+        else:
+            new_src = copy.copy(src)
+            new_src.source_id = '%s:%s' % (src.source_id, i)
+            new_src.mfd = mfd.ArbitraryMFD([mag], [rate])
+            i += 1
+            splitlist.append(new_src)
     return splitlist
 
 
