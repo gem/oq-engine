@@ -224,7 +224,7 @@ def split_fault_source_by_magnitude(src):
             new_src.mfd = mfd.ArbitraryMFD([mag], [rate])
             i += 1
             splitlist.append(new_src)
-    elif hasattr(src, 'start'):  # split by slice
+    elif hasattr(src, 'start') and src.num_ruptures > 500:  # split by slice
         for start, stop in _split_start_stop(src.num_ruptures, 500):
             new_src = copy.copy(src)
             new_src.start = start
