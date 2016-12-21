@@ -163,6 +163,7 @@ class SourceModelParser(object):
         return nrml.parse(fname, self.converter)
 
 
+
 class RlzsAssoc(collections.Mapping):
     """
     Realization association class. It should not be instantiated directly,
@@ -358,6 +359,16 @@ class CompositionInfo(object):
         self.source_models = source_models
         self.tot_weight = tot_weight
 
+    def get_info(self, sm_id):
+        """
+        Extract a CompositionInfo instance containing the single
+        model of index `sm_id`.
+        """
+        sm = self.source_models[sm_id]
+        num_samples = sm.samples if self.num_samples else 0
+        return self.__class__(
+            self.gsim_lt, self.seed, num_samples, [sm], self.tot_weight)
+
     def __getnewargs__(self):
         # with this CompositionInfo instances will be unpickled correctly
         return self.seed, self.num_samples, self.source_models
@@ -388,6 +399,7 @@ class CompositionInfo(object):
         sg_data = group_array(dic['sg_data'], 'sm_id')
         sm_data = dic['sm_data']
         vars(self).update(attrs)
+        self.gsim_fname = decode(self.gsim_fname)
         if self.gsim_fname.endswith('.xml'):
             self.gsim_lt = logictree.GsimLogicTree(
                 self.gsim_fname, sorted(self.trts))
@@ -400,7 +412,7 @@ class CompositionInfo(object):
                 sourceconverter.SourceGroup(
                     self.trts[trti], id=grp_id, eff_ruptures=effrup)
                 for grp_id, trti, effrup, sm_id in tdata if effrup]
-            path = tuple(rec['path'].split('_'))
+            path = tuple(str(decode(rec['path'])).split('_'))
             trts = set(sg.trt for sg in srcgroups)
             num_gsim_paths = self.gsim_lt.reduce(trts).get_num_paths()
             sm = SourceModel(rec['name'], rec['weight'], path, srcgroups,
@@ -460,7 +472,7 @@ class CompositionInfo(object):
                 assoc._add_realizations(indices, smodel, gsim_lt, rlzs)
             elif trts:
                 logging.warn('No realizations for %s, %s',
-                             b'_'.join(smodel.path), smodel.name)
+                             '_'.join(smodel.path), smodel.name)
         # NB: realizations could be filtered away by logic tree reduction
         if assoc.realizations:
             assoc._init()

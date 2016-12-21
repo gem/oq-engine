@@ -27,6 +27,7 @@ import functools
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
 from openquake.baselib.general import DictArray, AccumDict
+from openquake.baselib import parallel
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.geodetic import min_geodetic_distance
 from openquake.hazardlib.source import PointSource
@@ -37,7 +38,7 @@ from openquake.hazardlib.calc.hazard_curve import (
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.risklib import valid
-from openquake.commonlib import parallel, source, readinput
+from openquake.commonlib import source, readinput
 from openquake.commonlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base, classical
@@ -86,7 +87,7 @@ class UCERFControl(UCERFSESControl):
                 sources.append(ps)
         return sources
 
-    def get_rupture_indices(self, branch_id, split=None):
+    def get_rupture_indices(self, branch_id):
         """
         Returns a set of rupture indices
         """
@@ -95,7 +96,7 @@ class UCERFControl(UCERFSESControl):
         with h5py.File(self.source_file, "r") as hdf5:
             idxs = np.arange(len(hdf5[self.idx_set["rate_idx"]]))
         logging.info('Found %d ruptures in branch %s', len(idxs), branch_id)
-        return np.array_split(idxs, split) if split else idxs
+        return idxs
 
     def filter_sites_by_distance_from_rupture_set(
             self, rupset_idx, sites, max_dist):
