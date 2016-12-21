@@ -205,6 +205,7 @@ def _split_start_stop(n, chunksize):
         start = stop
 
 
+# this is only called on heavy sources
 def split_fault_source(src):
     """
     Generator splitting a fault source into several fault sources.
@@ -228,8 +229,7 @@ def split_fault_source(src):
             new_src.num_ruptures = new_src.count_ruptures()
             i += 1
             splitlist.append(new_src)
-    elif hasattr(src, 'start') and src.num_ruptures > source.MAXWEIGHT:
-        # split by slice of ruptures
+    elif hasattr(src, 'start'):  # split by slice of ruptures
         for start, stop in _split_start_stop(
                 src.num_ruptures, source.MAXWEIGHT):
             new_src = copy.copy(src)
