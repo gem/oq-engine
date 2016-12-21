@@ -107,7 +107,7 @@ def compute_stats(array, quantiles, weights):
         if isinstance(qc, list) and len(qc) == 1:
             result[i] = qc[0]
         elif qc.shape != shp:
-            result[i] = qc.reshape(qc)
+            result[i] = qc.reshape(shp)
         else:
             result[i] = qc
     return result
