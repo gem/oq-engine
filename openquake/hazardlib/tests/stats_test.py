@@ -43,17 +43,6 @@ class MeanCurveTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             expected_mean_curve, mean_curve(curves, weights=weights))
 
-    def test_compute_mean_curve_invalid_weights(self):
-        curves = [
-            [1.0, 0.85, 0.67, 0.3],
-            [0.87, 0.76, 0.59, 0.21],
-            [0.62, 0.41, 0.37, 0.0],
-        ]
-        weights = [0.6, None, 0.4]
-        with self.assertRaises(TypeError):
-            # None is not a valid weight
-            mean_curve(curves, weights)
-
 
 class QuantileCurveTestCase(unittest.TestCase):
 
