@@ -213,11 +213,18 @@ def split_fault_source_by_magnitude(src):
     :param src:
         an instance of :class:`openquake.hazardlib.source.base.SeismicSource`
     """
-    splitlist = []
     i = 0
+    splitlist = []
     mag_rates = [(mag, rate) for (mag, rate) in
                  src.mfd.get_annual_occurrence_rates() if rate]
-    if len(mag_rates) == 1 and hasattr(src, 'start'):  # split by slice
+    if len(mag_rates) > 1:  # split by magnitude bin
+        for mag, rate in mag_rates:
+            new_src = copy.copy(src)
+            new_src.source_id = '%s:%s' % (src.source_id, i)
+            new_src.mfd = mfd.ArbitraryMFD([mag], [rate])
+            i += 1
+            splitlist.append(new_src)
+    elif hasattr(src, 'start'):  # split by slice
         for start, stop in split_start_stop(src.num_ruptures, 100):
             new_src = copy.copy(src)
             new_src.start = start
@@ -225,13 +232,8 @@ def split_fault_source_by_magnitude(src):
             new_src.source_id = '%s:%s' % (src.source_id, i)
             i += 1
             splitlist.append(new_src)
-    else:  # split by magnitude bin
-        for mag, rate in mag_rates:
-            new_src = copy.copy(src)
-            new_src.source_id = '%s:%s' % (src.source_id, i)
-            new_src.mfd = mfd.ArbitraryMFD([mag], [rate])
-            i += 1
-            splitlist.append(new_src)
+    else:
+        splitlist.append(src)
     return splitlist
 
 
@@ -248,7 +250,6 @@ def split_fault_source(src):
     # will fail to transmit to the workers the generated sources.
     for ss in split_fault_source_by_magnitude(src):
         ss.num_ruptures = ss.count_ruptures()
-        #assert ss.num_ruptures
         yield ss
 
 
