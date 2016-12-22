@@ -116,10 +116,10 @@ class ComplexFaultSource(ParametricSeismicSource):
                 rupture_area * self.rupture_aspect_ratio)
             rupture_slices = _float_ruptures(
                 rupture_area, rupture_length, cell_area, cell_length
-            )[self.start:self.stop]
+            )
             occurrence_rate = mag_occ_rate / float(len(rupture_slices))
 
-            for rupture_slice in rupture_slices:
+            for rupture_slice in rupture_slices[self.start:self.stop]:
                 mesh = whole_fault_mesh[rupture_slice]
                 # XXX: use surface centroid as rupture's hypocenter
                 # XXX: instead of point with middle index
@@ -155,9 +155,8 @@ class ComplexFaultSource(ParametricSeismicSource):
             rupture_length = numpy.sqrt(
                 rupture_area * self.rupture_aspect_ratio)
             rupture_slices = _float_ruptures(
-                rupture_area, rupture_length, cell_area, cell_length
-            )[self.start:self.stop]
-            counts += len(rupture_slices)
+                rupture_area, rupture_length, cell_area, cell_length)
+            counts += len(rupture_slices[self.start:self.stop])
         return counts
 
     def modify_set_geometry(self, edges, spacing):
