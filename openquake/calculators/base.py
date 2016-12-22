@@ -385,27 +385,35 @@ class HazardCalculator(BaseCalculator):
 
     def basic_pre_execute(self):
         oq = self.oqparam
-        mon = self.monitor
         self.read_risk_data()
         if 'source' in oq.inputs:
             wakeup_pool()  # fork before reading the source model
             logging.info('Instantiating the source-sites filter')
             self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
-            with mon('reading composite source model', autoflush=True):
-                csm = readinput.get_composite_source_model(oq)
-            if self.is_stochastic:
-                # initialize the rupture serial numbers before the
-                # filtering; in this way the serials are independent
-                # from the site collection; this is ultra-fast
-                csm.init_serials()
-            with mon('filtering composite source model', autoflush=True):
-                logging.info('Filtering composite source model')
-                # we are also weighting the sources, but weighting is ultrafast
-                csm = csm.filter(self.src_filter)
-            self.csm = csm
-            self.datastore['csm_info'] = csm.info
+            if oq.hazard_calculation_id:  # already stored csm
+                logging.info('Reusing composite source model of calc #%d',
+                             oq.hazard_calculation_id)
+                with datastore.read(oq.hazard_calculation_id) as dstore:
+                    self.csm = dstore['composite_source_model']
+            else:
+                self.csm = self.read_filter_csm()
+            self.datastore['csm_info'] = self.csm.info
             self.rup_data = {}
         self.init()
+
+    def read_filter_csm(self):
+        with self.monitor('reading composite source model', autoflush=True):
+                csm = readinput.get_composite_source_model(self.oqparam)
+        if self.is_stochastic:
+            # initialize the rupture serial numbers before the
+            # filtering; in this way the serials are independent
+            # from the site collection; this is ultra-fast
+            csm.init_serials()
+        with self.monitor('filtering composite source model', autoflush=True):
+            logging.info('Filtering composite source model')
+            # we are also weighting the sources, but weighting is ultrafast
+            csm = csm.filter(self.src_filter)
+        return csm
 
     def pre_execute(self):
         """
