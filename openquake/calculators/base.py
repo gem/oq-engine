@@ -391,7 +391,8 @@ class HazardCalculator(BaseCalculator):
             logging.info('Instantiating the source-sites filter')
             self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
             if oq.hazard_calculation_id:  # already stored csm
-                logging.info('Reusing composite source model')
+                logging.info('Reusing composite source model of calc #%d',
+                             oq.hazard_calculation_id)
                 with datastore.read(oq.hazard_calculation_id) as dstore:
                     self.csm = dstore['composite_source_model']
             else:
