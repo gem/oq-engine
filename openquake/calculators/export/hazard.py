@@ -24,13 +24,13 @@ import collections
 
 import numpy
 
+from openquake.baselib import parallel
 from openquake.baselib.general import (
     groupby, humansize, get_array, group_array, DictArray)
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
 from openquake.calculators.export import export
-from openquake.commonlib import (
-    writers, hazard_writers, calc, util, parallel, datastore)
+from openquake.commonlib import writers, hazard_writers, calc, util, datastore
 
 F32 = numpy.float32
 F64 = numpy.float64
