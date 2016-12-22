@@ -83,7 +83,7 @@ class ClassicalTestCase(CalculatorTestCase):
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
             case_3.__file__)
 
-    @attr('qa', 'hazard', 'classical', 'slow')
+    @attr('qa', 'hazard', 'classical')  # a bit slow
     def test_case_4(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
