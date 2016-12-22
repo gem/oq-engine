@@ -82,30 +82,6 @@ def extract_outputs(dkey, dstore, loss_type=None, ext=''):
 # ############################### exporters ############################## #
 
 
-def compactify(array):
-    """
-    Compactify a composite array of type (name, N1, N2, N3, 2) into a
-    composite array of type (name, N1, N2, (N3, 2)). Works with any number
-    of Ns.
-    """
-    if array.shape[-1] != 2:
-        raise ValueError('You can only compactify an array which last '
-                         'dimension is 2, got shape %s' % str(array.shape))
-    dtype = array.dtype
-    pairs = []
-    for name in dtype.names:
-        dt = dtype.fields[name][0]
-        if dt.subdtype is None:
-            pairs.append((name, (dt, 2)))
-        else:  # this is the case for rcurves
-            sdt, shp = dt.subdtype
-            pairs.append((name, (sdt, shp + (2,))))
-    zeros = numpy.zeros(array.shape[:-1], numpy.dtype(pairs))
-    for idx, _ in numpy.ndenumerate(zeros):
-        zeros[idx] = array[idx]
-    return zeros
-
-
 # helper for exporting the average losses for event_based_risk
 #  _gen_triple('avg_losses-rlzs', array, quantiles, insured)
 # yields ('avg_losses', 'rlz-000', data), ...
@@ -175,7 +151,7 @@ def export_agg_losses(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    agg_losses = compactify(dstore[ekey[0]].value)
+    agg_losses = dstore[ekey[0]].value
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     etags = build_etags(dstore['events'])
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
