@@ -27,10 +27,10 @@ import sys
 import mock
 import time
 
-
+from openquake.baselib import parallel
 from openquake.baselib.general import humansize, AccumDict
 from openquake.baselib.python3compat import encode
-from openquake.commonlib import readinput, parallel
+from openquake.commonlib import readinput
 from openquake.calculators.classical import PSHACalculator
 from openquake.calculators import views
 

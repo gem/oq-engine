@@ -464,17 +464,21 @@ def build_complex_fault_source_node(fault_source):
 
 
 @obj_to_node.add('SourceGroup')
-def build_source_group_node(source_group):
-    """
-    Parses a SourceGroup to a Node class
-    :param source_group:
-        Instance of :class:openquake.commonlib.source.SourceGroup
-    :returns:
-        Instance of :class: openquake.commonlib.node.Node
-    """
+def build_source_group(source_group):
+    source_nodes = [obj_to_node(src) for src in source_group.src_list]
     attrs = dict(tectonicRegion=source_group.trt)
-    return Node("sourceGroup", attrs, nodes=map(obj_to_node, source_group))
+    if source_group.name:
+        attrs['name'] = source_group.name
+    if source_group.src_interdep:
+        attrs['src_interdep'] = source_group.src_interdep
+    if source_group.rup_interdep:
+        attrs['rup_interdep'] = source_group.rup_interdep
+    if source_group.srcs_weights:
+        attrs['srcs_weights'] = ' '.join(map(str, source_group.srcs_weights))
+    return Node('sourceGroup', attrs, nodes=source_nodes)
 
+
+# ##################### generic source model writer ####################### #
 
 def write_source_model(dest, groups, name=None):
     """
