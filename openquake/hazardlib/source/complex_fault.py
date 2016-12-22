@@ -48,6 +48,9 @@ class ComplexFaultSource(ParametricSeismicSource):
         fails or if rake value is invalid.
     """
 
+    start = stop = None  # these will be set by the engine to extract
+    # a slice of the rupture_slices, thus splitting the source
+
     _slots_ = ParametricSeismicSource._slots_ + '''edges rake'''.split()
 
     MODIFICATIONS = set(('set_geometry',))
@@ -109,13 +112,14 @@ class ComplexFaultSource(ParametricSeismicSource):
             rupture_area = self.magnitude_scaling_relationship.get_median_area(
                 mag, self.rake
             )
-            rupture_length = numpy.sqrt(rupture_area
-                                        * self.rupture_aspect_ratio)
-            rupture_slices = _float_ruptures(rupture_area, rupture_length,
-                                             cell_area, cell_length)
+            rupture_length = numpy.sqrt(
+                rupture_area * self.rupture_aspect_ratio)
+            rupture_slices = _float_ruptures(
+                rupture_area, rupture_length, cell_area, cell_length
+            )
             occurrence_rate = mag_occ_rate / float(len(rupture_slices))
 
-            for rupture_slice in rupture_slices:
+            for rupture_slice in rupture_slices[self.start:self.stop]:
                 mesh = whole_fault_mesh[rupture_slice]
                 # XXX: use surface centroid as rupture's hypocenter
                 # XXX: instead of point with middle index
@@ -147,13 +151,12 @@ class ComplexFaultSource(ParametricSeismicSource):
         counts = 0
         for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
             rupture_area = self.magnitude_scaling_relationship.get_median_area(
-                mag, self.rake
-            )
-            rupture_length = numpy.sqrt(rupture_area
-                                        * self.rupture_aspect_ratio)
-            rupture_slices = _float_ruptures(rupture_area, rupture_length,
-                                             cell_area, cell_length)
-            counts += len(rupture_slices)
+                mag, self.rake)
+            rupture_length = numpy.sqrt(
+                rupture_area * self.rupture_aspect_ratio)
+            rupture_slices = _float_ruptures(
+                rupture_area, rupture_length, cell_area, cell_length)
+            counts += len(rupture_slices[self.start:self.stop])
         return counts
 
     def modify_set_geometry(self, edges, spacing):
