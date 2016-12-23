@@ -51,24 +51,25 @@ def scenario_risk(riskinput, riskmodel, monitor):
     E = monitor.oqparam.number_of_ground_motion_fields
     L = len(riskmodel.loss_types)
     R = len(riskinput.rlzs)
-    result = dict(agg=numpy.zeros((E, L, R, 2), F64), avg=[])
+    I = monitor.oqparam.insured_losses + 1
+    result = dict(agg=numpy.zeros((E, L, R, I), F64), avg=[])
     for out in riskmodel.gen_outputs(riskinput, monitor):
         l, r = out.lr
-        stats = numpy.zeros((len(out.assets), 4), F32)
+        stats = numpy.zeros((len(out.assets), 2), (F32, I))
         # this is ugly but using a composite array (i.e.
         # stats['mean'], stats['stddev'], ...) may return
         # bogus numbers! even with the SAME version of numpy,
         # hdf5 and h5py!! the numbers are around 1E-300 and
         # different on different systems; we found issues
         # with Ubuntu 12.04 and Red Hat 7 (MS and DV)
-        stats[:, 0] = out.loss_matrix.mean(axis=1)
+
+        stats[:, 0] = out.loss_matrix.mean(axis=1)  # shape (N, I)
         stats[:, 1] = out.loss_matrix.std(ddof=1, axis=1)
-        stats[:, 2] = out.insured_loss_matrix.mean(axis=1)
-        stats[:, 3] = out.insured_loss_matrix.std(ddof=1, axis=1)
         for asset, stat in zip(out.assets, stats):
             result['avg'].append((l, r, asset.ordinal, stat))
-        result['agg'][:, l, r, 0] += out.aggregate_losses
-        result['agg'][:, l, r, 1] += out.insured_losses
+        agglosses = out.loss_matrix.sum(axis=0)  # shape E, I
+        for i in range(I):
+            result['agg'][:, l, r, i] += agglosses[:, i]
     return result
 
 
@@ -107,25 +108,22 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         the results on the datastore.
         """
         ltypes = self.riskmodel.loss_types
-        dt_list = [('mean', F32), ('stddev', F32)]
-        if self.oqparam.insured_losses:
-            dt_list.extend([('mean_ins', F32), ('stddev_ins', F32)])
-        stat_dt = numpy.dtype(dt_list)
+        I = self.oqparam.insured_losses + 1
+        stat_dt = numpy.dtype([('mean', (F32, I)), ('stddev', (F32, I))])
         multi_stat_dt = numpy.dtype([(lt, stat_dt) for lt in ltypes])
         with self.monitor('saving outputs', autoflush=True):
-            R = len(self.rlzs_assoc.realizations)
             N = len(self.assetcol)
 
             # agg losses
+            res = result['agg']
+            E, L, R, I = res.shape
+            if I == 1:
+                res = res.reshape(E, L, R)
+            mean, std = scientific.mean_std(res)
             agglosses = numpy.zeros(R, multi_stat_dt)
-            mean, std = scientific.mean_std(result['agg'])
             for l, lt in enumerate(ltypes):
-                agg = agglosses[lt]
-                agg['mean'] = numpy.float32(mean[l, :, 0])
-                agg['stddev'] = numpy.float32(std[l, :, 0])
-                if self.oqparam.insured_losses:
-                    agg['mean_ins'] = numpy.float32(mean[l, :, 1])
-                    agg['stddev_ins'] = numpy.float32(std[l, :, 1])
+                agglosses[lt]['mean'] = numpy.float32(mean[l])
+                agglosses[lt]['stddev'] = numpy.float32(std[l])
 
             # average losses
             avglosses = numpy.zeros((N, R), multi_stat_dt)
