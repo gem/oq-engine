@@ -20,6 +20,7 @@ import logging
 
 import numpy
 
+from openquake.baselib.general import AccumDict
 from openquake.commonlib import calc
 from openquake.risklib import scientific
 from openquake.calculators import base
@@ -52,7 +53,9 @@ def scenario_risk(riskinput, riskmodel, monitor):
     L = len(riskmodel.loss_types)
     R = len(riskinput.rlzs)
     I = monitor.oqparam.insured_losses + 1
-    result = dict(agg=numpy.zeros((E, L, R, I), F64), avg=[])
+    all_losses = monitor.oqparam.all_losses
+    result = dict(agg=numpy.zeros((E, L, R, I), F64), avg=[],
+                  all_losses=AccumDict(accum={}))
     for out in riskmodel.gen_outputs(riskinput, monitor):
         l, r = out.lr
         stats = numpy.zeros((len(out.assets), 2), (F32, I))
@@ -63,13 +66,16 @@ def scenario_risk(riskinput, riskmodel, monitor):
         # different on different systems; we found issues
         # with Ubuntu 12.04 and Red Hat 7 (MS and DV)
 
-        stats[:, 0] = out.loss_matrix.mean(axis=1)  # shape (N, I)
+        stats[:, 0] = out.loss_matrix.mean(axis=1)  # shape (A, I)
         stats[:, 1] = out.loss_matrix.std(ddof=1, axis=1)
         for asset, stat in zip(out.assets, stats):
             result['avg'].append((l, r, asset.ordinal, stat))
         agglosses = out.loss_matrix.sum(axis=0)  # shape E, I
         for i in range(I):
             result['agg'][:, l, r, i] += agglosses[:, i]
+        if all_losses:
+            aids = [asset.ordinal for asset in out.assets]
+            result['all_losses'][l, r] = dict(zip(aids, out.loss_matrix))
     return result
 
 
@@ -112,7 +118,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         stat_dt = numpy.dtype([('mean', (F32, I)), ('stddev', (F32, I))])
         multi_stat_dt = numpy.dtype([(lt, stat_dt) for lt in ltypes])
         with self.monitor('saving outputs', autoflush=True):
-            N = len(self.assetcol)
+            A = len(self.assetcol)
 
             # agg losses
             res = result['agg']
@@ -126,8 +132,19 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                 agglosses[lt]['stddev'] = numpy.float32(std[l])
 
             # average losses
-            avglosses = numpy.zeros((N, R), multi_stat_dt)
+            avglosses = numpy.zeros((A, R), multi_stat_dt)
             for (l, r, aid, stat) in result['avg']:
                 avglosses[ltypes[l]][aid, r] = stat
             self.datastore['losses_by_asset'] = avglosses
             self.datastore['agglosses-rlzs'] = agglosses
+
+            if self.oqparam.all_losses:
+                loss_dt = self.oqparam.loss_dt()
+                array = numpy.zeros((A, E, R), loss_dt)
+                for (l, r), losses_by_aid in result['all_losses'].items():
+                    for aid in losses_by_aid:
+                        lba = losses_by_aid[aid]  # (E, I)
+                        array[ltypes[l]][aid, :, r] = lba[:, 0]
+                        if I == 2:
+                            array[ltypes[l] + '_ins'][aid, :, r] = lba[:, 1]
+                self.datastore['all_losses-rlzs'] = array
