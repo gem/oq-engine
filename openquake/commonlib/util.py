@@ -112,7 +112,7 @@ def compose_arrays(a1, a2, firstfield='etag'):
         return composite
 
     fields2 = [(f, a2.dtype.fields[f][0]) for f in a2.dtype.names]
-    composite = numpy.zeros(a1.shape, numpy.dtype(fields1 + fields2))
+    composite = numpy.zeros(a2.shape, numpy.dtype(fields1 + fields2))
     for f1 in dict(fields1):
         composite[f1] = a1[f1]
     for f2 in dict(fields2):
