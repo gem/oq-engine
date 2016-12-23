@@ -603,36 +603,29 @@ class Scenario(RiskModel):
             assets = assets[ok]
             epsilons = epsilons[ok]
 
-        # a matrix of N x E elements
+        # a matrix of N x E x I elements
+        E = len(epsilons[0])
+        I = self.insured_losses + 1
+        loss_matrix = numpy.empty((len(assets), E, I))
+        loss_matrix.fill(numpy.nan)
+
         vf = self.risk_functions[loss_type]
         means, covs, idxs = vf.interpolate(ground_motion_values)
-        loss_ratio_matrix = numpy.zeros((len(assets), len(epsilons[0])))
+        loss_ratio_matrix = numpy.zeros((len(assets), E))
         for i, eps in enumerate(epsilons):
             loss_ratio_matrix[i, idxs] = vf.sample(means, covs, idxs, eps)
-        # another matrix of N x E elements
-        loss_matrix = (loss_ratio_matrix.T * values).T
-        # an array of E elements
-        aggregate_losses = loss_matrix.sum(axis=0)
+
+        loss_matrix[:, :, 0] = (loss_ratio_matrix.T * values).T
 
         if self.insured_losses and loss_type != "occupants":
             deductibles = [a.deductible(loss_type) for a in assets]
             limits = [a.insurance_limit(loss_type) for a in assets]
             insured_loss_ratio_matrix = utils.numpy_map(
-                scientific.insured_losses,
-                loss_ratio_matrix, deductibles, limits)
-            insured_loss_matrix = (insured_loss_ratio_matrix.T * values).T
-        else:
-            insured_loss_matrix = numpy.empty_like(loss_ratio_matrix)
-            insured_loss_matrix.fill(numpy.nan)
+                scientific.insured_losses, loss_ratio_matrix,
+                deductibles, limits)
+            loss_matrix[:, :, 1] = (insured_loss_ratio_matrix.T * values).T
 
-        # aggregating per asset, getting a vector of E elements
-        insured_losses = insured_loss_matrix.sum(axis=0)
-        return scientific.Output(
-            assets, loss_type, loss_matrix=loss_matrix,
-            loss_ratio_matrix=loss_ratio_matrix,
-            aggregate_losses=aggregate_losses,
-            insured_loss_matrix=insured_loss_matrix,
-            insured_losses=insured_losses)
+        return scientific.Output(assets, loss_type, loss_matrix=loss_matrix)
 
 
 @registry.add('scenario_damage')
