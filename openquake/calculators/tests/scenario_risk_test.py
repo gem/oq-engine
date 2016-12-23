@@ -110,6 +110,9 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         fname = writetmp(view('totlosses', dstore))
         self.assertEqualFiles('expected/totlosses.txt', fname)
 
+        # testing the npz export runs
+        export(('all_losses-rlzs', 'npz'), self.calc.datastore)
+
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_1g(self):
         out = self.run_calc(case_1g.__file__, 'job_haz.ini,job_risk.ini',

@@ -24,7 +24,8 @@ import numpy
 from openquake.baselib.general import AccumDict, get_array, group_array
 from openquake.risklib import scientific, riskinput
 from openquake.calculators.export import export
-from openquake.calculators.export.hazard import build_etags, get_sm_id_eid
+from openquake.calculators.export.hazard import (
+    build_etags, get_sm_id_eid, savez)
 from openquake.commonlib import writers, risk_writers
 from openquake.commonlib.util import get_assets, compose_arrays
 from openquake.commonlib.risk_writers import (
@@ -166,6 +167,21 @@ def export_losses_by_asset(ekey, dstore):
         data = compose_arrays(assets, losses)
         writer.save(data, dest)
     return writer.getsaved()
+
+
+# used by scenario_risk
+@export.add(('all_losses-rlzs', 'npz'))
+def export_all_losses_npz(ekey, dstore):
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    assets = get_assets(dstore)
+    losses = dstore['all_losses-rlzs']
+    dic = {}
+    for rlz in rlzs:
+        data = compose_arrays(assets, losses[:, :, rlz.ordinal])
+        dic['all_losses-%03d' % rlz.ordinal] = data
+    fname = dstore.build_fname('all_losses', 'rlzs', 'npz')
+    savez(fname, **dic)
+    return [fname]
 
 
 # this is used by classical_risk
