@@ -58,14 +58,7 @@ def scenario_risk(riskinput, riskmodel, monitor):
                   all_losses=AccumDict(accum={}))
     for out in riskmodel.gen_outputs(riskinput, monitor):
         l, r = out.lr
-        stats = numpy.zeros((len(out.assets), 2), (F32, I))
-        # this is ugly but using a composite array (i.e.
-        # stats['mean'], stats['stddev'], ...) may return
-        # bogus numbers! even with the SAME version of numpy,
-        # hdf5 and h5py!! the numbers are around 1E-300 and
-        # different on different systems; we found issues
-        # with Ubuntu 12.04 and Red Hat 7 (MS and DV)
-
+        stats = numpy.zeros((len(out.assets), 2), (F32, I))  # mean, stddev
         stats[:, 0] = out.loss_matrix.mean(axis=1)  # shape (A, I)
         stats[:, 1] = out.loss_matrix.std(ddof=1, axis=1)
         for asset, stat in zip(out.assets, stats):
