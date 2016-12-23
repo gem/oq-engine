@@ -784,6 +784,7 @@ agg_dt = numpy.dtype([('unit', (bytes, 6)), ('mean', F32), ('stddev', F32)])
 # this is used by scenario_risk
 @export.add(('agglosses-rlzs', 'csv'))
 def export_agglosses(ekey, dstore):
+    I = dstore['oqparam'].insured_losses + 1
     cc = dstore['assetcol/cost_calculator']
     unit_by_lt = cc.units
     unit_by_lt['occupants'] = 'people'
@@ -793,7 +794,7 @@ def export_agglosses(ekey, dstore):
         gsim, = rlz.gsim_rlz.value
         loss = agglosses[rlz.ordinal]
         losses = numpy.zeros(
-            1, numpy.dtype([(lt, agg_dt) for lt in loss.dtype.names]))
+            I, numpy.dtype([(lt, agg_dt) for lt in loss.dtype.names]))
         header = []
         for lt in loss.dtype.names:
             losses[lt]['unit'] = unit_by_lt[lt]
