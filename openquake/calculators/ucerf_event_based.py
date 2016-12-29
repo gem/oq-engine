@@ -27,6 +27,7 @@ import socket
 import collections
 import h5py
 import numpy
+from datetime import datetime
 
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip
@@ -680,7 +681,8 @@ class UCERFSourceConverter(SourceConverter):
         """
         dirname = os.path.dirname(self.fname)  # where the source_model_file is
         source_file = os.path.join(dirname, node["filename"])
-        if ("startDate" in node) and ("investigationTime" in node):
+        if ("startDate" in node.attrib) and\
+            ("investigationTime" in node.attrib):
             # Is a time-dependent model - even if rates were originally
             # poissonian
             # Verify that the source time span is the same as the TOM time span
@@ -694,7 +696,7 @@ class UCERFSourceConverter(SourceConverter):
                 source_file,
                 node["id"],
                 inv_time,
-                float(node["startDate"]),
+                datetime.strptime(node["startDate"], "%d/%m/%Y"),
                 float(node["minMag"]),
                 npd=self.convert_npdist(node),
                 hdd=self.convert_hpdist(node),
