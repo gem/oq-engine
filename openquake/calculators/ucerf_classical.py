@@ -23,6 +23,7 @@ import copy
 import time
 import logging
 import functools
+from datetime import datetime
 
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
@@ -32,6 +33,7 @@ from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.geodetic import min_geodetic_distance
 from openquake.hazardlib.source import PointSource
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
+from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.calc.hazard_curve import (
     get_probability_no_exceedance, pmap_from_grp)
@@ -43,7 +45,7 @@ from openquake.commonlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base, classical
 from openquake.calculators.ucerf_event_based import (
-    UCERFSESControl, get_ucerf_rupture, DEFAULT_TRT)
+    UCERFSESControl, get_ucerf_rupture, DEFAULT_TRT, NPD, HDD,)
 
 
 class UCERFControl(UCERFSESControl):
@@ -252,7 +254,8 @@ class UCERFClassicalSourceConverter(SourceConverter):
         dirname = os.path.dirname(self.fname)  # where the source_model_file is
         source_file = os.path.join(dirname, node["filename"])
 
-        if ("startDate" in node) and ("investigationTime" in node):
+        if ("startDate" in node.attrib) and\
+            ("investigationTime" in node.attrib):
             # Is a time-dependent model - even if rates were originally
             # poissonian
             # Verify that the source time span is the same as the TOM time span
@@ -266,7 +269,7 @@ class UCERFClassicalSourceConverter(SourceConverter):
                 source_file,
                 node["id"],
                 inv_time,
-                float(node["startDate"]),
+                datetime.strptime(node["startDate"], "%d/%m/%Y"),
                 float(node["minMag"]),
                 npd=self.convert_npdist(node),
                 hdd=self.convert_hpdist(node),
