@@ -10,10 +10,6 @@ addons:
     packages:
     - git
 
-env:
-    global:
-    - PYTHONPATH=$TRAVIS_BUILD_DIR/oq-hazardlib:$TRAVIS_BUILD_DIR/oq-engine
-
 install:
   # Clone oq-hazardlib and oq-engine
   - git clone --depth=1 https://github.com/gem/oq-hazardlib.git
@@ -25,8 +21,8 @@ install:
   - pip install -r oq-engine/requirements-py27-linux64.txt
   # Install HMTK extra dependencies
   - pip install -r requirements-py27-linux64.txt
+  - pip install oq-hazardlib/ && pip install oq-engine/
+  - pip install .
 
 script:
   - nosetests -vx tests
-  - pip install oq-hazardlib/ && pip install oq-engine/ && pip install .
-  - cd /tmp && python -c 'import hmtk'
