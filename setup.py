@@ -24,7 +24,7 @@ README = """
 The hmtk is a suite of tools developed by Scientists working at the GEM (i.e.
 Global Earthquake Model) Model Facility. The main purpouse of the hmtk is to
 provide a suite of tools for the creation of PSHA input models.
-Copyright (C) 2010-2016 GEM Foundation
+Copyright (C) 2010-2017 GEM Foundation
 """
 
 setup(
