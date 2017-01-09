@@ -18,9 +18,7 @@
 
 import re
 import sys
-from setuptools import setup, find_packages, Extension
-
-import numpy
+from setuptools import setup, find_packages
 
 
 def get_version():
@@ -58,7 +56,6 @@ suggestions and criticisms from the community are always very welcome.
 Copyright (C) 2014-2016 GEM Foundation
 """
 
-include_dirs = [numpy.get_include()]
 install_requires = [
     'Cython >=0.20, <0.26',
     'mock >=1.0, <1.4',
@@ -85,7 +82,6 @@ setup(
     url=url,
     packages=find_packages(exclude=['tests', 'tests.*']),
     install_requires=install_requires,
-    include_dirs=include_dirs,
     scripts=['openquake/hazardlib/tests/gsim/check_gsim.py'],
     author='GEM Foundation',
     author_email='devops@openquake.org',
