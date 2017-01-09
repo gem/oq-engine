@@ -24,7 +24,8 @@ import numpy
 from openquake.baselib.general import AccumDict, get_array, group_array
 from openquake.risklib import scientific, riskinput
 from openquake.calculators.export import export
-from openquake.calculators.export.hazard import build_etags, get_sm_id_eid
+from openquake.calculators.export.hazard import (
+    build_etags, get_sm_id_eid, savez)
 from openquake.commonlib import writers, risk_writers
 from openquake.commonlib.util import get_assets, compose_arrays
 from openquake.commonlib.risk_writers import (
@@ -104,6 +105,32 @@ def export_losses_by_asset(ekey, dstore):
         data = compose_arrays(assets, losses)
         writer.save(data, dest)
     return writer.getsaved()
+
+
+def _compact(array):
+    # convert an array of shape (a, e) into an array of shape (a,)
+    dt = array.dtype
+    a, e = array.shape
+    lst = []
+    for name in dt.names:
+        lst.append((name, (dt[name], e)))
+    return array.view(numpy.dtype(lst)).reshape(a)
+
+
+# used by scenario_risk
+@export.add(('all_losses-rlzs', 'npz'))
+def export_all_losses_npz(ekey, dstore):
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    assets = get_assets(dstore)
+    losses = dstore['all_losses-rlzs']
+    dic = {}
+    for rlz in rlzs:
+        rlz_losses = _compact(losses[:, :, rlz.ordinal])
+        data = compose_arrays(assets, rlz_losses)
+        dic['all_losses-%03d' % rlz.ordinal] = data
+    fname = dstore.build_fname('all_losses', 'rlzs', 'npz')
+    savez(fname, **dic)
+    return [fname]
 
 
 # this is used by classical_risk
@@ -700,6 +727,7 @@ agg_dt = numpy.dtype([('unit', (bytes, 6)), ('mean', F32), ('stddev', F32)])
 # this is used by scenario_risk
 @export.add(('agglosses-rlzs', 'csv'))
 def export_agglosses(ekey, dstore):
+    I = dstore['oqparam'].insured_losses + 1
     cc = dstore['assetcol/cost_calculator']
     unit_by_lt = cc.units
     unit_by_lt['occupants'] = 'people'
@@ -709,7 +737,7 @@ def export_agglosses(ekey, dstore):
         gsim, = rlz.gsim_rlz.value
         loss = agglosses[rlz.ordinal]
         losses = numpy.zeros(
-            1, numpy.dtype([(lt, agg_dt) for lt in loss.dtype.names]))
+            I, numpy.dtype([(lt, agg_dt) for lt in loss.dtype.names]))
         header = []
         for lt in loss.dtype.names:
             losses[lt]['unit'] = unit_by_lt[lt]
