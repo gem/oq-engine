@@ -211,9 +211,10 @@ class EbrPostCalculator(base.RiskCalculator):
         if R > 1:
             weights = self.datastore['realizations']['weight']
             quantiles = self.oqparam.quantile_loss_curves
-            with self.monitor('computing avg_losses-stats'):
-                self.datastore['avg_losses-stats'] = compute_stats2(
-                    self.datastore['avg_losses-rlzs'], quantiles, weights)
+            if 'avg_losses-rlzs' in self.datastore:
+                with self.monitor('computing avg_losses-stats'):
+                    self.datastore['avg_losses-stats'] = compute_stats2(
+                        self.datastore['avg_losses-rlzs'], quantiles, weights)
             with self.monitor('computing rcurves-stats'):
                 self.datastore['rcurves-stats'] = compute_stats2(
                     rcurves, quantiles, weights)
