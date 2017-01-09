@@ -42,69 +42,7 @@ def add_quotes(values):
     # used to escape taxonomies in CSV files
     return numpy.array(['"%s"' % val for val in values], (bytes, 100))
 
-
-def extract_outputs(dkey, dstore, loss_type=None, ext=''):
-    """
-    An utility to extract outputs ordered by loss types from a datastore
-    containing nested structures as follows:
-
-
-    >> dstore = {
-    ..     'risk_output':
-    ..        {'structural':
-    ..            {'b1': array N x 2,
-    ..             'b2': array N x 2,
-    ..            }}}
-    >> outputs = extract_outputs('risk_output', dstore)
-    >> [o.path for o in outputs]
-    ['risk_output-structural-b1', 'risk_output-structural-b2']
-    >> [o.ltype for o in outputs]
-    ['structural', 'structural']
-    """
-    group = dstore[dkey]
-    dashkey = dkey.replace('-rlzs', '').replace('-stats', '')
-    if ext and not ext.startswith('.'):
-        ext = '.' + ext
-    outputs = []
-    for ltype in sorted(group):
-        subgroup = group[ltype]
-        for key in subgroup:
-            for i in 0, 1:
-                ins = '_ins' if i else ''
-                path = dstore.build_fname(
-                    dashkey, '%s%s%s' % (ltype, key, ins), ext)
-                if loss_type:
-                    data = subgroup[key][loss_type][:, i]
-                else:
-                    data = subgroup[key][:, i]
-                outputs.append(Output(ltype, path, data))
-    return outputs
-
 # ############################### exporters ############################## #
-
-
-def compactify(array):
-    """
-    Compactify a composite array of type (name, N1, N2, N3, 2) into a
-    composite array of type (name, N1, N2, (N3, 2)). Works with any number
-    of Ns.
-    """
-    if array.shape[-1] != 2:
-        raise ValueError('You can only compactify an array which last '
-                         'dimension is 2, got shape %s' % str(array.shape))
-    dtype = array.dtype
-    pairs = []
-    for name in dtype.names:
-        dt = dtype.fields[name][0]
-        if dt.subdtype is None:
-            pairs.append((name, (dt, 2)))
-        else:  # this is the case for rcurves
-            sdt, shp = dt.subdtype
-            pairs.append((name, (sdt, shp + (2,))))
-    zeros = numpy.zeros(array.shape[:-1], numpy.dtype(pairs))
-    for idx, _ in numpy.ndenumerate(zeros):
-        zeros[idx] = array[idx]
-    return zeros
 
 
 # helper for exporting the average losses for event_based_risk
@@ -191,7 +129,7 @@ def export_agg_losses(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    agg_losses = compactify(dstore[ekey[0]].value)
+    agg_losses = dstore[ekey[0]].value
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     etags = build_etags(dstore['events'])
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
@@ -270,7 +208,7 @@ def group_by_aid(data, loss_type):
 
 # this is used by event_based_risk
 @export.add(('all_loss_ratios', 'csv'))
-def export_ass_losses_ebr(ekey, dstore):
+def export_all_loss_ratios(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
@@ -324,28 +262,6 @@ def export_ass_losses_ebr(ekey, dstore):
             elt.sort(order='event_tag')
             writer.save(elt, dest)
     return writer.getsaved()
-
-
-# alternative export format for the average losses, used by the platform
-@export.add(('avglosses-rlzs', 'csv'))
-def export_avglosses_csv(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    outs = extract_outputs(ekey[0], dstore, ext=ekey[1])
-    assetcol = dstore['assetcol/array'].value
-    aref = dstore['asset_refs'].value
-    header = ['lon', 'lat', 'asset_ref', 'asset_value', 'average_loss',
-              'stddev_loss', 'loss_type']
-    for out in outs:
-        rows = []
-        for asset, loss in zip(assetcol, out.array):
-            row = [asset['lon'], asset['lat'], aref[asset['idx']],
-                   asset[out.ltype], loss, numpy.nan, out.ltype]
-            rows.append(row)
-        writers.write_csv(out.path, [header] + rows)
-    return [out.path for out in outs]
 
 
 @export.add(('rcurves-rlzs', 'csv'))
