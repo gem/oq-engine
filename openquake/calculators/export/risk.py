@@ -107,6 +107,16 @@ def export_losses_by_asset(ekey, dstore):
     return writer.getsaved()
 
 
+def _compact(array):
+    # convert an array of shape (a, e) into an array of shape (a,)
+    dt = array.dtype
+    a, e = array.shape
+    lst = []
+    for name in dt.names:
+        lst.append((name, (dt[name], e)))
+    return array.view(numpy.dtype(lst)).reshape(a)
+
+
 # used by scenario_risk
 @export.add(('all_losses-rlzs', 'npz'))
 def export_all_losses_npz(ekey, dstore):
@@ -115,7 +125,8 @@ def export_all_losses_npz(ekey, dstore):
     losses = dstore['all_losses-rlzs']
     dic = {}
     for rlz in rlzs:
-        data = compose_arrays(assets, losses[:, :, rlz.ordinal])
+        rlz_losses = _compact(losses[:, :, rlz.ordinal])
+        data = compose_arrays(assets, rlz_losses)
         dic['all_losses-%03d' % rlz.ordinal] = data
     fname = dstore.build_fname('all_losses', 'rlzs', 'npz')
     savez(fname, **dic)
