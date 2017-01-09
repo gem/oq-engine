@@ -12,10 +12,7 @@ addons:
 
 install:
   - pip install -r requirements-py35-linux64.txt
-  - python setup.py develop
+  - pip install -e .
 
 script:
   - nosetests --with-doctest -v -a'!slow'
-  # Test dependencies in setup.py
-  - pip install .
-  - cd /tmp && python -c 'import openquake.hazardlib'
