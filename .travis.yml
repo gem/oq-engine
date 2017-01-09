@@ -28,5 +28,5 @@ install:
 
 script:
   - nosetests -vx tests
-  - pip install .
+  - pip install oq-hazardlib/ && pip install oq-engine/ && pip install .
   - cd /tmp && python -c 'import hmtk'
