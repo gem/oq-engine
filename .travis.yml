@@ -16,3 +16,6 @@ install:
 
 script:
   - nosetests --with-doctest -v -a'!slow'
+  # Test dependencies in setup.py
+  - pip install .
+  - cd /tmp && python -c 'import openquake.hazardlib'
