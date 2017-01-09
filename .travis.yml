@@ -10,20 +10,13 @@ addons:
     packages:
     - git
 
-env:
-    global:
-    - PYTHONPATH=$TRAVIS_BUILD_DIR/oq-engine:$TRAVIS_BUILD_DIR/oq-hazardlib
-
 install:
   - pip install -r requirements-py35-linux64.txt
   - if [ "$(git ls-remote --heads https://github.com/gem/oq-hazardlib.git ${TRAVIS_BRANCH})" != "" ]; then BRANCH=$TRAVIS_BRANCH; else BRANCH='master'; fi; git clone -b ${BRANCH} --depth=1 https://github.com/gem/oq-hazardlib.git && echo "Running on oq-hazardlib/${BRANCH}"
+  - pip install -e oq-hazardlib/
+  - pip install -e .
 
-# We must set the PYTHONPATH to the root oq-engine (insted of oq-engine/openquake) because otherwise
-# the full 'openquake' namespace is overwritten and then hazardlib and baselib are not found
 script:
   - nosetests --with-doctest -vsx -a'!slow'
   - cat /tmp/webui*
   - bin/oq info -r demos/hazard
-  # Test dependencies in setup.py
-  - pip install oq-hazardlib/ && pip install .
-  - cd /tmp && unset PYTHONPATH && python -c 'import openquake.engine'
