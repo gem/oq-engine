@@ -26,4 +26,4 @@ script:
   - bin/oq info -r demos/hazard
   # Test dependencies in setup.py
   - pip install oq-hazardlib/ && pip install .
-  - cd /tmp && python -c 'import openquake.engine'
+  - cd /tmp && unset PYTHONPATH && python -c 'import openquake.engine'
