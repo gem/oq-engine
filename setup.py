@@ -63,7 +63,7 @@ install_requires = [
     'django >=1.6, <1.10',
     'requests >=2.2, <2.13',
     'pyshp ==1.2',
-    'openquake.hazardlib',
+    'openquake.hazardlib ==0.22',
 ]
 if sys.version < '3':
     install_requires.append(
