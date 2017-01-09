@@ -60,20 +60,20 @@ Copyright (C) 2014-2016 GEM Foundation
 
 include_dirs = [numpy.get_include()]
 install_requires = [
-    'Cython >=0.20, <=0.25',
-    'mock >=1.0, <=1.3',
-    'h5py >=2.2, <=2.6',
-    'nose >=1.3, <=1.3',
-    'numpy >=1.8, <=1.11',
-    'scipy >=0.13, <=0.17',
-    'psutil >=1.2, <=4.4',
-    'shapely >=1.3, <=1.5',
-    'docutils >=0.11, <=0.13',
-    'decorator >=3.4, <=4.0',
+    'Cython >=0.20, <0.26',
+    'mock >=1.0, <1.4',
+    'h5py >=2.2, <2.7',
+    'nose >=1.3, <1.4',
+    'numpy >=1.8, <1.12',
+    'scipy >=0.13, <0.18',
+    'psutil >=1.2, <4.5',
+    'shapely >=1.3, <1.6',
+    'docutils >=0.11, <0.14',
+    'decorator >=3.4, <4.1',
 ]
 if sys.version < '3':
     install_requires.append(
-        'futures >= 2.1, <= 3.0'
+        'futures >=2.1, <3.1'
     )
 
 setup(
