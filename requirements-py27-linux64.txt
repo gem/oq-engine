@@ -2,3 +2,10 @@
 
 # GEM Mirror
 http://ftp.openquake.org/wheelhouse/linux/py27/PyYAML-3.12-cp27-cp27mu-manylinux1_x86_64.whl
+# Plotting stuff
+http://ftp.openquake.org/wheelhouse/linux/py27/matplotlib-1.5.3-cp27-cp27mu-manylinux1_x86_64.whl
+http://ftp.openquake.org/wheelhouse/linux/py/pyparsing-2.1.10-py2.py3-none-any.whl
+http://ftp.openquake.org/wheelhouse/linux/py/cycler-0.10.0-py2.py3-none-any.whl
+http://ftp.openquake.org/wheelhouse/linux/py/python_dateutil-2.6.0-py2.py3-none-any.whl
+http://ftp.openquake.org/wheelhouse/linux/py27/basemap-1.0.8-cp27-cp27mu-manylinux1_x86_64.whl
+http://ftp.openquake.org/wheelhouse/linux/py27/pyproj-1.9.5.1-cp27-cp27mu-manylinux1_x86_64.whl
