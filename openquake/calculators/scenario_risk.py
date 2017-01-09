@@ -68,7 +68,7 @@ def scenario_risk(riskinput, riskmodel, monitor):
             result['agg'][:, l, r, i] += agglosses[:, i]
         if all_losses:
             aids = [asset.ordinal for asset in out.assets]
-            result['all_losses'][l, r] = dict(zip(aids, out.loss_matrix))
+            result['all_losses'][l, r] = AccumDict(zip(aids, out.loss_matrix))
     return result
 
 
