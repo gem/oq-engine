@@ -20,7 +20,7 @@ from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_3, case_4, case_5, occupants,
-    case_6a)
+    case_6a, case_master)
 
 from openquake.baselib.general import writetmp
 from openquake.calculators.tests import CalculatorTestCase
@@ -119,3 +119,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                             exports='csv')
         [fname] = out['agglosses-rlzs', 'csv']
         self.assertEqualFiles('expected/agg-gsimltp_@.csv', fname)
+
+    @attr('qa', 'risk', 'scenario_risk')
+    def test_case_master(self):
+        self.run_calc(case_master.__file__, 'job.ini', exports='npz')
