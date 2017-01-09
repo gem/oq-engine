@@ -18,9 +18,7 @@
 
 import re
 import sys
-from setuptools import setup, find_packages, Extension
-
-import numpy
+from setuptools import setup, find_packages
 
 
 def get_version():
@@ -58,8 +56,6 @@ suggestions and criticisms from the community are always very welcome.
 Copyright (C) 2014-2016 GEM Foundation
 """
 
-include_dirs = [numpy.get_include()]
-
 setup(
     name='openquake.hazardlib',
     version=version,
@@ -75,7 +71,6 @@ setup(
         'psutil >= 0.4.1',
         'decorator',
     ],
-    include_dirs=include_dirs,
     scripts=['openquake/hazardlib/tests/gsim/check_gsim.py'],
     author='GEM Foundation',
     author_email='devops@openquake.org',
