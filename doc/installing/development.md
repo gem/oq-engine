@@ -58,7 +58,7 @@ git clone https://github.com/gem/oq-engine.git
 git clone https://github.com/gem/oq-hazardlib.git
 ```
 
-install OpenQuake (#note1)<sup>[1](#note1)</sup>)(#note2)<sup>[2](#note2)</sup>)
+install OpenQuake <sup>[1](#note1)</sup> <sup>[2](#note2)</sup>
 
 
 ```bash
