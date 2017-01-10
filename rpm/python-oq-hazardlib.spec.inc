@@ -53,7 +53,7 @@ the development of the  library by adding the most recent methodologies
 adopted by the seismological/seismic hazard communities. Comments,
 suggestions and criticisms from the community are always very welcome.
 
-Copyright (C) 2014-2016 GEM Foundation
+Copyright (C) 2014-2017 GEM Foundation
 
 
 %prep
