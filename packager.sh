@@ -547,7 +547,6 @@ celeryd_wait() {
 }
 
 celeryd_wait $GEM_MAXLOOP"
-        fi
 
         # run all of the hazard and risk demos
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
@@ -602,7 +601,7 @@ celeryd_wait $GEM_MAXLOOP"
         for demo_dir in \$(find . -type d | sort); do
             if [ -f \$demo_dir/job_hazard.ini ]; then
             cd \$demo_dir
-            echo \"Running \$demo_dir/job_hazard.ini\"
+            echo \"Running \$demo_dir/job_hazard.ini using celery\"
             OQ_DISTRIBUTE=celery oq engine --run job_hazard.ini
             echo \"Running \$demo_dir/job_risk.ini\"
             oq engine --run job_risk.ini --exports csv,xml --hazard-calculation-id -1
@@ -615,11 +614,12 @@ celeryd_wait $GEM_MAXLOOP"
         echo 'Listing risk calculations'
         oq engine --lrc"
 
-    ssh $lxc_ip "oq engine --make-html-report today
-    oq engine --delete-calculation 1 --yes
-    oq engine --dc 1 --yes
-    oq purge -1; oq purge 0"
-    scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
+        ssh $lxc_ip "oq engine --make-html-report today
+        oq engine --delete-calculation 1 --yes
+        oq engine --dc 1 --yes
+        oq purge -1; oq purge 0"
+        scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
+    fi
 
     scp -r "${lxc_ip}:/usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" "out_${BUILD_UBUVER}/"
 

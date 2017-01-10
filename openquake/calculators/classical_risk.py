@@ -20,18 +20,14 @@ import logging
 
 import numpy
 
-from openquake.baselib.general import groupby
+from openquake.baselib.general import groupby, AccumDict
+from openquake.hazardlib.stats import compute_stats
 from openquake.risklib import scientific, riskinput
 from openquake.commonlib import readinput, source
 from openquake.calculators import base
 
 
 F32 = numpy.float32
-
-
-def by_l_assets(output):
-    # use loss_type index and assets as a composity key
-    return output.lr[0], tuple(output.assets)
 
 
 def classical_risk(riskinput, riskmodel, monitor):
@@ -47,51 +43,47 @@ def classical_risk(riskinput, riskmodel, monitor):
     """
     oq = monitor.oqparam
     ins = oq.insured_losses
-    result = dict(
-        loss_curves=[], loss_maps=[], stat_curves=[], stat_maps=[])
-    outputs = list(riskmodel.gen_outputs(riskinput, monitor))
-    for out in outputs:
-        l, r = out.lr
-        for i, asset in enumerate(out.assets):
-            aid = asset.ordinal
-            avg = out.average_losses[i]
-            avg_ins = (out.average_insured_losses[i]
-                       if ins else numpy.nan)
-            lcurve = (
-                out.loss_curves[i, 0],
-                out.loss_curves[i, 1], avg)
-            if ins:
-                lcurve += (
-                    out.insured_curves[i, 0],
-                    out.insured_curves[i, 1], avg_ins)
-            else:
-                lcurve += (None, None, None)
-            result['loss_curves'].append((l, r, aid, lcurve))
+    result = dict(loss_curves=[], stat_curves=[])
+    all_outputs = list(riskmodel.gen_outputs(riskinput, monitor))
+    for outputs in all_outputs:
+        r = outputs.r
+        outputs.average_losses = AccumDict(accum=[])  # l -> array
+        for l, (loss_curves, insured_curves) in enumerate(outputs):
+            for i, asset in enumerate(outputs.assets):
+                aid = asset.ordinal
+                avg = scientific.average_loss(loss_curves[i])
+                outputs.average_losses[l].append(avg)
+                lcurve = (loss_curves[i, 0], loss_curves[i, 1], avg)
+                if ins:
+                    lcurve += (
+                        insured_curves[i, 0], insured_curves[i, 1],
+                        scientific.average_loss(insured_curves[i]))
+                else:
+                    lcurve += (None, None, None)
+                result['loss_curves'].append((l, r, aid, lcurve))
 
-            # no insured, shape (P, N)
-            result['loss_maps'].append(
-                (l, r, aid, out.loss_maps[:, i]))
-
-        # compute statistics
-        if len(riskinput.rlzs) > 1:
-            for (l, assets), outs in groupby(outputs, by_l_assets).items():
-                for out in outs:  # outputs with the same loss type and assets
-                    out.weight = riskinput.rlzs[out.lr[1]].weight
-                curve_resolution = outs[0].loss_curves.shape[-1]
-                statsbuilder = scientific.StatsBuilder(
-                    oq.quantile_loss_curves,
-                    oq.conditional_loss_poes,
-                    insured_losses=oq.insured_losses)
-                stats = statsbuilder.build(outs)
-                stat_curves, stat_maps = statsbuilder._get_curves_maps(
-                    stats, curve_resolution)
+    # compute statistics
+    if len(riskinput.rlzs) > 1:
+        l_idxs = range(len(riskmodel.lti))
+        for assets, rows in groupby(
+                all_outputs, lambda o: tuple(o.assets)).items():
+            weights = [riskinput.rlzs[row.r].weight for row in rows]
+            row = rows[0]
+            for l in l_idxs:
                 for i, asset in enumerate(assets):
+                    avgs = numpy.array([r.average_losses[l] for r in rows])
+                    avg_stats = compute_stats(
+                        avgs, oq.quantile_loss_curves, weights)
+                    # row is index by the loss type index l and row[l]
+                    # is a pair loss_curves, insured_loss_curves
+                    # loss_curves[i, 0] are the i-th losses,
+                    # loss_curves[i, 1] are the i-th poes
+                    losses = row[l][0][i, 0]
+                    poes_stats = compute_stats(
+                        numpy.array([row[l][0][i, 1] for row in rows]),
+                        oq.quantile_loss_curves, weights)
                     result['stat_curves'].append(
-                        (l, asset.ordinal, stat_curves[:, i]))
-                    if len(stat_maps):
-                        result['stat_maps'].append(
-                            (l, asset.ordinal, stat_maps[:, i]))
-
+                        (l, asset.ordinal, losses, poes_stats, avg_stats))
     return result
 
 
@@ -108,6 +100,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         Associate the assets to the sites and build the riskinputs.
         """
         oq = self.oqparam
+        if oq.insured_losses:
+            raise ValueError(
+                'insured_losses are not supported for classical_risk')
         if 'hazard_curves' in oq.inputs:  # read hazard from file
             haz_sitecol, haz_curves = readinput.get_hcurves(oq)
             self.save_params()
@@ -155,8 +150,6 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             loss_ratios, self.oqparam.conditional_loss_poes, self.I)
 
         self.save_loss_curves(result)
-        if self.oqparam.conditional_loss_poes:
-            self.save_loss_maps(result)
 
     def save_loss_curves(self, result):
         """
@@ -171,44 +164,17 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             for i, name in enumerate(loss_curves_lt.dtype.names):
                 if name.startswith('avg'):
                     loss_curves_lt[name][aid, r] = lcurve[i]
-                else:
+                else:  # 'losses', 'poes'
                     base.set_array(loss_curves_lt[name][aid, r], lcurve[i])
         self.datastore['loss_curves-rlzs'] = loss_curves
 
         # loss curves stats
         if self.R > 1:
             stat_curves = numpy.zeros((self.N, self.Q1), self.loss_curve_dt)
-            for l, aid, statcurve in result['stat_curves']:
+            for l, aid, losses, statpoes, statloss in result['stat_curves']:
                 stat_curves_lt = stat_curves[ltypes[l]]
-                for name in stat_curves_lt.dtype.names:
-                    for s in range(self.Q1):
-                        if name.startswith('avg'):
-                            stat_curves_lt[name][aid, s] = statcurve[name][s]
-                        else:
-                            base.set_array(stat_curves_lt[name][aid, s],
-                                           statcurve[name][s])
+                for s in range(self.Q1):
+                    stat_curves_lt['avg'][aid, s] = statloss[s]
+                    base.set_array(stat_curves_lt['poes'][aid, s], statpoes[s])
+                    base.set_array(stat_curves_lt['losses'][aid, s], losses)
             self.datastore['loss_curves-stats'] = stat_curves
-
-    def save_loss_maps(self, result):
-        """
-        Saving loss maps in the datastore.
-
-        :param result: aggregated result of the task classical_risk
-        """
-        ltypes = self.riskmodel.loss_types
-        loss_maps = numpy.zeros((self.N, self.R), self.loss_maps_dt)
-        for l, r, aid, lmaps in result['loss_maps']:
-            loss_maps_lt = loss_maps[ltypes[l]]
-            for i, name in enumerate(loss_maps_lt.dtype.names):
-                loss_maps_lt[name][aid, r] = lmaps[i]
-        self.datastore['loss_maps-rlzs'] = loss_maps
-
-        # loss maps stats
-        if self.R > 1:
-            stat_maps = numpy.zeros((self.N, self.Q1), self.loss_maps_dt)
-            for l, aid, statmaps in result['stat_maps']:
-                statmaps_lt = stat_maps[ltypes[l]]
-                for name in statmaps_lt.dtype.names:
-                    for s in range(self.Q1):
-                        statmaps_lt[name][aid, s] = statmaps[name][s]
-            self.datastore['loss_maps-stats'] = stat_maps
