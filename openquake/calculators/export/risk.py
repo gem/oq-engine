@@ -21,6 +21,7 @@ import collections
 
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, get_array, group_array
 from openquake.risklib import scientific, riskinput
 from openquake.calculators.export import export
@@ -41,6 +42,34 @@ U32 = numpy.uint32
 def add_quotes(values):
     # used to escape taxonomies in CSV files
     return numpy.array(['"%s"' % val for val in values], (bytes, 100))
+
+
+def rup_data_dict(dstore, grp_ids, grp_trt):
+    """
+    Extract a dictionary of arrays keyed by the rupture serial number
+    from the datastore for the given source group IDs.
+    """
+    rdict = {}
+    for grp_id in grp_ids:
+        for rec in dstore['rup_data/grp-%02d' % grp_id]:
+            rdict[rec['rupserial']] = rec, grp_trt[grp_id]
+    return rdict
+
+
+def copy_to(elt, rup_data, rupserials):
+    """
+    Copy information from the rup_data dictionary into the elt array for
+    the given rupture serials.
+    """
+    assert len(elt) == len(rupserials), (len(elt), len(rupserials))
+    for i, serial in numpy.ndenumerate(rupserials):
+        rdata, trt = rup_data[serial]
+        elt[i]['tectonic_region_type'] = trt
+        elt[i]['magnitude'] = rdata['mag']
+        elt[i]['centroid_lon'] = rdata['lon']
+        elt[i]['centroid_lat'] = rdata['lat']
+        elt[i]['centroid_depth'] = rdata['depth']
+        elt[i]['boundary'] = rdata['boundary']
 
 # ############################### exporters ############################## #
 
@@ -163,12 +192,20 @@ def export_agg_losses_ebr(ekey, dstore):
     name, ext = export.keyfunc(ekey)
     agg_losses = dstore[name]
     oq = dstore['oqparam']
-    dtlist = [('event_tag', (numpy.string_, 100)), ('year', U32)
+    csm_info = dstore['csm_info']
+    dtlist = [('event_tag', (numpy.string_, 100)),
+              ('year', U32),
+              ('tectonic_region_type', hdf5.vstr),
+              ('magnitude', F64),
+              ('centroid_lon', F64),
+              ('centroid_lat', F64),
+              ('centroid_depth', F64),
+              ('boundary', hdf5.vstr),
               ] + oq.loss_dt_list()
     elt_dt = numpy.dtype(dtlist)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     sm_ids = sorted(rlzs_assoc.rlzs_by_smodel)
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    writer = writers.CsvWriter(sep='\t', fmt=writers.FIVEDIGITS)
     for sm_id in sm_ids:
         rlzs = rlzs_assoc.rlzs_by_smodel[sm_id]
         try:
@@ -177,6 +214,8 @@ def export_agg_losses_ebr(ekey, dstore):
             continue
         if not len(events):
             continue
+        rup_data = rup_data_dict(
+            dstore, csm_info.get_grp_ids(sm_id), csm_info.grp_trt())
         for rlz in rlzs:
             dest = dstore.build_fname('agg_losses', rlz, 'csv')
             eids = set()
@@ -192,6 +231,7 @@ def export_agg_losses_ebr(ekey, dstore):
             elt = numpy.zeros(len(eids), elt_dt)
             elt['event_tag'] = build_etags(rlz_events)
             elt['year'] = rlz_events['year']
+            copy_to(elt, rup_data, rlz_events['rupserial'])
             for loss_type in loss_types:
                 elt_lt = elt[loss_type]
                 if oq.insured_losses:
