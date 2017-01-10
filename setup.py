@@ -64,9 +64,13 @@ install_requires = [
     'requests >=2.2, <2.13',
     # pyshp is fragile, we want only versions we have tested
     'pyshp >=1.2.3, <1.2.11',
-    'futures >=2.1, <3.1; python_version<"3.0"',
     'openquake.hazardlib ==0.22',
 ]
+
+if sys.version < '3':
+    install_requires.append(
+        'futures >=2.1, <3.1'
+)
 
 extras_require = {
     'rtree':  ["Rtree==0.8.2"],
