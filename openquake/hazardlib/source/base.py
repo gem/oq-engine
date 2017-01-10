@@ -23,32 +23,6 @@ from openquake.baselib.slots import with_slots
 from openquake.baselib.python3compat import with_metaclass
 
 
-class SourceGroupCollection(object):
-    """
-    :param grp_list:
-        A list of :class:`openquake.hazardlib.source.base.SourceGroup`
-        instances
-    :param name:
-        The name of the group
-    :param grp_interdep:
-        Interdependence between groups of sources can be either 'indep' or
-        'mutex'.
-    """
-    def __init__(self, grp_list, name='', grp_interdep='indep'):
-        # checks
-        assert isinstance(grp_list, list), grp_list
-        if grp_interdep not in ['indep', 'mutex']:
-            raise ValueError('group interdependence incorrect %s ' %
-                             grp_interdep)
-        # set instance parameters
-        self.grp_list = grp_list
-        self.name = name
-        self.grp_interdep = grp_interdep
-
-    def __iter__(self):
-        return iter(self.grp_list)
-
-
 class SourceGroup(object):
     """
     :param src_list:

@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Added more functions to compute mean and quantiles
+  * Cached the correlation matrix for speed
+
   [Marco Pagani, Michele Simionato]
   * Extended the hazard curve calculator to manage mutually exclusive probabilities
 
