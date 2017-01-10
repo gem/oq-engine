@@ -440,7 +440,7 @@ class ClassicalBCR(RiskModel):
         :param hazard: an hazard curve
         :param _eps: dummy parameter, unused
         :param _eids: dummy parameter, unused
-        :returns: a :class:`openquake.risklib.scientific.Output` instance
+        :returns: a list of triples (eal_orig, eal_retro, bcr_result)
         """
         n = len(assets)
         self.assets = assets
