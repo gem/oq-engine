@@ -420,10 +420,10 @@ class CompositeRiskModel(collections.Mapping):
                 hazard = hazard_getter(rlz)
             for taxonomy in sorted(taxonomies):
                 riskmodel = self[taxonomy]
-                for lt in self.loss_types:
-                    imt = riskmodel.risk_functions[lt].imt
-                    with mon_risk:
-                        for i, assets, epsgetter in dic[taxonomy]:
+                with mon_risk:
+                    for i, assets, epsgetter in dic[taxonomy]:
+                        for lt in self.loss_types:
+                            imt = riskmodel.risk_functions[lt].imt
                             haz = hazard[i].get(imt, ())
                             if len(haz):
                                 out = riskmodel(lt, assets, haz, epsgetter)
