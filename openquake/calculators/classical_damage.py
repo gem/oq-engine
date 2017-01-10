@@ -19,7 +19,6 @@
 import numpy
 
 from openquake.baselib.general import AccumDict
-from openquake.commonlib import datastore
 from openquake.calculators import base, classical_risk
 
 
@@ -38,10 +37,11 @@ def classical_damage(riskinput, riskmodel, monitor):
     """
     with monitor:
         result = {i: AccumDict() for i in range(len(riskinput.rlzs))}
-        for out in riskmodel.gen_outputs(riskinput, monitor):
-            l, r = out.lr
-            ordinals = [a.ordinal for a in out.assets]
-            result[r] += dict(zip(ordinals, out.damages))
+        for outputs in riskmodel.gen_outputs(riskinput, monitor):
+            for out in outputs:
+                l, r = out.lr
+                ordinals = [a.ordinal for a in out.assets]
+                result[r] += dict(zip(ordinals, out.damages))
     return result
 
 
