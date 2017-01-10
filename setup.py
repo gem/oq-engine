@@ -67,11 +67,12 @@ install_requires = [
     'shapely >=1.3, <1.6',
     'docutils >=0.11, <0.14',
     'decorator >=3.4, <4.1',
+    'futures >=2.1, <3.1; python_version<"3.0"',
 ]
-if sys.version < '3':
-    install_requires.append(
-        'futures >=2.1, <3.1'
-    )
+
+extras_require = {
+    'rtree':  ["Rtree==0.8.2"],
+}
 
 setup(
     name='openquake.hazardlib',
@@ -82,6 +83,7 @@ setup(
     url=url,
     packages=find_packages(exclude=['tests', 'tests.*']),
     install_requires=install_requires,
+    extras_require=extras_require,
     scripts=['openquake/hazardlib/tests/gsim/check_gsim.py'],
     author='GEM Foundation',
     author_email='devops@openquake.org',
