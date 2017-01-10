@@ -112,11 +112,11 @@ pip install -r oq-engine/requirements-py27-linux64.txt
 
 ```bash
 # oq-engine with Rtree support
-pip install -e oq-egine/[Rtree]
+pip install -e oq-engine/[Rtree]
 # oq-engine with celery support
-pip install -e oq-egine/[celery]
+pip install -e oq-engine/[celery]
 # oq-engine with support for both
-pip install -e oq-egine/[rtree,celery]
+pip install -e oq-engine/[rtree,celery]
 ```
 
 ***
