@@ -64,6 +64,10 @@ fi
 if [ "$GEM_EPHEM_NAME" = "" ]; then
     GEM_EPHEM_NAME="ubuntu16-lxc-eph"
 fi
+# FIXME this is currently unused, but left as reference
+if [ "$GEM_EPHEM_USER" = "" ]; then
+    GEM_EPHEM_USER="ubuntu"
+fi
 
 LXC_VER=$(lxc-ls --version | cut -d '.' -f 1)
 
