@@ -61,12 +61,24 @@ The main dependencies of this library are the following:
 * numpy
 * python-decorator
 * hazardlib (this is part of the OpenQuake suite)
-* nrmllib (this is part of the OpenQuake suite)
+
+Installation:
+
+```bash
+git clone https://github.com/GEMScienceTools/hmtk.git
+pip install hmtk/
+```
+
+To enable the plotting features (more non-trivial dependencies are needed):
+
+```bash
+pip install hmtk/[plotting]
+```
 
 For the libraries part of the OpenQuake suite the reader can refer to 
 http://github.com/gem
 
-Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
+Copyright (c) 2010-2017, GEM Foundation, G. Weatherill, M. Pagani, 
 D. Monelli.
 
 
