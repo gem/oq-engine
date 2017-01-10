@@ -103,25 +103,26 @@ def scenario_damage(riskinput, riskmodel, monitor):
     taxo2idx = {taxo: i for i, taxo in enumerate(monitor.taxonomies)}
     result = dict(d_asset=[], d_taxon=numpy.zeros((T, L, R, E, D), F64),
                   c_asset=[], c_taxon=numpy.zeros((T, L, R, E), F64))
-    for out in riskmodel.gen_outputs(riskinput, monitor):
-        l, r = out.lr
-        c_model = c_models.get(out.loss_type)
-        for asset, fraction in zip(out.assets, out.damages):
-            t = taxo2idx[asset.taxonomy]
-            damages = fraction * asset.number
-            if c_model:  # compute consequences
-                means = [par[0] for par in c_model[asset.taxonomy].params]
-                # NB: we add a 0 in front for nodamage state
-                c_ratio = numpy.dot(fraction, [0] + means)
-                consequences = c_ratio * asset.value(out.loss_type)
-                result['c_asset'].append(
-                    (l, r, asset.ordinal,
-                     scientific.mean_std(consequences)))
-                result['c_taxon'][t, l, r, :] += consequences
-                # TODO: consequences for the occupants
-            result['d_asset'].append(
-                (l, r, asset.ordinal, scientific.mean_std(damages)))
-            result['d_taxon'][t, l, r, :] += damages
+    for outputs in riskmodel.gen_outputs(riskinput, monitor):
+        for out in outputs:
+            l, r = out.lr
+            c_model = c_models.get(out.loss_type)
+            for asset, fraction in zip(out.assets, out.damages):
+                t = taxo2idx[asset.taxonomy]
+                damages = fraction * asset.number
+                if c_model:  # compute consequences
+                    means = [par[0] for par in c_model[asset.taxonomy].params]
+                    # NB: we add a 0 in front for nodamage state
+                    c_ratio = numpy.dot(fraction, [0] + means)
+                    consequences = c_ratio * asset.value(out.loss_type)
+                    result['c_asset'].append(
+                        (l, r, asset.ordinal,
+                         scientific.mean_std(consequences)))
+                    result['c_taxon'][t, l, r, :] += consequences
+                    # TODO: consequences for the occupants
+                result['d_asset'].append(
+                    (l, r, asset.ordinal, scientific.mean_std(damages)))
+                result['d_taxon'][t, l, r, :] += damages
     return result
 
 

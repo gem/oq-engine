@@ -97,32 +97,33 @@ def build_rcurves(cb_inputs, assets, monitor):
 def _aggregate(outputs, compositemodel, agg, ass, idx, result, monitor):
     # update the result dictionary and the agg array with each output
     lrs = set()
-    for out in outputs:
-        l, r = out.lr
-        lrs.add(out.lr)
-        loss_type = compositemodel.loss_types[l]
-        indices = numpy.array([idx[eid] for eid in out.eids])
-        agglr = agg[l, r]
-        for i, asset in enumerate(out.assets):
-            aid = asset.ordinal
-            loss_ratios = out.loss_ratios[i]
-            losses = loss_ratios * asset.value(loss_type)
+    for outs in outputs:
+        for out in outs:
+            l, r = out.lr
+            lrs.add(out.lr)
+            loss_type = compositemodel.loss_types[l]
+            indices = numpy.array([idx[eid] for eid in out.eids])
+            agglr = agg[l, r]
+            for i, asset in enumerate(out.assets):
+                aid = asset.ordinal
+                loss_ratios = out.loss_ratios[i]
+                losses = loss_ratios * asset.value(loss_type)
 
-            # average losses
-            if monitor.avg_losses:
-                result['avglosses'][l, r][aid] += (
-                    loss_ratios.sum(axis=0) * monitor.ses_ratio)
+                # average losses
+                if monitor.avg_losses:
+                    result['avglosses'][l, r][aid] += (
+                        loss_ratios.sum(axis=0) * monitor.ses_ratio)
 
-            # asset losses
-            if monitor.loss_ratios:
-                data = [(eid, aid, loss)
-                        for eid, loss in zip(out.eids, loss_ratios)
-                        if loss.sum() > 0]
-                if data:
-                    ass[l, r].append(numpy.array(data, monitor.ela_dt))
+                # asset losses
+                if monitor.loss_ratios:
+                    data = [(eid, aid, loss)
+                            for eid, loss in zip(out.eids, loss_ratios)
+                            if loss.sum() > 0]
+                    if data:
+                        ass[l, r].append(numpy.array(data, monitor.ela_dt))
 
-            # agglosses
-            agglr[indices] += losses
+                # agglosses
+                agglr[indices] += losses
     return sorted(lrs)
 
 
