@@ -49,30 +49,32 @@ def classical_risk(riskinput, riskmodel, monitor):
     oq = monitor.oqparam
     ins = oq.insured_losses
     result = dict(loss_curves=[], stat_curves=[])
-    outputs = list(riskmodel.gen_outputs(riskinput, monitor))
-    for out in outputs:
-        l, r = out.lr
-        out.average_losses = []
-        for i, asset in enumerate(out.assets):
-            aid = asset.ordinal
-            avg = scientific.average_loss(out.loss_curves[i])
-            out.average_losses.append(avg)
-            lcurve = (
-                out.loss_curves[i, 0],
-                out.loss_curves[i, 1],
-                avg)
-            if ins:
-                lcurve += (
-                    out.insured_curves[i, 0],
-                    out.insured_curves[i, 1],
-                    scientific.average_loss(out.insured_curves[i]))
-            else:
-                lcurve += (None, None, None)
-            result['loss_curves'].append((l, r, aid, lcurve))
+    all_outputs = []
+    for outputs in riskmodel.gen_outputs(riskinput, monitor):
+        for out in outputs:
+            all_outputs.append(out)
+            l, r = out.lr
+            out.average_losses = []
+            for i, asset in enumerate(out.assets):
+                aid = asset.ordinal
+                avg = scientific.average_loss(out.loss_curves[i])
+                out.average_losses.append(avg)
+                lcurve = (
+                    out.loss_curves[i, 0],
+                    out.loss_curves[i, 1],
+                    avg)
+                if ins:
+                    lcurve += (
+                        out.insured_curves[i, 0],
+                        out.insured_curves[i, 1],
+                        scientific.average_loss(out.insured_curves[i]))
+                else:
+                    lcurve += (None, None, None)
+                result['loss_curves'].append((l, r, aid, lcurve))
 
     # compute statistics
     if len(riskinput.rlzs) > 1:
-        for (l, assets), outs in groupby(outputs, by_l_assets).items():
+        for (l, assets), outs in groupby(all_outputs, by_l_assets).items():
             weights = []
             for out in outs:  # outputs with the same loss type and assets
                 weights.append(riskinput.rlzs[out.lr[1]].weight)
