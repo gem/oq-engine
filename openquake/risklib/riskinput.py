@@ -39,6 +39,15 @@ FIELDS = ('site_id', 'lon', 'lat', 'idx', 'taxonomy_id', 'area', 'number',
 by_taxonomy = operator.attrgetter('taxonomy')
 
 
+class MultiLoss(object):
+    def __init__(self, loss_types, values):
+        self.loss_types = loss_types
+        self.values = values
+
+    def __getitem__(self, l):
+        return self.values[l]
+
+
 class AssetCollection(object):
     D, I, R = len('deductible-'), len('insurance_limit-'), len('retrofitted-')
 
@@ -422,16 +431,17 @@ class CompositeRiskModel(collections.Mapping):
                 riskmodel = self[taxonomy]
                 with mon_risk:
                     for i, assets, epsgetter in dic[taxonomy]:
-                        outs = []
+                        outs = [None] * len(self.lti)
                         for lt in self.loss_types:
                             imt = riskmodel.risk_functions[lt].imt
                             haz = hazard[i].get(imt, ())
                             if len(haz):
                                 out = riskmodel(lt, assets, haz, epsgetter)
-                                if out:  # can be None in scenario_risk
-                                    out.lr = self.lti[lt], rlz.ordinal
-                                    outs.append(out)
-                        yield outs
+                                outs[self.lti[lt]] = out
+                        row = MultiLoss(self.loss_types, outs)
+                        row.r = rlz.ordinal
+                        row.assets = assets
+                        yield row
         if hasattr(hazard_getter, 'gmfbytes'):  # for event based risk
             monitor.gmfbytes = hazard_getter.gmfbytes
 
