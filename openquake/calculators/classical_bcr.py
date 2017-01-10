@@ -41,10 +41,12 @@ def classical_bcr(riskinput, riskmodel, bcr_dt, monitor):
     """
     result = {}  # (N, R) -> data
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
+        assets = outputs.assets
         for l, out in enumerate(outputs):
-            for asset, (eal_orig, eal_retro, bcr) in zip(out.assets, out.data):
-                aval = asset.value(out.loss_type)
-                result[asset.ordinal, out.loss_type, outputs.r] = numpy.array([
+            loss_type = riskmodel.loss_types[l]
+            for asset, (eal_orig, eal_retro, bcr) in zip(assets, out):
+                aval = asset.value(loss_type)
+                result[asset.ordinal, loss_type, outputs.r] = numpy.array([
                     (eal_orig * aval, eal_retro * aval, bcr)], bcr_dt)
     return result
 

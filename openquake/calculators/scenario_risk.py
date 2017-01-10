@@ -58,21 +58,21 @@ def scenario_risk(riskinput, riskmodel, monitor):
                   all_losses=AccumDict(accum={}))
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
         r = outputs.r
+        assets = outputs.assets
         for l, out in enumerate(outputs):
             if out is None:  # this may happen
                 continue
-            stats = numpy.zeros((len(out.assets), 2), (F32, I))  # mean, stddev
-            stats[:, 0] = out.loss_matrix.mean(axis=1)  # shape (A, I)
-            stats[:, 1] = out.loss_matrix.std(ddof=1, axis=1)
-            for asset, stat in zip(out.assets, stats):
+            stats = numpy.zeros((len(assets), 2), (F32, I))  # mean, stddev
+            stats[:, 0] = out.mean(axis=1)  # shape (A, I)
+            stats[:, 1] = out.std(ddof=1, axis=1)
+            for asset, stat in zip(assets, stats):
                 result['avg'].append((l, r, asset.ordinal, stat))
-            agglosses = out.loss_matrix.sum(axis=0)  # shape E, I
+            agglosses = out.sum(axis=0)  # shape E, I
             for i in range(I):
                 result['agg'][:, l, r, i] += agglosses[:, i]
             if all_losses:
-                aids = [asset.ordinal for asset in out.assets]
-                result['all_losses'][l, r] = AccumDict(
-                    zip(aids, out.loss_matrix))
+                aids = [asset.ordinal for asset in outputs.assets]
+                result['all_losses'][l, r] = AccumDict(zip(aids, out))
     return result
 
 
