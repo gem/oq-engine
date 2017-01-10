@@ -54,36 +54,6 @@ def build_dtypes(curve_resolution, conditional_loss_poes, insured=False):
     return loss_curve_dt, loss_maps_dt
 
 
-class Output(object):
-    """
-    A generic container of attributes. Only assets, loss_type, hid and weight
-    are always defined.
-
-    :param assets: a list of assets with the same taxonomy
-    :param loss_type: a loss type string
-    :param hid: ordinal of the hazard realization (can be None)
-    :param weight: weight of the realization (can be None)
-    """
-    def __init__(self, assets, loss_type, hid=None, weight=0, **attrs):
-        self.assets = assets
-        self.loss_type = loss_type
-        self.hid = hid
-        self.weight = weight
-        vars(self).update(attrs)
-
-    @property
-    def taxonomy(self):
-        return self.assets[0].taxonomy
-
-    def __repr__(self):
-        return '<%s %s, hid=%s>' % (
-            self.__class__.__name__, self.loss_type, self.hid)
-
-    def __str__(self):
-        items = '\n'.join('%s=%s' % item for item in vars(self).items())
-        return '<%s\n%s>' % (self.__class__.__name__, items)
-
-
 def fine_graining(points, steps):
     """
     :param points: a list of floats
