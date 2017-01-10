@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2016 GEM Foundation
+# Copyright (C) 2013-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -44,7 +44,7 @@ README = """
 OpenQuake is an open source application that allows users to
 compute seismic hazard and seismic risk of earthquakes on a global scale.
 
-Copyright (C) 2010-2016 GEM Foundation
+Copyright (C) 2010-2017 GEM Foundation
 """
 
 PY_MODULES = ['openquake.commands.__main__']
