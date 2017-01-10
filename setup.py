@@ -63,13 +63,15 @@ install_requires = [
     'django >=1.6, <1.10',
     'requests >=2.2, <2.13',
     # pyshp is fragile, we want only versions we have tested
-    'pyshp >==1.2.3, <1.2.11',
+    'pyshp >=1.2.3, <1.2.11',
+    'futures >=2.1, <3.1; python_version<"3.0"',
     'openquake.hazardlib ==0.22',
 ]
-if sys.version < '3':
-    install_requires.append(
-        'futures >=2.1, <3.1'
-    )
+
+extras_require = {
+    'rtree':  ["Rtree==0.8.2"],
+    'celery':  ["celery >=3.1, <4.0"],
+}
 
 setup(
     name="openquake.engine",
@@ -104,6 +106,7 @@ setup(
         "LICENSE", "CONTRIBUTORS.txt"]},
     namespace_packages=['openquake'],
     install_requires=install_requires,
+    extras_require=extras_require,
     scripts=['bin/oq'],
     test_loader='openquake.baselib.runtests:TestLoader',
     test_suite='openquake.risklib,openquake.commonlib,openquake.calculators',
