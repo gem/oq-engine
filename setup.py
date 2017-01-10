@@ -29,7 +29,7 @@ Copyright (C) 2010-2017 GEM Foundation
 
 setup(
     name='hmtk',
-    version='0.0.1',
+    version='1.0.0',
     description="The main purpouse of the hmtk is to provide a suite"
                 "of tools for the creation of PSHA input models.",
     long_description=README,
