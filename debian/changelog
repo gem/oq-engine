@@ -1,3 +1,7 @@
+  [Daniele Viganò]
+  * Add dependencies to setup.py
+  * Update Copyright to 2017
+
   [Michele Simionato]
   * Added more functions to compute mean and quantiles
   * Cached the correlation matrix for speed
