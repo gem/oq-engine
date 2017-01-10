@@ -30,11 +30,6 @@ from openquake.calculators import base
 F32 = numpy.float32
 
 
-def by_l_assets(output):
-    # use loss_type index and assets as a composity key
-    return output.lr[0], tuple(output.assets)
-
-
 def classical_risk(riskinput, riskmodel, monitor):
     """
     Compute and return the average losses for each asset.
@@ -49,11 +44,10 @@ def classical_risk(riskinput, riskmodel, monitor):
     oq = monitor.oqparam
     ins = oq.insured_losses
     result = dict(loss_curves=[], stat_curves=[])
-    all_outputs = []
-    for outputs in riskmodel.gen_outputs(riskinput, monitor):
-        for out in outputs:
-            all_outputs.append(out)
-            l, r = out.lr
+    all_outputs = list(riskmodel.gen_outputs(riskinput, monitor))
+    for outputs in all_outputs:
+        r = outputs.r
+        for l, out in enumerate(outputs):
             out.average_losses = []
             for i, asset in enumerate(out.assets):
                 aid = asset.ordinal
@@ -74,21 +68,23 @@ def classical_risk(riskinput, riskmodel, monitor):
 
     # compute statistics
     if len(riskinput.rlzs) > 1:
-        for (l, assets), outs in groupby(all_outputs, by_l_assets).items():
-            weights = []
-            for out in outs:  # outputs with the same loss type and assets
-                weights.append(riskinput.rlzs[out.lr[1]].weight)
-            for i, asset in enumerate(assets):
-                avg_stats = compute_stats(
-                    numpy.array([out.average_losses for out in outs]),
-                    oq.quantile_loss_curves, weights)
-                losses = out.loss_curves[i, 0]
-                poes_stats = compute_stats(
-                    numpy.array([out.loss_curves[i, 1] for out in outs]),
-                    oq.quantile_loss_curves, weights)
-                result['stat_curves'].append(
-                    (l, asset.ordinal, losses, poes_stats, avg_stats))
-
+        l_idxs = range(len(riskmodel.lti))
+        for assets, rows in groupby(
+                all_outputs, lambda o: tuple(o.assets)).items():
+            weights = [riskinput.rlzs[row.r].weight for row in rows]
+            row = rows[0]
+            for l in l_idxs:
+                for i, asset in enumerate(assets):
+                    avg_stats = compute_stats(
+                        numpy.array([row[l].average_losses for row in rows]),
+                        oq.quantile_loss_curves, weights)
+                    losses = row[l].loss_curves[i, 0]
+                    poes_stats = compute_stats(
+                        numpy.array([row[l].loss_curves[i, 1]
+                                     for row in rows]),
+                        oq.quantile_loss_curves, weights)
+                    result['stat_curves'].append(
+                        (l, asset.ordinal, losses, poes_stats, avg_stats))
     return result
 
 
