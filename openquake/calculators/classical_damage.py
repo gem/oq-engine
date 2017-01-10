@@ -19,7 +19,6 @@
 import numpy
 
 from openquake.baselib.general import AccumDict
-from openquake.commonlib import datastore
 from openquake.calculators import base, classical_risk
 
 
@@ -38,10 +37,10 @@ def classical_damage(riskinput, riskmodel, monitor):
     """
     with monitor:
         result = {i: AccumDict() for i in range(len(riskinput.rlzs))}
-        for out in riskmodel.gen_outputs(riskinput, monitor):
-            l, r = out.lr
-            ordinals = [a.ordinal for a in out.assets]
-            result[r] += dict(zip(ordinals, out.damages))
+        for outputs in riskmodel.gen_outputs(riskinput, monitor):
+            for l, out in enumerate(outputs):
+                ordinals = [a.ordinal for a in outputs.assets]
+                result[outputs.r] += dict(zip(ordinals, out))
     return result
 
 
@@ -51,7 +50,6 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
     Scenario damage calculator
     """
     core_task = classical_damage
-    damages = datastore.persistent_attribute('damages-rlzs')
 
     def check_poes(self, curves_by_rlz):
         """
@@ -78,4 +76,4 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
         for r in result:
             for aid, fractions in result[r].items():
                 damages[aid, r] = tuple(fractions)
-        self.damages = damages
+        self.datastore['damages-rlzs'] = damages

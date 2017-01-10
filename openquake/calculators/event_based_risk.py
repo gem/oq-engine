@@ -24,6 +24,7 @@ import numpy
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
     AccumDict, humansize, block_splitter, group_array)
+from openquake.hazardlib.stats import compute_stats, compute_stats2
 from openquake.calculators import base, event_based
 from openquake.baselib import parallel
 from openquake.risklib import riskinput, scientific
@@ -96,32 +97,36 @@ def build_rcurves(cb_inputs, assets, monitor):
 def _aggregate(outputs, compositemodel, agg, ass, idx, result, monitor):
     # update the result dictionary and the agg array with each output
     lrs = set()
-    for out in outputs:
-        l, r = out.lr
-        lrs.add(out.lr)
-        loss_type = compositemodel.loss_types[l]
-        indices = numpy.array([idx[eid] for eid in out.eids])
-        agglr = agg[l, r]
-        for i, asset in enumerate(out.assets):
-            aid = asset.ordinal
-            loss_ratios = out.loss_ratios[i]
-            losses = loss_ratios * asset.value(loss_type)
+    for outs in outputs:
+        r = outs.r
+        for l, out in enumerate(outs):
+            if out is None:  # for GMFs below the minimum_intensity
+                continue
+            loss_ratios, eids = out
+            lrs.add((l, r))
+            loss_type = compositemodel.loss_types[l]
+            indices = numpy.array([idx[eid] for eid in eids])
+            agglr = agg[l, r]
+            for i, asset in enumerate(outs.assets):
+                ratios = loss_ratios[i]
+                aid = asset.ordinal
+                losses = ratios * asset.value(loss_type)
 
-            # average losses
-            if monitor.avg_losses:
-                result['avglosses'][l, r][aid] += (
-                    loss_ratios.sum(axis=0) * monitor.ses_ratio)
+                # average losses
+                if monitor.avg_losses:
+                    result['avglosses'][l, r][aid] += (
+                        ratios.sum(axis=0) * monitor.ses_ratio)
 
-            # asset losses
-            if monitor.loss_ratios:
-                data = [(eid, aid, loss)
-                        for eid, loss in zip(out.eids, loss_ratios)
-                        if loss.sum() > 0]
-                if data:
-                    ass[l, r].append(numpy.array(data, monitor.ela_dt))
+                # asset losses
+                if monitor.loss_ratios:
+                    data = [(eid, aid, loss)
+                            for eid, loss in zip(eids, ratios)
+                            if loss.sum() > 0]
+                    if data:
+                        ass[l, r].append(numpy.array(data, monitor.ela_dt))
 
-            # agglosses
-            agglr[indices] += losses
+                # agglosses
+                agglr[indices] += losses
     return sorted(lrs)
 
 
@@ -196,7 +201,7 @@ class EbrPostCalculator(base.RiskCalculator):
         # build rcurves-rlzs
         if self.oqparam.loss_ratios:
             assets = list(self.assetcol)
-            cb_inputs = self.cb_inputs('ass_loss_ratios')
+            cb_inputs = self.cb_inputs('all_loss_ratios')
             mon = self.monitor('build_rcurves')
             res = parallel.apply(
                 build_rcurves, (cb_inputs, assets, mon)).reduce()
@@ -204,6 +209,19 @@ class EbrPostCalculator(base.RiskCalculator):
                 aids, curves = res[l, r]
                 rcurves[ltypes[l]][aids, r] = curves
             self.datastore['rcurves-rlzs'] = rcurves
+
+        # build rcurves-stats (sequentially)
+        # this is a fundamental output, being used to compute loss_maps-stats
+        if R > 1:
+            weights = self.datastore['realizations']['weight']
+            quantiles = self.oqparam.quantile_loss_curves
+            if 'avg_losses-rlzs' in self.datastore:
+                with self.monitor('computing avg_losses-stats'):
+                    self.datastore['avg_losses-stats'] = compute_stats2(
+                        self.datastore['avg_losses-rlzs'], quantiles, weights)
+            with self.monitor('computing rcurves-stats'):
+                self.datastore['rcurves-stats'] = compute_stats2(
+                    rcurves, quantiles, weights)
 
         # build an aggregate loss curve per realization
         if 'agg_loss_table' in self.datastore:
@@ -226,14 +244,33 @@ class EbrPostCalculator(base.RiskCalculator):
             cr, oq.conditional_loss_poes)
         lts = self.riskmodel.loss_types
         cb_inputs = self.cb_inputs('agg_loss_table')
+        I = oq.insured_losses + 1
         R = len(self.rlzs_assoc.realizations)
         result = parallel.apply(
             build_agg_curve, (cb_inputs, self.monitor('')),
             concurrent_tasks=self.oqparam.concurrent_tasks).reduce()
-        agg_curve = numpy.zeros((R, oq.insured_losses + 1), loss_curve_dt)
-        for l, r,  i in result:
-            agg_curve[lts[l]][r, i] = result[l, r, i]
+        agg_curve = numpy.zeros((I, R), loss_curve_dt)
+        for l, r, i in result:
+            agg_curve[lts[l]][i, r] = result[l, r, i]
         self.datastore['agg_curve-rlzs'] = agg_curve
+
+        if R > 1:  # save stats too
+            weights = self.datastore['realizations']['weight']
+            Q1 = len(oq.quantile_loss_curves) + 1
+            agg_curve_stats = numpy.zeros((I, Q1), agg_curve.dtype)
+            for l, loss_type in enumerate(agg_curve.dtype.names):
+                acs = agg_curve_stats[loss_type]
+                data = agg_curve[loss_type]
+                for i in range(I):
+                    losses, all_poes = scientific.normalize_curves_eb(
+                        [(c['losses'], c['poes']) for c in data[i]])
+                    acs['losses'][i] = losses
+                    acs['poes'][i] = compute_stats(
+                        all_poes, oq.quantile_loss_curves, weights)
+                    acs['avg'][i] = compute_stats(
+                        data['avg'][i], oq.quantile_loss_curves, weights)
+
+            self.datastore['agg_curve-stats'] = agg_curve_stats
 
 
 elt_dt = numpy.dtype([('eid', U32), ('loss', F32)])
@@ -415,6 +452,9 @@ class EbriskCalculator(base.RiskCalculator):
             for sg in source_models[i].src_groups:
                 sg.eff_ruptures = res.num_ruptures.get(sg.id, 0)
         self.datastore['csm_info'] = self.csm.info
+        self.datastore.flush()  # when killing the computation
+        # the csm_info arrays were stored but not the attributes;
+        # adding the .flush() solved the issue
         num_events = self.save_results(allres, num_rlzs)
         self.save_data_transfer(parallel.IterResult.sum(allres))
         return num_events
@@ -429,22 +469,26 @@ class EbriskCalculator(base.RiskCalculator):
         self.R = num_rlzs
         self.T = len(self.assetcol.taxonomies)
         self.A = len(self.assetcol)
-        ins = self.oqparam.insured_losses
+        self.I = I = self.oqparam.insured_losses + 1
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
+            # since we are using a composite array, we must use fillvalue=None
+            # and then set the array to 0 manually (to avoid bogus numbers)
+            zero = numpy.zeros(self.A, (F32, (I,)))
             dset = self.datastore.create_dset(
-                'avg_losses-rlzs', F32, (self.A, self.R, self.L * (ins + 1)))
+                'avg_losses-rlzs', (F32, (I,)), (self.A, self.R, self.L),
+                fillvalue=None)
+            for r in range(self.R):
+                for l in range(self.L):
+                    dset[:, r, l] = zero
+
         num_events = 0
         self.gmfbytes = 0
         for res in allres:
             start, stop = res.rlz_slice.start, res.rlz_slice.stop
             for dic in res:
                 if avg_losses:
-                    for (l, r), losses in dic.pop('avglosses').items():
-                        vs = self.vals[self.riskmodel.loss_types[l]]
-                        dset[:, r + start, l] += losses[:, 0] * vs
-                        if ins:
-                            dset[:, r + start, l + self.L] += losses[:, 1] * vs
+                    self.save_avg_losses(dset, dic.pop('avglosses'), start)
                 self.gmfbytes += dic.pop('gmfbytes')
                 self.save_losses(
                     dic.pop('agglosses'), dic.pop('asslosses'), start)
@@ -456,6 +500,16 @@ class EbriskCalculator(base.RiskCalculator):
             num_events += res.num_events
         self.datastore['events'].attrs['num_events'] = num_events
         return num_events
+
+    def save_avg_losses(self, dset, dic, start):
+        """
+        Save a dictionary (l, r) -> losses of average losses
+        """
+        with self.monitor('saving avg_losses-rlzs'):
+            for (l, r), losses in dic.items():
+                vs = self.vals[self.riskmodel.loss_types[l]]
+                new = numpy.array([losses[:, i] * vs for i in range(self.I)])
+                dset[:, r + start, l] += new.T  # shape (A, I)
 
     def save_losses(self, agglosses, asslosses, offset):
         """
@@ -472,7 +526,7 @@ class EbriskCalculator(base.RiskCalculator):
                 self.datastore.extend(key, agglosses[l, r])
             for l, r in asslosses:
                 loss_type = self.riskmodel.loss_types[l]
-                key = 'ass_loss_ratios/rlz-%03d/%s' % (r + offset, loss_type)
+                key = 'all_loss_ratios/rlz-%03d/%s' % (r + offset, loss_type)
                 self.datastore.extend(key, asslosses[l, r])
 
     def post_execute(self, num_events):
@@ -488,11 +542,11 @@ class EbriskCalculator(base.RiskCalculator):
         self.datastore.save('job_info', {'gmfbytes': self.gmfbytes})
 
         A, E = len(self.assetcol), num_events
-        if 'ass_loss_ratios' in self.datastore:
-            for rlzname in self.datastore['ass_loss_ratios']:
-                self.datastore.set_nbytes('ass_loss_ratios/' + rlzname)
-            self.datastore.set_nbytes('ass_loss_ratios')
-            asslt = self.datastore['ass_loss_ratios']
+        if 'all_loss_ratios' in self.datastore:
+            for rlzname in self.datastore['all_loss_ratios']:
+                self.datastore.set_nbytes('all_loss_ratios/' + rlzname)
+            self.datastore.set_nbytes('all_loss_ratios')
+            asslt = self.datastore['all_loss_ratios']
             for rlz, dset in asslt.items():
                 for ds in dset.values():
                     ds.attrs['nonzero_fraction'] = len(ds) / (A * E)
