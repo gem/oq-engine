@@ -52,38 +52,40 @@ def classical_risk(riskinput, riskmodel, monitor):
     outputs = list(riskmodel.gen_outputs(riskinput, monitor))
     for out in outputs:
         l, r = out.lr
+        out.average_losses = []
         for i, asset in enumerate(out.assets):
             aid = asset.ordinal
-            avg = out.average_losses[i]
-            avg_ins = (out.average_insured_losses[i]
-                       if ins else numpy.nan)
+            avg = scientific.average_loss(out.loss_curves[i])
+            out.average_losses.append(avg)
             lcurve = (
                 out.loss_curves[i, 0],
-                out.loss_curves[i, 1], avg)
+                out.loss_curves[i, 1],
+                avg)
             if ins:
                 lcurve += (
                     out.insured_curves[i, 0],
-                    out.insured_curves[i, 1], avg_ins)
+                    out.insured_curves[i, 1],
+                    scientific.average_loss(out.insured_curves[i]))
             else:
                 lcurve += (None, None, None)
             result['loss_curves'].append((l, r, aid, lcurve))
 
-        # compute statistics
-        if len(riskinput.rlzs) > 1:
-            for (l, assets), outs in groupby(outputs, by_l_assets).items():
-                weights = []
-                for out in outs:  # outputs with the same loss type and assets
-                    weights.append(riskinput.rlzs[out.lr[1]].weight)
-                for i, asset in enumerate(assets):
-                    avg_stats = compute_stats(
-                        numpy.array([out.average_losses for out in outs]),
-                        oq.quantile_loss_curves, weights)
-                    losses = out.loss_curves[i, 0]
-                    poes_stats = compute_stats(
-                        numpy.array([out.loss_curves[i, 1] for out in outs]),
-                        oq.quantile_loss_curves, weights)
-                    result['stat_curves'].append(
-                        (l, asset.ordinal, losses, poes_stats, avg_stats))
+    # compute statistics
+    if len(riskinput.rlzs) > 1:
+        for (l, assets), outs in groupby(outputs, by_l_assets).items():
+            weights = []
+            for out in outs:  # outputs with the same loss type and assets
+                weights.append(riskinput.rlzs[out.lr[1]].weight)
+            for i, asset in enumerate(assets):
+                avg_stats = compute_stats(
+                    numpy.array([out.average_losses for out in outs]),
+                    oq.quantile_loss_curves, weights)
+                losses = out.loss_curves[i, 0]
+                poes_stats = compute_stats(
+                    numpy.array([out.loss_curves[i, 1] for out in outs]),
+                    oq.quantile_loss_curves, weights)
+                result['stat_curves'].append(
+                    (l, asset.ordinal, losses, poes_stats, avg_stats))
 
     return result
 
