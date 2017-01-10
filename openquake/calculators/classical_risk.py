@@ -74,6 +74,10 @@ def classical_risk(riskinput, riskmodel, monitor):
                     avgs = numpy.array([r.average_losses[l] for r in rows])
                     avg_stats = compute_stats(
                         avgs, oq.quantile_loss_curves, weights)
+                    # row is index by the loss type index l and row[l]
+                    # is a pair loss_curves, insured_loss_curves
+                    # loss_curves[i, 0] are the i-th losses,
+                    # loss_curves[i, 1] are the i-th poes
                     losses = row[l][0][i, 0]
                     poes_stats = compute_stats(
                         numpy.array([row[l][0][i, 1] for row in rows]),
