@@ -12,7 +12,7 @@ The official supported distributions to develop the OpenQuake Engine and its lib
 - CentOS 7
 - Scientific Linux 7
 
-This guide may work also on other Linux releases/distributions and with some adaptations on macOS.
+This guide may work also on other Linux releases/distributions and with few adaptations on macOS.
 
 ## Prerequisites
 
@@ -58,7 +58,7 @@ git clone https://github.com/gem/oq-engine.git
 git clone https://github.com/gem/oq-hazardlib.git
 ```
 
-install OpenQuake (#note1)<sup>[1](#note1)</sup>)
+install OpenQuake (#note1)<sup>[1](#note1)</sup>)(#note2)<sup>[2](#note2)</sup>)
 
 
 ```bash
@@ -106,6 +106,17 @@ To uninstall the OpenQuake development make sure that its environment is not loa
 
 ```bash
 pip install -r oq-engine/requirements-py27-linux64.txt
+```
+
+*<a name="note2">[2]</a>: extra features, like celery and rtree support can be installed running:*
+
+```bash
+# oq-engine with Rtree support
+pip install -e oq-egine/[Rtree]
+# oq-engine with celery support
+pip install -e oq-egine/[celery]
+# oq-engine with support for both
+pip install -e oq-egine/[rtree,celery]
 ```
 
 ***
