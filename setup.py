@@ -67,8 +67,12 @@ install_requires = [
     'shapely >=1.3, <1.6',
     'docutils >=0.11, <0.14',
     'decorator >=3.4, <4.1',
-    'futures >=2.1, <3.1; python_version<"3.0"',
 ]
+
+if sys.version < '3':
+    install_requires.append(
+        'futures >=2.1, <3.1'
+)
 
 extras_require = {
     'rtree':  ["Rtree==0.8.2"],
