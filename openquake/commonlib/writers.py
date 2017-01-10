@@ -30,6 +30,7 @@ from openquake.baselib.python3compat import unicode
 from openquake.commonlib import InvalidFile
 
 FIVEDIGITS = '%.5E'
+OLD_NUMPY = map(int, numpy.__version__.split('.')) < (1, 11, 0)
 
 
 @contextmanager
@@ -299,6 +300,9 @@ def _build_header(dtype, root):
             return []
         return [root + (str(dtype), dtype.shape)]
     for field in dtype.names:
+        if OLD_NUMPY and field == 'vlen':
+            # workaround for a numpy bug with vlen fields
+            continue
         dt = dtype.fields[field][0]
         if dt.subdtype is None:  # nested
             header.extend(_build_header(dt, root + (field,)))
