@@ -77,7 +77,7 @@ class ComplexFaultSurfaceCheckFaultDataTestCase(utils.SurfaceTestCase):
             ComplexFaultSurface.from_fault_data(edges, mesh_spacing=10)
         self.assertEqual(
             'Surface does not conform with Aki & Richards convention',
-            gstr(cm.exception)
+            str(cm.exception)
         )
 
     def test_dip_left_of_fault_strike_topo(self):
