@@ -1,4 +1,9 @@
   [Michele Simionato]
+  * Increased the splitting of ComplexFaultSources
+  * Added a way to reuse the CompositeSourceModel from a previous computation
+  * Turned the loss maps into dynamically generated outputs
+  * Extended the source model writer to serialize the attributes
+    src_interdep, rup_interdep, srcs_weights
   * Fixed a bug when exporting the uniform hazard spectra in presence of
     IMTs non spectral acceleration
   * Fixed a bug when computing the loss maps in presence of insurance,
