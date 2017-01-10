@@ -139,7 +139,9 @@ class RateGrid(object):
                                     area_discretisation)
 
         parser = SourceModelParser(converter)
-        sources = parser.parse_sources(input_model)
+        sources = []
+        for grp in parser.parse_groups(input_model):
+            sources.extend(grp.sources)
         return cls(limits, sources, area_discretisation)
 
     def number_sources(self):

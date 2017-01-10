@@ -53,7 +53,7 @@ from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.surface import complex_fault, simple_fault
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
-from openquake.nrmllib.models import IncrementalMFD
+from hmtk.models import IncrementalMFD
 from hmtk.sources.simple_fault_source import mtkSimpleFaultSource
 from hmtk.sources.complex_fault_source import mtkComplexFaultSource
 from hmtk.seismicity.catalogue import Catalogue

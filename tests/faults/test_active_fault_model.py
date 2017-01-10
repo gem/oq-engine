@@ -49,17 +49,17 @@ Module to test :hmtk.faults.active_fault_model.mtkActiveFaultModel
 
 import unittest
 import numpy as np
-from openquake.nrmllib.models import IncrementalMFD
+from hmtk.models import IncrementalMFD
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.scalerel.wc1994 import WC1994
-from hmtk.sources.source_model import mtkSourceModel
 from hmtk.sources.simple_fault_source import mtkSimpleFaultSource
 from hmtk.sources.complex_fault_source import mtkComplexFaultSource
 from hmtk.faults.fault_models import mtkActiveFault
 from hmtk.faults.fault_geometries import (SimpleFaultGeometry,
                                           ComplexFaultGeometry)
 from hmtk.faults.active_fault_model import mtkActiveFaultModel
+
 
 class TestmtkActiveFaultModel(unittest.TestCase):
     '''
