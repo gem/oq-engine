@@ -51,13 +51,7 @@ mkdir src && cd src
 git clone https://github.com/gem/oq-hazardlib.git
 ```
 
-install the OpenQuake requirements
-
-```bash
-pip install -r oq-hazardlib/requirements-dev.txt
-```
-
-install OpenQuake itself
+install Hazardlib
 
 ```bash
 pip install -e oq-hazardlib/
