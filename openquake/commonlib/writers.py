@@ -30,7 +30,7 @@ from openquake.baselib.python3compat import unicode
 from openquake.commonlib import InvalidFile
 
 FIVEDIGITS = '%.5E'
-OLD_NUMPY = tuple(s for s in numpy.__version__.split('.')) < (1, 11, 0)
+OLD_NUMPY = tuple(int(s) for s in numpy.__version__.split('.')) < (1, 11, 0)
 
 
 @contextmanager
