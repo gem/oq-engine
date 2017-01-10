@@ -56,19 +56,21 @@ def scenario_risk(riskinput, riskmodel, monitor):
     all_losses = monitor.oqparam.all_losses
     result = dict(agg=numpy.zeros((E, L, R, I), F64), avg=[],
                   all_losses=AccumDict(accum={}))
-    for out in riskmodel.gen_outputs(riskinput, monitor):
-        l, r = out.lr
-        stats = numpy.zeros((len(out.assets), 2), (F32, I))  # mean, stddev
-        stats[:, 0] = out.loss_matrix.mean(axis=1)  # shape (A, I)
-        stats[:, 1] = out.loss_matrix.std(ddof=1, axis=1)
-        for asset, stat in zip(out.assets, stats):
-            result['avg'].append((l, r, asset.ordinal, stat))
-        agglosses = out.loss_matrix.sum(axis=0)  # shape E, I
-        for i in range(I):
-            result['agg'][:, l, r, i] += agglosses[:, i]
-        if all_losses:
-            aids = [asset.ordinal for asset in out.assets]
-            result['all_losses'][l, r] = AccumDict(zip(aids, out.loss_matrix))
+    for outputs in riskmodel.gen_outputs(riskinput, monitor):
+        for out in outputs:
+            l, r = out.lr
+            stats = numpy.zeros((len(out.assets), 2), (F32, I))  # mean, stddev
+            stats[:, 0] = out.loss_matrix.mean(axis=1)  # shape (A, I)
+            stats[:, 1] = out.loss_matrix.std(ddof=1, axis=1)
+            for asset, stat in zip(out.assets, stats):
+                result['avg'].append((l, r, asset.ordinal, stat))
+            agglosses = out.loss_matrix.sum(axis=0)  # shape E, I
+            for i in range(I):
+                result['agg'][:, l, r, i] += agglosses[:, i]
+            if all_losses:
+                aids = [asset.ordinal for asset in out.assets]
+                result['all_losses'][l, r] = AccumDict(
+                    zip(aids, out.loss_matrix))
     return result
 
 

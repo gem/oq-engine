@@ -422,6 +422,7 @@ class CompositeRiskModel(collections.Mapping):
                 riskmodel = self[taxonomy]
                 with mon_risk:
                     for i, assets, epsgetter in dic[taxonomy]:
+                        outs = []
                         for lt in self.loss_types:
                             imt = riskmodel.risk_functions[lt].imt
                             haz = hazard[i].get(imt, ())
@@ -429,7 +430,8 @@ class CompositeRiskModel(collections.Mapping):
                                 out = riskmodel(lt, assets, haz, epsgetter)
                                 if out:  # can be None in scenario_risk
                                     out.lr = self.lti[lt], rlz.ordinal
-                                    yield out
+                                    outs.append(out)
+                        yield outs
         if hasattr(hazard_getter, 'gmfbytes'):  # for event based risk
             monitor.gmfbytes = hazard_getter.gmfbytes
 
