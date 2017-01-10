@@ -346,9 +346,7 @@ class Db(object):
             if kw.get('one'):
                 return Row(colnames, rows[0])
             else:
-                tbl = Table([Row(colnames, r) for r in rows])
-                tbl._fields = colnames
-                return tbl
+                return Table(colnames, rows)
         else:
             return cursor
 
@@ -365,8 +363,11 @@ class Db(object):
 
 
 class Table(list):
-    """Just a list with an attribute _fields"""
-    _fields = []
+    """Just a list of Rows with an attribute _fields"""
+    def __init__(self, fields, rows):
+        self._fields = fields
+        for row in rows:
+            self.append(Row(fields, row))
 
 
 # we cannot use a namedtuple here because one would get a PicklingError:

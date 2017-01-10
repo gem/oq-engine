@@ -28,7 +28,6 @@ from openquake.baselib.general import (
     groupby, humansize, get_array, group_array, DictArray)
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
-from openquake.risklib.riskinput import GmfGetter
 from openquake.calculators.export import export
 from openquake.commonlib import writers, hazard_writers, calc, util
 
@@ -125,7 +124,7 @@ def export_ruptures_xml(ekey, dstore):
     return [dest]
 
 
-@export.add(('ses', 'csv'))
+@export.add(('ruptures', 'csv'))
 def export_ses_csv(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -133,7 +132,7 @@ def export_ses_csv(ekey, dstore):
     """
     if 'events' not in dstore:  # scenario
         return []
-    dest = dstore.export_path('ses.csv')
+    dest = dstore.export_path('ruptures.csv')
     header = ('id mag centroid_lon centroid_lat centroid_depth trt '
               'strike dip rake boundary').split()
     csm_info = dstore['csm_info']
@@ -591,7 +590,7 @@ def export_hcurves_npz(ekey, dstore):
     mesh = get_mesh(dstore['sitecol'])
     imtls = dstore['oqparam'].imtls
     fname = dstore.export_path('%s.%s' % ekey)
-    arr = numpy.zeros(1, imtls.imt_dt)
+    arr = numpy.zeros(1, imtls.dt)
     for imt in imtls:
         arr[imt] = imtls[imt]
     dic = dict(imtls=arr[0])
