@@ -49,6 +49,10 @@ fi
 if [ -z "$GEM_DEB_MONOTONE" ]; then
     GEM_DEB_MONOTONE="$HOME/monotone"
 fi
+# FIXME this is currently unused, but left as reference
+if [ "$GEM_EPHEM_USER" = "" ]; then
+    GEM_EPHEM_USER="ubuntu"
+fi
 
 GEM_BUILD_ROOT="build-deb"
 GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
@@ -59,7 +63,7 @@ if [ "$GEM_EPHEM_CMD" = "" ]; then
     GEM_EPHEM_CMD="lxc-copy"
 fi
 if [ "$GEM_EPHEM_NAME" = "" ]; then
-    GEM_EPHEM_NAME="ubuntu-lxc-eph"
+    GEM_EPHEM_NAME="ubuntu16-lxc-eph"
 fi
 
 LXC_VER=$(lxc-ls --version | cut -d '.' -f 1)
