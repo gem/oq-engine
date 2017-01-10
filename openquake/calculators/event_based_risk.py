@@ -98,9 +98,11 @@ def _aggregate(outputs, compositemodel, agg, ass, idx, result, monitor):
     # update the result dictionary and the agg array with each output
     lrs = set()
     for outs in outputs:
-        for out in outs:
-            l, r = out.lr
-            lrs.add(out.lr)
+        r = outs.r
+        for l, out in enumerate(outs):
+            if out is None:  # for GMFs below the minimum_intensity
+                continue
+            lrs.add((l, r))
             loss_type = compositemodel.loss_types[l]
             indices = numpy.array([idx[eid] for eid in out.eids])
             agglr = agg[l, r]

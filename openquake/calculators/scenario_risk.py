@@ -57,8 +57,10 @@ def scenario_risk(riskinput, riskmodel, monitor):
     result = dict(agg=numpy.zeros((E, L, R, I), F64), avg=[],
                   all_losses=AccumDict(accum={}))
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
-        for out in outputs:
-            l, r = out.lr
+        r = outputs.r
+        for l, out in enumerate(outputs):
+            if out is None:  # this may happen
+                continue
             stats = numpy.zeros((len(out.assets), 2), (F32, I))  # mean, stddev
             stats[:, 0] = out.loss_matrix.mean(axis=1)  # shape (A, I)
             stats[:, 1] = out.loss_matrix.std(ddof=1, axis=1)

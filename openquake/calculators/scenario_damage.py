@@ -104,8 +104,8 @@ def scenario_damage(riskinput, riskmodel, monitor):
     result = dict(d_asset=[], d_taxon=numpy.zeros((T, L, R, E, D), F64),
                   c_asset=[], c_taxon=numpy.zeros((T, L, R, E), F64))
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
-        for out in outputs:
-            l, r = out.lr
+        r = outputs.r
+        for l, out in enumerate(outputs):
             c_model = c_models.get(out.loss_type)
             for asset, fraction in zip(out.assets, out.damages):
                 t = taxo2idx[asset.taxonomy]
