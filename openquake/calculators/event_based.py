@@ -245,8 +245,9 @@ class EventBasedRuptureCalculator(PSHACalculator):
             if hasattr(ruptures_by_grp_id, 'rup_data'):
                 for grp_id, data in sorted(
                         ruptures_by_grp_id.rup_data.items()):
-                    key = 'rup_data/grp-%02d' % grp_id
-                    self.rup_data = self.datastore.extend(key, data)
+                    if len(data):
+                        key = 'rup_data/grp-%02d' % grp_id
+                        self.rup_data = self.datastore.extend(key, data)
 
     def post_execute(self, result):
         """
