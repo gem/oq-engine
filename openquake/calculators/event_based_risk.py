@@ -102,24 +102,25 @@ def _aggregate(outputs, compositemodel, agg, ass, idx, result, monitor):
         for l, out in enumerate(outs):
             if out is None:  # for GMFs below the minimum_intensity
                 continue
+            loss_ratios, eids = out
             lrs.add((l, r))
             loss_type = compositemodel.loss_types[l]
-            indices = numpy.array([idx[eid] for eid in out.eids])
+            indices = numpy.array([idx[eid] for eid in eids])
             agglr = agg[l, r]
-            for i, asset in enumerate(out.assets):
+            for i, asset in enumerate(outs.assets):
+                ratios = loss_ratios[i]
                 aid = asset.ordinal
-                loss_ratios = out.loss_ratios[i]
-                losses = loss_ratios * asset.value(loss_type)
+                losses = ratios * asset.value(loss_type)
 
                 # average losses
                 if monitor.avg_losses:
                     result['avglosses'][l, r][aid] += (
-                        loss_ratios.sum(axis=0) * monitor.ses_ratio)
+                        ratios.sum(axis=0) * monitor.ses_ratio)
 
                 # asset losses
                 if monitor.loss_ratios:
                     data = [(eid, aid, loss)
-                            for eid, loss in zip(out.eids, loss_ratios)
+                            for eid, loss in zip(eids, ratios)
                             if loss.sum() > 0]
                     if data:
                         ass[l, r].append(numpy.array(data, monitor.ela_dt))

@@ -20,7 +20,7 @@ import logging
 
 import numpy
 
-from openquake.baselib.general import groupby
+from openquake.baselib.general import groupby, AccumDict
 from openquake.hazardlib.stats import compute_stats
 from openquake.risklib import scientific, riskinput
 from openquake.commonlib import readinput, source
@@ -47,21 +47,17 @@ def classical_risk(riskinput, riskmodel, monitor):
     all_outputs = list(riskmodel.gen_outputs(riskinput, monitor))
     for outputs in all_outputs:
         r = outputs.r
-        for l, out in enumerate(outputs):
-            out.average_losses = []
-            for i, asset in enumerate(out.assets):
+        outputs.average_losses = AccumDict(accum=[])  # l -> array
+        for l, (loss_curves, insured_curves) in enumerate(outputs):
+            for i, asset in enumerate(outputs.assets):
                 aid = asset.ordinal
-                avg = scientific.average_loss(out.loss_curves[i])
-                out.average_losses.append(avg)
-                lcurve = (
-                    out.loss_curves[i, 0],
-                    out.loss_curves[i, 1],
-                    avg)
+                avg = scientific.average_loss(loss_curves[i])
+                outputs.average_losses[l].append(avg)
+                lcurve = (loss_curves[i, 0], loss_curves[i, 1], avg)
                 if ins:
                     lcurve += (
-                        out.insured_curves[i, 0],
-                        out.insured_curves[i, 1],
-                        scientific.average_loss(out.insured_curves[i]))
+                        insured_curves[i, 0], insured_curves[i, 1],
+                        scientific.average_loss(insured_curves[i]))
                 else:
                     lcurve += (None, None, None)
                 result['loss_curves'].append((l, r, aid, lcurve))
@@ -75,13 +71,12 @@ def classical_risk(riskinput, riskmodel, monitor):
             row = rows[0]
             for l in l_idxs:
                 for i, asset in enumerate(assets):
+                    avgs = numpy.array([r.average_losses[l] for r in rows])
                     avg_stats = compute_stats(
-                        numpy.array([row[l].average_losses for row in rows]),
-                        oq.quantile_loss_curves, weights)
-                    losses = row[l].loss_curves[i, 0]
+                        avgs, oq.quantile_loss_curves, weights)
+                    losses = row[l][0][i, 0]
                     poes_stats = compute_stats(
-                        numpy.array([row[l].loss_curves[i, 1]
-                                     for row in rows]),
+                        numpy.array([row[l][0][i, 1] for row in rows]),
                         oq.quantile_loss_curves, weights)
                     result['stat_curves'].append(
                         (l, asset.ordinal, losses, poes_stats, avg_stats))
