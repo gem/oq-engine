@@ -40,6 +40,13 @@ setup(
         'openquake.hazardlib',
         'PyYAML',
     ],
+    extras_require={
+        'plotting':  [
+           'matplotlib >=1.5',
+           'basemap >=1.0',
+           'pyproj >=1.9',
+        ],
+    },
     author='GEM Foundation',
     author_email='hazard@globalquakemodel.org',
     maintainer='GEM Foundation',
