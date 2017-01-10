@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# packager.sh  Copyright (C) 2014-2016 GEM Foundation
+# packager.sh  Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,8 +30,8 @@
 #
 # ephemeral containers are "clones" of a base container and have a
 # temporary file system that reflects the contents of the base container
-# but any modifications are stored in another overlayed
-# file system (in-memory or disk)
+# but any modifications are stored in an overlayed, in-memory
+# file system
 #
 
 if [ -n "$GEM_SET_DEBUG" -a "$GEM_SET_DEBUG" != "false" ]; then
@@ -705,7 +705,7 @@ _lxc_name_and_ip_get()
     if [ $e -eq 40 ]; then
         return 1
     fi
-    echo "SUCCESSFULY RUNNED $lxc_name ($lxc_ip)"
+    echo "SUCCESSFULLY RUN $lxc_name ($lxc_ip)"
 
     return 0
 }
