@@ -10,6 +10,7 @@
 
 ### Optional dependencies
 
+* Rtree - a wrapper of libspatialindex that provides a number of advanced spatial indexing features 
 * Celery - Distributed task queue library, using the `iterator_native()`
 * RabbitMQ - Message broker for Celery tasks, logging channels, and other signalling
 
@@ -17,7 +18,7 @@
 
 Software  | Version(s)
 --------- | ----------
-Python | 2.7
+Python | 2.7, 3.5
 RabbitMQ | 2.6 to 3.2
 libgeos | >= 3.2.2
 HDF5 | 1.8
@@ -25,4 +26,4 @@ HDF5 | 1.8
 
 ### Python dependencies
 
-See the [requirements](../requirements-dev.txt) file for a complete list of the Python dependencies.
+See the '[setup.py](../setup.py) file for a complete list of the Python dependencies.

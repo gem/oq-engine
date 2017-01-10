@@ -58,14 +58,8 @@ git clone https://github.com/gem/oq-engine.git
 git clone https://github.com/gem/oq-hazardlib.git
 ```
 
-install the OpenQuake requirements (from sources or [using binary wheels](#note1)<sup>[1](#note1)</sup>)
+install OpenQuake (#note1)<sup>[1](#note1)</sup>)
 
-```bash
-pip install -r oq-engine/requirements-dev.txt
-```
-
-
-install OpenQuake itself
 
 ```bash
 pip install -e oq-hazardlib/
@@ -92,12 +86,6 @@ cd ..
 
 `oq-engine` and `oq-hazardlib` must be always synced at the same time.
 
-Make also sure that no new dependencies have been added checking `requirements-dev.txt` in the source code folders or running `pip`
-
-```bash
-pip install -r oq-engine/requirements-dev.txt
-```
-
 ## Loading and unloading the development environment
 
 To exit from the OpenQuake development environment type `deactivate`. Before using again the OpenQuake software the environment must be loaded back running `source openquake/bin/activate`(assuming that it has been installed under 'openquake'). For more information about *virtualenv* and its you see http://docs.python-guide.org/en/latest/dev/virtualenvs/
@@ -114,7 +102,7 @@ To uninstall the OpenQuake development make sure that its environment is not loa
 
 ### Notes ###
 
-*<a name="note1">[1]</a>: a binary version of the dependencies (that do not require compilers, libs...) can be installed using*
+*<a name="note1">[1]</a> __for Linux only__: if you want to use binary dependencies (python wheels: they do not require any compiler, development library...) before installing `oq-engine` and `oq-hazardlib` run:*
 
 ```bash
 pip install -r oq-engine/requirements-py27-linux64.txt
