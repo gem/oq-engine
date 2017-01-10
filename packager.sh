@@ -307,14 +307,18 @@ _devtest_innervm_run () {
             skip_tests="!slow,"
         fi
 
-        # run tests (in this case we omit 'set -e' to be able to read all tests outputs)
+        ssh $lxc_ip "set -e
+                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine\"
+                 echo 'Starting DbServer. Log is saved to /tmp/dbserver.log'
+                 cd oq-engine; nohup bin/oq dbserver start &>/tmp/dbserver.log < /dev/null &"
+
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
                  set -e
                  if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
                      export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
                      set -x
                  fi
-                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine\" ;
+                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine\"
                  cd oq-engine; bin/oq dbserver start &
                  nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
                  nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
@@ -331,6 +335,7 @@ _devtest_innervm_run () {
         bin/oq dbserver stop"
         scp "${lxc_ip}:oq-engine/xunit-*.xml" "out_${BUILD_UBUVER}/" || true
         scp "${lxc_ip}:oq-engine/coverage.xml" "out_${BUILD_UBUVER}/" || true
+        scp "${lxc_ip}:/tmp/dbserver.log" "out_${BUILD_UBUVER}/" || true
     else
         if [ -d $HOME/fake-data/$GEM_GIT_PACKAGE ]; then
             cp $HOME/fake-data/$GEM_GIT_PACKAGE/* "out_${BUILD_UBUVER}/"
