@@ -105,16 +105,17 @@ def scenario_damage(riskinput, riskmodel, monitor):
                   c_asset=[], c_taxon=numpy.zeros((T, L, R, E), F64))
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
         r = outputs.r
-        for l, out in enumerate(outputs):
-            c_model = c_models.get(out.loss_type)
-            for asset, fraction in zip(out.assets, out.damages):
+        for l, damages in enumerate(outputs):
+            loss_type = riskmodel.loss_types[l]
+            c_model = c_models.get(loss_type)
+            for asset, fraction in zip(outputs.assets, damages):
                 t = taxo2idx[asset.taxonomy]
                 damages = fraction * asset.number
                 if c_model:  # compute consequences
                     means = [par[0] for par in c_model[asset.taxonomy].params]
                     # NB: we add a 0 in front for nodamage state
                     c_ratio = numpy.dot(fraction, [0] + means)
-                    consequences = c_ratio * asset.value(out.loss_type)
+                    consequences = c_ratio * asset.value(loss_type)
                     result['c_asset'].append(
                         (l, r, asset.ordinal,
                          scientific.mean_std(consequences)))
