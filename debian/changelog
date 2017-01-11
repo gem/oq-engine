@@ -1,3 +1,7 @@
+  [Daniele Viganò]
+  * Add dependencies to setup.py
+  * Update Copyright to 2017
+
   [Michele Simionato]
   * Increased the splitting of ComplexFaultSources
   * Added a way to reuse the CompositeSourceModel from a previous computation
