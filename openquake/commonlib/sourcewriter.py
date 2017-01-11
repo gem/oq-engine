@@ -22,7 +22,7 @@ Source model XML Writer
 
 import os
 from openquake.baselib.general import CallableDict
-from openquake.commonlib.node import Node
+from openquake.baselib.node import Node
 from openquake.commonlib import nrml
 
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
@@ -35,7 +35,7 @@ def build_area_source_geometry(area_source):
         Area source model as an instance of the :class:
         openquake.hazardlib.source.area.AreaSource
     :returns:
-        Instance of :class: openquake.commonlib.node.Node
+        Instance of :class: openquake.baselib.node.Node
     """
     geom_str = ["%s %s" % lonlat for lonlat in
                 zip(area_source.polygon.lons, area_source.polygon.lats)]
@@ -59,7 +59,7 @@ def build_point_source_geometry(point_source):
         Point source model as an instance of the :class:
         openquake.hazardlib.source.point.PointSource
     :returns:
-        Instance of :class: openquake.commonlib.node.Node
+        Instance of :class: openquake.baselib.node.Node
     """
     xy = point_source.location.x, point_source.location.y
     pos_node = Node("gml:pos", text=xy)
@@ -81,7 +81,7 @@ def build_linestring_node(line, with_depth=False):
     :param bool with_depth:
         Include the depth values (True) or not (False):
     :returns:
-        Instance of :class: openquake.commonlib.node.Node
+        Instance of :class: openquake.baselib.node.Node
     """
     if with_depth:
         geom_str = ["%s %s %s" % (p.x, p.y, p.z) for p in line.points]
@@ -98,7 +98,7 @@ def build_simple_fault_geometry(fault_source):
         Simple fault source model as an instance of the :class:
         openquake.hazardlib.source.simple_fault.SimpleFaultSource
     :returns:
-        Instance of :class: openquake.commonlib.node.Node
+        Instance of :class: openquake.baselib.node.Node
     """
     linestring_node = build_linestring_node(fault_source.fault_trace,
                                             with_depth=False)
@@ -119,7 +119,7 @@ def build_complex_fault_geometry(fault_source):
         Complex fault source model as an instance of the :class:
         openquake.hazardlib.source.complex_fault.ComplexFaultSource
     :returns:
-        Instance of :class: openquake.commonlib.node.Node
+        Instance of :class: openquake.baselib.node.Node
     """
     num_edges = len(fault_source.edges)
     edge_nodes = []
@@ -148,7 +148,7 @@ def build_evenly_discretised_mfd(mfd):
         MFD as instance of :class:
         openquake.hazardlib.mfd.evenly_discretized.EvenlyDiscretizedMFD
     :returns:
-        Instance of :class: openquake.commonlib.node.Node
+        Instance of :class: openquake.baselib.node.Node
     """
     occur_rates = Node("occurRates", text=mfd.occurrence_rates)
     return Node("incrementalMFD",
@@ -164,7 +164,7 @@ def build_truncated_gr_mfd(mfd):
         MFD as instance of :class:
         openquake.hazardlib.mfd.truncated_gr.TruncatedGRMFD
     :returns:
-        Instance of :class: openquake.commonlib.node.Node
+        Instance of :class: openquake.baselib.node.Node
     """
     return Node("truncGutenbergRichterMFD",
                 {"aValue": mfd.a_val, "bValue": mfd.b_val,
@@ -179,7 +179,7 @@ def build_arbitrary_mfd(mfd):
         MFD as instance of :class:
         openquake.hazardlib.mfd.arbitrary.ArbitraryMFD
     :returns:
-        Instance of :class: openquake.commonlib.node.Node
+        Instance of :class: openquake.baselib.node.Node
     """
     magnitudes = Node("magnitudes", text=mfd.magnitudes)
     occur_rates = Node("occurRates", text=mfd.occurrence_rates)
@@ -198,7 +198,7 @@ def build_youngs_coppersmith_mfd(mfd):
         openquake.hazardlib.mfd.youngs_coppersmith_1985.
         YoungsCoppersmith1985MFD
     :returns:
-        Instance of :class: openquake.commonlib.node.Node
+        Instance of :class: openquake.baselib.node.Node
     """
     return Node("YoungsCoppersmithMFD",
                 {"minMag": mfd.min_mag, "bValue": mfd.b_val,
@@ -214,7 +214,7 @@ def build_nodal_plane_dist(npd):
         Nodal plane distribution as instance of :class:
         openquake.hazardlib.pmf.PMF
     :returns:
-        Instance of :class: openquake.commonlib.node.Node
+        Instance of :class: openquake.baselib.node.Node
     """
     npds = []
     for prob, npd in npd.data:
@@ -232,7 +232,7 @@ def build_hypo_depth_dist(hdd):
         Hypocentral depth distribution as an instance of :class:
         openuake.hzardlib.pmf.PMF
     :returns:
-        Instance of :class: openquake.commonlib.node.Node
+        Instance of :class: openquake.baselib.node.Node
     """
     hdds = []
     for (prob, depth) in hdd.data:
@@ -250,7 +250,7 @@ def get_distributed_seismicity_source_nodes(source):
         openquake.hazardlib.source.area.AreaSource or :class:
         openquake.hazardlib.source.point.PointSource
     :returns:
-        List of instances of :class: openquake.commonlib.node.Node
+        List of instances of :class: openquake.baselib.node.Node
     """
     source_nodes = []
     #  parse msr
@@ -308,7 +308,7 @@ def get_fault_source_nodes(source):
         openquake.hazardlib.source.simple_fault.SimpleFaultSource or :class:
         openquake.hazardlib.source.complex_fault.ComplexFaultSource
     :returns:
-        List of instances of :class: openquake.commonlib.node.Node
+        List of instances of :class: openquake.baselib.node.Node
     """
     source_nodes = []
     #  parse msr
@@ -352,7 +352,7 @@ def build_area_source_node(area_source):
         Area source as instance of :class:
         openquake.hazardlib.source.area.AreaSource
     :returns:
-        Instance of :class: openquake.commonlib.node.Node
+        Instance of :class: openquake.baselib.node.Node
     """
     # parse geometry
     source_nodes = [build_area_source_geometry(area_source)]
@@ -414,7 +414,7 @@ def build_point_source_node(point_source):
         Point source as instance of :class:
         openquake.hazardlib.source.point.PointSource
     :returns:
-        Instance of :class: openquake.commonlib.node.Node
+        Instance of :class: openquake.baselib.node.Node
 
     """
     # parse geometry
@@ -434,7 +434,7 @@ def build_simple_fault_source_node(fault_source):
         Simple fault source as instance of :class:
         openquake.hazardlib.source.simple_fault.SimpleFaultSource
     :returns:
-        Instance of :class: openquake.commonlib.node.Node
+        Instance of :class: openquake.baselib.node.Node
     """
     # Parse geometry
     source_nodes = [build_simple_fault_geometry(fault_source)]
@@ -453,7 +453,7 @@ def build_complex_fault_source_node(fault_source):
         Simple fault source as instance of :class:
         openquake.hazardlib.source.complex_fault.ComplexFaultSource
     :returns:
-        Instance of :class: openquake.commonlib.node.Node
+        Instance of :class: openquake.baselib.node.Node
     """
     # Parse geometry
     source_nodes = [build_complex_fault_geometry(fault_source)]
