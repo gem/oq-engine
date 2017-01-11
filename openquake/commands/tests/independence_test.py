@@ -38,7 +38,7 @@ class IndependenceTestCase(unittest.TestCase):
 
     def test_commonlib(self):
         assert_independent('openquake.commonlib', 'openquake.calculators')
-        assert_independent('openquake.commonlib.node', 'openquake.hazardlib')
+        assert_independent('openquake.baselib.node', 'openquake.hazardlib')
         assert_independent('openquake.baselib.parallel', 'openquake.hazardlib')
 
     def test_engine(self):

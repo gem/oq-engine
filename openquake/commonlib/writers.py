@@ -20,7 +20,7 @@ import re
 import logging
 import numpy  # this is needed by the doctests, don't remove it
 from openquake.commonlib import InvalidFile
-from openquake.commonlib.node import scientificformat
+from openquake.baselib.node import scientificformat
 
 FIVEDIGITS = '%.5E'
 
