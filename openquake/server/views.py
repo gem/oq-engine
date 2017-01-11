@@ -33,7 +33,7 @@ from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest)
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django.shortcuts import render_to_response
+from django.shortcuts import render
 from django.template import RequestContext
 from django.contrib.auth import authenticate, login, logout
 try:
@@ -563,20 +563,17 @@ def get_datastore(request, job_id):
 
 
 def web_engine(request, **kwargs):
-    return render_to_response("engine/index.html",
-                              dict(),
-                              context_instance=RequestContext(request))
+    return render(request, "engine/index.html",
+                  dict())
 
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs(request, calc_id, **kwargs):
-    return render_to_response("engine/get_outputs.html",
-                              dict([('calc_id', calc_id)]),
-                              context_instance=RequestContext(request))
+    return render(request, "engine/get_outputs.html",
+                  dict([('calc_id', calc_id)]))
 
 
 @require_http_methods(['GET'])
 def license(request, **kwargs):
-    return render_to_response("engine/license.html",
-                              context_instance=RequestContext(request))
+    return render(request, "engine/license.html")
