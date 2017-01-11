@@ -1,3 +1,7 @@
+  [Daniele Viganò]
+  * Port WebUI/API server to Django 1.9 and 1.10
+  * Add dependencies to setup.py
+
   [Michele Simionato]
   * Increased the splitting of ComplexFaultSources
   * Added a way to reuse the CompositeSourceModel from a previous computation
