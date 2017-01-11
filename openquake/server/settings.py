@@ -19,8 +19,6 @@
 import os
 import getpass
 
-from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS
-
 from openquake.commonlib import config
 
 DB_SECTION = config.get_section('dbserver')
@@ -30,13 +28,31 @@ INSTALLED_APPS = ('openquake.server.db',)
 OQSERVER_ROOT = os.path.dirname(__file__)
 
 DEBUG = True
-TEMPLATE_DEBUG = DEBUG
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
-TEMPLATE_CONTEXT_PROCESSORS += (
-    'django.contrib.messages.context_processors.messages',
-    'openquake.server.utils.oq_server_context_processor',
-)
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [
+            # insert any extra TEMPLATE_DIRS here
+        ],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                # Insert your TEMPLATE_CONTEXT_PROCESSORS here or use this
+                # list if you haven't customized them:
+                'django.contrib.auth.context_processors.auth',
+                'django.template.context_processors.debug',
+                'django.template.context_processors.i18n',
+                'django.template.context_processors.media',
+                'django.template.context_processors.static',
+                'django.template.context_processors.tz',
+                'django.contrib.messages.context_processors.messages',
+                'openquake.server.utils.oq_server_context_processor',
+            ],
+        },
+    },
+]
 
 STATIC_URL = '/static/'
 
@@ -101,8 +117,12 @@ AUTH_EXEMPT_URLS = ()
 
 ROOT_URLCONF = 'openquake.server.urls'
 
-INSTALLED_APPS += ('django.contrib.staticfiles',
-                   'openquake.server',)
+INSTALLED_APPS += (
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.staticfiles',
+    'openquake.server',
+)
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
@@ -174,7 +194,6 @@ if LOCKDOWN:
     )
 
     INSTALLED_APPS += (
-        'django.contrib.auth',
         'django.contrib.contenttypes',
         'django.contrib.messages',
         'django.contrib.sessions',
