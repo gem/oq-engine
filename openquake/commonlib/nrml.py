@@ -86,9 +86,8 @@ import itertools
 import numpy
 
 from openquake.baselib.general import CallableDict, groupby
-from openquake.commonlib import writers
 from openquake.commonlib.node import (
-    node_to_xml, Node, striptag, ValidatingXmlParser, context)
+    node_to_xml, Node, striptag, ValidatingXmlParser, context, floatformat)
 from openquake.risklib import scientific, valid
 from openquake.commonlib import InvalidFile, sourceconverter
 
@@ -658,7 +657,7 @@ def write(nodes, output=sys.stdout, fmt='%.7E', gml=True, xmlns=None):
     namespaces = {xmlns or NRML05: ''}
     if gml:
         namespaces[GML_NAMESPACE] = 'gml:'
-    with writers.floatformat(fmt):
+    with floatformat(fmt):
         node_to_xml(root, output, namespaces)
     if hasattr(output, 'mode') and '+' in output.mode:  # read-write mode
         output.seek(0)

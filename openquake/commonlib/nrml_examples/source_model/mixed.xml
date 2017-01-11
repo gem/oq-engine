@@ -213,7 +213,6 @@ xmlns:gml="http://www.opengis.net/gml"
                     30.0
                 </rake>
                 <surface>
-                    
                     <simpleFaultGeometry>
                         
                         <gml:LineString>
@@ -251,7 +250,6 @@ xmlns:gml="http://www.opengis.net/gml"
                     60.0
                 </rake>
                 <surface>
-                    
                     <complexFaultGeometry>
                         
                         <faultTopEdge>
@@ -303,7 +301,6 @@ xmlns:gml="http://www.opengis.net/gml"
                     90.0
                 </rake>
                 <surface>
-                    
                     <planarSurface
                     dip="9.6965471"
                     strike="89.982546"
