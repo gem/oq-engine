@@ -394,7 +394,7 @@ def build_rupture_node(rupt, probs_occur):
                   Node('rake', {}, rupt.rake),
                   Node('hypocenter', hp_dict)]
     rupt_nodes.extend(rupt.surface.surface_nodes)
-    geom = rupt.surface.surface_nodes[0].tag.split('}')[1]
+    geom = rupt.surface.surface_nodes[0].tag
     if len(rupt.surface.surface_nodes) > 1:
         name = 'multiPlanesRupture'
     elif geom == 'planarSurface':
