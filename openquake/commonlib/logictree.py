@@ -42,7 +42,7 @@ from openquake.hazardlib.gsim.gsim_table import GMPETable
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo
 from openquake.risklib import valid
-from openquake.commonlib import nrml, writers
+from openquake.commonlib import nrml, writers, node
 from openquake.commonlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 
@@ -1131,7 +1131,7 @@ class GsimLogicTree(object):
         """
         :returns: an XML string representing the logic tree
         """
-        return writers.tostring(self._ltnode).decode('utf-8')
+        return node.tostring(self._ltnode).decode('utf-8')
 
     def reduce(self, trts):
         """
