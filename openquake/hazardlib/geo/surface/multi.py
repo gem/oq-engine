@@ -86,6 +86,15 @@ class MultiSurface(BaseSurface):
         For GC2, determines the length of the fault (km) in its own GC2
         configuration
     """
+
+    @property
+    def surface_nodes(self):
+        """
+        :returns:
+            a list of surface nodes from the underlying single node surfaces
+        """
+        return [surf.surface_nodes[0] for surf in self.surfaces]
+
     def __init__(self, surfaces, tol=0.1):
         """
         Instantiate object with list of surfaces
