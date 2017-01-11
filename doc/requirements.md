@@ -26,4 +26,4 @@ HDF5 | 1.8
 
 ### Python dependencies
 
-See the '[setup.py](../setup.py) file for a complete list of the Python dependencies.
+See [setup.py](../setup.py) for a complete list of the Python dependencies.
