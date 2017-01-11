@@ -403,6 +403,7 @@ class RuptureConverter(object):
         else:  # a collection of planar surfaces
             planar_surfaces = list(map(self.geo_planar, surface_nodes))
             surface = geo.MultiSurface(planar_surfaces)
+        surface.surface_nodes = surface_nodes
         return surface
 
     def convert_simpleFaultRupture(self, node, mag, rake, hypocenter):
@@ -420,8 +421,7 @@ class RuptureConverter(object):
             mag=mag, rake=rake, tectonic_region_type=None,
             hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
-            source_typology=source.SimpleFaultSource,
-            surface_nodes=surfaces)
+            source_typology=source.SimpleFaultSource)
         return rupt
 
     def convert_complexFaultRupture(self, node, mag, rake, hypocenter):
@@ -439,8 +439,7 @@ class RuptureConverter(object):
             mag=mag, rake=rake, tectonic_region_type=None,
             hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
-            source_typology=source.ComplexFaultSource,
-            surface_nodes=surfaces)
+            source_typology=source.ComplexFaultSource)
         return rupt
 
     def convert_singlePlaneRupture(self, node, mag, rake, hypocenter):
@@ -459,8 +458,7 @@ class RuptureConverter(object):
             tectonic_region_type=None,
             hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
-            source_typology=source.NonParametricSeismicSource,
-            surface_nodes=surfaces)
+            source_typology=source.NonParametricSeismicSource)
         return rupt
 
     def convert_multiPlanesRupture(self, node, mag, rake, hypocenter):
@@ -479,8 +477,7 @@ class RuptureConverter(object):
             tectonic_region_type=None,
             hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
-            source_typology=source.NonParametricSeismicSource,
-            surface_nodes=surfaces)
+            source_typology=source.NonParametricSeismicSource)
         return rupt
 
 
