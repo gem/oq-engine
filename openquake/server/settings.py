@@ -188,7 +188,6 @@ if LOCKDOWN:
     )
 
     INSTALLED_APPS += (
-        'django.contrib.contenttypes',
         'django.contrib.messages',
         'django.contrib.sessions',
         'django.contrib.admin',
