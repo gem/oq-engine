@@ -21,7 +21,7 @@ import copy
 import pickle
 import unittest
 
-from openquake.commonlib import node as n
+from openquake.baselib import node as n
 
 
 class NodeTestCase(unittest.TestCase):
