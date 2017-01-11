@@ -421,7 +421,7 @@ def _extract_site_param(fsc, name):
 
 
 # attach a number of properties filtering the arrays
-for name in 'vs30 vs30measured z1pt0 z2pt5 backarc lons lats depths\
+for name in 'vs30 vs30measured z1pt0 z2pt5 backarc lons lats depths \
 sids'.split():
     prop = property(
         lambda fsc, name=name: _extract_site_param(fsc, name),
