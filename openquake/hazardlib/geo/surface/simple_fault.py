@@ -171,7 +171,8 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
             " Possible cause: Mesh spacing could be too large with respect to"
             " the fault length and width."
         )
-        return cls(mesh)
+        self = cls(mesh)
+        return self
 
     @classmethod
     def get_fault_patch_vertices(cls, rupture_top_edge,
