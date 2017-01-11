@@ -67,7 +67,7 @@ class SourceWriterTestCase(unittest.TestCase):
 class DeepcopyTestCase(unittest.TestCase):
     def test_is_writeable(self):
         parser = SourceModelParser(SourceConverter(50., 1., 10, 0.1, 10.))
-        groups = map(copy.deepcopy, parser.parse_groups(ALT_MFDS))
+        groups = [copy.deepcopy(grp) for grp in parser.parse_groups(ALT_MFDS)]
         # there are a SimpleFaultSource and a CharacteristicFaultSource
         fd, fname = tempfile.mkstemp(suffix='.xml')
         with os.fdopen(fd, 'wb'):

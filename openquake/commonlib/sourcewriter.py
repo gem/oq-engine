@@ -366,7 +366,8 @@ def build_area_source_node(area_source):
 def build_characteristic_fault_source_node(source):
     source_nodes = [obj_to_node(source.mfd)]
     source_nodes.append(Node("rake", text=source.rake))
-    source_nodes.append(source.surface_node)
+    surface_node = Node('surface', nodes=source.surface.surface_nodes)
+    source_nodes.append(surface_node)
     return Node('characteristicFaultSource',
                 get_source_attributes(source),
                 nodes=source_nodes)

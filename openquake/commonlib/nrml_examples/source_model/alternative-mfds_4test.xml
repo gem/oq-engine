@@ -62,7 +62,6 @@ xmlns:gml="http://www.opengis.net/gml"
                     60.0
                 </rake>
                 <surface>
-                    
                     <complexFaultGeometry>
                         
                         <faultTopEdge>

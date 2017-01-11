@@ -143,12 +143,186 @@ generator. Finally, nodes containing lazy nodes will not be pickleable.
 import io
 import sys
 import copy
+import types
+import warnings
 import pprint as pp
 from contextlib import contextmanager
-from openquake.baselib.python3compat import raise_, exec_, configparser, decode
-from openquake.commonlib.writers import StreamingXMLWriter
+from openquake.baselib.python3compat import (
+    raise_, exec_, configparser, decode, unicode)
 from xml.etree import ElementTree
+from xml.sax.saxutils import escape, quoteattr
 from xml.parsers.expat import ParserCreate, ExpatError, ErrorString
+
+import numpy
+
+
+@contextmanager
+def floatformat(fmt_string):
+    """
+    Context manager to change the default format string for the
+    function :func:`openquake.commonlib.writers.scientificformat`.
+
+    :param fmt_string: the format to use; for instance '%13.9E'
+    """
+    fmt_defaults = scientificformat.__defaults__
+    scientificformat.__defaults__ = (fmt_string,) + fmt_defaults[1:]
+    try:
+        yield
+    finally:
+        scientificformat.__defaults__ = fmt_defaults
+
+
+zeroset = set(['E', '-', '+', '.', '0'])
+
+
+def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
+    """
+    :param value: the value to convert into a string
+    :param fmt: the formatting string to use for float values
+    :param sep: separator to use for vector-like values
+    :param sep2: second separator to use for matrix-like values
+
+    Convert a float or an array into a string by using the scientific notation
+    and a fixed precision (by default 10 decimal digits). For instance:
+
+    >>> scientificformat(-0E0)
+    '0.000000000E+00'
+    >>> scientificformat(-0.004)
+    '-4.000000000E-03'
+    >>> scientificformat([0.004])
+    '4.000000000E-03'
+    >>> scientificformat([0.01, 0.02], '%10.6E')
+    '1.000000E-02 2.000000E-02'
+    >>> scientificformat([[0.1, 0.2], [0.3, 0.4]], '%4.1E')
+    '1.0E-01:2.0E-01 3.0E-01:4.0E-01'
+    """
+    if isinstance(value, bytes):
+        return value.decode('utf8')
+    elif isinstance(value, unicode):
+        return value
+    elif hasattr(value, '__len__'):
+        return sep.join((scientificformat(f, fmt, sep2) for f in value))
+    elif isinstance(value, (float, numpy.float64, numpy.float32)):
+        fmt_value = fmt % value
+        if set(fmt_value) <= zeroset:
+            # '-0.0000000E+00' is converted into '0.0000000E+00
+            fmt_value = fmt_value.replace('-', '')
+        return fmt_value
+    return str(value)
+
+
+def tostring(node, indent=4, nsmap=None):
+    """
+    Convert a node into an XML string by using the StreamingXMLWriter.
+    This is useful for testing purposes.
+
+    :param node: a node object (typically an ElementTree object)
+    :param indent: the indentation to use in the XML (default 4 spaces)
+    """
+    out = io.BytesIO()
+    writer = StreamingXMLWriter(out, indent, nsmap=nsmap)
+    writer.serialize(node)
+    return out.getvalue()
+
+
+class StreamingXMLWriter(object):
+    """
+    A bynary stream XML writer. The typical usage is something like this::
+
+        with StreamingXMLWriter(output_file) as writer:
+            writer.start_tag('root')
+            for node in nodegenerator():
+                writer.serialize(node)
+            writer.end_tag('root')
+    """
+    def __init__(self, bytestream, indent=4, encoding='utf-8', nsmap=None):
+        """
+        :param bytestream: the stream or file where to write the XML
+        :param int indent: the indentation to use in the XML (default 4 spaces)
+        """
+        assert not isinstance(bytestream, io.StringIO)  # common error
+        self.stream = bytestream
+        self.indent = indent
+        self.encoding = encoding
+        self.indentlevel = 0
+        self.nsmap = nsmap
+
+    def shorten(self, tag):
+        """
+        Get the short representation of a fully qualified tag
+
+        :param str tag: a (fully qualified or not) XML tag
+        """
+        if tag.startswith('{'):
+            ns, _tag = tag.rsplit('}')
+            tag = self.nsmap.get(ns[1:], '') + _tag
+        return tag
+
+    def _write(self, text):
+        """Write text by respecting the current indentlevel"""
+        spaces = ' ' * (self.indent * self.indentlevel)
+        t = spaces + text.strip() + '\n'
+        if hasattr(t, 'encode'):
+            t = t.encode(self.encoding, 'xmlcharrefreplace')
+        self.stream.write(t)  # expected bytes
+
+    def emptyElement(self, name, attrs):
+        """Add an empty element (may have attributes)"""
+        attr = ' '.join('%s=%s' % (n, quoteattr(scientificformat(v)))
+                        for n, v in sorted(attrs.items()))
+        self._write('<%s %s/>' % (name, attr))
+
+    def start_tag(self, name, attrs=None):
+        """Open an XML tag"""
+        if not attrs:
+            self._write('<%s>' % name)
+        else:
+            self._write('<' + name)
+            for (name, value) in sorted(attrs.items()):
+                self._write(
+                    ' %s=%s' % (name, quoteattr(scientificformat(value))))
+            self._write('>')
+        self.indentlevel += 1
+
+    def end_tag(self, name):
+        """Close an XML tag"""
+        self.indentlevel -= 1
+        self._write('</%s>' % name)
+
+    def serialize(self, node):
+        """Serialize a node object (typically an ElementTree object)"""
+        if isinstance(node.tag, types.FunctionType):
+            # this looks like a bug of ElementTree: comments are stored as
+            # functions!?? see https://hg.python.org/sandbox/python2.7/file/tip/Lib/xml/etree/ElementTree.py#l458
+            return
+        if self.nsmap is not None:
+            tag = self.shorten(node.tag)
+        else:
+            tag = node.tag
+        with warnings.catch_warnings():  # unwanted ElementTree warning
+            warnings.simplefilter('ignore')
+            leafnode = not node
+        # NB: we cannot use len(node) to identify leafs since nodes containing
+        # an iterator have no length. They are always True, even if empty :-(
+        if leafnode and node.text is None:
+            self.emptyElement(tag, node.attrib)
+            return
+        self.start_tag(tag, node.attrib)
+        if node.text is not None:
+            self._write(escape(scientificformat(node.text).strip()))
+        for subnode in node:
+            self.serialize(subnode)
+        self.end_tag(tag)
+
+    def __enter__(self):
+        """Write the XML declaration"""
+        self._write('<?xml version="1.0" encoding="%s"?>\n' %
+                    self.encoding)
+        return self
+
+    def __exit__(self, etype, exc, tb):
+        """Close the XML document"""
+        pass
 
 
 class SourceLineParser(ElementTree.XMLParser):
@@ -509,7 +683,7 @@ def node_to_xml(node, output=sys.stdout, nsmap=None):
     """
     Convert a Node object into a pretty .xml file without keeping
     everything in memory. If you just want the string representation
-    use commonlib.writers.tostring(node).
+    use tostring(node).
 
     :param node: a Node-compatible object (ElementTree nodes are fine)
     :param nsmap: if given, shorten the tags with aliases
