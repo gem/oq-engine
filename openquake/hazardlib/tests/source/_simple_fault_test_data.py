@@ -907,5 +907,3 @@ TEST5_RUPTURES = [
         ]
     ),
 ]
-
-

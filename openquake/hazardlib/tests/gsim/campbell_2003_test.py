@@ -94,4 +94,3 @@ class Campbell2003MwNSHMP2008TestCase(BaseGSIMTestCase):
     def test_std_total(self):
         self.check('C03/C03MwNSHMP2008_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
-
