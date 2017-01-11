@@ -1,6 +1,8 @@
   [Daniele Viganò]
   * Port WebUI/API server to Django 1.9 and 1.10
   * Add dependencies to setup.py
+  * Add dependencies to setup.py
+  * Update Copyright to 2017
 
   [Michele Simionato]
   * Increased the splitting of ComplexFaultSources
