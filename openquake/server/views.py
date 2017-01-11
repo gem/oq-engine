@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -40,7 +40,10 @@ try:
     from django.http import FileResponse  # Django >= 1.8
 except ImportError:
     from django.http import StreamingHttpResponse as FileResponse
-from django.core.servers.basehttp import FileWrapper
+try:
+    from wsgiref.util import FileWrapper  # Django >= 1.9
+except ImportError:
+    from django.core.servers.basehttp import FileWrapper
 
 from openquake.baselib.general import groupby, writetmp
 from openquake.baselib.python3compat import unicode
