@@ -18,22 +18,22 @@
 
 from django.conf.urls import url
 
-from openquake.server import views as oqserver
+from openquake.server import views
 
 # each url is prefixed with /v1/calc/
 urlpatterns = [
-    url(r'^list$', oqserver.calc),
-    url(r'^(\d+)$', oqserver.calc_info),
-    url(r'^(\d+)/datastore$', oqserver.get_datastore),
-    url(r'^(\d+)/status$', oqserver.calc),
-    url(r'^(\d+)/results$', oqserver.calc_results),
-    url(r'^(\d+)/traceback$', oqserver.get_traceback),
-    url(r'^(\d+)/log/size$', oqserver.get_log_size),
-    url(r'^(\d+)/log/(\d*):(\d*)$', oqserver.get_log_slice),
-    url(r'^(\d+)/remove$', oqserver.calc_remove),
-    url(r'^result/(\d+)$', oqserver.get_result),
-    url(r'^run$', oqserver.run_calc),
+    url(r'^list$', views.calc),
+    url(r'^(\d+)$', views.calc_info),
+    url(r'^(\d+)/datastore$', views.get_datastore),
+    url(r'^(\d+)/status$', views.calc),
+    url(r'^(\d+)/results$', views.calc_results),
+    url(r'^(\d+)/traceback$', views.get_traceback),
+    url(r'^(\d+)/log/size$', views.get_log_size),
+    url(r'^(\d+)/log/(\d*):(\d*)$', views.get_log_slice),
+    url(r'^(\d+)/remove$', views.calc_remove),
+    url(r'^result/(\d+)$', views.get_result),
+    url(r'^run$', views.run_calc),
 
-    url(r'^(\d+)/result/list$', oqserver.calc_results),
-    url(r'^\d+/result/(\d+)$', oqserver.get_result),
+    url(r'^(\d+)/result/list$', views.calc_results),
+    url(r'^\d+/result/(\d+)$', views.get_result),
 ]
