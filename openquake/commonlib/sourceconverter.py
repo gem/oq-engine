@@ -403,7 +403,6 @@ class RuptureConverter(object):
         else:  # a collection of planar surfaces
             planar_surfaces = list(map(self.geo_planar, surface_nodes))
             surface = geo.MultiSurface(planar_surfaces)
-        surface.surface_nodes = surface_nodes
         return surface
 
     def convert_simpleFaultRupture(self, node, mag, rake, hypocenter):
