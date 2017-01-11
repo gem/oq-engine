@@ -30,7 +30,7 @@ import numpy
 from xml.etree import ElementTree as et
 
 from openquake.commonlib import node, nrml
-from openquake.commonlib.writers import scientificformat, floatformat
+from openquake.commonlib.node import scientificformat, floatformat
 
 by_imt = operator.itemgetter('imt', 'sa_period', 'sa_damping')
 
