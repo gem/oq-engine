@@ -24,7 +24,7 @@ import collections
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.risklib import valid
-from openquake.commonlib.node import context, striptag
+from openquake.baselib.node import context, striptag
 
 MAXWEIGHT = 200  # tuned by M. Simionato
 

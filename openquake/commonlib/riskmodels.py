@@ -25,7 +25,7 @@ import collections
 import numpy
 
 from openquake.risklib import valid
-from openquake.commonlib.node import Node
+from openquake.baselib.node import Node
 from openquake.commonlib import nrml
 from openquake.commonlib.sourcewriter import obj_to_node
 

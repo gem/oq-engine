@@ -29,8 +29,8 @@ import numpy
 
 from xml.etree import ElementTree as et
 
-from openquake.commonlib import node, nrml
-from openquake.commonlib.node import scientificformat, floatformat
+from openquake.baselib.node import Node, scientificformat, floatformat
+from openquake.commonlib import nrml
 
 by_imt = operator.itemgetter('imt', 'sa_period', 'sa_damping')
 
@@ -279,7 +279,7 @@ def gen_gmfs(gmf_set):
     are sorted by lon/lat.
     """
     for gmf in gmf_set:
-        gmf_node = node.Node('gmf')
+        gmf_node = Node('gmf')
         gmf_node['IMT'] = gmf.imt
         if gmf.imt == 'SA':
             gmf_node['saPeriod'] = str(gmf.sa_period)
@@ -289,8 +289,7 @@ def gen_gmfs(gmf_set):
             gmf_node['ruptureId'] = etag
         sorted_nodes = sorted(gmf)
         gmf_node.nodes = (
-            node.Node(
-                'node', dict(gmv=n.gmv, lon=n.location.x, lat=n.location.y))
+            Node('node', dict(gmv=n.gmv, lon=n.location.x, lat=n.location.y))
             for n in sorted_nodes)
         yield gmf_node
 
@@ -343,7 +342,7 @@ class EventBasedGMFXMLWriter(object):
         """
         gmf_set_nodes = []
         for gmf_set in data:
-            gmf_set_node = node.Node('gmfSet')
+            gmf_set_node = Node('gmfSet')
             if gmf_set.investigation_time:
                 gmf_set_node['investigationTime'] = str(
                     gmf_set.investigation_time)
@@ -352,7 +351,7 @@ class EventBasedGMFXMLWriter(object):
             gmf_set_node.nodes = gen_gmfs(gmf_set)
             gmf_set_nodes.append(gmf_set_node)
 
-        gmf_container = node.Node('gmfCollection')
+        gmf_container = Node('gmfCollection')
         gmf_container[SM_TREE_PATH] = self.sm_lt_path
         gmf_container[GSIM_TREE_PATH] = self.gsim_lt_path
         gmf_container.nodes = gmf_set_nodes
