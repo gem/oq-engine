@@ -21,8 +21,8 @@ import unittest
 import tempfile
 from io import BytesIO
 from openquake.baselib.performance import memory_info
-from openquake.commonlib.writers import tostring, StreamingXMLWriter, write_csv
-from openquake.commonlib.node import Node
+from openquake.commonlib.writers import write_csv
+from openquake.commonlib.node import Node, tostring, StreamingXMLWriter
 from xml.etree import ElementTree as etree
 
 import numpy
