@@ -39,8 +39,6 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
-                # Insert your TEMPLATE_CONTEXT_PROCESSORS here or use this
-                # list if you haven't customized them:
                 'django.contrib.auth.context_processors.auth',
                 'django.template.context_processors.debug',
                 'django.template.context_processors.i18n',
@@ -64,7 +62,6 @@ STATICFILES_DIRS = [
     os.path.join(OQSERVER_ROOT, 'static'),
 ]
 
-# We need a 'default' database to make Django happy:
 DATABASE = {
     'ENGINE': 'django.db.backends.sqlite3',
     'NAME': os.path.expanduser(DB_SECTION.get('file')),
@@ -86,7 +83,7 @@ AUTHENTICATION_BACKENDS = ()
 # timezone as the operating system.
 # If running in a Windows environment this must be set to the same as your
 # system time zone.
-TIME_ZONE = 'Europe/Zurich'
+TIME_ZONE = 'Europe/Rome'
 
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html
@@ -168,9 +165,6 @@ LOGGING = {
 }
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1
-
-# Enable this setting if used as backend for the OpenQuake Platform
-# DEFAULT_USER = 'platform'
 
 try:
     from local_settings import *
