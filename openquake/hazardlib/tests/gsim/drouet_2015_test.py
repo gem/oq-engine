@@ -56,4 +56,3 @@ class DrouetEtAl2015withDepthTestCase(DrouetEtAl2015TestCase):
     TOTAL_FILE = "drouet_2015/DROUET2015_DEPTH_TOTAL.csv"
     INTER_FILE = "drouet_2015/DROUET2015_DEPTH_INTER_EVENT.csv"
     INTRA_FILE = "drouet_2015/DROUET2015_DEPTH_INTRA_EVENT.csv"
-    

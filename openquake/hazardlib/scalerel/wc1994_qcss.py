@@ -60,4 +60,3 @@ class WC1994_QCSS(BaseMSRSigma):
         """
         # strike slip
         return 0.15
-

@@ -86,4 +86,3 @@ class CampbellBozorgnia2008ArbitraryTestCase(BaseGSIMTestCase):
     def test_std_total_strike_slip(self):
         self.check('CB08/CB08_SS_STD_TOTAL_ARBITRARY.csv',
                    max_discrep_percentage=0.1)
-
