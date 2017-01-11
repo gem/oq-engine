@@ -709,7 +709,7 @@ _lxc_name_and_ip_get()
     if [ $e -eq 40 ]; then
         return 1
     fi
-    echo "SUCCESSFULLY RUN $lxc_name ($lxc_ip)"
+    echo "SUCCESSFULLY STARTED: $lxc_name ($lxc_ip)"
 
     return 0
 }
