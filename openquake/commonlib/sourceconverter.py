@@ -719,8 +719,7 @@ class SourceConverter(RuptureConverter):
             mfd=self.convert_mfdist(node),
             surface=self.convert_surfaces(node.surface),
             rake=~node.rake,
-            temporal_occurrence_model=self.tom,
-            surface_node=node.surface)
+            temporal_occurrence_model=self.tom)
         return char
 
     def convert_nonParametricSeismicSource(self, node):
