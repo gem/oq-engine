@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2016 GEM Foundation
+# Copyright (C) 2013-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -44,7 +44,7 @@ README = """
 OpenQuake is an open source application that allows users to
 compute seismic hazard and seismic risk of earthquakes on a global scale.
 
-Copyright (C) 2010-2016 GEM Foundation
+Copyright (C) 2010-2017 GEM Foundation
 """
 
 PY_MODULES = ['openquake.commands.__main__']
@@ -60,7 +60,7 @@ install_requires = [
     'shapely >=1.3, <1.6',
     'docutils >=0.11, <0.14',
     'decorator >=3.4, <4.1',
-    'django >=1.6, <1.10',
+    'django >=1.6, <1.9',
     'requests >=2.2, <2.13',
     # pyshp is fragile, we want only versions we have tested
     'pyshp >=1.2.3, <1.2.11',
@@ -70,7 +70,7 @@ install_requires = [
 if sys.version < '3':
     install_requires.append(
         'futures >=2.1, <3.1'
-)
+    )
 
 extras_require = {
     'rtree':  ["Rtree==0.8.2"],
@@ -91,13 +91,18 @@ setup(
     url=url,
     long_description=README,
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Education',
         'Intended Audience :: Science/Research',
         'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.5',
         'License :: OSI Approved :: GNU Affero General Public License v3',
         'Operating System :: OS Independent',
         'Topic :: Scientific/Engineering',
+        'Environment :: Console',
+        'Environment :: Web Environment',
     ],
     packages=find_packages(exclude=["qa_tests", "qa_tests.*",
                                     "tools",
