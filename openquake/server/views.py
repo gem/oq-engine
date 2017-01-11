@@ -40,7 +40,10 @@ try:
     from django.http import FileResponse  # Django >= 1.8
 except ImportError:
     from django.http import StreamingHttpResponse as FileResponse
-from django.core.servers.basehttp import FileWrapper
+try:
+    from wsgiref.util import FileWrapper  # Django >= 1.9
+except ImportError:
+    from django.core.servers.basehttp import FileWrapper
 
 from openquake.baselib.general import groupby, writetmp
 from openquake.baselib.python3compat import unicode
