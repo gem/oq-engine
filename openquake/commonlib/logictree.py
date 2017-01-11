@@ -34,6 +34,7 @@ import operator
 from collections import namedtuple
 from decimal import Decimal
 
+from openquake.baselib import node
 from openquake.baselib.general import groupby
 from openquake.baselib.python3compat import raise_
 import openquake.hazardlib
@@ -42,11 +43,11 @@ from openquake.hazardlib.gsim.gsim_table import GMPETable
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo
 from openquake.risklib import valid
-from openquake.commonlib import nrml, writers, node
+from openquake.commonlib import nrml
 from openquake.commonlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 
-from openquake.commonlib.node import (
+from openquake.baselib.node import (
     node_from_xml, striptag, node_from_elem, Node as N, context)
 
 #: Minimum value for a seed number

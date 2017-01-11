@@ -86,7 +86,7 @@ import itertools
 import numpy
 
 from openquake.baselib.general import CallableDict, groupby
-from openquake.commonlib.node import (
+from openquake.baselib.node import (
     node_to_xml, Node, striptag, ValidatingXmlParser, context, floatformat)
 from openquake.risklib import scientific, valid
 from openquake.commonlib import InvalidFile, sourceconverter

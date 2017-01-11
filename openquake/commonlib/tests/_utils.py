@@ -19,7 +19,7 @@
 from xml.etree.ElementTree import parse
 
 from openquake.baselib.general import writetmp
-from openquake.commonlib.node import tostring
+from openquake.baselib.node import tostring
 from openquake.commonlib.nrml import PARSE_NS_MAP
 
 
