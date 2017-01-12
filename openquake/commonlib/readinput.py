@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -758,7 +758,7 @@ def get_sitecol_assets(oqparam, exposure):
     assets_by_site = []
     for lonlat in zip(sitecol.lons, sitecol.lats):
         assets = assets_by_loc[lonlat]
-        assets_by_site.append(sorted(assets, key=operator.attrgetter('id')))
+        assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
     return sitecol, numpy.array(assets_by_site)
 
 

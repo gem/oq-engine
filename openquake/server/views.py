@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -33,20 +33,23 @@ from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest)
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django.shortcuts import render_to_response
+from django.shortcuts import render
 from django.template import RequestContext
 from django.contrib.auth import authenticate, login, logout
 try:
     from django.http import FileResponse  # Django >= 1.8
 except ImportError:
     from django.http import StreamingHttpResponse as FileResponse
-from django.core.servers.basehttp import FileWrapper
+try:
+    from wsgiref.util import FileWrapper  # Django >= 1.9
+except ImportError:
+    from django.core.servers.basehttp import FileWrapper
 
 from openquake.baselib.general import groupby, writetmp
 from openquake.baselib.python3compat import unicode
 from openquake.commonlib import nrml, readinput, oqvalidation
-from openquake.commonlib.parallel import TaskManager, safely_call
-from openquake.commonlib.export import export
+from openquake.baselib.parallel import TaskManager, safely_call
+from openquake.calculators.export import export
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, logs
@@ -560,20 +563,17 @@ def get_datastore(request, job_id):
 
 
 def web_engine(request, **kwargs):
-    return render_to_response("engine/index.html",
-                              dict(),
-                              context_instance=RequestContext(request))
+    return render(request, "engine/index.html",
+                  dict())
 
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs(request, calc_id, **kwargs):
-    return render_to_response("engine/get_outputs.html",
-                              dict([('calc_id', calc_id)]),
-                              context_instance=RequestContext(request))
+    return render(request, "engine/get_outputs.html",
+                  dict([('calc_id', calc_id)]))
 
 
 @require_http_methods(['GET'])
 def license(request, **kwargs):
-    return render_to_response("engine/license.html",
-                              context_instance=RequestContext(request))
+    return render(request, "engine/license.html")

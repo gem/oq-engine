@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,10 +27,10 @@ import sys
 import mock
 import time
 
-
+from openquake.baselib import parallel
 from openquake.baselib.general import humansize, AccumDict
 from openquake.baselib.python3compat import encode
-from openquake.commonlib import readinput, parallel
+from openquake.commonlib import readinput
 from openquake.calculators.classical import PSHACalculator
 from openquake.calculators import views
 

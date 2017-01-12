@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,7 +30,8 @@ from openquake.hazardlib.probability_map import ProbabilityMap, PmapStats
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str
-from openquake.commonlib import parallel, calc, util
+from openquake.baselib import parallel
+from openquake.commonlib import calc, util
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 

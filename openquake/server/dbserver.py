@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (C) 2016 GEM Foundation
+#  Copyright (C) 2016-2017 GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -27,7 +27,7 @@ from multiprocessing.connection import Listener
 from concurrent.futures import ProcessPoolExecutor
 
 from openquake.baselib import sap
-from openquake.commonlib.parallel import safely_call
+from openquake.baselib.parallel import safely_call
 from openquake.risklib import valid
 from openquake.commonlib import config
 from openquake.server.db import actions

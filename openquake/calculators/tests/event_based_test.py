@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,7 +27,7 @@ import numpy.testing
 from openquake.baselib.general import group_array
 from openquake.commonlib.datastore import read
 from openquake.commonlib.util import max_rel_diff_index
-from openquake.commonlib.export import export
+from openquake.calculators.export import export
 from openquake.calculators.event_based import get_mean_curves
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
@@ -201,8 +201,8 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got, sorted)
 
-        [fname] = export(('ses', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/ses.csv', fname)
+        [fname] = export(('ruptures', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ruptures.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_6(self):

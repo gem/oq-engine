@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,7 +22,7 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import zip
+from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import groupby, get_array
 from openquake.hazardlib import site, calc
@@ -39,6 +39,15 @@ FIELDS = ('site_id', 'lon', 'lat', 'idx', 'taxonomy_id', 'area', 'number',
 by_taxonomy = operator.attrgetter('taxonomy')
 
 
+class MultiLoss(object):
+    def __init__(self, loss_types, values):
+        self.loss_types = loss_types
+        self.values = values
+
+    def __getitem__(self, l):
+        return self.values[l]
+
+
 class AssetCollection(object):
     D, I, R = len('deductible-'), len('insurance_limit-'), len('retrofitted-')
 
@@ -46,7 +55,7 @@ class AssetCollection(object):
                  time_events=''):
         self.cc = cost_calculator
         self.time_event = time_event
-        self.time_events = hdf5.array_of_vstr(time_events)
+        self.time_events = time_events
         self.array, self.taxonomies = self.build_asset_collection(
             assets_by_site, time_event)
         fields = self.array.dtype.names
@@ -74,7 +83,7 @@ class AssetCollection(object):
         """
         :returns: a composite array of asset values by loss type
         """
-        loss_dt = numpy.dtype([(lt, float) for lt in self.loss_types])
+        loss_dt = numpy.dtype([(str(lt), float) for lt in self.loss_types])
         vals = numpy.zeros(len(self), loss_dt)  # asset values by loss_type
         for assets in self.assets_by_site():
             for asset in assets:
@@ -115,18 +124,23 @@ class AssetCollection(object):
         return len(self.array)
 
     def __toh5__(self):
+        # NB: the loss types do not contain spaces, so we can store them
+        # together as a single space-separated string
         attrs = {'time_event': self.time_event or 'None',
-                 'time_events': self.time_events,
-                 'loss_types': hdf5.array_of_vstr(self.loss_types),
-                 'deduc': hdf5.array_of_vstr(self.deduc),
-                 'i_lim': hdf5.array_of_vstr(self.i_lim),
-                 'retro': hdf5.array_of_vstr(self.retro),
+                 'time_events': ' '.join(map(decode, self.time_events)),
+                 'loss_types': ' '.join(self.loss_types),
+                 'deduc': ' '.join(self.deduc),
+                 'i_lim': ' '.join(self.i_lim),
+                 'retro': ' '.join(self.retro),
                  'nbytes': self.array.nbytes}
         return dict(array=self.array, taxonomies=self.taxonomies,
                     cost_calculator=self.cc), attrs
 
     def __fromh5__(self, dic, attrs):
-        vars(self).update(attrs)
+        for name in ('time_events', 'loss_types', 'deduc', 'i_lim', 'retro'):
+            setattr(self, name, attrs[name].split())
+        self.time_event = attrs['time_event']
+        self.nbytes = attrs['nbytes']
         self.array = dic['array'].value
         self.taxonomies = dic['taxonomies'].value
         self.cc = dic['cost_calculator']
@@ -175,7 +189,7 @@ class AssetCollection(object):
         asset_ordinal = 0
         fields = set(asset_dt.fields)
         for sid, assets_ in enumerate(assets_by_site):
-            for asset in sorted(assets_, key=operator.attrgetter('id')):
+            for asset in sorted(assets_, key=operator.attrgetter('idx')):
                 asset.ordinal = asset_ordinal
                 record = assetcol[asset_ordinal]
                 asset_ordinal += 1
@@ -187,7 +201,7 @@ class AssetCollection(object):
                     elif field == 'area':
                         value = asset.area
                     elif field == 'idx':
-                        value = asset.id
+                        value = asset.idx
                     elif field == 'site_id':
                         value = sid
                     elif field == 'lon':
@@ -297,63 +311,6 @@ class CompositeRiskModel(collections.Mapping):
                 iml[rf.imt].append(rf.imls[0])
         return {imt: min(iml[imt]) for imt in iml}
 
-    def build_loss_dtypes(self, conditional_loss_poes, insured_losses=False):
-        """
-        :param conditional_loss_poes:
-            configuration parameter
-        :param insured_losses:
-            configuration parameter
-        :returns:
-           loss_curve_dt and loss_maps_dt
-        """
-        lst = [('poe-%s' % poe, F32) for poe in conditional_loss_poes]
-        if insured_losses:
-            lst += [(name + '_ins', pair) for name, pair in lst]
-        lm_dt = numpy.dtype(lst)
-        lc_list = []
-        lm_list = []
-        for cb in (b for b in self.curve_builders if b.user_provided):
-            pairs = [('losses', (F32, cb.curve_resolution)),
-                     ('poes', (F32, cb.curve_resolution)),
-                     ('avg', F32)]
-            if insured_losses:
-                pairs += [(name + '_ins', pair) for name, pair in pairs]
-            lc_list.append((cb.loss_type, numpy.dtype(pairs)))
-            lm_list.append((cb.loss_type, lm_dt))
-        loss_curve_dt = numpy.dtype(lc_list) if lc_list else None
-        loss_maps_dt = numpy.dtype(lm_list) if lm_list else None
-        return loss_curve_dt, loss_maps_dt
-
-    # FIXME: scheduled for removal once we change agg_curve to be built from
-    # the user-provided loss ratios
-    def build_all_loss_dtypes(self, curve_resolution, conditional_loss_poes,
-                              insured_losses=False):
-        """
-        :param conditional_loss_poes:
-            configuration parameter
-        :param insured_losses:
-            configuration parameter
-        :returns:
-           loss_curve_dt and loss_maps_dt
-        """
-        lst = [('poe-%s' % poe, F32) for poe in conditional_loss_poes]
-        if insured_losses:
-            lst += [(name + '_ins', pair) for name, pair in lst]
-        lm_dt = numpy.dtype(lst)
-        lc_list = []
-        lm_list = []
-        for loss_type in self.loss_types:
-            pairs = [('losses', (F32, curve_resolution)),
-                     ('poes', (F32, curve_resolution)),
-                     ('avg', F32)]
-            if insured_losses:
-                pairs += [(name + '_ins', pair) for name, pair in pairs]
-            lc_list.append((loss_type, numpy.dtype(pairs)))
-            lm_list.append((loss_type, lm_dt))
-        loss_curve_dt = numpy.dtype(lc_list) if lc_list else None
-        loss_maps_dt = numpy.dtype(lm_list) if lm_list else None
-        return loss_curve_dt, loss_maps_dt
-
     def make_curve_builders(self, oqparam):
         """
         Populate the inner lists .loss_types, .curve_builders.
@@ -361,6 +318,8 @@ class CompositeRiskModel(collections.Mapping):
         default_loss_ratios = numpy.linspace(
             0, 1, oqparam.loss_curve_resolution + 1)[1:]
         loss_types = self._get_loss_types()
+        ses_ratio = oqparam.ses_ratio if oqparam.calculation_mode in (
+            'event_based_risk',) else 1
         for l, loss_type in enumerate(loss_types):
             if oqparam.calculation_mode in ('classical', 'classical_risk'):
                 curve_resolutions = set()
@@ -372,22 +331,25 @@ class CompositeRiskModel(collections.Mapping):
                         curve_resolutions.add(len(ratios))
                         lines.append('%s %d' % (
                             rm.risk_functions[loss_type], len(ratios)))
-                if len(curve_resolutions) > 1:
+                if len(curve_resolutions) > 1:  # example in test_case_5
                     logging.info(
                         'Different num_loss_ratios:\n%s', '\n'.join(lines))
                 cb = scientific.CurveBuilder(
-                    loss_type, ratios, True,
-                    oqparam.conditional_loss_poes, oqparam.insured_losses,
-                    curve_resolution=max(curve_resolutions))
+                    loss_type, max(curve_resolutions), ratios, ses_ratio,
+                    True, oqparam.conditional_loss_poes,
+                    oqparam.insured_losses)
             elif loss_type in oqparam.loss_ratios:  # loss_ratios provided
                 cb = scientific.CurveBuilder(
-                    loss_type, oqparam.loss_ratios[loss_type], True,
+                    loss_type, oqparam.loss_curve_resolution,
+                    oqparam.loss_ratios[loss_type], ses_ratio, True,
                     oqparam.conditional_loss_poes, oqparam.insured_losses)
             else:  # no loss_ratios provided
                 cb = scientific.CurveBuilder(
-                    loss_type, default_loss_ratios, False,
+                    loss_type, oqparam.loss_curve_resolution,
+                    default_loss_ratios, ses_ratio, False,
                     oqparam.conditional_loss_poes, oqparam.insured_losses)
             self.curve_builders.append(cb)
+            cb.index = l
             self.lti[loss_type] = l
         return loss_types
 
@@ -467,21 +429,25 @@ class CompositeRiskModel(collections.Mapping):
                 hazard = hazard_getter(rlz)
             for taxonomy in sorted(taxonomies):
                 riskmodel = self[taxonomy]
-                for lt in self.loss_types:
-                    imt = riskmodel.risk_functions[lt].imt
-                    with mon_risk:
-                        for i, assets, epsgetter in dic[taxonomy]:
+                with mon_risk:
+                    for i, assets, epsgetter in dic[taxonomy]:
+                        outs = [None] * len(self.lti)
+                        for lt in self.loss_types:
+                            imt = riskmodel.risk_functions[lt].imt
                             haz = hazard[i].get(imt, ())
                             if len(haz):
                                 out = riskmodel(lt, assets, haz, epsgetter)
-                                if out:  # can be None in scenario_risk
-                                    out.lr = self.lti[lt], rlz.ordinal
-                                    yield out
+                                outs[self.lti[lt]] = out
+                        row = MultiLoss(self.loss_types, outs)
+                        row.r = rlz.ordinal
+                        row.assets = assets
+                        yield row
         if hasattr(hazard_getter, 'gmfbytes'):  # for event based risk
             monitor.gmfbytes = hazard_getter.gmfbytes
 
     def __toh5__(self):
-        return self._riskmodels, dict(covs=self.covs)
+        loss_types = hdf5.array_of_vstr(self._get_loss_types())
+        return self._riskmodels, dict(covs=self.covs, loss_types=loss_types)
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
@@ -626,7 +592,7 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
     eps = numpy.zeros((num_assets, num_samples), numpy.float32)
     for taxonomy, assets in assets_by_taxo.items():
         # the association with the epsilons is done in order
-        assets.sort(key=operator.attrgetter('id'))
+        assets.sort(key=operator.attrgetter('idx'))
         shape = (len(assets), num_samples)
         logging.info('Building %s epsilons for taxonomy %s', shape, taxonomy)
         zeros = numpy.zeros(shape)
