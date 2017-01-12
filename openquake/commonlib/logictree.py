@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2016 GEM Foundation
+# Copyright (C) 2010-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -34,6 +34,7 @@ import operator
 from collections import namedtuple
 from decimal import Decimal
 
+from openquake.baselib import node
 from openquake.baselib.general import groupby
 from openquake.baselib.python3compat import raise_
 import openquake.hazardlib
@@ -42,11 +43,11 @@ from openquake.hazardlib.gsim.gsim_table import GMPETable
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo
 from openquake.risklib import valid
-from openquake.commonlib import nrml, writers
+from openquake.commonlib import nrml
 from openquake.commonlib.sourceconverter import (
-    split_coords_2d, split_coords_3d)
+    split_coords_2d, split_coords_3d, SourceModel)
 
-from openquake.commonlib.node import (
+from openquake.baselib.node import (
     node_from_xml, striptag, node_from_elem, Node as N, context)
 
 #: Minimum value for a seed number
@@ -446,7 +447,7 @@ class SourceModelLogicTree(object):
         root = nrml.read(filename)
         try:
             tree = root.logicTree
-        except NameError:
+        except AttributeError:
             raise ValidationError(
                 root, self.filename, "missing logicTree node")
         self.parse_tree(tree, validate)
@@ -555,15 +556,27 @@ class SourceModelLogicTree(object):
             if branch_id in self.branches:
                 raise ValidationError(
                     branchnode, self.filename,
-                    "branchID '%s' is not unique" % branch_id
-                )
+                    "branchID '%s' is not unique" % branch_id)
             self.branches[branch_id] = branch
             branchset.branches.append(branch)
         if weight_sum != 1.0:
             raise ValidationError(
                 branchset_node, self.filename,
-                "branchset weights don't sum up to 1.0"
-            )
+                "branchset weights don't sum up to 1.0")
+
+    def gen_source_models(self, gsim_lt):
+        """
+        Yield empty SourceModel instances (one per effective realization)
+        """
+        samples_by_lt_path = self.samples_by_lt_path()
+        for i, rlz in enumerate(get_effective_rlzs(self)):
+            smpath = rlz.lt_path
+            num_samples = samples_by_lt_path[smpath]
+            num_gsim_paths = (num_samples if self.num_samples
+                              else gsim_lt.get_num_paths())
+            yield SourceModel(
+                rlz.value, rlz.weight / num_samples, smpath, [],
+                num_gsim_paths, i, num_samples)
 
     def sample_path(self, rnd):
         """
@@ -1131,7 +1144,7 @@ class GsimLogicTree(object):
         """
         :returns: an XML string representing the logic tree
         """
-        return writers.tostring(self._ltnode).decode('utf-8')
+        return node.tostring(self._ltnode).decode('utf-8')
 
     def reduce(self, trts):
         """

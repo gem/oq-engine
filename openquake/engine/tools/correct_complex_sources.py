@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,7 +23,7 @@ import sys
 import numpy
 
 from openquake.commonlib import nrml
-from openquake.commonlib.node import node_from_xml
+from openquake.baselib.node import node_from_xml
 
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.point import Point

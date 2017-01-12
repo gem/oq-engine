@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -849,30 +849,34 @@ def _build_csv_data(array, rlz, sitecol, imts, investigation_time):
 
 @export.add(('gmf_data', 'npz'))
 def export_gmf_scenario_npz(ekey, dstore):
-    # compute the GMFs on the fly from the stored rupture (if any)
     oq = dstore['oqparam']
-    if 'scenario' not in oq.calculation_mode:
-        logging.warn('GMF export not implemented for %s', oq.calculation_mode)
-        return []
-    sitemesh = get_mesh(dstore['sitecol'], complete=False)
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    gsims = rlzs_assoc.gsims_by_grp_id[0]  # there is a single grp_id
-    E = oq.number_of_ground_motion_fields
-    correl_model = oq.get_correl_model()
-    computer = gmf.GmfComputer(
-            dstore['ruptures/grp-00/0'], dstore['sitecol'], oq.imtls, gsims,
-            oq.truncation_level, correl_model)
-    fname = dstore.export_path('%s.%s' % ekey)
-    gmf_dt = numpy.dtype([(imt, (F32, E)) for imt in oq.imtls])
-    imts = list(oq.imtls)
     dic = {}
-    for gsim in gsims:
-        arr = computer.compute(gsim, E, oq.random_seed)
-        I, S, E = arr.shape  # #IMTs, #sites, #events
-        gmfa = numpy.zeros(S, gmf_dt)
-        for imti, imt in enumerate(imts):
-            gmfa[imt] = arr[imti]
-        dic[str(gsim)] = util.compose_arrays(sitemesh, gmfa)
+    fname = dstore.export_path('%s.%s' % ekey)
+    if 'scenario' in oq.calculation_mode:
+        # compute the GMFs on the fly from the stored rupture
+        sitemesh = get_mesh(dstore['sitecol'], complete=False)
+        rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+        gsims = rlzs_assoc.gsims_by_grp_id[0]  # there is a single grp_id
+        E = oq.number_of_ground_motion_fields
+        correl_model = oq.get_correl_model()
+        computer = gmf.GmfComputer(
+            dstore['ruptures/grp-00/0'], dstore['sitecol'], oq.imtls,
+            gsims, oq.truncation_level, correl_model)
+        gmf_dt = numpy.dtype([(imt, (F32, E)) for imt in oq.imtls])
+        imts = list(oq.imtls)
+        for gsim in gsims:
+            arr = computer.compute(gsim, E, oq.random_seed)
+            I, S, E = arr.shape  # #IMTs, #sites, #events
+            gmfa = numpy.zeros(S, gmf_dt)
+            for imti, imt in enumerate(imts):
+                gmfa[imt] = arr[imti]
+            dic[str(gsim)] = util.compose_arrays(sitemesh, gmfa)
+    elif 'gmf_data' in dstore:  # event_based
+        for sm_id in sorted(dstore['gmf_data']):
+            for rlzno in sorted(dstore['gmf_data/' + sm_id]):
+                dic['rlz-' + rlzno] = dstore['gmf_data/%s/%s' % (sm_id, rlzno)]
+    else:  # nothing to export
+        return []
     savez(fname, **dic)
     return [fname]
 
