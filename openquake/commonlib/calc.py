@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,7 +23,8 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import encode, decode
-from openquake.baselib.general import get_array, group_array, AccumDict
+from openquake.baselib.general import (
+    get_array, group_array, AccumDict, DictArray)
 from openquake.hazardlib.geo.mesh import RectangularMesh, build_array
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
@@ -237,8 +238,9 @@ def make_uhs(pmap, imtls, poes, nsites):
         an composite array containing nsites uniform hazard maps
     """
     P = len(poes)
-    array = make_hmap(pmap, imtls, poes).array  # size (N, I x P, 1)
     imts, _ = get_imts_periods(imtls)
+    dic = DictArray({imt: imtls[imt] for imt in imts})
+    array = make_hmap(pmap, dic, poes).array  # size (N, I x P, 1)
     imts_dt = numpy.dtype([(str(imt), F64) for imt in imts])
     uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in poes])
     uhs = numpy.zeros(nsites, uhs_dt)

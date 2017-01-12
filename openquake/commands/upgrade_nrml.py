@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,7 +27,7 @@ from openquake.baselib.general import groupby
 from openquake.risklib import scientific
 from openquake.commonlib.nrml import NRML05
 from openquake.baselib import sap
-from openquake.commonlib.node import context, striptag, Node
+from openquake.baselib.node import context, striptag, Node
 from openquake.commonlib import InvalidFile, riskmodels, nrml
 
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2016 GEM Foundation
+# Copyright (C) 2010-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -243,10 +243,3 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             expected_loss_ratios,
             self.vulnerability_function1(GMF[:10], EPSILONS))
-
-    def test_zero_curve(self):
-        expected = [0.] * 100
-        losses, poes = scientific.event_based(expected, 1, 11)
-
-        numpy.testing.assert_allclose([0.] * 11, losses)
-        numpy.testing.assert_allclose([0.] * 11, poes, atol=1E-10)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,8 +19,6 @@
 import os
 import getpass
 
-from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS
-
 from openquake.commonlib import config
 
 DB_SECTION = config.get_section('dbserver')
@@ -30,13 +28,29 @@ INSTALLED_APPS = ('openquake.server.db',)
 OQSERVER_ROOT = os.path.dirname(__file__)
 
 DEBUG = True
-TEMPLATE_DEBUG = DEBUG
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
-TEMPLATE_CONTEXT_PROCESSORS += (
-    'django.contrib.messages.context_processors.messages',
-    'openquake.server.utils.oq_server_context_processor',
-)
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [
+            # insert any extra TEMPLATE_DIRS here
+        ],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.contrib.auth.context_processors.auth',
+                'django.template.context_processors.debug',
+                'django.template.context_processors.i18n',
+                'django.template.context_processors.media',
+                'django.template.context_processors.static',
+                'django.template.context_processors.tz',
+                'django.contrib.messages.context_processors.messages',
+                'openquake.server.utils.oq_server_context_processor',
+            ],
+        },
+    },
+]
 
 STATIC_URL = '/static/'
 
@@ -48,7 +62,6 @@ STATICFILES_DIRS = [
     os.path.join(OQSERVER_ROOT, 'static'),
 ]
 
-# We need a 'default' database to make Django happy:
 DATABASE = {
     'ENGINE': 'django.db.backends.sqlite3',
     'NAME': os.path.expanduser(DB_SECTION.get('file')),
@@ -70,7 +83,7 @@ AUTHENTICATION_BACKENDS = ()
 # timezone as the operating system.
 # If running in a Windows environment this must be set to the same as your
 # system time zone.
-TIME_ZONE = 'Europe/Zurich'
+TIME_ZONE = 'Europe/Rome'
 
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html
@@ -101,8 +114,12 @@ AUTH_EXEMPT_URLS = ()
 
 ROOT_URLCONF = 'openquake.server.urls'
 
-INSTALLED_APPS += ('django.contrib.staticfiles',
-                   'openquake.server',)
+INSTALLED_APPS += (
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.staticfiles',
+    'openquake.server',
+)
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
@@ -149,9 +166,6 @@ LOGGING = {
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1
 
-# Enable this setting if used as backend for the OpenQuake Platform
-# DEFAULT_USER = 'platform'
-
 try:
     from local_settings import *
 except ImportError:
@@ -174,8 +188,6 @@ if LOCKDOWN:
     )
 
     INSTALLED_APPS += (
-        'django.contrib.auth',
-        'django.contrib.contenttypes',
         'django.contrib.messages',
         'django.contrib.sessions',
         'django.contrib.admin',
@@ -183,4 +195,4 @@ if LOCKDOWN:
 
     LOGIN_REDIRECT_URL = '/engine'
 
-    AUTH_EXEMPT_URLS = ('/accounts/ajax_login/', )
+    LOGIN_EXEMPT_URLS = ('/accounts/ajax_login/', )

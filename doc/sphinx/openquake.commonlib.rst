@@ -33,10 +33,10 @@ openquake.commonlib.logictree module
     :undoc-members:
     :show-inheritance:
 
-openquake.commonlib.node module
+openquake.baselib.node module
 -------------------------------
 
-.. automodule:: openquake.commonlib.node
+.. automodule:: openquake.baselib.node
     :members:
     :undoc-members:
     :show-inheritance:
@@ -57,10 +57,10 @@ openquake.commonlib.oqvalidation module
     :undoc-members:
     :show-inheritance:
 
-openquake.commonlib.parallel module
+openquake.baselib.parallel module
 -----------------------------------
 
-.. automodule:: openquake.commonlib.parallel
+.. automodule:: openquake.baselib.parallel
     :members:
     :undoc-members:
     :show-inheritance:
