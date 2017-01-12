@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -37,6 +37,15 @@ FIELDS = ('site_id', 'lon', 'lat', 'idx', 'taxonomy_id', 'area', 'number',
           'occupants', 'deductible-', 'insurance_limit-', 'retrofitted-')
 
 by_taxonomy = operator.attrgetter('taxonomy')
+
+
+class MultiLoss(object):
+    def __init__(self, loss_types, values):
+        self.loss_types = loss_types
+        self.values = values
+
+    def __getitem__(self, l):
+        return self.values[l]
 
 
 class AssetCollection(object):
@@ -420,16 +429,19 @@ class CompositeRiskModel(collections.Mapping):
                 hazard = hazard_getter(rlz)
             for taxonomy in sorted(taxonomies):
                 riskmodel = self[taxonomy]
-                for lt in self.loss_types:
-                    imt = riskmodel.risk_functions[lt].imt
-                    with mon_risk:
-                        for i, assets, epsgetter in dic[taxonomy]:
+                with mon_risk:
+                    for i, assets, epsgetter in dic[taxonomy]:
+                        outs = [None] * len(self.lti)
+                        for lt in self.loss_types:
+                            imt = riskmodel.risk_functions[lt].imt
                             haz = hazard[i].get(imt, ())
                             if len(haz):
                                 out = riskmodel(lt, assets, haz, epsgetter)
-                                if out:  # can be None in scenario_risk
-                                    out.lr = self.lti[lt], rlz.ordinal
-                                    yield out
+                                outs[self.lti[lt]] = out
+                        row = MultiLoss(self.loss_types, outs)
+                        row.r = rlz.ordinal
+                        row.assets = assets
+                        yield row
         if hasattr(hazard_getter, 'gmfbytes'):  # for event based risk
             monitor.gmfbytes = hazard_getter.gmfbytes
 

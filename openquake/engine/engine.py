@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2016 GEM Foundation
+# Copyright (C) 2010-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -95,8 +95,8 @@ def expose_outputs(dstore):
         rlzs = dstore['realizations']
     except KeyError:
         rlzs = []
-    if 'ass_loss_ratios' in dskeys:
-        dskeys.remove('ass_loss_ratios')  # export only specific IDs
+    if 'all_loss_ratios' in dskeys:
+        dskeys.remove('all_loss_ratios')  # export only specific IDs
     if 'realizations' in dskeys and len(rlzs) <= 1:
         dskeys.remove('realizations')  # do not export a single realization
     if 'ruptures' in dskeys and 'scenario' in calcmode:

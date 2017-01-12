@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,6 +25,38 @@ from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.risklib import valid
 from openquake.commonlib.node import context, striptag
+
+MAXWEIGHT = 200  # tuned by M. Simionato
+
+
+class SourceModel(object):
+    """
+    A container of SourceGroup instances with some additional attributes
+    describing the source model in the logic tree.
+    """
+    def __init__(self, name, weight, path, src_groups, num_gsim_paths, ordinal,
+                 samples):
+        self.name = name
+        self.weight = weight
+        self.path = path
+        self.src_groups = src_groups
+        self.num_gsim_paths = num_gsim_paths
+        self.ordinal = ordinal
+        self.samples = samples
+
+    @property
+    def num_sources(self):
+        return sum(len(sg) for sg in self.src_groups)
+
+    def get_skeleton(self):
+        """
+        Return an empty copy of the source model, i.e. without sources,
+        but with the proper attributes for each SourceGroup contained within.
+        """
+        src_groups = [SourceGroup(sg.trt, [], sg.min_mag, sg.max_mag, sg.id)
+                      for sg in self.src_groups]
+        return self.__class__(self.name, self.weight, self.path, src_groups,
+                              self.num_gsim_paths, self.ordinal, self.samples)
 
 
 class SourceGroup(collections.Sequence):
@@ -197,27 +229,15 @@ def area_to_point_sources(area_src):
         yield pt
 
 
-def split_fault_source_by_magnitude(src):
-    """
-    Utility splitting a fault source into fault sources with a single
-    magnitude bin.
-
-    :param src:
-        an instance of :class:`openquake.hazardlib.source.base.SeismicSource`
-    """
-    splitlist = []
-    i = 0
-    for mag, rate in src.mfd.get_annual_occurrence_rates():
-        if not rate:  # ignore zero occurency rate
-            continue
-        new_src = copy.copy(src)
-        new_src.source_id = '%s:%s' % (src.source_id, i)
-        new_src.mfd = mfd.ArbitraryMFD([mag], [rate])
-        i += 1
-        splitlist.append(new_src)
-    return splitlist
+def _split_start_stop(n, chunksize):
+    start = 0
+    while start < n:
+        stop = start + chunksize
+        yield start, min(stop, n)
+        start = stop
 
 
+# this is only called on heavy sources
 def split_fault_source(src):
     """
     Generator splitting a fault source into several fault sources.
@@ -229,9 +249,30 @@ def split_fault_source(src):
     # take advantage of the multiple cores; if you split too much,
     # the data transfer will kill you, i.e. multiprocessing/celery
     # will fail to transmit to the workers the generated sources.
-    for ss in split_fault_source_by_magnitude(src):
-        ss.num_ruptures = ss.count_ruptures()
-        yield ss
+    i = 0
+    splitlist = []
+    mag_rates = [(mag, rate) for (mag, rate) in
+                 src.mfd.get_annual_occurrence_rates() if rate]
+    if len(mag_rates) > 1:  # split by magnitude bin
+        for mag, rate in mag_rates:
+            new_src = copy.copy(src)
+            new_src.source_id = '%s:%s' % (src.source_id, i)
+            new_src.mfd = mfd.ArbitraryMFD([mag], [rate])
+            new_src.num_ruptures = new_src.count_ruptures()
+            i += 1
+            splitlist.append(new_src)
+    elif hasattr(src, 'start'):  # split by slice of ruptures
+        for start, stop in _split_start_stop(src.num_ruptures, MAXWEIGHT):
+            new_src = copy.copy(src)
+            new_src.start = start
+            new_src.stop = stop
+            new_src.num_ruptures = stop - start
+            new_src.source_id = '%s:%s' % (src.source_id, i)
+            i += 1
+            splitlist.append(new_src)
+    else:
+        splitlist.append(src)
+    return splitlist
 
 
 def split_source(src):

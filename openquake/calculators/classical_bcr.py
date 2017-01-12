@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -40,12 +40,14 @@ def classical_bcr(riskinput, riskmodel, bcr_dt, monitor):
         :class:`openquake.baselib.performance.Monitor` instance
     """
     result = {}  # (N, R) -> data
-    for out in riskmodel.gen_outputs(riskinput, monitor):
-        l, r = out.lr
-        for asset, (eal_orig, eal_retro, bcr) in zip(out.assets, out.data):
-            aval = asset.value(out.loss_type)
-            result[asset.ordinal, out.loss_type, r] = numpy.array([
-                (eal_orig * aval, eal_retro * aval, bcr)], bcr_dt)
+    for outputs in riskmodel.gen_outputs(riskinput, monitor):
+        assets = outputs.assets
+        for l, out in enumerate(outputs):
+            loss_type = riskmodel.loss_types[l]
+            for asset, (eal_orig, eal_retro, bcr) in zip(assets, out):
+                aval = asset.value(loss_type)
+                result[asset.ordinal, loss_type, outputs.r] = numpy.array([
+                    (eal_orig * aval, eal_retro * aval, bcr)], bcr_dt)
     return result
 
 
