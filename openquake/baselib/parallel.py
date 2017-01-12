@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2016 GEM Foundation
+# Copyright (C) 2010-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -318,7 +318,7 @@ class TaskManager(object):
       tm = TaskManager(do_something, logging.info)
       tm.send(arg1, arg2)
       tm.send(arg3, arg4)
-      print tm.reduce()
+      print(tm.reduce())
 
     Progress report is built-in.
     """

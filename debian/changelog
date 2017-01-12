@@ -1,3 +1,7 @@
+  [Daniele Viganò]
+  * Add dependencies to setup.py
+  * Update Copyright to 2017
+
   [Michele Simionato]
   * Moved node.py from the engine inside baselib; stored the surface nodes
     inside the Surface classes

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -38,4 +38,3 @@ class AbrahamsonSilva1997TestCase(BaseGSIMTestCase):
     def test_std_total(self):
         self.check('AS97/AS97_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
-

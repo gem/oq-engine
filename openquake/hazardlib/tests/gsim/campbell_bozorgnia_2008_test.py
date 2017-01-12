@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2016 GEM Foundation
+# Copyright (C) 2013-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -86,4 +86,3 @@ class CampbellBozorgnia2008ArbitraryTestCase(BaseGSIMTestCase):
     def test_std_total_strike_slip(self):
         self.check('CB08/CB08_SS_STD_TOTAL_ARBITRARY.csv',
                    max_discrep_percentage=0.1)
-
