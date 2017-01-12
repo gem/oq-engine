@@ -78,37 +78,6 @@ class LtRealization(object):
         return hash(repr(self))
 
 
-class SourceModel(object):
-    """
-    A container of SourceGroup instances with some additional attributes
-    describing the source model in the logic tree.
-    """
-    def __init__(self, name, weight, path, src_groups, num_gsim_paths, ordinal,
-                 samples):
-        self.name = name
-        self.weight = weight
-        self.path = path
-        self.src_groups = src_groups
-        self.num_gsim_paths = num_gsim_paths
-        self.ordinal = ordinal
-        self.samples = samples
-
-    @property
-    def num_sources(self):
-        return sum(len(sg) for sg in self.src_groups)
-
-    def get_skeleton(self):
-        """
-        Return an empty copy of the source model, i.e. without sources,
-        but with the proper attributes for each SourceGroup contained within.
-        """
-        src_groups = [sourceconverter.SourceGroup(
-            sg.trt, [], sg.min_mag, sg.max_mag, sg.id)
-                      for sg in self.src_groups]
-        return self.__class__(self.name, self.weight, self.path, src_groups,
-                              self.num_gsim_paths, self.ordinal, self.samples)
-
-
 def capitalize(words):
     """
     Capitalize words separated by spaces.
@@ -344,7 +313,7 @@ class CompositionInfo(object):
         """
         weight = 1
         gsim_lt = gsimlt or logictree.GsimLogicTree.from_('FromFile')
-        fakeSM = SourceModel(
+        fakeSM = sourceconverter.SourceModel(
             'fake', weight,  'b1',
             [sourceconverter.SourceGroup('*', eff_ruptures=1)],
             gsim_lt.get_num_paths(), ordinal=0, samples=1)
@@ -414,8 +383,9 @@ class CompositionInfo(object):
             path = tuple(str(decode(rec['path'])).split('_'))
             trts = set(sg.trt for sg in srcgroups)
             num_gsim_paths = self.gsim_lt.reduce(trts).get_num_paths()
-            sm = SourceModel(rec['name'], rec['weight'], path, srcgroups,
-                             num_gsim_paths, sm_id, rec['samples'])
+            sm = sourceconverter.SourceModel(
+                rec['name'], rec['weight'], path, srcgroups,
+                num_gsim_paths, sm_id, rec['samples'])
             self.source_models.append(sm)
 
     def get_num_rlzs(self, source_model=None):
@@ -534,7 +504,8 @@ class CompositeSourceModel(collections.Sequence):
     :param source_model_lt:
         a :class:`openquake.commonlib.logictree.SourceModelLogicTree` instance
     :param source_models:
-        a list of :class:`openquake.commonlib.source.SourceModel` tuples
+        a list of :class:`openquake.commonlib.sourceconverter.SourceModel`
+        tuples
     """
     def __init__(self, gsim_lt, source_model_lt, source_models,
                  set_weight=False):
@@ -587,8 +558,9 @@ class CompositeSourceModel(collections.Sequence):
                     sources.append(src)
                     weight += src.weight
                 src_group.sources = sources
-            newsm = SourceModel(sm.name, sm.weight, sm.path, src_groups,
-                                sm.num_gsim_paths, sm.ordinal, sm.samples)
+            newsm = sourceconverter.SourceModel(
+                sm.name, sm.weight, sm.path, src_groups,
+                sm.num_gsim_paths, sm.ordinal, sm.samples)
             source_models.append(newsm)
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models,
                              set_weight=True)
