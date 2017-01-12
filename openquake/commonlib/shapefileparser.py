@@ -29,7 +29,7 @@ from openquake.baselib.general import groupby
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.commonlib import nrml
-from openquake.commonlib.node import Node, striptag
+from openquake.baselib.node import Node, striptag
 from openquake.commonlib.sourceconverter import SourceConverter
 
 # maximum field size allowed by shapefile

@@ -28,7 +28,7 @@ from xml.etree import ElementTree as et
 
 from openquake.commonlib.nrml import SERIALIZE_NS_MAP
 from openquake.baselib.general import groupby, writetmp
-from openquake.commonlib.node import Node
+from openquake.baselib.node import Node
 from openquake.commonlib import nrml
 from openquake.commonlib.writers import FIVEDIGITS
 
