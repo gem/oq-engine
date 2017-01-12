@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2016 GEM Foundation
+# Copyright (C) 2010-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -44,7 +44,7 @@ from openquake.hazardlib import geo
 from openquake.risklib import valid
 from openquake.commonlib import nrml, writers
 from openquake.commonlib.sourceconverter import (
-    split_coords_2d, split_coords_3d)
+    split_coords_2d, split_coords_3d, SourceModel)
 
 from openquake.commonlib.node import (
     node_from_xml, striptag, node_from_elem, Node as N, context)
@@ -555,15 +555,27 @@ class SourceModelLogicTree(object):
             if branch_id in self.branches:
                 raise ValidationError(
                     branchnode, self.filename,
-                    "branchID '%s' is not unique" % branch_id
-                )
+                    "branchID '%s' is not unique" % branch_id)
             self.branches[branch_id] = branch
             branchset.branches.append(branch)
         if weight_sum != 1.0:
             raise ValidationError(
                 branchset_node, self.filename,
-                "branchset weights don't sum up to 1.0"
-            )
+                "branchset weights don't sum up to 1.0")
+
+    def gen_source_models(self, gsim_lt):
+        """
+        Yield empty SourceModel instances (one per effective realization)
+        """
+        samples_by_lt_path = self.samples_by_lt_path()
+        for i, rlz in enumerate(get_effective_rlzs(self)):
+            smpath = rlz.lt_path
+            num_samples = samples_by_lt_path[smpath]
+            num_gsim_paths = (num_samples if self.num_samples
+                              else gsim_lt.get_num_paths())
+            yield SourceModel(
+                rlz.value, rlz.weight / num_samples, smpath, [],
+                num_gsim_paths, i, num_samples)
 
     def sample_path(self, rnd):
         """
