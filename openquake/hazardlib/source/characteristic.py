@@ -55,8 +55,7 @@ class CharacteristicFaultSource(ParametricSeismicSource):
     its attribute `surface_node` to an explicit representation of the surface
     as a LiteralNode object.
     """
-    _slots_ = ParametricSeismicSource._slots_ + (
-        'surface surface_node rake').split()
+    _slots_ = ParametricSeismicSource._slots_ + 'surface rake'.split()
 
     MODIFICATIONS = set(('set_geometry',))
 
@@ -70,7 +69,6 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         NodalPlane.check_rake(rake)
         self.surface = surface
         self.rake = rake
-        self.surface_node = surface_node
 
     def get_rupture_enclosing_polygon(self, dilation=0):
         """

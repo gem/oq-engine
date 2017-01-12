@@ -3,6 +3,8 @@
   * Update Copyright to 2017
 
   [Michele Simionato]
+  * Moved node.py from the engine inside baselib; stored the surface nodes
+    inside the Surface classes
   * Added more functions to compute mean and quantiles
   * Cached the correlation matrix for speed
 

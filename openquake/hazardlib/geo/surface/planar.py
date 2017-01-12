@@ -22,6 +22,7 @@ Module :mod:`openquake.hazardlib.geo.surface.planar` contains
 """
 import numpy
 
+from openquake.baselib.node import Node
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
@@ -79,6 +80,18 @@ class PlanarSurface(BaseQuadrilateralSurface):
     _slots_ = ('mesh_spacing strike dip width length '
                'corner_lons corner_lats corner_depths '
                'normal d uv1 uv2 zero_zero').split()
+
+    @property
+    def surface_nodes(self):
+        """
+        A single element list containing a planarSurface node
+        """
+        node = Node('planarSurface')
+        for name, lon, lat, depth in zip(
+                'topLeft topRight bottomLeft bottomRight'.split(),
+                self.corner_lons, self.corner_lats, self.corner_depths):
+            node.append(Node(name, dict(lon=lon, lat=lat, depth=depth)))
+        return [node]
 
     def __init__(self, mesh_spacing, strike, dip,
                  top_left, top_right, bottom_right, bottom_left):
