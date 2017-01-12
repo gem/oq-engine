@@ -95,7 +95,13 @@ class NonParametricSeismicSource(BaseSeismicSource):
         :returns:
             Instance of :class:`openquake.hazardlib.geo.polygon.Polygon`.
         """
-        surfaces = [rup.surface for (rup, _) in self.data]
+        surfaces = []
+        for rup, _ in self.data:
+            if isinstance(rup.surface, MultiSurface):
+                for s in rup.surface.surfaces:
+                    surfaces.append(s)
+            else:
+                surfaces.append(rup.surface)
         multi_surf = MultiSurface(surfaces)
 
         west, east, north, south = multi_surf.get_bounding_box()
