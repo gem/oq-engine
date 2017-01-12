@@ -447,7 +447,7 @@ class SourceModelLogicTree(object):
         root = nrml.read(filename)
         try:
             tree = root.logicTree
-        except NameError:
+        except AttributeError:
             raise ValidationError(
                 root, self.filename, "missing logicTree node")
         self.parse_tree(tree, validate)

@@ -398,15 +398,12 @@ def rupture_to_element(rupture, parent=None):
                 node_elem.set('col', str(j))
                 node_elem.set('lon', str(rup.lons[i][j]))
                 node_elem.set('lat', str(rup.lats[i][j]))
-                node_elem.set(
-                    'depth', str(rup.depths[i][j]))
-        try:
-            # if we never entered the loop above, it's possible
-            # that i and j will be undefined
-            mesh_elem.set('rows', str(i + 1))
-            mesh_elem.set('cols', str(j + 1))
-        except NameError:
-            raise ValueError('Invalid rupture mesh')
+                node_elem.set('depth', str(rup.depths[i][j]))
+
+        # if we never entered the loop above, it's possible
+        # that i and j will be undefined
+        mesh_elem.set('rows', str(i + 1))
+        mesh_elem.set('cols', str(j + 1))
     else:
         # rupture is from a multi surface fault source
         if rup.is_multi_surface:
