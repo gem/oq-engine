@@ -376,6 +376,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         oqparam.width_of_mfd_bin,
         oqparam.area_source_discretization)
     parser = source.SourceModelParser(converter)
+    gsim_file = oqparam.inputs.get('gsim_logic_tree')
 
     # consider only the effective realizations
     for sm in source_model_lt.gen_source_models(gsim_lt):
@@ -403,6 +404,12 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         source_model_lt.tectonic_region_types.update(trts)
         logging.info('Processed source model %d with %d gsim path(s)',
                      sm.ordinal + 1, sm.num_gsim_paths)
+        if gsim_file:  # check TRTs
+            for src_group in src_groups:
+                if src_group.trt not in gsim_lt.values:
+                    raise ValueError(
+                        "Found in %r a tectonic region type %r inconsistent "
+                        "with the ones in %r" % (sm, src_group.trt, gsim_file))
         yield sm
 
     # log if some source file is being used more than once
