@@ -217,6 +217,7 @@ class ProbabilityMap(dict):
 
     def __or__(self, other):
         new = self.__class__(self.shape_y, self.shape_z)
+        new.update(self)
         new |= other
         return new
 
