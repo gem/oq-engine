@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2016, GEM Foundation
+#  Copyright (c) 2016-2017 GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -217,6 +217,7 @@ class ProbabilityMap(dict):
 
     def __or__(self, other):
         new = self.__class__(self.shape_y, self.shape_z)
+        new.update(self)
         new |= other
         return new
 

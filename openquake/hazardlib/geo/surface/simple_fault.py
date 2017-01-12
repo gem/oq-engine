@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2016 GEM Foundation
+# Copyright (C) 2012-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,11 +24,32 @@ import math
 
 import numpy
 
+from openquake.baselib.node import Node
 from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.near_fault import get_plane_equation
+
+
+def simple_fault_node(fault_trace, dip, upper_depth, lower_depth):
+    """
+    :param fault_trace: an object with an attribute .points
+    :param dip: dip parameter
+    :param upper_depth: upper seismogenic depth
+    :param lower_depth: lower seismogenic depth
+    :returns: a Node of kind simpleFaultGeometry
+    """
+    node = Node('simpleFaultGeometry')
+    line = []
+    for p in fault_trace.points:
+        line.append(p.longitude)
+        line.append(p.latitude)
+    node.append(Node('gml:LineString', nodes=[Node('gml:posList', {}, line)]))
+    node.append(Node('dip', {}, dip))
+    node.append(Node('upperSeismoDepth', {}, upper_depth))
+    node.append(Node('lowerSeismoDepth', {}, lower_depth))
+    return node
 
 
 class SimpleFaultSurface(BaseQuadrilateralSurface):
@@ -173,7 +194,11 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
             " Possible cause: Mesh spacing could be too large with respect to"
             " the fault length and width."
         )
-        return cls(mesh)
+        self = cls(mesh)
+        self.surface_nodes = [simple_fault_node(
+            fault_trace, dip,
+            upper_seismogenic_depth, lower_seismogenic_depth)]
+        return self
 
     @classmethod
     def get_fault_patch_vertices(cls, rupture_top_edge,

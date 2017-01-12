@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2016 GEM Foundation
+# Copyright (C) 2013-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -86,6 +86,15 @@ class MultiSurface(BaseSurface):
         For GC2, determines the length of the fault (km) in its own GC2
         configuration
     """
+
+    @property
+    def surface_nodes(self):
+        """
+        :returns:
+            a list of surface nodes from the underlying single node surfaces
+        """
+        return [surf.surface_nodes[0] for surf in self.surfaces]
+
     def __init__(self, surfaces, tol=0.1):
         """
         Instantiate object with list of surfaces

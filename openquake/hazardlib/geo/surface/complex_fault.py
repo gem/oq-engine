@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2016 GEM Foundation
+# Copyright (C) 2012-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,12 +25,42 @@ import numpy
 import shapely
 
 from openquake.baselib.python3compat import range, round
+from openquake.baselib.node import Node
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo.utils import spherical_to_cartesian
+
+
+def edge_node(name, points):
+    """
+    :param name: 'faultTopEdge', 'intermediateEdge' or 'faultBottomEdge'
+    :param points: a list of Point objects
+    :returns: a Node of kind faultTopEdge, intermediateEdge or faultBottomEdge
+    """
+    line = []
+    for point in points:
+        line.append(point.longitude)
+        line.append(point.latitude)
+        line.append(point.depth)
+    pos = Node('gml:posList', {}, line)
+    node = Node(name, nodes=[Node('gml:LineString', nodes=[pos])])
+    return node
+
+
+def complex_fault_node(edges):
+    """
+    :param edges: a list of lists of points
+    :returns: a Node of kind complexFaultGeometry
+    """
+    node = Node('complexFaultGeometry')
+    node.append(edge_node('faultTopEdge', edges[0]))
+    for edge in edges[1:-1]:
+        node.append(edge_node('intermediateEdge', edge))
+    node.append(edge_node('faultBottomEdge', edges[-1]))
+    return node
 
 
 class ComplexFaultSurface(BaseQuadrilateralSurface):
@@ -250,7 +280,7 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
         Uses :meth:`check_fault_data` for checking parameters.
         """
         cls.check_fault_data(edges, mesh_spacing)
-
+        surface_nodes = [complex_fault_node(edges)]
         mean_length = numpy.mean([edge.get_length() for edge in edges])
         num_hor_points = int(round(mean_length / mesh_spacing)) + 1
         if num_hor_points <= 1:
@@ -274,7 +304,9 @@ class ComplexFaultSurface(BaseQuadrilateralSurface):
                        for v_edge in vert_edges])
         mesh = RectangularMesh.from_points_list(list(points))
         assert 1 not in mesh.shape
-        return cls(mesh)
+        self = cls(mesh)
+        self.surface_nodes = surface_nodes
+        return self
 
     @classmethod
     def surface_projection_from_fault_data(cls, edges):
