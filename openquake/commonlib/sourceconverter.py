@@ -651,11 +651,11 @@ class SourceConverter(RuptureConverter):
         with context(self.fname, node):
             try:
                 hypo_list = valid.hypo_list(node.hypoList)
-            except NameError:
+            except AttributeError:
                 hypo_list = ()
             try:
                 slip_list = valid.slip_list(node.slipList)
-            except NameError:
+            except AttributeError:
                 slip_list = ()
             simple = source.SimpleFaultSource(
                 source_id=node['id'],
