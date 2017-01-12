@@ -1,5 +1,14 @@
   [Michele Simionato]
   * Added information about the rupture in the event loss table exports
+  * Fixed the classical UCERF calculator when there is more than one branch
+  * Added .npz exporter for gmf_data for event based calculations
+
+  [Daniele Viganò]
+  * Port WebUI/API server to Django 1.9 and 1.10
+  * Add dependencies to setup.py
+  * Update Copyright to 2017
+
+  [Michele Simionato]
   * Increased the splitting of ComplexFaultSources
   * Added a way to reuse the CompositeSourceModel from a previous computation
   * Turned the loss maps into dynamically generated outputs

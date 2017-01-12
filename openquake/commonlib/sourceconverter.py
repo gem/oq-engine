@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,9 +24,39 @@ import collections
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.risklib import valid
-from openquake.commonlib.node import context, striptag
+from openquake.baselib.node import context, striptag
 
 MAXWEIGHT = 200  # tuned by M. Simionato
+
+
+class SourceModel(object):
+    """
+    A container of SourceGroup instances with some additional attributes
+    describing the source model in the logic tree.
+    """
+    def __init__(self, name, weight, path, src_groups, num_gsim_paths, ordinal,
+                 samples):
+        self.name = name
+        self.weight = weight
+        self.path = path
+        self.src_groups = src_groups
+        self.num_gsim_paths = num_gsim_paths
+        self.ordinal = ordinal
+        self.samples = samples
+
+    @property
+    def num_sources(self):
+        return sum(len(sg) for sg in self.src_groups)
+
+    def get_skeleton(self):
+        """
+        Return an empty copy of the source model, i.e. without sources,
+        but with the proper attributes for each SourceGroup contained within.
+        """
+        src_groups = [SourceGroup(sg.trt, [], sg.min_mag, sg.max_mag, sg.id)
+                      for sg in self.src_groups]
+        return self.__class__(self.name, self.weight, self.path, src_groups,
+                              self.num_gsim_paths, self.ordinal, self.samples)
 
 
 class SourceGroup(collections.Sequence):
@@ -420,8 +450,7 @@ class RuptureConverter(object):
             mag=mag, rake=rake, tectonic_region_type=None,
             hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
-            source_typology=source.SimpleFaultSource,
-            surface_nodes=surfaces)
+            source_typology=source.SimpleFaultSource)
         return rupt
 
     def convert_complexFaultRupture(self, node, mag, rake, hypocenter):
@@ -439,8 +468,7 @@ class RuptureConverter(object):
             mag=mag, rake=rake, tectonic_region_type=None,
             hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
-            source_typology=source.ComplexFaultSource,
-            surface_nodes=surfaces)
+            source_typology=source.ComplexFaultSource)
         return rupt
 
     def convert_singlePlaneRupture(self, node, mag, rake, hypocenter):
@@ -459,8 +487,7 @@ class RuptureConverter(object):
             tectonic_region_type=None,
             hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
-            source_typology=source.NonParametricSeismicSource,
-            surface_nodes=surfaces)
+            source_typology=source.NonParametricSeismicSource)
         return rupt
 
     def convert_multiPlanesRupture(self, node, mag, rake, hypocenter):
@@ -479,8 +506,7 @@ class RuptureConverter(object):
             tectonic_region_type=None,
             hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
-            source_typology=source.NonParametricSeismicSource,
-            surface_nodes=surfaces)
+            source_typology=source.NonParametricSeismicSource)
         return rupt
 
 
@@ -655,11 +681,11 @@ class SourceConverter(RuptureConverter):
         with context(self.fname, node):
             try:
                 hypo_list = valid.hypo_list(node.hypoList)
-            except NameError:
+            except AttributeError:
                 hypo_list = ()
             try:
                 slip_list = valid.slip_list(node.slipList)
-            except NameError:
+            except AttributeError:
                 slip_list = ()
             simple = source.SimpleFaultSource(
                 source_id=node['id'],
@@ -722,8 +748,7 @@ class SourceConverter(RuptureConverter):
             mfd=self.convert_mfdist(node),
             surface=self.convert_surfaces(node.surface),
             rake=~node.rake,
-            temporal_occurrence_model=self.tom,
-            surface_node=node.surface)
+            temporal_occurrence_model=self.tom)
         return char
 
     def convert_nonParametricSeismicSource(self, node):
