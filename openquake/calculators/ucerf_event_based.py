@@ -625,31 +625,26 @@ class UCERFSESControl(object):
 
 # #################################################################### #
 
-
-class UCERFSourceConverter(SourceConverter):
+def convert_UCERFSource(self, node):
     """
-    Adjustment of the UCERF Source Converter to return the source information
-    as an instance of the UCERF SES Control object
+    Converts the Ucerf Source node into an SES Control object
     """
-    def convert_UCERFSource(self, node):
-        """
-        Converts the Ucerf Source node into an SES Control object
-        """
-        dirname = os.path.dirname(self.fname)  # where the source_model_file is
-        source_file = os.path.join(dirname, node["filename"])
-        return UCERFSESControl(
-            source_file,
-            node["id"],
-            self.tom.time_span,
-            float(node["minMag"]),
-            npd=self.convert_npdist(node),
-            hdd=self.convert_hpdist(node),
-            aspect=~node.ruptAspectRatio,
-            upper_seismogenic_depth=~node.pointGeometry.upperSeismoDepth,
-            lower_seismogenic_depth=~node.pointGeometry.lowerSeismoDepth,
-            msr=valid.SCALEREL[~node.magScaleRel](),
-            mesh_spacing=self.rupture_mesh_spacing,
-            trt=node["tectonicRegion"])
+    dirname = os.path.dirname(self.fname)  # where the source_model_file is
+    source_file = os.path.join(dirname, node["filename"])
+    return UCERFSESControl(
+        source_file,
+        node["id"],
+        self.tom.time_span,
+        float(node["minMag"]),
+        npd=self.convert_npdist(node),
+        hdd=self.convert_hpdist(node),
+        aspect=~node.ruptAspectRatio,
+        upper_seismogenic_depth=~node.pointGeometry.upperSeismoDepth,
+        lower_seismogenic_depth=~node.pointGeometry.lowerSeismoDepth,
+        msr=valid.SCALEREL[~node.magScaleRel](),
+        mesh_spacing=self.rupture_mesh_spacing,
+        trt=node["tectonicRegion"])
+SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
 def _copy_grp(src_group, grp_id, branch_name, branch_id):
@@ -683,8 +678,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         job_info = dict(hostname=socket.gethostname())
         self.datastore.save('job_info', job_info)
         parser = source.SourceModelParser(
-            UCERFSourceConverter(oq.investigation_time,
-                                 oq.rupture_mesh_spacing))
+            SourceConverter(oq.investigation_time, oq.rupture_mesh_spacing))
         [src_group] = parser.parse_src_groups(oq.inputs["source_model"])
         branches = sorted(self.smlt.branches.items())
         source_models = []
