@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2016 GEM Foundation
+# Copyright (C) 2010-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -356,15 +356,12 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         assert_close(self._expected_complex, self.cmplx)
 
     def test_characteristic_simple(self):
-        self.char_simple.surface_node = None
         assert_close(self._expected_char_simple, self.char_simple)
 
     def test_characteristic_complex(self):
-        self.char_complex.surface_node = None
         assert_close(self._expected_char_complex, self.char_complex)
 
     def test_characteristic_multi(self):
-        self.char_multi.surface_node = None
         assert_close(self._expected_char_multi, self.char_multi)
 
     def test_duplicate_id(self):
@@ -471,7 +468,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 </nrml>
 """)
         [area] = nrml.read(area_file).sourceModel
-        with self.assertRaises(NameError) as ctx:
+        with self.assertRaises(AttributeError) as ctx:
             self.parser.converter.convert_node(area)
         self.assertIn(
             "node areaSource: No subnode named 'nodalPlaneDist'"
