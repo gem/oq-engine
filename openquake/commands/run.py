@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,10 +18,10 @@
 
 from __future__ import print_function
 import collections
+import tempfile
 import logging
 import cProfile
 import pstats
-import io
 
 from openquake.baselib import performance, general, sap
 from openquake.risklib import valid
@@ -42,11 +42,12 @@ def get_pstats(pstatfile, n):
     :param pstatfile: path to a .pstat file
     :param n: the maximum number of stats to retrieve
     """
-    stream = io.BytesIO()
-    ps = pstats.Stats(pstatfile, stream=stream)
-    ps.sort_stats('cumtime')
-    ps.print_stats(n)
-    lines = stream.getvalue().splitlines()
+    with tempfile.TemporaryFile(mode='w+') as stream:
+        ps = pstats.Stats(pstatfile, stream=stream)
+        ps.sort_stats('cumtime')
+        ps.print_stats(n)
+        stream.seek(0)
+        lines = list(stream)
     for i, line in enumerate(lines):
         if line.startswith('   ncalls'):
             break
@@ -63,7 +64,7 @@ def get_pstats(pstatfile, n):
     # 1      33.502  commands/run.py:77(_run)
     # 1      33.483  calculators/base.py:110(run)
     # 1      25.166  calculators/classical.py:115(execute)
-    # 1      25.104  commonlib/parallel.py:249(apply_reduce)
+    # 1      25.104  baselib.parallel.py:249(apply_reduce)
     # 1      25.099  calculators/classical.py:41(classical)
     # 1      25.099  hazardlib/calc/hazard_curve.py:164(pmap_from_grp)
     return views.rst_table(rows, header='ncalls cumtime path'.split())

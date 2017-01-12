@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2016 GEM Foundation
+# Copyright (C) 2010-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -33,7 +33,7 @@ from openquake.baselib.general import groupby, group_array
 from openquake.commonlib import logictree, sourceconverter, InvalidFile
 from openquake.commonlib import nrml, node
 
-MAXWEIGHT = 200  # tuned by M. Simionato
+MAXWEIGHT = sourceconverter.MAXWEIGHT
 MAX_INT = 2 ** 31 - 1
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -367,6 +367,7 @@ class CompositionInfo(object):
         sg_data = group_array(dic['sg_data'], 'sm_id')
         sm_data = dic['sm_data']
         vars(self).update(attrs)
+        self.gsim_fname = decode(self.gsim_fname)
         if self.gsim_fname.endswith('.xml'):
             self.gsim_lt = logictree.GsimLogicTree(
                 self.gsim_fname, sorted(self.trts))
@@ -379,7 +380,7 @@ class CompositionInfo(object):
                 sourceconverter.SourceGroup(
                     self.trts[trti], id=grp_id, eff_ruptures=effrup)
                 for grp_id, trti, effrup, sm_id in tdata if effrup]
-            path = tuple(rec['path'].split('_'))
+            path = tuple(str(decode(rec['path'])).split('_'))
             trts = set(sg.trt for sg in srcgroups)
             num_gsim_paths = self.gsim_lt.reduce(trts).get_num_paths()
             sm = sourceconverter.SourceModel(
@@ -440,7 +441,7 @@ class CompositionInfo(object):
                 assoc._add_realizations(indices, smodel, gsim_lt, rlzs)
             elif trts:
                 logging.warn('No realizations for %s, %s',
-                             b'_'.join(smodel.path), smodel.name)
+                             '_'.join(smodel.path), smodel.name)
         # NB: realizations could be filtered away by logic tree reduction
         if assoc.realizations:
             assoc._init()
