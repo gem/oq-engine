@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,7 +25,7 @@ from nose.plugins.attrib import attr
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9)
 
-from openquake.commonlib import writers
+from openquake.baselib.node import floatformat
 from openquake.baselib.general import get_array
 from openquake.calculators.tests import CalculatorTestCase
 
@@ -81,7 +81,7 @@ class ScenarioTestCase(CalculatorTestCase):
         # the idea of supporting at the same time different versions of the
         # libraries was out of question, so it made a lot of sense to check
         # the XMLs, since the numbers had to be exactly identical.
-        with writers.floatformat('%5.1E'):
+        with floatformat('%5.1E'):
             out = self.run_calc(case_1.__file__, 'job.ini', exports='xml')
         raise unittest.SkipTest  # because of the rounding errors
         self.assertEqualFiles('expected.xml', out['gmf_data', 'xml'][0])
@@ -141,7 +141,7 @@ class ScenarioTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'scenario')
     def test_case_9(self):
-        with writers.floatformat('%10.6E'):
+        with floatformat('%10.6E'):
             out = self.run_calc(case_9.__file__, 'job.ini', exports='xml')
         f1, f2 = out['gmf_data', 'xml']
         self.assertEqualFiles('LinLee2008SSlab_gmf.xml', f1)
@@ -162,11 +162,8 @@ class ScenarioTestCase(CalculatorTestCase):
             self.assertEqual(len(f.keys()), 2)  # there are only two datasets
             data1 = f['LinLee2008SSlab()']
             data2 = f['YoungsEtAl1997SSlab()']
-            self.assertEqual(
-                data1.dtype.names,
-                ('lon', 'lat', 'PGA-000', 'PGA-001', 'PGA-002', 'PGA-003',
-                 'PGA-004', 'PGA-005', 'PGA-006', 'PGA-007', 'PGA-008',
-                 'PGA-009'))
+            self.assertEqual(data1.dtype.names, ('lon', 'lat', 'PGA'))
             self.assertEqual(data1.shape, (3,))
+            self.assertEqual(data1['PGA'].shape, (3, 10))
             self.assertEqual(data1.dtype.names, data2.dtype.names)
             self.assertEqual(data1.shape, data2.shape)

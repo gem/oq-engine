@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2016 GEM Foundation
+# Copyright (C) 2010-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,11 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import warnings
 from xml.etree.ElementTree import parse
 
 from openquake.baselib.general import writetmp
-from openquake.commonlib.writers import tostring
+from openquake.baselib.node import tostring
 from openquake.commonlib.nrml import PARSE_NS_MAP
 
 

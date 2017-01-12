@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,7 +27,7 @@ import numpy.testing
 from openquake.baselib.general import group_array
 from openquake.commonlib.datastore import read
 from openquake.commonlib.util import max_rel_diff_index
-from openquake.commonlib.export import export
+from openquake.calculators.export import export
 from openquake.calculators.event_based import get_mean_curves
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
@@ -136,6 +136,9 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/gmf-grp=00~ses=0002~src=1~rup=1-01-rlz-000.csv', fname)
 
+        # test that the .npz export runs
+        export(('gmf_data', 'npz'), self.calc.datastore)
+
         [fname] = out['hcurves', 'xml']
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1-PGA.xml', fname)
@@ -201,8 +204,8 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got, sorted)
 
-        [fname] = export(('ses', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/ses.csv', fname)
+        [fname] = export(('ruptures', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ruptures.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_6(self):
@@ -257,14 +260,15 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
-    def test_case_17(self):  # oversampling
+    def test_case_17(self):  # oversampling and save_ruptures
         expected = [
             'hazard_curve-rlz-001.csv',
             'hazard_curve-rlz-002.csv',
             'hazard_curve-rlz-003.csv',
             'hazard_curve-rlz-004.csv',
         ]
-        out = self.run_calc(case_17.__file__, 'job.ini', exports='csv')
+        # test --hc functionality, i.e. that the ruptures are read correctly
+        out = self.run_calc(case_17.__file__, 'job.ini,job.ini', exports='csv')
         fnames = out['hcurves', 'csv']
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)

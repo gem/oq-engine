@@ -1,0 +1,70 @@
+{
+    "features": [
+        {
+            "geometry": {
+                "coordinates": [
+                    81.29850006103516,
+                    29.109800338745117
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "asset_ref": "a0",
+                "loss": 386.5274353027344
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    83.0822982788086,
+                    27.90060043334961
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "asset_ref": "a1",
+                "loss": 170.2894744873047
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    85.7477035522461,
+                    27.901500701904297
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "asset_ref": "a2",
+                "loss": 35.98463439941406
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    85.7477035522461,
+                    27.901500701904297
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "asset_ref": "a3",
+                "loss": 0.0
+            },
+            "type": "Feature"
+        }
+    ],
+    "oqmetadata": {
+        "investigationTime": "50.0",
+        "lossType": "nonstructural",
+        "poE": "0.1",
+        "statistics": "mean",
+        "unit": "EUR"
+    },
+    "oqnrmlversion": "0.4",
+    "oqtype": "LossMap",
+    "type": "FeatureCollection"
+}
