@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2016 GEM Foundation
+# Copyright (C) 2010-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -2029,7 +2029,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
                 <logicTree logicTreeID="lt1"/>
             </logicTreeSet>
         """)
-        self.parse_invalid(xml, NameError,
+        self.parse_invalid(xml, AttributeError,
                            "No subnode named 'logicTree' found in 'nrml'")
 
     def test_not_a_gsim_logic_tree(self):

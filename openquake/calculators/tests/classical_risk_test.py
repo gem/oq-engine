@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,7 +23,7 @@ from openquake.qa_tests_data.classical_risk import (
 from openquake.baselib.general import writetmp
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.commonlib.writers import scientificformat
-from openquake.commonlib.export import export
+from openquake.calculators.export import export
 from openquake.calculators.views import view
 
 
@@ -44,7 +44,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
 
         # check loss maps
         clp = self.calc.oqparam.conditional_loss_poes
-        fnames = out['loss_maps-rlzs', 'xml']
+        fnames = export(('loss_maps-rlzs', 'xml'), self.calc.datastore)
         self.assertEqual(len(fnames), 3)  # for 3 conditional loss poes
         for poe, fname in zip(clp, fnames):
             self.assertEqualFiles('expected/loss_map-poe-%s.xml' % poe, fname)
@@ -56,7 +56,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/loss_curves.xml', fname)
 
         clp = self.calc.oqparam.conditional_loss_poes
-        fnames = out['loss_maps-rlzs', 'xml']
+        fnames = export(('loss_maps-rlzs', 'xml'), self.calc.datastore)
         self.assertEqual(len(fnames), 1)  # for 1 conditional loss poe
         for poe, fname in zip(clp, fnames):
             self.assertEqualFiles('expected/loss_map-poe-%s.xml' % poe, fname)
@@ -71,7 +71,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
     def test_case_4(self):
         out = self.run_calc(case_4.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv,xml')
-        fnames = out['loss_maps-rlzs', 'csv']
+        fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_maps-b1,b1.csv', fnames[0])
         self.assertEqualFiles('expected/loss_maps-b1,b2.csv', fnames[1])
 
@@ -79,7 +79,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/loss_curves-000.csv', fnames[0])
         self.assertEqualFiles('expected/loss_curves-001.csv', fnames[1])
 
-        [fname] = out['loss_maps-stats', 'xml']
+        [fname] = export(('loss_maps-stats', 'xml'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_maps-mean-structural.xml', fname)
 
         [fname] = out['loss_curves-stats', 'xml']
