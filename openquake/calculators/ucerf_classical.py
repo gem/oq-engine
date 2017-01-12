@@ -133,6 +133,7 @@ class UCERFControl(UCERFSESControl):
             else:
                 return [], []
 
+
 class UCERFControlTimeDep(UCERFControl):
     """
     Adaptation of the UCERF Control class for the time-dependent model
@@ -145,13 +146,12 @@ class UCERFControlTimeDep(UCERFControl):
         """
         Instantiate with new parameter 'start_date'
         """
-        super(UCERFControlTimeDep, self).__init__(source_file, id, 
-             investigation_time, min_mag, npd, hdd, aspect,
-             upper_seismogenic_depth, lower_seismogenic_depth,
-             msr, mesh_spacing, trt, integration_distance=1000)
+        super(UCERFControlTimeDep, self).__init__(
+            source_file, id, investigation_time, min_mag, npd, hdd, aspect,
+            upper_seismogenic_depth, lower_seismogenic_depth,
+            msr, mesh_spacing, trt, integration_distance=1000)
         self.start_date = start_date
 
-    
     def build_idx_set(self):
         """
         Builds a dictionary of indices based on the branch code
@@ -170,10 +170,9 @@ class UCERFControlTimeDep(UCERFControl):
         idx_set["msr_idx"] = "-".join([code_set[0], code_set[1], code_set[2]])
         idx_set["geol_idx"] = code_set[0]
         grid_key = "_".join(self.branch_id.replace("/", "_").split("_")[:-1])
-        #idx_set["grid_key"] = self.branch_id.replace("/", "_")
+        # idx_set["grid_key"] = self.branch_id.replace("/", "_")
         idx_set["grid_key"] = "_".join(
-            self.branch_id.replace("/", "_").split("_")[:-1]
-            )
+            self.branch_id.replace("/", "_").split("_")[:-1])
         idx_set["total_key"] = self.branch_id.replace("/", "|")
         return idx_set
 
@@ -234,46 +233,30 @@ def convert_UCERFSource(self, node):
     """
     dirname = os.path.dirname(self.fname)  # where the source_model_file is
     source_file = os.path.join(dirname, node["filename"])
+    if "startDate" in node.attrib and "investigationTime" in node.attrib:
+        # Is a time-dependent model - even if rates were originally
+        # poissonian
+        # Verify that the source time span is the same as the TOM time span
+        inv_time = float(node["investigationTime"])
+        if inv_time != self.tom.time_span:
+            raise ValueError("Source investigation time (%s) is not "
+                             "equal to configuration investigation time "
+                             "(%s)" % (inv_time, self.tom.time_span))
 
-        if ("startDate" in node.attrib) and\
-            ("investigationTime" in node.attrib):
-            # Is a time-dependent model - even if rates were originally
-            # poissonian
-            # Verify that the source time span is the same as the TOM time span
-            inv_time = float(node["investigationTime"]) 
-            if inv_time != self.tom.time_span:
-                raise ValueError("Source investigation time (%s) is not "
-                                 "equal to configuration investigation time "
-                                 "(%s)" % (inv_time, self.tom.time_span))
-
-            return UCERFControlTimeDep(
-                source_file,
-                node["id"],
-                inv_time,
-                datetime.strptime(node["startDate"], "%d/%m/%Y"),
-                float(node["minMag"]),
-                npd=self.convert_npdist(node),
-                hdd=self.convert_hpdist(node),
-                aspect=~node.ruptAspectRatio,
-                upper_seismogenic_depth=~node.pointGeometry.upperSeismoDepth,
-                lower_seismogenic_depth=~node.pointGeometry.lowerSeismoDepth,
-                msr=valid.SCALEREL[~node.magScaleRel](),
-                mesh_spacing=self.rupture_mesh_spacing,
-                trt=node["tectonicRegion"])
-
-    return UCERFControl(
-        source_file,
-        node["id"],
-        self.tom.time_span,
-        float(node["minMag"]),
-        npd=self.convert_npdist(node),
-        hdd=self.convert_hpdist(node),
-        aspect=~node.ruptAspectRatio,
-        upper_seismogenic_depth=~node.pointGeometry.upperSeismoDepth,
-        lower_seismogenic_depth=~node.pointGeometry.lowerSeismoDepth,
-        msr=valid.SCALEREL[~node.magScaleRel](),
-        mesh_spacing=self.rupture_mesh_spacing,
-        trt=node["tectonicRegion"])
+        return UCERFControlTimeDep(
+            source_file,
+            node["id"],
+            inv_time,
+            datetime.strptime(node["startDate"], "%d/%m/%Y"),
+            float(node["minMag"]),
+            npd=self.convert_npdist(node),
+            hdd=self.convert_hpdist(node),
+            aspect=~node.ruptAspectRatio,
+            upper_seismogenic_depth=~node.pointGeometry.upperSeismoDepth,
+            lower_seismogenic_depth=~node.pointGeometry.lowerSeismoDepth,
+            msr=valid.SCALEREL[~node.magScaleRel](),
+            mesh_spacing=self.rupture_mesh_spacing,
+            trt=node["tectonicRegion"])
 SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
@@ -368,6 +351,7 @@ def ucerf_classical_hazard_by_branch(branchname, ucerf_source, src_group_id,
     trt = ucerf_source.tectonic_region_type
     max_dist = monitor.oqparam.maximum_distance[trt]
     dic = AccumDict()
+    dic.grp_id = ucerf_source.src_group_id
     dic.calc_times = []
 
     # Two step process here - the first generates the hazard curves from
@@ -399,7 +383,9 @@ def ucerf_classical_hazard_by_branch(branchname, ucerf_source, src_group_id,
             (), monitor=monitor)
         dic[src_group_id] |= pmap
         dic.eff_ruptures[src_group_id] += monitor.eff_ruptures
-        dic.calc_times.extend(pmap.calc_times)
+        # not storing the calc_times for the background sources
+        # to avoid KeyErrors in ClassicalCalculator.agg_dicts
+        # dic.calc_times.extend(pmap.calc_times)
     return dic
 
 
