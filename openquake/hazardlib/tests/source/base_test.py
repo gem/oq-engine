@@ -40,7 +40,7 @@ class _BaseSeismicSourceTestCase(unittest.TestCase):
     POLYGON = Polygon([Point(0, 0), Point(0, 0.001),
                        Point(0.001, 0.001), Point(0.001, 0)])
     SITES = [
-        Site(Point(0.0005, 0.0005), 0.1, True, 3, 4),  # inside, middle
+        Site(Point(0.0005, 0.0005, -0.5), 0.1, True, 3, 4),  # inside, middle
         Site(Point(0.0015, 0.0005), 1, True, 3, 4),  # outside, middle-east
         Site(Point(-0.0005, 0.0005), 2, True, 3, 4),  # outside, middle-west
         Site(Point(0.0005, 0.0015), 3, True, 3, 4),  # outside, north-middle
@@ -104,6 +104,8 @@ class SeismicSourceFilterSitesTestCase(_BaseSeismicSourceTestCase):
         self.assertEqual(len(filtered), 5)
         numpy.testing.assert_array_equal(filtered.indices, [0, 5, 6, 7, 8])
         numpy.testing.assert_array_equal(filtered.vs30, [0.1, 5, 6, 7, 8])
+        numpy.testing.assert_array_equal(filtered.mesh.depths,
+                                         [-0.5, 0, 0, 0, 0])
 
     def test_source_filter_half_km_integration_distance(self):
         filtered = self.source.filter_sites_by_distance_to_source(
@@ -154,6 +156,8 @@ class SeismicSourceFilterSitesByRuptureTestCase(
         )
         numpy.testing.assert_array_equal(filtered.indices,
                                          [0, 1, 2, 3, 4, 5, 6, 7, 8])
+        numpy.testing.assert_array_equal(filtered.mesh.depths,
+                                         [-0.5, 0, 0, 0, 0, 0, 0, 0, 0])
 
 
 class SeismicSourceGroupTestCase(unittest.TestCase):
