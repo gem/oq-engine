@@ -442,8 +442,8 @@ class Node(object):
         for node in self.nodes:
             if striptag(node.tag) == name:
                 return node
-        raise NameError("No subnode named '%s' found in '%s'" %
-                        (name, striptag(self.tag)))
+        raise AttributeError("No subnode named '%s' found in '%s'" %
+                             (name, striptag(self.tag)))
 
     def getnodes(self, name):
         "Return the direct subnodes with name 'name'"
