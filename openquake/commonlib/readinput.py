@@ -581,19 +581,19 @@ def _get_exposure(fname, ok_cost_types, stop=None):
     description = exposure.description
     try:
         conversions = exposure.conversions
-    except NameError:
+    except AttributeError:
         conversions = Node('conversions', nodes=[Node('costTypes', [])])
     try:
         inslimit = conversions.insuranceLimit
-    except NameError:
+    except AttributeError:
         inslimit = Node('insuranceLimit', text=True)
     try:
         deductible = conversions.deductible
-    except NameError:
+    except AttributeError:
         deductible = Node('deductible', text=True)
     try:
         area = conversions.area
-    except NameError:
+    except AttributeError:
         # NB: the area type cannot be an empty string because when sending
         # around the CostCalculator object we would run into this numpy bug
         # about pickling dictionaries with empty strings:
@@ -694,11 +694,11 @@ def get_exposure(oqparam):
                 continue
         try:
             costs = asset.costs
-        except NameError:
+        except AttributeError:
             costs = Node('costs', [])
         try:
             occupancies = asset.occupancies
-        except NameError:
+        except AttributeError:
             occupancies = Node('occupancies', [])
         for cost in costs:
             with context(fname, cost):

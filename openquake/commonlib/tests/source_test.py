@@ -468,7 +468,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 </nrml>
 """)
         [area] = nrml.read(area_file).sourceModel
-        with self.assertRaises(NameError) as ctx:
+        with self.assertRaises(AttributeError) as ctx:
             self.parser.converter.convert_node(area)
         self.assertIn(
             "node areaSource: No subnode named 'nodalPlaneDist'"
