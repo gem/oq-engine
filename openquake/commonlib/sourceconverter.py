@@ -24,7 +24,7 @@ import collections
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.risklib import valid
-from openquake.commonlib.node import context, striptag
+from openquake.baselib.node import context, striptag
 
 MAXWEIGHT = 200  # tuned by M. Simionato
 
@@ -420,8 +420,7 @@ class RuptureConverter(object):
             mag=mag, rake=rake, tectonic_region_type=None,
             hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
-            source_typology=source.SimpleFaultSource,
-            surface_nodes=surfaces)
+            source_typology=source.SimpleFaultSource)
         return rupt
 
     def convert_complexFaultRupture(self, node, mag, rake, hypocenter):
@@ -439,8 +438,7 @@ class RuptureConverter(object):
             mag=mag, rake=rake, tectonic_region_type=None,
             hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
-            source_typology=source.ComplexFaultSource,
-            surface_nodes=surfaces)
+            source_typology=source.ComplexFaultSource)
         return rupt
 
     def convert_singlePlaneRupture(self, node, mag, rake, hypocenter):
@@ -459,8 +457,7 @@ class RuptureConverter(object):
             tectonic_region_type=None,
             hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
-            source_typology=source.NonParametricSeismicSource,
-            surface_nodes=surfaces)
+            source_typology=source.NonParametricSeismicSource)
         return rupt
 
     def convert_multiPlanesRupture(self, node, mag, rake, hypocenter):
@@ -479,8 +476,7 @@ class RuptureConverter(object):
             tectonic_region_type=None,
             hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
-            source_typology=source.NonParametricSeismicSource,
-            surface_nodes=surfaces)
+            source_typology=source.NonParametricSeismicSource)
         return rupt
 
 
@@ -655,11 +651,11 @@ class SourceConverter(RuptureConverter):
         with context(self.fname, node):
             try:
                 hypo_list = valid.hypo_list(node.hypoList)
-            except NameError:
+            except AttributeError:
                 hypo_list = ()
             try:
                 slip_list = valid.slip_list(node.slipList)
-            except NameError:
+            except AttributeError:
                 slip_list = ()
             simple = source.SimpleFaultSource(
                 source_id=node['id'],
@@ -722,8 +718,7 @@ class SourceConverter(RuptureConverter):
             mfd=self.convert_mfdist(node),
             surface=self.convert_surfaces(node.surface),
             rake=~node.rake,
-            temporal_occurrence_model=self.tom,
-            surface_node=node.surface)
+            temporal_occurrence_model=self.tom)
         return char
 
     def convert_nonParametricSeismicSource(self, node):
