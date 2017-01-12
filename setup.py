@@ -75,6 +75,7 @@ if sys.version < '3':
 extras_require = {
     'rtree':  ["Rtree==0.8.2"],
     'celery':  ["celery >=3.1, <4.0"],
+    'plotting':  ["matplotlib >=1.5"],
 }
 
 setup(
