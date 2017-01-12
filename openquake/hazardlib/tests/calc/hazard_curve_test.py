@@ -153,8 +153,8 @@ def example_calc(apply):
 
 class HazardCurvesParallelTestCase(unittest.TestCase):
     def test_same_curves_as_sequential(self):
-        curves_par = example_calc(Processmap.apply)
-        curves_seq = example_calc(Sequential.apply)
+        curves_par = example_calc(Processmap.apply)  # use multiprocessing
+        curves_seq = example_calc(Sequential.apply)  # sequential computation
         for name in curves_par.dtype.names:
             numpy.testing.assert_almost_equal(
                 curves_seq[name], curves_par[name])
