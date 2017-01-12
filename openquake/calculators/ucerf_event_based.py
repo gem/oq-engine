@@ -624,6 +624,7 @@ class UCERFSESControl(object):
         idx_set["total_key"] = self.branch_id.replace("/", "|")
         return idx_set
 
+
 class UCERFSESControlTimeDep(UCERFSESControl):
     """
     """
@@ -636,10 +637,10 @@ class UCERFSESControlTimeDep(UCERFSESControl):
         """
         Instantiate with new parameter 'start_date'
         """
-        super(UCERFControlTimeDep, self).__init__(source_file, id, 
-             investigation_time, min_mag, npd, hdd, aspect,
-             upper_seismogenic_depth, lower_seismogenic_depth,
-             msr, mesh_spacing, trt, integration_distance=1000)
+        super(UCERFControlTimeDep, self).__init__(
+            source_file, id, investigation_time, min_mag, npd, hdd, aspect,
+            upper_seismogenic_depth, lower_seismogenic_depth,
+            msr, mesh_spacing, trt, integration_distance=1000)
         self.start_date = start_date
 
     def build_idx_set(self):
@@ -669,43 +670,28 @@ class UCERFSESControlTimeDep(UCERFSESControl):
 
 # #################################################################### #
 
+
 def convert_UCERFSource(self, node):
     """
     Converts the Ucerf Source node into an SES Control object
     """
     dirname = os.path.dirname(self.fname)  # where the source_model_file is
     source_file = os.path.join(dirname, node["filename"])
-        if ("startDate" in node.attrib) and\
-            ("investigationTime" in node.attrib):
-            # Is a time-dependent model - even if rates were originally
-            # poissonian
-            # Verify that the source time span is the same as the TOM time span
-            inv_time = float(node["investigationTime"]) 
-            if inv_time != self.tom.time_span:
-                raise ValueError("Source investigation time (%s) is not "
-                                 "equal to configuration investigation time "
-                                 "(%s)" % (inv_time, self.tom.time_span))
+    if "startDate" in node.attrib and "investigationTime" in node.attrib:
+        # Is a time-dependent model - even if rates were originally
+        # poissonian
+        # Verify that the source time span is the same as the TOM time span
+        inv_time = float(node["investigationTime"])
+        if inv_time != self.tom.time_span:
+            raise ValueError("Source investigation time (%s) is not "
+                             "equal to configuration investigation time "
+                             "(%s)" % (inv_time, self.tom.time_span))
 
-            return UCERFSESControlTimeDep(
-                source_file,
-                node["id"],
-                inv_time,
-                datetime.strptime(node["startDate"], "%d/%m/%Y"),
-                float(node["minMag"]),
-                npd=self.convert_npdist(node),
-                hdd=self.convert_hpdist(node),
-                aspect=~node.ruptAspectRatio,
-                upper_seismogenic_depth=~node.pointGeometry.upperSeismoDepth,
-                lower_seismogenic_depth=~node.pointGeometry.lowerSeismoDepth,
-                msr=valid.SCALEREL[~node.magScaleRel](),
-                mesh_spacing=self.rupture_mesh_spacing,
-                trt=node["tectonicRegion"])
-
-
-    return UCERFSESControl(
+    return UCERFSESControlTimeDep(
         source_file,
         node["id"],
-        self.tom.time_span,
+        inv_time,
+        datetime.strptime(node["startDate"], "%d/%m/%Y"),
         float(node["minMag"]),
         npd=self.convert_npdist(node),
         hdd=self.convert_hpdist(node),
