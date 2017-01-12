@@ -2029,7 +2029,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
                 <logicTree logicTreeID="lt1"/>
             </logicTreeSet>
         """)
-        self.parse_invalid(xml, NameError,
+        self.parse_invalid(xml, AttributeError,
                            "No subnode named 'logicTree' found in 'nrml'")
 
     def test_not_a_gsim_logic_tree(self):

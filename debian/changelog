@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed the classical UCERF calculator when there is more than one branch
+  * Added .npz exporter for gmf_data for event based calculations
+
   [Daniele Viganò]
   * Port WebUI/API server to Django 1.9 and 1.10
   * Add dependencies to setup.py
