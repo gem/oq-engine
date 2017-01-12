@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -51,7 +51,7 @@ from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 
 from openquake.commonlib.calc import MAX_INT
-from openquake.commonlib.sourceconverter import SourceConverter
+from openquake.commonlib.sourceconverter import SourceConverter, SourceModel
 
 
 # ######################## rupture calculator ############################ #
@@ -669,18 +669,12 @@ class UCERFSESControlTimeDep(UCERFSESControl):
 
 # #################################################################### #
 
-
-class UCERFSourceConverter(SourceConverter):
+def convert_UCERFSource(self, node):
     """
-    Adjustment of the UCERF Source Converter to return the source information
-    as an instance of the UCERF SES Control object
+    Converts the Ucerf Source node into an SES Control object
     """
-    def convert_UCERFSource(self, node):
-        """
-        Converts the Ucerf Source node into an SES Control object
-        """
-        dirname = os.path.dirname(self.fname)  # where the source_model_file is
-        source_file = os.path.join(dirname, node["filename"])
+    dirname = os.path.dirname(self.fname)  # where the source_model_file is
+    source_file = os.path.join(dirname, node["filename"])
         if ("startDate" in node.attrib) and\
             ("investigationTime" in node.attrib):
             # Is a time-dependent model - even if rates were originally
@@ -708,19 +702,20 @@ class UCERFSourceConverter(SourceConverter):
                 trt=node["tectonicRegion"])
 
 
-        return UCERFSESControl(
-            source_file,
-            node["id"],
-            self.tom.time_span,
-            float(node["minMag"]),
-            npd=self.convert_npdist(node),
-            hdd=self.convert_hpdist(node),
-            aspect=~node.ruptAspectRatio,
-            upper_seismogenic_depth=~node.pointGeometry.upperSeismoDepth,
-            lower_seismogenic_depth=~node.pointGeometry.lowerSeismoDepth,
-            msr=valid.SCALEREL[~node.magScaleRel](),
-            mesh_spacing=self.rupture_mesh_spacing,
-            trt=node["tectonicRegion"])
+    return UCERFSESControl(
+        source_file,
+        node["id"],
+        self.tom.time_span,
+        float(node["minMag"]),
+        npd=self.convert_npdist(node),
+        hdd=self.convert_hpdist(node),
+        aspect=~node.ruptAspectRatio,
+        upper_seismogenic_depth=~node.pointGeometry.upperSeismoDepth,
+        lower_seismogenic_depth=~node.pointGeometry.lowerSeismoDepth,
+        msr=valid.SCALEREL[~node.magScaleRel](),
+        mesh_spacing=self.rupture_mesh_spacing,
+        trt=node["tectonicRegion"])
+SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
 def _copy_grp(src_group, grp_id, branch_name, branch_id):
@@ -754,8 +749,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         job_info = dict(hostname=socket.gethostname())
         self.datastore.save('job_info', job_info)
         parser = source.SourceModelParser(
-            UCERFSourceConverter(oq.investigation_time,
-                                 oq.rupture_mesh_spacing))
+            SourceConverter(oq.investigation_time, oq.rupture_mesh_spacing))
         [src_group] = parser.parse_src_groups(oq.inputs["source_model"])
         branches = sorted(self.smlt.branches.items())
         source_models = []
@@ -764,7 +758,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
             [name] = rlz.lt_path
             branch = self.smlt.branches[name]
             sg = _copy_grp(src_group, grp_id, name, branch.value)
-            sm = source.SourceModel(
+            sm = SourceModel(
                 name, branch.weight, [name], [sg], num_gsim_paths, grp_id, 1)
             source_models.append(sm)
         self.csm = source.CompositeSourceModel(

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2016 GEM Foundation
+# Copyright (C) 2013-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -282,63 +282,7 @@ def rescale(curves, values):
 @registry.add('classical_risk', 'classical', 'disaggregation')
 class Classical(RiskModel):
     """
-    Classical PSHA-Based RiskModel.
-
-    1) Compute loss curves, loss maps for each realization.
-    2) Compute (if more than one realization is given) mean and
-       quantiles loss curves and maps.
-
-    Per-realization Outputs contain the following fields:
-
-    :attr assets:
-      an iterable over N assets the outputs refer to
-    :attr loss_curves:
-      a numpy array of N loss curves. If the curve resolution is C, the final
-      shape of the array will be (N, 2, C), where the `two` accounts for
-      the losses/poes dimensions
-    :attr average_losses:
-      a numpy array of N average loss values
-    :attr insured_curves:
-      a numpy array of N insured loss curves, shaped (N, 2, C)
-    :attr average_insured_losses:
-      a numpy array of N average insured loss values
-    :attr loss_maps:
-      a numpy array of P elements holding N loss maps where P is the
-      number of `conditional_loss_poes` considered. Shape: (P, N)
-
-    The statistical outputs are stored into
-    :class:`openquake.risklib.scientific.Output`,
-    which holds the following fields:
-
-    :attr assets:
-      an iterable of N assets the outputs refer to
-    :attr mean_curves:
-       A numpy array with N mean loss curves. Shape: (N, 2)
-    :attr mean_average_losses:
-       A numpy array with N mean average loss values
-    :attr mean_maps:
-       A numpy array with P mean loss maps. Shape: (P, N)
-    :attr mean_fractions:
-       A numpy array with F mean fractions, where F is the number of PoEs
-       used for disaggregation. Shape: (F, N)
-    :attr quantile_curves:
-       A numpy array with Q quantile curves (Q = number of quantiles).
-       Shape: (Q, N, 2, C)
-    :attr quantile_average_losses:
-       A numpy array shaped (Q, N) with average losses
-    :attr quantile_maps:
-       A numpy array with Q quantile maps shaped (Q, P, N)
-    :attr quantile_fractions:
-       A numpy array with Q quantile maps shaped (Q, F, N)
-    :attr mean_insured_curves:
-       A numpy array with N mean insured loss curves. Shape: (N, 2)
-    :attr mean_average_insured_losses:
-       A numpy array with N mean average insured loss values
-    :attr quantile_insured_curves:
-       A numpy array with Q quantile insured curves (Q = number of quantiles).
-       Shape: (Q, N, 2, C)
-    :attr quantile_average_insured_losses:
-       A numpy array shaped (Q, N) with average insured losses
+    Classical PSHA-Based RiskModel. Computes loss curves and insured curves.
     """
     kind = 'vulnerability'
 
@@ -398,8 +342,6 @@ class Classical(RiskModel):
         lrcurves = numpy.array(
             [scientific.classical(
                 vf, imls, hazard_curve, self.lrem_steps_per_interval)] * n)
-        curves = rescale(lrcurves, values)
-        average_losses = utils.numpy_map(scientific.average_loss, curves)
 
         if self.insured_losses:
             deductibles = [a.deductible(loss_type) for a in assets]
@@ -407,63 +349,18 @@ class Classical(RiskModel):
             insured_curves = rescale(
                 utils.numpy_map(scientific.insured_loss_curve,
                                 lrcurves, deductibles, limits), values)
-            average_insured_losses = utils.numpy_map(
-                scientific.average_loss, insured_curves)
         else:
             insured_curves = None
-            average_insured_losses = None
 
-        return scientific.Output(
-            assets, loss_type, loss_curves=curves,
-            average_losses=average_losses, insured_curves=insured_curves,
-            average_insured_losses=average_insured_losses)
+        return rescale(lrcurves, values), insured_curves
 
 
 @registry.add('event_based_risk', 'event_based', 'event_based_rupture',
               'ebrisk', 'ucerf_rupture', 'ucerf_risk')
 class ProbabilisticEventBased(RiskModel):
     """
-    Implements the Probabilistic Event Based riskmodel
-
-    Per-realization Output are saved into
-    :class:`openquake.risklib.scientific.ProbabilisticEventBased.Output`
-    which contains the several fields:
-
-    :attr assets:
-      an iterable over N assets the outputs refer to
-
-    :attr loss_matrix:
-      an array of losses shaped N x T (where T is the number of events)
-
-    :attr loss_curves:
-      a numpy array of N loss curves. If the curve resolution is C, the final
-      shape of the array will be (N, 2, C), where the `two` accounts for
-      the losses/poes dimensions
-
-    :attr average_losses:
-      a numpy array of N average loss values
-
-    :attr stddev_losses:
-      a numpy array holding N standard deviation of losses
-
-    :attr insured_curves:
-      a numpy array of N insured loss curves, shaped (N, 2, C)
-
-    :attr average_insured_losses:
-      a numpy array of N average insured loss values
-
-    :attr stddev_insured_losses:
-      a numpy array holding N standard deviation of losses
-
-    :attr loss_maps:
-      a numpy array of P elements holding N loss maps where P is the
-      number of `conditional_loss_poes` considered. Shape: (P, N)
-
-    :attr dict event_loss_table:
-      a dictionary mapping event ids to aggregate loss values
-
-    The statistical outputs are stored into
-    :class:`openquake.risklib.scientific.Output` objects.
+    Implements the Probabilistic Event Based riskmodel.
+    Computes loss ratios and event IDs.
     """
     kind = 'vulnerability'
 
@@ -513,8 +410,7 @@ class ProbabilisticEventBased(RiskModel):
                 loss_ratios[i, idxs, 1] = scientific.insured_losses(
                     ratios,  asset.deductible(loss_type),
                     asset.insurance_limit(loss_type))
-        return scientific.Output(
-            assets, loss_type, loss_ratios=loss_ratios, eids=eids)
+        return loss_ratios, eids
 
 
 @registry.add('classical_bcr')
@@ -544,7 +440,7 @@ class ClassicalBCR(RiskModel):
         :param hazard: an hazard curve
         :param _eps: dummy parameter, unused
         :param _eids: dummy parameter, unused
-        :returns: a :class:`openquake.risklib.scientific.Output` instance
+        :returns: a list of triples (eal_orig, eal_retro, bcr_result)
         """
         n = len(assets)
         self.assets = assets
@@ -571,15 +467,13 @@ class ClassicalBCR(RiskModel):
                 asset.value(loss_type), asset.retrofitted(loss_type))
             for i, asset in enumerate(assets)]
 
-        return scientific.Output(
-            assets, loss_type,
-            data=list(zip(eal_original, eal_retrofitted, bcr_results)))
+        return list(zip(eal_original, eal_retrofitted, bcr_results))
 
 
 @registry.add('scenario_risk', 'scenario')
 class Scenario(RiskModel):
     """
-    Implements the Scenario riskmodel
+    Implements the Scenario riskmodel. Computes the loss matrix.
     """
     kind = 'vulnerability'
 
@@ -603,42 +497,35 @@ class Scenario(RiskModel):
             assets = assets[ok]
             epsilons = epsilons[ok]
 
-        # a matrix of N x E elements
+        # a matrix of N x E x I elements
+        E = len(epsilons[0])
+        I = self.insured_losses + 1
+        loss_matrix = numpy.empty((len(assets), E, I))
+        loss_matrix.fill(numpy.nan)
+
         vf = self.risk_functions[loss_type]
         means, covs, idxs = vf.interpolate(ground_motion_values)
-        loss_ratio_matrix = numpy.zeros((len(assets), len(epsilons[0])))
+        loss_ratio_matrix = numpy.zeros((len(assets), E))
         for i, eps in enumerate(epsilons):
             loss_ratio_matrix[i, idxs] = vf.sample(means, covs, idxs, eps)
-        # another matrix of N x E elements
-        loss_matrix = (loss_ratio_matrix.T * values).T
-        # an array of E elements
-        aggregate_losses = loss_matrix.sum(axis=0)
+
+        loss_matrix[:, :, 0] = (loss_ratio_matrix.T * values).T
 
         if self.insured_losses and loss_type != "occupants":
             deductibles = [a.deductible(loss_type) for a in assets]
             limits = [a.insurance_limit(loss_type) for a in assets]
             insured_loss_ratio_matrix = utils.numpy_map(
-                scientific.insured_losses,
-                loss_ratio_matrix, deductibles, limits)
-            insured_loss_matrix = (insured_loss_ratio_matrix.T * values).T
-        else:
-            insured_loss_matrix = numpy.empty_like(loss_ratio_matrix)
-            insured_loss_matrix.fill(numpy.nan)
+                scientific.insured_losses, loss_ratio_matrix,
+                deductibles, limits)
+            loss_matrix[:, :, 1] = (insured_loss_ratio_matrix.T * values).T
 
-        # aggregating per asset, getting a vector of E elements
-        insured_losses = insured_loss_matrix.sum(axis=0)
-        return scientific.Output(
-            assets, loss_type, loss_matrix=loss_matrix,
-            loss_ratio_matrix=loss_ratio_matrix,
-            aggregate_losses=aggregate_losses,
-            insured_loss_matrix=insured_loss_matrix,
-            insured_losses=insured_losses)
+        return loss_matrix
 
 
 @registry.add('scenario_damage')
 class Damage(RiskModel):
     """
-    Implements the ScenarioDamage riskmodel
+    Implements the ScenarioDamage riskmodel. Computes the damages.
     """
     kind = 'fragility'
 
@@ -661,13 +548,13 @@ class Damage(RiskModel):
         ffs = self.risk_functions[loss_type]
         damages = numpy.array(
             [scientific.scenario_damage(ffs, gmv) for gmv in gmvs])
-        return scientific.Output(assets, loss_type, damages=[damages] * n)
+        return [damages] * n
 
 
 @registry.add('classical_damage')
 class ClassicalDamage(Damage):
     """
-    Implements the ClassicalDamage riskmodel
+    Implements the ClassicalDamage riskmodel. Computes the damages.
     """
     kind = 'fragility'
 
@@ -695,8 +582,7 @@ class ClassicalDamage(Damage):
             ffl, hazard_imls, hazard_curve,
             investigation_time=self.investigation_time,
             risk_investigation_time=self.risk_investigation_time)
-        return scientific.Output(
-            assets, loss_type, damages=[a.number * damage for a in assets])
+        return [a.number * damage for a in assets]
 
 
 # NB: the approach used here relies on the convention of having the

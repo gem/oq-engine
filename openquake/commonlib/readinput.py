@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -378,16 +378,10 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
     parser = source.SourceModelParser(converter)
 
     # consider only the effective realizations
-    rlzs = logictree.get_effective_rlzs(source_model_lt)
-    samples_by_lt_path = source_model_lt.samples_by_lt_path()
-    num_source_models = len(rlzs)
-    for i, rlz in enumerate(rlzs):
-        sm = rlz.value  # name of the source model
-        smpath = rlz.lt_path
-        num_samples = samples_by_lt_path[smpath]
-        fname = possibly_gunzip(os.path.join(oqparam.base_path, sm))
+    for sm in source_model_lt.gen_source_models(gsim_lt):
+        fname = possibly_gunzip(os.path.join(oqparam.base_path, sm.name))
         if in_memory:
-            apply_unc = source_model_lt.make_apply_uncertainties(smpath)
+            apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
             try:
                 src_groups = parser.parse_src_groups(fname, apply_unc)
             except ValueError as e:
@@ -404,25 +398,12 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         else:  # just collect the TRT models
             smodel = nrml.read(fname).sourceModel
             src_groups = sourceconverter.SourceGroup.collect(smodel)
+        sm.src_groups = src_groups
         trts = [mod.trt for mod in src_groups]
         source_model_lt.tectonic_region_types.update(trts)
-
-        gsim_file = oqparam.inputs.get('gsim_logic_tree')
-        if gsim_file:  # check TRTs
-            for src_group in src_groups:
-                if src_group.trt not in gsim_lt.values:
-                    raise ValueError(
-                        "Found in %r a tectonic region type %r inconsistent "
-                        "with the ones in %r" % (sm, src_group.trt, gsim_file))
-        else:
-            gsim_lt = logictree.GsimLogicTree.from_(oqparam.gsim)
-        weight = rlz.weight / num_samples
-        num_gsim_paths = (num_samples if oqparam.number_of_logic_tree_samples
-                          else gsim_lt.get_num_paths())
-        logging.info('Processed source model %d/%d with %d gsim path(s)',
-                     i + 1, num_source_models, num_gsim_paths)
-        yield source.SourceModel(
-            sm, weight, smpath, src_groups, num_gsim_paths, i, num_samples)
+        logging.info('Processed source model %d with %d gsim path(s)',
+                     sm.ordinal + 1, sm.num_gsim_paths)
+        yield sm
 
     # log if some source file is being used more than once
     for fname, hits in parser.fname_hits.items():

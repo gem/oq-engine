@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016 GEM Foundation
+# Copyright (C) 2016-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -346,9 +346,7 @@ class Db(object):
             if kw.get('one'):
                 return Row(colnames, rows[0])
             else:
-                tbl = Table([Row(colnames, r) for r in rows])
-                tbl._fields = colnames
-                return tbl
+                return Table(colnames, rows)
         else:
             return cursor
 
@@ -365,8 +363,11 @@ class Db(object):
 
 
 class Table(list):
-    """Just a list with an attribute _fields"""
-    _fields = []
+    """Just a list of Rows with an attribute _fields"""
+    def __init__(self, fields, rows):
+        self._fields = fields
+        for row in rows:
+            self.append(Row(fields, row))
 
 
 # we cannot use a namedtuple here because one would get a PicklingError:
