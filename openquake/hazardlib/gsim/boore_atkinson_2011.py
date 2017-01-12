@@ -98,5 +98,3 @@ class Atkinson2008prime(BooreAtkinson2011):
     5.000   0.000   0.00000
     10.00   0.000   0.00000
     """)
-
-    
