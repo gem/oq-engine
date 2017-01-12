@@ -27,7 +27,7 @@ from openquake.baselib.general import groupby
 from openquake.risklib import scientific
 from openquake.commonlib.nrml import NRML05
 from openquake.baselib import sap
-from openquake.commonlib.node import context, striptag, Node
+from openquake.baselib.node import context, striptag, Node
 from openquake.commonlib import InvalidFile, riskmodels, nrml
 
 

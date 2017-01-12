@@ -27,11 +27,11 @@ import random
 
 import numpy
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import groupby, group_array
 from openquake.commonlib import logictree, sourceconverter, InvalidFile
-from openquake.commonlib import nrml, node
+from openquake.commonlib import nrml
 
 MAXWEIGHT = sourceconverter.MAXWEIGHT
 MAX_INT = 2 ** 31 - 1
