@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,11 +30,12 @@ import numpy
 
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip
+from openquake.baselib import parallel
 from openquake.risklib import valid, riskinput
-from openquake.commonlib import readinput, parallel, source, calc
+from openquake.commonlib import readinput, source, calc
 from openquake.calculators import base, event_based
 from openquake.calculators.event_based_risk import (
-    EbriskCalculator, event_based_risk)
+    EbriskCalculator, build_el_dtypes, event_based_risk)
 
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.pmf import PMF
@@ -49,7 +50,7 @@ from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 
 from openquake.commonlib.calc import MAX_INT
-from openquake.commonlib.sourceconverter import SourceConverter
+from openquake.commonlib.sourceconverter import SourceConverter, SourceModel
 
 
 # ######################## rupture calculator ############################ #
@@ -624,31 +625,26 @@ class UCERFSESControl(object):
 
 # #################################################################### #
 
-
-class UCERFSourceConverter(SourceConverter):
+def convert_UCERFSource(self, node):
     """
-    Adjustment of the UCERF Source Converter to return the source information
-    as an instance of the UCERF SES Control object
+    Converts the Ucerf Source node into an SES Control object
     """
-    def convert_UCERFSource(self, node):
-        """
-        Converts the Ucerf Source node into an SES Control object
-        """
-        dirname = os.path.dirname(self.fname)  # where the source_model_file is
-        source_file = os.path.join(dirname, node["filename"])
-        return UCERFSESControl(
-            source_file,
-            node["id"],
-            self.tom.time_span,
-            float(node["minMag"]),
-            npd=self.convert_npdist(node),
-            hdd=self.convert_hpdist(node),
-            aspect=~node.ruptAspectRatio,
-            upper_seismogenic_depth=~node.pointGeometry.upperSeismoDepth,
-            lower_seismogenic_depth=~node.pointGeometry.lowerSeismoDepth,
-            msr=valid.SCALEREL[~node.magScaleRel](),
-            mesh_spacing=self.rupture_mesh_spacing,
-            trt=node["tectonicRegion"])
+    dirname = os.path.dirname(self.fname)  # where the source_model_file is
+    source_file = os.path.join(dirname, node["filename"])
+    return UCERFSESControl(
+        source_file,
+        node["id"],
+        self.tom.time_span,
+        float(node["minMag"]),
+        npd=self.convert_npdist(node),
+        hdd=self.convert_hpdist(node),
+        aspect=~node.ruptAspectRatio,
+        upper_seismogenic_depth=~node.pointGeometry.upperSeismoDepth,
+        lower_seismogenic_depth=~node.pointGeometry.lowerSeismoDepth,
+        msr=valid.SCALEREL[~node.magScaleRel](),
+        mesh_spacing=self.rupture_mesh_spacing,
+        trt=node["tectonicRegion"])
+SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
 def _copy_grp(src_group, grp_id, branch_name, branch_id):
@@ -657,6 +653,9 @@ def _copy_grp(src_group, grp_id, branch_name, branch_id):
     new.id = src.src_group_id = grp_id
     src.source_id = branch_name
     src.branch_id = branch_id
+    idx_set = src.build_idx_set()
+    with h5py.File(src.source_file, "r") as hdf5:
+        src.num_ruptures = len(hdf5[idx_set["rate_idx"]])
     new.sources = [src]
     return new
 
@@ -679,8 +678,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         job_info = dict(hostname=socket.gethostname())
         self.datastore.save('job_info', job_info)
         parser = source.SourceModelParser(
-            UCERFSourceConverter(oq.investigation_time,
-                                 oq.rupture_mesh_spacing))
+            SourceConverter(oq.investigation_time, oq.rupture_mesh_spacing))
         [src_group] = parser.parse_src_groups(oq.inputs["source_model"])
         branches = sorted(self.smlt.branches.items())
         source_models = []
@@ -689,7 +687,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
             [name] = rlz.lt_path
             branch = self.smlt.branches[name]
             sg = _copy_grp(src_group, grp_id, name, branch.value)
-            sm = source.SourceModel(
+            sm = SourceModel(
                 name, branch.weight, [name], [sg], num_gsim_paths, grp_id, 1)
             source_models.append(sm)
         self.csm = source.CompositeSourceModel(
@@ -714,7 +712,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
                 samples=ssm.source_models[0].samples,
                 seed=ssm.source_model_lt.seed)
             gsims = ssm.gsim_lt.values[DEFAULT_TRT]
-            yield ssm.get_sources(), self.sitecol, gsims, monitor
+            yield ssm.get_sources(), self.sitecol.complete, gsims, monitor
 
     def execute(self):
         """
@@ -727,7 +725,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
             [(grp_id, ruptures)] = ruptures_by_grp.items()
             num_ruptures[grp_id] = len(ruptures)
             acc.calc_times.extend(ruptures_by_grp.calc_times[grp_id])
-            self.save_ruptures(ruptures_by_grp)
+            self.save_events(ruptures_by_grp)
         self.save_data_transfer(res)
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.infos)
@@ -756,7 +754,6 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     numpy.random.seed(monitor.seed + src.src_group_id)
     ebruptures = []
     eid = 0
-    src.build_idx_set()
     background_sids = src.get_background_sids(sitecol, integration_distance)
     for ses_idx in range(1, monitor.ses_per_logic_tree_path + 1):
         with event_mon:
@@ -850,6 +847,31 @@ class UCERFRiskCalculator(EbriskCalculator):
     Event based risk calculator for UCERF, parallelizing on the source models
     """
     pre_execute = UCERFRuptureCalculator.__dict__['pre_execute']
+
+    def gen_args(self):
+        """
+        Yield the arguments required by build_ruptures, i.e. the
+        source models, the asset collection, the riskmodel and others.
+        """
+        oq = self.oqparam
+        correl_model = oq.get_correl_model()
+        min_iml = self.get_min_iml(oq)
+        imts = list(oq.imtls)
+        ela_dt, elt_dt = build_el_dtypes(oq.insured_losses)
+        for sm in self.csm.source_models:
+            monitor = self.monitor.new(
+                ses_ratio=oq.ses_ratio,
+                ela_dt=ela_dt, elt_dt=elt_dt,
+                loss_ratios=oq.loss_ratios,
+                avg_losses=oq.avg_losses,
+                insured_losses=oq.insured_losses,
+                ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
+                maximum_distance=oq.maximum_distance,
+                samples=sm.samples,
+                seed=self.oqparam.random_seed)
+            ssm = self.csm.get_model(sm.ordinal)
+            yield (ssm, self.sitecol, self.assetcol, self.riskmodel,
+                   imts, oq.truncation_level, correl_model, min_iml, monitor)
 
     def execute(self):
         num_rlzs = len(self.rlzs_assoc.realizations)

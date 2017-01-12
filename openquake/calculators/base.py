@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -37,9 +37,9 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.risklib import riskinput, __version__ as engine_version
 from openquake.commonlib import readinput, datastore, source, calc
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.parallel import starmap, executor, wakeup_pool
+from openquake.baselib.parallel import starmap, executor, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
-from openquake.commonlib.export import export as exp
+from openquake.calculators.export import export as exp
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -76,10 +76,13 @@ PRECALC_MAP = dict(
     classical_risk=['classical'],
     classical_bcr=['classical'],
     classical_damage=['classical'],
-    event_based=['event_based_risk'],
-    event_based_risk=['event_based'],
-    ucerf_classical=['ucerf_psha'],
-    ebrisk=['event_based'])
+    ebrisk=['event_based', 'event_based_rupture', 'ebrisk',
+            'event_based_risk'],
+    event_based=['event_based', 'event_based_rupture', 'ebrisk',
+                 'event_based_risk'],
+    event_based_risk=['event_based', 'ebrisk', 'event_based_risk',
+                      'event_based_rupture'],
+    ucerf_classical=['ucerf_psha'])
 
 
 def set_array(longarray, shortarray):
@@ -382,27 +385,35 @@ class HazardCalculator(BaseCalculator):
 
     def basic_pre_execute(self):
         oq = self.oqparam
-        mon = self.monitor
         self.read_risk_data()
         if 'source' in oq.inputs:
             wakeup_pool()  # fork before reading the source model
             logging.info('Instantiating the source-sites filter')
             self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
-            with mon('reading composite source model', autoflush=True):
-                csm = readinput.get_composite_source_model(oq)
-            if self.is_stochastic:
-                # initialize the rupture serial numbers before the
-                # filtering; in this way the serials are independent
-                # from the site collection; this is ultra-fast
-                csm.init_serials()
-            with mon('filtering composite source model', autoflush=True):
-                logging.info('Filtering composite source model')
-                # we are also weighting the sources, but weighting is ultrafast
-                csm = csm.filter(self.src_filter)
-            self.csm = csm
-            self.datastore['csm_info'] = csm.info
+            if oq.hazard_calculation_id:  # already stored csm
+                logging.info('Reusing composite source model of calc #%d',
+                             oq.hazard_calculation_id)
+                with datastore.read(oq.hazard_calculation_id) as dstore:
+                    self.csm = dstore['composite_source_model']
+            else:
+                self.csm = self.read_filter_csm()
+            self.datastore['csm_info'] = self.csm.info
             self.rup_data = {}
         self.init()
+
+    def read_filter_csm(self):
+        with self.monitor('reading composite source model', autoflush=True):
+                csm = readinput.get_composite_source_model(self.oqparam)
+        if self.is_stochastic:
+            # initialize the rupture serial numbers before the
+            # filtering; in this way the serials are independent
+            # from the site collection; this is ultra-fast
+            csm.init_serials()
+        with self.monitor('filtering composite source model', autoflush=True):
+            logging.info('Filtering composite source model')
+            # we are also weighting the sources, but weighting is ultrafast
+            csm = csm.filter(self.src_filter)
+        return csm
 
     def pre_execute(self):
         """
@@ -493,7 +504,6 @@ class HazardCalculator(BaseCalculator):
         # save the risk models and loss_ratios in the datastore
         self.datastore['composite_risk_model'] = rm
         attrs = self.datastore.getitem('composite_risk_model').attrs
-        attrs['loss_types'] = hdf5.array_of_vstr(rm.loss_types)
         attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.get_min_iml().items()))
         if rm.damage_states:
             attrs['damage_states'] = hdf5.array_of_vstr(rm.damage_states)

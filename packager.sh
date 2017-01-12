@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# packager.sh  Copyright (C) 2014-2016 GEM Foundation
+# packager.sh  Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,8 +30,8 @@
 #
 # ephemeral containers are "clones" of a base container and have a
 # temporary file system that reflects the contents of the base container
-# but any modifications are stored in another overlayed
-# file system (in-memory or disk)
+# but any modifications are stored in an overlayed, in-memory
+# file system
 #
 
 if [ -n "$GEM_SET_DEBUG" -a "$GEM_SET_DEBUG" != "false" ]; then
@@ -59,29 +59,28 @@ GEM_MAXLOOP=20
 GEM_ALWAYS_YES=false
 
 if [ "$GEM_EPHEM_CMD" = "" ]; then
-    GEM_EPHEM_CMD="lxc-start-ephemeral"
+    GEM_EPHEM_CMD="lxc-copy"
 fi
 if [ "$GEM_EPHEM_NAME" = "" ]; then
-    GEM_EPHEM_NAME="ubuntu-lxc-eph"
+    GEM_EPHEM_NAME="ubuntu16-lxc-eph"
+fi
+# FIXME this is currently unused, but left as reference
+if [ "$GEM_EPHEM_USER" = "" ]; then
+    GEM_EPHEM_USER="ubuntu"
 fi
 
 LXC_VER=$(lxc-ls --version | cut -d '.' -f 1)
 
-if [ $LXC_VER -lt 1 ]; then
-    echo "lxc >= 1.0.0 is required." >&2
+if [ $LXC_VER -lt 2 ]; then
+    echo "LXC >= 2.0.0 is required." >&2
+    echo "Hint: LXC 2.0 is available for Trusty from backports."
     exit 1
 fi
 
 LXC_TERM="lxc-stop -t 10"
 LXC_KILL="lxc-stop -k"
 
-if command -v lxc-copy &> /dev/null; then
-    # New lxc (>= 2.0.0) with lxc-copy
-    GEM_EPHEM_EXE="${GEM_EPHEM_CMD} -n ${GEM_EPHEM_NAME} -e"
-else
-    # Old lxc (< 2.0.0) with lxc-start-ephimeral
-    GEM_EPHEM_EXE="${GEM_EPHEM_CMD} -o ${GEM_EPHEM_NAME} -d"
-fi
+GEM_EPHEM_EXE="${GEM_EPHEM_CMD} -n ${GEM_EPHEM_NAME} -e"
 
 NL="
 "
@@ -101,24 +100,7 @@ sig_hand () {
         scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
         scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/ssh.history"
         echo "Destroying [$lxc_name] lxc"
-        upper="$(mount | grep "${lxc_name}.*upperdir" | sed 's@.*upperdir=@@g;s@,.*@@g')"
-        if [ -f "${upper}.dsk" ]; then
-            loop_dev="$(sudo losetup -a | grep "(${upper}.dsk)$" | cut -d ':' -f1)"
-        fi
         sudo $LXC_KILL -n $lxc_name
-        sudo umount /var/lib/lxc/$lxc_name/rootfs
-        sudo umount /var/lib/lxc/$lxc_name/ephemeralbind
-        echo "$upper" | grep -q '^/tmp/'
-        if [ $? -eq 0 ]; then
-            sudo umount "$upper"
-            sudo rm -r "$upper"
-            if [ "$loop_dev" != "" ]; then
-                sudo losetup -d "$loop_dev"
-                if [ -f "${upper}.dsk" ]; then
-                    sudo rm -f "${upper}.dsk"
-                fi
-            fi
-        fi
         sudo lxc-destroy -n $lxc_name
     fi
     if [ -f /tmp/packager.eph.$$.log ]; then
@@ -329,14 +311,18 @@ _devtest_innervm_run () {
             skip_tests="!slow,"
         fi
 
-        # run tests (in this case we omit 'set -e' to be able to read all tests outputs)
+        ssh $lxc_ip "set -e
+                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine\"
+                 echo 'Starting DbServer. Log is saved to /tmp/dbserver.log'
+                 cd oq-engine; nohup bin/oq dbserver start &>/tmp/dbserver.log </dev/null &"
+
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
                  set -e
                  if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
                      export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
                      set -x
                  fi
-                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine\" ;
+                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine\"
                  cd oq-engine; bin/oq dbserver start &
                  nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
                  nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
@@ -353,6 +339,7 @@ _devtest_innervm_run () {
         bin/oq dbserver stop"
         scp "${lxc_ip}:oq-engine/xunit-*.xml" "out_${BUILD_UBUVER}/" || true
         scp "${lxc_ip}:oq-engine/coverage.xml" "out_${BUILD_UBUVER}/" || true
+        scp "${lxc_ip}:/tmp/dbserver.log" "out_${BUILD_UBUVER}/" || true
     else
         if [ -d $HOME/fake-data/$GEM_GIT_PACKAGE ]; then
             cp $HOME/fake-data/$GEM_GIT_PACKAGE/* "out_${BUILD_UBUVER}/"
@@ -547,7 +534,6 @@ celeryd_wait() {
 }
 
 celeryd_wait $GEM_MAXLOOP"
-        fi
 
         # run all of the hazard and risk demos
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
@@ -602,7 +588,7 @@ celeryd_wait $GEM_MAXLOOP"
         for demo_dir in \$(find . -type d | sort); do
             if [ -f \$demo_dir/job_hazard.ini ]; then
             cd \$demo_dir
-            echo \"Running \$demo_dir/job_hazard.ini\"
+            echo \"Running \$demo_dir/job_hazard.ini using celery\"
             OQ_DISTRIBUTE=celery oq engine --run job_hazard.ini
             echo \"Running \$demo_dir/job_risk.ini\"
             oq engine --run job_risk.ini --exports csv,xml --hazard-calculation-id -1
@@ -615,11 +601,12 @@ celeryd_wait $GEM_MAXLOOP"
         echo 'Listing risk calculations'
         oq engine --lrc"
 
-    ssh $lxc_ip "oq engine --make-html-report today
-    oq engine --delete-calculation 1 --yes
-    oq engine --dc 1 --yes
-    oq purge -1; oq purge 0"
-    scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
+        ssh $lxc_ip "oq engine --make-html-report today
+        oq engine --delete-calculation 1 --yes
+        oq engine --dc 1 --yes
+        oq purge -1; oq purge 0"
+        scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
+    fi
 
     scp -r "${lxc_ip}:/usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" "out_${BUILD_UBUVER}/"
 
@@ -700,23 +687,29 @@ _lxc_name_and_ip_get()
     i=-1
     e=-1
     for i in $(seq 1 40); do
+        if grep -q " as clone of $GEM_EPHEM_NAME" $filename 2>&1 ; then
+            lxc_name="$(grep " as clone of $GEM_EPHEM_NAME" $filename | tail -n 1 | sed "s/Created \(.*\) as clone of ${GEM_EPHEM_NAME}/\1/g")"
+            break
+        else
+            sleep 2
+        fi
+    done
+    if [ $i -eq 40 ]; then
+        return 1
+    fi
+
+    for e in $(seq 1 40); do
         sleep 2
-        if grep -q "sudo lxc-console -n $GEM_EPHEM_NAME" $filename 2>&1 ; then
-            lxc_name="$(grep "sudo lxc-console -n $GEM_EPHEM_NAME" $filename | grep -v '+ echo' | sed "s/.*sudo lxc-console -n \($GEM_EPHEM_NAME\)/\1/g")"
-            for e in $(seq 1 40); do
-                sleep 2
-                if grep -q "$lxc_name" /var/lib/misc/dnsmasq*.leases ; then
-                    lxc_ip="$(grep " $lxc_name " /var/lib/misc/dnsmasq*.leases | tail -n 1 | cut -d ' ' -f 3)"
-                    break
-                fi
-            done
+        lxc_ip="$(sudo lxc-ls -f --filter "^${lxc_name}\$" | tail -n 1 | sed 's/ \+/ /g' | cut -d ' ' -f 5)"
+        if [ "$lxc_ip" -a "$lxc_ip" != "-" ]; then
+            lxc_ssh="${GEM_EPHEM_USER}@${lxc_ip}"
             break
         fi
     done
-    if [ $i -eq 40 -o $e -eq 40 ]; then
+    if [ $e -eq 40 ]; then
         return 1
     fi
-    echo "SUCCESSFULLY RUNNED $lxc_name ($lxc_ip)"
+    echo "SUCCESSFULLY STARTED: $lxc_name ($lxc_ip)"
 
     return 0
 }

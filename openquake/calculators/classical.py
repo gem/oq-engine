@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,7 +23,7 @@ import collections
 from functools import partial, reduce
 import numpy
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
@@ -31,8 +31,7 @@ from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.calc.hazard_curve import (
     pmap_from_grp, ProbabilityMap)
 from openquake.hazardlib.probability_map import PmapStats
-from openquake.commonlib import (
-    parallel, datastore, source, calc, sourceconverter)
+from openquake.commonlib import datastore, source, calc, sourceconverter
 from openquake.calculators import base
 
 U16 = numpy.uint16

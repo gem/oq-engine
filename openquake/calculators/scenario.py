@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,7 +21,7 @@ import numpy
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput, source, calc
-from openquake.commonlib.export.hazard import gmv_dt
+from openquake.calculators.export.hazard import gmv_dt
 from openquake.calculators import base
 
 
@@ -58,7 +58,7 @@ class ScenarioCalculator(base.HazardCalculator):
             calc.event_dt)
         rupture = calc.EBRupture(
             rup, self.sitecol.sids, events, 'single_rupture', 0, 0)
-        self.datastore['ruptures/0'] = rupture
+        self.datastore['ruptures/grp-00/0'] = rupture
         self.computer = GmfComputer(
             rupture, self.sitecol, oq.imtls, self.gsims,
             trunc_level, correl_model)
