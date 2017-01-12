@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -67,7 +67,7 @@ class SourceWriterTestCase(unittest.TestCase):
 class DeepcopyTestCase(unittest.TestCase):
     def test_is_writeable(self):
         parser = SourceModelParser(SourceConverter(50., 1., 10, 0.1, 10.))
-        groups = map(copy.deepcopy, parser.parse_groups(ALT_MFDS))
+        groups = [copy.deepcopy(grp) for grp in parser.parse_groups(ALT_MFDS)]
         # there are a SimpleFaultSource and a CharacteristicFaultSource
         fd, fname = tempfile.mkstemp(suffix='.xml')
         with os.fdopen(fd, 'wb'):

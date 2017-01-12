@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -135,6 +135,9 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = export(('gmf_data:0', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
             'expected/gmf-grp=00~ses=0002~src=1~rup=1-01-rlz-000.csv', fname)
+
+        # test that the .npz export runs
+        export(('gmf_data', 'npz'), self.calc.datastore)
 
         [fname] = out['hcurves', 'xml']
         self.assertEqualFiles(
