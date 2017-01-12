@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed the classical UCERF calculator when there is more than one branch
   * Added .npz exporter for gmf_data for event based calculations
 
   [Daniele Viganò]
