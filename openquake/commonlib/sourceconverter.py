@@ -29,6 +29,36 @@ from openquake.baselib.node import context, striptag
 MAXWEIGHT = 200  # tuned by M. Simionato
 
 
+class SourceModel(object):
+    """
+    A container of SourceGroup instances with some additional attributes
+    describing the source model in the logic tree.
+    """
+    def __init__(self, name, weight, path, src_groups, num_gsim_paths, ordinal,
+                 samples):
+        self.name = name
+        self.weight = weight
+        self.path = path
+        self.src_groups = src_groups
+        self.num_gsim_paths = num_gsim_paths
+        self.ordinal = ordinal
+        self.samples = samples
+
+    @property
+    def num_sources(self):
+        return sum(len(sg) for sg in self.src_groups)
+
+    def get_skeleton(self):
+        """
+        Return an empty copy of the source model, i.e. without sources,
+        but with the proper attributes for each SourceGroup contained within.
+        """
+        src_groups = [SourceGroup(sg.trt, [], sg.min_mag, sg.max_mag, sg.id)
+                      for sg in self.src_groups]
+        return self.__class__(self.name, self.weight, self.path, src_groups,
+                              self.num_gsim_paths, self.ordinal, self.samples)
+
+
 class SourceGroup(collections.Sequence):
     """
     A container for the following parameters:
