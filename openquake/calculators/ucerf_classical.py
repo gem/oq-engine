@@ -308,13 +308,12 @@ def ucerf_classical_hazard_by_branch(branchname, ucerf_source, src_group_id,
 
     if len(s_sites):
         cmaker = ContextMaker(gsims, max_dist)
-        dic[src_group_id] = hazard_curves_per_rupture_subset(
+        dic[src_group_id] = pm = hazard_curves_per_rupture_subset(
             rupset_idx, ucerf_source, src_filter, imtls, cmaker,
             truncation_level, monitor=monitor)
-
+        dic.calc_times.extend(pm.calc_times)
     else:
         dic[src_group_id] = ProbabilityMap(len(imtls.array), len(gsims))
-    dic.calc_times += monitor.calc_times  # added by pmap_from_grp
     dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
     logging.info('Branch %s', branchname)
     # Get the background point sources
@@ -327,7 +326,7 @@ def ucerf_classical_hazard_by_branch(branchname, ucerf_source, src_group_id,
             (), monitor=monitor)
         dic[src_group_id] |= pmap
         dic.eff_ruptures[src_group_id] += monitor.eff_ruptures
-        dic.calc_times += monitor.calc_times
+        dic.calc_times.extend(pmap.calc_times)
     return dic
 
 
