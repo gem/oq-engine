@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,11 +20,12 @@ import os
 import logging
 import numpy
 
+from openquake.baselib import parallel
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import correlation
 from openquake.risklib import valid
-from openquake.commonlib import parallel, logictree
+from openquake.commonlib import logictree
 from openquake.commonlib.riskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
@@ -67,6 +68,7 @@ class OqParam(valid.ParamSet):
         z2pt5='reference_depth_to_2pt5km_per_sec',
         backarc='reference_backarc',
     )
+    all_losses = valid.Param(valid.boolean, False)
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
@@ -265,6 +267,7 @@ class OqParam(valid.ParamSet):
 
         risk_investigation_time / investigation_time / ses_per_logic_tree_path
         """
+        assert self.investigation_time, 'investigation_time = 0!'
         return (self.risk_investigation_time or self.investigation_time) / (
             self.investigation_time * self.ses_per_logic_tree_path)
 
@@ -317,6 +320,14 @@ class OqParam(valid.ParamSet):
         Return a composite dtype based on the loss types, including occupants
         """
         return numpy.dtype(self.loss_dt_list(dtype))
+
+    def multiloss_dt(self, dtype=numpy.float32):
+        """
+        Return a composite dtype based on the loss types, including occupants
+        """
+        I = self.insured_losses + 1
+        return numpy.dtype([(str(lt), (dtype, I))
+                            for lt in self.all_cost_types])
 
     def loss_dt_list(self, dtype=numpy.float32):
         """

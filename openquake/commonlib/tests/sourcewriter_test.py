@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -34,6 +34,10 @@ ALT_MFDS = os.path.join(
     os.path.dirname(nrml_examples.__file__),
     'source_model/alternative-mfds_4test.xml')
 
+COLLECTION = os.path.join(
+    os.path.dirname(nrml_examples.__file__),
+    'source_model/source_group_collection.xml')
+
 
 class SourceWriterTestCase(unittest.TestCase):
 
@@ -55,6 +59,9 @@ class SourceWriterTestCase(unittest.TestCase):
 
     def test_alt_mfds(self):
         self.check_round_trip(ALT_MFDS)
+
+    def test_collection(self):
+        self.check_round_trip(COLLECTION)
 
 
 class DeepcopyTestCase(unittest.TestCase):

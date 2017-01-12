@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,8 +25,8 @@ from openquake.baselib import sap
 from openquake.baselib.general import groupby
 from openquake.baselib.performance import Monitor
 from openquake.commonlib import nrml, readinput
-from openquake.commonlib.parallel import get_pickled_sizes
-from openquake.commonlib.export import export
+from openquake.baselib.parallel import get_pickled_sizes
+from openquake.calculators.export import export
 from openquake.calculators import base, reportwriter
 from openquake.calculators.views import view, rst_table
 from openquake.hazardlib import gsim

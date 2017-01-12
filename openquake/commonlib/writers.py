@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2016 GEM Foundation
+# Copyright (C) 2010-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -362,7 +362,7 @@ def extract_from(data, fields):
 
 def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
     """
-    :param dest: destination filename or io.StringIO instance
+    :param dest: file, filename or io.StringIO instance
     :param data: array to save
     :param sep: separator to use (default comma)
     :param fmt: formatting string (default '%12.8E')
@@ -371,9 +371,14 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
     :param comment:
        optional first line starting with a # character
     """
+    close = True
     if len(data) == 0:
         logging.warn('%s is empty', dest)
-    if not hasattr(dest, 'getvalue'):
+    if hasattr(dest, 'write'):
+        # file-like object in append mode
+        # it must be closed by client code
+        close = False
+    elif not hasattr(dest, 'getvalue'):
         # not a StringIO, assume dest is a filename
         dest = open(dest, 'w')
     try:
@@ -410,7 +415,7 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
                                 for col in row) + u'\n')
     if hasattr(dest, 'getvalue'):
         return dest.getvalue()[:-1]  # a newline is strangely added
-    else:
+    elif close:
         dest.close()
     return dest.name
 
@@ -422,7 +427,7 @@ class CsvWriter(object):
     def __init__(self, sep=',', fmt='%12.8E'):
         self.sep = sep
         self.fmt = fmt
-        self.fnames = []
+        self.fnames = set()
 
     def save(self, data, fname, header=None):
         """
@@ -433,7 +438,7 @@ class CsvWriter(object):
         :param header: header to use
         """
         write_csv(fname, data, self.sep, self.fmt, header)
-        self.fnames.append(fname)
+        self.fnames.add(getattr(fname, 'name', fname))
 
     def getsaved(self):
         """
