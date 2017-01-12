@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,7 @@ from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_3, case_4, case_5, occupants,
-    case_6a)
+    case_6a, case_master)
 
 from openquake.baselib.general import writetmp
 from openquake.calculators.tests import CalculatorTestCase
@@ -110,9 +110,16 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         fname = writetmp(view('totlosses', dstore))
         self.assertEqualFiles('expected/totlosses.txt', fname)
 
+        # testing the npz export runs
+        export(('all_losses-rlzs', 'npz'), self.calc.datastore)
+
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_1g(self):
         out = self.run_calc(case_1g.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv')
         [fname] = out['agglosses-rlzs', 'csv']
         self.assertEqualFiles('expected/agg-gsimltp_@.csv', fname)
+
+    @attr('qa', 'risk', 'scenario_risk')
+    def test_case_master(self):
+        self.run_calc(case_master.__file__, 'job.ini', exports='npz')

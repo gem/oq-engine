@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2016 GEM Foundation
+# Copyright (C) 2012-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -53,36 +53,6 @@ def build_dtypes(curve_resolution, conditional_loss_poes, insured=False):
         lst += [(name + '_ins', pair) for name, pair in lst]
     loss_maps_dt = numpy.dtype(lst) if lst else None
     return loss_curve_dt, loss_maps_dt
-
-
-class Output(object):
-    """
-    A generic container of attributes. Only assets, loss_type, hid and weight
-    are always defined.
-
-    :param assets: a list of assets with the same taxonomy
-    :param loss_type: a loss type string
-    :param hid: ordinal of the hazard realization (can be None)
-    :param weight: weight of the realization (can be None)
-    """
-    def __init__(self, assets, loss_type, hid=None, weight=0, **attrs):
-        self.assets = assets
-        self.loss_type = loss_type
-        self.hid = hid
-        self.weight = weight
-        vars(self).update(attrs)
-
-    @property
-    def taxonomy(self):
-        return self.assets[0].taxonomy
-
-    def __repr__(self):
-        return '<%s %s, hid=%s>' % (
-            self.__class__.__name__, self.loss_type, self.hid)
-
-    def __str__(self):
-        items = '\n'.join('%s=%s' % item for item in vars(self).items())
-        return '<%s\n%s>' % (self.__class__.__name__, items)
 
 
 def fine_graining(points, steps):
@@ -1324,92 +1294,6 @@ def normalize_curves_eb(curves):
     return loss_ratios, numpy.array(curves_poes)
 
 
-def apply_stat(f, arraylist, *extra, **kw):
-    """
-    :param f: a callable arraylist -> array (of the same shape and dtype)
-    :param arraylist: a list of arrays of the same shape and dtype
-    :param extra: additional arguments
-    :returns: an array of the same shape and dtype
-
-    Broadcast statistical functions to composite arrays. Here is an example:
-
-    >>> dt = numpy.dtype([('a', (float, 2)), ('b', float)])
-    >>> a1 = numpy.array([([1, 2], 3)], dt)
-    >>> a2 = numpy.array([([4, 5], 6)], dt)
-    >>> apply_stat(mean_curve, [a1, a2])
-    array([([2.5, 3.5], 4.5)], 
-          dtype=[('a', '<f8', (2,)), ('b', '<f8')])
-    """
-    dtype = arraylist[0].dtype
-    shape = arraylist[0].shape
-    if dtype.names:  # composite array
-        new = numpy.zeros(shape, dtype)
-        for name in dtype.names:
-            new[name] = f([arr[name] for arr in arraylist], *extra, **kw)
-        return new
-    else:  # simple array
-        return f(arraylist, *extra, **kw)
-
-
-class SimpleStats(object):
-    """
-    A class to perform statistics on the average losses. The average losses
-    are stored as N x 2 arrays (non-insured and insured losses) where N is
-    the number of assets.
-
-    :param rlzs: a list of realizations
-    :param quantiles: a list of floats in the range 0..1
-    """
-    def __init__(self, rlzs, quantiles=(), insured_losses=False):
-        self.rlzs = rlzs
-        self.quantiles = quantiles
-        self.insured_losses = insured_losses
-        self.names = ['mean'] + ['quantile-%s' % q for q in quantiles]
-
-    def compute(self, array):
-        """
-        Compute mean and quantiles from an array of shape (N, R, ...).
-        Returns an array of shape (N, Q1, ...).
-        """
-        weights = [rlz['weight'] for rlz in self.rlzs]
-        newshape = list(array.shape)
-        newshape[1] = len(self.quantiles) + 1  # number of statistical outputs
-        newarray = numpy.zeros(newshape, array.dtype)
-        data = [array[:, i] for i in range(len(self.rlzs))]
-        newarray[:, 0] = apply_stat(mean_curve, data, weights)
-        for i, q in enumerate(self.quantiles, 1):
-            newarray[:, i] = apply_stat(quantile_curve, data, q, weights)
-        return newarray
-
-    def build_agg_curve_stats(self, loss_curve_dt, dstore):
-        """
-        Build an array `agg_curve-stats`.
-
-        :param loss_curve_dt:
-            numpy dtype with fields (structural~losses, structural~poes,
-            structural~avg, ...)
-        :param dstore:
-            :class:`openquake.commonlib.datastore.DataStore` instance
-        :returns:
-            an array of size Q1 and dtype loss_curve_dt
-        """
-        Q1 = len(self.names)
-        agg_curve_stats = numpy.zeros(Q1, loss_curve_dt)
-        for l, loss_type in enumerate(loss_curve_dt.names):
-            acs = agg_curve_stats[loss_type]
-            data = dstore['agg_curve-rlzs'][loss_type]
-            for i in range(self.insured_losses + 1):
-                ins = '_ins' if i else ''
-                losses, all_poes = normalize_curves_eb(
-                    [(c['losses'], c['poes']) for c in data[i]])
-                acs['losses' + ins] = losses
-                # NB: all_poes.T to compute the stats on the second axis
-                acs['poes' + ins] = self.compute(all_poes.T).T
-                # NB: data['avg'][None, i] adds a first axis with dimension 1
-                acs['avg' + ins] = self.compute(data['avg'][None, i])[0]
-        return agg_curve_stats
-
-
 def build_loss_dtypes(curve_resolution, conditional_loss_poes,
                       insured_losses=False):
     """
@@ -1438,22 +1322,3 @@ def build_loss_dtypes(curve_resolution, conditional_loss_poes,
     loss_curve_dt = numpy.dtype(lc_list) if lc_list else None
     loss_maps_dt = numpy.dtype(lm_list) if lm_list else None
     return loss_curve_dt, loss_maps_dt
-
-
-# NB: this is a function linear in the array argument
-def compute_stats(array, quantiles, weights):
-    """
-    :param array:
-        an array of R elements (which can be arrays)
-    :param quantile:
-        a list of Q quantiles
-    :param weights:
-        a list of R weights
-    :returns:
-        an array of Q + 1 elements (which can be arrays)
-    """
-    result = numpy.zeros((len(quantiles) + 1,) + array.shape[1:], array.dtype)
-    result[0] = mean_curve(array, weights)
-    for i, q in enumerate(quantiles, 1):
-        result[i] = quantile_curve(array, q, weights)
-    return result
