@@ -29,7 +29,7 @@ from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.baselib import parallel
-from openquake.commonlib import sourceconverter
+from openquake.hazardlib import sourceconverter
 from openquake.calculators import base, classical
 
 DISAGG_RES_FMT = 'disagg/poe-%(poe)s-rlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
