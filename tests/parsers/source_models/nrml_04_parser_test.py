@@ -258,3 +258,4 @@ class NRMLParserPartialModelTestCase(unittest.TestCase):
         self.assertFalse(source.rupt_aspect_ratio)
         self.assertFalse(source.mag_scale_rel)
         self.assertFalse(source.mfd)
+

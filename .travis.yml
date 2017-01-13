@@ -20,7 +20,7 @@ install:
   # Install HMTK extra dependencies
   - pip install -r requirements-py27-linux64.txt
   - pip install oq-hazardlib
-  - pip install .
+  - pip install -e .
 
 script:
   - nosetests -vx tests
