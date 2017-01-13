@@ -24,7 +24,8 @@ import logging
 
 from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.baselib import sap
-from openquake.risklib import scientific, valid
+from openquake.hazardlib import valid
+from openquake.risklib import scientific
 from openquake.commonlib import datastore
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import rmsep
