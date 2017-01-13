@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports :class:`megawatipan2010`.
+Module exports :class:`megawatiEtAl2003`.
 """
 from __future__ import division
 from __future__ import print_function
