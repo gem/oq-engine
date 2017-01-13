@@ -16,58 +16,18 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import logging
-import operator
 import itertools
 import numpy
 
-from openquake.baselib.general import groupby
 from openquake.baselib.node import Node, context
 from openquake.hazardlib.nrml import node_to_obj, validators
-from openquake.hazardlib import InvalidFile, sourceconverter, valid
+from openquake.hazardlib import InvalidFile, valid
 from openquake.risklib import scientific
-
-
-class DuplicatedID(Exception):
-    """Raised when two sources with the same ID are found in a source model"""
 
 F64 = numpy.float64
 
 
 # ######################## node_to_obj definitions ######################### #
-
-@node_to_obj.add(('sourceModel', 'nrml/0.4'))
-def get_source_model_04(node, fname, converter):
-    sources = []
-    source_ids = set()
-    converter.fname = fname
-    for no, src_node in enumerate(node, 1):
-        src = converter.convert_node(src_node)
-        if src.source_id in source_ids:
-            raise DuplicatedID(
-                'The source ID %s is duplicated!' % src.source_id)
-        sources.append(src)
-        source_ids.add(src.source_id)
-        if no % 10000 == 0:  # log every 10,000 sources parsed
-            logging.info('Instantiated %d sources from %s', no, fname)
-    if no % 10000 != 0:
-        logging.info('Instantiated %d sources from %s', no, fname)
-    groups = groupby(
-        sources, operator.attrgetter('tectonic_region_type'))
-    return sorted(sourceconverter.SourceGroup(trt, srcs)
-                  for trt, srcs in groups.items())
-
-
-@node_to_obj.add(('sourceModel', 'nrml/0.5'))
-def get_source_model_05(node, fname, converter):
-    converter.fname = fname
-    groups = []  # expect a sequence of sourceGroup nodes
-    for src_group in node:
-        with context(fname, src_group):
-            if 'sourceGroup' not in src_group.tag:
-                raise ValueError('expected sourceGroup')
-        groups.append(converter.convert_node(src_group))
-    return sorted(groups)
-
 
 @node_to_obj.add(('vulnerabilityModel', 'nrml/0.4'))
 def get_vulnerability_functions_04(node, fname):
