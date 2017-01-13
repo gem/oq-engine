@@ -37,9 +37,9 @@ from openquake.hazardlib.calc.hazard_curve import (
     get_probability_no_exceedance, pmap_from_grp)
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
-from openquake.risklib import valid
+from openquake.hazardlib import valid
 from openquake.commonlib import source, readinput
-from openquake.commonlib.sourceconverter import SourceConverter
+from openquake.hazardlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base, classical
 from openquake.calculators.ucerf_event_based import (
