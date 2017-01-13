@@ -289,6 +289,12 @@ class GetTopEdgeDepthTestCase(unittest.TestCase):
         surface = DummySurface(corners)
         self.assertAlmostEqual(surface.get_top_edge_depth(), 3.3)
 
+    def test_with_depth_topo(self):
+        corners = [[(-0.5, -0.5, -3.3), (0.5, 0.5, -3.5)],
+                   [(-0.5, -0.5, 9.3), (0.5, 0.5, 9.8)]]
+        surface = DummySurface(corners)
+        self.assertAlmostEqual(surface.get_top_edge_depth(), -3.5)
+
     def test_one_row_no_depth(self):
         corners = [[(-0.5, -0.5), (0.5, 0.5)]]
         surface = DummySurface(corners)
@@ -385,7 +391,7 @@ class GetAzimuthTestCase(unittest.TestCase):
                                       Point(0.0, -0.2)])
         azimuths = surface.get_azimuth(mesh)
         expected = numpy.array([0, 90, 180])
-        azimuths[azimuths>180] = azimuths[azimuths>180]-360
+        azimuths[azimuths > 180] = azimuths[azimuths > 180] - 360
         print expected, azimuths
         numpy.testing.assert_almost_equal(expected, azimuths, 1)
 
