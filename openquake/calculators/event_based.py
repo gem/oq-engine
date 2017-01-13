@@ -253,6 +253,10 @@ class EventBasedRuptureCalculator(PSHACalculator):
         Save the SES collection
         """
         num_events = sum_dict(result)
+        if num_events == 0:
+            raise RuntimeError(
+                'No seismic events! Perhaps the investigation time is too '
+                'small or the maximum_distance is too small')
         logging.info('Setting %d event years', num_events)
         with self.monitor('setting event years', measuremem=True,
                           autoflush=True):

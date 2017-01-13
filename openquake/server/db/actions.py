@@ -20,7 +20,7 @@ import os
 import operator
 from datetime import datetime, timedelta
 
-from openquake.risklib import valid
+from openquake.hazardlib import valid
 from openquake.commonlib import datastore
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager

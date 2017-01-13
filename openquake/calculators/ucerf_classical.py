@@ -37,9 +37,9 @@ from openquake.hazardlib.calc.hazard_curve import (
     get_probability_no_exceedance, pmap_from_grp)
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
-from openquake.risklib import valid
+from openquake.hazardlib import valid, nrml
 from openquake.commonlib import source, readinput
-from openquake.commonlib.sourceconverter import SourceConverter
+from openquake.hazardlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base, classical
 from openquake.calculators.ucerf_event_based import (
@@ -345,7 +345,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         self.sitecol = readinput.get_site_collection(self.oqparam)
         self.gsim_lt = readinput.get_gsim_lt(self.oqparam, [DEFAULT_TRT])
         self.smlt = readinput.get_source_model_lt(self.oqparam)
-        parser = source.SourceModelParser(
+        parser = nrml.SourceModelParser(
             SourceConverter(self.oqparam.investigation_time,
                             self.oqparam.rupture_mesh_spacing))
         [self.src_group] = parser.parse_src_groups(
