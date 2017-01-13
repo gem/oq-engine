@@ -85,7 +85,7 @@ class MegawatiEtAl2003(GMPE):
         if isinstance(imt, (PGA, SA)):
             mean = np.log(np.exp(mean) / (100.0 * g))
         # Compute std
-        stddevs = self._compute_std(coe, stddev_types, len(dists.azimuth))
+        stddevs = self._compute_std(coe, stddev_types, dists.azimuth.shape)
         return mean, stddevs
 
     def _get_magnitude_scaling(self, coe, mag):
@@ -105,17 +105,16 @@ class MegawatiEtAl2003(GMPE):
         This is the azimuth correction defined in the functional form (see
         equation 3 at page 2256)
         """
-        term1 = abs(np.cos(np.radians(2*azimuth)))
-        term2 = abs(np.sin(np.radians(2*azimuth)))*coe['a5']
-        aa = np.log(np.max(np.hstack((term1, term2))))
-        return aa
+        term1 = abs(np.cos(np.radians(2.*azimuth)))
+        term2 = abs(np.sin(np.radians(2.*azimuth)))*coe['a5']
+        return np.log(np.max(np.hstack((term1, term2))))
 
-    def _compute_std(self, coe, stddev_types, num_sites):
+    def _compute_std(self, coe, stddev_types, shape):
         """
         Returns the total standard deviation according to table III at page
         2257. Table obtained via http://www.onlineocr.net/
         """
-        return [np.ones_like((num_sites))*coe['sigma']]
+        return [np.zeros(shape)*coe['sigma']]
 
     #: Coefficient table for rock sites, see table 3 page 2257
     COEFFS = CoeffsTable(sa_damping=5, table="""\
