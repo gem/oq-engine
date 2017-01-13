@@ -318,7 +318,7 @@ class TaskManager(object):
       tm = TaskManager(do_something, logging.info)
       tm.send(arg1, arg2)
       tm.send(arg3, arg4)
-      print tm.reduce()
+      print(tm.reduce())
 
     Progress report is built-in.
     """

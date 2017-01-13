@@ -21,5 +21,10 @@ http://ftp.openquake.org/wheelhouse/linux/py/decorator-4.0.10-py2.py3-none-any.w
 http://ftp.openquake.org/wheelhouse/linux/py/funcsigs-1.0.2-py2.py3-none-any.whl
 http://ftp.openquake.org/wheelhouse/linux/py/pbr-1.8.0-py2.py3-none-any.whl
 http://ftp.openquake.org/wheelhouse/linux/py/six-1.10.0-py2.py3-none-any.whl
-# Experimental wheel
+
+## Extra ##
+
+### Rtree ###
+# comment the following lines to skip installation
+# of Rtree (experimental wheel, optional feature)
 http://ftp.openquake.org/wheelhouse/linux/py35/Rtree-0.8.2-cp35-cp35m-manylinux1_x86_64.whl

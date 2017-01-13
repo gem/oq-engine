@@ -48,4 +48,3 @@ class SomervilleEtAl2009NonCratonicTestCase(BaseGSIMTestCase):
     def test_std_total(self):
         self.check('S09/SOMMERVILLE_Non_Cratonic2009_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
-
