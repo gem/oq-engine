@@ -552,12 +552,6 @@ cost_type_dt = numpy.dtype([('name', hdf5.vstr),
                             ('unit', hdf5.vstr)])
 
 
-class DuplicatedID(Exception):
-    """
-    Raised when two assets with the same ID are found in an exposure model
-    """
-
-
 def _get_exposure(fname, ok_cost_types, stop=None):
     """
     :param fname:
@@ -661,7 +655,7 @@ def get_exposure(oqparam):
         with context(fname, asset):
             asset_id = asset['id'].encode('utf8')
             if asset_id in asset_refs:
-                raise DuplicatedID(asset_id)
+                raise read_nrml.DuplicatedID(asset_id)
             asset_refs.add(asset_id)
             exposure.asset_refs.append(asset_id)
             taxonomy = asset['taxonomy']
