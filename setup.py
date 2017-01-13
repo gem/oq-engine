@@ -52,7 +52,7 @@ setup(
     maintainer='GEM Foundation',
     maintainer_email='hazard@globalquakemodel.org',
     classifiers=(
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Education',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: GNU Affero General Public License v3',
