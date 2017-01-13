@@ -31,7 +31,7 @@ import numpy
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip
 from openquake.baselib import parallel
-from openquake.hazardlib import valid
+from openquake.hazardlib import valid, nrml
 from openquake.risklib import riskinput
 from openquake.commonlib import readinput, source, calc
 from openquake.calculators import base, event_based
@@ -678,7 +678,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         self.smlt = readinput.get_source_model_lt(oq)
         job_info = dict(hostname=socket.gethostname())
         self.datastore.save('job_info', job_info)
-        parser = source.SourceModelParser(
+        parser = nrml.SourceModelParser(
             SourceConverter(oq.investigation_time, oq.rupture_mesh_spacing))
         [src_group] = parser.parse_src_groups(oq.inputs["source_model"])
         branches = sorted(self.smlt.branches.items())
