@@ -22,7 +22,6 @@ import numpy
 from openquake.baselib.performance import Monitor
 
 
-# NB: tests for the HDF5 functionality are in risklib
 class MonitorTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
