@@ -30,8 +30,9 @@ import numpy
 from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import groupby, group_array
-from openquake.commonlib import logictree, sourceconverter, InvalidFile
-from openquake.commonlib import nrml
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile
+from openquake.commonlib import logictree
+
 
 MAXWEIGHT = sourceconverter.MAXWEIGHT
 MAX_INT = 2 ** 31 - 1
@@ -504,7 +505,7 @@ class CompositeSourceModel(collections.Sequence):
     :param source_model_lt:
         a :class:`openquake.commonlib.logictree.SourceModelLogicTree` instance
     :param source_models:
-        a list of :class:`openquake.commonlib.sourceconverter.SourceModel`
+        a list of :class:`openquake.hazardlib.sourceconverter.SourceModel`
         tuples
     """
     def __init__(self, gsim_lt, source_model_lt, source_models,

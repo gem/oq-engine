@@ -31,7 +31,8 @@ import numpy
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip
 from openquake.baselib import parallel
-from openquake.risklib import valid, riskinput
+from openquake.hazardlib import valid
+from openquake.risklib import riskinput
 from openquake.commonlib import readinput, source, calc
 from openquake.calculators import base, event_based
 from openquake.calculators.event_based_risk import (
@@ -50,7 +51,7 @@ from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 
 from openquake.commonlib.calc import MAX_INT
-from openquake.commonlib.sourceconverter import SourceConverter, SourceModel
+from openquake.hazardlib.sourceconverter import SourceConverter, SourceModel
 
 
 # ######################## rupture calculator ############################ #
