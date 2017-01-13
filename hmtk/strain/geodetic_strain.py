@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-#License as published by the Free Software Foundation, either version
-#3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-#DISCLAIMER
+# DISCLAIMER
 #
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-#is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-#Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -106,8 +106,8 @@ class GeodeticStrain(object):
 
         # Check to ensure essential attributes are in data dictionary
         for essential_key in DATA_VARIABLES:
-            if not essential_key in self.data.keys():
-                print self.data
+            if essential_key not in self.data:
+                print(self.data)
                 raise ValueError('Essential strain information %s missing!'
                                  % essential_key)
         self.data_variables = deepcopy(DATA_VARIABLES)

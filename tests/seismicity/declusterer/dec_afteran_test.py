@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
+# DISCLAIMER
 # 
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -80,16 +80,15 @@ class AfteranTestCase(unittest.TestCase):
         Testing the Afteran algorithm
         """
         config = {
-                  'time_distance_window' : GardnerKnopoffWindow(),
-                  'time_window' : 60.,
-                  }
-        # Instantiate the declusterer and process the sample catalogue
-        #self.dec = Afteran()
-        print dir(self.dec)
+            'time_distance_window': GardnerKnopoffWindow(),
+            'time_window': 60.}
+        # Instantiate the declusterer and process the sample catalogue
+        # self.dec = Afteran()
+        print(dir(self.dec))
         vcl, flagvector = self.dec.decluster(self.cat, config)
-        print 'vcl:',vcl
-        print 'flagvector:',flagvector, self.cat.data['flag']
-        self.assertTrue(np.allclose(flagvector,self.cat.data['flag']))
+        print('vcl:', vcl)
+        print('flagvector:', flagvector, self.cat.data['flag'])
+        self.assertTrue(np.allclose(flagvector, self.cat.data['flag']))
 
     def test_find_aftershocks(self):
         '''
@@ -98,7 +97,6 @@ class AfteranTestCase(unittest.TestCase):
         # Test when aftershocks are in array
         year_dec = np.array([0.10, 0.20, 0.5, 0.60, 0.80, 1.2])
         vsel = np.array([3, 4, 5])
-        time_window = 0.25
         expected_result = (np.array([False, False, False, True, True, False]),
                            True)
         model_result = self.dec._find_aftershocks(vsel, year_dec, 0.25, 2, 6)
@@ -112,7 +110,6 @@ class AfteranTestCase(unittest.TestCase):
         self.assertTrue(np.all(expected_result[0] == model_result[0]))
         self.assertFalse(model_result[1])
 
-
     def test_find_foreshocks(self):
         '''
         Tests the find_foreshocks function
@@ -120,7 +117,6 @@ class AfteranTestCase(unittest.TestCase):
         # Test when aftershocks are in array
         year_dec = np.array([0.10, 0.40, 0.5, 0.60, 0.80, 1.2])
         vsel = np.array([0, 1])
-        time_window = 0.25
         expected_result = (
             np.array([False, True, False, False, False, False]), True)
         model_result = self.dec._find_foreshocks(vsel, year_dec, 0.25, 2, 6)

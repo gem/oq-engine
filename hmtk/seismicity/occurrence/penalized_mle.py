@@ -74,11 +74,11 @@ class PenalizedMLE(SeismicityOccurrence):
         :param int ierr:
             Error code
         """
-        print self.IERR[ierr] 
+        print(self.IERR[ierr])
         a_4 = 0.05 * config["area"]
-        return config["b_prior"], 0.0,\
-            10.0 ** (np.log10(a_4) +
-            (4. - config["reference_magnitude"]) * config["b_prior"]), 0.0
+        return config["b_prior"], 0.0, (
+            10.0 ** (np.log10(a_4) + (4. - config["reference_magnitude"])
+                     * config["b_prior"]), 0.0)
 
     def calculate(self, catalogue, config, completeness):
         """

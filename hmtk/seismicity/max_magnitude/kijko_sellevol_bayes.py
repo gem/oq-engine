@@ -131,8 +131,8 @@ class KijkoSellevolBayes(BaseMaximumMagnitude):
             mmax = np.copy(tmmax)
             iterator += 1
             if iterator > config['maximum_iterations']:
-                print 'Kijko-Sellevol-Bayes estimator reached'
-                print 'maximum # of iterations'
+                print('Kijko-Sellevol-Bayes estimator reached'
+                      'maximum # of iterations')
                 d_t = -np.inf
 
         return mmax.item(), np.sqrt(obsmaxsig ** 2. + delta ** 2.)

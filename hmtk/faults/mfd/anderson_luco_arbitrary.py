@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -347,8 +347,8 @@ class AndersonLucoArbitrary(BaseMFDfromSlip):
                          self.mmax + self.bin_width,
                          self.bin_width)
         if bbar >= dbar:
-            print ('b-value larger than 1.5 will produce invalid results in '
-                   'Anderson & Luco models')
+            print('b-value larger than 1.5 will produce invalid results in '
+                  'Anderson & Luco models')
             self.occurrence_rate = np.nan * np.ones(len(mags) - 1)
             return self.mmin, self.bin_width, self.occurrence_rate
         self.occurrence_rate = np.zeros(len(mags) - 1, dtype=float)

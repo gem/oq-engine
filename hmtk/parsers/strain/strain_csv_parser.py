@@ -123,8 +123,8 @@ class ReadStrainCsv(object):
 
         self._check_invalid_longitudes()
 
-        if not 'region' in self.strain.data.keys():
-            print 'No tectonic regionalisation found in input file!'
+        if 'region' not in self.strain.data:
+            print('No tectonic regionalisation found in input file!')
         self.strain.data_variables = self.strain.data.keys()
 
         # Update data with secondary data (i.e. 2nd invariant, e1h, e2h etc.
@@ -178,7 +178,7 @@ class WriteStrainCsv(object):
         strain, output_variables = self.slice_rates_to_data(strain)
 
         outfile = open(self.filename, 'wt')
-        print 'Writing strain data to file %s' % self.filename
+        print('Writing strain data to file %s' % self.filename)
         writer = csv.DictWriter(outfile,
                                 fieldnames=output_variables)
         writer.writeheader()
@@ -190,7 +190,7 @@ class WriteStrainCsv(object):
                     row_dict[key] = strain.data[key][iloc]
             writer.writerow(row_dict)
         outfile.close()
-        print 'done!'
+        print('done!')
 
     def slice_rates_to_data(self, strain):
         '''

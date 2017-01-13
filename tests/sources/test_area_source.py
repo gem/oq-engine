@@ -55,7 +55,6 @@ hmtk.sources.area_source.mtkAreaSource
 import unittest
 import warnings
 import numpy as np
-#from openquake.nrmllib import models
 from openquake.hazardlib.geo import point, polygon
 from openquake.hazardlib.source.area import AreaSource
 from openquake.hazardlib.pmf import PMF
@@ -71,6 +70,7 @@ SOURCE_ATTRIBUTES = ['mfd', 'name', 'geometry', 'nodal_plane_dist', 'typology',
                      'upper_depth', 'catalogue', 'rupt_aspect_ratio',
                      'lower_depth', 'id', 'hypo_depth_dist', 'mag_scale_rel',
                      'trt']
+
 
 class TestAreaSource(unittest.TestCase):
     '''
@@ -226,44 +226,6 @@ class TestAreaSource(unittest.TestCase):
             self.assertEqual(ver.exception.message,
                              'No events found in catalogue!')
 
-    #~ def test_create_oqnmrl_area_source(self):
-        #~ '''
-        #~ Tests the conversion of a point source to an instance of the :class:
-        #~ oqnrmllib.models.AreaSource
-        #~ '''
-        #~ # Define a complete source
-        #~ area_geom = polygon.Polygon([point.Point(10., 10.),
-                                     #~ point.Point(12., 10.),
-                                     #~ point.Point(12., 8.),
-                                     #~ point.Point(10., 8.)])
-        #~ self.area_source = mtkAreaSource('001',
-            #~ 'A Point Source',
-            #~ trt='Active Shallow Crust',
-            #~ geometry = area_geom,
-            #~ upper_depth = 0.,
-            #~ lower_depth = 20.,
-            #~ mag_scale_rel=None,
-            #~ rupt_aspect_ratio=1.0,
-            #~ mfd=models.TGRMFD(a_val=3., b_val=1.0, min_mag=5.0, max_mag=8.0),
-            #~ nodal_plane_dist=None,
-            #~ hypo_depth_dist=None)
-
-        #~ expected_source = models.AreaSource(
-            #~ '001',
-            #~ 'A Point Source',
-            #~ geometry=models.AreaGeometry(area_geom.wkt, 0., 20.),
-            #~ mag_scale_rel='WC1994',
-            #~ rupt_aspect_ratio=1.0,
-            #~ mfd=models.TGRMFD(a_val=3., b_val=1.0, min_mag=5.0, max_mag=8.0),
-            #~ nodal_plane_dist=None,
-            #~ hypo_depth_dist=None)
-        #~ test_source = self.area_source.create_oqnrml_source(use_defaults=True)
-        #~ self.assertTrue(isinstance(test_source, models.AreaSource))
-        #~ self.assertEqual(test_source.id, expected_source.id)
-        #~ self.assertEqual(test_source.name, expected_source.name)
-        #~ self.assertAlmostEqual(test_source.mfd.b_val,
-                               #~ expected_source.mfd.b_val)
-
     def test_create_oqhazardlib_source(self):
         """
         """
@@ -273,12 +235,13 @@ class TestAreaSource(unittest.TestCase):
                                      point.Point(12., 8.),
                                      point.Point(10., 8.)])
         mfd1 = TruncatedGRMFD(5.0, 8.0, 0.1, 3.0, 1.0)
-        self.area_source = mtkAreaSource('001',
+        self.area_source = mtkAreaSource(
+            '001',
             'A Point Source',
             trt='Active Shallow Crust',
-            geometry = area_geom,
-            upper_depth = 0.,
-            lower_depth = 20.,
+            geometry=area_geom,
+            upper_depth=0.,
+            lower_depth=20.,
             mag_scale_rel=None,
             rupt_aspect_ratio=1.0,
             mfd=mfd1,

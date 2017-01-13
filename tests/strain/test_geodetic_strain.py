@@ -44,11 +44,10 @@
 Test suite for hmtk.strain.geodetic_strain.GeodeticStrain a set of utility
 functions for the main geodetic strain class
 '''
-import os
 import unittest
 import numpy as np
-from math import log, log10
 from hmtk.strain.geodetic_strain import GeodeticStrain
+
 
 class TestGeodeticStrain(unittest.TestCase):
     '''
@@ -59,7 +58,6 @@ class TestGeodeticStrain(unittest.TestCase):
         '''
         self.data = {}
         self.model = GeodeticStrain()
-
 
     def test_instantiation(self):
         '''
@@ -83,21 +81,18 @@ class TestGeodeticStrain(unittest.TestCase):
         # No strain data
         with self.assertRaises(ValueError) as ae:
             self.model.get_secondary_strain_data()
-        self.assertEqual(ae.exception.message,
+        self.assertEqual(str(ae.exception),
                          'Strain data not input or incorrectly formatted')
-
 
         # Strain data missing critical attribute - e.g. exy
         self.data = {'longitude': np.array([10., 20., 30.]),
                      'latitude': np.array([10., 20., 30.]),
-                     'exx' : np.array([1E-9, 20E-9, 25E-9]),
-                     'eyy' : np.array([1E-9, 20E-9, 25E-9])}
+                     'exx': np.array([1E-9, 20E-9, 25E-9]),
+                     'eyy': np.array([1E-9, 20E-9, 25E-9])}
         with self.assertRaises(ValueError) as ae:
             self.model.get_secondary_strain_data(self.data)
-        self.assertEqual(ae.exception.message,
+        self.assertEqual(str(ae.exception),
                          'Essential strain information exy missing!')
-
-
 
     def test_secondary_strain_data_with_input(self):
         '''
@@ -116,7 +111,7 @@ class TestGeodeticStrain(unittest.TestCase):
                      'exy': 1E-9 * np.array([10., 1.0, 0.1])}
         self.model.get_secondary_strain_data(self.data)
         # Check that all expected keys are present
-        expected_keys = ['longitude', 'latitude','exx', 'eyy', 'exy',
+        expected_keys = ['longitude', 'latitude', 'exx', 'eyy', 'exy',
                          '2nd_inv', 'dilatation', 'err', 'e1h', 'e2h']
         for key in expected_keys:
             self.assertTrue(key in self.model.data.keys())
@@ -143,16 +138,15 @@ class TestGeodeticStrain(unittest.TestCase):
             np.log10(self.model.data['e2h']),
             np.array([-6.99171577, -7.99171577, -8.99171577]))
 
-
     def test_get_number_observations(self):
         '''
         Tests the count of the number of observations
         '''
         self.data = {'longitude': np.array([10., 20., 30.]),
                      'latitude': np.array([10., 20., 30.]),
-                     'exx' : np.array([1E-9, 20E-9, 25E-9]),
-                     'eyy' : np.array([1E-9, 20E-9, 25E-9]),
-                     'exy' : np.array([1E-9, 20E-9, 25E-9])}
+                     'exx': np.array([1E-9, 20E-9, 25E-9]),
+                     'eyy': np.array([1E-9, 20E-9, 25E-9]),
+                     'exy': np.array([1E-9, 20E-9, 25E-9])}
         self.model = GeodeticStrain()
         # Test when no data is input (should equal 0)
         self.assertEqual(self.model.get_number_observations(), 0)

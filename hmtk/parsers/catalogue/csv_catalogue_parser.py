@@ -107,21 +107,21 @@ class CsvCatalogueParser(BaseCatalogueParser):
             if element in catalogue_keys:
                 valid_key_list.append(element)
             else:
-                print ('Catalogue Attribute %s is not '
-                    'a recognised catalogue key' % element)
+                print('Catalogue Attribute %s is not '
+                      'a recognised catalogue key' % element)
         return valid_key_list
 
     def _float_check(self, attribute_array, value, irow, key):
         '''Checks if value is valid float, appends to array if valid, appends
         nan if not'''
         value = value.strip(' ')
-        try: 
+        try:
             if value:
                 attribute_array = np.hstack([attribute_array, float(value)])
             else:
                 attribute_array = np.hstack([attribute_array, np.nan])
         except:
-            print irow, key
+            print(irow, key)
             msg = 'Input file format error at line: %d' % (irow+2)
             msg += ' key: %s' % (key)
             raise ValueError(msg)

@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-#DISCLAIMER
+# DISCLAIMER
 #
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
 # is released as a prototype implementation on behalf of
@@ -459,5 +459,6 @@ class nrmlSourceModelParser(BaseSourceModelParser):
                     parse_complex_fault_node(node, mfd_spacing,
                                              complex_mesh_spacing))
             else:
-                print "Source typology %s not recognised - skipping!" % node.tag
+                print("Source typology %s not recognised - skipping!"
+                      % node.tag)
         return source_model
