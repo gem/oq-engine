@@ -12,7 +12,7 @@ addons:
 
 install:
   # Clone oq-hazardlib
-  - if [ "$(git ls-remote --heads https://github.com/gem/oq-engine.git ${TRAVIS_BRANCH})" != "" ]; then BRANCH=$TRAVIS_BRANCH; else BRANCH='master'; fi; git clone -b ${BRANCH} --depth=1 https://github.com/gem/oq-engine.git && echo "Running on oq-engine/${BRANCH}"
+  - if [ "$(git ls-remote --heads https://github.com/gem/oq-hazardlib.git ${TRAVIS_BRANCH})" != "" ]; then BRANCH=$TRAVIS_BRANCH; else BRANCH='master'; fi; git clone -b ${BRANCH} --depth=1 https://github.com/gem/oq-hazardlib.git && echo "Running on oq-hazardlib/${BRANCH}"
   # Make sure pip is up-to-date and has support for wheels
   - pip install -U pip
   # Install oq-hazardlib dependencies
