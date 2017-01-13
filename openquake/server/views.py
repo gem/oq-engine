@@ -34,7 +34,6 @@ from django.http import (
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
-from django.template import RequestContext
 from django.contrib.auth import authenticate, login, logout
 try:
     from django.http import FileResponse  # Django >= 1.8
