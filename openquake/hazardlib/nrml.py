@@ -78,9 +78,12 @@ supplemented by a dictionary of validators.
 from __future__ import print_function
 import re
 import sys
+import copy
 import decimal
 import logging
 import operator
+import collections
+
 import numpy
 
 from openquake.baselib.general import CallableDict, groupby
@@ -232,6 +235,50 @@ validators = {
     'spacing': valid.positivefloat,
     'srcs_weights': valid.weights,
 }
+
+
+class SourceModelParser(object):
+    """
+    A source model parser featuring a cache.
+
+    :param converter:
+        :class:`openquake.commonlib.source.SourceConverter` instance
+    """
+    def __init__(self, converter):
+        self.converter = converter
+        self.groups = {}  # cache fname -> groups
+        self.fname_hits = collections.Counter()  # fname -> number of calls
+
+    def parse_src_groups(self, fname, apply_uncertainties=None):
+        """
+        :param fname:
+            the full pathname of the source model file
+        :param apply_uncertainties:
+            a function modifying the sources (or None)
+        """
+        try:
+            groups = self.groups[fname]
+        except KeyError:
+            groups = self.groups[fname] = self.parse_groups(fname)
+        # NB: deepcopy is *essential* here
+        groups = [copy.deepcopy(g) for g in groups]
+        for group in groups:
+            for src in group:
+                if apply_uncertainties:
+                    apply_uncertainties(src)
+                    src.num_ruptures = src.count_ruptures()
+        self.fname_hits[fname] += 1
+        return groups
+
+    def parse_groups(self, fname):
+        """
+        Parse all the groups and return them ordered by number of sources.
+        It does not count the ruptures, so it is relatively fast.
+
+        :param fname:
+            the full pathname of the source model file
+        """
+        return parse(fname, self.converter)
 
 
 def read(source, chatty=True, stop=None):
