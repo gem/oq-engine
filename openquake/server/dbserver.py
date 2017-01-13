@@ -28,7 +28,7 @@ from concurrent.futures import ProcessPoolExecutor
 
 from openquake.baselib import sap
 from openquake.baselib.parallel import safely_call
-from openquake.risklib import valid
+from openquake.hazardlib import valid
 from openquake.commonlib import config
 from openquake.server.db import actions
 from openquake.server import dbapi

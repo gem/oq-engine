@@ -24,7 +24,7 @@ from openquake.baselib import parallel
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import correlation
-from openquake.risklib import valid
+from openquake.hazardlib import valid
 from openquake.commonlib import logictree
 from openquake.commonlib.riskmodels import get_risk_files
 

@@ -16,7 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import sys
-from openquake.risklib import valid
+from openquake.hazardlib import valid
 from openquake.baselib import sap
 from openquake.engine import logs
 from openquake.commonlib import config
