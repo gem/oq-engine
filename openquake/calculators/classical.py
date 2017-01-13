@@ -25,13 +25,14 @@ import numpy
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import AccumDict, block_splitter
+from openquake.hazardlib import sourceconverter
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.calc.hazard_curve import (
     pmap_from_grp, ProbabilityMap)
 from openquake.hazardlib.probability_map import PmapStats
-from openquake.commonlib import datastore, source, calc, sourceconverter
+from openquake.commonlib import datastore, source, calc
 from openquake.calculators import base
 
 U16 = numpy.uint16

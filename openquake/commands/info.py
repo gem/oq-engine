@@ -24,13 +24,13 @@ import operator
 from openquake.baselib import sap
 from openquake.baselib.general import groupby
 from openquake.baselib.performance import Monitor
-from openquake.commonlib import nrml, readinput
 from openquake.baselib.parallel import get_pickled_sizes
+from openquake.hazardlib import nrml
+from openquake.hazardlib import gsim
+from openquake.commonlib import readinput
 from openquake.calculators.export import export
 from openquake.calculators import base, reportwriter
 from openquake.calculators.views import view, rst_table
-from openquake.hazardlib import gsim
-
 
 def print_csm_info(fname):
     """
