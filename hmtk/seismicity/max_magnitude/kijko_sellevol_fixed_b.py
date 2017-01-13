@@ -127,18 +127,17 @@ class KijkoSellevolFixedb(BaseMaximumMagnitude):
         mmax = np.copy(obsmax)
         d_t = np.inf
         iterator = 0
-        print mmin, mmax, neq, beta
+        print(mmin, mmax, neq, beta)
         while d_t > config['tolerance']:
             delta = quadrature(self._ks_intfunc, mmin, mmax,
                                args=(neq, mmax, mmin, beta))[0]
-            #print mmin, neq, delta, mmax
             tmmax = obsmax + delta
             d_t = np.abs(tmmax - mmax)
             mmax = np.copy(tmmax)
             iterator += 1
             if iterator > config['maximum_iterations']:
-                print ('Kijko-Sellevol estimator reached '
-                       'maximum # of iterations')
+                print('Kijko-Sellevol estimator reached '
+                      'maximum # of iterations')
                 d_t = -np.inf
         return mmax.item(), np.sqrt(obsmaxsig ** 2. + delta ** 2.)
 

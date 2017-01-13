@@ -105,22 +105,25 @@ class ParseNDKtoGCMT(object):
             raise IOError('GCMT represented by 5 lines - number in file not'
                           ' a multiple of 5!')
         self.catalogue.number_gcmts = num_lines / 5
-        self.catalogue.gcmts = [None] * self.catalogue.number_gcmts #Pre-allocates list
+        self.catalogue.gcmts = [None] * self.catalogue.number_gcmts
+        # Pre-allocates list
         id0 = 0
-        print 'Parsing catalogue ...'
+        print('Parsing catalogue ...')
         for iloc in range(0, self.catalogue.number_gcmts):
             self.catalogue.gcmts[iloc] = self.read_ndk_event(raw_data, id0)
             id0 += 5
-        print 'complete. Contains %s moment tensors' \
-            % self.catalogue.get_number_tensors()
+        print('complete. Contains %s moment tensors'
+              % self.catalogue.get_number_tensors())
         if not start_year:
             min_years = []
-            min_years = [cent.centroid.date.year for cent in self.catalogue.gcmts]
+            min_years = [cent.centroid.date.year
+                         for cent in self.catalogue.gcmts]
             self.catalogue.start_year = np.min(min_years)
 
         if not end_year:
             max_years = []
-            max_years = [cent.centroid.date.year for cent in self.catalogue.gcmts]
+            max_years = [cent.centroid.date.year
+                         for cent in self.catalogue.gcmts]
             self.catalogue.end_year = np.max(max_years)
         self.to_hmtk(use_centroid)
         return self.catalogue

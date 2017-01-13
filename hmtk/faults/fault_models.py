@@ -9,13 +9,13 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-#License as published by the Free Software Foundation, either version
-#3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-#DISCLAIMER
+# DISCLAIMER
 #
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
 # is released as a prototype implementation on behalf of
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
-#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-#for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -50,7 +50,6 @@ Module: hmtk.faults.fault_model implements the set of classes to allow for a
 calculation of the magnitude frequency distribution from the geological
 slip rate
 '''
-import warnings
 import numpy as np
 from math import fabs
 
@@ -281,15 +280,14 @@ class mtkActiveFault(object):
                              'not defined in regionalisation')
 
         for iloc, key_val in enumerate(regionalisation.key_list):
-            #print iloc, key_val, self.trt
             if self.trt in key_val:
                 self.regionalisation = regionalisation.regionalisation[iloc]
 
                 # Update undefined shear modulus from tectonic regionalisation
                 if not self.shear_modulus:
                     self.shear_modulus = self.regionalisation.shear_modulus
-                 # Update undefined scaling relation from tectonic
-                 # regionalisation
+                # Update undefined scaling relation from tectonic
+                # regionalisation
                 if not self.msr:
                     self.msr = self.regionalisation.scaling_rel
                 # Update undefined displacement to length ratio from tectonic

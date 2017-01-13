@@ -99,18 +99,19 @@ BORDER_POINT_SOURCE = PointSource("PNT000", "Point 000",
                                   PMF([(1.0, NodalPlane(0.0, 90.0, 0.0))]),
                                   PMF([(1.0, 5.0)]))
 
-OUTSIDE_POINT_SOURCE = PointSource("PNT000", "Point 000",
-                                  "Active Shallow Crust",
-                                  EvenlyDiscretizedMFD(5.0, 0.1, [1.0]),
-                                  1.0,
-                                  PointMSR(),
-                                  1.0,
-                                  PoissonTOM(1.0),
-                                  0.0,
-                                  20.0,
-                                  Point(15.0, 15.2),
-                                  PMF([(1.0, NodalPlane(0.0, 90.0, 0.0))]),
-                                  PMF([(1.0, 5.0)]))
+OUTSIDE_POINT_SOURCE = PointSource(
+    "PNT000", "Point 000",
+    "Active Shallow Crust",
+    EvenlyDiscretizedMFD(5.0, 0.1, [1.0]),
+    1.0,
+    PointMSR(),
+    1.0,
+    PoissonTOM(1.0),
+    0.0,
+    20.0,
+    Point(15.0, 15.2),
+    PMF([(1.0, NodalPlane(0.0, 90.0, 0.0))]),
+    PMF([(1.0, 5.0)]))
 
 AREA_POLY = Polygon([Point(14.95, 15.05),
                      Point(15.05, 15.05),
@@ -151,14 +152,14 @@ COMPLEX_EDGES = [SIMPLE_TRACE,
                        Point(15.025, 15.0, 20.0)])]
 
 COMPLEX_FAULT = ComplexFaultSource("CFLT000", "Complex Fault Source",
-                                  "Active Shallow Crust",
-                                  EvenlyDiscretizedMFD(7.0, 0.1, [1.0]),
-                                  1.0,
-                                  PeerMSR(),
-                                  1.0,
-                                  PoissonTOM(1.0),
-                                  COMPLEX_EDGES,
-                                  0.0)
+                                   "Active Shallow Crust",
+                                   EvenlyDiscretizedMFD(7.0, 0.1, [1.0]),
+                                   1.0,
+                                   PeerMSR(),
+                                   1.0,
+                                   PoissonTOM(1.0),
+                                   COMPLEX_EDGES,
+                                   0.0)
 
 SIMPLE_FAULT_SURFACE = SimpleFaultSurface.from_fault_data(SIMPLE_TRACE,
                                                           0.0,

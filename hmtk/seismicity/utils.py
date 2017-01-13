@@ -88,8 +88,8 @@ try:
 
     hmtk_truncnorm = hmtk_truncnorm_gen(name="hmtk_truncnorm")
 except:
-    print "Continuous distributions not available on Scipy version < 0.15"
-    print "Bootstrap sampling of the depth distribution will raise an error"
+    print("Continuous distributions not available on Scipy version < 0.15\n")
+    print("Bootstrap sampling of the depth distribution will raise an error")
     hmtk_truncnorm = None
 
 MARKER_NORMAL = np.array([0, 31, 59, 90, 120, 151, 181,
@@ -99,8 +99,6 @@ MARKER_LEAP = np.array([0, 31, 60, 91, 121, 152, 182,
                         213, 244, 274, 305, 335])
 
 SECONDS_PER_DAY = 86400.0
-
-
 
 
 def decimal_year(year, month, day):

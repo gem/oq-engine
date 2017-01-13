@@ -29,8 +29,6 @@ def build_filename(filename, filetype='png', resolution=300):
         filetype = filevals[1][1:]
     if not filetype:
         filetype = 'png'
-
-    #print filevals[0], filetype
     filename = filevals[0] + '.' + filetype
 
     if not resolution:
@@ -177,7 +175,7 @@ def plot_magnitude_time_scatter(catalogue, plot_error=False, filename=None,
     plt.figure(figsize=DEFAULT_SIZE)
     dtime = catalogue.get_decimal_time()
     if len(catalogue.data['sigmaMagnitude']) == 0:
-        print 'Magnitude Error is missing - neglecting error bars!'
+        print('Magnitude Error is missing - neglecting error bars!')
         plot_error = False
 
     if plot_error:
@@ -268,29 +266,15 @@ def plot_magnitude_time_density(catalogue, mag_int, time_int,
     plt.show()
     return
 
+
 def _plot_completeness(comw, start_time, end_time):
-    x = []
-    y = []
     comp = np.column_stack([np.hstack([end_time, comw[:, 0], start_time]),
                             np.hstack([comw[0, 1], comw[:, 1], comw[-1, 1]])])
     for row in comp:
-        print row[0], row[1]
+        print(row[0], row[1])
     plt.step(comp[:-1, 0], comp[1:, 1], ls='--',
              where="post", linewidth=3, color='brown')
-    
-    #for idx in range(len(comp) - 1):
-    #    x.append(comp[idx, 0])
-    #    y.append(comp[idx, 1])
-    #    x.append(comp[idx + 1, 0])
-    #    y.append(comp[idx, 1])
 
-    #    x.append(comw[idx,0])
-    #    y.append(comw[idx,1])
-    #    x.append(comw[idx+1,0])
-    #    y.append(comw[idx,1])
-    #print x
-    #print y
-    #plt.step(x, y, '--', where="pre", linewidth=3, color='brown')
 
 def get_completeness_adjusted_table(catalogue, completeness, dmag, end_year):
     """
@@ -324,7 +308,6 @@ def get_completeness_adjusted_table(catalogue, completeness, dmag, end_year):
                                      mag_bins < high_mag + dmag)
         temp_rates = np.histogram(catalogue.data['magnitude'][idx],
                                   mag_bins[obs_idx])[0]
-        #print mag_bins[obs_idx], temp_rates
         temp_rates = temp_rates.astype(float) / obs_time[iloc]
         if iloc == n_comp - 1:
             # TODO This hack seems to fix the error in Numpy v.1.8.1
@@ -336,9 +319,8 @@ def get_completeness_adjusted_table(catalogue, completeness, dmag, end_year):
     obs_rates = obs_rates[selector[0]:selector[-1] + 1]
     # Get cumulative rates
     cum_rates = np.array([sum(obs_rates[iloc:])
-                                for iloc in range(0, len(obs_rates))])
+                          for iloc in range(0, len(obs_rates))])
     out_idx = cum_rates > 0.
-    #print mag_bins[out_idx], obs_rates[out_idx], cum_rates[out_idx]
     return np.column_stack([mag_bins[out_idx],
                             obs_rates[out_idx],
                             cum_rates[out_idx],

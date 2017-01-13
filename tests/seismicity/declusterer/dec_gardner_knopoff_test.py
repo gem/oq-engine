@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -78,11 +78,11 @@ class GardnerKnopoffType1TestCase(unittest.TestCase):
         """
         Testing the Gardner and Knopoff algorithm
         """
-        config = {'time_distance_window' : GardnerKnopoffWindow(),
-                  'fs_time_prop' : 1.0}
-        # Instantiate the declusterer and process the sample catalogue
+        config = {'time_distance_window': GardnerKnopoffWindow(),
+                  'fs_time_prop': 1.0}
+        # Instantiate the declusterer and process the sample catalogue
         dec = GardnerKnopoffType1()
         vcl, flagvector = dec.decluster(self.cat, config)
-        print 'vcl:',vcl
-        print 'flagvector:',flagvector, self.cat.data['flag']
-        self.assertTrue(np.allclose(flagvector,self.cat.data['flag']))
+        print('vcl:', vcl)
+        print('flagvector:', flagvector, self.cat.data['flag'])
+        self.assertTrue(np.allclose(flagvector, self.cat.data['flag']))

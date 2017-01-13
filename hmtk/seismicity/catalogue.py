@@ -144,7 +144,7 @@ class Catalogue(object):
             else:
                 self.data[key] = data_array[:, i]
             if key not in self.TOTAL_ATTRIBUTE_LIST:
-                print 'Key %s not a recognised catalogue attribute' % key
+                print('Key %s not a recognised catalogue attribute' % key)
 
         self.update_end_year()
 
@@ -192,7 +192,7 @@ class Catalogue(object):
         for comp_val in mt_table:
             id0 = np.logical_and(self.data['year'].astype(float) < comp_val[0],
                                  self.data['magnitude'] < comp_val[1])
-            print id0
+            print(id0)
             flag[id0] = False
         if not np.all(flag):
             self.purge_catalogue(flag)
@@ -454,8 +454,7 @@ class Catalogue(object):
                                          ' since the they have' +
                                          ' a different processing history')
                 else:
-                    print attrib
-                    raise ValueError('unknown attibute')
+                    raise ValueError('unknown attribute: %s' % attrib)
         self.sort_catalogue_chronologically()
 
 

@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -411,7 +411,7 @@ class TestBootstrapHistograms(unittest.TestCase):
             number_bootstraps=1000)
 
         array_diff = expected_array - np.round(hist_values, 1)
-        print expected_array, hist_values, array_diff
+        print(expected_array, hist_values, array_diff)
         self.assertTrue(np.all(np.fabs(array_diff) < 0.2))
         # With normalisation
         expected_array = np.array([[0.04, 0.05, 0.05, 0.04],
