@@ -34,16 +34,6 @@ from django.http import (
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
-from django.template import RequestContext
-from django.contrib.auth import authenticate, login, logout
-try:
-    from django.http import FileResponse  # Django >= 1.8
-except ImportError:
-    from django.http import StreamingHttpResponse as FileResponse
-try:
-    from wsgiref.util import FileWrapper  # Django >= 1.9
-except ImportError:
-    from django.core.servers.basehttp import FileWrapper
 
 from openquake.baselib.general import groupby, writetmp
 from openquake.baselib.python3compat import unicode
@@ -55,6 +45,19 @@ from openquake.engine.export import core
 from openquake.engine import engine, logs
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import executor, utils, dbapi
+
+from django.conf import settings
+if settings.LOCKDOWN:
+    from django.contrib.auth import authenticate, login, logout
+try:
+    from django.http import FileResponse  # Django >= 1.8
+except ImportError:
+    from django.http import StreamingHttpResponse as FileResponse
+try:
+    from wsgiref.util import FileWrapper  # Django >= 1.9
+except ImportError:
+    from django.core.servers.basehttp import FileWrapper
+
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
