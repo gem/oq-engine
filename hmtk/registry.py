@@ -42,31 +42,10 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-
+import sys
 import collections
 import functools
 from decorator import decorator
-
-
-class Registry(collections.OrderedDict):
-    """
-    A collection of methods added through a decorator. E.g.
-
-    @a_registry.add('foo')
-    def bar(): pass
-
-    a_registry['foo']
-    => <function bar>
-    """
-    def add(self, tag):
-        """
-        :param str tag: the tag associated to the registered object
-        """
-        def dec(obj):
-            """:param obj: the registered object"""
-            self[tag] = obj
-            return obj
-        return dec
 
 
 class CatalogueFunctionRegistry(collections.OrderedDict):
@@ -121,13 +100,15 @@ class CatalogueFunctionRegistry(collections.OrderedDict):
         """
         def class_decorator(class_obj):
             original_method = getattr(class_obj, method_name)
+            if sys.version[0] == '2':  # Python 2
+                original_method = original_method.im_func
 
             def caller(fn, obj, catalogue, config=None, *args, **kwargs):
                 config = config or {}
                 self.set_defaults(config, fields)
                 self.check_config(config, fields)
                 return fn(obj, catalogue, config, *args, **kwargs)
-            new_method = decorator(caller, original_method.im_func)
+            new_method = decorator(caller, original_method)
             setattr(class_obj, method_name, new_method)
             instance = class_obj()
             func = functools.partial(new_method, instance)
