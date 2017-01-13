@@ -35,6 +35,7 @@ from openquake.hazardlib.calc.filters import context
 from openquake.commonlib import tests, nrml_examples, readinput
 from openquake.commonlib.source import SourceModelParser, CompositionInfo
 from openquake.hazardlib import nrml
+from openquake.risklib import read_nrml
 from openquake.baselib.general import assert_close
 
 # directory where the example files are
@@ -371,7 +372,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             width_of_mfd_bin=0.1,
             area_source_discretization=10,
         ))
-        with self.assertRaises(nrml.DuplicatedID):
+        with self.assertRaises(read_nrml.DuplicatedID):
             parser.parse_groups(DUPLICATE_ID_SRC_MODEL)
 
     def test_raises_useful_error_1(self):
