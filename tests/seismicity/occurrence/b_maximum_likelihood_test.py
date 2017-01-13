@@ -67,7 +67,7 @@ class BMaxLikelihoodTestCase(unittest.TestCase):
         """
         # Generates a data set assuming b=1
         self.dmag = 0.1
-        mext = np.arange(4.0,7.01,0.1)
+        mext = np.arange(4.0, 7.01, 0.1)
         self.mval = mext[0:-1] + self.dmag / 2.0
         self.bval = 1.0
         numobs = np.flipud(np.diff(np.flipud(10.0**(-self.bval*mext+7.0))))
@@ -79,33 +79,33 @@ class BMaxLikelihoodTestCase(unittest.TestCase):
         numobs[22:] *= 100
 
         compl = np.array([[1900, 1950, 1980, 1990], [6.34, 5.44, 4.74, 3.0]])
-        print compl
+        print(compl)
         self.compl = compl.transpose()
-        print 'completeness'
-        print self.compl
-        print self.compl.shape
+        print('completeness')
+        print(self.compl)
+        print(self.compl.shape)
 
         numobs = np.around(numobs)
         print numobs
 
-        magnitude = np.zeros((np.sum(numobs)))
-        year = np.zeros((np.sum(numobs))) * 1999
+        magnitude = np.zeros(int(np.sum(numobs)))
+        year = np.zeros(int(np.sum(numobs))) * 1999
 
         lidx = 0
         for mag, nobs in zip(self.mval, numobs):
             uidx = int(lidx+nobs)
             magnitude[lidx:uidx] = mag + 0.01
-            year_low = compl[0,np.min(np.nonzero(compl[1,:] < mag)[0])]
+            year_low = compl[0, np.min(np.nonzero(compl[1, :] < mag)[0])]
             year[lidx:uidx] = (year_low + np.random.rand(uidx-lidx) *
-                    (2000-year_low))
-            print '%.2f %.0f %.0f' % (mag,np.min(year[lidx:uidx]),
+                               (2000-year_low))
+            print '%.2f %.0f %.0f' % (mag, np.min(year[lidx:uidx]),
                                       np.max(year[lidx:uidx]))
             lidx = uidx
 
         self.catalogue = Catalogue.make_from_dict(
             {'magnitude': magnitude, 'year': year})
         self.b_ml = BMaxLikelihood()
-        self.config = {'Average Type' : 'Weighted'}
+        self.config = {'Average Type': 'Weighted'}
 
     def test_b_maximum_likelihood(self):
         """
