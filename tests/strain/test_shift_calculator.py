@@ -91,7 +91,7 @@ class TestShift(unittest.TestCase):
         # Otherwise raise an error
         with self.assertRaises(ValueError) as ae:
             self.model = Shift(None)
-        self.assertEqual(ae.exception.message,
+        self.assertEqual(str(ae.exception),
                          'Minimum magnitudes must be float, list or array')
         # Check regionalisation - assuming defaults
         self.model = Shift(5.0)
@@ -100,7 +100,6 @@ class TestShift(unittest.TestCase):
                                  self.model.regionalisation[region])
         np.testing.assert_array_almost_equal(np.log10(self.model.base_rate),
                                              np.array([-20.74610902]))
-
 
     def test_reclassify_with_bird_data(self):
         '''

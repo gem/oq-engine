@@ -312,8 +312,8 @@ class SmoothedSeismicity(object):
         # Apply smoothing
         smoothed_data, sum_data, sum_smooth = self.kernel.smooth_data(
             self.data, config, self.use_3d)
-        print 'Smoothing Total Rate Comparison - ' \
-            'Observed: %.6g, Smoothed: %.6g' % (sum_data, sum_smooth)
+        print('Smoothing Total Rate Comparison - '
+              'Observed: %.6g, Smoothed: %.6g' % (sum_data, sum_smooth))
         self.data = np.column_stack([self.data, smoothed_data])
         return self.data
 

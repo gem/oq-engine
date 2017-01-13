@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -67,7 +67,7 @@ class BMaxLikelihoodTestCase(unittest.TestCase):
         """
         # Generates a data set assuming b=1
         self.dmag = 0.1
-        mext = np.arange(4.0,7.01,0.1)
+        mext = np.arange(4.0, 7.01, 0.1)
         self.mval = mext[0:-1] + self.dmag / 2.0
         self.bval = 1.0
         numobs = np.flipud(np.diff(np.flipud(10.0**(-self.bval*mext+7.0))))
@@ -79,45 +79,45 @@ class BMaxLikelihoodTestCase(unittest.TestCase):
         numobs[22:] *= 100
 
         compl = np.array([[1900, 1950, 1980, 1990], [6.34, 5.44, 4.74, 3.0]])
-        print compl
+        print(compl)
         self.compl = compl.transpose()
-        print 'completeness'
-        print self.compl
-        print self.compl.shape
+        print('completeness')
+        print(self.compl)
+        print(self.compl.shape)
 
         numobs = np.around(numobs)
-        print numobs
+        print(numobs)
 
-        magnitude = np.zeros((np.sum(numobs)))
-        year = np.zeros((np.sum(numobs))) * 1999
+        magnitude = np.zeros(int(np.sum(numobs)))
+        year = np.zeros(int(np.sum(numobs))) * 1999
 
         lidx = 0
         for mag, nobs in zip(self.mval, numobs):
             uidx = int(lidx+nobs)
             magnitude[lidx:uidx] = mag + 0.01
-            year_low = compl[0,np.min(np.nonzero(compl[1,:] < mag)[0])]
+            year_low = compl[0, np.min(np.nonzero(compl[1, :] < mag)[0])]
             year[lidx:uidx] = (year_low + np.random.rand(uidx-lidx) *
-                    (2000-year_low))
-            print '%.2f %.0f %.0f' % (mag,np.min(year[lidx:uidx]),
-                                      np.max(year[lidx:uidx]))
+                               (2000-year_low))
+            print('%.2f %.0f %.0f' % (mag, np.min(year[lidx:uidx]),
+                                      np.max(year[lidx:uidx])))
             lidx = uidx
 
         self.catalogue = Catalogue.make_from_dict(
             {'magnitude': magnitude, 'year': year})
         self.b_ml = BMaxLikelihood()
-        self.config = {'Average Type' : 'Weighted'}
+        self.config = {'Average Type': 'Weighted'}
 
     def test_b_maximum_likelihood(self):
         """
         Tests that the computed b value corresponds to the same value
         used to generate the test data set
         """
-        bval, sigma_b, aval, sigma_a = self.b_ml.calculate(self.catalogue,
-                self.config, self.compl)
+        bval, sigma_b, aval, sigma_a = self.b_ml.calculate(
+            self.catalogue, self.config, self.compl)
         self.assertAlmostEqual(self.bval, bval, 1)
 
     def test_b_maximum_likelihood_raise_error(self):
-        completeness_table = np.zeros((10,2))
+        completeness_table = np.zeros((10, 2))
         catalogue = {'year': [1900]}
         config = {'Average Type' : ['fake']}
         self.assertRaises(ValueError, self.b_ml.calculate, catalogue,
@@ -125,14 +125,14 @@ class BMaxLikelihoodTestCase(unittest.TestCase):
 
     def test_b_maximum_likelihood_average_parameters_raise_error(self):
         num = 4
-        gr_pars = np.zeros((10,num))
+        gr_pars = np.zeros((10, num))
         neq = np.zeros((num))
         self.assertRaises(ValueError, self.b_ml._average_parameters,
-                gr_pars, neq)
+                          gr_pars, neq)
 
     def test_b_maximum_likelihood_average_parameters_use_harmonic(self):
         num = 4
-        gr_pars = np.ones((num,10))
+        gr_pars = np.ones((num, 10))
         neq = np.ones((num))
         self.b_ml._average_parameters(gr_pars, neq, average_type='Harmonic')
 

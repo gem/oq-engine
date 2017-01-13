@@ -459,5 +459,6 @@ class nrmlSourceModelParser(BaseSourceModelParser):
                     parse_complex_fault_node(node, mfd_spacing,
                                              complex_mesh_spacing))
             else:
-                print "Source typology %s not recognised - skipping!" % node.tag
+                print("Source typology %s not recognised - skipping!"
+                      % node.tag)
         return source_model

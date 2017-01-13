@@ -104,7 +104,7 @@ class BMaxLikelihood(SeismicityOccurrence):
             id0 = np.abs(ctime - ctime[ival]) < mag_eq_tolerance
             m_c = np.min(cmag[id0])
 
-            print '--- ctime', ctime[ival], ' m_c', m_c
+            print('--- ctime', ctime[ival], ' m_c', m_c)
 
             # Find events later than cut-off year, and with magnitude
             # greater than or equal to the corresponding completeness
@@ -113,7 +113,6 @@ class BMaxLikelihood(SeismicityOccurrence):
             id1 = np.logical_and(
                 catalogue['year'] >= ctime[ival],
                 catalogue['magnitude'] >= (m_c - mag_eq_tolerance))
-            nyr = np.float(np.max(catalogue['year'][id1])) - ctime[ival] + 1.
             # Get a- and b- value for the selected events
             temp_rec_table = recurrence_table(catalogue['magnitude'][id1],
                                               dmag,
@@ -132,8 +131,8 @@ class BMaxLikelihood(SeismicityOccurrence):
             ival = ival + np.sum(id0)
 
         # Get average GR parameters
-        bval, sigma_b = self._average_parameters(gr_pars, neq,
-                config['Average Type'])
+        bval, sigma_b = self._average_parameters(
+            gr_pars, neq, config['Average Type'])
         aval = self._calculate_a_value(bval,
                                        np.float(np.sum(neq)),
                                        cmag,

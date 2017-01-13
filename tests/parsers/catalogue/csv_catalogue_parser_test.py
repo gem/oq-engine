@@ -118,7 +118,7 @@ class TestCsvCatalogueWriter(unittest.TestCase):
         '''
         self.output_filename = os.path.join(os.path.dirname(__file__),
                                             'TEST_OUTPUT_CATALOGUE.csv')
-        print self.output_filename
+        print(self.output_filename)
         self.catalogue = Catalogue()
         self.catalogue.data['eventID'] = ['1', '2', '3', '4', '5']
         self.catalogue.data['magnitude'] = np.array([5.6, 5.4, 4.8, 4.3, 5.])
@@ -133,7 +133,7 @@ class TestCsvCatalogueWriter(unittest.TestCase):
         Compares two catalogues
         '''
         for key1, key2 in zip(cat1.data['eventID'], cat2.data['eventID']):
-            print key1, key2
+            print(key1, key2)
             assert key1 == key2
         # np.testing.assert_array_equal(cat1.data['eventID'],
         #                              cat2.data['eventID'])

@@ -384,7 +384,7 @@ class Stepp1971(BaseCatalogueCompleteness):
 
         if convergence_info['warnflag'] != 0:
             # Optimisation has failed to converge - print the reason why
-            print convergence_info['task']
+            print(convergence_info['task'])
             return np.nan, np.nan, np.nan * np.ones(len(xdata))
 
         # Result contains three parameters = m_2, x_c, c_0

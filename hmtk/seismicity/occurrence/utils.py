@@ -185,11 +185,12 @@ def generate_synthetic_magnitudes(aval, bval, mmin, mmax, nyears):
     :returns:
         Synthetic catalogue (dict) with year and magnitude attributes
     '''
-    nsamples = np.round(nyears * (10. ** (aval - bval * mmin)), 0)
+    nsamples = int(np.round(nyears * (10. ** (aval - bval * mmin)), 0))
     year = np.random.randint(0, nyears, nsamples)
     # Get magnitudes
     mags = generate_trunc_gr_magnitudes(bval, mmin, mmax, nsamples)
     return {'magnitude': mags, 'year': np.sort(year)}
+
 
 def downsample_completeness_table(comp_table, sample_width=0.1, mmax=None):
     """
@@ -198,7 +199,7 @@ def downsample_completeness_table(comp_table, sample_width=0.1, mmax=None):
     new_comp_table = []
     for i in range(comp_table.shape[0] - 1):
         mvals = np.arange(comp_table[i, 1],
-        comp_table[i + 1, 1], d_m)
+        comp_table[i + 1, 1], d_m)  # FIXME: d_m is undefined!
         new_comp_table.extend([[comp_table[i, 0], mval] for mval in mvals])
     # If mmax > last magnitude in completeness table
     if mmax and (mmax > comp_table[-1, 1]):
@@ -254,7 +255,7 @@ def get_completeness_counts(catalogue, completeness, d_m):
             sel_mags,
             bins=m_bins)[0].astype(float)
         count_years[m_idx[:-1]] += float(nyrs)
-    # Removes any zero rates greater than 
+    # Removes any zero rates greater than
     last_loc = np.where(count_rates > 0)[0][-1]
     n_obs = count_rates[:(last_loc + 1)]
     t_per = count_years[:(last_loc + 1)]

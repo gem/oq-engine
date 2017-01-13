@@ -67,22 +67,24 @@ class AkiMaximumLikelihoodTestCase(unittest.TestCase):
         """
         # Test A: Generates a data set assuming b=1 and N(m=4.0)=10.0 events
         self.dmag = 0.1
-        mext = np.arange(4.0,7.01,0.1)
+        mext = np.arange(4.0, 7.01, 0.1)
         self.mval = mext[0:-1] + self.dmag / 2.0
         self.bval = 1.0
-        self.numobs = np.flipud(np.diff(np.flipud(10.0**(-self.bval*mext+8.0))))
+        self.numobs = np.flipud(
+            np.diff(np.flipud(10.0 ** (-self.bval * mext + 8.0))))
         # Test B: Generate a completely artificial catalogue using the
         # Gutenberg-Richter distribution defined above
         numobs = np.around(self.numobs)
-        magnitude = np.zeros( (np.sum(self.numobs)) )
+        size = int(np.sum(self.numobs))
+        magnitude = np.zeros(size)
         lidx = 0
         for mag, nobs in zip(self.mval, numobs):
             uidx = int(lidx+nobs)
             magnitude[lidx:uidx] = mag + 0.01
             lidx = uidx
-        year = np.ones( (np.sum(numobs)) ) * 1999
+        year = np.ones(size) * 1999
         self.catalogue = Catalogue.make_from_dict(
-            {'magnitude' : magnitude, 'year': year})
+            {'magnitude': magnitude, 'year': year})
         # Create the seismicity occurrence calculator
         self.aki_ml = AkiMaxLikelihood()
 

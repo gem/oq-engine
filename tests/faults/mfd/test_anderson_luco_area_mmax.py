@@ -10,18 +10,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-#License as published by the Free Software Foundation, either version
-#3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-#DISCLAIMER
+# DISCLAIMER
 #
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-#is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-#Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -251,17 +251,16 @@ class TestAndersonLucoArbitrary(unittest.TestCase):
         # Testing all three calculators!
         for iloc, model_type in enumerate(['First', 'Second', 'Third']):
             self.model = AndersonLucoAreaMmax()
-
             self.config = {'Model_Type': model_type,
-                          'MFD_spacing': 0.1,
-                          'Model_Weight': 1.0,
-                          'Minimum_Magnitude': 5.0,
-                          'Maximum_Magnitude': None,
-                          'b_value': [1.0, 0.1]}
+                           'MFD_spacing': 0.1,
+                           'Model_Weight': 1.0,
+                           'Minimum_Magnitude': 5.0,
+                           'Maximum_Magnitude': None,
+                           'b_value': [1.0, 0.1]}
             self.model.setUp(self.config)
             self.model.get_mmax(self.config, self.msr, 0., 7500.)
             test_output = self.model.get_mfd(5.0, 37.5)
-            print AL83_AREA_MMAX_INC[:, iloc], test_output[2]
+            print(AL83_AREA_MMAX_INC[:, iloc], test_output[2])
             np.testing.assert_array_almost_equal(AL83_AREA_MMAX_INC[:, iloc],
                                                  test_output[2])
 
@@ -269,11 +268,11 @@ class TestAndersonLucoArbitrary(unittest.TestCase):
             self.model = AndersonLucoAreaMmax()
 
             self.config = {'Model_Type': model_type,
-                          'MFD_spacing': 0.1,
-                          'Model_Weight': 1.0,
-                          'Minimum_Magnitude': 5.0,
-                          'Maximum_Magnitude': None,
-                          'b_value': [2.0, 0.1]}
+                           'MFD_spacing': 0.1,
+                           'Model_Weight': 1.0,
+                           'Minimum_Magnitude': 5.0,
+                           'Maximum_Magnitude': None,
+                           'b_value': [2.0, 0.1]}
             self.model.setUp(self.config)
             self.model.get_mmax(self.config, self.msr, 0., 7500.)
             self.model.get_mfd(5.0, 37.5)

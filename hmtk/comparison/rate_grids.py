@@ -158,11 +158,11 @@ class RateGrid(object):
         """
         nsrcs = self.number_sources()
         for iloc, source in enumerate(self.source_model):
-            print "Source Number %s of %s, Name = %s, Typology = %s" % (
+            print("Source Number %s of %s, Name = %s, Typology = %s" % (
                 iloc + 1,
                 nsrcs,
                 source.name,
-                source.__class__.__name__)
+                source.__class__.__name__))
             if isinstance(source, CharacteristicFaultSource):
                 self._get_fault_rates(source, mmin, mmax)
             elif isinstance(source, ComplexFaultSource):
@@ -174,7 +174,7 @@ class RateGrid(object):
             elif isinstance(source, PointSource):
                 self._get_point_rates(source, mmin, mmax)
             else:
-                print "Source type %s not recognised - skipping!" % source
+                print("Source type %s not recognised - skipping!" % source)
                 continue
 
     def _get_point_location(self, location):

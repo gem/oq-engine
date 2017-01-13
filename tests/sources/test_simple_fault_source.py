@@ -55,11 +55,9 @@ hmtk.sources.simple_fault_source.mtkSimpleFaultSource
 import unittest
 import warnings
 import numpy as np
-#from openquake.nrmllib import models
 from openquake.hazardlib.geo import point, line
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.source.simple_fault import SimpleFaultSource
-from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
@@ -236,64 +234,20 @@ class TestSimpleFaultSource(unittest.TestCase):
         self.assertEqual(ver.exception.message,
                          'No events found in catalogue!')
 
-    #~ def test_create_oqnmrl_simple_fault_source(self):
-        #~ '''
-        #~ Tests the conversion of a point source to an instance of the :class:
-        #~ oqnrmllib.models.SimpleFaultSource
-        #~ '''
-        #~ trace = line.Line([point.Point(10., 10.), point.Point(11., 10.)])
-        #~ #sflt_geom = SimpleFaultSurface.from_fault_data(trace, 0., 20., 90., 1.)
-
-        #~ # Define a complete source
-        #~ self.fault_source = mtkSimpleFaultSource('001',
-            #~ 'A Fault Source',
-            #~ trt='Active Shallow Crust',
-            #~ geometry = None,
-            #~ dip = 90.,
-            #~ upper_depth = 0.,
-            #~ lower_depth = 20.,
-            #~ mag_scale_rel=None,
-            #~ rupt_aspect_ratio=1.0,
-            #~ mfd=models.TGRMFD(a_val=3., b_val=1.0, min_mag=5.0, max_mag=8.0),
-            #~ rake=0.)
-        #~ self.fault_source.create_geometry(trace, 90., 0., 20., 1.0)
-
-        #~ expected_geometry = models.SimpleFaultGeometry(
-            #~ wkt='LINESTRING (10.0 10.0, 11.0 10.0)',
-            #~ dip=90.,
-            #~ upper_seismo_depth=0.,
-            #~ lower_seismo_depth=20.)
-        #~ expected_source = models.SimpleFaultSource(
-            #~ '001',
-            #~ 'A Fault Source',
-            #~ trt='Active Shallow Crust',
-            #~ geometry=expected_geometry,
-            #~ mag_scale_rel='WC1994',
-            #~ rupt_aspect_ratio=1.0,
-            #~ mfd=models.TGRMFD(a_val=3., b_val=1.0, min_mag=5.0, max_mag=8.0),
-            #~ rake=0.)
-        #~ test_source = self.fault_source.create_oqnrml_source(use_defaults=True)
-        #~ self.assertTrue(isinstance(test_source, models.SimpleFaultSource))
-        #~ self.assertEqual(test_source.id, expected_source.id)
-        #~ self.assertEqual(test_source.name, expected_source.name)
-        #~ self.assertDictEqual(test_source.geometry.__dict__,
-                             #~ expected_source.geometry.__dict__)
-        #~ self.assertAlmostEqual(test_source.mfd.b_val,
-                               #~ expected_source.mfd.b_val)
-
     def test_create_oqhazardlib_source(self):
         """
         Tests to ensure the hazardlib source is created
         """
         trace = line.Line([point.Point(10., 10.), point.Point(11., 10.)])
         mfd1 = TruncatedGRMFD(5.0, 8.0, 0.1, 3.0, 1.0)
-        self.fault_source = mtkSimpleFaultSource('001',
+        self.fault_source = mtkSimpleFaultSource(
+            '001',
             'A Fault Source',
             trt='Active Shallow Crust',
-            geometry = None,
-            dip = 90.,
-            upper_depth = 0.,
-            lower_depth = 20.,
+            geometry=None,
+            dip=90.,
+            upper_depth=0.,
+            lower_depth=20.,
             mag_scale_rel=None,
             rupt_aspect_ratio=1.0,
             mfd=mfd1,
