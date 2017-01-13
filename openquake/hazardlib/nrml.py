@@ -85,7 +85,7 @@ import numpy
 
 from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import (
-    node_to_xml, Node, striptag, ValidatingXmlParser, floatformat)
+    node_to_xml, context, Node, striptag, ValidatingXmlParser, floatformat)
 from openquake.hazardlib import valid, sourceconverter
 
 F64 = numpy.float64
