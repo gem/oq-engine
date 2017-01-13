@@ -47,7 +47,7 @@ except ImportError:
 
 from openquake.baselib.general import groupby, writetmp
 from openquake.baselib.python3compat import unicode
-from openquake.commonlib import nrml, readinput, oqvalidation
+from openquake.hazardlib import nrml, readinput, oqvalidation
 from openquake.baselib.parallel import TaskManager, safely_call
 from openquake.calculators.export import export
 from openquake.engine import __version__ as oqversion

@@ -24,7 +24,7 @@ import cProfile
 import pstats
 
 from openquake.baselib import performance, general, sap
-from openquake.risklib import valid
+from openquake.hazardlib import valid
 from openquake.commonlib import readinput, datastore, oqvalidation
 from openquake.calculators import base, views
 CT = oqvalidation.OqParam.concurrent_tasks.default

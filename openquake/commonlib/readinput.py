@@ -31,15 +31,16 @@ from shapely import wkt, geometry
 from openquake.baselib.general import groupby, AccumDict, writetmp
 from openquake.baselib.python3compat import configparser, encode
 from openquake.baselib import hdf5
-from openquake.hazardlib import geo, site, imt
+from openquake.hazardlib import (
+    geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.calc.hazard_curve import zero_curves
-from openquake.risklib import riskmodels, valid, riskinput
+from openquake.risklib import riskmodels, riskinput
 from openquake.commonlib import datastore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.baselib.node import Node, context
-from openquake.commonlib import nrml, logictree, InvalidFile
+from openquake.commonlib import logictree
 from openquake.commonlib.riskmodels import get_risk_models
-from openquake.commonlib import source, sourceconverter
+from openquake.commonlib import source
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2

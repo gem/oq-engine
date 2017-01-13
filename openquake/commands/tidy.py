@@ -18,7 +18,8 @@
 
 from __future__ import print_function
 from openquake.baselib import sap
-from openquake.commonlib import nrml, writers
+from openquake.hazardlib import nrml
+from openquake.commonlib import writers
 
 
 @sap.Script
