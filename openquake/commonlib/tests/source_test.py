@@ -33,7 +33,7 @@ from openquake.hazardlib import source, sourceconverter as s
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.filters import context
 from openquake.commonlib import tests, nrml_examples, readinput
-from openquake.commonlib.source import SourceModelParser, CompositionInfo
+from openquake.commonlib.source import CompositionInfo
 from openquake.hazardlib import nrml
 from openquake.baselib.general import assert_close
 
@@ -71,7 +71,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.parser = SourceModelParser(s.SourceConverter(
+        cls.parser = nrml.SourceModelParser(s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
             complex_fault_mesh_spacing=1,  # km
@@ -364,7 +364,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         assert_close(self._expected_char_multi, self.char_multi)
 
     def test_duplicate_id(self):
-        parser = SourceModelParser(s.SourceConverter(
+        parser = nrml.SourceModelParser(s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,
             complex_fault_mesh_spacing=1,
@@ -660,7 +660,7 @@ class SourceGroupTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.parser = SourceModelParser(s.SourceConverter(
+        cls.parser = nrml.SourceModelParser(s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
             complex_fault_mesh_spacing=1,  # km
@@ -905,7 +905,7 @@ xmlns:gml="http://www.opengis.net/gml"
             reference_depth_to_2pt5km_per_sec=5.0,
             reference_backarc=False)
         sitecol = site.SiteCollection.from_points([102.32], [-2.9107], mod)
-        parser = SourceModelParser(s.SourceConverter(
+        parser = nrml.SourceModelParser(s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
             complex_fault_mesh_spacing=1,  # km
