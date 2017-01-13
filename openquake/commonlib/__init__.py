@@ -18,7 +18,3 @@
 
 # keep the following line to have a __version__
 from openquake.risklib import __version__
-
-
-class InvalidFile(Exception):
-    pass

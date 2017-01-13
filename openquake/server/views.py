@@ -34,7 +34,6 @@ from django.http import (
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
-from django.template import RequestContext
 from django.contrib.auth import authenticate, login, logout
 try:
     from django.http import FileResponse  # Django >= 1.8
@@ -47,8 +46,9 @@ except ImportError:
 
 from openquake.baselib.general import groupby, writetmp
 from openquake.baselib.python3compat import unicode
-from openquake.commonlib import nrml, readinput, oqvalidation
 from openquake.baselib.parallel import TaskManager, safely_call
+from openquake.hazardlib import nrml
+from openquake.commonlib import readinput, oqvalidation
 from openquake.calculators.export import export
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
