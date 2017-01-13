@@ -11,17 +11,15 @@ addons:
     - git
 
 install:
-  # Clone oq-hazardlib and oq-engine
+  # Clone oq-hazardlib
   - if [ "$(git ls-remote --heads https://github.com/gem/oq-hazardlib.git ${TRAVIS_BRANCH})" != "" ]; then BRANCH=$TRAVIS_BRANCH; else BRANCH='master'; fi; git clone -b ${BRANCH} --depth=1 https://github.com/gem/oq-hazardlib.git && echo "Running on oq-hazardlib/${BRANCH}"
-  - if [ "$(git ls-remote --heads https://github.com/gem/oq-engine.git ${TRAVIS_BRANCH})" != "" ]; then BRANCH=$TRAVIS_BRANCH; else BRANCH='master'; fi; git clone -b ${BRANCH} --depth=1 https://github.com/gem/oq-engine.git && echo "Running on oq-engine/${BRANCH}"
   # Make sure pip is up-to-date and has support for wheels
   - pip install -U pip
-  # Install oq-hazardlib and oq-engine dependencies
+  # Install oq-hazardlib dependencies
   - pip install -r oq-hazardlib/requirements-py27-linux64.txt
-  - pip install -r oq-engine/requirements-py27-linux64.txt
   # Install HMTK extra dependencies
   - pip install -r requirements-py27-linux64.txt
-  - pip install -e oq-hazardlib/ && pip install -e oq-engine/
+  - pip install -e oq-hazardlib/
   - pip install -e .
 
 script:
