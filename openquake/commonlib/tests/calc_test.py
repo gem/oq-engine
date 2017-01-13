@@ -6,7 +6,7 @@ from openquake.baselib import hdf5, general
 from openquake.hazardlib import nrml
 from openquake.hazardlib.sourceconverter import (
     SourceConverter, RuptureConverter)
-from openquake.commonlib import nrml_examples, calc, source
+from openquake.commonlib import nrml_examples, calc
 
 NRML_DIR = os.path.dirname(nrml_examples.__file__)
 MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'source_model/mixed.xml')
@@ -39,7 +39,7 @@ planar = general.writetmp('''\
 
 class SerializeRuptureTestCase(unittest.TestCase):
     def test(self):
-        groups = source.SourceModelParser(converter).parse_groups(
+        groups = nrml.SourceModelParser(converter).parse_groups(
             MIXED_SRC_MODEL)
         ([point], [cmplx], [area, simple],
          [char_simple, char_complex, char_multi]) = groups
