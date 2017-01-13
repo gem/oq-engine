@@ -88,12 +88,12 @@ depend on the lower levels but not viceversa:
 
 - level 8: commands (commands for oq script)
 - level 7: server (database and Web UI)
-- level 6: engine (configuration, command-line tool, export, logs)
+- level 6: engine (command-line tool, export, logs)
 - level 5: calculators (hazard and risk calculators)
-- level 4: commonlib (read/write XML, logic trees, datastore)
-- level 3: risklib (validation, risk models, risk inputs)
-- level 2: hazardlib (geometric utilites, GSIM library, source and site objects)
-- level 1: baselib (programming utilities, monitoring, Python 3 compatibility)
+- level 4: commonlib (configuration, logic trees, datastore, I/O)
+- level 3: risklib (risk validation, risk models, risk inputs)
+- level 2: hazardlib (validation, read/write XML, source and site objects, geospatial utilities, GSIM library)
+- level 1: baselib (programming utilities, parallelization, monitoring, Python 3 compatibility)
 
 `baselib` and `hazardlib` are very stable and can be used outside of the
 engine; the other libraries are directly related to the engine and
