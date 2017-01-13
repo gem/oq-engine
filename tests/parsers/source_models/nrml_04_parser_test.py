@@ -49,17 +49,8 @@ Test suite for the NRML Source Model parser
 """
 import os
 import unittest
-import numpy as np
-from openquake.commonlib.node import node_from_xml
-from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.geo.line import Line
-from openquake.hazardlib.geo.polygon import Polygon
-from openquake.hazardlib.scalerel import get_available_scalerel
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib import mfd
-from openquake.hazardlib.pmf import PMF
-from openquake.hazardlib.geo.nodalplane import NodalPlane
-from hmtk.sources.source_model import mtkSourceModel
 from hmtk.sources.point_source import mtkPointSource
 from hmtk.sources.area_source import mtkAreaSource
 from hmtk.sources.simple_fault_source import mtkSimpleFaultSource
@@ -67,6 +58,7 @@ from hmtk.sources.complex_fault_source import mtkComplexFaultSource
 from hmtk.parsers.source_model.nrml04_parser import nrmlSourceModelParser
 
 BASE_PATH = os.path.join(os.path.dirname(__file__), "data")
+
 
 class NRMLParserFullModelTestCase(unittest.TestCase):
     """
@@ -98,8 +90,8 @@ class NRMLParserFullModelTestCase(unittest.TestCase):
         self.assertEqual(source.id, "1")
         self.assertEqual(source.name, "Quito")
         self.assertEqual(source.geometry.wkt,
-            'POLYGON((-122.5 38.0, -122.0 38.5, -121.5 38.0, '
-            '-122.0 37.5, -122.5 38.0))')
+                         'POLYGON((-122.5 38.0, -122.0 38.5, -121.5 38.0, '
+                         '-122.0 37.5, -122.5 38.0))')
         self.assertAlmostEqual(source.upper_depth, 0.0)
         self.assertAlmostEqual(source.lower_depth, 10.0)
         self.assertAlmostEqual(source.rupt_aspect_ratio, 1.5)
@@ -168,9 +160,11 @@ class NRMLParserFullModelTestCase(unittest.TestCase):
         self.assertAlmostEqual(source.dip, 45.0)
         self.assertAlmostEqual(source.upper_depth, 10.0)
         self.assertAlmostEqual(source.lower_depth, 20.0)
-        self.assertEqual(str(source.fault_trace.points[0]),
+        self.assertEqual(
+            str(source.fault_trace.points[0]),
             "<Latitude=37.730100, Longitude=-121.822900, Depth=0.0000>")
-        self.assertEqual(str(source.fault_trace.points[1]),
+        self.assertEqual(
+            str(source.fault_trace.points[1]),
             "<Latitude=37.877100, Longitude=-122.038800, Depth=0.0000>")
     
     def _check_complex_fault_source(self, source):
@@ -238,7 +232,6 @@ class NRMLParserPartialModelTestCase(unittest.TestCase):
         self.assertFalse(source.nodal_plane_dist)
         self.assertFalse(source.hypo_depth_dist)
 
-    
     def _check_simple_fault_source(self, source):
         self.assertTrue(isinstance(source, mtkSimpleFaultSource))
         self.assertEqual(source.id, "3")
@@ -246,14 +239,16 @@ class NRMLParserPartialModelTestCase(unittest.TestCase):
         self.assertAlmostEqual(source.dip, 45.0)
         self.assertAlmostEqual(source.upper_depth, 10.0)
         self.assertAlmostEqual(source.lower_depth, 20.0)
-        self.assertEqual(str(source.fault_trace.points[0]),
+        self.assertEqual(
+            str(source.fault_trace.points[0]),
             "<Latitude=37.730100, Longitude=-121.822900, Depth=0.0000>")
-        self.assertEqual(str(source.fault_trace.points[1]),
+        self.assertEqual(
+            str(source.fault_trace.points[1]),
             "<Latitude=37.877100, Longitude=-122.038800, Depth=0.0000>")
         self.assertFalse(source.rupt_aspect_ratio)
         self.assertFalse(source.mag_scale_rel)
         self.assertFalse(source.mfd)
-    
+
     def _check_complex_fault_source(self, source):
         self.assertTrue(isinstance(source, mtkComplexFaultSource))
         self.assertEqual(source.id, "4")
@@ -263,7 +258,3 @@ class NRMLParserPartialModelTestCase(unittest.TestCase):
         self.assertFalse(source.rupt_aspect_ratio)
         self.assertFalse(source.mag_scale_rel)
         self.assertFalse(source.mfd)
-
-    
-    
-    

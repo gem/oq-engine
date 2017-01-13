@@ -50,11 +50,8 @@
 Module implements :class: hmtk.sources.source_model.mtkSourceModel, the
 general class to describe a set of seismogenic sources
 '''
-
-#from openquake.nrmllib import models
-#from openquake.nrmllib.hazard.writers import SourceModelXMLWriter
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.commonlib.sourcewriter import write_source_model
+from openquake.hazardlib.sourcewriter import write_source_model
 from hmtk.sources.point_source import mtkPointSource
 from hmtk.sources.area_source import mtkAreaSource
 from hmtk.sources.simple_fault_source import mtkSimpleFaultSource

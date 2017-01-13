@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-#DISCLAIMER
+# DISCLAIMER
 #
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
 # is released as a prototype implementation on behalf of
@@ -52,7 +52,7 @@ import re
 import decimal
 import numpy as np
 from copy import copy
-from openquake.commonlib.node import node_from_xml
+from openquake.baselib.node import node_from_xml
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.polygon import Polygon

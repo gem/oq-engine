@@ -49,7 +49,7 @@
 Python tools for calculating activity rates on a grid from a source model
 """
 import numpy as np
-from openquake.commonlib.sourceconverter import (SourceConverter,
+from openquake.hazardlib.sourceconverter import (SourceConverter,
                                                  area_to_point_sources)
 from openquake.commonlib.source import SourceModelParser
 from openquake.hazardlib.source.complex_fault import ComplexFaultSource
