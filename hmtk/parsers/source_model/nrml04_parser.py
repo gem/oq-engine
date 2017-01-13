@@ -52,7 +52,7 @@ import re
 import decimal
 import numpy as np
 from copy import copy
-from openquake.commonlib.node import node_from_xml
+from openquake.baselib.node import node_from_xml
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.polygon import Polygon
