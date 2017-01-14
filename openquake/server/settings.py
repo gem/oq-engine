@@ -33,13 +33,9 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [
-            # insert any extra TEMPLATE_DIRS here
-        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
-                'django.contrib.auth.context_processors.auth',
                 'django.template.context_processors.debug',
                 'django.template.context_processors.i18n',
                 'django.template.context_processors.media',
@@ -115,8 +111,6 @@ AUTH_EXEMPT_URLS = ()
 ROOT_URLCONF = 'openquake.server.urls'
 
 INSTALLED_APPS += (
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
     'django.contrib.staticfiles',
     'openquake.server',
 )
@@ -188,10 +182,32 @@ if LOCKDOWN:
     )
 
     INSTALLED_APPS += (
+        'django.contrib.auth',
+        'django.contrib.contenttypes',
         'django.contrib.messages',
         'django.contrib.sessions',
         'django.contrib.admin',
         )
+
+    # Official documentation suggests to override the entire TEMPLATES
+    TEMPLATES = [
+        {
+            'BACKEND': 'django.template.backends.django.DjangoTemplates',
+            'APP_DIRS': True,
+            'OPTIONS': {
+                'context_processors': [
+                    'django.contrib.auth.context_processors.auth',
+                    'django.template.context_processors.debug',
+                    'django.template.context_processors.i18n',
+                    'django.template.context_processors.media',
+                    'django.template.context_processors.static',
+                    'django.template.context_processors.tz',
+                    'django.contrib.messages.context_processors.messages',
+                    'openquake.server.utils.oq_server_context_processor',
+                ],
+            },
+        },
+    ]
 
     LOGIN_REDIRECT_URL = '/engine'
 
