@@ -55,7 +55,7 @@ class WeightedSequence(collections.MutableSequence):
             a sequence of :class:
             `openquake.baselib.general.WeightedSequence` instances
         :returns:
-            a `openquake.baselib.general.WeightedSequence` instance
+            a :class:`openquake.baselib.general.WeightedSequence` instance
         """
         return sum(ws_list, cls())
 
@@ -583,7 +583,6 @@ class AccumDict(dict):
             raise KeyError(key)
         val = self[key] = copy.deepcopy(self.accum)
         return val
-
 
     def apply(self, func, *extras):
         """

@@ -93,13 +93,13 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
     :param tectonic_region_type:
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
-
     _slots_ = ['source_id', 'name', 'tectonic_region_type',
                'src_group_id', 'num_ruptures', 'seed', 'id']
-
-    MODIFICATIONS = abc.abstractproperty()
-
     RUPTURE_WEIGHT = 1.  # overridden in PointSource
+
+    @abc.abstractproperty
+    def MODIFICATIONS(self):
+        pass
 
     @property
     def weight(self):

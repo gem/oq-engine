@@ -43,8 +43,9 @@ def hdf_arrays_to_dict(hdfgroup):
     """
     Convert an hdf5 group contains only data sets to a dictionary of
     data sets
+
     :param hdfgroup:
-        Instance of :class: h5py.Group
+        Instance of :class:`h5py.Group`
     :returns:
         Dictionary containing each of the datasets within the group arranged
         by name
@@ -72,9 +73,9 @@ class AmplificationTable(object):
         Distance values for the tables
     :attr parameter:
         Parameter to which the amplification applies. Must be an element
-        inside the _slots_ defines in the :class: openquake.hazardlib.
-        gsim.base.RuptureContext or the :class: openquake.hazardlib.gsim.base.
-        SitesContext
+        inside the _slots_ defines in the :class:`openquake.hazardlib.
+        gsim.base.RuptureContext` or the :class:`openquake.hazardlib.gsim.base.
+        SitesContext`
     :attr values:
         Array of values to which each amplification table corresponds
     :attr element:
@@ -86,7 +87,7 @@ class AmplificationTable(object):
         Setup the amplification factors.
 
         :param amplification_group:
-            Amplification model as instance of :class: h5py.Group
+            Amplification model as instance of :class:`h5py.Group`
         :param magnitudes:
             Array of magnitudes
         :param distances:
@@ -164,13 +165,13 @@ class AmplificationTable(object):
 
         :param imt:
             Intensity measure type as an instance of the :class:
-            openquake.hazardlib.imt
+            `openquake.hazardlib.imt`
         :param sctx:
             Site parameters as instance of the :class:
-            openquake.hazardlib.gsim.base.SitesContext
+            `openquake.hazardlib.gsim.base.SitesContext`
         :param rctx:
             Rupture parameters as instance of the :class:
-            openquake.hazardlib.gsim.base.RuptureContext
+            `openquake.hazardlib.gsim.base.RuptureContext`
         :param dists:
             Source to site distances (km)
         :param stddev_types:
@@ -368,7 +369,7 @@ class GMPETable(GMPE):
         Reads the standard deviation tables from hdf5 and stores them in
         memory
         :param fle:
-            HDF5 Tables as instance of :class: `h5py.File`
+            HDF5 Tables as instance of :class:`h5py.File`
         """
         # Load in total standard deviation
         self.stddevs[const.StdDev.TOTAL] = hdf_arrays_to_dict(fle["Total"])
@@ -475,7 +476,7 @@ class GMPETable(GMPE):
         from the tables.
 
         :param fle:
-            HDF5 data stream as instance of :class: h5py.File
+            HDF5 data stream as instance of :class:`h5py.File`
         :param distances:
             The distance vector for the given magnitude and IMT
         :param key:

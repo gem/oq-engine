@@ -213,7 +213,7 @@ class IterResult(object):
         an iterator over futures
     :param taskname:
         the name of the task
-    :param num_tasks
+    :param num_tasks:
         the total number of expected futures (None if unknown)
     :param progress:
         a logging function for the progress report
