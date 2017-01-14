@@ -13,9 +13,6 @@ Subpackages
     openquake.hazardlib.scalerel
     openquake.hazardlib.source
 
-Submodules
-----------
-
 openquake.hazardlib.const module
 --------------------------------
 
@@ -116,15 +113,6 @@ openquake.hazardlib.valid module
 --------------------------------
 
 .. automodule:: openquake.hazardlib.valid
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: openquake.hazardlib
     :members:
     :undoc-members:
     :show-inheritance:

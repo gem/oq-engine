@@ -437,7 +437,7 @@ class CallableDict(collections.OrderedDict):
     what to return if the key is missing.
 
     For a more practical example see the implementation of the exporters
-    in openquake.commonlib.export
+    in openquake.calculators.export
     """
     def __init__(self, keyfunc=lambda key: key, keymissing=None):
         super(CallableDict, self).__init__()
@@ -467,32 +467,32 @@ class CallableDict(collections.OrderedDict):
 
 class AccumDict(dict):
     """
-    An accumulating dictionary, useful to accumulate variables.
+    An accumulating dictionary, useful to accumulate variables::
 
-    >> acc = AccumDict()
-    >> acc += {'a': 1}
-    >> acc += {'a': 1, 'b': 1}
-    >> acc
-    {'a': 2, 'b': 1}
-    >> {'a': 1} + acc
-    {'a': 3, 'b': 1}
-    >> acc + 1
-    {'a': 3, 'b': 2}
-    >> 1 - acc
-    {'a': -1, 'b': 0}
-    >> acc - 1
-    {'a': 1, 'b': 0}
+     >> acc = AccumDict()
+     >> acc += {'a': 1}
+     >> acc += {'a': 1, 'b': 1}
+     >> acc
+     {'a': 2, 'b': 1}
+     >> {'a': 1} + acc
+     {'a': 3, 'b': 1}
+     >> acc + 1
+     {'a': 3, 'b': 2}
+     >> 1 - acc
+     {'a': -1, 'b': 0}
+     >> acc - 1
+     {'a': 1, 'b': 0}
 
-    Also the multiplication has been defined:
+    Also the multiplication has been defined::
 
-    >> prob1 = AccumDict(a=0.4, b=0.5)
-    >> prob2 = AccumDict(b=0.5)
-    >> prob1 * prob2
-    {'a': 0.4, 'b': 0.25}
-    >> prob1 * 1.2
-    {'a': 0.48, 'b': 0.6}
-    >> 1.2 * prob1
-    {'a': 0.48, 'b': 0.6}
+     >> prob1 = AccumDict(a=0.4, b=0.5)
+     >> prob2 = AccumDict(b=0.5)
+     >> prob1 * prob2
+     {'a': 0.4, 'b': 0.25}
+     >> prob1 * 1.2
+     {'a': 0.48, 'b': 0.6}
+     >> 1.2 * prob1
+     {'a': 0.48, 'b': 0.6}
 
     It is very common to use an AccumDict of accumulators; here is an
     example using the empty list as accumulator:

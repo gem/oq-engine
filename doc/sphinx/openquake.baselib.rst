@@ -1,9 +1,6 @@
 openquake.baselib package
 =========================
 
-Submodules
-----------
-
 openquake.baselib.general module
 --------------------------------
 
