@@ -22,7 +22,7 @@ Module exports :class:`BindiEtAl2014Rjb`,
                :class:`BindiEtAl2014RjbEC8NoSOF`,
                :class:`BindiEtAl2014Rhyp`,
                :class:`BindiEtAl2014RhypEC8`,
-               :class:`BindiEtAl2014RhypEC8NoSOF
+               :class:`BindiEtAl2014RhypEC8NoSOF`
 """
 from __future__ import division
 

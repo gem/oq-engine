@@ -15,9 +15,45 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+"""There are several good libraries to manage parallel programming,
+such as multiprocessing, concurrent.futures, celery and ipython-parallel
+(plus a bunch of others). Since we are not interested
+in reinventing the wheel, OpenQuake does not offer any new parallel
+library; however, it does offer some glue code so that you can use
+your library of choice. Currently multiprocessing, concurrent.futures,
+celery and ipython-parallel are supported. Moreover, openquake.baselib.parallel
+offers some facilities that make it easier to parallelize scientific
+computations.
 
-"""
-TODO: write documentation.
+Typically in an embarrassing parallel problem there is a list of input
+values: one is interested in splitting the list in homogenous chunks
+so that each chunk can be processed by a different core simultaneously;
+at the end the results must be combined together. This is also known as
+a MapReduce problem. As a simple example, we will consider the problem
+of counting the letters in a text. Here is how you can solve the problem
+sequentially:
+
+>>> from functools import reduce
+>>> from operator import add
+>>> from collections import Counter
+
+>>> outs = map(Counter, ['hello', 'world'])
+>>> res = reduce(add, outs, Counter())
+
+>>> sorted(res.items())  # counts per letter
+[('d', 1), ('e', 1), ('h', 1), ('l', 3), ('o', 2), ('r', 1), ('w', 1)]
+
+Here is how you can solve the problem in parallel by using parallel.Processmap,
+which internally is using the standard library module multiprocessing:
+
+>>> res2 = Processmap(Counter, [('hello',), ('world',)]).reduce(add, Counter())
+>>> assert res2 == res
+
+Nothing that the list processed by `Processmap` must be a list of arguments.
+
+>>> res3 = Processmap(Counter, [('hello',), ('world',)]).reduce()
+>>> assert res3 == res
+
 """
 from __future__ import print_function
 import os
@@ -213,7 +249,7 @@ class IterResult(object):
         an iterator over futures
     :param taskname:
         the name of the task
-    :param num_tasks
+    :param num_tasks:
         the total number of expected futures (None if unknown)
     :param progress:
         a logging function for the progress report
@@ -351,7 +387,7 @@ class TaskManager(object):
         """
         Apply a task to a tuple of the form (sequence, \*other_args)
         by first splitting the sequence in chunks, according to the weight
-        of the elements and possibly to a key (see :function:
+        of the elements and possibly to a key (see :func:
         `openquake.baselib.general.split_in_blocks`).
         Then reduce the results with an aggregation function.
         The chunks which are generated internally can be seen directly (
