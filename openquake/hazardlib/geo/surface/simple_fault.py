@@ -134,7 +134,7 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
                              "upper seismogenic depth")
         if not upper_seismogenic_depth >= fault_trace[0].depth:
             raise ValueError("upper seismogenic depth must be greater than "
-                             "depth of fault trace")
+                             "or equal to depth of fault trace")
         if not mesh_spacing > 0.0:
             raise ValueError("mesh spacing must be positive")
 
