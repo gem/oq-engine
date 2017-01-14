@@ -18,7 +18,7 @@ Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 """
 import math
 
-from openquake.hazardlib.geo import Point
+from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
@@ -37,7 +37,7 @@ class PointSource(ParametricSeismicSource):
         Maximum depth an earthquake rupture can reach, in km.
     :param location:
         :class:`~openquake.hazardlib.geo.point.Point` object
-        representing the location of the seismic source. 
+        representing the location of the seismic source.
     :param nodal_plane_distribution:
         :class:`~openquake.hazardlib.pmf.PMF` object with values
         that are instances
@@ -86,6 +86,10 @@ class PointSource(ParametricSeismicSource):
                    for (prob, depth) in hypocenter_distribution.data):
             raise ValueError('depths of all hypocenters must be in between '
                              'lower and upper seismogenic depths')
+
+        if not upper_seismogenic_depth > geodetic.EARTH_ELEVATION:
+            raise ValueError("Upper seismogenic depth must be greater than the "
+                             "maximum elevation on Earth's surface (-8.848 km)")
 
         self.location = location
         self.nodal_plane_distribution = nodal_plane_distribution

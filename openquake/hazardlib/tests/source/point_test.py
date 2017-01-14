@@ -90,6 +90,14 @@ class PointSourceCreationTestCase(unittest.TestCase):
             upper_seismogenic_depth=10, lower_seismogenic_depth=10
         )
 
+    def test_upper_depth_inside_topo_range(self):
+        self.assert_failed_creation(
+            ValueError,
+            "Upper seismogenic depth must be greater than the maximum "
+            "elevation on Earth's surface (-8.848 km)",
+            upper_seismogenic_depth=-10
+        )
+
     def test_hypocenter_depth_out_of_seismogenic_layer(self):
         self.assert_failed_creation(
             ValueError,
