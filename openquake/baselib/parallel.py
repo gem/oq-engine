@@ -15,7 +15,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-"""There are several good libraries to manage parallel programming,
+"""\
+The Starmap API
+====================================
+
+There are several good libraries to manage parallel programming,
 both in the standard library and in third party packages. Since we are
 not interested in reinventing the wheel, OpenQuake does not offer any
 new parallel library; however, it does offer some glue code so that
@@ -88,6 +92,47 @@ to do, but the performance of using threads instead of processes is terrible
 for the kind of applications we are interested in (CPU-dominated, which large
 tasks such that the time to spawn a new process is negligible with respect
 to the time to perform the task).
+
+The Starmap.apply API
+====================================
+
+The `Starmap` class has a very convenient classmethod `Starmap.apply`
+which is used in several places in the engine. `Starmap.apply` is useful
+when you have a sequence of objects that you want to split in homogenous chunks
+and then apply a callable to each chunk (in parallel). For instance, in the
+letter counting example discussed before, `Starmap.apply` could
+be used as follows:
+
+>>> text = 'helloworld'  # sequence of characters
+>>> res3 = Starmap.apply(Counter, (text,)).reduce()
+>>> assert res3 == res
+
+The API of `Starmap.apply` is designed to extend the one of `apply`,
+a builtin of Python 2; the second argument is the tuple of arguments
+passed to the first argument. The difference with `apply` is that
+`Starmap.apply` returns a :class:`Starmap` object so that nothing is
+actually done until you iterate on it (`reduce` is doing that).
+
+How many chunks will be produced? That depends on the parameter
+`concurrent_tasks`; it it is not passed, it has a default of 5 times
+the number of cores in your machine are returned by `os.cpu_count()`
+and `Starmap.apply` will try to produce a number of chunks close to
+that number. The nice thing is that it is also possible to pass a
+`weight` function. Suppose for instance that instead of a list of
+letters you have a list of seismic sources: some sources requires a
+long computation time (such as `ComplexFaultSources`), some requires a
+short computation time (such as `PointSources`). By giving an heuristic
+weight to the different sources it is possible to produce chunks with
+nearly homogeneous weight; in particular `PointSource` tasks will
+contain a lot more sources than tasks with `ComplexFaultSources`.
+
+It is *essential* in large computations to have a homogeneous task
+distribution, otherwise you will end up having a big task dominating
+the computation time (i.e. you may have 1000 cores of which 999 are free,
+having finished all the short tasks, but you have to wait for days for
+the single core processing the slow task). The OpenQuake engine does
+a great amount of work trying to split slow sources in more manageable
+fast sources.
 """
 from __future__ import print_function
 import os
@@ -412,10 +457,6 @@ class Starmap(object):
         by first splitting the sequence in chunks, according to the weight
         of the elements and possibly to a key (see :func:
         `openquake.baselib.general.split_in_blocks`).
-        Then reduce the results with an aggregation function.
-        The chunks which are generated internally can be seen directly (
-        useful for debugging purposes) by looking at the attribute `._chunks`,
-        right after the `apply` function has been called.
 
         :param task: a task to run in parallel
         :param task_args: the arguments to be passed to the task function
