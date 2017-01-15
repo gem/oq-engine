@@ -308,7 +308,7 @@ class PSHACalculator(base.HazardCalculator):
             src_groups = list(self.csm.src_groups)
             iterargs = saving_sources_by_task(
                 self.gen_args(src_groups, oq, monitor), self.datastore)
-            res = parallel.starmap(
+            res = parallel.Starmap(
                 self.core_task.__func__, iterargs).submit_all()
         acc = reduce(self.agg_dicts, res, self.zerodict())
         self.save_data_transfer(res)
@@ -471,7 +471,7 @@ class ClassicalCalculator(PSHACalculator):
             pmap_by_grp = {
                 int(group_id): self.datastore['poes/' + group_id]
                 for group_id in self.datastore['poes']}
-            res = parallel.starmap(
+            res = parallel.Starmap(
                 build_hcurves_and_stats,
                 list(self.gen_args(pmap_by_grp))).submit_all()
         nbytes = reduce(self.save_hcurves, res, AccumDict())
