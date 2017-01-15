@@ -1,15 +1,15 @@
 openquake.hazardlib.geo package
 ===============================
 
-Subpackages
------------
+Surface classes
+-----------------
 
 .. toctree::
 
     openquake.hazardlib.geo.surface
 
-Submodules
-----------
+Geographic primitives and utilities
+------------------------------------
 
 openquake.hazardlib.geo.geodetic module
 ---------------------------------------

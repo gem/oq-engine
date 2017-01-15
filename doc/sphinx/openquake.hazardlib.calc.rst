@@ -1,54 +1,45 @@
 openquake.hazardlib.calc package
 ================================
 
-Submodules
-----------
+Hazardlib calculators
+---------------------
 
-openquake.hazardlib.calc.disagg module
---------------------------------------
+Disaggregation (openquake.hazardlib.calc.disagg module)
+-------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.calc.disagg
     :members:
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.calc.filters module
----------------------------------------
+Filters (openquake.hazardlib.calc.filters module)
+-------------------------------------------------
 
 .. automodule:: openquake.hazardlib.calc.filters
     :members:
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.calc.gmf module
------------------------------------
+Ground Motion Fields (openquake.hazardlib.calc.gmf module)
+----------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.calc.gmf
     :members:
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.calc.hazard_curve module
---------------------------------------------
+Hazard Curves (openquake.hazardlib.calc.hazard_curve module)
+------------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.calc.hazard_curve
     :members:
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.calc.stochastic module
-------------------------------------------
+Stochastic Event Set (openquake.hazardlib.calc.stochastic module)
+-------------------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.calc.stochastic
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: openquake.hazardlib.calc
     :members:
     :undoc-members:
     :show-inheritance:

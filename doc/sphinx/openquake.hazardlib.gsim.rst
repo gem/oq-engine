@@ -1,8 +1,8 @@
 openquake.hazardlib.gsim package
 ================================
 
-Submodules
-----------
+Ground-shaking intensity models
+-------------------------------
 
 openquake.hazardlib.gsim.abrahamson_2014 module
 -----------------------------------------------

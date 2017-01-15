@@ -1,6 +1,9 @@
 openquake.hazardlib.source package
 ==================================
 
+Seismic sources and ruptures
+----------------------------
+
 openquake.hazardlib.source.area module
 --------------------------------------
 

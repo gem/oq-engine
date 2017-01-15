@@ -115,7 +115,7 @@ actually done until you iterate on it (`reduce` is doing that).
 
 How many chunks will be produced? That depends on the parameter
 `concurrent_tasks`; it it is not passed, it has a default of 5 times
-the number of cores in your machine are returned by `os.cpu_count()`
+the number of cores in your machine - as returned by `os.cpu_count()` -
 and `Starmap.apply` will try to produce a number of chunks close to
 that number. The nice thing is that it is also possible to pass a
 `weight` function. Suppose for instance that instead of a list of
@@ -131,7 +131,7 @@ distribution, otherwise you will end up having a big task dominating
 the computation time (i.e. you may have 1000 cores of which 999 are free,
 having finished all the short tasks, but you have to wait for days for
 the single core processing the slow task). The OpenQuake engine does
-a great amount of work trying to split slow sources in more manageable
+a great deal of work trying to split slow sources in more manageable
 fast sources.
 """
 from __future__ import print_function

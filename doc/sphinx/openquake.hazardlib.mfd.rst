@@ -1,8 +1,8 @@
 openquake.hazardlib.mfd package
 ===============================
 
-Submodules
-----------
+Magnitude-frequency distributions
+---------------------------------
 
 openquake.hazardlib.mfd.arbitrary_mfd module
 --------------------------------------------

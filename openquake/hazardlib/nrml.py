@@ -15,11 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-"""
-From Node objects to NRML files and viceversa
-------------------------------------------------------
-
+"""\
 It is possible to save a Node object into a NRML file by using the
 function ``write(nodes, output)`` where output is a file
 object. If you want to make sure that the generated file is valid

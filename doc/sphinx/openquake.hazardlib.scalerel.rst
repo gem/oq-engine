@@ -1,8 +1,8 @@
 openquake.hazardlib.scalerel package
 ====================================
 
-Submodules
-----------
+Area-magnitude scaling relationships
+------------------------------------
 
 openquake.hazardlib.scalerel.base module
 ----------------------------------------
