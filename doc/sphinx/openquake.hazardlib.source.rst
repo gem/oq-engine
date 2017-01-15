@@ -1,9 +1,6 @@
 openquake.hazardlib.source package
 ==================================
 
-Submodules
-----------
-
 openquake.hazardlib.source.area module
 --------------------------------------
 
@@ -64,15 +61,6 @@ openquake.hazardlib.source.simple_fault module
 ----------------------------------------------
 
 .. automodule:: openquake.hazardlib.source.simple_fault
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: openquake.hazardlib.source
     :members:
     :undoc-members:
     :show-inheritance:
