@@ -44,13 +44,13 @@ from openquake.hazardlib.gsim.idriss_2014 import Idriss2014
 def nga_west2_epistemic_adjustment(magnitude, distance):
     """
     Applies the "average" adjustment factor for epistemic uncertainty
-    as defined in Table 17 of Petersen et al., (2014)
+    as defined in Table 17 of Petersen et al., (2014)::
 
-                   R < 10.  | 10.0 <= R < 30.0  |    R >= 30.0
-    -----------------------------------------------------------
-      M < 6.0   |   0.37    |      0.22         |       0.22
-    6 <= M <7.0 |   0.25    |      0.23         |       0.23
-      M >= 7.0  |   0.40    |      0.36         |       0.33
+                 |  R < 10.  | 10.0 <= R < 30.0  |    R >= 30.0
+     -----------------------------------------------------------
+       M < 6.0   |   0.37    |      0.22         |       0.22
+     6 <= M <7.0 |   0.25    |      0.23         |       0.23
+       M >= 7.0  |   0.40    |      0.36         |       0.33
     """
     if magnitude < 6.0:
         adjustment = 0.22 * np.ones_like(distance)
@@ -72,6 +72,7 @@ def get_weighted_poes(gsim, sctx, rctx, dctx, imt, imls, truncation_level,
     """
     This function implements the NGA West 2 GMPE epistemic uncertainty
     adjustment factor without re-calculating the actual GMPE each time.
+
     :param gsim:
         Instance of the GMPE
     :param list weighting:

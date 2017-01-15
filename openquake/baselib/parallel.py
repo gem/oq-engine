@@ -15,9 +15,124 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+"""\
+The Starmap API
+====================================
 
-"""
-TODO: write documentation.
+There are several good libraries to manage parallel programming,
+both in the standard library and in third party packages. Since we are
+not interested in reinventing the wheel, OpenQuake does not offer any
+new parallel library; however, it does offer some glue code so that
+you can use your library of choice. Currently multiprocessing,
+concurrent.futures, celery and ipython-parallel are
+supported. Moreover, :mod:`openquake.baselib.parallel` offers some
+additional facilities that make it easier to parallelize
+scientific computations, i.e. embarrassing parallel problems.
+
+Typically one wants to apply a callable to a list of arguments in
+parallel rather then sequentially, and then combine together the
+results. This is known as a `MapReduce` problem. As a simple example,
+we will consider the problem of counting the letters in a text. Here is
+how you can solve the problem sequentially:
+
+>>> from itertools import starmap  # map a function with multiple arguments
+>>> from functools import reduce  # reduce an iterable with a binary operator
+>>> from operator import add  # addition function
+>>> from collections import Counter  # callable doing the counting
+
+>>> arglist = [('hello',), ('world',)]  # list of arguments
+>>> results = starmap(Counter, arglist)  # iterator over the results
+>>> res = reduce(add, results, Counter())  # aggregated counts
+
+>>> sorted(res.items())  # counts per letter
+[('d', 1), ('e', 1), ('h', 1), ('l', 3), ('o', 2), ('r', 1), ('w', 1)]
+
+Here is how you can solve the problem in parallel by using
+:class:`openquake.baselib.parallel.Starmap`:
+
+>>> res2 = Starmap(Counter, arglist).reduce()
+>>> assert res2 == res  # the same as before
+
+As you see there are some notational advantages with respect to use
+`itertools.starmap`. First of all, `Starmap` has a `reduce` method, so
+there is no need to import `functools.reduce`; secondly, the `reduce`
+method has sensible defaults:
+
+1. the default aggregation function is `add`, so there is no need to specify it
+2. the default accumulator is an empty accumulation dictionary (see
+   :class:`openquake.baselib.AccumDict`) working as a `Counter`, so there
+   is no need to specify it.
+
+You can of course ovverride the defaults, so if you really want to
+return a `Counter` you can do
+
+>>> res3 = Starmap(Counter, arglist).reduce(acc=Counter())
+
+In the engine we use nearly always callables that return dictionaries
+and we aggregate nearly always with the addition operator, so such
+defaults are very convenient. You are encouraged to do the same, since we
+found that approach to be very flexible. Typically in a scientific
+application you will return a dictionary of numpy arrays.
+
+The parallelization algorithm used by `Starmap` will depend on the
+environment variable `OQ_DISTRIBUTE`. Here are the possibilities
+available at the moment:
+
+`OQ_DISTRIBUTE` not set or set to "futures":
+  use multiprocessing via the concurrent.futures interface
+`OQ_DISTRIBUTE` set to "no":
+  disable the parallelization, useful for debugging
+`OQ_DISTRIBUTE` set to "celery":
+   use celery, useful if you have multiple machines in a cluster
+`OQ_DISTRIBUTE` set tp "ipython"
+   use the ipyparallel concurrency mechanism (experimental)
+
+There is no such a thing as OQ_DISTRIBUTE="threading"; it would be trivial
+to do, but the performance of using threads instead of processes is terrible
+for the kind of applications we are interested in (CPU-dominated, which large
+tasks such that the time to spawn a new process is negligible with respect
+to the time to perform the task).
+
+The Starmap.apply API
+====================================
+
+The `Starmap` class has a very convenient classmethod `Starmap.apply`
+which is used in several places in the engine. `Starmap.apply` is useful
+when you have a sequence of objects that you want to split in homogenous chunks
+and then apply a callable to each chunk (in parallel). For instance, in the
+letter counting example discussed before, `Starmap.apply` could
+be used as follows:
+
+>>> text = 'helloworld'  # sequence of characters
+>>> res3 = Starmap.apply(Counter, (text,)).reduce()
+>>> assert res3 == res
+
+The API of `Starmap.apply` is designed to extend the one of `apply`,
+a builtin of Python 2; the second argument is the tuple of arguments
+passed to the first argument. The difference with `apply` is that
+`Starmap.apply` returns a :class:`Starmap` object so that nothing is
+actually done until you iterate on it (`reduce` is doing that).
+
+How many chunks will be produced? That depends on the parameter
+`concurrent_tasks`; it it is not passed, it has a default of 5 times
+the number of cores in your machine - as returned by `os.cpu_count()` -
+and `Starmap.apply` will try to produce a number of chunks close to
+that number. The nice thing is that it is also possible to pass a
+`weight` function. Suppose for instance that instead of a list of
+letters you have a list of seismic sources: some sources requires a
+long computation time (such as `ComplexFaultSources`), some requires a
+short computation time (such as `PointSources`). By giving an heuristic
+weight to the different sources it is possible to produce chunks with
+nearly homogeneous weight; in particular `PointSource` tasks will
+contain a lot more sources than tasks with `ComplexFaultSources`.
+
+It is *essential* in large computations to have a homogeneous task
+distribution, otherwise you will end up having a big task dominating
+the computation time (i.e. you may have 1000 cores of which 999 are free,
+having finished all the short tasks, but you have to wait for days for
+the single core processing the slow task). The OpenQuake engine does
+a great deal of work trying to split slow sources in more manageable
+fast sources.
 """
 from __future__ import print_function
 import os
@@ -213,7 +328,7 @@ class IterResult(object):
         an iterator over futures
     :param taskname:
         the name of the task
-    :param num_tasks
+    :param num_tasks:
         the total number of expected futures (None if unknown)
     :param progress:
         a logging function for the progress report
@@ -231,7 +346,7 @@ class IterResult(object):
             self.progress = logging.debug
         else:
             self.progress = progress
-        self.sent = 0  # set in TaskManager.submit_all
+        self.sent = 0  # set in Starmap.submit_all
         self.received = []
         if self.num_tasks:
             self.log_percent = self._log_percent()
@@ -310,12 +425,12 @@ class IterResult(object):
         return res
 
 
-class TaskManager(object):
+class Starmap(object):
     """
     A manager to submit several tasks of the same type.
     The usage is::
 
-      tm = TaskManager(do_something, logging.info)
+      tm = Starmap(do_something, logging.info)
       tm.send(arg1, arg2)
       tm.send(arg3, arg4)
       print(tm.reduce())
@@ -331,17 +446,6 @@ class TaskManager(object):
         cls.executor = ProcessPoolExecutor()
 
     @classmethod
-    def starmap(cls, task, task_args, name=None):
-        """
-        Spawn a bunch of tasks with the given list of arguments
-
-        :returns: a TaskManager object with a .result method.
-        """
-        self = cls(task, name)
-        self.task_args = task_args
-        return self
-
-    @classmethod
     def apply(cls, task, task_args,
               concurrent_tasks=executor.num_tasks_hint,
               maxweight=None,
@@ -351,12 +455,8 @@ class TaskManager(object):
         """
         Apply a task to a tuple of the form (sequence, \*other_args)
         by first splitting the sequence in chunks, according to the weight
-        of the elements and possibly to a key (see :function:
+        of the elements and possibly to a key (see :func:
         `openquake.baselib.general.split_in_blocks`).
-        Then reduce the results with an aggregation function.
-        The chunks which are generated internally can be seen directly (
-        useful for debugging purposes) by looking at the attribute `._chunks`,
-        right after the `apply` function has been called.
 
         :param task: a task to run in parallel
         :param task_args: the arguments to be passed to the task function
@@ -373,10 +473,11 @@ class TaskManager(object):
             chunks = block_splitter(arg0, maxweight, weight, key)
         else:
             chunks = split_in_blocks(arg0, concurrent_tasks or 1, weight, key)
-        return cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
+        return cls(task, [(chunk,) + args for chunk in chunks], name)
 
-    def __init__(self, oqtask, name=None):
+    def __init__(self, oqtask, task_args, name=None):
         self.task_func = oqtask
+        self.task_args = task_args
         self.name = name or oqtask.__name__
         self.results = []
         self.sent = AccumDict()
@@ -512,11 +613,6 @@ class TaskManager(object):
         return iter(self.submit_all())
 
 
-# convenient aliases
-starmap = TaskManager.starmap
-apply = TaskManager.apply
-
-
 def do_not_aggregate(acc, value):
     """
     Do nothing aggregation function.
@@ -574,11 +670,11 @@ def wakeup_pool():
     :returns: the list of PIDs spawned or None
     """
     if oq_distribute() == 'futures':  # when using the ProcessPoolExecutor
-        pids = starmap(_wakeup, ((.2,) for _ in range(executor._max_workers)))
+        pids = Starmap(_wakeup, ((.2,) for _ in range(executor._max_workers)))
         return list(pids)
 
 
-class Starmap(object):
+class BaseStarmap(object):
     poolfactory = staticmethod(multiprocessing.Pool)
 
     @classmethod
@@ -609,7 +705,7 @@ class Starmap(object):
         return acc
 
 
-class Sequential(Starmap):
+class Sequential(BaseStarmap):
     """
     A sequential Starmap, useful for debugging purpose.
     """
@@ -622,22 +718,22 @@ class Sequential(Starmap):
         self.imap = [safely_call(func, args) for args in allargs]
 
 
-class Threadmap(Starmap):
+class Threadmap(BaseStarmap):
     """
     MapReduce implementation based on threads. For instance
 
     >>> from collections import Counter
-    >>> c = Threadmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
+    >>> c = Threadmap(Counter, [('hello',), ('world',)]).reduce()
     """
     poolfactory = staticmethod(
         # following the same convention of the standard library, num_proc * 5
         lambda: multiprocessing.dummy.Pool(executor._max_workers * 5))
 
 
-class Processmap(Starmap):
+class Processmap(BaseStarmap):
     """
     MapReduce implementation based on processes. For instance
 
     >>> from collections import Counter
-    >>> c = Processmap(Counter, [('hello',), ('world',)]).reduce(acc=Counter())
+    >>> c = Processmap(Counter, [('hello',), ('world',)]).reduce()
     """
