@@ -147,6 +147,7 @@ import traceback
 import functools
 import multiprocessing.dummy
 from concurrent.futures import as_completed, ProcessPoolExecutor, Future
+import decorator
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import pickle
@@ -482,8 +483,8 @@ class Starmap(object):
         self.results = []
         self.sent = AccumDict()
         self.distribute = oq_distribute()
-        self.argnames = inspect.getargspec(self.task_func).args
-
+        f = oqtask.__init__ if inspect.isclass(oqtask) else oqtask
+        self.argnames = inspect.getargspec(f).args
         if self.distribute == 'ipython' and isinstance(
                 self.executor, ProcessPoolExecutor):
             client = ipp.Client()
