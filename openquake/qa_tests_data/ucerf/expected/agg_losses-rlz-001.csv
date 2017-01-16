@@ -1,11 +1,11 @@
-event_tag,year,structural
-grp=01~ses=0001~src=ltbr0723~rup=16-00,3054,1.02708E+06
-grp=01~ses=0001~src=ltbr0723~rup=17-00,9724,5.17435E+05
-grp=01~ses=0001~src=ltbr0723~rup=17-02,2142,1.35586E+06
-grp=01~ses=0001~src=ltbr0723~rup=24-00,1288,1.56092E+05
-grp=01~ses=0001~src=ltbr0723~rup=26-00,741,1.13253E+05
-grp=01~ses=0001~src=ltbr0723~rup=27-00,4404,9.81918E+06
-grp=01~ses=0001~src=ltbr0723~rup=4-00,7616,3.74045E+06
-grp=01~ses=0001~src=ltbr0723~rup=4-01,3776,2.32531E+05
-grp=01~ses=0001~src=ltbr0723~rup=4-02,4780,1.19389E+05
-grp=01~ses=0001~src=ltbr0723~rup=4-03,7064,2.09764E+05
+event_tag,year,tectonic_region_type,magnitude,centroid_lon,centroid_lat,centroid_depth,structural
+grp=01~ses=0001~src=ltbr0723~rup=26-00,741,Active Shallow Crust,6.15000E+00,-1.22100E+02,3.71000E+01,6.00000E+00,1.13253E+05
+grp=01~ses=0001~src=ltbr0723~rup=24-00,1288,Active Shallow Crust,5.95000E+00,-1.22000E+02,3.72000E+01,6.00000E+00,1.56092E+05
+grp=01~ses=0001~src=ltbr0723~rup=17-02,2142,Active Shallow Crust,5.75000E+00,-1.21800E+02,3.73000E+01,3.00000E+00,1.35586E+06
+grp=01~ses=0001~src=ltbr0723~rup=16-00,3054,Active Shallow Crust,5.75000E+00,-1.22000E+02,3.72000E+01,9.00000E+00,1.02708E+06
+grp=01~ses=0001~src=ltbr0723~rup=4-01,3776,Active Shallow Crust,5.55000E+00,-1.21800E+02,3.73000E+01,6.00000E+00,2.32531E+05
+grp=01~ses=0001~src=ltbr0723~rup=27-00,4404,Active Shallow Crust,6.85000E+00,-1.21600E+02,3.74000E+01,7.50000E+00,9.81918E+06
+grp=01~ses=0001~src=ltbr0723~rup=4-02,4780,Active Shallow Crust,5.55000E+00,-1.21800E+02,3.73000E+01,6.00000E+00,1.19389E+05
+grp=01~ses=0001~src=ltbr0723~rup=4-03,7064,Active Shallow Crust,5.55000E+00,-1.21800E+02,3.73000E+01,6.00000E+00,2.09764E+05
+grp=01~ses=0001~src=ltbr0723~rup=4-00,7616,Active Shallow Crust,5.55000E+00,-1.21800E+02,3.73000E+01,6.00000E+00,3.74045E+06
+grp=01~ses=0001~src=ltbr0723~rup=17-00,9724,Active Shallow Crust,5.75000E+00,-1.21800E+02,3.73000E+01,3.00000E+00,5.17435E+05

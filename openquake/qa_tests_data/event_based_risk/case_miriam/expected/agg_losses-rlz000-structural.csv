@@ -1,45 +1,45 @@
-event_tag,year,structural
-grp=00~ses=0001~src=F:0~rup=106-01,17,1.78471E+01
-grp=00~ses=0001~src=F:0~rup=122-01,14,3.05925E+01
-grp=00~ses=0001~src=F:0~rup=193-01,24,7.76759E+01
-grp=00~ses=0001~src=F:0~rup=90-01,34,6.25561E+00
-grp=00~ses=0001~src=F:10~rup=2113-01,31,1.03313E+05
-grp=00~ses=0001~src=F:12~rup=2373-01,17,4.38212E+05
-grp=00~ses=0001~src=F:1~rup=218-01,44,9.97222E+01
-grp=00~ses=0001~src=F:1~rup=220-01,10,4.71845E+02
-grp=00~ses=0001~src=F:1~rup=226-01,19,9.18329E+00
-grp=00~ses=0001~src=F:1~rup=290-01,36,7.60572E+01
-grp=00~ses=0001~src=F:1~rup=301-01,6,6.73743E+01
-grp=00~ses=0001~src=F:2~rup=447-01,38,7.59106E+00
-grp=00~ses=0001~src=F:2~rup=458-01,6,8.82159E+01
-grp=00~ses=0001~src=F:2~rup=477-01,28,8.83357E+00
-grp=00~ses=0001~src=F:2~rup=579-01,13,3.38372E+01
-grp=00~ses=0001~src=F:3~rup=667-01,6,1.10299E+02
-grp=00~ses=0001~src=F:3~rup=749-01,21,3.98540E+01
-grp=00~ses=0001~src=F:5~rup=1109-01,49,4.40243E+03
-grp=00~ses=0001~src=F:5~rup=1225-01,41,2.95672E+03
-grp=00~ses=0001~src=F:8~rup=1725-01,27,4.35365E+03
-grp=00~ses=0001~src=F:9~rup=1868-01,28,1.12682E+03
-grp=00~ses=0001~src=F:9~rup=1993-01,40,2.24819E+03
-grp=00~ses=0002~src=F:0~rup=1-01,68,2.57024E+01
-grp=00~ses=0002~src=F:0~rup=122-01,83,9.97086E-01
-grp=00~ses=0002~src=F:0~rup=144-01,54,1.56553E+01
-grp=00~ses=0002~src=F:0~rup=15-01,84,2.29513E+01
-grp=00~ses=0002~src=F:0~rup=180-01,83,2.67975E+01
-grp=00~ses=0002~src=F:0~rup=44-01,95,2.41865E+01
-grp=00~ses=0002~src=F:0~rup=48-01,88,5.87686E+01
-grp=00~ses=0002~src=F:0~rup=71-01,76,2.79197E+01
-grp=00~ses=0002~src=F:12~rup=2330-01,63,2.36067E+03
-grp=00~ses=0002~src=F:1~rup=212-01,75,5.46235E+01
-grp=00~ses=0002~src=F:1~rup=223-01,60,1.99355E+02
-grp=00~ses=0002~src=F:1~rup=224-01,52,5.67831E+01
-grp=00~ses=0002~src=F:1~rup=351-01,99,1.53273E+02
-grp=00~ses=0002~src=F:2~rup=497-01,70,6.25409E+01
-grp=00~ses=0002~src=F:2~rup=528-01,99,1.04262E+02
-grp=00~ses=0002~src=F:2~rup=536-01,64,4.85312E+02
-grp=00~ses=0002~src=F:2~rup=564-01,98,1.45912E+02
-grp=00~ses=0002~src=F:3~rup=741-01,57,4.89742E+01
-grp=00~ses=0002~src=F:4~rup=959-01,84,2.77208E+01
-grp=00~ses=0002~src=F:5~rup=1123-01,66,3.22460E+02
-grp=00~ses=0002~src=F:5~rup=1127-01,52,3.04047E+02
-grp=00~ses=0002~src=F:8~rup=1704-01,77,1.45154E+02
+event_tag,year,tectonic_region_type,magnitude,centroid_lon,centroid_lat,centroid_depth,structural
+grp=00~ses=0001~src=F:1~rup=301-01,6,Active Shallow Crust,5.30000E+00,-7.89169E+01,1.65976E+01,2.79167E+01,6.73743E+01
+grp=00~ses=0001~src=F:2~rup=458-01,6,Active Shallow Crust,5.50000E+00,-7.87954E+01,1.49833E+01,1.87500E+01,8.82159E+01
+grp=00~ses=0001~src=F:3~rup=667-01,6,Active Shallow Crust,5.70000E+00,-7.87954E+01,1.49833E+01,1.87500E+01,1.10299E+02
+grp=00~ses=0001~src=F:1~rup=220-01,10,Active Shallow Crust,5.30000E+00,-7.88814E+01,1.56071E+01,9.58333E+00,4.71845E+02
+grp=00~ses=0001~src=F:2~rup=579-01,13,Active Shallow Crust,5.50000E+00,-7.88836E+01,1.64237E+01,4.62500E+01,3.38372E+01
+grp=00~ses=0001~src=F:0~rup=122-01,14,Active Shallow Crust,5.10000E+00,-7.88982E+01,1.62402E+01,3.70833E+01,3.05925E+01
+grp=00~ses=0001~src=F:0~rup=106-01,17,Active Shallow Crust,5.10000E+00,-7.87483E+01,1.48048E+01,3.70833E+01,1.78471E+01
+grp=00~ses=0001~src=F:12~rup=2373-01,17,Active Shallow Crust,7.50000E+00,-7.88281E+01,1.55223E+01,3.70833E+01,4.38212E+05
+grp=00~ses=0001~src=F:1~rup=226-01,19,Active Shallow Crust,5.30000E+00,-7.89409E+01,1.61422E+01,9.58333E+00,9.18329E+00
+grp=00~ses=0001~src=F:3~rup=749-01,21,Active Shallow Crust,5.70000E+00,-7.88982E+01,1.62402E+01,3.70833E+01,3.98540E+01
+grp=00~ses=0001~src=F:0~rup=193-01,24,Active Shallow Crust,5.10000E+00,-7.88678E+01,1.63363E+01,5.54167E+01,7.76759E+01
+grp=00~ses=0001~src=F:8~rup=1725-01,27,Active Shallow Crust,6.70000E+00,-7.89107E+01,1.61475E+01,2.79167E+01,4.35365E+03
+grp=00~ses=0001~src=F:2~rup=477-01,28,Active Shallow Crust,5.50000E+00,-7.89342E+01,1.66840E+01,1.87500E+01,8.83357E+00
+grp=00~ses=0001~src=F:9~rup=1868-01,28,Active Shallow Crust,6.90000E+00,-7.90610E+01,1.71613E+01,1.41667E+01,1.12682E+03
+grp=00~ses=0001~src=F:10~rup=2113-01,31,Active Shallow Crust,7.10000E+00,-7.88991E+01,1.63755E+01,3.70833E+01,1.03313E+05
+grp=00~ses=0001~src=F:0~rup=90-01,34,Active Shallow Crust,5.10000E+00,-7.89160E+01,1.65075E+01,2.79167E+01,6.25561E+00
+grp=00~ses=0001~src=F:1~rup=290-01,36,Active Shallow Crust,5.30000E+00,-7.88526E+01,1.56103E+01,2.79167E+01,7.60572E+01
+grp=00~ses=0001~src=F:2~rup=447-01,38,Active Shallow Crust,5.50000E+00,-7.90564E+01,1.71159E+01,9.58333E+00,7.59106E+00
+grp=00~ses=0001~src=F:9~rup=1993-01,40,Active Shallow Crust,6.90000E+00,-7.89251E+01,1.69164E+01,5.08333E+01,2.24819E+03
+grp=00~ses=0001~src=F:5~rup=1225-01,41,Active Shallow Crust,6.10000E+00,-7.88677E+01,1.62911E+01,5.54167E+01,2.95672E+03
+grp=00~ses=0001~src=F:1~rup=218-01,44,Active Shallow Crust,5.30000E+00,-7.88607E+01,1.54288E+01,9.58333E+00,9.97222E+01
+grp=00~ses=0001~src=F:5~rup=1109-01,49,Active Shallow Crust,6.10000E+00,-7.87869E+01,1.50285E+01,2.79167E+01,4.40243E+03
+grp=00~ses=0002~src=F:1~rup=224-01,52,Active Shallow Crust,5.30000E+00,-7.89229E+01,1.59637E+01,9.58333E+00,5.67831E+01
+grp=00~ses=0002~src=F:5~rup=1127-01,52,Active Shallow Crust,6.10000E+00,-7.89173E+01,1.66426E+01,2.79167E+01,3.04047E+02
+grp=00~ses=0002~src=F:0~rup=144-01,54,Active Shallow Crust,5.10000E+00,-7.87645E+01,1.50745E+01,4.62500E+01,1.56553E+01
+grp=00~ses=0002~src=F:3~rup=741-01,57,Active Shallow Crust,5.70000E+00,-7.88281E+01,1.55223E+01,3.70833E+01,4.89742E+01
+grp=00~ses=0002~src=F:1~rup=223-01,60,Active Shallow Crust,5.30000E+00,-7.89125E+01,1.58746E+01,9.58333E+00,1.99355E+02
+grp=00~ses=0002~src=F:12~rup=2330-01,63,Active Shallow Crust,7.50000E+00,-7.89679E+01,1.68596E+01,1.87500E+01,2.36067E+03
+grp=00~ses=0002~src=F:2~rup=536-01,64,Active Shallow Crust,5.50000E+00,-7.88482E+01,1.57016E+01,3.70833E+01,4.85312E+02
+grp=00~ses=0002~src=F:5~rup=1123-01,66,Active Shallow Crust,6.10000E+00,-7.89139E+01,1.62825E+01,2.79167E+01,3.22460E+02
+grp=00~ses=0002~src=F:0~rup=1-01,68,Active Shallow Crust,5.10000E+00,-7.87885E+01,1.48046E+01,9.58333E+00,2.57024E+01
+grp=00~ses=0002~src=F:2~rup=497-01,70,Active Shallow Crust,5.50000E+00,-7.88222E+01,1.53418E+01,2.79167E+01,6.25409E+01
+grp=00~ses=0002~src=F:1~rup=212-01,75,Active Shallow Crust,5.30000E+00,-7.87988E+01,1.48938E+01,9.58333E+00,5.46235E+01
+grp=00~ses=0002~src=F:0~rup=71-01,76,Active Shallow Crust,5.10000E+00,-7.87617E+01,1.48048E+01,2.79167E+01,2.79197E+01
+grp=00~ses=0002~src=F:8~rup=1704-01,77,Active Shallow Crust,6.70000E+00,-7.90657E+01,1.72067E+01,1.87500E+01,1.45154E+02
+grp=00~ses=0002~src=F:0~rup=122-01,83,Active Shallow Crust,5.10000E+00,-7.88982E+01,1.62402E+01,3.70833E+01,9.97086E-01
+grp=00~ses=0002~src=F:0~rup=180-01,83,Active Shallow Crust,5.10000E+00,-7.87605E+01,1.51651E+01,5.54167E+01,2.67975E+01
+grp=00~ses=0002~src=F:0~rup=15-01,84,Active Shallow Crust,5.10000E+00,-7.89333E+01,1.60529E+01,9.58333E+00,2.29513E+01
+grp=00~ses=0002~src=F:4~rup=959-01,84,Active Shallow Crust,5.90000E+00,-7.89127E+01,1.67799E+01,3.70833E+01,2.77208E+01
+grp=00~ses=0002~src=F:0~rup=48-01,88,Active Shallow Crust,5.10000E+00,-7.88978E+01,1.58767E+01,1.87500E+01,5.87686E+01
+grp=00~ses=0002~src=F:0~rup=44-01,95,Active Shallow Crust,5.10000E+00,-7.88567E+01,1.55194E+01,1.87500E+01,2.41865E+01
+grp=00~ses=0002~src=F:2~rup=564-01,98,Active Shallow Crust,5.50000E+00,-7.87645E+01,1.50745E+01,4.62500E+01,1.45912E+02
+grp=00~ses=0002~src=F:1~rup=351-01,99,Active Shallow Crust,5.30000E+00,-7.87349E+01,1.48049E+01,4.62500E+01,1.53273E+02
+grp=00~ses=0002~src=F:2~rup=528-01,99,Active Shallow Crust,5.50000E+00,-7.87682E+01,1.49842E+01,3.70833E+01,1.04262E+02
