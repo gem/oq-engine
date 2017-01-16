@@ -229,7 +229,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                         (src_filter, srcs, src_group.id, self.rlzs_assoc,
                          trt_names, curves_dict, bin_edges, oq, self.monitor))
 
-        results = parallel.starmap(compute_disagg, all_args).reduce(
+        results = parallel.Starmap(compute_disagg, all_args).reduce(
             self.agg_result)
         self.save_disagg_results(results)
 
