@@ -23,7 +23,8 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict
-from openquake.risklib import utils, scientific, valid
+from openquake.hazardlib import valid
+from openquake.risklib import utils, scientific
 
 U32 = numpy.uint32
 F32 = numpy.float32

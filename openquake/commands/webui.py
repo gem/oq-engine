@@ -37,8 +37,11 @@ def webui(cmd, hostport='127.0.0.1:8800'):
     dbserver.ensure_on()  # start the dbserver in a subproces
     if cmd == 'start':
         rundjango('runserver', hostport)
+    elif cmd == 'migrate':
+        rundjango('migrate')
+    # For backward compatibility with Django 1.6
     elif cmd == 'syncdb':
         rundjango('syncdb')
 
-webui.arg('cmd', 'webui command', choices='start syncdb'.split())
+webui.arg('cmd', 'webui command', choices='start migrate syncdb'.split())
 webui.arg('hostport', 'a string of the form <hostname:port>')
