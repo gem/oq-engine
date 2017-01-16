@@ -242,21 +242,24 @@ def convert_UCERFSource(self, node):
             raise ValueError("Source investigation time (%s) is not "
                              "equal to configuration investigation time "
                              "(%s)" % (inv_time, self.tom.time_span))
-
-        return UCERFControlTimeDep(
-            source_file,
-            node["id"],
-            inv_time,
-            datetime.strptime(node["startDate"], "%d/%m/%Y"),
-            float(node["minMag"]),
-            npd=self.convert_npdist(node),
-            hdd=self.convert_hpdist(node),
-            aspect=~node.ruptAspectRatio,
-            upper_seismogenic_depth=~node.pointGeometry.upperSeismoDepth,
-            lower_seismogenic_depth=~node.pointGeometry.lowerSeismoDepth,
-            msr=valid.SCALEREL[~node.magScaleRel](),
-            mesh_spacing=self.rupture_mesh_spacing,
-            trt=node["tectonicRegion"])
+        start_date = datetime.strptime(node["startDate"], "%d/%m/%Y")
+    else:
+        inv_time = self.tom.time_span
+        start_date = None
+    return UCERFControlTimeDep(
+        source_file,
+        node["id"],
+        inv_time,
+        start_date,
+        float(node["minMag"]),
+        npd=self.convert_npdist(node),
+        hdd=self.convert_hpdist(node),
+        aspect=~node.ruptAspectRatio,
+        upper_seismogenic_depth=~node.pointGeometry.upperSeismoDepth,
+        lower_seismogenic_depth=~node.pointGeometry.lowerSeismoDepth,
+        msr=valid.SCALEREL[~node.magScaleRel](),
+        mesh_spacing=self.rupture_mesh_spacing,
+        trt=node["tectonicRegion"])
 SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
