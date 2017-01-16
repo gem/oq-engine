@@ -32,7 +32,8 @@ from datetime import datetime
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip
 from openquake.baselib import parallel
-from openquake.risklib import valid, riskinput
+from openquake.hazardlib import valid, nrml
+from openquake.risklib import riskinput
 from openquake.commonlib import readinput, source, calc
 from openquake.calculators import base, event_based
 from openquake.calculators.event_based_risk import (
@@ -51,7 +52,7 @@ from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 
 from openquake.commonlib.calc import MAX_INT
-from openquake.commonlib.sourceconverter import SourceConverter, SourceModel
+from openquake.hazardlib.sourceconverter import SourceConverter, SourceModel
 
 
 # ######################## rupture calculator ############################ #
@@ -734,7 +735,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         self.smlt = readinput.get_source_model_lt(oq)
         job_info = dict(hostname=socket.gethostname())
         self.datastore.save('job_info', job_info)
-        parser = source.SourceModelParser(
+        parser = nrml.SourceModelParser(
             SourceConverter(oq.investigation_time, oq.rupture_mesh_spacing))
         [src_group] = parser.parse_src_groups(oq.inputs["source_model"])
         branches = sorted(self.smlt.branches.items())
@@ -775,7 +776,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         """
         Run the ucerf calculation
         """
-        res = parallel.starmap(compute_events, self.gen_args()).submit_all()
+        res = parallel.Starmap(compute_events, self.gen_args()).submit_all()
         acc = self.zerodict()
         num_ruptures = {}
         for ruptures_by_grp in res:
@@ -933,7 +934,7 @@ class UCERFRiskCalculator(EbriskCalculator):
     def execute(self):
         num_rlzs = len(self.rlzs_assoc.realizations)
         self.grp_trt = self.csm.info.grp_trt()
-        allres = parallel.starmap(compute_losses, self.gen_args()).submit_all()
+        allres = parallel.Starmap(compute_losses, self.gen_args()).submit_all()
         num_events = self.save_results(allres, num_rlzs)
         self.save_data_transfer(allres)
         return num_events
