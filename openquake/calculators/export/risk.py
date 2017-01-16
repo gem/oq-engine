@@ -405,14 +405,19 @@ def export_damage_total(ekey, dstore):
 
 
 # used by classical_risk and event_based_risk
-@export.add(('loss_maps-rlzs', 'csv'))
+@export.add(('loss_maps-rlzs', 'csv'), ('loss_maps-stats', 'csv'))
 def export_loss_maps_csv(ekey, dstore):
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    kind = ekey[0].split('-')[1]  # rlzs or stats
     assets = get_assets(dstore)
-    value = get_loss_maps(dstore, 'rlzs')
+    value = get_loss_maps(dstore, kind)
+    if kind == 'rlzs':
+        tags = dstore['csm_info'].get_rlzs_assoc().realizations
+    else:
+        oq = dstore['oqparam']
+        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for rlz, values in zip(rlzs, value.T):
-        fname = dstore.build_fname('loss_maps', rlz, ekey[1])
+    for tag, values in zip(tags, value.T):
+        fname = dstore.build_fname('loss_maps', tag, ekey[1])
         writer.save(compose_arrays(assets, values), fname)
     return writer.getsaved()
 

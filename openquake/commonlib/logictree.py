@@ -41,10 +41,8 @@ import openquake.hazardlib
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.gsim_table import GMPETable
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import geo
-from openquake.risklib import valid
-from openquake.commonlib import nrml
-from openquake.commonlib.sourceconverter import (
+from openquake.hazardlib import geo, valid, nrml
+from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d, SourceModel)
 
 from openquake.baselib.node import (
@@ -1085,7 +1083,7 @@ class GsimLogicTree(object):
         a sequence of distinct tectonic region types
     :param ltnode:
         usually None, but it can also be a
-        :class:`openquake.commonlib.nrml.Node` object describing the
+        :class:`openquake.hazardlib.nrml.Node` object describing the
         GSIM logic tree XML file, to avoid reparsing it
     """
     @classmethod

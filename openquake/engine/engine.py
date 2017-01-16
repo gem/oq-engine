@@ -25,7 +25,7 @@ import signal
 import traceback
 
 from openquake.baselib.performance import Monitor
-from openquake.risklib import valid
+from openquake.hazardlib import valid
 from openquake.baselib import parallel
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import datastore, config, readinput
@@ -202,7 +202,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             # taking further action, so that the real error can propagate
             try:
                 if USE_CELERY:
-                    celery_cleanup(TERMINATE, parallel.TaskManager.task_ids)
+                    celery_cleanup(TERMINATE, parallel.Starmap.task_ids)
             except:
                 # log the finalization error only if there is no real error
                 if tb == 'None\n':
