@@ -19,7 +19,7 @@
 import re
 import logging
 import numpy  # this is needed by the doctests, don't remove it
-from openquake.commonlib import InvalidFile
+from openquake.hazardlib import InvalidFile
 from openquake.baselib.node import scientificformat
 
 FIVEDIGITS = '%.5E'
@@ -396,7 +396,7 @@ def read_array(fname, sep=','):
 if __name__ == '__main__':  # pretty print of NRML files
     import sys
     import shutil
-    from openquake.commonlib import nrml
+    from openquake.hazardlib import nrml
     nrmlfiles = sys.argv[1:]
     for fname in nrmlfiles:
         node = nrml.read(fname)

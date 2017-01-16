@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Added information about the rupture in the event loss table exports
+  * Fixed a bug and added a test calculation with nonparametric sources
   * Fixed the classical UCERF calculator when there is more than one branch
   * Added .npz exporter for gmf_data for event based calculations
 

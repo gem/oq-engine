@@ -20,9 +20,9 @@ import os
 import copy
 import unittest
 import tempfile
-from openquake.commonlib.sourcewriter import write_source_model
-from openquake.commonlib.sourceconverter import SourceConverter
-from openquake.commonlib.source import SourceModelParser
+from openquake.hazardlib.sourcewriter import write_source_model
+from openquake.hazardlib.sourceconverter import SourceConverter
+from openquake.hazardlib.nrml import SourceModelParser
 from openquake.commonlib import nrml_examples
 
 NONPARAM = os.path.join(os.path.dirname(__file__), 'data',
