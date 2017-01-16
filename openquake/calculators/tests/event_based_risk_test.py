@@ -60,6 +60,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             ('rcurves-stats', 'xml'),
             ('rcurves-stats', 'geojson'),
 
+            ('loss_maps-stats', 'csv'),
             ('loss_maps-stats', 'xml'),
             ('loss_maps-stats', 'geojson'),
 
@@ -125,6 +126,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         assert fnames, 'No agg_losses exported??'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+        # this is a case without loss_ratios in the .ini file
+        # we check that no risk curves are generated
+        self.assertNotIn('rcurves-rlzs', self.calc.datastore)
+        self.assertNotIn('rcurves-stats', self.calc.datastore)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_occupants(self):
