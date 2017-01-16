@@ -203,7 +203,7 @@ class EbrPostCalculator(base.RiskCalculator):
             assets = list(self.assetcol)
             cb_inputs = self.cb_inputs('all_loss_ratios')
             mon = self.monitor('build_rcurves')
-            res = parallel.apply(
+            res = parallel.Starmap.apply(
                 build_rcurves, (cb_inputs, assets, mon)).reduce()
             for l, r in res:
                 aids, curves = res[l, r]
@@ -246,7 +246,7 @@ class EbrPostCalculator(base.RiskCalculator):
         cb_inputs = self.cb_inputs('agg_loss_table')
         I = oq.insured_losses + 1
         R = len(self.rlzs_assoc.realizations)
-        result = parallel.apply(
+        result = parallel.Starmap.apply(
             build_agg_curve, (cb_inputs, self.monitor('')),
             concurrent_tasks=self.oqparam.concurrent_tasks).reduce()
         agg_curve = numpy.zeros((I, R), loss_curve_dt)
