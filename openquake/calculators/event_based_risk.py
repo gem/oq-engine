@@ -338,7 +338,7 @@ class EbriskCalculator(base.RiskCalculator):
     # TODO: if the number of source models is larger than concurrent_tasks
     # a different strategy should be used; the one used here is good when
     # there are few source models, so that we cannot parallelize on those
-    def build_Starmap(self, sm_id, ruptures_by_grp, sitecol,
+    def build_starmap(self, sm_id, ruptures_by_grp, sitecol,
                       assetcol, riskmodel, imts, trunc_level, correl_model,
                       min_iml, monitor):
         """
@@ -443,7 +443,7 @@ class EbriskCalculator(base.RiskCalculator):
         source_models = self.csm.info.source_models
         self.sm_by_grp = self.csm.info.get_sm_by_grp()
         for i, args in enumerate(self.gen_args(ruptures_by_grp)):
-            smap, attrs = self.build_Starmap(*args)
+            smap, attrs = self.build_starmap(*args)
             res = smap.submit_all()
             vars(res).update(attrs)
             allres.append(res)
