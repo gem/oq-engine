@@ -1,12 +1,12 @@
-event_tag,year,structural
-grp=00~ses=0001~src=ltbr1299~rup=17-00,3506,4.10128E+05
-grp=00~ses=0001~src=ltbr1299~rup=17-01,1203,7.05051E+04
-grp=00~ses=0001~src=ltbr1299~rup=17-02,8373,1.27294E+06
-grp=00~ses=0001~src=ltbr1299~rup=22-00,5602,1.99221E+06
-grp=00~ses=0001~src=ltbr1299~rup=22-01,9747,3.25749E+04
-grp=00~ses=0001~src=ltbr1299~rup=23-00,5167,6.34420E+05
-grp=00~ses=0001~src=ltbr1299~rup=26-00,1179,1.40565E+06
-grp=00~ses=0001~src=ltbr1299~rup=26-01,4242,2.09058E+04
-grp=00~ses=0001~src=ltbr1299~rup=28-00,8652,2.04430E+05
-grp=00~ses=0001~src=ltbr1299~rup=29-00,222,9.07347E+06
-grp=00~ses=0001~src=ltbr1299~rup=5-00,8185,3.27863E+05
+event_tag,year,tectonic_region_type,magnitude,centroid_lon,centroid_lat,centroid_depth,structural
+grp=00~ses=0001~src=ltbr1299~rup=29-00,222,Active Shallow Crust,6.85000E+00,-1.22100E+02,3.71000E+01,7.50000E+00,9.07347E+06
+grp=00~ses=0001~src=ltbr1299~rup=26-00,1179,Active Shallow Crust,5.95000E+00,-1.22000E+02,3.72000E+01,3.78812E+00,1.40565E+06
+grp=00~ses=0001~src=ltbr1299~rup=17-01,1203,Active Shallow Crust,5.75000E+00,-1.21800E+02,3.73000E+01,9.00000E+00,7.05051E+04
+grp=00~ses=0001~src=ltbr1299~rup=17-00,3506,Active Shallow Crust,5.75000E+00,-1.21800E+02,3.73000E+01,9.00000E+00,4.10128E+05
+grp=00~ses=0001~src=ltbr1299~rup=26-01,4242,Active Shallow Crust,5.95000E+00,-1.22000E+02,3.72000E+01,3.78812E+00,2.09058E+04
+grp=00~ses=0001~src=ltbr1299~rup=23-00,5167,Active Shallow Crust,5.85000E+00,-1.21800E+02,3.73000E+01,6.00000E+00,6.34420E+05
+grp=00~ses=0001~src=ltbr1299~rup=22-00,5602,Active Shallow Crust,5.85000E+00,-1.22000E+02,3.72000E+01,6.00000E+00,1.99221E+06
+grp=00~ses=0001~src=ltbr1299~rup=5-00,8185,Active Shallow Crust,5.55000E+00,-1.21800E+02,3.73000E+01,9.00000E+00,3.27863E+05
+grp=00~ses=0001~src=ltbr1299~rup=17-02,8373,Active Shallow Crust,5.75000E+00,-1.21800E+02,3.73000E+01,9.00000E+00,1.27294E+06
+grp=00~ses=0001~src=ltbr1299~rup=28-00,8652,Active Shallow Crust,6.05000E+00,-1.22000E+02,3.72000E+01,6.00000E+00,2.04430E+05
+grp=00~ses=0001~src=ltbr1299~rup=22-01,9747,Active Shallow Crust,5.85000E+00,-1.22000E+02,3.72000E+01,6.00000E+00,3.25749E+04
