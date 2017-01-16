@@ -719,7 +719,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         """
         Run the ucerf calculation
         """
-        res = parallel.starmap(compute_events, self.gen_args()).submit_all()
+        res = parallel.Starmap(compute_events, self.gen_args()).submit_all()
         acc = self.zerodict()
         num_ruptures = {}
         for ruptures_by_grp in res:
@@ -877,7 +877,7 @@ class UCERFRiskCalculator(EbriskCalculator):
     def execute(self):
         num_rlzs = len(self.rlzs_assoc.realizations)
         self.grp_trt = self.csm.info.grp_trt()
-        allres = parallel.starmap(compute_losses, self.gen_args()).submit_all()
+        allres = parallel.Starmap(compute_losses, self.gen_args()).submit_all()
         num_events = self.save_results(allres, num_rlzs)
         self.save_data_transfer(allres)
         return num_events

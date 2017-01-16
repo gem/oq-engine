@@ -398,7 +398,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         if len(self.csm) > 1:
             # when multiple branches, parallelise by branch
             branches = [br.value for br in self.smlt.branches.values()]
-            rup_res = parallel.starmap(
+            rup_res = parallel.Starmap(
                 ucerf_classical_hazard_by_branch,
                 self.gen_args(branches, ucerf_source, monitor)).submit_all()
         else:
@@ -421,14 +421,14 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             # parallelize on the background sources, small tasks
             args = (bckgnd_sources, self.src_filter, oq.imtls,
                     gsims, self.oqparam.truncation_level, (), monitor)
-            bg_res = parallel.apply(
+            bg_res = parallel.Starmap.apply(
                 pmap_from_grp, args,
                 concurrent_tasks=self.oqparam.concurrent_tasks).submit_all()
 
             # parallelize by rupture subsets
             tasks = self.oqparam.concurrent_tasks * 2  # they are big tasks
             rup_sets = ucerf_source.get_rupture_indices(branchname)
-            rup_res = parallel.apply(
+            rup_res = parallel.Starmap.apply(
                 ucerf_classical_hazard_by_rupture_set,
                 (rup_sets, branchname, ucerf_source, self.src_group.id,
                  self.src_filter, gsims, monitor),
