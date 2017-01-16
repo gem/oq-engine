@@ -28,7 +28,7 @@ from openquake.hazardlib.stats import compute_stats, compute_stats2
 from openquake.calculators import base, event_based
 from openquake.baselib import parallel
 from openquake.risklib import riskinput, scientific
-from openquake.baselib.parallel import starmap
+from openquake.baselib.parallel import Starmap
 
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -203,7 +203,7 @@ class EbrPostCalculator(base.RiskCalculator):
             assets = list(self.assetcol)
             cb_inputs = self.cb_inputs('all_loss_ratios')
             mon = self.monitor('build_rcurves')
-            res = parallel.apply(
+            res = parallel.Starmap.apply(
                 build_rcurves, (cb_inputs, assets, mon)).reduce()
             for l, r in res:
                 aids, curves = res[l, r]
@@ -246,7 +246,7 @@ class EbrPostCalculator(base.RiskCalculator):
         cb_inputs = self.cb_inputs('agg_loss_table')
         I = oq.insured_losses + 1
         R = len(self.rlzs_assoc.realizations)
-        result = parallel.apply(
+        result = parallel.Starmap.apply(
             build_agg_curve, (cb_inputs, self.monitor('')),
             concurrent_tasks=self.oqparam.concurrent_tasks).reduce()
         agg_curve = numpy.zeros((I, R), loss_curve_dt)
@@ -352,7 +352,7 @@ class EbriskCalculator(base.RiskCalculator):
         :param correl_model: correlation model
         :param min_iml: vector of minimum intensities, one per IMT
         :param monitor: a Monitor instance
-        :returns: a pair (starmap, dictionary of attributes)
+        :returns: a pair (Starmap, dictionary of attributes)
         """
         csm_info = self.csm_info.get_info(sm_id)
         grp_ids = sorted(csm_info.get_sm_by_grp())
@@ -387,7 +387,7 @@ class EbriskCalculator(base.RiskCalculator):
 
         self.vals = self.assetcol.values()
         taskname = '%s#%d' % (event_based_risk.__name__, sm_id + 1)
-        smap = starmap(event_based_risk, allargs, name=taskname)
+        smap = Starmap(event_based_risk, allargs, name=taskname)
         attrs = dict(num_ruptures={
             sg_id: len(rupts) for sg_id, rupts in ruptures_by_grp.items()},
                      num_events=num_events,

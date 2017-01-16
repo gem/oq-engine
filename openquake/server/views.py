@@ -37,7 +37,7 @@ from django.shortcuts import render
 
 from openquake.baselib.general import groupby, writetmp
 from openquake.baselib.python3compat import unicode
-from openquake.baselib.parallel import TaskManager, safely_call
+from openquake.baselib.parallel import Starmap, safely_call
 from openquake.hazardlib import nrml
 from openquake.commonlib import readinput, oqvalidation
 from openquake.calculators.export import export
@@ -386,7 +386,7 @@ def run_calc(request):
     try:
         job_id, fut = submit_job(einfo[0], user['name'], hazard_job_id)
         # restart the process pool at the end of each job
-        fut .add_done_callback(lambda f: TaskManager.restart())
+        fut .add_done_callback(lambda f: Starmap.restart())
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = str(exc)
