@@ -398,7 +398,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         if len(self.csm) > 1:
             # when multiple branches, parallelise by branch
             branches = [br.value for br in self.smlt.branches.values()]
-            rup_res = parallel.starmap(
+            rup_res = parallel.Starmap(
                 ucerf_classical_hazard_by_branch,
                 self.gen_args(branches, ucerf_source, monitor)).submit_all()
         else:
