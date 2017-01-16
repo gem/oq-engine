@@ -69,7 +69,6 @@ def copy_to(elt, rup_data, rupserials):
         elt[i]['centroid_lon'] = rdata['lon']
         elt[i]['centroid_lat'] = rdata['lat']
         elt[i]['centroid_depth'] = rdata['depth']
-        elt[i]['boundary'] = rdata['boundary']
 
 # ############################### exporters ############################## #
 
@@ -200,12 +199,11 @@ def export_agg_losses_ebr(ekey, dstore):
               ('centroid_lon', F64),
               ('centroid_lat', F64),
               ('centroid_depth', F64),
-              ('boundary', hdf5.vstr),
               ] + oq.loss_dt_list()
     elt_dt = numpy.dtype(dtlist)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     sm_ids = sorted(rlzs_assoc.rlzs_by_smodel)
-    writer = writers.CsvWriter(sep='\t', fmt=writers.FIVEDIGITS)
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for sm_id in sm_ids:
         rlzs = rlzs_assoc.rlzs_by_smodel[sm_id]
         try:
