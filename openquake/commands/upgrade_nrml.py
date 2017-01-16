@@ -23,12 +23,13 @@ import shutil
 import operator
 from xml.etree.ElementTree import iterparse
 
-from openquake.baselib.general import groupby
-from openquake.risklib import scientific
-from openquake.commonlib.nrml import NRML05
 from openquake.baselib import sap
+from openquake.baselib.general import groupby
 from openquake.baselib.node import context, striptag, Node
-from openquake.commonlib import InvalidFile, riskmodels, nrml
+from openquake.hazardlib.nrml import NRML05
+from openquake.hazardlib import InvalidFile, nrml
+from openquake.risklib import scientific
+from openquake.commonlib import riskmodels
 
 
 def get_vulnerability_functions_04(fname):

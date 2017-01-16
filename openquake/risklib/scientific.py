@@ -877,7 +877,7 @@ class CurveBuilder(object):
     """
     Build loss ratio curves. The loss ratios can be provided
     by the user or automatically generated (user_provided=False).
-    The usage is something like this:
+    The usage is something like this::
 
       builder = CurveBuilder(loss_type, loss_ratios, ses_ratio,
                              user_provided=True)

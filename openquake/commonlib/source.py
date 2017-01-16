@@ -30,8 +30,9 @@ import numpy
 from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import groupby, group_array
-from openquake.commonlib import logictree, sourceconverter, InvalidFile
-from openquake.commonlib import nrml
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile
+from openquake.commonlib import logictree
+
 
 MAXWEIGHT = sourceconverter.MAXWEIGHT
 MAX_INT = 2 ** 31 - 1
@@ -86,50 +87,6 @@ def capitalize(words):
     'Active Shallow Crust'
     """
     return ' '.join(w.capitalize() for w in words.split(' '))
-
-
-class SourceModelParser(object):
-    """
-    A source model parser featuring a cache.
-
-    :param converter:
-        :class:`openquake.commonlib.source.SourceConverter` instance
-    """
-    def __init__(self, converter):
-        self.converter = converter
-        self.groups = {}  # cache fname -> groups
-        self.fname_hits = collections.Counter()  # fname -> number of calls
-
-    def parse_src_groups(self, fname, apply_uncertainties=None):
-        """
-        :param fname:
-            the full pathname of the source model file
-        :param apply_uncertainties:
-            a function modifying the sources (or None)
-        """
-        try:
-            groups = self.groups[fname]
-        except KeyError:
-            groups = self.groups[fname] = self.parse_groups(fname)
-        # NB: deepcopy is *essential* here
-        groups = [copy.deepcopy(g) for g in groups]
-        for group in groups:
-            for src in group:
-                if apply_uncertainties:
-                    apply_uncertainties(src)
-                    src.num_ruptures = src.count_ruptures()
-        self.fname_hits[fname] += 1
-        return groups
-
-    def parse_groups(self, fname):
-        """
-        Parse all the groups and return them ordered by number of sources.
-        It does not count the ruptures, so it is relatively fast.
-
-        :param fname:
-            the full pathname of the source model file
-        """
-        return nrml.parse(fname, self.converter)
 
 
 class RlzsAssoc(collections.Mapping):
@@ -510,7 +467,7 @@ class CompositeSourceModel(collections.Sequence):
     :param source_model_lt:
         a :class:`openquake.commonlib.logictree.SourceModelLogicTree` instance
     :param source_models:
-        a list of :class:`openquake.commonlib.sourceconverter.SourceModel`
+        a list of :class:`openquake.hazardlib.sourceconverter.SourceModel`
         tuples
     """
     def __init__(self, gsim_lt, source_model_lt, source_models,
