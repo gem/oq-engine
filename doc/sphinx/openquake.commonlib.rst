@@ -1,10 +1,18 @@
 openquake.commonlib package
 ===========================
 
-openquake.commonlib.concurrent_futures_process_mpatch module
-------------------------------------------------------------
+openquake.commonlib.calc module
+---------------------------------
 
-.. automodule:: openquake.commonlib.concurrent_futures_process_mpatch
+.. automodule:: openquake.commonlib.calc
+    :members:
+    :undoc-members:
+    :show-inheritance:
+   
+openquake.commonlib.config module
+---------------------------------
+
+.. automodule:: openquake.commonlib.config
     :members:
     :undoc-members:
     :show-inheritance:
@@ -33,34 +41,10 @@ openquake.commonlib.logictree module
     :undoc-members:
     :show-inheritance:
 
-openquake.baselib.node module
--------------------------------
-
-.. automodule:: openquake.baselib.node
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-openquake.commonlib.nrml module
--------------------------------
-
-.. automodule:: openquake.commonlib.nrml
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 openquake.commonlib.oqvalidation module
 ---------------------------------------
 
 .. automodule:: openquake.commonlib.oqvalidation
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-openquake.baselib.parallel module
------------------------------------
-
-.. automodule:: openquake.baselib.parallel
     :members:
     :undoc-members:
     :show-inheritance:
@@ -74,7 +58,7 @@ openquake.commonlib.readinput module
     :show-inheritance:
 
 openquake.calculators.reportwriter module
----------------------------------------
+-----------------------------------------
 
 .. automodule:: openquake.calculators.reportwriter
     :members:
@@ -97,34 +81,10 @@ openquake.commonlib.riskmodels module
     :undoc-members:
     :show-inheritance:
 
-openquake.commonlib.sap module
-------------------------------
-
-.. automodule:: openquake.commonlib.sap
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 openquake.commonlib.source module
 ---------------------------------
 
 .. automodule:: openquake.commonlib.source
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-openquake.commonlib.sourceconverter module
-------------------------------------------
-
-.. automodule:: openquake.commonlib.sourceconverter
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-openquake.commonlib.sourcewriter module
----------------------------------------
-
-.. automodule:: openquake.commonlib.sourcewriter
     :members:
     :undoc-members:
     :show-inheritance:
@@ -141,15 +101,6 @@ openquake.commonlib.writers module
 ----------------------------------
 
 .. automodule:: openquake.commonlib.writers
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: openquake.commonlib
     :members:
     :undoc-members:
     :show-inheritance:
