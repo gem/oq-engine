@@ -26,7 +26,7 @@ from io import BytesIO, StringIO
 
 from numpy.testing import assert_allclose
 
-from openquake.risklib import valid
+from openquake.hazardlib import valid
 from openquake.commonlib import readinput, writers
 from openquake.baselib import general
 
