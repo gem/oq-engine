@@ -470,7 +470,7 @@ class EventBasedCalculator(ClassicalCalculator):
         self.sm_id = {sm.path: sm.ordinal
                       for sm in self.csm.info.source_models}
         L = len(oq.imtls.array)
-        res = parallel.starmap(
+        res = parallel.Starmap(
             self.core_task.__func__, self.gen_args(ruptures_by_grp)
         ).submit_all()
         acc = functools.reduce(self.combine_pmaps_and_save_gmfs, res, {
