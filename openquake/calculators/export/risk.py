@@ -245,7 +245,7 @@ def export_agg_losses_ebr(ekey, dstore):
                         elt_lt_ins[idx] = data['loss'][i, 1]
                     else:
                         elt_lt[idx] = data['loss'][i]
-            elt.sort(order='event_tag')
+            elt.sort(order=['year', 'event_tag'])
             writer.save(elt, dest)
     return writer.getsaved()
 

@@ -2,8 +2,8 @@ event_tag,year,tectonic_region_type,magnitude,centroid_lon,centroid_lat,centroid
 grp=00~ses=0001~src=1~rup=2-01,39,Active Shallow Crust,5.55000E+00,8.12985E+01,2.91098E+01,4.00000E+00,9.56327E+02
 grp=00~ses=0001~src=2~rup=7-01,41,Active Shallow Crust,5.25000E+00,8.30823E+01,2.79006E+01,8.00000E+00,1.37643E+02
 grp=00~ses=0002~src=1~rup=1-01,70,Active Shallow Crust,5.25000E+00,8.12985E+01,2.91098E+01,4.00000E+00,6.35889E+02
-grp=00~ses=0002~src=1~rup=2-01,91,Active Shallow Crust,5.55000E+00,8.12985E+01,2.91098E+01,4.00000E+00,5.02636E+02
 grp=00~ses=0002~src=2~rup=9-01,78,Active Shallow Crust,5.85000E+00,8.30823E+01,2.79006E+01,8.00000E+00,1.91743E+02
+grp=00~ses=0002~src=1~rup=2-01,91,Active Shallow Crust,5.55000E+00,8.12985E+01,2.91098E+01,4.00000E+00,5.02636E+02
 grp=00~ses=0003~src=2~rup=9-01,140,Active Shallow Crust,5.85000E+00,8.30823E+01,2.79006E+01,8.00000E+00,7.40691E+01
 grp=00~ses=0005~src=1~rup=2-01,210,Active Shallow Crust,5.55000E+00,8.12985E+01,2.91098E+01,4.00000E+00,2.40037E+03
 grp=00~ses=0005~src=2~rup=8-01,246,Active Shallow Crust,5.55000E+00,8.30823E+01,2.79006E+01,8.00000E+00,1.12018E+03
