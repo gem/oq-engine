@@ -219,9 +219,10 @@ class EbrPostCalculator(base.RiskCalculator):
                 with self.monitor('computing avg_losses-stats'):
                     self.datastore['avg_losses-stats'] = compute_stats2(
                         self.datastore['avg_losses-rlzs'], quantiles, weights)
-            with self.monitor('computing rcurves-stats'):
-                self.datastore['rcurves-stats'] = compute_stats2(
-                    rcurves, quantiles, weights)
+            if self.oqparam.loss_ratios:
+                with self.monitor('computing rcurves-stats'):
+                    self.datastore['rcurves-stats'] = compute_stats2(
+                        rcurves, quantiles, weights)
 
         # build an aggregate loss curve per realization
         if 'agg_loss_table' in self.datastore:
