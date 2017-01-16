@@ -60,6 +60,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             ('rcurves-stats', 'xml'),
             ('rcurves-stats', 'geojson'),
 
+            ('loss_maps-stats', 'csv'),
             ('loss_maps-stats', 'xml'),
             ('loss_maps-stats', 'geojson'),
 
