@@ -589,7 +589,6 @@ def get_loss_maps(dstore, kind):
         A, R, I = rcurves.shape
         ins = ['', '_ins']
         loss_maps = numpy.zeros((A, R), loss_maps_dt)
-        import pdb; pdb.set_trace()
         for ltype, lratios in oq.loss_ratios.items():
             for (a, r, i) in indices(A, R, I):
                 rcurve = rcurves[ltype][a, r, i]
