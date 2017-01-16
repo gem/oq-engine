@@ -413,6 +413,7 @@ def prefilter_background_model(hdf5, branch_key, sites, integration_distance,
     # Add buffer equal to half of length of median area from Mmax
     mmax_areas = msr.get_median_area(
         hdf5["/".join(["Grid", branch_key, "MMax"])][:], 0.0)
+    # for instance hdf5['Grid/FM0_0_MEANFS_MEANMSR/MMax']
     mmax_lengths = numpy.sqrt(mmax_areas / aspect)
     ok = distances <= (0.5 * mmax_lengths + integration_distance)
     # get list of indices from array of booleans
@@ -661,7 +662,7 @@ class UCERFSESControlTimeDep(UCERFSESControl):
         idx_set["rake_idx"] = "/".join([code_set[0], code_set[1], "Rake"])
         idx_set["msr_idx"] = "-".join([code_set[0], code_set[1], code_set[2]])
         idx_set["geol_idx"] = code_set[0]
-        grid_key = "_".join(self.branch_id.replace("/", "_").split("_")[:-1])
+        #grid_key = "_".join(self.branch_id.replace("/", "_").split("_")[:-1])
         #idx_set["grid_key"] = self.branch_id.replace("/", "_")
         idx_set["grid_key"] = "_".join(
             self.branch_id.replace("/", "_").split("_")[:-1]
@@ -687,12 +688,16 @@ def convert_UCERFSource(self, node):
             raise ValueError("Source investigation time (%s) is not "
                              "equal to configuration investigation time "
                              "(%s)" % (inv_time, self.tom.time_span))
+        start_date = datetime.strptime(node["startDate"], "%d/%m/%Y")
+    else:
+        inv_time = self.tom.time_span
+        start_date = None
 
     return UCERFSESControlTimeDep(
         source_file,
         node["id"],
         inv_time,
-        datetime.strptime(node["startDate"], "%d/%m/%Y"),
+        start_date,
         float(node["minMag"]),
         npd=self.convert_npdist(node),
         hdd=self.convert_hpdist(node),
