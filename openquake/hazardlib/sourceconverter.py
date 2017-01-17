@@ -151,9 +151,10 @@ class SourceGroup(collections.Sequence):
         if srcs_weights is not None:
             assert abs(1. - sum(srcs_weights)) < 1e-6
         # check TRT
-        for src in src_list:
-            assert src.tectonic_region_type == self.trt, (
-                src.tectonic_region_type, self.trt)
+        if src_list:  # can be None
+            for src in src_list:
+                assert src.tectonic_region_type == self.trt, (
+                    src.tectonic_region_type, self.trt)
 
     def tot_ruptures(self):
         return sum(src.num_ruptures for src in self.sources)
