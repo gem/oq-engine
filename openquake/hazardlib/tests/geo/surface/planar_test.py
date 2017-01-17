@@ -26,6 +26,8 @@ from openquake.hazardlib.tests.geo.surface \
     import _planar_test_data as test_data
 from openquake.hazardlib.tests.geo.surface import _utils as utils
 
+assert_aeq = numpy.testing.assert_almost_equal
+
 
 class PlanarSurfaceCreationTestCase(unittest.TestCase):
     def assert_failed_creation(self, mesh_spacing, strike, dip, corners,
@@ -624,14 +626,16 @@ class PlanarSurfaceGetMiddlePointTestCase(unittest.TestCase):
         corners = [Point(0.0, 0.0, 0.0), Point(0.0, 0.089932, 0.0),
                    Point(0.0, 0.089932, 10.0), Point(0.0, 0.0, 10.0)]
         surface = PlanarSurface(1, 45, 90, *corners)
-        self.assertTrue(
-            Point(0.0, 0.044966, 5.0) == surface.get_middle_point()
-        )
+        midpoint = surface.get_middle_point()
+        assert_aeq(midpoint.longitude, 0.0, decimal=5)
+        assert_aeq(midpoint.latitude, 0.044966, decimal=5)
+        assert_aeq(midpoint.depth, 5.0, decimal=5)
 
     def test_topo(self):
         corners = [Point(0.0, 0.0, 0.0), Point(0.0, 0.089932, 0.0),
                    Point(0.0, 0.089932, -8.0), Point(0.0, 0.0, -8.0)]
         surface = PlanarSurface(1, 45, 90, *corners)
-        self.assertTrue(
-            Point(0.0, 0.044966, -4.0) == surface.get_middle_point()
-        )
+        midpoint = surface.get_middle_point()
+        assert_aeq(midpoint.longitude, 0.0, decimal=5)
+        assert_aeq(midpoint.latitude, 0.044966, decimal=5)
+        assert_aeq(midpoint.depth, -4.0, decimal=5)
