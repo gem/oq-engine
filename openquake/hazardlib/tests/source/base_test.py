@@ -21,7 +21,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.source.base import SourceGroup
+from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.geo import Polygon, Point, RectangularMesh
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.site import \
@@ -171,7 +171,8 @@ class SeismicSourceGroupTestCase(unittest.TestCase):
 
     def test_init1(self):
         # test simple instantiation
-        grp = SourceGroup(src_list=[self.source],
+        grp = SourceGroup(self.source.tectonic_region_type,
+                          src_list=[self.source],
                           name='',
                           src_interdep='indep',
                           rup_interdep='indep',
@@ -180,7 +181,8 @@ class SeismicSourceGroupTestCase(unittest.TestCase):
 
     def test_init2(self):
         # test default weighting
-        grp = SourceGroup(src_list=[self.source, self.source, self.source],
+        grp = SourceGroup(self.source.tectonic_region_type,
+                          src_list=[self.source, self.source, self.source],
                           name='',
                           src_interdep='indep',
                           rup_interdep='indep',
@@ -189,12 +191,14 @@ class SeismicSourceGroupTestCase(unittest.TestCase):
 
     def test_init3(self):
         # test default weighting
-        SourceGroup(src_list=[self.source, self.source, self.source],
+        SourceGroup(self.source.tectonic_region_type,
+                    src_list=[self.source, self.source, self.source],
                     name='',
                     src_interdep='indep',
                     rup_interdep='indep',
                     srcs_weights=[0.3333, 0.3334, 0.3333])
 
     def test_wrong_label(self):
-        self.assertRaises(ValueError, SourceGroup, [self.source], 'name',
-                          'aaaa', 'indep', None)
+        self.assertRaises(ValueError, SourceGroup,
+                          self.source.tectonic_region_type,
+                          [self.source], 'name', 'aaaa', 'indep', None)

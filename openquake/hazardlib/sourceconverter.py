@@ -54,8 +54,13 @@ class SourceModel(object):
         Return an empty copy of the source model, i.e. without sources,
         but with the proper attributes for each SourceGroup contained within.
         """
-        src_groups = [SourceGroup(sg.trt, [], sg.min_mag, sg.max_mag, sg.id)
-                      for sg in self.src_groups]
+        src_groups = []
+        for grp in self.src_groups:
+            sg = SourceGroup(grp.trt)
+            sg.min_mag = grp.min_mag
+            sg.max_mag = grp.max_mag
+            sg.id = grp.id
+            src_groups.append(sg)
         return self.__class__(self.name, self.weight, self.path, src_groups,
                               self.num_gsim_paths, self.ordinal, self.samples)
 
@@ -122,7 +127,7 @@ class SourceGroup(collections.Sequence):
         self.name = name
         self.src_interdep = src_interdep
         self.rup_interdep = rup_interdep
-        if srcs_weights is None:
+        if srcs_weights is None and sources is not None:
             n = len(sources)
             self.srcs_weights = numpy.ones(n) / n
         else:

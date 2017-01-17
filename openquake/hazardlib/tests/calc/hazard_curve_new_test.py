@@ -32,7 +32,7 @@ from openquake.hazardlib.calc.hazard_curve import pmap_from_grp
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.pmf import PMF
-from openquake.hazardlib.source.base import SourceGroup
+from openquake.hazardlib.sourceconverter import SourceGroup
 
 
 def _create_rupture(distance, magnitude,
@@ -119,7 +119,8 @@ class HazardCurvesTestCase01(unittest.TestCase):
 
     def test_hazard_curve_B(self):
         # Test simple calculation
-        group = SourceGroup([self.src2], 'test', 'indep', 'indep')
+        group = SourceGroup(
+            TRT.ACTIVE_SHALLOW_CRUST, [self.src2], 'test', 'indep', 'indep')
         groups = [group]
         curves = calc_hazard_curves_ext(groups,
                                         self.sites,
@@ -141,7 +142,8 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
                 (rupture, PMF([(0.6, 0), (0.4, 1)]))]
         src = NonParametricSeismicSource('0', 'test', TRT.ACTIVE_SHALLOW_CRUST,
                                          data)
-        group = SourceGroup([src], 'test', 'indep', 'mutex')
+        group = SourceGroup(
+            src.tectonic_region_type, [src], 'test', 'indep', 'mutex')
         crv = pmap_from_grp(group, self.sites, self.imtls,
                             gsim_by_trt, truncation_level=None)[0]
         npt.assert_almost_equal(numpy.array([0.35000, 0.32497, 0.10398]),
@@ -151,7 +153,9 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
         # Test that the uniformity of a group (in terms of tectonic region)
         # is correctly checked
         gsim_by_trt = [SadighEtAl1997()]
-        group = SourceGroup([self.src1, self.src3], 'test', 'indep', 'indep')
+        group = SourceGroup(
+            TRT.ACTIVE_SHALLOW_CRUST, [self.src1, self.src3],
+            'test', 'indep', 'indep')
         self.assertRaises(AssertionError, pmap_from_grp, group,
                           self.sites, self.imtls, gsim_by_trt,
                           truncation_level=None)
