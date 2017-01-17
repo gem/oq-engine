@@ -56,10 +56,8 @@ class SourceModel(object):
         """
         src_groups = []
         for grp in self.src_groups:
-            sg = SourceGroup(grp.trt)
-            sg.min_mag = grp.min_mag
-            sg.max_mag = grp.max_mag
-            sg.id = grp.id
+            sg = copy.copy(grp)
+            sg.sources = []
             src_groups.append(sg)
         return self.__class__(self.name, self.weight, self.path, src_groups,
                               self.num_gsim_paths, self.ordinal, self.samples)
@@ -120,9 +118,9 @@ class SourceGroup(collections.Sequence):
                  rup_interdep='indep', srcs_weights=None,
                  min_mag=None, max_mag=None, id=0, eff_ruptures=-1):
         # checks
+        self.trt = trt
         self._check_init_variables(sources, name, src_interdep, rup_interdep,
                                    srcs_weights)
-        self.trt = trt
         self.sources = []
         self.name = name
         self.src_interdep = src_interdep
@@ -152,6 +150,10 @@ class SourceGroup(collections.Sequence):
         # check srcs weights defined by the user
         if srcs_weights is not None:
             assert abs(1. - sum(srcs_weights)) < 1e-6
+        # check TRT
+        for src in src_list:
+            assert src.tectonic_region_type == self.trt, (
+                src.tectonic_region_type, self.trt)
 
     def tot_ruptures(self):
         return sum(src.num_ruptures for src in self.sources)

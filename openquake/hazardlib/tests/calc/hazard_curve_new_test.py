@@ -152,13 +152,9 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
     def test_raise_error_non_uniform_group(self):
         # Test that the uniformity of a group (in terms of tectonic region)
         # is correctly checked
-        gsim_by_trt = [SadighEtAl1997()]
-        group = SourceGroup(
-            TRT.ACTIVE_SHALLOW_CRUST, [self.src1, self.src3],
-            'test', 'indep', 'indep')
-        self.assertRaises(AssertionError, pmap_from_grp, group,
-                          self.sites, self.imtls, gsim_by_trt,
-                          truncation_level=None)
+        self.assertRaises(
+            AssertionError, SourceGroup, TRT.ACTIVE_SHALLOW_CRUST,
+            [self.src1, self.src3], 'test', 'indep', 'indep')
 
 
 class HazardCurvesTestCase02(HazardCurvesTestCase01):

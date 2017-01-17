@@ -246,7 +246,7 @@ def pmap_from_grp(
     if isinstance(sources, SourceGroup):
         group = sources
         sources = group.sources
-        trt = group.src_list[0].tectonic_region_type
+        trt = sources[0].tectonic_region_type
     else:  # list of sources
         trt = sources[0].tectonic_region_type
         group = SourceGroup(trt, sources, 'src_group', 'indep', 'indep')
@@ -328,7 +328,8 @@ def calc_hazard_curves_ext(
     # This is ensuring backward compatibility i.e. processing a list of
     # sources
     if not isinstance(groups[0], SourceGroup):
-        groups = [SourceGroup(groups, 'src_group', 'indep', 'indep')]
+        trt = groups[0].tectonic_region_type  # is a source
+        groups = [SourceGroup(trt, groups, 'src_group', 'indep', 'indep')]
 
     imtls = DictArray(imtls)
     sitecol = source_site_filter.sitecol
@@ -342,11 +343,11 @@ def calc_hazard_curves_ext(
         # Fill the dictionary with sources for the different tectonic regions
         # belonging to this group
         if indep:
-            for src in group.src_list:
+            for src in group.sources:
                 sources_by_trt[src.tectonic_region_type].append(src)
                 weights_by_trt[src.tectonic_region_type][src.source_id] = 1
         else:
-            for src in group.src_list:
+            for src in group.sources:
                 sources_by_trt[src.tectonic_region_type].append(src)
                 w = group.srcs_weights[src.source_id]
                 weights_by_trt[src.tectonic_region_type][src.source_id] = w
@@ -355,7 +356,8 @@ def calc_hazard_curves_ext(
         for trt in sources_by_trt:
             gsim = gsim_by_trt[trt]
             # Create a temporary group
-            tmp_group = SourceGroup(sources_by_trt[trt],
+            tmp_group = SourceGroup(trt,
+                                    sources_by_trt[trt],
                                     'temp',
                                     group.src_interdep,
                                     group.rup_interdep,
