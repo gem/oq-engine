@@ -34,4 +34,4 @@ http://ftp.openquake.org/wheelhouse/macos/py27/pyshp-1.2.3-cp27-none-any.whl
 http://ftp.openquake.org/wheelhouse/macos/py/pyparsing-2.1.10-py2.py3-none-any.whl
 http://ftp.openquake.org/wheelhouse/macos/py/python_dateutil-2.6.0-py2.py3-none-any.whl
 http://ftp.openquake.org/wheelhouse/macos/py/cycler-0.10.0-py2.py3-none-any.whl
-http://ftp.openquake.org/wheelhouse/macos/py27/matplotlib-1.5.3-cp27-cp27mu-manylinux1_x86_64.whl
+http://ftp.openquake.org/wheelhouse/mac/py27/matplotlib-1.5.3-cp27-cp27m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl
