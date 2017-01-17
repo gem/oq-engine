@@ -472,6 +472,7 @@ class HazardCalculator(BaseCalculator):
             self.exposure = readinput.get_exposure(self.oqparam)
             arefs = numpy.array(self.exposure.asset_refs, hdf5.vstr)
             self.datastore['asset_refs'] = arefs
+            self.datastore.flush()
             self.datastore.set_attrs('asset_refs', nbytes=arefs.nbytes)
             self.cost_calculator = readinput.get_cost_calculator(self.oqparam)
             self.sitecol, self.assets_by_site = (
