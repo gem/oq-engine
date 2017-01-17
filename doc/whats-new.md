@@ -93,14 +93,12 @@ not need to run engine-style computations. This reduces the cognitive load.
 
 Among the improvements:
 
-- the function `calc_hazard_curves` of hazardlib is able to parallelize a
-  computation if you say so
+- the function `calc_hazard_curves` of hazardlib has been extended and it
+  is now able to parallelize a computation, if you say so
 - it is possible to correctly serialize to NRML and to read back all kind
   of hazardlib sources, including nonparametric sources
 - the format NRML 0.5 for hazard sources is now fully supported both in
   hazardlib and in the engine side
-- it is (optionally) possible to filter hazard sources with the rtree library,
-  which is a lot faster than using the old system
 
 As usual, new GMPEs were added:
 
