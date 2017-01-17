@@ -80,8 +80,10 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         ]
         sites = [openquake.hazardlib.site.Site(Point(11, 10), 1, True, 2, 3),
                  openquake.hazardlib.site.Site(Point(10, 16), 2, True, 2, 3),
-                 openquake.hazardlib.site.Site(Point(10, 10.6), 3, True, 2, 3),
-                 openquake.hazardlib.site.Site(Point(10, 10.7), 4, True, 2, 3)]
+                 openquake.hazardlib.site.Site(
+                     Point(10, 10.6, 1), 3, True, 2, 3),
+                 openquake.hazardlib.site.Site(
+                     Point(10, 10.7, -1), 4, True, 2, 3)]
         sitecol = openquake.hazardlib.site.SiteCollection(sites)
 
         from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
@@ -125,6 +127,11 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         self.assertEqual(result.shape, (4, 3))  # 4 sites, 3 levels
         numpy.testing.assert_allclose(result[0], 0)  # no contrib to site 1
         numpy.testing.assert_allclose(result[1], 0)  # no contrib to site 2
+
+        # test that depths are kept after filtering (sites 3 and 4 remain)
+        s_filter = SourceFilter(sitecol, 100)
+        numpy.testing.assert_array_equal(
+            s_filter.affected(sources[0]).depths, ([1, -1]))
 
 
 # this example originally came from the Hazard Modeler Toolkit
