@@ -68,7 +68,7 @@ from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.source.base import SourceGroup
+from openquake.hazardlib.sourceconverter import SourceGroup
 
 
 def zero_curves(num_sites, imtls):
@@ -245,11 +245,11 @@ def pmap_from_grp(
     """
     if isinstance(sources, SourceGroup):
         group = sources
-        sources = group.src_list
-    else:
-        group = SourceGroup(sources, 'src_group', 'indep', 'indep')
-        sources = group.src_list
-    trt = sources[0].tectonic_region_type
+        sources = group.sources
+        trt = group.src_list[0].tectonic_region_type
+    else:  # list of sources
+        trt = sources[0].tectonic_region_type
+        group = SourceGroup(trt, sources, 'src_group', 'indep', 'indep')
     try:
         maxdist = source_site_filter.integration_distance[trt]
     except:
