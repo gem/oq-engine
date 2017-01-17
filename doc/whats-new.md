@@ -3,16 +3,16 @@ Release notes for the OpenQuake Engine, version 2.2
 
 This release has focused on memory and performance optimizations, especially
 in the event based and scenario calculators. Moreover we have significantly
-improved our exports, by providing more information (expecially for the
-event based ruptures) and/or using more efficient export formats (like the
-.npz format).
+improved our exports, by providing more information (especially for the
+event based ruptures) and/or using more efficient export formats, like the
+.npz format.
 
 As usual lots of small bugs have been fixed. More than 50 pull requests were
-closed in oq-hazardlib and more than 150 pull requests were close in
+closed in oq-hazardlib and more than 150 pull requests were closed in
 oq-engine. For the complete list of changes, please 
 see the changelogs: https://github.com/gem/oq-hazardlib/blob/engine-2.2/debian/changelog and https://github.com/gem/oq-engine/blob/engine-2.2/debian/changelog.
 
-A brief summary follows.
+A summary follows.
 
 General improvements
 ====================================
@@ -22,8 +22,8 @@ Python 3 support
 
 The engine have been supporting Python 3 for several months and
 hazardlib for more than one year. The novelty is that
-since a couple of months ago, our production environment has become
-Python 3, so nowadays Python 3 is more tested than Python 2. Python 2.7
+since a couple of months ago our production environment has become
+Python 3. Nowadays Python 3 is more tested than Python 2. Python 2.7
 is still fully supported and we will keep supporting it for a while, but
 it will be eventually deprecated.
 
@@ -39,27 +39,29 @@ There are of course still C extensions, but they are only in third
 party code (i.e.  numpy), not in the OpenQuake code base. Third party
 extensions are not an issue because since 2.2 we manage the Python
 dependencies as wheels and we have wheels for all of our external
-dependencies. This binary format has the big advantage of not
-requiring compilation on the client side, which was an issue,
-expecially for non-linux users.
+dependencies, for all platforms. This binary format has the big
+advantage of not requiring compilation on the client side, which was
+an issue, especially for non-linux users.
 
 The recommended way to install the packages is still via the official
 packages released by GEM for Linux, Windows and Mac OS X. However,
 the engine is also installable as any other Python software: create a
 [virtual environment](http://docs.python-guide.org/en/latest/dev/virtualenvs/)
-and run `pip install openquake.engine`::
+and run `pip install openquake.engine`:
 
-  $ python3 -m venv oq-engine
-  $ source oq-engine/bin/activate
-  (oq-engine) $ pip install openquake.engine
+```bash
+$ python3 -m venv oq-engine
+$ source oq-engine/bin/activate
+(oq-engine) $ pip install openquake.engine
+```
 
-This will download all of the dependencies (wheels) automatically. If you only
-need hazardlib, run `pip install openquake.engine` instead. This kind
-of installation is meant for Python-savvy users that do not need to
-change the OpenQuake code. Users that want to develop
-with the engine or with hazardlib (i.e. develop a new GMPE) should
-not install anything, just clone the git repository and set the PYTHONPATH,
-as in any other Python project.
+This will download all of the dependencies (wheels) automatically. If
+you only need hazardlib, run `pip install openquake.hazardlib`
+instead. This kind of installation is meant for Python-savvy users
+that do not need to change the OpenQuake code. Users that want to
+develop with the engine or with hazardlib (i.e. develop a new GMPE)
+should not install anything, thye should just clone the git repositories
+and set the PYTHONPATH, as in any other Python project.
 
 The nrml_converters are not needed anymore
 ------------------------------------------
@@ -68,14 +70,13 @@ For as long as there has been an engine, there has been a repository
 of scripts called [nrml_converters]
 (https://github.com/GEMScienceTools/nrml_converters) written and
 maintaned by our scientific staff. With the release 2.2 such tools
-are be deprecated, since the engine includes all the required
+are be deprecated, since now the engine includes all the required
 functionality. This will make life a lot easier for the final user.
 For instance, instead of producing a (large) XML file with the engine
 and convert it into CSV with the nrml_converters, now the engine can
 produce the CSV directly in a more efficient way, sometimes *a lot* more
 efficient way.
-
-The nrml_converters repository will not be removed, since it is still
+The `nrml_converters` repository will not be removed, since it is still
 useful for users with an old version of the engine.
 
 Improvements to hazardlib
@@ -87,9 +88,8 @@ the parallelization libraries are now in oq-hazardlib, as well as
 the routines to read and write source models in NRML format. As
 a consequence now the [Hazard Modeler Toolkit]
 (https://github.com/GEMScienceTools/hmtk) depends solely on
-hazardlib, and users are not forced to install the engine if they do
-not need to run engine-style computations. This simplifies the life
-of hazard scientists.
+hazardlib: users are not forced to install the engine if they do
+not need to run engine-style computations. This reduces the cognitive load.
 
 Among the improvements:
 
@@ -101,8 +101,6 @@ Among the improvements:
   hazardlib and in the engine side
 - it is (optionally) possible to filter hazard sources with the rtree library,
   which is a lot faster than using the old system
-- the statistical functions that used to be in the engine are now
-  in hazardlib
 
 As usual, new GMPEs were added:
 
@@ -134,15 +132,17 @@ be split and they end up producing tasks which are extremely slow to run
 and dominate the total computation time. The solution was to split
 such sources by slices of ruptures: the same source is sent multiple
 times to the workers, but each time a different slice of the ruptures
-is taken into consideration. The number of slices is governed by the
-MAXWEIGHT parameter which currently is hard-coded to 200, so that
-there are at most 50 ruptures per split source, since the weight of a complex
-fault rupture is currently 4. Such numbers are implementation
-details that change with nearly every new release and should
-not be relied upon; an user should just know that a lot is going on
-in the engine when processing the sources. At each version we try to
-have a better (i.e. more homogeneous) task distribution, to avoid slow
-tasks dominating the computation.
+is taken into consideration.
+
+The number of slices is governed by the MAXWEIGHT parameter which
+currently is hard-coded to 200, so that there are at most 50 ruptures
+per split source, since the weight of a complex fault rupture is
+currently 4. Such numbers are implementation details that change with
+nearly every new release and should not be relied upon; an user should
+just know that a lot is going on in the engine when processing the
+sources. At each version we try to have a better (i.e. more
+homogeneous) task distribution, to avoid slow tasks dominating the
+computation.
 
 In release 2.2 we have increased the number of tasks generated by the
 engine by default. More tasks means smaller tasks and less
@@ -161,7 +161,7 @@ I am talking about.
 Correlated GMFs
 ---------------------
 
-The engine has always been able to consider correlated GMFs by setting
+The engine has always been able to compute correlated GMFs by setting
 the parameter `ground_motion_correlation_model = JB2009` in the
 job.ini file.  Unfortunately, computing correlated GMFs has always
 been slow and memory consuming. With the engine 2.2 the computation of
@@ -176,11 +176,12 @@ https://github.com/gem/oq-engine/pull/2409 for an explanation.
 Scenario calculators improvements
 ---------------------------------
 
-The calculators `scenario_risk` and `scenario_damage` were in some situations
-extremely slow and memory consuming, especially for large numbers of assets
-and large values of the parameter `number_of_ground_motion_fields`. This
-has been fixed: now they use half of the memory than before, and the computation
-is a lot faster. The performance bug was in the algorithm reordering the GMFs
+The calculators `scenario_risk` and `scenario_damage` were extremely
+slow and memory consuming, even in absence of correlation, for large
+numbers of assets and large values of the parameter
+`number_of_ground_motion_fields`. This has been fixed: now they use
+half of the memory than before, and the computation is a lot
+faster. The performance bug was in the algorithm reordering the GMFs
 and affected both the case of correlated and non-correlated GMFs.
 
 Classical and disaggregation calculators improvements
@@ -188,8 +189,8 @@ Classical and disaggregation calculators improvements
 
 There was some work on the disaggregation calculator: with engine 2.2 it
 is now possible to set a parameter `iml_disagg` in the `job.ini` file
-and have the engine disaggregate with respect to that Intensity Measure
-Level. This was requested by one of our users (Marlon Pirchiner). Moreover,
+and have the engine disaggregate with respect to that intensity measure
+level. This was requested by one of our users (Marlon Pirchiner). Moreover,
 now the disaggregation matrix is stored directly in the datastore - before
 it was stored in pickled format - and it is possible to export it directly
 in CSV format; before it had to be exported in XML format and converted into
@@ -199,7 +200,8 @@ We discovered (thanks to Céline Beauval) that the engine was giving bogus
 numbers for the uniform hazard spectra for calculation with intensity measure
 types different from PGA and SA. The bug has been in the engine at least
 from release 2.0, but now it has been finally fixed.
-Moreover, the improvements in the task distribution have improved the
+
+Finally, the improvements in the task distribution have improved the
 performance of several classical calculations too.
 
 Event based calculators improvements
@@ -299,9 +301,7 @@ saved). This allowed some simplifications in the risk calculators.
 A lot of refactoring of the risk calculators (all of them) went
 in. The code for computing the statistical outputs of the risk
 calculators has been completely rewritten and it is now 90% shorter
-than before and more efficient. The `loss_maps` outputs are more
-dynamic, i.e. they are generated at export time: if you do not need
-them, you don't need to pay the price.
+than before and more efficient.
 
 Finally, a lot of work went into the UCERF calculators. However,
 the should still be considered experimental and there are a few known
