@@ -14,7 +14,10 @@ LOCKDOWN = True
 Upgrade the database to host users and sessions:
 
 ```bash
-python -m openquake.server.manage syncdb
+# Django < 1.8
+python -m openquake.server.manage syncdb 
+# Django >= 1.8
+python -m openquake.server.manage migrate 
 ```
 
 Add a new local superuser:

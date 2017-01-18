@@ -12,13 +12,15 @@ The official supported distributions to develop the OpenQuake Engine and its lib
 - CentOS 7
 - Scientific Linux 7
 
+Guidelines are provided for *macOS* too.
+
 This guide may work also on other Linux releases/distributions and with few adaptations on macOS.
 
 ## Prerequisites
 
 Knowledge of [Python](https://www.python.org/) (and its virtual environments), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/) are required.
 
-Some software prerequisites are needed to build the development environment
+Some software prerequisites are needed to build the development environment. Python 2.7 is used in this guide, but Python 3.5 can be also used with few adaptations to the following commands.
 
 ### Ubuntu
 
@@ -31,6 +33,16 @@ sudo apt-get install build-essential git libhdf5-dev libgeos-dev python-virtuale
 ```bash
 sudo yum groupinstall "Development tools"
 sudo yum install git hdf5-devel geos-devel python-virtualenv python-pip
+```
+
+### macOS
+*This procedure refers to the Python setup shipped by Apple on macOS. If you are using a different python (from brew, macports, conda) you may need to adapt the following commands.*
+
+You must install [Xcode](https://itunes.apple.com/app/xcode/id497799835?mt=12) first.
+`pip` needs to be manually installed too:
+
+```bash
+curl https://bootstrap.pypa.io/get-pip.py | sudo python
 ```
 
 ## Build the development environment
@@ -102,10 +114,16 @@ To uninstall the OpenQuake development make sure that its environment is not loa
 
 ### Notes ###
 
-*<a name="note1">[1]</a> __for Linux only__: if you want to use binary dependencies (python wheels: they do not require any compiler, development library...) before installing `oq-engine` and `oq-hazardlib` run:*
+*<a name="note1">[1]</a>: if you want to use binary dependencies (python wheels: they do not require any compiler, development library...) before installing `oq-engine` and `oq-hazardlib` run:*
 
 ```bash
+# For Linux
 pip install -r oq-engine/requirements-py27-linux64.txt
+```
+
+```bash
+# For macOS
+pip install -r oq-engine/requirements-py27-macos.txt
 ```
 
 *<a name="note2">[2]</a>: extra features, like celery and rtree support can be installed running:*
