@@ -61,14 +61,14 @@ import numpy
 
 from openquake.baselib.python3compat import raise_, zip
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import DictArray
+from openquake.baselib.general import DictArray, groupby
 from openquake.baselib.parallel import Sequential
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.source.base import SourceGroup
+from openquake.hazardlib.sourceconverter import SourceGroup
 
 
 def zero_curves(num_sites, imtls):
@@ -245,11 +245,11 @@ def pmap_from_grp(
     """
     if isinstance(sources, SourceGroup):
         group = sources
-        sources = group.src_list
-    else:
-        group = SourceGroup(sources, 'src_group', 'indep', 'indep')
-        sources = group.src_list
-    trt = sources[0].tectonic_region_type
+        sources = group.sources
+        trt = sources[0].tectonic_region_type
+    else:  # list of sources
+        trt = sources[0].tectonic_region_type
+        group = SourceGroup(trt, sources, 'src_group', 'indep', 'indep')
     try:
         maxdist = source_site_filter.integration_distance[trt]
     except:
@@ -327,8 +327,10 @@ def calc_hazard_curves_ext(
     """
     # This is ensuring backward compatibility i.e. processing a list of
     # sources
-    if not isinstance(groups[0], SourceGroup):
-        groups = [SourceGroup(groups, 'src_group', 'indep', 'indep')]
+    if not isinstance(groups[0], SourceGroup):  # sent list of sources
+        dic = groupby(groups, operator.attrgetter('tectonic_region_type'))
+        groups = [SourceGroup(trt, dic[trt], 'src_group', 'indep', 'indep')
+                  for trt in dic]
 
     imtls = DictArray(imtls)
     sitecol = source_site_filter.sitecol
@@ -342,11 +344,11 @@ def calc_hazard_curves_ext(
         # Fill the dictionary with sources for the different tectonic regions
         # belonging to this group
         if indep:
-            for src in group.src_list:
+            for src in group.sources:
                 sources_by_trt[src.tectonic_region_type].append(src)
                 weights_by_trt[src.tectonic_region_type][src.source_id] = 1
         else:
-            for src in group.src_list:
+            for src in group.sources:
                 sources_by_trt[src.tectonic_region_type].append(src)
                 w = group.srcs_weights[src.source_id]
                 weights_by_trt[src.tectonic_region_type][src.source_id] = w
@@ -355,7 +357,8 @@ def calc_hazard_curves_ext(
         for trt in sources_by_trt:
             gsim = gsim_by_trt[trt]
             # Create a temporary group
-            tmp_group = SourceGroup(sources_by_trt[trt],
+            tmp_group = SourceGroup(trt,
+                                    sources_by_trt[trt],
                                     'temp',
                                     group.src_interdep,
                                     group.rup_interdep,
