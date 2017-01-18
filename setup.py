@@ -84,8 +84,7 @@ setup(
     author_email="devops@openquake.org",
     maintainer='GEM Foundation',
     maintainer_email='devops@openquake.org',
-    description=("Computes hazard, risk and socio-economic impact of "
-                 "earthquakes."),
+    description=("Computes earthquake hazard and risk."),
     license="AGPL3",
     keywords="earthquake seismic hazard risk",
     url=url,
