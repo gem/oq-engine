@@ -41,7 +41,7 @@ Containers can be started in headless mode (only the WebUI access will be provid
 
 ## Sources
 
-If you want to customize container images, or you want to build your own, source are provided on the [oq-containers/oq-docker](https://github.com/gem/oq-containers/tree/master/oq-docker) repo.
+If you want to customize container images, or you want to build your own, sources are provided on the [oq-containers/oq-docker](https://github.com/gem/oq-containers/tree/master/oq-docker) repo.
 
 
 ## Deploy and run
