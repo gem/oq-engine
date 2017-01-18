@@ -1,6 +1,6 @@
 # Deploying the OpenQuake Engine Docker container
 
-[![Build Status](https://ci.openquake.org/view/Builders/job/docker-builder/badge/icon)](https://ci.openquake.org/view/Builders/job/docker-builder/)
+<img src="https://upload.wikimedia.org/wikipedia/commons/7/79/Docker_%28container_engine%29_logo.png" width="150px"> [![Build Status](https://ci.openquake.org/view/Builders/job/docker-builder/badge/icon)](https://ci.openquake.org/view/Builders/job/docker-builder/)
 
 To be able to deploy and run the OpenQuake Engine Docker container you need **at least** Docker version **1.10**. 
 
@@ -54,7 +54,7 @@ $ docker pull docker.io/openquake/engine:[TAG]
 
 ### Headless mode
 
-This modality is recommended when only the [WebUI or the API server](../running/server.md) is used (for example as the backend for the [OpenQuake QGIS plugin](https://plugins.qgis.org/plugins/svir/).
+This modality is recommended when only the [WebUI or the API server](../running/server.md) is used (for example as the backend for the [OpenQuake QGIS plugin](https://plugins.qgis.org/plugins/svir/)).
 
 ```bash
 $ docker run --name pleasegiveaname -p 8800:8800 openquake/engine:master
