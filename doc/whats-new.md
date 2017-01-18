@@ -86,7 +86,7 @@ It's also possible to download a specific *stable* release:
 $ docker pull docker.io/openquake/engine:2.2
 ```
 
-For more information visit our [Docker](installing/dcoker.md) page.
+For more information visit our [Docker](installing/docker.md) page.
 
 The nrml_converters are not needed anymore
 ------------------------------------------
