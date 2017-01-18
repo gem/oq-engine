@@ -61,7 +61,7 @@ import numpy
 
 from openquake.baselib.python3compat import raise_, zip
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import DictArray
+from openquake.baselib.general import DictArray, groupby
 from openquake.baselib.parallel import Sequential
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
@@ -327,9 +327,10 @@ def calc_hazard_curves_ext(
     """
     # This is ensuring backward compatibility i.e. processing a list of
     # sources
-    if not isinstance(groups[0], SourceGroup):
-        trt = groups[0].tectonic_region_type  # is a source
-        groups = [SourceGroup(trt, groups, 'src_group', 'indep', 'indep')]
+    if not isinstance(groups[0], SourceGroup):  # sent list of sources
+        dic = groupby(groups, operator.attrgetter('tectonic_region_type'))
+        groups = [SourceGroup(trt, dic[trt], 'src_group', 'indep', 'indep')
+                  for trt in dic]
 
     imtls = DictArray(imtls)
     sitecol = source_site_filter.sitecol
