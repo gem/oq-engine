@@ -61,7 +61,8 @@ instead. This kind of installation is meant for Python-savvy users
 who do not need to modify the OpenQuake code. Users that want to
 develop with the engine or with hazardlib (eg. implement a new GMPE)
 should not install anything; they should clone the git repositories
-and set the PYTHONPATH, as in any other Python project.
+and set the PYTHONPATH, or install it from sources using 
+`pip install -e`, as in any other Python project.
 
 The nrml_converters are not needed anymore
 ------------------------------------------
