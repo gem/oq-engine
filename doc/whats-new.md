@@ -182,6 +182,12 @@ half of the memory than before, and the computation is a lot
 faster. The performance bug was in the algorithm reordering the GMFs
 and affected both the case of correlated and non-correlated GMFs.
 
+A new feature has been added to the `scenario_risk` calculator: if the
+flag `all_losses=true` is set in the `job.ini` file, then a matrix
+containing all the losses is saved in the datastore and can be
+exported in `.npz` format. By default the flag is false and only mean
+and stddev of the losses are stored.
+
 Classical and disaggregation calculators improvements
 ------------------------------------------------------
 
