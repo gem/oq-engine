@@ -240,7 +240,8 @@ class StreamingXMLWriter(object):
         :param bytestream: the stream or file where to write the XML
         :param int indent: the indentation to use in the XML (default 4 spaces)
         """
-        assert not isinstance(bytestream, io.StringIO)  # common error
+        # guard against a common error
+        assert not isinstance(bytestream, (io.StringIO, io.TextIOWrapper))
         self.stream = bytestream
         self.indent = indent
         self.encoding = encoding
