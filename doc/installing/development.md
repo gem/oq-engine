@@ -45,6 +45,12 @@ You must install [Xcode](https://itunes.apple.com/app/xcode/id497799835?mt=12) f
 curl https://bootstrap.pypa.io/get-pip.py | sudo python
 ```
 
+and finally *virtualenv*
+
+```bash
+sudo pip install virtualenv
+```
+
 ## Build the development environment
 
 A development environment will be built using a python *virtualenv*
