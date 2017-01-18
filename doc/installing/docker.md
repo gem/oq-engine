@@ -1,13 +1,15 @@
 # Deploying the OpenQuake Engine Docker container
 
+[![Build Status](https://ci.openquake.org/view/Builders/job/docker-builder/badge/icon)](https://ci.openquake.org/view/Builders/job/docker-builder/)
+
 To be able to deploy and run the OpenQuake Engine Docker container you need **at least** Docker version **1.10**. 
 
-A basic knowledge about [Docker](https://www.docker.com/) and how this kind of application containers work is also required.
+A basic knowledge about [Docker](https://docs.docker.com/engine/) and how this kind of application containers work is also required.
 For more information about operating system support (which includes Linux, macOS and specific versions of Windows) and on how to install Docker, please refer to the official [Docker website](https://www.docker.com/products/docker).
 
 ## Available tags
 
-Currently two different set of *tags* are provided. Images are hosted on [Docker Hub](https://hub.docker.com/r/openquake/engine/tags/).
+Currently two different set of *TAGS* are provided. Images are hosted on [Docker Hub](https://hub.docker.com/r/openquake/engine/tags/).
 
 ### master
 
@@ -17,7 +19,7 @@ This container is updated on weekly basis and contains the latest code with the 
 $ docker pull docker.io/openquake/engine:master
 ```
 
-## X.Y
+### X.Y
 
 For each stable release (starting with 2.2) a container is published and tagged with its release version. This contains the stable release of the OpenQuake Engine and its software stack.
 
@@ -25,7 +27,7 @@ For each stable release (starting with 2.2) a container is published and tagged 
 $ docker pull docker.io/openquake/engine:2.2
 ```
 
- ## Features provided
+## Features provided
 
 Each container includes:
 
@@ -36,6 +38,10 @@ Each container includes:
 - The OpenQuake WebUI and API server (by default listening on port 8800)
 
 Containers can be started in headless mode (only the WebUI access will be provided) or with a local console attached (required to run `oq` commands).
+
+## Sources
+
+If you want to customize container images, or you want to build your own, source are provided on the [oq-containers/oq-docker](https://github.com/gem/oq-containers/tree/master/oq-docker) repo.
 
 
 ## Deploy and run
@@ -76,15 +82,22 @@ $ docker run --name pleasegiveaname -t -i -p 8800:8800 openquake/engine:master
 
 The container prompt will appear, here you play with the `oq` [shell command](../running/unix.md).
 
+```bash
+[openquake@b318358ee053 ~]$ oq --version
+2.2.0
+```
+
 After you have restarted you container (same commands as the headless mode) you can re-attach the container shell using:
 
 ```bash
 $ docker attach pleasegiveaname
+[openquake@b318358ee053 ~]$
+
 ```
 
-## Remove a container or image
+## Remove a container or an image
 
-To destroy a container type:
+To destroy a container, type:
 
 ```bash
 $ docker rm pleasegiveaname
@@ -95,6 +108,8 @@ To remove its image:
 ```bash
 $ docker rmi openquake/engine:[TAG]
 ```
+
+You can print the list of containers and images using `$ docker ps -a` and `$ docker images`. For more details please refer to the [official Docker documentation](https://docs.docker.com/engine/).
 
 ***
 
