@@ -11,7 +11,7 @@ Current build status is  [![Build Status](https://ci.openquake.org/job/master_oq
 The full suite of tests for the OpenQuake Engine can be run using `nose`
 
 ```
-nosetests -v -a '!slow'
+nosetests -v -s -a '!slow'
 ```
 
 The command must be run from the OpenQuake Engine code location. On a development installation this is usually `oq-engine`. On production system it can be `/usr/lib/python2.7/site-packages/openquake` or `/usr/lib/python2.7/dist-packages/openquake`.
