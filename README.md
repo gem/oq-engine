@@ -24,7 +24,7 @@ suggestions and criticisms from the community are always very welcome.
 * [Technology stack and requirements](https://github.com/gem/oq-hazardlib/blob/master/doc/requirements.md)
 * [Installing from sources](https://github.com/gem/oq-hazardlib/blob/master/doc/development.md)
 
-The OpenQuake Hazardlib is also distributed in the form of **binary package** for Linux, macOS and Windows as part of the [OpenQuake Engine](https://github.com/gem/oq-engine/) suite. See the [OpenQuake Engine README](https://github.com/gem/oq-engine/blob/master/README.md) for more information.
+The OpenQuake Hazardlib is also distributed in the form of **binary package** for Linux, macOS and Windows as part of the [OpenQuake Engine](https://github.com/gem/oq-engine/) suite. See the [OpenQuake Engine README](https://github.com/gem/oq-engine/blob/master/README.md#installation) for more information.
 
 ### Development
 
