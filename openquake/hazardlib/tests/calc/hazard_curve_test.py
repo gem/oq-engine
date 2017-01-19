@@ -18,10 +18,18 @@ import numpy
 
 import openquake.hazardlib
 from openquake.hazardlib import const
-from openquake.hazardlib.geo import Point
+from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.baselib.parallel import Sequential, Processmap
+from openquake.hazardlib.site import Site, SiteCollection
+from openquake.hazardlib.gsim import akkar_bommer_2010
+from openquake.hazardlib.pmf import PMF
+from openquake.hazardlib.geo.nodalplane import NodalPlane
+from openquake.hazardlib.scalerel.wc1994 import WC1994
+from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
+from openquake.hazardlib.source.point import PointSource
 
 
 class HazardCurvesFiltersTestCase(unittest.TestCase):
@@ -117,3 +125,36 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         self.assertEqual(result.shape, (4, 3))  # 4 sites, 3 levels
         numpy.testing.assert_allclose(result[0], 0)  # no contrib to site 1
         numpy.testing.assert_allclose(result[1], 0)  # no contrib to site 2
+
+
+# this example originally came from the Hazard Modeler Toolkit
+def example_calc(apply):
+    sitecol = SiteCollection([
+        Site(Point(30.0, 30.0), 760., True, 1.0, 1.0),
+        Site(Point(30.25, 30.25), 760., True, 1.0, 1.0),
+        Site(Point(30.4, 30.4), 760., True, 1.0, 1.0)])
+    mfd_1 = TruncatedGRMFD(4.5, 8.0, 0.1, 4.0, 1.0)
+    mfd_2 = TruncatedGRMFD(4.5, 7.5, 0.1, 3.5, 1.1)
+    sources = [PointSource('001', 'Point1', 'Active Shallow Crust',
+                           mfd_1, 1.0, WC1994(), 1.0, PoissonTOM(50.0),
+                           0.0, 30.0, Point(30.0, 30.5),
+                           PMF([(1.0, NodalPlane(0.0, 90.0, 0.0))]),
+                           PMF([(1.0, 10.0)])),
+               PointSource('002', 'Point2', 'Active Shallow Crust',
+                           mfd_2, 1.0, WC1994(), 1.0, PoissonTOM(50.0),
+                           0.0, 30.0, Point(30.0, 30.5),
+                           PMF([(1.0, NodalPlane(0.0, 90.0, 0.0))]),
+                           PMF([(1.0, 10.0)]))]
+    imtls = {'PGA': [0.01, 0.1, 0.2, 0.5, 0.8],
+             'SA(0.5)': [0.01, 0.1, 0.2, 0.5, 0.8]}
+    gsims = {'Active Shallow Crust': akkar_bommer_2010.AkkarBommer2010()}
+    return calc_hazard_curves(sources, sitecol, imtls, gsims, apply=apply)
+
+
+class HazardCurvesParallelTestCase(unittest.TestCase):
+    def test_same_curves_as_sequential(self):
+        curves_par = example_calc(Processmap.apply)  # use multiprocessing
+        curves_seq = example_calc(Sequential.apply)  # sequential computation
+        for name in curves_par.dtype.names:
+            numpy.testing.assert_almost_equal(
+                curves_seq[name], curves_par[name])

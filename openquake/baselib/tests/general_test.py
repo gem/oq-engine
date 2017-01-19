@@ -138,7 +138,6 @@ class SearchModuleTestCase(unittest.TestCase):
         self.assertIsNone(search_module('openquake.do_not_exist'))
 
     def test_existing_module_in_package(self):
-        # this test may fail if oq-risklib is not on top of your PYTHONPATH
         self.assertIsNotNone(search_module('openquake.baselib.general'))
 
 

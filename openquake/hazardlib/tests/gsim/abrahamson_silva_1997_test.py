@@ -38,4 +38,3 @@ class AbrahamsonSilva1997TestCase(BaseGSIMTestCase):
     def test_std_total(self):
         self.check('AS97/AS97_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
-

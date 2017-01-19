@@ -114,4 +114,3 @@ class BaseMSRSigma(with_metaclass(abc.ABCMeta, BaseMSR)):
             Rake angle (the rupture propagation direction) in degrees,
             from -180 to 180.
         """
-

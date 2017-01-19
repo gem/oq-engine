@@ -337,7 +337,7 @@ class TusaLanger2015Rhypo(TusaLanger2015RepiBA08SE):
     hence dependence on vertical distance is required.
 
     Extends
-    :class:`openquake.hazardlib.gsim.tusa_langer_2015.TusaLanger2015RepiBA08SE
+    :class:`openquake.hazardlib.gsim.tusa_langer_2015.TusaLanger2015RepiBA08SE`
     because the same functional form is used, only the distance type and
     coefficients differ.
     """

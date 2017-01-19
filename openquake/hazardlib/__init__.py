@@ -25,6 +25,10 @@ from openquake.hazardlib import (
     calc, geo, gsim, mfd, scalerel, source, const, correlation, imt, pmf, site,
     tom, near_fault)
 
+
+class InvalidFile(Exception):
+    pass
+
 # the version is managed by packager.sh with a sed
 __version__ = '0.22.0'
 __version__ += git_suffix(__file__)
