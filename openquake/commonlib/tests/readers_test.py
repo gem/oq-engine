@@ -20,7 +20,7 @@ import unittest
 import tempfile
 import numpy
 from openquake.baselib.general import writetmp
-from openquake.commonlib import InvalidFile
+from openquake.hazardlib import InvalidFile
 from openquake.commonlib.readers import CurveReader
 from openquake.commonlib.writers import write_csv, read_composite_array
 

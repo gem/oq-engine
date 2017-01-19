@@ -32,7 +32,7 @@ from openquake.hazardlib import geo, tom
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib import readinput, oqvalidation, util
-from openquake.risklib import valid
+from openquake.hazardlib import valid
 
 
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator

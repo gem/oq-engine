@@ -25,13 +25,14 @@ import numpy
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import AccumDict, block_splitter
+from openquake.hazardlib import sourceconverter
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.calc.hazard_curve import (
     pmap_from_grp, ProbabilityMap)
 from openquake.hazardlib.probability_map import PmapStats
-from openquake.commonlib import datastore, source, calc, sourceconverter
+from openquake.commonlib import datastore, source, calc
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -307,7 +308,7 @@ class PSHACalculator(base.HazardCalculator):
             src_groups = list(self.csm.src_groups)
             iterargs = saving_sources_by_task(
                 self.gen_args(src_groups, oq, monitor), self.datastore)
-            res = parallel.starmap(
+            res = parallel.Starmap(
                 self.core_task.__func__, iterargs).submit_all()
         acc = reduce(self.agg_dicts, res, self.zerodict())
         self.save_data_transfer(res)
@@ -470,7 +471,7 @@ class ClassicalCalculator(PSHACalculator):
             pmap_by_grp = {
                 int(group_id): self.datastore['poes/' + group_id]
                 for group_id in self.datastore['poes']}
-            res = parallel.starmap(
+            res = parallel.Starmap(
                 build_hcurves_and_stats,
                 list(self.gen_args(pmap_by_grp))).submit_all()
         nbytes = reduce(self.save_hcurves, res, AccumDict())

@@ -31,8 +31,8 @@ from openquake.calculators.export import export
 from openquake.calculators.event_based import get_mean_curves
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
-    blocksize, case_1, case_2, case_4, case_5, case_6, case_7, case_12,
-    case_13, case_17, case_18)
+    blocksize, case_1, case_2, case_4, case_5, case_6, case_7,
+    case_8, case_12, case_13, case_17, case_18)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -136,6 +136,9 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/gmf-grp=00~ses=0002~src=1~rup=1-01-rlz-000.csv', fname)
 
+        # test that the .npz export runs
+        export(('gmf_data', 'npz'), self.calc.datastore)
+
         [fname] = out['hcurves', 'xml']
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1-PGA.xml', fname)
@@ -237,6 +240,12 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
             reldiff, _index = max_rel_diff_index(
                 mean_cl[imt], mean_eb[imt], min_value=0.1)
             self.assertLess(reldiff, 0.20)
+
+    @attr('qa', 'hazard', 'event_based')
+    def test_case_8(self):
+        out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
+        [fname] = out['rup_data', 'csv']
+        self.assertEqualFiles('expected/rup_data.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_12(self):

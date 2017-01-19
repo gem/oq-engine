@@ -30,16 +30,20 @@ from shapely import wkt, geometry
 
 from openquake.baselib.general import groupby, AccumDict, writetmp
 from openquake.baselib.python3compat import configparser, encode
+from openquake.baselib.node import Node, context
 from openquake.baselib import hdf5
-from openquake.hazardlib import geo, site, imt
+from openquake.hazardlib import (
+    geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.calc.hazard_curve import zero_curves
-from openquake.risklib import riskmodels, valid, riskinput
+from openquake.risklib import riskmodels, riskinput, read_nrml
 from openquake.commonlib import datastore
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.node import Node, context
-from openquake.commonlib import nrml, logictree, InvalidFile
+from openquake.commonlib import logictree
 from openquake.commonlib.riskmodels import get_risk_models
-from openquake.commonlib import source, sourceconverter
+from openquake.commonlib import source
+
+read_nrml.update_validators()
+
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
@@ -375,19 +379,14 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         oqparam.complex_fault_mesh_spacing,
         oqparam.width_of_mfd_bin,
         oqparam.area_source_discretization)
-    parser = source.SourceModelParser(converter)
+    parser = nrml.SourceModelParser(converter)
+    gsim_file = oqparam.inputs.get('gsim_logic_tree')
 
     # consider only the effective realizations
-    rlzs = logictree.get_effective_rlzs(source_model_lt)
-    samples_by_lt_path = source_model_lt.samples_by_lt_path()
-    num_source_models = len(rlzs)
-    for i, rlz in enumerate(rlzs):
-        sm = rlz.value  # name of the source model
-        smpath = rlz.lt_path
-        num_samples = samples_by_lt_path[smpath]
-        fname = possibly_gunzip(os.path.join(oqparam.base_path, sm))
+    for sm in source_model_lt.gen_source_models(gsim_lt):
+        fname = possibly_gunzip(os.path.join(oqparam.base_path, sm.name))
         if in_memory:
-            apply_unc = source_model_lt.make_apply_uncertainties(smpath)
+            apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
             try:
                 src_groups = parser.parse_src_groups(fname, apply_unc)
             except ValueError as e:
@@ -404,25 +403,18 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         else:  # just collect the TRT models
             smodel = nrml.read(fname).sourceModel
             src_groups = sourceconverter.SourceGroup.collect(smodel)
+        sm.src_groups = src_groups
         trts = [mod.trt for mod in src_groups]
         source_model_lt.tectonic_region_types.update(trts)
-
-        gsim_file = oqparam.inputs.get('gsim_logic_tree')
+        logging.info('Processed source model %d with %d gsim path(s)',
+                     sm.ordinal + 1, sm.num_gsim_paths)
         if gsim_file:  # check TRTs
             for src_group in src_groups:
                 if src_group.trt not in gsim_lt.values:
                     raise ValueError(
                         "Found in %r a tectonic region type %r inconsistent "
                         "with the ones in %r" % (sm, src_group.trt, gsim_file))
-        else:
-            gsim_lt = logictree.GsimLogicTree.from_(oqparam.gsim)
-        weight = rlz.weight / num_samples
-        num_gsim_paths = (num_samples if oqparam.number_of_logic_tree_samples
-                          else gsim_lt.get_num_paths())
-        logging.info('Processed source model %d/%d with %d gsim path(s)',
-                     i + 1, num_source_models, num_gsim_paths)
-        yield source.SourceModel(
-            sm, weight, smpath, src_groups, num_gsim_paths, i, num_samples)
+        yield sm
 
     # log if some source file is being used more than once
     for fname, hits in parser.fname_hits.items():
@@ -560,12 +552,6 @@ cost_type_dt = numpy.dtype([('name', hdf5.vstr),
                             ('unit', hdf5.vstr)])
 
 
-class DuplicatedID(Exception):
-    """
-    Raised when two assets with the same ID are found in an exposure model
-    """
-
-
 def _get_exposure(fname, ok_cost_types, stop=None):
     """
     :param fname:
@@ -581,19 +567,19 @@ def _get_exposure(fname, ok_cost_types, stop=None):
     description = exposure.description
     try:
         conversions = exposure.conversions
-    except NameError:
+    except AttributeError:
         conversions = Node('conversions', nodes=[Node('costTypes', [])])
     try:
         inslimit = conversions.insuranceLimit
-    except NameError:
+    except AttributeError:
         inslimit = Node('insuranceLimit', text=True)
     try:
         deductible = conversions.deductible
-    except NameError:
+    except AttributeError:
         deductible = Node('deductible', text=True)
     try:
         area = conversions.area
-    except NameError:
+    except AttributeError:
         # NB: the area type cannot be an empty string because when sending
         # around the CostCalculator object we would run into this numpy bug
         # about pickling dictionaries with empty strings:
@@ -669,7 +655,7 @@ def get_exposure(oqparam):
         with context(fname, asset):
             asset_id = asset['id'].encode('utf8')
             if asset_id in asset_refs:
-                raise DuplicatedID(asset_id)
+                raise read_nrml.DuplicatedID(asset_id)
             asset_refs.add(asset_id)
             exposure.asset_refs.append(asset_id)
             taxonomy = asset['taxonomy']
@@ -694,11 +680,11 @@ def get_exposure(oqparam):
                 continue
         try:
             costs = asset.costs
-        except NameError:
+        except AttributeError:
             costs = Node('costs', [])
         try:
             occupancies = asset.occupancies
-        except NameError:
+        except AttributeError:
             occupancies = Node('occupancies', [])
         for cost in costs:
             with context(fname, cost):
