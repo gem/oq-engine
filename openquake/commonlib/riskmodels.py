@@ -24,10 +24,9 @@ import collections
 
 import numpy
 
-from openquake.risklib import valid
-from openquake.commonlib.node import Node
-from openquake.commonlib import nrml
-from openquake.commonlib.sourcewriter import obj_to_node
+from openquake.hazardlib import valid, nrml
+from openquake.baselib.node import Node
+from openquake.hazardlib.sourcewriter import obj_to_node
 
 F64 = numpy.float64
 

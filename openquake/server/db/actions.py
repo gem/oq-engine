@@ -20,7 +20,7 @@ import os
 import operator
 from datetime import datetime, timedelta
 
-from openquake.risklib import valid
+from openquake.hazardlib import valid
 from openquake.commonlib import datastore
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
@@ -273,8 +273,8 @@ def del_calc(db, job_id, user):
     if dependent:
         return ('Cannot delete calculation %d: there are calculations '
                 'dependent from it: %s' % (job_id, [j.id for j in dependent]))
-    deleted = db('DELETE FROM job WHERE id=?x', job_id).rowcount
-    if not deleted:
+    found = db('SELECT count(id) FROM job WHERE id=?x', job_id, scalar=True)
+    if not found:
         return ('Cannot delete calculation %d: ID does not exist' % job_id)
     deleted = db('DELETE FROM job WHERE id=?x AND user_name=?x',
                  job_id, user).rowcount

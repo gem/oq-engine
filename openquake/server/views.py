@@ -33,9 +33,25 @@ from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest)
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django.shortcuts import render_to_response
-from django.template import RequestContext
-from django.contrib.auth import authenticate, login, logout
+from django.shortcuts import render
+
+from openquake.baselib.general import groupby, writetmp
+from openquake.baselib.python3compat import unicode
+from openquake.baselib.parallel import Starmap, safely_call
+from openquake.hazardlib import nrml
+from openquake.risklib import read_nrml
+
+from openquake.commonlib import readinput, oqvalidation
+from openquake.calculators.export import export
+from openquake.engine import __version__ as oqversion
+from openquake.engine.export import core
+from openquake.engine import engine, logs
+from openquake.engine.export.core import DataStoreExportError
+from openquake.server import executor, utils, dbapi
+
+from django.conf import settings
+if settings.LOCKDOWN:
+    from django.contrib.auth import authenticate, login, logout
 try:
     from django.http import FileResponse  # Django >= 1.8
 except ImportError:
@@ -45,16 +61,7 @@ try:
 except ImportError:
     from django.core.servers.basehttp import FileWrapper
 
-from openquake.baselib.general import groupby, writetmp
-from openquake.baselib.python3compat import unicode
-from openquake.commonlib import nrml, readinput, oqvalidation
-from openquake.baselib.parallel import TaskManager, safely_call
-from openquake.calculators.export import export
-from openquake.engine import __version__ as oqversion
-from openquake.engine.export import core
-from openquake.engine import engine, logs
-from openquake.engine.export.core import DataStoreExportError
-from openquake.server import executor, utils, dbapi
+read_nrml.update_validators()  # update risk validators
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -382,7 +389,7 @@ def run_calc(request):
     try:
         job_id, fut = submit_job(einfo[0], user['name'], hazard_job_id)
         # restart the process pool at the end of each job
-        fut .add_done_callback(lambda f: TaskManager.restart())
+        fut .add_done_callback(lambda f: Starmap.restart())
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = str(exc)
@@ -563,20 +570,17 @@ def get_datastore(request, job_id):
 
 
 def web_engine(request, **kwargs):
-    return render_to_response("engine/index.html",
-                              dict(),
-                              context_instance=RequestContext(request))
+    return render(request, "engine/index.html",
+                  dict())
 
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs(request, calc_id, **kwargs):
-    return render_to_response("engine/get_outputs.html",
-                              dict([('calc_id', calc_id)]),
-                              context_instance=RequestContext(request))
+    return render(request, "engine/get_outputs.html",
+                  dict([('calc_id', calc_id)]))
 
 
 @require_http_methods(['GET'])
 def license(request, **kwargs):
-    return render_to_response("engine/license.html",
-                              context_instance=RequestContext(request))
+    return render(request, "engine/license.html")

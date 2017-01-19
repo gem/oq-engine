@@ -50,7 +50,6 @@ Copyright (C) 2010-2017 GEM Foundation
 PY_MODULES = ['openquake.commands.__main__']
 
 install_requires = [
-    'Cython >=0.20, <0.26',
     'mock >=1.0, <1.4',
     'h5py >=2.2, <2.7',
     'nose >=1.3, <1.4',
@@ -60,7 +59,7 @@ install_requires = [
     'shapely >=1.3, <1.6',
     'docutils >=0.11, <0.14',
     'decorator >=3.4, <4.1',
-    'django >=1.6, <1.9',
+    'django >=1.6, <1.11',
     'requests >=2.2, <2.13',
     # pyshp is fragile, we want only versions we have tested
     'pyshp >=1.2.3, <1.2.11',
@@ -70,11 +69,12 @@ install_requires = [
 if sys.version < '3':
     install_requires.append(
         'futures >=2.1, <3.1'
-)
+    )
 
 extras_require = {
-    'rtree':  ["Rtree==0.8.2"],
+    'rtree':  ["Rtree >=0.8.2, <0.8.4"],
     'celery':  ["celery >=3.1, <4.0"],
+    'plotting':  ["matplotlib >=1.5"],
 }
 
 setup(
@@ -84,20 +84,24 @@ setup(
     author_email="devops@openquake.org",
     maintainer='GEM Foundation',
     maintainer_email='devops@openquake.org',
-    description=("Computes hazard, risk and socio-economic impact of "
-                 "earthquakes."),
+    description=("Computes earthquake hazard and risk."),
     license="AGPL3",
     keywords="earthquake seismic hazard risk",
     url=url,
     long_description=README,
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Education',
         'Intended Audience :: Science/Research',
         'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.5',
         'License :: OSI Approved :: GNU Affero General Public License v3',
         'Operating System :: OS Independent',
         'Topic :: Scientific/Engineering',
+        'Environment :: Console',
+        'Environment :: Web Environment',
     ],
     packages=find_packages(exclude=["qa_tests", "qa_tests.*",
                                     "tools",

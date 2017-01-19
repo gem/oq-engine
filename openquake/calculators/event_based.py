@@ -245,14 +245,19 @@ class EventBasedRuptureCalculator(PSHACalculator):
             if hasattr(ruptures_by_grp_id, 'rup_data'):
                 for grp_id, data in sorted(
                         ruptures_by_grp_id.rup_data.items()):
-                    key = 'rup_data/grp-%02d' % grp_id
-                    self.rup_data = self.datastore.extend(key, data)
+                    if len(data):
+                        key = 'rup_data/grp-%02d' % grp_id
+                        self.rup_data = self.datastore.extend(key, data)
 
     def post_execute(self, result):
         """
         Save the SES collection
         """
         num_events = sum_dict(result)
+        if num_events == 0:
+            raise RuntimeError(
+                'No seismic events! Perhaps the investigation time is too '
+                'small or the maximum_distance is too small')
         logging.info('Setting %d event years', num_events)
         with self.monitor('setting event years', measuremem=True,
                           autoflush=True):
@@ -466,7 +471,7 @@ class EventBasedCalculator(ClassicalCalculator):
         self.sm_id = {sm.path: sm.ordinal
                       for sm in self.csm.info.source_models}
         L = len(oq.imtls.array)
-        res = parallel.starmap(
+        res = parallel.Starmap(
             self.core_task.__func__, self.gen_args(ruptures_by_grp)
         ).submit_all()
         acc = functools.reduce(self.combine_pmaps_and_save_gmfs, res, {

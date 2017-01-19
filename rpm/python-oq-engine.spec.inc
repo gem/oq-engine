@@ -14,7 +14,7 @@ Release: %{oqrelease}
 Release: %{oqtimestamp}_%{oqrelease}
 %endif
 
-Summary: Computes hazard, risk and socio-economic impact of earthquakes
+Summary: Computes earthquake hazard and risk
 Name: %{oqname}
 Version: %{oqversion}
 License: AGPLv3

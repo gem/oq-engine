@@ -37,7 +37,7 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.risklib import riskinput, __version__ as engine_version
 from openquake.commonlib import readinput, datastore, source, calc
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.baselib.parallel import starmap, executor, wakeup_pool
+from openquake.baselib.parallel import Starmap, executor, wakeup_pool
 from openquake.baselib.python3compat import with_metaclass
 from openquake.calculators.export import export as exp
 
@@ -472,7 +472,12 @@ class HazardCalculator(BaseCalculator):
             self.exposure = readinput.get_exposure(self.oqparam)
             arefs = numpy.array(self.exposure.asset_refs, hdf5.vstr)
             self.datastore['asset_refs'] = arefs
-            self.datastore.set_attrs('asset_refs', nbytes=arefs.nbytes)
+            # the line below is commented out since it fails in computations
+            # with extra-large exposures (ex. PT_Scenario with 200,000+ assets)
+            # the reason is totally mysterious, the error is a KeyError:
+            # 'Unable to open object (Bad object header version number)'
+            # and the datastore becomes corrupt :-(
+            # self.datastore.set_attrs('asset_refs', nbytes=arefs.nbytes)
             self.cost_calculator = readinput.get_cost_calculator(self.oqparam)
             self.sitecol, self.assets_by_site = (
                 readinput.get_sitecol_assets(self.oqparam, self.exposure))
@@ -674,5 +679,5 @@ class RiskCalculator(HazardCalculator):
         all_args = ((riskinput, self.riskmodel) +
                     self.extra_args + (self.monitor,)
                     for riskinput in self.riskinputs)
-        res = starmap(self.core_task.__func__, all_args).reduce()
+        res = Starmap(self.core_task.__func__, all_args).reduce()
         return res
