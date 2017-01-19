@@ -62,7 +62,32 @@ instead. This kind of installation is meant for Python-savvy users
 who do not need to modify the OpenQuake code. Users that want to
 develop with the engine or with hazardlib (eg. implement a new GMPE)
 should not install anything; they should clone the git repositories
-and set the PYTHONPATH, as in any other Python project.
+and set the PYTHONPATH, or install it from sources using 
+`pip install -e`, as in any other Python project.
+
+Docker container
+----------------
+
+Starting from this release a set of experimental
+[Docker containers](https://www.docker.com/products/docker) are provided.
+These are meant to be used for easy deployment of the OpenQuake Engine
+in the cloud (just as an example, using
+[Amazon EC2 Container Service](https://aws.amazon.com/ecs/)) and for
+easily testing the software on different operating systems.
+
+A weekly updated image containing the *latest code* can be pulled as follow:
+
+```bash
+$ docker pull docker.io/openquake/engine:master
+```
+
+It's also possible to download a specific *stable* release:
+
+```bash
+$ docker pull docker.io/openquake/engine:2.2
+```
+
+For more information visit our [Docker](installing/docker.md) page.
 
 The nrml_converters are not needed anymore
 ------------------------------------------
