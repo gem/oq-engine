@@ -36,7 +36,7 @@ sudo yum install git hdf5-devel geos-devel python-virtualenv python-pip
 ```
 
 ### macOS
-*This procedure refers to the Python setup shipped by Apple on macOS. If you are using a different python (from brew, macports, conda) you may need to adapt the following commands.*
+*This procedure refers to the stock Python shipped by Apple on macOS. If you are using a different python (from brew, macports, conda) you may need to adapt the following commands.*
 
 You must install [Xcode](https://itunes.apple.com/app/xcode/id497799835?mt=12) first.
 `pip` needs to be manually installed too:
