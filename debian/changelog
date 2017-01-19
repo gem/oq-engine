@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a `logscale(x_min, x_max, n)` function in valid.py
   * Updated the documentation of the API
   * Moved the NRML-related functionality from the engine into hazardlib
     in order to have an engine-independent Hazard Modeler Toolkit
