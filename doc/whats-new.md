@@ -23,7 +23,7 @@ Python 3 support
 The engine has been supporting Python 3 for several months and
 hazardlib for more than one year. The novelty is that
 since a couple of months ago our production environment has become
-Python 3. Nowadays Python 3 is more tested than Python 2. Python 2.7
+Python 3.5. Nowadays Python 3.5 is more tested than Python 2.7. Python 2.7
 is still fully supported and we will keep supporting it for a while, but
 it will eventually be deprecated.
 
@@ -44,8 +44,9 @@ advantage of not requiring compilation on the client side, which was
 an issue, especially for non-linux users.
 
 The recommended way to install the packages is still via the official
-packages released by GEM for Linux, Windows and Mac OS X. However,
-the engine is also installable as any other Python software: create a
+packages released by GEM for Linux, Windows and Mac OS X (see
+https://github.com/gem/oq-engine/blob/master/doc/installing/overview.md).
+However, the engine is also installable as any other Python software: create a
 [virtual environment](http://docs.python-guide.org/en/latest/dev/virtualenvs/)
 and run `pip install openquake.engine`:
 
@@ -250,6 +251,10 @@ were supported before. No covariance matrix is needed, since the
 engine uses the standard normal distribution to generate the
 epsilons. It means that now it is possible to run much larger
 computations.
+
+The configuration parameter `asset_loss_table` has been removed. If you
+have a `job.ini` with that parameter, you will be warned that the
+parameter will be ignored.
 
 Also, a configuration parameter `ignore_covs` has been added. If the
 computation is so large that it does run out of memory even with the
