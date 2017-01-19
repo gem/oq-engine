@@ -12,9 +12,9 @@ The official supported distributions to develop the OpenQuake Engine and its lib
 - CentOS 7
 - Scientific Linux 7
 
-Guidelines are provided for *macOS* too.
+This guide may work also on other Linux releases/distributions.
 
-This guide may work also on other Linux releases/distributions and with few adaptations on macOS.
+Guidelines are provided for *macOS* too.
 
 ## Prerequisites
 
@@ -60,7 +60,7 @@ virtualenv openquake
 source openquake/bin/activate
 ```
 
-## Install the OpenQuake dependencies
+## Install the code
 
 Inside the *virtualenv* (the prompt shows something like `(openquake)user@myhost:~$`) upgrade `pip` first
 
@@ -68,7 +68,7 @@ Inside the *virtualenv* (the prompt shows something like `(openquake)user@myhost
 pip install -U pip
 ```
 
-download the OpenQuake source code
+### Download the OpenQuake source code
 
 ```bash
 mkdir src && cd src
@@ -76,7 +76,7 @@ git clone https://github.com/gem/oq-engine.git
 git clone https://github.com/gem/oq-hazardlib.git
 ```
 
-install OpenQuake <sup>[1](#note1)</sup> <sup>[2](#note2)</sup>
+### Install OpenQuake <sup>[1](#note1)</sup> <sup>[2](#note2)</sup>
 
 
 ```bash
