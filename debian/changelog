@@ -1,3 +1,7 @@
+  [Marco Pagani]
+  * Small bug fix on the sourcewriter
+
+
   [Michele Simionato]
   * Added a test making sure that every GSIM is listed in the API documentation
   * Added a `logscale(x_min, x_max, n)` function in valid.py
