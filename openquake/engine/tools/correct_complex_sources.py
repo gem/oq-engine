@@ -22,8 +22,8 @@ Correct complex fault sources to comply with Aki and Richards convention.
 import sys
 import numpy
 
-from openquake.commonlib import nrml
-from openquake.commonlib.node import node_from_xml
+from openquake.hazardlib import nrml
+from openquake.baselib.node import node_from_xml
 
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.point import Point

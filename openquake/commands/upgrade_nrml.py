@@ -23,12 +23,12 @@ import shutil
 import operator
 from xml.etree.ElementTree import iterparse
 
-from openquake.baselib.general import groupby
-from openquake.risklib import scientific
-from openquake.commonlib.nrml import NRML05
 from openquake.baselib import sap
-from openquake.commonlib.node import context, striptag, Node
-from openquake.commonlib import InvalidFile, riskmodels, nrml
+from openquake.baselib.general import groupby
+from openquake.baselib.node import context, striptag, Node
+from openquake.hazardlib.nrml import NRML05
+from openquake.hazardlib import InvalidFile, nrml
+from openquake.risklib import scientific, read_nrml
 
 
 def get_vulnerability_functions_04(fname):
@@ -93,10 +93,10 @@ def upgrade_file(path):
         # below I am converting into a NRML 0.5 vulnerabilityModel
         node0 = Node(
             'vulnerabilityModel', cat_dict,
-            nodes=list(map(riskmodels.obj_to_node, vf_dict.values())))
+            nodes=list(map(read_nrml.obj_to_node, vf_dict.values())))
         gml = False
     elif tag == 'fragilityModel':
-        node0 = riskmodels.convert_fragility_model_04(
+        node0 = read_nrml.convert_fragility_model_04(
             nrml.read(path)[0], path)
         gml = False
     elif tag == 'sourceModel':
@@ -106,7 +106,7 @@ def upgrade_file(path):
                             dict(tectonicRegion=trt, name="group %s" % i),
                             nodes=srcs)
                        for i, (trt, srcs) in enumerate(dic.items(), 1)]
-    with open(path, 'w') as f:
+    with open(path, 'wb') as f:
         nrml.write([node0], f, gml=gml)
 
 

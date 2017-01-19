@@ -9,14 +9,6 @@ openquake.server.db.actions module
     :undoc-members:
     :show-inheritance:
 
-openquake.server.db.models module
----------------------------------
-
-.. automodule:: openquake.server.db.models
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 openquake.server.db.upgrade_manager module
 ------------------------------------------
 

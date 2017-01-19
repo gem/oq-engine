@@ -15,9 +15,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import unittest
 from nose.plugins.attrib import attr
 
 from openquake.baselib.general import writetmp
+from openquake.commonlib.writers import OLD_NUMPY
 from openquake.calculators.views import view
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
@@ -60,6 +62,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             ('rcurves-stats', 'xml'),
             ('rcurves-stats', 'geojson'),
 
+            ('loss_maps-stats', 'csv'),
             ('loss_maps-stats', 'xml'),
             ('loss_maps-stats', 'geojson'),
 
@@ -72,6 +75,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
+        if OLD_NUMPY:
+            raise unittest.SkipTest('numpy too old to export agg_loss_table')
         self.assert_stats_ok(case_2, 'job.ini', individual_curves='true')
         fname = writetmp(view('mean_avg_losses', self.calc.datastore))
         self.assertEqualFiles('expected/mean_avg_losses.txt', fname)
@@ -96,6 +101,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_2.__file__, 'job_loss.ini', exports='csv',
                             asset_correlation=1.0)
         [fname] = out['agg_loss_table', 'csv']
+        if OLD_NUMPY:
+            raise unittest.SkipTest('numpy too old to export agg_loss_table')
         self.assertEqualFiles('expected/agg_losses.csv', fname)
 
     @attr('qa', 'risk', 'event_based_risk')
@@ -120,11 +127,18 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                             exports='csv', individual_curves='true')
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_losses-mean.csv', fname)
+        if OLD_NUMPY:
+            raise unittest.SkipTest('numpy too old to export agg_loss_table')
 
         fnames = out['agg_loss_table', 'csv']
         assert fnames, 'No agg_losses exported??'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+        # this is a case without loss_ratios in the .ini file
+        # we check that no risk curves are generated
+        self.assertNotIn('rcurves-rlzs', self.calc.datastore)
+        self.assertNotIn('rcurves-stats', self.calc.datastore)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_occupants(self):
@@ -167,6 +181,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_miriam(self):
         # this is a case with a grid and asset-hazard association
         out = self.run_calc(case_miriam.__file__, 'job.ini', exports='csv')
+        if OLD_NUMPY:
+            raise unittest.SkipTest('numpy too old to export agg_loss_table')
+
         [fname] = out['agg_loss_table', 'csv']
         self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
                               fname)
