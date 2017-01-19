@@ -516,6 +516,14 @@ openquake.hazardlib.gsim.mcverry_2006 module
     :undoc-members:
     :show-inheritance:
 
+openquake.hazardlib.gsim.megawati_2003 module
+---------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.megawati_2003
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 openquake.hazardlib.gsim.megawati_pan_2010 module
 -------------------------------------------------
 
