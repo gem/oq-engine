@@ -50,6 +50,10 @@ Current stable version is the **OpenQuake Engine 2.1** 'Benioff'. The documentat
 * [Installing on Windows](https://github.com/gem/oq-engine/blob/master/doc/installing/windows.md)
 * [Starting the software](https://github.com/gem/oq-engine/blob/master/doc/running/windows.md)
 
+#### Docker
+
+* [Deploy a Docker container](https://github.com/gem/oq-engine/blob/master/doc/installing/docker.md)
+
 ### Running the OpenQuake Engine
 
 * [Using the command line](https://github.com/gem/oq-engine/blob/master/doc/running/unix.md)
