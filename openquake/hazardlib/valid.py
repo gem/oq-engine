@@ -676,7 +676,7 @@ def dictionary(value):
     """
     if not value:
         return {}
-    value = value.replace('logscale(', '("logscale", ')
+    value = value.replace('logscale(', '("logscale", ')  # dirty but quick
     try:
         dic = dict(ast.literal_eval(value))
     except:
