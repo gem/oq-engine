@@ -129,7 +129,7 @@ Among the improvements:
 As usual, a few new GMPEs were added:
 
 - Kale et al (2015)
-- ...
+- Megawati et a. (2003)
 
 Finally, the documentation of hazardlib (and of the engine too) has
 been overhauled and it is better than it ever was. There is still room
