@@ -636,6 +636,24 @@ def loss_ratios(value):
     return dic
 
 
+def logscale(x_min, x_max, n):
+    """
+    :param x_min: minumum value
+    :param x_max: maximum value
+    :param n: number of steps
+    :returns: an array of n values from x_min to x_max
+    """
+    if not (isinstance(n, int) and n > 0):
+        raise ValueError('n must be a positive integer, got %s' % n)
+    if x_min <= 0:
+        raise ValueError('x_min must be positive, got %s' % x_min)
+    if x_max <= x_min:
+        raise ValueError('x_max (%s) must be bigger than x_min (%s)' %
+                         (x_max, x_min))
+    delta = numpy.log(x_max / x_min)
+    return numpy.exp(delta * numpy.arange(n) / (n - 1)) * x_min
+
+
 def dictionary(value):
     """
     :param value:
@@ -653,13 +671,23 @@ def dictionary(value):
     Traceback (most recent call last):
        ...
     ValueError: '"vs30_clustering: true"' is not a valid Python dictionary
+    >>> dictionary('{"ls": logscale(0.01, 2, 5)}')
+    {'ls': [0.01, 0.037606030930863933, 0.14142135623730948, 0.53182958969449856, 1.9999999999999991]}
     """
     if not value:
         return {}
+    value = value.replace('logscale(', '("logscale", ')  # dirty but quick
     try:
         dic = dict(ast.literal_eval(value))
     except:
         raise ValueError('%r is not a valid Python dictionary' % value)
+    for key, val in dic.items():
+        try:
+            has_logscale = (val[0] == 'logscale')
+        except:  # no val[0]
+            continue
+        if has_logscale:
+            dic[key] = list(logscale(*val[1:]))
     return dic
 
 

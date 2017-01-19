@@ -15,11 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-"""
-From Node objects to NRML files and viceversa
-------------------------------------------------------
-
+"""\
 It is possible to save a Node object into a NRML file by using the
 function ``write(nodes, output)`` where output is a file
 object. If you want to make sure that the generated file is valid
@@ -263,10 +259,16 @@ class SourceModelParser(object):
         # NB: deepcopy is *essential* here
         groups = [copy.deepcopy(g) for g in groups]
         for group in groups:
+            nrup = 0
             for src in group:
                 if apply_uncertainties:
                     apply_uncertainties(src)
                     src.num_ruptures = src.count_ruptures()
+                    nrup += src.num_ruptures
+            # NB: if the user sets a wrong discretization parameter
+            # the call to `.count_ruptures()` can be ultra-slow
+            logging.debug("%s, %s: parsed %d source(s) with %d ruptures",
+                          fname, group.trt, len(group), nrup)
         self.fname_hits[fname] += 1
         return groups
 
