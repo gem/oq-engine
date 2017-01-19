@@ -672,7 +672,7 @@ def dictionary(value):
        ...
     ValueError: '"vs30_clustering: true"' is not a valid Python dictionary
     >>> dictionary('{"ls": logscale(0.01, 2, 5)}')
-    {'ls': array([ 0.01      ,  0.03760603,  0.14142136,  0.53182959,  2.        ])}
+    {'ls': [0.01, 0.037606030930863933, 0.14142135623730948, 0.53182958969449856, 1.9999999999999991]}
     """
     if not value:
         return {}
@@ -687,7 +687,7 @@ def dictionary(value):
         except:  # no val[0]
             continue
         if has_logscale:
-            dic[key] = logscale(*val[1:])
+            dic[key] = list(logscale(*val[1:]))
     return dic
 
 
