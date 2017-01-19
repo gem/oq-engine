@@ -644,7 +644,7 @@ def logscale(x_min, x_max, n):
     :returns: an array of n values from x_min to x_max
     """
     if not (isinstance(n, int) and n > 0):
-        raise ValueError('n must be a positive integet, got %s' % n)
+        raise ValueError('n must be a positive integer, got %s' % n)
     if x_min <= 0:
         raise ValueError('x_min must be positive, got %s' % x_min)
     if x_max <= x_min:
