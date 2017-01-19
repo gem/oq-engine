@@ -21,7 +21,7 @@ from openquake.hazardlib.gsim.utils import (
     mblg_to_mw_johnston_96, mblg_to_mw_atkinson_boore_87, clip_mean
 )
 from openquake.hazardlib.imt import PGA, SA
-from openquake.hazardlib import gsim
+from openquake.hazardlib import gsim, InvalidFile
 
 GSIM_PATH = gsim.__path__[0]
 SUMMARY = os.path.normpath(
@@ -83,5 +83,5 @@ class DocumentationTestCase(unittest.TestCase):
         for name in os.listdir(GSIM_PATH):
             if name.endswith('.py') and not name.startswith('_'):
                 if name[:-3] not in txt:
-                    raise ValueError('%s is not documented in %s' %
-                                     (name, SUMMARY))
+                    raise InvalidFile('%s: %s is not documented' %
+                                      (SUMMARY, name))
