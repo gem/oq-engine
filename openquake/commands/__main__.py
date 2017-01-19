@@ -25,7 +25,7 @@ from openquake.baselib import sap
 from openquake.commonlib import __version__
 from openquake import commands
 
-from openquake.risklib import valid
+from openquake.hazardlib import valid
 from openquake.commonlib import config
 
 USE_CELERY = valid.boolean(config.get('celery', 'use_celery') or 'false')

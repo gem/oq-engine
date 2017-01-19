@@ -16,12 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import warnings
 from xml.etree.ElementTree import parse
 
 from openquake.baselib.general import writetmp
-from openquake.commonlib.writers import tostring
-from openquake.commonlib.nrml import PARSE_NS_MAP
+from openquake.baselib.node import tostring
+from openquake.hazardlib.nrml import PARSE_NS_MAP
 
 
 def get_path(fname_or_fileobject):

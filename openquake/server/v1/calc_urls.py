@@ -16,23 +16,24 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from django.conf.urls import patterns, url
+from django.conf.urls import url
+
+from openquake.server import views
 
 # each url is prefixed with /v1/calc/
-urlpatterns = patterns(
-    'openquake.server.views',
-    url(r'^list$', 'calc'),
-    url(r'^(\d+)$', 'calc_info'),
-    url(r'^(\d+)/datastore$', 'get_datastore'),
-    url(r'^(\d+)/status$', 'calc'),
-    url(r'^(\d+)/results$', 'calc_results'),
-    url(r'^(\d+)/traceback$', 'get_traceback'),
-    url(r'^(\d+)/log/size$', 'get_log_size'),
-    url(r'^(\d+)/log/(\d*):(\d*)$', 'get_log_slice'),
-    url(r'^(\d+)/remove$', 'calc_remove'),
-    url(r'^result/(\d+)$', 'get_result'),
-    url(r'^run$', 'run_calc'),
+urlpatterns = [
+    url(r'^list$', views.calc),
+    url(r'^(\d+)$', views.calc_info),
+    url(r'^(\d+)/datastore$', views.get_datastore),
+    url(r'^(\d+)/status$', views.calc),
+    url(r'^(\d+)/results$', views.calc_results),
+    url(r'^(\d+)/traceback$', views.get_traceback),
+    url(r'^(\d+)/log/size$', views.get_log_size),
+    url(r'^(\d+)/log/(\d*):(\d*)$', views.get_log_slice),
+    url(r'^(\d+)/remove$', views.calc_remove),
+    url(r'^result/(\d+)$', views.get_result),
+    url(r'^run$', views.run_calc),
 
-    url(r'^(\d+)/result/list$', 'calc_results'),
-    url(r'^\d+/result/(\d+)$', 'get_result'),
-)
+    url(r'^(\d+)/result/list$', views.calc_results),
+    url(r'^\d+/result/(\d+)$', views.get_result),
+]

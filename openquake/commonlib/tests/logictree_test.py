@@ -38,7 +38,7 @@ from mock import Mock
 import openquake.hazardlib
 from openquake.hazardlib import geo
 from openquake.baselib.general import writetmp
-from openquake.risklib import valid
+from openquake.hazardlib import valid
 from openquake.commonlib import logictree, readinput, tests, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.pmf import PMF
@@ -2029,7 +2029,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
                 <logicTree logicTreeID="lt1"/>
             </logicTreeSet>
         """)
-        self.parse_invalid(xml, NameError,
+        self.parse_invalid(xml, AttributeError,
                            "No subnode named 'logicTree' found in 'nrml'")
 
     def test_not_a_gsim_logic_tree(self):

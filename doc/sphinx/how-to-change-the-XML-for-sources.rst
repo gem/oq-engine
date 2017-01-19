@@ -1,3 +1,6 @@
+Change the XML representation of a hazard source
+================================================
+
 Each hazardlib source has an XML representation and there are utilities
 to convert from and to XML. Here is what you need to do if you want to
 change the XML representation of a source, the typical use case being
