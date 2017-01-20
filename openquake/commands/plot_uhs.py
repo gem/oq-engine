@@ -25,9 +25,9 @@ def make_figure(indices, n_sites, imtls, poes, pmap_by_rlz):
     """
     :param indices: the indices of the sites under analysis
     :param n_sites: total number of sites
-    :param imtls: ordered dictionary with the IMTs and levels
+    :param imtls: DictArray with the IMTs and levels
     :param poes: PoEs used to compute the hazard maps
-    :param pmap_by_tag: a dictionary rlz_tag -> pmap
+    :param pmap_by_rlz: a dictionary realization tag -> pmap
     """
     # NB: matplotlib is imported inside, otherwise nosetest would fail in an
     # installation without matplotlib
