@@ -204,7 +204,7 @@ def make_hmap(pmap, imtls, poes):
     Compute the hazard maps associated to the passed probability map.
 
     :param pmap: hazard curves in the form of a ProbabilityMap
-    :param imtls: I intensity measure types and levels
+    :param imtls: DictArray of intensity measure types and levels
     :param poes: P PoEs where to compute the maps
     :returns: a ProbabilityMap with size (N, I * P, 1)
     """
@@ -239,14 +239,14 @@ def make_uhs(pmap, imtls, poes, nsites):
     """
     P = len(poes)
     imts, _ = get_imts_periods(imtls)
-    dic = DictArray({imt: imtls[imt] for imt in imts})
-    array = make_hmap(pmap, dic, poes).array  # size (N, I x P, 1)
+    array = make_hmap(pmap, DictArray(imtls), poes).array  # size (N, I x P, 1)
     imts_dt = numpy.dtype([(str(imt), F64) for imt in imts])
     uhs_dt = numpy.dtype([(str(poe), imts_dt) for poe in poes])
     uhs = numpy.zeros(nsites, uhs_dt)
     for j, poe in enumerate(map(str, poes)):
-        for i, imt in enumerate(imts):
-            uhs[poe][imt] = array[:, i * P + j, 0]
+        for i, imt in enumerate(imtls):
+            if imt in imts:
+                uhs[poe][imt] = array[:, i * P + j, 0]
     return uhs
 
 
