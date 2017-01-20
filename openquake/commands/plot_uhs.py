@@ -37,17 +37,19 @@ def make_figure(indices, n_sites, imtls, poes, pmap_by_rlz):
     n_poes = len(poes)
     uhs_by_rlz = {rlz: calc.make_uhs(pmap_by_rlz[rlz], imtls, poes, n_sites)
                   for rlz in pmap_by_rlz}
+    _, periods = calc.get_imts_periods(imtls)
     for i, site in enumerate(indices):
         for j, poe in enumerate(poes):
             ax = fig.add_subplot(len(indices), n_poes, i * n_poes + j + 1)
             ax.grid(True)
-            ax.set_xlim([0, len(imtls)])
-            ax.set_xlabel('Hazard curve on site %d, poe=%s' % (site, poe))
+            ax.set_xlim([periods[0], periods[-1]])
+            ax.set_xlabel(
+                'UHS on site %d, poe=%s, period in seconds' % (site, poe))
             if j == 0:  # set Y label only on the leftmost graph
                 ax.set_ylabel('SA')
             for rlz in sorted(uhs_by_rlz):
-                uhs = list(uhs_by_rlz[rlz][str(poe)][site])
-                ax.plot(uhs, label='%s-%s-%s' % (rlz, site, poe))
+                uhs = uhs_by_rlz[rlz][str(poe)][site]
+                ax.plot(periods, list(uhs), label=rlz)
     plt.legend()
     return plt
 
@@ -68,9 +70,7 @@ def plot_uhs(calc_id, sites='0'):
     valid = sorted(set(range(n_sites)) & set(indices))
     print('Found %d site(s); plotting %d of them' % (n_sites, len(valid)))
     pmap_by_tag = {tag: dstore['hcurves/' + tag] for tag in dstore['hcurves']}
-    dic = {imt: oq.imtls[imt] for imt in oq.imtls
-           if imt == 'PGA' or imt.startswith('SA')}
-    plt = make_figure(valid, n_sites, dic, oq.poes, pmap_by_tag)
+    plt = make_figure(valid, n_sites, oq.imtls, oq.poes, pmap_by_tag)
     plt.show()
 
 plot_uhs.arg('calc_id', 'a computation id', type=int)
