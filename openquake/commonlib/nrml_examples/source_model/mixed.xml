@@ -7,6 +7,7 @@ xmlns:gml="http://www.opengis.net/gml"
     name="Test Source Model"
     >
         <sourceGroup
+        srcs_weights="1.0"
         tectonicRegion="Stable Continental Crust"
         >
             <pointSource
@@ -45,6 +46,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </pointSource>
         </sourceGroup>
         <sourceGroup
+        srcs_weights="1.0"
         tectonicRegion="Subduction Interface"
         >
             <complexFaultSource
@@ -95,6 +97,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </complexFaultSource>
         </sourceGroup>
         <sourceGroup
+        srcs_weights="1.0 1.0"
         tectonicRegion="Active Shallow Crust"
         >
             <areaSource
@@ -201,6 +204,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </simpleFaultSource>
         </sourceGroup>
         <sourceGroup
+        srcs_weights="1.0 1.0 1.0"
         tectonicRegion="Volcanic"
         >
             <characteristicFaultSource
