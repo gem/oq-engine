@@ -50,7 +50,6 @@ Copyright (C) 2010-2017 GEM Foundation
 PY_MODULES = ['openquake.commands.__main__']
 
 install_requires = [
-    'Cython >=0.20, <0.26',
     'mock >=1.0, <1.4',
     'h5py >=2.2, <2.7',
     'nose >=1.3, <1.4',
@@ -85,8 +84,7 @@ setup(
     author_email="devops@openquake.org",
     maintainer='GEM Foundation',
     maintainer_email='devops@openquake.org',
-    description=("Computes hazard, risk and socio-economic impact of "
-                 "earthquakes."),
+    description=("Computes earthquake hazard and risk."),
     license="AGPL3",
     keywords="earthquake seismic hazard risk",
     url=url,
