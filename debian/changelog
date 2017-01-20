@@ -1,6 +1,5 @@
   [Marco Pagani]
-  * Small bug fix in the sourcewriter
-
+  * Fixed the sourcewriter in the case of NRML 0.5 sources with weights
 
   [Michele Simionato]
   * Added a test making sure that every GSIM is listed in the API documentation
