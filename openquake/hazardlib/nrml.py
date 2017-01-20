@@ -229,7 +229,7 @@ validators = {
     'pos': valid.lon_lat,
     'gmv': valid.positivefloat,
     'spacing': valid.positivefloat,
-    'srcs_weights': valid.weights,
+    'srcs_weights': valid.positivefloats,
 }
 
 
