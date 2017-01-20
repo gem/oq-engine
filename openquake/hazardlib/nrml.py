@@ -293,7 +293,9 @@ def read(source, chatty=True, stop=None):
     """
     vparser = ValidatingXmlParser(validators, stop)
     nrml = vparser.parse_file(source)
-    assert striptag(nrml.tag) == 'nrml', nrml.tag
+    if striptag(nrml.tag) != 'nrml':
+        raise ValueError('%s: expected a node of kind nrml, got %s' %
+                         (source, nrml.tag))
     # extract the XML namespace URL ('http://openquake.org/xmlns/nrml/0.5')
     xmlns = nrml.tag.split('}')[0][1:]
     if xmlns != NRML05 and chatty:
