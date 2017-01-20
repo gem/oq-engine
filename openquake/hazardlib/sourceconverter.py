@@ -114,6 +114,16 @@ class SourceGroup(collections.Sequence):
         # return SourceGroups, ordered by TRT string
         return sorted(source_stats_dict.values())
 
+    @property
+    def srcs_weights(self):
+        """
+        The weights of the underlying sources. If not specified, returns
+        an array of 1s.
+        """
+        if self._srcs_weights is None:
+            return numpy.ones(len(self.sources))
+        return self._srcs_weights
+
     def __init__(self, trt, sources=None, name=None, src_interdep='indep',
                  rup_interdep='indep', srcs_weights=None,
                  min_mag=None, max_mag=None, id=0, eff_ruptures=-1):
@@ -125,11 +135,7 @@ class SourceGroup(collections.Sequence):
         self.name = name
         self.src_interdep = src_interdep
         self.rup_interdep = rup_interdep
-        if srcs_weights is None and sources is not None:
-            n = len(sources)
-            self.srcs_weights = numpy.ones(n) / n
-        else:
-            self.srcs_weights = srcs_weights
+        self._srcs_weights = srcs_weights
         self.min_mag = min_mag
         self.max_mag = max_mag
         self.id = id
