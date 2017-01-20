@@ -121,7 +121,7 @@ class SourceGroup(collections.Sequence):
         an array of 1s.
         """
         if self._srcs_weights is None:
-            return numpy.ones(len(self.sources))
+            return list(numpy.ones(len(self.sources)))
         return self._srcs_weights
 
     def __init__(self, trt, sources=None, name=None, src_interdep='indep',
@@ -857,7 +857,7 @@ class SourceConverter(RuptureConverter):
         sg.name = node.attrib.get('name')
         sg.src_interdep = node.attrib.get('src_interdep')
         sg.rup_interdep = node.attrib.get('rup_interdep')
-        sg.srcs_weights = srcs_weights
+        sg._srcs_weights = srcs_weights
         return sg
 
 
