@@ -7,8 +7,8 @@ improved our exports, by providing more information (especially for the
 event based ruptures) and/or using more efficient export formats, like the
 .npz format.
 
-As usual, lots of small bugs have been fixed. More than 50 pull requests were
-closed in oq-hazardlib and more than 150 pull requests were closed in
+As usual, lots of small bugs have been fixed. More than 60 pull requests were
+closed in oq-hazardlib and more than 160 pull requests were closed in
 oq-engine. For the complete list of changes, please 
 see the changelogs: https://github.com/gem/oq-hazardlib/blob/engine-2.2/debian/changelog and https://github.com/gem/oq-engine/blob/engine-2.2/debian/changelog.
 
