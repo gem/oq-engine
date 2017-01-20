@@ -823,9 +823,9 @@ class ValidatingXmlParser(object):
     def _start_element(self, longname, attrs):
         try:
             xmlns, name = longname.split('}')
-        except ValueError:
+        except ValueError:  # no namespace in the longname
             name = tag = longname
-        else:
+        else:  # fix the tag with an opening brace
             tag = '{' + longname
         self._ancestors.append(
             Node(tag, attrs, lineno=self.p.CurrentLineNumber))
