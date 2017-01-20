@@ -1,7 +1,10 @@
   [Marco Pagani, Meya Yanger Walling]
   * Implements the Megawati et al. (2003) GMPE for Singapore
+  * Fixed the sourcewriter in the case of NRML 0.5 sources with weights
 
   [Michele Simionato]
+  * Improved the error message for XML files which are not NRML
+  * Added a test making sure that every GSIM is listed in the API documentation
   * Added a `logscale(x_min, x_max, n)` function in valid.py
   * Updated the documentation of the API
   * Moved the NRML-related functionality from the engine into hazardlib
