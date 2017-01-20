@@ -14,12 +14,19 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
+import os
 import numpy
 
 from openquake.hazardlib.gsim.utils import (
     mblg_to_mw_johnston_96, mblg_to_mw_atkinson_boore_87, clip_mean
 )
 from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib import gsim, InvalidFile
+
+GSIM_PATH = gsim.__path__[0]
+SUMMARY = os.path.normpath(
+    os.path.join(
+        GSIM_PATH, '../../../doc/sphinx/openquake.hazardlib.gsim.rst'))
 
 
 class MblgToMwTestCase(unittest.TestCase):
@@ -67,3 +74,14 @@ class ClipMeanTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             [0.1, 0.2, 0.6, 1.2], clipped_mean
         )
+
+
+class DocumentationTestCase(unittest.TestCase):
+    """Make sure each GSIM module is listed in openquake.hazardlib.gsim.rst"""
+    def test_documented(self):
+        txt = open(SUMMARY).read()
+        for name in os.listdir(GSIM_PATH):
+            if name.endswith('.py') and not name.startswith('_'):
+                if name[:-3] not in txt:
+                    raise InvalidFile('%s: %s is not documented' %
+                                      (SUMMARY, name))

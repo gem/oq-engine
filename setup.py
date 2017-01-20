@@ -57,7 +57,6 @@ Copyright (C) 2014-2017 GEM Foundation
 """
 
 install_requires = [
-    'Cython >=0.20, <0.26',
     'mock >=1.0, <1.4',
     'h5py >=2.2, <2.7',
     'nose >=1.3, <1.4',

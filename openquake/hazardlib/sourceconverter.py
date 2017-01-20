@@ -20,6 +20,7 @@ import math
 import copy
 import operator
 import collections
+import numpy
 
 from openquake.baselib.node import context, striptag
 from openquake.hazardlib import geo, mfd, pmf, source
@@ -53,8 +54,11 @@ class SourceModel(object):
         Return an empty copy of the source model, i.e. without sources,
         but with the proper attributes for each SourceGroup contained within.
         """
-        src_groups = [SourceGroup(sg.trt, [], sg.min_mag, sg.max_mag, sg.id)
-                      for sg in self.src_groups]
+        src_groups = []
+        for grp in self.src_groups:
+            sg = copy.copy(grp)
+            sg.sources = []
+            src_groups.append(sg)
         return self.__class__(self.name, self.weight, self.path, src_groups,
                               self.num_gsim_paths, self.ordinal, self.samples)
 
@@ -67,6 +71,17 @@ class SourceGroup(collections.Sequence):
         the tectonic region type all the sources belong to
     :param list sources:
         a list of hazardlib source objects
+    :param name:
+        The name of the group
+    :param src_interdep:
+        A string specifying if the sources in this cluster are independent or
+        mutually exclusive
+    :param rup_indep:
+        A string specifying if the ruptures within each source of the cluster
+        are independent or mutually exclusive
+    :param weights:
+        A dictionary whose keys are the source IDs of the cluster and the
+        values are the weights associated with each source
     :param min_mag:
         the minimum magnitude among the given sources
     :param max_mag:
@@ -99,10 +114,22 @@ class SourceGroup(collections.Sequence):
         # return SourceGroups, ordered by TRT string
         return sorted(source_stats_dict.values())
 
-    def __init__(self, trt, sources=None,
+    def __init__(self, trt, sources=None, name=None, src_interdep='indep',
+                 rup_interdep='indep', srcs_weights=None,
                  min_mag=None, max_mag=None, id=0, eff_ruptures=-1):
+        # checks
         self.trt = trt
-        self.sources = self.src_list = []
+        self._check_init_variables(sources, name, src_interdep, rup_interdep,
+                                   srcs_weights)
+        self.sources = []
+        self.name = name
+        self.src_interdep = src_interdep
+        self.rup_interdep = rup_interdep
+        if srcs_weights is None and sources is not None:
+            n = len(sources)
+            self.srcs_weights = numpy.ones(n) / n
+        else:
+            self.srcs_weights = srcs_weights
         self.min_mag = min_mag
         self.max_mag = max_mag
         self.id = id
@@ -111,6 +138,23 @@ class SourceGroup(collections.Sequence):
                 self.update(src)
         self.source_model = None  # to be set later, in CompositionInfo
         self.eff_ruptures = eff_ruptures  # set later nby get_rlzs_assoc
+
+    def _check_init_variables(self, src_list, name, src_interdep, rup_interdep,
+                              srcs_weights):
+        if src_interdep not in ('indep', 'mutex'):
+            raise ValueError('source interdependence incorrect %s ' %
+                             src_interdep)
+        if rup_interdep not in ('indep', 'mutex'):
+            raise ValueError('rupture interdependence incorrect %s ' %
+                             rup_interdep)
+        # check srcs weights defined by the user
+        if srcs_weights is not None:
+            assert abs(1. - sum(srcs_weights)) < 1e-6
+        # check TRT
+        if src_list:  # can be None
+            for src in src_list:
+                assert src.tectonic_region_type == self.trt, (
+                    src.tectonic_region_type, self.trt)
 
     def tot_ruptures(self):
         return sum(src.num_ruptures for src in self.sources)
@@ -782,8 +826,7 @@ class SourceConverter(RuptureConverter):
         :param node:
             a node with tag sourceGroup
         :returns:
-            a :class:`openquake.commonlib.source.SourceGroup` instance
-            mimicking a :class:`openquake.hazardlib.source.base.SourceGroup`
+            a :class:`SourceGroup` instance
         """
         trt = node['tectonicRegion']
         srcs_weights = node.attrib.get('srcs_weights')

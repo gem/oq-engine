@@ -18,65 +18,8 @@ Module :mod:`openquake.hazardlib.source.base` defines a base class for
 seismic sources.
 """
 import abc
-import numpy
 from openquake.baselib.slots import with_slots
 from openquake.baselib.python3compat import with_metaclass
-
-
-class SourceGroup(object):
-    """
-    :param src_list:
-        A list containing seismic sources
-    :param name:
-        The name of the group
-    :param src_interdep:
-        A string specifying if the sources in this cluster are independent or
-        mutually exclusive
-    :param rup_indep:
-        A string specifying if the ruptures within each source of the cluster
-        are independent or mutually exclusive
-    :param weights:
-        A dictionary whose keys are the source IDs of the cluster and the
-        values are the weights associated with each source
-    """
-
-    @property
-    def source_id(self):
-        """Name of the source group"""
-        # alias useful for the write_source_model function
-        return self.name
-
-    def __init__(self, src_list, name, src_interdep='indep',
-                 rup_interdep='indep', srcs_weights=None, trt=''):
-        # checks
-        self._check_init_variables(src_list, name, src_interdep, rup_interdep,
-                                   srcs_weights)
-        # set instance parameters
-        self.src_list = src_list
-        self.name = name
-        self.src_interdep = src_interdep
-        self.rup_interdep = rup_interdep
-        if srcs_weights is None:
-            n = len(src_list)
-            self.srcs_weights = numpy.ones(n) / n
-        else:
-            self.srcs_weights = srcs_weights
-        self.tectonic_region_type = trt
-
-    def _check_init_variables(self, src_list, name, src_interdep, rup_interdep,
-                              srcs_weights):
-        if src_interdep not in ('indep', 'mutex'):
-            raise ValueError('source interdependence incorrect %s ' %
-                             src_interdep)
-        if rup_interdep not in ('indep', 'mutex'):
-            raise ValueError('rupture interdependence incorrect %s ' %
-                             rup_interdep)
-        # check srcs weights defined by the user
-        if srcs_weights is not None:
-            assert abs(1. - sum(srcs_weights)) < 1e-6
-
-    def __iter__(self):
-        return iter(self.src_list)
 
 
 @with_slots

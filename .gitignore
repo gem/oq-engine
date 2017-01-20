@@ -5,6 +5,7 @@ doc/build
 build
 build-deb
 build-rpm
+dist
 *.so
 .coverage
 .DS_Store

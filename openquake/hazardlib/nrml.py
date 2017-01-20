@@ -259,10 +259,16 @@ class SourceModelParser(object):
         # NB: deepcopy is *essential* here
         groups = [copy.deepcopy(g) for g in groups]
         for group in groups:
+            nrup = 0
             for src in group:
                 if apply_uncertainties:
                     apply_uncertainties(src)
                     src.num_ruptures = src.count_ruptures()
+                    nrup += src.num_ruptures
+            # NB: if the user sets a wrong discretization parameter
+            # the call to `.count_ruptures()` can be ultra-slow
+            logging.debug("%s, %s: parsed %d source(s) with %d ruptures",
+                          fname, group.trt, len(group), nrup)
         self.fname_hits[fname] += 1
         return groups
 
