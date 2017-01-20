@@ -1,4 +1,5 @@
-  [Marco Pagani]
+  [Marco Pagani, Meya Yanger Walling]
+  * Implements the Megawati et al. (2003) GMPE for Singapore
   * Fixed the sourcewriter in the case of NRML 0.5 sources with weights
 
   [Michele Simionato]
