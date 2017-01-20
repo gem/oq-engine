@@ -472,7 +472,12 @@ class HazardCalculator(BaseCalculator):
             self.exposure = readinput.get_exposure(self.oqparam)
             arefs = numpy.array(self.exposure.asset_refs, hdf5.vstr)
             self.datastore['asset_refs'] = arefs
-            self.datastore.set_attrs('asset_refs', nbytes=arefs.nbytes)
+            # the line below is commented out since it fails in computations
+            # with extra-large exposures (ex. PT_Scenario with 200,000+ assets)
+            # the reason is totally mysterious, the error is a KeyError:
+            # 'Unable to open object (Bad object header version number)'
+            # and the datastore becomes corrupt :-(
+            # self.datastore.set_attrs('asset_refs', nbytes=arefs.nbytes)
             self.cost_calculator = readinput.get_cost_calculator(self.oqparam)
             self.sitecol, self.assets_by_site = (
                 readinput.get_sitecol_assets(self.oqparam, self.exposure))

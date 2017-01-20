@@ -1,6 +1,9 @@
 # Installing the OpenQuake Engine on a generic Linux distribution
 
 The OpenQuake Engine is also available in the form of **self-installable binary distribution**.
+This way of installing OpenQuake is strongly suggested for old versions of Linux which
+do not ship with Python 2.7 (like RHEL/CentOS/SL 6), or for users that do not have
+administrator privileges (they cannot run `sudo` or `su`).
 
 ### Differences with packages for Ubuntu and RedHat
 
