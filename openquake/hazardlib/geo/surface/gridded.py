@@ -32,7 +32,7 @@ from openquake.hazardlib.geo.mesh import RectangularMesh
 def surface_node(points):
     """
     :param points: a list of Point objects
-    :returns: a Node of kind posList
+    :returns: a Node of kind "griddedSurface"
     """
     line = []
     for point in points:
