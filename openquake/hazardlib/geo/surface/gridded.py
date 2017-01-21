@@ -29,19 +29,6 @@ from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import RectangularMesh
 
 
-def surface_node(points):
-    """
-    :param points: a list of Point objects
-    :returns: a Node of kind posList
-    """
-    line = []
-    for point in points:
-        line.append(point.longitude)
-        line.append(point.latitude)
-        line.append(point.depth)
-    return Node('griddedSurface', nodes=[Node('gml:posList', {}, line)])
-
-
 class GriddedSurface(BaseSurface):
     """
     Gridded surface defined by an unstructured cloud of points. This surface
@@ -58,6 +45,19 @@ class GriddedSurface(BaseSurface):
     def __init__(self, mesh):
         self.mesh = mesh
 
+    @property
+    def surface_nodes(self):
+        """
+        :param points: a list of Point objects
+        :returns: a Node of kind posList
+        """
+        line = []
+        for point in self.mesh:
+            line.append(point.longitude)
+            line.append(point.latitude)
+            line.append(point.depth)
+        return [Node('griddedSurface', nodes=[Node('gml:posList', {}, line)])]
+
     @classmethod
     def from_points_list(cls, points):
         """
@@ -69,9 +69,7 @@ class GriddedSurface(BaseSurface):
             An instance of
             :class:`~openquake.hazardlib.geo.surface.gridded.GriddedSurface`
         """
-        self = cls(RectangularMesh.from_points_list([points]))
-        self.surface_nodes = [surface_node(points)]
-        return self
+        return cls(RectangularMesh.from_points_list([points]))
 
     def get_bounding_box(self):
         """
