@@ -254,12 +254,8 @@ def pmap_from_grp(
         maxdist = source_site_filter.integration_distance[trt]
     except:
         maxdist = source_site_filter.integration_distance
-    if hasattr(gsims, 'keys'):
+    if hasattr(gsims, 'keys'):  # dictionary trt -> gsim
         gsims = [gsims[trt]]
-    # check all the sources belong to the same tectonic region
-    trts = set(src.tectonic_region_type for src in sources)
-    assert len(trts) == 1, 'Multiple TRTs: %s' % ', '.join(trts)
-
     with GroundShakingIntensityModel.forbid_instantiation():
         imtls = DictArray(imtls)
         cmaker = ContextMaker(gsims, maxdist)
