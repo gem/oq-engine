@@ -49,7 +49,7 @@ class GriddedSurface(BaseSurface):
     def surface_nodes(self):
         """
         :param points: a list of Point objects
-        :returns: a Node of kind posList
+        :returns: a Node of kind 'griddedSurface'
         """
         line = []
         for point in self.mesh:
