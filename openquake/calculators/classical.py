@@ -514,7 +514,9 @@ class ClassicalCalculator(PSHACalculator):
                     dset = self.datastore.getitem(key)
                     for sid in pmap:
                         dset[sid] = pmap[sid].array
-                    acc += {kind: pmap.nbytes}
+                    # in the datastore we save 4 byte floats, thus we
+                    # divide the memory consumption by 2: pmap.nbytes / 2
+                    acc += {kind: pmap.nbytes / 2}
             self.datastore.flush()
             return acc
 
