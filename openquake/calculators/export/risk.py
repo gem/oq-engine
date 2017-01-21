@@ -22,6 +22,7 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5
+from openquake.baselib.python3compat import decode
 from openquake.baselib.general import AccumDict, get_array, group_array
 from openquake.risklib import scientific, riskinput
 from openquake.calculators.export import export
@@ -364,7 +365,7 @@ def export_damage(ekey, dstore):
         rlz = rlzs[r]
         dd_asset = []
         for n, ass in enumerate(assetcol):
-            assref = aref[ass['idx']]
+            assref = decode(aref[ass['idx']])
             dist = dmg_by_asset[n, r][lt]
             site = Site(ass['lon'], ass['lat'])
             for ds in range(D):
@@ -678,7 +679,7 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
                     poe_str = 'poe-%s' % poe + ins
                     for ass, stat in zip(assetcol, lmaps[poe_str]):
                         loc = Location(ass['lon'], ass['lat'])
-                        lm = LossMap(loc, aref[ass['idx']], stat, None)
+                        lm = LossMap(loc, decode(aref[ass['idx']]), stat, None)
                         data.append(lm)
                     writer = writercls(
                         fname, oq.investigation_time, poe=poe, loss_type=lt,
@@ -714,7 +715,7 @@ def export_loss_maps_stats_xml_geojson(ekey, dstore):
         poe_str = 'poe-%s' % poe + ins
         for ass, val in zip(assetcol, array[poe_str]):
             loc = Location(ass['lon'], ass['lat'])
-            curve = LossMap(loc, aref[ass['idx']], val, None)
+            curve = LossMap(loc, decode(aref[ass['idx']]), val, None)
             curves.append(curve)
         writer.serialize(curves)
         fnames.append(writer._dest)
@@ -754,7 +755,7 @@ def export_loss_map_xml_geojson(ekey, dstore):
                 for ass, mean, stddev in zip(
                         assetcol, means[:, r], stddevs[:, r]):
                     loc = Location(ass['lon'], ass['lat'])
-                    lm = LossMap(loc, aref[ass['idx']], mean, stddev)
+                    lm = LossMap(loc, decode(aref[ass['idx']]), mean, stddev)
                     data.append(lm)
                 writer = writercls(
                     fname, oq.investigation_time, poe=None, loss_type=lt,
@@ -901,7 +902,7 @@ def export_loss_curves_stats(ekey, dstore):
         curves = []
         for ass, rec in zip(assetcol, array):
             loc = Location(ass['lon'], ass['lat'])
-            curve = LossCurve(loc, aref[ass['idx']], rec['poes' + ins],
+            curve = LossCurve(loc, decode(aref[ass['idx']]), rec['poes' + ins],
                               rec['losses' + ins], loss_ratios[ltype],
                               rec['avg' + ins], None)
             curves.append(curve)
@@ -1028,7 +1029,7 @@ def export_bcr_map_rlzs(ekey, dstore):
             data = []
             for ass, value in zip(assetcol, rlz_data):
                 loc = Location(ass['lon'], ass['lat'])
-                data.append(BcrData(loc, aref[ass['idx']],
+                data.append(BcrData(loc, decode(aref[ass['idx']]),
                                     value['annual_loss_orig'],
                                     value['annual_loss_retro'],
                                     value['bcr']))
