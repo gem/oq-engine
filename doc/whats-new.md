@@ -5,7 +5,8 @@ This release has focused on memory and performance optimizations, especially
 in the event based and scenario calculators. Moreover we have significantly
 improved our exports, by providing more information (especially for the
 event based ruptures) and/or using more efficient export formats, like the
-.npz format.
+.npz format. As of now, the XML exports are deprecated, even if there is
+no plan to remove them at the moment.
 
 As usual, lots of small bugs have been fixed. More than 60 pull requests were
 closed in oq-hazardlib and more than 160 pull requests were closed in
@@ -338,6 +339,17 @@ A lot of refactoring of the risk calculators (all of them) went
 into this release. The code for computing the statistical outputs of the risk
 calculators has been completely rewritten and it is now 90% shorter
 than before and much more efficient.
+
+We introduced a `logscale` functionality; for instance now you can define in the
+`job.ini` something like this
+
+```
+intensity_measure_types_and_levels={'PGA': logscale(1E-5, 1, 6)}
+```
+
+and `logscale(1E-5, 1, 6)` is interpreted as a logarithmic scale
+starting from 1E-5 and arriving to 1 in 6 steps, i.e.
+`[.00001, .0001, .001, .01, .1, 1]`.
 
 Finally, a lot of work went into the UCERF calculators. However,
 the should still be considered experimental and there are a few known
