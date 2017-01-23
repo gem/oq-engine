@@ -453,17 +453,24 @@ class ClassicalCalculator(PSHACalculator):
         attrs = dict(
             __pyclass__='openquake.hazardlib.probability_map.ProbabilityMap',
             sids=numpy.arange(N, dtype=numpy.uint32))
+        nbytes = N * L * 4  # bytes per realization (32 bit floats)
+        totbytes = 0
         if oq.individual_curves:
             for rlz in rlzs:
                 self.datastore.create_dset(
                     'hcurves/rlz-%03d' % rlz.ordinal, F32,
                     (N, L, 1),  attrs=attrs)
-        if oq.mean_hazard_curves:
+                totbytes += nbytes
+        if oq.mean_hazard_curves and len(rlzs) > 1:
             self.datastore.create_dset(
                 'hcurves/mean', F32, (N, L, 1), attrs=attrs)
+            totbytes += nbytes
         for q in oq.quantile_hazard_curves:
             self.datastore.create_dset(
                 'hcurves/quantile-%s' % q, F32, (N, L, 1), attrs=attrs)
+            totbytes += nbytes
+        if 'hcurves' in self.datastore:
+            self.datastore.set_attrs('hcurves', nbytes=totbytes)
         self.datastore.flush()
 
         logging.info('Building hazard curves')
@@ -514,7 +521,9 @@ class ClassicalCalculator(PSHACalculator):
                     dset = self.datastore.getitem(key)
                     for sid in pmap:
                         dset[sid] = pmap[sid].array
-                    acc += {kind: pmap.nbytes}
+                    # in the datastore we save 4 byte floats, thus we
+                    # divide the memory consumption by 2: pmap.nbytes / 2
+                    acc += {kind: pmap.nbytes // 2}
             self.datastore.flush()
             return acc
 
