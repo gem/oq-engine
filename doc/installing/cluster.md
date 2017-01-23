@@ -44,7 +44,7 @@ multi_user = true
 file = /var/lib/openquake/db.sqlite3
 log = /var/lib/openquake/dbserver.log
 host = w.x.y.z
-port = 1999
+port = 1908
 authkey = changeme
 ```
 
@@ -78,10 +78,10 @@ Additionally, access to the RabbitMQ, and DbServer ports should be limited (agai
 The following ports must be open on the **master node**:
 
 * 5672 for RabbitMQ
-* 1999 for DbServer
+* 1908 for DbServer
 * 8800 for the API/WebUI (optional)
 
-The **worker nodes** must be able to connect to the master on port 5672, and port 1999.
+The **worker nodes** must be able to connect to the master on port 5672, and port 1908.
 
 
 ## Storage requirements
