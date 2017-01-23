@@ -469,7 +469,8 @@ class ClassicalCalculator(PSHACalculator):
             self.datastore.create_dset(
                 'hcurves/quantile-%s' % q, F32, (N, L, 1), attrs=attrs)
             totbytes += nbytes
-        self.datastore.set_attrs('hcurves', nbytes=totbytes)
+        if 'hcurves' in self.datastore:
+            self.datastore.set_attrs('hcurves', nbytes=totbytes)
         self.datastore.flush()
 
         logging.info('Building hazard curves')
