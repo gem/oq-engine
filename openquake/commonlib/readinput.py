@@ -740,8 +740,6 @@ def get_exposure(oqparam):
                      len(exposure.assets), out_of_region)
         if len(exposure.assets) == 0:
             raise RuntimeError('Could not find any asset within the region!')
-    else:
-        logging.info('Read %d assets', len(exposure.assets))
 
     # sanity check
     values = any(len(ass.values) + ass.number for ass in exposure.assets)
