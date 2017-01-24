@@ -27,9 +27,6 @@ import sys
 from contextlib import contextmanager
 
 OQDIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-#: Environment variable name for specifying a custom openquake.cfg.
-#: The file name doesn't matter.
-OQ_CONFIG_FILE_VAR = "OQ_CONFIG_FILE"
 
 
 # singleton
@@ -38,20 +35,24 @@ class _Config(object):
     Load the configuration, make each section available in a separate
     dict.
 
-    The configuration locations are specified via environment variables:
-        - OQ_SITE_CFG_PATH
-        - OQ_LOCAL_CFG_PATH
+    The configuration location can be specified via the 'OQ_SITE_CFG_PATH'
+    environment variable.
 
-    In the absence of these environment variables the following hard-coded
-    paths will be used in order:
-        - /etc/openquake/openquake.cfg
-        - ./openquake.cfg
+    In the absence of this environment variable the configuration is located
+    in the following way:
+
+        - inside a platform specific, standard, location
+            - XDG_CONFIG_HOME or ~/.config for Linux
+            - ~/Library/Preferences for macOS
+            - %APPDATA% for Windows
+        - in /etc, with higher prority, if code is running outside
+          a virtualenvironment
 
     Please note: settings in the site configuration file are overridden
     by settings with the same key names in the local configuration.
     """
-    GLOBAL_PATH = "/etc/openquake/openquake.cfg"
-    LOCAL_PATH = os.path.join(OQDIR, "openquake.cfg")
+    CFG_PREFIX = "openquake"
+    CFG_FILE = "openquake.cfg"
     cfg = dict()
 
     def __init__(self):
@@ -68,15 +69,27 @@ class _Config(object):
 
     def _get_paths(self):
         """Return the paths for the global/local configuration files."""
-        global_path = os.environ.get("OQ_SITE_CFG_PATH", self.GLOBAL_PATH)
-        local_path = os.environ.get(
-            "OQ_LOCAL_CFG_PATH", os.path.abspath(self.LOCAL_PATH))
-        paths = [global_path, local_path]
 
-        # User specified
-        user_path = os.environ.get(OQ_CONFIG_FILE_VAR)
-        if user_path is not None:
-            paths.append(user_path)
+        if sys.platform == 'win32':
+            local_prefix = os.environ['APPDATA']
+        elif sys.platform == 'darwin':
+            local_prefix = '~/Library/Preferences'
+        else:
+            local_prefix = os.environ.get('XDG_CONFIG_HOME', '~/.config')
+
+        paths = [os.path.normpath(os.path.join(local_prefix,
+                                               self.CFG_PREFIX,
+                                               self.CFG_FILE))]
+
+        if not hasattr(sys, 'real_prefix'):
+            # When not running in a virtualenv system
+            # config has the highest priority
+            paths.append(os.path.join('/etc', self.CFG_PREFIX, self.CFG_FILE))
+
+        env_path = os.environ.get('OQ_SITE_CFG_PATH')
+        if env_path is not None:
+            paths.append = os.path.normpath(os.environ['OQ_SITE_CFG_PATH'])
+
         return paths
 
     def _load_from_file(self):
