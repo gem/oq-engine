@@ -94,13 +94,13 @@ class _Config(object):
             paths.append(os.path.join(self.SYS_PREFIX, self.CFG_PREFIX,
                                       self.CFG_FILE))
 
-        env_path = os.environ.get('OQ_SITE_CFG_PATH')
-        if env_path is not None:
-            paths.append(os.path.normpath(os.environ['OQ_SITE_CFG_PATH']))
-
         # keep the old behaviour when git sources are used
         if os.path.exists(os.path.join(OQDIR, self.CFG_FILE)):
             paths.append(os.path.join(OQDIR, self.CFG_FILE))
+
+        env_path = os.environ.get('OQ_SITE_CFG_PATH')
+        if env_path is not None:
+            paths.append(os.path.normpath(os.environ['OQ_SITE_CFG_PATH']))
 
         # normalize all paths and resolve '~' in a single pass
         paths = [os.path.normpath(os.path.expanduser(p)) for p in paths]
