@@ -470,14 +470,12 @@ class HazardCalculator(BaseCalculator):
         logging.info('Reading the exposure')
         with self.monitor('reading exposure', autoflush=True):
             self.exposure = readinput.get_exposure(self.oqparam)
-            arefs = numpy.array(self.exposure.asset_refs, hdf5.vstr)
+            arefs = numpy.array(self.exposure.asset_refs)
+            # NB: using hdf5.vstr would fail for large exposures;
+            # the datastore could become corrupt, and also ultra-strange
+            # may happen (i.e. having the sitecol saved inside asset_refs!!)
             self.datastore['asset_refs'] = arefs
-            # the line below is commented out since it fails in computations
-            # with extra-large exposures (ex. PT_Scenario with 200,000+ assets)
-            # the reason is totally mysterious, the error is a KeyError:
-            # 'Unable to open object (Bad object header version number)'
-            # and the datastore becomes corrupt :-(
-            # self.datastore.set_attrs('asset_refs', nbytes=arefs.nbytes)
+            self.datastore.set_attrs('asset_refs', nbytes=arefs.nbytes)
             self.cost_calculator = readinput.get_cost_calculator(self.oqparam)
             self.sitecol, self.assets_by_site = (
                 readinput.get_sitecol_assets(self.oqparam, self.exposure))
