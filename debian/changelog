@@ -1,7 +1,10 @@
   [Michele Simionato]
   * Added NRML support for GriddedSurface and GriddedRupture objects
 
-  [Marco Pagani]
+python-oq-hazardlib (0.22.0-0~precise01) precise; urgency=low
+
+  [Marco Pagani, Meya Yanger Walling]
+  * Implements the Megawati et al. (2003) GMPE for Singapore
   * Fixed the sourcewriter in the case of NRML 0.5 sources with weights
 
   [Michele Simionato]
@@ -55,6 +58,8 @@
   * Removed the rupture_site_filter from the calculators
   * Removed the speedups and optimized the distance calculations at the
     numpy level
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 23 Jan 2017 11:27:14 +0100
 
 python-oq-hazardlib (0.21.0-0~precise01) precise; urgency=low
 

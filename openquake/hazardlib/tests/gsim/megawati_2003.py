@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2017 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,19 +16,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-"""
-hazardlib stands for Hazard Library.
-"""
-
-from openquake.baselib.general import git_suffix
-from openquake.hazardlib import (
-    calc, geo, gsim, mfd, scalerel, source, const, correlation, imt, pmf, site,
-    tom, near_fault)
+from openquake.hazardlib.gsim.megawati_2003 import MegawatiEtAl2003
+from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
-class InvalidFile(Exception):
-    pass
+class Megawati2003TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = MegawatiEtAl2003
 
-# the version is managed by packager.sh with a sed
-__version__ = '0.23.0'
-__version__ += git_suffix(__file__)
+    def test_mean(self):
+        self.check('MEA2003/mea2003_mean.csv',
+                   max_discrep_percentage=1.0)
+
+    def test_std_total(self):
+        self.check('MEA2003/mea2003_total_std.csv',
+                   max_discrep_percentage=0.1)
