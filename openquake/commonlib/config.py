@@ -75,7 +75,6 @@ class _Config(object):
 
     def _get_paths(self):
         """Return the paths for the global/local configuration files."""
-
         if sys.platform == 'win32':
             local_prefix = os.environ['APPDATA']
         elif sys.platform == 'darwin':
