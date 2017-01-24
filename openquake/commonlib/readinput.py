@@ -403,12 +403,12 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         else:  # just collect the TRT models
             smodel = nrml.read(fname).sourceModel
             src_groups = []
-            if smodel[0].tag.endswith('sourceGroup'):
+            if smodel[0].tag.endswith('sourceGroup'):  # NRML 0.5 format
                 for sg_node in smodel:
                     sg = sourceconverter.SourceGroup(sg_node['tectonicRegion'])
                     sg.sources = sg_node.nodes
                     src_groups.append(sg)
-            else:  # smodel is a list of source nodes
+            else:  # NRML 0.4 format: smodel is a list of source nodes
                 src_groups.extend(sourceconverter.SourceGroup.collect(smodel))
         sm.src_groups = src_groups
         trts = [mod.trt for mod in src_groups]
