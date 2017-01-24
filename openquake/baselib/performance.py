@@ -21,7 +21,6 @@ from datetime import datetime
 from multiprocessing.connection import Client
 
 import numpy
-import h5py
 
 from openquake.baselib.general import humansize
 from openquake.baselib import hdf5
