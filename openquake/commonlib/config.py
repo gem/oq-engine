@@ -28,6 +28,9 @@ from shutil import copy
 from contextlib import contextmanager
 
 OQDIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+#: Environment variable name for specifying a custom openquake.cfg.
+#: The file name doesn't matter.
+OQ_CONFIG_FILE_VAR = "OQ_CONFIG_FILE"
 
 
 # singleton
@@ -36,7 +39,7 @@ class _Config(object):
     Load the configuration, make each section available in a separate
     dict.
 
-    The configuration location can be specified via the 'OQ_SITE_CFG_PATH'
+    The configuration location can be specified via the 'OQ_CONFIG_FILE'
     environment variable.
 
     In the absence of this environment variable the configuration is located
@@ -97,9 +100,9 @@ class _Config(object):
         if os.path.exists(os.path.join(OQDIR, self.CFG_FILE)):
             paths.append(os.path.join(OQDIR, self.CFG_FILE))
 
-        env_path = os.environ.get('OQ_SITE_CFG_PATH')
+        env_path = os.environ.get(OQ_CONFIG_FILE_VAR)
         if env_path is not None:
-            paths.append(os.path.normpath(os.environ['OQ_SITE_CFG_PATH']))
+            paths.append(os.path.normpath(os.environ[OQ_CONFIG_FILE_VAR]))
 
         # normalize all paths and resolve '~' in a single pass
         paths = [os.path.normpath(os.path.expanduser(p)) for p in paths]

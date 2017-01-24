@@ -93,7 +93,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     """
     Run a calculation using the traditional command line API
     """
-    config.abort_if_no_config_available()
+    config.abort_if_no_config_readable()
 
     if run or run_hazard or run_risk:
         # the logging will be configured in engine.py
