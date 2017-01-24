@@ -24,6 +24,7 @@ Various utility functions concerned with configuration.
 from openquake.baselib.python3compat import configparser, encode
 import os
 import sys
+from shutil import copy
 from contextlib import contextmanager
 
 OQDIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -41,6 +42,7 @@ class _Config(object):
     In the absence of this environment variable the configuration is located
     in the following way:
 
+        - in the 'oq-engine' GIT source code repo (when using it)
         - inside a platform specific, standard, location
             - XDG_CONFIG_HOME or ~/.config for Linux
             - ~/Library/Preferences for macOS
@@ -51,11 +53,15 @@ class _Config(object):
     Please note: settings in the site configuration file are overridden
     by settings with the same key names in the local configuration.
     """
+    SYS_PREFIX = "/etc"
     CFG_PREFIX = "openquake"
     CFG_FILE = "openquake.cfg"
+    CFG_TEMPLATE = (os.path.join(os.path.dirname(__file__),
+                    'config_templates', CFG_FILE))
     cfg = dict()
 
     def __init__(self):
+        self._file_init()
         self._load_from_file()
         self.job_id = -1
 
@@ -77,20 +83,42 @@ class _Config(object):
         else:
             local_prefix = os.environ.get('XDG_CONFIG_HOME', '~/.config')
 
-        paths = [os.path.normpath(os.path.join(local_prefix,
-                                               self.CFG_PREFIX,
-                                               self.CFG_FILE))]
+        local_path = os.path.join(local_prefix, self.CFG_PREFIX,
+                                  self.CFG_FILE)
 
+        paths = [local_path]
+
+        # when not running in a virtualenv system config
+        # has the highest priority
         if not hasattr(sys, 'real_prefix'):
-            # When not running in a virtualenv system
-            # config has the highest priority
-            paths.append(os.path.join('/etc', self.CFG_PREFIX, self.CFG_FILE))
+            paths.append(os.path.join(self.SYS_PREFIX, self.CFG_PREFIX,
+                                      self.CFG_FILE))
 
         env_path = os.environ.get('OQ_SITE_CFG_PATH')
         if env_path is not None:
-            paths.append = os.path.normpath(os.environ['OQ_SITE_CFG_PATH'])
+            paths.append(os.path.normpath(os.environ['OQ_SITE_CFG_PATH']))
+
+        # keep the old behaviour when git sources are used
+        if os.path.exists(os.path.join(OQDIR, self.CFG_FILE)):
+            paths.append(os.path.join(OQDIR, self.CFG_FILE))
+
+        # normalize all paths and resolve '~' in a single pass
+        paths = [os.path.normpath(os.path.expanduser(p)) for p in paths]
 
         return paths
+
+    def _file_init(self):
+        """Initialize a new config file if it does not exist yet."""
+        paths = self._get_paths()
+        if not os.path.exists(paths[-1]):
+            try:
+                if not os.path.exists(os.path.dirname(paths[-1])):
+                    os.makedirs(os.path.dirname(paths[-1]))
+                copy(self.CFG_TEMPLATE, paths[-1])
+            finally:
+                print('Could not find a configuration file in %s and '
+                      'could not create if from template.\n'
+                      % paths)
 
     def _load_from_file(self):
         """Load the config files, set up the section dictionaries."""
@@ -106,10 +134,6 @@ class _Config(object):
                 return True
         else:
             return False
-
-    def exists(self):
-        """Return `True` if at least one config file exists."""
-        return any(os.path.exists(path) for path in self._get_paths())
 
 
 cfg = _Config()  # the only instance of _Config
@@ -132,7 +156,7 @@ def context(section, **kw):
 
 def get_section(section):
     """A dictionary of key/value pairs for the given `section` or `None`."""
-    abort_if_no_config_available()
+    abort_if_no_config_readable()
     return cfg.get(section)
 
 
@@ -142,14 +166,8 @@ def get(section, key):
     return data.get(key) if data else None
 
 
-def abort_if_no_config_available():
+def abort_if_no_config_readable():
     """Call sys.exit() if no openquake configuration file is readable."""
-    if not cfg.exists():
-        msg = ('Could not find a configuration file in %s. '
-               'Probably your are not in the right directory'
-               % cfg._get_paths())
-        print(msg)
-        sys.exit(2)
     if not cfg.is_readable():
         msg = (
             "\nYou are not authorized to read any of the OpenQuake "
