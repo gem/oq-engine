@@ -13,5 +13,5 @@ Index: oq-engine/openquake.cfg
 +file = /var/lib/openquake/db.sqlite3
 +log = /var/lib/openquake/dbserver.log
  host = localhost
- port = 1908
- authkey = changeme
+ # port 1908 has a good reputation:
+ # https://isc.sans.edu/port.html?port=1908
