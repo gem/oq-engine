@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Fixed bug when running `oq info job.ini` with NRML 0.5 source models
+
 python-oq-engine (2.2.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
