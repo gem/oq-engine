@@ -30,7 +30,7 @@ Patch1: openquake.cfg.patch
 
 Requires(pre): shadow-utils
 
-Requires: python-oq-libs python-oq-hazardlib >= 0.22.0
+Requires: python-oq-libs python-oq-hazardlib >= 0.23.0
 Requires: sudo systemd python rabbitmq-server
 
 BuildRequires: systemd python-setuptools
