@@ -60,7 +60,7 @@ class _Config(object):
     CFG_PREFIX = "openquake"
     CFG_FILE = "openquake.cfg"
     CFG_TEMPLATE = (os.path.join(os.path.dirname(__file__),
-                    'config_templates', CFG_FILE))
+                    'cfg_samples', CFG_FILE))
     cfg = dict()
 
     def __init__(self):

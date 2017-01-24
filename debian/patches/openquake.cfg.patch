@@ -1,7 +1,7 @@
-Index: oq-engine/openquake.cfg
+Index: oq-engine/openquake/commonlib/cfg_samples/openquake.cfg
 ===================================================================
---- oq-engine.orig/openquake.cfg	2016-05-06 14:06:06.000000000 +0000
-+++ oq-engine/openquake.cfg	2016-05-06 16:23:04.006138759 +0000
+--- oq-engine.orig/openquake/commonlib/cfg_samples/openquake.cfg    2016-05-06 14:06:06.000000000 +0000
++++ oq-engine/openquake/commonlib/cfg_samples/openquake.cfg	2016-05-06 16:23:04.006138759 +0000
 @@ -40,9 +40,9 @@
  
  [dbserver]
