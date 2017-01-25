@@ -158,6 +158,8 @@ class SiteCollection(object):
             reference_depth_to_2pt5km_per_sec,
             reference_backarc
         """
+        if depths is None:
+            depths = numpy.zeros(len(lons))
         assert len(lons) == len(lats) == len(depths), (len(lons), len(lats),
                                                        len(depths))
         self = cls.__new__(cls)
