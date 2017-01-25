@@ -82,7 +82,7 @@ class _Config(object):
                 paths.append(sys_path)
 
         # path from env variable
-        if 'OQ_CONFIG_FILE_VAR' in os.environ:
+        if OQ_CONFIG_FILE_VAR in os.environ:
             paths.append(os.path.normpath(os.environ[OQ_CONFIG_FILE_VAR]))
 
         # normalize all paths and resolve '~' in a single pass
