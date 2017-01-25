@@ -74,14 +74,15 @@ class _Config(object):
         # path from python package
         paths.append(os.path.join(OQ_PATH, "engine", self.CFG_FILE))
 
-        # path from system etc dir
-        sys_path = os.path.join(self.ETC_PATH, self.CFG_FILE)
-        if os.path.exists(sys_path):
-            paths.append(sys_path)
+        # path from system etc dir, only if a venv is not active
+        venv = 'VIRTUAL_ENV' in os.environ or hasattr(sys, 'real_prefix')
+        if not venv:
+            sys_path = os.path.join(self.ETC_PATH, self.CFG_FILE)
+            if os.path.exists(sys_path):
+                paths.append(sys_path)
 
         # path from env variable
-        env_path = os.environ.get(OQ_CONFIG_FILE_VAR)
-        if env_path is not None:
+        if 'OQ_CONFIG_FILE_VAR' in os.environ:
             paths.append(os.path.normpath(os.environ[OQ_CONFIG_FILE_VAR]))
 
         # normalize all paths and resolve '~' in a single pass
