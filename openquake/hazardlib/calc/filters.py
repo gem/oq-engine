@@ -59,14 +59,12 @@ the index can be compensed. Finally, there is a function
 `filter_sites_by_distance_to_rupture` based on the Joyner-Boore distance.
 """
 import sys
-import logging
 from contextlib import contextmanager
 import numpy
 try:
     import rtree
 except ImportError:
     rtree = None
-    logging.warn('Cannot find the rtree module, using slow filtering')
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.hazardlib.geo.utils import fix_lons_idl
