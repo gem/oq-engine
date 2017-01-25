@@ -26,7 +26,7 @@ import os
 import sys
 from contextlib import contextmanager
 
-OQ_PATH = os.path.dirname((os.path.dirname(__file__)))
+OQ_PATH = os.path.dirname(os.path.dirname(__file__))
 #: Environment variable name for specifying a custom openquake.cfg.
 #: The file name doesn't matter.
 OQ_CONFIG_FILE_VAR = "OQ_CONFIG_FILE"
@@ -38,17 +38,16 @@ class _Config(object):
     Load the configuration, make each section available in a separate
     dict.
 
-    The configuration locations are specified via environment variables:
-        - OQ_SITE_CFG_PATH
-        - OQ_LOCAL_CFG_PATH
+    The configuration location can specified via an environment variables:
+        - OQ_CONFIG_FILE
 
-    In the absence of these environment variables the following hard-coded
-    paths will be used in order:
-        - /etc/openquake/openquake.cfg
-        - ./openquake.cfg
+    In the absence of this environment variable the following paths will be
+    used in order:
+        - /etc/openquake/openquake.cfg (only when running outside a venv)
+        - openquake/engine/openquake.cfg (from the python package)
 
     Please note: settings in the site configuration file are overridden
-    by settings with the same key names in the local configuration.
+    by settings with the same key names in the OQ_CONFIG_FILE openquake.cfg.
     """
     CFG_FILE = "openquake.cfg"
     ETC_PATH = "/etc/openquake"
