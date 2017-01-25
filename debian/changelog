@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed `oq engine --make-html-report` when using Python 3
   * Fixed bug when running `oq info job.ini` with NRML 0.5 source models
 
 python-oq-engine (2.2.0-0~precise01) precise; urgency=low
