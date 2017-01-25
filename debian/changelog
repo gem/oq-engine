@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the separator from comma to tab for the output `ruptures`
   * If there are no conditional_loss_poes, the engine does not try to
     export the loss maps anymore
   * Fixed `oq engine --make-html-report` when using Python 3
