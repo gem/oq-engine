@@ -186,5 +186,5 @@ def make_report(isodate='today'):
         'Report last updated: %s' % datetime.now())
     fname = 'jobs-%s.html' % isodate
     with open(fname, 'w') as f:
-        f.write(PAGE_TEMPLATE % page.encode('utf-8'))
+        f.write(PAGE_TEMPLATE % page)
     return fname
