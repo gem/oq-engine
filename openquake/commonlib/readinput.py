@@ -223,7 +223,7 @@ def sitecol_from_coords(oqparam, coords):
     Return a SiteCollection instance from an ordered set of coordinates
     """
     lons, lats = zip(*coords)
-    return site.SiteCollection.from_points(lons, lats, oqparam)
+    return site.SiteCollection.from_points(lons, lats, None, oqparam)
 
 
 def get_site_model(oqparam):
