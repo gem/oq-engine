@@ -1,4 +1,4 @@
-openquake.cfg                              /etc/openquake
+openquake/engine/openquake.cfg             /etc/openquake
 LICENSE                                    /usr/share/openquake/engine
 README.md                                  /usr/share/openquake/engine
 debian/supervisord/openquake-celery.conf   /etc/supervisor/conf.d

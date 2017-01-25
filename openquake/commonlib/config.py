@@ -26,7 +26,7 @@ import os
 import sys
 from contextlib import contextmanager
 
-OQDIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+OQ_PATH = os.path.dirname((os.path.dirname(__file__)))
 #: Environment variable name for specifying a custom openquake.cfg.
 #: The file name doesn't matter.
 OQ_CONFIG_FILE_VAR = "OQ_CONFIG_FILE"
@@ -50,8 +50,9 @@ class _Config(object):
     Please note: settings in the site configuration file are overridden
     by settings with the same key names in the local configuration.
     """
-    GLOBAL_PATH = "/etc/openquake/openquake.cfg"
-    LOCAL_PATH = os.path.join(OQDIR, "openquake.cfg")
+    CFG_FILE = "openquake.cfg"
+    ETC_PATH = "/etc/openquake"
+    PKG_PATH = os.path.join(OQ_PATH, "engine", CFG_FILE)
     cfg = dict()
 
     def __init__(self):
@@ -68,16 +69,23 @@ class _Config(object):
 
     def _get_paths(self):
         """Return the paths for the global/local configuration files."""
-        global_path = os.environ.get("OQ_SITE_CFG_PATH", self.GLOBAL_PATH)
-        local_path = os.environ.get(
-            "OQ_LOCAL_CFG_PATH", os.path.abspath(self.LOCAL_PATH))
-        paths = [global_path, local_path]
+        paths = []
 
-        # User specified
-        user_path = os.environ.get(OQ_CONFIG_FILE_VAR)
-        if user_path is not None:
-            paths.append(user_path)
-        return paths
+        # path from python package
+        paths.append(os.path.join(OQ_PATH, "engine", self.CFG_FILE))
+
+        # path from system etc dir
+        sys_path = os.path.join(self.ETC_PATH, self.CFG_FILE)
+        if os.path.exists(sys_path):
+            paths.append(sys_path)
+
+        # path from env variable
+        env_path = os.environ.get(OQ_CONFIG_FILE_VAR)
+        if env_path is not None:
+            paths.append(os.path.normpath(os.environ[OQ_CONFIG_FILE_VAR]))
+
+        # normalize all paths and resolve '~' in a single pass
+        return [os.path.normpath(os.path.expanduser(p)) for p in paths]
 
     def _load_from_file(self):
         """Load the config files, set up the section dictionaries."""
