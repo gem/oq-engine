@@ -75,10 +75,8 @@ class _Config(object):
 
         # path from system etc dir, only if a venv is not active
         venv = 'VIRTUAL_ENV' in os.environ or hasattr(sys, 'real_prefix')
-        if not venv:
-            sys_path = self.ETC_PATH
-            if os.path.exists(sys_path):
-                paths.append(sys_path)
+        if not venv and os.path.exists(self.ETC_PATH):
+            paths.append(self.ETC_PATH)
 
         # path from env variable
         if OQ_CONFIG_FILE_VAR in os.environ:
