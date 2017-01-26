@@ -2,30 +2,31 @@ Classical Hazard QA Test, Case 4
 ================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_66985.hdf5 Wed Nov  9 08:15:21 2016
-engine_version                                 2.2.0-git54d01f4        
-hazardlib_version                              0.22.0-git173c60c       
+gem-tstation:/home/michele/ssd/calc_80560.hdf5 Thu Jan 26 05:25:26 2017
+engine_version                                 2.3.0-gitd31dc69        
+hazardlib_version                              0.23.0-git4d14bee       
 ============================================== ========================
 
-num_sites = 1, sitecol = 739 B
+num_sites = 1, sitecol = 762 B
 
 Parameters
 ----------
-============================ ================================
-calculation_mode             'classical'                     
-number_of_logic_tree_samples 0                               
-maximum_distance             {u'active shallow crust': 200.0}
-investigation_time           1.0                             
-ses_per_logic_tree_path      1                               
-truncation_level             0.0                             
-rupture_mesh_spacing         0.01                            
-complex_fault_mesh_spacing   0.01                            
-width_of_mfd_bin             1.0                             
-area_source_discretization   10.0                            
-random_seed                  1066                            
-master_seed                  0                               
-sites_per_tile               10000                           
-============================ ================================
+=============================== ===============================
+calculation_mode                'classical'                    
+number_of_logic_tree_samples    0                              
+maximum_distance                {'active shallow crust': 200.0}
+investigation_time              1.0                            
+ses_per_logic_tree_path         1                              
+truncation_level                0.0                            
+rupture_mesh_spacing            0.01                           
+complex_fault_mesh_spacing      0.01                           
+width_of_mfd_bin                1.0                            
+area_source_discretization      10.0                           
+ground_motion_correlation_model None                           
+random_seed                     1066                           
+master_seed                     0                              
+sites_per_tile                  10000                          
+=============================== ===============================
 
 Input files
 -----------
@@ -72,23 +73,24 @@ source_model.xml 0      Active Shallow Crust 1           901          901
 
 Informational data
 ------------------
-======================================== ============
-count_eff_ruptures_max_received_per_task 1,255       
-count_eff_ruptures_num_tasks             1           
-count_eff_ruptures_sent.gsims            82          
-count_eff_ruptures_sent.monitor          1,015       
-count_eff_ruptures_sent.sitecol          577         
-count_eff_ruptures_sent.sources          1,078       
-count_eff_ruptures_tot_received          1,255       
-hazard.input_weight                      901         
-hazard.n_imts                            1           
-hazard.n_levels                          3           
-hazard.n_realizations                    1           
-hazard.n_sites                           1           
-hazard.n_sources                         1           
-hazard.output_weight                     3.000       
-hostname                                 gem-tstation
-======================================== ============
+=========================================== ============
+count_eff_ruptures_max_received_per_task    1,215       
+count_eff_ruptures_num_tasks                1           
+count_eff_ruptures_sent.gsims               91          
+count_eff_ruptures_sent.monitor             992         
+count_eff_ruptures_sent.sitecol             598         
+count_eff_ruptures_sent.sources             1,073       
+count_eff_ruptures_tot_received             1,215       
+hazard.input_weight                         901         
+hazard.n_imts                               1           
+hazard.n_levels                             3           
+hazard.n_realizations                       1           
+hazard.n_sites                              1           
+hazard.n_sources                            1           
+hazard.output_weight                        3.000       
+hostname                                    gem-tstation
+require_epsilons                            False       
+=========================================== ============
 
 Slowest sources
 ---------------
@@ -110,7 +112,7 @@ Information about the tasks
 ---------------------------
 ================== ========= ====== ========= ========= =========
 operation-duration mean      stddev min       max       num_tasks
-count_eff_ruptures 8.001E-04 NaN    8.001E-04 8.001E-04 1        
+count_eff_ruptures 7.222E-04 NaN    7.222E-04 7.222E-04 1        
 ================== ========= ====== ========= ========= =========
 
 Slowest operations
@@ -118,13 +120,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.631     0.0       1     
-managing sources                 0.548     0.0       1     
-split/filter heavy sources       0.546     0.0       1     
+reading composite source model   0.686     0.0       1     
+managing sources                 0.004     0.0       1     
+split/filter heavy sources       0.003     0.0       1     
 filtering composite source model 0.002     0.0       1     
-total count_eff_ruptures         8.001E-04 0.0       1     
-store source_info                5.322E-04 0.0       1     
-reading site collection          3.505E-05 0.0       1     
-saving probability maps          2.003E-05 0.0       1     
-aggregate curves                 1.597E-05 0.0       1     
+total count_eff_ruptures         7.222E-04 0.0       1     
+store source_info                5.829E-04 0.0       1     
+reading site collection          3.767E-05 0.0       1     
+saving probability maps          2.742E-05 0.0       1     
+aggregate curves                 1.717E-05 0.0       1     
 ================================ ========= ========= ======

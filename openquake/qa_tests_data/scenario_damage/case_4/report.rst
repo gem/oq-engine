@@ -2,29 +2,30 @@ Scenario Damage QA Test 4
 =========================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_66936.hdf5 Wed Nov  9 08:14:04 2016
-engine_version                                 2.2.0-git54d01f4        
-hazardlib_version                              0.22.0-git173c60c       
+gem-tstation:/home/michele/ssd/calc_80510.hdf5 Thu Jan 26 05:24:18 2017
+engine_version                                 2.3.0-gitd31dc69        
+hazardlib_version                              0.23.0-git4d14bee       
 ============================================== ========================
 
-num_sites = 3, sitecol = 831 B
+num_sites = 3, sitecol = 854 B
 
 Parameters
 ----------
-============================ =================
-calculation_mode             'scenario'       
-number_of_logic_tree_samples 0                
-maximum_distance             {u'default': 300}
-investigation_time           None             
-ses_per_logic_tree_path      1                
-truncation_level             3.0              
-rupture_mesh_spacing         10.0             
-complex_fault_mesh_spacing   10.0             
-width_of_mfd_bin             None             
-area_source_discretization   None             
-random_seed                  3                
-master_seed                  0                
-============================ =================
+=============================== =================
+calculation_mode                'scenario_damage'
+number_of_logic_tree_samples    0                
+maximum_distance                {'default': 300} 
+investigation_time              None             
+ses_per_logic_tree_path         1                
+truncation_level                3.0              
+rupture_mesh_spacing            10.0             
+complex_fault_mesh_spacing      10.0             
+width_of_mfd_bin                None             
+area_source_discretization      None             
+ground_motion_correlation_model None             
+random_seed                     3                
+master_seed                     0                
+=============================== =================
 
 Input files
 -----------
@@ -67,7 +68,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.004     0.0       1     
-reading exposure        0.002     0.0       1     
-reading site collection 6.914E-06 0.0       1     
+filtering sites         0.005     0.0       1     
+reading exposure        0.003     0.0       1     
+reading site collection 7.391E-06 0.0       1     
 ======================= ========= ========= ======
