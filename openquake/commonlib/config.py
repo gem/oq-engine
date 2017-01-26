@@ -50,7 +50,7 @@ class _Config(object):
     by settings with the same key names in the OQ_CONFIG_FILE openquake.cfg.
     """
     CFG_FILE = "openquake.cfg"
-    ETC_PATH = "/etc/openquake"
+    ETC_PATH = os.path.join("/etc/openquake", CFG_FILE)
     PKG_PATH = os.path.join(OQ_PATH, "engine", CFG_FILE)
     cfg = dict()
 
@@ -76,7 +76,7 @@ class _Config(object):
         # path from system etc dir, only if a venv is not active
         venv = 'VIRTUAL_ENV' in os.environ or hasattr(sys, 'real_prefix')
         if not venv:
-            sys_path = os.path.join(self.ETC_PATH, self.CFG_FILE)
+            sys_path = self.ETC_PATH
             if os.path.exists(sys_path):
                 paths.append(sys_path)
 
