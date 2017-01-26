@@ -4,7 +4,7 @@ openquake.hazardlib.gsim package
 Ground-shaking intensity models
 -------------------------------
 
-openquake.hazardlib.gsim.abrahamson_2014 module
+abrahamson_2014
 -----------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.abrahamson_2014
@@ -12,7 +12,7 @@ openquake.hazardlib.gsim.abrahamson_2014 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.abrahamson_2015 module
+abrahamson_2015
 -----------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.abrahamson_2015
@@ -20,7 +20,7 @@ openquake.hazardlib.gsim.abrahamson_2015 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.abrahamson_silva_1997 module
+abrahamson_silva_1997
 -----------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.abrahamson_silva_1997
@@ -28,7 +28,7 @@ openquake.hazardlib.gsim.abrahamson_silva_1997 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.abrahamson_silva_2008 module
+abrahamson_silva_2008
 -----------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.abrahamson_silva_2008
@@ -36,7 +36,7 @@ openquake.hazardlib.gsim.abrahamson_silva_2008 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.akkar_2013 module
+akkar_2013
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.akkar_2013
@@ -44,7 +44,7 @@ openquake.hazardlib.gsim.akkar_2013 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.akkar_2014 module
+akkar_2014
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.akkar_2014
@@ -52,7 +52,7 @@ openquake.hazardlib.gsim.akkar_2014 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.akkar_bommer_2010 module
+akkar_bommer_2010
 -------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.akkar_bommer_2010
@@ -60,7 +60,7 @@ openquake.hazardlib.gsim.akkar_bommer_2010 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.akkar_bommer_2010_swiss_coeffs module
+akkar_bommer_2010_swiss_coeffs
 --------------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.akkar_bommer_2010_swiss_coeffs
@@ -68,7 +68,7 @@ openquake.hazardlib.gsim.akkar_bommer_2010_swiss_coeffs module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.akkar_cagnan_2010 module
+akkar_cagnan_2010
 -------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.akkar_cagnan_2010
@@ -76,7 +76,7 @@ openquake.hazardlib.gsim.akkar_cagnan_2010 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.allen_2012 module
+allen_2012
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.allen_2012
@@ -84,7 +84,7 @@ openquake.hazardlib.gsim.allen_2012 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.allen_2012_ipe module
+allen_2012_ipe
 ----------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.allen_2012_ipe
@@ -92,7 +92,7 @@ openquake.hazardlib.gsim.allen_2012_ipe module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.atkinson_2015 module
+atkinson_2015
 ---------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.atkinson_2015
@@ -100,7 +100,7 @@ openquake.hazardlib.gsim.atkinson_2015 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.atkinson_boore_1995 module
+atkinson_boore_1995
 ---------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.atkinson_boore_1995
@@ -108,7 +108,7 @@ openquake.hazardlib.gsim.atkinson_boore_1995 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.atkinson_boore_2003 module
+atkinson_boore_2003
 ---------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.atkinson_boore_2003
@@ -116,7 +116,7 @@ openquake.hazardlib.gsim.atkinson_boore_2003 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.atkinson_boore_2006 module
+atkinson_boore_2006
 ---------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.atkinson_boore_2006
@@ -124,7 +124,7 @@ openquake.hazardlib.gsim.atkinson_boore_2006 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.atkinson_macias_2009 module
+atkinson_macias_2009
 ----------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.atkinson_macias_2009
@@ -132,7 +132,7 @@ openquake.hazardlib.gsim.atkinson_macias_2009 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.base module
+base
 ------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.base
@@ -140,7 +140,7 @@ openquake.hazardlib.gsim.base module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.berge_thierry_2003 module
+berge_thierry_2003
 --------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.berge_thierry_2003
@@ -148,7 +148,7 @@ openquake.hazardlib.gsim.berge_thierry_2003 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.bindi_2011 module
+bindi_2011
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.bindi_2011
@@ -156,7 +156,7 @@ openquake.hazardlib.gsim.bindi_2011 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.bindi_2014 module
+bindi_2014
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.bindi_2014
@@ -164,7 +164,7 @@ openquake.hazardlib.gsim.bindi_2014 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.boore_1993 module
+boore_1993
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.boore_1993
@@ -172,7 +172,7 @@ openquake.hazardlib.gsim.boore_1993 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.boore_1997 module
+boore_1997
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.boore_1997
@@ -180,7 +180,7 @@ openquake.hazardlib.gsim.boore_1997 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.boore_2014 module
+boore_2014
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.boore_2014
@@ -188,7 +188,7 @@ openquake.hazardlib.gsim.boore_2014 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.boore_atkinson_2008 module
+boore_atkinson_2008
 ---------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.boore_atkinson_2008
@@ -196,7 +196,7 @@ openquake.hazardlib.gsim.boore_atkinson_2008 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.boore_atkinson_2011 module
+boore_atkinson_2011
 ---------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.boore_atkinson_2011
@@ -204,7 +204,7 @@ openquake.hazardlib.gsim.boore_atkinson_2011 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.bradley_2013 module
+bradley_2013
 --------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.bradley_2013
@@ -212,7 +212,7 @@ openquake.hazardlib.gsim.bradley_2013 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.campbell_2003 module
+campbell_2003
 ---------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.campbell_2003
@@ -220,7 +220,7 @@ openquake.hazardlib.gsim.campbell_2003 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.campbell_bozorgnia_2003 module
+campbell_bozorgnia_2003
 -------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.campbell_bozorgnia_2003
@@ -228,7 +228,7 @@ openquake.hazardlib.gsim.campbell_bozorgnia_2003 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.campbell_bozorgnia_2008 module
+campbell_bozorgnia_2008
 -------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.campbell_bozorgnia_2008
@@ -236,7 +236,7 @@ openquake.hazardlib.gsim.campbell_bozorgnia_2008 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.campbell_bozorgnia_2014 module
+campbell_bozorgnia_2014
 -------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.campbell_bozorgnia_2014
@@ -244,7 +244,7 @@ openquake.hazardlib.gsim.campbell_bozorgnia_2014 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.cauzzi_2014 module
+cauzzi_2014
 -------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.cauzzi_2014
@@ -252,7 +252,7 @@ openquake.hazardlib.gsim.cauzzi_2014 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.cauzzi_faccioli_2008 module
+cauzzi_faccioli_2008
 ----------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.cauzzi_faccioli_2008
@@ -260,7 +260,7 @@ openquake.hazardlib.gsim.cauzzi_faccioli_2008 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.cauzzi_faccioli_2008_swiss module
+cauzzi_faccioli_2008_swiss
 ----------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.cauzzi_faccioli_2008_swiss
@@ -268,7 +268,7 @@ openquake.hazardlib.gsim.cauzzi_faccioli_2008_swiss module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.cauzzi_faccioli_2008_swiss_coeffs module
+cauzzi_faccioli_2008_swiss_coeffs
 -----------------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.cauzzi_faccioli_2008_swiss_coeffs
@@ -276,7 +276,7 @@ openquake.hazardlib.gsim.cauzzi_faccioli_2008_swiss_coeffs module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.chiou_youngs_2008 module
+chiou_youngs_2008
 -------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.chiou_youngs_2008
@@ -284,7 +284,7 @@ openquake.hazardlib.gsim.chiou_youngs_2008 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.chiou_youngs_2008_swiss module
+chiou_youngs_2008_swiss
 -------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.chiou_youngs_2008_swiss
@@ -292,7 +292,7 @@ openquake.hazardlib.gsim.chiou_youngs_2008_swiss module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.chiou_youngs_2008_swiss_coeffs module
+chiou_youngs_2008_swiss_coeffs
 --------------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.chiou_youngs_2008_swiss_coeffs
@@ -300,7 +300,7 @@ openquake.hazardlib.gsim.chiou_youngs_2008_swiss_coeffs module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.chiou_youngs_2014 module
+chiou_youngs_2014
 -------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.chiou_youngs_2014
@@ -308,7 +308,7 @@ openquake.hazardlib.gsim.chiou_youngs_2014 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.climent_1994 module
+climent_1994
 --------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.climent_1994
@@ -316,7 +316,7 @@ openquake.hazardlib.gsim.climent_1994 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.convertito_2012 module
+convertito_2012
 -----------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.convertito_2012
@@ -324,7 +324,7 @@ openquake.hazardlib.gsim.convertito_2012 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.dost_2004 module
+dost_2004
 -----------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.dost_2004
@@ -332,7 +332,7 @@ openquake.hazardlib.gsim.dost_2004 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.douglas_stochastic_2013 module
+douglas_stochastic_2013
 -------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.douglas_stochastic_2013
@@ -340,7 +340,7 @@ openquake.hazardlib.gsim.douglas_stochastic_2013 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.dowrickrhoades_2005 module
+dowrickrhoades_2005
 ---------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.dowrickrhoades_2005
@@ -348,7 +348,7 @@ openquake.hazardlib.gsim.dowrickrhoades_2005 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.drouet_2015_brazil module
+drouet_2015_brazil
 --------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.drouet_2015_brazil
@@ -356,7 +356,7 @@ openquake.hazardlib.gsim.drouet_2015_brazil module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.edwards_fah_2013a module
+edwards_fah_2013a
 -------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.edwards_fah_2013a
@@ -364,7 +364,7 @@ openquake.hazardlib.gsim.edwards_fah_2013a module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.edwards_fah_2013a_coeffs module
+edwards_fah_2013a_coeffs
 --------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.edwards_fah_2013a_coeffs
@@ -372,7 +372,7 @@ openquake.hazardlib.gsim.edwards_fah_2013a_coeffs module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.edwards_fah_2013f module
+edwards_fah_2013f
 -------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.edwards_fah_2013f
@@ -380,7 +380,7 @@ openquake.hazardlib.gsim.edwards_fah_2013f module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.edwards_fah_2013f_coeffs module
+edwards_fah_2013f_coeffs
 --------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.edwards_fah_2013f_coeffs
@@ -388,7 +388,7 @@ openquake.hazardlib.gsim.edwards_fah_2013f_coeffs module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.faccioli_2010 module
+faccioli_2010
 ---------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.faccioli_2010
@@ -396,7 +396,7 @@ openquake.hazardlib.gsim.faccioli_2010 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.frankel_1996 module
+frankel_1996
 --------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.frankel_1996
@@ -404,7 +404,7 @@ openquake.hazardlib.gsim.frankel_1996 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.fukushima_tanaka_1990 module
+fukushima_tanaka_1990
 -----------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.fukushima_tanaka_1990
@@ -412,7 +412,7 @@ openquake.hazardlib.gsim.fukushima_tanaka_1990 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.garcia_2005 module
+garcia_2005
 -------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.garcia_2005
@@ -420,7 +420,7 @@ openquake.hazardlib.gsim.garcia_2005 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.geomatrix_1993 module
+geomatrix_1993
 ----------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.geomatrix_1993
@@ -428,7 +428,7 @@ openquake.hazardlib.gsim.geomatrix_1993 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.ghofrani_atkinson_2014 module
+ghofrani_atkinson_2014
 ------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.ghofrani_atkinson_2014
@@ -436,7 +436,7 @@ openquake.hazardlib.gsim.ghofrani_atkinson_2014 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.gsim_table module
+gsim_table
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.gsim_table
@@ -444,7 +444,7 @@ openquake.hazardlib.gsim.gsim_table module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.gupta_2010 module
+gupta_2010
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.gupta_2010
@@ -452,7 +452,7 @@ openquake.hazardlib.gsim.gupta_2010 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.hong_goda_2007 module
+hong_goda_2007
 ----------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.hong_goda_2007
@@ -460,7 +460,7 @@ openquake.hazardlib.gsim.hong_goda_2007 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.idriss_2014 module
+idriss_2014
 -------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.idriss_2014
@@ -468,7 +468,7 @@ openquake.hazardlib.gsim.idriss_2014 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.kale_2015 module
+kale_2015
 -----------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.kale_2015
@@ -476,7 +476,7 @@ openquake.hazardlib.gsim.kale_2015 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.kanno_2006 module
+kanno_2006
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.kanno_2006
@@ -484,7 +484,7 @@ openquake.hazardlib.gsim.kanno_2006 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.kotha_2016 module
+kotha_2016
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.kotha_2016
@@ -492,7 +492,7 @@ openquake.hazardlib.gsim.kotha_2016 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.lin_2009 module
+lin_2009
 ----------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.lin_2009
@@ -500,7 +500,7 @@ openquake.hazardlib.gsim.lin_2009 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.lin_lee_2008 module
+lin_lee_2008
 --------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.lin_lee_2008
@@ -508,7 +508,7 @@ openquake.hazardlib.gsim.lin_lee_2008 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.mcverry_2006 module
+mcverry_2006
 --------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.mcverry_2006
@@ -516,7 +516,7 @@ openquake.hazardlib.gsim.mcverry_2006 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.megawati_2003 module
+megawati_2003
 ---------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.megawati_2003
@@ -524,7 +524,7 @@ openquake.hazardlib.gsim.megawati_2003 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.megawati_pan_2010 module
+megawati_pan_2010
 -------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.megawati_pan_2010
@@ -532,7 +532,7 @@ openquake.hazardlib.gsim.megawati_pan_2010 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.montalva_2016 module
+montalva_2016
 ---------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.montalva_2016
@@ -540,7 +540,7 @@ openquake.hazardlib.gsim.montalva_2016 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.nath_2012 module
+nath_2012
 -----------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.nath_2012
@@ -548,7 +548,7 @@ openquake.hazardlib.gsim.nath_2012 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.nshmp_2014 module
+nshmp_2014
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.nshmp_2014
@@ -556,7 +556,7 @@ openquake.hazardlib.gsim.nshmp_2014 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.pezeshk_2011 module
+pezeshk_2011
 --------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.pezeshk_2011
@@ -564,7 +564,7 @@ openquake.hazardlib.gsim.pezeshk_2011 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.raghukanth_iyengar_2007 module
+raghukanth_iyengar_2007
 -------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.raghukanth_iyengar_2007
@@ -572,7 +572,7 @@ openquake.hazardlib.gsim.raghukanth_iyengar_2007 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.rietbrock_2013 module
+rietbrock_2013
 ----------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.rietbrock_2013
@@ -580,7 +580,7 @@ openquake.hazardlib.gsim.rietbrock_2013 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.sadigh_1997 module
+sadigh_1997
 -------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.sadigh_1997
@@ -588,7 +588,7 @@ openquake.hazardlib.gsim.sadigh_1997 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.sharma_2009 module
+sharma_2009
 -------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.sharma_2009
@@ -596,7 +596,7 @@ openquake.hazardlib.gsim.sharma_2009 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.si_midorikawa_1999 module
+si_midorikawa_1999
 --------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.si_midorikawa_1999
@@ -604,7 +604,7 @@ openquake.hazardlib.gsim.si_midorikawa_1999 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.silva_2002 module
+silva_2002
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.silva_2002
@@ -612,7 +612,7 @@ openquake.hazardlib.gsim.silva_2002 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.somerville_2001 module
+somerville_2001
 -----------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.somerville_2001
@@ -620,7 +620,7 @@ openquake.hazardlib.gsim.somerville_2001 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.somerville_2009 module
+somerville_2009
 -----------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.somerville_2009
@@ -628,7 +628,7 @@ openquake.hazardlib.gsim.somerville_2009 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.tavakoli_pezeshk_2005 module
+tavakoli_pezeshk_2005
 -----------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.tavakoli_pezeshk_2005
@@ -636,7 +636,7 @@ openquake.hazardlib.gsim.tavakoli_pezeshk_2005 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.toro_1997 module
+toro_1997
 -----------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.toro_1997
@@ -644,7 +644,7 @@ openquake.hazardlib.gsim.toro_1997 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.toro_2002 module
+toro_2002
 -----------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.toro_2002
@@ -652,7 +652,7 @@ openquake.hazardlib.gsim.toro_2002 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.travasarou_2003 module
+travasarou_2003
 -----------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.travasarou_2003
@@ -660,7 +660,7 @@ openquake.hazardlib.gsim.travasarou_2003 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.tusa_langer_2015 module
+tusa_langer_2015
 ------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.tusa_langer_2015
@@ -668,7 +668,7 @@ openquake.hazardlib.gsim.tusa_langer_2015 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.utils module
+utils
 -------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.utils
@@ -676,7 +676,7 @@ openquake.hazardlib.gsim.utils module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.utils_swiss_gmpe module
+utils_swiss_gmpe
 ------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.utils_swiss_gmpe
@@ -684,7 +684,7 @@ openquake.hazardlib.gsim.utils_swiss_gmpe module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.youngs_1997 module
+youngs_1997
 -------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.youngs_1997
@@ -692,7 +692,7 @@ openquake.hazardlib.gsim.youngs_1997 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.zhao_2006 module
+zhao_2006
 -----------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.zhao_2006
@@ -700,7 +700,7 @@ openquake.hazardlib.gsim.zhao_2006 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.zhao_2006_swiss module
+zhao_2006_swiss
 -----------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.zhao_2006_swiss
@@ -708,19 +708,10 @@ openquake.hazardlib.gsim.zhao_2006_swiss module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.gsim.zhao_2006_swiss_coeffs module
+zhao_2006_swiss_coeffs
 ------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.zhao_2006_swiss_coeffs
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: openquake.hazardlib.gsim
     :members:
     :undoc-members:
     :show-inheritance:

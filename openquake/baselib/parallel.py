@@ -391,7 +391,7 @@ class IterResult(object):
                           humansize(max(self.received)))
 
     def save_task_data(self, mon):
-        if hasattr(mon, 'weight'):
+        if mon.hdf5path and hasattr(mon, 'weight'):
             duration = mon.children[0].duration  # the task is the first child
             tup = (mon.task_no, mon.weight, duration)
             data = numpy.array([tup], self.task_data_dt)

@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Added NRML support for GriddedSurface and GriddedRupture objects
+  * Removed the warning about missing rtree
 
 python-oq-hazardlib (0.22.0-0~precise01) precise; urgency=low
 
