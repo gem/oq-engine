@@ -480,6 +480,11 @@ class RuptureConverter(object):
             surface = geo.ComplexFaultSurface.from_fault_data(
                 self.geo_lines(surface_node),
                 self.complex_fault_mesh_spacing)
+        elif surface_node.tag.endswith('griddedSurface'):
+            with context(self.fname, surface_node):
+                coords = split_coords_3d(~surface_node.posList)
+            points = [geo.Point(*p) for p in coords]
+            surface = geo.GriddedSurface.from_points_list(points)
         else:  # a collection of planar surfaces
             planar_surfaces = list(map(self.geo_planar, surface_nodes))
             surface = geo.MultiSurface(planar_surfaces)
@@ -551,6 +556,25 @@ class RuptureConverter(object):
         """
         with context(self.fname, node):
             surfaces = list(node.getnodes('planarSurface'))
+        rupt = source.rupture.Rupture(
+            mag=mag, rake=rake,
+            tectonic_region_type=None,
+            hypocenter=hypocenter,
+            surface=self.convert_surfaces(surfaces),
+            source_typology=source.NonParametricSeismicSource)
+        return rupt
+
+    def convert_griddedRupture(self, node, mag, rake, hypocenter):
+        """
+        Convert a griddedRupture node.
+
+        :param node: the rupture node
+        :param mag: the rupture magnitude
+        :param rake: the rupture rake angle
+        :param hypocenter: the rupture hypocenter
+        """
+        with context(self.fname, node):
+            surfaces = [node.griddedSurface]
         rupt = source.rupture.Rupture(
             mag=mag, rake=rake,
             tectonic_region_type=None,

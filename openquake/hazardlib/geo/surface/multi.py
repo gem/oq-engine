@@ -27,9 +27,9 @@ from openquake.hazardlib.geo.surface.base import (BaseSurface,
                                                   downsample_trace)
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import utils
-from openquake.hazardlib.geo.surface import (PlanarSurface,
-                                             SimpleFaultSurface,
-                                             ComplexFaultSurface)
+from openquake.hazardlib.geo.surface import (
+    PlanarSurface, SimpleFaultSurface, ComplexFaultSurface)
+from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 
 
 class MultiSurface(BaseSurface):
@@ -131,7 +131,9 @@ class MultiSurface(BaseSurface):
         """
         edges = []
         for surface in self.surfaces:
-            if isinstance(surface, PlanarSurface):
+            if isinstance(surface, GriddedSurface):
+                return edges.append(surface.mesh)
+            elif isinstance(surface, PlanarSurface):
                 # Top edge determined from two end points
                 edge = []
                 for pnt in [surface.top_left, surface.top_right]:
