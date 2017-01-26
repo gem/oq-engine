@@ -47,12 +47,11 @@ class MeanCurveTestCase(unittest.TestCase):
 class QuantileCurveTestCase(unittest.TestCase):
 
     def test_compute_quantile_curve(self):
-        expected_curve = numpy.array([
-            9.9178000e-01, 9.8892000e-01, 9.6903000e-01, 9.4030000e-01,
-            8.8405000e-01, 7.8782000e-01, 6.4897250e-01, 4.8284250e-01,
-            3.4531500e-01, 3.2337000e-01, 1.8880500e-01, 9.5574000e-02,
-            4.3707250e-02, 1.9643000e-02, 8.1923000e-03, 2.9157000e-03,
-            7.9955000e-04, 1.5233000e-04, 1.5582000e-05])
+        expected_curve = numpy.array(
+            [0.9910475, 0.9879525, 0.9667025, 0.9366125, 0.8806675, 0.7864,
+             0.64627, 0.47537, 0.335625, 0.3135875, 0.1807475, 0.091399,
+             0.042766, 0.0191415, 0.00796135, 0.002823625, 0.00077053,
+             0.0001457375, 1.489975e-05])
 
         quantile = 0.75
 
@@ -84,18 +83,7 @@ class QuantileCurveTestCase(unittest.TestCase):
              7.9955000e-04, 1.5233000e-04, 1.5582000e-05],
         ]
         actual_curve = quantile_curve(curves, quantile)
-
-        # TODO(LB): Check with our hazard experts to see if this is reasonable
-        # tolerance. Better yet, get a fresh set of test data. (This test data
-        # was just copied verbatim from from some old tests in
-        # `tests/hazard_test.py`.
         numpy.testing.assert_allclose(expected_curve, actual_curve, atol=0.005)
-
-        # Since this implementation is an optimized but equivalent version of
-        # scipy's `mquantiles`, compare algorithms just to prove they are the
-        # same:
-        scipy_curve = mstats.mquantiles(curves, prob=quantile, axis=0)[0]
-        numpy.testing.assert_allclose(scipy_curve, actual_curve)
 
     def test_compute_weighted_quantile_curve_case1(self):
         expected_curve = numpy.array([0.69909, 0.60859, 0.50328])
