@@ -45,7 +45,8 @@ def quantile_curve(curves, quantile, weights=None):
     :returns:
         A numpy array representing the quantile aggregate
     """
-    assert len(curves)
+    R = len(curves)
+    assert R, 'Passed no curves!'
     if weights is not None:
         weights = numpy.array(weights)
         assert len(weights) == len(curves)
@@ -63,21 +64,9 @@ def quantile_curve(curves, quantile, weights=None):
 
 def _quantile_curve(arr, quantile, weights):
     # arr is a 2D array of shape (R, N)
+    R = len(arr)
     if weights is None:
-        # this implementation is an alternative to
-        # numpy.array(mstats.mquantiles(curves, prob=quantile, axis=0))[0]
-        # more or less copied from the scipy mquantiles function, just special
-        # cased for what we need (and a lot faster)
-        p = numpy.array(quantile)
-        m = 0.4 + p * 0.2
-        n = len(arr)
-        aleph = n * p + m
-        k = numpy.floor(aleph.clip(1, n - 1)).astype(int)
-        gamma = (aleph - k).clip(0, 1)
-        data = numpy.sort(arr, axis=0).transpose()
-        qcurve = (1.0 - gamma) * data[:, k - 1] + gamma * data[:, k]
-        return qcurve
-
+        weights = numpy.ones(R) / R
     result_curve = []
     for poes in arr.transpose():
         sorted_poe_idxs = numpy.argsort(poes)
