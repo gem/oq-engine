@@ -288,8 +288,6 @@ def view_params(token, dstore):
               'ground_motion_correlation_model', 'random_seed', 'master_seed']
     if 'risk' in oq.calculation_mode:
         params.append('avg_losses')
-    if 'classical' in oq.calculation_mode:
-        params.append('sites_per_tile')
     return rst_table([(param, repr(getattr(oq, param, None)))
                       for param in params])
 

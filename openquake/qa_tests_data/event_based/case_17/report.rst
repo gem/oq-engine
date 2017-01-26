@@ -2,9 +2,9 @@ Event Based Hazard QA Test, Case 17
 ===================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80573.hdf5 Thu Jan 26 05:25:51 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81079.hdf5 Thu Jan 26 14:29:49 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 1, sitecol = 762 B
@@ -53,7 +53,7 @@ Required parameters per tectonic region type
 ====== ================ ========= ========== ==========
 grp_id gsims            distances siteparams ruptparams
 ====== ================ ========= ========== ==========
-1      SadighEtAl1997() rrup      vs30       rake mag  
+1      SadighEtAl1997() rrup      vs30       mag rake  
 ====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -122,7 +122,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.015 0.010  0.008 0.022 2        
+compute_ruptures   0.015 0.011  0.007 0.023 2        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -131,12 +131,12 @@ Slowest operations
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
 total compute_ruptures           0.030     0.0       2     
-saving ruptures                  0.024     0.0       2     
+saving ruptures                  0.020     0.0       2     
 reading composite source model   0.006     0.0       1     
 managing sources                 0.003     0.0       1     
 filtering composite source model 0.003     0.0       1     
 setting event years              0.003     0.0       1     
-filtering ruptures               0.002     0.0       3     
-store source_info                9.665E-04 0.0       1     
-reading site collection          5.388E-05 0.0       1     
+filtering ruptures               0.001     0.0       3     
+store source_info                8.285E-04 0.0       1     
+reading site collection          4.745E-05 0.0       1     
 ================================ ========= ========= ======

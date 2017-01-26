@@ -2,9 +2,9 @@ Scenario Risk with site model
 =============================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80595.hdf5 Thu Jan 26 05:26:39 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81101.hdf5 Thu Jan 26 14:30:38 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 12, sitecol = 1.62 KB
@@ -72,10 +72,10 @@ Slowest operations
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 filtering sites         0.042     0.0       1     
-reading exposure        0.032     0.0       1     
+reading exposure        0.029     0.0       1     
 computing gmfs          0.006     0.0       1     
 saving gmfs             0.001     0.0       1     
-building riskinputs     7.787E-04 0.0       1     
-building epsilons       2.575E-04 0.0       1     
-reading site collection 8.821E-06 0.0       1     
+building riskinputs     8.154E-04 0.0       1     
+building epsilons       2.558E-04 0.0       1     
+reading site collection 6.199E-06 0.0       1     
 ======================= ========= ========= ======

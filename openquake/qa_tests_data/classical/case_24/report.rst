@@ -2,9 +2,9 @@ Classical PSHA using Area Source
 ================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80554.hdf5 Thu Jan 26 05:24:58 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81059.hdf5 Thu Jan 26 14:28:54 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 1, sitecol = 762 B
@@ -25,7 +25,6 @@ area_source_discretization      10.0
 ground_motion_correlation_model None                           
 random_seed                     23                             
 master_seed                     0                              
-sites_per_tile                  10000                          
 =============================== ===============================
 
 Input files
@@ -110,22 +109,22 @@ AreaSource   0.0       1
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.001 NaN    0.001 0.001 1        
-================== ===== ====== ===== ===== =========
+================== ========= ====== ========= ========= =========
+operation-duration mean      stddev min       max       num_tasks
+count_eff_ruptures 9.604E-04 NaN    9.604E-04 9.604E-04 1        
+================== ========= ====== ========= ========= =========
 
 Slowest operations
 ------------------
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.025     0.0       1     
+reading composite source model   0.024     0.0       1     
 managing sources                 0.002     0.0       1     
 filtering composite source model 0.001     0.0       1     
-total count_eff_ruptures         0.001     0.0       1     
-store source_info                9.043E-04 0.0       1     
-saving probability maps          4.125E-05 0.0       1     
-reading site collection          3.147E-05 0.0       1     
-aggregate curves                 2.551E-05 0.0       1     
+total count_eff_ruptures         9.604E-04 0.0       1     
+store source_info                8.786E-04 0.0       1     
+saving probability maps          4.053E-05 0.0       1     
+reading site collection          3.076E-05 0.0       1     
+aggregate curves                 2.527E-05 0.0       1     
 ================================ ========= ========= ======

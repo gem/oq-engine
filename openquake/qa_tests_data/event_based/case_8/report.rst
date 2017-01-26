@@ -2,9 +2,9 @@ Event Based from NonParametric source
 =====================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80579.hdf5 Thu Jan 26 05:25:58 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81085.hdf5 Thu Jan 26 14:29:56 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 3, sitecol = 854 B
@@ -51,7 +51,7 @@ Required parameters per tectonic region type
 ====== ================= =========== ======================= =================
 grp_id gsims             distances   siteparams              ruptparams       
 ====== ================= =========== ======================= =================
-0      ChiouYoungs2008() rrup rx rjb z1pt0 vs30 vs30measured dip rake mag ztor
+0      ChiouYoungs2008() rjb rrup rx vs30measured vs30 z1pt0 mag ztor rake dip
 ====== ================= =========== ======================= =================
 
 Realizations per (TRT, GSIM)
@@ -81,7 +81,7 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.079     0.0       1     
+reading composite source model   0.080     0.0       1     
 filtering composite source model 0.002     0.0       1     
-reading site collection          3.242E-05 0.0       1     
+reading site collection          3.266E-05 0.0       1     
 ================================ ========= ========= ======

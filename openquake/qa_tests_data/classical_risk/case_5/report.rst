@@ -2,9 +2,9 @@ Hazard Calculation for end-to-end hazard+risk
 =============================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80505.hdf5 Thu Jan 26 05:24:17 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81010.hdf5 Thu Jan 26 14:28:12 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 1, sitecol = 762 B
@@ -14,7 +14,7 @@ Parameters
 =============================== ==============================================================
 calculation_mode                'classical'                                                   
 number_of_logic_tree_samples    0                                                             
-maximum_distance                {'Subduction Interface': 300.0, 'Active Shallow Crust': 300.0}
+maximum_distance                {'Active Shallow Crust': 300.0, 'Subduction Interface': 300.0}
 investigation_time              15.0                                                          
 ses_per_logic_tree_path         1                                                             
 truncation_level                4.0                                                           
@@ -25,7 +25,6 @@ area_source_discretization      10.0
 ground_motion_correlation_model None                                                          
 random_seed                     1024                                                          
 master_seed                     0                                                             
-sites_per_tile                  10000                                                         
 =============================== ==============================================================
 
 Input files
@@ -44,7 +43,7 @@ Composite source model
 ========= ====== ====================================== =============== ================
 smlt_path weight source_model_file                      gsim_logic_tree num_realizations
 ========= ====== ====================================== =============== ================
-b1        1.000  `source_model.xml <source_model.xml>`_ simple(4,1)     4/4             
+b1        1.000  `source_model.xml <source_model.xml>`_ simple(1,4)     4/4             
 ========= ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
@@ -52,7 +51,7 @@ Required parameters per tectonic region type
 ====== ======================================================================================== ========== ========== ==============
 grp_id gsims                                                                                    distances  siteparams ruptparams    
 ====== ======================================================================================== ========== ========== ==============
-0      AkkarBommer2010()                                                                        rjb        vs30       rake mag      
+0      AkkarBommer2010()                                                                        rjb        vs30       mag rake      
 1      AtkinsonBoore2003SInter() LinLee2008SInter() YoungsEtAl1997SInter() ZhaoEtAl2006SInter() rrup rhypo vs30       hypo_depth mag
 ====== ======================================================================================== ========== ========== ==============
 
@@ -127,7 +126,7 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 8.554E-04 9.171E-05 7.906E-04 9.203E-04 2        
+count_eff_ruptures 8.488E-04 2.225E-05 8.330E-04 8.645E-04 2        
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -135,12 +134,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.004     0.0       1     
-managing sources                 0.003     0.0       1     
+reading composite source model   0.005     0.0       1     
+managing sources                 0.004     0.0       1     
 filtering composite source model 0.003     0.0       1     
 total count_eff_ruptures         0.002     0.0       2     
-store source_info                8.810E-04 0.0       1     
-aggregate curves                 4.840E-05 0.0       2     
-reading site collection          4.268E-05 0.0       1     
-saving probability maps          3.839E-05 0.0       1     
+store source_info                9.429E-04 0.0       1     
+aggregate curves                 5.198E-05 0.0       2     
+saving probability maps          4.077E-05 0.0       1     
+reading site collection          3.290E-05 0.0       1     
 ================================ ========= ========= ======

@@ -2,9 +2,9 @@ Event-based PSHA with logic tree sampling
 =========================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80582.hdf5 Thu Jan 26 05:26:05 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81088.hdf5 Thu Jan 26 14:30:03 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 3, sitecol = 854 B
@@ -53,8 +53,8 @@ Required parameters per tectonic region type
 ====== ============================================================= =========== ============================= =================
 grp_id gsims                                                         distances   siteparams                    ruptparams       
 ====== ============================================================= =========== ============================= =================
-0      BooreAtkinson2008() CampbellBozorgnia2008() ChiouYoungs2008() rrup rx rjb z1pt0 vs30 vs30measured z2pt5 dip rake mag ztor
-1      BooreAtkinson2008() CampbellBozorgnia2008()                   rrup rjb    vs30 z2pt5                    dip rake mag ztor
+0      BooreAtkinson2008() CampbellBozorgnia2008() ChiouYoungs2008() rjb rrup rx vs30measured z2pt5 vs30 z1pt0 dip mag ztor rake
+1      BooreAtkinson2008() CampbellBozorgnia2008()                   rjb rrup    z2pt5 vs30                    dip mag ztor rake
 ====== ============================================================= =========== ============================= =================
 
 Realizations per (TRT, GSIM)
@@ -95,7 +95,7 @@ compute_ruptures_sent.gsims               916
 compute_ruptures_sent.monitor             5,392       
 compute_ruptures_sent.sources             167,590     
 compute_ruptures_sent.src_filter          2,552       
-compute_ruptures_tot_received             2,681,634   
+compute_ruptures_tot_received             2,681,637   
 hazard.input_weight                       2,456       
 hazard.n_imts                             2           
 hazard.n_levels                           38          
@@ -136,7 +136,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.845 0.614  0.273 1.641 4        
+compute_ruptures   0.863 0.650  0.274 1.723 4        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -144,14 +144,14 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           3.379     2.504     4     
-filtering ruptures               0.728     0.0       2,598 
-managing sources                 0.553     0.0       1     
-split/filter heavy sources       0.550     0.0       2     
-setting event years              0.206     0.0       1     
-reading composite source model   0.157     0.0       1     
-saving ruptures                  0.086     0.0       4     
+total compute_ruptures           3.452     2.410     4     
+filtering ruptures               0.743     0.0       2,598 
+managing sources                 0.549     0.0       1     
+split/filter heavy sources       0.547     0.0       2     
+setting event years              0.252     0.0       1     
+reading composite source model   0.152     0.0       1     
+saving ruptures                  0.087     0.0       4     
 filtering composite source model 0.002     0.0       1     
-store source_info                5.536E-04 0.0       1     
-reading site collection          4.911E-05 0.0       1     
+store source_info                5.751E-04 0.0       1     
+reading site collection          4.840E-05 0.0       1     
 ================================ ========= ========= ======

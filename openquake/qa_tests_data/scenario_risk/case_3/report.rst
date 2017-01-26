@@ -2,9 +2,9 @@ Scenario QA Test 3
 ==================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80591.hdf5 Thu Jan 26 05:26:39 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81097.hdf5 Thu Jan 26 14:30:37 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 4, sitecol = 900 B
@@ -73,7 +73,7 @@ computing gmfs          0.032     0.0       1
 filtering sites         0.006     0.0       1     
 reading exposure        0.003     0.0       1     
 saving gmfs             0.002     0.0       1     
-building epsilons       6.182E-04 0.0       1     
-building riskinputs     3.722E-04 0.0       1     
-reading site collection 7.153E-06 0.0       1     
+building epsilons       5.925E-04 0.0       1     
+building riskinputs     3.748E-04 0.0       1     
+reading site collection 9.060E-06 0.0       1     
 ======================= ========= ========= ======

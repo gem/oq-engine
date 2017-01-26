@@ -2,9 +2,9 @@ Probabilistic Event-Based QA Test with Spatial Correlation, case 1
 ==================================================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80578.hdf5 Thu Jan 26 05:25:57 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81084.hdf5 Thu Jan 26 14:29:56 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 2, sitecol = 808 B
@@ -73,13 +73,13 @@ source_model.xml 0      Active Shallow Crust 1           1            1
 Informational data
 ------------------
 ========================================= ============
-compute_ruptures_max_received_per_task    303,876     
+compute_ruptures_max_received_per_task    303,879     
 compute_ruptures_num_tasks                1           
 compute_ruptures_sent.gsims               102         
 compute_ruptures_sent.monitor             927         
 compute_ruptures_sent.sources             1,319       
 compute_ruptures_sent.src_filter          618         
-compute_ruptures_tot_received             303,876     
+compute_ruptures_tot_received             303,879     
 hazard.input_weight                       0.100       
 hazard.n_imts                             1           
 hazard.n_levels                           1           
@@ -119,7 +119,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.021 NaN    0.021 0.021 1        
+compute_ruptures   0.018 NaN    0.018 0.018 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -127,13 +127,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-setting event years              0.222     0.0       1     
-saving ruptures                  0.096     0.0       1     
-total compute_ruptures           0.021     0.609     1     
+setting event years              0.267     0.0       1     
+saving ruptures                  0.109     0.0       1     
+total compute_ruptures           0.018     0.699     1     
 reading composite source model   0.003     0.0       1     
 managing sources                 0.002     0.0       1     
 filtering composite source model 0.002     0.0       1     
-filtering ruptures               5.987E-04 0.0       1     
-store source_info                5.751E-04 0.0       1     
-reading site collection          3.600E-05 0.0       1     
+store source_info                5.848E-04 0.0       1     
+filtering ruptures               5.271E-04 0.0       1     
+reading site collection          3.386E-05 0.0       1     
 ================================ ========= ========= ======

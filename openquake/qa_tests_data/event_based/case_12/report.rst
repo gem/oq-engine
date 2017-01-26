@@ -2,9 +2,9 @@ Event Based QA Test, Case 12
 ============================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80585.hdf5 Thu Jan 26 05:26:38 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81091.hdf5 Thu Jan 26 14:30:36 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 1, sitecol = 762 B
@@ -51,7 +51,7 @@ Required parameters per tectonic region type
 ====== =================== ========= ========== ==========
 grp_id gsims               distances siteparams ruptparams
 ====== =================== ========= ========== ==========
-0      SadighEtAl1997()    rrup      vs30       rake mag  
+0      SadighEtAl1997()    rrup      vs30       mag rake  
 1      BooreAtkinson2008() rjb       vs30       rake mag  
 ====== =================== ========= ========== ==========
 
@@ -84,13 +84,13 @@ source_model.xml 1      Stable Continental   1           1            1
 Informational data
 ------------------
 ========================================= ============
-compute_ruptures_max_received_per_task    60,168      
+compute_ruptures_max_received_per_task    60,177      
 compute_ruptures_num_tasks                2           
 compute_ruptures_sent.gsims               193         
 compute_ruptures_sent.monitor             2,044       
 compute_ruptures_sent.sources             2,650       
 compute_ruptures_sent.src_filter          1,258       
-compute_ruptures_tot_received             117,678     
+compute_ruptures_tot_received             117,696     
 hazard.input_weight                       0.200       
 hazard.n_imts                             1           
 hazard.n_levels                           3           
@@ -131,7 +131,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-compute_ruptures   0.025 2.089E-04 0.025 0.026 2        
+compute_ruptures   0.025 4.769E-04 0.024 0.025 2        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -139,13 +139,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-setting event years              0.103     0.0       1     
-total compute_ruptures           0.051     0.0       2     
-saving ruptures                  0.043     0.0       2     
+setting event years              0.126     0.0       1     
+total compute_ruptures           0.049     0.0       2     
+saving ruptures                  0.045     0.0       2     
 reading composite source model   0.005     0.0       1     
 managing sources                 0.004     0.0       1     
 filtering composite source model 0.003     0.0       1     
 filtering ruptures               0.001     0.0       2     
-store source_info                6.969E-04 0.0       1     
-reading site collection          4.125E-05 0.0       1     
+store source_info                7.031E-04 0.0       1     
+reading site collection          4.148E-05 0.0       1     
 ================================ ========= ========= ======
