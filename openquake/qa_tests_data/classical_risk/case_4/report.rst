@@ -2,30 +2,31 @@ Classical Hazard-Risk QA test 4
 ===============================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_66929.hdf5 Wed Nov  9 08:14:02 2016
-engine_version                                 2.2.0-git54d01f4        
-hazardlib_version                              0.22.0-git173c60c       
+gem-tstation:/home/michele/ssd/calc_80503.hdf5 Thu Jan 26 05:24:16 2017
+engine_version                                 2.3.0-gitd31dc69        
+hazardlib_version                              0.23.0-git4d14bee       
 ============================================== ========================
 
-num_sites = 6, sitecol = 969 B
+num_sites = 6, sitecol = 992 B
 
 Parameters
 ----------
-============================ ================================
-calculation_mode             'classical'                     
-number_of_logic_tree_samples 0                               
-maximum_distance             {u'Active Shallow Crust': 200.0}
-investigation_time           50.0                            
-ses_per_logic_tree_path      1                               
-truncation_level             3.0                             
-rupture_mesh_spacing         5.0                             
-complex_fault_mesh_spacing   5.0                             
-width_of_mfd_bin             0.2                             
-area_source_discretization   10.0                            
-random_seed                  23                              
-master_seed                  0                               
-sites_per_tile               10000                           
-============================ ================================
+=============================== ===============================
+calculation_mode                'classical'                    
+number_of_logic_tree_samples    0                              
+maximum_distance                {'Active Shallow Crust': 200.0}
+investigation_time              50.0                           
+ses_per_logic_tree_path         1                              
+truncation_level                3.0                            
+rupture_mesh_spacing            5.0                            
+complex_fault_mesh_spacing      5.0                            
+width_of_mfd_bin                0.2                            
+area_source_discretization      10.0                           
+ground_motion_correlation_model None                           
+random_seed                     23                             
+master_seed                     0                              
+sites_per_tile                  10000                          
+=============================== ===============================
 
 Input files
 -----------
@@ -53,7 +54,7 @@ Required parameters per tectonic region type
 ====== =================================== =========== ======================= =================
 grp_id gsims                               distances   siteparams              ruptparams       
 ====== =================================== =========== ======================= =================
-0      AkkarBommer2010() ChiouYoungs2008() rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+0      AkkarBommer2010() ChiouYoungs2008() rrup rx rjb z1pt0 vs30 vs30measured dip rake mag ztor
 ====== =================================== =========== ======================= =================
 
 Realizations per (TRT, GSIM)
@@ -75,24 +76,24 @@ source_model.xml 0      Active Shallow Crust 2           4545         6,405
 
 Informational data
 ------------------
-======================================== ============
-count_eff_ruptures_max_received_per_task 1,339       
-count_eff_ruptures_num_tasks             4           
-count_eff_ruptures_sent.gsims            656         
-count_eff_ruptures_sent.monitor          4,376       
-count_eff_ruptures_sent.sitecol          2,828       
-count_eff_ruptures_sent.sources          75,344      
-count_eff_ruptures_tot_received          5,355       
-hazard.input_weight                      640         
-hazard.n_imts                            1           
-hazard.n_levels                          19          
-hazard.n_realizations                    2           
-hazard.n_sites                           6           
-hazard.n_sources                         2           
-hazard.output_weight                     228         
-hostname                                 gem-tstation
-require_epsilons                         1           
-======================================== ============
+=========================================== ============
+count_eff_ruptures_max_received_per_task    1,302       
+count_eff_ruptures_num_tasks                4           
+count_eff_ruptures_sent.gsims               700         
+count_eff_ruptures_sent.monitor             4,304       
+count_eff_ruptures_sent.sitecol             2,792       
+count_eff_ruptures_sent.sources             69,668      
+count_eff_ruptures_tot_received             5,207       
+hazard.input_weight                         640         
+hazard.n_imts                               1           
+hazard.n_levels                             19          
+hazard.n_realizations                       2           
+hazard.n_sites                              6           
+hazard.n_sources                            2           
+hazard.output_weight                        228         
+hostname                                    gem-tstation
+require_epsilons                            1           
+=========================================== ============
 
 Exposure model
 --------------
@@ -131,7 +132,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.003 0.001  0.001 0.004 4        
+count_eff_ruptures 0.003 0.001  0.002 0.004 4        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -139,14 +140,14 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   2.010     0.0       1     
-managing sources                 0.347     0.0       1     
-split/filter heavy sources       0.346     0.0       1     
-filtering composite source model 0.018     0.0       1     
-total count_eff_ruptures         0.011     0.840     4     
+reading composite source model   2.123     0.0       1     
+managing sources                 0.374     0.0       1     
+split/filter heavy sources       0.372     0.0       1     
+filtering composite source model 0.019     0.0       1     
+total count_eff_ruptures         0.012     0.680     4     
 reading exposure                 0.003     0.0       1     
-store source_info                4.351E-04 0.0       1     
-aggregate curves                 4.911E-05 0.0       4     
-saving probability maps          2.003E-05 0.0       1     
-reading site collection          6.199E-06 0.0       1     
+store source_info                4.280E-04 0.0       1     
+aggregate curves                 4.983E-05 0.0       4     
+saving probability maps          2.217E-05 0.0       1     
+reading site collection          6.914E-06 0.0       1     
 ================================ ========= ========= ======

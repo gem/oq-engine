@@ -2,30 +2,31 @@ Classical PSHA with NZ NSHM
 ===========================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_66994.hdf5 Wed Nov  9 08:15:48 2016
-engine_version                                 2.2.0-git54d01f4        
-hazardlib_version                              0.22.0-git173c60c       
+gem-tstation:/home/michele/ssd/calc_80569.hdf5 Thu Jan 26 05:25:43 2017
+engine_version                                 2.3.0-gitd31dc69        
+hazardlib_version                              0.23.0-git4d14bee       
 ============================================== ========================
 
-num_sites = 1, sitecol = 739 B
+num_sites = 1, sitecol = 762 B
 
 Parameters
 ----------
-============================ ====================================================================================================================
-calculation_mode             'classical'                                                                                                         
-number_of_logic_tree_samples 0                                                                                                                   
-maximum_distance             {u'Subduction Intraslab': 400.0, u'Subduction Interface': 400.0, u'Volcanic': 400.0, u'Active Shallow Crust': 400.0}
-investigation_time           50.0                                                                                                                
-ses_per_logic_tree_path      1                                                                                                                   
-truncation_level             3.0                                                                                                                 
-rupture_mesh_spacing         1.0                                                                                                                 
-complex_fault_mesh_spacing   1.0                                                                                                                 
-width_of_mfd_bin             0.1                                                                                                                 
-area_source_discretization   10.0                                                                                                                
-random_seed                  23                                                                                                                  
-master_seed                  0                                                                                                                   
-sites_per_tile               10000                                                                                                               
-============================ ====================================================================================================================
+=============================== ================================================================================================================
+calculation_mode                'classical'                                                                                                     
+number_of_logic_tree_samples    0                                                                                                               
+maximum_distance                {'Subduction Interface': 400.0, 'Active Shallow Crust': 400.0, 'Subduction Intraslab': 400.0, 'Volcanic': 400.0}
+investigation_time              50.0                                                                                                            
+ses_per_logic_tree_path         1                                                                                                               
+truncation_level                3.0                                                                                                             
+rupture_mesh_spacing            1.0                                                                                                             
+complex_fault_mesh_spacing      1.0                                                                                                             
+width_of_mfd_bin                0.1                                                                                                             
+area_source_discretization      10.0                                                                                                            
+ground_motion_correlation_model None                                                                                                            
+random_seed                     23                                                                                                              
+master_seed                     0                                                                                                               
+sites_per_tile                  10000                                                                                                           
+=============================== ================================================================================================================
 
 Input files
 -----------
@@ -83,33 +84,34 @@ NSHM_source_model-editedbkgd.xml 1      Subduction Interface 2           2      
 
 Informational data
 ------------------
-======================================== ============
-count_eff_ruptures_max_received_per_task 1,546       
-count_eff_ruptures_num_tasks             2           
-count_eff_ruptures_sent.gsims            169         
-count_eff_ruptures_sent.monitor          2,626       
-count_eff_ruptures_sent.sitecol          866         
-count_eff_ruptures_sent.sources          829,485     
-count_eff_ruptures_tot_received          3,092       
-hazard.input_weight                      6.000       
-hazard.n_imts                            1           
-hazard.n_levels                          29          
-hazard.n_realizations                    1           
-hazard.n_sites                           1           
-hazard.n_sources                         4           
-hazard.output_weight                     29          
-hostname                                 gem-tstation
-======================================== ============
+=========================================== ============
+count_eff_ruptures_max_received_per_task    1,509       
+count_eff_ruptures_num_tasks                2           
+count_eff_ruptures_sent.gsims               187         
+count_eff_ruptures_sent.monitor             2,574       
+count_eff_ruptures_sent.sitecol             1,366       
+count_eff_ruptures_sent.sources             828,503     
+count_eff_ruptures_tot_received             3,018       
+hazard.input_weight                         6.000       
+hazard.n_imts                               1           
+hazard.n_levels                             29          
+hazard.n_realizations                       1           
+hazard.n_sites                              1           
+hazard.n_sources                            4           
+hazard.output_weight                        29          
+hostname                                    gem-tstation
+require_epsilons                            False       
+=========================================== ============
 
 Slowest sources
 ---------------
 ====== ========= ========================= ============ ========= ========= =========
 grp_id source_id source_class              num_ruptures calc_time num_sites num_split
 ====== ========= ========================= ============ ========= ========= =========
-1      21445     CharacteristicFaultSource 1            0.0       1         0        
-0      2         PointSource               20           0.0       1         0        
 0      1         PointSource               20           0.0       1         0        
+0      2         PointSource               20           0.0       1         0        
 1      21444     CharacteristicFaultSource 1            0.0       1         0        
+1      21445     CharacteristicFaultSource 1            0.0       1         0        
 ====== ========= ========================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -123,22 +125,22 @@ PointSource               0.0       2
 
 Information about the tasks
 ---------------------------
-================== ===== ========= ========= ===== =========
-operation-duration mean  stddev    min       max   num_tasks
-count_eff_ruptures 0.001 3.459E-04 7.789E-04 0.001 2        
-================== ===== ========= ========= ===== =========
+================== ========= ========= ========= ===== =========
+operation-duration mean      stddev    min       max   num_tasks
+count_eff_ruptures 9.338E-04 1.175E-04 8.507E-04 0.001 2        
+================== ========= ========= ========= ===== =========
 
 Slowest operations
 ------------------
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.223     0.0       1     
+reading composite source model   0.273     0.0       1     
 filtering composite source model 0.004     0.0       1     
 managing sources                 0.002     0.0       1     
 total count_eff_ruptures         0.002     0.0       2     
-store source_info                5.910E-04 0.0       1     
-aggregate curves                 3.695E-05 0.0       2     
-reading site collection          3.505E-05 0.0       1     
-saving probability maps          2.599E-05 0.0       1     
+store source_info                6.442E-04 0.0       1     
+reading site collection          4.721E-05 0.0       1     
+aggregate curves                 3.409E-05 0.0       2     
+saving probability maps          2.766E-05 0.0       1     
 ================================ ========= ========= ======
