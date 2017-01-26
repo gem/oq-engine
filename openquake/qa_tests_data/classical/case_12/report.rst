@@ -2,9 +2,9 @@ Classical Hazard QA Test, Case 12
 =================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80568.hdf5 Thu Jan 26 05:25:42 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81074.hdf5 Thu Jan 26 14:29:40 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 1, sitecol = 762 B
@@ -25,7 +25,6 @@ area_source_discretization      10.0
 ground_motion_correlation_model None                                                        
 random_seed                     1066                                                        
 master_seed                     0                                                           
-sites_per_tile                  10000                                                       
 =============================== ============================================================
 
 Input files
@@ -52,7 +51,7 @@ Required parameters per tectonic region type
 ====== =================== ========= ========== ==========
 grp_id gsims               distances siteparams ruptparams
 ====== =================== ========= ========== ==========
-0      SadighEtAl1997()    rrup      vs30       rake mag  
+0      SadighEtAl1997()    rrup      vs30       mag rake  
 1      BooreAtkinson2008() rjb       vs30       rake mag  
 ====== =================== ========= ========== ==========
 
@@ -124,7 +123,7 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 8.770E-04 1.366E-05 8.674E-04 8.867E-04 2        
+count_eff_ruptures 6.720E-04 1.816E-04 5.436E-04 8.004E-04 2        
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -133,11 +132,11 @@ Slowest operations
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
 reading composite source model   0.005     0.0       1     
-managing sources                 0.003     0.0       1     
 filtering composite source model 0.003     0.0       1     
-total count_eff_ruptures         0.002     0.0       2     
+managing sources                 0.003     0.0       1     
+total count_eff_ruptures         0.001     0.0       2     
 store source_info                0.001     0.0       1     
-aggregate curves                 5.865E-05 0.0       2     
-saving probability maps          4.578E-05 0.0       1     
-reading site collection          4.053E-05 0.0       1     
+aggregate curves                 5.555E-05 0.0       2     
+saving probability maps          4.864E-05 0.0       1     
+reading site collection          4.148E-05 0.0       1     
 ================================ ========= ========= ======

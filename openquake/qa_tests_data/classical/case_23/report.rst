@@ -2,9 +2,9 @@ Classical PSHA with NZ NSHM
 ===========================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80569.hdf5 Thu Jan 26 05:25:43 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81075.hdf5 Thu Jan 26 14:29:40 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 1, sitecol = 762 B
@@ -14,7 +14,7 @@ Parameters
 =============================== ================================================================================================================
 calculation_mode                'classical'                                                                                                     
 number_of_logic_tree_samples    0                                                                                                               
-maximum_distance                {'Subduction Interface': 400.0, 'Active Shallow Crust': 400.0, 'Subduction Intraslab': 400.0, 'Volcanic': 400.0}
+maximum_distance                {'Active Shallow Crust': 400.0, 'Subduction Intraslab': 400.0, 'Subduction Interface': 400.0, 'Volcanic': 400.0}
 investigation_time              50.0                                                                                                            
 ses_per_logic_tree_path         1                                                                                                               
 truncation_level                3.0                                                                                                             
@@ -25,7 +25,6 @@ area_source_discretization      10.0
 ground_motion_correlation_model None                                                                                                            
 random_seed                     23                                                                                                              
 master_seed                     0                                                                                                               
-sites_per_tile                  10000                                                                                                           
 =============================== ================================================================================================================
 
 Input files
@@ -44,7 +43,7 @@ Composite source model
 ========= ====== ====================================================================== ================ ================
 smlt_path weight source_model_file                                                      gsim_logic_tree  num_realizations
 ========= ====== ====================================================================== ================ ================
-b1        1.000  `NSHM_source_model-editedbkgd.xml <NSHM_source_model-editedbkgd.xml>`_ trivial(0,1,0,1) 1/1             
+b1        1.000  `NSHM_source_model-editedbkgd.xml <NSHM_source_model-editedbkgd.xml>`_ trivial(1,0,0,1) 1/1             
 ========= ====== ====================================================================== ================ ================
 
 Required parameters per tectonic region type
@@ -125,22 +124,22 @@ PointSource               0.0       2
 
 Information about the tasks
 ---------------------------
-================== ========= ========= ========= ===== =========
-operation-duration mean      stddev    min       max   num_tasks
-count_eff_ruptures 9.338E-04 1.175E-04 8.507E-04 0.001 2        
-================== ========= ========= ========= ===== =========
+================== ========= ========= ========= ========= =========
+operation-duration mean      stddev    min       max       num_tasks
+count_eff_ruptures 7.650E-04 1.111E-04 6.864E-04 8.435E-04 2        
+================== ========= ========= ========= ========= =========
 
 Slowest operations
 ------------------
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.273     0.0       1     
+reading composite source model   0.274     0.0       1     
 filtering composite source model 0.004     0.0       1     
 managing sources                 0.002     0.0       1     
 total count_eff_ruptures         0.002     0.0       2     
-store source_info                6.442E-04 0.0       1     
-reading site collection          4.721E-05 0.0       1     
-aggregate curves                 3.409E-05 0.0       2     
-saving probability maps          2.766E-05 0.0       1     
+store source_info                0.001     0.0       1     
+aggregate curves                 8.488E-05 0.0       2     
+reading site collection          6.652E-05 0.0       1     
+saving probability maps          4.959E-05 0.0       1     
 ================================ ========= ========= ======

@@ -2,9 +2,9 @@ Classical PSHA using Alaska 2007 active shallow crust grid model
 ================================================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80557.hdf5 Thu Jan 26 05:25:00 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81062.hdf5 Thu Jan 26 14:28:56 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 21, sitecol = 1.64 KB
@@ -25,7 +25,6 @@ area_source_discretization      10.0
 ground_motion_correlation_model None                           
 random_seed                     23                             
 master_seed                     0                              
-sites_per_tile                  10000                          
 =============================== ===============================
 
 Input files
@@ -53,7 +52,7 @@ Required parameters per tectonic region type
 ====== ==================================================================================================== ========= ========== ============
 grp_id gsims                                                                                                distances siteparams ruptparams  
 ====== ==================================================================================================== ========= ========== ============
-0      AbrahamsonSilva1997() BooreEtAl1997GeometricMean() CampbellBozorgnia2003NSHMP2007() SadighEtAl1997() rrup rjb  vs30       dip rake mag
+0      AbrahamsonSilva1997() BooreEtAl1997GeometricMean() CampbellBozorgnia2003NSHMP2007() SadighEtAl1997() rjb rrup  vs30       rake mag dip
 ====== ==================================================================================================== ========= ========== ============
 
 Realizations per (TRT, GSIM)
@@ -117,22 +116,22 @@ PointSource  0.0       4
 
 Information about the tasks
 ---------------------------
-================== ===== ====== ===== ===== =========
-operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.001 NaN    0.001 0.001 1        
-================== ===== ====== ===== ===== =========
+================== ========= ====== ========= ========= =========
+operation-duration mean      stddev min       max       num_tasks
+count_eff_ruptures 9.680E-04 NaN    9.680E-04 9.680E-04 1        
+================== ========= ====== ========= ========= =========
 
 Slowest operations
 ------------------
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.022     0.0       1     
-filtering composite source model 0.017     0.0       1     
+reading composite source model   0.023     0.0       1     
+filtering composite source model 0.018     0.0       1     
 managing sources                 0.002     0.0       1     
-total count_eff_ruptures         0.001     0.0       1     
-store source_info                9.241E-04 0.0       1     
-reading site collection          1.976E-04 0.0       1     
-saving probability maps          3.934E-05 0.0       1     
-aggregate curves                 2.551E-05 0.0       1     
+total count_eff_ruptures         9.680E-04 0.0       1     
+store source_info                9.537E-04 0.0       1     
+reading site collection          2.487E-04 0.0       1     
+saving probability maps          4.244E-05 0.0       1     
+aggregate curves                 2.646E-05 0.0       1     
 ================================ ========= ========= ======

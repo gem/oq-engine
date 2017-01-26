@@ -2,9 +2,9 @@ Classical Hazard QA Test, Case 3
 ================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80558.hdf5 Thu Jan 26 05:25:25 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81063.hdf5 Thu Jan 26 14:29:22 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 1, sitecol = 762 B
@@ -25,7 +25,6 @@ area_source_discretization      0.05
 ground_motion_correlation_model None                           
 random_seed                     1066                           
 master_seed                     0                              
-sites_per_tile                  10000                          
 =============================== ===============================
 
 Input files
@@ -52,7 +51,7 @@ Required parameters per tectonic region type
 ====== ================ ========= ========== ==========
 grp_id gsims            distances siteparams ruptparams
 ====== ================ ========= ========== ==========
-0      SadighEtAl1997() rrup      vs30       rake mag  
+0      SadighEtAl1997() rrup      vs30       mag rake  
 ====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -112,7 +111,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-count_eff_ruptures 0.056 0.028  0.015 0.086 16       
+count_eff_ruptures 0.053 0.027  0.015 0.081 16       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -120,13 +119,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-managing sources                 20        0.0       1     
-split/filter heavy sources       20        0.0       1     
-reading composite source model   3.883     0.0       1     
-total count_eff_ruptures         0.897     6.148     16    
-filtering composite source model 9.055E-04 0.0       1     
-store source_info                5.071E-04 0.0       1     
-aggregate curves                 2.067E-04 0.0       16    
-reading site collection          4.315E-05 0.0       1     
-saving probability maps          2.241E-05 0.0       1     
+managing sources                 21        0.0       1     
+split/filter heavy sources       21        0.0       1     
+reading composite source model   3.852     0.0       1     
+total count_eff_ruptures         0.840     6.215     16    
+filtering composite source model 8.929E-04 0.0       1     
+store source_info                5.255E-04 0.0       1     
+aggregate curves                 2.134E-04 0.0       16    
+reading site collection          4.244E-05 0.0       1     
+saving probability maps          2.360E-05 0.0       1     
 ================================ ========= ========= ======
