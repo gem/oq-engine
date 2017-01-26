@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * If there is a single realization, do not compute the statistics
   * Changed the separator from comma to tab for the output `ruptures`
   * If there are no conditional_loss_poes, the engine does not try to
     export the loss maps anymore
