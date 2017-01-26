@@ -2,29 +2,30 @@ Ucerf test
 ==========
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_66932.hdf5 Wed Nov  9 08:14:03 2016
-engine_version                                 2.2.0-git54d01f4        
-hazardlib_version                              0.22.0-git173c60c       
+gem-tstation:/home/michele/ssd/calc_80506.hdf5 Thu Jan 26 05:24:17 2017
+engine_version                                 2.3.0-gitd31dc69        
+hazardlib_version                              0.23.0-git4d14bee       
 ============================================== ========================
 
-num_sites = 1588, sitecol = 72.04 KB
+num_sites = 1588, sitecol = 72.08 KB
 
 Parameters
 ----------
-============================ ================================
-calculation_mode             'ucerf_rupture'                 
-number_of_logic_tree_samples 0                               
-maximum_distance             {u'Active Shallow Crust': 200.0}
-investigation_time           10000.0                         
-ses_per_logic_tree_path      1                               
-truncation_level             None                            
-rupture_mesh_spacing         1.0                             
-complex_fault_mesh_spacing   1.0                             
-width_of_mfd_bin             1.0                             
-area_source_discretization   None                            
-random_seed                  1066                            
-master_seed                  0                               
-============================ ================================
+=============================== ===============================
+calculation_mode                'ucerf_rupture'                
+number_of_logic_tree_samples    0                              
+maximum_distance                {'Active Shallow Crust': 200.0}
+investigation_time              10000.0                        
+ses_per_logic_tree_path         1                              
+truncation_level                None                           
+rupture_mesh_spacing            1.0                            
+complex_fault_mesh_spacing      1.0                            
+width_of_mfd_bin                1.0                            
+area_source_discretization      None                           
+ground_motion_correlation_model None                           
+random_seed                     1066                           
+master_seed                     0                              
+=============================== ===============================
 
 Input files
 -----------
@@ -98,30 +99,30 @@ Required parameters per tectonic region type
 ====== ===================================== =========== ======================= =======================
 grp_id gsims                                 distances   siteparams              ruptparams             
 ====== ===================================== =========== ======================= =======================
-0      AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
-1      AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
-2      AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
-3      AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
-4      AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
-5      AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
-6      AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
-7      AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
-8      AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
-9      AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
-10     AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
-11     AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
-12     AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
-13     AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
-14     AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
-15     AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
-16     AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
-17     AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
-18     AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
-19     AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
-20     AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
-21     AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
-22     AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
-23     AbrahamsonSilva2008() BooreEtAl2014() rx rjb rrup vs30measured vs30 z1pt0 width ztor mag rake dip
+0      AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
+1      AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
+2      AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
+3      AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
+4      AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
+5      AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
+6      AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
+7      AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
+8      AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
+9      AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
+10     AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
+11     AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
+12     AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
+13     AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
+14     AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
+15     AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
+16     AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
+17     AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
+18     AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
+19     AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
+20     AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
+21     AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
+22     AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
+23     AbrahamsonSilva2008() BooreEtAl2014() rrup rx rjb z1pt0 vs30 vs30measured width dip rake mag ztor
 ====== ===================================== =========== ======================= =======================
 
 Realizations per (TRT, GSIM)
@@ -130,65 +131,65 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=48, rlzs=48)
-  0,AbrahamsonSilva2008(): ['<0,ltbr0001~AS08,w=0.00374999993015>']
-  0,BooreEtAl2014(): ['<1,ltbr0001~BA14,w=0.00249999995343>']
-  1,AbrahamsonSilva2008(): ['<2,ltbr0002~AS08,w=0.00374999993015>']
-  1,BooreEtAl2014(): ['<3,ltbr0002~BA14,w=0.00249999995343>']
-  2,AbrahamsonSilva2008(): ['<4,ltbr0003~AS08,w=0.0299999994412>']
-  2,BooreEtAl2014(): ['<5,ltbr0003~BA14,w=0.0199999996275>']
-  3,AbrahamsonSilva2008(): ['<6,ltbr0037~AS08,w=0.00374999993015>']
-  3,BooreEtAl2014(): ['<7,ltbr0037~BA14,w=0.00249999995343>']
-  4,AbrahamsonSilva2008(): ['<8,ltbr0038~AS08,w=0.00374999993015>']
-  4,BooreEtAl2014(): ['<9,ltbr0038~BA14,w=0.00249999995343>']
-  5,AbrahamsonSilva2008(): ['<10,ltbr0039~AS08,w=0.0299999994412>']
-  5,BooreEtAl2014(): ['<11,ltbr0039~BA14,w=0.0199999996275>']
-  6,AbrahamsonSilva2008(): ['<12,ltbr0541~AS08,w=0.0112500000698>']
-  6,BooreEtAl2014(): ['<13,ltbr0541~BA14,w=0.00750000004657>']
-  7,AbrahamsonSilva2008(): ['<14,ltbr0542~AS08,w=0.0112500000698>']
-  7,BooreEtAl2014(): ['<15,ltbr0542~BA14,w=0.00750000004657>']
-  8,AbrahamsonSilva2008(): ['<16,ltbr0543~AS08,w=0.0900000005588>']
-  8,BooreEtAl2014(): ['<17,ltbr0543~BA14,w=0.0600000003725>']
-  9,AbrahamsonSilva2008(): ['<18,ltbr0577~AS08,w=0.0112500000698>']
-  9,BooreEtAl2014(): ['<19,ltbr0577~BA14,w=0.00750000004657>']
-  10,AbrahamsonSilva2008(): ['<20,ltbr0578~AS08,w=0.0112500000698>']
-  10,BooreEtAl2014(): ['<21,ltbr0578~BA14,w=0.00750000004657>']
-  11,AbrahamsonSilva2008(): ['<22,ltbr0579~AS08,w=0.0900000005588>']
-  11,BooreEtAl2014(): ['<23,ltbr0579~BA14,w=0.0600000003725>']
-  12,AbrahamsonSilva2008(): ['<24,ltbr0721~AS08,w=0.00374999993015>']
-  12,BooreEtAl2014(): ['<25,ltbr0721~BA14,w=0.00249999995343>']
-  13,AbrahamsonSilva2008(): ['<26,ltbr0722~AS08,w=0.00374999993015>']
-  13,BooreEtAl2014(): ['<27,ltbr0722~BA14,w=0.00249999995343>']
-  14,AbrahamsonSilva2008(): ['<28,ltbr0723~AS08,w=0.0299999994412>']
-  14,BooreEtAl2014(): ['<29,ltbr0723~BA14,w=0.0199999996275>']
-  15,AbrahamsonSilva2008(): ['<30,ltbr0757~AS08,w=0.00374999993015>']
-  15,BooreEtAl2014(): ['<31,ltbr0757~BA14,w=0.00249999995343>']
-  16,AbrahamsonSilva2008(): ['<32,ltbr0758~AS08,w=0.00374999993015>']
-  16,BooreEtAl2014(): ['<33,ltbr0758~BA14,w=0.00249999995343>']
-  17,AbrahamsonSilva2008(): ['<34,ltbr0759~AS08,w=0.0299999994412>']
-  17,BooreEtAl2014(): ['<35,ltbr0759~BA14,w=0.0199999996275>']
-  18,AbrahamsonSilva2008(): ['<36,ltbr1261~AS08,w=0.0112500000698>']
-  18,BooreEtAl2014(): ['<37,ltbr1261~BA14,w=0.00750000004657>']
-  19,AbrahamsonSilva2008(): ['<38,ltbr1262~AS08,w=0.0112500000698>']
-  19,BooreEtAl2014(): ['<39,ltbr1262~BA14,w=0.00750000004657>']
-  20,AbrahamsonSilva2008(): ['<40,ltbr1263~AS08,w=0.0900000005588>']
-  20,BooreEtAl2014(): ['<41,ltbr1263~BA14,w=0.0600000003725>']
-  21,AbrahamsonSilva2008(): ['<42,ltbr1297~AS08,w=0.0112500000698>']
-  21,BooreEtAl2014(): ['<43,ltbr1297~BA14,w=0.00750000004657>']
-  22,AbrahamsonSilva2008(): ['<44,ltbr1298~AS08,w=0.0112500000698>']
-  22,BooreEtAl2014(): ['<45,ltbr1298~BA14,w=0.00750000004657>']
-  23,AbrahamsonSilva2008(): ['<46,ltbr1299~AS08,w=0.0900000005588>']
-  23,BooreEtAl2014(): ['<47,ltbr1299~BA14,w=0.0600000003725>']>
+  0,AbrahamsonSilva2008(): ['<0,ltbr0001~AS08,w=0.003749999930150809>']
+  0,BooreEtAl2014(): ['<1,ltbr0001~BA14,w=0.002499999953433873>']
+  1,AbrahamsonSilva2008(): ['<2,ltbr0002~AS08,w=0.003749999930150809>']
+  1,BooreEtAl2014(): ['<3,ltbr0002~BA14,w=0.002499999953433873>']
+  2,AbrahamsonSilva2008(): ['<4,ltbr0003~AS08,w=0.029999999441206474>']
+  2,BooreEtAl2014(): ['<5,ltbr0003~BA14,w=0.019999999627470982>']
+  3,AbrahamsonSilva2008(): ['<6,ltbr0037~AS08,w=0.003749999930150809>']
+  3,BooreEtAl2014(): ['<7,ltbr0037~BA14,w=0.002499999953433873>']
+  4,AbrahamsonSilva2008(): ['<8,ltbr0038~AS08,w=0.003749999930150809>']
+  4,BooreEtAl2014(): ['<9,ltbr0038~BA14,w=0.002499999953433873>']
+  5,AbrahamsonSilva2008(): ['<10,ltbr0039~AS08,w=0.029999999441206474>']
+  5,BooreEtAl2014(): ['<11,ltbr0039~BA14,w=0.019999999627470982>']
+  6,AbrahamsonSilva2008(): ['<12,ltbr0541~AS08,w=0.01125000006984919>']
+  6,BooreEtAl2014(): ['<13,ltbr0541~BA14,w=0.007500000046566127>']
+  7,AbrahamsonSilva2008(): ['<14,ltbr0542~AS08,w=0.01125000006984919>']
+  7,BooreEtAl2014(): ['<15,ltbr0542~BA14,w=0.007500000046566127>']
+  8,AbrahamsonSilva2008(): ['<16,ltbr0543~AS08,w=0.09000000055879352>']
+  8,BooreEtAl2014(): ['<17,ltbr0543~BA14,w=0.06000000037252902>']
+  9,AbrahamsonSilva2008(): ['<18,ltbr0577~AS08,w=0.01125000006984919>']
+  9,BooreEtAl2014(): ['<19,ltbr0577~BA14,w=0.007500000046566127>']
+  10,AbrahamsonSilva2008(): ['<20,ltbr0578~AS08,w=0.01125000006984919>']
+  10,BooreEtAl2014(): ['<21,ltbr0578~BA14,w=0.007500000046566127>']
+  11,AbrahamsonSilva2008(): ['<22,ltbr0579~AS08,w=0.09000000055879352>']
+  11,BooreEtAl2014(): ['<23,ltbr0579~BA14,w=0.06000000037252902>']
+  12,AbrahamsonSilva2008(): ['<24,ltbr0721~AS08,w=0.003749999930150809>']
+  12,BooreEtAl2014(): ['<25,ltbr0721~BA14,w=0.002499999953433873>']
+  13,AbrahamsonSilva2008(): ['<26,ltbr0722~AS08,w=0.003749999930150809>']
+  13,BooreEtAl2014(): ['<27,ltbr0722~BA14,w=0.002499999953433873>']
+  14,AbrahamsonSilva2008(): ['<28,ltbr0723~AS08,w=0.029999999441206474>']
+  14,BooreEtAl2014(): ['<29,ltbr0723~BA14,w=0.019999999627470982>']
+  15,AbrahamsonSilva2008(): ['<30,ltbr0757~AS08,w=0.003749999930150809>']
+  15,BooreEtAl2014(): ['<31,ltbr0757~BA14,w=0.002499999953433873>']
+  16,AbrahamsonSilva2008(): ['<32,ltbr0758~AS08,w=0.003749999930150809>']
+  16,BooreEtAl2014(): ['<33,ltbr0758~BA14,w=0.002499999953433873>']
+  17,AbrahamsonSilva2008(): ['<34,ltbr0759~AS08,w=0.029999999441206474>']
+  17,BooreEtAl2014(): ['<35,ltbr0759~BA14,w=0.019999999627470982>']
+  18,AbrahamsonSilva2008(): ['<36,ltbr1261~AS08,w=0.01125000006984919>']
+  18,BooreEtAl2014(): ['<37,ltbr1261~BA14,w=0.007500000046566127>']
+  19,AbrahamsonSilva2008(): ['<38,ltbr1262~AS08,w=0.01125000006984919>']
+  19,BooreEtAl2014(): ['<39,ltbr1262~BA14,w=0.007500000046566127>']
+  20,AbrahamsonSilva2008(): ['<40,ltbr1263~AS08,w=0.09000000055879352>']
+  20,BooreEtAl2014(): ['<41,ltbr1263~BA14,w=0.06000000037252902>']
+  21,AbrahamsonSilva2008(): ['<42,ltbr1297~AS08,w=0.01125000006984919>']
+  21,BooreEtAl2014(): ['<43,ltbr1297~BA14,w=0.007500000046566127>']
+  22,AbrahamsonSilva2008(): ['<44,ltbr1298~AS08,w=0.01125000006984919>']
+  22,BooreEtAl2014(): ['<45,ltbr1298~BA14,w=0.007500000046566127>']
+  23,AbrahamsonSilva2008(): ['<46,ltbr1299~AS08,w=0.09000000055879352>']
+  23,BooreEtAl2014(): ['<47,ltbr1299~BA14,w=0.06000000037252902>']>
 
 Informational data
 ------------------
-======== ============
-hostname gem-tstation
-======== ============
+=========== ============
+hostname    gem-tstation
+=========== ============
 
 Slowest operations
 ------------------
 ======================= ======== ========= ======
 operation               time_sec memory_mb counts
 ======================= ======== ========= ======
-reading site collection 0.006    0.0       1     
+reading site collection 0.007    0.0       1     
 ======================= ======== ========= ======

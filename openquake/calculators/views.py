@@ -32,7 +32,6 @@ from openquake.baselib.general import (
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.python3compat import unicode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.risklib import scientific
 from openquake.commonlib import util, source
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv, FIVEDIGITS)
@@ -286,7 +285,7 @@ def view_params(token, dstore):
               'ses_per_logic_tree_path', 'truncation_level',
               'rupture_mesh_spacing', 'complex_fault_mesh_spacing',
               'width_of_mfd_bin', 'area_source_discretization',
-              'random_seed', 'master_seed']
+              'ground_motion_correlation_model', 'random_seed', 'master_seed']
     if 'risk' in oq.calculation_mode:
         params.append('avg_losses')
     if 'classical' in oq.calculation_mode:
