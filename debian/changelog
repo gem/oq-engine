@@ -1,3 +1,9 @@
+  [Daniele Viganò]
+  * Move the openquake.cfg config file inside the python package
+    under openquake/engine/openquake.cfg
+  * Remove support to OQ_LOCAL_CFG_PATH and OQ_SITE_CFG_PATH vars;
+    only the OQ_CONFIG_FILE enviroment variable is read
+
   [Michele Simionato]
   * Changed the separator from comma to tab for the output `ruptures`
   * If there are no conditional_loss_poes, the engine does not try to
