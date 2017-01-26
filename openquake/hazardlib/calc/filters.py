@@ -59,6 +59,7 @@ the index can be compensed. Finally, there is a function
 `filter_sites_by_distance_to_rupture` based on the Joyner-Boore distance.
 """
 import sys
+import logging
 from contextlib import contextmanager
 import numpy
 try:
@@ -154,6 +155,9 @@ class SourceFilter(object):
             self.index = rtree.index.Index()
             for sid, lon, lat in zip(sitecol.sids, fixed_lons, sitecol.lats):
                 self.index.insert(sid, (lon, lat, lon, lat))
+        if rtree is None:
+            logging.info('Using distance filtering on %d sites [no rtree]',
+                         len(sitecol))
 
     def get_affected_box(self, src):
         """
