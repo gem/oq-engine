@@ -2,9 +2,9 @@ QA test for blocksize independence (hazard)
 ===========================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80583.hdf5 Thu Jan 26 05:26:09 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81089.hdf5 Thu Jan 26 14:30:07 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 2, sitecol = 808 B
@@ -51,7 +51,7 @@ Required parameters per tectonic region type
 ====== ================= =========== ======================= =================
 grp_id gsims             distances   siteparams              ruptparams       
 ====== ================= =========== ======================= =================
-0      ChiouYoungs2008() rrup rx rjb z1pt0 vs30 vs30measured dip rake mag ztor
+0      ChiouYoungs2008() rjb rrup rx vs30measured vs30 z1pt0 mag ztor rake dip
 ====== ================= =========== ======================= =================
 
 Realizations per (TRT, GSIM)
@@ -79,7 +79,7 @@ compute_ruptures_sent.gsims               882
 compute_ruptures_sent.monitor             8,982       
 compute_ruptures_sent.sources             436,439     
 compute_ruptures_sent.src_filter          5,562       
-compute_ruptures_tot_received             40,965      
+compute_ruptures_tot_received             40,971      
 hazard.input_weight                       1,382       
 hazard.n_imts                             1           
 hazard.n_levels                           4           
@@ -105,10 +105,10 @@ Slowest sources
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
 0      1         AreaSource   7,020        0.0       2         0        
-0      2         AreaSource   2,334        0.0       2         0        
-0      3         AreaSource   1,760        0.0       2         0        
-0      8         AreaSource   1,812        0.0       1         0        
 0      9         AreaSource   897          0.0       2         0        
+0      8         AreaSource   1,812        0.0       1         0        
+0      3         AreaSource   1,760        0.0       2         0        
+0      2         AreaSource   2,334        0.0       2         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -123,7 +123,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.412 0.300  0.003 0.698 9        
+compute_ruptures   0.385 0.272  0.001 0.653 9        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -131,14 +131,14 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           3.705     0.0       9     
-reading composite source model   1.648     0.0       1     
-managing sources                 1.345     0.0       1     
-split/filter heavy sources       1.340     0.0       1     
+total compute_ruptures           3.469     0.0       9     
+reading composite source model   1.678     0.0       1     
+managing sources                 1.312     0.0       1     
+split/filter heavy sources       1.308     0.0       1     
 saving ruptures                  0.007     0.0       9     
 filtering composite source model 0.005     0.0       1     
 setting event years              0.003     0.0       1     
 store source_info                0.001     0.0       1     
-filtering ruptures               9.835E-04 0.0       3     
-reading site collection          4.125E-05 0.0       1     
+filtering ruptures               9.522E-04 0.0       3     
+reading site collection          4.554E-05 0.0       1     
 ================================ ========= ========= ======

@@ -2,9 +2,9 @@ Classical PSHA - Loss fractions QA test
 =======================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80502.hdf5 Thu Jan 26 05:24:13 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81007.hdf5 Thu Jan 26 14:28:09 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 13, sitecol = 1.28 KB
@@ -26,7 +26,6 @@ ground_motion_correlation_model None
 random_seed                     23                             
 master_seed                     0                              
 avg_losses                      False                          
-sites_per_tile                  10000                          
 =============================== ===============================
 
 Input files
@@ -55,7 +54,7 @@ Required parameters per tectonic region type
 ====== ================= =========== ======================= =================
 grp_id gsims             distances   siteparams              ruptparams       
 ====== ================= =========== ======================= =================
-0      ChiouYoungs2008() rrup rx rjb z1pt0 vs30 vs30measured dip rake mag ztor
+0      ChiouYoungs2008() rjb rrup rx vs30measured vs30 z1pt0 mag ztor rake dip
 ====== ================= =========== ======================= =================
 
 Realizations per (TRT, GSIM)
@@ -118,8 +117,8 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      232       AreaSource   1,612        0.0       11        0        
 0      225       AreaSource   520          0.0       3         0        
+0      232       AreaSource   1,612        0.0       11        0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -134,7 +133,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.002 3.308E-04 0.002 0.002 2        
+count_eff_ruptures 0.002 1.883E-04 0.002 0.002 2        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -142,13 +141,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   1.072     0.0       1     
-filtering composite source model 0.009     0.0       1     
-reading exposure                 0.005     0.0       1     
-total count_eff_ruptures         0.004     1.770     2     
+reading composite source model   0.888     0.0       1     
+filtering composite source model 0.008     0.0       1     
+reading exposure                 0.004     0.0       1     
+total count_eff_ruptures         0.004     1.773     2     
 managing sources                 0.002     0.0       1     
-store source_info                4.497E-04 0.0       1     
-aggregate curves                 3.457E-05 0.0       2     
-saving probability maps          2.384E-05 0.0       1     
-reading site collection          1.359E-05 0.0       1     
+store source_info                4.425E-04 0.0       1     
+aggregate curves                 4.244E-05 0.0       2     
+saving probability maps          2.170E-05 0.0       1     
+reading site collection          1.335E-05 0.0       1     
 ================================ ========= ========= ======

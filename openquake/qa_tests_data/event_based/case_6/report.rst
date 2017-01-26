@@ -2,9 +2,9 @@ Event-based PSHA producing hazard curves only
 =============================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80574.hdf5 Thu Jan 26 05:25:54 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81080.hdf5 Thu Jan 26 14:29:52 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 1, sitecol = 762 B
@@ -53,8 +53,8 @@ Required parameters per tectonic region type
 ====== ============================================================= =========== ============================= =================
 grp_id gsims                                                         distances   siteparams                    ruptparams       
 ====== ============================================================= =========== ============================= =================
-0      BooreAtkinson2008() CampbellBozorgnia2008() ChiouYoungs2008() rrup rx rjb z1pt0 vs30 vs30measured z2pt5 dip rake mag ztor
-1      BooreAtkinson2008() CampbellBozorgnia2008() ChiouYoungs2008() rrup rx rjb z1pt0 vs30 vs30measured z2pt5 dip rake mag ztor
+0      BooreAtkinson2008() CampbellBozorgnia2008() ChiouYoungs2008() rjb rrup rx vs30measured z2pt5 vs30 z1pt0 dip mag ztor rake
+1      BooreAtkinson2008() CampbellBozorgnia2008() ChiouYoungs2008() rjb rrup rx vs30measured z2pt5 vs30 z1pt0 dip mag ztor rake
 ====== ============================================================= =========== ============================= =================
 
 Realizations per (TRT, GSIM)
@@ -137,7 +137,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.950 0.626  0.365 1.629 4        
+compute_ruptures   0.931 0.637  0.333 1.656 4        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -145,14 +145,14 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           3.799     2.309     4     
-filtering ruptures               0.790     0.0       3,081 
-managing sources                 0.561     0.0       1     
-split/filter heavy sources       0.558     0.0       2     
-setting event years              0.226     0.473     1     
-reading composite source model   0.161     0.0       1     
-saving ruptures                  0.083     0.0       4     
+total compute_ruptures           3.723     2.277     4     
+filtering ruptures               0.775     0.0       3,081 
+managing sources                 0.550     0.0       1     
+split/filter heavy sources       0.547     0.0       2     
+setting event years              0.275     0.887     1     
+reading composite source model   0.155     0.0       1     
+saving ruptures                  0.106     0.0       4     
 filtering composite source model 0.002     0.0       1     
-store source_info                5.443E-04 0.0       1     
-reading site collection          4.506E-05 0.0       1     
+store source_info                5.734E-04 0.0       1     
+reading site collection          4.029E-05 0.0       1     
 ================================ ========= ========= ======

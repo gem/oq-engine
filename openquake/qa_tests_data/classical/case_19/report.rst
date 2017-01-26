@@ -2,9 +2,9 @@ SHARE OpenQuake Computational Settings
 ======================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80570.hdf5 Thu Jan 26 05:25:48 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81076.hdf5 Thu Jan 26 14:29:46 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 1, sitecol = 762 B
@@ -14,7 +14,7 @@ Parameters
 =============================== =======================================================================================================================================================================================
 calculation_mode                'classical'                                                                                                                                                                            
 number_of_logic_tree_samples    0                                                                                                                                                                                      
-maximum_distance                {'Subduction Inslab': 200.0, 'Subduction Deep': 200.0, 'Stable Shallow Crust': 200.0, 'Shield': 200.0, 'Active Shallow Crust': 200.0, 'Volcanic': 200.0, 'Subduction Interface': 200.0}
+maximum_distance                {'Volcanic': 200.0, 'Stable Shallow Crust': 200.0, 'Subduction Deep': 200.0, 'Active Shallow Crust': 200.0, 'Subduction Inslab': 200.0, 'Shield': 200.0, 'Subduction Interface': 200.0}
 investigation_time              50.0                                                                                                                                                                                   
 ses_per_logic_tree_path         1                                                                                                                                                                                      
 truncation_level                3.0                                                                                                                                                                                    
@@ -25,7 +25,6 @@ area_source_discretization      10.0
 ground_motion_correlation_model None                                                                                                                                                                                   
 random_seed                     23                                                                                                                                                                                     
 master_seed                     0                                                                                                                                                                                      
-sites_per_tile                  10000                                                                                                                                                                                  
 =============================== =======================================================================================================================================================================================
 
 Input files
@@ -44,7 +43,7 @@ Composite source model
 ========= ====== ============================================================== ====================== ================
 smlt_path weight source_model_file                                              gsim_logic_tree        num_realizations
 ========= ====== ============================================================== ====================== ================
-b1        1.000  `simple_area_source_model.xml <simple_area_source_model.xml>`_ complex(4,5,0,4,2,1,0) 4/4             
+b1        1.000  `simple_area_source_model.xml <simple_area_source_model.xml>`_ complex(5,1,4,2,0,0,4) 4/4             
 ========= ====== ============================================================== ====================== ================
 
 Required parameters per tectonic region type
@@ -115,7 +114,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.002 2.229E-04 0.002 0.002 4        
+count_eff_ruptures 0.002 2.149E-04 0.002 0.002 4        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -123,13 +122,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   4.815     0.0       1     
-managing sources                 0.284     0.0       1     
-split/filter heavy sources       0.282     0.0       1     
+reading composite source model   5.018     0.0       1     
+managing sources                 0.273     0.0       1     
+split/filter heavy sources       0.271     0.0       1     
 filtering composite source model 0.017     0.0       1     
 total count_eff_ruptures         0.008     0.0       4     
-store source_info                5.479E-04 0.0       1     
-aggregate curves                 5.078E-05 0.0       4     
-reading site collection          3.719E-05 0.0       1     
+store source_info                5.360E-04 0.0       1     
+aggregate curves                 4.935E-05 0.0       4     
+reading site collection          4.840E-05 0.0       1     
 saving probability maps          2.337E-05 0.0       1     
 ================================ ========= ========= ======

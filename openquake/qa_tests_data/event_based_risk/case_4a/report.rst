@@ -2,9 +2,9 @@ Event Based Hazard
 ==================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80543.hdf5 Thu Jan 26 05:24:34 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81048.hdf5 Thu Jan 26 14:28:30 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 1, sitecol = 762 B
@@ -54,7 +54,7 @@ Required parameters per tectonic region type
 ====== ================ ========= ========== ==========
 grp_id gsims            distances siteparams ruptparams
 ====== ================ ========= ========== ==========
-0      SadighEtAl1997() rrup      vs30       rake mag  
+0      SadighEtAl1997() rrup      vs30       mag rake  
 ====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -82,7 +82,7 @@ compute_ruptures_sent.gsims               364
 compute_ruptures_sent.monitor             4,216       
 compute_ruptures_sent.sources             19,068      
 compute_ruptures_sent.src_filter          3,148       
-compute_ruptures_tot_received             28,849      
+compute_ruptures_tot_received             28,855      
 hazard.input_weight                       483         
 hazard.n_imts                             1           
 hazard.n_levels                           11          
@@ -138,7 +138,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.067 0.032  0.021 0.096 4        
+compute_ruptures   0.060 0.033  0.015 0.093 4        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -146,15 +146,15 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           0.267     1.641     4     
-managing sources                 0.081     0.0       1     
-split/filter heavy sources       0.078     0.0       1     
-filtering ruptures               0.028     0.0       5     
-reading composite source model   0.023     0.0       1     
-saving ruptures                  0.007     0.0       4     
+total compute_ruptures           0.241     1.582     4     
+managing sources                 0.083     0.0       1     
+split/filter heavy sources       0.080     0.0       1     
+filtering ruptures               0.023     0.0       5     
+reading composite source model   0.022     0.0       1     
+saving ruptures                  0.006     0.0       4     
 filtering composite source model 0.005     0.0       1     
 reading exposure                 0.003     0.0       1     
-setting event years              0.003     0.0       1     
-store source_info                0.001     0.0       1     
-reading site collection          8.106E-06 0.0       1     
+setting event years              0.002     0.0       1     
+store source_info                9.520E-04 0.0       1     
+reading site collection          7.868E-06 0.0       1     
 ================================ ========= ========= ======

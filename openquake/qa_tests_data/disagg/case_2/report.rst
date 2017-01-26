@@ -2,9 +2,9 @@ QA test for disaggregation case_2
 =================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80597.hdf5 Thu Jan 26 05:26:40 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81103.hdf5 Thu Jan 26 14:30:38 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 2, sitecol = 808 B
@@ -14,7 +14,7 @@ Parameters
 =============================== ==============================================================
 calculation_mode                'disaggregation'                                              
 number_of_logic_tree_samples    0                                                             
-maximum_distance                {'Active Shallow Crust': 200.0, 'Subduction IntraSlab': 200.0}
+maximum_distance                {'Subduction IntraSlab': 200.0, 'Active Shallow Crust': 200.0}
 investigation_time              1.0                                                           
 ses_per_logic_tree_path         1                                                             
 truncation_level                3.0                                                           
@@ -44,8 +44,8 @@ Composite source model
 ============== ====== ========================================== =============== ================
 smlt_path      weight source_model_file                          gsim_logic_tree num_realizations
 ============== ====== ========================================== =============== ================
-source_model_1 0.500  `source_model_1.xml <source_model_1.xml>`_ simple(1,2)     2/2             
-source_model_2 0.500  `source_model_2.xml <source_model_2.xml>`_ simple(1,2)     2/2             
+source_model_1 0.500  `source_model_1.xml <source_model_1.xml>`_ simple(2,1)     2/2             
+source_model_2 0.500  `source_model_2.xml <source_model_2.xml>`_ simple(2,1)     2/2             
 ============== ====== ========================================== =============== ================
 
 Required parameters per tectonic region type
@@ -54,8 +54,8 @@ Required parameters per tectonic region type
 grp_id gsims                                 distances   siteparams              ruptparams       
 ====== ===================================== =========== ======================= =================
 0      YoungsEtAl1997SSlab()                 rrup        vs30                    hypo_depth mag   
-1      BooreAtkinson2008() ChiouYoungs2008() rrup rx rjb z1pt0 vs30 vs30measured dip rake mag ztor
-2      BooreAtkinson2008() ChiouYoungs2008() rrup rx rjb z1pt0 vs30 vs30measured dip rake mag ztor
+1      BooreAtkinson2008() ChiouYoungs2008() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake
+2      BooreAtkinson2008() ChiouYoungs2008() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake
 ====== ===================================== =========== ======================= =================
 
 Realizations per (TRT, GSIM)
@@ -114,10 +114,10 @@ Slowest sources
 ====== ========= ================= ============ ========= ========= =========
 grp_id source_id source_class      num_ruptures calc_time num_sites num_split
 ====== ========= ================= ============ ========= ========= =========
-0      2         AreaSource        1,815        0.0       1         0        
 1      3         AreaSource        1,815        0.0       1         0        
-1      1         AreaSource        1,815        0.0       1         0        
+0      2         AreaSource        1,815        0.0       1         0        
 2      1         SimpleFaultSource 1,420        0.0       1         0        
+1      1         AreaSource        1,815        0.0       1         0        
 ====== ========= ================= ============ ========= ========= =========
 
 Computation times by source typology
@@ -133,7 +133,7 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 7.855E-04 8.146E-05 6.351E-04 9.422E-04 14       
+count_eff_ruptures 6.706E-04 1.112E-04 4.649E-04 8.676E-04 14       
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -141,13 +141,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-managing sources                 0.122     0.0       1     
-split/filter heavy sources       0.117     0.0       1     
-reading composite source model   0.080     0.0       1     
-total count_eff_ruptures         0.011     0.0       14    
+managing sources                 0.120     0.0       1     
+split/filter heavy sources       0.115     0.0       1     
+reading composite source model   0.079     0.0       1     
+total count_eff_ruptures         0.009     0.0       14    
 filtering composite source model 0.005     0.0       1     
-store source_info                5.288E-04 0.0       1     
-aggregate curves                 1.714E-04 0.0       14    
-reading site collection          2.885E-05 0.0       1     
-saving probability maps          2.241E-05 0.0       1     
+store source_info                5.984E-04 0.0       1     
+aggregate curves                 1.724E-04 0.0       14    
+reading site collection          2.861E-05 0.0       1     
+saving probability maps          2.360E-05 0.0       1     
 ================================ ========= ========= ======

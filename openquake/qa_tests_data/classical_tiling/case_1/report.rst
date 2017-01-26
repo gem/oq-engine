@@ -2,9 +2,9 @@ Classical PSHA using Area Source
 ================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80600.hdf5 Thu Jan 26 05:26:42 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81106.hdf5 Thu Jan 26 14:30:41 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 6, sitecol = 992 B
@@ -25,7 +25,6 @@ area_source_discretization      5.0
 ground_motion_correlation_model None                           
 random_seed                     23                             
 master_seed                     0                              
-sites_per_tile                  1                              
 =============================== ===============================
 
 Input files
@@ -52,7 +51,7 @@ Required parameters per tectonic region type
 ====== ===================================== =========== ======================= =================
 grp_id gsims                                 distances   siteparams              ruptparams       
 ====== ===================================== =========== ======================= =================
-0      BooreAtkinson2008() ChiouYoungs2008() rrup rx rjb z1pt0 vs30 vs30measured dip rake mag ztor
+0      BooreAtkinson2008() ChiouYoungs2008() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake
 ====== ===================================== =========== ======================= =================
 
 Realizations per (TRT, GSIM)
@@ -113,7 +112,7 @@ Information about the tasks
 ---------------------------
 ================== ========= ====== ========= ========= =========
 operation-duration mean      stddev min       max       num_tasks
-count_eff_ruptures 9.665E-04 NaN    9.665E-04 9.665E-04 1        
+count_eff_ruptures 7.889E-04 NaN    7.889E-04 7.889E-04 1        
 ================== ========= ====== ========= ========= =========
 
 Slowest operations
@@ -121,12 +120,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.080     0.0       1     
+reading composite source model   0.079     0.0       1     
 reading site collection          0.003     0.0       1     
 managing sources                 0.002     0.0       1     
 filtering composite source model 0.001     0.0       1     
-total count_eff_ruptures         9.665E-04 0.0       1     
-store source_info                7.517E-04 0.0       1     
-saving probability maps          3.505E-05 0.0       1     
-aggregate curves                 2.289E-05 0.0       1     
+store source_info                8.185E-04 0.0       1     
+total count_eff_ruptures         7.889E-04 0.0       1     
+saving probability maps          3.457E-05 0.0       1     
+aggregate curves                 2.384E-05 0.0       1     
 ================================ ========= ========= ======

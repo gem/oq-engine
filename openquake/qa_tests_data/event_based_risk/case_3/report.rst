@@ -2,9 +2,9 @@ Event Based Risk Lisbon
 =======================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80542.hdf5 Thu Jan 26 05:24:34 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81047.hdf5 Thu Jan 26 14:28:29 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 1, sitecol = 762 B
@@ -56,9 +56,9 @@ Required parameters per tectonic region type
 ====== ===================================== ========= ========== ==========
 grp_id gsims                                 distances siteparams ruptparams
 ====== ===================================== ========= ========== ==========
-0      AkkarBommer2010() AtkinsonBoore2006() rrup rjb  vs30       rake mag  
-2      AkkarBommer2010() AtkinsonBoore2006() rrup rjb  vs30       rake mag  
-3      AkkarBommer2010() AtkinsonBoore2006() rrup rjb  vs30       rake mag  
+0      AkkarBommer2010() AtkinsonBoore2006() rjb rrup  vs30       mag rake  
+2      AkkarBommer2010() AtkinsonBoore2006() rjb rrup  vs30       mag rake  
+3      AkkarBommer2010() AtkinsonBoore2006() rjb rrup  vs30       mag rake  
 ====== ===================================== ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -144,26 +144,26 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-1      9         AreaSource   2,508        0.0       1         0        
-3      6         AreaSource   4,123        0.0       1         0        
-1      3         AreaSource   3,509        0.0       1         0        
-1      4         AreaSource   1,280        0.0       1         0        
-2      1         AreaSource   4,163        0.0       1         0        
-3      8         AreaSource   1,440        0.0       1         0        
-1      6         AreaSource   4,123        0.0       1         0        
-0      2         AreaSource   19,923       0.0       1         0        
-3      10        AreaSource   4,482        0.0       1         0        
-1      7         AreaSource   1,690        0.0       1         0        
-1      10        AreaSource   4,482        0.0       1         0        
-0      0         AreaSource   24,435       0.0       1         0        
-0      1         AreaSource   4,163        0.0       1         0        
-1      8         AreaSource   1,440        0.0       1         0        
-2      0         AreaSource   24,435       0.0       1         0        
-1      5         AreaSource   2,349        0.0       1         0        
-3      9         AreaSource   2,508        0.0       1         0        
-3      4         AreaSource   1,280        0.0       1         0        
-3      3         AreaSource   3,509        0.0       1         0        
 3      5         AreaSource   2,349        0.0       1         0        
+1      5         AreaSource   2,349        0.0       1         0        
+3      7         AreaSource   1,690        0.0       1         0        
+3      4         AreaSource   1,280        0.0       1         0        
+1      6         AreaSource   4,123        0.0       1         0        
+0      1         AreaSource   4,163        0.0       1         0        
+1      3         AreaSource   3,509        0.0       1         0        
+1      7         AreaSource   1,690        0.0       1         0        
+3      6         AreaSource   4,123        0.0       1         0        
+1      9         AreaSource   2,508        0.0       1         0        
+1      4         AreaSource   1,280        0.0       1         0        
+2      2         AreaSource   19,923       0.0       1         0        
+0      0         AreaSource   24,435       0.0       1         0        
+3      10        AreaSource   4,482        0.0       1         0        
+0      2         AreaSource   19,923       0.0       1         0        
+1      10        AreaSource   4,482        0.0       1         0        
+3      8         AreaSource   1,440        0.0       1         0        
+3      9         AreaSource   2,508        0.0       1         0        
+2      0         AreaSource   24,435       0.0       1         0        
+3      3         AreaSource   3,509        0.0       1         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -178,7 +178,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   1.607 0.666  0.345 2.598 18       
+compute_ruptures   1.669 0.688  0.383 2.685 18       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -186,15 +186,15 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           28        3.332     18    
-managing sources                 2.412     0.0       1     
-split/filter heavy sources       2.402     0.0       2     
-reading composite source model   1.037     0.0       1     
-saving ruptures                  0.075     0.0       18    
-filtering composite source model 0.011     0.0       1     
+total compute_ruptures           30        3.164     18    
+managing sources                 2.259     0.0       1     
+split/filter heavy sources       2.249     0.0       2     
+reading composite source model   1.095     0.0       1     
+saving ruptures                  0.074     0.0       18    
+filtering composite source model 0.012     0.0       1     
 filtering ruptures               0.005     0.0       14    
 reading exposure                 0.003     0.0       1     
 setting event years              0.003     0.0       1     
-store source_info                8.364E-04 0.0       1     
-reading site collection          9.060E-06 0.0       1     
+store source_info                7.854E-04 0.0       1     
+reading site collection          8.821E-06 0.0       1     
 ================================ ========= ========= ======

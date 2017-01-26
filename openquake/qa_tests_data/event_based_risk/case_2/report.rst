@@ -2,9 +2,9 @@ Event Based Risk QA Test 2
 ==========================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80540.hdf5 Thu Jan 26 05:24:27 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81045.hdf5 Thu Jan 26 14:28:23 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 3, sitecol = 854 B
@@ -54,7 +54,7 @@ Required parameters per tectonic region type
 ====== ================= =========== ======================= =================
 grp_id gsims             distances   siteparams              ruptparams       
 ====== ================= =========== ======================= =================
-0      ChiouYoungs2008() rrup rx rjb z1pt0 vs30 vs30measured dip rake mag ztor
+0      ChiouYoungs2008() rjb rrup rx vs30measured vs30 z1pt0 mag ztor rake dip
 ====== ================= =========== ======================= =================
 
 Realizations per (TRT, GSIM)
@@ -76,13 +76,13 @@ source_model.xml 0      Active Shallow Crust 3           8            18
 Informational data
 ------------------
 ========================================= ============
-compute_ruptures_max_received_per_task    10,972      
+compute_ruptures_max_received_per_task    10,966      
 compute_ruptures_num_tasks                1           
 compute_ruptures_sent.gsims               98          
 compute_ruptures_sent.monitor             1,227       
 compute_ruptures_sent.sources             2,191       
 compute_ruptures_sent.src_filter          638         
-compute_ruptures_tot_received             10,972      
+compute_ruptures_tot_received             10,966      
 hazard.input_weight                       1.800       
 hazard.n_imts                             3           
 hazard.n_levels                           15          
@@ -129,8 +129,8 @@ Slowest sources
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
 0      1         PointSource  6            0.0       1         0        
-0      2         PointSource  6            0.0       1         0        
 0      3         PointSource  6            0.0       1         0        
+0      2         PointSource  6            0.0       1         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -153,14 +153,14 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           0.020     1.730     1     
+total compute_ruptures           0.020     1.734     1     
 reading composite source model   0.006     0.0       1     
-filtering composite source model 0.005     0.0       1     
-filtering ruptures               0.004     0.0       8     
+filtering composite source model 0.004     0.0       1     
 reading exposure                 0.004     0.0       1     
+filtering ruptures               0.004     0.0       8     
 saving ruptures                  0.004     0.0       1     
 setting event years              0.003     0.0       1     
 managing sources                 0.002     0.0       1     
-store source_info                9.103E-04 0.0       1     
-reading site collection          4.101E-05 0.0       1     
+store source_info                9.143E-04 0.0       1     
+reading site collection          4.578E-05 0.0       1     
 ================================ ========= ========= ======

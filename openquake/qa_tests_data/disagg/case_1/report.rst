@@ -2,9 +2,9 @@ QA test for disaggregation case_1, taken from the disagg demo
 =============================================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80598.hdf5 Thu Jan 26 05:26:40 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81104.hdf5 Thu Jan 26 14:30:39 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 2, sitecol = 808 B
@@ -51,7 +51,7 @@ Required parameters per tectonic region type
 ====== ================= =========== ======================= =================
 grp_id gsims             distances   siteparams              ruptparams       
 ====== ================= =========== ======================= =================
-0      ChiouYoungs2008() rrup rx rjb z1pt0 vs30 vs30measured dip rake mag ztor
+0      ChiouYoungs2008() rjb rrup rx vs30measured vs30 z1pt0 mag ztor rake dip
 ====== ================= =========== ======================= =================
 
 Realizations per (TRT, GSIM)
@@ -97,9 +97,9 @@ Slowest sources
 grp_id source_id source_class       num_ruptures calc_time num_sites num_split
 ====== ========= ================== ============ ========= ========= =========
 0      1         PointSource        15           0.0       1         0        
-0      2         AreaSource         1,440        0.0       1         0        
-0      3         SimpleFaultSource  617          0.0       1         0        
 0      4         ComplexFaultSource 164          0.0       1         0        
+0      3         SimpleFaultSource  617          0.0       1         0        
+0      2         AreaSource         1,440        0.0       1         0        
 ====== ========= ================== ============ ========= ========= =========
 
 Computation times by source typology
@@ -117,7 +117,7 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ===== =========
 operation-duration mean      stddev    min       max   num_tasks
-count_eff_ruptures 8.936E-04 8.397E-05 8.109E-04 0.001 5        
+count_eff_ruptures 8.931E-04 8.919E-05 8.168E-04 0.001 5        
 ================== ========= ========= ========= ===== =========
 
 Slowest operations
@@ -125,13 +125,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-managing sources                 0.183     0.0       1     
-split/filter heavy sources       0.180     0.0       1     
-reading composite source model   0.058     0.0       1     
+managing sources                 0.188     0.0       1     
+split/filter heavy sources       0.186     0.0       1     
+reading composite source model   0.063     0.0       1     
 filtering composite source model 0.006     0.0       1     
 total count_eff_ruptures         0.004     0.0       5     
-store source_info                6.146E-04 0.0       1     
-aggregate curves                 7.176E-05 0.0       5     
-reading site collection          3.099E-05 0.0       1     
-saving probability maps          2.742E-05 0.0       1     
+store source_info                6.292E-04 0.0       1     
+aggregate curves                 7.391E-05 0.0       5     
+reading site collection          3.600E-05 0.0       1     
+saving probability maps          2.956E-05 0.0       1     
 ================================ ========= ========= ======

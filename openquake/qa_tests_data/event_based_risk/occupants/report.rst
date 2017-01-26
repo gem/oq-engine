@@ -2,9 +2,9 @@ event based risk
 ================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80541.hdf5 Thu Jan 26 05:24:28 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81046.hdf5 Thu Jan 26 14:28:23 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 7, sitecol = 1.01 KB
@@ -140,7 +140,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.284 0.031  0.248 0.304 3        
+compute_ruptures   0.285 0.030  0.251 0.306 3        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -148,15 +148,15 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           0.852     3.418     3     
-filtering ruptures               0.544     0.0       265   
-managing sources                 0.081     0.0       1     
-split/filter heavy sources       0.079     0.0       1     
-setting event years              0.012     0.0       1     
+total compute_ruptures           0.856     3.410     3     
+filtering ruptures               0.551     0.0       265   
+managing sources                 0.086     0.0       1     
+split/filter heavy sources       0.084     0.0       1     
 saving ruptures                  0.011     0.0       3     
-reading composite source model   0.008     0.0       1     
+setting event years              0.010     0.0       1     
+reading composite source model   0.009     0.0       1     
 reading exposure                 0.005     0.0       1     
 filtering composite source model 0.003     0.0       1     
-store source_info                9.735E-04 0.0       1     
-reading site collection          8.583E-06 0.0       1     
+store source_info                7.374E-04 0.0       1     
+reading site collection          9.060E-06 0.0       1     
 ================================ ========= ========= ======

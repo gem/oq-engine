@@ -2,9 +2,9 @@ classical risk
 ==============
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80504.hdf5 Thu Jan 26 05:24:17 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81009.hdf5 Thu Jan 26 14:28:12 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 7, sitecol = 1.01 KB
@@ -26,7 +26,6 @@ ground_motion_correlation_model None
 random_seed                     24                                                            
 master_seed                     0                                                             
 avg_losses                      False                                                         
-sites_per_tile                  10000                                                         
 =============================== ==============================================================
 
 Input files
@@ -61,10 +60,10 @@ Required parameters per tectonic region type
 ====== ===================================== =========== ======================= =================
 grp_id gsims                                 distances   siteparams              ruptparams       
 ====== ===================================== =========== ======================= =================
-0      BooreAtkinson2008() ChiouYoungs2008() rrup rx rjb z1pt0 vs30 vs30measured dip rake mag ztor
-1      AkkarBommer2010() ChiouYoungs2008()   rrup rx rjb z1pt0 vs30 vs30measured dip rake mag ztor
-2      BooreAtkinson2008() ChiouYoungs2008() rrup rx rjb z1pt0 vs30 vs30measured dip rake mag ztor
-3      AkkarBommer2010() ChiouYoungs2008()   rrup rx rjb z1pt0 vs30 vs30measured dip rake mag ztor
+0      BooreAtkinson2008() ChiouYoungs2008() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake
+1      AkkarBommer2010() ChiouYoungs2008()   rjb rrup rx vs30measured vs30 z1pt0 rake dip ztor mag
+2      BooreAtkinson2008() ChiouYoungs2008() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake
+3      AkkarBommer2010() ChiouYoungs2008()   rjb rrup rx vs30measured vs30 z1pt0 rake dip ztor mag
 ====== ===================================== =========== ======================= =================
 
 Realizations per (TRT, GSIM)
@@ -110,7 +109,7 @@ count_eff_ruptures_sent.gsims               1,424
 count_eff_ruptures_sent.monitor             11,936      
 count_eff_ruptures_sent.sitecol             6,008       
 count_eff_ruptures_sent.sources             22,487      
-count_eff_ruptures_tot_received             13,736      
+count_eff_ruptures_tot_received             13,733      
 hazard.input_weight                         969         
 hazard.n_imts                               4           
 hazard.n_levels                             40          
@@ -163,7 +162,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ========= ===== =========
 operation-duration mean  stddev    min       max   num_tasks
-count_eff_ruptures 0.001 2.826E-04 8.559E-04 0.001 8        
+count_eff_ruptures 0.001 3.023E-04 8.519E-04 0.002 8        
 ================== ===== ========= ========= ===== =========
 
 Slowest operations
@@ -171,14 +170,14 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-managing sources                 0.136     0.0       1     
-split/filter heavy sources       0.132     0.0       2     
-reading composite source model   0.031     0.0       1     
-total count_eff_ruptures         0.009     0.680     8     
-filtering composite source model 0.009     0.0       1     
+managing sources                 0.127     0.0       1     
+split/filter heavy sources       0.123     0.0       2     
+reading composite source model   0.027     0.0       1     
+total count_eff_ruptures         0.009     0.559     8     
+filtering composite source model 0.008     0.0       1     
 reading exposure                 0.004     0.0       1     
-store source_info                4.880E-04 0.0       1     
-aggregate curves                 1.063E-04 0.0       8     
-saving probability maps          2.384E-05 0.0       1     
+store source_info                4.849E-04 0.0       1     
+aggregate curves                 1.035E-04 0.0       8     
+saving probability maps          2.360E-05 0.0       1     
 reading site collection          6.914E-06 0.0       1     
 ================================ ========= ========= ======

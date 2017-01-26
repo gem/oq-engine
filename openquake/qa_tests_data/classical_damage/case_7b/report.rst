@@ -2,9 +2,9 @@ Classical PSHA-Based Hazard
 ===========================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80536.hdf5 Thu Jan 26 05:24:26 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81041.hdf5 Thu Jan 26 14:28:21 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 7, sitecol = 1.01 KB
@@ -25,7 +25,6 @@ area_source_discretization      20.0
 ground_motion_correlation_model None                           
 random_seed                     42                             
 master_seed                     0                              
-sites_per_tile                  10000                          
 =============================== ===============================
 
 Input files
@@ -54,7 +53,7 @@ Required parameters per tectonic region type
 ====== ================ ========= ========== ==========
 grp_id gsims            distances siteparams ruptparams
 ====== ================ ========= ========== ==========
-0      SadighEtAl1997() rrup      vs30       rake mag  
+0      SadighEtAl1997() rrup      vs30       mag rake  
 ====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -131,7 +130,7 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ========= =========
 operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 8.136E-04 6.773E-05 7.229E-04 9.394E-04 10       
+count_eff_ruptures 6.823E-04 1.114E-04 4.930E-04 8.829E-04 10       
 ================== ========= ========= ========= ========= =========
 
 Slowest operations
@@ -139,14 +138,14 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-managing sources                 0.132     0.0       1     
-split/filter heavy sources       0.130     0.0       1     
+managing sources                 0.138     0.0       1     
+split/filter heavy sources       0.136     0.0       1     
 reading composite source model   0.014     0.0       1     
-total count_eff_ruptures         0.008     0.0       10    
+total count_eff_ruptures         0.007     0.0       10    
 filtering composite source model 0.003     0.0       1     
 reading exposure                 0.003     0.0       1     
-store source_info                5.295E-04 0.0       1     
+store source_info                5.279E-04 0.0       1     
 aggregate curves                 1.423E-04 0.0       10    
-saving probability maps          2.837E-05 0.0       1     
-reading site collection          8.821E-06 0.0       1     
+saving probability maps          2.766E-05 0.0       1     
+reading site collection          8.106E-06 0.0       1     
 ================================ ========= ========= ======

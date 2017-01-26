@@ -2,9 +2,9 @@ event based risk
 ================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80545.hdf5 Thu Jan 26 05:24:44 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81050.hdf5 Thu Jan 26 14:28:39 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 7, sitecol = 1.01 KB
@@ -60,8 +60,8 @@ Required parameters per tectonic region type
 ====== ===================================== =========== ======================= =================
 grp_id gsims                                 distances   siteparams              ruptparams       
 ====== ===================================== =========== ======================= =================
-1      AkkarBommer2010() ChiouYoungs2008()   rrup rx rjb z1pt0 vs30 vs30measured dip rake mag ztor
-2      BooreAtkinson2008() ChiouYoungs2008() rrup rx rjb z1pt0 vs30 vs30measured dip rake mag ztor
+1      AkkarBommer2010() ChiouYoungs2008()   rjb rrup rx vs30measured vs30 z1pt0 rake dip ztor mag
+2      BooreAtkinson2008() ChiouYoungs2008() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake
 ====== ===================================== =========== ======================= =================
 
 Realizations per (TRT, GSIM)
@@ -95,13 +95,13 @@ source_model_2.xml 2      Active Shallow Crust 1           1            482
 Informational data
 ------------------
 ========================================= ============
-compute_ruptures_max_received_per_task    5,748       
+compute_ruptures_max_received_per_task    5,749       
 compute_ruptures_num_tasks                8           
 compute_ruptures_sent.gsims               1,424       
 compute_ruptures_sent.monitor             12,672      
 compute_ruptures_sent.sources             28,270      
 compute_ruptures_sent.src_filter          6,008       
-compute_ruptures_tot_received             24,835      
+compute_ruptures_tot_received             24,832      
 hazard.input_weight                       969         
 hazard.n_imts                             4           
 hazard.n_levels                           46          
@@ -166,7 +166,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.045 0.025  0.004 0.075 8        
+compute_ruptures   0.033 0.020  0.002 0.068 8        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -174,15 +174,15 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           0.360     0.004     8     
-managing sources                 0.138     0.0       1     
-split/filter heavy sources       0.134     0.0       2     
-reading composite source model   0.031     0.0       1     
+total compute_ruptures           0.262     0.012     8     
+managing sources                 0.137     0.0       1     
+split/filter heavy sources       0.133     0.0       2     
+reading composite source model   0.030     0.0       1     
 filtering composite source model 0.009     0.0       1     
-filtering ruptures               0.008     0.0       4     
-saving ruptures                  0.004     0.0       8     
+filtering ruptures               0.005     0.0       4     
+saving ruptures                  0.005     0.0       8     
 reading exposure                 0.004     0.0       1     
-setting event years              0.002     0.0       1     
-store source_info                5.436E-04 0.0       1     
-reading site collection          6.914E-06 0.0       1     
+setting event years              0.003     0.0       1     
+store source_info                7.088E-04 0.0       1     
+reading site collection          7.391E-06 0.0       1     
 ================================ ========= ========= ======

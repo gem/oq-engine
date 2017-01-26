@@ -2,9 +2,9 @@ Classical PSHA with GMPE logic tree with multiple tectonic region types
 =======================================================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80550.hdf5 Thu Jan 26 05:24:48 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81055.hdf5 Thu Jan 26 14:28:44 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 3, sitecol = 854 B
@@ -25,7 +25,6 @@ area_source_discretization      10.0
 ground_motion_correlation_model None                                                              
 random_seed                     23                                                                
 master_seed                     0                                                                 
-sites_per_tile                  10000                                                             
 =============================== ==================================================================
 
 Input files
@@ -57,10 +56,10 @@ Required parameters per tectonic region type
 ====== =========================================== ========= ========== =================
 grp_id gsims                                       distances siteparams ruptparams       
 ====== =========================================== ========= ========== =================
-0      BooreAtkinson2008() CampbellBozorgnia2008() rrup rjb  vs30 z2pt5 dip rake mag ztor
-1      Campbell2003() ToroEtAl2002()               rrup rjb             mag              
-2      BooreAtkinson2008() CampbellBozorgnia2008() rrup rjb  vs30 z2pt5 dip rake mag ztor
-3      BooreAtkinson2008() CampbellBozorgnia2008() rrup rjb  vs30 z2pt5 dip rake mag ztor
+0      BooreAtkinson2008() CampbellBozorgnia2008() rjb rrup  z2pt5 vs30 dip mag ztor rake
+1      Campbell2003() ToroEtAl2002()               rjb rrup             mag              
+2      BooreAtkinson2008() CampbellBozorgnia2008() rjb rrup  z2pt5 vs30 dip mag ztor rake
+3      BooreAtkinson2008() CampbellBozorgnia2008() rjb rrup  z2pt5 vs30 dip mag ztor rake
 ====== =========================================== ========= ========== =================
 
 Realizations per (TRT, GSIM)
@@ -124,8 +123,8 @@ Slowest sources
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
 0      1         PointSource  15           0.0       3         0        
-3      1         AreaSource   240          0.0       3         0        
 1      2         PointSource  15           0.0       3         0        
+3      1         AreaSource   240          0.0       3         0        
 2      1         AreaSource   240          0.0       3         0        
 ====== ========= ============ ============ ========= ========= =========
 
@@ -142,7 +141,7 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ===== =========
 operation-duration mean      stddev    min       max   num_tasks
-count_eff_ruptures 9.121E-04 7.358E-05 8.557E-04 0.001 4        
+count_eff_ruptures 8.715E-04 1.310E-04 7.591E-04 0.001 4        
 ================== ========= ========= ========= ===== =========
 
 Slowest operations
@@ -153,9 +152,9 @@ operation                        time_sec  memory_mb counts
 reading composite source model   0.018     0.0       1     
 managing sources                 0.006     0.0       1     
 filtering composite source model 0.006     0.0       1     
-total count_eff_ruptures         0.004     0.0       4     
-store source_info                8.872E-04 0.0       1     
-aggregate curves                 1.016E-04 0.0       4     
-reading site collection          4.625E-05 0.0       1     
-saving probability maps          4.101E-05 0.0       1     
+total count_eff_ruptures         0.003     0.0       4     
+store source_info                9.274E-04 0.0       1     
+aggregate curves                 1.004E-04 0.0       4     
+reading site collection          4.220E-05 0.0       1     
+saving probability maps          4.172E-05 0.0       1     
 ================================ ========= ========= ======
