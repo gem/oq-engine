@@ -15,7 +15,7 @@ http://ftp.openquake.org/wheelhouse/macos/py27/scipy-0.17.1-cp27-cp27m-macosx_10
 http://ftp.openquake.org/wheelhouse/macos/py27/psutil-4.4.2-cp27-cp27m-macosx_10_6_intel.whl
 http://ftp.openquake.org/wheelhouse/macos/py27/Shapely-1.5.17.post1-cp27-cp27m-macosx_10_6_intel.whl
 http://ftp.openquake.org/wheelhouse/macos/py27/docutils-0.12-cp27-none-any.whl
-http://ftp.openquake.org/wheelhouse/macos/py/decorator-4.0.10-py2.py3-none-any.whl
+http://ftp.openquake.org/wheelhouse/macos/py/decorator-4.0.11-py2.py3-none-any.whl
 http://ftp.openquake.org/wheelhouse/macos/py/funcsigs-1.0.2-py2.py3-none-any.whl
 http://ftp.openquake.org/wheelhouse/macos/py/pbr-1.8.0-py2.py3-none-any.whl
 http://ftp.openquake.org/wheelhouse/macos/py/six-1.10.0-py2.py3-none-any.whl
