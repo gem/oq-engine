@@ -44,7 +44,7 @@ else:
 
     from openquake.commonlib import config
 
-    config.abort_if_no_config_available()
+    config.abort_if_no_config_readable()
 
     amqp = config.get_section("amqp")
 
