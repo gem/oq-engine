@@ -2,9 +2,9 @@ Classical Tiling for Turkey reduced
 ===================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80599.hdf5 Thu Jan 26 05:26:42 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81105.hdf5 Thu Jan 26 14:30:40 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 83, sitecol = 4.45 KB
@@ -14,7 +14,7 @@ Parameters
 =============================== ==========================================================================================================================================================================================
 calculation_mode                'classical'                                                                                                                                                                               
 number_of_logic_tree_samples    0                                                                                                                                                                                         
-maximum_distance                {'Subduction Interface': 100.0, 'Subduction Deep': 100.0, 'Stable Shallow Crust': 100.0, 'Shield': 100.0, 'Active Shallow Crust': 100.0, 'Volcanic': 100.0, 'Subduction IntraSlab': 100.0}
+maximum_distance                {'Stable Shallow Crust': 100.0, 'Subduction Deep': 100.0, 'Subduction IntraSlab': 100.0, 'Active Shallow Crust': 100.0, 'Volcanic': 100.0, 'Shield': 100.0, 'Subduction Interface': 100.0}
 investigation_time              10.0                                                                                                                                                                                      
 ses_per_logic_tree_path         1                                                                                                                                                                                         
 truncation_level                3.0                                                                                                                                                                                       
@@ -25,7 +25,6 @@ area_source_discretization      25.0
 ground_motion_correlation_model None                                                                                                                                                                                      
 random_seed                     323                                                                                                                                                                                       
 master_seed                     0                                                                                                                                                                                         
-sites_per_tile                  10                                                                                                                                                                                        
 =============================== ==========================================================================================================================================================================================
 
 Input files
@@ -48,9 +47,9 @@ Composite source model
 ======================== ====== ======================================================== ====================== ================
 smlt_path                weight source_model_file                                        gsim_logic_tree        num_realizations
 ======================== ====== ======================================================== ====================== ================
-AreaSource               0.500  `models/src/as_model.xml <models/src/as_model.xml>`_     complex(4,0,1,2,4,5,4) 4/4             
-FaultSourceAndBackground 0.200  `models/src/fsbg_model.xml <models/src/fsbg_model.xml>`_ complex(4,0,1,2,4,5,4) 4/4             
-SeiFaCrust               0.300  `models/src/ss_model.xml <models/src/ss_model.xml>`_     complex(4,0,1,2,4,5,4) 0/0             
+AreaSource               0.500  `models/src/as_model.xml <models/src/as_model.xml>`_     complex(4,5,1,4,2,0,4) 4/4             
+FaultSourceAndBackground 0.200  `models/src/fsbg_model.xml <models/src/fsbg_model.xml>`_ complex(4,5,1,4,2,0,4) 4/4             
+SeiFaCrust               0.300  `models/src/ss_model.xml <models/src/ss_model.xml>`_     complex(4,5,1,4,2,0,4) 0/0             
 ======================== ====== ======================================================== ====================== ================
 
 Required parameters per tectonic region type
@@ -58,8 +57,8 @@ Required parameters per tectonic region type
 ====== ========================================================================== ================= ======================= ============================
 grp_id gsims                                                                      distances         siteparams              ruptparams                  
 ====== ========================================================================== ================= ======================= ============================
-4      AkkarBommer2010() CauzziFaccioli2008() ChiouYoungs2008() ZhaoEtAl2006Asc() rrup rx rhypo rjb z1pt0 vs30 vs30measured hypo_depth dip rake mag ztor
-9      AkkarBommer2010() CauzziFaccioli2008() ChiouYoungs2008() ZhaoEtAl2006Asc() rrup rx rhypo rjb z1pt0 vs30 vs30measured hypo_depth dip rake mag ztor
+4      AkkarBommer2010() CauzziFaccioli2008() ChiouYoungs2008() ZhaoEtAl2006Asc() rrup rjb rhypo rx vs30measured vs30 z1pt0 rake dip hypo_depth ztor mag
+9      AkkarBommer2010() CauzziFaccioli2008() ChiouYoungs2008() ZhaoEtAl2006Asc() rrup rjb rhypo rx vs30measured vs30 z1pt0 rake dip hypo_depth ztor mag
 ====== ========================================================================== ================= ======================= ============================
 
 Realizations per (TRT, GSIM)
@@ -120,9 +119,9 @@ Slowest sources
 ====== ============ ============ ============ ========= ========= =========
 grp_id source_id    source_class num_ruptures calc_time num_sites num_split
 ====== ============ ============ ============ ========= ========= =========
+4      AS_GEAS343   AreaSource   3,876        0.0       40        0        
 9      FSBG_ARAS462 AreaSource   306          0.0       4         0        
 9      FSBG_TRBG103 AreaSource   1,755        0.0       34        0        
-4      AS_GEAS343   AreaSource   3,876        0.0       40        0        
 ====== ============ ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -137,7 +136,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ========= ===== ===== =========
 operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.001 1.998E-04 0.001 0.001 4        
+count_eff_ruptures 0.001 1.922E-04 0.001 0.001 4        
 ================== ===== ========= ===== ===== =========
 
 Slowest operations
@@ -145,13 +144,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.805     0.0       1     
-managing sources                 0.082     0.0       1     
-split/filter heavy sources       0.078     0.0       1     
-filtering composite source model 0.025     0.0       1     
-reading site collection          0.024     0.0       1     
+reading composite source model   0.790     0.0       1     
+managing sources                 0.091     0.0       1     
+split/filter heavy sources       0.087     0.0       1     
+filtering composite source model 0.032     0.0       1     
+reading site collection          0.025     0.0       1     
 total count_eff_ruptures         0.005     0.0       4     
-store source_info                4.430E-04 0.0       1     
-aggregate curves                 5.126E-05 0.0       4     
-saving probability maps          2.241E-05 0.0       1     
+store source_info                5.624E-04 0.0       1     
+aggregate curves                 6.008E-05 0.0       4     
+saving probability maps          2.909E-05 0.0       1     
 ================================ ========= ========= ======

@@ -2,9 +2,9 @@ Classical PSHA with non-trivial logic tree (1 source model + 5 (a, b) pairs per 
 ==========================================================================================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_80567.hdf5 Thu Jan 26 05:25:42 2017
-engine_version                                 2.3.0-gitd31dc69        
-hazardlib_version                              0.23.0-git4d14bee       
+gem-tstation:/home/michele/ssd/calc_81073.hdf5 Thu Jan 26 14:29:39 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
 num_sites = 1, sitecol = 762 B
@@ -25,7 +25,6 @@ area_source_discretization      10.0
 ground_motion_correlation_model None                           
 random_seed                     23                             
 master_seed                     0                              
-sites_per_tile                  10000                          
 =============================== ===============================
 
 Input files
@@ -181,26 +180,26 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-4      1         AreaSource   375          0.0       1         0        
-4      2         AreaSource   390          0.0       1         0        
-2      1         AreaSource   375          0.0       1         0        
-9      5         AreaSource   375          0.0       1         0        
-2      5         AreaSource   425          0.0       1         0        
-9      3         AreaSource   450          0.0       1         0        
-9      1         AreaSource   425          0.0       1         0        
-0      2         AreaSource   450          0.0       1         0        
-2      3         AreaSource   510          0.0       1         0        
-2      4         AreaSource   375          0.0       1         0        
-4      5         AreaSource   325          0.0       1         0        
-8      2         AreaSource   390          0.0       1         0        
+9      2         AreaSource   450          0.0       1         0        
 3      5         AreaSource   375          0.0       1         0        
-5      3         AreaSource   450          0.0       1         0        
-8      4         AreaSource   425          0.0       1         0        
 1      5         AreaSource   375          0.0       1         0        
-8      3         AreaSource   390          0.0       1         0        
-7      5         AreaSource   425          0.0       1         0        
+9      4         AreaSource   325          0.0       1         0        
+4      1         AreaSource   375          0.0       1         0        
+9      1         AreaSource   425          0.0       1         0        
+7      1         AreaSource   375          0.0       1         0        
+3      2         AreaSource   450          0.0       1         0        
 6      2         AreaSource   450          0.0       1         0        
-5      2         AreaSource   510          0.0       1         0        
+4      4         AreaSource   325          0.0       1         0        
+8      2         AreaSource   390          0.0       1         0        
+4      3         AreaSource   450          0.0       1         0        
+0      2         AreaSource   450          0.0       1         0        
+7      2         AreaSource   450          0.0       1         0        
+7      4         AreaSource   425          0.0       1         0        
+7      5         AreaSource   425          0.0       1         0        
+1      1         AreaSource   375          0.0       1         0        
+1      4         AreaSource   375          0.0       1         0        
+4      2         AreaSource   390          0.0       1         0        
+4      5         AreaSource   325          0.0       1         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -215,7 +214,7 @@ Information about the tasks
 ---------------------------
 ================== ========= ========= ========= ===== =========
 operation-duration mean      stddev    min       max   num_tasks
-count_eff_ruptures 9.944E-04 1.823E-04 6.807E-04 0.001 17       
+count_eff_ruptures 9.260E-04 2.561E-04 4.342E-04 0.001 17       
 ================== ========= ========= ========= ===== =========
 
 Slowest operations
@@ -223,12 +222,12 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.255     0.0       1     
-managing sources                 0.033     0.0       1     
-filtering composite source model 0.031     0.0       1     
-total count_eff_ruptures         0.017     0.0       17    
+reading composite source model   0.253     0.0       1     
+managing sources                 0.032     0.0       1     
+filtering composite source model 0.026     0.0       1     
+total count_eff_ruptures         0.016     0.0       17    
 store source_info                0.001     0.0       1     
-aggregate curves                 3.984E-04 0.0       17    
-saving probability maps          3.958E-05 0.0       1     
-reading site collection          2.956E-05 0.0       1     
+aggregate curves                 3.619E-04 0.0       17    
+saving probability maps          3.552E-05 0.0       1     
+reading site collection          2.980E-05 0.0       1     
 ================================ ========= ========= ======
