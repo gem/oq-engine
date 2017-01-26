@@ -57,8 +57,8 @@ def quantile_curve(curves, quantile, weights=None):
     elif dim == 2:  # shape R, N -> N
         return _quantile_curve(curves, quantile, weights)
     elif dim == 3:  # shape R, N, L -> N, L
-        return numpy.curves([_quantile_curve(arr, quantile, weights)
-                             for arr in curves.transpose(1, 0, 2)])
+        return numpy.array([_quantile_curve(arr, quantile, weights)
+                            for arr in curves.transpose(1, 0, 2)])
 
 
 def _quantile_curve(arr, quantile, weights):
