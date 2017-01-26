@@ -2,30 +2,31 @@ Event Based Risk QA Test 2
 ==========================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_66966.hdf5 Wed Nov  9 08:14:15 2016
-engine_version                                 2.2.0-git54d01f4        
-hazardlib_version                              0.22.0-git173c60c       
+gem-tstation:/home/michele/ssd/calc_80540.hdf5 Thu Jan 26 05:24:27 2017
+engine_version                                 2.3.0-gitd31dc69        
+hazardlib_version                              0.23.0-git4d14bee       
 ============================================== ========================
 
-num_sites = 3, sitecol = 831 B
+num_sites = 3, sitecol = 854 B
 
 Parameters
 ----------
-============================ ================================
-calculation_mode             'event_based_risk'              
-number_of_logic_tree_samples 0                               
-maximum_distance             {u'Active Shallow Crust': 100.0}
-investigation_time           50.0                            
-ses_per_logic_tree_path      20                              
-truncation_level             3.0                             
-rupture_mesh_spacing         5.0                             
-complex_fault_mesh_spacing   5.0                             
-width_of_mfd_bin             0.3                             
-area_source_discretization   10.0                            
-random_seed                  23                              
-master_seed                  42                              
-avg_losses                   True                            
-============================ ================================
+=============================== ===============================
+calculation_mode                'event_based_risk'             
+number_of_logic_tree_samples    0                              
+maximum_distance                {'Active Shallow Crust': 100.0}
+investigation_time              50.0                           
+ses_per_logic_tree_path         20                             
+truncation_level                3.0                            
+rupture_mesh_spacing            5.0                            
+complex_fault_mesh_spacing      5.0                            
+width_of_mfd_bin                0.3                            
+area_source_discretization      10.0                           
+ground_motion_correlation_model None                           
+random_seed                     23                             
+master_seed                     42                             
+avg_losses                      True                           
+=============================== ===============================
 
 Input files
 -----------
@@ -53,7 +54,7 @@ Required parameters per tectonic region type
 ====== ================= =========== ======================= =================
 grp_id gsims             distances   siteparams              ruptparams       
 ====== ================= =========== ======================= =================
-0      ChiouYoungs2008() rx rjb rrup vs30measured vs30 z1pt0 rake dip ztor mag
+0      ChiouYoungs2008() rrup rx rjb z1pt0 vs30 vs30measured dip rake mag ztor
 ====== ================= =========== ======================= =================
 
 Realizations per (TRT, GSIM)
@@ -74,30 +75,24 @@ source_model.xml 0      Active Shallow Crust 3           8            18
 
 Informational data
 ------------------
-============================================= ============
-compute_gmfs_and_curves_max_received_per_task 3,919       
-compute_gmfs_and_curves_num_tasks             8           
-compute_gmfs_and_curves_sent.getter           29,928      
-compute_gmfs_and_curves_sent.monitor          23,576      
-compute_gmfs_and_curves_sent.rlzs             3,328       
-compute_gmfs_and_curves_tot_received          30,494      
-compute_ruptures_max_received_per_task        11,301      
-compute_ruptures_num_tasks                    1           
-compute_ruptures_sent.gsims                   89          
-compute_ruptures_sent.monitor                 1,248       
-compute_ruptures_sent.sitecol                 473         
-compute_ruptures_sent.sources                 2,259       
-compute_ruptures_tot_received                 11,301      
-hazard.input_weight                           1.800       
-hazard.n_imts                                 3           
-hazard.n_levels                               15          
-hazard.n_realizations                         1           
-hazard.n_sites                                3           
-hazard.n_sources                              3           
-hazard.output_weight                          45          
-hostname                                      gem-tstation
-require_epsilons                              1           
-============================================= ============
+========================================= ============
+compute_ruptures_max_received_per_task    10,972      
+compute_ruptures_num_tasks                1           
+compute_ruptures_sent.gsims               98          
+compute_ruptures_sent.monitor             1,227       
+compute_ruptures_sent.sources             2,191       
+compute_ruptures_sent.src_filter          638         
+compute_ruptures_tot_received             10,972      
+hazard.input_weight                       1.800       
+hazard.n_imts                             3           
+hazard.n_levels                           15          
+hazard.n_realizations                     1           
+hazard.n_sites                            3           
+hazard.n_sources                          3           
+hazard.output_weight                      45          
+hostname                                  gem-tstation
+require_epsilons                          1           
+========================================= ============
 
 Specific information for event based
 ------------------------------------
@@ -124,7 +119,7 @@ insurance_limit absolute
 taxonomy mean  stddev min max num_sites num_assets
 RC+      1.000 NaN    1   1   1         1         
 RM       1.000 0.0    1   1   2         2         
-W        1.000 NaN    1   1   1         1         
+W/1      1.000 NaN    1   1   1         1         
 *ALL*    1.333 0.577  1   2   3         4         
 ======== ===== ====== === === ========= ==========
 
@@ -133,8 +128,8 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-0      2         PointSource  6            0.0       1         0        
 0      1         PointSource  6            0.0       1         0        
+0      2         PointSource  6            0.0       1         0        
 0      3         PointSource  6            0.0       1         0        
 ====== ========= ============ ============ ========= ========= =========
 
@@ -150,7 +145,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.017 NaN    0.017 0.017 1        
+compute_ruptures   0.020 NaN    0.020 0.020 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -158,16 +153,14 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_gmfs_and_curves    0.076     1.926     8     
-total compute_ruptures           0.017     1.781     1     
-reading composite source model   0.007     0.0       1     
-saving gmfs                      0.007     0.0       8     
+total compute_ruptures           0.020     1.730     1     
+reading composite source model   0.006     0.0       1     
+filtering composite source model 0.005     0.0       1     
+filtering ruptures               0.004     0.0       8     
 reading exposure                 0.004     0.0       1     
-filtering composite source model 0.004     0.0       1     
-filtering ruptures               0.003     0.0       8     
-saving ruptures                  0.003     0.0       1     
+saving ruptures                  0.004     0.0       1     
+setting event years              0.003     0.0       1     
 managing sources                 0.002     0.0       1     
-store source_info                8.461E-04 0.0       1     
-reading site collection          3.695E-05 0.0       1     
-aggregating hcurves              2.694E-05 0.0       8     
+store source_info                9.103E-04 0.0       1     
+reading site collection          4.101E-05 0.0       1     
 ================================ ========= ========= ======
