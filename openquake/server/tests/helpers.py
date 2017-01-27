@@ -107,7 +107,7 @@ class ConfigTestCase(object):
         os.environ.clear()
         # Move the local configuration file out of the way if it exists.
         # Otherwise the tests that follow will break.
-        local_path = "%s/openquake.cfg" % os.path.abspath(config.OQDIR)
+        local_path = config.cfg.PKG_PATH
         if os.path.isfile(local_path):
             shutil.move(local_path, "%s.test_bakk" % local_path)
 
@@ -116,7 +116,7 @@ class ConfigTestCase(object):
         os.environ.update(self.orig_env)
         # Move the local configuration file back into place if it was stashed
         # away.
-        local_path = "%s/openquake.cfg" % os.path.abspath(config.OQDIR)
+        local_path = config.cfg.PKG_PATH
         if os.path.isfile("%s.test_bakk" % local_path):
             shutil.move("%s.test_bakk" % local_path, local_path)
         config.cfg.cfg.clear()
@@ -132,7 +132,7 @@ class ConfigTestCase(object):
         else:
             content = ""
         site_path = touch(content=textwrap.dedent(content))
-        os.environ["OQ_SITE_CFG_PATH"] = site_path
+        os.environ["OQ_CONFIG_FILE"] = site_path
         config.cfg.cfg.clear()
         config.cfg._load_from_file()
 

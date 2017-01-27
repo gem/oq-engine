@@ -73,7 +73,7 @@ ln -sf /opt/openquake/bin/oq %{buildroot}%{_bindir}/oq
 mkdir -p %{buildroot}%{_sysconfdir}/openquake
 mkdir -p %{buildroot}%{_datadir}/openquake/engine
 mkdir -p %{buildroot}%{_unitdir}
-install -m 644 openquake.cfg %{buildroot}/%{_sysconfdir}/openquake
+install -m 644 openquake/engine/openquake.cfg %{buildroot}/%{_sysconfdir}/openquake
 install -m 644 rpm/systemd/openquake-dbserver.service %{buildroot}%{_unitdir}/openquake-dbserver.service
 install -m 644 rpm/systemd/openquake-webui.service %{buildroot}%{_unitdir}/openquake-webui.service
 install -m 644 rpm/systemd/openquake-celery.service %{buildroot}%{_unitdir}/openquake-celery.service

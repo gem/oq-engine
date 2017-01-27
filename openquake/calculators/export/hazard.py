@@ -150,7 +150,7 @@ def export_ses_csv(ekey, dstore):
                     (etag, r['mag'], r['lon'], r['lat'], r['depth'],
                      trt, r['strike'], r['dip'], r['rake'], boundary))
     rows.sort(key=operator.itemgetter(0))
-    writers.write_csv(dest, rows, header=header)
+    writers.write_csv(dest, rows, header=header, sep='\t')
     return [dest]
 
 

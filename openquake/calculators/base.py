@@ -479,6 +479,8 @@ class HazardCalculator(BaseCalculator):
             self.cost_calculator = readinput.get_cost_calculator(self.oqparam)
             self.sitecol, self.assets_by_site = (
                 readinput.get_sitecol_assets(self.oqparam, self.exposure))
+            logging.info('Read %d assets on %d sites',
+                         len(arefs), len(self.assets_by_site))
 
     def get_min_iml(self, oq):
         # set the minimum_intensity
