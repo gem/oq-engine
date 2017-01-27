@@ -329,42 +329,25 @@ def calc_hazard_curves_ext(
     imtls = DictArray(imtls)
     sitecol = ss_filter.sitecol
     pmap = ProbabilityMap(len(imtls.array), 1)
-    # Processing groups
+    # Processing groups with homogeneous tectonic region
     for group in groups:
-        indep = group.src_interdep == 'indep'
-        # Prepare a dictionary
-        sources_by_trt = collections.defaultdict(list)
-        weights_by_trt = collections.defaultdict(dict)
-        # Fill the dictionary with sources for the different tectonic regions
-        # belonging to this group
-        if indep:
-            for src in group.sources:
-                sources_by_trt[src.tectonic_region_type].append(src)
-                weights_by_trt[src.tectonic_region_type][src.source_id] = 1
+        if group.src_interdep == 'indep':
+            pmap |= apply(
+                pmap_from_grp,
+                (group, ss_filter, imtls, gsim_by_trt, truncation_level),
+                weight=operator.attrgetter('weight')).reduce(
+                    operator.or_, ProbabilityMap(len(imtls.array), 1))
         else:
-            for src in group.sources:
-                sources_by_trt[src.tectonic_region_type].append(src)
-                w = group.srcs_weights[src.source_id]
-                weights_by_trt[src.tectonic_region_type][src.source_id] = w
-        # Aggregate results. Note that for now we assume that source groups
-        # are independent.
-        for trt in sources_by_trt:
-            gsim = gsim_by_trt[trt]
-            grp = SourceGroup(
-                trt, sources_by_trt[trt], 'temp', group.src_interdep,
-                group.rup_interdep, weights_by_trt[trt].values(), False)
-            if indep:
-                pmap |= apply(
-                    pmap_from_grp,
-                    (grp, ss_filter, imtls, [gsim], truncation_level),
-                    weight=operator.attrgetter('weight')).reduce(
-                        operator.or_, ProbabilityMap(len(imtls.array), 1))
-            else:
-                # since in this case the probability for each source have
-                # been already accounted, we use a weight equal to unity
-                pmap += apply(
-                    pmap_from_grp,
-                    (grp, ss_filter, imtls, [gsim], truncation_level),
-                    weight=operator.attrgetter('weight')).reduce(
-                        operator.or_, ProbabilityMap(len(imtls.array), 1))
+            # since in this case the probability for each source have
+            # been already accounted, we use a weight equal to unity
+            newmap = apply(
+                pmap_from_grp,
+                (group, ss_filter, imtls, gsim_by_trt, truncation_level),
+                weight=operator.attrgetter('weight')).reduce(
+                    operator.or_, ProbabilityMap(len(imtls.array), 1))
+            for sid in newmap:
+                if sid in pmap:
+                    pmap[sid] += newmap[sid]
+                else:
+                    pmap[sid] = newmap[sid]
     return pmap.convert(imtls, len(sitecol.complete))

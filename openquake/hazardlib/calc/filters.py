@@ -149,7 +149,8 @@ class SourceFilter(object):
     def __init__(self, sitecol, integration_distance, use_rtree=True):
         self.integration_distance = integration_distance
         self.sitecol = sitecol
-        self.use_rtree = use_rtree and integration_distance and rtree
+        self.use_rtree = use_rtree and rtree and (
+            integration_distance and sitecol is not None)
         if self.use_rtree:
             fixed_lons, self.idl = fix_lons_idl(sitecol.lons)
             self.index = rtree.index.Index()
@@ -202,6 +203,10 @@ class SourceFilter(object):
     def __call__(self, sources, sites=None):
         if sites is None:
             sites = self.sitecol
+        if self.sitecol is None:  # do not filter
+            for source in sources:
+                yield source, sites
+            return
         for source in sources:
             if self.use_rtree:  # Rtree filtering
                 box = self.get_affected_box(source)
