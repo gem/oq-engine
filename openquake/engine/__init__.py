@@ -18,10 +18,9 @@
 
 
 """
-OpenQuake is an open-source platform for the calculation of hazard, risk,
-and socio-economic impact. It is a project of the Global Earthquake Model,
-nd may be extended by other organizations to address additional classes
-of peril.
+OpenQuake is an open-source platform for the calculation of hazard and risk
+impact. It is a project of the Global Earthquake Model, and may be extended
+by other organizations to address additional classes of peril.
 
 For more information, please see the website at http://www.globalquakemodel.org
 This software may be downloaded at http://github.com/gem/openquake

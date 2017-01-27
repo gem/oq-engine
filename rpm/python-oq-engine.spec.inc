@@ -6,7 +6,7 @@
 %define oqtimestamp ##_timestamp_##
 %define oquser openquake
 
-Summary: Computes hazard, risk and socio-economic impact of earthquakes
+Summary: Computes earthquake hazard and risk
 Name: %{oqname}
 Version: %{oqversion}
 License: AGPLv3
@@ -30,7 +30,7 @@ Patch1: openquake.cfg.patch
 Requires(pre): shadow-utils
 
 %define common_deps sudo systemd python numpy scipy python-shapely python-psutil python-decorator python-mock python-futures h5py python-amqp python-celery python-django pyshp python-docutils python-requests python-prctl python-gunicorn rabbitmq-server
-%define oqlib_deps python-oq-hazardlib >= 0.22.0
+%define oqlib_deps python-oq-hazardlib >= 0.23.0
 %define dev_deps python-nose python-coverage
 
 Requires: %{common_deps}
@@ -83,7 +83,7 @@ python setup.py install --single-version-externally-managed -O1 --root=%{buildro
 mkdir -p %{buildroot}%{_sysconfdir}/openquake
 mkdir -p %{buildroot}%{_datadir}/openquake/engine
 mkdir -p %{buildroot}%{_unitdir}
-install -m 644 openquake.cfg %{buildroot}/%{_sysconfdir}/openquake
+install -m 644 openquake/engine/openquake.cfg %{buildroot}/%{_sysconfdir}/openquake
 install -m 644 rpm/systemd/openquake-dbserver.service %{buildroot}%{_unitdir}/openquake-dbserver.service
 install -m 644 rpm/systemd/openquake-webui.service %{buildroot}%{_unitdir}/openquake-webui.service
 install -m 644 rpm/systemd/openquake-celery.service %{buildroot}%{_unitdir}/openquake-celery.service

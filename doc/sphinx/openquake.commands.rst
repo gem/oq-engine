@@ -88,12 +88,3 @@ openquake.commands.upgrade_nrml module
     :members:
     :undoc-members:
     :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: openquake.commands
-    :members:
-    :undoc-members:
-    :show-inheritance:

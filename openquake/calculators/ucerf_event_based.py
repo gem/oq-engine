@@ -98,6 +98,7 @@ def prefilter_ruptures(hdf5, ridx, idx_set, sites, integration_distance):
     """
     Determines if a rupture is likely to be inside the integration distance
     by considering the set of fault plane centroids.
+
     :param hdf5:
         Source of UCERF file as h5py.File object
     :param list ridx:
@@ -134,7 +135,6 @@ def get_ucerf_rupture(hdf5, iloc, idx_set, tom, sites,
         Location of the rupture plane in the hdf5 file
     :param dict idx_set:
         Set of indices for the branch
-    Generates a rupture set from a sample of the background model
     :param tom:
         Temporal occurrence model as instance of :class:
         openquake.hazardlib.tom.TOM
@@ -392,6 +392,7 @@ def prefilter_background_model(hdf5, branch_key, sites, integration_distance,
                                msr=WC1994(), aspect=1.5):
     """
     Identify those points within the integration distance
+
     :param sites:
         Sites under consideration
     :param float integration_distance:
@@ -426,6 +427,7 @@ def sample_background_model(
         aspect=1.5, trt=DEFAULT_TRT):
     """
     Generates a rupture set from a sample of the background model
+
     :param branch_key:
         Key to indicate the branch for selecting the background model
     :param tom:

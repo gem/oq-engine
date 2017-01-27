@@ -12,27 +12,27 @@ The OpenQuake Engine is available for macOS in the form of **self-installable bi
 
 Requirements are:
 
-- Mac OS X 10.10 (Yosemite) or Mac OS X 10.11 (El Capitan). Untested, but may works on macOS 10.12 (Sierra)
+- Mac OS X 10.10 (Yosemite) or Mac OS X 10.11 (El Capitan), macOS 10.12 (Sierra)
 - 4 GB of RAM (8 GB recommended)
 - 1.2 GB of free disk space
 - Terminal or iTerm app
 
 ## Install packages from the OpenQuake website
 
-Download the installer from http://www.globalquakemodel.org/pkgs/macos/oq-engine/openquake-setup-macos-2.1.0-1.run using any browser
+Download the installer from http://www.globalquakemodel.org/pkgs/macos/oq-engine/openquake-setup-macos-2.2.0-1.run using any browser
 
 From the Terminal app (or using iTerm) run
 
 ```bash
 cd Downloads
-chmod +x openquake-setup-macos-2.1.0-1.run
-./openquake-setup-macos-2.1.0-1.run
+chmod +x openquake-setup-macos-2.2.0-1.run
+./openquake-setup-macos-2.2.0-1.run
 ```
 then follow the wizard on screen. By default the code is installed in `~/openquake`.
 
 ```bash
 Verifying archive integrity... All good.
-Uncompressing installer for the OpenQuake Engine  100%  
+Uncompressing installer for the OpenQuake Engine  100%
 Type the path where you want to install OpenQuake, followed by [ENTER]. Otherwise leave blank, it will be installed in /Users/auser/openquake: 
 Creating a new python environment in /Users/auser/openquake. Please wait.
 Installing the files in /Users/auser/openquake. Please wait.
