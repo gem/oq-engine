@@ -28,6 +28,11 @@ http://ftp.openquake.org/wheelhouse/linux/py27/pyshp-1.2.3-cp27-none-any.whl
 
 ## Extra ##
 
+### pythn-prctl ###
+# comment the following lines to skip installation
+# of pythn-prctl (optional feature)
+http://ftp.openquake.org/wheelhouse/linux/py27/python_prctl-1.6.1-cp27-cp27mu-manylinux1_x86_64.whl
+
 ### Rtree ###
 # comment the following lines to skip installation
 # of Rtree (experimental wheel, optional feature)
