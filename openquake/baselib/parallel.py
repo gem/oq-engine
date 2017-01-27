@@ -147,7 +147,6 @@ import traceback
 import functools
 import multiprocessing.dummy
 from concurrent.futures import as_completed, ProcessPoolExecutor, Future
-import decorator
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import pickle

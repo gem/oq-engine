@@ -22,6 +22,7 @@ Module :mod:`openquake.hazardlib.geo.surface.gridded` defines
 """
 import numpy as np
 
+from openquake.baselib.node import Node
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.surface.base import BaseSurface
@@ -44,6 +45,19 @@ class GriddedSurface(BaseSurface):
     def __init__(self, mesh):
         self.mesh = mesh
 
+    @property
+    def surface_nodes(self):
+        """
+        :param points: a list of Point objects
+        :returns: a Node of kind 'griddedSurface'
+        """
+        line = []
+        for point in self.mesh:
+            line.append(point.longitude)
+            line.append(point.latitude)
+            line.append(point.depth)
+        return [Node('griddedSurface', nodes=[Node('gml:posList', {}, line)])]
+
     @classmethod
     def from_points_list(cls, points):
         """
@@ -55,7 +69,6 @@ class GriddedSurface(BaseSurface):
             An instance of
             :class:`~openquake.hazardlib.geo.surface.gridded.GriddedSurface`
         """
-
         return cls(RectangularMesh.from_points_list([points]))
 
     def get_bounding_box(self):
