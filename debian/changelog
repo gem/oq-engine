@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Added new version of Pezeshk et al. (2011) GMPE adjusted for NEHRP BC Site condition
+  
   [Michele Simionato]
   * Added NRML support for GriddedSurface and GriddedRupture objects
   * Removed the warning about missing rtree
