@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import unittest
 import numpy
 import numpy.testing as npt
@@ -21,6 +22,7 @@ import numpy.testing as npt
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.source import NonParametricSeismicSource
 from openquake.hazardlib.source.rupture import Rupture
+from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.geo.surface import PlanarSurface, SimpleFaultSurface
 from openquake.hazardlib.geo import Point, Line
@@ -30,9 +32,11 @@ from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves_ext
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 from openquake.hazardlib.calc.hazard_curve import pmap_from_grp
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
+from openquake.hazardlib.gsim.si_midorikawa_1999 import SiMidorikawa1999SInter
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.sourceconverter import SourceGroup
+from openquake.hazardlib import nrml
 
 
 def _create_rupture(distance, magnitude,
@@ -88,7 +92,6 @@ class HazardCurvesTestCase01(unittest.TestCase):
         self.src3 = _create_non_param_sourceA(10., 6.0,
                                               PMF([(0.7, 0), (0.3, 1)]),
                                               TRT.GEOTHERMAL)
-        site = Site(Point(0.0, 0.0), 800, True, z1pt0=100., z2pt5=1.)
         site = Site(Point(0.0, 0.0), 800, True, z1pt0=100., z2pt5=1.)
         s_filter = SourceFilter(SiteCollection([site]), None)
         self.sites = s_filter
@@ -180,3 +183,19 @@ class HazardCurvesTestCase02(HazardCurvesTestCase01):
         crv = curves[0][0]
         npt.assert_almost_equal(numpy.array([0.58000, 0.53891, 0.15929]),
                                 crv, decimal=4)
+
+
+class NankaiTestCase(object):
+    # use a source model for Nankai provided by M. Pagani
+    def test(self):
+        fname = os.path.join(os.path.dirname(__file__), 'nankai.xml')
+        conv = SourceConverter(investigation_time=50., rupture_mesh_spacing=2.)
+        groups = nrml.parse(fname, conv)
+        site = Site(Point(135.68, 35.68), 800, True, z1pt0=100., z2pt5=1.)
+        s_filter = SourceFilter(SiteCollection([site]), None)
+        imtls = DictArray({'PGV': [20, 40, 80]})
+        gsim_by_trt = {'Subduction Interface': SiMidorikawa1999SInter()}
+        hcurves = calc_hazard_curves_ext(groups, s_filter, imtls, gsim_by_trt)
+        npt.assert_almost_equal([0.91149953, 0.12548556, 0.00177583],
+                                hcurves['PGV'][0])
+

@@ -296,7 +296,7 @@ def calc_hazard_curves_ext(
     Probability of ground motion exceedance is computed in different ways
     depending if the sources are independent or mutually exclusive.
 
-    :param group:
+    :param groups:
         A sequence of groups of seismic sources objects (instances of
         of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`).
     :param ss_filter:
