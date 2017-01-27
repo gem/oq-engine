@@ -159,7 +159,7 @@ def calc_hazard_curves(
                         gsim_by_trt, truncation_level),
         weight=operator.attrgetter('weight'),
         key=operator.attrgetter('tectonic_region_type')
-    ).reduce(operator.or_, ProbabilityMap(len(imtls.array), 1))
+    ).reduce(operator.or_)
     return pmap.convert(imtls, len(sites))
 
 
@@ -335,16 +335,14 @@ def calc_hazard_curves_ext(
             pmap |= apply(
                 pmap_from_grp,
                 (group, ss_filter, imtls, gsim_by_trt, truncation_level),
-                weight=operator.attrgetter('weight')).reduce(
-                    operator.or_, ProbabilityMap(len(imtls.array), 1))
+                weight=operator.attrgetter('weight')).reduce(operator.or_)
         else:
             # since in this case the probability for each source have
             # been already accounted, we use a weight equal to unity
             newmap = apply(
                 pmap_from_grp,
                 (group, ss_filter, imtls, gsim_by_trt, truncation_level),
-                weight=operator.attrgetter('weight')).reduce(
-                    operator.or_, ProbabilityMap(len(imtls.array), 1))
+                weight=operator.attrgetter('weight')).reduce(operator.or_)
             for sid in newmap:
                 if sid in pmap:
                     pmap[sid] += newmap[sid]
