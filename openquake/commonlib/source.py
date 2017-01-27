@@ -158,6 +158,11 @@ class RlzsAssoc(collections.Mapping):
         """Flat list with all the realizations"""
         return sum(self.rlzs_by_smodel.values(), [])
 
+    @property
+    def weights(self):
+        """Array with the weight of the realizations"""
+        return numpy.array([rlz.weight for rlz in self.realizations])
+
     def get_rlz(self, rlzstr):
         """
         Get a Realization instance for a string of the form 'rlz-\d+'
