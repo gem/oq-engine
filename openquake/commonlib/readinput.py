@@ -402,7 +402,14 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
                     raise
         else:  # just collect the TRT models
             smodel = nrml.read(fname).sourceModel
-            src_groups = sourceconverter.SourceGroup.collect(smodel)
+            src_groups = []
+            if smodel[0].tag.endswith('sourceGroup'):  # NRML 0.5 format
+                for sg_node in smodel:
+                    sg = sourceconverter.SourceGroup(sg_node['tectonicRegion'])
+                    sg.sources = sg_node.nodes
+                    src_groups.append(sg)
+            else:  # NRML 0.4 format: smodel is a list of source nodes
+                src_groups.extend(sourceconverter.SourceGroup.collect(smodel))
         sm.src_groups = src_groups
         trts = [mod.trt for mod in src_groups]
         source_model_lt.tectonic_region_types.update(trts)
@@ -733,8 +740,6 @@ def get_exposure(oqparam):
                      len(exposure.assets), out_of_region)
         if len(exposure.assets) == 0:
             raise RuntimeError('Could not find any asset within the region!')
-    else:
-        logging.info('Read %d assets', len(exposure.assets))
 
     # sanity check
     values = any(len(ass.values) + ass.number for ass in exposure.assets)
