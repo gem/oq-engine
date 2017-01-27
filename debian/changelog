@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Parallelized `calc_hazard_curves_ext` and added an example of use
+    in the docstring of `openquake.hazardlib.calc.hazard_curves`
   * Added NRML support for GriddedSurface and GriddedRupture objects
   * Removed the warning about missing rtree
 

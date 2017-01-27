@@ -27,9 +27,8 @@ than 20 lines of code:
    import logging
    from openquake.baselib import parallel
    from openquake.hazardlib.calc.filters import SourceFilter
-   from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
+   from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves_ext
    from openquake.commonlib import readinput
-
 
    def main(job_ini):
        logging.basicConfig(level=logging.INFO)
@@ -38,12 +37,14 @@ than 20 lines of code:
        src_filter = SourceFilter(sitecol, oq.maximum_distance)
        csm = readinput.get_composite_source_model(oq).filter(src_filter)
        rlzs_assoc = csm.info.get_rlzs_assoc()
-       sources = csm.get_sources()
-       for rlzno, gsim_by_trt in enumerate(rlzs_assoc.gsim_by_trt):
-           hcurves = calc_hazard_curves(sources, src_filter, oq.imtls,
-                                        gsim_by_trt, oq.truncation_level,
-                                        parallel.apply)
-           print('rlzno=%d, hcurves=%r' % (rlzno, hcurves))
+       for i, sm in enumerate(csm.source_models):
+           for rlz in rlzs_assoc.rlzs_by_smodel[i]:
+               gsim_by_trt = rlzs_assoc.gsim_by_trt[rlz.ordinal]
+               hcurves = calc_hazard_curves_ext(
+                   sm.src_groups, src_filter, oq.imtls,
+                   gsim_by_trt, oq.truncation_level,
+                   parallel.Starmap.apply)
+           print('rlz=%s, hcurves=%s' % (rlz, hcurves))
 
    if __name__ == '__main__':
        main(sys.argv[1])  # path to a job.ini file
@@ -285,7 +286,7 @@ def pmap_from_grp(
 
 
 def calc_hazard_curves_ext(
-        groups, source_site_filter, imtls, gsim_by_trt, truncation_level=None,
+        groups, ss_filter, imtls, gsim_by_trt, truncation_level=None,
         apply=Sequential.apply):
     """
     Compute hazard curves on a list of sites, given a set of seismic source
@@ -298,7 +299,7 @@ def calc_hazard_curves_ext(
     :param group:
         A sequence of groups of seismic sources objects (instances of
         of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`).
-    :param source_site_filter:
+    :param ss_filter:
         A source filter over the site collection or the site collection itself
     :param imtls:
         Dictionary mapping intensity measure type strings
@@ -311,9 +312,6 @@ def calc_hazard_curves_ext(
     :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
         distribution.
-    :param source_site_filter:
-        Optional source-site filter function. See
-        :mod:`openquake.hazardlib.calc.filters`.
     :param maximum_distance:
         The integration distance, if any
     :returns:
@@ -329,7 +327,7 @@ def calc_hazard_curves_ext(
                   for trt in dic]
 
     imtls = DictArray(imtls)
-    sitecol = source_site_filter.sitecol
+    sitecol = ss_filter.sitecol
     pmap = ProbabilityMap(len(imtls.array), 1)
     # Processing groups
     for group in groups:
@@ -352,21 +350,21 @@ def calc_hazard_curves_ext(
         # are independent.
         for trt in sources_by_trt:
             gsim = gsim_by_trt[trt]
-            # Create a temporary group
-            tmp_group = SourceGroup(trt,
-                                    sources_by_trt[trt],
-                                    'temp',
-                                    group.src_interdep,
-                                    group.rup_interdep,
-                                    weights_by_trt[trt].values(),
-                                    False)
+            grp = SourceGroup(
+                trt, sources_by_trt[trt], 'temp', group.src_interdep,
+                group.rup_interdep, weights_by_trt[trt].values(), False)
             if indep:
-                pmap |= pmap_from_grp(
-                    tmp_group, source_site_filter, imtls, [gsim],
-                    truncation_level)
+                pmap |= apply(
+                    pmap_from_grp,
+                    (grp, ss_filter, imtls, [gsim], truncation_level),
+                    weight=operator.attrgetter('weight')).reduce(
+                        operator.or_, ProbabilityMap(len(imtls.array), 1))
             else:
                 # since in this case the probability for each source have
                 # been already accounted, we use a weight equal to unity
-                pmap += pmap_from_grp(
-                    tmp_group, sitecol, imtls, [gsim], truncation_level)
+                pmap += apply(
+                    pmap_from_grp,
+                    (grp, ss_filter, imtls, [gsim], truncation_level),
+                    weight=operator.attrgetter('weight')).reduce(
+                        operator.or_, ProbabilityMap(len(imtls.array), 1))
     return pmap.convert(imtls, len(sitecol.complete))
