@@ -153,14 +153,13 @@ class SourceGroup(collections.Sequence):
         if rup_interdep not in ('indep', 'mutex'):
             raise ValueError('rupture interdependence incorrect %s ' %
                              rup_interdep)
-        # check srcs weights defined by the user
-        if srcs_weights is not None:
-            assert abs(1. - sum(srcs_weights)) < 1e-6
         # check TRT
         if src_list:  # can be None
             for src in src_list:
                 assert src.tectonic_region_type == self.trt, (
                     src.tectonic_region_type, self.trt)
+
+        # ask Marco: should we add a check on the srcs_weights?
 
     def tot_ruptures(self):
         return sum(src.num_ruptures for src in self.sources)
