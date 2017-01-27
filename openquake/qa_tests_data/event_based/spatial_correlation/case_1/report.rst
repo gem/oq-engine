@@ -2,29 +2,30 @@ Probabilistic Event-Based QA Test with Spatial Correlation, case 1
 ==================================================================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_67003.hdf5 Wed Nov  9 08:16:02 2016
-engine_version                                 2.2.0-git54d01f4        
-hazardlib_version                              0.22.0-git173c60c       
+gem-tstation:/home/michele/ssd/calc_81084.hdf5 Thu Jan 26 14:29:56 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
-num_sites = 2, sitecol = 785 B
+num_sites = 2, sitecol = 808 B
 
 Parameters
 ----------
-============================ ================================
-calculation_mode             'event_based'                   
-number_of_logic_tree_samples 0                               
-maximum_distance             {u'Active Shallow Crust': 200.0}
-investigation_time           50.0                            
-ses_per_logic_tree_path      125                             
-truncation_level             None                            
-rupture_mesh_spacing         2.0                             
-complex_fault_mesh_spacing   2.0                             
-width_of_mfd_bin             0.1                             
-area_source_discretization   10.0                            
-random_seed                  123456789                       
-master_seed                  0                               
-============================ ================================
+=============================== ===============================
+calculation_mode                'event_based'                  
+number_of_logic_tree_samples    0                              
+maximum_distance                {'Active Shallow Crust': 200.0}
+investigation_time              50.0                           
+ses_per_logic_tree_path         125                            
+truncation_level                None                           
+rupture_mesh_spacing            2.0                            
+complex_fault_mesh_spacing      2.0                            
+width_of_mfd_bin                0.1                            
+area_source_discretization      10.0                           
+ground_motion_correlation_model 'JB2009'                       
+random_seed                     123456789                      
+master_seed                     0                              
+=============================== ===============================
 
 Input files
 -----------
@@ -71,23 +72,24 @@ source_model.xml 0      Active Shallow Crust 1           1            1
 
 Informational data
 ------------------
-====================================== ============
-compute_ruptures_max_received_per_task 303,873     
-compute_ruptures_num_tasks             1           
-compute_ruptures_sent.gsims            93          
-compute_ruptures_sent.monitor          951         
-compute_ruptures_sent.sitecol          453         
-compute_ruptures_sent.sources          1,334       
-compute_ruptures_tot_received          303,873     
-hazard.input_weight                    0.100       
-hazard.n_imts                          1           
-hazard.n_levels                        1           
-hazard.n_realizations                  1           
-hazard.n_sites                         2           
-hazard.n_sources                       1           
-hazard.output_weight                   125         
-hostname                               gem-tstation
-====================================== ============
+========================================= ============
+compute_ruptures_max_received_per_task    303,879     
+compute_ruptures_num_tasks                1           
+compute_ruptures_sent.gsims               102         
+compute_ruptures_sent.monitor             927         
+compute_ruptures_sent.sources             1,319       
+compute_ruptures_sent.src_filter          618         
+compute_ruptures_tot_received             303,879     
+hazard.input_weight                       0.100       
+hazard.n_imts                             1           
+hazard.n_levels                           1           
+hazard.n_realizations                     1           
+hazard.n_sites                            2           
+hazard.n_sources                          1           
+hazard.output_weight                      125         
+hostname                                  gem-tstation
+require_epsilons                          False       
+========================================= ============
 
 Specific information for event based
 ------------------------------------
@@ -117,7 +119,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.076 NaN    0.076 0.076 1        
+compute_ruptures   0.018 NaN    0.018 0.018 1        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -125,12 +127,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-saving ruptures                  0.101     0.0       1     
-total compute_ruptures           0.076     1.031     1     
-reading composite source model   0.004     0.0       1     
+setting event years              0.267     0.0       1     
+saving ruptures                  0.109     0.0       1     
+total compute_ruptures           0.018     0.699     1     
+reading composite source model   0.003     0.0       1     
 managing sources                 0.002     0.0       1     
 filtering composite source model 0.002     0.0       1     
-store source_info                6.721E-04 0.0       1     
-filtering ruptures               6.230E-04 0.0       1     
-reading site collection          4.005E-05 0.0       1     
+store source_info                5.848E-04 0.0       1     
+filtering ruptures               5.271E-04 0.0       1     
+reading site collection          3.386E-05 0.0       1     
 ================================ ========= ========= ======

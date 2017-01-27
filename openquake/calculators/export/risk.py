@@ -21,6 +21,8 @@ import collections
 
 import numpy
 
+from openquake.baselib import hdf5
+from openquake.baselib.python3compat import decode
 from openquake.baselib.general import AccumDict, get_array, group_array
 from openquake.risklib import scientific, riskinput
 from openquake.calculators.export import export
@@ -41,6 +43,33 @@ U32 = numpy.uint32
 def add_quotes(values):
     # used to escape taxonomies in CSV files
     return numpy.array(['"%s"' % val for val in values], (bytes, 100))
+
+
+def rup_data_dict(dstore, grp_ids, grp_trt):
+    """
+    Extract a dictionary of arrays keyed by the rupture serial number
+    from the datastore for the given source group IDs.
+    """
+    rdict = {}
+    for grp_id in grp_ids:
+        for rec in dstore['rup_data/grp-%02d' % grp_id]:
+            rdict[rec['rupserial']] = rec, grp_trt[grp_id]
+    return rdict
+
+
+def copy_to(elt, rup_data, rupserials):
+    """
+    Copy information from the rup_data dictionary into the elt array for
+    the given rupture serials.
+    """
+    assert len(elt) == len(rupserials), (len(elt), len(rupserials))
+    for i, serial in numpy.ndenumerate(rupserials):
+        rdata, trt = rup_data[serial]
+        elt[i]['tectonic_region_type'] = trt
+        elt[i]['magnitude'] = rdata['mag']
+        elt[i]['centroid_lon'] = rdata['lon']
+        elt[i]['centroid_lat'] = rdata['lat']
+        elt[i]['centroid_depth'] = rdata['depth']
 
 # ############################### exporters ############################## #
 
@@ -163,7 +192,14 @@ def export_agg_losses_ebr(ekey, dstore):
     name, ext = export.keyfunc(ekey)
     agg_losses = dstore[name]
     oq = dstore['oqparam']
-    dtlist = [('event_tag', (numpy.string_, 100)), ('year', U32)
+    csm_info = dstore['csm_info']
+    dtlist = [('event_tag', (numpy.string_, 100)),
+              ('year', U32),
+              ('tectonic_region_type', hdf5.vstr),
+              ('magnitude', F64),
+              ('centroid_lon', F64),
+              ('centroid_lat', F64),
+              ('centroid_depth', F64),
               ] + oq.loss_dt_list()
     elt_dt = numpy.dtype(dtlist)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
@@ -177,6 +213,8 @@ def export_agg_losses_ebr(ekey, dstore):
             continue
         if not len(events):
             continue
+        rup_data = rup_data_dict(
+            dstore, csm_info.get_grp_ids(sm_id), csm_info.grp_trt())
         for rlz in rlzs:
             dest = dstore.build_fname('agg_losses', rlz, 'csv')
             eids = set()
@@ -192,6 +230,7 @@ def export_agg_losses_ebr(ekey, dstore):
             elt = numpy.zeros(len(eids), elt_dt)
             elt['event_tag'] = build_etags(rlz_events)
             elt['year'] = rlz_events['year']
+            copy_to(elt, rup_data, rlz_events['rupserial'])
             for loss_type in loss_types:
                 elt_lt = elt[loss_type]
                 if oq.insured_losses:
@@ -207,7 +246,7 @@ def export_agg_losses_ebr(ekey, dstore):
                         elt_lt_ins[idx] = data['loss'][i, 1]
                     else:
                         elt_lt[idx] = data['loss'][i]
-            elt.sort(order='event_tag')
+            elt.sort(order=['year', 'event_tag'])
             writer.save(elt, dest)
     return writer.getsaved()
 
@@ -326,7 +365,7 @@ def export_damage(ekey, dstore):
         rlz = rlzs[r]
         dd_asset = []
         for n, ass in enumerate(assetcol):
-            assref = aref[ass['idx']]
+            assref = decode(aref[ass['idx']])
             dist = dmg_by_asset[n, r][lt]
             site = Site(ass['lon'], ass['lat'])
             for ds in range(D):
@@ -640,7 +679,7 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
                     poe_str = 'poe-%s' % poe + ins
                     for ass, stat in zip(assetcol, lmaps[poe_str]):
                         loc = Location(ass['lon'], ass['lat'])
-                        lm = LossMap(loc, aref[ass['idx']], stat, None)
+                        lm = LossMap(loc, decode(aref[ass['idx']]), stat, None)
                         data.append(lm)
                     writer = writercls(
                         fname, oq.investigation_time, poe=poe, loss_type=lt,
@@ -676,7 +715,7 @@ def export_loss_maps_stats_xml_geojson(ekey, dstore):
         poe_str = 'poe-%s' % poe + ins
         for ass, val in zip(assetcol, array[poe_str]):
             loc = Location(ass['lon'], ass['lat'])
-            curve = LossMap(loc, aref[ass['idx']], val, None)
+            curve = LossMap(loc, decode(aref[ass['idx']]), val, None)
             curves.append(curve)
         writer.serialize(curves)
         fnames.append(writer._dest)
@@ -716,7 +755,7 @@ def export_loss_map_xml_geojson(ekey, dstore):
                 for ass, mean, stddev in zip(
                         assetcol, means[:, r], stddevs[:, r]):
                     loc = Location(ass['lon'], ass['lat'])
-                    lm = LossMap(loc, aref[ass['idx']], mean, stddev)
+                    lm = LossMap(loc, decode(aref[ass['idx']]), mean, stddev)
                     data.append(lm)
                 writer = writercls(
                     fname, oq.investigation_time, poe=None, loss_type=lt,
@@ -863,7 +902,7 @@ def export_loss_curves_stats(ekey, dstore):
         curves = []
         for ass, rec in zip(assetcol, array):
             loc = Location(ass['lon'], ass['lat'])
-            curve = LossCurve(loc, aref[ass['idx']], rec['poes' + ins],
+            curve = LossCurve(loc, decode(aref[ass['idx']]), rec['poes' + ins],
                               rec['losses' + ins], loss_ratios[ltype],
                               rec['avg' + ins], None)
             curves.append(curve)
@@ -990,7 +1029,7 @@ def export_bcr_map_rlzs(ekey, dstore):
             data = []
             for ass, value in zip(assetcol, rlz_data):
                 loc = Location(ass['lon'], ass['lat'])
-                data.append(BcrData(loc, aref[ass['idx']],
+                data.append(BcrData(loc, decode(aref[ass['idx']]),
                                     value['annual_loss_orig'],
                                     value['annual_loss_retro'],
                                     value['bcr']))

@@ -15,13 +15,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-"""
+"""\
 One of the worst thing about Python is the `DB API 2.0`_
 specification, which is unusable except for building frameworks. It
 should have been a stepping stone for an usable DB API 3.0 that never
 happened. So, instead of a good low level API, we had a proliferation
 of Object Relational Mappers making our lives a lot harder. Fortunately,
- there has always been good Pythonistas in the anti-ORM camp.
+there has always been good Pythonistas in the anti-ORM camp.
 
 This module is heavily inspired by the dbapiext_ module by
 Martin Blais, which is part of the antiorm_ package. The main (only)
@@ -108,7 +108,7 @@ that returns the interpolated template. In this case
 'INSERT INTO job (id, value) VALUES (?, ?)'
 
 As you see, `?S` parameters work by replacing a list of strings with a comma
-separated string, where ?X parameters are replaced by a comma separated
+separated string, where `?X` parameters are replaced by a comma separated
 sequence of question marks, i.e. the low level placeholder for SQLite.
 The interpolation performs a regular search and replace,
 so if you have a `?-` string in your template that must not be escaped,
