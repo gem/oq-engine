@@ -18,6 +18,7 @@
 """
 Utilities to compute mean and quantile curves
 """
+from __future__ import division
 import numpy
 
 
@@ -37,7 +38,7 @@ def quantile_curve(curves, quantile, weights=None):
     Compute the weighted quantile aggregate of a set of curves.
 
     :param curves:
-        Array of PoEs of shape (R,), (R, N) or (R, N, L)
+        Array of R PoEs (possibly arrays)
     :param quantile:
         Quantile value to calculate. Should be in the range [0.0, 1.0].
     :param weights:
@@ -45,36 +46,24 @@ def quantile_curve(curves, quantile, weights=None):
     :returns:
         A numpy array representing the quantile aggregate
     """
-    R = len(curves)
-    assert R, 'Passed no curves!'
-    if weights is not None:
-        weights = numpy.array(weights)
-        assert len(weights) == len(curves)
     if not isinstance(curves, numpy.ndarray):
         curves = numpy.array(curves)
-    dim = len(curves.shape)
-    if dim == 1:  # shape R -> 1
-        return _quantile_curve(curves[:, None], quantile, weights)[0]
-    elif dim == 2:  # shape R, N -> N
-        return _quantile_curve(curves, quantile, weights)
-    elif dim == 3:  # shape R, N, L -> N, L
-        return numpy.array([_quantile_curve(arr, quantile, weights)
-                            for arr in curves.transpose(1, 0, 2)])
-
-
-def _quantile_curve(arr, quantile, weights):
-    # arr is a 2D array of shape (R, N)
-    R = len(arr)
+    R = len(curves)
     if weights is None:
         weights = numpy.ones(R) / R
-    result_curve = []
-    for poes in arr.transpose():
-        sorted_poe_idxs = numpy.argsort(poes)
-        sorted_weights = weights[sorted_poe_idxs]
-        sorted_poes = poes[sorted_poe_idxs]
+    else:
+        weights = numpy.array(weights)
+        assert len(weights) == R, (len(weights), R)
+    result = numpy.zeros(curves.shape[1:])
+    for idx, _ in numpy.ndenumerate(result):
+        data = numpy.array([a[idx] for a in curves])
+        sorted_idxs = numpy.argsort(data)
+        sorted_weights = weights[sorted_idxs]
+        sorted_data = data[sorted_idxs]
         cum_weights = numpy.cumsum(sorted_weights)
-        result_curve.append(numpy.interp(quantile, cum_weights, sorted_poes))
-    return numpy.array(result_curve)
+        # get the quantile from the interpolated CDF
+        result[idx] = numpy.interp(quantile, cum_weights, sorted_data)
+    return result
 
 
 # NB: this is a function linear in the array argument
