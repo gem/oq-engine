@@ -427,7 +427,7 @@ class EbriskCalculator(base.RiskCalculator):
         Run the calculator and aggregate the results
         """
         if self.oqparam.number_of_logic_tree_samples:
-            logging.warn('The event based risk calculator with sampling is ',
+            logging.warn('The event based risk calculator with sampling is '
                          'EXPERIMENTAL, UNTESTED, SLOW and most likely WRONG')
         if self.oqparam.ground_motion_fields:
             logging.warn('To store the ground motion fields change '
