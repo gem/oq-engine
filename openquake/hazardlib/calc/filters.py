@@ -66,7 +66,6 @@ try:
     import rtree
 except ImportError:
     rtree = None
-    logging.warn('Cannot find the rtree module, using slow filtering')
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.hazardlib.geo.utils import fix_lons_idl
@@ -139,7 +138,7 @@ class SourceFilter(object):
     cannot be properly pickled (https://github.com/Toblerity/rtree/issues/65).
 
     :param sitecol:
-        :class:`openquake.hazardlib.site.SiteCollection` instance
+        :class:`openquake.hazardlib.site.SiteCollection` instance (or None)
     :param integration_distance:
         Threshold distance in km, this value gets passed straight to
         :meth:`openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source`
@@ -150,12 +149,15 @@ class SourceFilter(object):
     def __init__(self, sitecol, integration_distance, use_rtree=True):
         self.integration_distance = integration_distance
         self.sitecol = sitecol
-        self.use_rtree = use_rtree and integration_distance and rtree
+        self.use_rtree = use_rtree and rtree and (
+            integration_distance and sitecol is not None)
         if self.use_rtree:
             fixed_lons, self.idl = fix_lons_idl(sitecol.lons)
             self.index = rtree.index.Index()
             for sid, lon, lat in zip(sitecol.sids, fixed_lons, sitecol.lats):
                 self.index.insert(sid, (lon, lat, lon, lat))
+        if rtree is None:
+            logging.info('Using distance filtering [no rtree]')
 
     def get_affected_box(self, src):
         """
@@ -201,6 +203,10 @@ class SourceFilter(object):
     def __call__(self, sources, sites=None):
         if sites is None:
             sites = self.sitecol
+        if self.sitecol is None:  # do not filter
+            for source in sources:
+                yield source, sites
+            return
         for source in sources:
             if self.use_rtree:  # Rtree filtering
                 box = self.get_affected_box(source)

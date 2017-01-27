@@ -147,7 +147,6 @@ import traceback
 import functools
 import multiprocessing.dummy
 from concurrent.futures import as_completed, ProcessPoolExecutor, Future
-import decorator
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import pickle
@@ -392,7 +391,7 @@ class IterResult(object):
                           humansize(max(self.received)))
 
     def save_task_data(self, mon):
-        if hasattr(mon, 'weight'):
+        if mon.hdf5path and hasattr(mon, 'weight'):
             duration = mon.children[0].duration  # the task is the first child
             tup = (mon.task_no, mon.weight, duration)
             data = numpy.array([tup], self.task_data_dt)
