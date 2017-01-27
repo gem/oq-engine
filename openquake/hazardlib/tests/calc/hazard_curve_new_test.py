@@ -185,12 +185,12 @@ class HazardCurvesTestCase02(HazardCurvesTestCase01):
                                 crv, decimal=4)
 
 
-class NankaiTestCase(object):
-    # use a source model for Nankai provided by M. Pagani
+class NankaiTestCase(unittest.TestCase):
+    # use a source model for the Nankai region provided by M. Pagani
     def test(self):
-        fname = os.path.join(os.path.dirname(__file__), 'nankai.xml')
-        conv = SourceConverter(investigation_time=50., rupture_mesh_spacing=2.)
-        groups = nrml.parse(fname, conv)
+        source_model = os.path.join(os.path.dirname(__file__), 'nankai.xml')
+        groups = nrml.parse(source_model, SourceConverter(
+            investigation_time=50., rupture_mesh_spacing=2.))
         site = Site(Point(135.68, 35.68), 800, True, z1pt0=100., z2pt5=1.)
         s_filter = SourceFilter(SiteCollection([site]), None)
         imtls = DictArray({'PGV': [20, 40, 80]})
@@ -198,4 +198,3 @@ class NankaiTestCase(object):
         hcurves = calc_hazard_curves_ext(groups, s_filter, imtls, gsim_by_trt)
         npt.assert_almost_equal([0.91149953, 0.12548556, 0.00177583],
                                 hcurves['PGV'][0])
-
