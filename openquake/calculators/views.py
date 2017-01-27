@@ -30,7 +30,7 @@ import h5py
 from openquake.baselib.general import (
     humansize, groupby, AccumDict, CallableDict)
 from openquake.baselib.performance import perf_dt
-from openquake.baselib.python3compat import unicode, encode, decode
+from openquake.baselib.python3compat import unicode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source
 from openquake.commonlib.writers import (
