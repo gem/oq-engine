@@ -10,7 +10,7 @@ Travis CI (Python 3): [![Build Status](https://travis-ci.org/gem/oq-engine.svg?b
 
 ### Current stable
 
-Current stable version is the **OpenQuake Engine 2.1** 'Benioff'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-2.1#openquake-engine.
+Current stable version is the **OpenQuake Engine 2.2** 'Cornell'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-2.2#openquake-engine.
 
 ## Documentation (master tree)
 
@@ -49,6 +49,10 @@ Current stable version is the **OpenQuake Engine 2.1** 'Benioff'. The documentat
 
 * [Installing on Windows](https://github.com/gem/oq-engine/blob/master/doc/installing/windows.md)
 * [Starting the software](https://github.com/gem/oq-engine/blob/master/doc/running/windows.md)
+
+#### Docker
+
+* [Deploy a Docker container](https://github.com/gem/oq-engine/blob/master/doc/installing/docker.md)
 
 ### Running the OpenQuake Engine
 

@@ -23,6 +23,7 @@ from openquake.hazardlib import InvalidFile
 from openquake.baselib.node import scientificformat
 
 FIVEDIGITS = '%.5E'
+OLD_NUMPY = tuple(int(s) for s in numpy.__version__.split('.')) < (1, 11, 0)
 
 
 class HeaderTranslator(object):
@@ -123,6 +124,9 @@ def _build_header(dtype, root):
             return []
         return [root + (str(dtype), dtype.shape)]
     for field in dtype.names:
+        if OLD_NUMPY and field == 'vlen':
+            # workaround for a numpy bug with vlen fields
+            continue
         dt = dtype.fields[field][0]
         if dt.subdtype is None:  # nested
             header.extend(_build_header(dt, root + (field,)))

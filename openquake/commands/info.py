@@ -32,6 +32,7 @@ from openquake.calculators.export import export
 from openquake.calculators import base, reportwriter
 from openquake.calculators.views import view, rst_table
 
+
 def print_csm_info(fname):
     """
     Parse the composite source model without instantiating the sources and
