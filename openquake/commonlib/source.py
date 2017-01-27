@@ -158,6 +158,11 @@ class RlzsAssoc(collections.Mapping):
         """Flat list with all the realizations"""
         return sum(self.rlzs_by_smodel.values(), [])
 
+    @property
+    def weights(self):
+        """Array with the weight of the realizations"""
+        return numpy.array([rlz.weight for rlz in self.realizations])
+
     def get_rlz(self, rlzstr):
         """
         Get a Realization instance for a string of the form 'rlz-\d+'
@@ -412,6 +417,12 @@ class CompositionInfo(object):
             for src_group in smodel.src_groups:
                 if src_group.id == src_group_id:
                     return smodel
+
+    def get_grp_ids(self, sm_id):
+        """
+        :returns: a list of source group IDs for the given source model ID
+        """
+        return [sg.id for sg in self.source_models[sm_id].src_groups]
 
     def get_sm_by_rlz(self, realizations):
         """

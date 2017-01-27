@@ -7,24 +7,21 @@ The OpenQuake Engine is available for Windows in the form of **self-installable 
     - Python dependencies (pip, numpy, scipy, h5py, django, shapely, rtree and few more)
 - multiple versions can be installed alongside
 - currently does not support Celery (and will never do)
-- 32bit version only is provided (it works on 64bit systems too)
 
 ## Requirements
 
 Requirements are:
 
 - One of the following editions of Windows
-    - Windows XP 32bit
-    - Windows Vista (32/64bit)
-    - Windows 7 (32/64bit)
-    - Windows 8 and 8.1 (32/64bit)
-    - Windows 10 (32/64bit)
+    - Windows 7 (64bit)
+    - Windows 8 and 8.1 (64bit)
+    - Windows 10 (64bit)
 - 4 GB of RAM (8 GB recommended)
 - 1.2 GB of free disk space
 
 ## Install or upgrade packages from the OpenQuake website
 
-Download the installer from http://www.globalquakemodel.org/pkgs/windows/oq-engine/OpenQuake_Engine_2.1.0-2.exe using any browser and run the installer, then follow the wizard on screen.
+Download the installer from http://www.globalquakemodel.org/pkgs/windows/oq-engine/OpenQuake_Engine_2.2.0-1.exe using any browser and run the installer, then follow the wizard on screen.
 
 ![installer-screenshot-1](../img/win-installer-1.png)
 ![installer-screenshot-2](../img/win-installer-2.png)

@@ -103,6 +103,17 @@ xmlns:gml="http://www.opengis.net/gml"
 """
         self.assertEqual(outfile.getvalue(), expected)
 
+    def test_no_nrml(self):
+        fname = writetmp('''\
+<?xml version="1.0" encoding="UTF-8"?>
+<fragilityModel id="Ethiopia" assetCategory="buildings"
+lossCategory="structural" />
+''')
+        with self.assertRaises(ValueError) as ctx:
+            read(fname)
+        self.assertIn('expected a node of kind nrml, got fragilityModel',
+                      str(ctx.exception))
+
     def test_invalid(self):
         fname = writetmp('''\
 <?xml version="1.0" encoding="UTF-8"?>

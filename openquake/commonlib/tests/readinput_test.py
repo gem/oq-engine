@@ -29,6 +29,7 @@ from numpy.testing import assert_allclose
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput, writers
 from openquake.baselib import general
+from openquake.qa_tests_data.classical import case_1, case_2
 
 TMP = tempfile.gettempdir()
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
@@ -786,3 +787,19 @@ class TestLoadCurvesTestCase(unittest.TestCase):
         self.assertEqual(str(hcurves), '''\
 [([0.098727, 0.098265, 0.094956], [0.098728, 0.098216, 0.094945, 0.092947])
  ([0.98728, 0.98266, 0.94957], [0.98728, 0.98226, 0.94947, 0.92947])]''')
+
+
+class GetCompositeSourceModelTestCase(unittest.TestCase):
+    # test the case in_memory=False, used when running `oq info job.ini`
+
+    def test_nrml05(self):
+        oq = readinput.get_oqparam('job.ini', case_1)
+        csm = readinput.get_composite_source_model(oq, in_memory=False)
+        srcs = csm.get_sources()  # a single PointSource
+        self.assertEqual(len(srcs), 1)
+
+    def test_nrml04(self):
+        oq = readinput.get_oqparam('job.ini', case_2)
+        csm = readinput.get_composite_source_model(oq, in_memory=False)
+        srcs = csm.get_sources()  # a single PointSource
+        self.assertEqual(len(srcs), 1)
