@@ -55,19 +55,9 @@ class _Config(object):
     cfg = dict()
 
     def __init__(self):
-        self._load_from_file()
-        self.job_id = -1
-
-    def get(self, name):
-        """A dict with key/value pairs for the given `section` or `None`."""
-        return self.cfg.get(name)
-
-    def set(self, name, dic):
-        """Set the dictionary for given section"""
-        self.cfg[name] = dic
-
-    def _get_paths(self):
-        """Return the paths for the global/local configuration files."""
+        """
+        Determine the paths to search and load the config file.
+        """
         paths = []
 
         # path from python package
@@ -83,18 +73,27 @@ class _Config(object):
             paths.append(os.path.normpath(os.environ[OQ_CONFIG_FILE_VAR]))
 
         # normalize all paths and resolve '~' in a single pass
-        return [os.path.normpath(os.path.expanduser(p)) for p in paths]
+        self._paths = [os.path.normpath(os.path.expanduser(p)) for p in paths]
+        self._load_from_file()
+
+    def get(self, name):
+        """A dict with key/value pairs for the given `section` or `None`."""
+        return self.cfg.get(name)
+
+    def set(self, name, dic):
+        """Set the dictionary for given section"""
+        self.cfg[name] = dic
 
     def _load_from_file(self):
         """Load the config files, set up the section dictionaries."""
         config = configparser.SafeConfigParser()
-        config.read(self._get_paths())
+        config.read(self._paths)
         for section in config.sections():
             self.cfg[section] = dict(config.items(section))
 
     def is_readable(self):
         """Return `True` if at least one config file is readable."""
-        for path in self._get_paths():
+        for path in self._paths:
             if os.access(path, os.R_OK):
                 return True
         else:
@@ -102,7 +101,7 @@ class _Config(object):
 
     def exists(self):
         """Return `True` if at least one config file exists."""
-        return any(os.path.exists(path) for path in self._get_paths())
+        return any(os.path.exists(path) for path in self._paths)
 
 
 cfg = _Config()  # the only instance of _Config
@@ -140,17 +139,15 @@ def abort_if_no_config_available():
     if not cfg.exists():
         msg = ('Could not find a configuration file in %s. '
                'Probably your are not in the right directory'
-               % cfg._get_paths())
-        print(msg)
-        sys.exit(2)
+               % cfg._paths)
+        sys.exit(msg)
     if not cfg.is_readable():
         msg = (
             "\nYou are not authorized to read any of the OpenQuake "
             "configuration files.\n"
             "Please check permissions on the configuration files in %s."
-            % cfg._get_paths())
-        print(msg)
-        sys.exit(2)
+            % cfg._paths)
+        sys.exit(msg)
 
 
 def flag_set(section, setting):
@@ -165,16 +162,6 @@ def flag_set(section, setting):
     if setting is None:
         return False
     return setting.lower() in ("true", "yes", "t", "1")
-
-
-def refresh():
-    """
-    Re-parse config files and refresh the cached configuration.
-
-    NOTE: Use with caution. Calling this during some phases of a calculation
-    could cause undesirable side-effects.
-    """
-    cfg._load_from_file()
 
 
 port = int(get('dbserver', 'port'))
