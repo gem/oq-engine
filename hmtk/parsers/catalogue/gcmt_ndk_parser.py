@@ -3,6 +3,7 @@
 '''
 Parser for moment tensor catalogue in GCMT format into a set of GCMT classes
 '''
+from __future__ import division
 import re
 import datetime
 import numpy as np
@@ -10,22 +11,23 @@ from math import floor, fabs
 from linecache import getlines
 
 import hmtk.seismicity.gcmt_utils as utils
-from hmtk.seismicity.gcmt_catalogue import (GCMTHypocentre, GCMTCentroid, 
-					    GCMTPrincipalAxes, GCMTNodalPlanes,
-                                            GCMTMomentTensor, GCMTEvent, GCMTCatalogue)
+from hmtk.seismicity.gcmt_catalogue import (
+    GCMTHypocentre, GCMTCentroid,  GCMTPrincipalAxes, GCMTNodalPlanes,
+    GCMTMomentTensor, GCMTEvent, GCMTCatalogue)
 
 
 def _read_date_from_string(str1):
     """
-    Reads the date from a string in the format YYYY/MM/DD and returns 
+    Reads the date from a string in the format YYYY/MM/DD and returns
     :class: datetime.date
     """
     full_date = map(int, str1.split('/'))
     return datetime.date(full_date[0], full_date[1], full_date[2])
 
+
 def _read_time_from_string(str1):
     """
-    Reads the time from a string in the format HH:MM:SS.S and returns 
+    Reads the time from a string in the format HH:MM:SS.S and returns
     :class: datetime.time
     """
     full_time = map(float, str1.split(':'))
@@ -36,7 +38,6 @@ def _read_time_from_string(str1):
         second = 0
     else:
         second = int(full_time[2])
-    
     microseconds = int((full_time[2] - floor(full_time[2])) * 1000000)
     return datetime.time(hour, minute, second, microseconds)
 
@@ -44,8 +45,8 @@ def _read_time_from_string(str1):
 def _read_moment_tensor_from_ndk_string(ndk_string, system='USE'):
     """
     Reads the moment tensor from the ndk_string representation
-    ndk_string = [Mrr, sigMrr, Mtt, sigMtt, Mpp, sigMpp, Mrt, sigMrt, Mrp, 
-        sigMrp, Mtp, sigMtp]
+    ndk_string = [Mrr, sigMrr, Mtt, sigMtt, Mpp, sigMpp, Mrt, sigMrt, Mrp,
+                  sigMrp, Mtp, sigMtp]
     Output tensors should be of format:
         expected = [[Mtt, Mtp, Mtr],
                     [Mtp, Mpp, Mpr],
@@ -58,28 +59,29 @@ def _read_moment_tensor_from_ndk_string(ndk_string, system='USE'):
     :param str ndk_string:
         String of data in ndk format (line 4 of event)
     :param str system:
-        Reference frame of tensor Up, South, East {USE} or North, East, Down 
+        Reference frame of tensor Up, South, East {USE} or North, East, Down
         (NED)
     """
     exponent = float(ndk_string[0:2]) - 7.
     mkr = np.array([2, 9, 15], dtype=int)
     vector = []
     for i in range(0, 6):
-        vector.extend([float(ndk_string[mkr[0]:mkr[1]]), 
-                       float(ndk_string[mkr[1]:mkr[2]])])
+        vector.extend([
+            float(ndk_string[mkr[0]:mkr[1]]),
+            float(ndk_string[mkr[1]:mkr[2]])])
         mkr = mkr + 13
     vector = np.array(vector)
-    mrr, mtt, mpp, mrt, mrp, mtp  = tuple(vector[np.arange(0, 12, 2)])
-    sig_mrr, sig_mtt, sig_mpp, sig_mrt, sig_mrp, sig_mtp  = \
+    mrr, mtt, mpp, mrt, mrp, mtp = tuple(vector[np.arange(0, 12, 2)])
+    sig_mrr, sig_mtt, sig_mpp, sig_mrt, sig_mrp, sig_mtp = \
         tuple(vector[np.arange(1, 13, 2)])
 
     tensor = utils.COORD_SYSTEM[system](mrr, mtt, mpp, mrt, mrp, mtp)
     tensor = (10. ** exponent) * tensor
 
-    sigma = utils.COORD_SYSTEM[system](sig_mrr, sig_mtt, sig_mpp, 
+    sigma = utils.COORD_SYSTEM[system](sig_mrr, sig_mtt, sig_mpp,
                                        sig_mrt, sig_mrp, sig_mtp)
     sigma = (10. ** exponent) * sigma
-    
+
     return tensor, sigma, exponent
 
 
@@ -104,7 +106,7 @@ class ParseNDKtoGCMT(object):
         if ((float(num_lines) / 5.) - float(num_lines / 5)) > 1E-9:
             raise IOError('GCMT represented by 5 lines - number in file not'
                           ' a multiple of 5!')
-        self.catalogue.number_gcmts = num_lines / 5
+        self.catalogue.number_gcmts = num_lines // 5
         self.catalogue.gcmts = [None] * self.catalogue.number_gcmts
         # Pre-allocates list
         id0 = 0
@@ -255,7 +257,6 @@ class ParseNDKtoGCMT(object):
                 gcmt.principal_axes.t_axis['plunge']
         return self.catalogue
 
-
     def _preallocate_data_dict(self):
         """
         """
@@ -267,7 +268,6 @@ class ParseNDKtoGCMT(object):
                 self.catalogue.data[key] = np.zeros(nvals, dtype=int)
             else:
                 self.catalogue.data[key] = np.zeros(nvals, dtype=float)
-
 
     def _read_hypocentre_from_ndk_string(self, linestring):
         """
@@ -289,7 +289,6 @@ class ParseNDKtoGCMT(object):
         hypo.location = linestring[56:]
         return hypo
 
-
     def _get_metadata_from_ndk_string(self, gcmt, ndk_string):
         """
         Reads the GCMT metadata from line 2 of the ndk batch
@@ -304,7 +303,6 @@ class ParseNDKtoGCMT(object):
         gcmt.metadata['FUNCTION'] = {'TYPE': further_meta[2],
                                      'DURATION': float(further_meta[3])}
         return gcmt
-
 
     def _read_centroid_from_ndk_string(self, ndk_string, hypocentre):
         """
@@ -339,7 +337,7 @@ class ParseNDKtoGCMT(object):
         """
         Reads the moment tensor from the ndk_string and returns an instance of
         the GCMTMomentTensor class.
-        By default the ndk format uses the Up, South, East (USE) reference 
+        By default the ndk format uses the Up, South, East (USE) reference
         system.
         """
         moment_tensor = GCMTMomentTensor('USE')
@@ -348,7 +346,6 @@ class ParseNDKtoGCMT(object):
         moment_tensor.tensor_sigma = tensor_data[1]
         moment_tensor.exponent = tensor_data[2]
         return moment_tensor
-
 
     def _get_principal_axes_from_ndk_string(self, ndk_string, exponent):
         """
@@ -359,8 +356,8 @@ class ParseNDKtoGCMT(object):
         # The principal axes is defined in characters 3:48 of the 5th line
         exponent = 10. ** exponent
         axes.t_axis = {'eigenvalue': exponent * float(ndk_string[0:8]),
-                      'plunge': float(ndk_string[8:11]),
-                      'azimuth': float(ndk_string[11:15])}
+                       'plunge': float(ndk_string[8:11]),
+                       'azimuth': float(ndk_string[11:15])}
 
         axes.b_axis = {'eigenvalue': exponent * float(ndk_string[15:23]),
                        'plunge': float(ndk_string[23:26]),
@@ -378,12 +375,12 @@ class ParseNDKtoGCMT(object):
         class
         """
         planes = GCMTNodalPlanes()
-        planes.nodal_plane_1 = {'strike': float(ndk_string[0:3]) ,
-                              'dip': float(ndk_string[3:6]),
-                              'rake': float(ndk_string[6:11])}
-        planes.nodal_plane_2 = {'strike': float(ndk_string[11:15]) ,
-                              'dip': float(ndk_string[15:18]),
-                              'rake': float(ndk_string[18:])}
+        planes.nodal_plane_1 = {'strike': float(ndk_string[0:3]),
+                                'dip': float(ndk_string[3:6]),
+                                'rake': float(ndk_string[6:11])}
+        planes.nodal_plane_2 = {'strike': float(ndk_string[11:15]),
+                                'dip': float(ndk_string[15:18]),
+                                'rake': float(ndk_string[18:])}
         return planes
 
     def _get_moment_from_ndk_string(self, ndk_string, exponent):
@@ -394,4 +391,3 @@ class ParseNDKtoGCMT(object):
         version = ndk_string[:3]
         magnitude = utils.moment_magnitude_scalar(moment)
         return moment, version, magnitude
-

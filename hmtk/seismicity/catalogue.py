@@ -102,7 +102,7 @@ class Catalogue(object):
         self.number_earthquakes = 0
 
     def get_number_events(self):
-        return len(self.data[self.data.keys()[0]])
+        return len(self.data[list(self.data)[0]])
 
     def add_event(self):
         raise NotImplementedError
@@ -275,7 +275,7 @@ class Catalogue(object):
         :param np.ndarray id0:
             Pointer array indicating the locations of selected events
         '''
-        for key in self.data.keys():
+        for key in self.data:
             if isinstance(
                     self.data[key], np.ndarray) and len(self.data[key]) > 0:
                 # Dictionary element is numpy array - use logical indexing
@@ -474,7 +474,7 @@ def _merge_data(dat1, dat2):
     """
 
     cnt = 0
-    for key in dat1.keys():
+    for key in dat1:
         flg1 = len(dat1[key]) > 0
         flg2 = len(dat2[key]) > 0
         if flg1 != flg2:
@@ -485,7 +485,7 @@ def _merge_data(dat1, dat2):
                       ' attributes')
         return None
     else:
-        for key in dat1.keys():
+        for key in dat1:
             if isinstance(dat1[key], np.ndarray):
                 dat1[key] = np.concatenate((dat1[key], dat2[key]), axis=0)
             elif isinstance(dat1[key], list):

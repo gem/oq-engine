@@ -75,16 +75,16 @@ class TestSimpleGeometry(unittest.TestCase):
         '''
         Test the instantiation of the fault and the calculation of the length
         '''
-        expected_keys = ['trace', 'downdip_width', 'area', 'surface',
-                         'upper_depth', 'length', 'surface_width',
-                         'lower_depth', 'dip', 'typology']
+        expected_keys = sorted(['trace', 'downdip_width', 'area', 'surface',
+                                'upper_depth', 'length', 'surface_width',
+                                'lower_depth', 'dip', 'typology'])
         self.fault = SimpleFaultGeometry(self.trace, self.dip,
                                          self.upper_depth, self.lower_depth)
-        self.assertListEqual(self.fault.__dict__.keys(), expected_keys)
+        self.assertListEqual(sorted(self.fault.__dict__), expected_keys)
         self.assertAlmostEqual(self.fault.length, 60., 5)
         self.assertEqual(self.fault.typology, 'Simple')
         self.assertTrue(isinstance(self.fault.surface,
-                    simple_fault.SimpleFaultSurface))
+                                   simple_fault.SimpleFaultSurface))
 
     def test_simple_get_area_vertical(self):
         '''
@@ -97,7 +97,6 @@ class TestSimpleGeometry(unittest.TestCase):
         self.assertAlmostEqual(1200., self.fault.get_area(), 5)
         self.assertAlmostEqual(20., self.fault.downdip_width, 5)
         self.assertAlmostEqual(0., self.fault.surface_width, 5)
-
 
     def test_simple_get_area_dipping(self):
         '''

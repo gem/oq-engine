@@ -3,12 +3,15 @@
 """
 Implements sets of classes for mapping components of the focal mechanism
 """
-import csv
 import datetime
 from math import fabs, floor, sqrt, pi
 import numpy as np
-import gcmt_utils as utils
+from hmtk.seismicity import gcmt_utils as utils
 from hmtk.seismicity.catalogue import Catalogue
+
+
+def cmp(a, b):  # Python 3 replacement of Python2 cmp
+    return (a > b) - (a < b)
 
 
 def cmp_mat(a, b):
@@ -16,9 +19,10 @@ def cmp_mat(a, b):
     Sorts two matrices returning a positive or zero value
     """
     c = 0
-    for x,y in zip(a.flat, b.flat):
-        c = cmp(abs(x),abs(y))
-        if c != 0: return c
+    for x, y in zip(a.flat, b.flat):
+        c = cmp(abs(x), abs(y))
+        if c != 0:
+            return c
     return c
 
 

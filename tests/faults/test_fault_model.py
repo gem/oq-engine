@@ -6,18 +6,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-#License as published by the Free Software Foundation, either version
-#3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-#DISCLAIMER
+# DISCLAIMER
 #
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-#is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-#Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -50,7 +50,6 @@ import unittest
 import numpy as np
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
-from openquake.hazardlib.geo.surface import complex_fault, simple_fault
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 from hmtk.models import IncrementalMFD
@@ -59,7 +58,6 @@ from hmtk.sources.complex_fault_source import mtkComplexFaultSource
 from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.selector import CatalogueSelector
 from hmtk.faults.mfd.characteristic import Characteristic
-from hmtk.faults.mfd.anderson_luco_area_mmax import AndersonLucoAreaMmax
 from hmtk.faults.tectonic_regionalisation import TectonicRegionalisation
 from hmtk.faults.fault_geometries import (SimpleFaultGeometry,
                                           ComplexFaultGeometry)
@@ -71,8 +69,20 @@ BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'fault_data')
 FAULT_RATE_DATA = np.genfromtxt(os.path.join(BASE_DATA_PATH,
                                 'recurrence_branches_results.txt'))
 
-COLLAPSE_DATA = np.genfromtxt(os.path.join(BASE_DATA_PATH,
-                              'collapse_branch_tests.csv'), delimiter=',')
+COLLAPSE_DATA = np.array([
+    [5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1,
+     6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 7.0, np.nan],
+    [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.3],
+    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0,
+     1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.2],
+    [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+     1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1],
+    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.4],
+    [0.1, 0.1, 0.1, 0.1, 0.1, 0.4, 0.4, 0.4, 0.4, 0.4, 1.0, 1.0, 1.0, 1.0, 1.0,
+     1.0, 0.7, 0.7, 0.7, 0.7, 0.7, np.nan]])
+
 
 class TestFaultAncilliaries(unittest.TestCase):
     '''
@@ -226,8 +236,8 @@ class TestmtkActiveFault(unittest.TestCase):
         '''
         with self.assertRaises(IOError) as ioe:
             self.fault = mtkActiveFault('001', 'A Fault', 'Nonsense',
-                                    self.slip, 0., 'Active Shallow Crust')
-        self.assertEqual(ioe.exception.message, 'Geometry must be instance '
+                                        self.slip, 0., 'Active Shallow Crust')
+        self.assertEqual(str(ioe.exception), 'Geometry must be instance '
                          'of hmtk.faults.fault_geometries.BaseFaultGeometry')
 
     def test_mtk_active_fault_not_bad_input_slip(self):
@@ -239,7 +249,7 @@ class TestmtkActiveFault(unittest.TestCase):
             self.fault = mtkActiveFault('001', 'A Fault', self.simple_fault,
                                         [(5.0, 0.5), (7.0, 0.4)], 0.,
                                         'Active Shallow Crust')
-        self.assertEqual(ae.exception.message,
+        self.assertEqual(str(ae.exception),
                          'Slip rate weightings must sum to 1.0')
 
     def test_get_tectonic_regionalisation(self):
@@ -279,10 +289,9 @@ class TestmtkActiveFault(unittest.TestCase):
         with self.assertRaises(ValueError) as ae:
             self.fault.get_tectonic_regionalisation(tect_reg, None)
 
-        self.assertEqual(ae.exception.message,
-                        'Tectonic region classification missing or '
-                        'not defined in regionalisation')
-
+        self.assertEqual(str(ae.exception),
+                         'Tectonic region classification missing or '
+                         'not defined in regionalisation')
 
     def test_generate_config_set_as_dict(self):
         '''
@@ -290,7 +299,7 @@ class TestmtkActiveFault(unittest.TestCase):
         single config dict
         '''
         self.fault = mtkActiveFault('001', 'A Fault', self.simple_fault,
-            [(5., 1.0)], 0., None)
+                                    [(5., 1.0)], 0., None)
         good_config = {'MFD_spacing': 0.1,
                        'Maximum_Magnitude': None,
                        'Minimum_Magnitude': 5.0,
@@ -302,7 +311,6 @@ class TestmtkActiveFault(unittest.TestCase):
         self.assertTrue(isinstance(self.fault.config, list))
         self.assertDictEqual(self.fault.config[0][0], good_config)
         self.assertAlmostEqual(self.fault.config[0][1], 1.0)
-
 
     def test_generate_config_set_as_dict(self):
         '''
@@ -339,13 +347,11 @@ class TestmtkActiveFault(unittest.TestCase):
         a list or dict
         '''
         self.fault = mtkActiveFault('001', 'A Fault', self.simple_fault,
-            [(5., 1.0)], 0., None)
+                                    [(5., 1.0)], 0., None)
         with self.assertRaises(ValueError) as ae:
             self.fault.generate_config_set(None)
-        self.assertEqual(ae.exception.message,
+        self.assertEqual(str(ae.exception),
                          'MFD config must be input as dictionary or list!')
-
-
 
     def test_generate_config_set_with_bad_weights(self):
         '''
@@ -353,24 +359,24 @@ class TestmtkActiveFault(unittest.TestCase):
         to 1.0
         '''
         self.fault = mtkActiveFault('001', 'A Fault', self.simple_fault,
-            [(5., 1.0)], 0., None)
+                                    [(5., 1.0)], 0., None)
         bad_config = [{'MFD_spacing': 0.1,
                        'Maximum_Magnitude': None,
                        'Minimum_Magnitude': 5.0,
-                        'Model_Name': 'AndersonLucoArbitrary',
-                        'Model_Weight': 0.5,
-                        'Type': 'First',
-                        'b_value': [0.8, 0.05]},
-                       {'MFD_spacing': 0.1,
-                        'Maximum_Magnitude': None,
-                        'Maximum_Magnitude_Uncertainty': None,
-                        'Minimum_Magnitude': 5.0,
-                        'Model_Name': 'YoungsCoppersmithExponential',
-                        'Model_Weight': 0.3,
-                        'b_value': [0.8, 0.05]}]
+                       'Model_Name': 'AndersonLucoArbitrary',
+                       'Model_Weight': 0.5,
+                       'Type': 'First',
+                       'b_value': [0.8, 0.05]},
+                      {'MFD_spacing': 0.1,
+                       'Maximum_Magnitude': None,
+                       'Maximum_Magnitude_Uncertainty': None,
+                       'Minimum_Magnitude': 5.0,
+                       'Model_Name': 'YoungsCoppersmithExponential',
+                       'Model_Weight': 0.3,
+                       'b_value': [0.8, 0.05]}]
         with self.assertRaises(ValueError) as ae:
             self.fault.generate_config_set(bad_config)
-        self.assertEqual(ae.exception.message,
+        self.assertEqual(str(ae.exception),
                          'MFD config weights do not sum to 1.0 for fault 001')
 
 
@@ -433,14 +439,15 @@ class TestmtkActiveFault(unittest.TestCase):
         bad_config = None
         with self.assertRaises(ValueError) as ae:
             self.fault.generate_recurrence_models(bad_config)
-            self.assertEqual(ae.exception.message,
+            self.assertEqual(
+                str(ae.exception),
                 'MFD configuration missing or incorrectly formatted')
         # Test 2 - Collapse is required but no msr set!
         with self.assertRaises(ValueError) as ae:
             self.fault.generate_recurrence_models(collapse=True)
-            self.assertEqual(ae.exception.message,
-                'Collapsing logic tree branches requires input '
-                'of a single msr for rendering sources')
+            self.assertEqual(str(ae.exception),
+                             'Collapsing logic tree branches requires input '
+                             'of a single msr for rendering sources')
 
     def test_collapse_branches(self):
         '''
@@ -482,7 +489,7 @@ class TestmtkActiveFault(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             self.fault.catalogue.data["depth"],
             np.array([5.0, 250.0, 10.0]))
-        
+
     def test_select_catalogue_rrup(self):
         """
         Tests catalogue selection with Joyner-Boore distance
@@ -521,7 +528,10 @@ class TestmtkActiveFault(unittest.TestCase):
         collapse model
         '''
         # Build test data
-        mags = COLLAPSE_DATA[0, :-1]
+        try:
+            mags = COLLAPSE_DATA[0, :-1]
+        except:
+            import pdb; pdb.set_trace()
         weights = COLLAPSE_DATA[1:-1, -1]
         rates = COLLAPSE_DATA[1:-1:, :-1]
         expected_rate = COLLAPSE_DATA[-1, :-1]
