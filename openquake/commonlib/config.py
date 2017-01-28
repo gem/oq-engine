@@ -16,15 +16,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-
 """
 Various utility functions concerned with configuration.
 """
 
-from openquake.baselib.python3compat import configparser, encode
 import os
 import sys
-from contextlib import contextmanager
+
+from openquake.baselib.python3compat import configparser, encode
+from openquake.hazardlib import valid
 
 OQ_PATH = os.path.dirname(os.path.dirname(__file__))
 #: Environment variable name for specifying a custom openquake.cfg.
@@ -107,21 +107,6 @@ class _Config(object):
 cfg = _Config()  # the only instance of _Config
 
 
-@contextmanager
-def context(section, **kw):
-    """
-    Context manager used to change the parameters of a configuration
-    section on the fly. For use in the tests.
-    """
-    section_dict = cfg.get(section)
-    orig = section_dict.copy()
-    try:
-        section_dict.update(kw)
-        yield
-    finally:
-        cfg.set(section, orig)
-
-
 def get_section(section):
     """A dictionary of key/value pairs for the given `section` or `None`."""
     abort_if_no_config_available()
@@ -158,10 +143,7 @@ def flag_set(section, setting):
 
     :returns: True if the setting is enabled in openquake.cfg, False otherwise
     """
-    setting = get(section, setting)
-    if setting is None:
-        return False
-    return setting.lower() in ("true", "yes", "t", "1")
+    return valid.boolean(get(section, setting) or '')
 
 
 port = int(get('dbserver', 'port'))
