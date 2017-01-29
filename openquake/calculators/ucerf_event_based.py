@@ -664,11 +664,8 @@ class UCERFSESControlTimeDep(UCERFSESControl):
         idx_set["rake_idx"] = "/".join([code_set[0], code_set[1], "Rake"])
         idx_set["msr_idx"] = "-".join([code_set[0], code_set[1], code_set[2]])
         idx_set["geol_idx"] = code_set[0]
-        #grid_key = "_".join(self.branch_id.replace("/", "_").split("_")[:-1])
-        #idx_set["grid_key"] = self.branch_id.replace("/", "_")
         idx_set["grid_key"] = "_".join(
-            self.branch_id.replace("/", "_").split("_")[:-1]
-            )
+            self.branch_id.replace("/", "_").split("_")[:-1])
         idx_set["total_key"] = self.branch_id.replace("/", "|")
         return idx_set
 
