@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Made sure that the openquake.cfg file is read only once
+
   [Daniele Viganò]
   * Move the openquake.cfg config file inside the python package
     under openquake/engine/openquake.cfg
