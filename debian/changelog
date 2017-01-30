@@ -1,7 +1,13 @@
+  [Michele Simionato]
+  * Tasks meant to be used with a shared directory are now marked with a
+    boolean attribute `.shared_dir_on`
+  * Added a warning when running event based risk calculations with sampling
+  * Made sure that the openquake.cfg file is read only once
+
   [Daniele Viganò]
-  * Move the openquake.cfg config file inside the python package
+  * Moved the openquake.cfg config file inside the python package
     under openquake/engine/openquake.cfg
-  * Remove support to OQ_LOCAL_CFG_PATH and OQ_SITE_CFG_PATH vars;
+  * Removed support to OQ_LOCAL_CFG_PATH and OQ_SITE_CFG_PATH vars;
     only the OQ_CONFIG_FILE enviroment variable is read
 
   [Michele Simionato]
