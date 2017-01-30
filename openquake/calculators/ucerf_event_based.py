@@ -641,7 +641,7 @@ class UCERFSESControlTimeDep(UCERFSESControl):
         """
         Instantiate with new parameter 'start_date'
         """
-        super(UCERFControlTimeDep, self).__init__(
+        super(UCERFSESControlTimeDep, self).__init__(
             source_file, id, investigation_time, min_mag, npd, hdd, aspect,
             upper_seismogenic_depth, lower_seismogenic_depth,
             msr, mesh_spacing, trt, integration_distance=1000)
