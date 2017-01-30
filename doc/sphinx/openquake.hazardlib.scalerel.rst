@@ -4,7 +4,7 @@ openquake.hazardlib.scalerel package
 Area-magnitude scaling relationships
 ------------------------------------
 
-openquake.hazardlib.scalerel.base module
+base
 ----------------------------------------
 
 .. automodule:: openquake.hazardlib.scalerel.base
@@ -12,7 +12,7 @@ openquake.hazardlib.scalerel.base module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.scalerel.ceus2011 module
+ceus2011
 --------------------------------------------
 
 .. automodule:: openquake.hazardlib.scalerel.ceus2011
@@ -20,7 +20,7 @@ openquake.hazardlib.scalerel.ceus2011 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.scalerel.gsc_offshore_thrusts module
+gsc_offshore_thrusts
 --------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.scalerel.gsc_offshore_thrusts
@@ -28,7 +28,7 @@ openquake.hazardlib.scalerel.gsc_offshore_thrusts module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.scalerel.leonard2014 module
+leonard2014
 -----------------------------------------------
 
 .. automodule:: openquake.hazardlib.scalerel.leonard2014
@@ -36,7 +36,7 @@ openquake.hazardlib.scalerel.leonard2014 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.scalerel.peer module
+peer
 ----------------------------------------
 
 .. automodule:: openquake.hazardlib.scalerel.peer
@@ -44,7 +44,7 @@ openquake.hazardlib.scalerel.peer module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.scalerel.point module
+point
 -----------------------------------------
 
 .. automodule:: openquake.hazardlib.scalerel.point
@@ -52,7 +52,7 @@ openquake.hazardlib.scalerel.point module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.scalerel.strasser2010 module
+strasser2010
 ------------------------------------------------
 
 .. automodule:: openquake.hazardlib.scalerel.strasser2010
@@ -60,7 +60,7 @@ openquake.hazardlib.scalerel.strasser2010 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.scalerel.wc1994 module
+wc1994
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.scalerel.wc1994
@@ -68,7 +68,7 @@ openquake.hazardlib.scalerel.wc1994 module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.scalerel.wc1994_qcss module
+wc1994_qcss
 -----------------------------------------------
 
 .. automodule:: openquake.hazardlib.scalerel.wc1994_qcss

@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Added new version of Pezeshk et al. (2011) GMPE adjusted for NEHRP BC Site condition
+  
   [Michele Simionato]
   * Parallelized `calc_hazard_curves` and added an example of use
     in the docstring of `openquake.hazardlib.calc.hazard_curves`

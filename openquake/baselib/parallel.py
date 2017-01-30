@@ -173,12 +173,21 @@ elif OQ_DISTRIBUTE == 'ipython':
     import ipyparallel as ipp
 
 
-def oq_distribute():
+def oq_distribute(task=None):
     """
-    Return the current value of the variable OQ_DISTRIBUTE; if undefined,
-    return 'futures'.
+    If the task has an attribute `shared_dir_on` which is false,
+    return 'futures' even if OQ_DISTRIBUTE is `celery`, otherwise
+    return the current value of the variable OQ_DISTRIBUTE;
+    if undefined, return 'futures'.
     """
-    return os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
+    env = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
+    if hasattr(task, 'shared_dir_on'):
+        if env == 'celery' and not task.shared_dir_on:
+            logging.warn(
+                'Task `%s` will be run on the controller node only, since '
+                'no `shared_dir` has been specified' % task.__name__)
+            return 'futures'
+    return env
 
 
 def check_mem_usage(monitor=Monitor(),
@@ -481,7 +490,7 @@ class Starmap(object):
         self.name = name or oqtask.__name__
         self.results = []
         self.sent = AccumDict()
-        self.distribute = oq_distribute()
+        self.distribute = oq_distribute(oqtask)
         f = oqtask.__init__ if inspect.isclass(oqtask) else oqtask
         self.argnames = inspect.getargspec(f).args
         if self.distribute == 'ipython' and isinstance(
