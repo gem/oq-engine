@@ -39,6 +39,7 @@ if USE_CELERY and 'run' in sys.argv:
     sys.exit('You are on a cluster and you are using oq run?? '
              'Use oq engine --run instead!')
 
+
 def oq():
     modnames = ['openquake.commands.%s' % mod[:-3]
                 for mod in os.listdir(commands.__path__[0])
