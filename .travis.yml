@@ -20,4 +20,4 @@ script:
   - nosetests --with-doctest -vsx -a'!slow'
   - cat /tmp/webui*
   - bin/oq info -r demos/hazard
-  - oq show slow_sources -1
+  - oq show slow_sources -2
