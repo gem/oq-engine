@@ -4,7 +4,7 @@ openquake.hazardlib.source package
 Seismic sources and ruptures
 ----------------------------
 
-openquake.hazardlib.source.area module
+area
 --------------------------------------
 
 .. automodule:: openquake.hazardlib.source.area
@@ -12,7 +12,7 @@ openquake.hazardlib.source.area module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.source.base module
+base
 --------------------------------------
 
 .. automodule:: openquake.hazardlib.source.base
@@ -20,7 +20,7 @@ openquake.hazardlib.source.base module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.source.characteristic module
+characteristic
 ------------------------------------------------
 
 .. automodule:: openquake.hazardlib.source.characteristic
@@ -28,7 +28,7 @@ openquake.hazardlib.source.characteristic module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.source.complex_fault module
+complex_fault
 -----------------------------------------------
 
 .. automodule:: openquake.hazardlib.source.complex_fault
@@ -36,7 +36,7 @@ openquake.hazardlib.source.complex_fault module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.source.non_parametric module
+non_parametric
 ------------------------------------------------
 
 .. automodule:: openquake.hazardlib.source.non_parametric
@@ -44,7 +44,7 @@ openquake.hazardlib.source.non_parametric module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.source.point module
+point
 ---------------------------------------
 
 .. automodule:: openquake.hazardlib.source.point
@@ -52,7 +52,7 @@ openquake.hazardlib.source.point module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.source.rupture module
+rupture
 -----------------------------------------
 
 .. automodule:: openquake.hazardlib.source.rupture
@@ -60,7 +60,7 @@ openquake.hazardlib.source.rupture module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.source.simple_fault module
+simple_fault
 ----------------------------------------------
 
 .. automodule:: openquake.hazardlib.source.simple_fault
