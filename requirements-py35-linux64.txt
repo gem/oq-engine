@@ -27,6 +27,11 @@ http://ftp.openquake.org/wheelhouse/linux/py35/pyshp-1.2.3-py3-none-any.whl
 
 ## Extra ##
 
+### pythn-prctl ###
+# comment the following lines to skip installation
+# of python-prctl (optional feature)
+http://ftp.openquake.org/wheelhouse/linux/py35/python_prctl-1.6.1-cp35-cp35m-manylinux1_x86_64.whl
+
 ### Rtree ###
 # comment the following lines to skip installation
 # of Rtree (experimental wheel, optional feature)
