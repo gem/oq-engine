@@ -33,9 +33,20 @@ def purge_one(calc_id, user):
     err = dbcmd('del_calc', calc_id, user)
     if err:
         print(err)
-    if os.path.exists(hdf5path):
+    if os.path.exists(hdf5path):  # not removed yet
         os.remove(hdf5path)
         print('Removed %s' % hdf5path)
+
+
+def purge_all(user):
+    """
+    Remove all calculations of the given user
+    """
+    for fname in os.listdir(datastore.DATADIR):
+        mo = re.match('calc_(\d+)\.hdf5', fname)
+        if mo is not None:
+            calc_id = int(mo.group(1))
+            purge_one(calc_id, user)
 
 
 @sap.Script
@@ -44,12 +55,8 @@ def purge(calc_id):
     Remove the given calculation. If calc_id is 0, remove all calculations.
     """
     user = getpass.getuser()
-    if not calc_id:
-        for fname in os.listdir(datastore.DATADIR):
-            mo = re.match('calc_(\d+)\.hdf5', fname)
-            if mo is not None:
-                calc_id = int(mo.group(1))
-                purge_one(calc_id, user)
+    if calc_id == 0:  # purge all calculations of the given user
+        purge_all(user)
     else:
         if calc_id < 0:
             try:
