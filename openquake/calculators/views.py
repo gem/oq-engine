@@ -182,7 +182,7 @@ def view_slow_sources(token, dstore, maxrows=20):
     Returns the slowest sources
     """
     info = dstore['source_info'].value
-    info.sort(order='max_calc_time')
+    info.sort(order='calc_time')
     return rst_table(info[::-1][:maxrows])
 
 
@@ -659,6 +659,6 @@ def view_task_slowest(token, dstore):
     i = dstore['task_info/classical']['duration'].argmax()
     taskno, weight, duration = dstore['task_info/classical'][i]
     sources = dstore['task_sources'][taskno - 1].split()
-    srcs = set(src.split(':', 1)[0] for src in sources)
+    srcs = set(decode(s).split(':', 1)[0] for s in sources)
     return 'taskno=%d, weight=%d, duration=%d s, sources="%s"' % (
         taskno, weight, duration, ' '.join(sorted(srcs)))
