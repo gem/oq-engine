@@ -20,7 +20,6 @@ from __future__ import print_function
 import os
 import sys
 import shutil
-import getpass
 from openquake.baselib import sap
 from openquake.commonlib import datastore, config
 from openquake.engine import logs
@@ -46,8 +45,7 @@ def reset(yes):
         print('dbserver stopped')
 
     dbpath = config.get('dbserver', 'file')
-    datadir = os.path.join(os.path.realpath(datastore.DATADIR),
-                           getpass.getuser())
+    datadir = os.path.realpath(datastore.DATADIR)
     if os.path.exists(datadir):
         shutil.rmtree(datadir)  # datastore of the current user
     print('Removed %s' % datadir)
