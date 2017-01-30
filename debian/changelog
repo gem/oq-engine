@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Added a warning when running event based risk calculations with sampling
+  * Made sure that the openquake.cfg file is read only once
 
   [Daniele Viganò]
   * Moved the openquake.cfg config file inside the python package
