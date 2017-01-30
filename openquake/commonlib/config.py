@@ -149,3 +149,4 @@ def flag_set(section, setting):
 port = int(get('dbserver', 'port'))
 DBS_ADDRESS = (get('dbserver', 'host'), port)
 DBS_AUTHKEY = encode(get('dbserver', 'authkey'))
+SHARED_DIR_ON = bool(get('directory', 'shared_dir'))
