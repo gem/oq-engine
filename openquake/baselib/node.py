@@ -598,7 +598,11 @@ def node_to_dict(node):
 
     :param node: a Node-compatible object
     """
-    dic = dict(tag=node.tag, attrib=node.attrib, text=node.text)
+    dic = dict(tag=node.tag)
+    if node.attrib:
+        dic['attrib'] = node.attrib
+    if node.text is not None:
+        dic['text'] = node.text
     if node.nodes:
         dic['nodes'] = [node_to_dict(n) for n in node]
     return dic

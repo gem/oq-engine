@@ -265,6 +265,36 @@ class File(h5py.File):
         else:
             return h5obj
 
+    def _save(self, nodedict, root=''):
+        """
+        :param nodedict:
+            a dictionary with keys 'tag', 'attrib', 'text', 'nodes'
+        """
+        setitem = super(File, self).__setitem__
+        getitem = super(File, self).__getitem__
+        path = os.path.join(root, nodedict['tag'])
+        text = nodedict.get('text', None)
+        attrib = nodedict.get('attrib', {})
+        nodes = nodedict.get('nodes', [])
+        if text is not None:
+            setitem(path, text)
+        elif attrib and not nodes:
+            setitem(path, numpy.nan)
+        for subnode in resolve_duplicates(nodes):
+            self._save(subnode, path)
+        if attrib:
+            dset = getitem(path)
+            for k, v in attrib.items():
+                dset.attrs[k] = v
+
+
+def resolve_duplicates(nodes):
+    tagset = set(n['tag'] for n in nodes)
+    if len(tagset) < len(nodes):  # there are duplicate tags
+        for i, node in enumerate(nodes, 1):
+            node['tag'] += str(i)
+    return nodes
+
 
 def array_of_vstr(lst):
     """
