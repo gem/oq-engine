@@ -29,7 +29,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
 from openquake.calculators.export import export
-from openquake.commonlib import writers, hazard_writers, calc, util
+from openquake.commonlib import writers, hazard_writers, calc, util, source
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -1006,5 +1006,19 @@ def export_realizations(ekey, dstore):
     for i, rlz in enumerate(rlzs):
         data.append([i, rlz['uid'], rlz['model'], rlz['gsims'], rlz['weight']])
     path = dstore.export_path('realizations.csv')
+    writers.write_csv(path, data, fmt='%s')
+    return [path]
+
+
+@export.add(('sourcegroups', 'csv'))
+def export_sourcegroups(ekey, dstore):
+    csm_info = dstore['csm_info']
+    data = [['grp_id', 'trt', 'eff_ruptures']]
+    for i, sm in enumerate(csm_info.source_models):
+        for src_group in sm.src_groups:
+            trt = source.capitalize(src_group.trt)
+            er = src_group.eff_ruptures
+            data.append((src_group.id, trt, er))
+    path = dstore.export_path('sourcegroups.csv')
     writers.write_csv(path, data, fmt='%s')
     return [path]
