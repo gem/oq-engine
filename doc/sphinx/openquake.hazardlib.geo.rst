@@ -11,7 +11,7 @@ Surface classes
 Geographic primitives and utilities
 ------------------------------------
 
-openquake.hazardlib.geo.geodetic module
+geodetic
 ---------------------------------------
 
 .. automodule:: openquake.hazardlib.geo.geodetic
@@ -19,7 +19,7 @@ openquake.hazardlib.geo.geodetic module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.geo.line module
+line
 -----------------------------------
 
 .. automodule:: openquake.hazardlib.geo.line
@@ -27,7 +27,7 @@ openquake.hazardlib.geo.line module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.geo.mesh module
+mesh
 -----------------------------------
 
 .. automodule:: openquake.hazardlib.geo.mesh
@@ -35,7 +35,7 @@ openquake.hazardlib.geo.mesh module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.geo.nodalplane module
+nodalplane
 -----------------------------------------
 
 .. automodule:: openquake.hazardlib.geo.nodalplane
@@ -43,7 +43,7 @@ openquake.hazardlib.geo.nodalplane module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.geo.point module
+point
 ------------------------------------
 
 .. automodule:: openquake.hazardlib.geo.point
@@ -51,7 +51,7 @@ openquake.hazardlib.geo.point module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.geo.polygon module
+polygon
 --------------------------------------
 
 .. automodule:: openquake.hazardlib.geo.polygon
@@ -59,7 +59,7 @@ openquake.hazardlib.geo.polygon module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.geo.utils module
+utils
 ------------------------------------
 
 .. automodule:: openquake.hazardlib.geo.utils

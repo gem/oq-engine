@@ -17,7 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports :class:'PezeshkEtAl2011'.
+Module exports :class:'PezeshkEtAl2011',
+               :class:'PezeshkEtAl2011NEHRPBC'.
 """
 from __future__ import division
 
@@ -194,4 +195,45 @@ class PezeshkEtAl2011(GMPE):
     5.000    -8.27036650     1.93795990     -0.117965260    -2.9501142     0.25032167     0.329567930   -0.030227728    -1.01253690      0.073323916    -0.000200169     6.3422591     -0.006899636     0.35767668     0.35802021     0.031592909
     7.500    -8.33763300     1.80623080     -0.104248570    -2.9838785     0.25418641     0.287880220   -0.022521612    -1.18165170      0.095976523    -0.000162413     6.5180975     -0.007239689     0.37304593     0.37100909     0.029567069
     10.00    -9.10461860     1.89872240     -0.107604830    -2.8611231     0.23953867     0.286847230   -0.022896491    -1.37862210      0.122158550    -0.000126810     6.5383616     -0.007485065     0.38476363     0.38100915     0.024448978
+    """)
+
+
+class  PezeshkEtAl2011NEHRPBC(PezeshkEtAl2011):
+    """
+    Adaptation of Pezeshk et al. (2011) to amplify the ground motions from
+    the original hard rock (Vs30 2880 m/s) sites to the NEHRP B/C site class
+    using the factors of Atkinson & Boore (2006) (Table 4)
+    """
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        C_AMP = self.SITE_COEFFS[imt]
+        # Get method from superclass
+        mean, stddevs = super(
+            PezeshkEtAl2011NEHRPBC, self).get_mean_and_stddevs(
+                sites, rup, dists, imt, stddev_types)
+        return mean + np.log(C_AMP["F"]), stddevs
+
+    SITE_COEFFS = CoeffsTable(sa_damping=5, table="""
+    IMT            F
+    pga       2.5000
+    0.0100    2.5000
+    0.0122    2.4970
+    0.0299    2.4740
+    0.0471    2.4520
+    0.0797    2.4110
+    0.1577    2.3130
+    0.2484    2.2020
+    0.3505    2.0790
+    0.5192    1.8840
+    0.7225    1.6720
+    1.2715    1.3940
+    2.2381    1.2370
+    4.1632    1.1450
+    9.8619    1.0730
+    10.000    1.0000
     """)
