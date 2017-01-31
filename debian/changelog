@@ -1,6 +1,11 @@
+  [Michele Simionato]
+  * Used always the same algorithm for computing quantiles (before there
+    was a special case in absence of weights)
+
   [Graeme Weatherill]
-  * Added new version of Pezeshk et al. (2011) GMPE adjusted for NEHRP BC Site condition
-  
+  * Added new version of Pezeshk et al. (2011) GMPE adjusted for NEHRP BC Site
+    condition
+
   [Michele Simionato]
   * Parallelized `calc_hazard_curves_ext` and added an example of use
     in the docstring of `openquake.hazardlib.calc.hazard_curves`
