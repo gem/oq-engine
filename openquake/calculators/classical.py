@@ -23,7 +23,8 @@ import collections
 from functools import partial, reduce
 import numpy
 
-from openquake.baselib import hdf5, parallel
+from openquake.baselib import parallel
+from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib import sourceconverter
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
@@ -228,7 +229,7 @@ def saving_sources_by_task(iterargs, dstore):
     for args in iterargs:
         source_ids.append(' ' .join(src.source_id for src in args[0]))
         yield args
-    dstore['task_sources'] = numpy.array(source_ids, hdf5.vstr)
+    dstore['task_sources'] = numpy.array([encode(s) for s in source_ids])
 
 
 @base.calculators.add('psha')
@@ -421,9 +422,11 @@ def build_hcurves_and_stats(pmap_by_grp, sids, pstats, rlzs_assoc, monitor):
     rlzs = rlzs_assoc.realizations
     with monitor('combine pmaps'):
         pmap_by_rlz = calc.combine_pmaps(rlzs_assoc, pmap_by_grp)
-    with monitor('compute stats'):
-        pmap_by_kind = dict(
-            pstats.compute(sids, [pmap_by_rlz[rlz] for rlz in rlzs]))
+    pmap_by_kind = {}
+    if len(rlzs) > 1:
+        with monitor('compute stats'):
+            pmap_by_kind.update(
+                pstats.compute(sids, [pmap_by_rlz[rlz] for rlz in rlzs]))
     if monitor.individual_curves:
         for rlz in rlzs:
             pmap_by_kind['rlz-%03d' % rlz.ordinal] = pmap_by_rlz[rlz]

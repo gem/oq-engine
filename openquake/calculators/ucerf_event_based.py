@@ -33,7 +33,7 @@ from openquake.baselib.python3compat import zip
 from openquake.baselib import parallel
 from openquake.hazardlib import valid, nrml
 from openquake.risklib import riskinput
-from openquake.commonlib import readinput, source, calc
+from openquake.commonlib import readinput, source, calc, config
 from openquake.calculators import base, event_based
 from openquake.calculators.event_based_risk import (
     EbriskCalculator, build_el_dtypes, event_based_risk)
@@ -628,6 +628,7 @@ class UCERFSESControl(object):
 
 # #################################################################### #
 
+
 def convert_UCERFSource(self, node):
     """
     Converts the Ucerf Source node into an SES Control object
@@ -782,8 +783,9 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     res[src.src_group_id] = ebruptures
     res.calc_times[src.src_group_id] = (
         src.source_id, len(sitecol), time.time() - t0)
-    res.rup_data = {src.src_group_id:
-                    calc.RuptureData(DEFAULT_TRT, gsims).to_array(ebruptures)}
+    # not returning the boundary to save data transfer and disk space
+    res.rup_data = {src.src_group_id: calc.RuptureData(DEFAULT_TRT, gsims)
+                    .to_array(ebruptures, boundary='')}
     return res
 
 
@@ -801,6 +803,7 @@ def compute_events(sources, sitecol, gsims, monitor):
             EBR(ebr.serial, ebr.source_id, ebr.events)
             for ebr in ruptures_by_grp[grp_id]]
     return ruptures_by_grp
+compute_events.shared_dir_on = config.SHARED_DIR_ON
 
 
 class List(list):
@@ -842,6 +845,7 @@ def compute_losses(ssm, sitecol, assetcol, riskmodel,
     res.ruptures_by_grp[grp_id] = [EBR(ebr.serial, ebr.source_id, ebr.events)
                                    for ebr in ebruptures]
     return res
+compute_losses.shared_dir_on = config.SHARED_DIR_ON
 
 
 @base.calculators.add('ucerf_risk')
