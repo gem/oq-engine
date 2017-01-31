@@ -38,10 +38,12 @@ def purge_one(calc_id, user):
         print('Removed %s' % hdf5path)
 
 
-def purge_all(user):
+# used in the reset command
+def purge_all(user=None):
     """
     Remove all calculations of the given user
     """
+    user = user or getpass.getuser()
     for fname in os.listdir(datastore.DATADIR):
         mo = re.match('calc_(\d+)\.hdf5', fname)
         if mo is not None:
@@ -54,16 +56,12 @@ def purge(calc_id):
     """
     Remove the given calculation. If calc_id is 0, remove all calculations.
     """
-    user = getpass.getuser()
-    if calc_id == 0:  # purge all calculations of the given user
-        purge_all(user)
-    else:
-        if calc_id < 0:
-            try:
-                calc_id = datastore.get_calc_ids()[calc_id]
-            except IndexError:
-                print('Calculation %d not found' % calc_id)
-                return
-        purge_one(calc_id, user)
+    if calc_id < 0:
+        try:
+            calc_id = datastore.get_calc_ids()[calc_id]
+        except IndexError:
+            print('Calculation %d not found' % calc_id)
+            return
+    purge_one(calc_id, getpass.getuser())
 
 purge.arg('calc_id', 'calculation ID', type=int)
