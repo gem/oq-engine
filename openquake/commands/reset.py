@@ -44,15 +44,16 @@ def reset(yes):
         logs.dbcmd('stop')
         print('dbserver stopped')
 
-    dbpath = config.get('dbserver', 'file')
+    dbpath = os.path.realpath(
+        os.path.expanduser(config.get('dbserver', 'file')))
+    try:
+        os.remove(dbpath)  # database of the current user
+        print('Removed %s' % dbpath)
+    except OSError as exc:
+        print(exc, file=sys.stderr)
     datadir = os.path.realpath(datastore.DATADIR)
     if os.path.exists(datadir):
         shutil.rmtree(datadir)  # datastore of the current user
     print('Removed %s' % datadir)
-    try:
-        os.remove(dbpath)  # database of the current user
-        print('Removed %s' % dbpath)
-    except OSError:
-        print('You have no permission to remove %s' % dbpath)
 
 reset.flg('yes', 'confirmation')
