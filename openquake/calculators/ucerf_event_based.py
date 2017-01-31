@@ -783,8 +783,9 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     res[src.src_group_id] = ebruptures
     res.calc_times[src.src_group_id] = (
         src.source_id, len(sitecol), time.time() - t0)
-    res.rup_data = {src.src_group_id:
-                    calc.RuptureData(DEFAULT_TRT, gsims).to_array(ebruptures)}
+    # not returning the boundary to save data transfer and disk space
+    res.rup_data = {src.src_group_id: calc.RuptureData(DEFAULT_TRT, gsims)
+                    .to_array(ebruptures, boundary='')}
     return res
 
 
