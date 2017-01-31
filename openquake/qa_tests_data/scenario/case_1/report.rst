@@ -2,29 +2,30 @@ Scenario QA Test, Case 1
 ========================
 
 ============================================== ========================
-gem-tstation:/home/michele/ssd/calc_66948.hdf5 Wed Nov  9 08:14:05 2016
-engine_version                                 2.2.0-git54d01f4        
-hazardlib_version                              0.22.0-git173c60c       
+gem-tstation:/home/michele/ssd/calc_81027.hdf5 Thu Jan 26 14:28:14 2017
+engine_version                                 2.3.0-gite807292        
+hazardlib_version                              0.23.0-gite1ea7ea       
 ============================================== ========================
 
-num_sites = 3, sitecol = 831 B
+num_sites = 3, sitecol = 854 B
 
 Parameters
 ----------
-============================ =================
-calculation_mode             'scenario'       
-number_of_logic_tree_samples 0                
-maximum_distance             {u'default': 200}
-investigation_time           None             
-ses_per_logic_tree_path      1                
-truncation_level             1.0              
-rupture_mesh_spacing         1.0              
-complex_fault_mesh_spacing   1.0              
-width_of_mfd_bin             None             
-area_source_discretization   None             
-random_seed                  3                
-master_seed                  0                
-============================ =================
+=============================== ================
+calculation_mode                'scenario'      
+number_of_logic_tree_samples    0               
+maximum_distance                {'default': 200}
+investigation_time              None            
+ses_per_logic_tree_path         1               
+truncation_level                1.0             
+rupture_mesh_spacing            1.0             
+complex_fault_mesh_spacing      1.0             
+width_of_mfd_bin                None            
+area_source_discretization      None            
+ground_motion_correlation_model None            
+random_seed                     3               
+master_seed                     0               
+=============================== ================
 
 Input files
 -----------
