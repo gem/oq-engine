@@ -20,7 +20,8 @@ import os
 import copy
 import unittest
 import tempfile
-from openquake.hazardlib.sourcewriter import write_source_model
+from openquake.baselib import hdf5
+from openquake.hazardlib.sourcewriter import write_source_model, hdf5write
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.nrml import SourceModelParser
 from openquake.commonlib import nrml_examples
@@ -75,3 +76,14 @@ class DeepcopyTestCase(unittest.TestCase):
         # NB: without Node.__deepcopy__ the serialization would fail
         # with a RuntimeError: maximum recursion depth exceeded while
         # calling a Python object
+
+
+class Hdf5WriterTestCase(unittest.TestCase):
+    def test_mixed(self):
+        parser = SourceModelParser(SourceConverter(50., 2.))
+        srcs = sum([sg.sources for sg in parser.parse_src_groups(MIXED)], [])
+        _, fname = tempfile.mkstemp(suffix='.hdf5')
+        print('Saving on %s' % fname)
+        with hdf5.File(fname, 'w') as f:
+            for src in srcs:
+                hdf5write(f, src)
