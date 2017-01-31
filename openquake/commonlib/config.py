@@ -16,17 +16,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-
 """
 Various utility functions concerned with configuration.
 """
 
-from openquake.baselib.python3compat import configparser, encode
 import os
 import sys
-from contextlib import contextmanager
 
-OQDIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+from openquake.baselib.python3compat import configparser, encode
+from openquake.hazardlib import valid
+
+OQ_PATH = os.path.dirname(os.path.dirname(__file__))
 #: Environment variable name for specifying a custom openquake.cfg.
 #: The file name doesn't matter.
 OQ_CONFIG_FILE_VAR = "OQ_CONFIG_FILE"
@@ -38,25 +38,43 @@ class _Config(object):
     Load the configuration, make each section available in a separate
     dict.
 
-    The configuration locations are specified via environment variables:
-        - OQ_SITE_CFG_PATH
-        - OQ_LOCAL_CFG_PATH
+    The configuration location can specified via an environment variables:
+        - OQ_CONFIG_FILE
 
-    In the absence of these environment variables the following hard-coded
-    paths will be used in order:
-        - /etc/openquake/openquake.cfg
-        - ./openquake.cfg
+    In the absence of this environment variable the following paths will be
+    used in order:
+        - /etc/openquake/openquake.cfg (only when running outside a venv)
+        - openquake/engine/openquake.cfg (from the python package)
 
     Please note: settings in the site configuration file are overridden
-    by settings with the same key names in the local configuration.
+    by settings with the same key names in the OQ_CONFIG_FILE openquake.cfg.
     """
-    GLOBAL_PATH = "/etc/openquake/openquake.cfg"
-    LOCAL_PATH = os.path.join(OQDIR, "openquake.cfg")
+    CFG_FILE = "openquake.cfg"
+    ETC_PATH = os.path.join("/etc/openquake", CFG_FILE)
+    PKG_PATH = os.path.join(OQ_PATH, "engine", CFG_FILE)
     cfg = dict()
 
     def __init__(self):
+        """
+        Determine the paths to search and load the config file.
+        """
+        paths = []
+
+        # path from python package
+        paths.append(os.path.join(OQ_PATH, "engine", self.CFG_FILE))
+
+        # path from system etc dir, only if a venv is not active
+        venv = 'VIRTUAL_ENV' in os.environ or hasattr(sys, 'real_prefix')
+        if not venv and os.path.exists(self.ETC_PATH):
+            paths.append(self.ETC_PATH)
+
+        # path from env variable
+        if OQ_CONFIG_FILE_VAR in os.environ:
+            paths.append(os.path.normpath(os.environ[OQ_CONFIG_FILE_VAR]))
+
+        # normalize all paths and resolve '~' in a single pass
+        self._paths = [os.path.normpath(os.path.expanduser(p)) for p in paths]
         self._load_from_file()
-        self.job_id = -1
 
     def get(self, name):
         """A dict with key/value pairs for the given `section` or `None`."""
@@ -66,29 +84,16 @@ class _Config(object):
         """Set the dictionary for given section"""
         self.cfg[name] = dic
 
-    def _get_paths(self):
-        """Return the paths for the global/local configuration files."""
-        global_path = os.environ.get("OQ_SITE_CFG_PATH", self.GLOBAL_PATH)
-        local_path = os.environ.get(
-            "OQ_LOCAL_CFG_PATH", os.path.abspath(self.LOCAL_PATH))
-        paths = [global_path, local_path]
-
-        # User specified
-        user_path = os.environ.get(OQ_CONFIG_FILE_VAR)
-        if user_path is not None:
-            paths.append(user_path)
-        return paths
-
     def _load_from_file(self):
         """Load the config files, set up the section dictionaries."""
         config = configparser.SafeConfigParser()
-        config.read(self._get_paths())
+        config.read(self._paths)
         for section in config.sections():
             self.cfg[section] = dict(config.items(section))
 
     def is_readable(self):
         """Return `True` if at least one config file is readable."""
-        for path in self._get_paths():
+        for path in self._paths:
             if os.access(path, os.R_OK):
                 return True
         else:
@@ -96,25 +101,10 @@ class _Config(object):
 
     def exists(self):
         """Return `True` if at least one config file exists."""
-        return any(os.path.exists(path) for path in self._get_paths())
+        return any(os.path.exists(path) for path in self._paths)
 
 
 cfg = _Config()  # the only instance of _Config
-
-
-@contextmanager
-def context(section, **kw):
-    """
-    Context manager used to change the parameters of a configuration
-    section on the fly. For use in the tests.
-    """
-    section_dict = cfg.get(section)
-    orig = section_dict.copy()
-    try:
-        section_dict.update(kw)
-        yield
-    finally:
-        cfg.set(section, orig)
 
 
 def get_section(section):
@@ -134,17 +124,15 @@ def abort_if_no_config_available():
     if not cfg.exists():
         msg = ('Could not find a configuration file in %s. '
                'Probably your are not in the right directory'
-               % cfg._get_paths())
-        print(msg)
-        sys.exit(2)
+               % cfg._paths)
+        sys.exit(msg)
     if not cfg.is_readable():
         msg = (
             "\nYou are not authorized to read any of the OpenQuake "
             "configuration files.\n"
             "Please check permissions on the configuration files in %s."
-            % cfg._get_paths())
-        print(msg)
-        sys.exit(2)
+            % cfg._paths)
+        sys.exit(msg)
 
 
 def flag_set(section, setting):
@@ -155,22 +143,10 @@ def flag_set(section, setting):
 
     :returns: True if the setting is enabled in openquake.cfg, False otherwise
     """
-    setting = get(section, setting)
-    if setting is None:
-        return False
-    return setting.lower() in ("true", "yes", "t", "1")
-
-
-def refresh():
-    """
-    Re-parse config files and refresh the cached configuration.
-
-    NOTE: Use with caution. Calling this during some phases of a calculation
-    could cause undesirable side-effects.
-    """
-    cfg._load_from_file()
+    return valid.boolean(get(section, setting) or '')
 
 
 port = int(get('dbserver', 'port'))
 DBS_ADDRESS = (get('dbserver', 'host'), port)
 DBS_AUTHKEY = encode(get('dbserver', 'authkey'))
+SHARED_DIR_ON = bool(get('directory', 'shared_dir'))
