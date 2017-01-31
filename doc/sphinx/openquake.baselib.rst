@@ -1,7 +1,7 @@
 openquake.baselib package
 =========================
 
-openquake.baselib.general module
+general
 --------------------------------
 
 .. automodule:: openquake.baselib.general
@@ -9,7 +9,7 @@ openquake.baselib.general module
     :undoc-members:
     :show-inheritance:
       
-openquake.baselib.hdf5 module
+hdf5
 -----------------------------
 
 .. automodule:: openquake.baselib.hdf5
@@ -17,7 +17,7 @@ openquake.baselib.hdf5 module
     :undoc-members:
     :show-inheritance:
 
-openquake.baselib.node module
+node
 -----------------------------
 
 .. automodule:: openquake.baselib.node
@@ -25,7 +25,7 @@ openquake.baselib.node module
     :undoc-members:
     :show-inheritance:
 
-openquake.baselib.parallel module
+parallel
 ---------------------------------
 
 .. automodule:: openquake.baselib.parallel
@@ -33,7 +33,7 @@ openquake.baselib.parallel module
     :undoc-members:
     :show-inheritance:
 
-openquake.baselib.performance module
+performance
 ------------------------------------
 
 .. automodule:: openquake.baselib.performance
@@ -41,7 +41,7 @@ openquake.baselib.performance module
     :undoc-members:
     :show-inheritance:
 
-openquake.baselib.python3compat module
+python3compat
 --------------------------------------
 
 .. automodule:: openquake.baselib.python3compat
@@ -49,7 +49,7 @@ openquake.baselib.python3compat module
     :undoc-members:
     :show-inheritance:
 
-openquake.baselib.runtests module
+runtests
 ---------------------------------
 
 .. automodule:: openquake.baselib.runtests
@@ -57,7 +57,7 @@ openquake.baselib.runtests module
     :undoc-members:
     :show-inheritance:
 
-openquake.baselib.sap module
+sap
 ----------------------------
 
 .. automodule:: openquake.baselib.sap
@@ -65,7 +65,7 @@ openquake.baselib.sap module
     :undoc-members:
     :show-inheritance:
 
-openquake.baselib.slots module
+slots
 ------------------------------
 
 .. automodule:: openquake.baselib.slots

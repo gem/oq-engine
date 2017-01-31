@@ -1,3 +1,16 @@
+  [Michele Simionato]
+  * Extended `calc_hazard_curves` to manage mutex sources and ruptures and
+    removed `calc_hazard_curves_ext`
+
+  [Graeme Weatherill]
+  * Added new version of Pezeshk et al. (2011) GMPE adjusted for NEHRP BC Site condition
+
+  [Michele Simionato]
+  * Parallelized `calc_hazard_curves_ext` and added an example of use
+    in the docstring of `openquake.hazardlib.calc.hazard_curves`
+  * Added NRML support for GriddedSurface and GriddedRupture objects
+  * Removed the warning about missing rtree
+
 python-oq-hazardlib (0.22.0-0~precise01) precise; urgency=low
 
   [Marco Pagani, Meya Yanger Walling]

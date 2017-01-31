@@ -153,14 +153,13 @@ class SourceGroup(collections.Sequence):
         if rup_interdep not in ('indep', 'mutex'):
             raise ValueError('rupture interdependence incorrect %s ' %
                              rup_interdep)
-        # check srcs weights defined by the user
-        if srcs_weights is not None:
-            assert abs(1. - sum(srcs_weights)) < 1e-6
         # check TRT
         if src_list:  # can be None
             for src in src_list:
                 assert src.tectonic_region_type == self.trt, (
                     src.tectonic_region_type, self.trt)
+
+        # ask Marco: should we add a check on the srcs_weights?
 
     def tot_ruptures(self):
         return sum(src.num_ruptures for src in self.sources)
@@ -480,6 +479,11 @@ class RuptureConverter(object):
             surface = geo.ComplexFaultSurface.from_fault_data(
                 self.geo_lines(surface_node),
                 self.complex_fault_mesh_spacing)
+        elif surface_node.tag.endswith('griddedSurface'):
+            with context(self.fname, surface_node):
+                coords = split_coords_3d(~surface_node.posList)
+            points = [geo.Point(*p) for p in coords]
+            surface = geo.GriddedSurface.from_points_list(points)
         else:  # a collection of planar surfaces
             planar_surfaces = list(map(self.geo_planar, surface_nodes))
             surface = geo.MultiSurface(planar_surfaces)
@@ -551,6 +555,25 @@ class RuptureConverter(object):
         """
         with context(self.fname, node):
             surfaces = list(node.getnodes('planarSurface'))
+        rupt = source.rupture.Rupture(
+            mag=mag, rake=rake,
+            tectonic_region_type=None,
+            hypocenter=hypocenter,
+            surface=self.convert_surfaces(surfaces),
+            source_typology=source.NonParametricSeismicSource)
+        return rupt
+
+    def convert_griddedRupture(self, node, mag, rake, hypocenter):
+        """
+        Convert a griddedRupture node.
+
+        :param node: the rupture node
+        :param mag: the rupture magnitude
+        :param rake: the rupture rake angle
+        :param hypocenter: the rupture hypocenter
+        """
+        with context(self.fname, node):
+            surfaces = [node.griddedSurface]
         rupt = source.rupture.Rupture(
             mag=mag, rake=rake,
             tectonic_region_type=None,

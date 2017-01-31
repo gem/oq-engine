@@ -4,7 +4,7 @@ openquake.hazardlib.calc package
 Hazardlib calculators
 ---------------------
 
-Disaggregation (openquake.hazardlib.calc.disagg module)
+Disaggregation (disagg)
 -------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.calc.disagg
@@ -12,7 +12,7 @@ Disaggregation (openquake.hazardlib.calc.disagg module)
     :undoc-members:
     :show-inheritance:
 
-Filters (openquake.hazardlib.calc.filters module)
+Filters (filters)
 -------------------------------------------------
 
 .. automodule:: openquake.hazardlib.calc.filters
@@ -20,7 +20,7 @@ Filters (openquake.hazardlib.calc.filters module)
     :undoc-members:
     :show-inheritance:
 
-Ground Motion Fields (openquake.hazardlib.calc.gmf module)
+Ground Motion Fields (gmf)
 ----------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.calc.gmf
@@ -28,7 +28,7 @@ Ground Motion Fields (openquake.hazardlib.calc.gmf module)
     :undoc-members:
     :show-inheritance:
 
-Hazard Curves (openquake.hazardlib.calc.hazard_curve module)
+Hazard Curves (hazard_curve)
 ------------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.calc.hazard_curve
@@ -36,7 +36,7 @@ Hazard Curves (openquake.hazardlib.calc.hazard_curve module)
     :undoc-members:
     :show-inheritance:
 
-Stochastic Event Set (openquake.hazardlib.calc.stochastic module)
+Stochastic Event Set (stochastic)
 -------------------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.calc.stochastic

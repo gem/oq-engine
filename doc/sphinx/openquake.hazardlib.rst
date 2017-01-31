@@ -13,7 +13,7 @@ Subpackages
     openquake.hazardlib.scalerel
     openquake.hazardlib.source
 
-openquake.hazardlib.const module
+const
 --------------------------------
 
 .. automodule:: openquake.hazardlib.const
@@ -21,7 +21,7 @@ openquake.hazardlib.const module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.correlation module
+correlation
 --------------------------------------
 
 .. automodule:: openquake.hazardlib.correlation
@@ -29,7 +29,7 @@ openquake.hazardlib.correlation module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.imt module
+imt
 ------------------------------
 
 .. automodule:: openquake.hazardlib.imt
@@ -37,7 +37,7 @@ openquake.hazardlib.imt module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.near_fault module
+near_fault
 -------------------------------------
 
 .. automodule:: openquake.hazardlib.near_fault
@@ -45,7 +45,7 @@ openquake.hazardlib.near_fault module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.nrml module
+nrml
 -------------------------------
 
 .. automodule:: openquake.hazardlib.nrml
@@ -53,7 +53,7 @@ openquake.hazardlib.nrml module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.pmf module
+pmf
 ------------------------------
 
 .. automodule:: openquake.hazardlib.pmf
@@ -61,7 +61,7 @@ openquake.hazardlib.pmf module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.probability_map module
+probability_map
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.probability_map
@@ -69,7 +69,7 @@ openquake.hazardlib.probability_map module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.site module
+site
 -------------------------------
 
 .. automodule:: openquake.hazardlib.site
@@ -77,7 +77,7 @@ openquake.hazardlib.site module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.sourceconverter module
+sourceconverter
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.sourceconverter
@@ -85,7 +85,7 @@ openquake.hazardlib.sourceconverter module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.sourcewriter module
+sourcewriter
 ---------------------------------------
 
 .. automodule:: openquake.hazardlib.sourcewriter
@@ -93,7 +93,7 @@ openquake.hazardlib.sourcewriter module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.stats module
+stats
 --------------------------------
 
 .. automodule:: openquake.hazardlib.stats
@@ -101,7 +101,7 @@ openquake.hazardlib.stats module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.tom module
+tom
 ------------------------------
 
 .. automodule:: openquake.hazardlib.tom
@@ -109,7 +109,7 @@ openquake.hazardlib.tom module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.valid module
+valid
 --------------------------------
 
 .. automodule:: openquake.hazardlib.valid
