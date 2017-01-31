@@ -25,6 +25,7 @@ from openquake.commonlib import datastore, config
 from openquake.engine import logs
 from openquake.engine.utils import confirm
 from openquake.server import dbserver
+from openquake.commands.purge import purge_all
 
 
 @sap.Script
@@ -32,13 +33,15 @@ def reset(yes):
     """
     Remove all the datastores and the database of the current user
     """
-    if config.flag_set('dbserver', 'multi_user'):
-        sys.exit('Please ask your sysadmin to reset the database')
-
-    ok = yes or confirm('Do you really want to destroy the database and all '
-                        'datastores? (y/n) ')
+    ok = yes or confirm('Do you really want to destroy all your data? (y/n) ')
     if not ok:
         return
+
+    if config.flag_set('dbserver', 'multi_user'):
+        purge_all()  # remove data of the current user only
+        return
+
+    # else: fast way of removing everything
 
     if dbserver.get_status() == 'running':
         logs.dbcmd('stop')
