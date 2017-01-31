@@ -272,9 +272,13 @@ class File(h5py.File):
         """
         setitem = super(File, self).__setitem__
         getitem = super(File, self).__getitem__
-        path = os.path.join(root, nodedict['tag'])
+        tag = nodedict['tag']
         text = nodedict.get('text', None)
         attrib = nodedict.get('attrib', {})
+        if 'id' in attrib:
+            path = os.path.join(root, tag + '-' + attrib.pop('id'))
+        else:
+            path = os.path.join(root, tag)
         nodes = nodedict.get('nodes', [])
         if text is not None:
             setitem(path, text)
