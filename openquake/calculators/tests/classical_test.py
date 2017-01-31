@@ -305,6 +305,8 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
             'hazard_curve-smltp_b1_mfd3_mid_dip_dip45-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_b1_mfd3_mid_dip_dip60-gsimltp_Sad1997.csv'],
             case_21.__file__, delta=1E-7)
+        [fname] = export(('sourcegroups', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/sourcegroups.csv', fname)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_22(self):  # crossing date line calculation for Alaska
