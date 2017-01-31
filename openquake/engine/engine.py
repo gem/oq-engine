@@ -83,6 +83,8 @@ def expose_outputs(dstore):
     exportable = set(ekey[0] for ekey in export.export)
     calcmode = oq.calculation_mode
     dskeys = set(dstore) & exportable  # exportable datastore keys
+    if sum(len(sm.src_groups) for sm in dstore['csm_info'].source_models) > 1:
+        dskeys.add('sourcegroups')  # export sourcegroups.csv
     if oq.uniform_hazard_spectra:
         dskeys.add('uhs')  # export them
     if oq.hazard_maps:
