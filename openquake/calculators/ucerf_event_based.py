@@ -714,6 +714,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
                 ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
                 maximum_distance=oq.maximum_distance,
                 samples=ssm.source_models[0].samples,
+                save_ruptures=oq.save_ruptures,
                 seed=ssm.source_model_lt.seed)
             gsims = ssm.gsim_lt.values[DEFAULT_TRT]
             yield ssm.get_sources(), self.sitecol.complete, gsims, monitor
@@ -783,8 +784,9 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     res[src.src_group_id] = ebruptures
     res.calc_times[src.src_group_id] = (
         src.source_id, len(sitecol), time.time() - t0)
-    res.rup_data = {src.src_group_id:
-                    calc.RuptureData(DEFAULT_TRT, gsims).to_array(ebruptures)}
+    if monitor.save_ruptures:
+        res.rup_data = {src.src_group_id: calc.RuptureData(DEFAULT_TRT, gsims)
+                        .to_array(ebruptures)}
     return res
 
 
@@ -840,7 +842,7 @@ def compute_losses(ssm, sitecol, assetcol, riskmodel,
     res.num_events = len(ri.eids)
     start = res.sm_id * num_rlzs
     res.rlz_slice = slice(start, start + num_rlzs)
-    # don't return back the ruptures, only the events and rup_data
+    # don't return back the ruptures, only the events
     res.ruptures_by_grp[grp_id] = [EBR(ebr.serial, ebr.source_id, ebr.events)
                                    for ebr in ebruptures]
     return res
@@ -874,6 +876,7 @@ class UCERFRiskCalculator(EbriskCalculator):
                 ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
                 maximum_distance=oq.maximum_distance,
                 samples=sm.samples,
+                save_ruptures=oq.save_ruptures,
                 seed=self.oqparam.random_seed)
             ssm = self.csm.get_model(sm.ordinal)
             yield (ssm, self.sitecol, self.assetcol, self.riskmodel,

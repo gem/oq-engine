@@ -370,7 +370,10 @@ class RuptureData(object):
             ('strike', F64), ('dip', F64), ('rake', F64),
             ('boundary', hdf5.vstr)] + [(param, F64) for param in self.params])
 
-    def to_array(self, ebruptures):
+    def to_array(self, ebruptures, boundary=None):
+        """
+        Convert a list of ebruptures into an array of dtype RuptureRata.dt
+        """
         data = []
         for ebr in ebruptures:
             rup = ebr.rupture
@@ -378,9 +381,12 @@ class RuptureData(object):
             ruptparams = tuple(getattr(rc, param) for param in self.params)
             point = rup.surface.get_middle_point()
             multi_lons, multi_lats = rup.surface.get_surface_boundaries()
-            boundary = ','.join('((%s))' % ','.join(
-                '%.5f %.5f' % (lon, lat) for lon, lat in zip(lons, lats))
-                                for lons, lats in zip(multi_lons, multi_lats))
+            if boundary is None:
+                bounds = ','.join('((%s))' % ','.join(
+                    '%.5f %.5f' % (lon, lat) for lon, lat in zip(lons, lats))
+                    for lons, lats in zip(multi_lons, multi_lats))
+            else:
+                bounds = boundary
             try:
                 rate = ebr.rupture.occurrence_rate
             except AttributeError:  # for nonparametric sources
@@ -388,7 +394,7 @@ class RuptureData(object):
             data.append((ebr.serial, ebr.multiplicity, len(ebr.sids),
                          rate, rup.mag, point.x, point.y, point.z,
                          rup.surface.get_strike(), rup.surface.get_dip(),
-                         rup.rake, decode(boundary)) + ruptparams)
+                         rup.rake, decode(bounds)) + ruptparams)
         return numpy.array(data, self.dt)
 
 
