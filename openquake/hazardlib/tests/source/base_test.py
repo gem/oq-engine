@@ -155,6 +155,5 @@ class SeismicSourceFilterSitesByRuptureTestCase(
         )
         numpy.testing.assert_array_equal(filtered.indices,
                                          [0, 1, 2, 3, 4, 5, 6, 7, 8])
-
         numpy.testing.assert_array_equal(filtered.mesh.depths,
                                          [-0.5, 0, 0, 0, 0, 0, 0, 0, 0])

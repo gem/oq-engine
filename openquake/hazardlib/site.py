@@ -123,6 +123,14 @@ class SiteCollection(object):
     Instances of this class are intended to represent a large collection
     of sites in a most efficient way in terms of memory usage.
 
+    .. note::
+
+        If a :class:`SiteCollection` is created from sites containing only
+        lon and lat, iterating over the collection will yield
+        :class:`Sites <Site>` with a reference depth of 0.0 (the sea level).
+        Otherwise, it is possible to model the sites on a realistic
+        topographic surface by specifying the `depth` of each site.
+
     :param sites:
         A list of instances of :class:`Site` class.
     """

@@ -145,9 +145,11 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         Create and return a fault surface using fault source data.
 
         :param openquake.hazardlib.geo.line.Line fault_trace:
-            Geographical line representing the intersection between
-            the fault surface and the earth surface. Line must be
-            horizontal
+            Geographical line representing the intersection between the fault
+            surface and the earth surface. The line must be horizontal (i.e.
+            all depth values must be equal). If the depths are not given, they
+            are assumed to be zero, meaning the trace intersects the surface at
+            sea level, e.g. fault_trace = Line([Point(1, 1), Point(1, 2)]).
         :param upper_seismo_depth:
             Minimum depth ruptures can reach, in km (i.e. depth
             to fault's top edge).
