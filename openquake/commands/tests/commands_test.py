@@ -189,9 +189,6 @@ class RunShowExportTestCase(unittest.TestCase):
         self.assertIn('See the output with hdfview', str(self.p))
 
     def test_show_calc(self):
-        # test show all
-        with Print.patch() as p:
-            show('all')
         with Print.patch() as p:
             show('contents', self.calc_id)
         self.assertIn('sitecol', str(p))
@@ -199,6 +196,11 @@ class RunShowExportTestCase(unittest.TestCase):
         with Print.patch() as p:
             show('sitecol', self.calc_id)
         self.assertEqual(str(p), '<SiteCollection with 1 sites>')
+
+        with Print.patch() as p:
+            show('slow_sources', self.calc_id)
+        self.assertIn('grp_id source_id source_class num_ruptures calc_time '
+                      'num_sites num_split', str(p))
 
     def test_show_attrs(self):
         with Print.patch() as p:

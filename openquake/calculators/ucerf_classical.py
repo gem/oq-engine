@@ -38,7 +38,7 @@ from openquake.hazardlib.calc.hazard_curve import (
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import valid, nrml
-from openquake.commonlib import source, readinput
+from openquake.commonlib import source, readinput, config
 from openquake.hazardlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base, classical
@@ -270,6 +270,7 @@ def ucerf_classical_hazard_by_rupture_set(
         pmap.eff_ruptures = {src_group_id: 0}
     pmap.grp_id = ucerf_source.src_group_id
     return pmap
+ucerf_classical_hazard_by_rupture_set.shared_dir_on = config.SHARED_DIR_ON
 
 
 def ucerf_classical_hazard_by_branch(branchname, ucerf_source, src_group_id,
@@ -328,6 +329,7 @@ def ucerf_classical_hazard_by_branch(branchname, ucerf_source, src_group_id,
         dic.eff_ruptures[src_group_id] += monitor.eff_ruptures
         dic.calc_times.extend(pmap.calc_times)
     return dic
+ucerf_classical_hazard_by_branch.shared_dir_on = config.SHARED_DIR_ON
 
 
 @base.calculators.add('ucerf_psha')

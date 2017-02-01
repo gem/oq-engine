@@ -32,7 +32,6 @@ from openquake.baselib.general import (
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.python3compat import unicode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.risklib import scientific
 from openquake.commonlib import util, source
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv, FIVEDIGITS)
@@ -183,7 +182,7 @@ def view_slow_sources(token, dstore, maxrows=20):
     Returns the slowest sources
     """
     info = dstore['source_info'].value
-    info.sort(order='max_calc_time')
+    info.sort(order='calc_time')
     return rst_table(info[::-1][:maxrows])
 
 
@@ -286,11 +285,9 @@ def view_params(token, dstore):
               'ses_per_logic_tree_path', 'truncation_level',
               'rupture_mesh_spacing', 'complex_fault_mesh_spacing',
               'width_of_mfd_bin', 'area_source_discretization',
-              'random_seed', 'master_seed']
+              'ground_motion_correlation_model', 'random_seed', 'master_seed']
     if 'risk' in oq.calculation_mode:
         params.append('avg_losses')
-    if 'classical' in oq.calculation_mode:
-        params.append('sites_per_tile')
     return rst_table([(param, repr(getattr(oq, param, None)))
                       for param in params])
 
@@ -662,6 +659,6 @@ def view_task_slowest(token, dstore):
     i = dstore['task_info/classical']['duration'].argmax()
     taskno, weight, duration = dstore['task_info/classical'][i]
     sources = dstore['task_sources'][taskno - 1].split()
-    srcs = set(src.split(':', 1)[0] for src in sources)
+    srcs = set(decode(s).split(':', 1)[0] for s in sources)
     return 'taskno=%d, weight=%d, duration=%d s, sources="%s"' % (
         taskno, weight, duration, ' '.join(sorted(srcs)))

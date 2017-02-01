@@ -31,7 +31,7 @@ from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str
 from openquake.baselib import parallel
-from openquake.commonlib import calc, util
+from openquake.commonlib import calc, util, datastore
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 
@@ -269,15 +269,17 @@ class EventBasedRuptureCalculator(PSHACalculator):
         if 'ruptures' in self.datastore:
             self.datastore.set_nbytes('ruptures')
         self.datastore.set_nbytes('events')
-
+        if 'rup_data' not in self.datastore:
+            return
         for dset in self.datastore['rup_data'].values():
             if len(dset):
                 numsites = dset['numsites']
                 multiplicity = dset['multiplicity']
                 spr = numpy.average(numsites, weights=multiplicity)
                 mul = numpy.average(multiplicity, weights=numsites)
-                self.datastore.set_attrs(dset.name, sites_per_rupture=spr,
-                                         multiplicity=mul)
+                self.datastore.set_attrs(
+                    dset.name, sites_per_rupture=spr,
+                    multiplicity=mul, nbytes=datastore.get_nbytes(dset))
         self.datastore.set_nbytes('rup_data')
 
 
