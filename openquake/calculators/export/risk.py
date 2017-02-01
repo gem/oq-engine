@@ -191,16 +191,17 @@ def export_agg_losses_ebr(ekey, dstore):
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     name, ext = export.keyfunc(ekey)
     agg_losses = dstore[name]
+    has_rup_data = 'rup_data' in dstore
+    extra_list = [('tectonic_region_type', hdf5.vstr),
+                  ('magnitude', F64),
+                  ('centroid_lon', F64),
+                  ('centroid_lat', F64),
+                  ('centroid_depth', F64)] if has_rup_data else []
     oq = dstore['oqparam']
     csm_info = dstore['csm_info']
     dtlist = [('event_tag', (numpy.string_, 100)),
               ('year', U32),
-              ('tectonic_region_type', hdf5.vstr),
-              ('magnitude', F64),
-              ('centroid_lon', F64),
-              ('centroid_lat', F64),
-              ('centroid_depth', F64),
-              ] + oq.loss_dt_list()
+              ] + extra_list + oq.loss_dt_list()
     elt_dt = numpy.dtype(dtlist)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     sm_ids = sorted(rlzs_assoc.rlzs_by_smodel)
@@ -214,7 +215,8 @@ def export_agg_losses_ebr(ekey, dstore):
         if not len(events):
             continue
         rup_data = rup_data_dict(
-            dstore, csm_info.get_grp_ids(sm_id), csm_info.grp_trt())
+            dstore, csm_info.get_grp_ids(sm_id), csm_info.grp_trt()
+        ) if has_rup_data else {}
         for rlz in rlzs:
             dest = dstore.build_fname('agg_losses', rlz, 'csv')
             eids = set()
@@ -230,7 +232,8 @@ def export_agg_losses_ebr(ekey, dstore):
             elt = numpy.zeros(len(eids), elt_dt)
             elt['event_tag'] = build_etags(rlz_events)
             elt['year'] = rlz_events['year']
-            copy_to(elt, rup_data, rlz_events['rupserial'])
+            if rup_data:
+                copy_to(elt, rup_data, rlz_events['rupserial'])
             for loss_type in loss_types:
                 elt_lt = elt[loss_type]
                 if oq.insured_losses:
