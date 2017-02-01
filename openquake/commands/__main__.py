@@ -24,11 +24,9 @@ import importlib
 from openquake.baselib import sap
 from openquake.commonlib import __version__
 from openquake import commands
-
-from openquake.hazardlib import valid
 from openquake.commonlib import config
 
-USE_CELERY = valid.boolean(config.get('celery', 'use_celery') or 'false')
+USE_CELERY = config.flag_set('celery', 'use_celery')
 
 # the environment variable has the precedence over the configuration file
 if 'OQ_DISTRIBUTE' not in os.environ and USE_CELERY:
