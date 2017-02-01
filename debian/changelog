@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a bug in `combine_maps`: realizations with zero probability were
+    discarded, thus breaking the computation of the statistics
   * Added a command `oq reset` to reset database and datastores
   * Reduced the data transfer back and disk space occupation for UCERF
     event based risk calculations
