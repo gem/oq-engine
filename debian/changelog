@@ -1,4 +1,20 @@
   [Michele Simionato]
+  * Added a command `oq reset` to reset database and datastores
+  * Reduced the data transfer back and disk space occupation for UCERF
+    event based risk calculations
+  * Tasks meant to be used with a shared directory are now marked with a
+    boolean attribute `.shared_dir_on`
+  * Added a warning when running event based risk calculations with sampling
+  * Made sure that the openquake.cfg file is read only once
+
+  [Daniele Viganò]
+  * Moved the openquake.cfg config file inside the python package
+    under openquake/engine/openquake.cfg
+  * Removed support to OQ_LOCAL_CFG_PATH and OQ_SITE_CFG_PATH vars;
+    only the OQ_CONFIG_FILE enviroment variable is read
+
+  [Michele Simionato]
+  * If there is a single realization, do not compute the statistics
   * Changed the separator from comma to tab for the output `ruptures`
   * If there are no conditional_loss_poes, the engine does not try to
     export the loss maps anymore
