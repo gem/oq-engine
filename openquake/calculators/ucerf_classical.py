@@ -40,7 +40,7 @@ from openquake.hazardlib.calc.hazard_curve import (
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import valid, nrml
-from openquake.commonlib import source, readinput
+from openquake.commonlib import source, readinput, config
 from openquake.hazardlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base, classical
@@ -345,6 +345,7 @@ def ucerf_classical_hazard_by_rupture_set(
         pmap.eff_ruptures = {src_group_id: 0}
     pmap.grp_id = ucerf_source.src_group_id
     return pmap
+ucerf_classical_hazard_by_rupture_set.shared_dir_on = config.SHARED_DIR_ON
 
 
 def ucerf_classical_hazard_by_branch(branchname, ucerf_source, src_group_id,
@@ -401,6 +402,7 @@ def ucerf_classical_hazard_by_branch(branchname, ucerf_source, src_group_id,
         pm.eff_ruptures += AccumDict(pmap.eff_ruptures)
     # TODO: should I add a .calc_times attribute?
     return pm
+ucerf_classical_hazard_by_branch.shared_dir_on = config.SHARED_DIR_ON
 
 
 @base.calculators.add('ucerf_psha')
@@ -415,6 +417,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         """
         parse the logic tree and source model input
         """
+        logging.warn('%s is still experimental', self.__class__.__name__)
         self.sitecol = readinput.get_site_collection(self.oqparam)
         self.gsim_lt = readinput.get_gsim_lt(self.oqparam, [DEFAULT_TRT])
         self.smlt = readinput.get_source_model_lt(self.oqparam)
