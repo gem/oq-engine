@@ -58,3 +58,59 @@ This happens when the **Celery support is enabled but RabbitMQ server is not run
 ```bash
 $ sudo service rabbitmq-server start
 ``` 
+
+***
+
+### error: [Errno 104] Connection reset by peer
+
+A more detailed stack trace:
+
+```python
+Traceback (most recent call last):
+  File "/usr/lib/python2.7/dist-packages/celery/worker/__init__.py", line 206, in start
+    self.blueprint.start(self)
+  File "/usr/lib/python2.7/dist-packages/celery/bootsteps.py", line 119, in start
+    self.on_start()
+  File "/usr/lib/python2.7/dist-packages/celery/apps/worker.py", line 165, in on_start
+    self.purge_messages()
+  File "/usr/lib/python2.7/dist-packages/celery/apps/worker.py", line 189, in purge_messages
+    count = self.app.control.purge()
+  File "/usr/lib/python2.7/dist-packages/celery/app/control.py", line 145, in purge
+    return self.app.amqp.TaskConsumer(conn).purge()
+  File "/usr/lib/python2.7/dist-packages/celery/app/amqp.py", line 375, in __init__
+    **kw
+  File "/usr/lib/python2.7/dist-packages/kombu/messaging.py", line 364, in __init__
+    self.revive(self.channel)
+  File "/usr/lib/python2.7/dist-packages/kombu/messaging.py", line 369, in revive
+    channel = self.channel = maybe_channel(channel)
+  File "/usr/lib/python2.7/dist-packages/kombu/connection.py", line 1054, in maybe_channel
+    return channel.default_channel
+  File "/usr/lib/python2.7/dist-packages/kombu/connection.py", line 756, in default_channel
+    self.connection
+  File "/usr/lib/python2.7/dist-packages/kombu/connection.py", line 741, in connection
+    self._connection = self._establish_connection()
+  File "/usr/lib/python2.7/dist-packages/kombu/connection.py", line 696, in _establish_connection
+    conn = self.transport.establish_connection()
+  File "/usr/lib/python2.7/dist-packages/kombu/transport/pyamqp.py", line 116, in establish_connection
+    conn = self.Connection(**opts)
+  File "/usr/lib/python2.7/dist-packages/amqp/connection.py", line 180, in __init__
+    (10, 30),  # tune
+  File "/usr/lib/python2.7/dist-packages/amqp/abstract_channel.py", line 67, in wait
+    self.channel_id, allowed_methods, timeout)
+  File "/usr/lib/python2.7/dist-packages/amqp/connection.py", line 241, in _wait_method
+    channel, method_sig, args, content = read_timeout(timeout)
+  File "/usr/lib/python2.7/dist-packages/amqp/connection.py", line 330, in read_timeout
+    return self.method_reader.read_method()
+  File "/usr/lib/python2.7/dist-packages/amqp/method_framing.py", line 189, in read_method
+    raise m
+error: [Errno 104] Connection reset by peer
+```
+
+This means that RabbiMQ _user_ and _vhost_ have not been created or set correctly. Please refer to [cluster documentation](installing/cluster.md#rabbitmq) to fix it.
+
+***
+
+## Getting help
+If you need help or have questions/comments/feedback for us, you can:
+  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/forum/?fromgroups#!forum/openquake-users
+  * Contact us on IRC: irc.freenode.net, channel #openquake
