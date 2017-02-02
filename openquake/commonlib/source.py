@@ -86,7 +86,7 @@ def capitalize(words):
     >>> capitalize('active shallow crust')
     'Active Shallow Crust'
     """
-    return ' '.join(w.capitalize() for w in words.split(' '))
+    return ' '.join(w.capitalize() for w in decode(words).split(' '))
 
 
 class RlzsAssoc(collections.Mapping):
