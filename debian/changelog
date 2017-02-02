@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a dynamic output for source group information
   * Fixed a bug in `combine_maps`: realizations with zero probability were
     discarded, thus breaking the computation of the statistics
   * Added a command `oq reset` to reset database and datastores
