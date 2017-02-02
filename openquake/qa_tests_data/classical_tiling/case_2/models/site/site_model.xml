@@ -8,7 +8,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <site lat="37.54648" lon="34.98430" vs30="760.00" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
         <site lat="36.91276" lon="35.17898" vs30="203.00" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
         <site lat="36.97022" lon="35.42197" vs30="289.12" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
-        <site lat="37.56571" lon="38.49118" vs30="457.76" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="37.56571" lon="38.49118" depth="-1.0000" vs30="457.76" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
         <site lat="38.68505" lon="30.82767" vs30="220.14" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
         <site lat="37.91932" lon="29.78324" vs30="415.22" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
         <site lat="39.57773" lon="44.03619" vs30="372.12" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
