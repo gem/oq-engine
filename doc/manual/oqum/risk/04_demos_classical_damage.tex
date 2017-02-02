@@ -1,0 +1,36 @@
+The seismic source model developed within the Global Seismic Hazard Assessment
+Program (GSHAP) is used with the \cite{chiou2008} ground motion prediction
+equation to produce the hazard input for this demo. No uncertainties are
+considered in the seismic source model and since only one GMPE is being
+considered, there will be only one possible path in the logic tree. Therefore,
+only one set of seismic hazard curves will be produced. To run the hazard
+calculation, the following command needs to be employed:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --run job_hazard.ini
+\end{minted}
+
+which will produce the following sample hazard output:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+Calculation 8971 completed in 34 seconds. Results:
+  id | name
+9074 | hcurves
+9075 | realizations
+\end{minted}
+
+The risk job calculates the probabilistic damage distribution for each asset
+in the \gls{exposuremodel} starting from the above generated hazard curves. The
+following command launches the risk calculations:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --run job_risk.ini --hc 8971
+\end{minted}
+
+and the following sample outputs are obtained:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+Calculation 8972 completed in 16 seconds. Results:
+  id | name
+9076 | damages-rlzs
+\end{minted}

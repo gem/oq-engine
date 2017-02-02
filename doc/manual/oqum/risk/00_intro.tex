@@ -1,0 +1,92 @@
+\index{OpenQuake-engine!Risk}
+
+The seismic risk results are calculated using the \gls{acr:risklib}, 
+an open-source suite of tools for seismic risk assessment and
+loss estimation. This library is written in the Python programming language
+and available in the form of a ``developers'' release at the following location:
+\href{https://github.com/gem/oq-engine/tree/master/openquake/risklib}{https://github.com/gem/oq-engine/tree/master/openquake/risklib}.
+
+The risk component of the \glsdesc{acr:oqe} can compute both scenario-based and
+probabilistic seismic damage and risk using various approaches. The following
+types of analysis are currently supported:
+
+\begin{itemize}
+
+    \item \textit{\textbf{Scenario Damage Assessment}}, for the
+	calculation of damage distribution statistics for a portfolio of buildings
+	from a single earthquake rupture scenario taking into account aleatory and
+	epistemic ground-motion variability.
+
+    \item \textit{\textbf{Scenario Risk Assessment}}, for the calculation of
+	individual asset and portfolio loss statistics due to a single earthquake
+	rupture scenario taking into account aleatory and epistemic ground-motion
+	variability. Correlation in the vulnerability of different assets of the
+	same typology can also be taken into consideration.
+
+	\item \textit{\textbf{Classical Probabilistic Seismic Damage Analysis}}, for 
+	the calculation of damage state probabilities over a specified time period,  
+	and probabilistic collapse maps, starting from the hazard curves 
+	computed following the classical integration procedure (\cite{cornell1968}, 
+	\citet{mcguire1976}) as formulated by \cite{field2003}.
+
+    \item \textit{\textbf{Classical Probabilistic Seismic Risk Analysis}}, for the
+	calculation of loss curves and loss maps, starting from the hazard curves 
+	computed following the classical integration procedure (\cite{cornell1968}, 
+	\citet{mcguire1976}) as formulated by \cite{field2003}.
+
+	\item \textit{\textbf{Stochastic Event Based Probabilistic Seismic Risk Analysis}}, 
+	for the calculation of event loss tables starting from stochastic event sets.
+	Other results such as loss-exceedance curves, probabilistic loss maps, 
+	average annual losses, and insured loss statistics can be obtained by 
+	post-processing the event loss tables.
+
+    \item \textit{\textbf{Retrofit Benefit-Cost Ratio Analysis}}, which is
+	useful in estimating the net-present value of the potential benefits of
+	performing retrofitting for a portfolio of assets (in terms of decreased
+	losses in seismic events), measured relative to the upfront cost of
+	retrofitting.
+
+\end{itemize}
+
+Each calculation workflow has a modular structure, so that intermediate
+results can be saved and analyzed. Moreover, each calculator can be
+extended independently of the others so that additional calculation options
+and methodologies can be easily introduced, without affecting the overall
+calculation workflow. Each workflow is described in more detail in the
+following sections.
+
+\section{Scenario Damage Assessment}
+\index{OpenQuake-engine!Risk calculation workflows!Scenario Damage Assessment}
+\label{sec:workflow_scenario_damage}
+\input{oqum/risk/00_workflow_scenario_damage}
+
+\section{Scenario Risk Assessment}
+\index{OpenQuake-engine!Risk calculation workflows!Scenario Risk Assessment}
+\label{sec:workflow_scenario_risk}
+\input{oqum/risk/00_workflow_scenario_risk}
+
+\section{Classical Probabilistic Seismic Damage Analysis}
+\index{OpenQuake-engine!Risk calculation workflows!Classical Probabilistic Seismic Damage Analysis}
+\label{sec:workflow_classical_damage}
+\input{oqum/risk/00_workflow_classical_damage}
+
+\section{Classical Probabilistic Seismic Risk Analysis}
+\index{OpenQuake-engine!Risk calculation workflows!Classical Probabilistic Seismic Risk Analysis}
+\label{sec:workflow_classical_risk}
+\input{oqum/risk/00_workflow_classical_risk}
+
+\section{Stochastic Event Based Probabilistic Seismic Risk Analysis}
+\index{OpenQuake-engine!Risk calculation workflows!Event-Based Probabilistic Seismic Risk Analysis}
+\label{sec:workflow_event_based_risk}
+\input{oqum/risk/00_workflow_event_based_risk}
+
+\section{Retrofit Benefit-Cost Ratio Analysis}
+\index{OpenQuake-engine!Risk calculation workflows!Retrofit Benefit-Cost Ratio Analysis}
+\label{sec:workflow_benefit_cost}
+\input{oqum/risk/00_workflow_benefit_cost}
+
+For further information regarding the theoretical background of the
+methodologies used for each calculator, users are referred to the OpenQuake-
+engine Book (Risk).
+
+\cleardoublepage

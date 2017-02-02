@@ -1,0 +1,207 @@
+In the following we describe the overall structure and the most typical
+parameters of a configuration file to be used for the computation of a
+seismic hazard map using a classical PSHA methodology.
+
+
+\textbf{Calculation type and model info}
+
+\begin{minted}[firstline=1,linenos=true,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
+[general]
+description = A demo OpenQuake-engine .ini file for classical PSHA
+calculation_mode = classical
+random_seed = 1024
+\end{minted}
+
+In this section the user specifies the following parameters:
+
+\begin{itemize}
+
+    \item \texttt{description}: a parameter that can be used to designate
+    the model
+
+    \item \texttt{calculation\_mode}: it is used to set the kind of
+    calculation. In this case it corresponds to \texttt{classical}.
+    Alternative options for the calculation\_mode are described later in this
+    manual.
+
+    \item \texttt{random\_seed}: is used to control the random generator
+    so that when Monte Carlo procedures are used calculations are
+    replicable (if the same \texttt{random\_seed} is used you get exactly
+    the same results).
+
+\end{itemize}
+
+\textbf{Geometry of the area (or the sites) where hazard is computed}
+
+This section is used to specify where the hazard will be computed. Two
+options are available:
+
+The first ooption is to define a polygon (usually a rectangle) and a distance
+(in km) to be used to discretize the  polygon area. The polygon is defined by
+a list of longitude-latitude tuples.
+
+An example is provided below:
+
+\begin{minted}[firstline=1,linenos=true,firstnumber=5,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
+[geometry]
+region = 10.0 43.0, 12.0 43.0, 12.0 46.0, 10.0 46.0
+region_grid_spacing = 10.0
+\end{minted}
+
+The second option allows the definition of a number of sites where the hazard
+will be computed. An example is provided below:
+
+\begin{minted}[firstline=1,linenos=true,firstnumber=8,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
+[geometry]
+sites = 10.0 43.0, 12.0 43.0, 12.0 46.0, 10.0 46.0
+\end{minted}
+
+If the list of sites is too long the user can specify the name of a csv file
+as shown below:
+
+\begin{minted}[firstline=1,linenos=true,firstnumber=10,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
+[geometry]
+sites_csv = <name_of_the_csv_file>
+\end{minted}
+
+The format of the csv file containing the list of sites is a sequence of
+points (one per row) specified in terms of the longitude, latitude tuple. An
+example is provided below:
+
+\begin{minted}[firstline=1,linenos=false,firstnumber=10,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{text}
+179.0,90.0
+178.0,89.0
+177.0,88.0
+\end{minted}
+
+\textbf{Logic tree sampling}
+
+The \gls{acr:oqe} provides two options for processing the whole logic tree
+structure. The first option uses Montecarlo sampling; the user in this case
+specifies a number of realizations.
+
+In the second option all the possible realizations are created. Below we
+provide an example for the latter option. In this case we set the
+\texttt{number\-\_of\-\_logic\_tree\_samples} to 0. \gls{acr:oqe} will perform
+a complete enumeration of all  the possible paths from the roots to the leaves
+of the logic tree  structure.
+
+\begin{minted}[firstline=1,linenos=true,firstnumber=12,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
+[logic_tree]
+number_of_logic_tree_samples = 0
+\end{minted}
+
+If the seismic source logic tree and the ground motion logic tree do not
+contain epistemic uncertainties the engine will create a single PSHA input.
+
+\textbf{Generation of the earthquake rupture forecast}
+
+\begin{minted}[firstline=1,linenos=true,firstnumber=14,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
+[erf]
+rupture_mesh_spacing = 5
+width_of_mfd_bin = 0.1
+area_source_discretization = 10
+\end{minted}
+
+This section of the configuration file is used to specify the level of
+discretization of the mesh representing faults, the grid used to delineate the area sources and, the magnitude-frequency distribution. Note that the smaller is the mesh spacing (or the bin width) the larger are (1) the precision in the calculation and (2) the computation demand.
+
+In cases where the source model may contain a mixture of simple and complex ruptures it is possible to define a different rupture mesh spacing for complex faults only. This may be helpful in models that permit floating ruptures over large subduction sources, in which the nearest source to site distances may be larger than 20 - 30 km, and for which a small mesh spacing would produce a very large number of ruptures. The spacing for complex faults only can be configured by the line:
+
+\begin{minted}[firstline=1,linenos=true,firstnumber=18,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
+complex_rupture_mesh_spacing = 10
+\end{minted}
+
+\textbf{Parameters describing site conditions}
+
+\begin{minted}[firstline=1,linenos=true,firstnumber=18,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
+[site_params]
+reference_vs30_type = measured
+reference_vs30_value = 760.0
+reference_depth_to_2pt5km_per_sec = 5.0
+reference_depth_to_1pt0km_per_sec = 100.0
+\end{minted}
+
+In this section the user specifies local soil conditions. The simplest
+solution is to define uniform site conditions (i.e. all the sites have  the
+same characteristics).
+
+Alternatively it is possible to define  spatially variable soil properties in
+a separate file; the engine will then assign to each investigation location
+the values of the closest point used to specify site conditions.
+
+\begin{minted}[firstline=1,linenos=true,firstnumber=23,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
+[site_params]
+site_model_file = site_model.xml
+\end{minted}
+
+The file containing the site model has the following structure:
+
+\begin{minted}[firstline=1,linenos=false,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+    <siteModel>
+        <site lon="10.0" lat="40.0" vs30="800.0" 
+            vs30Type="inferred" z1pt0="19.367196734"
+            z2pt5="0.588625072259" backarc="false"/>
+        <site lon="10.1" lat="40.0" vs30="800.0" 
+            vs30Type="inferred" z1pt0="19.367196734"
+            z2pt5="0.588625072259" backarc="false"/>
+        <site lon="10.2" lat="40.0" vs30="800.0" 
+            vs30Type="inferred" z1pt0="19.367196734"
+            z2pt5="0.588625072259" backarc="false"/>
+        <site lon="10.3" lat="40.0" vs30="800.0" 
+            vs30Type="inferred" z1pt0="19.367196734"
+            z2pt5="0.588625072259" backarc="false"/>
+        <site lon="10.4" lat="40.0" vs30="800.0" 
+            vs30Type="inferred" z1pt0="19.367196734"
+            z2pt5="0.588625072259" backarc="false"/>
+        ...
+    </siteModel>
+</nrml>
+\end{minted}
+%\input{oqum/hazard/verbatim/input_site_model}
+
+If the closest available site with soil conditions is at a distance greater than 5~km from the investigation location, a warning is generated.
+
+\textbf{Calculation configuration}
+\phantomsection
+\label{sec:calculation_configuration}
+
+\begin{minted}[firstline=1,linenos=true,firstnumber=25,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
+[calculation]
+source_model_logic_tree_file = source_model_logic_tree.xml
+gsim_logic_tree_file = gmpe_logic_tree.xml
+investigation_time = 50.0
+intensity_measure_types_and_levels = {"PGA": [0.005, ..., 2.13]}
+truncation_level = 3
+maximum_distance = 200.0
+\end{minted}
+
+This section of the \gls{acr:oqe} configuration file specifies the parameters that are relevant for the calculation of hazard. These include the names of the two files containing the Seismic Source System and the Ground Motion System, the duration of the time window used to compute the  hazard, the ground motion intensity measure types and levels for  which the probability of exceedence will be computed, the level of truncation of the Gaussian distribution of the logarithm of ground motion used in the calculation of hazard and the maximum integration distance (i.e. the distance within which sources will contribute to the computation of the hazard).
+
+The maximum distance refers to the largest distance between a rupture and the target calculation sites in order for the rupture to be considered in the PSHA calculation. This can be input directly in terms of kilometres (as above). There may be cases, however, in which it may be appropriate to have a different maximum source to site distance depending on the tectonic region type. This may be used, for example, to eliminate the impact of small, very far-field sources with very low activity rates in stable tectonic regions (in which case maximum distance is reduced), or conversely it may be raised to allow certain source types to contribute to the hazard at greater distances (such as in the case of large subduction interface events). An example configuration for a maximum distance in Active Shallow Crust of 200 km, and in Stable Continental Crust of 150 km, is shown below:
+\begin{minted}[firstline=1,linenos=true,firstnumber=31,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
+maximum_distance = {'Stable Continental Crust': 150.0,
+                    'Active Shallow Crust': 200.0}
+\end{minted}
+
+
+\textbf{Output}
+
+\begin{minted}[firstline=1,linenos=true,firstnumber=31,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
+[output]
+export_dir = outputs/
+# given the specified `intensity_measure_types_and_levels`
+mean_hazard_curves = true
+quantile_hazard_curves = 0.1 0.5 0.9
+uniform_hazard_spectra = false
+individual_curves = false
+poes = 0.1
+\end{minted}
+
+The final section of the configuration file is the one that contains the
+parameters controlling the types of output to be produced. Providing an export directory will tell OpenQuake where to place the output files when the \texttt{-{}-exports} flag is used when running the program. Setting \verb=mean_hazard_curves= to true will result in a specific output containing the mean curves of the logic tree, likewise \verb=quantile_hazard_curves= will produce separate files containing the quantile hazard curves at the quantiles listed (0.1, 0.5 and 0.9 in the example above, leave blank or omit if no quantiles are required). Setting \verb=uniform_hazard_spectra= to true will output the uniform hazard spectra at the same probabilities of exceedence (poes) as those specified by the later option \verb=poes=. The probabilities specified here correspond to the set investigation time. 
+
+By default, OpenQuake will export the results for each of the logic tree end branches. If the logic tree contains a large number of end branches the process of exporting the results from each end branch can add a significant amount of computation time - and result in a large volume of disk spaced being used. If instead the user wishes only to export the hazard results for the mean and quantiles then the \verb=individual_curves= option should be set to false. 

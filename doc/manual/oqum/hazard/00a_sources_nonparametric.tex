@@ -1,0 +1,15 @@
+\subsubsection{Non-Parametric Fault}
+\label{desc_nonparametric_fault}
+\index{Source type!fault!nonparametric}
+\index{Non-Parametric fault|see{Source type}}
+
+The non-parametric fault typology requires that the user indicates the rupture properties (rupture surface, magnitude, rake and hypocentre) and the corresponding probabilities of the rupture. The probabilities are given as a list of floating point values that correspond to the probabilities of $0, 1, 2, \ldots ... N$ occurrences of the rupture within the specified investigation time. Note that there is not, at present, any internal check to ensure that the investigation time to which the probabilities refer corresponds to that specified in the configuration file. As the surface of the rupture is set explicitly, no rupture floating occurs, and, as in the case of the characteristic fault source, the rupture surface can be defined as either a single planar rupture, a list of planar ruptures, a \gls{simplefaultsource} geometry, a \gls{complexfaultsource} geometry, or a combination of different geometries.
+
+Comprehensive examples enumerating the possible configurations are shown below:
+
+\inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/input_nonparametric_planar.xml}
+\captionof{listing}{Example non-parametric fault with planar and multi-planar fault geometry\label{lst:example_nonparametric_planar}}
+\inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/input_nonparametric_simple.xml}
+\captionof{listing}{Example characteristic fault with simple fault geometry\label{lst:example_nonparametric_simple}}
+\inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/input_nonparametric_complex.xml}
+\captionof{listing}{Example characteristic fault with complex fault geometry\label{lst:example_nonparametric_complex}}

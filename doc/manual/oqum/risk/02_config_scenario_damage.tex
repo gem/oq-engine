@@ -1,0 +1,357 @@
+For this calculator, the parameter \Verb+calculation_mode+ should be set to
+\Verb+scenario_damage+.
+
+\paragraph{Example 1}
+
+This example illustrates a scenario damage calculation which uses a single
+configuration file to first compute the ground motion fields for the given
+rupture model and then calculate damage distribution statistics based on the
+ground motion fields. A minimal job configuration file required for running a
+scenario damage calculation is shown in
+Listing~\ref{lst:config_scenario_damage_combined}.
+
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray,label=job.ini]{ini}{oqum/risk/verbatim/config_scenario_damage_combined.ini}
+  \caption{Example combined configuration file for running a scenario damage calculation (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/config_scenario_damage_combined.ini}{Download example})}
+  \label{lst:config_scenario_damage_combined}
+\end{listing}
+
+The general parameters \Verb+description+ and \Verb+calculation_mode+, and
+\Verb+exposure_file+ have already been described earlier. The other parameters
+seen in the above example configuration file are described below:
+
+\begin{itemize}
+
+  \item \Verb+rupture_model_file+: a parameter used to define the path
+	to the earthquake \gls{rupturemodel} file describing the scenario event.
+
+  \item \Verb+rupture_mesh_spacing+: a parameter used to specify the mesh size
+  	(in km) used by the \glsdesc{acr:oqe} to discretize the rupture.
+  	Note that the smaller the mesh spacing, the greater will be
+  	(1) the precision in the calculation and
+  	(2) the computational demand.
+
+  \item \Verb+structural_fragility_file+: a parameter used to define the path
+	to the structural \gls{fragilitymodel} file.
+
+\end{itemize}
+
+In this case, the ground motion fields will be computed at each of the
+locations of the assets in the exposure model. Ground motion fields will be
+generated for each of the intensity measure types found in the provided set of
+fragility models. The above calculation can be run using the command line:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --run job.ini
+\end{minted}
+
+After the calculation is completed, a message similar to the following will be
+displayed:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+Calculation 2680 completed in 13 seconds. Results:
+  id | name
+5069 | dmg_by_asset_and_collapse_map
+5070 | dmg_by_taxon
+5071 | dmg_total
+\end{minted}
+
+Note that one or more of the following parameters can be used in the same job
+configuration file to provide the corresponding fragility model files:
+
+\begin{itemize}
+
+  \item \Verb+structural_fragility_file+: a parameter used to define the path
+    to a structural \gls{fragilitymodel} file
+
+  \item \Verb+nonstructural_fragility_file+: a parameter used to define the path
+    to a nonstructural \gls{fragilitymodel} file
+
+  \item \Verb+contents_fragility_file+: a parameter used to define the path
+    to a contents \gls{fragilitymodel} file
+
+  \item \Verb+business_interruption_fragility_file+: a parameter used to define
+    the path to a business interruption \gls{fragilitymodel} file
+
+\end{itemize}
+
+It is important that the \Verb+lossCategory+ parameter in the metadata section
+for each provided fragility model file (``structural'', ``nonstructural'',
+``contents'', or ``business\_interruption'') should match the loss type
+defined in the configuration file by the relevant keyword above.
+
+
+\paragraph{Example 2}
+
+This example illustrates a scenario damage calculation which uses separate
+configuration files for the hazard and risk parts of a scenario damage
+assessment. The first configuration file shown in
+Listing~\ref{lst:config_scenario_damage_hazard} contains input models and
+parameters required for the computation of the ground motion fields due to a
+given rupture. The second configuration file shown in
+Listing~\ref{lst:config_scenario_damage} contains input models and parameters
+required for the calculation of the damage distribution for a portfolio of
+assets due to the ground motion fields.
+
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray,label=job\_hazard.ini]{ini}{oqum/risk/verbatim/config_scenario_hazard.ini}
+  \caption{Example hazard configuration file for a scenario damage calculation (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/config_scenario_hazard.ini}{Download example})}
+  \label{lst:config_scenario_damage_hazard}
+\end{listing}
+
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray,label=job\_damage.ini]{ini}{oqum/risk/verbatim/config_scenario_damage.ini}
+  \caption{Example risk configuration file for a scenario damage calculation (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/config_scenario_damage.ini}{Download example})}
+  \label{lst:config_scenario_damage}
+\end{listing}
+
+
+In this example, the set of intensity measure types for which the ground
+motion fields should be generated is specified explicitly in the configuration
+file using the parameter \Verb+intensity_measure_types+. If the hazard
+calculation outputs are intended to be used as inputs for a subsequent
+scenario damage or risk calculation, the set of intensity measure types
+specified here must include all intensity measure types that are used in the
+fragility or vulnerability models for the subsequent damage or risk
+calculation.
+
+In the hazard configuration file illustrated above
+(Listing~\ref{lst:config_scenario_damage_hazard}), the list of sites at which
+the ground motion values will be computed is provided in a CSV file, specified
+using the \Verb+sites_csv+ parameter. The sites used for the hazard
+calculation need not be the same as the locations of the assets in the
+exposure model used for the following risk calculation. In such cases, it is
+recommended to set a reasonable search radius (in km) using the
+\Verb+asset_hazard_distance+ parameter for the \glsdesc{acr:oqe} to look for
+available hazard values, as shown in the job\_damage.ini example file above.
+
+The only new parameters introduced in risk configuration file for this example
+(Listing~\ref{lst:config_scenario_damage}) are the \Verb+region_constraint+
+and \Verb+asset_hazard_distance+ parameters, which are described below; all
+other parameters have already been described in earlier examples.
+
+\begin{itemize}
+
+  \item \Verb+region_constraint+: this is an optional parameter, applicable
+    only to risk calculations, which defines the polygon that will be used for
+    filtering the assets from the exposure model. Assets outside of this region
+    will not be considered in the risk calculations. This region is defined
+    using pairs of coordinates that indicate the vertices of the polygon, which
+    should be listed in the Well-known text (WKT) format:
+
+    region\_constraint = lon\_1 lat\_1, lon\_2 lat\_2, ..., lon\_n lat\_n
+
+    For each point, the longitude is listed first, followed by the latitude,
+    both in decimal degrees. The list of points defining the polygon can be
+    provided either in a clockwise or counter-clockwise direction.
+
+    If the \Verb+region_constraint+ is not provided, all assets in the exposure
+    model are considered for the risk calculation.
+
+    This parameter is useful in cases where the exposure model covers a region
+    larger than the one that is of interest in the current calculation.
+
+  \item \Verb+asset_hazard_distance+: this parameter indicates the maximum
+    allowable distance between an \gls{asset} and the closest hazard input.
+    Hazard inputs can include hazard curves or ground motion intensity values.
+    If no hazard input site is found within the radius defined by the
+    \Verb+asset_hazard_distance+, the asset is skipped and a message is
+    provided mentioning the id of the asset that is affected by this issue.
+
+    If multiple hazard input sites are found within the radius defined by the
+    this parameter, the hazard input site with the shortest distance from the
+    asset location is associated with the asset. It is possible that the
+    associated hazard input site might be located outside the polygon defined
+    by the \Verb+region_constraint+.
+
+\end{itemize}
+
+
+Now, the above calculations described by the two configuration files
+``job\_hazard.ini'' and ``job\_damage.ini'' can be run sequentially using the
+command line as follows:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --run job_hazard.ini,job_damage.ini
+\end{minted}
+
+The hazard and risk calculations can also be run separately. In that case, the
+calculation id for the hazard calculation should be
+provided to the \glsdesc{acr:oqe} while running the risk calculation using the
+option \Verb+--hazard-calculation-id+ (or \Verb+--hc+). This is shown below:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --run job_hazard.ini
+\end{minted}
+
+After the hazard calculation is completed, a message similar to the one below
+will be displayed in the terminal:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+Calculation 2681 completed in 4 seconds. Results:
+  id | name
+5072 | gmfs
+\end{minted}
+
+In the example above, the calculation~id of the hazard calculation is 2681.
+There is only one output from this calculation, i.e., the \glspl{acr:gmf}.
+
+The risk calculation for computing the damage distribution statistics for the
+portfolio of \glspl{asset} can now be run using:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --run job_damage.ini --hc 2681
+\end{minted}
+
+After the calculation is completed, a message similar to the one listed above
+in Example~1 will be displayed.
+
+In order to retrieve the calculation~id of a previously run hazard calculation,
+the option \Verb+--list-hazard-calculations+ (or \Verb+--lhc+) can be used to
+display a list of all previously run hazard calculations:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+job_id |     status |         start_time |         description
+  2609 | successful | 2015-12-01 14:14:14 | Mid Nepal earthquake
+  ...
+  2681 | successful | 2015-12-12 10:00:00 | Scenario hazard example
+\end{minted}
+
+The option \Verb+--list-outputs+ (or \Verb+--lo+) can be used to display a
+list of all outputs generated during a particular calculation. For instance,
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --lo 2681
+\end{minted}
+
+will produce the following display:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+  id | name
+5072 | gmfs
+\end{minted}
+
+
+\paragraph{Example 3}
+
+The example shown in Listing~\ref{lst:config_scenario_damage_gmf} illustrates
+a scenario damage calculation which uses a file listing a precomputed set of
+\glspl{acr:gmf}. These \glspl{acr:gmf} can be computed using the
+\glsdesc{acr:oqe} or some other software. The \glspl{acr:gmf} must be provided
+in the \gls{acr:nrml} schema as presented in
+Section~\ref{subsec:output_event_based_psha}. The damage distribution is
+computed based on the provided \glspl{acr:gmf}.
+
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray,label=job.ini]{ini}{oqum/risk/verbatim/config_scenario_damage_gmf.ini}
+  \caption{Example configuration file for a scenario damage calculation using a precomputed set of ground motion fields (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/config_scenario_damage_gmf.ini}{Download example})}
+  \label{lst:config_scenario_damage_gmf}
+\end{listing}
+
+\begin{itemize}
+
+  \item \Verb+gmfs_file+: a parameter used to define the path
+	  to the \glspl{acr:gmf} file in the \gls{acr:nrml} schema. This file must
+    define \glspl{acr:gmf} for all of the intensity measure types used in the
+    \gls{fragilitymodel}.
+
+\end{itemize}
+
+The above calculation can be run using the command line:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --run job.ini
+\end{minted}
+
+
+\paragraph{Example 4}
+
+This example illustrates a the hazard job configuration file for a scenario
+damage calculation which uses two \glspl{acr:gmpe} instead of only one.
+Currently, the set of \glspl{acr:gmpe} to be used for a scenario calculation
+can be specified using a logic tree file, as demonstrated in
+\ref{subsec:gmlt}. As of \glsdesc{acr:oqe18}, the weights in the logic tree
+are ignored, and a set of \glspl{acr:gmf} will be generated for each
+\gls{acr:gmpe} in the logic tree file. Correspondingly, damage distribution
+statistics will be generated for each set of \gls{acr:gmf}.
+
+The file shown in Listing~\ref{lst:input_scenario_gmlt} lists the two
+\glspl{acr:gmpe} to be used for the hazard calculation:
+
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray,label=gsim\_logic\_tree.xml]{xml}{oqum/risk/verbatim/input_scenario_gmlt.xml}
+  \caption{Example ground motion logic tree for a scenario calculation (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/input_scenario_gmlt.xml}{Download example})}
+  \label{lst:input_scenario_gmlt}
+\end{listing}
+
+The only change that needs to be made in the hazard job configuration file is
+to replace the \Verb+gsim+ parameter with \Verb+gsim_logic_tree_file+, as
+demonstrated in Listing~\ref{lst:config_scenario_hazard_gmlt}.
+
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray,label=job\_hazard.ini]{ini}{oqum/risk/verbatim/config_scenario_hazard_gmlt.ini}
+  \caption{Example configuration file for a scenario damage calculation using a logic-tree file (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/config_scenario_hazard_gmlt.ini}{Download example})}
+  \label{lst:config_scenario_hazard_gmlt}
+\end{listing}
+
+
+\paragraph{Example 5}
+
+This example illustrates a scenario damage calculation which specifies
+fragility models for calculating damage to structural and nonstructural
+components of structures, and also specifies \gls{consequencemodel} files for
+calculation of the corresponding losses.
+
+A minimal job configuration file required for running a scenario damage
+calculation followed by a consequences analysis is shown in
+Listing~\ref{lst:config_scenario_damage_consequences}.
+
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray,label=job.ini]{ini}{oqum/risk/verbatim/config_scenario_damage_consequences.ini}
+  \caption{Example configuration file for a scenario damage calculation followed by a consequences analysis (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/config_scenario_damage_consequences.ini}{Download example})}
+  \label{lst:config_scenario_damage_consequences}
+\end{listing}
+
+Note that one or more of the following parameters can be used in the same job
+configuration file to provide the corresponding \gls{consequencemodel} files:
+
+\begin{itemize}
+
+  \item \Verb+structural_consequence_file+: a parameter used to define the path
+    to a structural \gls{consequencemodel} file
+
+  \item \Verb+nonstructural_consequence_file+: a parameter used to define the path
+    to a nonstructural \gls{consequencemodel} file
+
+  \item \Verb+contents_consequence_file+: a parameter used to define the path
+    to a contents \gls{consequencemodel} file
+
+  \item \Verb+business_interruption_consequence_file+: a parameter used to define
+    the path to a business interruption \gls{consequencemodel} file
+
+\end{itemize}
+
+It is important that the \Verb+lossCategory+ parameter in the metadata section
+for each provided \gls{consequencemodel} file (``structural'', ``nonstructural'',
+``contents'', or ``business\_interruption'') should match the loss type
+defined in the configuration file by the relevant keyword above.
+
+The above calculation can be run using the command line:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --run job.ini
+\end{minted}
+
+After the calculation is completed, a message similar to the following will be
+displayed:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+Calculation 1579 completed in 37 seconds. Results:
+  id | name
+8990 | csq_by_asset
+8991 | csq_by_taxon
+8992 | csq_total
+8993 | dmg_by_asset_and_collapse_map
+8994 | dmg_by_taxon
+8995 | dmg_total
+\end{minted}

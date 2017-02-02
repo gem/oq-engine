@@ -1,0 +1,120 @@
+In order to run this calculator, the parameter \Verb+calculation_mode+ needs
+to be set to \Verb+scenario_risk+. 
+
+Most of the job configuration parameters required for running a scenario risk
+calculation are the same as those described in the previous section for the
+scenario damage calculator. The remaining parameters specific to the scenario
+risk calculator are illustrated through the examples below.
+
+
+\paragraph{Example 1}
+
+This example illustrates a scenario risk calculation which uses a single
+configuration file to first compute the ground motion fields for the given
+rupture model and then calculate loss statistics for structural losses,
+nonstructural losses, and insured structural losses, based on the ground
+motion fields. The job configuration file required for running this scenario
+risk calculation is shown in Listing~\ref{lst:config_scenario_risk_combined}.
+
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray,label=job.ini]{ini}{oqum/risk/verbatim/config_scenario_risk_combined.ini}
+  \caption{Example combined configuration file for a scenario risk calculation (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/config_scenario_risk_combined.ini}{Download example})}
+  \label{lst:config_scenario_risk_combined}
+\end{listing}
+
+Whereas a scenario damage calculation requires one or more fragility and/or
+consequence models, a scenario risk calculation requires the user to specify
+one or more vulnerability model files. Note that one or more of the following
+parameters can be used in the same job configuration file to provide the
+corresponding vulnerability model files:
+
+\begin{itemize}
+
+  \item \Verb+structural_vulnerability_file+: this parameter is used to
+    specify the path to the structural \gls{vulnerabilitymodel} file
+
+  \item \Verb+nonstructural_vulnerability_file+: this parameter is used to
+    specify the path to the nonstructural\gls{vulnerabilitymodel} file
+
+  \item \Verb+contents_vulnerability_file+: this parameter is used to
+    specify the path to the contents \gls{vulnerabilitymodel} file
+
+  \item \Verb+business_interruption_vulnerability_file+: this parameter is
+    used to specify the path to the business interruption
+    \gls{vulnerabilitymodel} file
+
+  \item \Verb+occupants_vulnerability_file+: this parameter is used to
+    specify the path to the occupants \gls{vulnerabilitymodel} file
+
+\end{itemize}
+
+It is important that the \Verb+lossCategory+ parameter in the metadata section
+for each provided vulnerability model file (``structural'', ``nonstructural'',
+``contents'', ``business\_interruption'', or ``occupants'') should match the
+loss type defined in the configuration file by the relevant keyword above.
+
+The remaining new parameters introduced in this example are the following:
+
+\begin{itemize}
+
+  \item \Verb+master_seed+: this parameter is used to control the random
+    number generator in the loss ratio sampling process. If the same
+    \Verb+master_seed+ is defined at each calculation run, the same random loss
+    ratios will be generated, thus allowing reproducibility of the results.
+
+  \item \Verb+asset_correlation+: if the uncertainty in the loss ratios
+    has been defined within the \gls{vulnerabilitymodel}, users can specify
+    a coefficient of correlation that will be used in the Monte Carlo sampling
+    process of the loss ratios, between the assets that share the same
+    \gls{taxonomy}. If the \Verb+asset_correlation+ is set to one,
+    the loss ratio residuals will be perfectly correlated. On the other hand,
+    if this parameter is set to zero, the loss ratios will be sampled
+    independently. If this parameter is not defined, the
+    \glsdesc{acr:oqe} will assume zero correlation in the vulnerability. As of
+    \glsdesc{acr:oqe18}, \Verb+asset_correlation+ applies only to continuous
+    \glspl{vulnerabilityfunction} using the lognormal or Beta distribution; 
+    it does not apply to \glspl{vulnerabilityfunction} defined using the PMF
+    distribution. Although partial correlation was supported in previous
+    versions of the engine, beginning from \glsdesc{acr:oqe22}, values between
+    zero and one are no longer supported due to performance considerations. The
+    only two values permitted are \Verb+asset_correlation = 0+ and 
+    \Verb+asset_correlation = 1+.
+
+  \item \Verb+insured_losses+: this parameter specifies whether insured losses
+    should be calculated; the default value of this parameter is \Verb+false+.
+    In order for the \glsdesc{acr:oqe} to be able to compute insured losses, the
+    insurance limits and deductibles must be listed for each asset in the 
+    exposure model, as described in Example~5 in Section~\ref{sec:exposure}.
+
+  \item \Verb+all_losses+: this parameter was introduced in \glsdesc{acr:oqe22}
+    and specifies whether the individual asset and portfolio losses should be
+    stored for each realization; the default value of this parameter is
+    \Verb+false+ and only mean and standard deviation of the portfolio losses
+    across all realizations are stored. If this flag is set to \Verb+true+, a
+    matrix containing all of the losses is saved in the datastore and can be
+    exported in the .npz format.
+
+\end{itemize}
+
+In this case, the ground motion fields will be computed at each of the
+locations of the assets in the exposure model and for each of the intensity
+measure types found in the provided set of vulnerability models. The above
+calculation can be run using the command line:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --run job.ini
+\end{minted}
+
+After the calculation is completed, a message similar to the following will be
+displayed:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+Calculation 2735 completed in 10 seconds. Results:
+  id | name
+5328 | agglosses-rlzs
+5329 | losses_by_asset
+\end{minted}
+
+All of the different ways of running a scenario damage calculation as
+illustrated through the examples of the previous section are also applicable
+to the scenario risk calculator, though the examples are not repeated here.

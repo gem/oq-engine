@@ -1,0 +1,344 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% The GEM Technical Documentation LaTeX Template
+% Version 1.0 (10/10/2015)
+%
+% Original author:
+% Mathias Legrand (legrand.mathias@gmail.com)
+%
+% Adapted for use by the GEM Foundation by:
+% James Brown (james.brown@globalquakemodel.org)
+% Anirudh Rao (anirudh.rao@globalquakemodel.org)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+% Compiling this template:
+% This template uses bibtex for its bibliography and makeindex for its index.
+% When you first open the template, compile it from the command line with the
+% commands below:
+%
+% 1) pdflatex -interaction=nonstopmode oq-manual.tex
+% 2) bibtex oq-manual
+% 3) pdflatex -interaction=nonstopmode oq-manual.tex
+% 4) pdflatex -interaction=nonstopmode oq-manual.tex
+% 5) makeindex oq-manual.idx
+% 6) makeglossaries oq-manual
+% 7) pdflatex -interaction=nonstopmode oq-manual.tex
+%
+% After this, when you wish to update the bibliography/index use the appropriate
+% command above and make sure to compile with pdflatex several times
+% afterwards to propagate your changes to the document.
+%
+% This template also uses a number of packages which may need to be updated
+% to the newest versions for the template to compile. It is strongly
+% recommended you update your LaTeX distribution if you have any
+% compilation errors.
+%
+% Important note:
+% Chapter heading images should have a 2:1 width:height ratio,
+% e.g. 920px width and 460px height.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%-------------------------------------------------------------------------------
+%  PACKAGES AND OTHER DOCUMENT CONFIGURATION
+%-------------------------------------------------------------------------------
+
+% Page layout and margins
+\usepackage[top=3cm,bottom=3cm,left=3.2cm,right=3.2cm,headsep=10pt,a4paper]{geometry}
+\linespread{1.25}
+
+% Font settings
+\usepackage[condensed]{roboto} % Use the Roboto font for headings
+\usepackage[bitstream-charter]{mathdesign} % Use the Bitstream Charter font for text
+% \usepackage{amsmath,amsfonts,amssymb,amsthm} % For math equations, theorems, symbols, etc
+\usepackage{microtype} % Slightly tweak font spacing for aesthetics
+\usepackage[utf8]{inputenc} % Required for including letters with accents
+\usepackage[T1]{fontenc} % Use 8-bit encoding that has 256 glyphs
+
+% Color settings
+\usepackage{color, colortbl}
+\usepackage{xcolor} % Required for specifying colors by name
+\definecolor{darkgray}{gray}{.25}
+\definecolor{lightgray}{gray}{.98}
+% Colors from the GEM Brand Guidelines
+\definecolor{oqblue}{RGB}{27,117,165}
+\definecolor{gembrown}{cmyk}{.53,.54,.55,.54}
+
+% Bibliography settings
+\usepackage{csquotes}
+\usepackage[style=alphabetic,
+            sorting=nyt,
+            sortcites=true,
+            natbib=true,
+            style=authoryear,
+            maxcitenames=2,
+            maxbibnames=100,
+            autopunct=true,
+            autolang=hyphen,
+            hyperref=true,
+            doi=true,
+            abbreviate=false,
+            backref=true,
+            backend=bibtex,
+            bibencoding=ascii,
+            firstinits=true,
+	    	uniquename=false,
+	    	uniquelist=false]{biblatex}
+\addbibresource{bibliography/hazard.bib} % Hazard BibTeX bibliography file
+\addbibresource{bibliography/risk.bib} % Risk BibTeX bibliography file
+\defbibheading{bibempty}{}
+
+% Figure caption settings
+\usepackage[textfont=it,margin=10pt,font=small,labelfont=bf,labelsep=endash]{caption}
+\usepackage{subcaption}
+
+% Rotate any object
+\usepackage{rotating}
+
+% Verbatim environments
+\usepackage{verbatim}
+\usepackage{fancyvrb}
+
+% Index settings
+\usepackage{calc} % Infix notation for \setcounter, \addtocounter, \setlength, \addtolength
+\usepackage{imakeidx} % Required to make an index
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3} % Entries down to \subsubsections in the TOC
+\makeindex[title=Index,columns=2,intoc] % Create the files required for indexing
+
+\usepackage{todonotes}
+\usepackage{marginnote}
+% Bold symbols in maths mode
+\usepackage{bm}
+
+% Flexible typesetting of tables and figures
+\usepackage{ctable}
+\usepackage{booktabs}
+
+% Customization of section titles and table of contents
+\usepackage{titlesec}
+\usepackage{titletoc}
+
+% Header and footer customization
+\usepackage{fancyhdr}
+\usepackage{etoolbox}
+
+\usepackage{graphicx} % Required for including pictures
+\usepackage{tikz} % Required for drawing custom shapes
+\usepackage{eso-pic} % Required for specifying an image background in the title page
+\usepackage{pdfpages} % Needed to load .pdf pages, used for the cover page
+
+% English language hyphenation
+\usepackage[english]{babel}
+
+\usepackage{enumitem} % Customize lists
+\setlist{nolistsep} % Reduce spacing between bullet points and numbered lists
+\usepackage{listings} % Required for embedding code snippets
+\usepackage[cache=true]{minted} % Syntax highlighting for xml
+
+\usepackage{hyperref}
+\hypersetup{hidelinks,colorlinks=true,breaklinks=true,citecolor=oqblue,linkcolor=gembrown,urlcolor=oqblue,bookmarksopen=false,pdftitle={Title},pdfauthor={Author}}
+
+% Package to create a glossary - must be loaded after hyperref
+\usepackage[acronym,nonumberlist,style=altlist,section=section,toc]{glossaries}
+\makeglossaries
+
+
+%----------------------------------------------------------------------------------------
+%     MAIN TABLE OF CONTENTS
+%----------------------------------------------------------------------------------------
+
+% Remove the default margin
+\contentsmargin{0cm}
+
+% \titlecontents{section}
+%                       [left]
+%                       {above}
+%                       {before with label}
+%                       {before without label}
+%                       {filler and page}
+%                       [after]
+
+% Part text styling
+\titlecontents{part}
+                    [0cm] % Indentation
+                    {\addvspace{24pt}\Large\sffamily\bfseries} % Spacing and font options for parts
+                    {\color{black!60}\contentslabel[\Large\thecontentslabel]{1.25cm}\color{black}} % Part number
+                    {}
+                    {\color{black!60}\Large\sffamily\bfseries\hfill\thecontentspage} % Page number
+                    []
+
+% Chapter text styling
+\titlecontents{chapter}
+                    [1.25cm] % Indentation
+                    {\addvspace{18pt}\large\sffamily\bfseries} % Spacing and font options for chapters
+                    {\color{darkgray!80}\contentslabel[\Large\thecontentslabel]{1.25cm}\color{darkgray}} % Chapter number
+                    {\color{darkgray}}
+                    {\color{darkgray!40}\large\sffamily\bfseries\;\titlerule*[.5pc]{.}\;\color{darkgray!80}\thecontentspage} % Page number
+                    []
+
+% Section text styling
+\titlecontents{section}
+                    [1.25cm] % Indentation
+                    {\addvspace{12pt}\sffamily\bfseries} % Spacing and font options for sections
+                    {\color{black!60}\contentslabel[\thecontentslabel]{1.25cm}\color{black}} % Section number
+                    {}
+                    {\color{black!20}\normalsize\sffamily\bfseries\;\titlerule*[.5pc]{.}\;\color{black!60}\thecontentspage} % Page number
+                    []
+
+% Subsection text styling
+\titlecontents{subsection}
+                    [1.25cm] % Indentation
+                    {\addvspace{6pt}\sffamily\small} % Spacing and font options for subsections
+                    {\color{black!60}\contentslabel[\thecontentslabel]{1.25cm}\color{black}} % Subsection number
+                    {}
+                    {\color{black!20}\normalsize\sffamily\;\titlerule*[.5pc]{.}\;\color{black!60}\thecontentspage} % Page number
+                    []
+
+% Subsubsection text styling
+\titlecontents{subsubsection}
+                    [1.25cm] % Indentation
+                    {\addvspace{3pt}\sffamily\footnotesize} % Spacing and font options for subsubsections
+                    {\color{black!60}\contentslabel[\thecontentslabel]{1.25cm}\color{black}\em} % Subsubsection number
+                    {}
+                    {\color{black!20}\normalsize\sffamily\;\titlerule*[.5pc]{.}\;\color{black!60}\thecontentspage} % Page number
+                    []
+
+%----------------------------------------------------------------------------------------
+%     MINI TABLE OF CONTENTS IN CHAPTER HEADS
+%----------------------------------------------------------------------------------------
+
+% Section text styling
+\titlecontents{lsection}[0em] % Indendation
+{\footnotesize\sffamily} % Font settings
+{}
+{}
+{}
+
+% Subsection text styling
+\titlecontents{lsubsection}[.5em] % Indentation
+{\normalfont\footnotesize\sffamily} % Font settings
+{}
+{}
+{}
+
+%----------------------------------------------------------------------------------------
+%     PAGE HEADERS
+%----------------------------------------------------------------------------------------
+
+% Patch fancyhdr to set the font and rule colors for headers and footers
+\makeatletter
+\patchcmd{\@fancyhead}{\rlap}{\color{oqblue}\rlap}{}{}
+\patchcmd{\headrule}{\hrule}{\color{black}\hrule}{}{}
+\patchcmd{\@fancyfoot}{\rlap}{\color{oqblue}\rlap}{}{}
+\patchcmd{\footrule}{\hrule}{\color{black}\hrule}{}{}
+\makeatother
+
+\pagestyle{fancy}
+\renewcommand{\chaptermark}[1]{\markboth{\sffamily\normalsize\bfseries\chaptername\ \thechapter.\ #1}{}} % Chapter text font settings
+\renewcommand{\sectionmark}[1]{\markright{\sffamily\normalsize\thesection\hspace{5pt}#1}{}} % Section text font settings
+\fancyhf{} \fancyhead[LE,RO]{\sffamily\normalsize\thepage} % Font setting for the page number in the header
+\fancyhead[LO]{\rightmark} % Print the nearest section name on the left side of odd pages
+\fancyhead[RE]{\leftmark} % Print the current chapter name on the right side of even pages
+\renewcommand{\headrulewidth}{0.5pt} % Width of the rule under the header
+\addtolength{\headheight}{7.5pt} % Increase the spacing around the header
+\renewcommand{\footrulewidth}{0pt} % Removes the rule in the footer
+\fancypagestyle{plain}{\fancyhead{}\renewcommand{\headrulewidth}{0pt}} % Style for when a plain pagestyle is specified
+
+% Remove the header from odd empty pages at the end of chapters
+\makeatletter
+\renewcommand{\cleardoublepage}{
+\clearpage\ifodd\c@page\else
+\hbox{}
+\vspace*{\fill}
+\thispagestyle{empty}
+\newpage
+\fi}
+\makeatother
+
+%----------------------------------------------------------------------------------------
+%     SECTION NUMBERING IN THE MARGIN
+%----------------------------------------------------------------------------------------
+
+\makeatletter
+\renewcommand{\@seccntformat}[1]{\llap{\textcolor{oqblue}{\csname the#1\endcsname}\hspace{1em}}}
+\renewcommand{\section}{\@startsection{section}{1}{\z@}
+{-4ex \@plus -1ex \@minus -.4ex}
+{1ex \@plus.2ex }
+{\normalfont\large\sffamily\bfseries}}
+\renewcommand{\subsection}{\@startsection {subsection}{2}{\z@}
+{-3ex \@plus -0.1ex \@minus -.4ex}
+{0.5ex \@plus.2ex }
+{\normalfont\sffamily\bfseries}}
+\renewcommand{\subsubsection}{\@startsection {subsubsection}{3}{\z@}
+{-2ex \@plus -0.1ex \@minus -.2ex}
+{.2ex \@plus.2ex }
+{\normalfont\small\sffamily\bfseries}}
+\renewcommand{\paragraph}{\@startsection {paragraph}{4}{\z@}
+{-2ex \@plus-.2ex \@minus .2ex}
+{.1ex}
+{\normalfont\small\sffamily\bfseries\em}}
+\makeatother
+
+%----------------------------------------------------------------------------------------
+%     PART HEADINGS
+%----------------------------------------------------------------------------------------
+
+% \titleformat{command}[shape]{format}{label}{sep}{before}[after]
+\titleformat{\part}[display]{\bfseries\filcenter\Huge\sffamily}{\textcolor{gembrown}{\partname~\thepart}}{20pt}{\textcolor{gembrown}}
+
+%----------------------------------------------------------------------------------------
+%     CHAPTER HEADINGS
+%----------------------------------------------------------------------------------------
+
+% The set-up below should be manually adapted to the overall page
+% layout and margin setup controlled by the geometry package.
+
+\newcommand{\thechapterimage}{}
+\newcommand{\chapterimage}[1]{\renewcommand{\thechapterimage}{#1}}
+
+% Numbered chapters with mini tableofcontents
+\makeatletter
+\def\thechapter{\arabic{chapter}}
+\def\@makechapterhead#1{
+\thispagestyle{empty}
+{\centering \normalfont\sffamily
+\ifnum \c@secnumdepth >\m@ne
+\if@mainmatter
+\startcontents
+\begin{tikzpicture}[remember picture,overlay]
+\node at (current page.north west)
+{\begin{tikzpicture}[remember picture,overlay]
+\node[anchor=north west,inner sep=0pt] at (0,0) {\includegraphics[width=\paperwidth]{\thechapterimage}};
+
+% Commenting the 3 lines below removes the small contents box in the chapter heading
+\fill[color=oqblue!10!white,opacity=.6] (1cm,0) rectangle (12cm,-7cm);
+\node[anchor=north west] at (1.5cm,.05cm) {\parbox[t][6.9cm][t]{10.5cm}{
+    \huge\bfseries\flushleft \printcontents{l}{1}{\setcounter{tocdepth}{2}}}};
+% The 3 lines below control the box environment for chapter titles
+\draw[anchor=west] (1.8cm,-10cm) node [fill=white,text opacity=1,draw=white,draw opacity=1,line width=1.5pt,fill opacity=.6,inner sep=12pt]{\huge\sffamily\bfseries\textcolor{oqblue}{\thechapter.\hspace{0.35cm}#1\strut\makebox[22cm]{}}};
+
+\end{tikzpicture}};
+\end{tikzpicture}}
+\par\vspace*{230\p@}
+\fi
+\fi}
+
+% Unnumbered chapters without mini tableofcontents
+\def\@makeschapterhead#1{
+\thispagestyle{empty}
+{\centering \normalfont\sffamily
+\ifnum \c@secnumdepth >\m@ne
+\if@mainmatter
+\begin{tikzpicture}[remember picture,overlay]
+\node at (current page.north west)
+{\begin{tikzpicture}[remember picture,overlay]
+\draw[anchor=west] (2.6cm,-4.2cm) node [fill=white,text opacity=1,draw=white,draw opacity=1,line width=1.5pt,fill opacity=.6,inner sep=12pt]{\huge\sffamily\bfseries\textcolor{oqblue}{#1\strut\makebox[22cm]{}}};
+\end{tikzpicture}};
+\end{tikzpicture}}
+\par\vspace*{40\p@}
+\fi
+\fi
+}
+\makeatother

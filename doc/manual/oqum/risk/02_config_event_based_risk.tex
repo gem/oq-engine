@@ -1,0 +1,102 @@
+The parameter \Verb+calculation_mode+ needs to be set to
+\Verb+event_based_risk+ in order to use this calculator.
+
+Most of the job configuration parameters required for running a stochastic
+event based risk calculation are the same as those described in the previous
+sections for the scenario risk calculator and the classical probabilistic risk
+calculator. The remaining parameters specific to the stochastic event based
+risk calculator are illustrated through the example below.
+
+
+\paragraph{Example 1}
+
+This example illustrates a stochastic event based risk calculation which uses
+a single configuration file to first compute the \glspl{acr:ses} and
+\glspl{acr:gmf} for the given source model and ground motion model, and then
+calculate event loss tables, loss exceedance curves and probabilistic loss
+maps for structural losses, nonstructural losses, insured structural losses,
+and occupants, based on the \glspl{acr:gmf}. The job configuration file
+required for running this stochastic event based risk calculation is shown in
+Listing~\ref{lst:config_event_based_risk_combined}.
+
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\scriptsize
+  ,frame=single,bgcolor=lightgray,linenos,label=job.ini]{ini}{oqum/risk/verbatim/config_event_based_risk_combined.ini}
+  \caption{Example combined configuration file for running a stochastic event based risk calculation (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/config_event_based_risk_combined.ini}{Download example})}
+  \label{lst:config_event_based_risk_combined}
+\end{listing}
+
+Similar to that the procedure described for the Scenario Risk calculator, a
+Monte Carlo sampling process is also employed in this calculator to take into
+account the uncertainty in the conditional loss ratio at a particular
+intensity level. Hence, the parameters \Verb+asset_correlation+ and
+\Verb+master_seed+ may be defined as previously described for the Scenario
+Risk calculator in Section~\ref{sec:config_scenario_risk}. This calculator is
+also capable of estimating insured losses and therefore, setting the
+\Verb+insured_losses+ attribute to \Verb+true+ will generate all results (loss
+tables, loss curves, loss maps) for insured losses as well. The parameter
+``risk\_investigation\_time'' specifies the time period for which the event
+loss tables and loss exceedance curves will be calculated, similar to the
+Classical Probabilistic Risk calculator. If this parameter is not provided in
+the risk job configuration file, the time period used is the same as that
+specifed in the hazard calculation using the parameter ``investigation\_time''.
+
+The new parameters introduced in this example are described below:
+
+\begin{itemize}
+
+  \item \Verb+minimum_intensity+: this optional parameter specifies the minimum
+    intensity levels for each of the intensity measure types in the risk model.
+    Ground motion fields where each ground motion value is less than the 
+    specified minimum threshold are discarded. This helps speed up calculations
+    and reduce memory consumption by considering only those ground motion fields
+    that are likely to contribute to losses. It is also possible to set the same
+    threshold value for all intensity measure types by simply providing a single
+    value to this parameter. For instance: ``minimum\_intensity = 0.05'' would
+    set the threshold to 0.05 g for all intensity measure types in the risk 
+    calculation.
+    If this parameter is not set, the \glsdesc{acr:oqe} extracts the minimum
+    thresholds for each intensity measure type from the vulnerability
+    models provided, picking the first intensity value for which the mean loss
+    ratio is nonzero.
+
+  \item \Verb+loss_curve_resolution+: this parameter specifies the number of
+    points on the aggregate loss curve. The loss levels on the aggregate loss
+    curve are obtained by dividing the interval between the minimum and maximum
+    portfolio losses in the portfolio loss table into `n' equispaced intervals,
+    where `n' is the value specified for the \Verb+loss_curve_resolution+.
+    If this parameter is not set, the \glsdesc{acr:oqe} uses a default value of
+    20 for the \Verb+loss_curve_resolution+.
+
+  \item \Verb+loss_ratios+: this parameter specifies the set of loss ratios at
+    which the individual asset loss curves will be computed. If
+    \Verb+loss_ratios+ is not set in the configuration file, the individual 
+    asset loss curves will not be computed; and only the aggregate loss curve
+    for the portfolio of assets will be computed. Furthermore, if
+    \Verb+loss_ratios+ is not set in the configuration file, loss maps will
+    also \textbf{not} be computed.
+
+  \item \Verb+avg_losses+: this boolean parameter specifies whether the average
+    asset losses over the time period ``risk\_investigation\_time'' should be
+    computed. The default value of this parameter is \Verb+false+.
+
+    \begin{equation*}
+    \begin{split}
+    average\_loss & = sum(event\_losses) \\
+                 & \div (hazard\_investigation\_time \times ses\_per\_logic\_tree\_path) \\
+                 & \times risk\_investigation\_time
+    \end{split}
+    \end{equation*}
+
+\end{itemize}
+
+The above calculation can be run using the command line:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --run job.ini
+\end{minted}
+
+Computation of the loss tables, loss curves, and average losses for each
+individual \gls{asset} in the \gls{exposuremodel} can be resource intensive,
+and thus these outputs are not generated by default, unless instructed to by
+using the parameters described above.
