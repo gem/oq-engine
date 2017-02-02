@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml" 
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+<exposureModel id="exposure_example" 
+               category="buildings"
+               taxonomySource="GEM_Building_Taxonomy_2.0">
+  <description>
+    Exposure model with replacement costs per building for each asset
+  </description>
+  <conversions>
+    <costTypes>
+      <costType name="structural" type="per_asset" unit="USD" />
+      <costType name="nonstructural" type="per_asset" unit="USD" />
+      <costType name="contents" type="per_asset" unit="USD" />
+      <costType name="business_interruption" type="per_asset" unit="USD/month"/>
+    </costTypes>
+  </conversions>
+  <assets>
+    <asset id="a1" number="2" taxonomy="Adobe" >
+      <location lon="-122.000" lat="38.113" />
+      <costs>
+        <cost type="structural" value="7500" />
+        <cost type="nonstructural" value="11250" />
+        <cost type="contents" value="3750" />
+        <cost type="business_interruption" value="1500" />
+      </costs>
+    </asset>
+  </assets>
+</exposureModel>
+
+</nrml>

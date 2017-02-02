@@ -1,3 +1,6 @@
+  [Daniele Viganò]
+  * Moved the OpenQuake Engine manual sources inside doc/manual
+
   [Michele Simionato]
   * Introduced an experimental classical time dependent UCERF calculator
   * Added a dynamic output for source group information

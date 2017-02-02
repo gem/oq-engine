@@ -1,0 +1,74 @@
+To obtain a list of all risk calculations that have been previously run
+(successfully or unsuccessfully), or are currently running, the following
+command can be employed:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --list-risk-calculations
+\end{minted}
+
+or simply:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --lrc
+\end{minted}
+
+Which will display a list of risk calculations as presented below.
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+job_id |     status |          start_time |     description
+     1 | successful | 2015-12-02 08:50:30  | Scenario damage example
+     2 |     failed | 2015-12-03 09:56:17  | Scenario risk example
+     3 | successful | 2015-12-04 10:45:32  | Scenario risk example
+     4 | successful | 2015-12-04 10:48:33  | Classical risk example
+\end{minted}
+
+Then, in order to display a list of the risk outputs from a given job, the
+following command can be used:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --list-outputs <risk_calculation_id>
+\end{minted}
+
+or simply:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --lo <risk_calculation_id>
+\end{minted}
+
+which will display a list of outputs for the calculation requested, as
+presented below:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+Calculation 4 results:
+id | name
+29 | loss_curve
+30 | loss_map
+\end{minted}
+
+Then, in order to export all of the risk calculation outputs in the
+appropriate xml format, the following command can be used:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --export-outputs <risk_calculation_id> <output_directory>
+\end{minted}
+
+or simply:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --eos <risk_calculation_id> <output_directory>
+\end{minted}
+
+If, instead of exporting all of the outputs from a particular calculation,
+only particular output files need to be exported, this can be achieved by
+using the \Verb+--export-output+ option and providing the id of the required
+output:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --export-output <risk_output_id> <output_directory>
+\end{minted}
+
+or simply:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --eo <risk_output_id> <output_directory>
+\end{minted}

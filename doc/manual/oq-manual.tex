@@ -1,0 +1,255 @@
+% ------------------------------------------------------------------------------
+% The OpenQuake-engine Users Manual
+%
+% Authors:
+% 	Marco Pagani 		- GEM Foundation, Pavia, Italy
+% 	Vitor Silva 		- GEM Foundation, Pavia, Italy
+%	Graeme Weatherill - GEM Foundation, Pavia, Italy
+%  Anirudh Rao       - GEM Foundation, Pavia, Italy
+%  Michele Simionato - GEM Foundation, Pavia, Italy
+%
+% Authors on previous versions:
+%  Helen Crowley     - GEM Foundation, Pavia, Italy
+%  Damiano Monelli   - GEM Foundation, Pavia, Italy
+%
+% License:
+% Document distributed under the CC BY-NC-SA 4.0 License
+% Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
+% http://creativecommons.org/licenses/by-nc-sa/4.0/
+%
+% Copyright:
+% © GEM Foundation, Pavia, Italy. 2013--2017.
+% ------------------------------------------------------------------------------
+
+%-------------------------------------------------------------------------------
+%  PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%-------------------------------------------------------------------------------
+
+\documentclass[11pt,fleqn]{book} % ------------------ Left-justified equations -
+\input{configuration/configuration} % ------------- Load packages and template -
+\graphicspath{{figures/}} % -------------- Directory where pictures are stored -
+
+\begin{document}
+\input{oqum/glossary} % ---------------------------------------- Load glossary -
+
+%-------------------------------------------------------------------------------
+%  COVER PAGE
+%-------------------------------------------------------------------------------
+
+\includepdf[pages=-]{figures/oq_manual_cover.pdf}
+
+%-------------------------------------------------------------------------------
+%  TITLE PAGE
+%-------------------------------------------------------------------------------
+
+\begingroup
+\thispagestyle{empty}
+\begin{center}
+\par\normalfont\fontsize{15}{15}\sffamily\selectfont
+\textcolor{oqblue}{OpenQuake: calculate, share, explore}
+\vspace*{9cm}
+\par\bfseries\fontsize{35}{35}\sffamily\selectfont
+\textcolor{gembrown}{The OpenQuake-engine\\User Instruction Manual}\par
+\vspace*{9cm}
+\par\normalfont\fontsize{15}{15}\sffamily\selectfont
+\href{http://globalquakemodel.org/openquake/}{\textcolor{oqblue}{globalquakemodel.org/openquake}}
+\end{center}
+\endgroup
+
+%-------------------------------------------------------------------------------
+%  COPYRIGHT PAGE
+%-------------------------------------------------------------------------------
+
+\newpage
+~\vfill
+\thispagestyle{empty}
+
+\noindent
+   \textbf{Authors} \\
+   Marco Pagani$^1$, Vitor Silva$^1$, Graeme Weatherill$^1$,
+   Anirudh Rao$^1$, Michele Simionato$^1$\hfill \\
+   \hfill \\
+   \textbf{Authors on previous versions} \\
+   Helen Crowley$^2$, Damiano Monelli\hfill \\
+   \hfill \\
+   \small
+   \begin{tabular}{p{4cm}p{4cm}p{4cm}}
+   $^1$ GEM Foundation \hfill \newline
+   via Ferrata, 1 \hfill \newline
+   20133 Pavia \hfill \newline
+   Italy \hfill \newline
+   &
+   $^2$ EUCENTRE \hfill \newline
+   via Ferrata, 1 \hfill \newline
+   20133 Pavia \hfill \newline
+   Italy \hfill \newline
+   \end{tabular} \hfill \newline
+   %
+   Email address for all the authors:\hfill\\
+   $<$name.surname$>$@globalquakemodel.org\hfill\\
+   \normalsize
+
+\noindent
+   {\textbf{Citation}} \hfill \\
+   Please cite this document as: \hfill \\
+   GEM (2017). The OpenQuake-engine User Manual.
+   \textit{Global Earthquake Model (GEM) Technical Report 2017-01.\\
+   doi: 10.13117/GEM.OPENQUAKE.MAN.ENGINE.2.2/01, 193 pages.} \hfill \\
+\noindent \hfill\\
+\noindent
+   {\bf{Disclaimer}} \hfill \\
+   The OpenQuake-engine User Manual is distributed in the hope that it will be
+   useful, but without any warranty: without even the implied warranty of
+   merchantability or fitness for a particular purpose. While every precaution
+   has been taken in the preparation of this document, in no event shall the
+   authors of the Manual and the GEM Foundation be liable to any party for
+   direct, indirect, special, incidental, or consequential damages, including
+   lost profits, arising out of the use of information contained in this
+   document or from the use of programs and source code that may accompany it,
+   even if the authors and GEM Foundation have been advised of the possibility
+   of such damage. The Manual provided hereunder is on as ``as is'' basis, and
+   the  authors and GEM Foundation have no obligations to provide maintenance,
+   support, updates, enhancements, or modifications. \hfill \\
+\noindent \hfill\\
+\noindent
+   {\bf{License}} \hfill \\
+   This Manual is distributed under the Creative Commons License  Attribution-
+   NonCommercial-ShareAlike 4.0 International
+   (\href{http://creativecommons.org/licenses/by-nc-sa/4.0/} {CC BY-NC-SA
+   4.0}). You can download this Manual and share it with others as long as you
+   provide proper credit, but you cannot change it in any way or use it
+   commercially.\hfill \\
+
+\noindent \copyright\ \textsc{2013--2017 GEM Foundation}\\
+\noindent \textit{Eleventh printing, January 2017} % Printing/edition date
+
+%-------------------------------------------------------------------------------
+%  TABLE OF CONTENTS
+%-------------------------------------------------------------------------------
+
+\chapterimage{figures/chapter_head.pdf} % Table of contents heading image
+\pagestyle{empty} % No headers
+\tableofcontents % Print the table of contents itself
+\cleardoublepage % Forces the first chapter to start on the right
+\pagestyle{fancy} % Print headers again
+
+%-------------------------------------------------------------------------------
+%  FOREWORD
+%-------------------------------------------------------------------------------
+\chapterimage{figures/chapter_head.pdf} % Chapter heading image
+\chapter*{Preface}
+\addcontentsline{toc}{chapter}{Preface}
+\input{oqum/preamble}
+
+%-------------------------------------------------------------------------------
+%  THE MANUAL
+%-------------------------------------------------------------------------------
+
+% ------------------------------------------------------- Part I: Introduction -
+\part{Introduction}
+\label{part:introduction}
+\chapterimage{figures/chapter_head.pdf} % Chapter heading image
+\chapter{OpenQuake-engine Background}
+   \label{chap:intro}
+	\input{oqum/introduction}
+
+% ----------------------------------------------------- Part II: Hazard Module -
+\thispagestyle{empty}
+\part{Hazard}
+
+\chapterimage{figures/chapter_head.pdf} % Chapter heading image
+\chapter{Introduction to the Hazard Module}
+   \label{chap:hazintro}
+	\input{oqum/hazard/00_intro}
+   \cleardoublepage
+
+\chapterimage{figures/chapter_head.pdf} % Chapter heading image
+\chapter{Using the Hazard Module}
+	\label{chap:hazinputs}
+	\input{oqum/hazard/01_using}
+   \cleardoublepage
+
+\chapterimage{figures/chapter_head.pdf} % Chapter heading image
+\chapter{Hazard Calculations and Results}
+	\label{chap:hazoutputs}
+	\input{oqum/hazard/02_outputs}
+   \cleardoublepage
+
+\chapterimage{figures/chapter_head.pdf} % Chapter heading image
+\chapter{Demonstrative Examples}
+	\label{chap:hazdemos}
+	\input{oqum/hazard/03_demos}
+   \cleardoublepage
+
+% ------------------------------------------------------ Part III: Risk Module -
+\thispagestyle{empty}
+\part{Risk}
+
+\chapterimage{figures/chapter_head.pdf} % Chapter heading image
+\chapter{Introduction to the Risk Module}
+   \label{chap:riskintro}
+	\input{oqum/risk/00_intro}
+   \cleardoublepage
+
+\chapterimage{figures/chapter_head.pdf} % Chapter heading image
+\chapter{Risk Input Models}
+   \label{chap:riskinputs}
+   \input{oqum/risk/01_inputs}
+   \cleardoublepage
+
+\chapterimage{figures/chapter_head.pdf} % Chapter heading image
+\chapter{Using the Risk Module}
+	\label{chap:riskcalculators}
+	\input{oqum/risk/02_config}
+   \cleardoublepage
+
+\chapterimage{figures/chapter_head.pdf} % Chapter heading image
+\chapter{Risk Results}
+	\label{chap:riskoutputs}
+	\input{oqum/risk/03_outputs}
+   \cleardoublepage
+
+\chapterimage{figures/chapter_head.pdf} % Chapter heading image
+\chapter{Demonstrative Examples}
+	\label{chap:riskdemos}
+	\input{oqum/risk/04_demos}
+   \cleardoublepage
+
+% -------------------------------------------------------- Part IV: Appendices -
+%\thispagestyle{empty}
+%\part*{Appendices}
+%\appendix
+%
+%\chapterimage{figures/chapter_head_2.pdf} % Chapter heading image
+%\chapter{Ground Shaking Intensity Models}
+%   \label{chap:gsims}
+%	\input{oqum/appendix/gmpes}
+%   \cleardoublepage
+
+
+%-------------------------------------------------------------------------------
+%  BIBLIOGRAPHY
+%-------------------------------------------------------------------------------
+
+\chapter*{Bibliography}
+\addcontentsline{toc}{chapter}{\textcolor{darkgray}{Bibliography}}
+\section*{Books}
+\printbibliography[heading=bibempty,type=book]
+\section*{Articles}
+\printbibliography[heading=bibempty,type=article]
+\section*{Other Sources}
+\printbibliography[heading=bibempty,nottype=book,nottype=article]
+\cleardoublepage
+
+%-------------------------------------------------------------------------------
+%  INDEX & GLOSSARY
+%-------------------------------------------------------------------------------
+
+\printindex
+\chapter*{Glossary}
+\addcontentsline{toc}{chapter}{\textcolor{darkgray}{Glossary}}
+\printglossary[type=acronym, title=List of Acronyms]
+\printglossary[title=List of Terms]
+\hfill \\ \thispagestyle{empty} \clearpage % ---------------- Final empty page -
+
+\end{document}
