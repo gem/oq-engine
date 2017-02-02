@@ -57,7 +57,6 @@ from openquake.hazardlib.sourceconverter import SourceConverter, SourceModel
 
 # ######################## rupture calculator ############################ #
 
-EBR = collections.namedtuple('EBR', 'serial source_id events')
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -773,6 +772,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
                 ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
                 maximum_distance=oq.maximum_distance,
                 samples=ssm.source_models[0].samples,
+                save_ruptures=oq.save_ruptures,
                 seed=ssm.source_model_lt.seed)
             gsims = ssm.gsim_lt.values[DEFAULT_TRT]
             yield ssm.get_sources(), self.sitecol.complete, gsims, monitor
@@ -781,7 +781,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         """
         Run the ucerf calculation
         """
-        res = parallel.Starmap(compute_events, self.gen_args()).submit_all()
+        res = parallel.Starmap(compute_ruptures, self.gen_args()).submit_all()
         acc = self.zerodict()
         num_ruptures = {}
         for ruptures_by_grp in res:
@@ -842,27 +842,11 @@ def compute_ruptures(sources, sitecol, gsims, monitor):
     res[src.src_group_id] = ebruptures
     res.calc_times[src.src_group_id] = (
         src.source_id, len(sitecol), time.time() - t0)
-    # not returning the boundary to save data transfer and disk space
-    res.rup_data = {src.src_group_id: calc.RuptureData(DEFAULT_TRT, gsims)
-                    .to_array(ebruptures, boundary='')}
+    if monitor.save_ruptures:
+        res.rup_data = {src.src_group_id: calc.RuptureData(DEFAULT_TRT, gsims)
+                        .to_array(ebruptures)}
     return res
-
-
-def compute_events(sources, sitecol, gsims, monitor):
-    """
-    :param sources: a sequence of UCERF sources
-    :param sitecol: a SiteCollection instance
-    :param gsims: a list of GSIMs
-    :param monitor: a Monitor instance
-    :returns: an AccumDict grp_id -> EBRs
-    """
-    ruptures_by_grp = compute_ruptures(sources, sitecol, gsims, monitor)
-    for grp_id in ruptures_by_grp:
-        ruptures_by_grp[grp_id] = [
-            EBR(ebr.serial, ebr.source_id, ebr.events)
-            for ebr in ruptures_by_grp[grp_id]]
-    return ruptures_by_grp
-compute_events.shared_dir_on = config.SHARED_DIR_ON
+compute_ruptures.shared_dir_on = config.SHARED_DIR_ON
 
 
 class List(list):
@@ -900,9 +884,8 @@ def compute_losses(ssm, sitecol, assetcol, riskmodel,
     res.num_events = len(ri.eids)
     start = res.sm_id * num_rlzs
     res.rlz_slice = slice(start, start + num_rlzs)
-    # don't return back the ruptures, only the events and rup_data
-    res.ruptures_by_grp[grp_id] = [EBR(ebr.serial, ebr.source_id, ebr.events)
-                                   for ebr in ebruptures]
+    # return back the ruptures
+    res.ruptures_by_grp[grp_id] = ebruptures
     return res
 compute_losses.shared_dir_on = config.SHARED_DIR_ON
 
@@ -934,6 +917,7 @@ class UCERFRiskCalculator(EbriskCalculator):
                 ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
                 maximum_distance=oq.maximum_distance,
                 samples=sm.samples,
+                save_ruptures=oq.save_ruptures,
                 seed=self.oqparam.random_seed)
             ssm = self.csm.get_model(sm.ordinal)
             yield (ssm, self.sitecol, self.assetcol, self.riskmodel,
