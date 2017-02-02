@@ -27,7 +27,7 @@ than 20 lines of code:
    import logging
    from openquake.baselib import parallel
    from openquake.hazardlib.calc.filters import SourceFilter
-   from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves_ext
+   from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
    from openquake.commonlib import readinput
 
    def main(job_ini):
@@ -40,7 +40,7 @@ than 20 lines of code:
        for i, sm in enumerate(csm.source_models):
            for rlz in rlzs_assoc.rlzs_by_smodel[i]:
                gsim_by_trt = rlzs_assoc.gsim_by_trt[rlz.ordinal]
-               hcurves = calc_hazard_curves_ext(
+               hcurves = calc_hazard_curves(
                    sm.src_groups, src_filter, oq.imtls,
                    gsim_by_trt, oq.truncation_level,
                    parallel.Starmap.apply)
@@ -57,7 +57,6 @@ from __future__ import division
 import sys
 import time
 import operator
-import collections
 import numpy
 
 from openquake.baselib.python3compat import raise_, zip
@@ -94,73 +93,6 @@ def rupture_weight_pairs(src):
     weight = 1. / (src.num_ruptures or src.count_ruptures())
     for rup in src.iter_ruptures():
         yield rup, weight
-
-
-# old version working only for independent sources
-def calc_hazard_curves(
-        sources, source_site_filter, imtls, gsim_by_trt,
-        truncation_level=None, apply=Sequential.apply):
-    """
-    Compute hazard curves on a list of sites, given a set of seismic sources
-    and a set of ground shaking intensity models (one per tectonic region type
-    considered in the seismic sources).
-
-    Probability of ground motion exceedance is computed using the following
-    formula ::
-
-        P(X≥x|T) = 1 - ∏ ∏ Prup_ij(X<x|T)
-
-    where ``P(X≥x|T)`` is the probability that the ground motion parameter
-    ``X`` is exceeding level ``x`` one or more times in a time span ``T``, and
-    ``Prup_ij(X<x|T)`` is the probability that the j-th rupture of the i-th
-    source is not producing any ground motion exceedance in time span ``T``.
-    The first product ``∏`` is done over sources, while the second one is done
-    over ruptures in a source.
-
-    The above formula computes the probability of having at least one ground
-    motion exceedance in a time span as 1 minus the probability that none of
-    the ruptures in none of the sources is causing a ground motion exceedance
-    in the same time span. The basic assumption is that seismic sources are
-    independent, and ruptures in a seismic source are also independent.
-
-    :param sources:
-        A sequence of seismic sources objects (instances of subclasses
-        of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`).
-    :param source_site_filter:
-        A source filter over the site collection or the site collection itself
-    :param imtls:
-        Dictionary mapping intensity measure type strings
-        to lists of intensity measure levels.
-    :param gsim_by_trt:
-        Dictionary mapping tectonic region types (members
-        of :class:`openquake.hazardlib.const.TRT`) to
-        :class:`~openquake.hazardlib.gsim.base.GMPE` or
-        :class:`~openquake.hazardlib.gsim.base.IPE` objects.
-    :param truncation_level:
-        Float, number of standard deviations for truncation of the intensity
-        distribution.
-    :param apply:
-        Application function, for instance `parallel.apply`; by default use
-        `openquake.baselib.parallel.Sequential.apply`.
-
-    :returns:
-        An array of size N, where N is the number of sites, which elements
-        are records with fields given by the intensity measure types; the
-        size of each field is given by the number of levels in ``imtls``.
-    """
-    imtls = DictArray(imtls)
-    if hasattr(source_site_filter, 'sitecol'):  # a filter, as it should be
-        sites = source_site_filter.sitecol
-    else:  # backward compatibility, a site collection was passed
-        sites = source_site_filter
-        source_site_filter = SourceFilter(sites, None)
-    pmap = apply(
-        pmap_from_grp, (sources, source_site_filter, imtls,
-                        gsim_by_trt, truncation_level),
-        weight=operator.attrgetter('weight'),
-        key=operator.attrgetter('tectonic_region_type')
-    ).reduce(operator.or_)
-    return pmap.convert(imtls, len(sites))
 
 
 # NB: it is important for this to be fast since it is inside an inner loop
@@ -285,7 +217,7 @@ def pmap_from_grp(
         return pmap
 
 
-def calc_hazard_curves_ext(
+def calc_hazard_curves(
         groups, ss_filter, imtls, gsim_by_trt, truncation_level=None,
         apply=Sequential.apply):
     """
@@ -321,13 +253,17 @@ def calc_hazard_curves_ext(
     """
     # This is ensuring backward compatibility i.e. processing a list of
     # sources
-    if not isinstance(groups[0], SourceGroup):  # sent list of sources
+    if not isinstance(groups[0], SourceGroup):  # sent a list of sources
         dic = groupby(groups, operator.attrgetter('tectonic_region_type'))
         groups = [SourceGroup(trt, dic[trt], 'src_group', 'indep', 'indep')
                   for trt in dic]
+    if hasattr(ss_filter, 'sitecol'):  # a filter, as it should be
+        sitecol = ss_filter.sitecol
+    else:  # backward compatibility, a site collection was passed
+        sitecol = ss_filter
+        ss_filter = SourceFilter(sitecol, None)
 
     imtls = DictArray(imtls)
-    sitecol = ss_filter.sitecol
     pmap = ProbabilityMap(len(imtls.array), 1)
     # Processing groups with homogeneous tectonic region
     for group in groups:

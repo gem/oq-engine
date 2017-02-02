@@ -4,7 +4,7 @@ openquake.hazardlib.mfd package
 Magnitude-frequency distributions
 ---------------------------------
 
-openquake.hazardlib.mfd.arbitrary_mfd module
+arbitrary_mfd
 --------------------------------------------
 
 .. automodule:: openquake.hazardlib.mfd.arbitrary_mfd
@@ -12,7 +12,7 @@ openquake.hazardlib.mfd.arbitrary_mfd module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.mfd.base module
+base
 -----------------------------------
 
 .. automodule:: openquake.hazardlib.mfd.base
@@ -20,7 +20,7 @@ openquake.hazardlib.mfd.base module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.mfd.evenly_discretized module
+evenly_discretized
 -------------------------------------------------
 
 .. automodule:: openquake.hazardlib.mfd.evenly_discretized
@@ -28,7 +28,7 @@ openquake.hazardlib.mfd.evenly_discretized module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.mfd.truncated_gr module
+truncated_gr
 -------------------------------------------
 
 .. automodule:: openquake.hazardlib.mfd.truncated_gr
@@ -36,7 +36,7 @@ openquake.hazardlib.mfd.truncated_gr module
     :undoc-members:
     :show-inheritance:
 
-openquake.hazardlib.mfd.youngs_coppersmith_1985 module
+youngs_coppersmith_1985
 ------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.mfd.youngs_coppersmith_1985
