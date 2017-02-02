@@ -91,7 +91,7 @@ cp -R demos %{buildroot}/%{_datadir}/openquake/engine
 cp -R utils %{buildroot}/%{_datadir}/openquake/engine
 
 %post
-if [ -f /run/rabbitmq/pid -o -f /var/lib/rabbitmq/mnesia/rabbit@$(hostname -s).pid ]; then
+(if [ -f /run/rabbitmq/pid -o -f /var/lib/rabbitmq/mnesia/rabbit@$(hostname -s).pid ]; then
     if ! rabbitmqctl list_users | grep openquake; then
         rabbitmqctl add_user openquake openquake
     fi
@@ -99,7 +99,7 @@ if [ -f /run/rabbitmq/pid -o -f /var/lib/rabbitmq/mnesia/rabbit@$(hostname -s).p
         rabbitmqctl add_vhost openquake
         rabbitmqctl set_permissions -p openquake openquake ".*" ".*" ".*"
     fi
-fi
+fi) >/dev/null || true
 systemctl stop rabbitmq-server.service
 %systemd_post openquake-dbserver.service
 %systemd_post openquake-webui.service
