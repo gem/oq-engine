@@ -23,6 +23,7 @@ import copy
 import time
 import logging
 import functools
+from datetime import datetime
 
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
@@ -32,6 +33,7 @@ from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.geodetic import min_geodetic_distance
 from openquake.hazardlib.source import PointSource
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
+from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.calc.hazard_curve import (
     get_probability_no_exceedance, pmap_from_grp)
@@ -43,7 +45,8 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base, classical
 from openquake.calculators.ucerf_event_based import (
-    UCERFSESControl, get_ucerf_rupture, DEFAULT_TRT)
+    UCERFSESControl, get_ucerf_rupture, DEFAULT_TRT, NPD, HDD,)
+# FIXME: the counting of effective ruptures has to be revised completely
 
 
 class UCERFControl(UCERFSESControl):
@@ -132,6 +135,47 @@ class UCERFControl(UCERFSESControl):
                 return [], []
 
 
+class UCERFControlTimeDep(UCERFControl):
+    """
+    Adaptation of the UCERF Control class for the time-dependent model
+    """
+    def __init__(self, source_file, id, investigation_time, start_date,
+                 min_mag, npd=NPD, hdd=HDD, aspect=1.5,
+                 upper_seismogenic_depth=0.0, lower_seismogenic_depth=15.0,
+                 msr=WC1994(), mesh_spacing=1.0, trt="Active Shallow Crust",
+                 integration_distance=1000):
+        """
+        Instantiate with new parameter 'start_date'
+        """
+        super(UCERFControlTimeDep, self).__init__(
+            source_file, id, investigation_time, min_mag, npd, hdd, aspect,
+            upper_seismogenic_depth, lower_seismogenic_depth,
+            msr, mesh_spacing, trt, integration_distance=1000)
+        self.start_date = start_date
+
+    def build_idx_set(self):
+        """
+        Builds a dictionary of indices based on the branch code
+
+        :param str branch_code:
+            Code for the branch
+        """
+        code_set = self.branch_id.split("/")
+        idx_set = {
+            "sec_idx": "/".join([code_set[0], code_set[1], "Sections"]),
+            "mag_idx": "/".join([code_set[0], code_set[1], code_set[2],
+                                 "Magnitude"])}
+        code_set.insert(3, "Rates")
+        idx_set["rate_idx"] = "/".join(code_set)
+        idx_set["rake_idx"] = "/".join([code_set[0], code_set[1], "Rake"])
+        idx_set["msr_idx"] = "-".join([code_set[0], code_set[1], code_set[2]])
+        idx_set["geol_idx"] = code_set[0]
+        idx_set["grid_key"] = "_".join(
+            self.branch_id.replace("/", "_").split("_")[:-1])
+        idx_set["total_key"] = self.branch_id.replace("/", "|")
+        return idx_set
+
+
 def ucerf_poe_map(hdf5, ucerf_source, rupset_idx, s_sites, imtls, cmaker,
                   trunclevel, ctx_mon, pne_mon):
     """
@@ -146,6 +190,7 @@ def ucerf_poe_map(hdf5, ucerf_source, rupset_idx, s_sites, imtls, cmaker,
     """
     pmap = ProbabilityMap.build(len(imtls.array), len(cmaker.gsims),
                                 s_sites.sids, initvalue=1.)
+    eff_ruptures = 0
     try:
         for ridx in rupset_idx:
             # Get the ucerf rupture
@@ -174,12 +219,15 @@ def ucerf_poe_map(hdf5, ucerf_source, rupset_idx, s_sites, imtls, cmaker,
                     rup, sctx, rctx, dctx, imtls, cmaker.gsims, trunclevel)
                 for sid, pne in zip(sctx.sites.sids, pnes):
                     pmap[sid].array *= pne
+                eff_ruptures += 1
     except Exception as err:
         etype, err, tb = sys.exc_info()
         msg = 'An error occurred with rupture=%s. Error: %s'
         msg %= (ridx, str(err))
         raise_(etype, msg, tb)
-    return ~pmap
+    inv_pmap = ~pmap
+    inv_pmap.eff_ruptures = {ucerf_source.src_group_id: eff_ruptures}
+    return inv_pmap
 
 
 def convert_UCERFSource(self, node):
@@ -188,23 +236,49 @@ def convert_UCERFSource(self, node):
     """
     dirname = os.path.dirname(self.fname)  # where the source_model_file is
     source_file = os.path.join(dirname, node["filename"])
-    return UCERFControl(
-        source_file,
-        node["id"],
-        self.tom.time_span,
-        float(node["minMag"]),
-        npd=self.convert_npdist(node),
-        hdd=self.convert_hpdist(node),
-        aspect=~node.ruptAspectRatio,
-        upper_seismogenic_depth=~node.pointGeometry.upperSeismoDepth,
-        lower_seismogenic_depth=~node.pointGeometry.lowerSeismoDepth,
-        msr=valid.SCALEREL[~node.magScaleRel](),
-        mesh_spacing=self.rupture_mesh_spacing,
-        trt=node["tectonicRegion"])
+    if "startDate" in node.attrib and "investigationTime" in node.attrib:
+        # Is a time-dependent model - even if rates were originally
+        # poissonian
+        # Verify that the source time span is the same as the TOM time span
+        inv_time = float(node["investigationTime"])
+        if inv_time != self.tom.time_span:
+            raise ValueError("Source investigation time (%s) is not "
+                             "equal to configuration investigation time "
+                             "(%s)" % (inv_time, self.tom.time_span))
+        start_date = datetime.strptime(node["startDate"], "%d/%m/%Y")
+        return UCERFControlTimeDep(
+            source_file,
+            node["id"],
+            inv_time,
+            start_date,
+            float(node["minMag"]),
+            npd=self.convert_npdist(node),
+            hdd=self.convert_hpdist(node),
+            aspect=~node.ruptAspectRatio,
+            upper_seismogenic_depth=~node.pointGeometry.upperSeismoDepth,
+            lower_seismogenic_depth=~node.pointGeometry.lowerSeismoDepth,
+            msr=valid.SCALEREL[~node.magScaleRel](),
+            mesh_spacing=self.rupture_mesh_spacing,
+            trt=node["tectonicRegion"])
+    else:
+        return UCERFControl(
+            source_file,
+            node["id"],
+            self.tom.time_span,
+            float(node["minMag"]),
+            npd=self.convert_npdist(node),
+            hdd=self.convert_hpdist(node),
+            aspect=~node.ruptAspectRatio,
+            upper_seismogenic_depth=~node.pointGeometry.upperSeismoDepth,
+            lower_seismogenic_depth=~node.pointGeometry.lowerSeismoDepth,
+            msr=valid.SCALEREL[~node.magScaleRel](),
+            mesh_spacing=self.rupture_mesh_spacing,
+            trt=node["tectonicRegion"])
+
 SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
-def hazard_curves_per_rupture_subset(
+def _hazard_curves_per_rupture_subset(
         rupset_idx, ucerf_source, src_filter, imtls, cmaker,
         truncation_level=None, monitor=Monitor()):
     """
@@ -215,17 +289,18 @@ def hazard_curves_per_rupture_subset(
     pne_mon = monitor('computing poes', measuremem=False)
     pmap = ProbabilityMap(len(imtls.array), len(cmaker.gsims))
     pmap.calc_times = []
-    pmap.eff_ruptures = 0
-    pmap.grp_id = ucerf_source.src_group_id
+    pmap.grp_id = grp_id = ucerf_source.src_group_id
+    pmap.eff_ruptures = {pmap.grp_id: 0}
     nsites = len(src_filter.sitecol)
     with h5py.File(ucerf_source.source_file, "r") as hdf5:
         t0 = time.time()
-        pmap |= ucerf_poe_map(hdf5, ucerf_source, rupset_idx,
+        upmap = ucerf_poe_map(hdf5, ucerf_source, rupset_idx,
                               src_filter.sitecol, imtls, cmaker,
                               truncation_level, ctx_mon, pne_mon)
+        pmap |= upmap
         pmap.calc_times.append(
             (ucerf_source.source_id, nsites, time.time() - t0))
-        pmap.eff_ruptures += pne_mon.counts
+        pmap.eff_ruptures[grp_id] += upmap.eff_ruptures[grp_id]
     return pmap
 
 
@@ -261,7 +336,7 @@ def ucerf_classical_hazard_by_rupture_set(
 
     if len(s_sites):
         cmaker = ContextMaker(gsims, max_dist)
-        pmap = hazard_curves_per_rupture_subset(
+        pmap = _hazard_curves_per_rupture_subset(
             rupset_idx, ucerf_source, src_filter, imtls, cmaker,
             truncation_level, monitor=monitor)
     else:
@@ -295,12 +370,10 @@ def ucerf_classical_hazard_by_branch(branchname, ucerf_source, src_group_id,
     imtls = monitor.oqparam.imtls
     trt = ucerf_source.tectonic_region_type
     max_dist = monitor.oqparam.maximum_distance[trt]
-    dic = AccumDict()
-    dic.calc_times = []
+    ucerf_source.src_group_id = src_group_id
 
     # Two step process here - the first generates the hazard curves from
     # the rupture sets
-    monitor.eff_ruptures = 0
     # Apply the initial rupture to site filtering
     rupset_idx = ucerf_source.get_rupture_indices(branchname)
     rupset_idx, s_sites = \
@@ -309,26 +382,26 @@ def ucerf_classical_hazard_by_branch(branchname, ucerf_source, src_group_id,
 
     if len(s_sites):
         cmaker = ContextMaker(gsims, max_dist)
-        dic[src_group_id] = pm = hazard_curves_per_rupture_subset(
+        pm = _hazard_curves_per_rupture_subset(
             rupset_idx, ucerf_source, src_filter, imtls, cmaker,
             truncation_level, monitor=monitor)
-        dic.calc_times.extend(pm.calc_times)
     else:
-        dic[src_group_id] = ProbabilityMap(len(imtls.array), len(gsims))
-    dic.eff_ruptures = {src_group_id: monitor.eff_ruptures}  # idem
+        pm = ProbabilityMap(len(imtls.array), len(gsims))
+        pm.eff_ruptures = {src_group_id: 0}
     logging.info('Branch %s', branchname)
     # Get the background point sources
     background_sids = ucerf_source.get_background_sids(
         src_filter.sitecol, max_dist)
     bckgnd_sources = ucerf_source.get_background_sources(background_sids)
     if bckgnd_sources:
+        bckgnd_sources[0].src_group_id = src_group_id
         pmap = pmap_from_grp(
             bckgnd_sources, src_filter, imtls, gsims, truncation_level,
             (), monitor=monitor)
-        dic[src_group_id] |= pmap
-        dic.eff_ruptures[src_group_id] += monitor.eff_ruptures
-        dic.calc_times.extend(pmap.calc_times)
-    return dic
+        pm |= pmap
+        pm.eff_ruptures += AccumDict(pmap.eff_ruptures)
+    # TODO: should I add a .calc_times attribute?
+    return pm
 ucerf_classical_hazard_by_branch.shared_dir_on = config.SHARED_DIR_ON
 
 
@@ -344,6 +417,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         """
         parse the logic tree and source model input
         """
+        logging.warn('%s is still experimental', self.__class__.__name__)
         self.sitecol = readinput.get_site_collection(self.oqparam)
         self.gsim_lt = readinput.get_gsim_lt(self.oqparam, [DEFAULT_TRT])
         self.smlt = readinput.get_source_model_lt(self.oqparam)
