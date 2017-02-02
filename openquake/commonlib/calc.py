@@ -18,7 +18,6 @@
 
 from __future__ import division
 import logging
-import copy
 import numpy
 
 from openquake.baselib import hdf5
@@ -30,7 +29,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, tom
 from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.probability_map import ProbabilityMap, get_shape
 from openquake.commonlib import readinput, oqvalidation, util
 from openquake.hazardlib import valid
 
@@ -63,15 +62,15 @@ def combine_pmaps(rlzs_assoc, results):
     :param results: dictionary src_group_id -> probability map
     :returns: a dictionary rlz -> aggregate probability map
     """
-    acc = AccumDict()
+    num_levels = get_shape(results.values())[1]
+    acc = {rlz: ProbabilityMap(num_levels, 1)
+           for rlz in rlzs_assoc.realizations}
     for grp_id in results:
         for i, gsim in enumerate(rlzs_assoc.gsims_by_grp_id[grp_id]):
             pmap = results[grp_id].extract(i)
             for rlz in rlzs_assoc.rlzs_assoc[grp_id, gsim]:
                 if rlz in acc:
                     acc[rlz] |= pmap
-                else:
-                    acc[rlz] = copy.copy(pmap)
     return acc
 
 # ######################### hazard maps ################################### #
