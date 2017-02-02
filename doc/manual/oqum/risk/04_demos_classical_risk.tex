@@ -1,0 +1,36 @@
+The same hazard input as described in the Classical Probabilistic Damage demo
+is used for this demo. Thus, the workflow to produce the set of hazard curves
+described in Section~\ref{sec:demos_classical_damage} is also valid herein.
+Then, to run the Classical Probabilistic Risk demo, users should navigate to
+the folder containing the demo input models and configuration files and employ
+the following command:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --run job_hazard.ini
+\end{minted}
+
+which will produce the following hazard output:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+Calculation 8971 completed in 34 seconds. Results:
+  id | name
+9074 | hcurves
+9075 | realizations
+\end{minted}
+
+In this demo, loss exceedance curves for each asset and two probabilistic loss
+maps (for probabilities of exceedance of 1\% and 10\%) are produced. The
+following command launches these risk calculations:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --run job_risk.ini --hc 8971
+\end{minted}
+
+and the following outputs are expected:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+Calculation 8973 completed in 16 seconds. Results:
+  id | name
+9077 | loss_curves-rlzs
+9078 | loss_maps-rlzs
+\end{minted}
