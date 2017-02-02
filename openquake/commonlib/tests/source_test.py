@@ -904,7 +904,8 @@ xmlns:gml="http://www.opengis.net/gml"
             reference_depth_to_1pt0km_per_sec=100.,
             reference_depth_to_2pt5km_per_sec=5.0,
             reference_backarc=False)
-        sitecol = site.SiteCollection.from_points([102.32], [-2.9107], mod)
+        sitecol = site.SiteCollection.from_points(
+            [102.32], [-2.9107], [0], mod)
         parser = nrml.SourceModelParser(s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
