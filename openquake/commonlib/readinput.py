@@ -183,14 +183,16 @@ def get_mesh(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     if oqparam.sites:
-        lons, lats = zip(*sorted(oqparam.sites))
-        return geo.Mesh(numpy.array(lons), numpy.array(lats))
+        lons, lats, depths = zip(*sorted(oqparam.sites))
+        return geo.Mesh(numpy.array(lons), numpy.array(lats),
+                        numpy.array(depths))
     elif 'sites' in oqparam.inputs:
         csv_data = open(oqparam.inputs['sites'], 'U').read()
         coords = valid.coordinates(
             csv_data.strip().replace(',', ' ').replace('\n', ','))
-        lons, lats = zip(*sorted(coords))
-        return geo.Mesh(numpy.array(lons), numpy.array(lats))
+        lons, lats, depths = zip(*sorted(coords))
+        return geo.Mesh(numpy.array(lons), numpy.array(lats),
+                        numpy.array(depths))
     elif oqparam.region:
         # close the linear polygon ring by appending the first
         # point to the end
@@ -272,6 +274,7 @@ def get_site_collection(oqparam, mesh=None, site_model_params=None):
             if dist >= MAX_SITE_MODEL_DISTANCE:
                 logging.warn('The site parameter associated to %s came from a '
                              'distance of %d km!' % (pt, dist))
+            # ignoring the depths here
             sitecol.append(
                 site.Site(pt, param.vs30, param.measured,
                           param.z1pt0, param.z2pt5, param.backarc))
