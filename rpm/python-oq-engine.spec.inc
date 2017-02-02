@@ -105,7 +105,6 @@ systemctl stop rabbitmq-server.service
 %systemd_post openquake-webui.service
 %systemd_post openquake-celery.service
 
-
 %clean
 rm -rf %{buildroot}
 
