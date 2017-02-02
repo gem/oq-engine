@@ -82,9 +82,6 @@ class LtRealization(object):
 def capitalize(words):
     """
     Capitalize words separated by spaces.
-
-    >>> capitalize('active shallow crust')
-    'Active Shallow Crust'
     """
     return ' '.join(w.capitalize() for w in decode(words).split(' '))
 
