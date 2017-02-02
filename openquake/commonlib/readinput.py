@@ -223,7 +223,7 @@ def sitecol_from_coords(oqparam, coords):
     Return a SiteCollection instance from an ordered set of coordinates
     """
     lons, lats = zip(*coords)
-    return site.SiteCollection.from_points(lons, lats, oqparam)
+    return site.SiteCollection.from_points(lons, lats, None, oqparam)
 
 
 def get_site_model(oqparam):
@@ -278,7 +278,8 @@ def get_site_collection(oqparam, mesh=None, site_model_params=None):
         return site.SiteCollection(sitecol)
 
     # else use the default site params
-    return site.SiteCollection.from_points(mesh.lons, mesh.lats, oqparam)
+    return site.SiteCollection.from_points(
+        mesh.lons, mesh.lats, mesh.depths, oqparam)
 
 
 def get_gsim_lt(oqparam, trts=['*']):

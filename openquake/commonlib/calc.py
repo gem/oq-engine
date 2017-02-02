@@ -18,7 +18,6 @@
 
 from __future__ import division
 import logging
-import copy
 import numpy
 
 from openquake.baselib import hdf5
@@ -30,7 +29,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, tom
 from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.probability_map import ProbabilityMap, get_shape
 from openquake.commonlib import readinput, oqvalidation, util
 from openquake.hazardlib import valid
 
@@ -63,15 +62,15 @@ def combine_pmaps(rlzs_assoc, results):
     :param results: dictionary src_group_id -> probability map
     :returns: a dictionary rlz -> aggregate probability map
     """
-    acc = AccumDict()
+    num_levels = get_shape(results.values())[1]
+    acc = {rlz: ProbabilityMap(num_levels, 1)
+           for rlz in rlzs_assoc.realizations}
     for grp_id in results:
         for i, gsim in enumerate(rlzs_assoc.gsims_by_grp_id[grp_id]):
             pmap = results[grp_id].extract(i)
             for rlz in rlzs_assoc.rlzs_assoc[grp_id, gsim]:
                 if rlz in acc:
                     acc[rlz] |= pmap
-                else:
-                    acc[rlz] = copy.copy(pmap)
     return acc
 
 # ######################### hazard maps ################################### #
@@ -371,7 +370,10 @@ class RuptureData(object):
             ('strike', F64), ('dip', F64), ('rake', F64),
             ('boundary', hdf5.vstr)] + [(param, F64) for param in self.params])
 
-    def to_array(self, ebruptures):
+    def to_array(self, ebruptures, boundary=None):
+        """
+        Convert a list of ebruptures into an array of dtype RuptureRata.dt
+        """
         data = []
         for ebr in ebruptures:
             rup = ebr.rupture
@@ -379,9 +381,12 @@ class RuptureData(object):
             ruptparams = tuple(getattr(rc, param) for param in self.params)
             point = rup.surface.get_middle_point()
             multi_lons, multi_lats = rup.surface.get_surface_boundaries()
-            boundary = ','.join('((%s))' % ','.join(
-                '%.5f %.5f' % (lon, lat) for lon, lat in zip(lons, lats))
-                                for lons, lats in zip(multi_lons, multi_lats))
+            if boundary is None:
+                bounds = ','.join('((%s))' % ','.join(
+                    '%.5f %.5f' % (lon, lat) for lon, lat in zip(lons, lats))
+                    for lons, lats in zip(multi_lons, multi_lats))
+            else:
+                bounds = boundary
             try:
                 rate = ebr.rupture.occurrence_rate
             except AttributeError:  # for nonparametric sources
@@ -389,7 +394,7 @@ class RuptureData(object):
             data.append((ebr.serial, ebr.multiplicity, len(ebr.sids),
                          rate, rup.mag, point.x, point.y, point.z,
                          rup.surface.get_strike(), rup.surface.get_dip(),
-                         rup.rake, decode(boundary)) + ruptparams)
+                         rup.rake, decode(bounds)) + ruptparams)
         return numpy.array(data, self.dt)
 
 
