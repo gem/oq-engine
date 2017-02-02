@@ -269,7 +269,8 @@ class EventBasedRuptureCalculator(PSHACalculator):
         if 'ruptures' in self.datastore:
             self.datastore.set_nbytes('ruptures')
         self.datastore.set_nbytes('events')
-
+        if 'rup_data' not in self.datastore:
+            return
         for dset in self.datastore['rup_data'].values():
             if len(dset):
                 numsites = dset['numsites']
