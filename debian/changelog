@@ -1,7 +1,11 @@
   [Michele Simionato]
   * Introduced an experimental classical time dependent UCERF calculator
+  * Changed the UCERF rupture calculator to fully store the ruptures
+  * Fixed a bug in `combine_maps`: realizations with zero probability were
+    discarded, thus breaking the computation of the statistics
   * Added a command `oq reset` to reset database and datastores
-  * Reduced the data transfer back and disk space for UCERF event based risk
+  * Reduced the data transfer back and disk space occupation for UCERF
+    event based risk calculations
   * Tasks meant to be used with a shared directory are now marked with a
     boolean attribute `.shared_dir_on`
   * Added a warning when running event based risk calculations with sampling
