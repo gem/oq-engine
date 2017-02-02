@@ -1,0 +1,55 @@
+An example of disaggregation calculation is given considering a source model
+consisting of two sources (area and simple fault) belonging to two different
+tectonic region types.
+
+The calculation is defined with the following configuration file:
+
+\begin{Verbatim}[frame=single, commandchars=\\\{\}, fontsize=\normalsize]
+[general]
+description = ...
+calculation_mode = disaggregation
+random_seed = 23
+
+[geometry]
+sites = 0.5 -0.5
+
+[logic_tree]
+number_of_logic_tree_samples = 0
+
+[erf]
+rupture_mesh_spacing = 2
+width_of_mfd_bin = 0.1
+area_source_discretization = 5.0
+
+[site_params]
+reference_vs30_type = measured
+reference_vs30_value = 600.0
+reference_depth_to_2pt5km_per_sec = 5.0
+reference_depth_to_1pt0km_per_sec = 100.0
+
+[calculation]
+source_model_logic_tree_file = source_model_logic_tree.xml
+gsim_logic_tree_file = gmpe_logic_tree.xml
+investigation_time = 50.0
+intensity_measure_types_and_levels = {"PGA": [...]}
+truncation_level = 3
+maximum_distance = 200.0
+
+[disaggregation]
+poes_disagg = 0.1
+mag_bin_width = 1.0
+distance_bin_width = 10.0
+coordinate_bin_width = 0.2
+num_epsilon_bins = 3
+
+[output]
+export_dir = ...
+\end{Verbatim}
+
+Disaggregation matrices are computed for a single site (located between the
+two sources) for a ground motion value corresponding to a probability value
+equal to 0.1 (\texttt{poes\_\-disagg = 0.1}). Magnitude values are classified
+in one magnitude unit bins (\texttt{mag\_\-bin\_\-width = 1.0}), distances in
+bins of 10 km (\texttt{distance\_\-bin\_\-width = 10.0}), coordinates in bins
+of 0.2 degrees (\texttt{coordinate\_\-bin\_\-width = 0.2}). 3 epsilons bins
+are considered (\texttt{num\_\-epsilon\_\-bins = 3}).
