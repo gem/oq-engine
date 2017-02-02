@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+  <bcrMap
+  assetLifeExpectancy="50.0"
+  gsimTreePath="b1"
+  interestRate="0.05"
+  lossType="structural"
+  sourceModelTreePath="b1"
+  >
+    <node>
+      <gml:Point><gml:pos>80.0888 28.8612</gml:pos></gml:Point>
+      <bcr aalOrig="966606" aalRetr="53036" assetRef="a1846" ratio="1.7157"/>
+      <bcr aalOrig="225788" aalRetr="26638" assetRef="a4119" ratio="1.4621"/>
+      <bcr aalOrig="444595" aalRetr="16952" assetRef="a6444" ratio="1.3275"/>
+      <bcr aalOrig="106907" aalRetr="10085" assetRef="a8717" ratio="0.3908"/>
+    </node>
+    <node>
+      <gml:Point><gml:pos>80.0888 28.9362</gml:pos></gml:Point>
+      <bcr aalOrig="964381" aalRetr="53007" assetRef="a1784" ratio="1.9248"/>
+      <bcr aalOrig="106673" aalRetr="10080" assetRef="a8655" ratio="0.4386"/>
+    </node>
+    ...
+    <node>
+      <gml:Point><gml:pos>88.1138 26.9862</gml:pos></gml:Point>
+      <bcr aalOrig="5273" aalRetr="612.9" assetRef="a2734" ratio="1.1607"/>
+      <bcr aalOrig="23550" aalRetr="1259.3" assetRef="a461" ratio="1.3617"/>
+      <bcr aalOrig="10799" aalRetr="393.6" assetRef="a5059" ratio="1.0529"/>
+    </node>
+  </bcrMap>
+</nrml>

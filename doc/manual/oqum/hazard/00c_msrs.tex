@@ -1,0 +1,36 @@
+We provide below a list of the magnitude-area scaling relationships
+implemented in the \gls{acr:hazlib}:
+
+\subsection{Relationships for shallow earthquakes in active tectonic regions}
+
+\begin{itemize}
+
+    \item \cite{wells1994} - One of the most well known magnitude scaling
+	relationships, based on a global database of historical earthquake
+	ruptures. The implemented relationship is the one linking magnitude to
+	rupture area, and is called with the keyword \verb=WC1994=
+
+\end{itemize}
+
+
+\subsection{Magnitude-scaling relationships for subduction earthquakes}
+\begin{itemize}
+    \item \cite{Strasser2010} - Defines several magnitude scaling relationships for interface and in-slab earthquakes. Only the magnitude to rupture-area scaling relationships are implemented here, and are called with the keywords \verb=StrasserInterface= and \verb=StrasserIntraslab= respectively.
+\end{itemize}
+
+\subsection{Magnitude-scaling relationships stable continental regions}
+\begin{itemize}
+    \item \cite{ceus2011} - Defines a single magnitude to rupture-area scaling relationship for use in the central and eastern United States: $Area = 10.0^{M_W - 4.336}$. It is called with the keyword \verb=CEUS2011=
+\end{itemize}
+
+\subsection{Miscellaneous Magnitude-Scaling Relationships}
+\begin{itemize}
+    \item \verb=PeerMSR= defines a simple magnitude scaling relation used as part of the Pacific Earthquake Engineering Research Center verification of probabilistic seismic hazard analysis programs: $Area = 10.0 ^{M_W - 4.0}$.
+    \item \verb=PointMSR= approximates a `point' source by returning an infinitesimally small area for all magnitudes. Should only be used for distributed seismicity sources and not for fault sources. 
+\end{itemize}
+
+%
+%\subsection{Ground motion prediction equations for volcanic areas}
+%\begin{itemize}
+%    \item
+%\end{itemize}
