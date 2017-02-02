@@ -242,6 +242,10 @@ class SiteCollection(object):
         """The full set of indices from 0 to total_sites - 1"""
         return numpy.arange(0, self.total_sites)
 
+    def at_sea_level(self):
+        """True if all depths are zero"""
+        return (self.depths == 0).all()
+
     def split_in_tiles(self, hint):
         """
         Split a SiteCollection into a set of tiles (SiteCollection instances).
