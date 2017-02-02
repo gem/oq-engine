@@ -224,8 +224,8 @@ def sitecol_from_coords(oqparam, coords):
     """
     Return a SiteCollection instance from an ordered set of coordinates
     """
-    lons, lats = zip(*coords)
-    return site.SiteCollection.from_points(lons, lats, None, oqparam)
+    lons, lats, depths = zip(*coords)
+    return site.SiteCollection.from_points(lons, lats, depths, oqparam)
 
 
 def get_site_model(oqparam):
@@ -991,8 +991,9 @@ def get_scenario_from_nrml(oqparam, fname):
     imt_dt = numpy.dtype([(imt, F32) for imt in imts])
     gmfset = nrml.read(fname).gmfCollection.gmfSet
     etags, sitecounts = _extract_etags_sitecounts(gmfset)
-    oqparam.sites = sorted(sitecounts)
-    site_idx = {lonlat: i for i, lonlat in enumerate(oqparam.sites)}
+    coords = sorted(sitecounts)
+    oqparam.sites = [(lon, lat, 0) for lon, lat in coords]
+    site_idx = {lonlat: i for i, lonlat in enumerate(coords)}
     oqparam.number_of_ground_motion_fields = num_events = len(etags)
     sitecol = get_site_collection(oqparam)
     num_sites = len(oqparam.sites)
