@@ -1,0 +1,92 @@
+The following sections describe the set of demos that have been compiled to
+demonstrate some of the features and usage of the risk calculators of the
+\glsdesc{acr:oqe}. These demos can be found in a public repository on GitHub at
+the following link:
+\href{https://github.com/gem/oq-engine/tree/master/demos/risk}
+{https://github.com/gem/oq-engine/tree/master/demos/risk}.
+Furthermore, a folder containing all of these
+demonstrative examples is provided when an OATS (OpenQuake Alpha Testing
+Service) account is requested, and it is also part of the \gls{acr:oqe}
+virtual image package.
+
+These examples are purely demonstrative and are not intended to represent
+accurately the seismicity, vulnerability or exposure characteristics of the
+region of interest, but simply to provide example input files that can be used
+as a starting point for users planning to employ the \glsdesc{acr:oqe} in seismic
+risk and loss estimation studies.
+
+It is also noted that in the demonstrative examples presented in this section,
+illustrations about the various messages from the engine displayed in the
+command line interface are presented. These messages often contain information
+about the calculation id and output id, which will certainly be different for
+each user.
+
+Following is the list of demos which illustrate how to use the \gls{acr:oqe} for
+various scenario-based and probabilistic seismic risk analyses:
+
+\begin{itemize}
+
+    \item ClassicalBCR
+	\item ClassicalDamage
+    \item ClassicalRisk
+    \item EventBasedRisk
+    \item ScenarioDamage
+    \item ScenarioRisk
+
+\end{itemize}
+
+These six demos use Nepal as the region of interest. An example
+\gls{exposuremodel} has been developed for this region, comprising 9,144
+assets distributed amongst 2,221 locations (due to the existence of more than
+one \gls{asset} at the same location). A map with the distribution of the
+number of buildings throughout Nepal is presented in Figure~\ref{fig:exposure-nepal}.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=12cm,height=8cm]{figures/risk/exposure-nepal.pdf}
+\caption{Distribution of number of buildings in Nepal}
+\label{fig:exposure-nepal}
+\end{figure}
+
+The building portfolio was organised into four classes for the rural areas
+(adobe, dressed stone, unreinforced fired brick, wooden frames), and five
+classes for the urban areas (the aforementioned typologies, in addition to
+reinforced concrete buildings). For each one of these building typologies,
+\glspl{vulnerabilityfunction} and \glspl{fragilityfunction} were collected
+from the published literature available for the region. These input models are
+only for demonstrative purposes and for further information about the building
+characteristics of Nepal, users are advised to contact the National Society
+for Earthquake Technology of Nepal (NSET -
+\href{http://www.nset.org.np/}{http:www.nset.org.np/}).
+
+The following sections include instructions not only on how to run the risk
+calculations, but also on how to produce the necessary hazard inputs. Thus,
+each demo comprises the configuration file, \gls{exposuremodel} and fragility or
+vulnerability models fundamental for the risk calculations. Each demo folder
+also a configuration file and the input models to produce the relevant hazard
+inputs.
+
+
+\section{Scenario Damage Demos}
+\label{sec:demos_scenario_damage}
+\input{oqum/risk/04_demos_scenario_damage}
+
+\section{Scenario Risk Demos}
+\label{sec:demos_scenario_risk}
+\input{oqum/risk/04_demos_scenario_risk}
+
+\section{Classical Probabilistic Seismic Damage Demos}
+\label{sec:demos_classical_damage}
+\input{oqum/risk/04_demos_classical_damage}
+
+\section{Classical Probabilistic Seismic Risk Demos}
+\label{sec:demos_classical_risk}
+\input{oqum/risk/04_demos_classical_risk}
+
+\section{Event Based Probabilistic Seismic Risk Demos}
+\label{sec:demos_event_based_risk}
+\input{oqum/risk/04_demos_event_based_risk}
+
+\section{Retrofit Benefit-Cost Ratio Demos}
+\label{sec:demos_benefit_cost}
+\input{oqum/risk/04_demos_benefit_cost}

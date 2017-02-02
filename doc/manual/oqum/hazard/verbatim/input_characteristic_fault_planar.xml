@@ -1,0 +1,21 @@
+<characteristicFaultSource id="7" name="characteristic source, multi surface"
+                           tectonicRegion="Volcanic">
+    <truncGutenbergRichterMFD aValue="-3.6" bValue="1.0" 
+                              minMag="5.2" maxMag="6.4" /> 
+    <rake>90.0</rake> 
+    <surface> 
+        <!-- Characteristic source with a collection of planar surfaces -->
+        <planarSurface strike="0.0" dip="90.0"> 
+            <topLeft lon="-1.0" lat="1.0" depth="21.0" /> 
+            <topRight lon="1.0" lat="1.0" depth="21.0" /> 
+            <bottomLeft lon="-1.0" lat="-1.0" depth="59.0" /> 
+            <bottomRight lon="1.0" lat="-1.0" depth="59.0" /> 
+        </planarSurface> 
+        <planarSurface strike="20.0" dip="45.0"> 
+             <topLeft lon="1.0" lat="1.0" depth="20.0" /> 
+             <topRight lon="3.0" lat="1.0" depth="20.0" /> 
+             <bottomLeft lon="1.0" lat="-1.0" depth="80.0" /> 
+             <bottomRight lon="3.0" lat="-1.0" depth="80.0" /> 
+         </planarSurface> 
+    </surface> 
+</characteristicFaultSource>
