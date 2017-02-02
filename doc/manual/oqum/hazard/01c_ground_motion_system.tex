@@ -1,0 +1,40 @@
+The Ground Motion System defines the models and the possible epistemic
+uncertainties related to ground motion modelling to be incorporated into the
+calculation.
+
+\subsection{The Ground Motion Logic Tree}
+\index{Input!Ground motion logic tree}
+\label{subsec:gmlt}
+
+The structure of the \gls{groundmotionlogictree} consists of a list of ground
+motion prediction equations for each tectonic region used to characterise the
+sources in the PSHA input model.
+
+The example below shows a simple \gls{groundmotionlogictree}. This logic tree
+assumes that all the sources in the PSHA input model belong to ``Active
+Shallow Crust'' and uses for calculation the \citet{chiou2008}
+\gls{acr:gmpe}.
+
+\begin{minted}[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+    <logicTree logicTreeID="lt1">
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="gmpeModel"
+                    branchSetID="bs1"
+                    applyToTectonicRegionType="Active Shallow Crust">
+
+                <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>
+                    ChiouYoungs2008
+                    </uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+    </logicTree>
+</nrml>
+\end{minted}
+%\input{oqum/hazard/verbatim/input_gmlt.tex}

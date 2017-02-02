@@ -1,0 +1,62 @@
+As previously explained, this calculator uses loss exceedance curves which are
+calculated using the Classical Probabilistic risk calculator. In order to run
+this calculator, the parameter \Verb+calculation_mode+ needs to be set to
+\Verb+classical_bcr+.
+
+Most of the job configuration parameters required for running a classical
+retrofit benefit-cost ratio calculation are the same as those described in the
+previous section for the classical probabilistic risk calculator. The
+remaining parameters specific to the classical retrofit benefit-cost ratio
+calculator are illustrated through the examples below.
+
+\paragraph{Example 1}
+
+This example illustrates a classical probabilistic retrofit benefit-cost ratio
+calculation which uses a single configuration file to first compute the hazard
+curves for the given source model and ground motion model, then calculate loss
+exceedance curves based on the hazard curves using both the original
+vulnerability model and the vulnerability model for the retrofitted
+structures, then calculate the reduction in average annual losses due to the
+retrofits, and finally calculate the benefit-cost ratio for each asset. A
+minimal job configuration file required for running a classical probabilistic
+retrofit benefit-cost ratio calculation is shown in
+Listing~\ref{lst:config_classical_bcr_combined}.
+
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray,label=job.ini]{ini}{oqum/risk/verbatim/config_classical_bcr_combined.ini}
+  \caption{Example configuration file for a classical probabilistic retrofit benefit-cost ratio calculation (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/config_classical_bcr_combined.ini}{Download example})}
+  \label{lst:config_classical_bcr_combined}
+\end{listing}
+
+The new parameters introduced in the above example configuration file are
+described below:
+
+\begin{itemize}
+
+  \item \Verb+vulnerability_retrofitted_file+: this parameter is used to
+    specify the path to the \gls{vulnerabilitymodel} file containing the
+    \glspl{vulnerabilityfunction} for the retrofitted asset
+
+  \item \Verb+interest_rate+: this parameter is used in the calculation of the
+    present value of potential future benefits by discounting future cash flows
+
+  \item \Verb+asset_life_expectancy+: this variable defines the life
+    expectancy or design life of the assets, and is used as the time-frame in
+    which the costs and benefits of the retrofit will be compared
+
+\end{itemize}
+
+The above calculation can be run using the command line:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --run job.ini
+\end{minted}
+
+After the calculation is completed, a message similar to the following will be
+displayed:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+Calculation 2776 completed in 25 seconds. Results:
+  id | name
+5422 | Benefit-cost ratio distribution | BCR Map. type=structural, hazard=5420
+\end{minted}

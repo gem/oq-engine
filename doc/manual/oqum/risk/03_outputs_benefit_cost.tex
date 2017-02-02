@@ -1,0 +1,31 @@
+\subsection{Retrofitting benefit/cost ratio maps}
+
+Ratio maps from the Retrofitting Benefit/Cost Ratio calculator require loss
+exceedance curves, which can be calculated using the Classical Probabilistic Risk
+calculator. For this reason, the parameters \Verb+sourceModelTreePath+ and
+\Verb+gsimTreePath+ are also included in this NRML schema, so the whole
+calculation process can be traced back. The results for each \gls{asset} are
+stored as depicted in Listing~\ref{lst:output_bcr_map}.
+
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{xml}{oqum/risk/verbatim/output_bcr_map.xml}
+  \caption{Example retrofitting benefit-cost ratio map}
+  \label{lst:output_bcr_map}
+\end{listing}
+
+
+\begin{itemize}
+  \item \Verb+interestRate+: this parameter represents the interest rate used
+    in the time-value of money calculations
+
+  \item \Verb+assetLifeExpectancy+: this parameter specifies the life expectancy
+    (or design life) of the \glspl{asset} considered for the calculations
+
+  \item \Verb+node+: this schema follows the same \Verb+node+ structure already
+    presented for the loss maps, however, instead of losses for each
+    \gls{asset}, the benefit/cost ratio (\Verb+ratio+), the average annual loss
+    considering the original vulnerability (\Verb+aalOrig+) and the average
+    annual loss for the retrofitted (\Verb+aalRetr+) configuration of the
+    \glspl{asset} are provided.
+
+\end{itemize}
