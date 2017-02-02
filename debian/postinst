@@ -31,7 +31,7 @@ if [ "$LSB_RELEASE" != "precise" -a "$LSB_RELEASE" != "trusty" -a "$LSB_RELEASE"
     db_go
 fi
 
-if [ -f /run/rabbitmq/pid -o -f /var/lib/rabbitmq/mnesia/rabbit@$(hostname -s).pid ]; then
+(if [ -f /run/rabbitmq/pid -o -f /var/lib/rabbitmq/mnesia/rabbit@$(hostname -s).pid ]; then
     if ! rabbitmqctl list_users | grep openquake; then
         rabbitmqctl add_user openquake openquake
     fi
@@ -39,14 +39,14 @@ if [ -f /run/rabbitmq/pid -o -f /var/lib/rabbitmq/mnesia/rabbit@$(hostname -s).p
         rabbitmqctl add_vhost openquake
         rabbitmqctl set_permissions -p openquake openquake ".*" ".*" ".*"
     fi
-fi
+fi) >/dev/null || true # Do not hard fail if something went wrong
 
 USER=openquake
 
-if ! getent group $USER; then
+if ! getent group $USER >/dev/null; then
     addgroup --system $USER
 fi
-if  ! getent passwd $USER; then
+if  ! getent passwd $USER >/dev/null; then
     adduser --system --home /var/lib/$USER --group --shell /bin/bash $USER
 fi
 
