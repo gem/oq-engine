@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <lossMap
+    gsimTreePath="b11_b21"
+    investigationTime="50.0"
+    lossType="structural"
+    poE="0.10"
+    unit="USD"
+    >
+        <node>
+            <gml:Point>
+                <gml:pos>
+                    -122.57 38.113
+                </gml:pos>
+            </gml:Point>
+            <loss assetRef="a3" value="256.854"/>
+            <loss assetRef="a2" value="646.431"/>
+        </node>
+        ...
+        <node>
+            <gml:Point>
+                <gml:pos>
+                    -122.0 38.225
+                </gml:pos>
+            </gml:Point>
+            <loss assetRef="a6" value="790.869"/>
+        </node>
+        <node>
+            <gml:Point>
+                <gml:pos>
+                    -121.886 38.113
+                </gml:pos>
+            </gml:Point>
+            <loss assetRef="a7" value="1269.7"/>
+        </node>
+    </lossMap>
+</nrml>

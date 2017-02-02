@@ -1,0 +1,61 @@
+In this section we describe the structure of the configuration file to be used
+to complete a seismic hazard disaggregation. Since only a few parts of the
+standard configuration file need to be changed we can use the description
+given in Section~\ref{subsec:config_classical_psha} at
+page~\pageref{subsec:config_classical_psha} as a reference and we emphasize
+herein major differences.
+
+
+\begin{minted}[firstline=1,linenos=true,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
+[general]
+description = A demo .ini file for PSHA disaggregation
+calculation_mode = disaggregation
+random_seed = 1024
+\end{minted}
+
+The calculation mode parameter in this case is set as
+\texttt{disaggregation}.
+
+
+
+\textbf{Geometry of the area (or the sites) where hazard is computed}
+
+\begin{minted}[firstline=1,linenos=true,firstnumber=5,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
+[geometry]
+sites = 11.0 44.5
+\end{minted}
+
+In the section it is necessary to specify the geographic coordinates of
+the site (or sites) where the disaggregation will be performed.
+
+
+
+\textbf{Disaggregation parameters}
+
+\begin{minted}[firstline=1,linenos=true,firstnumber=7,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
+[disaggregation]
+poes_disagg = 0.02, 0.1
+mag_bin_width = 1.0
+distance_bin_width = 25.0
+coordinate_bin_width = 1.5
+num_epsilon_bins = 3
+\end{minted}
+
+With the disaggregation settings shown above we'll disaggregate the intensity
+measure levels with 10\% and 2\% probability of exceedance using the
+\texttt{in\-ves\-ti\-gation\_time} and the intensity measure types  defined in
+the ``Calculation configuration'' section of the OpenQuake configuration file
+(see page~\pageref{sec:calculation_configuration}).
+
+The parameters \texttt{mag\_bin\_width},  \texttt{distance\_bin\_width},
+\texttt{coordinate\_bin\_width} control the level of discretization of the
+disaggregation matrix computed. \texttt{num\_epsilon\_bins} indicates the
+number of bins used to represent the contributions provided by different
+values of epsilon.
+
+If the user is interested in a specific type of disaggregation, we suggest to
+use a very coarse gridding for the parameters that are  not necessary. For
+example, if the user is interested in a magnitude-distance  disaggregation, we
+suggest the use of very large value for the
+\texttt{coordinate\_\-bin\_\-width} and to set  \texttt{num\_epsilon\_bins}
+equal to 1.
