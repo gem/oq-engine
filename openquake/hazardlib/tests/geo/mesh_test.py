@@ -467,6 +467,13 @@ class RectangularMeshGetMiddlePointTestCase(unittest.TestCase):
         mesh = RectangularMesh(lons, lats, depths)
         self.assertEqual(mesh.get_middle_point(), Point(0, 0, 10))
 
+    def test_odd_rows_odd_columns_with_topo(self):
+        lons = numpy.array([numpy.arange(-1, 1.2, 0.2)] * 11)
+        lats = lons.transpose()
+        depths = lats - 1
+        mesh = RectangularMesh(lons, lats, depths)
+        self.assertEqual(mesh.get_middle_point(), Point(0, 0, -1))
+
     def test_odd_rows_even_columns_no_depths(self):
         lons = numpy.array([[10, 20, 30, 40]])
         lats = numpy.array([[30] * 4])
@@ -479,6 +486,13 @@ class RectangularMeshGetMiddlePointTestCase(unittest.TestCase):
         depths = numpy.array([[2, 7, 8, 10]])
         mesh = RectangularMesh(lons, lats, depths=depths)
         self.assertEqual(mesh.get_middle_point(), Point(25, 30.094679, 7.5))
+
+    def test_odd_rows_even_columns_with_topo(self):
+        lons = numpy.array([[0, 20, 30, 90]])
+        lats = numpy.array([[30] * 4])
+        depths = numpy.array([[2, 1, -3, -5]])
+        mesh = RectangularMesh(lons, lats, depths=depths)
+        self.assertEqual(mesh.get_middle_point(), Point(25, 30.094679, -1))
 
     def test_even_rows_odd_columns_no_depths(self):
         lons = numpy.array([[-1, 0, 1, 2, 3], [-1.5, 0.5, 1.5, 2.5, 3.5]])
@@ -493,6 +507,13 @@ class RectangularMeshGetMiddlePointTestCase(unittest.TestCase):
         mesh = RectangularMesh(lons, lats, depths=depths)
         self.assertEqual(mesh.get_middle_point(), Point(20.5, 0, 11.2))
 
+    def test_even_rows_odd_columns_with_topo(self):
+        lons = numpy.array([[20], [21]])
+        lats = numpy.array([[-1], [1]])
+        depths = numpy.array([[-1.1], [-1.3]])
+        mesh = RectangularMesh(lons, lats, depths=depths)
+        self.assertEqual(mesh.get_middle_point(), Point(20.5, 0, -1.2))
+
     def test_even_rows_even_columns_no_depths(self):
         lons = numpy.array([[10, 20], [10.002, 20.002]])
         lats = numpy.array([[10, -10], [8, -8]])
@@ -506,6 +527,14 @@ class RectangularMeshGetMiddlePointTestCase(unittest.TestCase):
         mesh = RectangularMesh(lons, lats, depths=depths)
         self.assertEqual(mesh.get_middle_point(),
                          Point(15.996712, -0.250993, 3.5))
+
+    def test_even_rows_even_columns_with_topo(self):
+        lons = numpy.array([[10, 20], [12, 22]])
+        lats = numpy.array([[10, -10], [8, -9]])
+        depths = numpy.array([[-2, -3], [-4, -5]])
+        mesh = RectangularMesh(lons, lats, depths=depths)
+        self.assertEqual(mesh.get_middle_point(),
+                         Point(15.996712, -0.250993, -3.5))
 
 
 class RectangularMeshGetMeanInclinationAndAzimuthTestCase(unittest.TestCase):
@@ -570,6 +599,29 @@ class RectangularMeshGetMeanInclinationAndAzimuthTestCase(unittest.TestCase):
 
         row1 = [Point(90, -0.1), Point(90, 0.1)]
         row2 = [Point(90, -0.1, 1), Point(90, 0.1, 1)]
+        mesh = RectangularMesh.from_points_list([row1, row2])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertAlmostEqual(dip, 90)
+        self.assertAlmostEqual(strike, 0, delta=0.1)
+
+    def test_one_cell_topo(self):
+        top = [Point(0, -0.01, -3.00), Point(0, 0.01, -3.00)]
+        bottom = [Point(0.01, -0.01, -1.89), Point(0.01, 0.01, -1.89)]
+
+        mesh = RectangularMesh.from_points_list([top, bottom])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertAlmostEqual(dip, 45, delta=0.1)
+        self.assertAlmostEqual(strike, 0, delta=0.05)
+
+        row1 = [Point(45, -0.1, -3.00), Point(45.2, 0.1, -3.00)]
+        row2 = [Point(45, -0.1, -2.00), Point(45.2, 0.1, -2.00)]
+        mesh = RectangularMesh.from_points_list([row1, row2])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertAlmostEqual(dip, 90)
+        self.assertAlmostEqual(strike, 225, delta=0.1)
+
+        row1 = [Point(90, -0.1, -3.00), Point(90, 0.1, -3.00)]
+        row2 = [Point(90, -0.1, -2.00), Point(90, 0.1, -2.00)]
         mesh = RectangularMesh.from_points_list([row1, row2])
         dip, strike = mesh.get_mean_inclination_and_azimuth()
         self.assertAlmostEqual(dip, 90)
@@ -693,11 +745,32 @@ class RectangularMeshGetCellDimensionsTestCase(unittest.TestCase):
             areas=[0.5 + 1]
         )
 
+    def test_unequal_triangle_areas_topo(self):
+        self._test(
+            points=[[(10, 0, 0), (11, 0, 0)],
+                   [(10, 0, -1), (11, 0, -2)]],
+            centroids=[(((10 + 1/3.) * 0.5 + (10 + 2/3.) * 1) / 1.5, 0,
+                        ((-1/3.) * 0.5 + (-1) * 1) / 1.5)],
+            lengths=[(1 * 0.5 + math.sqrt(2) * 1) / (0.5 + 1)],
+            widths=[(1 * 0.5 + 2 * 1) / (0.5 + 1)],
+            areas=[0.5 + 1]
+        )
+
     def test_two_unequal_cells(self):
         self._test(
             points=[[(0, 0, 0), (0, 0, 1), (0, 0, 3)],
                     [(0, 1, 0), (0, 1, 1), (0, 1, 3)]],
             centroids=[(0, 0.5, 0.5), (0, 0.5, 2)],
+            lengths=[1, 2],
+            widths=[1, 1],
+            areas=[1, 2]
+        )
+
+    def test_two_unequal_cells_topo(self):
+        self._test(
+            points=[[(0, 0, -1), (0, 0, 0), (0, 0, 2)],
+                    [(0, 1, -1), (0, 1, 0), (0, 1, 2)]],
+            centroids=[(0, 0.5, -0.5), (0, 0.5, 1)],
             lengths=[1, 2],
             widths=[1, 1],
             areas=[1, 2]
