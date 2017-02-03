@@ -61,9 +61,8 @@ def build_etags(events):
     An array of tags for the underlying seismic events
     """
     tags = []
-    for (serial, year, ses, occ, sampleid, grp_id, source_id) in events:
-        tag = b'grp=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
-            grp_id, ses, source_id, serial, occ)
+    for (serial, year, ses, occ, sampleid, grp_id) in events:
+        tag = b'grp=%02d~ses=%04d~rup=%d-%02d' % (grp_id, ses, serial, occ)
         if sampleid > 0:
             tag += b'~sample=%d' % sampleid
         tags.append(tag)
