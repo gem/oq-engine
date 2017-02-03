@@ -22,8 +22,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import encode, decode
-from openquake.baselib.general import (
-    get_array, group_array, AccumDict)
+from openquake.baselib.general import get_array, group_array
 from openquake.hazardlib.geo.mesh import RectangularMesh, build_array
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
@@ -31,7 +30,6 @@ from openquake.hazardlib import geo, tom
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.probability_map import ProbabilityMap, get_shape
 from openquake.commonlib import readinput, oqvalidation, util
-from openquake.hazardlib import valid
 
 
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
@@ -47,10 +45,8 @@ F64 = numpy.float64
 event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
 stored_event_dt = numpy.dtype([
-    ('rupserial', U32), ('year', U32),
-    ('ses', U32), ('occ', U32),
-    ('sample', U32), ('grp_id', U16),
-    ('source_id', 'S%d' % valid.MAX_ID_LENGTH)])
+    ('rupserial', U32), ('year', U32), ('ses', U32), ('occ', U32),
+    ('sample', U32), ('grp_id', U16)])
 
 # ############## utilities for the classical calculator ############### #
 
