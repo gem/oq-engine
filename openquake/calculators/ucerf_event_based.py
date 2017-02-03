@@ -542,6 +542,18 @@ class UCERFSESControl(object):
         self.num_ruptures = 0
         self.weight = 1  # all branches have the same weight
 
+    def copy(self, grp_id, branch_name, branch_id):
+        # i.e, branch_name='ltbr0001'
+        # branch_id='FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2'
+        src = copy.copy(self)
+        src.source_id = branch_name
+        src.branch_id = branch_id
+        src.src_group_id = grp_id
+        src.build_idx_set()
+        with h5py.File(src.source_file, "r") as hdf5:
+            src.num_ruptures = len(hdf5[src.idx_set["rate_idx"]])
+        return src
+
     def get_min_max_mag(self):
         return self.min_mag, None
 
@@ -563,7 +575,7 @@ class UCERFSESControl(object):
     # this is used in the classical calculator when there is a single branch
     def get_rupture_indices(self, branch_id):
         """
-        Returns a set of rupture indices
+        Returns a range of rupture indices [0:#MeanRates]
         """
         with h5py.File(self.source_file, "r") as hdf5:
             idxs = numpy.arange(len(hdf5[self.idx_set["rate_idx"]]))
@@ -625,9 +637,9 @@ class UCERFSESControl(object):
         """
         with h5py.File(self.source_file, "r") as hdf5:
             for ridx in self.rupset_idx:
-                # Get the ucerf rupture
+                # Get the ucerf rupture rate from the MeanRates array
                 if not hdf5[self.idx_set["rate_idx"]][ridx]:
-                    # ruptures may have have zero probability
+                    # ruptures may have have zero rate
                     continue
                 rup, ridx_string = get_ucerf_rupture(
                     hdf5, ridx,
@@ -720,19 +732,6 @@ def convert_UCERFSource(self, node):
 SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
-def _copy_grp(src_group, grp_id, branch_name, branch_id):
-    src = copy.copy(src_group[0])  # there is single source
-    new = copy.copy(src_group)
-    new.id = src.src_group_id = grp_id
-    src.source_id = branch_name
-    src.branch_id = branch_id
-    src.build_idx_set()
-    with h5py.File(src.source_file, "r") as hdf5:
-        src.num_ruptures = len(hdf5[src.idx_set["rate_idx"]])
-    new.sources = [src]
-    return new
-
-
 @base.calculators.add('ucerf_rupture')
 class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
     """
@@ -755,15 +754,17 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         parser = nrml.SourceModelParser(
             SourceConverter(oq.investigation_time, oq.rupture_mesh_spacing))
         [src_group] = parser.parse_src_groups(oq.inputs["source_model"])
+        [src] = src_group
         branches = sorted(self.smlt.branches.items())
         source_models = []
         num_gsim_paths = self.gsim_lt.get_num_paths()
         for grp_id, rlz in enumerate(self.smlt):
             [name] = rlz.lt_path
-            branch = self.smlt.branches[name]
-            sg = _copy_grp(src_group, grp_id, name, branch.value)
+            sg = copy.copy(src_group)
+            sg.id = grp_id
+            sg.sources = [src.copy(grp_id, name, rlz.value)]
             sm = SourceModel(
-                name, branch.weight, [name], [sg], num_gsim_paths, grp_id, 1)
+                name, rlz.weight, [name], [sg], num_gsim_paths, grp_id, 1)
             source_models.append(sm)
         self.csm = source.CompositeSourceModel(
             self.gsim_lt, self.smlt, source_models, set_weight=False)
