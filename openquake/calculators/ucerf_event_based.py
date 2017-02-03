@@ -554,7 +554,7 @@ class UCERFSESControl(object):
         self.sites = src_filter.sitecol
         self.integration_distance = (
             src_filter.integration_distance[DEFAULT_TRT])
-        build_idx_set(self)
+        self.build_idx_set()
         with h5py.File(self.source_file, 'r') as hdf5:
             return prefilter_background_model(
                 hdf5, self.idx_set["grid_key"], self.sites,
@@ -639,27 +639,26 @@ class UCERFSESControl(object):
                 if rup:
                     yield rup
 
-
-def build_idx_set(ucerf_source):
-    """
-    Builds a dictionary of indices based on the branch code
-    """
-    code_set = ucerf_source.branch_id.split("/")
-    ucerf_source.idx_set = idx_set = {
-        "sec_idx": "/".join([code_set[0], code_set[1], "Sections"]),
-        "mag_idx": "/".join([code_set[0], code_set[1], code_set[2],
-                             "Magnitude"])}
-    code_set.insert(3, "Rates")
-    idx_set["rate_idx"] = "/".join(code_set)
-    idx_set["rake_idx"] = "/".join([code_set[0], code_set[1], "Rake"])
-    idx_set["msr_idx"] = "-".join([code_set[0], code_set[1], code_set[2]])
-    idx_set["geol_idx"] = code_set[0]
-    if hasattr(ucerf_source, 'start_date'):  # time-dependent source
-        idx_set["grid_key"] = "_".join(
-            ucerf_source.branch_id.replace("/", "_").split("_")[:-1])
-    else:  # time-independent source
-        idx_set["grid_key"] = ucerf_source.branch_id.replace("/", "_")
-    idx_set["total_key"] = ucerf_source.branch_id.replace("/", "|")
+    def build_idx_set(self):
+        """
+        Builds a dictionary of indices based on the branch code
+        """
+        code_set = self.branch_id.split("/")
+        self.idx_set = idx_set = {
+            "sec_idx": "/".join([code_set[0], code_set[1], "Sections"]),
+            "mag_idx": "/".join([code_set[0], code_set[1], code_set[2],
+                                 "Magnitude"])}
+        code_set.insert(3, "Rates")
+        idx_set["rate_idx"] = "/".join(code_set)
+        idx_set["rake_idx"] = "/".join([code_set[0], code_set[1], "Rake"])
+        idx_set["msr_idx"] = "-".join([code_set[0], code_set[1], code_set[2]])
+        idx_set["geol_idx"] = code_set[0]
+        if hasattr(self, 'start_date'):  # time-dependent source
+            idx_set["grid_key"] = "_".join(
+                self.branch_id.replace("/", "_").split("_")[:-1])
+        else:  # time-independent source
+            idx_set["grid_key"] = self.branch_id.replace("/", "_")
+        idx_set["total_key"] = self.branch_id.replace("/", "|")
 
 
 class UCERFSESControlTimeDep(UCERFSESControl):
@@ -727,7 +726,7 @@ def _copy_grp(src_group, grp_id, branch_name, branch_id):
     new.id = src.src_group_id = grp_id
     src.source_id = branch_name
     src.branch_id = branch_id
-    build_idx_set(src)
+    src.build_idx_set()
     with h5py.File(src.source_file, "r") as hdf5:
         src.num_ruptures = len(hdf5[src.idx_set["rate_idx"]])
     new.sources = [src]
