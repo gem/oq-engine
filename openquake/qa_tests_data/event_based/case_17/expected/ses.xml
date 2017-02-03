@@ -1,0 +1,368 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <stochasticEventSetCollection>
+        <stochasticEventSet
+        id="1"
+        investigationTime="1.0"
+        >
+            <rupture
+            dip="90.0"
+            id="grp=01~ses=0001~rup=44-01"
+            magnitude="5.8"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="17.2283588264" lat="-0.0357178271839" lon="0.0"/>
+                    <topRight depth="17.2283588264" lat="0.0357178271839" lon="0.0"/>
+                    <bottomLeft depth="25.1716411736" lat="-0.0357178271839" lon="0.0"/>
+                    <bottomRight depth="25.1716411736" lat="0.0357178271839" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="grp=01~ses=0001~rup=44-02"
+            magnitude="5.8"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="17.2283588264" lat="-0.0357178271839" lon="0.0"/>
+                    <topRight depth="17.2283588264" lat="0.0357178271839" lon="0.0"/>
+                    <bottomLeft depth="25.1716411736" lat="-0.0357178271839" lon="0.0"/>
+                    <bottomRight depth="25.1716411736" lat="0.0357178271839" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="grp=01~ses=0001~rup=45-01"
+            magnitude="6.05"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="16.053997364" lat="-0.0462791135464" lon="0.0"/>
+                    <topRight depth="16.053997364" lat="0.0462791135464" lon="0.0"/>
+                    <bottomLeft depth="26.346002636" lat="-0.0462791135464" lon="0.0"/>
+                    <bottomRight depth="26.346002636" lat="0.0462791135464" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="grp=01~ses=0001~rup=46-01"
+            magnitude="6.3"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="14.5323928392" lat="-0.059963231795" lon="0.0"/>
+                    <topRight depth="14.5323928392" lat="0.059963231795" lon="0.0"/>
+                    <bottomLeft depth="27.8676071608" lat="-0.059963231795" lon="0.0"/>
+                    <bottomRight depth="27.8676071608" lat="0.059963231795" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="grp=01~ses=0001~rup=46-01~sample=1"
+            magnitude="6.3"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="14.5323928392" lat="-0.059963231795" lon="0.0"/>
+                    <topRight depth="14.5323928392" lat="0.059963231795" lon="0.0"/>
+                    <bottomLeft depth="27.8676071608" lat="-0.059963231795" lon="0.0"/>
+                    <bottomRight depth="27.8676071608" lat="0.059963231795" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="grp=01~ses=0001~rup=46-02~sample=1"
+            magnitude="6.3"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="14.5323928392" lat="-0.059963231795" lon="0.0"/>
+                    <topRight depth="14.5323928392" lat="0.059963231795" lon="0.0"/>
+                    <bottomLeft depth="27.8676071608" lat="-0.059963231795" lon="0.0"/>
+                    <bottomRight depth="27.8676071608" lat="0.059963231795" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+        </stochasticEventSet>
+        <stochasticEventSet
+        id="2"
+        investigationTime="1.0"
+        >
+            <rupture
+            dip="90.0"
+            id="grp=01~ses=0002~rup=44-01"
+            magnitude="5.8"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="17.2283588264" lat="-0.0357178271839" lon="0.0"/>
+                    <topRight depth="17.2283588264" lat="0.0357178271839" lon="0.0"/>
+                    <bottomLeft depth="25.1716411736" lat="-0.0357178271839" lon="0.0"/>
+                    <bottomRight depth="25.1716411736" lat="0.0357178271839" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="grp=01~ses=0002~rup=44-01~sample=2"
+            magnitude="5.8"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="17.2283588264" lat="-0.0357178271839" lon="0.0"/>
+                    <topRight depth="17.2283588264" lat="0.0357178271839" lon="0.0"/>
+                    <bottomLeft depth="25.1716411736" lat="-0.0357178271839" lon="0.0"/>
+                    <bottomRight depth="25.1716411736" lat="0.0357178271839" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="grp=01~ses=0002~rup=44-01~sample=3"
+            magnitude="5.8"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="17.2283588264" lat="-0.0357178271839" lon="0.0"/>
+                    <topRight depth="17.2283588264" lat="0.0357178271839" lon="0.0"/>
+                    <bottomLeft depth="25.1716411736" lat="-0.0357178271839" lon="0.0"/>
+                    <bottomRight depth="25.1716411736" lat="0.0357178271839" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="grp=01~ses=0002~rup=44-02~sample=3"
+            magnitude="5.8"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="17.2283588264" lat="-0.0357178271839" lon="0.0"/>
+                    <topRight depth="17.2283588264" lat="0.0357178271839" lon="0.0"/>
+                    <bottomLeft depth="25.1716411736" lat="-0.0357178271839" lon="0.0"/>
+                    <bottomRight depth="25.1716411736" lat="0.0357178271839" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="grp=01~ses=0002~rup=45-01"
+            magnitude="6.05"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="16.053997364" lat="-0.0462791135464" lon="0.0"/>
+                    <topRight depth="16.053997364" lat="0.0462791135464" lon="0.0"/>
+                    <bottomLeft depth="26.346002636" lat="-0.0462791135464" lon="0.0"/>
+                    <bottomRight depth="26.346002636" lat="0.0462791135464" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="grp=01~ses=0002~rup=45-01~sample=1"
+            magnitude="6.05"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="16.053997364" lat="-0.0462791135464" lon="0.0"/>
+                    <topRight depth="16.053997364" lat="0.0462791135464" lon="0.0"/>
+                    <bottomLeft depth="26.346002636" lat="-0.0462791135464" lon="0.0"/>
+                    <bottomRight depth="26.346002636" lat="0.0462791135464" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="grp=01~ses=0002~rup=45-02~sample=1"
+            magnitude="6.05"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="16.053997364" lat="-0.0462791135464" lon="0.0"/>
+                    <topRight depth="16.053997364" lat="0.0462791135464" lon="0.0"/>
+                    <bottomLeft depth="26.346002636" lat="-0.0462791135464" lon="0.0"/>
+                    <bottomRight depth="26.346002636" lat="0.0462791135464" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="grp=01~ses=0002~rup=46-01~sample=3"
+            magnitude="6.3"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="14.5323928392" lat="-0.059963231795" lon="0.0"/>
+                    <topRight depth="14.5323928392" lat="0.059963231795" lon="0.0"/>
+                    <bottomLeft depth="27.8676071608" lat="-0.059963231795" lon="0.0"/>
+                    <bottomRight depth="27.8676071608" lat="0.059963231795" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+        </stochasticEventSet>
+        <stochasticEventSet
+        id="3"
+        investigationTime="1.0"
+        >
+            <rupture
+            dip="90.0"
+            id="grp=01~ses=0003~rup=44-01"
+            magnitude="5.8"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="17.2283588264" lat="-0.0357178271839" lon="0.0"/>
+                    <topRight depth="17.2283588264" lat="0.0357178271839" lon="0.0"/>
+                    <bottomLeft depth="25.1716411736" lat="-0.0357178271839" lon="0.0"/>
+                    <bottomRight depth="25.1716411736" lat="0.0357178271839" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="grp=01~ses=0003~rup=44-01~sample=2"
+            magnitude="5.8"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="17.2283588264" lat="-0.0357178271839" lon="0.0"/>
+                    <topRight depth="17.2283588264" lat="0.0357178271839" lon="0.0"/>
+                    <bottomLeft depth="25.1716411736" lat="-0.0357178271839" lon="0.0"/>
+                    <bottomRight depth="25.1716411736" lat="0.0357178271839" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="grp=01~ses=0003~rup=44-01~sample=3"
+            magnitude="5.8"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="17.2283588264" lat="-0.0357178271839" lon="0.0"/>
+                    <topRight depth="17.2283588264" lat="0.0357178271839" lon="0.0"/>
+                    <bottomLeft depth="25.1716411736" lat="-0.0357178271839" lon="0.0"/>
+                    <bottomRight depth="25.1716411736" lat="0.0357178271839" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="grp=01~ses=0003~rup=45-01~sample=1"
+            magnitude="6.05"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="16.053997364" lat="-0.0462791135464" lon="0.0"/>
+                    <topRight depth="16.053997364" lat="0.0462791135464" lon="0.0"/>
+                    <bottomLeft depth="26.346002636" lat="-0.0462791135464" lon="0.0"/>
+                    <bottomRight depth="26.346002636" lat="0.0462791135464" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="grp=01~ses=0003~rup=45-01~sample=3"
+            magnitude="6.05"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="16.053997364" lat="-0.0462791135464" lon="0.0"/>
+                    <topRight depth="16.053997364" lat="0.0462791135464" lon="0.0"/>
+                    <bottomLeft depth="26.346002636" lat="-0.0462791135464" lon="0.0"/>
+                    <bottomRight depth="26.346002636" lat="0.0462791135464" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="grp=01~ses=0003~rup=46-01"
+            magnitude="6.3"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="14.5323928392" lat="-0.059963231795" lon="0.0"/>
+                    <topRight depth="14.5323928392" lat="0.059963231795" lon="0.0"/>
+                    <bottomLeft depth="27.8676071608" lat="-0.059963231795" lon="0.0"/>
+                    <bottomRight depth="27.8676071608" lat="0.059963231795" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="grp=01~ses=0003~rup=46-01~sample=2"
+            magnitude="6.3"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="14.5323928392" lat="-0.059963231795" lon="0.0"/>
+                    <topRight depth="14.5323928392" lat="0.059963231795" lon="0.0"/>
+                    <bottomLeft depth="27.8676071608" lat="-0.059963231795" lon="0.0"/>
+                    <bottomRight depth="27.8676071608" lat="0.059963231795" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="grp=01~ses=0003~rup=46-01~sample=3"
+            magnitude="6.3"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="14.5323928392" lat="-0.059963231795" lon="0.0"/>
+                    <topRight depth="14.5323928392" lat="0.059963231795" lon="0.0"/>
+                    <bottomLeft depth="27.8676071608" lat="-0.059963231795" lon="0.0"/>
+                    <bottomRight depth="27.8676071608" lat="0.059963231795" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="grp=01~ses=0003~rup=46-02~sample=3"
+            magnitude="6.3"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="14.5323928392" lat="-0.059963231795" lon="0.0"/>
+                    <topRight depth="14.5323928392" lat="0.059963231795" lon="0.0"/>
+                    <bottomLeft depth="27.8676071608" lat="-0.059963231795" lon="0.0"/>
+                    <bottomRight depth="27.8676071608" lat="0.059963231795" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+        </stochasticEventSet>
+    </stochasticEventSetCollection>
+</nrml>
