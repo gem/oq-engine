@@ -492,8 +492,8 @@ class EBRupture(object):
         """
         tags = []
         for (eid, ses, occ, sampleid) in self.events:
-            tag = 'grp=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
-                self.grp_id, ses, self.source_id, self.serial, occ)
+            tag = 'grp=%02d~ses=%04d~rup=%d-%02d' % (
+                self.grp_id, ses, self.serial, occ)
             if sampleid > 0:
                 tag += '~sample=%d' % sampleid
             tags.append(encode(tag))
