@@ -96,8 +96,8 @@ class UCERFControl(UCERFSESControl):
         """
         with h5py.File(self.source_file, "r") as hdf5:
             idxs = np.arange(len(hdf5[self.idx_set["rate_idx"]]))
-        logging.info('Found %d ruptures in %s', len(idxs), self.source_file)
-        logging.info(branch_id)
+        logging.info('Found %d ruptures in %s:%s',
+                     len(idxs), self.source_file, branch_id)
         return idxs
 
     def filter_sites_by_distance_from_rupture_set(
@@ -473,7 +473,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
 
         if len(self.csm) > 1:
             # when multiple branches, parallelise by branch
-            branches = [br.value for br in self.smlt.branches.values()]
+            branches = [rlz.value for rlz in self.smlt]
             rup_res = parallel.Starmap(
                 ucerf_classical_hazard_by_branch,
                 self.gen_args(branches, ucerf_source, monitor)).submit_all()

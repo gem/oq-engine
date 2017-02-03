@@ -55,6 +55,16 @@ class UcerfTestCase(CalculatorTestCase):
         fname = out['hcurves', 'csv'][0]
         self.assertEqualFiles('expected/hazard_curve-td-mean.csv', fname)
 
+    @attr('qa', 'hazard', 'ucerf_td')
+    def test_classical_time_dep_sampling(self):
+        if h5py.__version__ < '2.6.0':
+            raise unittest.SkipTest  # UCERF requires vlen arrays
+        out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
+                            number_of_logic_tree_samples='2',
+                            exports='csv')
+        fname = out['hcurves', 'csv'][0]
+        self.assertEqualFiles('expected/hazard_curve-sampling.csv', fname)
+
     @attr('qa', 'risk', 'ucerf')
     def test_event_based_risk(self):
         if h5py.__version__ < '2.6.0':
