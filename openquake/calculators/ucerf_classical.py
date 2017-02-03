@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import sys
 import h5py
 import numpy as np
 import copy
@@ -287,7 +286,7 @@ def ucerf_classical_hazard_by_branch(branchname, ucerf_source, src_group_id,
     max_dist = monitor.oqparam.maximum_distance[trt]
     ucerf_source.src_group_id = src_group_id
     ucerf_source.src_filter = src_filter
-    
+
     # Two step process here - the first generates the hazard curves from
     # the rupture sets
     # Apply the initial rupture to site filtering
