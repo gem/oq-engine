@@ -557,6 +557,17 @@ class UCERFSESControl(object):
                 hdf5, self.idx_set["grid_key"], self.sites,
                 integration_distance, self.msr, self.aspect)
 
+    # this is used in the classical calculator when there is a single branch
+    def get_rupture_indices(self, branch_id):
+        """
+        Returns a set of rupture indices
+        """
+        with h5py.File(self.source_file, "r") as hdf5:
+            idxs = numpy.arange(len(hdf5[self.idx_set["rate_idx"]]))
+        logging.info('Found %d ruptures in %s:%s',
+                     len(idxs), self.source_file, branch_id)
+        return idxs
+
     def update_seed(self, seed):
         """
         Updates the random seed associated with the source
