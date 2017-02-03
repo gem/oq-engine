@@ -183,16 +183,12 @@ def get_mesh(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     if oqparam.sites:
-        lons, lats, depths = zip(*sorted(oqparam.sites))
-        return geo.Mesh(numpy.array(lons), numpy.array(lats),
-                        numpy.array(depths))
+        return geo.Mesh.from_coords(oqparam.sites)
     elif 'sites' in oqparam.inputs:
         csv_data = open(oqparam.inputs['sites'], 'U').read()
         coords = valid.coordinates(
             csv_data.strip().replace(',', ' ').replace('\n', ','))
-        lons, lats, depths = zip(*sorted(coords))
-        return geo.Mesh(numpy.array(lons), numpy.array(lats),
-                        numpy.array(depths))
+        return geo.Mesh.from_coords(coords)
     elif oqparam.region:
         # close the linear polygon ring by appending the first
         # point to the end
@@ -210,22 +206,14 @@ def get_mesh(oqparam):
         return get_gmfs(oqparam)[0].mesh
     elif oqparam.hazard_calculation_id:
         sitecol = datastore.read(oqparam.hazard_calculation_id)['sitecol']
-        return geo.Mesh(sitecol.lons, sitecol.lats)
+        return geo.Mesh(sitecol.lons, sitecol.lats, sitecol.depths)
     elif 'exposure' in oqparam.inputs:
         # the mesh is extracted from get_sitecol_assets
         return
     elif 'site_model' in oqparam.inputs:
-        coords = [(param.lon, param.lat) for param in get_site_model(oqparam)]
-        lons, lats = zip(*sorted(coords))
-        return geo.Mesh(numpy.array(lons), numpy.array(lats))
-
-
-def sitecol_from_coords(oqparam, coords):
-    """
-    Return a SiteCollection instance from an ordered set of coordinates
-    """
-    lons, lats, depths = zip(*coords)
-    return site.SiteCollection.from_points(lons, lats, depths, oqparam)
+        coords = [(param.lon, param.lat, param.depth)
+                  for param in get_site_model(oqparam)]
+        return geo.Mesh.from_coords(coords)
 
 
 def get_site_model(oqparam):
@@ -925,7 +913,8 @@ def get_gmfs_from_txt(oqparam, fname):
             raise InvalidFile(
                 'The first line of %s is expected to contain comma separated'
                 'ordered coordinates, got %s instead' % (fname, firstline))
-        sitecol = sitecol_from_coords(oqparam, coords)
+        lons, lats, depths = zip(*coords)
+        sitecol = site.SiteCollection.from_points(lons, lats, depths, oqparam)
         if not oqparam.imtls:
             oqparam.set_risk_imtls(get_risk_models(oqparam))
         imts = list(oqparam.imtls)
