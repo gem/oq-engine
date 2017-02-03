@@ -43,7 +43,7 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base, classical
 from openquake.calculators.ucerf_event_based import (
-    UCERFSESControl, DEFAULT_TRT, NPD, HDD, build_idx_set)
+    UCERFSESControl, DEFAULT_TRT, NPD, HDD)
 # FIXME: the counting of effective ruptures has to be revised completely
 
 
@@ -350,7 +350,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             src.src_group_id = sg.id = sm.ordinal
             src.nsites = len(self.sitecol)
             src.branch_id = sm.name
-            build_idx_set(src)
+            src.build_idx_set()
             source_models.append(sm)
         self.csm = source.CompositeSourceModel(
             self.gsim_lt, self.smlt, source_models, set_weight=False)
