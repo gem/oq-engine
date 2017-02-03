@@ -383,7 +383,10 @@ class IterResult(object):
                 result = fut.result()
             else:
                 result = fut
-            if hasattr(result, 'unpickle'):
+            if isinstance(result, BaseException):
+                # this happens for instance with WorkerLostError with celery
+                raise result
+            elif hasattr(result, 'unpickle'):
                 self.received.append(len(result))
                 val, etype, mon = result.unpickle()
             else:
