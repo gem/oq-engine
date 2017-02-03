@@ -45,7 +45,7 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base, classical
 from openquake.calculators.ucerf_event_based import (
-    UCERFSESControl, get_ucerf_rupture, DEFAULT_TRT, NPD, HDD,)
+    UCERFSESControl, get_ucerf_rupture, DEFAULT_TRT, NPD, HDD, build_idx_set)
 # FIXME: the counting of effective ruptures has to be revised completely
 
 
@@ -152,28 +152,6 @@ class UCERFControlTimeDep(UCERFControl):
             upper_seismogenic_depth, lower_seismogenic_depth,
             msr, mesh_spacing, trt, integration_distance=1000)
         self.start_date = start_date
-
-    def build_idx_set(self):
-        """
-        Builds a dictionary of indices based on the branch code
-
-        :param str branch_code:
-            Code for the branch
-        """
-        code_set = self.branch_id.split("/")
-        idx_set = {
-            "sec_idx": "/".join([code_set[0], code_set[1], "Sections"]),
-            "mag_idx": "/".join([code_set[0], code_set[1], code_set[2],
-                                 "Magnitude"])}
-        code_set.insert(3, "Rates")
-        idx_set["rate_idx"] = "/".join(code_set)
-        idx_set["rake_idx"] = "/".join([code_set[0], code_set[1], "Rake"])
-        idx_set["msr_idx"] = "-".join([code_set[0], code_set[1], code_set[2]])
-        idx_set["geol_idx"] = code_set[0]
-        idx_set["grid_key"] = "_".join(
-            self.branch_id.replace("/", "_").split("_")[:-1])
-        idx_set["total_key"] = self.branch_id.replace("/", "|")
-        return idx_set
 
 
 def ucerf_poe_map(hdf5, ucerf_source, rupset_idx, s_sites, imtls, cmaker,
@@ -435,7 +413,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             src.src_group_id = sg.id = sm.ordinal
             src.nsites = len(self.sitecol)
             src.branch_id = sm.name
-            src.idx_set = src.build_idx_set()
+            build_idx_set(src)
             source_models.append(sm)
         self.csm = source.CompositeSourceModel(
             self.gsim_lt, self.smlt, source_models, set_weight=False)
