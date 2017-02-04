@@ -451,7 +451,6 @@ class HazardCalculator(BaseCalculator):
         """
         To be overridden to initialize the datasets needed by the calculation
         """
-        self.random_seed = None
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
         if self.precalc:
