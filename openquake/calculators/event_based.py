@@ -344,8 +344,9 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
     gmfcoll = {}  # rlz -> gmfa
     for rlz in rlzs:
         gmfcoll[rlz] = []
-        for sid, gmvdict in zip(getter.sids, getter(rlz)):
+        for i, gmvdict in enumerate(getter(rlz)):
             if gmvdict:
+                sid = getter.sids[i]
                 for imti, imt in enumerate(getter.imts):
                     if oq.hazard_curves_from_gmfs:
                         try:
