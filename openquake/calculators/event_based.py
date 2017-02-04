@@ -92,7 +92,9 @@ def compute_ruptures(sources, src_filter, gsims, monitor):
     res = AccumDict({grp_id: eb_ruptures})
     res.num_events = num_events
     res.calc_times = calc_times
-    res.rup_data = {grp_id: calc.RuptureData(trt, gsims).to_array(eb_ruptures)}
+    if gsims:  # we can pass an empty gsims list to disable saving of rup_data
+        res.rup_data = {
+            grp_id: calc.RuptureData(trt, gsims).to_array(eb_ruptures)}
     return res
 
 
@@ -306,19 +308,12 @@ def set_random_years(dstore, events_sm, investigation_time):
 
 # ######################## GMF calculator ############################ #
 
-gmv_dt = numpy.dtype([('sid', U32), ('eid', U32), ('imti', U8), ('gmv', F32)])
-
-
 def compute_gmfs_and_curves(getter, rlzs, monitor):
     """
-    :param eb_ruptures:
-        a list of blocks of EBRuptures of the same SESCollection
-    :param sitecol:
-        a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param imts:
-        a list of intensity measure type strings
-    :param rlzs_by_gsim:
-        a dictionary gsim -> associated realizations
+    :param getter:
+        a GmfGetter instance
+    :param rlzs:
+        realizations for the current source group
     :param monitor:
         a Monitor instance
     :returns:
@@ -345,7 +340,7 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
                         gmfcoll[rlz].append(
                             (sid, rec['eid'], imti, rec['gmv']))
     for rlz in gmfcoll:
-        gmfcoll[rlz] = numpy.array(gmfcoll[rlz], gmv_dt)
+        gmfcoll[rlz] = numpy.array(gmfcoll[rlz], calc.gmv_dt)
     result = dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
                   hcurves={})
     if oq.hazard_curves_from_gmfs:
