@@ -25,6 +25,7 @@ import collections
 
 import numpy
 
+from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, split_in_blocks
 from openquake.hazardlib.probability_map import ProbabilityMap, PmapStats
 from openquake.hazardlib.calc.filters import \
