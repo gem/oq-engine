@@ -177,7 +177,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
         minimum_intensity dictionary.
         """
         oq = self.oqparam
-        self.random_seed = oq.random_seed
         self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
         self.min_iml = calc.fix_minimum_intensity(
             oq.minimum_intensity, oq.imtls)

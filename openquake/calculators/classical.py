@@ -43,18 +43,18 @@ F64 = numpy.float64
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-def split_filter_source(src, sites, src_filter, random_seed):
+def split_filter_source(src, sites, src_filter):
     """
     :param src: an heavy source
     :param sites: sites affected by the source
     :param src_filter: a SourceFilter instance
-    :random_seed: used only for event based calculations
     :returns: a list of split sources
     """
     split_sources = []
     start = 0
+    has_serial = hasattr(src, 'serial')
     for split in sourceconverter.split_source(src):
-        if random_seed:
+        if has_serial:
             nr = split.num_ruptures
             split.serial = src.serial[start:start + nr]
             start += nr
@@ -356,8 +356,7 @@ class PSHACalculator(base.HazardCalculator):
                 for src in heavy:
                     sites = self.src_filter.affected(src)
                     self.infos[sg.id, src.source_id] = source.SourceInfo(src)
-                    sources = split_filter_source(
-                        src, sites, self.src_filter, self.random_seed)
+                    sources = split_filter_source(src, sites, self.src_filter)
                     if len(sources) > 1:
                         logging.info(
                             'Splitting %s "%s" in %d sources',
