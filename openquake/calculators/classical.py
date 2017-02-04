@@ -26,7 +26,7 @@ import numpy
 from openquake.baselib import parallel
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import AccumDict, block_splitter
-from openquake.hazardlib import sourceconverter
+from openquake.hazardlib.sourceconverter import split_filter_source
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -41,26 +41,6 @@ F32 = numpy.float32
 F64 = numpy.float64
 
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
-
-
-def split_filter_source(src, sites, src_filter):
-    """
-    :param src: an heavy source
-    :param sites: sites affected by the source
-    :param src_filter: a SourceFilter instance
-    :returns: a list of split sources
-    """
-    split_sources = []
-    start = 0
-    has_serial = hasattr(src, 'serial')
-    for split in sourceconverter.split_source(src):
-        if has_serial:
-            nr = split.num_ruptures
-            split.serial = src.serial[start:start + nr]
-            start += nr
-        if src_filter.affected(split) is not None:
-            split_sources.append(split)
-    return split_sources
 
 
 class BBdict(AccumDict):
@@ -354,9 +334,8 @@ class PSHACalculator(base.HazardCalculator):
                 continue
             with self.monitor('split/filter heavy sources', autoflush=True):
                 for src in heavy:
-                    sites = self.src_filter.affected(src)
                     self.infos[sg.id, src.source_id] = source.SourceInfo(src)
-                    sources = split_filter_source(src, sites, self.src_filter)
+                    sources = split_filter_source(src, self.src_filter)
                     if len(sources) > 1:
                         logging.info(
                             'Splitting %s "%s" in %d sources',
