@@ -339,9 +339,9 @@ class EbriskCalculator(base.RiskCalculator):
     # TODO: if the number of source models is larger than concurrent_tasks
     # a different strategy should be used; the one used here is good when
     # there are few source models, so that we cannot parallelize on those
-    def build_starmap(self, sm_id, ruptures_by_grp, sitecol,
-                      assetcol, riskmodel, imts, trunc_level, correl_model,
-                      min_iml, monitor):
+    def start_tasks(self, sm_id, ruptures_by_grp, sitecol,
+                    assetcol, riskmodel, imts, trunc_level, correl_model,
+                    min_iml, monitor):
         """
         :param sm_id: source model ordinal
         :param ruptures_by_grp: dictionary of ruptures by src_group_id
@@ -353,7 +353,7 @@ class EbriskCalculator(base.RiskCalculator):
         :param correl_model: correlation model
         :param min_iml: vector of minimum intensities, one per IMT
         :param monitor: a Monitor instance
-        :returns: a pair (Starmap, dictionary of attributes)
+        :returns: an IterResult instance
         """
         csm_info = self.csm_info.get_info(sm_id)
         grp_ids = sorted(csm_info.get_sm_by_grp())
@@ -388,13 +388,13 @@ class EbriskCalculator(base.RiskCalculator):
 
         self.vals = self.assetcol.values()
         taskname = '%s#%d' % (event_based_risk.__name__, sm_id + 1)
-        smap = Starmap(event_based_risk, allargs, name=taskname)
-        attrs = dict(num_ruptures={
-            sg_id: len(rupts) for sg_id, rupts in ruptures_by_grp.items()},
-                     num_events=num_events,
-                     num_rlzs=len(rlzs_assoc.realizations),
-                     sm_id=sm_id)
-        return smap, attrs
+        ires = Starmap(event_based_risk, allargs, name=taskname).submit_all()
+        ires.num_ruptures = {
+            sg_id: len(rupts) for sg_id, rupts in ruptures_by_grp.items()}
+        ires.num_events = num_events
+        ires.num_rlzs = len(rlzs_assoc.realizations)
+        ires.sm_id = sm_id
+        return ires
 
     def gen_args(self, ruptures_by_grp):
         """
@@ -447,14 +447,12 @@ class EbriskCalculator(base.RiskCalculator):
         source_models = self.csm.info.source_models
         self.sm_by_grp = self.csm.info.get_sm_by_grp()
         for i, args in enumerate(self.gen_args(ruptures_by_grp)):
-            smap, attrs = self.build_starmap(*args)
-            res = smap.submit_all()
-            vars(res).update(attrs)
-            allres.append(res)
-            res.rlz_slice = slice(num_rlzs, num_rlzs + res.num_rlzs)
-            num_rlzs += res.num_rlzs
+            ires = self.start_tasks(*args)
+            allres.append(ires)
+            ires.rlz_slice = slice(num_rlzs, num_rlzs + ires.num_rlzs)
+            num_rlzs += ires.num_rlzs
             for sg in source_models[i].src_groups:
-                sg.eff_ruptures = res.num_ruptures.get(sg.id, 0)
+                sg.eff_ruptures = ires.num_ruptures.get(sg.id, 0)
         self.datastore['csm_info'] = self.csm.info
         self.datastore.flush()  # when killing the computation
         # the csm_info arrays were stored but not the attributes;
