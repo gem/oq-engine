@@ -164,13 +164,6 @@ class EventBasedTestCase(CalculatorTestCase):
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
-    def test_case_3(self):  # 1 site, 1 rupture, 2 GSIMs
-        out = self.run_calc(case_3.__file__, 'job.ini', exports='txt')
-        [f1, f2] = out['gmf_data', 'txt']
-        self.assertEqualFiles('expected/gmf-rlz-000.txt', f1)
-        self.assertEqualFiles('expected/gmf-rlz-001.txt', f2)
-
-    @attr('qa', 'hazard', 'event_based')
     def test_case_2bis(self):  # oversampling
         out = self.run_calc(case_2.__file__, 'job_2.ini',
                             exports='txt,csv,xml')
@@ -189,6 +182,13 @@ class EventBasedTestCase(CalculatorTestCase):
             'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv', ltr[0])
         self.assertEqualFiles(
             'expected/hc-smltp_b1-gsimltp_b1-ltr_1.csv', ltr[1])
+
+    @attr('qa', 'hazard', 'event_based')
+    def test_case_3(self):  # 1 site, 1 rupture, 2 GSIMs
+        out = self.run_calc(case_3.__file__, 'job.ini', exports='txt')
+        [f1, f2] = out['gmf_data', 'txt']
+        self.assertEqualFiles('expected/gmf-rlz-000.txt', f1)
+        self.assertEqualFiles('expected/gmf-rlz-001.txt', f2)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4(self):

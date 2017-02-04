@@ -253,7 +253,9 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """
         Save the SES collection
         """
-        num_events = sum_dict(result)
+        num_events = result if isinstance(result, int) else sum(
+            sum(ebr.multiplicity for ebr in ruptures)
+            for ruptures in result.values())
         if num_events == 0:
             raise RuntimeError(
                 'No seismic events! Perhaps the investigation time is too '
@@ -296,26 +298,6 @@ def set_random_years(dstore, events_sm, investigation_time):
         idx = event['ses'] - 1  # starts from 0
         event['year'] = idx * investigation_time + year_of[tuple(event)]
     dstore[events_sm] = events
-
-
-def sum_dict(dic):
-    """
-    Sum by key a dictionary of lists or numbers:
-
-    >>> sum_dict({'a': 1})
-    1
-    >>> sum_dict({'a': [None, None]})
-    2
-    """
-    if isinstance(dic, int):
-        return dic
-    s = 0
-    for k, v in dic.items():
-        if hasattr(v, '__len__'):
-            s += len(v)
-        else:
-            s += v
-    return s
 
 
 # ######################## GMF calculator ############################ #
