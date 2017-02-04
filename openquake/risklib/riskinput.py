@@ -467,6 +467,9 @@ class PoeGetter(object):
             yield {imt: haz[imt][rlz] for imt in haz}
 
 
+gmv_dt = numpy.dtype([('sid', U32), ('eid', U32), ('imti', U8), ('gmv', F32)])
+
+
 class GmfGetter(object):
     """
     Callable yielding dictionaries {imt: array(gmv, eid)} when called
@@ -518,6 +521,17 @@ class GmfGetter(object):
                 dic[imt] = arr = numpy.array(dic[imt], self.dt)
                 self.gmfbytes += arr.nbytes
             yield dic
+
+    def get(self, rlz):
+        """:returns: array of dtype gmv_dt"""
+        gmfcoll = []
+        for i, gmvdict in enumerate(self(rlz)):
+            if gmvdict:
+                sid = self.sids[i]
+                for imti, imt in enumerate(self.imts):
+                    for rec in gmvdict.get(imt, []):
+                        gmfcoll.append((sid, rec['eid'], imti, rec['gmv']))
+        return numpy.array(gmfcoll, gmv_dt)
 
 
 class RiskInput(object):
