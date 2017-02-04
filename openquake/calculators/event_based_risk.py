@@ -18,7 +18,7 @@
 from __future__ import division
 import logging
 import operator
-
+import collections
 import numpy
 
 from openquake.baselib.python3compat import zip
@@ -461,7 +461,7 @@ class EbriskCalculator(base.RiskCalculator):
         # adding the .flush() solved the issue
         num_events = self.save_results(allres, num_rlzs)
         self.save_data_transfer(parallel.IterResult.sum(allres))
-        return num_events
+        return num_events  # {sm_id: #events}
 
     def save_results(self, allres, num_rlzs):
         """
@@ -486,7 +486,7 @@ class EbriskCalculator(base.RiskCalculator):
                 for l in range(self.L):
                     dset[:, r, l] = zero
 
-        num_events = 0
+        num_events = collections.Counter()
         self.gmfbytes = 0
         for res in allres:
             start, stop = res.rlz_slice.start, res.rlz_slice.stop
@@ -501,8 +501,8 @@ class EbriskCalculator(base.RiskCalculator):
                 res.sm_id + 1, start, stop)
             if hasattr(res, 'ruptures_by_grp'):
                 save_events(self, res.ruptures_by_grp)
-            num_events += res.num_events
-        self.datastore['events'].attrs['num_events'] = num_events
+            num_events[res.sm_id] += res.num_events
+        self.datastore['events'].attrs['num_events'] = sum(num_events.values())
         return num_events
 
     def save_avg_losses(self, dset, dic, start):
@@ -545,7 +545,7 @@ class EbriskCalculator(base.RiskCalculator):
         logging.info('Generated %s of GMFs', humansize(self.gmfbytes))
         self.datastore.save('job_info', {'gmfbytes': self.gmfbytes})
 
-        A, E = len(self.assetcol), num_events
+        A, E = len(self.assetcol), sum(num_events.values())
         if 'all_loss_ratios' in self.datastore:
             for rlzname in self.datastore['all_loss_ratios']:
                 self.datastore.set_nbytes('all_loss_ratios/' + rlzname)

@@ -155,6 +155,12 @@ def build_eb_ruptures(
                 src.source_id, src.src_group_id, serial)
 
 
+def _count(ruptures):
+    if isinstance(ruptures, int):  # passed the number of ruptures
+        return ruptures
+    return sum(ebr.multiplicity for ebr in ruptures)
+
+
 @base.calculators.add('event_based_rupture')
 class EventBasedRuptureCalculator(PSHACalculator):
     """
@@ -253,9 +259,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """
         Save the SES collection
         """
-        num_events = result if isinstance(result, int) else sum(
-            sum(ebr.multiplicity for ebr in ruptures)
-            for ruptures in result.values())
+        num_events = sum(_count(ruptures) for ruptures in result.values())
         if num_events == 0:
             raise RuntimeError(
                 'No seismic events! Perhaps the investigation time is too '
