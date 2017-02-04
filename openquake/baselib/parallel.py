@@ -438,7 +438,7 @@ class IterResult(object):
         return res
 
 
-class Operation(object):
+class Computer(object):
     """
     Abstract Base Class. Subclasses must override the methods `__call__`
     and `gen_args`, and may override `aggregate`. They may also override

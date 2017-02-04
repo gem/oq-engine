@@ -38,10 +38,9 @@ def get_len(data, monitor):
     return result
 
 
-class SumPairs(parallel.Operation):
+class SumPairs(parallel.Computer):
     # generate pairs from a sequence of indices
-    def gen_args(self, idxs):
-        monitor = performance.Monitor(self.__name__)
+    def gen_args(self, idxs, monitor):
         for pair in general.block_splitter(idxs, 2):
             yield pair, monitor
 
@@ -104,5 +103,6 @@ class StarmapTestCase(unittest.TestCase):
                 self.assertGreater(len(res.received), 0)
 
     def test_operation(self):
-        res = parallel.Starmap.run(SumPairs(), (range(5),))
+        monitor = performance.Monitor('SumPairs')
+        res = parallel.Starmap.run(SumPairs(), (range(5), monitor))
         self.assertEqual(res, {1: 1, 2: 5, 3: 4})
