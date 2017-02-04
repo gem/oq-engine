@@ -137,6 +137,7 @@ fast sources.
 from __future__ import print_function
 import os
 import sys
+import abc
 import time
 import signal
 import socket
@@ -437,6 +438,30 @@ class IterResult(object):
         return res
 
 
+class Operation(object):
+    """
+    Abstract Base Class. Subclasses must override the methods `__call__`
+    and `gen_args`, and may override `aggregate`. They may also override
+    `__init__`: in that case they must set the `__name__` attribute.
+    """
+    def __init__(self):
+        self.__name__ = self.__class__.__name__
+
+    @abc.abstractmethod
+    def __call__(self, *args):
+        """Return a result, typically a dictionary"""
+        return {}
+
+    @abc.abstractmethod
+    def gen_args(self, *args):
+        """Yield tuples of arguments"""
+        yield ()
+
+    def aggregate(self, acc, val):
+        """Aggregate values; the default operation is the sum"""
+        return acc + val
+
+
 class Starmap(object):
     """
     A manager to submit several tasks of the same type.
@@ -451,6 +476,11 @@ class Starmap(object):
     """
     executor = executor
     task_ids = []
+
+    @classmethod
+    def run(cls, operation, args, acc=None):
+        return cls(operation, operation.gen_args(*args)).reduce(
+            operation.aggregate, acc)
 
     @classmethod
     def restart(cls):
@@ -494,8 +524,10 @@ class Starmap(object):
         self.results = []
         self.sent = AccumDict()
         self.distribute = oq_distribute(oqtask)
+        # a task can be a function, a class or an instance with a __call__
         f = oqtask.__init__ if inspect.isclass(oqtask) else oqtask
-        self.argnames = inspect.getargspec(f).args
+        self.argnames = (inspect.getargspec(f).args if inspect.isfunction(f)
+                         else inspect.getargspec(oqtask.__call__).args[1:])
         if self.distribute == 'ipython' and isinstance(
                 self.executor, ProcessPoolExecutor):
             client = ipp.Client()
