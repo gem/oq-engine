@@ -25,7 +25,7 @@ from openquake.server.settings import DATABASE
 from openquake.server import executor
 from openquake.server.db import actions
 from openquake.server.dbapi import Db
-from openquake.engine import logs
+from openquake.commonlib import logs
 
 db = Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
         detect_types=sqlite3.PARSE_DECLTYPES, timeout=20)

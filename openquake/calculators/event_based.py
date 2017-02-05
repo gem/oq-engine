@@ -31,10 +31,9 @@ from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str
 from openquake.baselib import parallel
-from openquake.commonlib import calc, util, datastore
+from openquake.commonlib import calc, util, datastore, logs
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
-from openquake.engine import logs
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -89,7 +88,7 @@ def compute_ruptures(sources, src_filter, gsims, monitor):
             num_events += ebr.multiplicity
         dt = time.time() - t0
         calc_times.append((src.id, dt))
-    eids = logs.dbcmd('get_seq_ids', monitor.calc_id, num_events)
+    eids = logs.get_seq_ids(num_events)
     start = 0
     for ebr in eb_ruptures:
         m = ebr.multiplicity

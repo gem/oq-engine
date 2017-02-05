@@ -21,8 +21,8 @@ import sys
 import getpass
 import logging
 from openquake.baselib import sap
-from openquake.commonlib import datastore, config
-from openquake.engine import engine as eng, logs
+from openquake.commonlib import datastore, config, logs
+from openquake.engine import engine as eng
 from openquake.engine.export import core
 from openquake.engine.utils import confirm
 from openquake.engine.tools.make_html_report import make_report
