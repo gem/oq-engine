@@ -61,7 +61,7 @@ def build_etags(events):
     An array of tags for the underlying seismic events
     """
     tags = []
-    for (serial, year, ses, occ, sampleid, grp_id, source_id) in events:
+    for (eid, serial, year, ses, occ, sampleid, grp_id, source_id) in events:
         tag = b'grp=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
             grp_id, ses, source_id, serial, occ)
         if sampleid > 0:
@@ -659,7 +659,8 @@ def export_gmf(ekey, dstore):
             events = dstore['events']
             if key not in events:  # source model producing zero ruptures
                 continue
-            etags = build_etags(events[key])
+            sm_events = events[key]
+            etags = dict(zip(sm_events['eid'], build_etags(sm_events)))
         for rlz in rlzs:
             try:
                 gmf_arr = gmf_data['%s/%04d' % (key, rlz.ordinal)].value
