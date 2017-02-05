@@ -156,6 +156,7 @@ from openquake.baselib.general import (
     block_splitter, split_in_blocks, AccumDict, humansize)
 
 executor = ProcessPoolExecutor()
+executor.pids = ()  # set by wakup_pool
 # the num_tasks_hint is chosen to be 5 times bigger than the name of
 # cores; it is a heuristic number to get a good distribution;
 # it has no more significance than that
@@ -479,6 +480,8 @@ class Starmap(object):
 
     @classmethod
     def run(cls, operation, args, acc=None):
+        if not executor.pids:
+            wakeup_pool()
         return cls(operation, operation.gen_args(*args)).reduce(
             operation.aggregate, acc)
 
@@ -715,7 +718,7 @@ def wakeup_pool():
     """
     if oq_distribute() == 'futures':  # when using the ProcessPoolExecutor
         pids = Starmap(_wakeup, ((.2,) for _ in range(executor._max_workers)))
-        return list(pids)
+        executor.pids = list(pids)
 
 
 class BaseStarmap(object):
