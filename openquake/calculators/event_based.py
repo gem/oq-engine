@@ -34,6 +34,7 @@ from openquake.baselib import parallel
 from openquake.commonlib import calc, util, datastore
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
+from openquake.engine import logs
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -88,6 +89,12 @@ def compute_ruptures(sources, src_filter, gsims, monitor):
             num_events += ebr.multiplicity
         dt = time.time() - t0
         calc_times.append((src.id, dt))
+    eids = logs.dbcmd('get_seq_ids', monitor.calc_id, num_events)
+    start = 0
+    for ebr in eb_ruptures:
+        m = ebr.multiplicity
+        ebr.events['eid'] = eids[start: start + m]
+        start += m
     res = AccumDict({grp_id: eb_ruptures})
     res.num_events = num_events
     res.calc_times = calc_times
@@ -128,7 +135,6 @@ def build_eb_ruptures(
     Filter the ruptures stored in the dictionary num_occ_by_rup and
     yield pairs (rupture, <list of associated EBRuptures>)
     """
-    eid = 0
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
         with rup_mon:
             r_sites = rupture_filter(rup)
@@ -144,9 +150,8 @@ def build_eb_ruptures(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
                 # NB: the eid below is a placeholder; the right eid will be
-                # set later, in EventBasedRuptureCalculator.post_execute
-                events.append((eid, ses_idx, occ_no, sampleid))
-                eid += 1
+                # set a but later, in compute_ruptures
+                events.append((0, ses_idx, occ_no, sampleid))
         if events:
             yield calc.EBRupture(
                 rup, r_sites.indices,
@@ -192,7 +197,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
         zd = AccumDict()
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()
-        self.eid = collections.Counter()  # sm_id -> event_id
+        #self.eid = collections.Counter()  # sm_id -> event_id
         self.sm_by_grp = self.csm.info.get_sm_by_grp()
         self.grp_trt = self.csm.info.grp_trt()
         return zd
@@ -218,12 +223,12 @@ class EventBasedRuptureCalculator(PSHACalculator):
         with self.monitor('saving ruptures', autoflush=True):
             for grp_id, ebrs in ruptures_by_grp_id.items():
                 events = []
-                i = 0
                 sm_id = self.sm_by_grp[grp_id]
                 for ebr in ebrs:
                     for event in ebr.events:
-                        event['eid'] = self.eid[sm_id]
-                        rec = (ebr.serial,
+                        # event['eid'] = self.eid[sm_id]
+                        rec = (event['eid'],
+                               ebr.serial,
                                0,  # year to be set
                                event['ses'],
                                event['occ'],
@@ -231,8 +236,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
                                grp_id,
                                ebr.source_id)
                         events.append(rec)
-                        self.eid[sm_id] += 1
-                        i += 1
+                        #self.eid[sm_id] += 1
                     if self.oqparam.save_ruptures:
                         key = 'ruptures/grp-%02d/%s' % (grp_id, ebr.serial)
                         self.datastore[key] = ebr
