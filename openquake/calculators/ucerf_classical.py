@@ -442,7 +442,6 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
         self.rup_data = {}
         self.num_tiles = 1
-        self.infos = {}
 
     def gen_args(self, branches, ucerf_source, monitor):
         """
@@ -450,7 +449,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         """
         for grp_id, branch in enumerate(branches):
             gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
-            self.infos[grp_id, ucerf_source.source_id] = source.SourceInfo(
+            self.csm.infos[grp_id, ucerf_source.source_id] = source.SourceInfo(
                 ucerf_source)
             yield branch, ucerf_source, grp_id, self.src_filter, gsims, monitor
 
@@ -485,7 +484,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             ucerf_source.src_group_id = 0
             ucerf_source.weight = 1
             ucerf_source.nsites = len(self.sitecol)
-            self.infos[0, ucerf_source.source_id] = source.SourceInfo(
+            self.csm.infos[0, ucerf_source.source_id] = source.SourceInfo(
                 ucerf_source)
             logging.info('Getting the background point sources')
             with self.monitor('getting background sources', autoflush=True):
@@ -517,7 +516,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
 
         pmap_by_grp_id = functools.reduce(self.agg_dicts, rup_res, acc)
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(self.infos)
+            self.store_source_info(self.csm.infos)
             self.save_data_transfer(rup_res)
         self.datastore['csm_info'] = self.csm.info
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
