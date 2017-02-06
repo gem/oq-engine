@@ -308,10 +308,11 @@ def calc(request, id=None):
 @require_http_methods(['POST'])
 def calc_remove(request, calc_id):
     """
-    Remove the calculation id by setting the field oq_job.relevant to False.
+    Remove the calculation id
     """
+    user = utils.get_user_data(request)['name']
     try:
-        logs.dbcmd('set_relevant', calc_id, False)
+        logs.dbcmd('del_calc', calc_id, user)
     except dbapi.NotFound:
         return HttpResponseNotFound()
     return HttpResponse(content=json.dumps([]),
