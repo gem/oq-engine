@@ -185,6 +185,6 @@ def get_seq_ids(num_ids):
     :returns: an array of length `num_ids` and dtype `numpy.uint32`
     """
     if os.environ.get('OQ_DISTRIBUTE') == 'celery':
-        return dbcmd(_get_seq_ids, num_ids)
+        return dbcmd('get_seq_ids', num_ids)
     else:
         return _get_seq_ids(num_ids)
