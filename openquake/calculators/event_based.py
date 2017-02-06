@@ -196,7 +196,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
         zd = AccumDict()
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()
-        #self.eid = collections.Counter()  # sm_id -> event_id
         self.sm_by_grp = self.csm.info.get_sm_by_grp()
         self.grp_trt = self.csm.info.grp_trt()
         return zd
@@ -225,7 +224,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
                 sm_id = self.sm_by_grp[grp_id]
                 for ebr in ebrs:
                     for event in ebr.events:
-                        # event['eid'] = self.eid[sm_id]
                         rec = (event['eid'],
                                ebr.serial,
                                0,  # year to be set
@@ -234,7 +232,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
                                event['sample'],
                                grp_id)
                         events.append(rec)
-                        #self.eid[sm_id] += 1
                     if self.oqparam.save_ruptures:
                         key = 'ruptures/grp-%02d/%s' % (grp_id, ebr.serial)
                         self.datastore[key] = ebr

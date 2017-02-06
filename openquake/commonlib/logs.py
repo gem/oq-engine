@@ -180,6 +180,10 @@ def _get_seq_ids(num_ids):
 
 
 def get_seq_ids(num_ids):
+    """
+    :param num_ids: the number of sequential IDs to return
+    :returns: an array of length `num_ids` and dtype `numpy.uint32`
+    """
     if os.environ.get('OQ_DISTRIBUTE') == 'celery':
         return dbcmd(_get_seq_ids, num_ids)
     else:
