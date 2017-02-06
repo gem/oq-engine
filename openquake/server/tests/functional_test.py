@@ -175,6 +175,7 @@ class EngineServerTestCase(unittest.TestCase):
         hmaps_id = results[1]['id']
         resp = requests.head('http://%s/v1/calc/result/%s?export_type=csv' %
                              (self.hostport, hmaps_id))
+        # remove output ID digits from the filename
         contentdisp = re.sub(r'\d', '', resp.headers['Content-Disposition'])
         self.assertEqual(
             contentdisp, 'attachment; filename=output--hmaps-csv.zip')
