@@ -1,4 +1,4 @@
-asset_ref,taxonomy,lon,lat,business_interruption,contents,nonstructural,occupants:float32,structural,business_interruption_ins,contents_ins,nonstructural_ins,occupants_ins:float32,structural_ins
+asset_ref,taxonomy,lon,lat,business_interruption,contents,nonstructural,occupants,structural,business_interruption_ins,contents_ins,nonstructural_ins,occupants_ins:float32,structural_ins
 a3,"tax1",-122.57000,38.11300,3.86752E+02,1.95971E+03,2.93957E+03,7.73503E-03,0.00000E+00,1.24688E+01,1.24688E+01,1.24688E+01,0.00000E+00,0.00000E+00
 a2,"tax2",-122.11400,38.11300,3.34729E+03,1.49975E+04,2.15593E+04,6.69458E-02,7.29200E+03,2.62500E+01,2.62500E+01,2.62500E+01,0.00000E+00,2.01250E+01
 a5,"tax1",-122.00000,37.91000,7.17506E+02,3.83664E+03,5.75496E+03,1.43501E-02,0.00000E+00,2.01250E+01,2.01250E+01,2.01250E+01,0.00000E+00,0.00000E+00
