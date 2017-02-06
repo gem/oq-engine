@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed the UCERF classical calculator in the case of sampling
   * Reduced the size of the event tags in the event based calculators, thus
     saving GB of disk space in UCERF calculations
   * Fixed the name of the files downloaded by the Web UI: they must not
