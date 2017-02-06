@@ -18,7 +18,6 @@
 
 import os
 import re
-import shelve
 import getpass
 import collections
 import numpy
@@ -464,21 +463,3 @@ def persistent_attribute(key):
         setattr(self.datastore, privatekey, value)
 
     return property(getter, setter)
-
-
-# ######################### get sequential ids ########################### #
-
-shelvefile = os.path.join(DATADIR, '_events.shelve')
-
-
-def get_seq_ids(calc_id, num_ids):
-    """
-    :param calc_id: a calculation ID
-    :param num_ids: the number of indices to get
-    :returns: a numpy.uint32 array of sequential indices
-    """
-    calc_id = str(calc_id)
-    with shelve.open(shelvefile) as sh:
-        start = sh.get(calc_id, 0)
-        sh[calc_id] = stop = start + num_ids
-    return numpy.arange(start, stop, dtype=numpy.uint32)
