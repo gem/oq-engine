@@ -551,11 +551,22 @@ class UCERFSESControl(object):
         """
         self.sites = sites
         self.integration_distance = integration_distance
-        self.idx_set = self.build_idx_set()
+        build_idx_set(self)
         with h5py.File(self.source_file, 'r') as hdf5:
             return prefilter_background_model(
                 hdf5, self.idx_set["grid_key"], self.sites,
                 integration_distance, self.msr, self.aspect)
+
+    # this is used in the classical calculator when there is a single branch
+    def get_rupture_indices(self, branch_id):
+        """
+        Returns a set of rupture indices
+        """
+        with h5py.File(self.source_file, "r") as hdf5:
+            idxs = numpy.arange(len(hdf5[self.idx_set["rate_idx"]]))
+        logging.info('Found %d ruptures in %s:%s',
+                     len(idxs), self.source_file, branch_id)
+        return idxs
 
     def update_seed(self, seed):
         """
@@ -606,30 +617,32 @@ class UCERFSESControl(object):
             rupture_occ.extend(background_n_occ)
         return ruptures, rupture_occ
 
-    def build_idx_set(self):
-        """
-        Builds a dictionary of indices based on the branch code
 
-        :param str branch_code:
-            Code for the branch
-        """
-        code_set = self.branch_id.split("/")
-        idx_set = {
-            "sec_idx": "/".join([code_set[0], code_set[1], "Sections"]),
-            "mag_idx": "/".join([code_set[0], code_set[1], code_set[2],
-                                 "Magnitude"])}
-        code_set.insert(3, "Rates")
-        idx_set["rate_idx"] = "/".join(code_set)
-        idx_set["rake_idx"] = "/".join([code_set[0], code_set[1], "Rake"])
-        idx_set["msr_idx"] = "-".join([code_set[0], code_set[1], code_set[2]])
-        idx_set["geol_idx"] = code_set[0]
-        idx_set["grid_key"] = self.branch_id.replace("/", "_")
-        idx_set["total_key"] = self.branch_id.replace("/", "|")
-        return idx_set
+def build_idx_set(ucerf_source):
+    """
+    Builds a dictionary of indices based on the branch code
+    """
+    code_set = ucerf_source.branch_id.split("/")
+    ucerf_source.idx_set = idx_set = {
+        "sec_idx": "/".join([code_set[0], code_set[1], "Sections"]),
+        "mag_idx": "/".join([code_set[0], code_set[1], code_set[2],
+                             "Magnitude"])}
+    code_set.insert(3, "Rates")
+    idx_set["rate_idx"] = "/".join(code_set)
+    idx_set["rake_idx"] = "/".join([code_set[0], code_set[1], "Rake"])
+    idx_set["msr_idx"] = "-".join([code_set[0], code_set[1], code_set[2]])
+    idx_set["geol_idx"] = code_set[0]
+    if hasattr(ucerf_source, 'start_date'):  # time-dependent source
+        idx_set["grid_key"] = "_".join(
+            ucerf_source.branch_id.replace("/", "_").split("_")[:-1])
+    else:  # time-independent source
+        idx_set["grid_key"] = ucerf_source.branch_id.replace("/", "_")
+    idx_set["total_key"] = ucerf_source.branch_id.replace("/", "|")
 
 
 class UCERFSESControlTimeDep(UCERFSESControl):
     """
+    Time dependent UCERF source-like object
     """
 
     def __init__(self, source_file, id, investigation_time, start_date,
@@ -645,28 +658,6 @@ class UCERFSESControlTimeDep(UCERFSESControl):
             upper_seismogenic_depth, lower_seismogenic_depth,
             msr, mesh_spacing, trt, integration_distance=1000)
         self.start_date = start_date
-
-    def build_idx_set(self):
-        """
-        Builds a dictionary of indices based on the branch code
-
-        :param str branch_code:
-            Code for the branch
-        """
-        code_set = self.branch_id.split("/")
-        idx_set = {
-            "sec_idx": "/".join([code_set[0], code_set[1], "Sections"]),
-            "mag_idx": "/".join([code_set[0], code_set[1], code_set[2],
-                                 "Magnitude"])}
-        code_set.insert(3, "Rates")
-        idx_set["rate_idx"] = "/".join(code_set)
-        idx_set["rake_idx"] = "/".join([code_set[0], code_set[1], "Rake"])
-        idx_set["msr_idx"] = "-".join([code_set[0], code_set[1], code_set[2]])
-        idx_set["geol_idx"] = code_set[0]
-        idx_set["grid_key"] = "_".join(
-            self.branch_id.replace("/", "_").split("_")[:-1])
-        idx_set["total_key"] = self.branch_id.replace("/", "|")
-        return idx_set
 
 # #################################################################### #
 
@@ -714,9 +705,9 @@ def _copy_grp(src_group, grp_id, branch_name, branch_id):
     new.id = src.src_group_id = grp_id
     src.source_id = branch_name
     src.branch_id = branch_id
-    idx_set = src.build_idx_set()
+    build_idx_set(src)
     with h5py.File(src.source_file, "r") as hdf5:
-        src.num_ruptures = len(hdf5[idx_set["rate_idx"]])
+        src.num_ruptures = len(hdf5[src.idx_set["rate_idx"]])
     new.sources = [src]
     return new
 
@@ -856,7 +847,8 @@ class List(list):
 def compute_losses(ssm, sitecol, assetcol, riskmodel,
                    imts, trunc_level, correl_model, min_iml, monitor):
     """
-    Compute the losses for a single source model.
+    Compute the losses for a single source model. Returns the ruptures
+    as an attribute `.ruptures_by_grp` of the list of losses.
 
     :param ssm: CompositeSourceModel containing a single source model
     :param sitecol: a SiteCollection instance
@@ -884,8 +876,6 @@ def compute_losses(ssm, sitecol, assetcol, riskmodel,
     res.num_events = len(ri.eids)
     start = res.sm_id * num_rlzs
     res.rlz_slice = slice(start, start + num_rlzs)
-    # return back the ruptures
-    res.ruptures_by_grp[grp_id] = ebruptures
     return res
 compute_losses.shared_dir_on = config.SHARED_DIR_ON
 
