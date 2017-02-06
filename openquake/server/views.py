@@ -308,10 +308,11 @@ def calc(request, id=None):
 @require_http_methods(['POST'])
 def calc_remove(request, calc_id):
     """
-    Remove the calculation id by setting the field oq_job.relevant to False.
+    Remove the calculation id
     """
+    user = utils.get_user_data(request)['name']
     try:
-        logs.dbcmd('set_relevant', calc_id, False)
+        logs.dbcmd('del_calc', calc_id, user)
     except dbapi.NotFound:
         return HttpResponseNotFound()
     return HttpResponse(content=json.dumps([]),
@@ -537,7 +538,8 @@ def get_result(request, result_id):
         data = open(exported, 'rb').read()
         response = HttpResponse(data, content_type=content_type)
         response['Content-Length'] = len(data)
-        response['Content-Disposition'] = 'attachment; filename=%s' % fname
+        response['Content-Disposition'] = (
+            'attachment; filename=%s' % os.path.basename(fname))
         return response
     finally:
         shutil.rmtree(tmpdir)
@@ -565,7 +567,8 @@ def get_datastore(request, job_id):
     fname = job.ds_calc_dir + '.hdf5'
     response = FileResponse(
         FileWrapper(open(fname, 'rb')), content_type=HDF5)
-    response['Content-Disposition'] = 'attachment; filename=%s' % fname
+    response['Content-Disposition'] = (
+        'attachment; filename=%s' % os.path.basename(fname))
     return response
 
 
