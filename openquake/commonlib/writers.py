@@ -106,6 +106,7 @@ htranslator = HeaderTranslator(
     '(nonstructural.*):float32',
     '(business_interruption.*):float32',
     '(contents.*):float32',
+    '(occupants):float32',
     '(occupants~.+):float32',
     '(no_damage):float32',
     '(slight):float32',
