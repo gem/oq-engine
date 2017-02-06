@@ -538,7 +538,8 @@ def get_result(request, result_id):
         data = open(exported, 'rb').read()
         response = HttpResponse(data, content_type=content_type)
         response['Content-Length'] = len(data)
-        response['Content-Disposition'] = 'attachment; filename=%s' % fname
+        response['Content-Disposition'] = (
+            'attachment; filename=%s' % os.path.basename(fname))
         return response
     finally:
         shutil.rmtree(tmpdir)
@@ -566,7 +567,8 @@ def get_datastore(request, job_id):
     fname = job.ds_calc_dir + '.hdf5'
     response = FileResponse(
         FileWrapper(open(fname, 'rb')), content_type=HDF5)
-    response['Content-Disposition'] = 'attachment; filename=%s' % fname
+    response['Content-Disposition'] = (
+        'attachment; filename=%s' % os.path.basename(fname))
     return response
 
 
