@@ -18,6 +18,7 @@
 """
 Utilities to compute mean and quantile curves
 """
+from __future__ import division
 import numpy
 
 
@@ -34,13 +35,10 @@ def mean_curve(values, weights=None):
 
 def quantile_curve(curves, quantile, weights=None):
     """
-    Compute the weighted quantile aggregate of a set of curves
-    when using the logic tree end-branch enumeration approach, or just the
-    standard quantile when using the sampling approach.
+    Compute the weighted quantile aggregate of a set of curves.
 
     :param curves:
-        2D array-like of curve PoEs. Each row represents the PoEs for a single
-        curve
+        Array of R PoEs (possibly arrays)
     :param quantile:
         Quantile value to calculate. Should be in the range [0.0, 1.0].
     :param weights:
@@ -48,30 +46,24 @@ def quantile_curve(curves, quantile, weights=None):
     :returns:
         A numpy array representing the quantile aggregate
     """
+    if not isinstance(curves, numpy.ndarray):
+        curves = numpy.array(curves)
     R = len(curves)
-    assert R, 'Passed no curves!'
     if weights is None:
         weights = numpy.ones(R) / R
     else:
-        # Each curve needs to be associated with a weight
-        assert len(weights) == R
         weights = numpy.array(weights)
-
-    result_curve = []
-    np_curves = numpy.array(curves).reshape(len(curves), -1)
-    np_weights = numpy.array(weights)
-    for poes in np_curves.transpose():
-        sorted_poe_idxs = numpy.argsort(poes)
-        sorted_weights = np_weights[sorted_poe_idxs]
-        sorted_poes = poes[sorted_poe_idxs]
+        assert len(weights) == R, (len(weights), R)
+    result = numpy.zeros(curves.shape[1:])
+    for idx, _ in numpy.ndenumerate(result):
+        data = numpy.array([a[idx] for a in curves])
+        sorted_idxs = numpy.argsort(data)
+        sorted_weights = weights[sorted_idxs]
+        sorted_data = data[sorted_idxs]
         cum_weights = numpy.cumsum(sorted_weights)
-        result_curve.append(numpy.interp(quantile, cum_weights, sorted_poes))
-
-    shape = getattr(curves[0], 'shape', None)
-    if shape:  # passed a sequence of arrays
-        return numpy.array(result_curve).reshape(shape)
-    else:  # passed a sequence of numbers
-        return result_curve
+        # get the quantile from the interpolated CDF
+        result[idx] = numpy.interp(quantile, cum_weights, sorted_data)
+    return result
 
 
 # NB: this is a function linear in the array argument
@@ -88,16 +80,8 @@ def compute_stats(array, quantiles, weights):
     """
     result = numpy.zeros((len(quantiles) + 1,) + array.shape[1:], array.dtype)
     result[0] = mean_curve(array, weights)
-    shp = result[0].shape
     for i, q in enumerate(quantiles, 1):
-        qc = quantile_curve(array, q, weights)
-        # TODO: try to simplify the ugliness below
-        if isinstance(qc, list) and len(qc) == 1:
-            result[i] = qc[0]
-        elif qc.shape != shp:
-            result[i] = qc.reshape(shp)
-        else:
-            result[i] = qc
+        result[i] = quantile_curve(array, q, weights)
     return result
 
 
