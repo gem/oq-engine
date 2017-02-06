@@ -847,7 +847,8 @@ class List(list):
 def compute_losses(ssm, sitecol, assetcol, riskmodel,
                    imts, trunc_level, correl_model, min_iml, monitor):
     """
-    Compute the losses for a single source model and returns the ruptures.
+    Compute the losses for a single source model. Returns the ruptures
+    as an attribute `.ruptures_by_grp` of the list of losses.
 
     :param ssm: CompositeSourceModel containing a single source model
     :param sitecol: a SiteCollection instance
