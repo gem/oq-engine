@@ -201,10 +201,7 @@ def _hazard_curves_per_rupture_subset(
     pmap = ProbabilityMap(len(imtls.array), len(cmaker.gsims))
     pmap.calc_times = []
     pmap.grp_id = ucerf_source.src_group_id
-    try:
-        nsites = len(sites)
-    except:
-        import pdb; pdb.set_trace()
+    nsites = len(sites)
     ucerf_source.rupset_idx = rupset_idx
     ucerf_source.num_ruptures = len(rupset_idx)
     pmap.eff_ruptures = {pmap.grp_id: ucerf_source.num_ruptures}
