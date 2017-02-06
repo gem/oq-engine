@@ -108,6 +108,7 @@ htranslator = HeaderTranslator(
     '(contents.*):float32',
     '(occupants):float32',
     '(occupants~.+):float32',
+    '(occupants_ins):float32',
     '(no_damage):float32',
     '(slight):float32',
     '(moderate):float32',
