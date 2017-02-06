@@ -46,6 +46,9 @@ class UcerfTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_curve-rlz-000.csv', f1)
         self.assertEqualFiles('expected/hazard_curve-rlz-001.csv', f2)
 
+        # make sure this runs
+        view('fullreport', self.calc.datastore)
+
     @attr('qa', 'hazard', 'ucerf_td')
     def test_classical_time_dep(self):
         if h5py.__version__ < '2.6.0':
@@ -54,6 +57,19 @@ class UcerfTestCase(CalculatorTestCase):
                             exports='csv')
         fname = out['hcurves', 'csv'][0]
         self.assertEqualFiles('expected/hazard_curve-td-mean.csv', fname)
+
+        # make sure this runs
+        view('fullreport', self.calc.datastore)
+
+    @attr('qa', 'hazard', 'ucerf_td')
+    def test_classical_time_dep_sampling(self):
+        if h5py.__version__ < '2.6.0':
+            raise unittest.SkipTest  # UCERF requires vlen arrays
+        out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
+                            number_of_logic_tree_samples='2',
+                            exports='csv')
+        fname = out['hcurves', 'csv'][0]
+        self.assertEqualFiles('expected/hazard_curve-sampling.csv', fname)
 
     @attr('qa', 'risk', 'ucerf')
     def test_event_based_risk(self):
@@ -68,3 +84,6 @@ class UcerfTestCase(CalculatorTestCase):
 
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname)
+
+        # make sure this runs
+        view('fullreport', self.calc.datastore)
