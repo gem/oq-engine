@@ -31,6 +31,9 @@ from openquake.baselib.python3compat import range, round
 #: Earth radius in km.
 EARTH_RADIUS = 6371.0
 
+#: Maximum elevation on Earth in km.
+EARTH_ELEVATION = -8.848
+
 
 class GeographicObjects(object):
     """

@@ -27,6 +27,7 @@ Point = collections.namedtuple("Point",  'lon lat')
 LAX = (118 + 24 / 60., 33 + 57 / 60.)
 JFK = (73 + 47 / 60., 40 + 38 / 60.)
 
+assert_aeq = numpy.testing.assert_almost_equal
 
 class TestGeodeticDistance(unittest.TestCase):
     def test_LAX_to_JFK(self):
@@ -46,7 +47,7 @@ class TestGeodeticDistance(unittest.TestCase):
         coords = list(map(numpy.array, [(77.5, -150.), (-10., 15.),
                                    (77.5, -150.), (-20., 25.)]))
         dist = geodetic.geodetic_distance(*coords)
-        self.assertTrue(numpy.allclose(dist, [1111.949, 1111.949]), str(dist))
+        assert_aeq(dist, [1111.949, 1111.949], decimal=3)
 
     def test_one_point_on_pole(self):
         dist = geodetic.geodetic_distance(0, 90, 0, 88)
@@ -76,15 +77,14 @@ class TestGeodeticDistance(unittest.TestCase):
                              [5807.34519649, 12163.45759805]])
         dist = geodetic.geodetic_distance(lons1, lats1, lons2, lats2)
         self.assertEqual(dist.shape, edist.shape)
-        self.assertTrue(numpy.allclose(dist, edist))
+        assert_aeq(dist, edist, decimal=2)
 
     def test_one_to_many(self):
         dist = geodetic.geodetic_distance(0, 0, [-1, 1], [0, 0])
-        self.assertTrue(numpy.allclose(dist, [111.195, 111.195]), str(dist))
+        assert_aeq(dist, [111.195, 111.195], decimal=4)
         dist = geodetic.geodetic_distance(0, 0, [[-1, 0], [1, 0]],
                                                 [[0, 0], [0, 0]])
-        self.assertTrue(numpy.allclose(dist, [[111.195, 0], [111.195, 0]]),
-                        str(dist))
+        assert_aeq(dist, [[111.195, 0], [111.195, 0]], decimal=4)
 
 
 class TestAzimuth(unittest.TestCase):
@@ -107,7 +107,7 @@ class TestAzimuth(unittest.TestCase):
     def test_quadrants(self):
         az = geodetic.azimuth(0, 0, [0.01, 0.01, -0.01, -0.01],
                                     [0.01, -0.01, -0.01, 0.01])
-        self.assertTrue(numpy.allclose(az, [45, 135, 225, 315]), str(az))
+        assert_aeq(az, [45, 135, 225, 315], decimal=5)
 
     def test_arrays(self):
         lons1 = numpy.array([[156.49676849, 150.03697145],
@@ -121,13 +121,25 @@ class TestAzimuth(unittest.TestCase):
         eazimuths = numpy.array([[47.07336955, 350.11740733],
                                  [54.46959147, 92.76923701]])
         az = geodetic.azimuth(lons1, lats1, lons2, lats2)
-        self.assertTrue(numpy.allclose(az, eazimuths), str(az))
+        assert_aeq(az, eazimuths)
 
 
 class TestDistance(unittest.TestCase):
     def test(self):
         p1 = (0, 0, 10)
         p2 = (0.5, -0.3, 5)
+        distance = geodetic.distance(*(p1 + p2))
+        self.assertAlmostEqual(distance, 65.0295143)
+
+    def test_topo(self):
+        p1 = (0, 0, 1)
+        p2 = (0, 0, -1)
+        distance = geodetic.distance(*(p1 + p2))
+        self.assertAlmostEqual(distance, 2.0)
+
+    def test_topo2(self):
+        p1 = (0, 0, 3)
+        p2 = (0.5, -0.3, -2)
         distance = geodetic.distance(*(p1 + p2))
         self.assertAlmostEqual(distance, 65.0295143)
 
@@ -151,7 +163,7 @@ class MinDistanceTest(unittest.TestCase):
             expected_closest_mdepths,
             slons, slats, sdepths
         )
-        self.assertTrue((dists == expected_distances).all())
+        assert_aeq(dists, expected_distances)
 
         # testing min_geodetic_distance with the same lons and lats
         min_geo_distance = geodetic.min_geodetic_distance(mlons, mlats,
@@ -297,7 +309,7 @@ class DistanceToArcTest(unittest.TestCase):
         plats = numpy.array([20.3, 15.3])
         dists = geodetic.distance_to_arc(4.0, 17.0, -123.0, plons, plats)
         expected_dists = [347.61490787, -176.03785187]
-        self.assertTrue(numpy.allclose(dists, expected_dists))
+        assert_aeq(dists, expected_dists)
 
 
 class PointAtTest(unittest.TestCase):
@@ -332,9 +344,9 @@ class NPointsBetweenTest(unittest.TestCase):
                          42.66557829138413, 43.87856696738466,
                          45.067397797471415, 46.23]
         expected_depths = [17.5, 15.45, 13.4, 11.35, 9.3, 7.25, 5.2]
-        self.assertTrue(numpy.allclose(lons, expected_lons))
-        self.assertTrue(numpy.allclose(lats, expected_lats))
-        self.assertTrue(numpy.allclose(depths, expected_depths))
+        assert_aeq(lons, expected_lons)
+        assert_aeq(lats, expected_lats)
+        assert_aeq(depths, expected_depths)
         # the last and the first points should be exactly the same as two
         # original corner points, so no "assertAlmostEqual" for them
         self.assertEqual(lons[0], 40.77)
@@ -352,9 +364,34 @@ class NPointsBetweenTest(unittest.TestCase):
         expected_lons = [lon] * 7
         expected_lats = [lat] * 7
         expected_depths = [depth] * 7
-        self.assertTrue(numpy.allclose(lons, expected_lons))
-        self.assertTrue(numpy.allclose(lats, expected_lats))
-        self.assertTrue(numpy.allclose(depths, expected_depths))
+        assert_aeq(lons, expected_lons)
+        assert_aeq(lats, expected_lats)
+        assert_aeq(depths, expected_depths)
+
+    def test_topo(self):
+        lons, lats, depths = geodetic.npoints_between(
+            lon1=40.77, lat1=38.9, depth1=2,
+            lon2=31.14, lat2=46.23, depth2=-4,
+            npoints=7
+        )
+        expected_lons = [40.77, 39.316149154562076, 37.8070559966114,
+                         36.23892429550906, 34.60779411051164,
+                         32.90956020775102, 31.14]
+        expected_lats = [38.9, 40.174608368560094, 41.43033989236144,
+                         42.66557829138413, 43.87856696738466,
+                         45.067397797471415, 46.23]
+        expected_depths = [2, 1, 0, -1, -2, -3, -4]
+        assert_aeq(lons, expected_lons)
+        assert_aeq(lats, expected_lats)
+        assert_aeq(depths, expected_depths)
+        # the last and the first points should be exactly the same as two
+        # original corner points, so no "assertAlmostEqual" for them
+        self.assertEqual(lons[0], 40.77)
+        self.assertEqual(lats[0], 38.9)
+        self.assertEqual(depths[0], 2)
+        self.assertEqual(lons[-1], 31.14)
+        self.assertEqual(lats[-1], 46.23)
+        self.assertEqual(depths[-1], -4)
 
 
 class NPointsTowardsTest(unittest.TestCase):
@@ -369,9 +406,9 @@ class NPointsTowardsTest(unittest.TestCase):
         expected_lats = [23.6, 23.43314083, 23.26038177,
                          23.08178673, 22.8974212]
         expected_depths = [55, 45, 35, 25, 15]
-        self.assertTrue(numpy.allclose(lons, expected_lons))
-        self.assertTrue(numpy.allclose(lats, expected_lats))
-        self.assertTrue(numpy.allclose(depths, expected_depths))
+        assert_aeq(lons, expected_lons)
+        assert_aeq(lats, expected_lats)
+        assert_aeq(depths, expected_depths)
         # the first point should be exactly the same
         # as the original starting point
         self.assertEqual(lons[0], -30.5)
@@ -386,9 +423,9 @@ class NPointsTowardsTest(unittest.TestCase):
         expected_lons = [lon] * 5
         expected_lats = [lat] * 5
         expected_depths = [depth] * 5
-        self.assertTrue(numpy.allclose(lons, expected_lons))
-        self.assertTrue(numpy.allclose(lats, expected_lats))
-        self.assertTrue(numpy.allclose(depths, expected_depths))
+        assert_aeq(lons, expected_lons)
+        assert_aeq(lats, expected_lats)
+        assert_aeq(depths, expected_depths)
 
     def test_input_as_int(self):
         lons, lats, depths = geodetic.npoints_towards(
@@ -405,6 +442,25 @@ class NPointsTowardsTest(unittest.TestCase):
         self.assertEqual(lats[0], 0)
         self.assertEqual(depths[0], 0)
 
+    def test_topo(self):
+        lons, lats, depths = geodetic.npoints_towards(
+            lon=-30.5, lat=23.6, depth=2, azimuth=-100.5,
+            hdist=400, vdist=-4, npoints=5
+        )
+        expected_lons = [-30.5, -31.46375358, -32.42503446,
+                         -33.3837849, -34.33995063]
+        expected_lats = [23.6, 23.43314083, 23.26038177,
+                         23.08178673, 22.8974212]
+        expected_depths = [2, 1, 0, -1, -2]
+        assert_aeq(lons, expected_lons)
+        assert_aeq(lats, expected_lats)
+        assert_aeq(depths, expected_depths)
+        # the first point should be exactly the same
+        # as the original starting point
+        self.assertEqual(lons[0], -30.5)
+        self.assertEqual(lats[0], 23.6)
+        self.assertEqual(depths[0], 2)
+
 
 class IntervalsBetweenTest(unittest.TestCase):
     # values in this test have not been checked by hand
@@ -417,9 +473,9 @@ class IntervalsBetweenTest(unittest.TestCase):
         expected_lons = [10., 10.82836972, 11.65558943]
         expected_lats = [-4, -0.68763949, 2.62486454]
         expected_depths = [100, 83.43802828, 66.87605655]
-        self.assertTrue(numpy.allclose(lons, expected_lons))
-        self.assertTrue(numpy.allclose(lats, expected_lats))
-        self.assertTrue(numpy.allclose(depths, expected_depths))
+        assert_aeq(lons, expected_lons)
+        assert_aeq(lats, expected_lats)
+        assert_aeq(depths, expected_depths)
 
     def test_round_up(self):
         lons, lats, depths = geodetic.intervals_between(
@@ -430,9 +486,35 @@ class IntervalsBetweenTest(unittest.TestCase):
         expected_lons = [10., 10.76308634, 11.52482625, 12.28955192]
         expected_lats = [-4, -0.94915589, 2.10185625, 5.15249576]
         expected_depths = [100, 84.74555236, 69.49110472, 54.23665708]
-        self.assertTrue(numpy.allclose(lons, expected_lons))
-        self.assertTrue(numpy.allclose(lats, expected_lats))
-        self.assertTrue(numpy.allclose(depths, expected_depths))
+        assert_aeq(lons, expected_lons)
+        assert_aeq(lats, expected_lats)
+        assert_aeq(depths, expected_depths)
+
+    def test_round_down_topo(self):
+        lons, lats, depths = geodetic.intervals_between(
+            lon1=0, lat1=0, depth1=0,
+            lon2=0, lat2=0, depth2=-2.9,
+            length=2
+        )
+        expected_lons = [0, 0]
+        expected_lats = [0, 0]
+        expected_depths = [0, -2]
+        assert_aeq(lons, expected_lons)
+        assert_aeq(lats, expected_lats)
+        assert_aeq(depths, expected_depths)
+
+    def test_round_up_topo(self):
+        lons, lats, depths = geodetic.intervals_between(
+            lon1=0, lat1=0, depth1=0,
+            lon2=0, lat2=0, depth2=-3,
+            length=2
+        )
+        expected_lons = [0, 0, 0]
+        expected_lats = [0, 0, 0]
+        expected_depths = [0, -2, -4]
+        assert_aeq(lons, expected_lons)
+        assert_aeq(lats, expected_lats)
+        assert_aeq(depths, expected_depths)
 
     def test_zero_intervals(self):
         lons, lats, depths = geodetic.intervals_between(
@@ -442,9 +524,9 @@ class IntervalsBetweenTest(unittest.TestCase):
         expected_lons = [10]
         expected_lats = [1]
         expected_depths = [100]
-        self.assertTrue(numpy.allclose(lons, expected_lons))
-        self.assertTrue(numpy.allclose(lats, expected_lats))
-        self.assertTrue(numpy.allclose(depths, expected_depths))
+        assert_aeq(lons, expected_lons)
+        assert_aeq(lats, expected_lats)
+        assert_aeq(depths, expected_depths)
 
     def test_same_number_of_intervals(self):
         # these two set of points are separated by a distance of 65 km. By
@@ -466,9 +548,9 @@ class IntervalsBetweenTest(unittest.TestCase):
             length=2.0
         )
 
-        self.assertTrue(34, lons_1.shape[0])
-        self.assertTrue(34, lons_2.shape[0])
-        self.assertTrue(34, lats_1.shape[0])
-        self.assertTrue(34, lats_2.shape[0])
-        self.assertTrue(34, depths_1.shape[0])
-        self.assertTrue(34, depths_2.shape[0])
+        assert_aeq(34, lons_1.shape[0])
+        assert_aeq(34, lons_2.shape[0])
+        assert_aeq(34, lats_1.shape[0])
+        assert_aeq(34, lats_2.shape[0])
+        assert_aeq(34, depths_1.shape[0])
+        assert_aeq(34, depths_2.shape[0])
