@@ -1,11 +1,11 @@
   [Michele Simionato]
   * Fixed the UCERF classical calculator in the case of sampling
+  * Reduced the size of the event tags in the event based calculators, thus
+    saving GB of disk space in UCERF calculations
   * Fixed the name of the files downloaded by the Web UI: they must not
     contain slashes
   * Now deleting a calculation from the Web UI really deletes it, before
     if was only hiding it
-  * Reduced the size of the event tags in the event based calculators, thus
-    saving GB of disk space in UCERF calculations
 
   [Daniele Viganò]
   * Moved the OpenQuake Engine manual sources inside doc/manual
