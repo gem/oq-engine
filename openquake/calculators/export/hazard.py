@@ -802,8 +802,8 @@ class GmfExporter(object):
     def export_one(self, sm_id, eid):
         fnames = []
         imts = list(self.oq.imtls)
-        event = self.dstore['events/sm-%04d' % sm_id][eid]
-        [etag] = build_etags([event])
+        events = self.dstore['events/sm-%04d' % sm_id]
+        [etag] = build_etags(events[events['eid'] == eid])
         for rlzno in self.dstore['gmf_data/sm-%04d' % sm_id]:
             rlz = self.rlzs[int(rlzno)]
             gmfa = self.dstore['gmf_data/sm-%04d/%s' % (sm_id, rlzno)]
