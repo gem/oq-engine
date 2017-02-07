@@ -62,9 +62,9 @@ def build_etags(events):
     """
     tags = []
     for (eid, serial, year, ses, occ, sampleid, grp_id) in events:
-        tag = b'grp=%02d~ses=%04d~rup=%d-%02d' % (grp_id, ses, serial, occ)
+        tag = 'grp=%02d~ses=%04d~rup=%d-%02d' % (grp_id, ses, serial, occ)
         if sampleid > 0:
-            tag += b'~sample=%d' % sampleid
+            tag += '~sample=%d' % sampleid
         tags.append(tag)
     return numpy.array(tags)
 
