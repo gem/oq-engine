@@ -27,12 +27,11 @@ import socket
 import collections
 import h5py
 import numpy
-from datetime import datetime
 
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip
 from openquake.baselib import parallel
-from openquake.hazardlib import valid, nrml
+from openquake.hazardlib import nrml
 from openquake.risklib import riskinput
 from openquake.commonlib import readinput, source, calc, config
 from openquake.calculators import base, event_based
@@ -494,6 +493,8 @@ class UCERFSESControl(object):
         Valid branch of UCERF
     :param float investigation_time:
         Investigation time of event set (years)
+    :param start_date:
+        Starting date of the investigation (None for time independent)
     :param float min_mag:
         Minimim magnitude for consideration of background sources
     :param npd:
@@ -517,14 +518,16 @@ class UCERFSESControl(object):
     :param float integration_distance:
         Maximum distance from rupture to site for consideration
     """
-    def __init__(self, source_file, id, investigation_time, min_mag,
-                 npd=NPD, hdd=HDD, aspect=1.5, upper_seismogenic_depth=0.0,
-                 lower_seismogenic_depth=15.0, msr=WC1994(), mesh_spacing=1.0,
-                 trt="Active Shallow Crust", integration_distance=1000):
+    def __init__(
+            self, source_file, id, investigation_time, start_date, min_mag,
+            npd=NPD, hdd=HDD, aspect=1.5, upper_seismogenic_depth=0.0,
+            lower_seismogenic_depth=15.0, msr=WC1994(), mesh_spacing=1.0,
+            trt="Active Shallow Crust", integration_distance=1000):
         assert os.path.exists(source_file), source_file
         self.source_file = source_file
         self.source_id = id
         self.inv_time = investigation_time
+        self.start_date = start_date
         self.tom = self._get_tom()
         self.min_mag = min_mag
         self.npd = npd
@@ -665,71 +668,14 @@ class UCERFSESControl(object):
         idx_set["rake_idx"] = "/".join([code_set[0], code_set[1], "Rake"])
         idx_set["msr_idx"] = "-".join([code_set[0], code_set[1], code_set[2]])
         idx_set["geol_idx"] = code_set[0]
-        if hasattr(self, 'start_date'):  # time-dependent source
+        if self.start_date:  # time-dependent source
             idx_set["grid_key"] = "_".join(
                 self.branch_id.replace("/", "_").split("_")[:-1])
         else:  # time-independent source
             idx_set["grid_key"] = self.branch_id.replace("/", "_")
         idx_set["total_key"] = self.branch_id.replace("/", "|")
 
-
-class UCERFSESControlTimeDep(UCERFSESControl):
-    """
-    Time dependent UCERF source-like object
-    """
-
-    def __init__(self, source_file, id, investigation_time, start_date,
-                 min_mag, npd=NPD, hdd=HDD, aspect=1.5,
-                 upper_seismogenic_depth=0.0, lower_seismogenic_depth=15.0,
-                 msr=WC1994(), mesh_spacing=1.0, trt="Active Shallow Crust",
-                 integration_distance=1000):
-        """
-        Instantiate with new parameter 'start_date'
-        """
-        super(UCERFSESControlTimeDep, self).__init__(
-            source_file, id, investigation_time, min_mag, npd, hdd, aspect,
-            upper_seismogenic_depth, lower_seismogenic_depth,
-            msr, mesh_spacing, trt, integration_distance=1000)
-        self.start_date = start_date
-
 # #################################################################### #
-
-
-def convert_UCERFSource(self, node):
-    """
-    Converts the Ucerf Source node into an SES Control object
-    """
-    dirname = os.path.dirname(self.fname)  # where the source_model_file is
-    source_file = os.path.join(dirname, node["filename"])
-    if "startDate" in node.attrib and "investigationTime" in node.attrib:
-        # Is a time-dependent model - even if rates were originally
-        # poissonian
-        # Verify that the source time span is the same as the TOM time span
-        inv_time = float(node["investigationTime"])
-        if inv_time != self.tom.time_span:
-            raise ValueError("Source investigation time (%s) is not "
-                             "equal to configuration investigation time "
-                             "(%s)" % (inv_time, self.tom.time_span))
-        start_date = datetime.strptime(node["startDate"], "%d/%m/%Y")
-    else:
-        inv_time = self.tom.time_span
-        start_date = None
-
-    return UCERFSESControlTimeDep(
-        source_file,
-        node["id"],
-        inv_time,
-        start_date,
-        float(node["minMag"]),
-        npd=self.convert_npdist(node),
-        hdd=self.convert_hpdist(node),
-        aspect=~node.ruptAspectRatio,
-        upper_seismogenic_depth=~node.pointGeometry.upperSeismoDepth,
-        lower_seismogenic_depth=~node.pointGeometry.lowerSeismoDepth,
-        msr=valid.SCALEREL[~node.magScaleRel](),
-        mesh_spacing=self.rupture_mesh_spacing,
-        trt=node["tectonicRegion"])
-SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
 @base.calculators.add('ucerf_rupture')
