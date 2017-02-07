@@ -727,7 +727,7 @@ class RuptureConverterTestCase(unittest.TestCase):
     <simpleFaultRupture>
         <magnitude>7.65</magnitude>
         <rake>15.0</rake>
-        <hypocenter lon="0.0" lat="0.0" depth="-5.0"/>
+        <hypocenter lon="0.0" lat="91.0" depth="5.0"/>
         <simpleFaultGeometry>
                 <gml:LineString>
                     <gml:posList>
