@@ -595,7 +595,7 @@ class Starmap(object):
             nargs = ''
         if nargs == 1:
             [args] = self.task_args
-            self.progress('Executing a single task in process')
+            self.progress('Executing "%s" in process', self.name)
             fut = mkfuture(safely_call(self.task_func, args))
             return IterResult([fut], self.name)
         task_no = 0
