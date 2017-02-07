@@ -481,7 +481,7 @@ def get_traceback(request, calc_id):
 
 
 @cross_domain_ajax
-@require_http_methods(['GET'])
+@require_http_methods(['GET', 'HEAD'])
 def get_result(request, result_id):
     """
     Download a specific result, by ``result_id``.
@@ -533,7 +533,11 @@ def get_result(request, result_id):
     content_type = EXPORT_CONTENT_TYPE_MAP.get(
         export_type, DEFAULT_CONTENT_TYPE)
     try:
-        fname = 'output-%s-%s' % (result_id, os.path.basename(exported))
+        bname = os.path.basename(exported)
+        if bname.startswith('.'):
+            # the "." is added by `export_from_db`, strip it
+            bname = bname[1:]
+        fname = 'output-%s-%s' % (result_id, bname)
         # 'b' is needed when running the WebUI on Windows
         data = open(exported, 'rb').read()
         response = HttpResponse(data, content_type=content_type)
