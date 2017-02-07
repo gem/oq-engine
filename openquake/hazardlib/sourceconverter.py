@@ -30,45 +30,6 @@ from openquake.hazardlib import valid
 MAXWEIGHT = 200  # tuned by M. Simionato
 
 
-class SourceModel(object):
-    """
-    A container of SourceGroup instances with some additional attributes
-    describing the source model in the logic tree.
-    """
-    def __init__(self, name, weight, path, src_groups, num_gsim_paths, ordinal,
-                 samples):
-        self.name = name
-        self.weight = weight
-        self.path = path
-        self.src_groups = src_groups
-        self.num_gsim_paths = num_gsim_paths
-        self.ordinal = ordinal
-        self.samples = samples
-
-    @property
-    def num_sources(self):
-        return sum(len(sg) for sg in self.src_groups)
-
-    def get_skeleton(self):
-        """
-        Return an empty copy of the source model, i.e. without sources,
-        but with the proper attributes for each SourceGroup contained within.
-        """
-        src_groups = []
-        for grp in self.src_groups:
-            sg = copy.copy(grp)
-            sg.sources = []
-            src_groups.append(sg)
-        return self.__class__(self.name, self.weight, self.path, src_groups,
-                              self.num_gsim_paths, self.ordinal, self.samples)
-
-    def __repr__(self):
-        samples = ', samples=%d' % self.samples if self.samples > 1 else ''
-        return '<%s #%d %s, path=%s, weight=%s%s>' % (
-            self.__class__.__name__, self.ordinal, self.name,
-            '_'.join(self.path), self.weight, samples)
-
-
 class SourceGroup(collections.Sequence):
     """
     A container for the following parameters:
