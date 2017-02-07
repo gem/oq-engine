@@ -1,3 +1,6 @@
+  [Robin Gee, Michele Simionato]
+  * Implemented support for sites above the level of the sea
+
   [Michele Simionato]
   * Made the parallelization library more robust against unexpected exceptions
   * Used always the same algorithm for computing quantiles (before there

@@ -161,7 +161,7 @@ validators = {
     'magnitude': valid.positivefloat,
     'lon': valid.longitude,
     'lat': valid.latitude,
-    'depth': valid.positivefloat,
+    'depth': valid.float_,
     'upperSeismoDepth': valid.positivefloat,
     'lowerSeismoDepth': valid.positivefloat,
     'posList': valid.posList,
