@@ -617,15 +617,3 @@ SELECT id, description, user_name,
 FROM job WHERE status='complete' AND description LIKE lower(?x)
 ORDER BY id desc'''
     return db(query, description.lower())
-
-
-def get_seq_ids(db, num_ids):
-    """
-    :param db:
-        a :class:`openquake.server.dbapi.Db` instance (ignored)
-    :param num_ids:
-        the number of indices to get
-    :returns:
-        a numpy.uint32 array of sequential indices
-    """
-    return logs.get_seq_ids(num_ids)
