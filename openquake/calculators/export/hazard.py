@@ -50,9 +50,16 @@ savez = numpy.savez_compressed
 
 def get_mesh(sitecol, complete=True):
     sc = sitecol.complete if complete else sitecol
-    mesh = numpy.zeros(len(sc), [('lon', F64), ('lat', F64)])
-    mesh['lon'] = sc.lons
-    mesh['lat'] = sc.lats
+    if sc.at_sea_level():
+        mesh = numpy.zeros(len(sc), [('lon', F64), ('lat', F64)])
+        mesh['lon'] = sc.lons
+        mesh['lat'] = sc.lats
+    else:
+        mesh = numpy.zeros(len(sc), [('lon', F64), ('lat', F64),
+                                     ('depth', F64)])
+        mesh['lon'] = sc.lons
+        mesh['lat'] = sc.lats
+        mesh['depth'] = sc.depths
     return mesh
 
 
@@ -62,9 +69,9 @@ def build_etags(events):
     """
     tags = []
     for (serial, year, ses, occ, sampleid, grp_id) in events:
-        tag = b'grp=%02d~ses=%04d~rup=%d-%02d' % (grp_id, ses, serial, occ)
+        tag = 'grp=%02d~ses=%04d~rup=%d-%02d' % (grp_id, ses, serial, occ)
         if sampleid > 0:
-            tag += b'~sample=%d' % sampleid
+            tag += '~sample=%d' % sampleid
         tags.append(tag)
     return numpy.array(tags)
 
@@ -351,13 +358,14 @@ def export_hcurves_by_imt_csv(key, kind, rlzs_assoc, fname, sitecol, pmap, oq):
     slicedic = oq.imtls.slicedic
     for imt, imls in oq.imtls.items():
         dest = add_imt(fname, imt)
-        lst = [('lon', F32), ('lat', F32)]
+        lst = [('lon', F32), ('lat', F32), ('depth', F32)]
         for iml in imls:
             lst.append((str(iml), F32))
         hcurves = numpy.zeros(nsites, lst)
-        for sid, lon, lat in zip(range(nsites), sitecol.lons, sitecol.lats):
+        for sid, lon, lat, dep in zip(
+                range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
             poes = pmap.setdefault(sid, 0).array[slicedic[imt]]
-            hcurves[sid] = (lon, lat) + tuple(poes)
+            hcurves[sid] = (lon, lat, dep) + tuple(poes)
         fnames.append(writers.write_csv(dest, hcurves, comment=_comment(
             rlzs_assoc, kind, oq.investigation_time) + ',imt=%s' % imt))
     return fnames
@@ -489,11 +497,10 @@ def export_uhs_xml(ekey, dstore):
     return sorted(fnames)
 
 
-# emulate a Django point
 class Location(object):
-    def __init__(self, xy):
-        self.x, self.y = xy
-        self.wkt = 'POINT(%s %s)' % tuple(xy)
+    def __init__(self, xyz):
+        self.x, self.y = tuple(xyz)[:2]
+        self.wkt = 'POINT(%s %s)' % (self.x, self.y)
 
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 HazardMap = collections.namedtuple('HazardMap', 'lon lat iml')
