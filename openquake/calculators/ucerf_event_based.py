@@ -34,7 +34,7 @@ from openquake.baselib.python3compat import zip
 from openquake.baselib import parallel
 from openquake.hazardlib import valid, nrml
 from openquake.risklib import riskinput
-from openquake.commonlib import readinput, source, calc, config
+from openquake.commonlib import readinput, source, calc, config, logictree
 from openquake.calculators import base, event_based
 from openquake.calculators.event_based_risk import (
     EbriskCalculator, build_el_dtypes, event_based_risk)
@@ -53,7 +53,7 @@ from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.calc.filters import SourceFilter
 
 from openquake.commonlib.calc import MAX_INT
-from openquake.hazardlib.sourceconverter import SourceConverter, SourceModel
+from openquake.hazardlib.sourceconverter import SourceConverter
 
 
 # ######################## rupture calculator ############################ #
@@ -763,7 +763,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
             sg = copy.copy(src_group)
             sg.id = grp_id
             sg.sources = [src.copy(grp_id, name, rlz.value)]
-            sm = SourceModel(
+            sm = logictree.SourceModel(
                 name, rlz.weight, [name], [sg], num_gsim_paths, grp_id, 1)
             source_models.append(sm)
         self.csm = source.CompositeSourceModel(
