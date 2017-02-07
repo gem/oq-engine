@@ -383,7 +383,10 @@ class IterResult(object):
                 result = fut.result()
             else:
                 result = fut
-            if hasattr(result, 'unpickle'):
+            if isinstance(result, BaseException):
+                # this happens for instance with WorkerLostError with celery
+                raise result
+            elif hasattr(result, 'unpickle'):
                 self.received.append(len(result))
                 val, etype, mon = result.unpickle()
             else:
@@ -592,7 +595,7 @@ class Starmap(object):
             nargs = ''
         if nargs == 1:
             [args] = self.task_args
-            self.progress('Executing a single task in process')
+            self.progress('Executing "%s" in process', self.name)
             fut = mkfuture(safely_call(self.task_func, args))
             return IterResult([fut], self.name)
         task_no = 0
