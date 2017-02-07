@@ -285,11 +285,11 @@ def export_all_loss_ratios(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for sm_id in sm_ids:
         rlzs = rlzs_assoc.rlzs_by_smodel[sm_id]
-        try:
-            event = dstore['events/sm-%04d' % sm_id][eid]
-        except KeyError:
+        events = dstore['events/sm-%04d' % sm_id]
+        ok_events = events[events['eid'] == eid]
+        if len(ok_events) == 0:
             continue
-        [event_tag] = build_etags([event])
+        [event_tag] = build_etags(ok_events)
         for rlz in rlzs:
             exportname = 'losses-sm=%04d-eid=%d' % (sm_id, eid)
             dest = dstore.build_fname(exportname, rlz, 'csv')
@@ -301,7 +301,7 @@ def export_all_loss_ratios(ekey, dstore):
                 losses_by_aid += group_by_aid(data, loss_type)
             elt = numpy.zeros(len(losses_by_aid), elt_dt)
             elt['event_tag'] = event_tag
-            elt['year'] = event['year']
+            elt['year'] = ok_events[0]['year']
             elt['aid'] = sorted(losses_by_aid)
             for i, aid in numpy.ndenumerate(elt['aid']):
                 for loss_type in loss_types:
