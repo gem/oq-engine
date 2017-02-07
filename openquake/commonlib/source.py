@@ -272,7 +272,7 @@ class CompositionInfo(object):
         """
         weight = 1
         gsim_lt = gsimlt or logictree.GsimLogicTree.from_('FromFile')
-        fakeSM = sourceconverter.SourceModel(
+        fakeSM = logictree.SourceModel(
             'fake', weight,  'b1',
             [sourceconverter.SourceGroup('*', eff_ruptures=1)],
             gsim_lt.get_num_paths(), ordinal=0, samples=1)
@@ -342,7 +342,7 @@ class CompositionInfo(object):
             path = tuple(str(decode(rec['path'])).split('_'))
             trts = set(sg.trt for sg in srcgroups)
             num_gsim_paths = self.gsim_lt.reduce(trts).get_num_paths()
-            sm = sourceconverter.SourceModel(
+            sm = logictree.SourceModel(
                 rec['name'], rec['weight'], path, srcgroups,
                 num_gsim_paths, sm_id, rec['samples'])
             self.source_models.append(sm)
@@ -523,7 +523,7 @@ class CompositeSourceModel(collections.Sequence):
                     sources.append(src)
                     weight += src.weight
                 src_group.sources = sources
-            newsm = sourceconverter.SourceModel(
+            newsm = logictree.SourceModel(
                 sm.name, sm.weight, sm.path, src_groups,
                 sm.num_gsim_paths, sm.ordinal, sm.samples)
             source_models.append(newsm)
