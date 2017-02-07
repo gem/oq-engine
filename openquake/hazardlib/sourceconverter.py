@@ -62,6 +62,12 @@ class SourceModel(object):
         return self.__class__(self.name, self.weight, self.path, src_groups,
                               self.num_gsim_paths, self.ordinal, self.samples)
 
+    def __repr__(self):
+        samples = ', samples=%d' % self.samples if self.samples > 1 else ''
+        return '<%s #%d %s, path=%s, weight=%s%s>' % (
+            self.__class__.__name__, self.ordinal, self.name,
+            '_'.join(self.path), self.weight, samples)
+
 
 class SourceGroup(collections.Sequence):
     """
