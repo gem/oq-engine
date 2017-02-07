@@ -403,7 +403,8 @@ def point(value):
 
 def coordinates(value):
     """
-    Convert a non-empty string into a list of lon-lat coordinates
+    Convert a non-empty string into a list of lon-lat coordinates.
+
     >>> coordinates('')
     Traceback (most recent call last):
     ...
@@ -414,10 +415,19 @@ def coordinates(value):
     [(1.1, 1.2, 0.0), (2.2, 2.3, 0.0)]
     >>> coordinates('1.1 1.2 -0.4, 2.2 2.3 -0.5')
     [(1.1, 1.2, -0.4), (2.2, 2.3, -0.5)]
+
+    >>> coordinates('0 0 0, 0 0 -1')
+    Traceback (most recent call last):
+    ...
+    ValueError: There are overlapping points in 0 0 0, 0 0 -1
     """
     if not value.strip():
         raise ValueError('Empty list of coordinates: %r' % value)
-    return list(map(point, value.split(',')))
+    points = list(map(point, value.split(',')))
+    num_distinct = len(set(pnt[:2] for pnt in points))
+    if num_distinct < len(points):
+        raise ValueError("There are overlapping points in %s" % value)
+    return points
 
 
 def wkt_polygon(value):
