@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed the header `occupants:float32` in the CSV risk exports involving
+    occupants
   * Fixed the name of the zipped files downloaded by the Web UI: there
     was a spurious dot
   * Fixed the UCERF classical calculator in the case of sampling
