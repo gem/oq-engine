@@ -8,7 +8,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <site lat="37.54648" lon="34.98430" vs30="760.00" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
         <site lat="36.91276" lon="35.17898" vs30="203.00" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
         <site lat="36.97022" lon="35.42197" vs30="289.12" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
-        <site lat="37.56571" lon="38.49118" vs30="457.76" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="37.56571" lon="38.49118" depth="-1.0" vs30="457.76" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
         <site lat="38.68505" lon="30.82767" vs30="220.14" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
         <site lat="37.91932" lon="29.78324" vs30="415.22" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
         <site lat="39.57773" lon="44.03619" vs30="372.12" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
@@ -28,7 +28,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <site lat="38.95654" lon="40.57670" vs30="760.00" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
         <site lat="38.17297" lon="42.57946" vs30="594.46" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
         <site lat="37.04174" lon="29.54414" vs30="361.99" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
-        <site lat="39.74223" lon="28.84076" vs30="398.65" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="39.74223" lon="28.84076" vs30="398.65" depth="-2.0" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
         <site lat="39.58679" lon="26.37142" vs30="368.83" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
         <site lat="39.79821" lon="26.29105" vs30="427.90" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
         <site lat="40.79475" lon="34.44577" vs30="536.82" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
