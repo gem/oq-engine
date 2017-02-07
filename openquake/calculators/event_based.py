@@ -31,7 +31,7 @@ from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str
 from openquake.baselib import parallel
-from openquake.commonlib import calc, util, datastore, logs
+from openquake.commonlib import calc, util, datastore
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 
@@ -40,8 +40,25 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+TWO16 = 2 ** 16
 
 # ######################## rupture calculator ############################ #
+
+
+def get_seq_ids(task_no, num_ids):
+    """
+    Get an array of sequential indices for the given task.
+
+    :param task_no: the number of the task
+    :param num_ids: the number of indices to return
+
+    >>> list(get_seq_ids(1, 3))
+    [65536, 65537, 65538]
+    """
+    assert 0 <= task_no < TWO16, task_no
+    assert 0 <= num_ids < TWO16, num_ids
+    start = task_no * TWO16
+    return numpy.arange(start, start + num_ids, dtype=U32)
 
 
 def compute_ruptures(sources, src_filter, gsims, monitor):
@@ -88,7 +105,7 @@ def compute_ruptures(sources, src_filter, gsims, monitor):
             num_events += ebr.multiplicity
         dt = time.time() - t0
         calc_times.append((src.id, dt))
-    eids = logs.get_seq_ids(num_events)
+    eids = get_seq_ids(monitor.task_no, num_events)
     start = 0
     for ebr in eb_ruptures:
         m = ebr.multiplicity
