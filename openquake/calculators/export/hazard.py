@@ -781,12 +781,7 @@ def export_gmf_data_csv(ekey, dstore):
     else:  # event based
         exporter = GmfExporter(dstore)
         sm_id, eid = get_sm_id_eid(ekey[0])
-        if eid is None:
-            logging.info('Exporting only the first event')
-            logging.info('Use the command `oq export gmf_data:*:* %d` '
-                         'to export everything', dstore.calc_id)
-            return exporter.export_one(0, 0)
-        elif eid == '*':
+        if eid in (None, '*'):
             return exporter.export_all()
         else:
             return exporter.export_one(int(sm_id), int(eid))
@@ -803,7 +798,8 @@ class GmfExporter(object):
         fnames = []
         imts = list(self.oq.imtls)
         events = self.dstore['events/sm-%04d' % sm_id]
-        [etag] = build_etags(events[events['eid'] == eid])
+        ok_events = events[events['eid'] == eid]
+        [etag] = build_etags(ok_events)
         for rlzno in self.dstore['gmf_data/sm-%04d' % sm_id]:
             rlz = self.rlzs[int(rlzno)]
             gmfa = self.dstore['gmf_data/sm-%04d/%s' % (sm_id, rlzno)]
@@ -827,6 +823,8 @@ class GmfExporter(object):
                 rlz = self.rlzs[int(rlzno)]
                 gmf = self.dstore['gmf_data/%s/%s' % (sm_id, rlzno)].value
                 for eid, array in group_array(gmf, 'eid').items():
+                    if eid not in etag:
+                        continue
                     data, comment = _build_csv_data(
                         array, rlz, self.sitecol,
                         imts, self.oq.investigation_time)
