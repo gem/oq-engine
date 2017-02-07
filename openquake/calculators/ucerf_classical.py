@@ -138,12 +138,11 @@ def convert_UCERFSource(self, node):
                              "(%s)" % (inv_time, self.tom.time_span))
         start_date = datetime.strptime(node["startDate"], "%d/%m/%Y")
     else:
-        inv_time = self.tom.time_span
         start_date = None
     return UCERFControl(
         source_file,
         node["id"],
-        inv_time,
+        self.tom.time_span,
         start_date,
         float(node["minMag"]),
         npd=self.convert_npdist(node),
