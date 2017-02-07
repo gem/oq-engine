@@ -183,14 +183,12 @@ def get_mesh(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     if oqparam.sites:
-        lons, lats = zip(*sorted(oqparam.sites))
-        return geo.Mesh(numpy.array(lons), numpy.array(lats))
+        return geo.Mesh.from_coords(oqparam.sites)
     elif 'sites' in oqparam.inputs:
         csv_data = open(oqparam.inputs['sites'], 'U').read()
         coords = valid.coordinates(
             csv_data.strip().replace(',', ' ').replace('\n', ','))
-        lons, lats = zip(*sorted(coords))
-        return geo.Mesh(numpy.array(lons), numpy.array(lats))
+        return geo.Mesh.from_coords(coords)
     elif oqparam.region:
         # close the linear polygon ring by appending the first
         # point to the end
@@ -208,22 +206,14 @@ def get_mesh(oqparam):
         return get_gmfs(oqparam)[0].mesh
     elif oqparam.hazard_calculation_id:
         sitecol = datastore.read(oqparam.hazard_calculation_id)['sitecol']
-        return geo.Mesh(sitecol.lons, sitecol.lats)
+        return geo.Mesh(sitecol.lons, sitecol.lats, sitecol.depths)
     elif 'exposure' in oqparam.inputs:
         # the mesh is extracted from get_sitecol_assets
         return
     elif 'site_model' in oqparam.inputs:
-        coords = [(param.lon, param.lat) for param in get_site_model(oqparam)]
-        lons, lats = zip(*sorted(coords))
-        return geo.Mesh(numpy.array(lons), numpy.array(lats))
-
-
-def sitecol_from_coords(oqparam, coords):
-    """
-    Return a SiteCollection instance from an ordered set of coordinates
-    """
-    lons, lats = zip(*coords)
-    return site.SiteCollection.from_points(lons, lats, None, oqparam)
+        coords = [(param.lon, param.lat, param.depth)
+                  for param in get_site_model(oqparam)]
+        return geo.Mesh.from_coords(coords)
 
 
 def get_site_model(oqparam):
@@ -272,6 +262,7 @@ def get_site_collection(oqparam, mesh=None, site_model_params=None):
             if dist >= MAX_SITE_MODEL_DISTANCE:
                 logging.warn('The site parameter associated to %s came from a '
                              'distance of %d km!' % (pt, dist))
+            # ignoring the depths here
             sitecol.append(
                 site.Site(pt, param.vs30, param.measured,
                           param.z1pt0, param.z2pt5, param.backarc))
@@ -922,7 +913,8 @@ def get_gmfs_from_txt(oqparam, fname):
             raise InvalidFile(
                 'The first line of %s is expected to contain comma separated'
                 'ordered coordinates, got %s instead' % (fname, firstline))
-        sitecol = sitecol_from_coords(oqparam, coords)
+        lons, lats, depths = zip(*coords)
+        sitecol = site.SiteCollection.from_points(lons, lats, depths, oqparam)
         if not oqparam.imtls:
             oqparam.set_risk_imtls(get_risk_models(oqparam))
         imts = list(oqparam.imtls)
@@ -988,8 +980,9 @@ def get_scenario_from_nrml(oqparam, fname):
     imt_dt = numpy.dtype([(imt, F32) for imt in imts])
     gmfset = nrml.read(fname).gmfCollection.gmfSet
     etags, sitecounts = _extract_etags_sitecounts(gmfset)
-    oqparam.sites = sorted(sitecounts)
-    site_idx = {lonlat: i for i, lonlat in enumerate(oqparam.sites)}
+    coords = sorted(sitecounts)
+    oqparam.sites = [(lon, lat, 0) for lon, lat in coords]
+    site_idx = {lonlat: i for i, lonlat in enumerate(coords)}
     oqparam.number_of_ground_motion_fields = num_events = len(etags)
     sitecol = get_site_collection(oqparam)
     num_sites = len(oqparam.sites)
