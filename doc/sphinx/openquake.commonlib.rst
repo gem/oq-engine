@@ -42,7 +42,7 @@ openquake.commonlib.logictree module
     :show-inheritance:
 
 openquake.commonlib.logs module
-----------------------------
+-------------------------------
 
 .. automodule:: openquake.commonlib.logs
     :members:
