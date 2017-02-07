@@ -15,17 +15,18 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-
 """
 Set up some system-wide loggers
 """
 
 import os.path
 import logging
+import multiprocessing
 from datetime import datetime
 from contextlib import contextmanager
 from multiprocessing.connection import Client
+import numpy
+
 from openquake.commonlib import config
 
 LEVELS = {'debug': logging.DEBUG,
@@ -163,3 +164,27 @@ def handle(job_id, log_level='info', log_file=None):
             logging.root.warn('The log file %s is empty!?' % log_file)
         for handler in handlers:
             logging.root.removeHandler(handler)
+
+
+# #################### getting sequential indices ###################### #
+
+shared_index = multiprocessing.Value('L', 0)
+
+
+def _get_seq_ids(num_ids):
+    with shared_index.get_lock():
+        start = shared_index.value
+        stop = start + num_ids
+        shared_index.value = stop
+    return numpy.arange(start, stop, dtype=numpy.uint32)
+
+
+def get_seq_ids(num_ids):
+    """
+    :param num_ids: the number of sequential IDs to return
+    :returns: an array of length `num_ids` and dtype `numpy.uint32`
+    """
+    if os.environ.get('OQ_DISTRIBUTE') == 'celery':
+        return dbcmd('get_seq_ids', num_ids)
+    else:
+        return _get_seq_ids(num_ids)

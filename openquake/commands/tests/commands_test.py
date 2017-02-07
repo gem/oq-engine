@@ -322,7 +322,7 @@ class DbTestCase(unittest.TestCase):
     def test_db(self):
         # the some db commands bypassing the dbserver
         with Print.patch(), mock.patch(
-                'openquake.engine.logs.dbcmd', manage.dbcmd):
+                'openquake.commonlib.logs.dbcmd', manage.dbcmd):
             db('version_db')
             try:
                 db('calc_info 1')

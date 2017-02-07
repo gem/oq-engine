@@ -217,6 +217,7 @@ def export_agg_losses_ebr(ekey, dstore):
         rup_data = rup_data_dict(
             dstore, csm_info.get_grp_ids(sm_id), csm_info.grp_trt()
         ) if has_rup_data else {}
+        event_by_eid = {event['eid']: event for event in events}
         for rlz in rlzs:
             dest = dstore.build_fname('agg_losses', rlz, 'csv')
             eids = set()
@@ -227,7 +228,7 @@ def export_agg_losses_ebr(ekey, dstore):
                 dset = agg_losses['%s/%s' % (rlzname, loss_type)]
                 eids.update(dset['eid'])
             eids = sorted(eids)
-            rlz_events = events[eids]
+            rlz_events = numpy.array([event_by_eid[eid] for eid in eids])
             eid2idx = dict(zip(eids, range(len(eids))))
             elt = numpy.zeros(len(eids), elt_dt)
             elt['event_tag'] = build_etags(rlz_events)

@@ -22,7 +22,7 @@ import operator
 from datetime import datetime, timedelta
 
 from openquake.hazardlib import valid
-from openquake.commonlib import datastore
+from openquake.commonlib import datastore, logs
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
 from openquake.server.dbapi import NotFound
@@ -617,3 +617,15 @@ SELECT id, description, user_name,
 FROM job WHERE status='complete' AND description LIKE lower(?x)
 ORDER BY id desc'''
     return db(query, description.lower())
+
+
+def get_seq_ids(db, num_ids):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance (ignored)
+    :param num_ids:
+        the number of indices to get
+    :returns:
+        a numpy.uint32 array of sequential indices
+    """
+    return logs.get_seq_ids(num_ids)
