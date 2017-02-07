@@ -232,7 +232,7 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
             row = []
             for fields in all_fields:
                 val = extract_from(record, fields)
-                if fields == ['lon'] or fields == ['lat']:
+                if fields[0] in ('lon', 'lat', 'depth'):
                     row.append('%.5f' % val)
                 else:
                     row.append(scientificformat(val, fmt))
