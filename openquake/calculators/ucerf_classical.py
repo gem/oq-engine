@@ -31,7 +31,6 @@ from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.geodetic import min_geodetic_distance
 from openquake.hazardlib.source import PointSource
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
-from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.calc.hazard_curve import pmap_from_grp, poe_map
 from openquake.hazardlib.calc.filters import SourceFilter
@@ -42,7 +41,7 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base, classical
 from openquake.calculators.ucerf_event_based import (
-    UCERFSESControl, DEFAULT_TRT, NPD, HDD)
+    UCERFSESControl, DEFAULT_TRT)
 # FIXME: the counting of effective ruptures has to be revised completely
 
 
@@ -122,25 +121,6 @@ class UCERFControl(UCERFSESControl):
                 return [], []
 
 
-class UCERFControlTimeDep(UCERFControl):
-    """
-    Adaptation of the UCERF Control class for the time-dependent model
-    """
-    def __init__(self, source_file, id, investigation_time, start_date,
-                 min_mag, npd=NPD, hdd=HDD, aspect=1.5,
-                 upper_seismogenic_depth=0.0, lower_seismogenic_depth=15.0,
-                 msr=WC1994(), mesh_spacing=1.0, trt="Active Shallow Crust",
-                 integration_distance=1000):
-        """
-        Instantiate with new parameter 'start_date'
-        """
-        super(UCERFControlTimeDep, self).__init__(
-            source_file, id, investigation_time, min_mag, npd, hdd, aspect,
-            upper_seismogenic_depth, lower_seismogenic_depth,
-            msr, mesh_spacing, trt, integration_distance=1000)
-        self.start_date = start_date
-
-
 def convert_UCERFSource(self, node):
     """
     Converts the Ucerf Source node into an SES Control object
@@ -157,35 +137,23 @@ def convert_UCERFSource(self, node):
                              "equal to configuration investigation time "
                              "(%s)" % (inv_time, self.tom.time_span))
         start_date = datetime.strptime(node["startDate"], "%d/%m/%Y")
-        return UCERFControlTimeDep(
-            source_file,
-            node["id"],
-            inv_time,
-            start_date,
-            float(node["minMag"]),
-            npd=self.convert_npdist(node),
-            hdd=self.convert_hpdist(node),
-            aspect=~node.ruptAspectRatio,
-            upper_seismogenic_depth=~node.pointGeometry.upperSeismoDepth,
-            lower_seismogenic_depth=~node.pointGeometry.lowerSeismoDepth,
-            msr=valid.SCALEREL[~node.magScaleRel](),
-            mesh_spacing=self.rupture_mesh_spacing,
-            trt=node["tectonicRegion"])
     else:
-        return UCERFControl(
-            source_file,
-            node["id"],
-            self.tom.time_span,
-            float(node["minMag"]),
-            npd=self.convert_npdist(node),
-            hdd=self.convert_hpdist(node),
-            aspect=~node.ruptAspectRatio,
-            upper_seismogenic_depth=~node.pointGeometry.upperSeismoDepth,
-            lower_seismogenic_depth=~node.pointGeometry.lowerSeismoDepth,
-            msr=valid.SCALEREL[~node.magScaleRel](),
-            mesh_spacing=self.rupture_mesh_spacing,
-            trt=node["tectonicRegion"])
-
+        inv_time = self.tom.time_span
+        start_date = None
+    return UCERFControl(
+        source_file,
+        node["id"],
+        inv_time,
+        start_date,
+        float(node["minMag"]),
+        npd=self.convert_npdist(node),
+        hdd=self.convert_hpdist(node),
+        aspect=~node.ruptAspectRatio,
+        upper_seismogenic_depth=~node.pointGeometry.upperSeismoDepth,
+        lower_seismogenic_depth=~node.pointGeometry.lowerSeismoDepth,
+        msr=valid.SCALEREL[~node.magScaleRel](),
+        mesh_spacing=self.rupture_mesh_spacing,
+        trt=node["tectonicRegion"])
 SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
