@@ -978,7 +978,9 @@ def annual_frequency_of_exceedence(poe, t_haz):
     :param poe: hazard probability of exceedence
     :param t_haz: hazard investigation time
     """
-    return - numpy.log(1. - poe) / t_haz
+    afe = - numpy.log(1. - poe) / t_haz
+    afe[poe == 1] = numpy.inf
+    return afe
 
 
 def classical_damage(
