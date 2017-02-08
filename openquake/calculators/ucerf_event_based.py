@@ -483,10 +483,10 @@ def sample_background_model(
 
 
 # this is a fake source object built around the HDF5 UCERF file
-# there is one object per branch, so there are 1,440 UCERFSESControls
+# there is one object per branch, so there are 1,440 UCERFControls
 # this approach cannot work on a cluster unless the HDF5 file is
 # on a shared file system
-class UCERFSESControl(object):
+class UCERFControl(object):
     """
     :param source_file:
         Path to an existing HDF5 file containing the UCERF model
