@@ -36,12 +36,10 @@ class UcerfTestCase(CalculatorTestCase):
         self.run_calc(ucerf.__file__, 'job.ini')
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         # check that we get the expected number of events
-        lines = open(fname).readlines()
-        self.assertEqual(len(lines), 918)
-        # check the first events
-        fname = os.path.join(self.testdir, 'expected/ruptures.csv')
-        for expected, line in zip(open(fname), lines):
-            self.assertEqual(line, expected)
+        with open(fname) as f:
+            self.assertEqual(len(f.readlines()), 918)
+        # check the first 18 events
+        self.assertEqualFiles('expected/ruptures.csv', fname, lastline=19)
 
     @attr('qa', 'hazard', 'ucerf')
     def test_classical(self):
