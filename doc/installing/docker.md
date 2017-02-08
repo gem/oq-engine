@@ -1,6 +1,6 @@
 # Deploying the OpenQuake Engine Docker container
 
-<img src="https://upload.wikimedia.org/wikipedia/commons/7/79/Docker_%28container_engine%29_logo.png" width="150px"> [![Build Status](https://ci.openquake.org/view/Builders/job/docker-builder/badge/icon)](https://ci.openquake.org/view/Builders/job/docker-builder/)
+<img src="https://upload.wikimedia.org/wikipedia/commons/7/79/Docker_%28container_engine%29_logo.png" width="150px"> [![Build Status](https://ci.openquake.org/buildStatus/icon?job=builders/docker-builder)](https://ci.openquake.org/job/builders/docker-builder)
 
 To be able to deploy and run the OpenQuake Engine Docker container you need **at least** Docker version **1.10**. 
 
