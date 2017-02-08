@@ -210,23 +210,6 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         self.num_tiles = 1
         self.infos = {}
 
-    def gen_args(self, source_models, monitor):
-        """
-        :yields: (ucerf_source, src_filter, gsims, monitor)
-        """
-        nsites = len(self.src_filter.sitecol)
-        for sm in source_models:
-            [grp] = sm.src_groups
-            [ucerf_source] = grp
-            ucerf_source.nsites = nsites
-            gsims = self.rlzs_assoc.gsims_by_grp_id[grp.id]
-            self.infos[grp.id, ucerf_source.source_id] = source.SourceInfo(
-                ucerf_source)
-            # TODO: add source splitting
-            # for src in ucerf_source.split(self.oqparam.ruptures_per_block):
-            #     yield src, self.src_filter, gsims, monitor
-            yield ucerf_source, self.src_filter, gsims, monitor
-
     def execute(self):
         """
         Run in parallel `core_task(sources, sitecol, monitor)`, by
@@ -243,17 +226,12 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         acc.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         acc.bb_dict = {}  # just for API compatibility
 
-        if len(self.csm) > 1:
-            # when multiple branches, parallelise by branch
-            rup_res = parallel.Starmap(
-                ucerf_classical_hazard_by_branch,
-                self.gen_args(self.csm.source_models, monitor)).submit_all()
-        else:
-            # single branch
-            gsims = self.rlzs_assoc.gsims_by_grp_id[0]
-            ucerf_source = self.csm.source_models[0].src_groups[0][0]
+        for sm in self.csm.source_models:  # one branch at the time
+            grp_id = sm.ordinal
+            gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
+            [[ucerf_source]] = sm.src_groups
             ucerf_source.nsites = len(self.sitecol)
-            self.infos[0, ucerf_source.source_id] = source.SourceInfo(
+            self.infos[grp_id, ucerf_source.source_id] = source.SourceInfo(
                 ucerf_source)
             logging.info('Getting the background point sources')
             with self.monitor('getting background sources', autoflush=True):
@@ -279,17 +257,17 @@ class UcerfPSHACalculator(classical.PSHACalculator):
 
             # compose probabilities from background sources
             for pmap in bg_res:
-                acc[0] |= pmap
+                acc[grp_id] |= pmap
             self.save_data_transfer(bg_res)
 
-        pmap_by_grp_id = functools.reduce(self.agg_dicts, rup_res, acc)
-        with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(self.infos)
-            self.save_data_transfer(rup_res)
+            acc = functools.reduce(self.agg_dicts, rup_res, acc)
+            with self.monitor('store source_info', autoflush=True):
+                self.store_source_info(self.infos)
+                self.save_data_transfer(rup_res)
         self.datastore['csm_info'] = self.csm.info
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
-            functools.partial(self.count_eff_ruptures, pmap_by_grp_id))
-        return pmap_by_grp_id
+            functools.partial(self.count_eff_ruptures, acc))
+        return acc
 
 
 @base.calculators.add('ucerf_classical')
