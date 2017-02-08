@@ -247,6 +247,8 @@ def ucerf_classical_hazard_by_branch(branchname, ucerf_source, src_group_id,
     imtls = monitor.oqparam.imtls
     ucerf_source.src_group_id = src_group_id
     ucerf_source.src_filter = src_filter
+    ucerf_source.branch_id = branchname
+    ucerf_source.build_idx_set()
 
     # Two step process here - the first generates the hazard curves from
     # the rupture sets
