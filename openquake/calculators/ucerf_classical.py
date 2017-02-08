@@ -137,49 +137,12 @@ def ucerf_classical_hazard_by_rupture_set(
 ucerf_classical_hazard_by_rupture_set.shared_dir_on = config.SHARED_DIR_ON
 
 
-def ucerf_classical_hazard_by_branch(ucerf_source, src_filter, gsims, monitor):
-    """
-    :param ucerf_source:
-        a source-like object for the UCERF model
-    :param src_filter:
-        a filter returning the sites affected by the source
-    :param gsims:
-        a list of GSIMs
-    :param monitor:
-        a monitor instance
-    :returns:
-        a ProbabilityMap
-    """
-    truncation_level = monitor.oqparam.truncation_level
-    imtls = monitor.oqparam.imtls
-    # Two step process here - the first generates the hazard curves from
-    # the rupture sets
-    # Apply the initial rupture to site filtering
-    rupset_idx = ucerf_source.get_rupture_indices()
-    pm = ucerf_classical_hazard_by_rupture_set(
-        rupset_idx, ucerf_source, src_filter, gsims, monitor)
-    logging.info('Branch %s', ucerf_source.source_id)
-    # Get the background point sources
-    background_sids = ucerf_source.get_background_sids(src_filter)
-    bckgnd_sources = ucerf_source.get_background_sources(background_sids)
-    if bckgnd_sources:
-        bckgnd_sources[0].src_group_id = ucerf_source.src_group_id
-        pmap = pmap_from_grp(
-            bckgnd_sources, src_filter, imtls, gsims, truncation_level,
-            (), monitor=monitor)
-        pm |= pmap
-        pm.eff_ruptures += AccumDict(pmap.eff_ruptures)
-    # TODO: should I add a .calc_times attribute?
-    return pm
-ucerf_classical_hazard_by_branch.shared_dir_on = config.SHARED_DIR_ON
-
-
 @base.calculators.add('ucerf_psha')
 class UcerfPSHACalculator(classical.PSHACalculator):
     """
     UCERF classical calculator.
     """
-    core_task = ucerf_classical_hazard_by_branch
+    core_task = ucerf_classical_hazard_by_rupture_set
     is_stochastic = False
 
     def pre_execute(self):
