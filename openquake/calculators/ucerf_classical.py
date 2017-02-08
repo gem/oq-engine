@@ -16,8 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import h5py
-import numpy as np
 import copy
 import time
 import logging
@@ -216,13 +214,17 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         """
         :yields: (ucerf_source, src_filter, gsims, monitor)
         """
+        nsites = len(self.src_filter.sitecol)
         for sm in source_models:
             [grp] = sm.src_groups
             [ucerf_source] = grp
-            ucerf_source.nsites = len(self.src_filter.sitecol)
+            ucerf_source.nsites = nsites
             gsims = self.rlzs_assoc.gsims_by_grp_id[grp.id]
             self.infos[grp.id, ucerf_source.source_id] = source.SourceInfo(
                 ucerf_source)
+            # TODO: add source splitting
+            # for src in ucerf_source.split(self.oqparam.ruptures_per_block):
+            #     yield src, self.src_filter, gsims, monitor
             yield ucerf_source, self.src_filter, gsims, monitor
 
     def execute(self):
