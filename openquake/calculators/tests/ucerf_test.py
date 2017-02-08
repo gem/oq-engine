@@ -58,10 +58,8 @@ class UcerfTestCase(CalculatorTestCase):
     def test_classical_time_dep(self):
         if h5py.__version__ < '2.6.0':
             raise unittest.SkipTest  # UCERF requires vlen arrays
-        elif sys.platform == 'darwin':  # we are getting different numbers here
-            raise unittest.SkipTest('MacOSX')
         out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
-                            exports='csv')
+                            ruptures_per_block='10', exports='csv')
         fname = out['hcurves', 'csv'][0]
         self.assertEqualFiles('expected/hazard_curve-td-mean.csv', fname,
                               delta=1E-6)
@@ -73,8 +71,6 @@ class UcerfTestCase(CalculatorTestCase):
     def test_classical_time_dep_sampling(self):
         if h5py.__version__ < '2.6.0':
             raise unittest.SkipTest  # UCERF requires vlen arrays
-        elif sys.platform == 'darwin':  # we are getting different numbers here
-            raise unittest.SkipTest('MacOSX')
         out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
                             number_of_logic_tree_samples='2',
                             exports='csv')
