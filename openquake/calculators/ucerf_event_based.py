@@ -557,9 +557,6 @@ class UCERFControl(object):
         """
         return PoissonTOM(self.inv_time)
 
-    def __len__(self):
-        return 1
-
 
 class UcerfSource(object):
     """
