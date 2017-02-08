@@ -583,7 +583,8 @@ class UcerfSource(object):
         if stop is None:
             with h5py.File(self.control.source_file, "r") as hdf5:
                 stop = len(hdf5[self.idx_set["rate_idx"]])
-        self.slice = slice(start, stop)
+        self.start = start
+        self.stop = stop
         self.num_ruptures = stop - start
 
     @property
@@ -623,7 +624,7 @@ class UcerfSource(object):
         # get rates from file
         ctl = self.control
         with h5py.File(ctl.source_file, 'r') as hdf5:
-            rates = hdf5[self.idx_set["rate_idx"]][self.slice]
+            rates = hdf5[self.idx_set["rate_idx"]][self.start:self.stop]
             occurrences = ctl.tom.sample_number_of_occurrences(rates)
             indices = numpy.where(occurrences)[0]
             logging.debug(
@@ -659,7 +660,7 @@ class UcerfSource(object):
             try:
                 rupset_idx = self.rupset_idx
             except AttributeError:
-                rupset_idx = numpy.arange(self.slice.start, self.slice.stop)
+                rupset_idx = numpy.arange(self.start, self.stop)
             rate = hdf5[self.idx_set["rate_idx"]]
             for ridx in rupset_idx:
                 # Get the ucerf rupture rate from the MeanRates array
@@ -746,6 +747,25 @@ class UcerfSource(object):
             else:
                 return [], []
 
+    def split(self, ruptures_per_block):
+        """
+        Split an UcerfSource object in sub sources containing at most
+        `ruptures_per_block` ruptures.
+        """
+        start, stop = self.start, self.stop
+        i = 0  # sub source ordinal
+        while True:
+            new = copy.copy(self)
+            new.source_id = '%s:%s' % (self.source_id, i)
+            i += 1
+            new.start = start
+            new.stop = start + ruptures_per_block
+            new.num_ruptures = ruptures_per_block
+            yield new
+            start = new.stop
+            if start >= stop:
+                break
+
 
 def build_idx_set(branch_id, start_date):
     """
@@ -768,26 +788,6 @@ def build_idx_set(branch_id, start_date):
         idx_set["grid_key"] = branch_id.replace("/", "_")
     idx_set["total_key"] = branch_id.replace("/", "|")
     return idx_set
-
-
-def split_ucerf_source(src, blocksize=1000):
-    """
-    Split an UcerfSource object in sub sources containing at most
-    `blocksize` ruptures.
-    """
-    start, stop = src.start, src.stop
-    i = 0  # sub source ordinal
-    while True:
-        new = copy.copy(src)
-        new.source_id = '%s:%s' % (src.source_id, i)
-        i += 1
-        new.start = start
-        new.stop = start + blocksize
-        new.num_ruptures = blocksize
-        yield new
-        start = new.stop
-        if start >= stop:
-            break
 
 # #################################################################### #
 
