@@ -562,6 +562,21 @@ class UCERFControl(object):
 
 
 class UcerfSource(object):
+    """
+    Source-like class for use in UCERF calculations. It is build on top
+    of an UCERFControl object which wraps the input file in HDF5 format.
+    Each source has attributes `.source_id` (the name of the branch),
+    `.src_group_id` (the number of the group i.e. of the source model),
+    `.num_ruptures` (the number of ruptures in that branch) and `.idx_set`,
+    a dictionary of HDF5 keys determined by the `branch_id` string.
+
+    :param control: a :class:`UCERFControl` instance
+    :param grp_id: ordinal of the source group
+    :param branch_name: name of the UCERF branch
+    :param branch_id: string associated to the branch
+    :param start: initial branch rupture index (default 0)
+    :param stop: final branch rupture index (default None i.e. last index)
+    """
     def __init__(self, control, grp_id, branch_name, branch_id,
                  start=0, stop=None):
         self.control = control
@@ -576,6 +591,9 @@ class UcerfSource(object):
 
     @property
     def weight(self):
+        """
+        Weight of the source, equal to the number of ruptures contained
+        """
         return self.num_ruptures
 
     def get_rupture_indices(self):
