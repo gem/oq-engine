@@ -116,7 +116,7 @@ def ucerf_classical_hazard_by_rupture_set(
     :param monitor:
         a monitor instance
     :returns:
-        an AccumDict rlz -> curves
+        a ProbabilityMap
     """
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.imtls
@@ -143,19 +143,17 @@ def ucerf_classical_hazard_by_branch(ucerf_source, src_filter, gsims, monitor):
     """
     :param ucerf_source:
         a source-like object for the UCERF model
-    :param source filter:
+    :param src_filter:
         a filter returning the sites affected by the source
     :param gsims:
         a list of GSIMs
     :param monitor:
         a monitor instance
     :returns:
-        an AccumDict rlz -> curves
+        a ProbabilityMap
     """
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.imtls
-    ucerf_source.src_filter = src_filter  # so that .iter_ruptures() work
-
     # Two step process here - the first generates the hazard curves from
     # the rupture sets
     # Apply the initial rupture to site filtering
