@@ -37,7 +37,7 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base, classical
 from openquake.calculators.ucerf_event_based import (
-    UCERFSESControl, DEFAULT_TRT, UcerfSource)
+    UCERFControl, DEFAULT_TRT, UcerfSource)
 # FIXME: the counting of effective ruptures has to be revised completely
 
 
@@ -59,7 +59,7 @@ def convert_UCERFSource(self, node):
         start_date = datetime.strptime(node["startDate"], "%d/%m/%Y")
     else:
         start_date = None
-    return UCERFSESControl(
+    return UCERFControl(
         source_file,
         node["id"],
         self.tom.time_span,
