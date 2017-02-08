@@ -542,7 +542,6 @@ class UCERFSESControl(object):
         self.rnd = None
         self.integration_distance = integration_distance
         self.sites = None
-        self.num_ruptures = 0
         self.weight = 1  # all branches have the same weight
 
     def copy(self, grp_id, branch_name, branch_id):
@@ -714,7 +713,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
                 name, rlz.weight, [name], [sg], num_gsim_paths, grp_id, 1)
             source_models.append(sm)
         self.csm = source.CompositeSourceModel(
-            self.gsim_lt, self.smlt, source_models, set_weight=False)
+            self.gsim_lt, self.smlt, source_models, set_weight=True)
         self.datastore['csm_info'] = self.csm.info
         logging.info('Found %d x %d logic tree branches', len(branches),
                      self.gsim_lt.get_num_paths())
