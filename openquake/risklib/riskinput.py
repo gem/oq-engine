@@ -426,7 +426,7 @@ class CompositeRiskModel(collections.Mapping):
                     taxonomies.add(taxonomy)
         for rlz in riskinput.rlzs:
             with mon_hazard:
-                hazard = hazard_getter(rlz)
+                hazard = list(hazard_getter(rlz))
             for taxonomy in sorted(taxonomies):
                 riskmodel = self[taxonomy]
                 with mon_risk:
@@ -457,21 +457,23 @@ class CompositeRiskModel(collections.Mapping):
 
 class PoeGetter(object):
     """
-    Callable returning a list of N dictionaries imt -> curve
-    when called on a realization.
+    Callable yielding dictionaries {imt: curve} when called on a realization.
     """
     def __init__(self, hazard_by_site):
         self.hazard_by_site = hazard_by_site
 
     def __call__(self, rlz):
-        return [{imt: haz[imt][rlz] for imt in haz}
-                for haz in self.hazard_by_site]
+        for haz in self.hazard_by_site:
+            yield {imt: haz[imt][rlz] for imt in haz}
+
+
+gmv_dt = numpy.dtype([('sid', U32), ('eid', U32), ('imti', U8), ('gmv', F32)])
 
 
 class GmfGetter(object):
     """
-    Callable returning a list of N dictionaries imt -> array(gmv, eid).
-    when called on a realization.
+    Callable yielding dictionaries {imt: array(gmv, eid)} when called
+    on a realization.
     """
     dt = numpy.dtype([('gmv', F32), ('eid', U32)])
 
@@ -513,14 +515,23 @@ class GmfGetter(object):
                                 dic[imt].append((gmv, eid))
                             else:
                                 dic[imt] = [(gmv, eid)]
-        dicts = []  # a list of dictionaries imt -> array(gmv, eid)
         for sid in self.sids:
             dic = gmfdict[sid]
             for imt in dic:
                 dic[imt] = arr = numpy.array(dic[imt], self.dt)
                 self.gmfbytes += arr.nbytes
-            dicts.append(dic)
-        return dicts
+            yield dic
+
+    def get(self, rlz):
+        """:returns: array of dtype gmv_dt"""
+        gmfcoll = []
+        for i, gmvdict in enumerate(self(rlz)):
+            if gmvdict:
+                sid = self.sids[i]
+                for imti, imt in enumerate(self.imts):
+                    for rec in gmvdict.get(imt, []):
+                        gmfcoll.append((sid, rec['eid'], imti, rec['gmv']))
+        return numpy.array(gmfcoll, gmv_dt)
 
 
 class RiskInput(object):
@@ -694,10 +705,9 @@ class RiskInputFromRuptures(object):
         :returns:
             lists of N hazard dictionaries imt -> rlz -> Gmvs
         """
-        gg = GmfGetter(self.gsims, self.ses_ruptures, self.sitecol,
-                       self.imts, self.min_iml, self.trunc_level,
-                       self.correl_model, self.samples)
-        return gg
+        return GmfGetter(self.gsims, self.ses_ruptures, self.sitecol,
+                         self.imts, self.min_iml, self.trunc_level,
+                         self.correl_model, self.samples)
 
     def __repr__(self):
         return '<%s imts=%s, weight=%d>' % (

@@ -31,7 +31,7 @@ from openquake.calculators.export import export
 from openquake.calculators.event_based import get_mean_curves
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
-    blocksize, case_1, case_2, case_4, case_5, case_6, case_7,
+    blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
     case_8, case_12, case_13, case_17, case_18)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
@@ -182,6 +182,13 @@ class EventBasedTestCase(CalculatorTestCase):
             'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv', ltr[0])
         self.assertEqualFiles(
             'expected/hc-smltp_b1-gsimltp_b1-ltr_1.csv', ltr[1])
+
+    @attr('qa', 'hazard', 'event_based')
+    def test_case_3(self):  # 1 site, 1 rupture, 2 GSIMs
+        out = self.run_calc(case_3.__file__, 'job.ini', exports='txt')
+        [f1, f2] = out['gmf_data', 'txt']
+        self.assertEqualFiles('expected/gmf-rlz-000.txt', f1)
+        self.assertEqualFiles('expected/gmf-rlz-001.txt', f2)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4(self):
