@@ -63,7 +63,8 @@ class UcerfTestCase(CalculatorTestCase):
         out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
                             exports='csv')
         fname = out['hcurves', 'csv'][0]
-        self.assertEqualFiles('expected/hazard_curve-td-mean.csv', fname)
+        self.assertEqualFiles('expected/hazard_curve-td-mean.csv', fname,
+                              delta=1E-6)
 
         # make sure this runs
         view('fullreport', self.calc.datastore)
@@ -78,7 +79,8 @@ class UcerfTestCase(CalculatorTestCase):
                             number_of_logic_tree_samples='2',
                             exports='csv')
         fname = out['hcurves', 'csv'][0]
-        self.assertEqualFiles('expected/hazard_curve-sampling.csv', fname)
+        self.assertEqualFiles('expected/hazard_curve-sampling.csv', fname,
+                              delta=1E-6)
 
     @attr('qa', 'risk', 'ucerf')
     def test_event_based_risk(self):
