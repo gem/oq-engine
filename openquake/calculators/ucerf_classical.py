@@ -206,23 +206,22 @@ def ucerf_classical_hazard_by_rupture_set(
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.imtls
     max_dist = src_filter.integration_distance[DEFAULT_TRT]
-
-    # Apply the initial rupture to site filtering
     rupset_idx, s_sites = \
         ucerf_source.filter_sites_by_distance_from_rupture_set(
             rupset_idx, src_filter.sitecol, max_dist)
-    ucerf_source.src_filter = src_filter
+
     if len(s_sites):
+        ucerf_source.src_filter = src_filter
         cmaker = ContextMaker(gsims, max_dist)
-        pmap = _hazard_curves_per_rupture_subset(
+        pm = _hazard_curves_per_rupture_subset(
             rupset_idx, ucerf_source, s_sites, imtls, cmaker,
             truncation_level, monitor=monitor)
     else:
-        pmap = ProbabilityMap(len(imtls.array), len(gsims))
-        pmap.calc_times = []
-        pmap.eff_ruptures = {src_group_id: 0}
-    pmap.grp_id = ucerf_source.src_group_id
-    return pmap
+        pm = ProbabilityMap(len(imtls.array), len(gsims))
+        pm.eff_ruptures = {ucerf_source.src_group_id: 0}
+        pm.calc_times = []  # TODO: fix this
+        pm.grp_id = ucerf_source.src_group_id
+    return pm
 ucerf_classical_hazard_by_rupture_set.shared_dir_on = config.SHARED_DIR_ON
 
 
@@ -246,8 +245,6 @@ def ucerf_classical_hazard_by_branch(branchname, ucerf_source, src_group_id,
     """
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.imtls
-    trt = ucerf_source.tectonic_region_type
-    max_dist = monitor.oqparam.maximum_distance[trt]
     ucerf_source.src_group_id = src_group_id
     ucerf_source.src_filter = src_filter
 
@@ -255,18 +252,9 @@ def ucerf_classical_hazard_by_branch(branchname, ucerf_source, src_group_id,
     # the rupture sets
     # Apply the initial rupture to site filtering
     rupset_idx = ucerf_source.get_rupture_indices(branchname)
-    rupset_idx, s_sites = \
-        ucerf_source.filter_sites_by_distance_from_rupture_set(
-            rupset_idx, src_filter.sitecol, max_dist)
-
-    if len(s_sites):
-        cmaker = ContextMaker(gsims, max_dist)
-        pm = _hazard_curves_per_rupture_subset(
-            rupset_idx, ucerf_source, s_sites, imtls, cmaker,
-            truncation_level, monitor=monitor)
-    else:
-        pm = ProbabilityMap(len(imtls.array), len(gsims))
-        pm.eff_ruptures = {src_group_id: 0}
+    pm = ucerf_classical_hazard_by_rupture_set(
+        rupset_idx, branchname, ucerf_source, src_group_id, src_filter,
+        gsims, monitor)
     logging.info('Branch %s', branchname)
     # Get the background point sources
     background_sids = ucerf_source.get_background_sids(src_filter)
