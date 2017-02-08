@@ -50,6 +50,7 @@ from openquake.hazardlib.source.characteristic import CharacteristicFaultSource
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 
 from openquake.commonlib.calc import MAX_INT
 from openquake.hazardlib.sourceconverter import SourceConverter
@@ -540,49 +541,9 @@ class UCERFSESControl(object):
         self.tectonic_region_type = trt
         self.seed = random.randint(0, MAX_INT)
         self.rnd = None
-        self.integration_distance = integration_distance
-        self.sites = None
-        self.weight = 1  # all branches have the same weight
-
-    def copy(self, grp_id, branch_name, branch_id):
-        # i.e, branch_name='ltbr0001'
-        # branch_id='FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2'
-        src = copy.copy(self)
-        src.source_id = branch_name
-        src.branch_id = branch_id
-        src.src_group_id = grp_id
-        src.idx_set = build_idx_set(branch_id, self.start_date)
-        with h5py.File(src.source_file, "r") as hdf5:
-            src.num_ruptures = len(hdf5[src.idx_set["rate_idx"]])
-        return src
 
     def get_min_max_mag(self):
         return self.min_mag, None
-
-    def get_background_sids(self, src_filter):
-        """
-        We can apply the filtering of the background sites as a pre-processing
-        step - this is done here rather than in the sampling of the ruptures
-        themselves
-        """
-        self.sites = src_filter.sitecol
-        self.integration_distance = (
-            src_filter.integration_distance[DEFAULT_TRT])
-        with h5py.File(self.source_file, 'r') as hdf5:
-            return prefilter_background_model(
-                hdf5, self.idx_set["grid_key"], self.sites,
-                self.integration_distance, self.msr, self.aspect)
-
-    # this is used in the classical calculator when there is a single branch
-    def get_rupture_indices(self, branch_id):
-        """
-        Returns a range of rupture indices [0:#MeanRates]
-        """
-        with h5py.File(self.source_file, "r") as hdf5:
-            idxs = numpy.arange(len(hdf5[self.idx_set["rate_idx"]]))
-        logging.info('Found %d ruptures in %s:%s',
-                     len(idxs), self.source_file, branch_id)
-        return idxs
 
     def update_seed(self, seed):
         """
@@ -599,67 +560,16 @@ class UCERFSESControl(object):
     def __len__(self):
         return 1
 
-    def generate_event_set(self, background_sids, src_filter):
-        """
-        Generates the event set corresponding to a particular branch
-        """
-        # get rates from file
-        with h5py.File(self.source_file, 'r') as hdf5:
-            rates = hdf5[self.idx_set["rate_idx"]].value
-            occurrences = self.tom.sample_number_of_occurrences(rates)
-            indices = numpy.where(occurrences)[0]
-            logging.debug(
-                'Considering "%s", %d ruptures', self.branch_id, len(indices))
-
-            # get ruptures from the indices
-            ruptures = []
-            rupture_occ = []
-            for idx, n_occ in zip(indices, occurrences[indices]):
-                ucerf_rup, _ = get_ucerf_rupture(
-                    hdf5, idx, self.idx_set, self.tom, src_filter,
-                    self.mesh_spacing, self.tectonic_region_type)
-
-                if ucerf_rup:
-                    ruptures.append(ucerf_rup)
-                    rupture_occ.append(n_occ)
-
-            # sample background sources
-            background_ruptures, background_n_occ = sample_background_model(
-                hdf5, self.idx_set["grid_key"], self.tom, background_sids,
-                self.min_mag, self.npd, self.hdd, self.usd, self.lsd, self.msr,
-                self.aspect, self.tectonic_region_type)
-            ruptures.extend(background_ruptures)
-            rupture_occ.extend(background_n_occ)
-        return ruptures, rupture_occ
-
-    def iter_ruptures(self):
-        """
-        Yield ruptures for the current set of indices (.rupset_idx)
-        """
-        with h5py.File(self.source_file, "r") as hdf5:
-            for ridx in self.rupset_idx:
-                # Get the ucerf rupture rate from the MeanRates array
-                if not hdf5[self.idx_set["rate_idx"]][ridx]:
-                    # ruptures may have have zero rate
-                    continue
-                rup, ridx_string = get_ucerf_rupture(
-                    hdf5, ridx,
-                    self.idx_set,
-                    self.tom,
-                    self.src_filter,
-                    self.mesh_spacing,
-                    self.tectonic_region_type)
-                if rup:
-                    yield rup
-
 
 class UcerfSource(object):
-    def __init__(self, control, branch_id, start_date, start=0, stop=None):
+    def __init__(self, control, grp_id, branch_name, branch_id,
+                 start=0, stop=None):
         self.control = control
-        self.source_id = branch_id
-        self.idx_set = build_idx_set(branch_id, start_date)
+        self.src_group_id = grp_id
+        self.source_id = branch_name
+        self.idx_set = build_idx_set(branch_id, control.start_date)
         if stop is None:
-            with h5py.File(self.source_file, "r") as hdf5:
+            with h5py.File(self.control.source_file, "r") as hdf5:
                 stop = len(hdf5[self.idx_set["rate_idx"]])
         self.slice = slice(start, stop)
         self.num_ruptures = stop - start
@@ -668,6 +578,16 @@ class UcerfSource(object):
     def weight(self):
         return self.num_ruptures
 
+    def get_rupture_indices(self):
+        """
+        Returns a range of rupture indices [0:#MeanRates]
+        """
+        with h5py.File(self.control.source_file, "r") as hdf5:
+            idxs = numpy.arange(len(hdf5[self.idx_set["rate_idx"]]))
+        logging.info('Found %d ruptures in %s:%s',
+                     len(idxs), self.control.source_file, self.source_id)
+        return idxs
+
     def get_background_sids(self, src_filter):
         """
         We can apply the filtering of the background sites as a pre-processing
@@ -675,32 +595,31 @@ class UcerfSource(object):
         themselves
         """
         ctl = self.control
-        self.integration_distance = (
-            src_filter.integration_distance[DEFAULT_TRT])
+        integration_distance = src_filter.integration_distance[DEFAULT_TRT]
         with h5py.File(ctl.source_file, 'r') as hdf5:
             return prefilter_background_model(
                 hdf5, self.idx_set["grid_key"], src_filter.sitecol,
-                src_filter.integration_distance, ctl.msr, ctl.aspect)
+                integration_distance, ctl.msr, ctl.aspect)
 
-    def generate_event_set(self, background_sids):
+    def generate_event_set(self, background_sids, src_filter):
         """
         Generates the event set corresponding to a particular branch
         """
         # get rates from file
         ctl = self.control
         with h5py.File(ctl.source_file, 'r') as hdf5:
-            rates = hdf5[self.idx_set["rate_idx"]][self.start:self.stop]
+            rates = hdf5[self.idx_set["rate_idx"]][self.slice]
             occurrences = ctl.tom.sample_number_of_occurrences(rates)
             indices = numpy.where(occurrences)[0]
             logging.debug(
-                'Considering "%s", %d ruptures', self.branch_id, len(indices))
+                'Considering "%s", %d ruptures', self.source_id, len(indices))
 
             # get ruptures from the indices
             ruptures = []
             rupture_occ = []
             for idx, n_occ in zip(indices, occurrences[indices]):
                 ucerf_rup, _ = get_ucerf_rupture(
-                    hdf5, idx, self.idx_set, ctl.tom, self.src_filter,
+                    hdf5, idx, self.idx_set, ctl.tom, src_filter,
                     ctl.mesh_spacing, ctl.tectonic_region_type)
 
                 if ucerf_rup:
@@ -720,9 +639,14 @@ class UcerfSource(object):
         """
         Yield ruptures for the current set of indices (.rupset_idx)
         """
-        with h5py.File(self.control.source_file, "r") as hdf5:
+        ctl = self.control
+        with h5py.File(ctl.source_file, "r") as hdf5:
+            try:
+                rupset_idx = self.rupset_idx
+            except AttributeError:
+                rupset_idx = numpy.arange(self.slice.start, self.slice.stop)
             rate = hdf5[self.idx_set["rate_idx"]]
-            for ridx in numpy.range(self.slice.start, self.slice.stop):
+            for ridx in rupset_idx:
                 # Get the ucerf rupture rate from the MeanRates array
                 if not rate[ridx]:
                     # ruptures may have have zero rate
@@ -730,12 +654,82 @@ class UcerfSource(object):
                 rup, ridx_string = get_ucerf_rupture(
                     hdf5, ridx,
                     self.idx_set,
-                    self.tom,
+                    ctl.tom,
                     self.src_filter,
-                    self.mesh_spacing,
-                    self.tectonic_region_type)
+                    ctl.mesh_spacing,
+                    ctl.tectonic_region_type)
                 if rup:
                     yield rup
+
+    def get_background_sources(self, background_sids):
+        """
+        Turn the background model of a given branch into a set of point sources
+
+        :param str branch_id:
+            Valid ID of a UCERF branch
+        :param background_sids:
+            Site IDs affected by the background sources
+        """
+        ctl = self.control
+        with h5py.File(ctl.source_file, "r") as hdf5:
+            grid_loc = "/".join(["Grid", self.idx_set["grid_key"]])
+            mags = hdf5[grid_loc + "/Magnitude"][:]
+            mmax = hdf5[grid_loc + "/MMax"][background_sids]
+            rates = hdf5[grid_loc + "/RateArray"][background_sids, :]
+            locations = hdf5["Grid/Locations"][background_sids, :]
+            sources = []
+            for i, bg_idx in enumerate(background_sids):
+                src_id = "_".join([self.idx_set["grid_key"], str(bg_idx)])
+                src_name = "|".join([self.idx_set["total_key"], str(bg_idx)])
+                # Get MFD
+                mag_idx = numpy.logical_and(
+                    mags >= ctl.min_mag, mags < mmax[i])
+                src_mags = mags[mag_idx]
+                src_rates = rates[i, :]
+                src_mfd = EvenlyDiscretizedMFD(
+                    src_mags[0], src_mags[1] - src_mags[0],
+                    src_rates[mag_idx].tolist())
+                ps = PointSource(
+                    src_id, src_name, ctl.tectonic_region_type, src_mfd,
+                    ctl.mesh_spacing, ctl.msr, ctl.aspect, ctl.tom, ctl.usd,
+                    ctl.lsd, Point(locations[i, 0], locations[i, 1]),
+                    ctl.npd, ctl.hdd)
+                sources.append(ps)
+        return sources
+
+    def filter_sites_by_distance_from_rupture_set(
+            self, rupset_idx, sites, max_dist):
+        """
+        Filter sites by distances from a set of ruptures
+        """
+        with h5py.File(self.control.source_file, "r") as hdf5:
+            rup_index_key = "/".join([self.idx_set["geol_idx"],
+                                      "RuptureIndex"])
+
+            # Find the combination of rupture sections used in this model
+            rupture_set = set()
+            # Determine which of the rupture sections used in this set
+            # of indices
+            rup_index = hdf5[rup_index_key]
+            for i in rupset_idx:
+                rupture_set.update(rup_index[i])
+            centroids = numpy.empty([1, 3])
+            # For each of the identified rupture sections, retreive the
+            # centroids
+            for ridx in rupture_set:
+                trace_idx = "{:s}/{:s}".format(self.idx_set["sec_idx"],
+                                               str(ridx))
+                centroids = numpy.vstack([
+                    centroids,
+                    hdf5[trace_idx + "/Centroids"][:].astype("float64")])
+            distance = min_geodetic_distance(centroids[1:, 0],
+                                             centroids[1:, 1],
+                                             sites.lons, sites.lats)
+            idx = distance <= max_dist
+            if numpy.any(idx):
+                return rupset_idx, sites.filter(idx)
+            else:
+                return [], []
 
 
 def build_idx_set(branch_id, start_date):
@@ -759,6 +753,26 @@ def build_idx_set(branch_id, start_date):
         idx_set["grid_key"] = branch_id.replace("/", "_")
     idx_set["total_key"] = branch_id.replace("/", "|")
     return idx_set
+
+
+def split_ucerf_source(src, blocksize=1000):
+    """
+    Split an UcerfSource object in sub sources containing at most
+    `blocksize` ruptures.
+    """
+    start, stop = src.start, src.stop
+    i = 0  # sub source ordinal
+    while True:
+        new = copy.copy(src)
+        new.source_id = '%s:%s' % (src.source_id, i)
+        i += 1
+        new.start = start
+        new.stop = start + blocksize
+        new.num_ruptures = blocksize
+        yield new
+        start = new.stop
+        if start >= stop:
+            break
 
 # #################################################################### #
 
@@ -793,7 +807,9 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
             [name] = rlz.lt_path
             sg = copy.copy(src_group)
             sg.id = grp_id
-            sg.sources = [src.copy(grp_id, name, rlz.value)]
+            # i.e, branch_name='ltbr0001'
+            # branch_id='FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2'
+            sg.sources = [UcerfSource(src, grp_id, name, rlz.value)]
             sm = logictree.SourceModel(
                 name, rlz.weight, [name], [sg], num_gsim_paths, grp_id, 1)
             source_models.append(sm)
