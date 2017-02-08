@@ -314,9 +314,11 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             src.nsites = len(self.sitecol)
             src.branch_id = sm.name
             src.idx_set = build_idx_set(src.branch_id, src.start_date)
+            with h5py.File(src.source_file, "r") as hdf5:
+                src.num_ruptures = len(hdf5[src.idx_set["rate_idx"]])
             source_models.append(sm)
         self.csm = source.CompositeSourceModel(
-            self.gsim_lt, self.smlt, source_models, set_weight=False)
+            self.gsim_lt, self.smlt, source_models, set_weight=True)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
         self.rup_data = {}
         self.num_tiles = 1
