@@ -38,7 +38,7 @@ class UcerfTestCase(CalculatorTestCase):
         # check that we get the expected number of events
         with open(fname) as f:
             self.assertEqual(len(f.readlines()), 918)
-        # check the first 18 events
+        # check the header and the first 18 events
         self.assertEqualFiles('expected/ruptures.csv', fname, lastline=19)
 
     @attr('qa', 'hazard', 'ucerf')
