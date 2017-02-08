@@ -552,7 +552,7 @@ class UCERFSESControl(object):
         src.source_id = branch_name
         src.branch_id = branch_id
         src.src_group_id = grp_id
-        src.build_idx_set()
+        src.idx_set = build_idx_set(branch_id, self.start_date)
         with h5py.File(src.source_file, "r") as hdf5:
             src.num_ruptures = len(hdf5[src.idx_set["rate_idx"]])
         return src
@@ -569,7 +569,6 @@ class UCERFSESControl(object):
         self.sites = src_filter.sitecol
         self.integration_distance = (
             src_filter.integration_distance[DEFAULT_TRT])
-        self.build_idx_set()
         with h5py.File(self.source_file, 'r') as hdf5:
             return prefilter_background_model(
                 hdf5, self.idx_set["grid_key"], self.sites,
@@ -654,26 +653,28 @@ class UCERFSESControl(object):
                 if rup:
                     yield rup
 
-    def build_idx_set(self):
-        """
-        Builds a dictionary of indices based on the branch code
-        """
-        code_set = self.branch_id.split("/")
-        self.idx_set = idx_set = {
-            "sec_idx": "/".join([code_set[0], code_set[1], "Sections"]),
-            "mag_idx": "/".join([code_set[0], code_set[1], code_set[2],
-                                 "Magnitude"])}
-        code_set.insert(3, "Rates")
-        idx_set["rate_idx"] = "/".join(code_set)
-        idx_set["rake_idx"] = "/".join([code_set[0], code_set[1], "Rake"])
-        idx_set["msr_idx"] = "-".join([code_set[0], code_set[1], code_set[2]])
-        idx_set["geol_idx"] = code_set[0]
-        if self.start_date:  # time-dependent source
-            idx_set["grid_key"] = "_".join(
-                self.branch_id.replace("/", "_").split("_")[:-1])
-        else:  # time-independent source
-            idx_set["grid_key"] = self.branch_id.replace("/", "_")
-        idx_set["total_key"] = self.branch_id.replace("/", "|")
+
+def build_idx_set(branch_id, start_date):
+    """
+    Builds a dictionary of indices based on the branch code
+    """
+    code_set = branch_id.split("/")
+    idx_set = {
+        "sec_idx": "/".join([code_set[0], code_set[1], "Sections"]),
+        "mag_idx": "/".join([code_set[0], code_set[1], code_set[2],
+                             "Magnitude"])}
+    code_set.insert(3, "Rates")
+    idx_set["rate_idx"] = "/".join(code_set)
+    idx_set["rake_idx"] = "/".join([code_set[0], code_set[1], "Rake"])
+    idx_set["msr_idx"] = "-".join([code_set[0], code_set[1], code_set[2]])
+    idx_set["geol_idx"] = code_set[0]
+    if start_date:  # time-dependent source
+        idx_set["grid_key"] = "_".join(
+            branch_id.replace("/", "_").split("_")[:-1])
+    else:  # time-independent source
+        idx_set["grid_key"] = branch_id.replace("/", "_")
+    idx_set["total_key"] = branch_id.replace("/", "|")
+    return idx_set
 
 # #################################################################### #
 
