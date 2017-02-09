@@ -630,9 +630,9 @@ class UcerfSource(object):
         """
         ctl = self.control
         with h5py.File(ctl.source_file, "r") as hdf5:
-            try:
+            try:  # the task has set a subset of indices
                 rupset_idx = self.rupset_idx
-            except AttributeError:
+            except AttributeError:  # use all indices
                 rupset_idx = numpy.arange(self.num_ruptures)
             rate = hdf5[self.idx_set["rate_idx"]]
             for ridx in rupset_idx:
@@ -654,8 +654,6 @@ class UcerfSource(object):
         """
         Turn the background model of a given branch into a set of point sources
 
-        :param str branch_id:
-            Valid ID of a UCERF branch
         :param background_sids:
             Site IDs affected by the background sources
         """
