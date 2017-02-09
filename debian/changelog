@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a bug in the scenario_risk calculator in case of multiple assets
+    of the same taxonomy on the same site
   * Fixed the header `occupants:float32` in the CSV risk exports involving
     occupants
   * Fixed the name of the zipped files downloaded by the Web UI: there

@@ -46,7 +46,7 @@
     </asset>
     
     <asset id="a3" number="1" area="100" taxonomy="tax1" >
-      <location lon="-122.570" lat="38.113" />
+      <location lon="-122.000" lat="38.113" />
       <costs>
         <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
         <cost type="nonstructural" value="15000" deductible="0.1" insuranceLimit="0.8" />
