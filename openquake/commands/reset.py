@@ -22,7 +22,7 @@ import sys
 import shutil
 from openquake.baselib import sap
 from openquake.commonlib import datastore, config
-from openquake.engine import logs
+from openquake.commonlib import logs
 from openquake.engine.utils import confirm
 from openquake.server import dbserver
 from openquake.commands.purge import purge_all

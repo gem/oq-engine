@@ -15,8 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-
 """
 Set up some system-wide loggers
 """
@@ -26,6 +24,7 @@ import logging
 from datetime import datetime
 from contextlib import contextmanager
 from multiprocessing.connection import Client
+
 from openquake.commonlib import config
 
 LEVELS = {'debug': logging.DEBUG,
