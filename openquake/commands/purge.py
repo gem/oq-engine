@@ -22,7 +22,7 @@ import re
 import getpass
 from openquake.baselib import sap
 from openquake.commonlib import datastore
-from openquake.engine.logs import dbcmd
+from openquake.commonlib.logs import dbcmd
 
 
 def purge_one(calc_id, user):

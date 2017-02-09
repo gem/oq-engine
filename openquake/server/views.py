@@ -41,11 +41,11 @@ from openquake.baselib.parallel import Starmap, safely_call
 from openquake.hazardlib import nrml
 from openquake.risklib import read_nrml
 
-from openquake.commonlib import readinput, oqvalidation
+from openquake.commonlib import readinput, oqvalidation, logs
 from openquake.calculators.export import export
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
-from openquake.engine import engine, logs
+from openquake.engine import engine
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import executor, utils, dbapi
 
