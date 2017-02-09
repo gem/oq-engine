@@ -22,7 +22,6 @@ import time
 import math
 import os.path
 import logging
-import random
 import socket
 import collections
 import h5py
@@ -482,10 +481,6 @@ def sample_background_model(
     return background_ruptures, background_n_occ
 
 
-# this is a fake source object built around the HDF5 UCERF file
-# there is one object per branch, so there are 1,440 UCERFControls
-# this approach cannot work on a cluster unless the HDF5 file is
-# on a shared file system
 class UCERFControl(object):
     """
     :param source_file:
@@ -539,17 +534,12 @@ class UCERFControl(object):
         self.msr = msr
         self.mesh_spacing = mesh_spacing
         self.tectonic_region_type = trt
-        self.seed = random.randint(0, MAX_INT)
-        self.rnd = None
 
     def get_min_max_mag(self):
+        """
+        Called when updating the SourceGroup
+        """
         return self.min_mag, None
-
-    def update_seed(self, seed):
-        """
-        Updates the random seed associated with the source
-        """
-        self.rnd = random.Random(seed)
 
     def _get_tom(self):
         """
@@ -571,21 +561,14 @@ class UcerfSource(object):
     :param grp_id: ordinal of the source group
     :param branch_name: name of the UCERF branch
     :param branch_id: string associated to the branch
-    :param start: initial branch rupture index (default 0)
-    :param stop: final branch rupture index (default None i.e. last index)
     """
-    def __init__(self, control, grp_id, branch_name, branch_id,
-                 start=0, stop=None):
+    def __init__(self, control, grp_id, branch_name, branch_id):
         self.control = control
         self.src_group_id = grp_id
         self.source_id = branch_name
         self.idx_set = build_idx_set(branch_id, control.start_date)
-        if stop is None:
-            with h5py.File(self.control.source_file, "r") as hdf5:
-                stop = len(hdf5[self.idx_set["rate_idx"]])
-        self.start = start
-        self.stop = stop
-        self.num_ruptures = stop - start
+        with h5py.File(self.control.source_file, "r") as hdf5:
+            self.num_ruptures = len(hdf5[self.idx_set["rate_idx"]])
 
     @property
     def weight(self):
@@ -593,16 +576,6 @@ class UcerfSource(object):
         Weight of the source, equal to the number of ruptures contained
         """
         return self.num_ruptures
-
-    def get_rupture_indices(self):
-        """
-        Returns a range of rupture indices [0:#MeanRates]
-        """
-        with h5py.File(self.control.source_file, "r") as hdf5:
-            idxs = numpy.arange(len(hdf5[self.idx_set["rate_idx"]]))
-        logging.info('Found %d ruptures in %s:%s',
-                     len(idxs), self.control.source_file, self.source_id)
-        return idxs
 
     def get_background_sids(self, src_filter):
         """
@@ -624,7 +597,7 @@ class UcerfSource(object):
         # get rates from file
         ctl = self.control
         with h5py.File(ctl.source_file, 'r') as hdf5:
-            rates = hdf5[self.idx_set["rate_idx"]][self.start:self.stop]
+            rates = hdf5[self.idx_set["rate_idx"]].value
             occurrences = ctl.tom.sample_number_of_occurrences(rates)
             indices = numpy.where(occurrences)[0]
             logging.debug(
@@ -660,7 +633,7 @@ class UcerfSource(object):
             try:
                 rupset_idx = self.rupset_idx
             except AttributeError:
-                rupset_idx = numpy.arange(self.start, self.stop)
+                rupset_idx = numpy.arange(self.num_ruptures)
             rate = hdf5[self.idx_set["rate_idx"]]
             for ridx in rupset_idx:
                 # Get the ucerf rupture rate from the MeanRates array
@@ -746,25 +719,6 @@ class UcerfSource(object):
                 return rupset_idx, sites.filter(idx)
             else:
                 return [], []
-
-    def split(self, ruptures_per_block):
-        """
-        Split an UcerfSource object in sub sources containing at most
-        `ruptures_per_block` ruptures.
-        """
-        start, stop = self.start, self.stop
-        i = 0  # sub source ordinal
-        while True:
-            new = copy.copy(self)
-            new.source_id = '%s:%s' % (self.source_id, i)
-            i += 1
-            new.start = start
-            new.stop = start + ruptures_per_block
-            new.num_ruptures = ruptures_per_block
-            yield new
-            start = new.stop
-            if start >= stop:
-                break
 
 
 def build_idx_set(branch_id, start_date):
