@@ -211,13 +211,13 @@ class UcerfPSHACalculator(classical.PSHACalculator):
                 concurrent_tasks=self.oqparam.concurrent_tasks).submit_all()
 
             # parallelize by rupture subsets
-            tasks = self.oqparam.concurrent_tasks * 2  # they are big tasks
             rup_sets = numpy.arange(ucerf_source.num_ruptures)
             taskname = 'ucerf_classical_hazard_by_rupture_set_%d' % grp_id
             rup_res = parallel.Starmap.apply(
                 ucerf_classical_hazard_by_rupture_set,
                 (rup_sets, ucerf_source, self.src_filter, gsims, monitor),
-                concurrent_tasks=tasks, name=taskname).submit_all()
+                concurrent_tasks=self.oqparam.concurrent_tasks, name=taskname
+            ).submit_all()
 
             # compose probabilities from background sources
             for pmap in bg_res:
