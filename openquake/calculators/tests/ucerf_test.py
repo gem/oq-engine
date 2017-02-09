@@ -15,6 +15,7 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+import os
 import sys
 import h5py
 import unittest
@@ -29,13 +30,16 @@ from nose.plugins.attrib import attr
 
 class UcerfTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'ucerf')
-    def test_event_based(self):
+    def test_ruptures(self):
         if h5py.__version__ < '2.6.0':
             raise unittest.SkipTest  # UCERF requires vlen arrays
         self.run_calc(ucerf.__file__, 'job.ini')
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
-        # just check that we get the expected number of ruptures
-        self.assertEqual(open(fname).read().count('\n'), 918)
+        # check that we get the expected number of events
+        with open(fname) as f:
+            self.assertEqual(len(f.readlines()), 918)
+        # check the header and the first 18 events
+        self.assertEqualFiles('expected/ruptures.csv', fname, lastline=19)
 
     @attr('qa', 'hazard', 'ucerf')
     def test_classical(self):
@@ -54,8 +58,6 @@ class UcerfTestCase(CalculatorTestCase):
     def test_classical_time_dep(self):
         if h5py.__version__ < '2.6.0':
             raise unittest.SkipTest  # UCERF requires vlen arrays
-        elif sys.platform == 'darwin':  # we are getting different numbers here
-            raise unittest.SkipTest('MacOSX')
         out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
                             exports='csv')
         fname = out['hcurves', 'csv'][0]
@@ -69,8 +71,6 @@ class UcerfTestCase(CalculatorTestCase):
     def test_classical_time_dep_sampling(self):
         if h5py.__version__ < '2.6.0':
             raise unittest.SkipTest  # UCERF requires vlen arrays
-        elif sys.platform == 'darwin':  # we are getting different numbers here
-            raise unittest.SkipTest('MacOSX')
         out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
                             number_of_logic_tree_samples='2',
                             exports='csv')
