@@ -25,6 +25,7 @@ import collections
 
 import numpy
 
+from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, split_in_blocks
 from openquake.hazardlib.probability_map import ProbabilityMap, PmapStats
 from openquake.hazardlib.calc.filters import \
@@ -40,8 +41,25 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+TWO16 = 2 ** 16
 
 # ######################## rupture calculator ############################ #
+
+
+def get_seq_ids(task_no, num_ids):
+    """
+    Get an array of sequential indices for the given task.
+
+    :param task_no: the number of the task
+    :param num_ids: the number of indices to return
+
+    >>> list(get_seq_ids(1, 3))
+    [65536, 65537, 65538]
+    """
+    assert 0 <= task_no < TWO16, task_no
+    assert 0 <= num_ids < TWO16, num_ids
+    start = task_no * TWO16
+    return numpy.arange(start, start + num_ids, dtype=U32)
 
 
 def compute_ruptures(sources, src_filter, gsims, monitor):
@@ -88,10 +106,18 @@ def compute_ruptures(sources, src_filter, gsims, monitor):
             num_events += ebr.multiplicity
         dt = time.time() - t0
         calc_times.append((src.id, dt))
+    eids = get_seq_ids(monitor.task_no, num_events)
+    start = 0
+    for ebr in eb_ruptures:
+        m = ebr.multiplicity
+        ebr.events['eid'] = eids[start: start + m]
+        start += m
     res = AccumDict({grp_id: eb_ruptures})
     res.num_events = num_events
     res.calc_times = calc_times
-    res.rup_data = {grp_id: calc.RuptureData(trt, gsims).to_array(eb_ruptures)}
+    if gsims:  # we can pass an empty gsims list to disable saving of rup_data
+        res.rup_data = {
+            grp_id: calc.RuptureData(trt, gsims).to_array(eb_ruptures)}
     return res
 
 
@@ -128,7 +154,6 @@ def build_eb_ruptures(
     Filter the ruptures stored in the dictionary num_occ_by_rup and
     yield pairs (rupture, <list of associated EBRuptures>)
     """
-    eid = 0
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
         with rup_mon:
             r_sites = rupture_filter(rup)
@@ -143,15 +168,20 @@ def build_eb_ruptures(
         for (sampleid, ses_idx), num_occ in sorted(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
-                # NB: the eid below is a placeholder; the right eid will be
-                # set later, in EventBasedRuptureCalculator.post_execute
-                events.append((eid, ses_idx, occ_no, sampleid))
-                eid += 1
+                # NB: the 0 below is a placeholder; the right eid will be
+                # set a bit later, in compute_ruptures
+                events.append((0, ses_idx, occ_no, sampleid))
         if events:
             yield calc.EBRupture(
                 rup, r_sites.indices,
                 numpy.array(events, calc.event_dt),
                 src.source_id, src.src_group_id, serial)
+
+
+def _count(ruptures):
+    if isinstance(ruptures, int):  # passed the number of ruptures
+        return ruptures
+    return sum(ebr.multiplicity for ebr in ruptures)
 
 
 @base.calculators.add('event_based_rupture')
@@ -168,7 +198,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
         minimum_intensity dictionary.
         """
         oq = self.oqparam
-        self.random_seed = oq.random_seed
         self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
         self.min_iml = calc.fix_minimum_intensity(
             oq.minimum_intensity, oq.imtls)
@@ -192,7 +221,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
         zd = AccumDict()
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()
-        self.eid = collections.Counter()  # sm_id -> event_id
         self.sm_by_grp = self.csm.info.get_sm_by_grp()
         self.grp_trt = self.csm.info.grp_trt()
         return zd
@@ -218,20 +246,17 @@ class EventBasedRuptureCalculator(PSHACalculator):
         with self.monitor('saving ruptures', autoflush=True):
             for grp_id, ebrs in ruptures_by_grp_id.items():
                 events = []
-                i = 0
                 sm_id = self.sm_by_grp[grp_id]
                 for ebr in ebrs:
                     for event in ebr.events:
-                        event['eid'] = self.eid[sm_id]
-                        rec = (ebr.serial,
+                        rec = (event['eid'],
+                               ebr.serial,
                                0,  # year to be set
                                event['ses'],
                                event['occ'],
                                event['sample'],
                                grp_id)
                         events.append(rec)
-                        self.eid[sm_id] += 1
-                        i += 1
                     if self.oqparam.save_ruptures:
                         key = 'ruptures/grp-%02d/%s' % (grp_id, ebr.serial)
                         self.datastore[key] = ebr
@@ -252,7 +277,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """
         Save the SES collection
         """
-        num_events = sum_dict(result)
+        num_events = sum(_count(ruptures) for ruptures in result.values())
         if num_events == 0:
             raise RuntimeError(
                 'No seismic events! Perhaps the investigation time is too '
@@ -288,50 +313,23 @@ def set_random_years(dstore, events_sm, investigation_time):
     SES ordinal and the investigation time.
     """
     events = dstore[events_sm].value
-    sorted_events = sorted(tuple(event) for event in events)
+    sorted_events = sorted(tuple(event)[1:] for event in events)
     years = numpy.random.choice(investigation_time, len(events)) + 1
     year_of = dict(zip(sorted_events, years))
     for event in events:
         idx = event['ses'] - 1  # starts from 0
-        event['year'] = idx * investigation_time + year_of[tuple(event)]
+        event['year'] = idx * investigation_time + year_of[tuple(event)[1:]]
     dstore[events_sm] = events
-
-
-def sum_dict(dic):
-    """
-    Sum by key a dictionary of lists or numbers:
-
-    >>> sum_dict({'a': 1})
-    1
-    >>> sum_dict({'a': [None, None]})
-    2
-    """
-    if isinstance(dic, int):
-        return dic
-    s = 0
-    for k, v in dic.items():
-        if hasattr(v, '__len__'):
-            s += len(v)
-        else:
-            s += v
-    return s
 
 
 # ######################## GMF calculator ############################ #
 
-gmv_dt = numpy.dtype([('sid', U32), ('eid', U32), ('imti', U8), ('gmv', F32)])
-
-
 def compute_gmfs_and_curves(getter, rlzs, monitor):
     """
-    :param eb_ruptures:
-        a list of blocks of EBRuptures of the same SESCollection
-    :param sitecol:
-        a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param imts:
-        a list of intensity measure type strings
-    :param rlzs_by_gsim:
-        a dictionary gsim -> associated realizations
+    :param getter:
+        a GmfGetter instance
+    :param rlzs:
+        realizations for the current source group
     :param monitor:
         a Monitor instance
     :returns:
@@ -342,8 +340,9 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
     gmfcoll = {}  # rlz -> gmfa
     for rlz in rlzs:
         gmfcoll[rlz] = []
-        for sid, gmvdict in zip(getter.sids, getter(rlz)):
+        for i, gmvdict in enumerate(getter(rlz)):
             if gmvdict:
+                sid = getter.sids[i]
                 for imti, imt in enumerate(getter.imts):
                     if oq.hazard_curves_from_gmfs:
                         try:
@@ -357,7 +356,7 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
                         gmfcoll[rlz].append(
                             (sid, rec['eid'], imti, rec['gmv']))
     for rlz in gmfcoll:
-        gmfcoll[rlz] = numpy.array(gmfcoll[rlz], gmv_dt)
+        gmfcoll[rlz] = numpy.array(gmfcoll[rlz], calc.gmv_dt)
     result = dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
                   hcurves={})
     if oq.hazard_curves_from_gmfs:
