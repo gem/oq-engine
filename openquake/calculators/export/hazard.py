@@ -68,7 +68,7 @@ def build_etags(events):
     An array of tags for the underlying seismic events
     """
     tags = []
-    for (serial, year, ses, occ, sampleid, grp_id) in events:
+    for (eid, serial, year, ses, occ, sampleid, grp_id) in events:
         tag = 'grp=%02d~ses=%04d~rup=%d-%02d' % (grp_id, ses, serial, occ)
         if sampleid > 0:
             tag += '~sample=%d' % sampleid
@@ -665,7 +665,8 @@ def export_gmf(ekey, dstore):
             events = dstore['events']
             if key not in events:  # source model producing zero ruptures
                 continue
-            etags = build_etags(events[key])
+            sm_events = events[key]
+            etags = dict(zip(sm_events['eid'], build_etags(sm_events)))
         for rlz in rlzs:
             try:
                 gmf_arr = gmf_data['%s/%04d' % (key, rlz.ordinal)].value
@@ -780,12 +781,7 @@ def export_gmf_data_csv(ekey, dstore):
     else:  # event based
         exporter = GmfExporter(dstore)
         sm_id, eid = get_sm_id_eid(ekey[0])
-        if eid is None:
-            logging.info('Exporting only the first event')
-            logging.info('Use the command `oq export gmf_data:*:* %d` '
-                         'to export everything', dstore.calc_id)
-            return exporter.export_one(0, 0)
-        elif eid == '*':
+        if eid in (None, '*'):
             return exporter.export_all()
         else:
             return exporter.export_one(int(sm_id), int(eid))
@@ -801,8 +797,9 @@ class GmfExporter(object):
     def export_one(self, sm_id, eid):
         fnames = []
         imts = list(self.oq.imtls)
-        event = self.dstore['events/sm-%04d' % sm_id][eid]
-        [etag] = build_etags([event])
+        events = self.dstore['events/sm-%04d' % sm_id]
+        ok_events = events[events['eid'] == eid]
+        [etag] = build_etags(ok_events)
         for rlzno in self.dstore['gmf_data/sm-%04d' % sm_id]:
             rlz = self.rlzs[int(rlzno)]
             gmfa = self.dstore['gmf_data/sm-%04d/%s' % (sm_id, rlzno)]
@@ -826,6 +823,8 @@ class GmfExporter(object):
                 rlz = self.rlzs[int(rlzno)]
                 gmf = self.dstore['gmf_data/%s/%s' % (sm_id, rlzno)].value
                 for eid, array in group_array(gmf, 'eid').items():
+                    if eid not in etag:
+                        continue
                     data, comment = _build_csv_data(
                         array, rlz, self.sitecol,
                         imts, self.oq.investigation_time)

@@ -42,8 +42,25 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+TWO16 = 2 ** 16
 
 # ######################## rupture calculator ############################ #
+
+
+def get_seq_ids(task_no, num_ids):
+    """
+    Get an array of sequential indices for the given task.
+
+    :param task_no: the number of the task
+    :param num_ids: the number of indices to return
+
+    >>> list(get_seq_ids(1, 3))
+    [65536, 65537, 65538]
+    """
+    assert 0 <= task_no < TWO16, task_no
+    assert 0 <= num_ids < TWO16, num_ids
+    start = task_no * TWO16
+    return numpy.arange(start, start + num_ids, dtype=U32)
 
 
 def compute_ruptures(sources, src_filter, gsims, monitor):
@@ -90,6 +107,12 @@ def compute_ruptures(sources, src_filter, gsims, monitor):
             num_events += ebr.multiplicity
         dt = time.time() - t0
         calc_times.append((src.id, dt))
+    eids = get_seq_ids(monitor.task_no, num_events)
+    start = 0
+    for ebr in eb_ruptures:
+        m = ebr.multiplicity
+        ebr.events['eid'] = eids[start: start + m]
+        start += m
     res = AccumDict({grp_id: eb_ruptures})
     res.num_events = num_events
     res.calc_times = calc_times
@@ -132,7 +155,6 @@ def build_eb_ruptures(
     Filter the ruptures stored in the dictionary num_occ_by_rup and
     yield pairs (rupture, <list of associated EBRuptures>)
     """
-    eid = 0
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
         with rup_mon:
             r_sites = rupture_filter(rup)
@@ -147,10 +169,9 @@ def build_eb_ruptures(
         for (sampleid, ses_idx), num_occ in sorted(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
-                # NB: the eid below is a placeholder; the right eid will be
-                # set later, in EventBasedRuptureCalculator.post_execute
-                events.append((eid, ses_idx, occ_no, sampleid))
-                eid += 1
+                # NB: the 0 below is a placeholder; the right eid will be
+                # set a bit later, in compute_ruptures
+                events.append((0, ses_idx, occ_no, sampleid))
         if events:
             yield calc.EBRupture(
                 rup, r_sites.indices,
@@ -201,7 +222,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
         zd = AccumDict()
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()
-        self.eid = collections.Counter()  # sm_id -> event_id
         self.sm_by_grp = self.csm.info.get_sm_by_grp()
         self.grp_trt = self.csm.info.grp_trt()
         return zd
@@ -227,20 +247,17 @@ class EventBasedRuptureCalculator(PSHACalculator):
         with self.monitor('saving ruptures', autoflush=True):
             for grp_id, ebrs in ruptures_by_grp_id.items():
                 events = []
-                i = 0
                 sm_id = self.sm_by_grp[grp_id]
                 for ebr in ebrs:
                     for event in ebr.events:
-                        event['eid'] = self.eid[sm_id]
-                        rec = (ebr.serial,
+                        rec = (event['eid'],
+                               ebr.serial,
                                0,  # year to be set
                                event['ses'],
                                event['occ'],
                                event['sample'],
                                grp_id)
                         events.append(rec)
-                        self.eid[sm_id] += 1
-                        i += 1
                     if self.oqparam.save_ruptures:
                         key = 'ruptures/grp-%02d/%s' % (grp_id, ebr.serial)
                         self.datastore[key] = ebr
@@ -297,12 +314,12 @@ def set_random_years(dstore, events_sm, investigation_time):
     SES ordinal and the investigation time.
     """
     events = dstore[events_sm].value
-    sorted_events = sorted(tuple(event) for event in events)
+    sorted_events = sorted(tuple(event)[1:] for event in events)
     years = numpy.random.choice(investigation_time, len(events)) + 1
     year_of = dict(zip(sorted_events, years))
     for event in events:
         idx = event['ses'] - 1  # starts from 0
-        event['year'] = idx * investigation_time + year_of[tuple(event)]
+        event['year'] = idx * investigation_time + year_of[tuple(event)[1:]]
     dstore[events_sm] = events
 
 
