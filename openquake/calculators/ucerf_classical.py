@@ -21,6 +21,7 @@ import time
 import logging
 import functools
 from datetime import datetime
+import numpy
 
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import DictArray, AccumDict
@@ -155,7 +156,7 @@ def ucerf_classical_hazard_by_branch(ucerf_source, src_filter, gsims, monitor):
     # Two step process here - the first generates the hazard curves from
     # the rupture sets
     # Apply the initial rupture to site filtering
-    rupset_idx = ucerf_source.get_rupture_indices()
+    rupset_idx = numpy.arange(ucerf_source.num_ruptures)
     pm = ucerf_classical_hazard_by_rupture_set(
         rupset_idx, ucerf_source, src_filter, gsims, monitor)
     logging.info('Branch %s', ucerf_source.source_id)
@@ -271,7 +272,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
 
             # parallelize by rupture subsets
             tasks = self.oqparam.concurrent_tasks * 2  # they are big tasks
-            rup_sets = ucerf_source.get_rupture_indices()
+            rup_sets = numpy.arange(ucerf_source.num_ruptures)
             rup_res = parallel.Starmap.apply(
                 ucerf_classical_hazard_by_rupture_set,
                 (rup_sets, ucerf_source, self.src_filter, gsims, monitor),
