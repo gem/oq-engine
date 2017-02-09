@@ -168,8 +168,8 @@ def build_eb_ruptures(
         for (sampleid, ses_idx), num_occ in sorted(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
-                # NB: the eid below is a placeholder; the right eid will be
-                # set a but later, in compute_ruptures
+                # NB: the 0 below is a placeholder; the right eid will be
+                # set a bit later, in compute_ruptures
                 events.append((0, ses_idx, occ_no, sampleid))
         if events:
             yield calc.EBRupture(
