@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed the event based calculator so that it can run UCERF ruptures
+  * Changed the UCERF classical calculators to compute one branch at the time
   * Fixed the header `occupants:float32` in the CSV risk exports involving
     occupants
   * Fixed the name of the zipped files downloaded by the Web UI: there
