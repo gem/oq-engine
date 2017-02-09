@@ -29,7 +29,7 @@ import numpy
 
 from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import groupby, group_array
+from openquake.baselib.general import groupby, group_array, block_splitter
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile
 from openquake.commonlib import logictree
 
@@ -489,6 +489,9 @@ class CompositeSourceModel(collections.Sequence):
             self.source_model_lt.num_samples,
             [sm.get_skeleton() for sm in self.source_models],
             self.weight)
+        # dictionary src_group_id, source_id -> SourceInfo,
+        # populated by the split_sources method
+        self.infos = {}
 
     def get_model(self, sm_id):
         """
@@ -601,6 +604,34 @@ class CompositeSourceModel(collections.Sequence):
         """
         ct = concurrent_tasks or 1
         return max(math.ceil(self.weight / ct), MAXWEIGHT)
+
+    def split_sources(self, sources, src_filter, maxweight=MAXWEIGHT):
+        """
+        Split a set of sources of the same source group; light sources
+        (i.e. with weight <= maxweight) are not split.
+
+        :param sources: sources of the same source group
+        :param src_filter: SourceFilter instance
+        :param maxweight: weight used to decide if a source is light
+        :yields: blocks of sources of weight around maxweight
+        """
+        light = [src for src in sources if src.weight <= maxweight]
+        for src in light:
+            self.infos[src.src_group_id, src.source_id] = SourceInfo(src)
+        for block in block_splitter(
+                light, maxweight, weight=operator.attrgetter('weight')):
+            yield block
+        heavy = [src for src in sources if src.weight > maxweight]
+        for src in heavy:
+            self.infos[src.src_group_id, src.source_id] = SourceInfo(src)
+            srcs = sourceconverter.split_filter_source(src, src_filter)
+            if len(srcs) > 1:
+                logging.info(
+                    'Splitting %s "%s" in %d sources', src.__class__.__name__,
+                    src.source_id, len(srcs))
+            for block in block_splitter(
+                    srcs, maxweight, weight=operator.attrgetter('weight')):
+                yield block
 
     def __repr__(self):
         """
