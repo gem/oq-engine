@@ -207,7 +207,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             args = (bckgnd_sources, self.src_filter, oq.imtls,
                     gsims, self.oqparam.truncation_level, (), monitor)
             bg_res = parallel.Starmap.apply(
-                pmap_from_grp, args, name='pmap_from_grp_%d' % grp_id,
+                pmap_from_grp, args, name='background_sources_%d' % grp_id,
                 concurrent_tasks=self.oqparam.concurrent_tasks).submit_all()
 
             # parallelize by rupture subsets
