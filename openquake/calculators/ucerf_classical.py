@@ -138,49 +138,12 @@ def ucerf_classical_hazard_by_rupture_set(
 ucerf_classical_hazard_by_rupture_set.shared_dir_on = config.SHARED_DIR_ON
 
 
-def ucerf_classical_hazard_by_branch(ucerf_source, src_filter, gsims, monitor):
-    """
-    :param ucerf_source:
-        a source-like object for the UCERF model
-    :param src_filter:
-        a filter returning the sites affected by the source
-    :param gsims:
-        a list of GSIMs
-    :param monitor:
-        a monitor instance
-    :returns:
-        a ProbabilityMap
-    """
-    truncation_level = monitor.oqparam.truncation_level
-    imtls = monitor.oqparam.imtls
-    # Two step process here - the first generates the hazard curves from
-    # the rupture sets
-    # Apply the initial rupture to site filtering
-    rupset_idx = numpy.arange(ucerf_source.num_ruptures)
-    pm = ucerf_classical_hazard_by_rupture_set(
-        rupset_idx, ucerf_source, src_filter, gsims, monitor)
-    logging.info('Branch %s', ucerf_source.source_id)
-    # Get the background point sources
-    background_sids = ucerf_source.get_background_sids(src_filter)
-    bckgnd_sources = ucerf_source.get_background_sources(background_sids)
-    if bckgnd_sources:
-        bckgnd_sources[0].src_group_id = ucerf_source.src_group_id
-        pmap = pmap_from_grp(
-            bckgnd_sources, src_filter, imtls, gsims, truncation_level,
-            (), monitor=monitor)
-        pm |= pmap
-        pm.eff_ruptures += AccumDict(pmap.eff_ruptures)
-    # TODO: should I add a .calc_times attribute?
-    return pm
-ucerf_classical_hazard_by_branch.shared_dir_on = config.SHARED_DIR_ON
-
-
 @base.calculators.add('ucerf_psha')
 class UcerfPSHACalculator(classical.PSHACalculator):
     """
     UCERF classical calculator.
     """
-    core_task = ucerf_classical_hazard_by_branch
+    core_task = ucerf_classical_hazard_by_rupture_set
     is_stochastic = False
 
     def pre_execute(self):
@@ -210,20 +173,6 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         self.rup_data = {}
         self.num_tiles = 1
 
-    def gen_args(self, source_models, monitor):
-        """
-        :yields: (ucerf_source, src_filter, gsims, monitor)
-        """
-        nsites = len(self.src_filter.sitecol)
-        for sm in source_models:
-            [grp] = sm.src_groups
-            [ucerf_source] = grp
-            ucerf_source.nsites = nsites
-            gsims = self.rlzs_assoc.gsims_by_grp_id[grp.id]
-            self.csm.infos[grp.id, ucerf_source.source_id] = source.SourceInfo(
-                ucerf_source)
-            yield ucerf_source, self.src_filter, gsims, monitor
-
     def execute(self):
         """
         Run in parallel `core_task(sources, sitecol, monitor)`, by
@@ -240,17 +189,12 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         acc.eff_ruptures = AccumDict()  # grp_id -> eff_ruptures
         acc.bb_dict = {}  # just for API compatibility
 
-        if len(self.csm) > 1:
-            # when multiple branches, parallelise by branch
-            rup_res = parallel.Starmap(
-                ucerf_classical_hazard_by_branch,
-                self.gen_args(self.csm.source_models, monitor)).submit_all()
-        else:
-            # single branch
-            gsims = self.rlzs_assoc.gsims_by_grp_id[0]
-            ucerf_source = self.csm.source_models[0].src_groups[0][0]
+        for sm in self.csm.source_models:  # one branch at the time
+            grp_id = sm.ordinal
+            gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
+            [[ucerf_source]] = sm.src_groups
             ucerf_source.nsites = len(self.sitecol)
-            self.csm.infos[0, ucerf_source.source_id] = source.SourceInfo(
+            self.csm.infos[grp_id, ucerf_source.source_id] = source.SourceInfo(
                 ucerf_source)
             logging.info('Getting the background point sources')
             with self.monitor('getting background sources', autoflush=True):
@@ -263,30 +207,31 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             args = (bckgnd_sources, self.src_filter, oq.imtls,
                     gsims, self.oqparam.truncation_level, (), monitor)
             bg_res = parallel.Starmap.apply(
-                pmap_from_grp, args,
+                pmap_from_grp, args, name='background_sources_%d' % grp_id,
                 concurrent_tasks=self.oqparam.concurrent_tasks).submit_all()
 
             # parallelize by rupture subsets
             tasks = self.oqparam.concurrent_tasks * 2  # they are big tasks
             rup_sets = numpy.arange(ucerf_source.num_ruptures)
+            taskname = 'ucerf_classical_hazard_by_rupture_set_%d' % grp_id
             rup_res = parallel.Starmap.apply(
                 ucerf_classical_hazard_by_rupture_set,
                 (rup_sets, ucerf_source, self.src_filter, gsims, monitor),
-                concurrent_tasks=tasks).submit_all()
+                concurrent_tasks=tasks, name=taskname).submit_all()
 
             # compose probabilities from background sources
             for pmap in bg_res:
-                acc[0] |= pmap
+                acc[grp_id] |= pmap
             self.save_data_transfer(bg_res)
 
-        pmap_by_grp_id = functools.reduce(self.agg_dicts, rup_res, acc)
-        with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(self.csm.infos)
-            self.save_data_transfer(rup_res)
+            acc = functools.reduce(self.agg_dicts, rup_res, acc)
+            with self.monitor('store source_info', autoflush=True):
+                self.store_source_info(self.csm.infos)
+                self.save_data_transfer(rup_res)
         self.datastore['csm_info'] = self.csm.info
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
-            functools.partial(self.count_eff_ruptures, pmap_by_grp_id))
-        return pmap_by_grp_id
+            functools.partial(self.count_eff_ruptures, acc))
+        return acc  # {grp_id: pmap}
 
 
 @base.calculators.add('ucerf_classical')
