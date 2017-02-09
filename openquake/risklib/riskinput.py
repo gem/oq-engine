@@ -48,6 +48,14 @@ class MultiLoss(object):
         return self.values[l]
 
 
+def get_refs(assets, hdf5path):
+    """
+    Debugging method returning the string IDs of the assets from the datastore
+    """
+    with hdf5.File(hdf5path, 'r') as f:
+        return f['asset_refs'][[a.idx for a in assets]]
+
+
 class AssetCollection(object):
     D, I, R = len('deductible-'), len('insurance_limit-'), len('retrofitted-')
 
