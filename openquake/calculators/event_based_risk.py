@@ -18,7 +18,7 @@
 from __future__ import division
 import logging
 import operator
-
+import collections
 import numpy
 
 from openquake.baselib.python3compat import zip
@@ -339,9 +339,9 @@ class EbriskCalculator(base.RiskCalculator):
     # TODO: if the number of source models is larger than concurrent_tasks
     # a different strategy should be used; the one used here is good when
     # there are few source models, so that we cannot parallelize on those
-    def build_starmap(self, sm_id, ruptures_by_grp, sitecol,
-                      assetcol, riskmodel, imts, trunc_level, correl_model,
-                      min_iml, monitor):
+    def start_tasks(self, sm_id, ruptures_by_grp, sitecol,
+                    assetcol, riskmodel, imts, trunc_level, correl_model,
+                    min_iml, monitor):
         """
         :param sm_id: source model ordinal
         :param ruptures_by_grp: dictionary of ruptures by src_group_id
@@ -353,7 +353,7 @@ class EbriskCalculator(base.RiskCalculator):
         :param correl_model: correlation model
         :param min_iml: vector of minimum intensities, one per IMT
         :param monitor: a Monitor instance
-        :returns: a pair (Starmap, dictionary of attributes)
+        :returns: an IterResult instance
         """
         csm_info = self.csm_info.get_info(sm_id)
         grp_ids = sorted(csm_info.get_sm_by_grp())
@@ -388,13 +388,13 @@ class EbriskCalculator(base.RiskCalculator):
 
         self.vals = self.assetcol.values()
         taskname = '%s#%d' % (event_based_risk.__name__, sm_id + 1)
-        smap = Starmap(event_based_risk, allargs, name=taskname)
-        attrs = dict(num_ruptures={
-            sg_id: len(rupts) for sg_id, rupts in ruptures_by_grp.items()},
-                     num_events=num_events,
-                     num_rlzs=len(rlzs_assoc.realizations),
-                     sm_id=sm_id)
-        return smap, attrs
+        ires = Starmap(event_based_risk, allargs, name=taskname).submit_all()
+        ires.num_ruptures = {
+            sg_id: len(rupts) for sg_id, rupts in ruptures_by_grp.items()}
+        ires.num_events = num_events
+        ires.num_rlzs = len(rlzs_assoc.realizations)
+        ires.sm_id = sm_id
+        return ires
 
     def gen_args(self, ruptures_by_grp):
         """
@@ -447,21 +447,19 @@ class EbriskCalculator(base.RiskCalculator):
         source_models = self.csm.info.source_models
         self.sm_by_grp = self.csm.info.get_sm_by_grp()
         for i, args in enumerate(self.gen_args(ruptures_by_grp)):
-            smap, attrs = self.build_starmap(*args)
-            res = smap.submit_all()
-            vars(res).update(attrs)
-            allres.append(res)
-            res.rlz_slice = slice(num_rlzs, num_rlzs + res.num_rlzs)
-            num_rlzs += res.num_rlzs
+            ires = self.start_tasks(*args)
+            allres.append(ires)
+            ires.rlz_slice = slice(num_rlzs, num_rlzs + ires.num_rlzs)
+            num_rlzs += ires.num_rlzs
             for sg in source_models[i].src_groups:
-                sg.eff_ruptures = res.num_ruptures.get(sg.id, 0)
+                sg.eff_ruptures = ires.num_ruptures.get(sg.id, 0)
         self.datastore['csm_info'] = self.csm.info
         self.datastore.flush()  # when killing the computation
         # the csm_info arrays were stored but not the attributes;
         # adding the .flush() solved the issue
         num_events = self.save_results(allres, num_rlzs)
         self.save_data_transfer(parallel.IterResult.sum(allres))
-        return num_events
+        return num_events  # {sm_id: #events}
 
     def save_results(self, allres, num_rlzs):
         """
@@ -486,7 +484,7 @@ class EbriskCalculator(base.RiskCalculator):
                 for l in range(self.L):
                     dset[:, r, l] = zero
 
-        num_events = 0
+        num_events = collections.Counter()
         self.gmfbytes = 0
         for res in allres:
             start, stop = res.rlz_slice.start, res.rlz_slice.stop
@@ -501,8 +499,8 @@ class EbriskCalculator(base.RiskCalculator):
                 res.sm_id + 1, start, stop)
             if hasattr(res, 'ruptures_by_grp'):
                 save_events(self, res.ruptures_by_grp)
-            num_events += res.num_events
-        self.datastore['events'].attrs['num_events'] = num_events
+            num_events[res.sm_id] += res.num_events
+        self.datastore['events'].attrs['num_events'] = sum(num_events.values())
         return num_events
 
     def save_avg_losses(self, dset, dic, start):
@@ -545,7 +543,7 @@ class EbriskCalculator(base.RiskCalculator):
         logging.info('Generated %s of GMFs', humansize(self.gmfbytes))
         self.datastore.save('job_info', {'gmfbytes': self.gmfbytes})
 
-        A, E = len(self.assetcol), num_events
+        A, E = len(self.assetcol), sum(num_events.values())
         if 'all_loss_ratios' in self.datastore:
             for rlzname in self.datastore['all_loss_ratios']:
                 self.datastore.set_nbytes('all_loss_ratios/' + rlzname)
