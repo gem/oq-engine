@@ -217,6 +217,7 @@ def export_agg_losses_ebr(ekey, dstore):
         rup_data = rup_data_dict(
             dstore, csm_info.get_grp_ids(sm_id), csm_info.grp_trt()
         ) if has_rup_data else {}
+        event_by_eid = {event['eid']: event for event in events}
         for rlz in rlzs:
             dest = dstore.build_fname('agg_losses', rlz, 'csv')
             eids = set()
@@ -227,7 +228,7 @@ def export_agg_losses_ebr(ekey, dstore):
                 dset = agg_losses['%s/%s' % (rlzname, loss_type)]
                 eids.update(dset['eid'])
             eids = sorted(eids)
-            rlz_events = events[eids]
+            rlz_events = numpy.array([event_by_eid[eid] for eid in eids])
             eid2idx = dict(zip(eids, range(len(eids))))
             elt = numpy.zeros(len(eids), elt_dt)
             elt['event_tag'] = build_etags(rlz_events)
@@ -284,11 +285,11 @@ def export_all_loss_ratios(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for sm_id in sm_ids:
         rlzs = rlzs_assoc.rlzs_by_smodel[sm_id]
-        try:
-            event = dstore['events/sm-%04d' % sm_id][eid]
-        except KeyError:
+        events = dstore['events/sm-%04d' % sm_id]
+        ok_events = events[events['eid'] == eid]
+        if len(ok_events) == 0:
             continue
-        [event_tag] = build_etags([event])
+        [event_tag] = build_etags(ok_events)
         for rlz in rlzs:
             exportname = 'losses-sm=%04d-eid=%d' % (sm_id, eid)
             dest = dstore.build_fname(exportname, rlz, 'csv')
@@ -300,7 +301,7 @@ def export_all_loss_ratios(ekey, dstore):
                 losses_by_aid += group_by_aid(data, loss_type)
             elt = numpy.zeros(len(losses_by_aid), elt_dt)
             elt['event_tag'] = event_tag
-            elt['year'] = event['year']
+            elt['year'] = ok_events[0]['year']
             elt['aid'] = sorted(losses_by_aid)
             for i, aid in numpy.ndenumerate(elt['aid']):
                 for loss_type in loss_types:
