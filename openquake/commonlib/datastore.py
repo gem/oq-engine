@@ -88,7 +88,7 @@ def get_calc_ids(datadir=DATADIR):
     return sorted(calc_ids)
 
 
-def get_last_calc_id(datadir):
+def get_last_calc_id(datadir=DATADIR):
     """
     Extract the latest calculation ID from the given directory.
     If none is found, return 0.
@@ -97,6 +97,19 @@ def get_last_calc_id(datadir):
     if not calcs:
         return 0
     return calcs[-1]
+
+
+def hdf5new(datadir=DATADIR):
+    """
+    Return a new `hdf5.File by` instance with name determined by the last
+    calculation in the datadir (plus one). Set the .path attribute to the
+    generated filename.
+    """
+    calc_id = get_last_calc_id(datadir) + 1
+    fname = os.path.join(datadir, 'calc_%d.hdf5' % calc_id)
+    new = hdf5.File(fname, 'w')
+    new.path = fname
+    return new
 
 
 def read(calc_id, mode='r', datadir=DATADIR):

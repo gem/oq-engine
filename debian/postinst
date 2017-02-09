@@ -31,24 +31,22 @@ if [ "$LSB_RELEASE" != "precise" -a "$LSB_RELEASE" != "trusty" -a "$LSB_RELEASE"
     db_go
 fi
 
-if [ -f /usr/sbin/rabbitmqctl -a -f /run/rabbitmq/pid ]; then
-    # create rabbitmq configuration for python-celery
-    celeryuser_count=`rabbitmqctl list_users | grep celeryuser | wc -l`
-    if [ $celeryuser_count -eq 0 ]; then
-        rabbitmqctl add_user celeryuser celery
+(if [ -f /run/rabbitmq/pid -o -f /var/lib/rabbitmq/mnesia/rabbit@$(hostname -s).pid ]; then
+    if ! rabbitmqctl list_users | grep openquake; then
+        rabbitmqctl add_user openquake openquake
     fi
-    celeryvhost_count=`rabbitmqctl list_vhosts | grep celeryvhost | wc -l`
-    if [ $celeryvhost_count -eq 0 ]; then
-        rabbitmqctl add_vhost celeryvhost
-        rabbitmqctl set_permissions -p celeryvhost celeryuser ".*" ".*" ".*"
+    if ! rabbitmqctl list_vhosts | grep openquake; then
+        rabbitmqctl add_vhost openquake
+        rabbitmqctl set_permissions -p openquake openquake ".*" ".*" ".*"
     fi
-fi
+fi) >/dev/null || true # Do not hard fail if something went wrong
 
 USER=openquake
-if [ $(cat /etc/group | grep ^openquake: | wc -l) -eq 0 ]; then
+
+if ! getent group $USER >/dev/null; then
     addgroup --system $USER
 fi
-if [ $(cat /etc/passwd | grep ^openquake: | wc -l) -eq 0 ]; then
+if  ! getent passwd $USER >/dev/null; then
     adduser --system --home /var/lib/$USER --group --shell /bin/bash $USER
 fi
 
