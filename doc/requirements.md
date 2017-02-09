@@ -10,11 +10,11 @@
 
 Software  | Version(s)
 --------- | ----------
-Python | 2.7
+Python | 2.7, 3.5
 libgeos | >= 3.2.2
 HDF5 | 1.8
 
 
 ### Python dependencies
 
-See the [requirements](../requirements-dev.txt) file for a complete list of the Python dependencies.
+See [setup.py](../setup.py) file for a complete list of the Python dependencies.

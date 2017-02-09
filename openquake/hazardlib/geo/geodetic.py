@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2016 GEM Foundation
+# Copyright (C) 2012-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,6 +30,9 @@ from openquake.baselib.python3compat import range, round
 
 #: Earth radius in km.
 EARTH_RADIUS = 6371.0
+
+#: Maximum elevation on Earth in km.
+EARTH_ELEVATION = -8.848
 
 
 class GeographicObjects(object):

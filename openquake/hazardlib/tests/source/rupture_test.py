@@ -1,6 +1,6 @@
 from __future__ import division
 # The Hazard Library
-# Copyright (C) 2012-2016 GEM Foundation
+# Copyright (C) 2012-2017 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -69,13 +69,6 @@ class RuptureCreationTestCase(unittest.TestCase):
             mag=0
         )
 
-    def test_hypocenter_in_the_air(self):
-        self.assert_failed_creation(
-            Rupture, ValueError,
-            'rupture hypocenter must have positive depth',
-            hypocenter=Point(0, 1, -0.1)
-        )
-
     def test_probabilistic_rupture_negative_occurrence_rate(self):
         self.assert_failed_creation(
             ParametricProbabilisticRupture, ValueError,
@@ -89,6 +82,10 @@ class RuptureCreationTestCase(unittest.TestCase):
             'occurrence rate must be positive',
             occurrence_rate=0, temporal_occurrence_model=PoissonTOM(10)
         )
+
+    def test_rupture_topo(self):
+        rupture = make_rupture(Rupture, hypocenter=Point(5, 6, -2))
+        self.assertEqual(rupture.hypocenter.depth, -2)
 
 
 class ParametricProbabilisticRuptureTestCase(unittest.TestCase):

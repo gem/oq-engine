@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2016 GEM Foundation
+# Copyright (C) 2012-2017 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -36,13 +36,13 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
     :param tectonic_region_type:
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
-
     _slots_ = ['source_id', 'name', 'tectonic_region_type',
                'src_group_id', 'num_ruptures', 'seed', 'id']
-
-    MODIFICATIONS = abc.abstractproperty()
-
     RUPTURE_WEIGHT = 1.  # overridden in PointSource
+
+    @abc.abstractproperty
+    def MODIFICATIONS(self):
+        pass
 
     @property
     def weight(self):
@@ -50,6 +50,8 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         Determine the source weight from the number of ruptures, by
         multiplying with the scale factor RUPTURE_WEIGHT
         """
+        if not self.num_ruptures:
+            self.num_ruptures = self.count_ruptures()
         return self.num_ruptures * self.RUPTURE_WEIGHT
 
     def __init__(self, source_id, name, tectonic_region_type):
@@ -205,8 +207,8 @@ class ParametricSeismicSource(with_metaclass(abc.ABCMeta, BaseSeismicSource)):
         and vice versa.
     :param temporal_occurrence_model:
         Instance of
-        :class:`openquake.hazardlib.tom.PoissonTOM` defining temporal occurrence
-        model for calculating rupture occurrence probabilities
+        :class:`openquake.hazardlib.tom.PoissonTOM` defining temporal
+        occurrence model for calculating rupture occurrence probabilities
 
     :raises ValueError:
         If either rupture aspect ratio or rupture mesh spacing is not positive

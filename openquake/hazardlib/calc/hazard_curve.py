@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2016 GEM Foundation
+# Copyright (C) 2012-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,24 +16,59 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+""":mod:`openquake.hazardlib.calc.hazard_curve` implements
+:func:`calc_hazard_curves`. Here is an example of a classical PSHA
+parallel calculator computing the hazard curves per each realization in less
+than 20 lines of code:
+
+.. code-block:: python
+
+   import sys
+   import logging
+   from openquake.baselib import parallel
+   from openquake.hazardlib.calc.filters import SourceFilter
+   from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
+   from openquake.commonlib import readinput
+
+   def main(job_ini):
+       logging.basicConfig(level=logging.INFO)
+       oq = readinput.get_oqparam(job_ini)
+       sitecol = readinput.get_site_collection(oq)
+       src_filter = SourceFilter(sitecol, oq.maximum_distance)
+       csm = readinput.get_composite_source_model(oq).filter(src_filter)
+       rlzs_assoc = csm.info.get_rlzs_assoc()
+       for i, sm in enumerate(csm.source_models):
+           for rlz in rlzs_assoc.rlzs_by_smodel[i]:
+               gsim_by_trt = rlzs_assoc.gsim_by_trt[rlz.ordinal]
+               hcurves = calc_hazard_curves(
+                   sm.src_groups, src_filter, oq.imtls,
+                   gsim_by_trt, oq.truncation_level,
+                   parallel.Starmap.apply)
+           print('rlz=%s, hcurves=%s' % (rlz, hcurves))
+
+   if __name__ == '__main__':
+       main(sys.argv[1])  # path to a job.ini file
+
+NB: the implementation in the engine is smarter and more
+efficient. Here we start a parallel computation per each realization,
+the engine manages all the realizations at once.
 """
-:mod:`openquake.hazardlib.calc.hazard_curve` implements
-:func:`calc_hazard_curves`.
-"""
+from __future__ import division
 import sys
 import time
 import operator
-
 import numpy
 
 from openquake.baselib.python3compat import raise_, zip
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import groupby, DictArray
+from openquake.baselib.general import DictArray, groupby
+from openquake.baselib.parallel import Sequential
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.sourceconverter import SourceGroup
 
 
 def zero_curves(num_sites, imtls):
@@ -45,86 +80,19 @@ def zero_curves(num_sites, imtls):
     # numpy dtype for the hazard curves
     imt_dt = numpy.dtype([(imt, float, 1 if imls is None else len(imls))
                           for imt, imls in imtls.items()])
-    zero = numpy.zeros(num_sites, imt_dt)
-    return zero
+    return numpy.zeros(num_sites, imt_dt)
 
 
-def agg_curves(acc, curves):
+def rupture_weight_pairs(src):
     """
-    Aggregate hazard curves by composing the probabilities.
-
-    :param acc: an accumulator array
-    :param curves: an array of hazard curves
-    :returns: a new accumulator
+    Generator yielding (rupture, weight) for each rupture in the source
     """
-    new = numpy.array(acc)  # copy of the accumulator
-    for imt in curves.dtype.fields:
-        new[imt] = 1. - (1. - curves[imt]) * (1. - acc[imt])
-    return new
-
-
-def calc_hazard_curves(
-        sources, source_site_filter, imtls, gsim_by_trt,
-        truncation_level=None):
-    """
-    Compute hazard curves on a list of sites, given a set of seismic sources
-    and a set of ground shaking intensity models (one per tectonic region type
-    considered in the seismic sources).
-
-
-    Probability of ground motion exceedance is computed using the following
-    formula ::
-
-        P(X≥x|T) = 1 - ∏ ∏ Prup_ij(X<x|T)
-
-    where ``P(X≥x|T)`` is the probability that the ground motion parameter
-    ``X`` is exceeding level ``x`` one or more times in a time span ``T``, and
-    ``Prup_ij(X<x|T)`` is the probability that the j-th rupture of the i-th
-    source is not producing any ground motion exceedance in time span ``T``.
-    The first product ``∏`` is done over sources, while the second one is done
-    over ruptures in a source.
-
-    The above formula computes the probability of having at least one ground
-    motion exceedance in a time span as 1 minus the probability that none of
-    the ruptures in none of the sources is causing a ground motion exceedance
-    in the same time span. The basic assumption is that seismic sources are
-    independent, and ruptures in a seismic source are also independent.
-
-    :param sources:
-        A sequence of seismic sources objects (instances of subclasses
-        of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`).
-    :param source_site_filter:
-        A source filter over the site collection or the site collection itself
-    :param imtls:
-        Dictionary mapping intensity measure type strings
-        to lists of intensity measure levels.
-    :param gsim_by_trt:
-        Dictionary mapping tectonic region types (members
-        of :class:`openquake.hazardlib.const.TRT`) to
-        :class:`~openquake.hazardlib.gsim.base.GMPE` or
-        :class:`~openquake.hazardlib.gsim.base.IPE` objects.
-    :param truncation_level:
-        Float, number of standard deviations for truncation of the intensity
-        distribution.
-
-    :returns:
-        An array of size N, where N is the number of sites, which elements
-        are records with fields given by the intensity measure types; the
-        size of each field is given by the number of levels in ``imtls``.
-    """
-    imtls = DictArray(imtls)
-    if hasattr(source_site_filter, 'sitecol'):  # a filter, as it should be
-        sites = source_site_filter.sitecol
-    else:  # backward compatibility, a site collection was passed
-        sites = source_site_filter
-        source_site_filter = SourceFilter(sites, None)
-    sources_by_trt = groupby(
-        sources, operator.attrgetter('tectonic_region_type'))
-    pmap = ProbabilityMap(len(imtls.array), 1)
-    for trt in sources_by_trt:
-        pmap |= pmap_from_grp(sources_by_trt[trt], source_site_filter, imtls,
-                              [gsim_by_trt[trt]], truncation_level)
-    return pmap.convert(imtls, len(sites))
+    if hasattr(src, 'weights'):
+        for pair in zip(src.iter_ruptures(), src.weights):
+            yield pair
+    weight = 1. / (src.num_ruptures or src.count_ruptures())
+    for rup in src.iter_ruptures():
+        yield rup, weight
 
 
 # NB: it is important for this to be fast since it is inside an inner loop
@@ -151,17 +119,17 @@ def get_probability_no_exceedance(
     return pne_array
 
 
-def poe_map(src, s_sites, imtls, cmaker, trunclevel, bbs,
-            ctx_mon, pne_mon, disagg_mon):
+def poe_map(src, s_sites, imtls, cmaker, trunclevel, ctx_mon, pne_mon,
+            bbs=(), rup_indep=True, disagg_mon=None):
     """
     Compute the ProbabilityMap generated by the given source. Also,
     store some information in the monitors and optionally in the
     bounding boxes.
     """
     pmap = ProbabilityMap.build(
-        len(imtls.array), len(cmaker.gsims), s_sites.sids, initvalue=1.)
+        len(imtls.array), len(cmaker.gsims), s_sites.sids, initvalue=rup_indep)
     try:
-        for rup in src.iter_ruptures():
+        for rup, weight in rupture_weight_pairs(src):
             with ctx_mon:  # compute distances
                 try:
                     sctx, rctx, dctx = cmaker.make_contexts(s_sites, rup)
@@ -171,8 +139,10 @@ def poe_map(src, s_sites, imtls, cmaker, trunclevel, bbs,
                 pnes = get_probability_no_exceedance(
                     rup, sctx, rctx, dctx, imtls, cmaker.gsims, trunclevel)
                 for sid, pne in zip(sctx.sites.sids, pnes):
-                    pmap[sid].array *= pne
-
+                    if rup_indep:
+                        pmap[sid].array *= pne
+                    else:
+                        pmap[sid].array += pne * weight
             # add optional disaggregation information (bounding boxes)
             if bbs:
                 with disagg_mon:
@@ -206,28 +176,112 @@ def pmap_from_grp(
 
     :returns: a ProbabilityMap instance
     """
-    trt = sources[0].tectonic_region_type
+    if isinstance(sources, SourceGroup):
+        group = sources
+        sources = group.sources
+        trt = sources[0].tectonic_region_type
+    else:  # list of sources
+        trt = sources[0].tectonic_region_type
+        group = SourceGroup(trt, sources, 'src_group', 'indep', 'indep')
     try:
         maxdist = source_site_filter.integration_distance[trt]
     except:
         maxdist = source_site_filter.integration_distance
+    if hasattr(gsims, 'keys'):  # dictionary trt -> gsim
+        gsims = [gsims[trt]]
     with GroundShakingIntensityModel.forbid_instantiation():
         imtls = DictArray(imtls)
         cmaker = ContextMaker(gsims, maxdist)
         ctx_mon = monitor('making contexts', measuremem=False)
         pne_mon = monitor('computing poes', measuremem=False)
         disagg_mon = monitor('get closest points', measuremem=False)
+        src_indep = group.src_interdep == 'indep'
         pmap = ProbabilityMap(len(imtls.array), len(gsims))
         pmap.calc_times = []  # pairs (src_id, delta_t)
         pmap.grp_id = sources[0].src_group_id
         for src, s_sites in source_site_filter(sources):
             t0 = time.time()
-            pmap |= poe_map(src, s_sites, imtls, cmaker, truncation_level, bbs,
-                            ctx_mon, pne_mon, disagg_mon)
-            # we are attaching the calculation times to the pmap
-            # so that the engine can store them
+            poemap = poe_map(
+                src, s_sites, imtls, cmaker, truncation_level, ctx_mon,
+                pne_mon, bbs, group.rup_interdep == 'indep', disagg_mon)
+            if src_indep:  # usual composition of probabilities
+                pmap |= poemap
+            else:  # mutually exclusive probabilities
+                weight = float(group.srcs_weights[src.source_id])
+                for sid in poemap:
+                    pmap[sid] += poemap[sid] * weight
             pmap.calc_times.append(
                 (src.source_id, len(s_sites), time.time() - t0))
         # storing the number of contributing ruptures too
         pmap.eff_ruptures = {pmap.grp_id: pne_mon.counts}
         return pmap
+
+
+def calc_hazard_curves(
+        groups, ss_filter, imtls, gsim_by_trt, truncation_level=None,
+        apply=Sequential.apply):
+    """
+    Compute hazard curves on a list of sites, given a set of seismic source
+    groups and a dictionary of ground shaking intensity models (one per
+    tectonic region type).
+
+    Probability of ground motion exceedance is computed in different ways
+    depending if the sources are independent or mutually exclusive.
+
+    :param groups:
+        A sequence of groups of seismic sources objects (instances of
+        of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`).
+    :param ss_filter:
+        A source filter over the site collection or the site collection itself
+    :param imtls:
+        Dictionary mapping intensity measure type strings
+        to lists of intensity measure levels.
+    :param gsim_by_trt:
+        Dictionary mapping tectonic region types (members
+        of :class:`openquake.hazardlib.const.TRT`) to
+        :class:`~openquake.hazardlib.gsim.base.GMPE` or
+        :class:`~openquake.hazardlib.gsim.base.IPE` objects.
+    :param truncation_level:
+        Float, number of standard deviations for truncation of the intensity
+        distribution.
+    :param maximum_distance:
+        The integration distance, if any
+    :returns:
+        An array of size N, where N is the number of sites, which elements
+        are records with fields given by the intensity measure types; the
+        size of each field is given by the number of levels in ``imtls``.
+    """
+    # This is ensuring backward compatibility i.e. processing a list of
+    # sources
+    if not isinstance(groups[0], SourceGroup):  # sent a list of sources
+        dic = groupby(groups, operator.attrgetter('tectonic_region_type'))
+        groups = [SourceGroup(trt, dic[trt], 'src_group', 'indep', 'indep')
+                  for trt in dic]
+    if hasattr(ss_filter, 'sitecol'):  # a filter, as it should be
+        sitecol = ss_filter.sitecol
+    else:  # backward compatibility, a site collection was passed
+        sitecol = ss_filter
+        ss_filter = SourceFilter(sitecol, None)
+
+    imtls = DictArray(imtls)
+    pmap = ProbabilityMap(len(imtls.array), 1)
+    # Processing groups with homogeneous tectonic region
+    for group in groups:
+        if group.src_interdep == 'indep':
+            pmap |= apply(
+                pmap_from_grp,
+                (group, ss_filter, imtls, gsim_by_trt, truncation_level),
+                weight=operator.attrgetter('weight')).reduce(operator.or_)
+        else:
+            # since in this case the probability for each source have
+            # been already accounted, we use a weight equal to unity
+            newmap = apply(
+                pmap_from_grp,
+                (group, ss_filter, imtls, gsim_by_trt, truncation_level),
+                weight=operator.attrgetter('weight')).reduce(operator.or_)
+            for sid in newmap:
+                if sid in pmap:
+                    pmap[sid] += newmap[sid]
+                else:
+                    pmap[sid] = newmap[sid]
+    return pmap.convert(imtls, len(sitecol.complete))

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -337,7 +337,7 @@ class TusaLanger2015Rhypo(TusaLanger2015RepiBA08SE):
     hence dependence on vertical distance is required.
 
     Extends
-    :class:`openquake.hazardlib.gsim.tusa_langer_2015.TusaLanger2015RepiBA08SE
+    :class:`openquake.hazardlib.gsim.tusa_langer_2015.TusaLanger2015RepiBA08SE`
     because the same functional form is used, only the distance type and
     coefficients differ.
     """

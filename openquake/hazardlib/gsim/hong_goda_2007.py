@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# copyright (c) 2013-2016 gem foundation
+# Copyright (c) 2013-2017 GEM Foundation
 #
 # openquake is free software: you can redistribute it and/or modify it
 # under the terms of the gnu affero general public license as published

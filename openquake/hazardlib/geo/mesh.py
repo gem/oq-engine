@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2016 GEM Foundation
+# Copyright (C) 2012-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -80,6 +80,17 @@ class Mesh(object):
         self.lons = lons
         self.lats = lats
         self.depths = depths
+
+    @classmethod
+    def from_coords(cls, coords):
+        """
+        Create a mesh object from a list of 3D coordinates (by sorting them)
+
+        :params coords: list of coordinates
+        :returns: a :class:`Mesh` instance
+        """
+        lons, lats, depths = zip(*sorted(coords))
+        return cls(numpy.array(lons), numpy.array(lats), numpy.array(depths))
 
     @classmethod
     def from_points_list(cls, points):

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -56,4 +56,3 @@ class DrouetEtAl2015withDepthTestCase(DrouetEtAl2015TestCase):
     TOTAL_FILE = "drouet_2015/DROUET2015_DEPTH_TOTAL.csv"
     INTER_FILE = "drouet_2015/DROUET2015_DEPTH_INTER_EVENT.csv"
     INTRA_FILE = "drouet_2015/DROUET2015_DEPTH_INTRA_EVENT.csv"
-    

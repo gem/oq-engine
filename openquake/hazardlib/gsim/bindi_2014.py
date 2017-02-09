@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,7 +22,7 @@ Module exports :class:`BindiEtAl2014Rjb`,
                :class:`BindiEtAl2014RjbEC8NoSOF`,
                :class:`BindiEtAl2014Rhyp`,
                :class:`BindiEtAl2014RhypEC8`,
-               :class:`BindiEtAl2014RhypEC8NoSOF
+               :class:`BindiEtAl2014RhypEC8NoSOF`
 """
 from __future__ import division
 

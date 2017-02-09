@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -253,6 +253,10 @@ class SphericalToCartesianAndBackTestCase(unittest.TestCase):
     def test_north_pole_10_km_depth(self):
         self._test((0, 90, 10), (0, 0, 6361))
         self._test(([0], [90], [10]), [(0, 0, 6361)])
+
+    def test_topo(self):
+        self._test((0, 0, -10), (6381, 0, 0))
+        self._test(([0], [0], [-10]), [(6381, 0, 0)])
 
     def test_arrays(self):
         lons = numpy.array([10.0, 20.0, 30.0])

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2016 GEM Foundation
+# Copyright (C) 2012-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -78,8 +78,8 @@ class GmfComputer(object):
     # seed is extracted from the underlying rupture and salted in such a
     # way to produce different numbers even if the method is called twice
     # with the same `gsim`. This ensures that different GMPE logic tree
-    # realizations produce different numbers even in the case of complex
-    # logic trees.
+    # realizations produce different numbers even in the case of sampling.
+    # If all GMPEs are different the salt is 0 and the rupture seed is used.
     def __init__(self, rupture, sites, imts, gsims,
                  truncation_level=None, correlation_model=None, samples=0):
         assert sites, sites

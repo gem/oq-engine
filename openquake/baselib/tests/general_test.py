@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2010-2016 GEM Foundation
+# Copyright (C) 2010-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -123,8 +123,8 @@ class BlockSplitterTestCase(unittest.TestCase):
             split_in_blocks([s1, s2, s3, s4, s5], hint=6,
                             weight=attrgetter('weight'),
                             key=attrgetter('typology')))
-        self.assertEqual(list(map(len, blocks)), [2, 1, 1, 1])
-        self.assertEqual([b.weight for b in blocks], [2, 2, 4, 4])
+        self.assertEqual(list(map(len, blocks)), [1, 1, 1, 2])
+        self.assertEqual([b.weight for b in blocks], [2, 4, 4, 2])
 
 
 class SearchModuleTestCase(unittest.TestCase):
@@ -138,7 +138,6 @@ class SearchModuleTestCase(unittest.TestCase):
         self.assertIsNone(search_module('openquake.do_not_exist'))
 
     def test_existing_module_in_package(self):
-        # this test may fail if oq-risklib is not on top of your PYTHONPATH
         self.assertIsNotNone(search_module('openquake.baselib.general'))
 
 

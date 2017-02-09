@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2016 GEM Foundation
+# Copyright (C) 2012-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,11 +24,32 @@ import math
 
 import numpy
 
+from openquake.baselib.node import Node
 from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.near_fault import get_plane_equation
+
+
+def simple_fault_node(fault_trace, dip, upper_depth, lower_depth):
+    """
+    :param fault_trace: an object with an attribute .points
+    :param dip: dip parameter
+    :param upper_depth: upper seismogenic depth
+    :param lower_depth: lower seismogenic depth
+    :returns: a Node of kind simpleFaultGeometry
+    """
+    node = Node('simpleFaultGeometry')
+    line = []
+    for p in fault_trace.points:
+        line.append(p.longitude)
+        line.append(p.latitude)
+    node.append(Node('gml:LineString', nodes=[Node('gml:posList', {}, line)]))
+    node.append(Node('dip', {}, dip))
+    node.append(Node('upperSeismoDepth', {}, upper_depth))
+    node.append(Node('lowerSeismoDepth', {}, lower_depth))
+    return node
 
 
 class SimpleFaultSurface(BaseQuadrilateralSurface):
@@ -100,8 +121,8 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         """
         if not len(fault_trace) >= 2:
             raise ValueError("the fault trace must have at least two points")
-        if not fault_trace.on_surface():
-            raise ValueError("the fault trace must be defined on the surface")
+        if not fault_trace.horizontal():
+            raise ValueError("the fault trace must be horizontal")
         tlats = [point.latitude for point in fault_trace.points]
         tlons = [point.longitude for point in fault_trace.points]
         if geo_utils.line_intersects_itself(tlons, tlats):
@@ -111,8 +132,9 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         if not lower_seismogenic_depth > upper_seismogenic_depth:
             raise ValueError("lower seismogenic depth must be greater than "
                              "upper seismogenic depth")
-        if not upper_seismogenic_depth >= 0.0:
-            raise ValueError("upper seismo depth must be non-negative")
+        if not upper_seismogenic_depth >= fault_trace[0].depth:
+            raise ValueError("upper seismogenic depth must be greater than "
+                             "or equal to depth of fault trace")
         if not mesh_spacing > 0.0:
             raise ValueError("mesh spacing must be positive")
 
@@ -123,8 +145,11 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         Create and return a fault surface using fault source data.
 
         :param openquake.hazardlib.geo.line.Line fault_trace:
-            Geographical line representing the intersection between
-            the fault surface and the earth surface.
+            Geographical line representing the intersection between the fault
+            surface and the earth surface. The line must be horizontal (i.e.
+            all depth values must be equal). If the depths are not given, they
+            are assumed to be zero, meaning the trace intersects the surface at
+            sea level, e.g. fault_trace = Line([Point(1, 1), Point(1, 2)]).
         :param upper_seismo_depth:
             Minimum depth ruptures can reach, in km (i.e. depth
             to fault's top edge).
@@ -147,8 +172,8 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         # on the top edge compute corresponding point on the bottom edge, then
         # computes equally spaced points between top and bottom points.
 
-        vdist_top = upper_seismogenic_depth
-        vdist_bottom = lower_seismogenic_depth
+        vdist_top = upper_seismogenic_depth - fault_trace[0].depth
+        vdist_bottom = lower_seismogenic_depth - fault_trace[0].depth
 
         hdist_top = vdist_top / math.tan(math.radians(dip))
         hdist_bottom = vdist_bottom / math.tan(math.radians(dip))
@@ -171,7 +196,11 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
             " Possible cause: Mesh spacing could be too large with respect to"
             " the fault length and width."
         )
-        return cls(mesh)
+        self = cls(mesh)
+        self.surface_nodes = [simple_fault_node(
+            fault_trace, dip,
+            upper_seismogenic_depth, lower_seismogenic_depth)]
+        return self
 
     @classmethod
     def get_fault_patch_vertices(cls, rupture_top_edge,

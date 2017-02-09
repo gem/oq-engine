@@ -1,6 +1,6 @@
 # coding: utf-8
 # The Hazard Library
-# Copyright (C) 2012-2016 GEM Foundation
+# Copyright (C) 2012-2017 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -63,22 +63,18 @@ class Rupture(object):
         Angle describing rupture propagation direction in decimal degrees.
 
     :raises ValueError:
-        If magnitude value is not positive, hypocenter is above the earth
-        surface or tectonic region type is unknown.
+        If magnitude value is not positive, or tectonic region type is unknown.
 
     NB: if you want to convert the rupture into XML, you should set the
     attribute surface_nodes to an appropriate value.
     """
     _slots_ = '''mag rake tectonic_region_type hypocenter surface
-    surface_nodes source_typology rupture_slip_direction'''.split()
+    source_typology rupture_slip_direction'''.split()
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
-                 surface, source_typology, rupture_slip_direction=None,
-                 surface_nodes=()):
+                 surface, source_typology, rupture_slip_direction=None):
         if not mag > 0:
             raise ValueError('magnitude must be positive')
-        if not hypocenter.depth > 0:
-            raise ValueError('rupture hypocenter must have positive depth')
         NodalPlane.check_rake(rake)
         self.tectonic_region_type = tectonic_region_type
         self.rake = rake
@@ -86,7 +82,6 @@ class Rupture(object):
         self.hypocenter = hypocenter
         self.surface = surface
         self.source_typology = source_typology
-        self.surface_nodes = surface_nodes
         self.rupture_slip_direction = rupture_slip_direction
 
 
@@ -200,12 +195,14 @@ class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
         ``p(k|T)`` is given by the constructor's parameter ``pmf``, and
         ``p(X<x|rup)`` is computed as ``1 - poes``.
         """
+        # Converting from 1d to 2d
+        if len(poes.shape) == 1:
+            poes = numpy.reshape(poes, (-1, len(poes)))
         p_kT = numpy.array([float(p) for (p, _) in self.pmf.data])
         prob_no_exceed = numpy.array(
             [v * ((1 - poes) ** i) for i, v in enumerate(p_kT)]
         )
         prob_no_exceed = numpy.sum(prob_no_exceed, axis=0)
-
         return prob_no_exceed
 
     def sample_number_of_occurrences(self):

@@ -1,4 +1,39 @@
 #!/bin/bash
+#
+# packager.sh  Copyright (C) 2014-2017 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+#
+# DESCRIPTION
+#
+# packager.sh automates procedures to:
+#  - test sources
+#  - build Ubuntu package (official or development version)
+#  - test Ubuntu package
+#
+# tests are performed inside linux containers (lxc) to achieve
+# a good compromise between speed and isolation
+#
+# all lxc instances are ephemeral
+#
+# ephemeral containers are "clones" of a base container and have a
+# temporary file system that reflects the contents of the base container
+# but any modifications are stored in an overlayed, in-memory
+# file system
+#
+
 if [ -n "$GEM_SET_DEBUG" -a "$GEM_SET_DEBUG" != "false" ]; then
     export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
     set -x
@@ -14,6 +49,10 @@ fi
 if [ -z "$GEM_DEB_MONOTONE" ]; then
     GEM_DEB_MONOTONE="$HOME/monotone"
 fi
+# FIXME this is currently unused, but left as reference
+if [ "$GEM_EPHEM_USER" = "" ]; then
+    GEM_EPHEM_USER="ubuntu"
+fi
 
 GEM_BUILD_ROOT="build-deb"
 GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
@@ -21,29 +60,24 @@ GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
 GEM_ALWAYS_YES=false
 
 if [ "$GEM_EPHEM_CMD" = "" ]; then
-    GEM_EPHEM_CMD="lxc-start-ephemeral"
+    GEM_EPHEM_CMD="lxc-copy"
 fi
 if [ "$GEM_EPHEM_NAME" = "" ]; then
-    GEM_EPHEM_NAME="ubuntu-lxc-eph"
+    GEM_EPHEM_NAME="ubuntu16-lxc-eph"
 fi
 
 LXC_VER=$(lxc-ls --version | cut -d '.' -f 1)
 
-if [ $LXC_VER -lt 1 ]; then
-    echo "lxc >= 1.0.0 is required." >&2
+if [ $LXC_VER -lt 2 ]; then
+    echo "LXC >= 2.0.0 is required." >&2
+    echo "Hint: LXC 2.0 is available for Trusty from backports."
     exit 1
 fi
 
 LXC_TERM="lxc-stop -t 10"
 LXC_KILL="lxc-stop -k"
 
-if command -v lxc-copy &> /dev/null; then
-    # New lxc (>= 2.0.0) with lxc-copy
-    GEM_EPHEM_EXE="${GEM_EPHEM_CMD} -n ${GEM_EPHEM_NAME} -e"
-else
-    # Old lxc (< 2.0.0) with lxc-start-ephimeral
-    GEM_EPHEM_EXE="${GEM_EPHEM_CMD} -o ${GEM_EPHEM_NAME} -d"
-fi
+GEM_EPHEM_EXE="${GEM_EPHEM_CMD} -n ${GEM_EPHEM_NAME} -e"
 
 NL="
 "
@@ -56,25 +90,9 @@ sig_hand () {
     echo "signal trapped"
     if [ "$lxc_name" != "" ]; then
         set +e
+        scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/ssh.history"
         echo "Destroying [$lxc_name] lxc"
-        upper="$(mount | grep "${lxc_name}.*upperdir" | sed 's@.*upperdir=@@g;s@,.*@@g')"
-        if [ -f "${upper}.dsk" ]; then
-            loop_dev="$(sudo losetup -a | grep "(${upper}.dsk)$" | cut -d ':' -f1)"
-        fi
         sudo $LXC_KILL -n $lxc_name
-        sudo umount /var/lib/lxc/$lxc_name/rootfs
-        sudo umount /var/lib/lxc/$lxc_name/ephemeralbind
-        echo "$upper" | grep -q '^/tmp/'
-        if [ $? -eq 0 ]; then
-            sudo umount "$upper"
-            sudo rm -r "$upper"
-            if [ "$loop_dev" != "" ]; then
-                sudo losetup -d "$loop_dev"
-                if [ -f "${upper}.dsk" ]; then
-                    sudo rm -f "${upper}.dsk"
-                fi
-            fi
-        fi
         sudo lxc-destroy -n $lxc_name
     fi
     if [ -f /tmp/packager.eph.$$.log ]; then
@@ -368,23 +386,29 @@ _lxc_name_and_ip_get()
     i=-1
     e=-1
     for i in $(seq 1 40); do
+        if grep -q " as clone of $GEM_EPHEM_NAME" $filename 2>&1 ; then
+            lxc_name="$(grep " as clone of $GEM_EPHEM_NAME" $filename | tail -n 1 | sed "s/Created \(.*\) as clone of ${GEM_EPHEM_NAME}/\1/g")"
+            break
+        else
+            sleep 2
+        fi
+    done
+    if [ $i -eq 40 ]; then
+        return 1
+    fi
+
+    for e in $(seq 1 40); do
         sleep 2
-        if grep -q "sudo lxc-console -n $GEM_EPHEM_NAME" /tmp/packager.eph.$$.log 2>&1 ; then
-            lxc_name="$(grep "sudo lxc-console -n $GEM_EPHEM_NAME" /tmp/packager.eph.$$.log | grep -v '+ echo' | sed "s/.*sudo lxc-console -n \($GEM_EPHEM_NAME\)/\1/g")"
-            for e in $(seq 1 40); do
-                sleep 2
-                if grep -q "$lxc_name" /var/lib/misc/dnsmasq*.leases ; then
-                    lxc_ip="$(grep " $lxc_name " /var/lib/misc/dnsmasq*.leases | tail -n 1 | cut -d ' ' -f 3)"
-                    break
-                fi
-            done
+        lxc_ip="$(sudo lxc-ls -f --filter "^${lxc_name}\$" | tail -n 1 | sed 's/ \+/ /g' | cut -d ' ' -f 5)"
+        if [ "$lxc_ip" -a "$lxc_ip" != "-" ]; then
+            lxc_ssh="${GEM_EPHEM_USER}@${lxc_ip}"
             break
         fi
     done
-    if [ $i -eq 40 -o $e -eq 40 ]; then
+    if [ $e -eq 40 ]; then
         return 1
     fi
-    echo "SUCCESSFULLY RUNNED $lxc_name ($lxc_ip)"
+    echo "SUCCESSFULLY STARTED: $lxc_name ($lxc_ip)"
 
     return 0
 }

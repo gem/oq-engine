@@ -24,7 +24,7 @@ BuildArch: noarch
 Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-hazardlib
 
-%define common_deps python numpy scipy python-shapely python-psutil h5py python-mock python-rtree
+%define common_deps python numpy scipy python-futures python-shapely python-psutil h5py python-mock python-rtree
 %define dev_deps python-nose python-coverage
 Requires: %{common_deps}
 Requires: %{dev_deps}
@@ -53,7 +53,7 @@ the development of the  library by adding the most recent methodologies
 adopted by the seismological/seismic hazard communities. Comments,
 suggestions and criticisms from the community are always very welcome.
 
-Copyright (C) 2014-2016 GEM Foundation
+Copyright (C) 2014-2017 GEM Foundation
 
 
 %prep

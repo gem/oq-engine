@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013-2016 GEM Foundation
+# Copyright (C) 2013-2017 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -55,8 +55,7 @@ class CharacteristicFaultSource(ParametricSeismicSource):
     its attribute `surface_node` to an explicit representation of the surface
     as a LiteralNode object.
     """
-    _slots_ = ParametricSeismicSource._slots_ + (
-        'surface surface_node rake').split()
+    _slots_ = ParametricSeismicSource._slots_ + 'surface rake'.split()
 
     MODIFICATIONS = set(('set_geometry',))
 
@@ -70,7 +69,6 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         NodalPlane.check_rake(rake)
         self.surface = surface
         self.rake = rake
-        self.surface_node = surface_node
 
     def get_rupture_enclosing_polygon(self, dilation=0):
         """

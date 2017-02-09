@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2016 GEM Foundation
+# Copyright (C) 2012-2017 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -3783,4 +3783,11 @@ TEST_7_RUPTURE_8_MESH = [
      (0.0127935203316, 0.0181990991029, 11.4225736987),
      (0.0127935211156, 0.0271923200564, 11.4225737874),
      (0.0127935222219, 0.0361855410098, 11.42257391)]
+]
+
+TEST_7_RUPTURE_9_CORNERS = [
+    Point(-0.0252862987308, -0.0252862962683, -0.98817682192),
+    Point(0.0252862987308, 0.0252862962683, -0.98817682192),
+    Point(0.0252862987308, 0.0252862962683, 2.9881768219),
+    Point(-0.0252862987308, -0.0252862962683, 2.9881768219)
 ]

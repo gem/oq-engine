@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013-2016 GEM Foundation
+# Copyright (C) 2013-2017 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -95,7 +95,13 @@ class NonParametricSeismicSource(BaseSeismicSource):
         :returns:
             Instance of :class:`openquake.hazardlib.geo.polygon.Polygon`.
         """
-        surfaces = [rup.surface for (rup, _) in self.data]
+        surfaces = []
+        for rup, _ in self.data:
+            if isinstance(rup.surface, MultiSurface):
+                for s in rup.surface.surfaces:
+                    surfaces.append(s)
+            else:
+                surfaces.append(rup.surface)
         multi_surf = MultiSurface(surfaces)
 
         west, east, north, south = multi_surf.get_bounding_box()

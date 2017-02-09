@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2016 GEM Foundation
+# Copyright (C) 2012-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -50,9 +50,13 @@ class Point(object):
     EQUALITY_DISTANCE = 1e-3
 
     def __init__(self, longitude, latitude, depth=0.0):
-        if not depth < geo_utils.EARTH_RADIUS:
+        if not depth < geodetic.EARTH_RADIUS:
             raise ValueError("The depth must be less than "
-                             "the earth radius (6371.0 km)")
+                             "the Earth's radius (6371.0 km)")
+
+        if not depth > geodetic.EARTH_ELEVATION:
+            raise ValueError("The depth must be greater than the maximum "
+                             "elevation on Earth's surface (-8.848 km)")
 
         if not -180.0 <= longitude <= 180.0:
             raise ValueError("longitude %.6f outside range" % longitude)

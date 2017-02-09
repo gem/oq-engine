@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,7 +21,6 @@ from datetime import datetime
 from multiprocessing.connection import Client
 
 import numpy
-import h5py
 
 from openquake.baselib.general import humansize
 from openquake.baselib import hdf5

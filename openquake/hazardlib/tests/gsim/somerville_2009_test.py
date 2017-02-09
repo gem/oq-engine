@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2016 GEM Foundation
+# Copyright (C) 2013-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -48,4 +48,3 @@ class SomervilleEtAl2009NonCratonicTestCase(BaseGSIMTestCase):
     def test_std_total(self):
         self.check('S09/SOMMERVILLE_Non_Cratonic2009_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
-

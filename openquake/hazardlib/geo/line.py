@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2016 GEM Foundation
+# Copyright (C) 2012-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -79,6 +79,16 @@ class Line(object):
             True if this line is on the surface, false otherwise.
         """
         return all(point.on_surface() for point in self.points)
+
+    def horizontal(self):
+        """
+        Check if this line is horizontal (i.e. all depths of points
+        are equal).
+
+        :returns bool:
+            True if this line is horizontal, false otherwise.
+        """
+        return all(p.depth == self[0].depth for p in self)
 
     def average_azimuth(self):
         """
