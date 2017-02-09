@@ -371,15 +371,7 @@ def latitudes(value):
     return [latitude(v) for v in value.split(',')]
 
 
-def depth(value):
-    """
-    :param value: input string
-    :returns: float >= 0
-    """
-    dep = float_(value)
-    if dep < 0:
-        raise ValueError('depth %s < 0' % dep)
-    return dep
+depth = float_
 
 
 def lon_lat(value):
@@ -394,21 +386,47 @@ def lon_lat(value):
     return longitude(lon), latitude(lat)
 
 
+def point(value):
+    """
+    :param value: a tuple of coordinates as a string (2D or 3D)
+    :returns: a tuple of coordinates as a string (2D or 3D)
+    """
+    lst = value.split()
+    dim = len(lst)
+    if dim == 2:
+        return longitude(lst[0]), latitude(lst[1]), 0.
+    elif dim == 3:
+        return longitude(lst[0]), latitude(lst[1]), depth(lst[2])
+    else:
+        raise ValueError('Invalid point format: %s' % value)
+
+
 def coordinates(value):
     """
-    Convert a non-empty string into a list of lon-lat coordinates
+    Convert a non-empty string into a list of lon-lat coordinates.
+
     >>> coordinates('')
     Traceback (most recent call last):
     ...
     ValueError: Empty list of coordinates: ''
     >>> coordinates('1.1 1.2')
-    [(1.1, 1.2)]
+    [(1.1, 1.2, 0.0)]
     >>> coordinates('1.1 1.2, 2.2 2.3')
-    [(1.1, 1.2), (2.2, 2.3)]
+    [(1.1, 1.2, 0.0), (2.2, 2.3, 0.0)]
+    >>> coordinates('1.1 1.2 -0.4, 2.2 2.3 -0.5')
+    [(1.1, 1.2, -0.4), (2.2, 2.3, -0.5)]
+    >>> coordinates('0 0 0, 0 0 -1')
+    Traceback (most recent call last):
+    ...
+    ValueError: There are overlapping points in 0 0 0, 0 0 -1
     """
     if not value.strip():
         raise ValueError('Empty list of coordinates: %r' % value)
-    return list(map(lon_lat, value.split(',')))
+    points = list(map(point, value.split(',')))
+    num_distinct = len(set(pnt[:2] for pnt in points))
+    if num_distinct < len(points):
+        raise ValueError("There are overlapping points in %s" % value)
+    return points
 
 
 def wkt_polygon(value):
@@ -416,7 +434,7 @@ def wkt_polygon(value):
     Convert a string with a comma separated list of coordinates into
     a WKT polygon, by closing the ring.
     """
-    points = ['%s %s' % lon_lat for lon_lat in coordinates(value)]
+    points = ['%s %s' % (lon, lat) for lon, lat, dep in coordinates(value)]
     # close the linear polygon ring by appending the first coord to the end
     points.append(points[0])
     return 'POLYGON((%s))' % ', '.join(points)
@@ -886,10 +904,11 @@ def positiveints(value):
 vs30_type = ChoiceCI('measured', 'inferred')
 
 SiteParam = collections.namedtuple(
-    'SiteParam', 'z1pt0 z2pt5 measured vs30 lon lat backarc'.split())
+    'SiteParam', 'z1pt0 z2pt5 measured vs30 lon lat depth backarc'.split())
 
 
-def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat, backarc="false"):
+def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat,
+               depth=0, backarc="false"):
     """
     Used to convert a node like
 
@@ -901,7 +920,7 @@ def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat, backarc="false"):
     return SiteParam(positivefloat(z1pt0), positivefloat(z2pt5),
                      vs30_type(vs30Type) == 'measured',
                      positivefloat(vs30), longitude(lon),
-                     latitude(lat), boolean(backarc))
+                     latitude(lat), float_(depth), boolean(backarc))
 
 # used for the exposure validation
 cost_type = Choice('structural', 'nonstructural', 'contents',

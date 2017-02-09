@@ -1,10 +1,16 @@
+  [Robin Gee, Michele Simionato]
+  * Implemented support for sites above the level of the sea
+
   [Michele Simionato]
   * Made the parallelization library more robust against unexpected exceptions
+  * Used always the same algorithm for computing quantiles (before there
+    was a special case in absence of weights)
   * Extended `calc_hazard_curves` to manage mutex sources and ruptures and
     removed `calc_hazard_curves_ext`
 
   [Graeme Weatherill]
-  * Added new version of Pezeshk et al. (2011) GMPE adjusted for NEHRP BC Site condition
+  * Added new version of Pezeshk et al. (2011) GMPE adjusted for NEHRP BC Site
+    condition
 
   [Michele Simionato]
   * Parallelized `calc_hazard_curves_ext` and added an example of use

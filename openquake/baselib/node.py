@@ -781,7 +781,9 @@ class ValidatingXmlParser(object):
         try:
             yield
         except ExpatError as err:
-            e = ExpatError(ErrorString(err.code))
+            msg = '%s: %s: %s' % (self.filename, err.lineno,
+                                  ErrorString(err.code))
+            e = ExpatError(msg)
             e.lineno = err.lineno
             e.offset = err.offset
             e.filename = self.filename
