@@ -32,9 +32,9 @@ On all worker nodes, the `/etc/openquake/openquake.cfg` file should be also modi
 [amqp]
 host = w.x.y.z
 port = 5672
-user = guest
-password = guest
-vhost = /
+user = openquake
+password = openquake
+vhost = openquake
 # This is where tasks will be enqueued.
 celery_queue = celery
 
@@ -57,6 +57,35 @@ The required daemons are:
 - RabbitMQ
 - OpenQuake Engine DbServer
 - OpenQuake Engine WebUI (optional)
+
+
+##### RabbitMQ
+
+A _user_ and _vhost_ are automatically added to the RabbitMQ configuration during the installation on `python-oq-engine`.
+
+You can verify that the `openquake` user and vhost exist running:
+
+```bash
+# Check the user
+sudo rabbitmqctl list_users | grep openquake 
+
+# Check the vhost
+sudo rabbitmqctl list_vhosts | grep openquake 
+```
+
+If, for any reason, the `openquake` user and vhost are missing they can be set up running:
+
+```bash
+# Add the user
+sudo rabbitmqctl add_user openquake openquake
+
+# Add the vhost
+sudo rabbitmqctl add_vhost openquake
+sudo rabbitmqctl set_permissions -p openquake openquake ".*" ".*" ".*"
+```
+
+For more information please refer to https://www.rabbitmq.com/man/rabbitmqctl.1.man.html.
+
 
 #### Worker nodes
 - Celery
