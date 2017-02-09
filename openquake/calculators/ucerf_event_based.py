@@ -660,7 +660,7 @@ class UcerfSource(object):
         ctl = self.control
         with h5py.File(ctl.source_file, "r") as hdf5:
             grid_loc = "/".join(["Grid", self.idx_set["grid_key"]])
-            mags = hdf5[grid_loc + "/Magnitude"][:]
+            mags = hdf5[grid_loc + "/Magnitude"].value
             mmax = hdf5[grid_loc + "/MMax"][background_sids]
             rates = hdf5[grid_loc + "/RateArray"][background_sids, :]
             locations = hdf5["Grid/Locations"][background_sids, :]
