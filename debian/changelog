@@ -243,7 +243,7 @@ python-oq-hazardlib (0.16.0-0~precise01) precise; urgency=low
   * Adds Montalva et al. (2015) GMPE
 
   [Robin Gee]
-  * Adds Tusa and Langer (2015) GMPE
+  * Adds Tusa and Langer (2016) GMPE
 
  -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 17 Nov 2015 10:31:52 +0100
 
