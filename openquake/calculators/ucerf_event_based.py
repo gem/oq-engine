@@ -662,9 +662,8 @@ class UcerfSource(object):
             grid_loc = "/".join(["Grid", self.idx_set["grid_key"]])
             mags = hdf5[grid_loc + "/Magnitude"].value
             mmax = hdf5[grid_loc + "/MMax"][background_sids]
-            rates = hdf5[grid_loc + "/RateArray"][
-                background_sids, :]
-            locations = hdf5["Grid/Locations"][background_sids]
+            rates = hdf5[grid_loc + "/RateArray"][background_sids, :]
+            locations = hdf5["Grid/Locations"][background_sids, :]
             sources = []
             for i, bg_idx in enumerate(background_sids):
                 src_id = "_".join([self.idx_set["grid_key"], str(bg_idx)])
@@ -673,7 +672,7 @@ class UcerfSource(object):
                 mag_idx = numpy.logical_and(
                     mags >= ctl.min_mag, mags < mmax[i])
                 src_mags = mags[mag_idx]
-                src_rates = rates[i]
+                src_rates = rates[i, :]
                 src_mfd = EvenlyDiscretizedMFD(
                     src_mags[0], src_mags[1] - src_mags[0],
                     src_rates[mag_idx].tolist())
