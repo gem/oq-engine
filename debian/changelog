@@ -1,5 +1,7 @@
   [Michele Simionato]
   * Fixed the event based calculator so that it can run UCERF ruptures
+  * Now the event IDs are generated in the workers in the event based calculator
+    and there is a limit of 65536 tasks with 65536 ruptures each
   * Changed the UCERF classical calculators to compute one branch at the time
   * Fixed the header `occupants:float32` in the CSV risk exports involving
     occupants
