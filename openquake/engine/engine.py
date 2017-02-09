@@ -30,7 +30,7 @@ from openquake.baselib import parallel
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import datastore, config, readinput
 from openquake.calculators import base, views, export
-from openquake.engine import logs
+from openquake.commonlib import logs
 
 TERMINATE = valid.boolean(
     config.get('celery', 'terminate_workers_on_revoke') or 'false')

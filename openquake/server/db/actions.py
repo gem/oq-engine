@@ -22,7 +22,7 @@ import operator
 from datetime import datetime, timedelta
 
 from openquake.hazardlib import valid
-from openquake.commonlib import datastore
+from openquake.commonlib import datastore, logs
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
 from openquake.server.dbapi import NotFound
