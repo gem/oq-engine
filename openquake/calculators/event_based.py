@@ -25,6 +25,7 @@ import collections
 
 import numpy
 
+from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, split_in_blocks
 from openquake.hazardlib.probability_map import ProbabilityMap, PmapStats
 from openquake.hazardlib.calc.filters import \
@@ -91,7 +92,9 @@ def compute_ruptures(sources, src_filter, gsims, monitor):
     res = AccumDict({grp_id: eb_ruptures})
     res.num_events = num_events
     res.calc_times = calc_times
-    res.rup_data = {grp_id: calc.RuptureData(trt, gsims).to_array(eb_ruptures)}
+    if gsims:  # we can pass an empty gsims list to disable saving of rup_data
+        res.rup_data = {
+            grp_id: calc.RuptureData(trt, gsims).to_array(eb_ruptures)}
     return res
 
 
@@ -154,6 +157,12 @@ def build_eb_ruptures(
                 src.source_id, src.src_group_id, serial)
 
 
+def _count(ruptures):
+    if isinstance(ruptures, int):  # passed the number of ruptures
+        return ruptures
+    return sum(ebr.multiplicity for ebr in ruptures)
+
+
 @base.calculators.add('event_based_rupture')
 class EventBasedRuptureCalculator(PSHACalculator):
     """
@@ -168,7 +177,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
         minimum_intensity dictionary.
         """
         oq = self.oqparam
-        self.random_seed = oq.random_seed
         self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
         self.min_iml = calc.fix_minimum_intensity(
             oq.minimum_intensity, oq.imtls)
@@ -252,7 +260,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """
         Save the SES collection
         """
-        num_events = sum_dict(result)
+        num_events = sum(_count(ruptures) for ruptures in result.values())
         if num_events == 0:
             raise RuntimeError(
                 'No seismic events! Perhaps the investigation time is too '
@@ -297,41 +305,14 @@ def set_random_years(dstore, events_sm, investigation_time):
     dstore[events_sm] = events
 
 
-def sum_dict(dic):
-    """
-    Sum by key a dictionary of lists or numbers:
-
-    >>> sum_dict({'a': 1})
-    1
-    >>> sum_dict({'a': [None, None]})
-    2
-    """
-    if isinstance(dic, int):
-        return dic
-    s = 0
-    for k, v in dic.items():
-        if hasattr(v, '__len__'):
-            s += len(v)
-        else:
-            s += v
-    return s
-
-
 # ######################## GMF calculator ############################ #
-
-gmv_dt = numpy.dtype([('sid', U32), ('eid', U32), ('imti', U8), ('gmv', F32)])
-
 
 def compute_gmfs_and_curves(getter, rlzs, monitor):
     """
-    :param eb_ruptures:
-        a list of blocks of EBRuptures of the same SESCollection
-    :param sitecol:
-        a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param imts:
-        a list of intensity measure type strings
-    :param rlzs_by_gsim:
-        a dictionary gsim -> associated realizations
+    :param getter:
+        a GmfGetter instance
+    :param rlzs:
+        realizations for the current source group
     :param monitor:
         a Monitor instance
     :returns:
@@ -342,8 +323,9 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
     gmfcoll = {}  # rlz -> gmfa
     for rlz in rlzs:
         gmfcoll[rlz] = []
-        for sid, gmvdict in zip(getter.sids, getter(rlz)):
+        for i, gmvdict in enumerate(getter(rlz)):
             if gmvdict:
+                sid = getter.sids[i]
                 for imti, imt in enumerate(getter.imts):
                     if oq.hazard_curves_from_gmfs:
                         try:
@@ -357,7 +339,7 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
                         gmfcoll[rlz].append(
                             (sid, rec['eid'], imti, rec['gmv']))
     for rlz in gmfcoll:
-        gmfcoll[rlz] = numpy.array(gmfcoll[rlz], gmv_dt)
+        gmfcoll[rlz] = numpy.array(gmfcoll[rlz], calc.gmv_dt)
     result = dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
                   hcurves={})
     if oq.hazard_curves_from_gmfs:

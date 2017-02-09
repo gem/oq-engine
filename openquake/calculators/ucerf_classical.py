@@ -21,6 +21,7 @@ import time
 import logging
 import functools
 from datetime import datetime
+import numpy
 
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import DictArray, AccumDict
@@ -171,7 +172,6 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
         self.rup_data = {}
         self.num_tiles = 1
-        self.infos = {}
 
     def execute(self):
         """
@@ -194,7 +194,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             gsims = self.rlzs_assoc.gsims_by_grp_id[grp_id]
             [[ucerf_source]] = sm.src_groups
             ucerf_source.nsites = len(self.sitecol)
-            self.infos[grp_id, ucerf_source.source_id] = source.SourceInfo(
+            self.csm.infos[grp_id, ucerf_source.source_id] = source.SourceInfo(
                 ucerf_source)
             logging.info('Getting the background point sources')
             with self.monitor('getting background sources', autoflush=True):
@@ -212,7 +212,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
 
             # parallelize by rupture subsets
             tasks = self.oqparam.concurrent_tasks * 2  # they are big tasks
-            rup_sets = ucerf_source.get_rupture_indices()
+            rup_sets = numpy.arange(ucerf_source.num_ruptures)
             rup_res = parallel.Starmap.apply(
                 ucerf_classical_hazard_by_rupture_set,
                 (rup_sets, ucerf_source, self.src_filter, gsims, monitor),
@@ -225,7 +225,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
 
             acc = functools.reduce(self.agg_dicts, rup_res, acc)
             with self.monitor('store source_info', autoflush=True):
-                self.store_source_info(self.infos)
+                self.store_source_info(self.csm.infos)
                 self.save_data_transfer(rup_res)
         self.datastore['csm_info'] = self.csm.info
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(

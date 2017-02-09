@@ -59,7 +59,7 @@ class UcerfTestCase(CalculatorTestCase):
         if h5py.__version__ < '2.6.0':
             raise unittest.SkipTest  # UCERF requires vlen arrays
         out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
-                            ruptures_per_block='10', exports='csv')
+                            exports='csv')
         fname = out['hcurves', 'csv'][0]
         self.assertEqualFiles('expected/hazard_curve-td-mean.csv', fname,
                               delta=1E-6)
