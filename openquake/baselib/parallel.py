@@ -480,8 +480,7 @@ class Starmap(object):
 
     @classmethod
     def run(cls, operation, args, acc=None):
-        if not executor.pids:
-            wakeup_pool()
+        wakeup_pool()
         return cls(operation, operation.gen_args(*args)).reduce(
             operation.aggregate, acc)
 
@@ -712,11 +711,11 @@ def _wakeup(sec):
 def wakeup_pool():
     """
     This is used at startup, only when the ProcessPoolExecutor is used,
-    to fork the processes before loading any big data structure.
-
-    :returns: the list of PIDs spawned or None
+    to fork the processes before loading any big data structure. It is
+    called once once, and adds the list of PIDs spawned to the executor.
     """
-    if oq_distribute() == 'futures':  # when using the ProcessPoolExecutor
+    if not executor.pids and oq_distribute() == 'futures':
+        # when using the ProcessPoolExecutor
         pids = Starmap(_wakeup, ((.2,) for _ in range(executor._max_workers)))
         executor.pids = list(pids)
 
