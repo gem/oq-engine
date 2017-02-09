@@ -21,11 +21,9 @@ Set up some system-wide loggers
 
 import os.path
 import logging
-import multiprocessing
 from datetime import datetime
 from contextlib import contextmanager
 from multiprocessing.connection import Client
-import numpy
 
 from openquake.commonlib import config
 
