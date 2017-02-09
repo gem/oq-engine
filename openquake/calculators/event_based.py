@@ -28,6 +28,7 @@ import numpy
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, split_in_blocks
 from openquake.hazardlib.probability_map import ProbabilityMap, PmapStats
+from openquake.hazardlib.geo.surface import PlanarSurface
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str
@@ -359,6 +360,12 @@ def get_ruptures_by_grp(dstore):
     """
     Extracts the dictionary `ruptures_by_grp` from the given calculator
     """
+    n = 0
+    for grp in dstore['ruptures']:
+        n += len(dstore['ruptures/' + grp])
+    logging.info('Reading %d ruptures from the datastore', n)
+    # disable check on PlaceSurface to support UCERF ruptures
+    PlanarSurface.IMPERFECT_RECTANGLE_TOLERANCE = numpy.inf
     ruptures_by_grp = AccumDict(accum=[])
     for grp in dstore['ruptures']:
         grp_id = int(grp[4:])  # strip 'grp-'
@@ -451,7 +458,7 @@ class EventBasedCalculator(ClassicalCalculator):
                            else get_ruptures_by_grp(self.datastore.parent))
         if self.oqparam.ground_motion_fields:
             calc.check_overflow(self)
-        self.sm_id = {sm.path: sm.ordinal
+        self.sm_id = {tuple(sm.path): sm.ordinal
                       for sm in self.csm.info.source_models}
         L = len(oq.imtls.array)
         res = parallel.Starmap(
