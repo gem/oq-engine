@@ -209,7 +209,6 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
         self.rup_data = {}
         self.num_tiles = 1
-        self.infos = {}
 
     def gen_args(self, source_models, monitor):
         """
@@ -221,7 +220,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             [ucerf_source] = grp
             ucerf_source.nsites = nsites
             gsims = self.rlzs_assoc.gsims_by_grp_id[grp.id]
-            self.infos[grp.id, ucerf_source.source_id] = source.SourceInfo(
+            self.csm.infos[grp.id, ucerf_source.source_id] = source.SourceInfo(
                 ucerf_source)
             # TODO: add source splitting
             # for src in ucerf_source.split(self.oqparam.ruptures_per_block):
@@ -254,7 +253,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             gsims = self.rlzs_assoc.gsims_by_grp_id[0]
             ucerf_source = self.csm.source_models[0].src_groups[0][0]
             ucerf_source.nsites = len(self.sitecol)
-            self.infos[0, ucerf_source.source_id] = source.SourceInfo(
+            self.csm.infos[0, ucerf_source.source_id] = source.SourceInfo(
                 ucerf_source)
             logging.info('Getting the background point sources')
             with self.monitor('getting background sources', autoflush=True):
@@ -285,7 +284,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
 
         pmap_by_grp_id = functools.reduce(self.agg_dicts, rup_res, acc)
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(self.infos)
+            self.store_source_info(self.csm.infos)
             self.save_data_transfer(rup_res)
         self.datastore['csm_info'] = self.csm.info
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
