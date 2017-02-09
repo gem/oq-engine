@@ -9,7 +9,7 @@
                     applyToTectonicRegionType="Volcanic">
 
                 <logicTreeBranch branchID="b1">
- <uncertaintyModel>TusaLanger2015Rhypo</uncertaintyModel>
+ <uncertaintyModel>TusaLanger2016Rhypo</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
 
