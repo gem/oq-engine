@@ -34,7 +34,7 @@ host = w.x.y.z
 port = 5672
 user = openquake
 password = openquake
-vhost = /openquake
+vhost = openquake
 # This is where tasks will be enqueued.
 celery_queue = celery
 
