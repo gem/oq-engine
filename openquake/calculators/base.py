@@ -79,7 +79,7 @@ PRECALC_MAP = dict(
     ebrisk=['event_based', 'event_based_rupture', 'ebrisk',
             'event_based_risk'],
     event_based=['event_based', 'event_based_rupture', 'ebrisk',
-                 'event_based_risk'],
+                 'event_based_risk', 'ucerf_rupture'],
     event_based_risk=['event_based', 'ebrisk', 'event_based_risk',
                       'event_based_rupture'],
     ucerf_classical=['ucerf_psha'])
