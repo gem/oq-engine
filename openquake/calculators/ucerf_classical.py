@@ -222,9 +222,6 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             gsims = self.rlzs_assoc.gsims_by_grp_id[grp.id]
             self.csm.infos[grp.id, ucerf_source.source_id] = source.SourceInfo(
                 ucerf_source)
-            # TODO: add source splitting
-            # for src in ucerf_source.split(self.oqparam.ruptures_per_block):
-            #     yield src, self.src_filter, gsims, monitor
             yield ucerf_source, self.src_filter, gsims, monitor
 
     def execute(self):
