@@ -600,9 +600,9 @@ class EBRupture(object):
                 mesh_spacing, m.flatten())
         elif surface_class.endswith('MultiSurface'):
             mesh_spacing = attrs.pop('mesh_spacing')
-            self.rupture.surface.surfaces = [
+            self.rupture.surface.__init__([
                 geo.PlanarSurface.from_array(mesh_spacing, m1.flatten())
-                for m1 in m]
+                for m1 in m])
         else:  # fault surface
             surface.strike = surface.dip = None  # they will be computed
             surface.mesh = RectangularMesh(
