@@ -202,6 +202,11 @@ class UcerfPSHACalculator(classical.PSHACalculator):
                     self.src_filter)
                 bckgnd_sources = ucerf_source.get_background_sources(
                     background_sids)
+
+            # since there are two kinds of tasks (background and rupture_set)
+            # we divide the concurrent_tasks parameter by 2;
+            # notice the "or 1" below, to avoid issues when
+            # self.oqparam.concurrent_tasks is 0 or 1
             ct2 = (self.oqparam.concurrent_tasks // 2) or 1
 
             # parallelize on the background sources, small tasks
