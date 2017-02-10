@@ -17,8 +17,14 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports contains Armenian modification to GMPEs
-
+Armenian modification to selected active shallow crustal GMPEs
+Module exports :class:`AkkarEtAlRjb2014Armenia`,
+               :class:`BindiEtAl2014RjbArmenia`,
+               :class:`BooreEtAl2014LowQArmenia`,
+               :class:`CauzziEtAl2014Armenia`,
+               :class:`KaleEtAl2015Armenia`,
+               :class:`KothaEtAl2016Armenia`,
+               :class:`ChiouYoungs2014Armenia`
 """
 from __future__ import division
 
@@ -38,7 +44,7 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 
 class AkkarEtAlRjb2014Armenia(AkkarEtAlRjb2014):
     """
-    
+    A 
     """
     ADJUST = CoeffsTable(sa_damping=5, table="""\
     IMT            a          b        tau_adj        sig_adj
@@ -173,7 +179,7 @@ class BooreEtAl2014LowQArmenia(BooreEtAl2014LowQ):
 
 class CauzziEtAl2014Armenia(CauzziEtAl2014):
     """
-    
+    Adjustment of Cauzzi et al. (2014) for Armenia
     """
     ADJUST = CoeffsTable(sa_damping=5, table="""\
     IMT               a          b       tau_adj        sig_adj 
@@ -219,7 +225,7 @@ class CauzziEtAl2014Armenia(CauzziEtAl2014):
 
 class KaleEtAl2015Armenia(KaleEtAl2015Turkey):
     """
-    
+    Adjustment of Kale et al (2015) - Turkish version, for use in Armenia
     """
     ADJUST = CoeffsTable(sa_damping=5, table="""\
     IMT             a          b       tau_adj        sig_adj 
@@ -264,7 +270,8 @@ class KaleEtAl2015Armenia(KaleEtAl2015Turkey):
 
 class KothaEtAl2016Armenia(KothaEtAl2016Turkey):
     """
-    
+    Adaptation of Kotha et al. (2016) - Turkey Regionalisation - for use in
+    Armenia
     """
     ADJUST = CoeffsTable(sa_damping=5, table="""\
     IMT             a          b       tau_adj       sig_adj 
@@ -307,7 +314,7 @@ class KothaEtAl2016Armenia(KothaEtAl2016Turkey):
 
 class ChiouYoungs2014Armenia(ChiouYoungs2014):
     """
-    
+    Adaptation of Chiou & Youngs (2014) for use in Armenia
     """
     ADJUST = CoeffsTable(sa_damping=5, table="""\
     IMT             a          b       tau_adj        sig_adj 
@@ -348,77 +355,3 @@ class ChiouYoungs2014Armenia(ChiouYoungs2014):
             elif stddev == const.StdDev.TOTAL:
                 stddevs.append(np.sqrt(adj_tau ** 2. + adj_sigma ** 2.))
         return mean + adj_factor, stddevs
-#class AkkarEtAlRjb2014ArmeniaMagDepth(AkkarEtAlRjb2014):
-#    """
-#    
-#    """
-#    REQUIRES_RUPTURE_PARAMETERS = set(("rake", "mag", "hypo_depth"))
-#
-#    ADJUST_MAG = CoeffsTable(sa_damping=5, table="""\
-#    IMT                  f        a          b        tau_adj       sig_adj
-#    pga       -1.611999393   -7.026      1.0802   1.573639692   1.382804565
-#    0.01      -1.611999393   -7.026      1.0802   1.573639692   1.382804565
-#    0.1       -1.559374398   -6.546     0.99493   1.500870581   1.411711027
-#    0.2       -1.259592673   -4.887     0.72378   1.449189206   1.431701071
-#    0.3       -1.067923383   -3.711     0.52724   1.328000143   1.366881400
-#    0.5       -0.856924117   -2.448     0.31735   1.214482541   1.260264111
-#    0.75      -0.755948778   -2.248     0.29770   1.177079388   1.166368305
-#    1.0       -0.751074442   -2.349     0.31890   1.205065990   1.115748947
-#    2.0       -0.750440452   -2.893     0.42752   1.212931772   1.078281365
-#    3.0       -0.683021019   -2.908     0.44392   1.205262709   1.139651450
-#    4.0       -0.600000000   -2.900     0.44000   1.200000000   1.100000000
-#    """)
-#
-#    ADJUST_DEPTH = CoeffsTable(sa_damping=5, table="""\
-#    IMT         a          b         tau_adj
-#    pga    -1.623    0.23791           0.929      
-#    0.01   -1.623    0.23791           0.929
-#    0.10   -1.413    0.20431           0.911
-#    0.20   -1.139    0.16051           0.927
-#    0.30   -0.928    0.12500           0.927
-#    0.50   -0.629    0.0076379         0.943
-#    0.75   -0.629    0.007815          0.971
-#    1.00   -0.688    0.0088014         1.000
-#    2.00   -0.967    0.1354            1.000
-#    3.00   -0.826    0.11992           1.000
-#    4.00   -0.826    0.11992           1.000
-#    """)
-#
-#
-#    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-#        """
-#        """
-#        C_ADJ_M = self.ADJUST_MAG[imt]
-#        C_ADJ_D = self.ADJUST_DEPTH[imt]
-#        mean, stddevs = \
-#            super(AkkarEtAlRjb2014ArmeniaMagDepth, self).get_mean_and_stddevs(
-#                sites, rup, dists, imt, [const.StdDev.INTER_EVENT,
-#                                         const.StdDev.INTRA_EVENT])
-#        # Offset factor is dependent on magnitude and inter-event residual
-#        adj_factor = (C_ADJ_M["a"] + C_ADJ_M["b"] * rup.mag) * stddevs[0]
-#        adj_tau = stddevs[0] * C_ADJ_M["tau_adj"]
-#        adj_sigma = stddevs[1] * C_ADJ_M["sig_adj"]
-#        mean += adj_factor
-#        # Adjust for the depth correction
-#        adj_depth = (C_ADJ_D["a"] + C_ADJ_D["b"] * rup.hypo_depth) * adj_tau
-#        adj_tau *= C_ADJ_D["tau_adj"]
-#
-#        stddevs = []
-#        for stddev in stddev_types:
-#            if stddev == const.StdDev.INTER_EVENT:
-#                stddevs.append(adj_tau)
-#            elif stddev == const.StdDev.INTRA_EVENT:
-#                stddevs.append(adj_sigma)
-#            elif stddev == const.StdDev.TOTAL:
-#                stddevs.append(np.sqrt(adj_tau ** 2. + adj_sigma ** 2.))
-#        
-##        stddevs_out = []
-##        for stddev in stddev_types:
-##            if stddev == const.StdDev.INTER_EVENT:
-##                stddevs_out.append(stddevs[0])
-##            elif stddev == const.StdDev.INTRA_EVENT:
-##                stddevs_out.append(stddevs[1])
-##            elif stddev == const.StdDev.TOTAL:
-##                stddevs_out.append(np.sqrt(stddevs[0] ** 2. + stddevs[1] ** 2.))
-#        
-#        return mean + adj_depth, stddevs
