@@ -5,37 +5,29 @@
 %define oqname python-%{oqrepo}
 %define oqtimestamp ##_timestamp_##
 
+%if %{oqstable} == 1
+%define oqformat %{oqrepo}-%{oqversion}
+Release: %{oqrelease}
+%else
+%define oqformat %{oqrepo}-%{oqversion}-%{oqrelease}
+Release: %{oqtimestamp}_%{oqrelease}
+%endif
+
 Summary: hazardlib is a library for performing seismic hazard analysis
 Name: %{oqname}
 Version: %{oqversion}
 License: AGPLv3
 Group: Applications/Engineering
-%if %{oqstable} == 1
-Release: %{oqrelease}
-Source0: %{oqrepo}-%{oqversion}.tar.gz
-BuildRoot: %{_tmppath}/%{oqname}-%{oqversion}-buildroot
-%else
-Release: %{oqtimestamp}_%{oqrelease}
-Source0: %{oqrepo}-%{oqversion}-%{oqrelease}.tar.gz
-BuildRoot: %{_tmppath}/%{oqname}-%{oqversion}-%{oqrelease}-buildroot
-%endif
+Source0: %{oqformat}.tar.gz
+BuildRoot: %{_tmppath}/python-%{oqformat}-buildroot
 Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-hazardlib
 
-%define common_deps python numpy scipy python-futures python-shapely python-psutil h5py python-mock python-rtree
-%define dev_deps python-nose python-coverage
-Requires: %{common_deps}
-Requires: %{dev_deps}
+Requires: python
+Requires: python-oq-libs
 
-# Since tests are currently not enabled during the packaging phase, the following build dependencies are not required
-#BuildRequires: %{common_deps}
-#BuildRequires: %{dev_deps}
-
-BuildRequires: gcc
-BuildRequires: numpy
-BuildRequires: python-devel
 BuildRequires: python-setuptools
 
 %description
@@ -55,23 +47,18 @@ suggestions and criticisms from the community are always very welcome.
 
 Copyright (C) 2014-2017 GEM Foundation
 
-
 %prep
-%if %{oqstable} == 1
-%setup -n %{oqrepo}-%{oqversion} -n %{oqrepo}-%{oqversion}
-%else
-%setup -n %{oqrepo}-%{oqversion}-%{oqrelease} -n %{oqrepo}-%{oqversion}-%{oqrelease}
-%endif
+%setup -n %{oqformat}
 
 %build
-env CFLAGS="$RPM_OPT_FLAGS" python setup.py build
+python setup.py build
 
 %check
 #nosetests -v -a '!slow' --with-doctest --with-coverage --cover-package=openquake.hazardlib
 
 %install
 sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" openquake/hazardlib/__init__.py
-python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --record=INSTALLED_FILES
+python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --prefix=/opt/openquake --install-scripts=/usr/bin --record=INSTALLED_FILES
 
 %clean
 rm -rf %{buildroot}
