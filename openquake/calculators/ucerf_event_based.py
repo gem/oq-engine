@@ -50,8 +50,6 @@ from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
-
-from openquake.commonlib.calc import MAX_INT
 from openquake.hazardlib.sourceconverter import SourceConverter
 
 
