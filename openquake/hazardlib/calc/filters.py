@@ -191,7 +191,7 @@ class SourceFilter(object):
         min_lon, min_lat, max_lon, max_lat = self.get_affected_box(src)
         return (min_lon, min_lat), max_lon - min_lon, max_lat - min_lat
 
-    def affected(self, source):
+    def get_close_sites(self, source):
         """
         Returns the sites within the integration distance from the source,
         or None.
