@@ -214,14 +214,16 @@ def split_in_slices(number, hint):
     :param hint: a hint for the number of slices to return
     :returns: a list of slices with length close to `hint`
 
+    >>> split_in_slices(4, 2)
+    [slice(0, 2, None), slice(2, 4, None)]
     >>> split_in_slices(5, 1)
     [slice(0, 5, None)]
     >>> split_in_slices(5, 2)
     [slice(0, 2, None), slice(2, 4, None), slice(4, 5, None)]
-    >>> split_in_slices(4, 2)
-    [slice(0, 2, None), slice(2, 4, None)]
+    >>> split_in_slices(2, 4)
+    [slice(0, 1, None), slice(1, 2, None)]
     """
-    blocksize = number // hint
+    blocksize = int(math.ceil(number / hint))
     slices = []
     start = 0
     while True:
