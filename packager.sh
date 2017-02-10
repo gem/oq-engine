@@ -234,7 +234,7 @@ _devtest_innervm_run () {
             # skip slow tests
             skip_tests="!slow,"
         fi
-        ssh $lxc_ip "cd $GEM_GIT_PACKAGE ; nosetests -v -a '${skip_tests}' --with-doctest --with-coverage --cover-package=openquake.hazardlib --with-xunit"
+        ssh $lxc_ip "cd $GEM_GIT_PACKAGE ; export PYTHONPATH=opt/openquake/lib/python2.7/site-packages ; nosetests -v -a '${skip_tests}' --with-doctest --with-coverage --cover-package=openquake.hazardlib --with-xunit"
         scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" "out_${BUILD_UBUVER}/"
     else
         if [ -d $HOME/fake-data/$GEM_GIT_PACKAGE ]; then
