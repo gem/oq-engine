@@ -667,10 +667,10 @@ travasarou_2003
     :undoc-members:
     :show-inheritance:
 
-tusa_langer_2015
+tusa_langer_2016
 ------------------------------------------------
 
-.. automodule:: openquake.hazardlib.gsim.tusa_langer_2015
+.. automodule:: openquake.hazardlib.gsim.tusa_langer_2016
     :members:
     :undoc-members:
     :show-inheritance:
