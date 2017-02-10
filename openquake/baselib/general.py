@@ -219,7 +219,7 @@ def split_in_slices(number, hint):
     >>> split_in_slices(5, 1)
     [slice(0, 5, None)]
     >>> split_in_slices(5, 2)
-    [slice(0, 2, None), slice(2, 4, None), slice(4, 5, None)]
+    [slice(0, 3, None), slice(3, 5, None)]
     >>> split_in_slices(2, 4)
     [slice(0, 1, None), slice(1, 2, None)]
     """
