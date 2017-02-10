@@ -202,13 +202,14 @@ class UcerfPSHACalculator(classical.PSHACalculator):
                     self.src_filter)
                 bckgnd_sources = ucerf_source.get_background_sources(
                     background_sids)
+            ct2 = (self.oqparam.concurrent_tasks // 2) or 1
 
             # parallelize on the background sources, small tasks
             args = (bckgnd_sources, self.src_filter, oq.imtls,
                     gsims, self.oqparam.truncation_level, (), monitor)
             bg_res = parallel.Starmap.apply(
                 pmap_from_grp, args, name='background_sources_%d' % grp_id,
-                concurrent_tasks=self.oqparam.concurrent_tasks).submit_all()
+                concurrent_tasks=ct2).submit_all()
 
             # parallelize by rupture subsets
             rup_sets = numpy.arange(ucerf_source.num_ruptures)
@@ -216,7 +217,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             rup_res = parallel.Starmap.apply(
                 ucerf_classical_hazard_by_rupture_set,
                 (rup_sets, ucerf_source, self.src_filter, gsims, monitor),
-                concurrent_tasks=self.oqparam.concurrent_tasks, name=taskname
+                concurrent_tasks=ct2, name=taskname
             ).submit_all()
 
             # compose probabilities from background sources
