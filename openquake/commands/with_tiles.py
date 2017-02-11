@@ -26,12 +26,13 @@ from openquake.commands import engine
 @sap.Script
 def with_tiles(num_tiles, job_ini):
     """
-    Run a calculation by splitting the sites into tiles
+    Run a calculation by splitting the sites into tiles.
+    WARNING: this is experimental and meant only for GEM users
     """
     oq = readinput.get_oqparam(job_ini)
     num_sites = len(readinput.get_mesh(oq))
-    tiles = general.split_in_blocks(num_sites, num_tiles)
-    for t, sites_slice in enumerate(tiles, 1):
+    slices = general.split_in_slices(num_sites, num_tiles)
+    for t, sites_slice in enumerate(slices, 1):
         ss = sites_slice.start, sites_slice.stop
         engine.run_job(job_ini, sites_slice=ss)
         logging.warn('Finished tile %d of %d', t, num_tiles)
