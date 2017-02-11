@@ -208,11 +208,11 @@ def block_splitter(items, max_weight, weight=lambda item: 1, kind=nokey):
         yield ws
 
 
-def split_in_slices(number, hint):
+def split_in_slices(number, num_slices):
     """
     :param number: a positive number to split in slices
-    :param hint: a hint for the number of slices to return
-    :returns: a list of slices with length close to `hint`
+    :param num_slices: the number of slices to return (at most)
+    :returns: a list of slices
 
     >>> split_in_slices(4, 2)
     [slice(0, 2, None), slice(2, 4, None)]
@@ -223,7 +223,7 @@ def split_in_slices(number, hint):
     >>> split_in_slices(2, 4)
     [slice(0, 1, None), slice(1, 2, None)]
     """
-    blocksize = int(math.ceil(number / hint))
+    blocksize = int(math.ceil(number / num_slices))
     slices = []
     start = 0
     while True:
