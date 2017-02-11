@@ -37,7 +37,7 @@ def with_tiles(num_tiles, job_ini):
         Starmap = parallel.Processmap  # celery plays only with processes
     else:  # multiprocessing plays only with threads
         Starmap = parallel.Threadmap
-    Starmap(engine.run_tile, task_args).reduce()
+    Starmap(engine.run_tile, task_args, poolsize=4).reduce()
 
 with_tiles.arg('num_tiles', 'number of tiles to generate',
                type=valid.positiveint)
