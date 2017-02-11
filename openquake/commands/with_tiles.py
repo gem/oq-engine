@@ -17,14 +17,15 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
 import os
+import logging
 from openquake.baselib import sap, general, parallel
 from openquake.hazardlib import valid
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, datastore
 from openquake.commands import engine
 
 
 @sap.Script
-def with_tiles(num_tiles, job_ini):
+def with_tiles(num_tiles, job_ini, poolsize=0):
     """
     Run a calculation by splitting the sites into tiles.
     WARNING: this is experimental and meant only for GEM users
@@ -33,13 +34,24 @@ def with_tiles(num_tiles, job_ini):
     num_sites = len(readinput.get_mesh(oq))
     task_args = [(job_ini, slc)
                  for slc in general.split_in_slices(num_sites, num_tiles)]
-    if os.environ.get('OQ_DISTRIBUTE') == 'celery':
+    if poolsize == 0:  # no pool
+        Starmap = parallel.Sequential
+    elif os.environ.get('OQ_DISTRIBUTE') == 'celery':
         Starmap = parallel.Processmap  # celery plays only with processes
     else:  # multiprocessing plays only with threads
         Starmap = parallel.Threadmap
-    Starmap(engine.run_tile, task_args, poolsize=4).reduce()
+
+    def agg(calc_ids, calc_id):
+        logging.warn('Finished %d calculation(s) out of %d',
+                     len(calc_ids) + 1, num_tiles)
+        return calc_ids + [calc_id]
+    calc_ids = Starmap(engine.run_tile, task_args, poolsize).reduce(agg, [])
+    for calc_id in calc_ids:
+        print(os.path.join(datastore.DATADIR, 'calc_%d.hdf5' % calc_id))
 
 with_tiles.arg('num_tiles', 'number of tiles to generate',
                type=valid.positiveint)
 with_tiles.arg('job_ini', 'calculation configuration file '
                '(or files, comma-separated)')
+with_tiles.opt('poolsize', 'size of the pool (default 0, no pool)',
+               type=valid.positiveint)
