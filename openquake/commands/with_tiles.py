@@ -18,6 +18,7 @@
 from __future__ import division
 import os
 import time
+import logging
 from openquake.baselib import sap, general, parallel
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput, datastore, logs
@@ -48,6 +49,8 @@ def with_tiles(num_tiles, job_ini, poolsize=0):
             parent_child[0] = calc_id
         parent_child[1] = calc_id
         logs.dbcmd('update_parent_child', parent_child)
+        logging.warn('Finished calculation %d of %d',
+                     len(calc_ids) + 1, num_tiles)
         return calc_ids + [calc_id]
     calc_ids = Starmap(engine.run_tile, task_args, poolsize).reduce(agg, [])
     for calc_id in calc_ids:
