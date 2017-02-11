@@ -21,9 +21,8 @@ import time
 import logging
 from openquake.baselib import sap, general, parallel
 from openquake.hazardlib import valid
-from openquake.commonlib import readinput, datastore
+from openquake.commonlib import readinput, datastore, logs
 from openquake.commands import engine
-from openquake.server.manage import db
 
 
 @sap.Script
@@ -51,8 +50,7 @@ def with_tiles(num_tiles, job_ini, poolsize=0):
         parent_child[1] = calc_id
         logging.warn('Finished %d calculation(s) out of %d',
                      len(calc_ids) + 1, num_tiles)
-        db('UPDATE job SET hazard_calculation_id=?x WHERE id=?x',
-           *parent_child)
+        logs.dbcmd('update_parent_child', parent_child)
         return calc_ids + [calc_id]
     calc_ids = Starmap(engine.run_tile, task_args, poolsize).reduce(agg, [])
     for calc_id in calc_ids:
