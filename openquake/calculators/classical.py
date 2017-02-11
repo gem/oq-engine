@@ -285,8 +285,10 @@ class PSHACalculator(base.HazardCalculator):
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
             seed=oq.random_seed)
         with self.monitor('managing sources', autoflush=True):
-            iterargs = saving_sources_by_task(
-                self.gen_args(self.csm, monitor), self.datastore)
+            allargs = self.gen_args(self.csm, monitor)
+            iterargs = saving_sources_by_task(allargs, self.datastore)
+            if isinstance(allargs, list):
+                iterargs = list(iterargs)
             res = parallel.Starmap(
                 self.core_task.__func__, iterargs).submit_all()
         acc = reduce(self.agg_dicts, res, self.zerodict())
