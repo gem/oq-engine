@@ -223,6 +223,8 @@ def split_in_slices(number, num_slices):
     >>> split_in_slices(2, 4)
     [slice(0, 1, None), slice(1, 2, None)]
     """
+    assert number > 0, number
+    assert num_slices > 0, num_slices
     blocksize = int(math.ceil(number / num_slices))
     slices = []
     start = 0
