@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
+import os
 from openquake.baselib import sap, general, parallel
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput
@@ -30,9 +31,13 @@ def with_tiles(num_tiles, job_ini):
     """
     oq = readinput.get_oqparam(job_ini)
     num_sites = len(readinput.get_mesh(oq))
-    task_args = [(job_ini, slc) for slc in general.split_in_slices(
-        num_sites, num_tiles)]
-    parallel.Threadmap(engine.run_tile, task_args).reduce()
+    task_args = [(job_ini, slc)
+                 for slc in general.split_in_slices(num_sites, num_tiles)]
+    if os.environ.get('OQ_DISTRIBUTE') == 'celery':
+        Starmap = parallel.Processmap  # celery plays only with processes
+    else:  # multiprocessing plays only with threads
+        Starmap = parallel.Threadmap
+    Starmap(engine.run_tile, task_args).reduce()
 
 with_tiles.arg('num_tiles', 'number of tiles to generate',
                type=valid.positiveint)
