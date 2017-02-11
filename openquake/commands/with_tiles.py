@@ -57,7 +57,7 @@ def with_tiles(num_tiles, job_ini, poolsize=0):
     calc_ids = Starmap(engine.run_tile, task_args, poolsize).reduce(agg, [])
     for calc_id in calc_ids:
         print(os.path.join(datastore.DATADIR, 'calc_%d.hdf5' % calc_id))
-    print('Total calculation time: %s h' % ((time.time() - t0) / 3600.))
+    print('Total calculation time: %.1f h' % ((time.time() - t0) / 3600.))
 
 with_tiles.arg('num_tiles', 'number of tiles to generate',
                type=valid.positiveint)
