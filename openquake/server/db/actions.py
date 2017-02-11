@@ -495,7 +495,7 @@ def set_relevant(db, job_id, flag):
     db('UPDATE job SET relevant=?x WHERE id=?x', flag, job_id)
 
 
-def update_parent(db, parent_child):
+def update_parent_child(db, parent_child):
     """
     Set hazard_calculation_id (parent) on a job_id (child)
     """
