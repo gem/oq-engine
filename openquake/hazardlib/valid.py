@@ -901,20 +901,19 @@ def positiveints(value):
 
 def simple_slice(value):
     """
-    A simple slice with step 1.
-
     >>> simple_slice('2:5')
-    slice(2, 5, None)
+    (2, 5)
     >>> simple_slice('0:None')
-    slice(0, None, None)
+    (0, None)
     """
     try:
         start, stop = value.split(':')
         start = ast.literal_eval(start)
         stop = ast.literal_eval(stop)
+        assert start < stop
     except:
         raise ValueError('invalid slice: %s' % value)
-    return slice(start, stop)
+    return (start, stop)
 
 # ############################## site model ################################ #
 
