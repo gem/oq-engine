@@ -285,9 +285,8 @@ class PSHACalculator(base.HazardCalculator):
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
             seed=oq.random_seed)
         with self.monitor('managing sources', autoflush=True):
-            src_groups = list(self.csm.src_groups)
             iterargs = saving_sources_by_task(
-                self.gen_args(src_groups, oq, monitor), self.datastore)
+                self.gen_args(self.csm, monitor), self.datastore)
             res = parallel.Starmap(
                 self.core_task.__func__, iterargs).submit_all()
         acc = reduce(self.agg_dicts, res, self.zerodict())
@@ -299,29 +298,30 @@ class PSHACalculator(base.HazardCalculator):
         self.datastore['csm_info'] = self.csm.info
         return acc
 
-    def gen_args(self, src_groups, oq, monitor):
+    def gen_args(self, csm, monitor):
         """
         Used in the case of large source model logic trees.
 
-        :param src_groups: a list of SourceGroup instances
-        :param oq: a :class:`openquake.commonlib.oqvalidation.OqParam` instance
+        :param csm: a CompositeSourceModel instance
         :param monitor: a :class:`openquake.baselib.performance.Monitor`
         :yields: (sources, sites, gsims, monitor) tuples
         """
-        ngroups = len(src_groups)
+        oq = self.oqparam
         maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
         logging.info('Using a maxweight of %d', maxweight)
-        for sg in src_groups:
-            logging.info('Sending source group #%d of %d (%s, %d sources)',
-                         sg.id + 1, ngroups, sg.trt, len(sg.sources))
-            gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
-            if oq.poes_disagg or oq.iml_disagg:  # only for disaggregation
-                monitor.sm_id = self.rlzs_assoc.sm_ids[sg.id]
-            monitor.seed = self.rlzs_assoc.seed
-            monitor.samples = self.rlzs_assoc.samples[sg.id]
-            for block in self.csm.split_sources(
-                    sg.sources, self.src_filter, maxweight):
-                yield block, self.src_filter, gsims, monitor
+        ngroups = sum(len(sm.src_groups) for sm in csm.source_models)
+        for sm in csm.source_models:
+            for sg in sm.src_groups:
+                logging.info('Sending source group #%d of %d (%s, %d sources)',
+                             sg.id + 1, ngroups, sg.trt, len(sg.sources))
+                gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
+                if oq.poes_disagg or oq.iml_disagg:  # only for disaggregation
+                    monitor.sm_id = self.rlzs_assoc.sm_ids[sg.id]
+                monitor.seed = self.rlzs_assoc.seed
+                monitor.samples = self.rlzs_assoc.samples[sg.id]
+                for block in self.csm.split_sources(
+                        sg.sources, self.src_filter, maxweight):
+                    yield block, self.src_filter, gsims, monitor
 
     def store_source_info(self, infos):
         # save the calculation times per each source
