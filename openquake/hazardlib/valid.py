@@ -899,6 +899,23 @@ def positiveints(value):
     return ints
 
 
+def simple_slice(value):
+    """
+    A simple slice with step 1.
+
+    >>> simple_slice('2:5')
+    slice(2, 5, None)
+    >>> simple_slice('0:None')
+    slice(0, None, None)
+    """
+    try:
+        start, stop = value.split(':')
+        start = ast.literal_eval(start)
+        stop = ast.literal_eval(stop)
+    except:
+        raise ValueError('invalid slice: %s' % value)
+    return slice(start, stop)
+
 # ############################## site model ################################ #
 
 vs30_type = ChoiceCI('measured', 'inferred')
