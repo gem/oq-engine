@@ -687,7 +687,7 @@ def wakeup_pool():
 
 
 class BaseStarmap(object):
-    poolfactory = staticmethod(multiprocessing.Pool)
+    poolfactory = staticmethod(lambda size: multiprocessing.Pool(size))
 
     @classmethod
     def apply(cls, func, args, concurrent_tasks=executor._max_workers * 5,
@@ -695,8 +695,8 @@ class BaseStarmap(object):
         chunks = split_in_blocks(args[0], concurrent_tasks, weight, key)
         return cls(func, (((chunk,) + args[1:]) for chunk in chunks))
 
-    def __init__(self, func, iterargs):
-        self.pool = self.poolfactory()
+    def __init__(self, func, iterargs, poolsize=None):
+        self.pool = self.poolfactory(poolsize)
         self.func = func
         allargs = list(iterargs)
         self.num_tasks = len(allargs)
@@ -721,7 +721,7 @@ class Sequential(BaseStarmap):
     """
     A sequential Starmap, useful for debugging purpose.
     """
-    def __init__(self, func, iterargs):
+    def __init__(self, func, iterargs, poolsize=None):
         self.pool = None
         self.func = func
         allargs = list(iterargs)
@@ -738,8 +738,7 @@ class Threadmap(BaseStarmap):
     >>> c = Threadmap(Counter, [('hello',), ('world',)]).reduce()
     """
     poolfactory = staticmethod(
-        # following the same convention of the standard library, num_proc * 5
-        lambda: multiprocessing.dummy.Pool(executor._max_workers * 5))
+        lambda size: multiprocessing.dummy.Pool(size))
 
 
 class Processmap(BaseStarmap):
