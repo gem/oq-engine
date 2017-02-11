@@ -16,8 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
-import logging
-from openquake.baselib import sap, general
+from openquake.baselib import sap, general, parallel
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput
 from openquake.commands import engine
@@ -31,11 +30,9 @@ def with_tiles(num_tiles, job_ini):
     """
     oq = readinput.get_oqparam(job_ini)
     num_sites = len(readinput.get_mesh(oq))
-    slices = general.split_in_slices(num_sites, num_tiles)
-    for t, sites_slice in enumerate(slices, 1):
-        ss = sites_slice.start, sites_slice.stop
-        engine.run_job(job_ini, sites_slice=ss)
-        logging.warn('Finished tile %d of %d', t, num_tiles)
+    task_args = [(job_ini, slc) for slc in general.split_in_slices(
+        num_sites, num_tiles)]
+    parallel.Threadmap(engine.run_tile, task_args).reduce()
 
 with_tiles.arg('num_tiles', 'number of tiles to generate',
                type=valid.positiveint)
