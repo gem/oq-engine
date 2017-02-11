@@ -849,6 +849,8 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         Generate a task for each branch
         """
         oq = self.oqparam
+        allargs = []  # it is better to return a list; if there is single
+        # branch then `parallel.Starmap` will run the task in core
         for sm_id in range(len(csm.source_models)):
             ssm = csm.get_model(sm_id)
             mon = monitor.new(
@@ -858,7 +860,8 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
                 save_ruptures=oq.save_ruptures,
                 seed=ssm.source_model_lt.seed)
             gsims = ssm.gsim_lt.values[DEFAULT_TRT]
-            yield ssm.get_sources(), self.src_filter, gsims, mon
+            allargs.append((ssm.get_sources(), self.src_filter, gsims, mon))
+        return allargs
 
 
 class List(list):
