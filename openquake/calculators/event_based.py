@@ -337,7 +337,7 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
         a dictionary with keys gmfcoll and hcurves
    """
     oq = monitor.oqparam
-    with monitor('GmfGetter.init', measuremem=True):
+    with monitor('making contexts', measuremem=True):
         getter.init()
     haz = {sid: {} for sid in getter.sids}
     gmfcoll = {}  # rlz -> gmfa
