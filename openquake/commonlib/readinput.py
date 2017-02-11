@@ -188,7 +188,8 @@ def get_mesh(oqparam):
         csv_data = open(oqparam.inputs['sites'], 'U').read()
         coords = valid.coordinates(
             csv_data.strip().replace(',', ' ').replace('\n', ','))
-        return geo.Mesh.from_coords(coords)
+        start, stop = oqparam.sites_slice
+        return geo.Mesh.from_coords(coords[start:stop])
     elif oqparam.region:
         # close the linear polygon ring by appending the first
         # point to the end

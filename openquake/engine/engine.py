@@ -158,7 +158,7 @@ def job_from_file(cfg_file, username, hazard_calculation_id=None):
 
 
 def run_calc(job_id, oqparam, log_level, log_file, exports,
-             hazard_calculation_id=None):
+             hazard_calculation_id=None, **kw):
     """
     Run a calculation.
 
@@ -183,7 +183,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         tb = 'None\n'
         try:
             logs.dbcmd('set_status', job_id, 'executing')
-            _do_run_calc(calc, exports, hazard_calculation_id)
+            _do_run_calc(calc, exports, hazard_calculation_id, **kw)
             expose_outputs(calc.datastore)
             records = views.performance_view(calc.datastore)
             logs.dbcmd('save_performance', job_id, records)
@@ -213,7 +213,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     return calc
 
 
-def _do_run_calc(calc, exports, hazard_calculation_id):
+def _do_run_calc(calc, exports, hazard_calculation_id, **kw):
     with calc.monitor:
         calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id,
-                 close=False)  # don't close the datastore too soon
+                 close=False, **kw)  # don't close the datastore too soon
