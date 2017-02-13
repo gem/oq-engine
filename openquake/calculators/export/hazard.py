@@ -877,6 +877,7 @@ def export_gmf_scenario_npz(ekey, dstore):
                 gmfa[imt] = arr[imti]
             dic[str(gsim)] = util.compose_arrays(sitemesh, gmfa)
     elif 'gmf_data' in dstore:  # event_based
+        dic['sitemesh'] = get_mesh(dstore['sitecol'])
         for sm_id in sorted(dstore['gmf_data']):
             for rlzno in sorted(dstore['gmf_data/' + sm_id]):
                 dic['rlz-' + rlzno] = dstore['gmf_data/%s/%s' % (sm_id, rlzno)]

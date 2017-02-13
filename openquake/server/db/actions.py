@@ -495,6 +495,14 @@ def set_relevant(db, job_id, flag):
     db('UPDATE job SET relevant=?x WHERE id=?x', flag, job_id)
 
 
+def update_parent_child(db, parent_child):
+    """
+    Set hazard_calculation_id (parent) on a job_id (child)
+    """
+    db('UPDATE job SET hazard_calculation_id=?x WHERE id=?x',
+       *parent_child)
+
+
 def get_log_slice(db, job_id, start, stop):
     """
     Get a slice of the calculation log as a JSON list of rows
