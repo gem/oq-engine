@@ -216,15 +216,11 @@ def export_agg_losses_ebr(ekey, dstore):
             dstore, csm_info.get_grp_ids(sm_id)) if has_rup_data else {}
         event_by_eid = {event['eid']: event for event in events}
         for rlz in rlzs:
-            dest = dstore.build_fname('agg_losses', rlz, 'csv')
-            eids = set()
             rlzname = 'rlz-%03d' % rlz.ordinal
             if rlzname not in agg_losses:
                 continue
-            for loss_type in agg_losses[rlzname]:
-                dset = agg_losses['%s/%s' % (rlzname, loss_type)]
-                eids.update(dset['eid'])
-            eids = sorted(eids)
+            data = agg_losses[rlzname].value
+            eids = data['eid']
             rlz_events = numpy.array([event_by_eid[eid] for eid in eids])
             eid2idx = dict(zip(eids, range(len(eids))))
             elt = numpy.zeros(len(eids), elt_dt)
@@ -232,22 +228,19 @@ def export_agg_losses_ebr(ekey, dstore):
             elt['year'] = rlz_events['year']
             if rup_data:
                 copy_to(elt, rup_data, rlz_events['rupserial'])
-            for loss_type in loss_types:
+            for l, loss_type in enumerate(loss_types):
                 elt_lt = elt[loss_type]
                 if oq.insured_losses:
                     elt_lt_ins = elt[loss_type + '_ins']
-                key = 'rlz-%03d/%s' % (rlz.ordinal, loss_type)
-                if key not in agg_losses:  # nothing was saved for this key
-                    continue
-                data = agg_losses[key].value
                 for i, eid in numpy.ndenumerate(data['eid']):
                     idx = eid2idx[eid]
                     if oq.insured_losses:
-                        elt_lt[idx] = data['loss'][i, 0]
-                        elt_lt_ins[idx] = data['loss'][i, 1]
+                        elt_lt[idx] = data['loss'][i, l, 0]
+                        elt_lt_ins[idx] = data['loss'][i, l, 1]
                     else:
-                        elt_lt[idx] = data['loss'][i]
+                        elt_lt[idx] = data['loss'][i, l]
             elt.sort(order=['year', 'event_tag'])
+            dest = dstore.build_fname('agg_losses', rlz, 'csv')
             writer.save(elt, dest)
     return writer.getsaved()
 
