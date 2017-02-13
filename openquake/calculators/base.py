@@ -66,7 +66,8 @@ class AssetSiteAssociationError(Exception):
 rlz_dt = numpy.dtype([('uid', hdf5.vstr), ('model', hdf5.vstr),
                       ('gsims', hdf5.vstr), ('weight', F32)])
 
-logversion = {True}
+logversion = True
+
 
 PRECALC_MAP = dict(
     classical=['psha'],
@@ -173,12 +174,13 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         Run the calculation and return the exported outputs.
         """
+        global logversion
         self.close = close
         self.set_log_format()
         if logversion:  # make sure this is logged only once
             logging.info('Using engine version %s', engine_version)
             logging.info('Using hazardlib version %s', hazardlib_version)
-            logversion.pop()
+            logversion = False
         if concurrent_tasks is None:  # use the default
             pass
         elif concurrent_tasks == 0:  # disable distribution temporarily
