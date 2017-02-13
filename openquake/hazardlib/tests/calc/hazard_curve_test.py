@@ -34,7 +34,7 @@ from openquake.hazardlib.source.point import PointSource
 
 
 class HazardCurvesFiltersTestCase(unittest.TestCase):
-    def test_mdf_pickleable(self):
+    def test_MagnitudeDistance_pickleable(self):
         md = MagnitudeDistance(
             [(1, 10), (2, 20), (3, 30), (4, 40), (5, 100), (6, 200),
              (7, 400), (8, 800)])

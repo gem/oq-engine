@@ -156,6 +156,12 @@ class MagnitudeDistance(object):
     def __str__(self):
         return repr(self.value)
 
+    def max(self):
+        if isinstance(self.value, list):
+            return self.value[-1][1]
+        else:
+            return self.value
+
 
 class SourceFilter(object):
     """

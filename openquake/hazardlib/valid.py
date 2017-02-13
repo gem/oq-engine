@@ -709,6 +709,7 @@ def dictionary(value):
     return dic
 
 
+# used for the maximum distance parameter in the job.ini file
 def floatdict(value):
     """
     :param value:
@@ -724,7 +725,7 @@ def floatdict(value):
     [('active shallow crust', 250.0), ('default', 200)]
     """
     value = ast.literal_eval(value)
-    if isinstance(value, (int, float)):
+    if isinstance(value, (int, float, list)):
         return {'default': value}
     return value
 
