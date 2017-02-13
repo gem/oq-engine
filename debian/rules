@@ -13,5 +13,8 @@ export DH_VERBOSE=1
 export DH_OPTIONS=-v
 export PREFIX=/opt/openquake
 
+override_dh_auto_install:
+	python setup.py install --force --root=$(PWD)/debian/python-oq-hazardlib --prefix=$(PREFIX) --no-compile -O0
+
 %:
 	dh --with python2 --with quilt --buildsystem=python_distutils $@ 
