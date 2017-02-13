@@ -736,6 +736,8 @@ class Threadmap(BaseStarmap):
 
     >>> from collections import Counter
     >>> c = Threadmap(Counter, [('hello',), ('world',)], poolsize=4).reduce()
+    >>> sorted(c.items())
+    [('d', 1), ('e', 1), ('h', 1), ('l', 3), ('o', 2), ('r', 1), ('w', 1)]
     """
     poolfactory = staticmethod(
         lambda size: multiprocessing.dummy.Pool(size))
@@ -747,4 +749,6 @@ class Processmap(BaseStarmap):
 
     >>> from collections import Counter
     >>> c = Processmap(Counter, [('hello',), ('world',)], poolsize=4).reduce()
+    >>> sorted(c.items())
+    [('d', 1), ('e', 1), ('h', 1), ('l', 3), ('o', 2), ('r', 1), ('w', 1)]
     """
