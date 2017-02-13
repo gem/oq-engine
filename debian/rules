@@ -16,5 +16,9 @@ export PREFIX=/opt/openquake
 override_dh_auto_install:
 	python setup.py install --force --root=$(PWD)/debian/python-oq-hazardlib --prefix=$(PREFIX) --no-compile -O0
 
+override_dh_install:
+	python2 -m compileall $(PWD)/debian/python-oq-hazardlib$(PREFIX) || true
+	dh_install
+
 %:
 	dh --with python2 --with quilt --buildsystem=python_distutils $@ 
