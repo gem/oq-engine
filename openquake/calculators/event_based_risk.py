@@ -73,11 +73,8 @@ def build_agg_curve(cb_inputs, monitor):
         for cb in cbs:
             l = cb.index
             losses = data['loss'][:, l]  # shape (E, I)
-            if len(losses.shape) == 1:  # no insured losses
-                result[l, r, 0] = cb.calc_agg_curve(losses)
-            else:
-                result[l, r, 0] = cb.calc_agg_curve(losses[:, 0])
-                result[l, r, 1] = cb.calc_agg_curve(losses[:, 1])
+            for i in range(cb.insured_losses + 1):
+                result[l, r, i] = cb.calc_agg_curve(losses[:, i])
     return result
 
 

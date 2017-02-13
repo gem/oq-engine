@@ -21,7 +21,6 @@ import collections
 
 import numpy
 
-from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import AccumDict, get_array, group_array
 from openquake.risklib import scientific, riskinput
@@ -245,11 +244,6 @@ def export_agg_losses_ebr(ekey, dstore):
     return writer.getsaved()
 
 
-def group_by_aid(data, loss_type):
-    return {aid: AccumDict({loss_type: rec['loss']})
-            for aid, [rec] in group_array(data, 'aid').items()}
-
-
 # this is used by event_based_risk
 @export.add(('all_loss_ratios', 'csv'))
 def export_all_loss_ratios(ekey, dstore):
@@ -271,7 +265,6 @@ def export_all_loss_ratios(ekey, dstore):
         return []
     sm_id, eid = int(sm_id), int(eid)
     sm_ids = [sm_id]
-    zero = [0, 0] if oq.insured_losses else 0
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for sm_id in sm_ids:
         rlzs = rlzs_assoc.rlzs_by_smodel[sm_id]
@@ -285,18 +278,18 @@ def export_all_loss_ratios(ekey, dstore):
             dest = dstore.build_fname(exportname, rlz, 'csv')
             losses_by_aid = AccumDict()
             rlzname = 'rlz-%03d' % rlz.ordinal
-            for loss_type in ass_losses[rlzname]:
-                data = get_array(ass_losses['%s/%s' % (rlzname, loss_type)],
-                                 eid=eid)
-                losses_by_aid += group_by_aid(data, loss_type)
+            data = get_array(ass_losses[rlzname], eid=eid)
+            losses_by_aid = group_array(data, 'aid')
             elt = numpy.zeros(len(losses_by_aid), elt_dt)
             elt['event_tag'] = event_tag
             elt['year'] = ok_events[0]['year']
             elt['aid'] = sorted(losses_by_aid)
             for i, aid in numpy.ndenumerate(elt['aid']):
-                for loss_type in loss_types:
+                # there is a single eid
+                losses = losses_by_aid[aid]['loss'][0, :, :]  # shape (L, I)
+                for l, loss_type in enumerate(loss_types):
                     value = assetcol[int(aid)].value(loss_type, oq.time_event)
-                    loss = value * losses_by_aid[aid].get(loss_type, zero)
+                    loss = value * losses[l]
                     if oq.insured_losses:
                         elt[loss_type][i] = loss[0]
                         elt[loss_type + '_ins'][i] = loss[1]
