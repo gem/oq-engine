@@ -26,7 +26,7 @@ from openquake.commands import engine
 
 
 @sap.Script
-def with_tiles(num_tiles, job_ini, poolsize=0):
+def run_tiles(num_tiles, job_ini, poolsize=0):
     """
     Run a calculation by splitting the sites into tiles.
     WARNING: this is experimental and meant only for GEM users
@@ -57,9 +57,9 @@ def with_tiles(num_tiles, job_ini, poolsize=0):
         print(os.path.join(datastore.DATADIR, 'calc_%d.hdf5' % calc_id))
     print('Total calculation time: %.1f h' % ((time.time() - t0) / 3600.))
 
-with_tiles.arg('num_tiles', 'number of tiles to generate',
-               type=valid.positiveint)
-with_tiles.arg('job_ini', 'calculation configuration file '
-               '(or files, comma-separated)')
-with_tiles.opt('poolsize', 'size of the pool (default 0, no pool)',
-               type=valid.positiveint)
+run_tiles.arg('num_tiles', 'number of tiles to generate',
+              type=valid.positiveint)
+run_tiles.arg('job_ini', 'calculation configuration file '
+              '(or files, comma-separated)')
+run_tiles.opt('poolsize', 'size of the pool (default 0, no pool)',
+              type=valid.positiveint)
