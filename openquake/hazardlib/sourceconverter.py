@@ -326,7 +326,7 @@ def split_filter_source(src, src_filter):
             nr = split.num_ruptures
             split.serial = src.serial[start:start + nr]
             start += nr
-        if src_filter.affected(split) is not None:
+        if src_filter.get_close_sites(split) is not None:
             split_sources.append(split)
     return split_sources
 
