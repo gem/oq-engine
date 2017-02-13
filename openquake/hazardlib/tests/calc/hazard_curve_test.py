@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
+import pickle
 import numpy
 
 import openquake.hazardlib
@@ -21,7 +22,8 @@ from openquake.hazardlib import const
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
-from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib.calc.filters import (
+    SourceFilter, MagnitudeDistanceFunction)
 from openquake.baselib.parallel import Sequential, Processmap
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim import akkar_bommer_2010
@@ -33,6 +35,13 @@ from openquake.hazardlib.source.point import PointSource
 
 
 class HazardCurvesFiltersTestCase(unittest.TestCase):
+    def test_mdf_pickleable(self):
+        mdf = MagnitudeDistanceFunction(
+            [(1, 10), (2, 20), (3, 30), (4, 40), (5, 100), (6, 200),
+             (7, 400), (8, 800)])
+        mdf2 = pickle.loads(pickle.dumps(mdf))
+        self.assertEqual(mdf.value, mdf2.value)
+
     def test_point_sources(self):
         sources = [
             openquake.hazardlib.source.PointSource(

@@ -289,7 +289,12 @@ class ContextMaker(object):
         distances = get_distances(rupture, site_collection.mesh, 'rjb')
         sites = site_collection
         if self.maximum_distance:
-            mask = distances <= self.maximum_distance
+            # self.maximum_distance can be just a scalar number in km
+            # or a function magniture -> distance
+            maxdist = (self.maximum_distance(rupture.mag)
+                       if callable(self.maximum_distance)
+                       else self.maximum_distance)
+            mask = distances <= maxdist
             if mask.any():
                 sites = site_collection.filter(mask)
                 distances = distances[mask]
