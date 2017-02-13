@@ -288,6 +288,10 @@ class PSHACalculator(base.HazardCalculator):
             allargs = self.gen_args(self.csm, monitor)
             iterargs = saving_sources_by_task(allargs, self.datastore)
             if isinstance(allargs, list):
+                # there is a trick here: if the arguments are known
+                # (a list, not an iterator), keep them as a list
+                # then the Starmap will understand the case of a single
+                # argument tuple and it will run in core the task
                 iterargs = list(iterargs)
             res = parallel.Starmap(
                 self.core_task.__func__, iterargs).submit_all()
