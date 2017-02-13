@@ -387,6 +387,7 @@ class HazardCalculator(BaseCalculator):
 
     def basic_pre_execute(self):
         oq = self.oqparam
+        import pdb; pdb.set_trace()
         self.read_risk_data()
         if 'source' in oq.inputs:
             wakeup_pool()  # fork before reading the source model

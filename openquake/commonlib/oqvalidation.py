@@ -22,6 +22,7 @@ import numpy
 
 from openquake.baselib import parallel
 from openquake.baselib.general import DictArray
+from openquake.hazardlib.calc.filters import MagnitudeDistance
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import correlation
 from openquake.hazardlib import valid
@@ -429,7 +430,9 @@ class OqParam(valid.ParamSet):
                           'not in %s' % (unknown, gsim_lt))
             return False
         for trt, val in self.maximum_distance.items():
-            if val <= 0:
+            if isinstance(val, list):
+                self.maximum_distance[trt] = MagnitudeDistance(val)
+            elif val <= 0:
                 self.error = '%s=%r < 0' % (trt, val)
                 return False
             elif trt not in self._gsims_by_trt and trt != 'default':
