@@ -932,7 +932,8 @@ class UCERFRiskCalculator(EbriskCalculator):
         correl_model = oq.get_correl_model()
         min_iml = self.get_min_iml(oq)
         imts = list(oq.imtls)
-        ela_dt, elt_dt = build_el_dtypes(oq.insured_losses)
+        ela_dt, elt_dt = build_el_dtypes(
+            self.riskmodel.loss_types, oq.insured_losses)
         for sm in self.csm.source_models:
             monitor = self.monitor.new(
                 ses_ratio=oq.ses_ratio,
