@@ -121,34 +121,40 @@ def filter_sites_by_distance_to_rupture(rupture, integration_distance, sites):
     return sites.filter(jb_dist <= integration_distance)
 
 
-class MagnitudeDistanceFunction(object):
+class MagnitudeDistance(object):
     """
-    Pickleable callable returning the integration distance associated
-    to the given magnitude.
+    Pickleable object with a .get property returning the integration distance
+    associated with a given magnitude.
+
+    >>> maxdist = MagnitudeDistance([
+    ...          (1, 10), (2, 20), (3, 30), (4, 40), (5, 100), (6, 200),
+    ...          (7, 400), (8, 800)])
+    >>> maxdist.get(5.5)
+    array(150.0)
     """
+    _interp = None
+
     @property
-    def interp(self):
+    def get(self):
         if self._interp is not None:
             return self._interp
-        self._interp = interp1d(self.mags, self.dists)
+        if isinstance(self.value, list):
+            self._interp = interp1d(self.mags, self.dists)
+        else:
+            self._interp = lambda mag: self.value
         return self._interp
 
     def __init__(self, value):
         self.value = value
         if isinstance(value, list):  # assume a list of pairs (mag, dist)
             value.sort()  # make sure the list is sorted by magnitude
-            self.func = interp1d(*zip(*value))
-        else:  # scalar value
-            self.func = None
+            self.mags, self.dists = zip(*value)
 
     def __getstate__(self):
         return dict(value=self.value)
 
-    def __call__(self, mag):
-        if self.func:
-            return self.func(mag)
-        else:
-            return self.value
+    def __str__(self):
+        return repr(self.value)
 
 
 class SourceFilter(object):
