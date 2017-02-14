@@ -1181,7 +1181,7 @@ class GsimLogicTree(object):
         """
         :returns: an XML string representing the logic tree
         """
-        return node.tostring(self._ltnode).decode('utf-8')
+        return nrml.convert(self._ltnode)
 
     def reduce(self, trts):
         """
