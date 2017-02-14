@@ -177,11 +177,8 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             self.csm.infos[grp_id, ucerf_source.source_id] = source.SourceInfo(
                 ucerf_source)
             logging.info('Getting the background point sources')
-            with self.monitor('getting background sources', autoflush=True):
-                background_sids = ucerf_source.get_background_sids(
-                    self.src_filter)
-                bckgnd_sources = ucerf_source.get_background_sources(
-                    background_sids)
+            bckgnd_sources = ucerf_source.get_background_sources(
+                self.src_filter)
 
             # since there are two kinds of tasks (background and rupture_set)
             # we divide the concurrent_tasks parameter by 2;
