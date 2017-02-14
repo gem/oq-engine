@@ -120,20 +120,11 @@ def ucerf_classical_hazard_by_rupture_set(
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.imtls
     max_dist = src_filter.integration_distance[DEFAULT_TRT]
-    rupset_idx, s_sites = \
-        ucerf_source.filter_sites_by_distance_from_rupture_set(
-            rupset_idx, src_filter.sitecol, max_dist)
-    if len(s_sites):
-        ucerf_source.src_filter = src_filter  # so that .iter_ruptures() work
-        cmaker = ContextMaker(gsims, max_dist)
-        pm = _hazard_curves_per_rupture_subset(
-            rupset_idx, ucerf_source, s_sites, imtls, cmaker,
-            truncation_level, monitor=monitor)
-    else:  # return an empty probability map
-        pm = ProbabilityMap(len(imtls.array), len(gsims))
-        pm.calc_times = []  # TODO: fix .calc_times
-        pm.eff_ruptures = {ucerf_source.src_group_id: 0}
-        pm.grp_id = ucerf_source.src_group_id
+    ucerf_source.src_filter = src_filter  # so that .iter_ruptures() work
+    cmaker = ContextMaker(gsims, max_dist)
+    pm = _hazard_curves_per_rupture_subset(
+        rupset_idx, ucerf_source, src_filter.sitecol, imtls, cmaker,
+        truncation_level, monitor=monitor)
     return pm
 ucerf_classical_hazard_by_rupture_set.shared_dir_on = config.SHARED_DIR_ON
 
