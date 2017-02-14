@@ -286,23 +286,26 @@ class ContextMaker(object):
             and distance parameters) is unknown.
         """
         rctx = self.make_rupture_context(rupture)
-        distances = get_distances(rupture, site_collection.mesh, 'rjb')
-        sites = site_collection
-        if self.maximum_distance:
-            # self.maximum_distance can be just a scalar number in km
-            # or a function magniture -> distance
-            maxdist = self.maximum_distance(
-                rupture.tectonic_region_type, rupture.mag)
-            mask = distances <= maxdist
-            if mask.any():
-                sites = site_collection.filter(mask)
-                distances = distances[mask]
-            else:
-                raise FarAwayRupture
-
+        sites, distances = self.get_close(site_collection, rupture, 'rjb')
         sctx = self.make_sites_context(sites)
         dctx = self.make_distances_context(sites, rupture, {'rjb': distances})
         return (sctx, rctx, dctx)
+
+    def get_close(self, sites, rupture, distance_type='rjb'):
+        """
+        :param rupture: a rupture
+        :param sites: a (Filtered)SiteColletion
+        :param distance_type: default 'rjb'
+        :returns: (close sites, close distances)
+        :raises: a FarAwayRupture exception is the rupture is far away
+        """
+        distances = get_distances(rupture, sites.mesh, distance_type)
+        mask = distances <= self.maximum_distance(
+            rupture.tectonic_region_type, rupture.mag)
+        if mask.any():
+            return sites.filter(mask), distances[mask]
+        else:
+            raise FarAwayRupture
 
 
 @functools.total_ordering
