@@ -682,40 +682,6 @@ class UcerfSource(object):
                 sources.append(ps)
         return sources
 
-    def filter_sites_by_distance_from_rupture_set(
-            self, rupset_idx, sites, max_dist):
-        """
-        Filter sites by distances from a set of ruptures
-        """
-        with h5py.File(self.control.source_file, "r") as hdf5:
-            rup_index_key = "/".join([self.idx_set["geol_idx"],
-                                      "RuptureIndex"])
-
-            # Find the combination of rupture sections used in this model
-            rupture_set = set()
-            # Determine which of the rupture sections used in this set
-            # of indices
-            rup_index = hdf5[rup_index_key]
-            for i in rupset_idx:
-                rupture_set.update(rup_index[i])
-            centroids = numpy.empty([1, 3])
-            # For each of the identified rupture sections, retreive the
-            # centroids
-            for ridx in rupture_set:
-                trace_idx = "{:s}/{:s}".format(self.idx_set["sec_idx"],
-                                               str(ridx))
-                centroids = numpy.vstack([
-                    centroids,
-                    hdf5[trace_idx + "/Centroids"][:].astype("float64")])
-            distance = min_geodetic_distance(centroids[1:, 0],
-                                             centroids[1:, 1],
-                                             sites.lons, sites.lats)
-            idx = distance <= max_dist
-            if numpy.any(idx):
-                return rupset_idx, sites.filter(idx)
-            else:
-                return [], []
-
 
 def build_idx_set(branch_id, start_date):
     """
