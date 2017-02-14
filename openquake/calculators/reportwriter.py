@@ -56,7 +56,7 @@ def count_eff_ruptures(sources, srcfilter, gsims, monitor):
         if sites is not None:
             for rup in src.iter_ruptures():
                 try:
-                    cmaker.make_contexts(sites, rup)
+                    cmaker.get_close(sites, rup)
                 except FarAwayRupture:
                     continue
                 else:
