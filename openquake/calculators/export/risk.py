@@ -227,10 +227,10 @@ def export_agg_losses_ebr(ekey, dstore):
             elt['year'] = rlz_events['year']
             if rup_data:
                 copy_to(elt, rup_data, rlz_events['rupserial'])
-            for i, ext in enumerate(
+            for i, ins in enumerate(
                     ['', '_ins'] if oq.insured_losses else ['']):
                 for l, loss_type in enumerate(loss_types):
-                    elt[loss_type + ext][:] = losses[:, l, i]
+                    elt[loss_type + ins][:] = losses[:, l, i]
             elt.sort(order=['year', 'event_tag'])
             dest = dstore.build_fname('agg_losses', rlz, 'csv')
             writer.save(elt, dest)
