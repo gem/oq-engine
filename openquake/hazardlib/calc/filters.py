@@ -67,6 +67,7 @@ try:
 except ImportError:
     rtree = None
 from openquake.baselib.python3compat import raise_
+from openquake.hazardlib import valid
 from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.hazardlib.geo.utils import fix_lons_idl
 
@@ -147,6 +148,8 @@ class SourceFilter(object):
         by default True, i.e. try to use the rtree module if available
     """
     def __init__(self, sitecol, integration_distance, use_rtree=True):
+        if isinstance(integration_distance, dict):
+            integration_distance = valid.MaximumDistance(integration_distance)
         self.integration_distance = integration_distance
         self.sitecol = sitecol
         self.use_rtree = use_rtree and rtree and (
