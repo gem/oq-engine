@@ -627,8 +627,6 @@ def get_exposure(oqparam):
     """
     Read the full exposure in memory and build a list of
     :class:`openquake.risklib.riskmodels.Asset` instances.
-    If you don't want to keep everything in memory, use
-    get_exposure_lazy instead (for experts only).
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
