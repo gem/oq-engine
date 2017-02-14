@@ -241,7 +241,7 @@ class StreamingXMLWriter(object):
         :param int indent: the indentation to use in the XML (default 4 spaces)
         """
         # guard against a common error, one must use io.BytesIO
-        if not isinstance(bytestream, (io.StringIO, io.TextIOWrapper)):
+        if isinstance(bytestream, (io.StringIO, io.TextIOWrapper)):
             raise TypeError('%r is not a byte stream' % bytestream)
         self.stream = bytestream
         self.indent = indent
