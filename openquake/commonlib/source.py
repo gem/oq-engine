@@ -29,7 +29,8 @@ import numpy
 
 from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import groupby, group_array, block_splitter
+from openquake.baselib.general import (
+    groupby, group_array, block_splitter, writetmp)
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile
 from openquake.commonlib import logictree
 
@@ -328,8 +329,8 @@ class CompositionInfo(object):
         vars(self).update(attrs)
         self.gsim_fname = decode(self.gsim_fname)
         if self.gsim_fname.endswith('.xml'):
-            self.gsim_lt = logictree.GsimLogicTree(
-                self.gsim_fname, sorted(self.trts))
+            tmp = writetmp(self.gsim_lt_xml, suffix='.xml')
+            self.gsim_lt = logictree.GsimLogicTree(tmp, sorted(self.trts))
         else:  # fake file with the name of the GSIM
             self.gsim_lt = logictree.GsimLogicTree.from_(self.gsim_fname)
         self.source_models = []
