@@ -1,13 +1,13 @@
 scenario hazard
 ===============
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_81018.hdf5 Thu Jan 26 14:28:13 2017
-engine_version                                 2.3.0-gite807292        
-hazardlib_version                              0.23.0-gite1ea7ea       
-============================================== ========================
+============================================ ========================
+gem-tstation:/mnt/ssd/oqdata/calc_85516.hdf5 Tue Feb 14 15:36:35 2017
+engine_version                               2.3.0-git1f56df2        
+hazardlib_version                            0.23.0-git6937706       
+============================================ ========================
 
-num_sites = 7, sitecol = 1.01 KB
+num_sites = 7, sitecol = 1.11 KB
 
 Parameters
 ----------

@@ -1,31 +1,31 @@
 Classical Hazard QA Test, Case 6
 ================================
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_81057.hdf5 Thu Jan 26 14:28:51 2017
-engine_version                                 2.3.0-gite807292        
-hazardlib_version                              0.23.0-gite1ea7ea       
-============================================== ========================
+============================================ ========================
+gem-tstation:/mnt/ssd/oqdata/calc_85556.hdf5 Tue Feb 14 15:39:59 2017
+engine_version                               2.3.0-git1f56df2        
+hazardlib_version                            0.23.0-git6937706       
+============================================ ========================
 
-num_sites = 1, sitecol = 762 B
+num_sites = 1, sitecol = 809 B
 
 Parameters
 ----------
-=============================== ===============================
-calculation_mode                'classical'                    
-number_of_logic_tree_samples    0                              
-maximum_distance                {'active shallow crust': 200.0}
-investigation_time              1.0                            
-ses_per_logic_tree_path         1                              
-truncation_level                0.0                            
-rupture_mesh_spacing            0.01                           
-complex_fault_mesh_spacing      0.01                           
-width_of_mfd_bin                1.0                            
-area_source_discretization      10.0                           
-ground_motion_correlation_model None                           
-random_seed                     1066                           
-master_seed                     0                              
-=============================== ===============================
+=============================== ==================
+calculation_mode                'classical'       
+number_of_logic_tree_samples    0                 
+maximum_distance                {'default': 200.0}
+investigation_time              1.0               
+ses_per_logic_tree_path         1                 
+truncation_level                0.0               
+rupture_mesh_spacing            0.01              
+complex_fault_mesh_spacing      0.01              
+width_of_mfd_bin                1.0               
+area_source_discretization      10.0              
+ground_motion_correlation_model None              
+random_seed                     1066              
+master_seed                     0                 
+=============================== ==================
 
 Input files
 -----------
@@ -73,13 +73,13 @@ source_model.xml 0      Active Shallow Crust 2           1386         1,386
 Informational data
 ------------------
 =========================================== ============
-count_eff_ruptures_max_received_per_task    1,215       
+count_eff_ruptures_max_received_per_task    1,281       
 count_eff_ruptures_num_tasks                4           
 count_eff_ruptures_sent.gsims               364         
-count_eff_ruptures_sent.monitor             3,968       
-count_eff_ruptures_sent.sitecol             2,392       
+count_eff_ruptures_sent.monitor             4,220       
 count_eff_ruptures_sent.sources             4,586       
-count_eff_ruptures_tot_received             4,857       
+count_eff_ruptures_sent.srcfilter           2,840       
+count_eff_ruptures_tot_received             5,121       
 hazard.input_weight                         2,841       
 hazard.n_imts                               1           
 hazard.n_levels                             3           
@@ -96,8 +96,8 @@ Slowest sources
 ====== ========= ================== ============ ========= ========= =========
 grp_id source_id source_class       num_ruptures calc_time num_sites num_split
 ====== ========= ================== ============ ========= ========= =========
-0      1         SimpleFaultSource  901          0.0       1         0        
 0      2         ComplexFaultSource 485          0.0       1         0        
+0      1         SimpleFaultSource  901          0.0       1         0        
 ====== ========= ================== ============ ========= ========= =========
 
 Computation times by source typology
@@ -111,23 +111,22 @@ SimpleFaultSource  0.0       1
 
 Information about the tasks
 ---------------------------
-================== ========= ========= ========= ========= =========
-operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 7.866E-04 3.878E-05 7.479E-04 8.402E-04 4        
-================== ========= ========= ========= ========= =========
+================== ==== ====== === === =========
+operation-duration mean stddev min max num_tasks
+count_eff_ruptures 113  32     70  143 4        
+================== ==== ====== === === =========
 
 Slowest operations
 ------------------
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   6.092     0.0       1     
-managing sources                 0.010     0.0       1     
-split/filter heavy sources       0.009     0.0       1     
-total count_eff_ruptures         0.003     0.0       4     
+total count_eff_ruptures         452       22        4     
+reading composite source model   6.041     0.0       1     
+managing sources                 0.007     0.0       1     
 filtering composite source model 0.002     0.0       1     
-store source_info                5.603E-04 0.0       1     
-aggregate curves                 5.102E-05 0.0       4     
-reading site collection          4.196E-05 0.0       1     
-saving probability maps          2.289E-05 0.0       1     
+store source_info                0.001     0.0       1     
+aggregate curves                 1.152E-04 0.0       4     
+reading site collection          5.174E-05 0.0       1     
+saving probability maps          4.721E-05 0.0       1     
 ================================ ========= ========= ======

@@ -1,32 +1,32 @@
 event based risk
 ================
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_81046.hdf5 Thu Jan 26 14:28:23 2017
-engine_version                                 2.3.0-gite807292        
-hazardlib_version                              0.23.0-gite1ea7ea       
-============================================== ========================
+============================================ ========================
+gem-tstation:/mnt/ssd/oqdata/calc_85544.hdf5 Tue Feb 14 15:37:04 2017
+engine_version                               2.3.0-git1f56df2        
+hazardlib_version                            0.23.0-git6937706       
+============================================ ========================
 
-num_sites = 7, sitecol = 1.01 KB
+num_sites = 7, sitecol = 1.11 KB
 
 Parameters
 ----------
-=============================== ===============================
-calculation_mode                'event_based_risk'             
-number_of_logic_tree_samples    0                              
-maximum_distance                {'Active Shallow Crust': 200.0}
-investigation_time              10000.0                        
-ses_per_logic_tree_path         1                              
-truncation_level                3.0                            
-rupture_mesh_spacing            2.0                            
-complex_fault_mesh_spacing      2.0                            
-width_of_mfd_bin                0.1                            
-area_source_discretization      None                           
-ground_motion_correlation_model 'JB2009'                       
-random_seed                     24                             
-master_seed                     42                             
-avg_losses                      False                          
-=============================== ===============================
+=============================== ==================
+calculation_mode                'event_based_risk'
+number_of_logic_tree_samples    0                 
+maximum_distance                {'default': 200.0}
+investigation_time              10000.0           
+ses_per_logic_tree_path         1                 
+truncation_level                3.0               
+rupture_mesh_spacing            2.0               
+complex_fault_mesh_spacing      2.0               
+width_of_mfd_bin                0.1               
+area_source_discretization      None              
+ground_motion_correlation_model 'JB2009'          
+random_seed                     24                
+master_seed                     42                
+avg_losses                      False             
+=============================== ==================
 
 Input files
 -----------
@@ -54,7 +54,7 @@ Required parameters per tectonic region type
 ====== =================== ========= ========== ==========
 grp_id gsims               distances siteparams ruptparams
 ====== =================== ========= ========== ==========
-0      BooreAtkinson2008() rjb       vs30       rake mag  
+0      BooreAtkinson2008() rjb       vs30       mag rake  
 ====== =================== ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -76,13 +76,13 @@ source_model.xml 0      Active Shallow Crust 1           265          482
 Informational data
 ------------------
 ========================================= ============
-compute_ruptures_max_received_per_task    125,624     
+compute_ruptures_max_received_per_task    125,687     
 compute_ruptures_num_tasks                3           
 compute_ruptures_sent.gsims               306         
-compute_ruptures_sent.monitor             2,805       
+compute_ruptures_sent.monitor             2,994       
 compute_ruptures_sent.sources             7,966       
-compute_ruptures_sent.src_filter          2,154       
-compute_ruptures_tot_received             352,195     
+compute_ruptures_sent.src_filter          2,634       
+compute_ruptures_tot_received             352,384     
 hazard.input_weight                       482         
 hazard.n_imts                             1           
 hazard.n_levels                           1           
@@ -140,7 +140,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.285 0.030  0.251 0.306 3        
+compute_ruptures   0.291 0.035  0.252 0.319 3        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -148,15 +148,14 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           0.856     3.410     3     
-filtering ruptures               0.551     0.0       265   
-managing sources                 0.086     0.0       1     
-split/filter heavy sources       0.084     0.0       1     
-saving ruptures                  0.011     0.0       3     
-setting event years              0.010     0.0       1     
+total compute_ruptures           0.874     0.555     3     
+filtering ruptures               0.570     0.0       265   
+managing sources                 0.084     0.0       1     
+saving ruptures                  0.012     0.0       3     
+setting event years              0.011     0.0       1     
 reading composite source model   0.009     0.0       1     
 reading exposure                 0.005     0.0       1     
 filtering composite source model 0.003     0.0       1     
-store source_info                7.374E-04 0.0       1     
+store source_info                8.135E-04 0.0       1     
 reading site collection          9.060E-06 0.0       1     
 ================================ ========= ========= ======

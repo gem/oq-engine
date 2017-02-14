@@ -1,31 +1,31 @@
 Ucerf test
 ==========
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_81011.hdf5 Thu Jan 26 14:28:12 2017
-engine_version                                 2.3.0-gite807292        
-hazardlib_version                              0.23.0-gite1ea7ea       
-============================================== ========================
+============================================ ========================
+gem-tstation:/mnt/ssd/oqdata/calc_85509.hdf5 Tue Feb 14 15:36:34 2017
+engine_version                               2.3.0-git1f56df2        
+hazardlib_version                            0.23.0-git6937706       
+============================================ ========================
 
-num_sites = 1588, sitecol = 72.08 KB
+num_sites = 155, sitecol = 8.93 KB
 
 Parameters
 ----------
-=============================== ===============================
-calculation_mode                'ucerf_rupture'                
-number_of_logic_tree_samples    0                              
-maximum_distance                {'Active Shallow Crust': 200.0}
-investigation_time              10000.0                        
-ses_per_logic_tree_path         1                              
-truncation_level                None                           
-rupture_mesh_spacing            1.0                            
-complex_fault_mesh_spacing      1.0                            
-width_of_mfd_bin                1.0                            
-area_source_discretization      None                           
-ground_motion_correlation_model None                           
-random_seed                     1066                           
-master_seed                     0                              
-=============================== ===============================
+=============================== ==================
+calculation_mode                'ucerf_rupture'   
+number_of_logic_tree_samples    0                 
+maximum_distance                {'default': 200.0}
+investigation_time              10000.0           
+ses_per_logic_tree_path         1                 
+truncation_level                None              
+rupture_mesh_spacing            1.0               
+complex_fault_mesh_spacing      1.0               
+width_of_mfd_bin                1.0               
+area_source_discretization      None              
+ground_motion_correlation_model None              
+random_seed                     1066              
+master_seed                     0                 
+=============================== ==================
 
 Input files
 -----------
@@ -99,30 +99,30 @@ Required parameters per tectonic region type
 ====== ===================================== =========== ======================= =======================
 grp_id gsims                                 distances   siteparams              ruptparams             
 ====== ===================================== =========== ======================= =======================
-0      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-1      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-2      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-3      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-4      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-5      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-6      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-7      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-8      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-9      AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-10     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-11     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-12     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-13     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-14     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-15     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-16     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-17     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-18     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-19     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-20     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-21     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-22     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
-23     AbrahamsonSilva2008() BooreEtAl2014() rjb rrup rx vs30measured vs30 z1pt0 dip mag ztor rake width
+0      AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
+1      AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
+2      AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
+3      AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
+4      AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
+5      AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
+6      AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
+7      AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
+8      AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
+9      AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
+10     AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
+11     AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
+12     AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
+13     AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
+14     AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
+15     AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
+16     AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
+17     AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
+18     AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
+19     AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
+20     AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
+21     AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
+22     AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
+23     AbrahamsonSilva2008() BooreEtAl2014() rrup rjb rx vs30 z1pt0 vs30measured mag dip width ztor rake
 ====== ===================================== =========== ======================= =======================
 
 Realizations per (TRT, GSIM)
@@ -191,5 +191,5 @@ Slowest operations
 ======================= ======== ========= ======
 operation               time_sec memory_mb counts
 ======================= ======== ========= ======
-reading site collection 0.007    0.0       1     
+reading site collection 0.001    0.0       1     
 ======================= ======== ========= ======
