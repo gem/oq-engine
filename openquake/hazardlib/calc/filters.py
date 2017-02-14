@@ -210,27 +210,23 @@ class SourceFilter(object):
             for source in sources:
                 yield source, sites
             return
-        for source in sources:
+        for src in sources:
             if self.use_rtree:  # Rtree filtering
-                box = self.get_affected_box(source)
+                box = self.get_affected_box(src)
                 sids = numpy.array(sorted(self.index.intersection(box)))
                 if len(sids):
-                    source.nsites = len(sids)
-                    yield source, FilteredSiteCollection(sids, sites.complete)
+                    src.nsites = len(sids)
+                    yield src, FilteredSiteCollection(sids, sites.complete)
             elif not self.integration_distance:
-                yield source, sites
+                yield src, sites
             else:  # normal filtering
-                try:
-                    maxdist = self.integration_distance[
-                        source.tectonic_region_type]
-                except TypeError:  # passed a scalar, not a dictionary
-                    maxdist = self.integration_distance
-                with context(source):
-                    s_sites = source.filter_sites_by_distance_to_source(
+                maxdist = self.integration_distance[src.tectonic_region_type]
+                with context(src):
+                    s_sites = src.filter_sites_by_distance_to_source(
                         maxdist, sites)
                 if s_sites is not None:
-                    source.nsites = len(s_sites)
-                    yield source, s_sites
+                    src.nsites = len(s_sites)
+                    yield src, s_sites
 
     def __getstate__(self):
         return dict(integration_distance=self.integration_distance,
