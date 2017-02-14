@@ -192,6 +192,8 @@ _wait_ssh () {
 add_local_pkg_repo () {
     local deb="$1"
 
+
+    
     var_pfx="$(dep2var "$dep")"
     var_repo="${var_pfx}_REPO"
     var_branch="${var_pfx}_BRANCH"
@@ -281,6 +283,10 @@ _devtest_innervm_run () {
 
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
+
+    if [ -f _jenkins_deps_info ]; then
+        source _jenkins_deps_info
+    fi
 
     old_ifs="$IFS"
     IFS=" "
