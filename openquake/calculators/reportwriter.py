@@ -30,6 +30,7 @@ import time
 from openquake.baselib import parallel
 from openquake.baselib.general import humansize, AccumDict
 from openquake.baselib.python3compat import encode
+from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.commonlib import readinput
 from openquake.calculators.classical import PSHACalculator
 from openquake.calculators import views
@@ -39,16 +40,28 @@ def indent(text):
     return '  ' + '\n  '.join(text.splitlines())
 
 
-def count_eff_ruptures(sources, sitecol, gsims, monitor):
+def count_eff_ruptures(sources, srcfilter, gsims, monitor):
     """
-    Count the number of ruptures contained in the given sources and return
-    a dictionary src_group_id -> num_ruptures. All sources belong to the
-    same tectonic region type.
+    Count the effective number of ruptures contained in the given sources
+    within the integration distance and return a dictionary src_group_id ->
+    num_ruptures. All sources must belong to the same tectonic region type.
     """
     acc = AccumDict()
     acc.grp_id = sources[0].src_group_id
     acc.calc_times = []
-    acc.eff_ruptures = {acc.grp_id: sum(src.num_ruptures for src in sources)}
+    cmaker = ContextMaker(gsims, srcfilter.integration_distance)
+    count = 0
+    for src in sources:
+        sites = srcfilter.get_close_sites(src)
+        if sites is not None:
+            for rup in src.iter_ruptures():
+                try:
+                    cmaker.make_contexts(sites, rup)
+                except FarAwayRupture:
+                    continue
+                else:
+                    count += 1
+    acc.eff_ruptures = {acc.grp_id: count}
     return acc
 
 
