@@ -298,11 +298,13 @@ _devtest_innervm_run () {
             git archive --prefix ${dep}/ HEAD | ssh $lxc_ip "tar xv"
             cd -
         elif [ "$dep_type" = "deb" ]; then
-            cd _jenkins_deps/$dep
+            # cd _jenkins_deps/$dep
 
-        else
             add_local_pkg_repo "$deb"
             ssh $lxc_ip "sudo apt-get install -y python-${deb}"
+        else
+            echo "Dep type $dep_type not supported"
+            exit 1
         fi
     done
     IFS="$old_ifs"
