@@ -761,7 +761,7 @@ class MaximumDistance(collections.Mapping):
     >>> maxdist = MaximumDistance({'default': [
     ...          (1, 10), (2, 20), (3, 30), (4, 40), (5, 100), (6, 200),
     ...          (7, 400), (8, 800)]})
-    >>> maxdist('default', mag)
+    >>> maxdist('default', mag=5.5)
     array(150.0)
     """
     def __init__(self, dic):
