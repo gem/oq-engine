@@ -22,7 +22,6 @@ import numpy
 
 from openquake.baselib import parallel
 from openquake.baselib.general import DictArray
-from openquake.hazardlib.calc.filters import MagnitudeDistance
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import correlation
 from openquake.hazardlib import valid
@@ -30,18 +29,6 @@ from openquake.commonlib import logictree
 from openquake.commonlib.riskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
-
-
-def getdefault(dic_with_default, key):
-    """
-    :param dic_with_default: a dictionary with a 'default' key
-    :param key: a key that may be present in the dictionary or not
-    :returns: the value associated to the key, or to 'default'
-    """
-    try:
-        return dic_with_default[key]
-    except KeyError:
-        return dic_with_default['default']
 
 
 def fix_maximum_distance(max_dist, trts):
@@ -52,13 +39,13 @@ def fix_maximum_distance(max_dist, trts):
     """
     for trt in trts:
         try:
-            max_dist[trt] = getdefault(max_dist, trt)
+            max_dist.dic[trt] = valid.getdefault(max_dist.dic, trt)
         except KeyError:
             raise ValueError(
                 'The parameter `maximum_distance` in the job.ini '
                 'file is missing the TRT %r' % trt)
     if 'default' in max_dist:
-        del max_dist['default']
+        del max_dist.dic['default']
 
 
 class OqParam(valid.ParamSet):
@@ -115,7 +102,7 @@ class OqParam(valid.ParamSet):
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 0)
-    maximum_distance = valid.Param(valid.floatdict)  # km
+    maximum_distance = valid.Param(valid.maximum_distance)  # km
     asset_hazard_distance = valid.Param(valid.positivefloat, 5)  # km
     mean_hazard_curves = valid.Param(valid.boolean, False)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
@@ -430,9 +417,7 @@ class OqParam(valid.ParamSet):
                           'not in %s' % (unknown, gsim_lt))
             return False
         for trt, val in self.maximum_distance.items():
-            if isinstance(val, list):
-                self.maximum_distance[trt] = MagnitudeDistance(val)
-            elif val <= 0:
+            if val <= 0:
                 self.error = '%s=%r < 0' % (trt, val)
                 return False
             elif trt not in self._gsims_by_trt and trt != 'default':
