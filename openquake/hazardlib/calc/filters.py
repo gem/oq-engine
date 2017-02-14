@@ -211,7 +211,7 @@ class SourceFilter(object):
                 yield source, sites
             return
         for src in sources:
-            if self.use_rtree:  # Rtree filtering
+            if self.use_rtree:  # Rtree filtering, used in the controller
                 box = self.get_affected_box(src)
                 sids = numpy.array(sorted(self.index.intersection(box)))
                 if len(sids):
@@ -219,7 +219,7 @@ class SourceFilter(object):
                     yield src, FilteredSiteCollection(sids, sites.complete)
             elif not self.integration_distance:
                 yield src, sites
-            else:  # normal filtering
+            else:  # normal filtering, used in the workers
                 max_mag = src.get_min_max_mag()[1]
                 maxdist = self.integration_distance(
                     src.tectonic_region_type, max_mag)
