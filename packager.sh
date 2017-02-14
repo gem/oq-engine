@@ -307,7 +307,7 @@ _devtest_innervm_run () {
             # cd _jenkins_deps/$dep
 
             add_local_pkg_repo "$deb"
-            ssh $lxc_ip "sudo apt-get install -y python-${deb}"
+            ssh $lxc_ip "sudo apt-get install -y python-${dep}"
         else
             echo "Dep type $dep_type not supported"
             exit 1
