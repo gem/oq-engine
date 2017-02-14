@@ -335,7 +335,7 @@ class CompositionInfo(object):
                 # in the datastore; I am storing the path to the original
                 # file so that the external files can be found; unfortunately,
                 # this means that copying the datastore on a different machine
-                # and exporting from there works only if the gmpe file and all
+                # and exporting from there works only if the gsim_fname and all
                 # the external files are copied in the exact same place
                 self.gsim_lt = logictree.GsimLogicTree(self.gsim_fname, trts)
             else:
