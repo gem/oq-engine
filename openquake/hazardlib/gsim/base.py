@@ -144,6 +144,10 @@ class FarAwayRupture(Exception):
 class ContextMaker(object):
     """
     A class to manage the creation of contexts for distances, sites, rupture.
+    It has also a method `.get_close(sites, rupture)` returning the closest
+    sites to the rupture and their distances. The integration distance can be
+    None if the sites have been already filtered: in that case returns all the
+    sites and all the distances.
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
@@ -300,6 +304,8 @@ class ContextMaker(object):
         :raises: a FarAwayRupture exception is the rupture is far away
         """
         distances = get_distances(rupture, sites.mesh, distance_type)
+        if self.maximum_distance is None:  # for sites already filtered
+            return sites, distances
         mask = distances <= self.maximum_distance(
             rupture.tectonic_region_type, rupture.mag)
         if mask.any():
