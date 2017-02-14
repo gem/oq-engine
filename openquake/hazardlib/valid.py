@@ -789,7 +789,7 @@ class MaximumDistance(collections.Mapping):
         return md(mag)
 
     def __getitem__(self, trt):
-        value = self.dic[trt]
+        value = getdefault(self.dic, trt)
         if isinstance(value, float):  # scalar maximum distance
             return value
         # get the maximum magnitude distance
