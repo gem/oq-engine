@@ -291,9 +291,8 @@ class ContextMaker(object):
         if self.maximum_distance:
             # self.maximum_distance can be just a scalar number in km
             # or a function magniture -> distance
-            maxdist = (self.maximum_distance(rupture.mag)
-                       if callable(self.maximum_distance)
-                       else self.maximum_distance)
+            maxdist = self.maximum_distance(
+                rupture.tectonic_region_type, rupture.mag)
             mask = distances <= maxdist
             if mask.any():
                 sites = site_collection.filter(mask)

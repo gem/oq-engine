@@ -774,7 +774,7 @@ class MaximumDistance(collections.Mapping):
             else:
                 self.dic[trt] = float(value)
 
-    def __call__(self, mag, trt):
+    def __call__(self, trt, mag):
         maxdist = getdefault(self.dic, trt)
         if isinstance(maxdist, float):  # scalar maximum distance
             return maxdist
@@ -783,8 +783,10 @@ class MaximumDistance(collections.Mapping):
         try:
             md = self.interp[trt]  # retrieve from the cache
         except KeyError:  # fill the cache
-            md = self.interp[trt] = interp1d(*self.magdist[trt])
-        return md[mag]
+            magdist = getdefault(self.magdist, trt)
+            md = self.interp[trt] = interp1d(
+                *magdist, fill_value='extrapolate')
+        return md(mag)
 
     def __getitem__(self, trt):
         value = self.dic[trt]
@@ -798,9 +800,6 @@ class MaximumDistance(collections.Mapping):
 
     def __len__(self):
         return len(self.dic)
-
-    def __getstate__(self):
-        return dict(dic=self.dic)
 
     def __repr__(self):
         return repr(self.dic)
