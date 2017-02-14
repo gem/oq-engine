@@ -648,14 +648,15 @@ class UcerfSource(object):
                 if rup:
                     yield rup
 
-    def get_background_sources(self, background_sids):
+    def get_background_sources(self, src_filter):
         """
         Turn the background model of a given branch into a set of point sources
 
-        :param background_sids:
-            Site IDs affected by the background sources
+        :param src_filter:
+            SourceFilter instance
         """
         ctl = self.control
+        background_sids = self.get_background_sids(src_filter)
         with h5py.File(ctl.source_file, "r") as hdf5:
             grid_loc = "/".join(["Grid", self.idx_set["grid_key"]])
             mags = hdf5[grid_loc + "/Magnitude"].value
