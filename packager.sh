@@ -191,8 +191,6 @@ _wait_ssh () {
 
 add_local_pkg_repo () {
     local deb="$1"
-
-
     
     var_pfx="$(dep2var "$dep")"
     var_repo="${var_pfx}_REPO"
@@ -238,6 +236,7 @@ add_local_pkg_repo () {
         fi
     done
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-${dep} ./\""
+    ssh $lxc_ip "sudo apt-get update"
 }
 
 _pkgbuild_innervm_run () {
