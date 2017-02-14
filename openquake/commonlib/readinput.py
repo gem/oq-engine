@@ -188,7 +188,8 @@ def get_mesh(oqparam):
         csv_data = open(oqparam.inputs['sites'], 'U').read()
         coords = valid.coordinates(
             csv_data.strip().replace(',', ' ').replace('\n', ','))
-        return geo.Mesh.from_coords(coords)
+        start, stop = oqparam.sites_slice
+        return geo.Mesh.from_coords(coords[start:stop])
     elif oqparam.region:
         # close the linear polygon ring by appending the first
         # point to the end
@@ -626,8 +627,6 @@ def get_exposure(oqparam):
     """
     Read the full exposure in memory and build a list of
     :class:`openquake.risklib.riskmodels.Asset` instances.
-    If you don't want to keep everything in memory, use
-    get_exposure_lazy instead (for experts only).
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance

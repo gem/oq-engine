@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a bug when storing the GMPE logic tree file in the datastore
+  * Added a command `oq run_tiles` (experimental)
   * Fixed the event based calculator so that it can run UCERF ruptures
   * Fixed a bug in the scenario_risk calculator in case of multiple assets
     of the same taxonomy on the same site with no insurance losses

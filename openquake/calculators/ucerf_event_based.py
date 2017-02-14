@@ -742,86 +742,6 @@ def build_idx_set(branch_id, start_date):
 # #################################################################### #
 
 
-@base.calculators.add('ucerf_rupture')
-class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
-    """
-    Event based PSHA calculator generating the ruptures only
-    """
-    is_stochastic = True
-
-    def pre_execute(self):
-        """
-        parse the logic tree and source model input
-        """
-        logging.warn('%s is still experimental', self.__class__.__name__)
-        oq = self.oqparam
-        self.read_risk_data()  # read the site collection
-        self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
-        self.gsim_lt = readinput.get_gsim_lt(oq, [DEFAULT_TRT])
-        self.smlt = readinput.get_source_model_lt(oq)
-        job_info = dict(hostname=socket.gethostname())
-        self.datastore.save('job_info', job_info)
-        parser = nrml.SourceModelParser(
-            SourceConverter(oq.investigation_time, oq.rupture_mesh_spacing))
-        [src_group] = parser.parse_src_groups(oq.inputs["source_model"])
-        [src] = src_group
-        branches = sorted(self.smlt.branches.items())
-        source_models = []
-        num_gsim_paths = self.gsim_lt.get_num_paths()
-        for grp_id, rlz in enumerate(self.smlt):
-            [name] = rlz.lt_path
-            sg = copy.copy(src_group)
-            sg.id = grp_id
-            # i.e, branch_name='ltbr0001'
-            # branch_id='FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2'
-            sg.sources = [UcerfSource(src, grp_id, name, rlz.value)]
-            sm = logictree.SourceModel(
-                name, rlz.weight, [name], [sg], num_gsim_paths, grp_id, 1)
-            source_models.append(sm)
-        self.csm = source.CompositeSourceModel(
-            self.gsim_lt, self.smlt, source_models, set_weight=True)
-        self.datastore['csm_info'] = self.csm.info
-        logging.info('Found %d x %d logic tree branches', len(branches),
-                     self.gsim_lt.get_num_paths())
-        self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
-        self.infos = []
-        self.eid = collections.Counter()  # sm_id -> event_id
-        self.sm_by_grp = self.csm.info.get_sm_by_grp()
-        if not self.oqparam.imtls:
-            raise ValueError('Missing intensity_measure_types!')
-
-    def gen_args(self):
-        oq = self.oqparam
-        for sm_id in range(len(self.csm.source_models)):
-            ssm = self.csm.get_model(sm_id)
-            monitor = self.monitor.new(
-                ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
-                maximum_distance=oq.maximum_distance,
-                samples=ssm.source_models[0].samples,
-                save_ruptures=oq.save_ruptures,
-                seed=ssm.source_model_lt.seed)
-            gsims = ssm.gsim_lt.values[DEFAULT_TRT]
-            yield ssm.get_sources(), self.src_filter, gsims, monitor
-
-    def execute(self):
-        """
-        Run the ucerf calculation
-        """
-        res = parallel.Starmap(compute_ruptures, self.gen_args()).submit_all()
-        acc = self.zerodict()
-        num_ruptures = {}
-        for ruptures_by_grp in res:
-            [(grp_id, ruptures)] = ruptures_by_grp.items()
-            num_ruptures[grp_id] = len(ruptures)
-            acc.calc_times.extend(ruptures_by_grp.calc_times[grp_id])
-            self.save_events(ruptures_by_grp)
-        self.save_data_transfer(res)
-        with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(self.infos)
-        self.datastore['csm_info'] = self.csm.info
-        return num_ruptures
-
-
 def compute_ruptures(sources, src_filter, gsims, monitor):
     """
     :param sources: a sequence of UCERF sources
@@ -876,6 +796,74 @@ def compute_ruptures(sources, src_filter, gsims, monitor):
 compute_ruptures.shared_dir_on = config.SHARED_DIR_ON
 
 
+@base.calculators.add('ucerf_rupture')
+class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
+    """
+    Event based PSHA calculator generating the ruptures only
+    """
+    core_task = compute_ruptures
+
+    def pre_execute(self):
+        """
+        parse the logic tree and source model input
+        """
+        logging.warn('%s is still experimental', self.__class__.__name__)
+        oq = self.oqparam
+        self.read_risk_data()  # read the site collection
+        self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
+        self.gsim_lt = readinput.get_gsim_lt(oq, [DEFAULT_TRT])
+        self.smlt = readinput.get_source_model_lt(oq)
+        job_info = dict(hostname=socket.gethostname())
+        self.datastore.save('job_info', job_info)
+        parser = nrml.SourceModelParser(
+            SourceConverter(oq.investigation_time, oq.rupture_mesh_spacing))
+        [src_group] = parser.parse_src_groups(oq.inputs["source_model"])
+        [src] = src_group
+        branches = sorted(self.smlt.branches.items())
+        source_models = []
+        num_gsim_paths = self.gsim_lt.get_num_paths()
+        for grp_id, rlz in enumerate(self.smlt):
+            [name] = rlz.lt_path
+            sg = copy.copy(src_group)
+            sg.id = grp_id
+            # i.e, branch_name='ltbr0001'
+            # branch_id='FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2'
+            sg.sources = [UcerfSource(src, grp_id, name, rlz.value)]
+            sm = logictree.SourceModel(
+                name, rlz.weight, [name], [sg], num_gsim_paths, grp_id, 1)
+            source_models.append(sm)
+        self.csm = source.CompositeSourceModel(
+            self.gsim_lt, self.smlt, source_models, set_weight=True)
+        self.datastore['csm_info'] = self.csm.info
+        logging.info('Found %d x %d logic tree branches', len(branches),
+                     self.gsim_lt.get_num_paths())
+        self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
+        self.infos = []
+        self.eid = collections.Counter()  # sm_id -> event_id
+        self.sm_by_grp = self.csm.info.get_sm_by_grp()
+        if not self.oqparam.imtls:
+            raise ValueError('Missing intensity_measure_types!')
+
+    def gen_args(self, csm, monitor):
+        """
+        Generate a task for each branch
+        """
+        oq = self.oqparam
+        allargs = []  # it is better to return a list; if there is single
+        # branch then `parallel.Starmap` will run the task in core
+        for sm_id in range(len(csm.source_models)):
+            ssm = csm.get_model(sm_id)
+            mon = monitor.new(
+                ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
+                maximum_distance=oq.maximum_distance,
+                samples=ssm.source_models[0].samples,
+                save_ruptures=oq.save_ruptures,
+                seed=ssm.source_model_lt.seed)
+            gsims = ssm.gsim_lt.values[DEFAULT_TRT]
+            allargs.append((ssm.get_sources(), self.src_filter, gsims, mon))
+        return allargs
+
+
 class List(list):
     """Trivial container returned by compute_losses"""
 
@@ -914,6 +902,14 @@ def compute_losses(ssm, src_filter, assetcol, riskmodel,
     res.rlz_slice = slice(start, start + num_rlzs)
     return res
 compute_losses.shared_dir_on = config.SHARED_DIR_ON
+
+
+@base.calculators.add('ucerf_hazard')
+class UCERFHazardCalculator(event_based.EventBasedCalculator):
+    """
+    Runs a standard event based calculation starting from UCERF ruptures
+    """
+    pre_calculator = 'ucerf_rupture'
 
 
 @base.calculators.add('ucerf_risk')
