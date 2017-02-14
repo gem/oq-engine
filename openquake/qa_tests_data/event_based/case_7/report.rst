@@ -1,31 +1,31 @@
 Event-based PSHA with logic tree sampling
 =========================================
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_81088.hdf5 Thu Jan 26 14:30:03 2017
-engine_version                                 2.3.0-gite807292        
-hazardlib_version                              0.23.0-gite1ea7ea       
-============================================== ========================
+============================================ ========================
+gem-tstation:/mnt/ssd/oqdata/calc_85588.hdf5 Tue Feb 14 15:48:25 2017
+engine_version                               2.3.0-git1f56df2        
+hazardlib_version                            0.23.0-git6937706       
+============================================ ========================
 
-num_sites = 3, sitecol = 854 B
+num_sites = 3, sitecol = 917 B
 
 Parameters
 ----------
-=============================== ===============================
-calculation_mode                'event_based'                  
-number_of_logic_tree_samples    10                             
-maximum_distance                {'Active Shallow Crust': 200.0}
-investigation_time              50.0                           
-ses_per_logic_tree_path         40                             
-truncation_level                3.0                            
-rupture_mesh_spacing            2.0                            
-complex_fault_mesh_spacing      2.0                            
-width_of_mfd_bin                0.2                            
-area_source_discretization      20.0                           
-ground_motion_correlation_model None                           
-random_seed                     23                             
-master_seed                     0                              
-=============================== ===============================
+=============================== ==================
+calculation_mode                'event_based'     
+number_of_logic_tree_samples    10                
+maximum_distance                {'default': 200.0}
+investigation_time              50.0              
+ses_per_logic_tree_path         40                
+truncation_level                3.0               
+rupture_mesh_spacing            2.0               
+complex_fault_mesh_spacing      2.0               
+width_of_mfd_bin                0.2               
+area_source_discretization      20.0              
+ground_motion_correlation_model None              
+random_seed                     23                
+master_seed                     0                 
+=============================== ==================
 
 Input files
 -----------
@@ -53,8 +53,8 @@ Required parameters per tectonic region type
 ====== ============================================================= =========== ============================= =================
 grp_id gsims                                                         distances   siteparams                    ruptparams       
 ====== ============================================================= =========== ============================= =================
-0      BooreAtkinson2008() CampbellBozorgnia2008() ChiouYoungs2008() rjb rrup rx vs30measured z2pt5 vs30 z1pt0 dip mag ztor rake
-1      BooreAtkinson2008() CampbellBozorgnia2008()                   rjb rrup    z2pt5 vs30                    dip mag ztor rake
+0      BooreAtkinson2008() CampbellBozorgnia2008() ChiouYoungs2008() rrup rjb rx vs30 z1pt0 vs30measured z2pt5 mag dip rake ztor
+1      BooreAtkinson2008() CampbellBozorgnia2008()                   rrup rjb    vs30 z2pt5                    mag dip rake ztor
 ====== ============================================================= =========== ============================= =================
 
 Realizations per (TRT, GSIM)
@@ -89,13 +89,13 @@ source_model2.xml 1      Active Shallow Crust 1           478          2,456
 Informational data
 ------------------
 ========================================= ============
-compute_ruptures_max_received_per_task    1,784,012   
+compute_ruptures_max_received_per_task    1,784,075   
 compute_ruptures_num_tasks                4           
 compute_ruptures_sent.gsims               916         
-compute_ruptures_sent.monitor             5,392       
+compute_ruptures_sent.monitor             5,644       
 compute_ruptures_sent.sources             167,590     
-compute_ruptures_sent.src_filter          2,552       
-compute_ruptures_tot_received             2,681,637   
+compute_ruptures_sent.src_filter          3,064       
+compute_ruptures_tot_received             2,681,886   
 hazard.input_weight                       2,456       
 hazard.n_imts                             2           
 hazard.n_levels                           38          
@@ -136,7 +136,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.863 0.650  0.274 1.723 4        
+compute_ruptures   0.838 0.622  0.269 1.651 4        
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -144,14 +144,13 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           3.452     2.410     4     
-filtering ruptures               0.743     0.0       2,598 
-managing sources                 0.549     0.0       1     
-split/filter heavy sources       0.547     0.0       2     
-setting event years              0.252     0.0       1     
-reading composite source model   0.152     0.0       1     
-saving ruptures                  0.087     0.0       4     
+total compute_ruptures           3.353     1.102     4     
+filtering ruptures               0.706     0.0       2,598 
+managing sources                 0.536     0.0       1     
+setting event years              0.206     0.0       1     
+reading composite source model   0.151     0.0       1     
+saving ruptures                  0.106     0.0       4     
 filtering composite source model 0.002     0.0       1     
-store source_info                5.751E-04 0.0       1     
-reading site collection          4.840E-05 0.0       1     
+store source_info                5.546E-04 0.0       1     
+reading site collection          5.388E-05 0.0       1     
 ================================ ========= ========= ======
