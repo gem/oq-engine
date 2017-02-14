@@ -61,7 +61,6 @@ the index can be compensed. Finally, there is a function
 import sys
 import logging
 from contextlib import contextmanager
-from scipy.interpolate import interp1d
 import numpy
 try:
     import rtree
@@ -119,48 +118,6 @@ def filter_sites_by_distance_to_rupture(rupture, integration_distance, sites):
     """
     jb_dist = rupture.surface.get_joyner_boore_distance(sites.mesh)
     return sites.filter(jb_dist <= integration_distance)
-
-
-class MagnitudeDistance(object):
-    """
-    Pickleable object with a .get property returning the integration distance
-    associated with a given magnitude.
-
-    >>> maxdist = MagnitudeDistance([
-    ...          (1, 10), (2, 20), (3, 30), (4, 40), (5, 100), (6, 200),
-    ...          (7, 400), (8, 800)])
-    >>> maxdist.get(5.5)
-    array(150.0)
-    """
-    _interp = None
-
-    @property
-    def get(self):
-        if self._interp is not None:
-            return self._interp
-        if isinstance(self.value, list):
-            self._interp = interp1d(self.mags, self.dists)
-        else:
-            self._interp = lambda mag: self.value
-        return self._interp
-
-    def __init__(self, value):
-        self.value = value
-        if isinstance(value, list):  # assume a list of pairs (mag, dist)
-            value.sort()  # make sure the list is sorted by magnitude
-            self.mags, self.dists = zip(*value)
-
-    def __getstate__(self):
-        return dict(value=self.value)
-
-    def __str__(self):
-        return repr(self.value)
-
-    def max(self):
-        if isinstance(self.value, list):
-            return self.value[-1][1]
-        else:
-            return self.value
 
 
 class SourceFilter(object):
