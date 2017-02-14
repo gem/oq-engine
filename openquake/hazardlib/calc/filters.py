@@ -149,7 +149,7 @@ class SourceFilter(object):
     """
     def __init__(self, sitecol, integration_distance, use_rtree=True):
         if isinstance(integration_distance, dict):
-            integration_distance = valid.MaximumDistance(integration_distance)
+            integration_distance = valid.IntegrationDistance(integration_distance)
         self.integration_distance = integration_distance
         self.sitecol = sitecol
         self.use_rtree = use_rtree and rtree and (

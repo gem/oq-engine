@@ -748,17 +748,17 @@ def maximum_distance(value):
     :param value:
         input string corresponding to a valid maximum distance
     :returns:
-        a MaximumDistance mapping
+        a IntegrationDistance mapping
     """
-    return MaximumDistance(floatdict(value))
+    return IntegrationDistance(floatdict(value))
 
 
-class MaximumDistance(collections.Mapping):
+class IntegrationDistance(collections.Mapping):
     """
     Pickleable object wrapping a dictionary of integration distances per
     tectonic region type.
 
-    >>> maxdist = MaximumDistance({'default': [
+    >>> maxdist = IntegrationDistance({'default': [
     ...          (1, 10), (2, 20), (3, 30), (4, 40), (5, 100), (6, 200),
     ...          (7, 400), (8, 800)]})
     >>> maxdist('default', mag=5.5)

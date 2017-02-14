@@ -35,7 +35,7 @@ from openquake.hazardlib.source.point import PointSource
 
 class HazardCurvesFiltersTestCase(unittest.TestCase):
     def test_MagnitudeDistance_pickleable(self):
-        md = valid.MaximumDistance(
+        md = valid.IntegrationDistance(
             dict(default=[(1, 10), (2, 20), (3, 30), (4, 40), (5, 100),
                           (6, 200), (7, 400), (8, 800)]))
         md2 = pickle.loads(pickle.dumps(md))
