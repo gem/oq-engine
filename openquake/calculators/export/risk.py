@@ -63,11 +63,12 @@ def copy_to(elt, rup_data, rupserials):
     """
     assert len(elt) == len(rupserials), (len(elt), len(rupserials))
     for i, serial in numpy.ndenumerate(rupserials):
+        rec = elt[i]
         rdata = rup_data[serial]
-        elt[i]['magnitude'] = rdata['mag']
-        elt[i]['centroid_lon'] = rdata['lon']
-        elt[i]['centroid_lat'] = rdata['lat']
-        elt[i]['centroid_depth'] = rdata['depth']
+        rec['magnitude'] = rdata['mag']
+        rec['centroid_lon'] = rdata['lon']
+        rec['centroid_lat'] = rdata['lat']
+        rec['centroid_depth'] = rdata['depth']
 
 # ############################### exporters ############################## #
 
