@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * `oq info --report` now filters the ruptures and reports the correct
+    number of effective ruptures even for classical calculators
   * Stripped the TRT information from the event loss table CSV export
     and optimized its performance
   * Fixed a bug when storing the GMPE logic tree file in the datastore
