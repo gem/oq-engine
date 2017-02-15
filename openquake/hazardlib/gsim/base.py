@@ -144,7 +144,7 @@ class FarAwayRupture(Exception):
 class ContextMaker(object):
     """
     A class to manage the creation of contexts for distances, sites, rupture.
-    It has also a method `.get_close(sites, rupture)` returning the closest
+    It has also a method `.get_closest(sites, rupture)` returning the closest
     sites to the rupture and their distances. The integration distance can be
     None if the sites have been already filtered: in that case returns all the
     sites and all the distances.
@@ -290,12 +290,12 @@ class ContextMaker(object):
             and distance parameters) is unknown.
         """
         rctx = self.make_rupture_context(rupture)
-        sites, distances = self.get_close(site_collection, rupture, 'rjb')
+        sites, distances = self.get_closest(site_collection, rupture, 'rjb')
         sctx = self.make_sites_context(sites)
         dctx = self.make_distances_context(sites, rupture, {'rjb': distances})
         return (sctx, rctx, dctx)
 
-    def get_close(self, sites, rupture, distance_type='rjb'):
+    def get_closest(self, sites, rupture, distance_type='rjb'):
         """
         :param rupture: a rupture
         :param sites: a (Filtered)SiteColletion
