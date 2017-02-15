@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Stripped the TRT information from the event loss table CSV export
+    and optimized its performance
   * Fixed a bug when storing the GMPE logic tree file in the datastore
   * Added a command `oq run_tiles` (experimental)
   * Fixed the event based calculator so that it can run UCERF ruptures
