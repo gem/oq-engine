@@ -380,18 +380,17 @@ def view_totlosses(token, dstore):
 
 
 def portfolio_loss_from_agg_loss_table(agg_loss_table, loss_dt):
+    ins = loss_dt.names[-1].endswith('_ins')
+    L = len(loss_dt.names) // 2 if ins else len(loss_dt.names)
     data = numpy.zeros(len(agg_loss_table), loss_dt)
     rlzids = []
     for rlz, dset in sorted(agg_loss_table.items()):
         rlzi = int(rlz.split('-')[1])  # rlz-000 -> 0 etc
         rlzids.append(rlzi)
-        for loss_type, losses in dset.items():
-            loss = losses['loss'].sum(axis=0)
-            if loss.shape == (2,):
-                data[rlzi][loss_type] = loss[0]
-                data[rlzi][loss_type + '_ins'] = loss[1]
-            else:
-                data[rlzi][loss_type] = loss
+        loss = dset['loss'].sum(axis=0)
+        for l, name in enumerate(loss_dt.names):
+            data[rlzi][name] = (loss[l - L, 1] if name.endswith('_ins')
+                                else loss[l, 0])
     return rlzids, data
 
 
