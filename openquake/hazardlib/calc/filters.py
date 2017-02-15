@@ -60,6 +60,7 @@ the index can be compensed. Finally, there is a function
 """
 import sys
 import logging
+import collections
 from contextlib import contextmanager
 import numpy
 try:
@@ -148,7 +149,7 @@ class SourceFilter(object):
         by default True, i.e. try to use the rtree module if available
     """
     def __init__(self, sitecol, integration_distance, use_rtree=True):
-        if (isinstance(integration_distance, dict) and not
+        if (isinstance(integration_distance, collections.Mapping) and not
                 isinstance(integration_distance, valid.IntegrationDistance)):
             self.integration_distance = valid.IntegrationDistance(
                 integration_distance)

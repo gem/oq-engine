@@ -761,12 +761,12 @@ class IntegrationDistance(collections.Mapping):
     >>> maxdist = IntegrationDistance({'default': [
     ...          (1, 10), (2, 20), (3, 30), (4, 40), (5, 100), (6, 200),
     ...          (7, 400), (8, 800)]})
-    >>> maxdist('default', mag=5.5)
+    >>> maxdist('Some TRT', mag=5.5)
     array(150.0)
     """
     def __init__(self, dic):
-        self.dic = dic  # TRT -> list of pairs
-        self.magdist = {}  # TRT -> magdist
+        self.dic = dic  # TRT -> float or list of pairs
+        self.magdist = {}  # TRT -> (magnitudes, distances)
         for trt, value in dic.items():
             if isinstance(value, list):  # assume a list of pairs (mag, dist)
                 value.sort()  # make sure the list is sorted by magnitude
