@@ -119,10 +119,10 @@ def ucerf_classical_hazard_by_rupture_set(
     """
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.imtls
-    max_dist = src_filter.integration_distance[DEFAULT_TRT]
+    max_dist = src_filter.integration_distance
     rupset_idx, s_sites = \
         ucerf_source.filter_sites_by_distance_from_rupture_set(
-            rupset_idx, src_filter.sitecol, max_dist)
+            rupset_idx, src_filter.sitecol, max_dist[DEFAULT_TRT])
     if len(s_sites):
         ucerf_source.src_filter = src_filter  # so that .iter_ruptures() work
         cmaker = ContextMaker(gsims, max_dist)
