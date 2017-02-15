@@ -912,7 +912,9 @@ class CurveBuilder(object):
                 loss_ratios = ratios_by_aid[aid]['loss']
             except KeyError:   # no loss ratios
                 continue
-            counts = numpy.array([(loss_ratios >= ratio).sum(axis=0)
+            # loss_ratios has shape (E, L, I)
+            lrs = loss_ratios[:, self.index]
+            counts = numpy.array([(lrs >= ratio).sum(axis=0)
                                   for ratio in self.ratios])
             poes = build_poes(counts, 1. / self.ses_ratio)
             if len(poes.shape) == 1:
