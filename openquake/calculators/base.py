@@ -478,6 +478,8 @@ class HazardCalculator(BaseCalculator):
             self.datastore['asset_refs'] = arefs
             self.datastore.set_attrs('asset_refs', nbytes=arefs.nbytes)
             self.cost_calculator = readinput.get_cost_calculator(self.oqparam)
+        logging.info('Building the site collection')
+        with self.monitor('building site collection', autoflush=True):
             self.sitecol, self.assets_by_site = (
                 readinput.get_sitecol_assets(self.oqparam, self.exposure))
             logging.info('Read %d assets on %d sites',
