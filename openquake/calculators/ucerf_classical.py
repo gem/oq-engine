@@ -94,7 +94,7 @@ def ucerf_classical_hazard_by_rupture_set(
     t0 = time.time()
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.imtls
-    max_dist = src_filter.integration_distance[DEFAULT_TRT]
+    max_dist = src_filter.integration_distance
     ucerf_source.src_filter = src_filter  # so that .iter_ruptures() work
     ucerf_source.rupset_idx = rupset_idx
     ucerf_source.num_ruptures = len(rupset_idx)
