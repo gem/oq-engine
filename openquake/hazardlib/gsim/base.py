@@ -301,7 +301,7 @@ class ContextMaker(object):
         :param sites: a (Filtered)SiteColletion
         :param distance_type: default 'rjb'
         :returns: (close sites, close distances)
-        :raises: a FarAwayRupture exception is the rupture is far away
+        :raises: a FarAwayRupture exception if the rupture is far away
         """
         distances = get_distances(rupture, sites.mesh, distance_type)
         if self.maximum_distance is None:  # for sites already filtered
