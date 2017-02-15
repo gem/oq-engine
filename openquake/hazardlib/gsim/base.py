@@ -144,6 +144,10 @@ class FarAwayRupture(Exception):
 class ContextMaker(object):
     """
     A class to manage the creation of contexts for distances, sites, rupture.
+    It has also a method `.get_closest(sites, rupture)` returning the closest
+    sites to the rupture and their distances. The integration distance can be
+    None if the sites have been already filtered: in that case returns all the
+    sites and all the distances.
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
@@ -286,19 +290,28 @@ class ContextMaker(object):
             and distance parameters) is unknown.
         """
         rctx = self.make_rupture_context(rupture)
-        distances = get_distances(rupture, site_collection.mesh, 'rjb')
-        sites = site_collection
-        if self.maximum_distance:
-            mask = distances <= self.maximum_distance
-            if mask.any():
-                sites = site_collection.filter(mask)
-                distances = distances[mask]
-            else:
-                raise FarAwayRupture
-
+        sites, distances = self.get_closest(site_collection, rupture, 'rjb')
         sctx = self.make_sites_context(sites)
         dctx = self.make_distances_context(sites, rupture, {'rjb': distances})
         return (sctx, rctx, dctx)
+
+    def get_closest(self, sites, rupture, distance_type='rjb'):
+        """
+        :param sites: a (Filtered)SiteColletion
+        :param rupture: a rupture
+        :param distance_type: default 'rjb'
+        :returns: (close sites, close distances)
+        :raises: a FarAwayRupture exception if the rupture is far away
+        """
+        distances = get_distances(rupture, sites.mesh, distance_type)
+        if self.maximum_distance is None:  # for sites already filtered
+            return sites, distances
+        mask = distances <= self.maximum_distance(
+            rupture.tectonic_region_type, rupture.mag)
+        if mask.any():
+            return sites.filter(mask), distances[mask]
+        else:
+            raise FarAwayRupture
 
 
 @functools.total_ordering

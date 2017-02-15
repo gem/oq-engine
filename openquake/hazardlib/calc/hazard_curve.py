@@ -158,8 +158,7 @@ def poe_map(src, s_sites, imtls, cmaker, trunclevel, ctx_mon, pne_mon,
                         bb.update([dist], [p.longitude], [p.latitude])
     except Exception as err:
         etype, err, tb = sys.exc_info()
-        msg = 'An error occurred with source id=%s. Error: %s'
-        msg %= (src.source_id, str(err))
+        msg = '%s (source id=%s)' % (str(err), src.source_id)
         raise_(etype, msg, tb)
     return ~pmap
 
@@ -183,10 +182,7 @@ def pmap_from_grp(
     else:  # list of sources
         trt = sources[0].tectonic_region_type
         group = SourceGroup(trt, sources, 'src_group', 'indep', 'indep')
-    try:
-        maxdist = source_site_filter.integration_distance[trt]
-    except:
-        maxdist = source_site_filter.integration_distance
+    maxdist = source_site_filter.integration_distance
     if hasattr(gsims, 'keys'):  # dictionary trt -> gsim
         gsims = [gsims[trt]]
     with GroundShakingIntensityModel.forbid_instantiation():
