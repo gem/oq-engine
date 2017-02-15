@@ -45,7 +45,7 @@ def add_quotes(values):
     return numpy.array(['"%s"' % val for val in values], (bytes, 100))
 
 
-def rup_data_dict(dstore, grp_ids, grp_trt):
+def rup_data_dict(dstore, grp_ids):
     """
     Extract a dictionary of arrays keyed by the rupture serial number
     from the datastore for the given source group IDs.
@@ -53,7 +53,7 @@ def rup_data_dict(dstore, grp_ids, grp_trt):
     rdict = {}
     for grp_id in grp_ids:
         for rec in dstore['rup_data/grp-%02d' % grp_id]:
-            rdict[rec['rupserial']] = rec, grp_trt[grp_id]
+            rdict[rec['rupserial']] = rec
     return rdict
 
 
@@ -64,8 +64,7 @@ def copy_to(elt, rup_data, rupserials):
     """
     assert len(elt) == len(rupserials), (len(elt), len(rupserials))
     for i, serial in numpy.ndenumerate(rupserials):
-        rdata, trt = rup_data[serial]
-        elt[i]['tectonic_region_type'] = trt
+        rdata = rup_data[serial]
         elt[i]['magnitude'] = rdata['mag']
         elt[i]['centroid_lon'] = rdata['lon']
         elt[i]['centroid_lat'] = rdata['lat']
@@ -192,8 +191,7 @@ def export_agg_losses_ebr(ekey, dstore):
     name, ext = export.keyfunc(ekey)
     agg_losses = dstore[name]
     has_rup_data = 'rup_data' in dstore
-    extra_list = [('tectonic_region_type', hdf5.vstr),
-                  ('magnitude', F64),
+    extra_list = [('magnitude', F64),
                   ('centroid_lon', F64),
                   ('centroid_lat', F64),
                   ('centroid_depth', F64)] if has_rup_data else []
@@ -215,8 +213,7 @@ def export_agg_losses_ebr(ekey, dstore):
         if not len(events):
             continue
         rup_data = rup_data_dict(
-            dstore, csm_info.get_grp_ids(sm_id), csm_info.grp_trt()
-        ) if has_rup_data else {}
+            dstore, csm_info.get_grp_ids(sm_id)) if has_rup_data else {}
         event_by_eid = {event['eid']: event for event in events}
         for rlz in rlzs:
             dest = dstore.build_fname('agg_losses', rlz, 'csv')
