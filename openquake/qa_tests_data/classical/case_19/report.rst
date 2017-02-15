@@ -1,31 +1,31 @@
 SHARE OpenQuake Computational Settings
 ======================================
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_81076.hdf5 Thu Jan 26 14:29:46 2017
-engine_version                                 2.3.0-gite807292        
-hazardlib_version                              0.23.0-gite1ea7ea       
-============================================== ========================
+============================================ ========================
+gem-tstation:/mnt/ssd/oqdata/calc_85395.hdf5 Tue Feb 14 06:52:17 2017
+engine_version                               2.3.0-git63d0821        
+hazardlib_version                            0.23.0-git7531d78       
+============================================ ========================
 
-num_sites = 1, sitecol = 762 B
+num_sites = 1, sitecol = 809 B
 
 Parameters
 ----------
-=============================== =======================================================================================================================================================================================
-calculation_mode                'classical'                                                                                                                                                                            
-number_of_logic_tree_samples    0                                                                                                                                                                                      
-maximum_distance                {'Volcanic': 200.0, 'Stable Shallow Crust': 200.0, 'Subduction Deep': 200.0, 'Active Shallow Crust': 200.0, 'Subduction Inslab': 200.0, 'Shield': 200.0, 'Subduction Interface': 200.0}
-investigation_time              50.0                                                                                                                                                                                   
-ses_per_logic_tree_path         1                                                                                                                                                                                      
-truncation_level                3.0                                                                                                                                                                                    
-rupture_mesh_spacing            5.0                                                                                                                                                                                    
-complex_fault_mesh_spacing      5.0                                                                                                                                                                                    
-width_of_mfd_bin                0.2                                                                                                                                                                                    
-area_source_discretization      10.0                                                                                                                                                                                   
-ground_motion_correlation_model None                                                                                                                                                                                   
-random_seed                     23                                                                                                                                                                                     
-master_seed                     0                                                                                                                                                                                      
-=============================== =======================================================================================================================================================================================
+=============================== ===========================================
+calculation_mode                'classical'                                
+number_of_logic_tree_samples    0                                          
+maximum_distance                {'default': [(6, 100), (7, 150), (8, 200)]}
+investigation_time              50.0                                       
+ses_per_logic_tree_path         1                                          
+truncation_level                3.0                                        
+rupture_mesh_spacing            5.0                                        
+complex_fault_mesh_spacing      5.0                                        
+width_of_mfd_bin                0.2                                        
+area_source_discretization      10.0                                       
+ground_motion_correlation_model None                                       
+random_seed                     23                                         
+master_seed                     0                                          
+=============================== ===========================================
 
 Input files
 -----------
@@ -43,7 +43,7 @@ Composite source model
 ========= ====== ============================================================== ====================== ================
 smlt_path weight source_model_file                                              gsim_logic_tree        num_realizations
 ========= ====== ============================================================== ====================== ================
-b1        1.000  `simple_area_source_model.xml <simple_area_source_model.xml>`_ complex(5,1,4,2,0,0,4) 4/4             
+b1        1.000  `simple_area_source_model.xml <simple_area_source_model.xml>`_ complex(2,4,0,4,5,1,0) 4/4             
 ========= ====== ============================================================== ====================== ================
 
 Required parameters per tectonic region type
@@ -51,7 +51,7 @@ Required parameters per tectonic region type
 ====== ==================================================================================== ========== ========== ==============
 grp_id gsims                                                                                distances  siteparams ruptparams    
 ====== ==================================================================================== ========== ========== ==============
-4      AtkinsonBoore2003SSlab() LinLee2008SSlab() YoungsEtAl1997SSlab() ZhaoEtAl2006SSlab() rrup rhypo vs30       hypo_depth mag
+4      AtkinsonBoore2003SSlab() LinLee2008SSlab() YoungsEtAl1997SSlab() ZhaoEtAl2006SSlab() rhypo rrup vs30       hypo_depth mag
 ====== ==================================================================================== ========== ========== ==============
 
 Realizations per (TRT, GSIM)
@@ -70,19 +70,19 @@ Number of ruptures per tectonic region type
 ============================ ====== ================= =========== ============ ============
 source_model                 grp_id trt               num_sources eff_ruptures tot_ruptures
 ============================ ====== ================= =========== ============ ============
-simple_area_source_model.xml 4      Subduction Inslab 1           7770         7,770       
+simple_area_source_model.xml 4      Subduction Inslab 1           5680         7,770       
 ============================ ====== ================= =========== ============ ============
 
 Informational data
 ------------------
 =========================================== ============
-count_eff_ruptures_max_received_per_task    2,124       
+count_eff_ruptures_max_received_per_task    2,062       
 count_eff_ruptures_num_tasks                4           
 count_eff_ruptures_sent.gsims               1,292       
-count_eff_ruptures_sent.monitor             7,604       
-count_eff_ruptures_sent.sitecol             3,028       
+count_eff_ruptures_sent.monitor             7,344       
 count_eff_ruptures_sent.sources             78,450      
-count_eff_ruptures_tot_received             8,496       
+count_eff_ruptures_sent.srcfilter           3,184       
+count_eff_ruptures_tot_received             8,248       
 hazard.input_weight                         777         
 hazard.n_imts                               3           
 hazard.n_levels                             78          
@@ -112,23 +112,22 @@ AreaSource   0.0       1
 
 Information about the tasks
 ---------------------------
-================== ===== ========= ===== ===== =========
-operation-duration mean  stddev    min   max   num_tasks
-count_eff_ruptures 0.002 2.149E-04 0.002 0.002 4        
-================== ===== ========= ===== ===== =========
+================== ===== ====== ===== ===== =========
+operation-duration mean  stddev min   max   num_tasks
+count_eff_ruptures 1.722 0.136  1.535 1.857 4        
+================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   5.018     0.0       1     
-managing sources                 0.273     0.0       1     
-split/filter heavy sources       0.271     0.0       1     
+total count_eff_ruptures         6.887     2.738     4     
+reading composite source model   4.738     0.0       1     
+managing sources                 0.274     0.0       1     
 filtering composite source model 0.017     0.0       1     
-total count_eff_ruptures         0.008     0.0       4     
-store source_info                5.360E-04 0.0       1     
-aggregate curves                 4.935E-05 0.0       4     
-reading site collection          4.840E-05 0.0       1     
-saving probability maps          2.337E-05 0.0       1     
+store source_info                0.001     0.0       1     
+aggregate curves                 1.135E-04 0.0       4     
+reading site collection          6.628E-05 0.0       1     
+saving probability maps          4.244E-05 0.0       1     
 ================================ ========= ========= ======
