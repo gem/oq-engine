@@ -38,6 +38,8 @@ getweight = operator.attrgetter('weight')
 
 def build_el_dtypes(loss_types, insured_losses):
     """
+    :param loss_types:
+        list of loss type strings
     :param bool insured_losses:
         job.ini configuration parameter
     :returns:
