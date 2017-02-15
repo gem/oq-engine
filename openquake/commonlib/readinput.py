@@ -254,12 +254,8 @@ def get_site_collection(oqparam, mesh=None, site_model_params=None):
                 get_site_model(oqparam))
         sitecol = []
         for pt in mesh:
-            # NB: the mesh, when read from the datastore, is a 32 bit array;
-            # however, the underlying C library expects 64 bit floats, thus
-            # we have to cast float(pt.longitude), float(pt.latitude);
-            # we should change the geodetic speedups instead
-            param, dist = site_model_params.\
-                get_closest(float(pt.longitude), float(pt.latitude))
+            param, dist = site_model_params.get_closest(
+                pt.longitude, pt.latitude)
             if dist >= MAX_SITE_MODEL_DISTANCE:
                 logging.warn('The site parameter associated to %s came from a '
                              'distance of %d km!' % (pt, dist))
