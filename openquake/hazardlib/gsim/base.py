@@ -297,8 +297,8 @@ class ContextMaker(object):
 
     def get_closest(self, sites, rupture, distance_type='rjb'):
         """
-        :param rupture: a rupture
         :param sites: a (Filtered)SiteColletion
+        :param rupture: a rupture
         :param distance_type: default 'rjb'
         :returns: (close sites, close distances)
         :raises: a FarAwayRupture exception if the rupture is far away
