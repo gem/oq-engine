@@ -191,7 +191,7 @@ _wait_ssh () {
 
 add_local_pkg_repo () {
     local deb="$1"
-    
+
     var_pfx="$(dep2var "$dep")"
     var_repo="${var_pfx}_REPO"
     var_branch="${var_pfx}_BRANCH"
@@ -278,7 +278,6 @@ _devtest_innervm_run () {
     ssh $lxc_ip mkdir -p "repo"
     scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\""
-    # ssh $lxc_ip "sudo apt-add-repository ppa:nastasi-oq/test"
 
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
