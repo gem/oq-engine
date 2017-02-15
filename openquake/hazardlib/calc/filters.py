@@ -148,9 +148,12 @@ class SourceFilter(object):
         by default True, i.e. try to use the rtree module if available
     """
     def __init__(self, sitecol, integration_distance, use_rtree=True):
-        if isinstance(integration_distance, dict):
-            integration_distance = valid.IntegrationDistance(integration_distance)
-        self.integration_distance = integration_distance
+        if (isinstance(integration_distance, dict) and not
+                isinstance(integration_distance, valid.IntegrationDistance)):
+            self.integration_distance = valid.IntegrationDistance(
+                integration_distance)
+        else:
+            self.integration_distance = integration_distance
         self.sitecol = sitecol
         self.use_rtree = use_rtree and rtree and (
             integration_distance and sitecol is not None)
@@ -169,10 +172,7 @@ class SourceFilter(object):
         :param src: a source object
         :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
         """
-        try:
-            maxdist = self.integration_distance[src.tectonic_region_type]
-        except TypeError:  # passed a scalar, not a dictionary
-            maxdist = self.integration_distance
+        maxdist = self.integration_distance[src.tectonic_region_type]
         min_lon, min_lat, max_lon, max_lat = src.get_bounding_box(maxdist)
         if self.idl:  # apply IDL fix
             if min_lon < 0 and max_lon > 0:
