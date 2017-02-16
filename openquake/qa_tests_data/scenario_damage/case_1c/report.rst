@@ -1,13 +1,13 @@
 Scenario Damage
 ===============
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_81012.hdf5 Thu Jan 26 14:28:13 2017
-engine_version                                 2.3.0-gite807292        
-hazardlib_version                              0.23.0-gite1ea7ea       
-============================================== ========================
+============================================ ========================
+gem-tstation:/mnt/ssd/oqdata/calc_85510.hdf5 Tue Feb 14 15:36:35 2017
+engine_version                               2.3.0-git1f56df2        
+hazardlib_version                            0.23.0-git6937706       
+============================================ ========================
 
-num_sites = 1, sitecol = 1.04 KB
+num_sites = 1, sitecol = 1.14 KB
 
 Parameters
 ----------
@@ -70,6 +70,6 @@ filtering sites         0.008     0.0       1
 reading exposure        0.003     0.0       1     
 computing gmfs          0.002     0.0       1     
 saving gmfs             0.001     0.0       1     
-reading site collection 1.674E-04 0.0       1     
-building riskinputs     1.407E-04 0.0       1     
+reading site collection 1.760E-04 0.0       1     
+building riskinputs     1.340E-04 0.0       1     
 ======================= ========= ========= ======
