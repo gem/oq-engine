@@ -82,12 +82,12 @@ cp -R utils %{buildroot}/%{_datadir}/openquake/engine
 
 %post
 (if [ -f /run/rabbitmq/pid -o -f /var/lib/rabbitmq/mnesia/rabbit@$(hostname -s).pid ]; then
-    if ! rabbitmqctl list_users | grep openquake; then
-        rabbitmqctl add_user openquake openquake
+    if ! rabbitmqctl list_users | grep %{oquser}; then
+        rabbitmqctl add_user %{oquser} %{oquser}
     fi
-    if ! rabbitmqctl list_vhosts | grep openquake; then
-        rabbitmqctl add_vhost openquake
-        rabbitmqctl set_permissions -p openquake openquake ".*" ".*" ".*"
+    if ! rabbitmqctl list_vhosts | grep %{oquser}; then
+        rabbitmqctl add_vhost %{oquser}
+        rabbitmqctl set_permissions -p %{oquser} %{oquser} ".*" ".*" ".*"
     fi
 fi) >/dev/null || true
 systemctl stop rabbitmq-server.service
