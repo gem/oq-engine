@@ -72,6 +72,7 @@ this is a job for the Node class which can be subclassed and
 supplemented by a dictionary of validators.
 """
 from __future__ import print_function
+import io
 import re
 import sys
 import copy
@@ -328,6 +329,15 @@ def write(nodes, output=sys.stdout, fmt='%.7E', gml=True, xmlns=None):
     if hasattr(output, 'mode') and '+' in output.mode:  # read-write mode
         output.seek(0)
         read(output)  # validate the written file
+
+
+def convert(node):
+    """
+    Convert a node into a string in NRML format
+    """
+    with io.BytesIO() as f:
+        write([node], f)
+        return f.getvalue().decode('utf-8')
 
 
 if __name__ == '__main__':
