@@ -89,7 +89,7 @@ class GmfComputer(object):
         self.rupture = rupture
         self.sites = sites
         self.imts = [from_string(imt) for imt in imts]
-        self.gsims = set(gsims)
+        self.gsims = sorted(set(gsims))
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.samples = samples
