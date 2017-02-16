@@ -6,20 +6,21 @@
 %define oqtimestamp ##_timestamp_##
 %define oquser openquake
 
+%if %{oqstable} == 1
+%define oqformat %{oqrepo}-%{oqversion}
+Release: %{oqrelease}
+%else
+%define oqformat %{oqrepo}-%{oqversion}-%{oqrelease}
+Release: %{oqtimestamp}_%{oqrelease}
+%endif
+
 Summary: Computes earthquake hazard and risk
 Name: %{oqname}
 Version: %{oqversion}
 License: AGPLv3
 Group: Applications/Engineering
-%if %{oqstable} == 1
-Release: %{oqrelease}
-Source0: %{oqrepo}-%{oqversion}.tar.gz
-BuildRoot: %{_tmppath}/%{oqname}-%{oqversion}-buildroot
-%else
-Release: %{oqtimestamp}_%{oqrelease}
-Source0: %{oqrepo}-%{oqversion}-%{oqrelease}.tar.gz
-BuildRoot: %{_tmppath}/%{oqname}-%{oqversion}-%{oqrelease}-buildroot
-%endif
+Source0: %{oqformat}.tar.gz
+BuildRoot: %{_tmppath}/python-%{oqformat}-buildroot
 Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: The GEM OpenQuake team <devops@openquake.org>
@@ -29,18 +30,8 @@ Patch1: openquake.cfg.patch
 
 Requires(pre): shadow-utils
 
-%define common_deps sudo systemd python numpy scipy python-shapely python-psutil python-decorator python-mock python-futures h5py python-amqp python-celery python-django pyshp python-docutils python-requests python-prctl python-gunicorn rabbitmq-server
-%define oqlib_deps python-oq-hazardlib >= 0.23.0
-%define dev_deps python-nose python-coverage
-
-Requires: %{common_deps}
-Requires: %{oqlib_deps}
-Requires: %{dev_deps}
-
-# since tests are currently not enabled during the packaging phase, the following build dependencies are not required
-#BuildRequires: %{common_deps}
-#BuildRequires: %{dev_deps}
-#BuildRequires: %{oqlib_deps}
+Requires: python-oq-libs python-oq-hazardlib >= 0.23.0
+Requires: sudo systemd python rabbitmq-server
 
 BuildRequires: systemd python-setuptools
 
@@ -55,11 +46,7 @@ compute seismic hazard and seismic risk of earthquakes on a global scale.
 Copyright (C) 2010-2017 GEM Foundation
 
 %prep
-%if %{oqstable} == 1
-%setup -n %{oqrepo}-%{oqversion} -n %{oqrepo}-%{oqversion}
-%else
-%setup -n %{oqrepo}-%{oqversion}-%{oqrelease} -n %{oqrepo}-%{oqversion}-%{oqrelease}
-%endif
+%setup -n %{oqformat}
 
 %patch1 -p1
 
@@ -78,7 +65,10 @@ systemctl start rabbitmq-server.service
 
 %install
 sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" openquake/risklib/__init__.py
-python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --record=INSTALLED_FILES
+install -p -m 755 -d %{buildroot}%{_bindir}
+install -p -m 755 -d %{buildroot}/opt/openquake/bin
+python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --prefix=/opt/openquake --install-scripts=/opt/openquake/bin --record=INSTALLED_FILES
+ln -sf /opt/openquake/bin/oq %{buildroot}%{_bindir}/oq
 # create directories where the files will be located
 mkdir -p %{buildroot}%{_sysconfdir}/openquake
 mkdir -p %{buildroot}%{_datadir}/openquake/engine
@@ -121,6 +111,7 @@ rm -rf %{buildroot}
 %files -f INSTALLED_FILES
 %defattr(-,root,root)
 %doc README.md LICENSE CONTRIBUTORS.txt doc
+%{_bindir}/oq
 %{_datadir}/openquake/engine
 %{_sysconfdir}/openquake/openquake.cfg
 %{_unitdir}/openquake-dbserver.service
