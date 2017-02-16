@@ -30,7 +30,7 @@ from nose.plugins.attrib import attr
 
 class UcerfTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'ucerf')
-    def test_ruptures(self):
+    def test_event_based(self):
         if h5py.__version__ < '2.6.0':
             raise unittest.SkipTest  # UCERF requires vlen arrays
         self.run_calc(ucerf.__file__, 'job.ini')
@@ -40,6 +40,14 @@ class UcerfTestCase(CalculatorTestCase):
             self.assertEqual(len(f.readlines()), 918)
         # check the header and the first 18 events
         self.assertEqualFiles('expected/ruptures.csv', fname, lastline=19)
+
+        # run a regular event based on top of the UCERF ruptures and
+        # check the generated hazard maps
+        self.run_calc(ucerf.__file__, 'job.ini',
+                      calculation_mode='event_based',
+                      hazard_calculation_id=str(self.calc.datastore.calc_id))
+        [fname] = export(('hmaps', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
 
     @attr('qa', 'hazard', 'ucerf')
     def test_classical(self):

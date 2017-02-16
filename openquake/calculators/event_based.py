@@ -27,9 +27,9 @@ import numpy
 
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, split_in_blocks
+from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.probability_map import ProbabilityMap, PmapStats
-from openquake.hazardlib.calc.filters import \
-    filter_sites_by_distance_to_rupture
+from openquake.hazardlib.geo.surface import PlanarSurface
 from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util, datastore
@@ -84,16 +84,12 @@ def compute_ruptures(sources, src_filter, gsims, monitor):
     rup_mon = monitor('filtering ruptures', measuremem=False)
     num_samples = monitor.samples
     num_events = 0
-
+    cmaker = ContextMaker(gsims, src_filter.integration_distance)
     # Compute and save stochastic event sets
     for src, s_sites in src_filter(sources):
         t0 = time.time()
         if s_sites is None:
             continue
-        max_dist = src_filter.integration_distance[trt]
-        rupture_filter = functools.partial(
-            filter_sites_by_distance_to_rupture,
-            integration_distance=max_dist, sites=s_sites)
         num_occ_by_rup = sample_ruptures(
             src, monitor.ses_per_logic_tree_path, num_samples,
             monitor.seed)
@@ -101,7 +97,7 @@ def compute_ruptures(sources, src_filter, gsims, monitor):
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
         for ebr in build_eb_ruptures(
-                src, num_occ_by_rup, rupture_filter, monitor.seed, rup_mon):
+                src, num_occ_by_rup, cmaker, s_sites, monitor.seed, rup_mon):
             eb_ruptures.append(ebr)
             num_events += ebr.multiplicity
         dt = time.time() - t0
@@ -149,18 +145,19 @@ def sample_ruptures(src, num_ses, num_samples, seed):
 
 
 def build_eb_ruptures(
-        src, num_occ_by_rup, rupture_filter, random_seed, rup_mon):
+        src, num_occ_by_rup, cmaker, s_sites, random_seed, rup_mon):
     """
     Filter the ruptures stored in the dictionary num_occ_by_rup and
     yield pairs (rupture, <list of associated EBRuptures>)
     """
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
         with rup_mon:
-            r_sites = rupture_filter(rup)
-        if r_sites is None:
-            # ignore ruptures which are far away
-            del num_occ_by_rup[rup]  # save memory
-            continue
+            try:
+                r_sites, dists = cmaker.get_closest(s_sites, rup)
+            except FarAwayRupture:
+                # ignore ruptures which are far away
+                del num_occ_by_rup[rup]  # save memory
+                continue
 
         # creating EBRuptures
         serial = rup.seed - random_seed + 1
@@ -336,6 +333,8 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
         a dictionary with keys gmfcoll and hcurves
    """
     oq = monitor.oqparam
+    with monitor('making contexts', measuremem=True):
+        getter.init()
     haz = {sid: {} for sid in getter.sids}
     gmfcoll = {}  # rlz -> gmfa
     for rlz in rlzs:
@@ -376,6 +375,12 @@ def get_ruptures_by_grp(dstore):
     """
     Extracts the dictionary `ruptures_by_grp` from the given calculator
     """
+    n = 0
+    for grp in dstore['ruptures']:
+        n += len(dstore['ruptures/' + grp])
+    logging.info('Reading %d ruptures from the datastore', n)
+    # disable check on PlaceSurface to support UCERF ruptures
+    PlanarSurface.IMPERFECT_RECTANGLE_TOLERANCE = numpy.inf
     ruptures_by_grp = AccumDict(accum=[])
     for grp in dstore['ruptures']:
         grp_id = int(grp[4:])  # strip 'grp-'
@@ -468,7 +473,7 @@ class EventBasedCalculator(ClassicalCalculator):
                            else get_ruptures_by_grp(self.datastore.parent))
         if self.oqparam.ground_motion_fields:
             calc.check_overflow(self)
-        self.sm_id = {sm.path: sm.ordinal
+        self.sm_id = {tuple(sm.path): sm.ordinal
                       for sm in self.csm.info.source_models}
         L = len(oq.imtls.array)
         res = parallel.Starmap(
