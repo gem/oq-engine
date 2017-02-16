@@ -44,6 +44,8 @@ override_dh_auto_install:
 override_dh_install:
 	python2 -m compileall $(PWD)/debian/python-oq-engine$(PREFIX) || true
 	dh_install
+	mkdir -p $(PWD)/debian/python-oq-engine/usr/bin
+	ln -s $(PREFIX)/bin/oq $(PWD)/debian/python-oq-engine/usr/bin/oq
 
 override_dh_quilt_patch:
 	dh_quilt_patch
