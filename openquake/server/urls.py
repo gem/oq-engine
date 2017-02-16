@@ -34,6 +34,11 @@ urlpatterns = [
         name="license"),
 ]
 
+for app in settings.STANDALONE_APPS:
+    app_name = app.split('_')[1]
+    urlpatterns.append(url(r'^%s/' % app_name, include('%s.urls' % app,
+                       namespace='%s' % app_name)))
+
 if settings.LOCKDOWN:
     from django.contrib import admin
     from django.contrib.auth.views import login, logout
