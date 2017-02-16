@@ -94,7 +94,7 @@ def ucerf_classical_hazard_by_rupture_set(
     t0 = time.time()
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.imtls
-    max_dist = src_filter.integration_distance[DEFAULT_TRT]
+    max_dist = src_filter.integration_distance
     ucerf_source.src_filter = src_filter  # so that .iter_ruptures() work
     ucerf_source.rupset_idx = rupset_idx
     ucerf_source.num_ruptures = len(rupset_idx)
@@ -102,14 +102,15 @@ def ucerf_classical_hazard_by_rupture_set(
     imtls = DictArray(imtls)
     nsites = len(src_filter.sitecol)
     ctx_mon = monitor('making contexts', measuremem=False)
-    pne_mon = monitor('computing poes', measuremem=False)
+    pne_mons = [monitor('%s.get_poes' % gsim, measuremem=False)
+                for gsim in gsims]
     pmap = ProbabilityMap(len(imtls.array), len(cmaker.gsims))
     pmap.calc_times = []
     pmap.grp_id = ucerf_source.src_group_id
     pmap.eff_ruptures = {pmap.grp_id: ucerf_source.num_ruptures}
     # NB: the effective ruptures can be less, some may have zero probability
     upmap = poe_map(ucerf_source, src_filter.sitecol, imtls, cmaker,
-                    truncation_level, ctx_mon, pne_mon)
+                    truncation_level, ctx_mon, pne_mons)
     pmap |= upmap
     pmap.calc_times.append(
         (ucerf_source.source_id, nsites, time.time() - t0))
