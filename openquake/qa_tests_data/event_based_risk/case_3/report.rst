@@ -1,32 +1,32 @@
 Event Based Risk Lisbon
 =======================
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_81047.hdf5 Thu Jan 26 14:28:29 2017
-engine_version                                 2.3.0-gite807292        
-hazardlib_version                              0.23.0-gite1ea7ea       
-============================================== ========================
+============================================ ========================
+gem-tstation:/mnt/ssd/oqdata/calc_85545.hdf5 Tue Feb 14 15:37:10 2017
+engine_version                               2.3.0-git1f56df2        
+hazardlib_version                            0.23.0-git6937706       
+============================================ ========================
 
-num_sites = 1, sitecol = 762 B
+num_sites = 1, sitecol = 809 B
 
 Parameters
 ----------
-=============================== ==============================================================
-calculation_mode                'event_based_risk'                                            
-number_of_logic_tree_samples    0                                                             
-maximum_distance                {'Active Shallow Crust': 400.0, 'Stable Shallow Crust': 400.0}
-investigation_time              2.0                                                           
-ses_per_logic_tree_path         1                                                             
-truncation_level                5.0                                                           
-rupture_mesh_spacing            4.0                                                           
-complex_fault_mesh_spacing      4.0                                                           
-width_of_mfd_bin                0.1                                                           
-area_source_discretization      10.0                                                          
-ground_motion_correlation_model None                                                          
-random_seed                     23                                                            
-master_seed                     42                                                            
-avg_losses                      True                                                          
-=============================== ==============================================================
+=============================== ==================
+calculation_mode                'event_based_risk'
+number_of_logic_tree_samples    0                 
+maximum_distance                {'default': 400.0}
+investigation_time              2.0               
+ses_per_logic_tree_path         1                 
+truncation_level                5.0               
+rupture_mesh_spacing            4.0               
+complex_fault_mesh_spacing      4.0               
+width_of_mfd_bin                0.1               
+area_source_discretization      10.0              
+ground_motion_correlation_model None              
+random_seed                     23                
+master_seed                     42                
+avg_losses                      True              
+=============================== ==================
 
 Input files
 -----------
@@ -56,9 +56,9 @@ Required parameters per tectonic region type
 ====== ===================================== ========= ========== ==========
 grp_id gsims                                 distances siteparams ruptparams
 ====== ===================================== ========= ========== ==========
-0      AkkarBommer2010() AtkinsonBoore2006() rjb rrup  vs30       mag rake  
-2      AkkarBommer2010() AtkinsonBoore2006() rjb rrup  vs30       mag rake  
-3      AkkarBommer2010() AtkinsonBoore2006() rjb rrup  vs30       mag rake  
+0      AkkarBommer2010() AtkinsonBoore2006() rrup rjb  vs30       mag rake  
+2      AkkarBommer2010() AtkinsonBoore2006() rrup rjb  vs30       mag rake  
+3      AkkarBommer2010() AtkinsonBoore2006() rrup rjb  vs30       mag rake  
 ====== ===================================== ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -95,13 +95,13 @@ SA_RA_CATAL2_00.xml 3      Stable Shallow Crust 8           3            21,381
 Informational data
 ------------------
 ========================================= ============
-compute_ruptures_max_received_per_task    7,710       
+compute_ruptures_max_received_per_task    7,740       
 compute_ruptures_num_tasks                18          
 compute_ruptures_sent.gsims               3,222       
-compute_ruptures_sent.monitor             23,958      
+compute_ruptures_sent.monitor             24,498      
 compute_ruptures_sent.sources             1,012,310   
-compute_ruptures_sent.src_filter          11,358      
-compute_ruptures_tot_received             80,156      
+compute_ruptures_sent.src_filter          12,780      
+compute_ruptures_tot_received             80,714      
 hazard.input_weight                       13,980      
 hazard.n_imts                             1           
 hazard.n_levels                           40          
@@ -144,26 +144,26 @@ Slowest sources
 ====== ========= ============ ============ ========= ========= =========
 grp_id source_id source_class num_ruptures calc_time num_sites num_split
 ====== ========= ============ ============ ========= ========= =========
-3      5         AreaSource   2,349        0.0       1         0        
-1      5         AreaSource   2,349        0.0       1         0        
-3      7         AreaSource   1,690        0.0       1         0        
-3      4         AreaSource   1,280        0.0       1         0        
-1      6         AreaSource   4,123        0.0       1         0        
-0      1         AreaSource   4,163        0.0       1         0        
+1      10        AreaSource   4,482        0.0       1         0        
 1      3         AreaSource   3,509        0.0       1         0        
-1      7         AreaSource   1,690        0.0       1         0        
-3      6         AreaSource   4,123        0.0       1         0        
-1      9         AreaSource   2,508        0.0       1         0        
+3      5         AreaSource   2,349        0.0       1         0        
+0      0         AreaSource   24,435       0.0       1         0        
+1      5         AreaSource   2,349        0.0       1         0        
+3      8         AreaSource   1,440        0.0       1         0        
+1      8         AreaSource   1,440        0.0       1         0        
+3      4         AreaSource   1,280        0.0       1         0        
+3      10        AreaSource   4,482        0.0       1         0        
 1      4         AreaSource   1,280        0.0       1         0        
 2      2         AreaSource   19,923       0.0       1         0        
-0      0         AreaSource   24,435       0.0       1         0        
-3      10        AreaSource   4,482        0.0       1         0        
-0      2         AreaSource   19,923       0.0       1         0        
-1      10        AreaSource   4,482        0.0       1         0        
-3      8         AreaSource   1,440        0.0       1         0        
+1      6         AreaSource   4,123        0.0       1         0        
+0      1         AreaSource   4,163        0.0       1         0        
 3      9         AreaSource   2,508        0.0       1         0        
-2      0         AreaSource   24,435       0.0       1         0        
+1      9         AreaSource   2,508        0.0       1         0        
+0      2         AreaSource   19,923       0.0       1         0        
 3      3         AreaSource   3,509        0.0       1         0        
+2      1         AreaSource   4,163        0.0       1         0        
+1      7         AreaSource   1,690        0.0       1         0        
+2      0         AreaSource   24,435       0.0       1         0        
 ====== ========= ============ ============ ========= ========= =========
 
 Computation times by source typology
@@ -178,7 +178,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   1.669 0.688  0.383 2.685 18       
+compute_ruptures   1.683 0.739  0.319 2.753 18       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -186,15 +186,14 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           30        3.164     18    
-managing sources                 2.259     0.0       1     
-split/filter heavy sources       2.249     0.0       2     
-reading composite source model   1.095     0.0       1     
-saving ruptures                  0.074     0.0       18    
-filtering composite source model 0.012     0.0       1     
-filtering ruptures               0.005     0.0       14    
+total compute_ruptures           30        0.695     18    
+managing sources                 2.151     0.0       1     
+reading composite source model   1.136     0.0       1     
+saving ruptures                  0.085     0.0       18    
+filtering composite source model 0.011     0.0       1     
+filtering ruptures               0.004     0.0       14    
+setting event years              0.004     0.0       1     
 reading exposure                 0.003     0.0       1     
-setting event years              0.003     0.0       1     
-store source_info                7.854E-04 0.0       1     
-reading site collection          8.821E-06 0.0       1     
+store source_info                0.001     0.0       1     
+reading site collection          9.775E-06 0.0       1     
 ================================ ========= ========= ======

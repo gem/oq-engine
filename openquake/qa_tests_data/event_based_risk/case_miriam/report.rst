@@ -1,32 +1,32 @@
 Virtual Island - City C, 2 SES, grid=0.1
 ========================================
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_81051.hdf5 Thu Jan 26 14:28:43 2017
-engine_version                                 2.3.0-gite807292        
-hazardlib_version                              0.23.0-gite1ea7ea       
-============================================== ========================
+============================================ ========================
+gem-tstation:/mnt/ssd/oqdata/calc_85549.hdf5 Tue Feb 14 15:37:23 2017
+engine_version                               2.3.0-git1f56df2        
+hazardlib_version                            0.23.0-git6937706       
+============================================ ========================
 
-num_sites = 281, sitecol = 83.46 KB
+num_sites = 281, sitecol = 97.5 KB
 
 Parameters
 ----------
-=============================== ==============================================================
-calculation_mode                'event_based_risk'                                            
-number_of_logic_tree_samples    0                                                             
-maximum_distance                {'Active Shallow Crust': 200.0, 'Subduction Interface': 200.0}
-investigation_time              50.0                                                          
-ses_per_logic_tree_path         2                                                             
-truncation_level                4.0                                                           
-rupture_mesh_spacing            10.0                                                          
-complex_fault_mesh_spacing      10.0                                                          
-width_of_mfd_bin                0.2                                                           
-area_source_discretization      None                                                          
-ground_motion_correlation_model None                                                          
-random_seed                     1024                                                          
-master_seed                     100                                                           
-avg_losses                      True                                                          
-=============================== ==============================================================
+=============================== ==================
+calculation_mode                'event_based_risk'
+number_of_logic_tree_samples    0                 
+maximum_distance                {'default': 200.0}
+investigation_time              50.0              
+ses_per_logic_tree_path         2                 
+truncation_level                4.0               
+rupture_mesh_spacing            10.0              
+complex_fault_mesh_spacing      10.0              
+width_of_mfd_bin                0.2               
+area_source_discretization      None              
+ground_motion_correlation_model None              
+random_seed                     1024              
+master_seed                     100               
+avg_losses                      True              
+=============================== ==================
 
 Input files
 -----------
@@ -76,13 +76,13 @@ source_model.xml 0      Active Shallow Crust 1           44           2,558
 Informational data
 ------------------
 ========================================= ============
-compute_ruptures_max_received_per_task    13,147      
+compute_ruptures_max_received_per_task    13,177      
 compute_ruptures_num_tasks                15          
 compute_ruptures_sent.gsims               1,470       
-compute_ruptures_sent.monitor             21,090      
+compute_ruptures_sent.monitor             21,540      
 compute_ruptures_sent.sources             30,514      
-compute_ruptures_sent.src_filter          582,465     
-compute_ruptures_tot_received             100,226     
+compute_ruptures_sent.src_filter          798,630     
+compute_ruptures_tot_received             100,804     
 hazard.input_weight                       10,232      
 hazard.n_imts                             1           
 hazard.n_levels                           50          
@@ -151,7 +151,7 @@ Information about the tasks
 ---------------------------
 ================== ===== ====== ===== ===== =========
 operation-duration mean  stddev min   max   num_tasks
-compute_ruptures   0.270 0.038  0.192 0.366 15       
+compute_ruptures   0.274 0.035  0.213 0.335 15       
 ================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -159,15 +159,14 @@ Slowest operations
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-total compute_ruptures           4.049     1.281     15    
-managing sources                 0.603     0.0       1     
-split/filter heavy sources       0.600     0.0       1     
-reading site collection          0.199     0.0       1     
-reading composite source model   0.111     0.0       1     
-reading exposure                 0.082     0.0       1     
-saving ruptures                  0.015     0.0       15    
-filtering ruptures               0.013     0.0       57    
-setting event years              0.002     0.0       1     
+total compute_ruptures           4.116     0.527     15    
+managing sources                 0.502     0.0       1     
+reading site collection          0.165     0.0       1     
+reading composite source model   0.115     0.0       1     
+reading exposure                 0.064     0.0       1     
+saving ruptures                  0.016     0.0       15    
+filtering ruptures               0.012     0.0       57    
+setting event years              0.003     0.0       1     
 filtering composite source model 0.002     0.0       1     
-store source_info                5.314E-04 0.0       1     
+store source_info                8.118E-04 0.0       1     
 ================================ ========= ========= ======

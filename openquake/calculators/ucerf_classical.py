@@ -119,10 +119,10 @@ def ucerf_classical_hazard_by_rupture_set(
     """
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.imtls
-    max_dist = src_filter.integration_distance[DEFAULT_TRT]
+    max_dist = src_filter.integration_distance
     rupset_idx, s_sites = \
         ucerf_source.filter_sites_by_distance_from_rupture_set(
-            rupset_idx, src_filter.sitecol, max_dist)
+            rupset_idx, src_filter.sitecol, max_dist[DEFAULT_TRT])
     if len(s_sites):
         ucerf_source.src_filter = src_filter  # so that .iter_ruptures() work
         cmaker = ContextMaker(gsims, max_dist)
@@ -203,21 +203,27 @@ class UcerfPSHACalculator(classical.PSHACalculator):
                 bckgnd_sources = ucerf_source.get_background_sources(
                     background_sids)
 
+            # since there are two kinds of tasks (background and rupture_set)
+            # we divide the concurrent_tasks parameter by 2;
+            # notice the "or 1" below, to avoid issues when
+            # self.oqparam.concurrent_tasks is 0 or 1
+            ct2 = (self.oqparam.concurrent_tasks // 2) or 1
+
             # parallelize on the background sources, small tasks
             args = (bckgnd_sources, self.src_filter, oq.imtls,
                     gsims, self.oqparam.truncation_level, (), monitor)
             bg_res = parallel.Starmap.apply(
                 pmap_from_grp, args, name='background_sources_%d' % grp_id,
-                concurrent_tasks=self.oqparam.concurrent_tasks).submit_all()
+                concurrent_tasks=ct2).submit_all()
 
             # parallelize by rupture subsets
-            tasks = self.oqparam.concurrent_tasks * 2  # they are big tasks
             rup_sets = numpy.arange(ucerf_source.num_ruptures)
             taskname = 'ucerf_classical_hazard_by_rupture_set_%d' % grp_id
             rup_res = parallel.Starmap.apply(
                 ucerf_classical_hazard_by_rupture_set,
                 (rup_sets, ucerf_source, self.src_filter, gsims, monitor),
-                concurrent_tasks=tasks, name=taskname).submit_all()
+                concurrent_tasks=ct2, name=taskname
+            ).submit_all()
 
             # compose probabilities from background sources
             for pmap in bg_res:

@@ -420,6 +420,8 @@ class CompositeRiskModel(collections.Mapping):
                               else assetcol.assets_by_site())
             hazard_getter = riskinput.hazard_getter(
                 mon_hazard(measuremem=False))
+            if hasattr(hazard_getter, 'init'):  # expensive operation
+                hazard_getter.init()
 
         # group the assets by taxonomy
         taxonomies = set()
@@ -488,18 +490,26 @@ class GmfGetter(object):
     def __init__(self, gsims, ebruptures, sitecol, imts, min_iml,
                  truncation_level, correlation_model, samples):
         self.gsims = gsims
+        self.ebruptures = ebruptures
+        self.sitecol = sitecol
         self.imts = imts
         self.min_iml = min_iml
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.samples = samples
-        self.sids = sitecol.sids
+
+    def init(self):
+        """
+        Initialize the computers. Should be called on the workers
+        """
+        self.sids = self.sitecol.sids
         self.computers = []
-        for ebr in ebruptures:
-            sites = site.FilteredSiteCollection(ebr.sids, sitecol.complete)
+        for ebr in self.ebruptures:
+            sites = site.FilteredSiteCollection(
+                ebr.sids, self.sitecol.complete)
             computer = calc.gmf.GmfComputer(
-                ebr, sites, imts, set(gsims),
-                truncation_level, correlation_model)
+                ebr, sites, self.imts, self.gsims,
+                self.truncation_level, self.correlation_model)
             self.computers.append(computer)
         self.gmfbytes = 0
 

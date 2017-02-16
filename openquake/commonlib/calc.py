@@ -26,10 +26,10 @@ from openquake.baselib.general import get_array, group_array
 from openquake.hazardlib.geo.mesh import RectangularMesh, build_array
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import geo, tom
+from openquake.hazardlib import geo, tom, valid
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.probability_map import ProbabilityMap, get_shape
-from openquake.commonlib import readinput, oqvalidation, util
+from openquake.commonlib import readinput, util
 
 
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
@@ -316,7 +316,7 @@ def fix_minimum_intensity(min_iml, imts):
     if min_iml:
         for imt in imts:
             try:
-                min_iml[imt] = oqvalidation.getdefault(min_iml, imt)
+                min_iml[imt] = valid.getdefault(min_iml, imt)
             except KeyError:
                 raise ValueError(
                     'The parameter `minimum_intensity` in the job.ini '
@@ -600,9 +600,9 @@ class EBRupture(object):
                 mesh_spacing, m.flatten())
         elif surface_class.endswith('MultiSurface'):
             mesh_spacing = attrs.pop('mesh_spacing')
-            self.rupture.surface.surfaces = [
+            self.rupture.surface.__init__([
                 geo.PlanarSurface.from_array(mesh_spacing, m1.flatten())
-                for m1 in m]
+                for m1 in m])
         else:  # fault surface
             surface.strike = surface.dip = None  # they will be computed
             surface.mesh = RectangularMesh(
