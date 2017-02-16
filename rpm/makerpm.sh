@@ -15,8 +15,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>
 
-# Work in progress
-
 set -e
 
 CUR=$(pwd)
@@ -75,15 +73,26 @@ echo "$LIB - $BRANCH - $SHA - $VER"
 sed "s/##_stable_##/${STABLE}/g;s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_timestamp_##/${TIME}/g" rpm/python-${REPO}.spec.inc > build-rpm/SPECS/python-${REPO}.spec
 
 if [ "$STABLE" == "1" ]; then
-    git archive --format=tar --prefix=${REPO}-${VER}/ $BRANCH | gzip -9 > build-rpm/SOURCES/${REPO}-${VER}.tar.gz
+    IN=build-rpm/SOURCES/${REPO}-${VER}.tar
+    git archive --format=tar --prefix=${REPO}-${VER}/ $BRANCH > $IN
     sed -i "s/##_release_##/${PKG}/g" build-rpm/SPECS/python-${REPO}.spec
     OUT=python-${REPO}-${VER}-${PKG}.src.rpm
 else
-    git archive --format=tar --prefix=${REPO}-${VER}-git${SHA}/ $BRANCH | gzip -9 > build-rpm/SOURCES/${REPO}-${VER}-git${SHA}.tar.gz
+    IN=build-rpm/SOURCES/${REPO}-${VER}-git${SHA}.tar
+    git archive --format=tar --prefix=${REPO}-${VER}-git${SHA}/ $BRANCH > $IN
     sed -i "s/##_release_##/git${SHA}/g" build-rpm/SPECS/python-${REPO}.spec
     OUT=python-${REPO}-${VER}-${TIME}_git${SHA}.src.rpm
 fi
 cp debian/patches/openquake.cfg.patch build-rpm/SOURCES
+if [ "$STABLE" == "1" ]; then
+    TMPD=$(mktemp -d)
+    TMPM=${REPO}-${VER}/doc
+    mkdir -p $TMPD/$TMPM
+    wget -qO- http://packages.openquake.org/pdf/oq-engine/$SHA/oq-manual.pdf > $TMPD/$TMPM/oq-manual.pdf
+    tar -C $TMPD -rf $IN $TMPM/oq-manual.pdf
+    rm -Rf $TMPD
+fi
+gzip -9 $IN
 
 mock -r openquake --buildsrpm --spec build-rpm/SPECS/python-${REPO}.spec --source build-rpm/SOURCES --resultdir=build-rpm/SRPMS/
 if [ "$BUILD" == "1" ]; then

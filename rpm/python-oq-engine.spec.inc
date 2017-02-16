@@ -110,7 +110,13 @@ rm -rf %{buildroot}
 
 %files -f INSTALLED_FILES
 %defattr(-,root,root)
-%doc README.md LICENSE CONTRIBUTORS.txt doc
+%doc README.md LICENSE CONTRIBUTORS.txt
+%doc doc/oq-manual.pdf
+%doc doc/*.md
+%doc doc/img/*
+%doc doc/installing/*
+%doc doc/running/*
+%doc doc/upgrading/*
 %{_bindir}/oq
 %{_datadir}/openquake/engine
 %{_sysconfdir}/openquake/openquake.cfg
