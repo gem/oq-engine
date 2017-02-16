@@ -83,7 +83,8 @@ def _hazard_curves_per_rupture_subset(
     """
     imtls = DictArray(imtls)
     ctx_mon = monitor('making contexts', measuremem=False)
-    pne_mon = monitor('computing poes', measuremem=False)
+    pne_mons = [monitor('%s.get_poes' % gsim, measuremem=False)
+                for gsim in cmaker.gsims]
     pmap = ProbabilityMap(len(imtls.array), len(cmaker.gsims))
     pmap.calc_times = []
     pmap.grp_id = ucerf_source.src_group_id
@@ -94,7 +95,7 @@ def _hazard_curves_per_rupture_subset(
     # NB: the effective ruptures can be less, some may have zero probability
     t0 = time.time()
     upmap = poe_map(ucerf_source, sites, imtls, cmaker,
-                    truncation_level, ctx_mon, pne_mon)
+                    truncation_level, ctx_mon, pne_mons)
     pmap |= upmap
     pmap.calc_times.append(
         (ucerf_source.source_id, nsites, time.time() - t0))
