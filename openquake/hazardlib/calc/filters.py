@@ -60,6 +60,7 @@ the index can be compensed. Finally, there is a function
 """
 import sys
 import logging
+import collections
 from contextlib import contextmanager
 import numpy
 try:
@@ -67,6 +68,7 @@ try:
 except ImportError:
     rtree = None
 from openquake.baselib.python3compat import raise_
+from openquake.hazardlib import valid
 from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.hazardlib.geo.utils import fix_lons_idl
 
@@ -147,7 +149,12 @@ class SourceFilter(object):
         by default True, i.e. try to use the rtree module if available
     """
     def __init__(self, sitecol, integration_distance, use_rtree=True):
-        self.integration_distance = integration_distance
+        if (isinstance(integration_distance, collections.Mapping) and not
+                isinstance(integration_distance, valid.IntegrationDistance)):
+            self.integration_distance = valid.IntegrationDistance(
+                integration_distance)
+        else:
+            self.integration_distance = integration_distance
         self.sitecol = sitecol
         self.use_rtree = use_rtree and rtree and (
             integration_distance and sitecol is not None)
@@ -166,10 +173,7 @@ class SourceFilter(object):
         :param src: a source object
         :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
         """
-        try:
-            maxdist = self.integration_distance[src.tectonic_region_type]
-        except TypeError:  # passed a scalar, not a dictionary
-            maxdist = self.integration_distance
+        maxdist = self.integration_distance[src.tectonic_region_type]
         min_lon, min_lat, max_lon, max_lat = src.get_bounding_box(maxdist)
         if self.idl:  # apply IDL fix
             if min_lon < 0 and max_lon > 0:
@@ -191,7 +195,7 @@ class SourceFilter(object):
         min_lon, min_lat, max_lon, max_lat = self.get_affected_box(src)
         return (min_lon, min_lat), max_lon - min_lon, max_lat - min_lat
 
-    def affected(self, source):
+    def get_close_sites(self, source):
         """
         Returns the sites within the integration distance from the source,
         or None.
@@ -207,27 +211,25 @@ class SourceFilter(object):
             for source in sources:
                 yield source, sites
             return
-        for source in sources:
-            if self.use_rtree:  # Rtree filtering
-                box = self.get_affected_box(source)
+        for src in sources:
+            if self.use_rtree:  # Rtree filtering, used in the controller
+                box = self.get_affected_box(src)
                 sids = numpy.array(sorted(self.index.intersection(box)))
                 if len(sids):
-                    source.nsites = len(sids)
-                    yield source, FilteredSiteCollection(sids, sites.complete)
+                    src.nsites = len(sids)
+                    yield src, FilteredSiteCollection(sids, sites.complete)
             elif not self.integration_distance:
-                yield source, sites
-            else:  # normal filtering
-                try:
-                    maxdist = self.integration_distance[
-                        source.tectonic_region_type]
-                except TypeError:  # passed a scalar, not a dictionary
-                    maxdist = self.integration_distance
-                with context(source):
-                    s_sites = source.filter_sites_by_distance_to_source(
+                yield src, sites
+            else:  # normal filtering, used in the workers
+                max_mag = src.get_min_max_mag()[1]
+                maxdist = self.integration_distance(
+                    src.tectonic_region_type, max_mag)
+                with context(src):
+                    s_sites = src.filter_sites_by_distance_to_source(
                         maxdist, sites)
                 if s_sites is not None:
-                    source.nsites = len(s_sites)
-                    yield source, s_sites
+                    src.nsites = len(s_sites)
+                    yield src, s_sites
 
     def __getstate__(self):
         return dict(integration_distance=self.integration_distance,
