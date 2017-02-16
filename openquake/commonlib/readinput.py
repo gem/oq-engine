@@ -188,7 +188,8 @@ def get_mesh(oqparam):
         csv_data = open(oqparam.inputs['sites'], 'U').read()
         coords = valid.coordinates(
             csv_data.strip().replace(',', ' ').replace('\n', ','))
-        return geo.Mesh.from_coords(coords)
+        start, stop = oqparam.sites_slice
+        return geo.Mesh.from_coords(coords[start:stop])
     elif oqparam.region:
         # close the linear polygon ring by appending the first
         # point to the end
@@ -253,12 +254,8 @@ def get_site_collection(oqparam, mesh=None, site_model_params=None):
                 get_site_model(oqparam))
         sitecol = []
         for pt in mesh:
-            # NB: the mesh, when read from the datastore, is a 32 bit array;
-            # however, the underlying C library expects 64 bit floats, thus
-            # we have to cast float(pt.longitude), float(pt.latitude);
-            # we should change the geodetic speedups instead
-            param, dist = site_model_params.\
-                get_closest(float(pt.longitude), float(pt.latitude))
+            param, dist = site_model_params.get_closest(
+                pt.longitude, pt.latitude)
             if dist >= MAX_SITE_MODEL_DISTANCE:
                 logging.warn('The site parameter associated to %s came from a '
                              'distance of %d km!' % (pt, dist))
@@ -626,8 +623,6 @@ def get_exposure(oqparam):
     """
     Read the full exposure in memory and build a list of
     :class:`openquake.risklib.riskmodels.Asset` instances.
-    If you don't want to keep everything in memory, use
-    get_exposure_lazy instead (for experts only).
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance

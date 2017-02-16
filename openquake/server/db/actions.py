@@ -22,7 +22,7 @@ import operator
 from datetime import datetime, timedelta
 
 from openquake.hazardlib import valid
-from openquake.commonlib import datastore, logs
+from openquake.commonlib import datastore
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
 from openquake.server.dbapi import NotFound
@@ -493,6 +493,14 @@ def set_relevant(db, job_id, flag):
         flag for the field job.relevant
     """
     db('UPDATE job SET relevant=?x WHERE id=?x', flag, job_id)
+
+
+def update_parent_child(db, parent_child):
+    """
+    Set hazard_calculation_id (parent) on a job_id (child)
+    """
+    db('UPDATE job SET hazard_calculation_id=?x WHERE id=?x',
+       *parent_child)
 
 
 def get_log_slice(db, job_id, start, stop):
