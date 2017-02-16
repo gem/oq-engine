@@ -41,26 +41,26 @@ fi
     fi
 fi) >/dev/null || true # Do not hard fail if something went wrong
 
-USER=openquake
+engine_user=openquake
 
-if ! getent group $USER >/dev/null; then
-    addgroup --system $USER
+if ! getent group $engine_user >/dev/null; then
+    addgroup --system $engine_user
 fi
-if  ! getent passwd $USER >/dev/null; then
-    adduser --system --home /var/lib/$USER --group --shell /bin/bash $USER
+if  ! getent passwd $engine_user >/dev/null; then
+    adduser --system --home /var/lib/$engine_user --group --shell /bin/bash $engine_user
 fi
 
 DIR=/var/lib/openquake
 mkdir -p $DIR
-chown -R $USER.$USER $DIR
+chown -R $engine_user.$engine_user $DIR
 
 DIR=/usr/share/openquake/engine
 mkdir -p $DIR
-chown -R $USER.$USER $DIR
+chown -R $engine_user.$engine_user $DIR
 
 DIR=/var/log/openquake
 mkdir -p $DIR
-chown -R $USER.adm $DIR
+chown -R $engine_user.adm $DIR
 
 # delete obsolete .pyc files in /usr/share/openquake
 find /usr/share/openquake -type f -name \*.pyc -exec rm -f {} \;
