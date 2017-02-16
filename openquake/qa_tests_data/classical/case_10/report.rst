@@ -1,31 +1,31 @@
 Classical Hazard QA Test, Case 10
 =================================
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_81056.hdf5 Thu Jan 26 14:28:45 2017
-engine_version                                 2.3.0-gite807292        
-hazardlib_version                              0.23.0-gite1ea7ea       
-============================================== ========================
+============================================ ========================
+gem-tstation:/mnt/ssd/oqdata/calc_85555.hdf5 Tue Feb 14 15:37:29 2017
+engine_version                               2.3.0-git1f56df2        
+hazardlib_version                            0.23.0-git6937706       
+============================================ ========================
 
-num_sites = 1, sitecol = 762 B
+num_sites = 1, sitecol = 809 B
 
 Parameters
 ----------
-=============================== ===============================
-calculation_mode                'classical'                    
-number_of_logic_tree_samples    0                              
-maximum_distance                {'active shallow crust': 200.0}
-investigation_time              1.0                            
-ses_per_logic_tree_path         1                              
-truncation_level                0.0                            
-rupture_mesh_spacing            0.01                           
-complex_fault_mesh_spacing      0.01                           
-width_of_mfd_bin                0.001                          
-area_source_discretization      10.0                           
-ground_motion_correlation_model None                           
-random_seed                     1066                           
-master_seed                     0                              
-=============================== ===============================
+=============================== ==================
+calculation_mode                'classical'       
+number_of_logic_tree_samples    0                 
+maximum_distance                {'default': 200.0}
+investigation_time              1.0               
+ses_per_logic_tree_path         1                 
+truncation_level                0.0               
+rupture_mesh_spacing            0.01              
+complex_fault_mesh_spacing      0.01              
+width_of_mfd_bin                0.001             
+area_source_discretization      10.0              
+ground_motion_correlation_model None              
+random_seed                     1066              
+master_seed                     0                 
+=============================== ==================
 
 Input files
 -----------
@@ -87,13 +87,13 @@ source_model.xml 1      Active Shallow Crust 1           3000         3,000
 Informational data
 ------------------
 =========================================== ============
-count_eff_ruptures_max_received_per_task    1,223       
+count_eff_ruptures_max_received_per_task    1,289       
 count_eff_ruptures_num_tasks                2           
 count_eff_ruptures_sent.gsims               182         
-count_eff_ruptures_sent.monitor             2,000       
-count_eff_ruptures_sent.sitecol             1,196       
+count_eff_ruptures_sent.monitor             2,126       
 count_eff_ruptures_sent.sources             2,360       
-count_eff_ruptures_tot_received             2,446       
+count_eff_ruptures_sent.srcfilter           1,420       
+count_eff_ruptures_tot_received             2,578       
 hazard.input_weight                         600         
 hazard.n_imts                               1           
 hazard.n_levels                             4           
@@ -124,23 +124,22 @@ PointSource  0.0       2
 
 Information about the tasks
 ---------------------------
-================== ========= ========= ========= ========= =========
-operation-duration mean      stddev    min       max       num_tasks
-count_eff_ruptures 7.334E-04 1.656E-04 6.163E-04 8.504E-04 2        
-================== ========= ========= ========= ========= =========
+================== ===== ====== ===== ===== =========
+operation-duration mean  stddev min   max   num_tasks
+count_eff_ruptures 1.840 0.034  1.816 1.864 2        
+================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
 ================================ ========= ========= ======
 operation                        time_sec  memory_mb counts
 ================================ ========= ========= ======
-reading composite source model   0.022     0.0       1     
-filtering composite source model 0.018     0.0       1     
-managing sources                 0.009     0.0       1     
-split/filter heavy sources       0.006     0.0       2     
-total count_eff_ruptures         0.001     0.0       2     
-store source_info                8.810E-04 0.0       1     
-reading site collection          6.366E-05 0.0       1     
-aggregate curves                 4.959E-05 0.0       2     
-saving probability maps          4.268E-05 0.0       1     
+total count_eff_ruptures         3.680     1.102     2     
+reading composite source model   0.024     0.0       1     
+filtering composite source model 0.019     0.0       1     
+managing sources                 0.005     0.0       1     
+store source_info                9.983E-04 0.0       1     
+reading site collection          8.130E-05 0.0       1     
+aggregate curves                 6.175E-05 0.0       2     
+saving probability maps          4.458E-05 0.0       1     
 ================================ ========= ========= ======
