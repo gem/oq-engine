@@ -785,7 +785,7 @@ class IntegrationDistance(collections.Mapping):
         except KeyError:  # fill the cache
             magdist = getdefault(self.magdist, trt)
             md = self.interp[trt] = interp1d(
-                *magdist, fill_value='extrapolate')
+                *magdist, bounds_error=False, fill_value='extrapolate')
         return md(mag)
 
     def __getitem__(self, trt):
