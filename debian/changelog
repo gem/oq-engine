@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Monitored the calculation time for the PoEs for each GSIM
   * Introduced a magnitude-dependent integration distance
 
   [Robin Gee, Michele Simionato]
