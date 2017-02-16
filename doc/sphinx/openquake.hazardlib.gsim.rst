@@ -92,6 +92,13 @@ allen_2012_ipe
     :undoc-members:
     :show-inheritance:
 
+armenia_2016
+---------------------------------------------------
+.. automodule:: openquake.hazardlib.gsim.armenia_2016
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 atkinson_2015
 ---------------------------------------------
 

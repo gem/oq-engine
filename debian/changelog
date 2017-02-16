@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Implemented modification of selected GMPEs for use in Armenia
+  
   [Michele Simionato]
   * Monitored the calculation time for the PoEs for each GSIM
   * Introduced a magnitude-dependent integration distance
