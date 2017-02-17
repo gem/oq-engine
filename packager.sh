@@ -337,7 +337,7 @@ _devtest_innervm_run () {
         elif [ "$dep_type" = "deb" ]; then
             # cd _jenkins_deps/$dep
 
-            add_local_pkg_repo "$deb"
+            add_local_pkg_repo "$dep"
             ssh $lxc_ip "sudo apt-get install -y python-${dep}"
         else
             echo "Dep type $dep_type not supported"
@@ -449,7 +449,7 @@ _builddoc_innervm_run () {
         elif [ "$dep_type" = "deb" ]; then
             # cd _jenkins_deps/$dep
 
-            add_local_pkg_repo "$deb"
+            add_local_pkg_repo "$dep"
             ssh $lxc_ip "sudo apt-get install -y python-${dep}"
         else
             echo "Dep type $dep_type not supported"
@@ -517,7 +517,7 @@ _pkgtest_innervm_run () {
         dep="$(echo "$dep_item" | cut -d '|' -f 1)"
         dep_type="$(echo "$dep_item" | cut -d '|' -f 2)"
 
-        add_local_pkg_repo "$deb"
+        add_local_pkg_repo "$dep"
     done
     IFS="$old_ifs"
 
