@@ -24,7 +24,7 @@ A 64bit operating system **is required**. Please refer to each OS specific page 
 Binary packages *may* work on Ubuntu derivatives and Debian if the dependencies are satisfied; these configurations are known to work:
 - **Ubuntu 14.04** (Trusty) packages work on **Mint Linux 17** and on **Debian 8.0** (Jessie)
 - **Ubuntu 16.04** (Xenial) packages work on **Mint Linux 18** and on **Debian unstable**
-- **RHEL 7** packages generally work on Fedora
+- **RHEL 7** packages generally work on **Fedora**
 
 These configurations however are not tested by our [continuous integration system](https://ci.openquake.org) and we cannot guarantee on the quality of the results. Use at your own risk.
 
