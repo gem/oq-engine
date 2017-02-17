@@ -162,7 +162,7 @@ class Polygon(object):
             (measured perpendicularly to edges and circularly to vertices)
             from the border of original polygon.
         """
-        assert dilation > 0
+        assert dilation > 0, dilation
         self._init_polygon2d()
         # use shapely buffer() method
         new_2d_polygon = self._polygon2d.buffer(dilation)

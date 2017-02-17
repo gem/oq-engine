@@ -17,11 +17,11 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports :class:`TusaLanger2015RepiBA08SE`,
-               :class:`TusaLanger2015RepiBA08DE`,
-               :class:`TusaLanger2015RepiSP87SE`,
-               :class:`TusaLanger2015RepiSP87DE`,
-               :class:`TusaLanger2015Rhypo`
+Module exports :class:`TusaLanger2016RepiBA08SE`,
+               :class:`TusaLanger2016RepiBA08DE`,
+               :class:`TusaLanger2016RepiSP87SE`,
+               :class:`TusaLanger2016RepiSP87DE`,
+               :class:`TusaLanger2016Rhypo`
 """
 from __future__ import division
 
@@ -34,9 +34,9 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
-class TusaLanger2015RepiBA08SE(GMPE):
+class TusaLanger2016RepiBA08SE(GMPE):
     """
-    Implements GMPE developed by Giuseppina Tusa and Horst Langer (2015) and
+    Implements GMPE developed by Giuseppina Tusa and Horst Langer (2016) and
     published as "Prediction of ground motion parameters for the volcanic area
     of Mount Etna" Journal of Seismology, DOI 10.1007/s10950-015-9508-x.
 
@@ -44,7 +44,7 @@ class TusaLanger2015RepiBA08SE(GMPE):
     magnitude range 3<ML<4.8 for epicentral distances <100 km, and for soil
     classes A, B, and D. Authors do NOT derive coefficients for site class C
     due to limited data. For implementation using hypocentral distance see
-    :class:`TusaLanger2015Rhypo`.
+    :class:`TusaLanger2016Rhypo`.
 
     Two functional forms were considered by the authors: Sabetta and Pugliese,
     1987 (SP87) and a simplified version of Boore and Atkinson, 2008 (BA08).
@@ -201,12 +201,12 @@ class TusaLanger2015RepiBA08SE(GMPE):
     """)
 
 
-class TusaLanger2015RepiBA08DE(TusaLanger2015RepiBA08SE):
+class TusaLanger2016RepiBA08DE(TusaLanger2016RepiBA08SE):
     """
-    Implements Tusa and Langer (2015) using the BA08 model and DE.
+    Implements Tusa and Langer (2016) using the BA08 model and DE.
 
     Extends
-    :class:`openquake.hazardlib.gsim.tusa_langer_2015.TusaLanger2015RepiBA08SE`
+    :class:`openquake.hazardlib.gsim.tusa_langer_2016.TusaLanger2016RepiBA08SE`
     because the same functional form is used, only the coefficients differ.
     """
     # Coefficients from Table 9 (PGA) and Table 13 (SA); sigma values in log
@@ -239,12 +239,12 @@ class TusaLanger2015RepiBA08DE(TusaLanger2015RepiBA08SE):
     """)
 
 
-class TusaLanger2015RepiSP87SE(TusaLanger2015RepiBA08SE):
+class TusaLanger2016RepiSP87SE(TusaLanger2016RepiBA08SE):
     """
-    Implements Tusa and Langer (2015) using the SP87 model and SE.
+    Implements Tusa and Langer (2016) using the SP87 model and SE.
 
     Extends
-    :class:`openquake.hazardlib.gsim.tusa_langer_2015.TusaLanger2015RepiBA08SE`
+    :class:`openquake.hazardlib.gsim.tusa_langer_2016.TusaLanger2016RepiBA08SE`
     with modification to the functional form and different coefficients.
     """
     def _compute_distance(self, rup, dists, C):
@@ -290,12 +290,12 @@ class TusaLanger2015RepiSP87SE(TusaLanger2015RepiBA08SE):
     """)
 
 
-class TusaLanger2015RepiSP87DE(TusaLanger2015RepiSP87SE):
+class TusaLanger2016RepiSP87DE(TusaLanger2016RepiSP87SE):
     """
-    Implements Tusa and Langer (2015) using the SP87 model and DE.
+    Implements Tusa and Langer (2016) using the SP87 model and DE.
 
     Extends
-    :class:`openquake.hazardlib.gsim.tusa_langer_2015.TusaLanger2015RepiSP87SE`
+    :class:`openquake.hazardlib.gsim.tusa_langer_2016.TusaLanger2016RepiSP87SE`
     because the same functional form is used, only the coefficients differ.
     """
     # Coefficients from Table 8 (PGA) and Table 11 (SA); sigma values in log
@@ -328,16 +328,16 @@ class TusaLanger2015RepiSP87DE(TusaLanger2015RepiSP87SE):
     """)
 
 
-class TusaLanger2015Rhypo(TusaLanger2015RepiBA08SE):
+class TusaLanger2016Rhypo(TusaLanger2016RepiBA08SE):
     """
     Implements the GMPE using the BA08 model and hypocentral distance (not
-    described in Tusa and Langer, 2015). This version has been developed in the
+    described in Tusa and Langer, 2016). This version has been developed in the
     frame of V3-2012 INGV-DPC Project in order to perform PSHA calculations
     when topography is taken into consideration (e.g. the flanks of Mt Etna),
     hence dependence on vertical distance is required.
 
     Extends
-    :class:`openquake.hazardlib.gsim.tusa_langer_2015.TusaLanger2015RepiBA08SE`
+    :class:`openquake.hazardlib.gsim.tusa_langer_2016.TusaLanger2016RepiBA08SE`
     because the same functional form is used, only the distance type and
     coefficients differ.
     """
@@ -355,8 +355,8 @@ class TusaLanger2015Rhypo(TusaLanger2015RepiBA08SE):
             np.log10(rval / rref) + C['c3'] * (rval - rref)
 
     # Coefficients provided by Giuseppina Tusa in excel file
-    # 'SpectralAccXLaura.xlsx' (email dated May 29, 2015) with modification
-    # to pga coefficients in Catania (personal communication, July, 2015);
+    # 'SpectralAccXLaura.xlsx' (email dated May 29, 2016) with modification
+    # to pga coefficients in Catania (personal communication, July, 2016);
     # sigma values in log
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT    a        b1       b2       c1       c2       h        c3          sA  sB        sD        SigmaTot

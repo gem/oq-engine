@@ -59,6 +59,9 @@ class GmfComputer(object):
     :param imts:
         a sorted list of Intensity Measure Type strings
 
+    :param gsims:
+        a set of GSIM instances
+
     :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
         distribution, or ``None``.
@@ -86,7 +89,7 @@ class GmfComputer(object):
         self.rupture = rupture
         self.sites = sites
         self.imts = [from_string(imt) for imt in imts]
-        self.gsims = gsims
+        self.gsims = sorted(set(gsims))
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.samples = samples
