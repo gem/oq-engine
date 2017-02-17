@@ -66,7 +66,7 @@ cleaning up a testing machine were there are no important calculations.
 Use it with care.
 
 New features in hazardlib
-=========================================
+--------------------------
 
 New GMPEs (site adjusted Pezeshk et al. 2011) were added.
 
