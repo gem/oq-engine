@@ -19,12 +19,12 @@
 """
 Armenian modification to selected active shallow crustal GMPEs
 Module exports :class:`AkkarEtAlRjb2014Armenia`,
-               :class:`BindiEtAl2014RjbArmenia`,
-               :class:`BooreEtAl2014LowQArmenia`,
-               :class:`CauzziEtAl2014Armenia`,
-               :class:`KaleEtAl2015Armenia`,
-               :class:`KothaEtAl2016Armenia`,
-               :class:`ChiouYoungs2014Armenia`
+:class:`BindiEtAl2014RjbArmenia`,
+:class:`BooreEtAl2014LowQArmenia`,
+:class:`CauzziEtAl2014Armenia`,
+:class:`KaleEtAl2015Armenia`,
+:class:`KothaEtAl2016Armenia`,
+:class:`ChiouYoungs2014Armenia`
 """
 from __future__ import division
 
