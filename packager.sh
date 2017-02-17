@@ -386,7 +386,7 @@ _devtest_innervm_run () {
                      export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
                      set -x
                  fi
-                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine\"
+                 export PYTHONPATH=\"/opt/openquake/lib/python2.7/site-packages:\$PWD/oq-hazardlib:\$PWD/oq-engine\"
                  cd oq-engine; bin/oq dbserver start &
                  /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
                  /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
