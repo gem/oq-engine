@@ -91,7 +91,7 @@ Changes
 There are two new limits in the event based calculators:
 
 1. it is impossible to run calculations with more than 65536 tasks
-2. it is impossible to have tasks generating more than 65536 events
+2. it is impossible to have tasks generating more than 65536 events each
 
 The limits are there for safety purpose: users trying to run calculations
 impossibly large will get an error early, rather than trashing their machines.
