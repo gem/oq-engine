@@ -16,3 +16,8 @@ install:
 
 script:
   - nosetests --with-doctest -v -a'!slow'
+
+after_success:
+  - pip install sphinx==1.3.6
+  - cd doc/sphinx
+  - make html
