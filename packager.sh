@@ -211,7 +211,7 @@ _wait_ssh () {
 }
 
 add_local_pkg_repo () {
-    local deb="$1"
+    local dep="$1"
 
     var_pfx="$(dep2var "$dep")"
     var_repo="${var_pfx}_REPO"
