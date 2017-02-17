@@ -63,8 +63,8 @@ class InvalidCalculationID(Exception):
 class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 
-rlz_dt = numpy.dtype([('uid', hdf5.vstr), ('model', hdf5.vstr),
-                      ('gsims', hdf5.vstr), ('weight', F32)])
+rlz_dt = numpy.dtype([('uid', 'S100'), ('model', 'S100'),
+                      ('gsims', 'S100'), ('weight', F32)])
 
 logversion = True
 
