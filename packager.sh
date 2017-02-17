@@ -319,6 +319,10 @@ _devtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
 
+    if [ -f _jenkins_deps_info ]; then
+        source _jenkins_deps_info
+    fi
+
     old_ifs="$IFS"
     IFS=" "
     for dep_item in $GEM_DEPENDS; do
