@@ -1,0 +1,17 @@
+STANDALONE = True
+
+INSTALLED_APPS += (
+    'openquakeplatform',
+)
+
+STANDALONE_APPS += (
+    'openquakeplatform_ipt',
+    'openquakeplatform_taxtweb',
+)
+
+INSTALLED_APPS += STANDALONE_APPS
+
+FILE_PATH_FIELD_DIRECTORY = os.path.join(os.path.expanduser('~'), 'oqdata')
+
+CONTEXT_PROCESSORS = TEMPLATES[0]['OPTIONS']['context_processors']
+CONTEXT_PROCESSORS.append('openquakeplatform.utils.oq_context_processor')
