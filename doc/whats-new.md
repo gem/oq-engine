@@ -1,356 +1,199 @@
-Release notes for the OpenQuake Engine, version 2.2
+Release notes for the OpenQuake Engine, version 2.3
 ===================================================
 
-This release has focused on memory and performance optimizations, especially
-in the event based and scenario calculators. Moreover we have significantly
-improved our exports, by providing more information (especially for the
-event based ruptures) and/or using more efficient export formats, like the
-.npz format. As of now, the XML exports are deprecated, even if there is
-no plan to remove them at the moment.
+This release introduces several new features and improvements of the
+engine calculators. Moreover, our packaging strategy has been
+revolutionized and now we provide packages for most operating
+system - including previously abandoned systems such as Ubuntu 12.04 - by
+using the exact same versions of the libraries on every supported
+platform (Linux, Windows, Mac).
 
-As usual, lots of small bugs have been fixed. More than 60 pull requests were
-closed in oq-hazardlib and more than 160 pull requests were closed in
-oq-engine. For the complete list of changes, please 
-see the changelogs: https://github.com/gem/oq-hazardlib/blob/engine-2.2/debian/changelog and https://github.com/gem/oq-engine/blob/engine-2.2/debian/changelog.
+More than 20 pull requests were closed in oq-hazardlib and more than
+70 pull requests were closed in oq-engine. For the complete list of
+changes, please see the changelogs:
+https://github.com/gem/oq-hazardlib/blob/engine-2.3/debian/changelog
+and https://github.com/gem/oq-engine/blob/engine-2.3/debian/changelog.
 
 A summary follows.
 
-General improvements
-====================================
+New features in the engine
+--------------------------
 
-Python 3 support
+From this release it is possible to take into account the *topography
+of the region of interest*. It is enough to write the elevation of the
+hazard sites in the sites file or in the site model file, as a
+negative depth, and the engine will compute the ground shaking
+correctly. Before there was no way to specify the elevation of the hazard sites
+and the ground shaking was computed only at the sea level.
+
+From this release it is also possible to use *magnitude-dependent
+integration distances*. This is expected to have a substantial impact on the
+calculation time, since small magnitude ruptures will affects a lot
+less sites than before. In order to use the feature the user has to
+specify in the `job.ini` file a list of pairs (magnitude, distance) for each
+tectonic region type. In the past the user would write
+
+`maximum_distance = {'Active Shallow Crust': 200}`
+
+and the engine would use an integration distance of 200 km for all
+ruptures of the given tectonic region type, disregarding the magnitude.
+Now, the user can write
+
+`maximum_distance = {'Active Shallow Crust': [(8, 200), (7, 100), (5, 20)]}`
+
+and the engine will use an integration distance of 200 km for ruptures
+of magnitude 8, of 100 km for ruptures of magnitude 7, and of 20 km
+for ruptures of magnitude 5. Intermediate magnitudes will use a
+linearly interpolated distance. It is up to the user to provide a
+sound magnitude-distance function. For the future, we plan to release
+tools to help the users in the task of inferring magnitude-distance functions.
+If in doubt, you can always use the old syntax, equivalent to a
+constant maximum distance for all magnitudes, and the engine will keep
+working as in the past.
+
+A lot of work went into the UCERF calculators, but they are still officially
+marked as experimental and are left undocumented on purpose. There is a
+new time-dependent classical calculator, while the old calculators were
+substantially improved.
+
+There is an experimental command `run_tiles` to split a `sites.csv`
+file in tiles and run multiple calculations at once. This is meant for
+power users only.
+
+There is a new command `oq reset` that will remove all calculations of
+the current user from the database and the filesystem. It is meant for
+cleaning up a testing machine were there are no important calculations.
+Use it with care.
+
+New features in hazardlib
+--------------------------
+
+New GMPEs (site adjusted Pezeshk et al. 2011) were added.
+
+The new `GriddedSurface` object introduced in engine 2.2 can now be
+serialized in the NRML 0.5 format properly.
+
+The calculator `calc_hazard_curves` now supports mutually exclusive
+sources and ruptures too.
+
+Performance improvements
+------------------------
+
+The calculation of ground motion fields is a lot faster than before in
+situations with a large amount of hazard sites. The reason is that now
+the distances are computed in the workers, whereas before they were
+computed in the controller node. This has a significant impact on
+users with a cluster.
+
+Changes
+------------
+
+There are two new limits in the event based calculators:
+
+1. it is impossible to run calculations with more than 65536 tasks
+2. it is impossible to have tasks generating more than 65536 events each
+
+These limits have been added to prevent users from running impossibly
+large calculations: an error message will be displayed early rather
+than causing machines to crash.
+
+The event loss table exporter is now faster than in
+release 2.2. It does not export the tectonic region type string
+anymore, however you can infer it from the `event_tag` field which
+contains the source group ID. The association between the source group
+ID and the tectonic region type is contained in the new export
+`sourcegroups.csv`.  The `source_id` has been stripped from the `event
+tag` since it was taking a lot of memory in the case of extra-large
+calculations (UCERF).
+
+The calculation of quantiles hazard curves used different algorithms
+in the case of logic tree full enumeration and logic tree sampling.
+For the sake of consistency, we now use always the same algorithm, the
+one of full enumeration. This change may produce small differences in
+the quantile curves if you were doing computations with sampling of
+the logic tree.
+
+The separator for the exported file `ruptures.csv` has changed from comma
+to tab, since this file now contains MULTIPOLYGON geometries containing commas.
+
+We do not compute the mean anymore if there is a single realization, even
+if the user has set `mean_hazard_curves=true`.
+
+We changed the DbServer port from port 1999 to port 1908. The
+reason is that some anti-viruses were blocking port 1999.
+
+Fixes to the Web UI
 -------------------
 
-The engine has been supporting Python 3 for several months and
-hazardlib for more than one year. The novelty is that
-since a couple of months ago our production environment has become
-Python 3.5. Nowadays Python 3.5 is more tested than Python 2.7. Python 2.7
-is still fully supported and we will keep supporting it for a while, but
-it will eventually be deprecated.
+The "Remove" button now actually removes the calculation. Before
+it was only hiding it from the Web UI. Be careful with it, since it is
+final. If you remove a calculation, the only way to restore it is
+to repeat the computation.
 
-Simplified the installation and dependency management
------------------------------------------------------
+We fixed the names of the files downloaded from the Web UI.  The names
+of files downloaded from the Web UI previously contained slash ('/')
+characters that were then replaced with dashes or underscores by the
+browser. We no longer include slash characters in file names.
 
-Starting with release 2.2 the OpenQuake libraries are pure Python.
-We were able to remove the need for the C speedups in hazardlib and
-now we are as fast as before without requiring a C extension, except
-in rare cases, where the performance penalty is very minor.
-
-There are of course still a few C extensions, but they are only in third
-party code (i.e.  numpy), not in the OpenQuake code base. Third party
-extensions are not an issue because since 2.2 we manage the Python
-dependencies as wheels and we have wheels for all of our external
-dependencies, for all platforms. This binary format has the big
-advantage of not requiring compilation on the client side, which was
-an issue, especially for non-linux users.
-
-The recommended way to install the packages is still via the official
-packages released by GEM for Linux, Windows and Mac OS X (see
-https://github.com/gem/oq-engine/blob/master/doc/installing/overview.md).
-However, the engine is also installable as any other Python software: create a
-[virtual environment](http://docs.python-guide.org/en/latest/dev/virtualenvs/)
-and run `pip install openquake.engine`:
-
-```bash
-$ python3 -m venv oq-engine
-$ source oq-engine/bin/activate
-(oq-engine) $ pip install openquake.engine
-```
-
-This will download all of the dependencies (wheels) automatically. If
-you only need hazardlib, run `pip install openquake.hazardlib`
-instead. This kind of installation is meant for Python-savvy users
-who do not need to modify the OpenQuake code. Users that want to
-develop with the engine or with hazardlib (eg. implement a new GMPE)
-should not install anything; they should clone the git repositories
-and set the PYTHONPATH, or install it from sources using 
-`pip install -e`, as in any other Python project.
-
-Docker container
-----------------
-
-Starting from this release a set of experimental
-[Docker containers](https://www.docker.com/products/docker) are provided.
-These are meant to be used for easy deployment of the OpenQuake Engine
-in the cloud (just as an example, using
-[Amazon EC2 Container Service](https://aws.amazon.com/ecs/)) and for
-easily testing the software on different operating systems.
-
-A weekly updated image containing the *latest code* can be pulled as follow:
-
-```bash
-$ docker pull docker.io/openquake/engine:master
-```
-
-It's also possible to download a specific *stable* release:
-
-```bash
-$ docker pull docker.io/openquake/engine:2.2
-```
-
-For more information visit our [Docker](installing/docker.md) page.
-
-The nrml_converters are not needed anymore
-------------------------------------------
-
-For as long as there has been an engine, there has been a repository
-of scripts called [nrml_converters]
-(https://github.com/GEMScienceTools/nrml_converters) written and
-maintaned by our scientific staff. With the release 2.2 such tools
-are being deprecated, since now the engine includes all the required
-functionality. This will make life a lot easier for the final user.
-For instance, instead of producing a (large) XML file with the engine
-and converting it into CSV with the nrml_converters, now the engine can
-produce the CSV directly in a more efficient way, sometimes *a lot* more
-efficiently.
-The `nrml_converters` repository will not be removed, since it is still
-useful for users working with an old version of the engine.
-
-Improvements to hazardlib
-=========================================
-
-In release 2.2 several changes entered in hazardlib. Finally the
-oq-hazardlib repository has become self-consistent. In particular
-the parallelization libraries are now in oq-hazardlib, as well as
-the routines to read and write source models in NRML format. As
-a consequence now the [Hazard Modeller's Toolkit]
-(https://github.com/GEMScienceTools/hmtk) depends solely on
-hazardlib: users are not forced to install the engine if they do
-not need to run engine-style computations. This reduces the cognitive load.
-
-Among the improvements:
-
-- the function `calc_hazard_curves` of hazardlib has been extended and it
-  is now able to parallelize a computation, if specified
-- it is possible to correctly serialize to NRML and to read back all types
-  of hazardlib sources, including nonparametric sources
-- the format NRML 0.5 for hazard sources is now fully supported both in
-  hazardlib and in the engine
-
-As usual, a few new GMPEs were added:
-
-- Kale et al (2015)
-- Megawati et a. (2003)
-
-Finally, the documentation of hazardlib (and of the engine too) has
-been overhauled and it is better than it ever was. There is still room
-for improvement, and users are welcome to submit documentation patches
-and/or tutorials.
-
-Improvements to the engine
-=========================================
-
-Task distribution improvements
--------------------------------
-
-There have been a few changes affecting all calculators. In particular
-the splitting and weighting of complex fault sources has been
-changed and a bug fixed.
-
-Right now a complex fault source is split by magnitude bin [1]:
-if there are N magnitude bins, the same source is sent N times to
-the workers, each time with a different single-bin MFD. This works
-well if there are many bins; unfortunately there are cases of large
-complex fault sources (i.e. sources generating several thousands of ruptures)
-that have a single-bin MFD. Such sources cannot
-be split and they end up producing tasks which are extremely slow to run
-and dominate the total computation time. The solution was to split
-such sources by slices of ruptures: the same source is sent multiple
-times to the workers, but each time a different slice of the ruptures
-is taken into consideration.
-
-The number of slices is governed by the MAXWEIGHT parameter which
-currently is hard-coded to 200, so that there are at most 50 ruptures
-per split source, since the weight of a complex fault rupture is
-currently 4. Such numbers are implementation details that change with
-nearly every new release and should not be relied upon; an user should
-just know that a lot is going on in the engine when processing the
-sources. At each version we try to have a better (i.e. more
-homogeneous) task distribution, to avoid slow tasks dominating the
-computation.
-
-In release 2.2 we have increased the number of tasks generated by the
-engine by default. More tasks means smaller tasks and less
-problems with slow tasks dominating the computation. You can still (as
-always) control the number of generated tasks by setting the parameter
-`concurrent_tasks` in the job.ini file. In spite of our best efforts,
-there will always be some tasks that run slower than others;
-if your calculation is totally dominated by a slow task,
-please send us your files and we will try to improve the situation, as always.
-
-[1] Technically, an MFD (Magnitude Frequency Distribution) object coming
-from hazardlib has a method `get_annual_occurrence_rates()` returning
-a list of pairs `(magnitude, occurrence_rate)`: those are the magnitude bins
-we are talking about.
-
-Correlated GMFs
----------------------
-
-The engine has always been able to compute correlated GMFs by setting
-the parameter `ground_motion_correlation_model = JB2009` in the
-job.ini file.  Unfortunately, computing correlated GMFs has always
-been slow and memory consuming. With the engine 2.2 the computation of
-correlated GMFs is still slow and memory consuming, but less so.
-In particular, in a real life example submitted by one of our
-sponsors we were able to achieve a speed up of 44 times, by caching
-the computation of the correlation matrix. Since the algorithm has changed,
-the produced GMFs in some cases can be slightly different than the ones
-produced in the past. See https://github.com/gem/oq-engine/pull/2409 
-for an explanation.
-
-Scenario calculators improvements
----------------------------------
-
-The calculators `scenario_risk` and `scenario_damage` were extremely
-slow and memory consuming, even in absence of correlation, for large
-numbers of assets and large values of the parameter
-`number_of_ground_motion_fields`. This has been improved: now they use
-half of the memory, and the computation is a lot faster than before.
-The performance bug was in the algorithm reordering the GMFs
-and affected both the cases of correlated and non-correlated GMFs.
-
-A new feature has been added to the `scenario_risk` calculator: if the
-flag `all_losses=true` is set in the `job.ini` file, then a matrix
-containing all the losses is saved in the datastore and can be
-exported in `.npz` format. By default the flag is false and only mean
-and stddev of the losses are stored.
-
-Classical and disaggregation calculators improvements
-------------------------------------------------------
-
-There was some work on the disaggregation calculator: with engine 2.2 it
-is now possible to set a parameter `iml_disagg` in the `job.ini` file
-and have the engine disaggregate with respect to that intensity measure
-level. This was requested by one of our users (Marlon Pirchiner). Moreover,
-now the disaggregation matrix is stored directly in the datastore - before
-it was stored in pickled format - and it is possible to export it directly
-in CSV format; before it had to be exported in XML format and converted into
-CSV with the nrml_converters.
-
-We discovered (thanks to Céline Beauval) that the engine was giving bogus
-numbers for the uniform hazard spectra for calculations with intensity measure
-types different from PGA and SA. The bug has been in the engine at least
-from release 2.0, but now it has been finally fixed.
-
-Finally, the improvements in the task distribution have improved the
-performance of several classical calculations too.
-
-Event based calculators improvements
--------------------------------------
-
-There is a new and much wanted feature in the event based hazard calculator:
-now it is possible to export information about the ruptures directly in CSV
-format. Before one had to export it in XML format and than convert the XML
-into CSV by relying on the `nrml_converters` tools. In order to be able to
-export, however, one must set the parameter `save_ruptures=true` in the
-`job.ini` file. By default, the parameter is false. The reason is that
-storing the ruptures is time-consuming - it can dominate the computation
-time - so if you are not interested in exporting the stochastic event set
-you should not pay the price for it. Information about the ruptures is
-still stored even if `save_ruptures` is set to `false`: such information is not
-enough to completely reconstruct the ruptures, but it is enough for most uses.
-To get that information you should just export the `rup_data` CSV file.
-
-At user request, we have added the year information to each seismic
-event. This is included also in the exported event loss table. In
-release 2.1 the stochastic set index was used instead. The two
-approaches are equivalent if the investigation time is of 1 year, so
-in engine 2.1 in order to know the year, an user had to use an
-investigation time of 1 year, which is inefficient.  It is a lot
-better to have a long investigation time (say 10,000 years) and a
-single stochastic event set, with the years marked independently from
-the stochastic event sets, as it is now.
-
-Several changes went into the event based risk calculators, in
-particular the management of the epsilons is now different [2]. Whilst
-before the engine was using the multivariate normal distribution,
-with the covariance matrix coming from the `asset_correlation`
-parameter and, now the engine does a lot less. Actually, it is only
-able to address the special cases of `asset_correlation=0` and
-`asset_correlation=1`: intermediate cases are no longer handled. The reason
-is that computing the full covariance matrix and all the epsilons at
-the same time was too memory intensive. Moreover, the data transfer of
-the epsilons from the master node to the workers was too big, except
-in toy models. This is why now only the cases of no correlation and
-full correlation are supported, in a lot more efficient way than they
-were supported before. No covariance matrix is needed, since the
-engine uses the standard normal distribution to generate the
-epsilons. It means that now it is possible to run much larger
-computations.
-
-The configuration parameter `asset_loss_table` has been removed. If you
-have a `job.ini` with that parameter, you will be warned that the
-parameter will be ignored.
-
-Also, a configuration parameter `ignore_covs` has been added. If the
-computation is so large that it does run out of memory even with the
-new improved mechanism, you can still run it by setting
-`ignore_covs=true` in the `job.ini` file: with this trick the epsilons
-will not be generated at all, even if your vulnerability functions
-have nonzero coefficients of variation. You will lose the effects of
-asset correlation, but an imperfect computation that runs has been
-deemed better than a perfect computation that does not run.
-
-Another big change is that the computation of loss curves has been moved in
-a postprocessing phase and it is a lot more efficient than before, especially
-in terms of data transfer. Also, loss maps are now dynamic outputs, i.e.
-they are computed only on demand at export time. Earlier, they would be
-computed and stored, even if they were not exported.
-
-[2] When the vulnerability functions have nonzero coefficients of variations,
-the engine (versions <= 2.1) computes a matrix of (A, E) floats (the epsilons)
-where A is the number of assets and E the number of seismic events.
-
-.npz exports
--------------
-
-We started using the `.npz` export format for numpy arrays. This is
-extremely convenient for Python applications, since an `.npz` file can be
-managed as a dictionary of arrays (just call `numpy.load('data.npz')`).
-In particular our QGIS plugin is able to read the exported `.npz` files
-and display things liks hazard curves, hazard maps and uniform hazard
-spectra. We also have a tool to convert `.npz` files into `.hdf5` files,
-if you prefer that format, just run
-
-```bash
-$ oq to_hdf5 *.npz
-```
-
-and all of your `.npz` files will be converted into `.hdf5` files.
-In the future a lot more outputs are expected to be exported into
-`.npz` format.
+The named of the zipped outputs contained a spurious ".". This has been
+fixed.
 
 Other
 ------
 
+We removed a warning about missing the `rtree` library that was too noisy.
+
+A bug in the logic tree storage was fixed. Now it possible to run a
+computation on a machine, copy the datastore on a different machine
+and to export the results from there.
+
+The was a bug in scenario_risk calculations in the case of exposures
+featuring multiple assets of the same taxonomy on the same point
+without insured losses. This is now fixed.
+
+There was a bug when combining hazard curves happening in rare situations,
+when a source group was generating probabilities of exceedence all zeros.
+This has been fixed.
+
+Configuration files with empty `conditional_loss_poes` and non-empty
+`loss_ratios` were giving an ugly error message at export
+time. Now the non-existing loss maps are simply not exported.
+
+The parallelization library is now more robust against unexpected
+exceptions.
+
+Calculations in which a single task is generated are now executed in core,
+i.e. no subprocess is spawned.
+
 As usual the internal representation of several data structures has
-changed in the datastore. Thus, we repeat our regular reminder that
-users should not rely on the stability of the internal datastore formats.
-In particular, the ruptures are now stored as a nice HDF5 structure and
-not as pickled objects, something that we wanted to achieve for
-years.
+changed in the datastore. In particular, we removed several usages of
+variable-length strings, since they were buggy in the case of large
+arrays. As always, users should not rely on the stability of the
+internal datastore formats.
 
-Also, we fixed the storing of the composite risk model object
-which now can be extracted from the datastore (earlier, it could only be
-saved, but not exported). This allowed some simplifications in the
-risk calculators.
+UCERF calculations (and more generally any calculations requiring a
+shared directory) now work even on clusters without a shared
+directory: they will only use the controller node, but at least they
+will not fail.
 
-A lot of refactoring of the risk calculators (all of them) went
-into this release. The code for computing the statistical outputs of the risk
-calculators has been completely rewritten and it is now 90% shorter
-than before and much more efficient.
+The header of the exported losses for scenario calculations with
+occupants was the ugly string `occupants:float32`: now it is just
+`occupants`.
 
-We introduced a `logscale` functionality; for instance now you can define in the
-`job.ini` something like this
+The command `oq engine --make-html-report` now works with Python 3 too.
 
-```
-intensity_measure_types_and_levels={'PGA': logscale(1E-5, 1, 6)}
-```
+The commands `oq info` and `oq info --report` have been fixed and improved; in
+particular, now the report contains the correct number of effective ruptures
+(i.e. ruptures within the integration distance) even for classical
+calculations.
 
-and `logscale(1E-5, 1, 6)` is interpreted as a logarithmic scale
-starting from 1E-5 and arriving to 1 in 6 steps, i.e.
-`[.00001, .0001, .001, .01, .1, 1]`.
+The `openquake.cfg` file is included in the installation, so users that
+installed the engine via `pip install openquake.engine` will not get
+any complain about the missing configuration file.
 
-Finally, a lot of work went into the UCERF calculators. However,
-the should still be considered experimental and there are a few known
-limitations about those. This is why they are still undocumented.
+The repository with the latex manual has been merged into the oq-engine
+repository, to help reducing disalignement between the code and the
+documentation.
+
+We fixed an issue with rabbitmq on Ubuntu 16.04 by updating our configuration
+file `openquake.cfg` to not use the `guest` account.
