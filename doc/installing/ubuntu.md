@@ -7,6 +7,8 @@ The OpenQuake Engine stable tree is available in the form of *deb* binary packag
 
 Packages *may* work on Ubuntu derivatives (i.e. Mint Linux) and Debian, but this setup in not supported by GEM. See the **[FAQ](../faq.md#unsupported-operating-systems)**.
 
+The software and its libraries will be installed under `/opt/openquake`. Data will be stored under `/var/lib/openquake`.
+
 ## Install packages from the OpenQuake repository
 
 If you want to upgrade an existing installation see **[upgrading](../upgrading/ubuntu.md)**.
@@ -39,7 +41,6 @@ If a full upgrade is performed on the system, the OpenQuake software is upgraded
 sudo apt update
 sudo apt upgrade
 ```
-
 
 ## Configure the system services
 
