@@ -3,6 +3,7 @@
 if [ $GEM_SET_DEBUG ]; then
     set -x
 fi
+set -e
 
 inkscape -A figures/oq_manual_cover.pdf figures/oq_manual_cover.svg
 pdflatex -shell-escape -interaction=nonstopmode oq-manual.tex &> log.md
