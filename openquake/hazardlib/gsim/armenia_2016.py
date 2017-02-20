@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2016 GEM Foundation
+# Copyright (C) 2013-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,18 +19,17 @@
 """
 Armenian modification to selected active shallow crustal GMPEs
 Module exports :class:`AkkarEtAlRjb2014Armenia`,
-               :class:`BindiEtAl2014RjbArmenia`,
-               :class:`BooreEtAl2014LowQArmenia`,
-               :class:`CauzziEtAl2014Armenia`,
-               :class:`KaleEtAl2015Armenia`,
-               :class:`KothaEtAl2016Armenia`,
-               :class:`ChiouYoungs2014Armenia`
+:class:`BindiEtAl2014RjbArmenia`,
+:class:`BooreEtAl2014LowQArmenia`,
+:class:`CauzziEtAl2014Armenia`,
+:class:`KaleEtAl2015Armenia`,
+:class:`KothaEtAl2016Armenia`,
+:class:`ChiouYoungs2014Armenia`
 """
 from __future__ import division
 
 import numpy as np
-import warnings
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRjb2014
 from openquake.hazardlib.gsim.bindi_2014 import BindiEtAl2014Rjb
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014LowQ
@@ -39,17 +38,16 @@ from openquake.hazardlib.gsim.kale_2015 import KaleEtAl2015Turkey
 from openquake.hazardlib.gsim.kotha_2016 import KothaEtAl2016Turkey
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA, PGV, SA
 
 
 class AkkarEtAlRjb2014Armenia(AkkarEtAlRjb2014):
     """
-    A 
+    A
     """
     ADJUST = CoeffsTable(sa_damping=5, table="""\
     IMT            a          b        tau_adj        sig_adj
     pga     -4.41108    0.67245    1.237606958    1.382804565
-    0.01    -4.41108    0.67245    1.237606958    1.382804565 
+    0.01    -4.41108    0.67245    1.237606958    1.382804565
     0.1     -4.26857    0.63633    1.234234554    1.411711027
     0.15    -3.58023    0.53806    1.213586478    1.454392101
     0.2     -3.21751    0.47609    1.197379023    1.431701071
@@ -84,15 +82,16 @@ class AkkarEtAlRjb2014Armenia(AkkarEtAlRjb2014):
                 stddevs.append(adj_sigma)
             elif stddev == const.StdDev.TOTAL:
                 stddevs.append(np.sqrt(adj_tau ** 2. + adj_sigma ** 2.))
-        
+
         return mean + adj_factor, stddevs
+
 
 class BindiEtAl2014RjbArmenia(BindiEtAl2014Rjb):
     """
     Adjustment of Bindi et al based on Armenian data
     """
     ADJUST = CoeffsTable(sa_damping=5, table="""\
-    IMT              a          b      tau_adj       sig_adj 
+    IMT              a          b      tau_adj       sig_adj
     pga       -3.53175    0.51121  1.148988194   1.339231170
     0.01      -3.53175    0.51121  1.148988194   1.339231170
     0.10      -4.01062    0.58731  1.186227974   1.369630629
@@ -137,12 +136,12 @@ class BooreEtAl2014LowQArmenia(BooreEtAl2014LowQ):
     Adjustment of Boore et al for Low Q regions - adjusted for Armenian data
     """
     ADJUST = CoeffsTable(sa_damping=5, table="""\
-    IMT             a          b        tau_adj        sig_adj 
-    pga      -5.45458    0.84260    1.633057382    1.315998086 
-    0.01     -5.45458    0.84260    1.633057382    1.315998086 
-    0.10     -5.45010    0.78926    1.531996667    1.326562840 
-    0.15     -4.64516    0.65549    1.575356285    1.421007734 
-    0.20     -3.98702    0.55509    1.585970506    1.411586591 
+    IMT             a          b        tau_adj        sig_adj
+    pga      -5.45458    0.84260    1.633057382    1.315998086
+    0.01     -5.45458    0.84260    1.633057382    1.315998086
+    0.10     -5.45010    0.78926    1.531996667    1.326562840
+    0.15     -4.64516    0.65549    1.575356285    1.421007734
+    0.20     -3.98702    0.55509    1.585970506    1.411586591
     0.25     -3.11883    0.42217    1.524902361    1.368089701
     0.30     -2.80831    0.39356    1.472224512    1.388970102
     0.40     -2.63587    0.38977    1.418578519    1.362769784
@@ -182,7 +181,7 @@ class CauzziEtAl2014Armenia(CauzziEtAl2014):
     Adjustment of Cauzzi et al. (2014) for Armenia
     """
     ADJUST = CoeffsTable(sa_damping=5, table="""\
-    IMT               a          b       tau_adj        sig_adj 
+    IMT               a          b       tau_adj        sig_adj
     pga        -4.01091    0.54155   1.182557898    1.336230261
     0.01       -4.01091    0.54155   1.182557898    1.336230261
     0.10       -3.34721    0.36510   1.186559348    1.373721566
@@ -198,7 +197,6 @@ class CauzziEtAl2014Armenia(CauzziEtAl2014):
     3.00       -3.61081    0.65005   0.992899354    1.186719473
     4.00       -3.61081    0.65005   0.992899354    1.186719473
     """)
-
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -228,7 +226,7 @@ class KaleEtAl2015Armenia(KaleEtAl2015Turkey):
     Adjustment of Kale et al (2015) - Turkish version, for use in Armenia
     """
     ADJUST = CoeffsTable(sa_damping=5, table="""\
-    IMT             a          b       tau_adj        sig_adj 
+    IMT             a          b       tau_adj        sig_adj
     pga       -3.81210   0.60842   1.211930412    1.380035424
     0.01      -3.81210   0.60842   1.211930412    1.380035424
     0.10      -3.92511   0.63176   1.233919574    1.414621711
@@ -274,7 +272,7 @@ class KothaEtAl2016Armenia(KothaEtAl2016Turkey):
     Armenia
     """
     ADJUST = CoeffsTable(sa_damping=5, table="""\
-    IMT             a          b       tau_adj       sig_adj 
+    IMT             a          b       tau_adj       sig_adj
     pga      -4.69043    0.75333   1.309083043   1.468617949
     0.01     -4.69043    0.75333   1.309083043   1.468617949
     0.10     -4.72868    0.74971   1.336985424   1.497481448
@@ -290,6 +288,7 @@ class KothaEtAl2016Armenia(KothaEtAl2016Turkey):
     3.00     -2.55008    0.39507   0.965496258   1.178953103
     4.00     -2.55008    0.39507   0.965496258   1.178953103
     """)
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         """
@@ -312,12 +311,13 @@ class KothaEtAl2016Armenia(KothaEtAl2016Turkey):
                 stddevs.append(np.sqrt(adj_tau ** 2. + adj_sigma ** 2.))
         return mean + adj_factor, stddevs
 
+
 class ChiouYoungs2014Armenia(ChiouYoungs2014):
     """
     Adaptation of Chiou & Youngs (2014) for use in Armenia
     """
     ADJUST = CoeffsTable(sa_damping=5, table="""\
-    IMT             a          b       tau_adj        sig_adj 
+    IMT             a          b       tau_adj        sig_adj
     pga      -4.51489    0.57803   1.647935626    1.331572905
     0.01     -4.51489    0.57803   1.647935626    1.331572905
     0.10     -4.81330    0.60673   1.727544316    1.399648152
