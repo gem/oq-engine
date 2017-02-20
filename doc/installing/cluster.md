@@ -119,6 +119,7 @@ Storage requirements depend a lot on the type of calculations you want to run. O
 
 On the master node you will also need space for:
 - the users' **home** directory (usually located under `/home`): it contains the calculations datastore (`hdf5` files located in the `oqdata` folder)
+- the OpenQuake database (located under `/var/lib/openquake`): it contains only logs and metadata, the expected size is tens of megabyte
 - *RabbitMQ* mnesia dir (usually located under `/var/lib/rabbitmq`)
 
 On large installations we strongly suggest to create separate partition for `/home`, `/var` and *RabbitMQ* (`/var/lib/rabbitmq`).
