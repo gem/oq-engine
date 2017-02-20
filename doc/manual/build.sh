@@ -16,7 +16,7 @@ makeglossaries oq-manual
 pdflatex -shell-escape -interaction=nonstopmode oq-manual.tex) | egrep -i "error|warning|missing"
 
 if [ -f oq-manual.pdf ]; then
-    ./clean.sh
+    ./clean.sh || true
     if [ "$1" == "--compress" ]; then
         pdfinfo "oq-manual.pdf" | sed -e 's/^ *//;s/ *$//;s/ \{1,\}/ /g' -e 's/^/  \//' -e '/CreationDate/,$d' -e 's/$/)/' -e 's/: / (/' > .pdfmarks
         sed -i '1s/^ /[/' .pdfmarks
