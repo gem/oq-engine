@@ -548,6 +548,7 @@ _pkgtest_innervm_run () {
         # wait for celeryd startup time
         ssh $lxc_ip "
 export PYTHONPATH=\"$OPT_LIBS_PATH\"
+sleep 10
 sudo supervisorctl start openquake-celery
 celery_wait() {
     local cw_nloop=\"\$1\" cw_ret cw_i
