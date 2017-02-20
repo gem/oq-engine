@@ -97,6 +97,7 @@ sig_hand () {
     echo "signal trapped"
     if [ "$lxc_name" != "" ]; then
         set +e
+        scp "${lxc_ip}:/tmp/webui*" "out_${BUILD_UBUVER}/"
         scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
         scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/ssh.history"
         echo "Destroying [$lxc_name] lxc"
@@ -872,6 +873,7 @@ devtest_run () {
     _devtest_innervm_run "$lxc_ip" "$branch"
     inner_ret=$?
 
+    scp "${lxc_ip}:/tmp/webui*" "out_${BUILD_UBUVER}/"
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/devtest.history"
 
     sudo $LXC_TERM -n $lxc_name
@@ -1050,6 +1052,7 @@ EOF
     _pkgtest_innervm_run "$lxc_ip" "$branch"
     inner_ret=$?
 
+    scp "${lxc_ip}:/tmp/webui*" "out_${BUILD_UBUVER}/"
     scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/pkgtest.history"
 
