@@ -539,29 +539,25 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
     ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
 
+    celery_bin=/opt/openquake/bin/celery
+
     # configure the machine to run tests
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # use celery to run the demos
-        ssh $lxc_ip "celeryd --config openquake.engine.celeryconfig >/tmp/celeryd.log 2>&1 3>&1 &"
-
         # wait for celeryd startup time
         ssh $lxc_ip "
-celeryd_wait() {
+export PYTHONPATH=\"/opt/openquake/lib/python2.7/site-packages\"
+sudo supervisorctl start openquake-celery
+celery_wait() {
     local cw_nloop=\"\$1\" cw_ret cw_i
 
-    if command -v celeryctl &> /dev/null; then
-        # celery 2.4
-        celery=celeryctl
-    elif command -v celery &> /dev/null; then
-        # celery 3
-        celery=celery
-    else
+    if ! -f $celery_bin &> /dev/null; then
         echo \"ERROR: no Celery available\"
         return 1
     fi
 
     for cw_i in \$(seq 1 \$cw_nloop); do
-        cw_ret=\"\$(\$celery status)\"
+        cw_ret=\"\$($celery_bin status)\"
         if echo \"\$cw_ret\" | grep -iq '^error:'; then
             if echo \"\$cw_ret\" | grep -ivq '^error: no nodes replied'; then
                 return 1
@@ -575,7 +571,7 @@ celeryd_wait() {
     return 1
 }
 
-celeryd_wait $GEM_MAXLOOP"
+celery_wait $GEM_MAXLOOP"
 
         # run all of the hazard and risk demos
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
