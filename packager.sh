@@ -528,6 +528,7 @@ _pkgtest_innervm_run () {
     IFS="$old_ifs"
 
     # add custom packages
+    ssh $lxc_ip mkdir -p "repo"
     scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\""
 
