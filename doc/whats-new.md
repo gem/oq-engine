@@ -3,8 +3,8 @@ Release notes for the OpenQuake Engine, version 2.3
 
 This release introduces several new features and improvements of the
 engine calculators. Moreover, our packaging strategy has been
-revolutionized and now we provide packages for nearly every operating
-system - including old ones like Ubuntu 12.04, previously abandoned - by
+revolutionized and now we provide packages for most operating
+system - including previously abandoned systems such as Ubuntu 12.04 - by
 using the exact same versions of the libraries on every supported
 platform (Linux, Windows, Mac).
 
@@ -24,7 +24,7 @@ of the region of interest*. It is enough to write the elevation of the
 hazard sites in the sites file or in the site model file, as a
 negative depth, and the engine will compute the ground shaking
 correctly. Before there was no way to specify the elevation of the hazard sites
-and the ground shaking was computed only at the level of the sea.
+and the ground shaking was computed only at the sea level.
 
 From this release it is also possible to use *magnitude-dependent
 integration distances*. This is expected to have a substantial impact on the
@@ -37,7 +37,7 @@ tectonic region type. In the past the user would write
 
 and the engine would use an integration distance of 200 km for all
 ruptures of the given tectonic region type, disregarding the magnitude.
-Nowadays, the user can write
+Now, the user can write
 
 `maximum_distance = {'Active Shallow Crust': [(8, 200), (7, 100), (5, 20)]}`
 
@@ -57,8 +57,8 @@ new time-dependent classical calculator, while the old calculators were
 substantially improved.
 
 There is an experimental command `run_tiles` to split a `sites.csv`
-file in tiles and run multiple calculations at once. This for expert
-use only.
+file in tiles and run multiple calculations at once. This is meant for
+power users only.
 
 There is a new command `oq reset` that will remove all calculations of
 the current user from the database and the filesystem. It is meant for
@@ -93,10 +93,11 @@ There are two new limits in the event based calculators:
 1. it is impossible to run calculations with more than 65536 tasks
 2. it is impossible to have tasks generating more than 65536 events each
 
-The limits are there for safety purpose: users trying to run calculations
-impossibly large will get an error early, rather than trashing their machines.
+These limits have been added to prevent users from running impossibly
+large calculations: an error message will be displayed early rather
+than causing machines to crash.
 
-The event loss table exporter has changed and it is now faster than in
+The event loss table exporter is now faster than in
 release 2.2. It does not export the tectonic region type string
 anymore, however you can infer it from the `event_tag` field which
 contains the source group ID. The association between the source group
@@ -107,7 +108,7 @@ calculations (UCERF).
 
 The calculation of quantiles hazard curves used different algorithms
 in the case of logic tree full enumeration and logic tree sampling.
-Now, for consistency sake, we use always the same algorithm, the
+For the sake of consistency, we now use always the same algorithm, the
 one of full enumeration. This change may produce small differences in
 the quantile curves if you were doing computations with sampling of
 the logic tree.
@@ -129,9 +130,10 @@ it was only hiding it from the Web UI. Be careful with it, since it is
 final. If you remove a calculation, the only way to restore it is
 to repeat the computation.
 
-We fixed the names of the files downloaded from the Web UI. They were
-containing slashes, that were then replaced in a browser-dependent way
-with dashes or underscores. This is solved now.
+We fixed the names of the files downloaded from the Web UI.  The names
+of files downloaded from the Web UI previously contained slash ('/')
+characters that were then replaced with dashes or underscores by the
+browser. We no longer include slash characters in file names.
 
 The named of the zipped outputs contained a spurious ".". This has been
 fixed.
