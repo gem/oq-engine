@@ -381,7 +381,7 @@ _devtest_innervm_run () {
         fi
 
         ssh $lxc_ip "set -e
-                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine\"
+                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine:/opt/openquake/lib/python2.7/site-packages\"
                  echo 'Starting DbServer. Log is saved to /tmp/dbserver.log'
                  cd oq-engine; nohup bin/oq dbserver start &>/tmp/dbserver.log </dev/null &"
 
@@ -391,7 +391,7 @@ _devtest_innervm_run () {
                      export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
                      set -x
                  fi
-                 export PYTHONPATH=\"/opt/openquake/lib/python2.7/site-packages:\$PWD/oq-hazardlib:\$PWD/oq-engine\"
+                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine:/opt/openquake/lib/python2.7/site-packages\"
                  cd oq-engine
                  /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
                  /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
@@ -470,7 +470,7 @@ _builddoc_innervm_run () {
     # install sources of this package
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
-    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine\" ; cd oq-engine/doc/sphinx ; make html"
+    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine:/opt/openquake/lib/python2.7/site-packages\" ; cd oq-engine/doc/sphinx ; make html"
     scp -r "${lxc_ip}:oq-engine/doc/sphinx/build/html" "out_${BUILD_UBUVER}/" || true
 
     # TODO: version check
