@@ -443,9 +443,11 @@ class Computer(object):
     """
     Abstract Base Class. Subclasses must override the methods `__call__`
     and `gen_args`, and may override `aggregate`. They may also override
-    `__init__`: in that case they must set the `__name__` attribute.
+    `__init__`: in that case they must set the `hdf5path` and `__name__`
+    attributes.
     """
-    def __init__(self):
+    def __init__(self, hdf5path=None):
+        self.hdf5path = hdf5path
         self.__name__ = self.__class__.__name__
 
     @abc.abstractmethod
@@ -462,6 +464,23 @@ class Computer(object):
         """Aggregate values; the default operation is the sum"""
         return acc + val
 
+    def monitor(self, operation=None, autoflush=False, measuremem=False):
+        """
+        Return a :class:`openquake.baselib.performance.Monitor` instance
+        """
+        return Monitor(operation or self.__name__, self.hdf5path, autoflush,
+                       measuremem)
+
+    def run(self, *args, **kw):
+        """
+        Run the computer with the given arguments; one specify extra arguments
+        `acc` and `Starmap`.
+        """
+        acc = kw.get('acc')
+        starmap = kw.get('Starmap', Starmap)
+        wakeup_pool()  # if not already started
+        return starmap(self, self.gen_args(*args)).reduce(self.aggregate, acc)
+
 
 class Starmap(object):
     """
@@ -477,12 +496,6 @@ class Starmap(object):
     """
     executor = executor
     task_ids = []
-
-    @classmethod
-    def run(cls, operation, args, acc=None):
-        wakeup_pool()
-        return cls(operation, operation.gen_args(*args)).reduce(
-            operation.aggregate, acc)
 
     @classmethod
     def restart(cls):

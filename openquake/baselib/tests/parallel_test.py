@@ -19,7 +19,7 @@
 import mock
 import unittest
 import numpy
-from openquake.baselib import parallel, general, performance
+from openquake.baselib import parallel, general
 
 try:
     import celery
@@ -40,9 +40,10 @@ def get_len(data, monitor):
 
 class SumPairs(parallel.Computer):
     # generate pairs from a sequence of indices
-    def gen_args(self, idxs, monitor):
-        for pair in general.block_splitter(idxs, 2):
-            yield pair, monitor
+    def gen_args(self, idxs):
+        with self.monitor() as monitor:
+            for pair in general.block_splitter(idxs, 2):
+                yield pair, monitor
 
     # compute the sum of each pair
     def __call__(self, pair, monitor):
@@ -103,6 +104,5 @@ class StarmapTestCase(unittest.TestCase):
                 self.assertGreater(len(res.received), 0)
 
     def test_operation(self):
-        monitor = performance.Monitor('SumPairs')
-        res = parallel.Starmap.run(SumPairs(), (range(5), monitor))
+        res = SumPairs().run(range(5))
         self.assertEqual(res, {1: 1, 2: 5, 3: 4})
