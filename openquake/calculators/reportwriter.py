@@ -54,7 +54,8 @@ def count_eff_ruptures(sources, srcfilter, gsims, monitor):
     for src in sources:
         sites = srcfilter.get_close_sites(src)
         if sites is not None:
-            for rup in src.iter_ruptures():
+            for i, rup in enumerate(src.iter_ruptures()):
+                rup.serial = src.serial[i]  # added for debugging purposes
                 try:
                     cmaker.get_closest(sites, rup)
                 except FarAwayRupture:
@@ -172,6 +173,7 @@ def build_report(job_ini, output_dir=None):
     # some taken is care so that the real calculation is not run:
     # the goal is to extract information about the source management only
     with mock.patch.object(PSHACalculator, 'core_task', count_eff_ruptures):
+        PSHACalculator.is_stochastic = True  # to call .init_serials()
         if calc.pre_calculator == 'ebrisk':
             # compute the ruptures only, not the risk
             calc.pre_calculator = 'event_based_rupture'
