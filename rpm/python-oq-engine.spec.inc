@@ -61,7 +61,6 @@ getent group %{oquser} >/dev/null || groupadd -r %{oquser}
 getent passwd %{oquser} >/dev/null || \
     useradd -r -g %{oquser} -m -d /var/lib/%{oquser} -s /bin/bash \
     -c "The OpenQuake user" %{oquser}
-systemctl start rabbitmq-server.service
 
 %install
 sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" openquake/risklib/__init__.py
@@ -81,16 +80,21 @@ cp -R demos %{buildroot}/%{_datadir}/openquake/engine
 cp -R utils %{buildroot}/%{_datadir}/openquake/engine
 
 %post
-(if [ -f /run/rabbitmq/pid -o -f /var/lib/rabbitmq/mnesia/rabbit@$(hostname -s).pid ]; then
-    if ! rabbitmqctl list_users | grep %{oquser}; then
-        rabbitmqctl add_user %{oquser} %{oquser}
-    fi
-    if ! rabbitmqctl list_vhosts | grep %{oquser}; then
-        rabbitmqctl add_vhost %{oquser}
-        rabbitmqctl set_permissions -p %{oquser} %{oquser} ".*" ".*" ".*"
-    fi
-fi) >/dev/null || true
-systemctl stop rabbitmq-server.service
+(if [ ! -f /run/rabbitmq/pid -o ! -f /var/lib/rabbitmq/mnesia/rabbit@$(hostname -s).pid ]; then
+    systemctl start rabbitmq-server.service
+    rabbit_started=true
+fi
+if ! rabbitmqctl list_users | grep %{oquser}; then
+    rabbitmqctl add_user %{oquser} %{oquser}
+fi
+if ! rabbitmqctl list_vhosts | grep %{oquser}; then
+    rabbitmqctl add_vhost %{oquser}
+    rabbitmqctl set_permissions -p %{oquser} %{oquser} ".*" ".*" ".*"
+fi
+if $rabbit_started; then
+    systemctl stop rabbitmq-server.service
+fi
+) >/dev/null || true
 %systemd_post openquake-dbserver.service
 %systemd_post openquake-webui.service
 %systemd_post openquake-celery.service
