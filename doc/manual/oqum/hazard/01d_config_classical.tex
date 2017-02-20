@@ -36,7 +36,7 @@ In this section the user specifies the following parameters:
 This section is used to specify where the hazard will be computed. Two
 options are available:
 
-The first ooption is to define a polygon (usually a rectangle) and a distance
+The first option is to define a polygon (usually a rectangle) and a distance
 (in km) to be used to discretize the  polygon area. The polygon is defined by
 a list of longitude-latitude tuples.
 
@@ -49,7 +49,12 @@ region_grid_spacing = 10.0
 \end{minted}
 
 The second option allows the definition of a number of sites where the hazard
-will be computed. An example is provided below:
+will be computed. Each site is specified in terms of a longitude, latitude tuple.
+Optionally, if the user wants to consider the elevation of the sites, a value of
+depth [km] can also be specified, where positive values indicate below sea level,
+and negative values indicate above sea level (i.e. the topographic surface). If
+no value of depth is given for a site, it is assumed to be zero. An example is
+provided below:
 
 \begin{minted}[firstline=1,linenos=true,firstnumber=8,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
 [geometry]
@@ -65,8 +70,8 @@ sites_csv = <name_of_the_csv_file>
 \end{minted}
 
 The format of the csv file containing the list of sites is a sequence of
-points (one per row) specified in terms of the longitude, latitude tuple. An
-example is provided below:
+points (one per row) specified in terms of the longitude, latitude tuple. Depth
+values are again optional. An example is provided below:
 
 \begin{minted}[firstline=1,linenos=false,firstnumber=10,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{text}
 179.0,90.0
