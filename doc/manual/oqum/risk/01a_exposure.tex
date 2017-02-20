@@ -11,7 +11,7 @@ A simple \gls{exposuremodel} comprising a single \gls{asset} is shown in
 Listing~\ref{lst:input_exposure_minimal}.
 
 \begin{listing}[htbp]
-  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/Verbatim/input_exposure_minimal.xml}
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_exposure_minimal.xml}
   \caption{Example exposure model comprising a single asset (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/input_exposure_minimal.xml}{Download example})}
   \label{lst:input_exposure_minimal}
 \end{listing}
@@ -19,7 +19,7 @@ Listing~\ref{lst:input_exposure_minimal}.
 Let us take a look at each of the sections in the above example file in turn.
 The first part of the file contains the metadata section:
 
-\inputminted[firstline=5,firstnumber=5,lastline=8,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/Verbatim/input_exposure_minimal.xml}
+\inputminted[firstline=5,firstnumber=5,lastline=8,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_exposure_minimal.xml}
 
 The information in the metadata section is common to all of the \glspl{asset}
 in the portfolio and needs to be incorporated at the beginning of every
@@ -50,7 +50,7 @@ described below:
 Next, let us look at the part of the file describing the area and cost
 conversions:
 
-\inputminted[firstline=10,firstnumber=10,lastline=15,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/Verbatim/input_exposure_minimal.xml}
+\inputminted[firstline=10,firstnumber=10,lastline=15,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_exposure_minimal.xml}
 
 Notice that the \Verb+costType+ element defines a \Verb+name+, a \Verb+type+, 
 and a \Verb+unit+ attribute.
@@ -151,7 +151,7 @@ Finally, let us look at the part of the file describing the set of
 \glspl{asset} in the portfolio to be used in seismic damage or risk
 calculations:
 
-\inputminted[firstline=17,firstnumber=17,lastline=27,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/Verbatim/input_exposure_minimal.xml}
+\inputminted[firstline=17,firstnumber=17,lastline=27,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_exposure_minimal.xml}
 
 Each \gls{asset} definition involves specifiying a set of mandatory and
 optional attributes concerning the \gls{asset}. The following set of
@@ -225,7 +225,7 @@ following information needs to be stored in the \gls{exposuremodel} file, as
 shown in Listing~\ref{lst:input_exposure_cagg_metadata}.
 
 \begin{listing}[htbp]
-  \inputminted[firstline=8,firstnumber=8,lastline=18,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/Verbatim/input_exposure_cagg.xml}
+  \inputminted[firstline=8,firstnumber=8,lastline=18,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_exposure_cagg.xml}
   \caption{Example exposure model using aggregate costs: metadata definition (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/input_exposure_cagg.xml}{Download example})}
   \label{lst:input_exposure_cagg_metadata}
 \end{listing}
@@ -236,7 +236,7 @@ been established, the values for each asset can be stored according to the
 format shown in Listing~\ref{lst:input_exposure_cagg_assets}.
 
 \begin{listing}[htbp]
-  \inputminted[firstline=19,firstnumber=19,lastline=29,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/Verbatim/input_exposure_cagg.xml}
+  \inputminted[firstline=19,firstnumber=19,lastline=29,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_exposure_cagg.xml}
   \caption{Example exposure model using aggregate costs: assets definition (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/input_exposure_cagg.xml}{Download example})}
   \label{lst:input_exposure_cagg_assets}
 \end{listing}
@@ -261,7 +261,7 @@ In the snippet shown in Listing~\ref{lst:input_exposure_cunit_metadata}, an
 associated costs per unit of each \gls{asset} is presented.
 
 \begin{listing}[htbp]
-  \inputminted[firstline=8,firstnumber=8,lastline=18,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/Verbatim/input_exposure_cunit.xml}
+  \inputminted[firstline=8,firstnumber=8,lastline=18,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_exposure_cunit.xml}
   \caption{Example exposure model using costs per unit: metadata definition (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/input_exposure_cunit.xml}{Download example})}
   \label{lst:input_exposure_cunit_metadata}
 \end{listing}
@@ -271,7 +271,7 @@ the information from each \gls{asset} can be stored following the format shown
 in Listing~\ref{lst:input_exposure_cunit_assets}.
 
 \begin{listing}[htbp]
-  \inputminted[firstline=19,firstnumber=19,lastline=29,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/Verbatim/input_exposure_cunit.xml}
+  \inputminted[firstline=19,firstnumber=19,lastline=29,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_exposure_cunit.xml}
   \caption{Example exposure model using costs per unit: assets definition (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/input_exposure_cunit.xml}{Download example})}
   \label{lst:input_exposure_cunit_assets}
 \end{listing}
@@ -291,7 +291,7 @@ comprises an \gls{exposuremodel} containing the built up area of each
 \gls{asset}, and the associated costs are provided per unit area.
 
 \begin{listing}[htbp]
-  \inputminted[firstline=8,firstnumber=8,lastline=20,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/Verbatim/input_exposure_carea_aagg.xml}
+  \inputminted[firstline=8,firstnumber=8,lastline=20,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_exposure_carea_aagg.xml}
   \caption{Example exposure model using costs per unit area and aggregated areas: metadata definition (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/input_exposure_carea_aagg.xml}{Download example})}
   \label{lst:input_exposure_carea_aagg_metadata}
 \end{listing}
@@ -306,7 +306,7 @@ the aggregated built up area per asset, and thus this attribute was set to
 illustrates the definition of the \glspl{asset} for this example.
 
 \begin{listing}[htbp]
-  \inputminted[firstline=21,firstnumber=21,lastline=31,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/Verbatim/input_exposure_carea_aagg.xml}
+  \inputminted[firstline=21,firstnumber=21,lastline=31,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_exposure_carea_aagg.xml}
   \caption{Example exposure model using costs per unit area and aggregated areas: assets definition (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/input_exposure_carea_aagg.xml}{Download example})}
   \label{lst:input_exposure_carea_aagg_assets}
 \end{listing}
@@ -327,7 +327,7 @@ Listing~\ref{lst:input_exposure_carea_aunit_metadata} shows the metadata
 definition for an \gls{exposuremodel} built in this manner.
 
 \begin{listing}[htbp]
-  \inputminted[firstline=8,firstnumber=8,lastline=20,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/Verbatim/input_exposure_carea_aunit.xml}
+  \inputminted[firstline=8,firstnumber=8,lastline=20,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_exposure_carea_aunit.xml}
   \caption{Example exposure model using costs per unit area and areas per unit: metadata definition (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/input_exposure_carea_aunit.xml}{Download example})}
   \label{lst:input_exposure_carea_aunit_metadata}
 \end{listing}
@@ -339,7 +339,7 @@ Listing~\ref{lst:input_exposure_carea_aunit_assets} illustrates the definition
 of the assets for this example.
 
 \begin{listing}[htbp]
-  \inputminted[firstline=21,firstnumber=21,lastline=31,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/Verbatim/input_exposure_carea_aunit.xml}
+  \inputminted[firstline=21,firstnumber=21,lastline=31,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_exposure_carea_aunit.xml}
   \caption{Example exposure model using costs per unit area and areas per unit: assets definition (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/input_exposure_carea_aunit.xml}{Download example})}
   \label{lst:input_exposure_carea_aunit_assets}
 \end{listing}
@@ -363,7 +363,7 @@ section of an \gls{exposuremodel} where the insurance \glspl{limit} and
 structural replacement cost.
 
 \begin{listing}[htbp]
-  \inputminted[firstline=8,firstnumber=8,lastline=21,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/Verbatim/input_exposure_ins_rel.xml}
+  \inputminted[firstline=8,firstnumber=8,lastline=21,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_exposure_ins_rel.xml}
   \caption{Example exposure model using relative insurance limits and deductibles: metadata definition (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/input_exposure_ins_rel.xml}{Download example})}
   \label{lst:input_exposure_ins_rel_metadata}
 \end{listing}
@@ -376,7 +376,7 @@ illustrated in the snippet shown in
 Listing~\ref{lst:input_exposure_ins_rel_assets}.
 
 \begin{listing}[htbp]
-  \inputminted[firstline=22,firstnumber=22,lastline=32,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/Verbatim/input_exposure_ins_rel.xml}
+  \inputminted[firstline=22,firstnumber=22,lastline=32,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_exposure_ins_rel.xml}
   \caption{Example exposure model using relative insurance limits and deductibles: assets definition (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/input_exposure_ins_rel.xml}{Download example})}
   \label{lst:input_exposure_ins_rel_assets}
 \end{listing}
@@ -386,7 +386,7 @@ absolute values, by setting the aforementioned attribute to \Verb+true+. This
 is shown in the example shown in Listing~\ref{lst:input_exposure_ins_abs}.
 
 \begin{listing}[htbp]
-  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/Verbatim/input_exposure_ins_abs.xml}
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_exposure_ins_abs.xml}
   \caption{Example exposure model using absolute insurance limits and deductibles (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/input_exposure_ins_abs.xml}{Download example})}
   \label{lst:input_exposure_ins_abs}
 \end{listing}
@@ -397,7 +397,7 @@ manner as the structural cost, and it should be stored according to the format
 shown in Listing~\ref{lst:input_exposure_retrofit}.
 
 \begin{listing}[htbp]
-  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/Verbatim/input_exposure_retrofit.xml}
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_exposure_retrofit.xml}
   \caption{Example exposure model specifying retrofit costs (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/input_exposure_retrofit.xml}{Download example})}
   \label{lst:input_exposure_retrofit}
 \end{listing}
@@ -429,7 +429,7 @@ also provided as aggregated values for all of the buildings comprising the
 \gls{asset}.
 
 \begin{listing}[htbp]
-  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/Verbatim/input_exposure_occupants.xml}
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_exposure_occupants.xml}
   \caption{Example exposure model specifying the aggregate number of occupants per asset (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/input_exposure_occupants.xml}{Download example})}
   \label{lst:input_exposure_occupants}
 \end{listing}
