@@ -437,6 +437,10 @@ _builddoc_innervm_run () {
     # install package to manage repository properly
     # ssh $lxc_ip "sudo apt-get install -y python-software-properties"
 
+    if [ -f _jenkins_deps_info ]; then
+        source _jenkins_deps_info
+    fi
+
     old_ifs="$IFS"
     IFS=" "
     for dep_item in $GEM_DEPENDS; do
