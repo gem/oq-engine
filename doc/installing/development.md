@@ -108,6 +108,18 @@ cd ..
 
 To exit from the OpenQuake development environment type `deactivate`. Before using again the OpenQuake software the environment must be loaded back running `source openquake/bin/activate`(assuming that it has been installed under 'openquake'). For more information about *virtualenv* and its you see http://docs.python-guide.org/en/latest/dev/virtualenvs/
 
+### Multiple installations
+
+If any other installation of the Engine exists on the same machine, like a system-wide installation made with packages, you must change the DbServer port from the default one (1908) to any other unused port. Using a DbServer started from a different codebase (which may be out-of-sync) could lead to unexpected behaviours and errors. To change the DbServer port `oq-engine/openquake/engine/openquake.cfg` must be updated:
+
+```
+[dbserver]          |  [dbserver]
+## cut ##           |  ## cut ##
+port = 1908         >  port = 1909
+authkey = changeme  |  authkey = changeme
+## cut ##           |  ## cut ##
+```
+
 ## Running the tests
 
 To run the OpenQuake Engine tests see the **[testing](../testing.md)** page.
