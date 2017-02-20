@@ -104,5 +104,6 @@ class StarmapTestCase(unittest.TestCase):
                 self.assertGreater(len(res.received), 0)
 
     def test_operation(self):
-        res = SumPairs().run(range(5))
-        self.assertEqual(res, {1: 1, 2: 5, 3: 4})
+        res = SumPairs().run(range(5)).items()
+        # task 1: 0 + 1, task 2: 2 + 3, task 3: 4
+        self.assertEqual(sorted(res), [(1, 1), (2, 5), (3, 4)])
