@@ -39,8 +39,8 @@ in the following paragraph.
 
 \begin{itemize}
 
-    \item A \gls{faulttrace} (usually a polyline). It is a list of
-    longitude-latitude tuples [degrees]
+    \item A horizontal \gls{faulttrace} (usually a polyline). It is a list of
+    longitude-latitude tuples [degrees].
 
     \item A \gls{frequencymagnitudedistribution}
 
@@ -118,10 +118,14 @@ fault surface is defined and the fault surface is later created. The input
 parameters used to describe complex faults are, for the most part, the same
 used to describe the simple fault typology.
 
-In case of complex faults the dip angle is not requested while the fault trace
-is substituted by two fault edges limiting at the top and bottom the fault
+In the case of complex faults, the dip angle is not requested while the fault
+trace is substituted by two fault edges limiting the top and bottom of the fault
 surface. Additional curves lying over the fault surface can be specified to
 complement and refine the description of the fault surface geometry.
+Unlike the simple fault, these edges are not required to be horizontal
+and may vary in depth (positive values) or elevation (negative values i.e.
+the upper edge may represent the intersection between the exposed fault trace
+and the topographic surface).
 
 Usually, we use complex faults to model intraplate megathrust faults such as
 the big subduction structures active in the Pacific (Sumatra, South America,
