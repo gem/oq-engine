@@ -548,7 +548,8 @@ _pkgtest_innervm_run () {
         # wait for celeryd startup time
         ssh $lxc_ip "
 export PYTHONPATH=\"$OPT_LIBS_PATH\"
-sleep 10
+sleep 30 # FIXME
+sudo supervisorctl status
 sudo supervisorctl start openquake-celery
 celery_wait() {
     local cw_nloop=\"\$1\" cw_ret cw_i
@@ -573,7 +574,8 @@ celery_wait() {
     return 1
 }
 
-celery_wait $GEM_MAXLOOP"
+celery_wait $GEM_MAXLOOP
+sudo supervisorctl status"
 
         # run all of the hazard and risk demos
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
