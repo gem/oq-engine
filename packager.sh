@@ -86,6 +86,7 @@ NL="
 "
 TB="	"
 
+OPT_LIBS_PATH=/opt/openquake/lib/python2.7/site-packages
 #
 #  functions
 
@@ -381,7 +382,7 @@ _devtest_innervm_run () {
         fi
 
         ssh $lxc_ip "set -e
-                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine:/opt/openquake/lib/python2.7/site-packages\"
+                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine:$OPT_LIBS_PATH\"
                  echo 'Starting DbServer. Log is saved to /tmp/dbserver.log'
                  cd oq-engine; nohup bin/oq dbserver start &>/tmp/dbserver.log </dev/null &"
 
@@ -391,7 +392,7 @@ _devtest_innervm_run () {
                      export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
                      set -x
                  fi
-                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine:/opt/openquake/lib/python2.7/site-packages\"
+                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine:$OPT_LIBS_PATH\"
                  cd oq-engine
                  /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
                  /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
@@ -470,7 +471,7 @@ _builddoc_innervm_run () {
     # install sources of this package
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
-    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine:/opt/openquake/lib/python2.7/site-packages\" ; cd oq-engine/doc/sphinx ; make html"
+    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine:$OPT_LIBS_PATH\" ; cd oq-engine/doc/sphinx ; make html"
     scp -r "${lxc_ip}:oq-engine/doc/sphinx/build/html" "out_${BUILD_UBUVER}/" || true
 
     # TODO: version check
@@ -546,7 +547,7 @@ _pkgtest_innervm_run () {
         # use celery to run the demos
         # wait for celeryd startup time
         ssh $lxc_ip "
-export PYTHONPATH=\"/opt/openquake/lib/python2.7/site-packages\"
+export PYTHONPATH=\"$OPT_LIBS_PATH\"
 sudo supervisorctl start openquake-celery
 celery_wait() {
     local cw_nloop=\"\$1\" cw_ret cw_i
