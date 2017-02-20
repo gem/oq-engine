@@ -314,6 +314,7 @@ _devtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get install -y python-software-properties"
 
     # add custom packages
+    ssh $lxc_ip mkdir -p "repo"
     scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\""
 
@@ -323,8 +324,6 @@ _devtest_innervm_run () {
     if [ -f _jenkins_deps_info ]; then
         source _jenkins_deps_info
     fi
-
-    ssh $lxc_ip mkdir -p "repo"
 
     old_ifs="$IFS"
     IFS=" "
@@ -523,6 +522,8 @@ _pkgtest_innervm_run () {
     if [ -f _jenkins_deps_info ]; then
         source _jenkins_deps_info
     fi
+
+    ssh $lxc_ip mkdir -p "repo"
 
     old_ifs="$IFS"
     IFS=" $NL"
