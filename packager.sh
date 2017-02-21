@@ -562,7 +562,7 @@ sudo supervisorctl start openquake-celery
 celery_wait() {
     local cw_nloop=\"\$1\" cw_ret cw_i
 
-    if ! -f $celery_bin &> /dev/null; then
+    if [ ! -f $celery_bin ]; then
         echo \"ERROR: no Celery available\"
         return 1
     fi
