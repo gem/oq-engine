@@ -4,6 +4,7 @@
 %define oqrelease ##_release_##
 %define oqname python-%{oqrepo}
 %define oqtimestamp ##_timestamp_##
+%define oqprefix /opt/openquake
 %define oquser openquake
 
 %if %{oqstable} == 1
@@ -65,9 +66,9 @@ getent passwd %{oquser} >/dev/null || \
 %install
 sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" openquake/risklib/__init__.py
 install -p -m 755 -d %{buildroot}%{_bindir}
-install -p -m 755 -d %{buildroot}/opt/openquake/bin
-python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --prefix=/opt/openquake --install-scripts=/opt/openquake/bin --record=INSTALLED_FILES
-ln -sf /opt/openquake/bin/oq %{buildroot}%{_bindir}/oq
+install -p -m 755 -d %{buildroot}%{oqprefix}/bin
+python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --prefix=%{oqprefix} --install-scripts=%{oqprefix}/bin
+ln -sf %{oqprefix}/bin/oq %{buildroot}%{_bindir}/oq
 # create directories where the files will be located
 mkdir -p %{buildroot}%{_sysconfdir}/openquake
 mkdir -p %{buildroot}%{_datadir}/openquake/engine
@@ -112,7 +113,7 @@ rm -rf %{buildroot}
 %systemd_postun_with_restart openquake-webui.service
 %systemd_postun_with_restart openquake-celery.service
 
-%files -f INSTALLED_FILES
+%files
 %defattr(-,root,root)
 %doc README.md LICENSE CONTRIBUTORS.txt
 %doc doc/*.md
@@ -120,6 +121,8 @@ rm -rf %{buildroot}
 %doc doc/installing/*
 %doc doc/running/*
 %doc doc/upgrading/*
+%{oqprefix}/bin/oq
+%{oqprefix}/lib/python2.7/site-packages/openquake*
 %{_bindir}/oq
 %{_datadir}/openquake/engine
 %{_sysconfdir}/openquake/openquake.cfg
