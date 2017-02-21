@@ -555,8 +555,16 @@ _pkgtest_innervm_run () {
         # use celery to run the demos
         # wait for celeryd startup time
         ssh $lxc_ip "
+export GEM_SET_DEBUG=$GEM_SET_DEBUG
+if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
+    export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
+    set -x
+fi
+set -e
 export PYTHONPATH=\"$OPT_LIBS_PATH\"
-sleep 30 # FIXME
+# FIXME: the big sleep below is a temporary workaround to avoid races.
+#        No better solution because we will abandon supervisord at all early
+sleep 30
 sudo supervisorctl status
 sudo supervisorctl start openquake-celery
 celery_wait() {
@@ -568,7 +576,7 @@ celery_wait() {
     fi
 
     for cw_i in \$(seq 1 \$cw_nloop); do
-        cw_ret=\"\$($celery_bin status)\"
+        cw_ret=\"\$($celery_bin status --config openquake.engine.celeryconfig)\"
         if echo \"\$cw_ret\" | grep -iq '^error:'; then
             if echo \"\$cw_ret\" | grep -ivq '^error: no nodes replied'; then
                 return 1
@@ -582,8 +590,7 @@ celery_wait() {
     return 1
 }
 
-celery_wait $GEM_MAXLOOP
-sudo supervisorctl status"
+celery_wait $GEM_MAXLOOP"
 
         # run all of the hazard and risk demos
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
