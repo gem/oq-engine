@@ -4,6 +4,7 @@
 %define oqrelease ##_release_##
 %define oqname python-%{oqrepo}
 %define oqtimestamp ##_timestamp_##
+%define oqprefix /opt/openquake
 
 %if %{oqstable} == 1
 %define oqformat %{oqrepo}-%{oqversion}
@@ -58,14 +59,16 @@ python setup.py build
 
 %install
 sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" openquake/hazardlib/__init__.py
-python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --prefix=/opt/openquake --install-scripts=/usr/bin --record=INSTALLED_FILES
+python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --prefix=%{oqprefix} --install-scripts=%{oqprefix}/bin
 
 %clean
 rm -rf %{buildroot}
 
-%files -f INSTALLED_FILES
+%files
 %defattr(-,root,root)
 %doc CONTRIBUTORS.txt LICENSE README.md doc
+%{oqprefix}/bin/check_gsim.py
+%{oqprefix}/lib/python2.7/site-packages/openquake*
 
 %changelog
 %if %{oqstable} == 1
