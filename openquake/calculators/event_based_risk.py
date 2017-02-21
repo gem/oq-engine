@@ -468,7 +468,6 @@ class EbriskCalculator(base.RiskCalculator):
         # the csm_info arrays were stored but not the attributes;
         # adding the .flush() solved the issue
         num_events = self.save_results(allres, num_rlzs)
-        self.save_data_transfer(parallel.IterResult.sum(allres))
         return num_events  # {sm_id: #events}
 
     def save_results(self, allres, num_rlzs):
