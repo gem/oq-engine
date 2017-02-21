@@ -401,6 +401,12 @@ class IterResult(object):
             self.progress('Received %s of data, maximum per task %s',
                           humansize(sum(self.received)),
                           humansize(max(self.received)))
+            tname = self.name
+            dic = {tname + '_sent': self.sent,
+                   tname + '_max_received_per_task': max(self.received),
+                   tname + '_tot_received': sum(self.received),
+                   tname + '_num_tasks': len(self.received)}
+            mon.save_info(dic)
 
     def save_task_data(self, mon):
         if mon.hdf5path and hasattr(mon, 'weight'):

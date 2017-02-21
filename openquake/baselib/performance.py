@@ -52,6 +52,20 @@ perf_dt = numpy.dtype([('operation', (bytes, 50)), ('time_sec', float),
                        ('memory_mb', float), ('counts', int)])
 
 
+def pairs(items):
+    """
+    :returns: a sorted list of pairs (name, repr(value))
+    """
+    lst = []
+    for name, value in items:
+        if isinstance(value, dict):
+            for k, v in value.items():
+                lst.append(('%s.%s' % (name, k), repr(v)))
+        else:
+            lst.append((name, repr(value)))
+    return sorted(lst)
+
+
 # this is not thread-safe
 class Monitor(object):
     """
@@ -163,6 +177,16 @@ class Monitor(object):
                 client.send(args + (self.calc_id,))
             finally:
                 client.close()
+
+    def save_info(self, dic):
+        """
+        Save (name, value) information in the associated hdf5path
+        """
+        if self.hdf5path:
+            data = numpy.array(
+                pairs(dic.items()),
+                [('par_name', hdf5.vstr), ('par_value', hdf5.vstr)])
+            hdf5.extend3(self.hdf5path, 'job_info', data)
 
     def flush(self):
         """
