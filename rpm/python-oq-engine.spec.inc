@@ -4,6 +4,7 @@
 %define oqrelease ##_release_##
 %define oqname python-%{oqrepo}
 %define oqtimestamp ##_timestamp_##
+%define oqprefix /opt/openquake
 %define oquser openquake
 
 %if %{oqstable} == 1
@@ -61,14 +62,13 @@ getent group %{oquser} >/dev/null || groupadd -r %{oquser}
 getent passwd %{oquser} >/dev/null || \
     useradd -r -g %{oquser} -m -d /var/lib/%{oquser} -s /bin/bash \
     -c "The OpenQuake user" %{oquser}
-systemctl start rabbitmq-server.service
 
 %install
 sed -i "s/^__version__[  ]*=.*/__version__ = '%{oqversion}-%{oqrelease}'/g" openquake/risklib/__init__.py
 install -p -m 755 -d %{buildroot}%{_bindir}
-install -p -m 755 -d %{buildroot}/opt/openquake/bin
-python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --prefix=/opt/openquake --install-scripts=/opt/openquake/bin --record=INSTALLED_FILES
-ln -sf /opt/openquake/bin/oq %{buildroot}%{_bindir}/oq
+install -p -m 755 -d %{buildroot}%{oqprefix}/bin
+python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --prefix=%{oqprefix} --install-scripts=%{oqprefix}/bin
+ln -sf %{oqprefix}/bin/oq %{buildroot}%{_bindir}/oq
 # create directories where the files will be located
 mkdir -p %{buildroot}%{_sysconfdir}/openquake
 mkdir -p %{buildroot}%{_datadir}/openquake/engine
@@ -81,16 +81,21 @@ cp -R demos %{buildroot}/%{_datadir}/openquake/engine
 cp -R utils %{buildroot}/%{_datadir}/openquake/engine
 
 %post
-(if [ -f /run/rabbitmq/pid -o -f /var/lib/rabbitmq/mnesia/rabbit@$(hostname -s).pid ]; then
-    if ! rabbitmqctl list_users | grep %{oquser}; then
-        rabbitmqctl add_user %{oquser} %{oquser}
-    fi
-    if ! rabbitmqctl list_vhosts | grep %{oquser}; then
-        rabbitmqctl add_vhost %{oquser}
-        rabbitmqctl set_permissions -p %{oquser} %{oquser} ".*" ".*" ".*"
-    fi
-fi) >/dev/null || true
-systemctl stop rabbitmq-server.service
+(if ! rabbitmqctl status &>/dev/null; then
+    systemctl start rabbitmq-server.service
+    rabbit_started=true
+fi
+if ! rabbitmqctl list_users | grep %{oquser}; then
+    rabbitmqctl add_user %{oquser} %{oquser}
+fi
+if ! rabbitmqctl list_vhosts | grep %{oquser}; then
+    rabbitmqctl add_vhost %{oquser}
+    rabbitmqctl set_permissions -p %{oquser} %{oquser} ".*" ".*" ".*"
+fi
+if $rabbit_started; then
+    systemctl stop rabbitmq-server.service
+fi
+) >/dev/null || true
 %systemd_post openquake-dbserver.service
 %systemd_post openquake-webui.service
 %systemd_post openquake-celery.service
@@ -108,7 +113,7 @@ rm -rf %{buildroot}
 %systemd_postun_with_restart openquake-webui.service
 %systemd_postun_with_restart openquake-celery.service
 
-%files -f INSTALLED_FILES
+%files
 %defattr(-,root,root)
 %doc README.md LICENSE CONTRIBUTORS.txt
 %doc doc/*.md
@@ -116,6 +121,8 @@ rm -rf %{buildroot}
 %doc doc/installing/*
 %doc doc/running/*
 %doc doc/upgrading/*
+%{oqprefix}/bin/oq
+%{oqprefix}/lib/python2.7/site-packages/openquake*
 %{_bindir}/oq
 %{_datadir}/openquake/engine
 %{_sysconfdir}/openquake/openquake.cfg
