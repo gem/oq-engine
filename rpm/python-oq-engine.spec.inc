@@ -80,7 +80,7 @@ cp -R demos %{buildroot}/%{_datadir}/openquake/engine
 cp -R utils %{buildroot}/%{_datadir}/openquake/engine
 
 %post
-(if [ ! -f /run/rabbitmq/pid -o ! -f /var/lib/rabbitmq/mnesia/rabbit@$(hostname -s).pid ]; then
+(if [ ! -f /run/rabbitmq/pid -a ! -f /var/lib/rabbitmq/mnesia/rabbit@$(hostname -s).pid ]; then
     systemctl start rabbitmq-server.service
     rabbit_started=true
 fi
