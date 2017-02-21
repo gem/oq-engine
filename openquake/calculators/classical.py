@@ -296,7 +296,6 @@ class PSHACalculator(base.HazardCalculator):
             res = parallel.Starmap(
                 self.core_task.__func__, iterargs).submit_all()
         acc = reduce(self.agg_dicts, res, self.zerodict())
-        self.save_data_transfer(res)
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(self.csm.infos)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
@@ -444,7 +443,6 @@ class ClassicalCalculator(PSHACalculator):
                 build_hcurves_and_stats,
                 list(self.gen_args(pmap_by_grp))).submit_all()
         nbytes = reduce(self.save_hcurves, res, AccumDict())
-        self.save_data_transfer(res)
         return nbytes
 
     def gen_args(self, pmap_by_grp):
