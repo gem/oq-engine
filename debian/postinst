@@ -33,7 +33,7 @@ fi
 
 ENGINE_USER=openquake
 
-(if [ -f /run/rabbitmq/pid -o -f /var/lib/rabbitmq/mnesia/rabbit@$(hostname -s).pid ]; then
+(if ! rabbitmqctl status &>/dev/null; then
     if ! rabbitmqctl list_users | grep $ENGINE_USER; then
         rabbitmqctl add_user $ENGINE_USER $ENGINE_USER
     fi
