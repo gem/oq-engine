@@ -213,8 +213,8 @@ class EbrPostCalculator(base.RiskCalculator):
             cbs = self.riskmodel.curve_builders
             self.multi_lr_dt = numpy.dtype([(ltype, (F32, len(cb.ratios)))
                                             for ltype, cb in zip(ltypes, cbs)])
-            self.datastore['rcurves-rlzs'] = numpy.zeros(
-                (A, R, I), self.multi_lr_dt)
+            rcurves = self.datastore.create_dset(
+                'rcurves-rlzs', self.multi_lr_dt, (A, R, I), fillvalue=None)
             iterargs = ((rlzname, table[rlzname].value, cbs, assets, mon)
                         for rlzname in table)
             parallel.Starmap(build_rcurves, iterargs).reduce(self.save_rcurves)
@@ -229,10 +229,9 @@ class EbrPostCalculator(base.RiskCalculator):
                     self.datastore['avg_losses-stats'] = compute_stats2(
                         self.datastore['avg_losses-rlzs'], quantiles, weights)
             if self.oqparam.loss_ratios:
-                rcurves = self.datastore['rcurves-rlzs'].value
                 with self.monitor('computing rcurves-stats'):
                     self.datastore['rcurves-stats'] = compute_stats2(
-                        rcurves, quantiles, weights)
+                        rcurves.value, quantiles, weights)
 
         # build an aggregate loss curve per realization
         if 'agg_loss_table' in self.datastore:
