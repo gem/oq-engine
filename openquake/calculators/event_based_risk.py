@@ -548,7 +548,7 @@ class EbriskCalculator(base.RiskCalculator):
             raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')
         logging.info('Generated %s of GMFs', humansize(self.gmfbytes))
-        self.datastore.save('job_info', {'gmfbytes': self.gmfbytes})
+        self.monitor.save_info({'gmfbytes': self.gmfbytes})
 
         A, E = len(self.assetcol), sum(num_events.values())
         if 'all_loss_ratios' in self.datastore:
