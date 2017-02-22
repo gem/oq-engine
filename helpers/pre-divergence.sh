@@ -19,7 +19,7 @@ usage () {
 
 $0 <new-engine-version_(maj.min.bugfix)>
 
-    update VM images links on documentation files with new engine version
+    update VM installers links on documentation files with new engine version
 
 EOF
     exit $1
