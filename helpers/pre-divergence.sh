@@ -52,6 +52,6 @@ for f in $files; do
         fex_esc="$(echo "$fex" | sed 's/\./\\./g')"
         sed -i "s/$fex_esc/$fex_new/g" $f
     done
-    
+
 echo "F:   $f"
 done
