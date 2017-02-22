@@ -26,6 +26,7 @@ from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
     AccumDict, humansize, block_splitter, group_array)
 from openquake.hazardlib.stats import compute_stats, compute_stats2
+from openquake.commonlib import config
 from openquake.calculators import base, event_based
 from openquake.baselib import parallel
 from openquake.risklib import riskinput, scientific
@@ -96,6 +97,7 @@ def build_rcurves(h5path, rlzname, cbs, assets, monitor):
         if len(aids):
             result[cb.loss_type] = aids, curves
     return result
+build_rcurves.shared_dir_on = config.SHARED_DIR_ON
 
 
 def _aggregate(outputs, compositemodel, agg, ass, idx, result, monitor):
