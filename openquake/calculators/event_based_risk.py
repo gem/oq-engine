@@ -215,11 +215,9 @@ class EbrPostCalculator(base.RiskCalculator):
                                             for ltype, cb in zip(ltypes, cbs)])
             rcurves = self.datastore.create_dset(
                 'rcurves-rlzs', self.multi_lr_dt, (A, R, I), fillvalue=None)
-            ext5path = self.datastore.hdf5path.replace('.hdf5', '.ext5')
-            with hdf5.File(ext5path, 'r') as ext5:
-                table = ext5['all_loss_ratios']
-                allargs = [(ext5path, rlzname, cbs, assets, mon)
-                           for rlzname in table]
+            with self.datastore.ext5() as ext5:
+                allargs = [(self.datastore.ext5path, rlzname, cbs, assets, mon)
+                           for rlzname in ext5['all_loss_ratios']]
             parallel.Starmap(build_rcurves, allargs).reduce(self.save_rcurves)
 
         # build rcurves-stats (sequentially)
@@ -413,7 +411,6 @@ class EbriskCalculator(base.RiskCalculator):
         Yield the arguments required by build_ruptures, i.e. the
         source models, the asset collection, the riskmodel and others.
         """
-        self.ext5path = self.datastore.hdf5path.replace('.hdf5', '.ext5')
         oq = self.oqparam
         correl_model = oq.get_correl_model()
         min_iml = self.get_min_iml(oq)
@@ -540,7 +537,7 @@ class EbriskCalculator(base.RiskCalculator):
                 self.datastore.extend(key, agglosses[r])
             for r in asslosses:
                 key = 'all_loss_ratios/rlz-%03d' % (r + offset)
-                hdf5.extend3(self.ext5path, key, asslosses[r])
+                hdf5.extend3(self.datastore.ext5path, key, asslosses[r])
 
     def post_execute(self, num_events):
         """

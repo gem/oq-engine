@@ -248,7 +248,6 @@ def export_all_loss_ratios(ekey, dstore):
     """
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     name, ext = export.keyfunc(ekey)
-    ext5path = dstore.hdf5path.replace('.hdf5', '.ext5')
     assetcol = dstore['assetcol']
     oq = dstore['oqparam']
     dtlist = [('event_tag', (numpy.string_, 100)), ('year', U32),
@@ -273,7 +272,7 @@ def export_all_loss_ratios(ekey, dstore):
             dest = dstore.build_fname(exportname, rlz, 'csv')
             losses_by_aid = AccumDict()
             rlzname = 'rlz-%03d' % rlz.ordinal
-            with hdf5.File(ext5path) as ext5:
+            with dstore.ext5() as ext5:
                 ass_losses = ext5['all_loss_ratios'][rlzname].value
             data = get_array(ass_losses, eid=eid)
             losses_by_aid = group_array(data, 'aid')
