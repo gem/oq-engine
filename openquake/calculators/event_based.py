@@ -482,7 +482,6 @@ class EventBasedCalculator(ClassicalCalculator):
         acc = functools.reduce(self.combine_pmaps_and_save_gmfs, res, {
             rlz.ordinal: ProbabilityMap(L, 1)
             for rlz in self.rlzs_assoc.realizations})
-        self.save_data_transfer(res)
         return acc
 
     def post_execute(self, result):
