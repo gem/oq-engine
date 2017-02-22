@@ -472,7 +472,6 @@ class EbriskCalculator(base.RiskCalculator):
         # the csm_info arrays were stored but not the attributes;
         # adding the .flush() solved the issue
         num_events = self.save_results(allres, num_rlzs)
-        self.save_data_transfer(parallel.IterResult.sum(allres))
         return num_events  # {sm_id: #events}
 
     def save_results(self, allres, num_rlzs):
@@ -553,7 +552,7 @@ class EbriskCalculator(base.RiskCalculator):
             raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')
         logging.info('Generated %s of GMFs', humansize(self.gmfbytes))
-        self.datastore.save('job_info', {'gmfbytes': self.gmfbytes})
+        self.monitor.save_info({'gmfbytes': self.gmfbytes})
 
         A, E = len(self.assetcol), sum(num_events.values())
         if 'all_loss_ratios' in self.datastore:
