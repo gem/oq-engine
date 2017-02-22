@@ -813,8 +813,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         self.gsim_lt = readinput.get_gsim_lt(oq, [DEFAULT_TRT])
         self.smlt = readinput.get_source_model_lt(oq)
-        job_info = dict(hostname=socket.gethostname())
-        self.datastore.save('job_info', job_info)
+        self.monitor.save_info(dict(hostname=socket.gethostname()))
         parser = nrml.SourceModelParser(
             SourceConverter(oq.investigation_time, oq.rupture_mesh_spacing))
         [src_group] = parser.parse_src_groups(oq.inputs["source_model"])
@@ -951,5 +950,4 @@ class UCERFRiskCalculator(EbriskCalculator):
         self.grp_trt = self.csm.info.grp_trt()
         allres = parallel.Starmap(compute_losses, self.gen_args()).submit_all()
         num_events = self.save_results(allres, num_rlzs)
-        self.save_data_transfer(allres)
         return num_events
