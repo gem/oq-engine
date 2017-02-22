@@ -314,14 +314,26 @@ def view_inputs(token, dstore):
         header=['Name', 'File'])
 
 
+def _humansize(literal):
+    dic = ast.literal_eval(decode(literal))
+    if isinstance(dic, dict):
+        items = sorted(dic.items(), key=operator.itemgetter(1), reverse=True)
+        lst = ['%s %s' % (k, humansize(v)) for k, v in items]
+        return ', '.join(lst)
+    elif isinstance(dic, int):
+        return humansize(dic)
+    else:
+        return dic
+
+
 @view.add('job_info')
 def view_job_info(token, dstore):
     """
     Determine the amount of data transferred from the controller node
     to the workers and back in a classical calculation.
     """
-    job_info = h5py.File.__getitem__(dstore.hdf5, 'job_info')
-    rows = [(k, ast.literal_eval(decode(v))) for k, v in job_info]
+    job_info = dict(dstore.hdf5['job_info'])
+    rows = [(k, _humansize(v)) for k, v in sorted(job_info.items())]
     return rst_table(rows)
 
 

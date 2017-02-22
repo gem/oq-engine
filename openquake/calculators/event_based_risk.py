@@ -80,20 +80,20 @@ def build_agg_curve(cb_inputs, monitor):
     return result
 
 
-def build_rcurves(cb_inputs, assets, monitor):
+def build_rcurves(rlzname, data, cbs, assets, monitor):
     """
-    :param cb_inputs: triples `(cbs, rlzname, data)`
+    :param rlzname: string of the form `rlz-\d\d\d\d`
+    :param data: `all_loss_ratios` data for the realization
+    :param cbs: list of `L` CurveBuilders instances
     :param assets: full list of assets
     :param monitor: Monitor instance
     """
-    result = {}
-    for cbs, rlzname, data in cb_inputs:
-        losses_by_aid = group_array(data, 'aid')
-        for cb in cbs:
-            aids, curves = cb(assets, losses_by_aid)
-            if len(aids):
-                # strip "rlz-" from rlzname below
-                result[cb.index, int(rlzname[4:])] = aids, curves
+    result = {'rlzno': int(rlzname[4:])}  # strip rlz-
+    losses_by_aid = group_array(data, 'aid')
+    for cb in cbs:
+        aids, curves = cb(assets, losses_by_aid)
+        if len(aids):
+            result[cb.loss_type] = aids, curves
     return result
 
 
@@ -188,31 +188,36 @@ class EbrPostCalculator(base.RiskCalculator):
         return [(cbs, rlzstr, loss_table[rlzstr].value)
                 for rlzstr in loss_table]
 
-    def execute(self):
+    def save_rcurves(self, acc, res):
         A = len(self.assetcol)
-        ltypes = self.riskmodel.loss_types
         I = self.oqparam.insured_losses + 1
+        rcurves = numpy.zeros((A, I), self.multi_lr_dt)
+        rlzno = res.pop('rlzno')
+        for lt in res:
+            aids, curves = res[lt]
+            rcurves[lt][aids] = curves
+        self.datastore['rcurves-rlzs'][:, rlzno, :] = rcurves
+
+    def execute(self):
         R = len(self.rlzs_assoc.realizations)
         self.vals = self.assetcol.values()
 
-        # loss curves
-        multi_lr_dt = numpy.dtype(
-            [(ltype, (F32, len(cbuilder.ratios)))
-             for ltype, cbuilder in zip(
-                ltypes, self.riskmodel.curve_builders)])
-        rcurves = numpy.zeros((A, R, I), multi_lr_dt)
-
         # build rcurves-rlzs
         if self.oqparam.loss_ratios:
+            A = len(self.assetcol)
+            I = self.oqparam.insured_losses + 1
             assets = list(self.assetcol)
-            cb_inputs = self.cb_inputs('all_loss_ratios')
+            table = self.datastore['all_loss_ratios']
             mon = self.monitor('build_rcurves')
-            res = parallel.Starmap.apply(
-                build_rcurves, (cb_inputs, assets, mon)).reduce()
-            for l, r in res:
-                aids, curves = res[l, r]
-                rcurves[ltypes[l]][aids, r] = curves
-            self.datastore['rcurves-rlzs'] = rcurves
+            ltypes = self.riskmodel.loss_types
+            cbs = self.riskmodel.curve_builders
+            self.multi_lr_dt = numpy.dtype([(ltype, (F32, len(cb.ratios)))
+                                            for ltype, cb in zip(ltypes, cbs)])
+            rcurves = self.datastore.create_dset(
+                'rcurves-rlzs', self.multi_lr_dt, (A, R, I), fillvalue=None)
+            iterargs = ((rlzname, table[rlzname].value, cbs, assets, mon)
+                        for rlzname in table)
+            parallel.Starmap(build_rcurves, iterargs).reduce(self.save_rcurves)
 
         # build rcurves-stats (sequentially)
         # this is a fundamental output, being used to compute loss_maps-stats
@@ -226,7 +231,7 @@ class EbrPostCalculator(base.RiskCalculator):
             if self.oqparam.loss_ratios:
                 with self.monitor('computing rcurves-stats'):
                     self.datastore['rcurves-stats'] = compute_stats2(
-                        rcurves, quantiles, weights)
+                        rcurves.value, quantiles, weights)
 
         # build an aggregate loss curve per realization
         if 'agg_loss_table' in self.datastore:
@@ -463,7 +468,6 @@ class EbriskCalculator(base.RiskCalculator):
         # the csm_info arrays were stored but not the attributes;
         # adding the .flush() solved the issue
         num_events = self.save_results(allres, num_rlzs)
-        self.save_data_transfer(parallel.IterResult.sum(allres))
         return num_events  # {sm_id: #events}
 
     def save_results(self, allres, num_rlzs):
@@ -544,7 +548,7 @@ class EbriskCalculator(base.RiskCalculator):
             raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')
         logging.info('Generated %s of GMFs', humansize(self.gmfbytes))
-        self.datastore.save('job_info', {'gmfbytes': self.gmfbytes})
+        self.monitor.save_info({'gmfbytes': self.gmfbytes})
 
         A, E = len(self.assetcol), sum(num_events.values())
         if 'all_loss_ratios' in self.datastore:

@@ -22,8 +22,8 @@
                         </gml:LinearRing>
                     </gml:exterior>
                 </gml:Polygon>
-                <upperSeismoDepth>0.0</upperSeismoDepth>
-                <lowerSeismoDepth>3.0</lowerSeismoDepth>
+                <upperSeismoDepth>-1.0</upperSeismoDepth>
+                <lowerSeismoDepth>6.0</lowerSeismoDepth>
             </areaGeometry>
             <magScaleRel>WC1994</magScaleRel>
             <ruptAspectRatio>1.5</ruptAspectRatio>
