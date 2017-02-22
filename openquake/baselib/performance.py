@@ -60,7 +60,7 @@ def pairs(items):
     for name, value in items:
         if isinstance(value, dict):
             for k, v in value.items():
-                lst.append(('%s_%s' % (name, k), repr(v)))
+                lst.append(('%s.%s' % (name, k), repr(v)))
         else:
             lst.append((name, repr(value)))
     return sorted(lst)
