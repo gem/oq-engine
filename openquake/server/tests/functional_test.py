@@ -35,6 +35,7 @@ from openquake.baselib.general import writetmp
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.manage import db
+from openquake.server.settings import DATABASE
 
 if requests.__version__ < '1.0.0':
     requests.Response.text = property(lambda self: self.content)
@@ -117,6 +118,11 @@ class EngineServerTestCase(unittest.TestCase):
         env['LOGNAME'] = env['USERNAME'] = 'openquake'
         cls.fd, cls.errfname = tempfile.mkstemp(prefix='webui')
         print('Errors saved in %s' % cls.errfname, file=sys.stderr)
+
+        # sanity check, `oq dbserver start` should have created the dbdir
+        dbdir = os.path.dirname(DATABASE['NAME'])
+        assert os.path.exists(dbdir), dbdir
+
         cls.proc = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
              cls.hostport, '--noreload', '--nothreading'],

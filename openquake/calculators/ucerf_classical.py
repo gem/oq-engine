@@ -206,12 +206,10 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             # compose probabilities from background sources
             for pmap in bg_res:
                 acc[grp_id] |= pmap
-            self.save_data_transfer(bg_res)
 
             acc = functools.reduce(self.agg_dicts, rup_res, acc)
             with self.monitor('store source_info', autoflush=True):
                 self.store_source_info(self.csm.infos)
-                self.save_data_transfer(rup_res)
         self.datastore['csm_info'] = self.csm.info
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             functools.partial(self.count_eff_ruptures, acc))

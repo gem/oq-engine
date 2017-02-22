@@ -51,7 +51,7 @@ from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.sourceconverter import SourceConverter
-
+from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 
 # ######################## rupture calculator ############################ #
 
@@ -729,17 +729,17 @@ def compute_ruptures(sources, src_filter, gsims, monitor):
     numpy.random.seed(monitor.seed + src.src_group_id)
     ebruptures = []
     eid = 0
-    integration_distance = src_filter.integration_distance[DEFAULT_TRT]
     background_sids = src.get_background_sids(src_filter)
     sitecol = src_filter.sitecol
+    cmaker = ContextMaker([], src_filter.integration_distance)
     for ses_idx in range(1, monitor.ses_per_logic_tree_path + 1):
         with event_mon:
             rups, n_occs = src.generate_event_set(background_sids, src_filter)
         for rup, n_occ in zip(rups, n_occs):
             rup.seed = monitor.seed  # to think
-            rrup = rup.surface.get_min_distance(sitecol.mesh)
-            r_sites = sitecol.filter(rrup <= integration_distance)
-            if r_sites is None:
+            try:
+                r_sites, rrup = cmaker.get_closest(sitecol, rup)
+            except FarAwayRupture:
                 continue
             indices = r_sites.indices
             events = []
@@ -780,8 +780,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         self.gsim_lt = readinput.get_gsim_lt(oq, [DEFAULT_TRT])
         self.smlt = readinput.get_source_model_lt(oq)
-        job_info = dict(hostname=socket.gethostname())
-        self.datastore.save('job_info', job_info)
+        self.monitor.save_info(dict(hostname=socket.gethostname()))
         parser = nrml.SourceModelParser(
             SourceConverter(oq.investigation_time, oq.rupture_mesh_spacing))
         [src_group] = parser.parse_src_groups(oq.inputs["source_model"])
@@ -918,5 +917,4 @@ class UCERFRiskCalculator(EbriskCalculator):
         self.grp_trt = self.csm.info.grp_trt()
         allres = parallel.Starmap(compute_losses, self.gen_args()).submit_all()
         num_events = self.save_results(allres, num_rlzs)
-        self.save_data_transfer(allres)
         return num_events
