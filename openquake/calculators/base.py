@@ -440,8 +440,7 @@ class HazardCalculator(BaseCalculator):
         job_info['hostname'] = socket.gethostname()
         if hasattr(self, 'riskmodel'):
             job_info['require_epsilons'] = bool(self.riskmodel.covs)
-        self.datastore.save('job_info', job_info)
-        self.datastore.flush()
+        self.monitor.save_info(job_info)
         try:
             self.csm_info = self.datastore['csm_info']
         except KeyError:
@@ -578,19 +577,6 @@ class HazardCalculator(BaseCalculator):
             if self.riskmodel and missing:
                 raise RuntimeError('The exposure contains the taxonomies %s '
                                    'which are not in the risk model' % missing)
-
-    def save_data_transfer(self, iter_result):
-        """
-        Save information about the data transfer in the risk calculation
-        as attributes of agg_loss_table
-        """
-        if iter_result.received:  # nothing is received when OQ_DISTRIBUTE=no
-            tname = iter_result.name
-            self.datastore.save('job_info', {
-                tname + '_sent': iter_result.sent,
-                tname + '_max_received_per_task': max(iter_result.received),
-                tname + '_tot_received': sum(iter_result.received),
-                tname + '_num_tasks': len(iter_result.received)})
 
     def post_process(self):
         """For compatibility with the engine"""
