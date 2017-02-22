@@ -5,6 +5,8 @@ The OpenQuake Engine is available in the form of *rpm* binary packages for the f
 - CentOS 7
 - Scientific Linux 7
 
+The software and its libraries will be installed under `/opt/openquake`. Data will be stored under `/var/lib/openquake`.
+
 ### External dependencies
 
 Installation on these distribution requires the [EPEL](https://fedoraproject.org/wiki/EPEL) repository to be configured on the target system

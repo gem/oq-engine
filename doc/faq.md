@@ -6,11 +6,25 @@ The OpenQuake Engine has at least three installation methods. To choose the one 
 
 ***
 
+### Supported operating systems
+
+Binary packages are provided for the following 64bit operating systems:
+- [Windows](installing/windows.md)
+- [macOS](installing/macos.md)
+- Linux [Ubuntu](installing/ubuntu.md) and [RedHat/CentOS/Scientific Linux](installing/rhel.md) via _deb_ and _rpm_
+- Any other generic Linux distribution via a [self-installable binary distribution](installing/linux-generic.md)
+- [Docker](installing/docker.md) hosts
+
+A 64bit operating system **is required**. Please refer to each OS specific page for details about requirements.
+
+***
+
 ### Unsupported operating systems
 
 Binary packages *may* work on Ubuntu derivatives and Debian if the dependencies are satisfied; these configurations are known to work:
 - **Ubuntu 14.04** (Trusty) packages work on **Mint Linux 17** and on **Debian 8.0** (Jessie)
-- **Ubuntu 16.04** (Trusty) packages work on **Mint Linux 18** and on **Debian unstable**
+- **Ubuntu 16.04** (Xenial) packages work on **Mint Linux 18** and on **Debian unstable**
+- **RHEL 7** packages generally work on **Fedora**
 
 These configurations however are not tested by our [continuous integration system](https://ci.openquake.org) and we cannot guarantee on the quality of the results. Use at your own risk.
 
@@ -20,7 +34,7 @@ Another installation option for unsupported Linux systems is provided by the **[
 
 ### Celery support
 
-Starting with OpenQuake Engine 2.1 Celery isn't needed (and not recommended) on a single machine setup; the OpenQuake Engine is able to use all the available CPU cores even without Celery.
+Starting with OpenQuake Engine 2.0 Celery isn't needed (and not recommended) on a single machine setup; the OpenQuake Engine is able to use all the available CPU cores even without Celery.
 Celery must be enabled on a cluster / multi node setup. To enable it please refer to the [multiple nodes installation guidelines](installing/cluster.md).
 
 ***
