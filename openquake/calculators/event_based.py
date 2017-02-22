@@ -25,6 +25,7 @@ import collections
 
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, split_in_blocks
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
@@ -419,7 +420,7 @@ class EventBasedCalculator(ClassicalCalculator):
                     if len(array):
                         sm_id = self.sm_id[rlz.sm_lt_path]
                         key = 'gmf_data/sm-%04d/%04d' % (sm_id, rlz.ordinal)
-                        self.datastore.extend(key, array)
+                        hdf5.extend3(self.datastore.ext5path, key, array)
         slicedic = self.oqparam.imtls.slicedic
         with agg_mon:
             for key, poes in res['hcurves'].items():
@@ -515,6 +516,7 @@ class EventBasedCalculator(ClassicalCalculator):
                     continue
                 self.datastore['hcurves/' + kind] = stat
 
+        '''
         if ('gmf_data' in self.datastore and 'nbytes' not
                 in self.datastore['gmf_data'].attrs):
             self.datastore.set_nbytes('gmf_data')
@@ -522,7 +524,7 @@ class EventBasedCalculator(ClassicalCalculator):
                 for rlzno in self.datastore['gmf_data/' + sm_id]:
                     self.datastore.set_nbytes(
                         'gmf_data/%s/%s' % (sm_id, rlzno))
-
+        '''
         if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
             if not os.path.exists(export_dir):
