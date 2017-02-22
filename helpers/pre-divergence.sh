@@ -17,7 +17,7 @@
 usage () {
     cat <<EOF
 
-$0 <new-engine-version>
+$0 <new-engine-version_(maj.min.bugfix)>
 
     update VM images links on documentation files with new engine version
 
