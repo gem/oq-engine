@@ -21,10 +21,12 @@ import operator
 import collections
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
     AccumDict, humansize, block_splitter, group_array)
 from openquake.hazardlib.stats import compute_stats, compute_stats2
+from openquake.commonlib import config
 from openquake.calculators import base, event_based
 from openquake.baselib import parallel
 from openquake.risklib import riskinput, scientific
@@ -80,14 +82,14 @@ def build_agg_curve(cb_inputs, monitor):
     return result
 
 
-def build_rcurves(rlzname, data, cbs, assets, monitor):
+def build_rcurves(h5path, rlzname, cbs, assets, monitor):
     """
     :param rlzname: string of the form `rlz-\d\d\d\d`
-    :param data: `all_loss_ratios` data for the realization
     :param cbs: list of `L` CurveBuilders instances
-    :param assets: full list of assets
     :param monitor: Monitor instance
     """
+    with hdf5.File(h5path, 'r') as f:
+        data = f['all_loss_ratios/' + rlzname].value
     result = {'rlzno': int(rlzname[4:])}  # strip rlz-
     losses_by_aid = group_array(data, 'aid')
     for cb in cbs:
@@ -95,6 +97,7 @@ def build_rcurves(rlzname, data, cbs, assets, monitor):
         if len(aids):
             result[cb.loss_type] = aids, curves
     return result
+build_rcurves.shared_dir_on = config.SHARED_DIR_ON
 
 
 def _aggregate(outputs, compositemodel, agg, ass, idx, result, monitor):
@@ -207,7 +210,6 @@ class EbrPostCalculator(base.RiskCalculator):
             A = len(self.assetcol)
             I = self.oqparam.insured_losses + 1
             assets = list(self.assetcol)
-            table = self.datastore['all_loss_ratios']
             mon = self.monitor('build_rcurves')
             ltypes = self.riskmodel.loss_types
             cbs = self.riskmodel.curve_builders
@@ -215,9 +217,10 @@ class EbrPostCalculator(base.RiskCalculator):
                                             for ltype, cb in zip(ltypes, cbs)])
             rcurves = self.datastore.create_dset(
                 'rcurves-rlzs', self.multi_lr_dt, (A, R, I), fillvalue=None)
-            iterargs = ((rlzname, table[rlzname].value, cbs, assets, mon)
-                        for rlzname in table)
-            parallel.Starmap(build_rcurves, iterargs).reduce(self.save_rcurves)
+            with self.datastore.ext5() as ext5:
+                allargs = [(self.datastore.ext5path, rlzname, cbs, assets, mon)
+                           for rlzname in ext5['all_loss_ratios']]
+            parallel.Starmap(build_rcurves, allargs).reduce(self.save_rcurves)
 
         # build rcurves-stats (sequentially)
         # this is a fundamental output, being used to compute loss_maps-stats
@@ -536,7 +539,7 @@ class EbriskCalculator(base.RiskCalculator):
                 self.datastore.extend(key, agglosses[r])
             for r in asslosses:
                 key = 'all_loss_ratios/rlz-%03d' % (r + offset)
-                self.datastore.extend(key, asslosses[r])
+                hdf5.extend3(self.datastore.ext5path, key, asslosses[r])
 
     def post_execute(self, num_events):
         """
