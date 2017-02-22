@@ -18,6 +18,7 @@
 
 from nose.plugins.attrib import attr
 from openquake.baselib import parallel
+from openquake.baselib.python3compat import decode
 from openquake.hazardlib import InvalidFile
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase, check_platform
@@ -47,7 +48,8 @@ class ClassicalTestCase(CalculatorTestCase):
 
         if parallel.oq_distribute() != 'no':
             # make sure we saved the data transfer information in job_info
-            keys = set(dict(self.calc.datastore['job_info']))
+            keys = {decode(key) for key in dict(
+                self.calc.datastore['job_info'])}
             self.assertIn('classical_max_received_per_task', keys)
             self.assertIn('classical_tot_received', keys)
             self.assertIn('classical_sent', keys)
