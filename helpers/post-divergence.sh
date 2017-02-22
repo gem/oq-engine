@@ -46,10 +46,10 @@ IFS='
 '
 for f in $files; do
     echo "$f"
-#    sed -i "s@github.com/gem/oq-engine/blob/master/@github.com/gem/oq-engine/blob/$branch_new/@g" "$f"
+    sed -i "s@github.com/gem/oq-engine/blob/master/@github.com/gem/oq-engine/blob/$branch_new/@g" "$f"
 done
 echo
-read -p "[Press enter to continue]" a
+read -p "[Press enter to continue] " a
 
 echo
 # show blocks of documentation that must by updated
@@ -60,7 +60,8 @@ for f in $files; do
     echo "=== Show content that must be manually handled  ==="
     echo
     echo "--- FILE: $f ---"
-    sed -n '/<!-- GEM BEGIN:.*/,/<!-- GEM END /p' $f
     echo
-    read -p "[Press enter to continue]" a
+    sed -n '/<!-- GEM BEGIN[: ].*/,/<!-- GEM END[: ]/p' $f
+    echo
+    read -p "[Press enter to continue] " a
 done
