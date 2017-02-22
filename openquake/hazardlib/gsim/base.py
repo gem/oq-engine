@@ -109,7 +109,7 @@ class MetaGSIM(abc.ABCMeta):
             cls.instantiable = True
 
 
-def get_distances(rupture, mesh, param='rjb'):
+def get_distances(rupture, mesh, param):
     """
     :param rupture: a rupture
     :param mesh: a mesh of points
@@ -295,7 +295,7 @@ class ContextMaker(object):
         dctx = self.make_distances_context(sites, rupture, {'rjb': distances})
         return (sctx, rctx, dctx)
 
-    def get_closest(self, sites, rupture, distance_type='rjb'):
+    def get_closest(self, sites, rupture, distance_type='rrup'):
         """
         :param sites: a (Filtered)SiteColletion
         :param rupture: a rupture
