@@ -398,11 +398,11 @@ class IterResult(object):
             self.save_task_data(mon)
             yield val
         if self.received:
+            tot = sum(self.received)
+            max_per_task = max(self.received)
             self.progress('Received %s of data, maximum per task %s',
-                          humansize(sum(self.received)),
-                          humansize(max(self.received)))
-            received = {'max_per_task': max(self.received),
-                        'tot': sum(self.received)}
+                          humansize(tot), humansize(max_per_task))
+            received = {'max_per_task': max_per_task, 'tot': tot}
             tname = self.name
             dic = {tname: {'sent': self.sent, 'received': received}}
             mon.save_info(dic)

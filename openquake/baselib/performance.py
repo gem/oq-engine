@@ -52,10 +52,7 @@ perf_dt = numpy.dtype([('operation', (bytes, 50)), ('time_sec', float),
                        ('memory_mb', float), ('counts', int)])
 
 
-def pairs(items):
-    """
-    :returns: a sorted list of pairs (name, repr(value))
-    """
+def _pairs(items):
     lst = []
     for name, value in items:
         if isinstance(value, dict):
@@ -184,7 +181,7 @@ class Monitor(object):
         """
         if self.hdf5path:
             data = numpy.array(
-                pairs(dic.items()),
+                _pairs(dic.items()),
                 [('par_name', hdf5.vstr), ('par_value', hdf5.vstr)])
             hdf5.extend3(self.hdf5path, 'job_info', data)
 
