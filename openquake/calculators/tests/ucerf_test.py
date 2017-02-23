@@ -93,10 +93,6 @@ class UcerfTestCase(CalculatorTestCase):
         self.run_calc(ucerf.__file__, 'job_ebr.ini',
                       number_of_logic_tree_samples='2')
 
-        fnames = export(('agg_loss_table', 'csv'), self.calc.datastore)
-        for fname in fnames:
-            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
-
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname)
 

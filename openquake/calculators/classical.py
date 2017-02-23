@@ -283,7 +283,7 @@ class PSHACalculator(base.HazardCalculator):
             maximum_distance=oq.maximum_distance,
             disagg=oq.poes_disagg or oq.iml_disagg,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
-            seed=oq.random_seed)
+            seed=oq.ses_seed)
         with self.monitor('managing sources', autoflush=True):
             allargs = self.gen_args(self.csm, monitor)
             iterargs = saving_sources_by_task(allargs, self.datastore)
