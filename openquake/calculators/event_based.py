@@ -337,6 +337,8 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
         getter.init()
     haz = {sid: {} for sid in getter.sids}
     gmfcoll = {}  # rlz -> gmfa
+    I1 = len(getter.imts) + 1  # num_imts + 1 for num_eids
+    agg_data = AccumDict(accum=numpy.zeros(I1, F32))  # rlz -> data
     for rlz in rlzs:
         gmfcoll[rlz] = []
         for i, gmvdict in enumerate(getter(rlz)):
@@ -352,12 +354,15 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
                         else:
                             haz[sid][imt, rlz] = gmv
                     for rec in gmvdict.get(imt, []):
+                        gmv = rec['gmv']
                         gmfcoll[rlz].append(
-                            (sid, rec['eid'], imti, rec['gmv']))
+                            (sid, rec['eid'], imti, gmv))
+                        agg_data[rlz][imti] += gmv
+        agg_data[rlz][-1] += getter.num_eids
     for rlz in gmfcoll:
         gmfcoll[rlz] = numpy.array(gmfcoll[rlz], calc.gmv_dt)
     result = dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
-                  hcurves={})
+                  hcurves={}, agg_data=agg_data)
     if oq.hazard_curves_from_gmfs:
         with monitor('building hazard curves', measuremem=False):
             duration = oq.investigation_time * oq.ses_per_logic_tree_path
@@ -413,6 +418,7 @@ class EventBasedCalculator(ClassicalCalculator):
         """
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
+        self.agg_data += res['agg_data']
         if res['gmfcoll'] is not None:
             with sav_mon:
                 for rlz, array in res['gmfcoll'].items():
@@ -479,9 +485,20 @@ class EventBasedCalculator(ClassicalCalculator):
         res = parallel.Starmap(
             self.core_task.__func__, self.gen_args(ruptures_by_grp)
         ).submit_all()
+        self.agg_data = {}
         acc = functools.reduce(self.combine_pmaps_and_save_gmfs, res, {
             rlz.ordinal: ProbabilityMap(L, 1)
             for rlz in self.rlzs_assoc.realizations})
+        n_sites = len(self.sitecol)
+        dtlist = [('rlz', U32), ('events', U32)] + [
+            (imt, F32) for imt in oq.imtls]
+        array = numpy.zeros(len(self.agg_data), dtlist)
+        for i, rlz in enumerate(sorted(self.agg_data)):
+            data = self.agg_data[rlz]
+            n_events = data[-1]
+            gmv = data[:-1] / n_events / n_sites
+            array[i] = (rlz.ordinal, n_events) + tuple(gmv)
+        self.datastore['gmv'] = array
         return acc
 
     def post_execute(self, result):

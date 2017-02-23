@@ -516,12 +516,14 @@ class GmfGetter(object):
     def __call__(self, rlz):
         gsim = self.gsims[rlz.ordinal]
         gmfdict = collections.defaultdict(dict)
+        self.num_eids = 0
         for computer in self.computers:
             rup = computer.rupture
             if self.samples > 1:
                 eids = get_array(rup.events, sample=rlz.sampleid)['eid']
             else:
                 eids = rup.events['eid']
+            self.num_eids += len(eids)
             array = computer.compute(gsim, len(eids))  # (i, n, e)
             for imti, imt in enumerate(self.imts):
                 min_gmv = self.min_iml[imti]
