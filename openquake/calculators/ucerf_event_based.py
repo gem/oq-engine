@@ -940,7 +940,7 @@ class UCERFRiskCalculator(EbriskCalculator):
                 maximum_distance=oq.maximum_distance,
                 samples=sm.samples,
                 save_ruptures=oq.save_ruptures,
-                seed=self.oqparam.random_seed)
+                seed=self.oqparam.ses_seed)
             ssm = self.csm.get_model(sm.ordinal)
             yield (ssm, self.src_filter, self.assetcol, self.riskmodel,
                    imts, oq.truncation_level, correl_model, min_iml, monitor)
