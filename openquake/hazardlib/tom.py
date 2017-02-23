@@ -95,7 +95,7 @@ class PoissonTOM(object):
                 occ.append(numpy.random.poisson(rate))
             return numpy.array(occ)
         elif isinstance(seeds, int):
-            numpy.random.seed(seed)
+            numpy.random.seed(seeds)
         return numpy.random.poisson(occurrence_rate * self.time_span)
 
     def get_probability_no_exceedance(self, occurrence_rate, poes):
