@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
+import sys
 import csv
 from openquake.baselib import sap
 from openquake.hazardlib import valid
@@ -36,6 +37,14 @@ def normalize(file_csv, sites_csv):
                 lon_idx = i
             if col in ('lat', 'latitude'):
                 lat_idx = i
+        try:
+            lon_idx
+        except NameError:
+            sys.exit('No longitude field in the header of %s!' % file_csv)
+        try:
+            lat_idx
+        except NameError:
+            sys.exit('No latitude field in the header of %s!' % file_csv)
         points = set()
         for row in reader:
             point = valid.lon_lat('%s %s' % (row[lon_idx], row[lat_idx]))
@@ -43,6 +52,7 @@ def normalize(file_csv, sites_csv):
     with open(sites_csv, 'w') as f:
         for point in sorted(points):
             f.write('%s,%s\n' % point)
+    print('Written %d sites on %s' % (len(points), sites_csv))
 
 
 normalize.arg('file_csv', 'CSV file with lon and lat in the header')
