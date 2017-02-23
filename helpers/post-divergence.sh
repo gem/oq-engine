@@ -19,8 +19,10 @@ usage () {
     cat <<EOF
 
 $0 <new-engine-stable-branch_(engine-2.x))>
-
     update documentation files and README.md with links related to the new stable engine branch name
+
+$0 <-h|--help>
+    this help
 
 EOF
     exit $1
@@ -29,6 +31,10 @@ EOF
 #
 #  MAIN
 #
+
+if [ "$1" = "-h" -o "$1" = "--help" ]; then
+    usage 0
+fi
 
 if [ $# -ne 1 ]; then
     usage 1
