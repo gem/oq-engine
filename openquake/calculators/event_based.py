@@ -283,7 +283,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
         with self.monitor('setting event years', measuremem=True,
                           autoflush=True):
             inv_time = int(self.oqparam.investigation_time)
-            numpy.random.seed(self.oqparam.random_seed)
+            numpy.random.seed(self.oqparam.ses_seed)
             for sm in sorted(self.datastore['events']):
                 set_random_years(self.datastore, 'events/' + sm, inv_time)
 
