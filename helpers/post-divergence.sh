@@ -19,8 +19,10 @@ usage () {
     cat <<EOF
 
 $0 <new-engine-stable-branch_(engine-2.x))>
-
     update documentation files and README.md with links related to the new stable engine branch name
+
+$0 <-h|--help>
+    this help
 
 EOF
     exit $1
@@ -29,6 +31,10 @@ EOF
 #
 #  MAIN
 #
+
+if [ "$1" = "-h" -o "$1" = "--help" ]; then
+    usage 0
+fi
 
 if [ $# -ne 1 ]; then
     usage 1
@@ -41,12 +47,12 @@ clear
 # substitute 'blob/master' with 'blob/<stable-branch-name>'
 echo "=== Blob/master to blob/$branch_new substitution ==="
 echo
-files="$(grep -ril 'github.com/gem/oq-engine/blob/master/' README.md doc/)"
+files="$(egrep -ril 'github.com/gem/oq-(hazardlib|engine)/blob/master/' README.md doc/)"
 IFS='
 '
 for f in $files; do
     echo "$f"
-    sed -i "s@github.com/gem/oq-engine/blob/master/@github.com/gem/oq-engine/blob/$branch_new/@g" "$f"
+    sed -i "s@github.com/gem/oq-\([^/]\+\)/blob/master/@github.com/gem/oq-\1/blob/$branch_new/@g" "$f"
 done
 echo
 read -p "[Press enter to continue] " a
