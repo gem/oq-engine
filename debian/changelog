@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a command `oq normalize` to produce good `sites.csv` files
   * Introduced a `ses_seed` parameter to specify the seed used to generate
     the stochastic event sets; `random_seed` is used for the sampling only
   * Changed the `build_rcurves` procedure to read the loss ratios directly from
