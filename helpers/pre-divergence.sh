@@ -14,21 +14,27 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>
+
 usage () {
     cat <<EOF
 
 $0 <new-engine-version_(maj.min.bugfix)>
-
     update VM installers links on documentation files with new engine version
+
+$0 <-h|--help>
+    this help
 
 EOF
     exit $1
 }
 
-
 #
 #  MAIN
 #
+
+if [ "$1" = "-h" -o "$1" = "--help" ]; then
+    usage 0
+fi
 
 if [ $# -ne 1 ]; then
     usage 1
