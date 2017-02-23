@@ -117,6 +117,7 @@ class OqParam(valid.ParamSet):
         valid.NoneOr(valid.positivefloat), None)
     save_ruptures = valid.Param(valid.boolean, False)
     ses_per_logic_tree_path = valid.Param(valid.positiveint, 1)
+    ses_seed = valid.Param(valid.positiveint, 42)
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     sites_disagg = valid.Param(valid.NoneOr(valid.coordinates), [])
     sites_slice = valid.Param(valid.simple_slice, (None, None))
