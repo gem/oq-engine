@@ -1,8 +1,12 @@
+  [Michele Simionato]
+  * Changed the default distance from filtering from Rjb to Rrup
+  * Saved data transfer information automatically in `parallel.Starmap`
+
 python-oq-hazardlib (0.23.0-0~precise01) precise; urgency=low
 
   [Graeme Weatherill]
   * Implemented modification of selected GMPEs for use in Armenia
-  
+
   [Michele Simionato]
   * Monitored the calculation time for the PoEs for each GSIM
   * Introduced a magnitude-dependent integration distance
