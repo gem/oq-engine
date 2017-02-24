@@ -482,22 +482,21 @@ class EventBasedCalculator(ClassicalCalculator):
         self.sm_id = {tuple(sm.path): sm.ordinal
                       for sm in self.csm.info.source_models}
         L = len(oq.imtls.array)
+        rlzs = self.rlzs_assoc.realizations
         res = parallel.Starmap(
             self.core_task.__func__, self.gen_args(ruptures_by_grp)
         ).submit_all()
         self.agg_data = {}
         acc = functools.reduce(self.combine_pmaps_and_save_gmfs, res, {
-            rlz.ordinal: ProbabilityMap(L, 1)
-            for rlz in self.rlzs_assoc.realizations})
+            rlz.ordinal: ProbabilityMap(L, 1) for rlz in rlzs})
         n_sites = len(self.sitecol)
-        dtlist = [('rlz', U32), ('events', U32)] + [
-            (imt, F32) for imt in oq.imtls]
-        array = numpy.zeros(len(self.agg_data), dtlist)
-        for i, rlz in enumerate(sorted(self.agg_data)):
+        dtlist = [('events', U32)] + [(imt, F32) for imt in oq.imtls]
+        array = numpy.zeros(len(rlzs), dtlist)
+        for rlz in sorted(self.agg_data):
             data = self.agg_data[rlz]
             n_events = data[-1]
             gmv = data[:-1] / n_events / n_sites
-            array[i] = (rlz.ordinal, n_events) + tuple(gmv)
+            array[rlz.ordinal] = (n_events, ) + tuple(gmv)
         self.datastore['gmv'] = array
         return acc
 
