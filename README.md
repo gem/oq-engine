@@ -26,7 +26,7 @@ Travis CI (Python 3): [![Build Status](https://travis-ci.org/gem/oq-engine.svg?b
 
 ### Current stable
 
-Current stable version is the **OpenQuake Engine 2.2** 'Cornell'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-2.2#openquake-engine.
+Current stable version is the **OpenQuake Engine 2.3** 'Degenkolb'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-2.3#openquake-engine.
 
 ## Documentation (master tree)
 
