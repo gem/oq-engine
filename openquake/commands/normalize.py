@@ -28,6 +28,7 @@ def normalize(file_csv, sites_csv):
     Produce a good `sites_csv` file from a generic CSV with fields longitude
     and latitude, by truncating to 5 digits and discarding duplicate sites.
     """
+    nrows = 0
     with open(file_csv) as f:
         reader = csv.reader(f)
         header = next(reader)
@@ -49,10 +50,13 @@ def normalize(file_csv, sites_csv):
         for row in reader:
             point = valid.lon_lat('%s %s' % (row[lon_idx], row[lat_idx]))
             points.add(point)
+            nrows += 1
     with open(sites_csv, 'w') as f:
         for point in sorted(points):
             f.write('%s,%s\n' % point)
     print('Written %d sites on %s' % (len(points), sites_csv))
+    if len(points) < nrows:
+        print('Found %d duplicated sites!' % (nrows - len(points)))
 
 
 normalize.arg('file_csv', 'CSV file with lon and lat in the header')
