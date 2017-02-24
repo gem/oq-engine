@@ -182,11 +182,18 @@ class DataStore(collections.MutableMapping):
         self.calc_dir = os.path.join(datadir, 'calc_%s' % self.calc_id)
         self.export_dir = export_dir
         self.hdf5path = self.calc_dir + '.hdf5'
+        self.ext5path = self.calc_dir + '.ext5'
         mode = mode or 'r+' if os.path.exists(self.hdf5path) else 'w'
         self.hdf5 = hdf5.File(self.hdf5path, mode, libver='latest')
         self.attrs = self.hdf5.attrs
         for name, value in params:
             self.attrs[name] = value
+
+    def ext5(self, mode='r'):
+        """
+        Return the calc_XXX.ext5 file
+        """
+        return hdf5.File(self.ext5path, mode)
 
     def getitem(self, name):
         """
@@ -327,8 +334,10 @@ class DataStore(collections.MutableMapping):
     def close(self):
         """Close the underlying hdf5 file"""
         if self.parent != ():
+            self.parent.flush()
             self.parent.close()
         if self.hdf5:  # is open
+            self.hdf5.flush()
             self.hdf5.close()
 
     def clear(self):

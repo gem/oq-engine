@@ -41,7 +41,7 @@ fi
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-engine"
-GEM_GIT_DEPS="oq-hazardlib"
+GEM_DEPENDS="oq-libs|deb oq-hazardlib|src"
 GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
@@ -86,6 +86,7 @@ NL="
 "
 TB="	"
 
+OPT_LIBS_PATH=/opt/openquake/lib/python2.7/site-packages
 #
 #  functions
 
@@ -97,6 +98,7 @@ sig_hand () {
     echo "signal trapped"
     if [ "$lxc_name" != "" ]; then
         set +e
+        scp "${lxc_ip}:/tmp/webui*" "out_${BUILD_UBUVER}/"
         scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
         scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/ssh.history"
         echo "Destroying [$lxc_name] lxc"
@@ -210,6 +212,56 @@ _wait_ssh () {
     fi
 }
 
+add_local_pkg_repo () {
+    local dep="$1"
+
+    var_pfx="$(dep2var "$dep")"
+    var_repo="${var_pfx}_REPO"
+    var_branch="${var_pfx}_BRANCH"
+    var_commit="${var_pfx}_COMMIT"
+    if [ "${!var_repo}" != "" ]; then
+        dep_repo="${!var_repo}"
+    else
+        dep_repo="$GEM_GIT_REPO"
+    fi
+    if [ "${!var_branch}" != "" ]; then
+        dep_branch="${!var_branch}"
+    else
+        dep_branch="master"
+    fi
+
+    if [ "$dep_repo" = "$GEM_GIT_REPO" -a "$dep_branch" = "master" ]; then
+        GEM_DEB_SERIE="master"
+    else
+        GEM_DEB_SERIE="devel/$(echo "$dep_repo" | sed 's@^.*://@@g;s@/@__@g;s/\./-/g')__${dep_branch}"
+    fi
+    from_dir="${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python-${dep}.${!var_commit:0:7}"
+    time_start="$(date +%s)"
+    while true; do
+        if scp -r "$from_dir" $lxc_ip:repo/python-${dep}; then
+            break
+        fi
+        if [ "$dep_branch" = "$branch" ]; then
+            # NOTE: currently we retry for 1 hour to get the correct dep version
+            # if there is concordance between package and dependency branches
+            time_cur="$(date +%s)"
+            if [ $time_cur -gt $((time_start + 3600)) ]; then
+                return 1
+            fi
+            sleep 10
+        else
+            # NOTE: in the other case dep branch is 'master' and package branch isn't
+            #       so we try to get the correct commit package and if it isn't yet built
+            #       it fallback to the latest builded
+            from_dir="$(ls -drt ${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python-${dep}* | tail -n 1)"
+            scp -r "$from_dir" $lxc_ip:repo/python-${dep}
+            break
+        fi
+    done
+    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-${dep} ./\""
+    ssh $lxc_ip "sudo apt-get update"
+}
+
 _pkgbuild_innervm_run () {
     local lxc_ip="$1"
     local DPBP_FLAG="$2"
@@ -269,17 +321,35 @@ _devtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
 
+    if [ -f _jenkins_deps_info ]; then
+        source _jenkins_deps_info
+    fi
+
     old_ifs="$IFS"
     IFS=" "
-    for dep in $GEM_GIT_DEPS; do
-        # extract dependencies for source dependencies
-        pkgs_list="$(deps_list "deprec" _jenkins_deps/$dep/debian)"
-        ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
+    for dep_item in $GEM_DEPENDS; do
+        dep="$(echo "$dep_item" | cut -d '|' -f 1)"
+        dep_type="$(echo "$dep_item" | cut -d '|' -f 2)"
 
-        # install source dependencies
-        cd _jenkins_deps/$dep
-        git archive --prefix ${dep}/ HEAD | ssh $lxc_ip "tar xv"
-        cd -
+        if [ "$dep_type" = "src" ]; then
+            # extract dependencies for source dependencies
+            pkgs_list="$(deps_list "deprec" _jenkins_deps/$dep/debian)"
+            ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
+
+            # install source dependencies
+            cd _jenkins_deps/$dep
+            git archive --prefix ${dep}/ HEAD | ssh $lxc_ip "tar xv"
+            cd -
+        elif [ "$dep_type" = "deb" ]; then
+            # cd _jenkins_deps/$dep
+
+            add_local_pkg_repo "$dep"
+            ssh $lxc_ip "sudo apt-get install -y python-${dep}"
+        else
+            echo "Dep type $dep_type not supported"
+            exit 1
+        fi
+
     done
     IFS="$old_ifs"
 
@@ -312,7 +382,7 @@ _devtest_innervm_run () {
         fi
 
         ssh $lxc_ip "set -e
-                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine\"
+                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine:$OPT_LIBS_PATH\"
                  echo 'Starting DbServer. Log is saved to /tmp/dbserver.log'
                  cd oq-engine; nohup bin/oq dbserver start &>/tmp/dbserver.log </dev/null &"
 
@@ -322,18 +392,18 @@ _devtest_innervm_run () {
                      export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
                      set -x
                  fi
-                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine\"
+                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine:$OPT_LIBS_PATH\"
                  cd oq-engine
-                 nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
-                 nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
+                 /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
+                 /opt/openquake/bin/nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
 
                  # OQ Engine QA tests (splitted into multiple execution to track the performance)
-                 nosetests  -a '${skip_tests}qa,hazard' -v --with-xunit --xunit-file=xunit-qa-hazard.xml
-                 nosetests  -a '${skip_tests}qa,risk' -v --with-xunit --xunit-file=xunit-qa-risk.xml
+                 /opt/openquake/bin/nosetests  -a '${skip_tests}qa,hazard' -v --with-xunit --xunit-file=xunit-qa-hazard.xml
+                 /opt/openquake/bin/nosetests  -a '${skip_tests}qa,risk' -v --with-xunit --xunit-file=xunit-qa-risk.xml
 
-                 nosetests -v --with-doctest --with-coverage --cover-package=openquake.risklib openquake/risklib
-                 nosetests -v --with-doctest --with-coverage --cover-package=openquake.commonlib openquake/commonlib
-                 nosetests -v --with-doctest --with-coverage --cover-package=openquake.commands openquake/commands
+                 /opt/openquake/bin/nosetests -v --with-doctest --with-coverage --cover-package=openquake.risklib openquake/risklib
+                 /opt/openquake/bin/nosetests -v --with-doctest --with-coverage --cover-package=openquake.commonlib openquake/commonlib
+                 /opt/openquake/bin/nosetests -v --with-doctest --with-coverage --cover-package=openquake.commands openquake/commands
 
                  python-coverage xml --include=\"openquake/*\"
         bin/oq dbserver stop"
@@ -367,17 +437,36 @@ _builddoc_innervm_run () {
     # install package to manage repository properly
     # ssh $lxc_ip "sudo apt-get install -y python-software-properties"
 
+    if [ -f _jenkins_deps_info ]; then
+        source _jenkins_deps_info
+    fi
+
+    ssh $lxc_ip mkdir -p "repo"
+
     old_ifs="$IFS"
     IFS=" "
-    for dep in $GEM_GIT_DEPS; do
-        # extract dependencies for source dependencies
-        pkgs_list="$(deps_list "build" _jenkins_deps/$dep/debian)"
-        ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
+    for dep_item in $GEM_DEPENDS; do
+        dep="$(echo "$dep_item" | cut -d '|' -f 1)"
+        dep_type="$(echo "$dep_item" | cut -d '|' -f 2)"
 
-        # install source dependencies
-        cd _jenkins_deps/$dep
-        git archive --prefix ${dep}/ HEAD | ssh $lxc_ip "tar xv"
-        cd -
+        if [ "$dep_type" = "src" ]; then
+            # extract dependencies for source dependencies
+            pkgs_list="$(deps_list "build" _jenkins_deps/$dep/debian)"
+            ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
+
+            # install source dependencies
+            cd _jenkins_deps/$dep
+            git archive --prefix ${dep}/ HEAD | ssh $lxc_ip "tar xv"
+            cd -
+        elif [ "$dep_type" = "deb" ]; then
+            # cd _jenkins_deps/$dep
+
+            add_local_pkg_repo "$dep"
+            ssh $lxc_ip "sudo apt-get install -y python-${dep}"
+        else
+            echo "Dep type $dep_type not supported"
+            exit 1
+        fi
     done
     IFS="$old_ifs"
 
@@ -388,7 +477,7 @@ _builddoc_innervm_run () {
     # install sources of this package
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
-    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine\" ; cd oq-engine/doc/sphinx ; make html"
+    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-engine:$OPT_LIBS_PATH\" ; cd oq-engine/doc/sphinx ; make html"
     scp -r "${lxc_ip}:oq-engine/doc/sphinx/build/html" "out_${BUILD_UBUVER}/" || true
 
     # TODO: version check
@@ -434,53 +523,15 @@ _pkgtest_innervm_run () {
         source _jenkins_deps_info
     fi
 
+    ssh $lxc_ip mkdir -p "repo"
+
     old_ifs="$IFS"
     IFS=" $NL"
-    for dep in $GEM_GIT_DEPS; do
-        var_pfx="$(dep2var "$dep")"
-        var_repo="${var_pfx}_REPO"
-        var_branch="${var_pfx}_BRANCH"
-        var_commit="${var_pfx}_COMMIT"
-        if [ "${!var_repo}" != "" ]; then
-            dep_repo="${!var_repo}"
-        else
-            dep_repo="$GEM_GIT_REPO"
-        fi
-        if [ "${!var_branch}" != "" ]; then
-            dep_branch="${!var_branch}"
-        else
-            dep_branch="master"
-        fi
+    for dep_item in $GEM_DEPENDS; do
+        dep="$(echo "$dep_item" | cut -d '|' -f 1)"
+        dep_type="$(echo "$dep_item" | cut -d '|' -f 2)"
 
-        if [ "$dep_repo" = "$GEM_GIT_REPO" -a "$dep_branch" = "master" ]; then
-            GEM_DEB_SERIE="master"
-        else
-            GEM_DEB_SERIE="devel/$(echo "$dep_repo" | sed 's@^.*://@@g;s@/@__@g;s/\./-/g')__${dep_branch}"
-        fi
-        from_dir="${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python-${dep}.${!var_commit:0:7}"
-        time_start="$(date +%s)"
-        while true; do
-            if scp -r "$from_dir" $lxc_ip:repo/python-${dep}; then
-                break
-            fi
-            if [ "$dep_branch" = "$branch" ]; then
-                # NOTE: currently we retry for 1 hour to get the correct dep version
-                # if there is concordance between package and dependency branches
-                time_cur="$(date +%s)"
-                if [ $time_cur -gt $((time_start + 3600)) ]; then
-                    return 1
-                fi
-                sleep 10
-            else
-                # NOTE: in the other case dep branch is 'master' and package branch isn't
-                #       so we try to get the correct commit package and if it isn't yet built
-                #       it fallback to the latest builded
-                from_dir="$(ls -drt ${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python-${dep}* | tail -n 1)"
-                scp -r "$from_dir" $lxc_ip:repo/python-${dep}
-                break
-            fi
-        done
-        ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-${dep} ./\""
+        add_local_pkg_repo "$dep"
     done
     IFS="$old_ifs"
 
@@ -497,29 +548,35 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
     ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
 
+    celery_bin=/opt/openquake/bin/celery
+
     # configure the machine to run tests
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # use celery to run the demos
-        ssh $lxc_ip "celeryd --config openquake.engine.celeryconfig >/tmp/celeryd.log 2>&1 3>&1 &"
-
         # wait for celeryd startup time
         ssh $lxc_ip "
-celeryd_wait() {
+export GEM_SET_DEBUG=$GEM_SET_DEBUG
+if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
+    export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
+    set -x
+fi
+set -e
+export PYTHONPATH=\"$OPT_LIBS_PATH\"
+# FIXME: the big sleep below is a temporary workaround to avoid races.
+#        No better solution because we will abandon supervisord at all early
+sleep 30
+sudo supervisorctl status
+sudo supervisorctl start openquake-celery
+celery_wait() {
     local cw_nloop=\"\$1\" cw_ret cw_i
 
-    if command -v celeryctl &> /dev/null; then
-        # celery 2.4
-        celery=celeryctl
-    elif command -v celery &> /dev/null; then
-        # celery 3
-        celery=celery
-    else
+    if [ ! -f $celery_bin ]; then
         echo \"ERROR: no Celery available\"
         return 1
     fi
 
     for cw_i in \$(seq 1 \$cw_nloop); do
-        cw_ret=\"\$(\$celery status)\"
+        cw_ret=\"\$($celery_bin status --config openquake.engine.celeryconfig)\"
         if echo \"\$cw_ret\" | grep -iq '^error:'; then
             if echo \"\$cw_ret\" | grep -ivq '^error: no nodes replied'; then
                 return 1
@@ -533,7 +590,7 @@ celeryd_wait() {
     return 1
 }
 
-celeryd_wait $GEM_MAXLOOP"
+celery_wait $GEM_MAXLOOP"
 
         # run all of the hazard and risk demos
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
@@ -543,7 +600,7 @@ celeryd_wait $GEM_MAXLOOP"
             echo \"There's no 'openquake' user on this system. Installation may have failed.\"
             exit 1
         fi
-        
+
         # dbserver should be already started by supervisord. Let's have a check
         # FIXME instead of using a 'sleep' we should use a better way to check that
         # the dbserver is alive
@@ -652,7 +709,13 @@ deps_list() {
             continue
         fi
         skip=0
-        for d in $(echo "$GEM_GIT_DEPS" | sed 's/ /,/g'); do
+        for d_item in $(echo "$GEM_DEPENDS" | sed 's/ /,/g'); do
+            d="$(echo "$d_item" | cut -d '|' -f 1)"
+            d_type="$(echo "$d_item" | cut -d '|' -f 2)"
+
+            if [ "$d_type" != "src" ]; then
+                continue
+            fi
             if [ "$pkg_name" = "python-${d}" ]; then
                 skip=1
                 break
@@ -768,7 +831,9 @@ devtest_run () {
     fi
     old_ifs="$IFS"
     IFS=" "
-    for dep in $GEM_GIT_DEPS; do
+    for dep_item in $GEM_DEPENDS; do
+        dep="$(echo "$dep_item" | cut -d '|' -f 1)"
+        dep_type="$(echo "$dep_item" | cut -d '|' -f 2)"
         found=0
         branch_cur="$branch"
         for repo in $repos; do
@@ -809,6 +874,7 @@ devtest_run () {
             echo "${var_pfx}_COMMIT=$commit" >> _jenkins_deps_info
             echo "${var_pfx}_REPO=$repo"     >> _jenkins_deps_info
             echo "${var_pfx}_BRANCH=$branch_cur" >> _jenkins_deps_info
+            echo "${var_pfx}_TYPE=$dep_type" >> _jenkins_deps_info
         fi
     done
     IFS="$old_ifs"
@@ -822,6 +888,7 @@ devtest_run () {
     _devtest_innervm_run "$lxc_ip" "$branch"
     inner_ret=$?
 
+    scp "${lxc_ip}:/tmp/webui*" "out_${BUILD_UBUVER}/"
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/devtest.history"
 
     sudo $LXC_TERM -n $lxc_name
@@ -867,7 +934,12 @@ builddoc_run () {
     fi
     old_ifs="$IFS"
     IFS=" "
-    for dep in $GEM_GIT_DEPS; do
+    for dep_item in $GEM_DEPENDS; do
+        dep="$(echo "$dep_item" | cut -d '|' -f 1)"
+        dep_type="$(echo "$dep_item" | cut -d '|' -f 2)"
+        if [ "$dep_type" = "deb" ]; then
+            continue
+        fi
         found=0
         branch_cur="$branch"
         for repo in $repos; do
@@ -995,6 +1067,7 @@ EOF
     _pkgtest_innervm_run "$lxc_ip" "$branch"
     inner_ret=$?
 
+    scp "${lxc_ip}:/tmp/webui*" "out_${BUILD_UBUVER}/"
     scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/pkgtest.history"
 
@@ -1203,7 +1276,8 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     hash="$(git log --pretty='format:%h' -1)"
     mv debian/changelog debian/changelog.orig
     cp debian/control debian/control.orig
-    for dep in $GEM_GIT_DEPS; do
+    for dep_item in $GEM_DEPENDS; do
+        dep="$(echo "$dep_item" | cut -d '|' -f 1)"
         sed -i "s/\(python-${dep}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3${BUILD_UBUVER}01~dev0\4/g"  debian/control
     done
 

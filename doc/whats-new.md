@@ -68,7 +68,8 @@ Use it with care.
 New features in hazardlib
 --------------------------
 
-New GMPEs (site adjusted Pezeshk et al. 2011) were added.
+New GMPEs - site adjusted Pezeshk et al. 2011, plus a few modified GMPEs
+for Armenia - were added.
 
 The new `GriddedSurface` object introduced in engine 2.2 can now be
 serialized in the NRML 0.5 format properly.
