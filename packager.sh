@@ -398,13 +398,48 @@ _builddoc_innervm_run () {
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
+    ssh $lxc_ip "rm -f ssh.log"
+
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
-
     gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
     # install package to manage repository properly
     # ssh $lxc_ip "sudo apt-get install -y python-software-properties"
 
+    if [ -f _jenkins_deps_info ]; then
+        source _jenkins_deps_info
+    fi
+
+    ssh $lxc_ip mkdir -p "repo"
+
+    old_ifs="$IFS"
+    IFS=" "
+    for dep_item in $GEM_DEPENDS; do
+        dep="$(echo "$dep_item" | cut -d '|' -f 1)"
+        dep_type="$(echo "$dep_item" | cut -d '|' -f 2)"
+
+        if [ "$dep_type" = "src" ]; then
+            # extract dependencies for source dependencies
+            pkgs_list="$(deps_list "build" _jenkins_deps/$dep/debian)"
+            ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
+
+            # install source dependencies
+            cd _jenkins_deps/$dep
+            git archive --prefix ${dep}/ HEAD | ssh $lxc_ip "tar xv"
+            cd -
+        elif [ "$dep_type" = "deb" ]; then
+            # cd _jenkins_deps/$dep
+
+            add_local_pkg_repo "$dep"
+            ssh $lxc_ip "sudo apt-get install --force-yes -y python-${dep}"
+        else
+            echo "Dep type $dep_type not supported"
+            exit 1
+        fi
+    done
+    IFS="$old_ifs"
+
+    # extract dependencies for this package
     pkgs_list="$(deps_list all debian)"
     ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
@@ -414,7 +449,7 @@ _builddoc_innervm_run () {
     ssh $lxc_ip "sudo apt-get -y install python-pip"
     ssh $lxc_ip "sudo pip install sphinx==1.3.4"
 
-    ssh $lxc_ip "cd ${GEM_GIT_PACKAGE} ; export PYTHONPATH=\$PWD ; cd doc/sphinx ; make html"
+    ssh $lxc_ip "cd ${GEM_GIT_PACKAGE} ; export PYTHONPATH=\$PWD:/opt/openquake/lib/python2.7/site-packages: ; cd doc/sphinx ; make html"
     scp -r "$lxc_ip:${GEM_GIT_PACKAGE}/doc/sphinx/build/html" "out_${BUILD_UBUVER}/"
 
     trap ERR
