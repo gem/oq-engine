@@ -23,7 +23,6 @@ import functools
 from datetime import datetime
 import numpy
 
-from openquake.baselib.performance import Monitor
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.baselib import parallel
 from openquake.hazardlib.probability_map import ProbabilityMap
