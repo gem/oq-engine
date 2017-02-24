@@ -98,6 +98,9 @@ def compute_stats2(arrayNR, quantiles, weights):
         an array of (N, Q + 1) elements
     """
     newshape = list(arrayNR.shape)
+    if newshape[1] != len(weights):
+        raise ValueError('Got %d weights but %d values!' %
+                         (len(weights), newshape[1]))
     newshape[1] = len(quantiles) + 1  # number of statistical outputs
     newarray = numpy.zeros(newshape, arrayNR.dtype)
     data = [arrayNR[:, i] for i in range(len(weights))]
