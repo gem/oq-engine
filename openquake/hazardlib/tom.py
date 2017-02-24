@@ -68,20 +68,34 @@ class PoissonTOM(object):
         """
         return scipy.stats.poisson(occurrence_rate * self.time_span).pmf(1)
 
-    def sample_number_of_occurrences(self, occurrence_rate):
+    def sample_number_of_occurrences(self, occurrence_rate, seeds=None):
         """
         Draw a random sample from the distribution and return a number
         of events to occur.
 
-        Method uses numpy random generator, which needs to be seeded
-        outside of this method in order to get reproducible results.
+        The method uses the numpy random generator, which needs a seed
+        in order to get reproducible results. If the seed is None, it
+        should be set outside of this method.
 
         :param occurrence_rate:
             The average number of events per year.
+        :param seeds:
+            Random number generator seeds, one per each occurrence_rate
         :return:
             Sampled integer number of events to occur within model's
             time span.
         """
+        if isinstance(seeds, numpy.ndarray):  # array of seeds
+            assert len(seeds) == len(occurrence_rate), (
+                len(seeds), len(occurrence_rate))
+            rates = occurrence_rate * self.time_span
+            occ = []
+            for rate, seed in zip(rates, seeds):
+                numpy.random.seed(seed)
+                occ.append(numpy.random.poisson(rate))
+            return numpy.array(occ)
+        elif isinstance(seeds, int):
+            numpy.random.seed(seeds)
         return numpy.random.poisson(occurrence_rate * self.time_span)
 
     def get_probability_no_exceedance(self, occurrence_rate, poes):

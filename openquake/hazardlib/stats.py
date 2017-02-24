@@ -79,9 +79,9 @@ def compute_stats(array, quantiles, weights):
         an array of Q + 1 elements (which can be arrays)
     """
     result = numpy.zeros((len(quantiles) + 1,) + array.shape[1:], array.dtype)
-    result[0] = mean_curve(array, weights)
+    result[0] = apply_stat(mean_curve, array, weights)
     for i, q in enumerate(quantiles, 1):
-        result[i] = quantile_curve(array, q, weights)
+        result[i] = apply_stat(quantile_curve, array, q, weights)
     return result
 
 
@@ -98,6 +98,9 @@ def compute_stats2(arrayNR, quantiles, weights):
         an array of (N, Q + 1) elements
     """
     newshape = list(arrayNR.shape)
+    if newshape[1] != len(weights):
+        raise ValueError('Got %d weights but %d values!' %
+                         (len(weights), newshape[1]))
     newshape[1] = len(quantiles) + 1  # number of statistical outputs
     newarray = numpy.zeros(newshape, arrayNR.dtype)
     data = [arrayNR[:, i] for i in range(len(weights))]
