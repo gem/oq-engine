@@ -857,7 +857,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
                 maximum_distance=oq.maximum_distance,
                 samples=ssm.source_models[0].samples,
                 save_ruptures=oq.save_ruptures,
-                seed=ssm.source_model_lt.seed)
+                seed=oq.ses_seed)
             gsims = ssm.gsim_lt.values[DEFAULT_TRT]
             allargs.append((ssm.get_sources(), self.src_filter, gsims, mon))
         return allargs
