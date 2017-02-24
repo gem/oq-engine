@@ -107,16 +107,11 @@ def prefilter_ruptures(hdf5, ridx, idx_set, sites, integration_distance):
     :param float integration_distance:
         Maximum distance from rupture to site for consideration
     """
-    # Generate array of sites
-    if not sites:
-        return True
-    centroids = numpy.array([[0., 0., 0.]], dtype="f")
+    centroids = []
     for idx in ridx:
         trace_idx = "{:s}/{:s}".format(idx_set["sec_idx"], str(idx))
-        centroids = numpy.vstack([
-            centroids,
-            hdf5[trace_idx + "/Centroids"][:].astype("float64")])
-    centroids = centroids[1:, :]
+        centroids.append(hdf5[trace_idx + "/Centroids"].value)
+    centroids = numpy.concatenate(centroids)
     distance = min_geodetic_distance(centroids[:, 0], centroids[:, 1],
                                      sites.lons, sites.lats)
     return numpy.any(distance <= integration_distance)
