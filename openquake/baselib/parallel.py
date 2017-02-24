@@ -545,9 +545,12 @@ class Starmap(object):
         self.sent = AccumDict()
         self.distribute = oq_distribute(oqtask)
         # a task can be a function, a class or an instance with a __call__
-        f = oqtask.__init__ if inspect.isclass(oqtask) else oqtask
-        self.argnames = (inspect.getargspec(f).args if inspect.isfunction(f)
-                         else inspect.getargspec(oqtask.__call__).args[1:])
+        if inspect.isfunction(oqtask):
+            self.argnames = inspect.getargspec(oqtask).args
+        elif inspect.isclass(oqtask):
+            self.argnames = inspect.getargspec(oqtask.__init__).args[1:]
+        else:  # instance with a __call__ method
+            self.argnames = inspect.getargspec(oqtask.__call__).args[1:]
         if self.distribute == 'ipython' and isinstance(
                 self.executor, ProcessPoolExecutor):
             client = ipp.Client()
