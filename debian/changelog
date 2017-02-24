@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a `parallel.Computer` base class
   * Changed the default distance from filtering from Rjb to Rrup
   * Saved data transfer information automatically in `parallel.Starmap`
 
