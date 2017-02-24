@@ -156,7 +156,7 @@ from openquake.baselib.general import (
     block_splitter, split_in_blocks, AccumDict, humansize)
 
 executor = ProcessPoolExecutor()
-executor.pids = ()  # set by wakup_pool
+executor.pids = ()  # set by wakeup_pool
 # the num_tasks_hint is chosen to be 5 times bigger than the name of
 # cores; it is a heuristic number to get a good distribution;
 # it has no more significance than that
