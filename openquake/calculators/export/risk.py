@@ -21,6 +21,7 @@ import collections
 
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import AccumDict, get_array, group_array
 from openquake.risklib import scientific, riskinput
@@ -247,7 +248,6 @@ def export_all_loss_ratios(ekey, dstore):
     """
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     name, ext = export.keyfunc(ekey)
-    ass_losses = dstore[name]
     assetcol = dstore['assetcol']
     oq = dstore['oqparam']
     dtlist = [('event_tag', (numpy.string_, 100)), ('year', U32),
@@ -272,7 +272,9 @@ def export_all_loss_ratios(ekey, dstore):
             dest = dstore.build_fname(exportname, rlz, 'csv')
             losses_by_aid = AccumDict()
             rlzname = 'rlz-%03d' % rlz.ordinal
-            data = get_array(ass_losses[rlzname], eid=eid)
+            with dstore.ext5() as ext5:
+                ass_losses = ext5['all_loss_ratios'][rlzname].value
+            data = get_array(ass_losses, eid=eid)
             losses_by_aid = group_array(data, 'aid')
             elt = numpy.zeros(len(losses_by_aid), elt_dt)
             elt['event_tag'] = event_tag
