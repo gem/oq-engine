@@ -322,7 +322,6 @@ class PSHACalculator(base.HazardCalculator):
                 gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
                 if oq.poes_disagg or oq.iml_disagg:  # only for disaggregation
                     monitor.sm_id = self.rlzs_assoc.sm_ids[sg.id]
-                monitor.seed = self.rlzs_assoc.seed
                 monitor.samples = self.rlzs_assoc.samples[sg.id]
                 for block in self.csm.split_sources(
                         sg.sources, self.src_filter, maxweight):
