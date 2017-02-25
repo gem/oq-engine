@@ -62,7 +62,23 @@ def get_seq_ids(task_no, num_ids):
     return numpy.arange(start, start + num_ids, dtype=U32)
 
 
-def compute_ruptures(sources, src_filter, gsims, monitor):
+def set_eids(ebruptures, task_no):
+    """
+    Set event IDs on the given list of ebruptures produced by the given task.
+
+    :returns: the total number of events
+    """
+    num_events = sum(ebr.multiplicity for ebr in ebruptures)
+    eids = get_seq_ids(task_no, num_events)
+    start = 0
+    for ebr in ebruptures:
+        m = ebr.multiplicity
+        ebr.events['eid'] = eids[start: start + m]
+        start += m
+    return num_events
+
+
+def compute_ruptures(sources, src_filter, gsims, param, monitor):
     """
     :param sources:
         List of commonlib.source.Source tuples
@@ -70,6 +86,8 @@ def compute_ruptures(sources, src_filter, gsims, monitor):
         a source site filter
     :param gsims:
         a list of GSIMs for the current tectonic region model
+    :param param:
+        a dictionary of additional parameters
     :param monitor:
         monitor instance
     :returns:
@@ -83,7 +101,6 @@ def compute_ruptures(sources, src_filter, gsims, monitor):
     calc_times = []
     rup_mon = monitor('filtering ruptures', measuremem=False)
     num_samples = monitor.samples
-    num_events = 0
     cmaker = ContextMaker(gsims, src_filter.integration_distance)
     # Compute and save stochastic event sets
     for src, s_sites in src_filter(sources):
@@ -99,17 +116,10 @@ def compute_ruptures(sources, src_filter, gsims, monitor):
         for ebr in build_eb_ruptures(
                 src, num_occ_by_rup, cmaker, s_sites, monitor.seed, rup_mon):
             eb_ruptures.append(ebr)
-            num_events += ebr.multiplicity
         dt = time.time() - t0
         calc_times.append((src.id, dt))
-    eids = get_seq_ids(monitor.task_no, num_events)
-    start = 0
-    for ebr in eb_ruptures:
-        m = ebr.multiplicity
-        ebr.events['eid'] = eids[start: start + m]
-        start += m
     res = AccumDict({grp_id: eb_ruptures})
-    res.num_events = num_events
+    res.num_events = set_eids(eb_ruptures, monitor.task_no)
     res.calc_times = calc_times
     if gsims:  # we can pass an empty gsims list to disable saving of rup_data
         res.rup_data = {
@@ -166,7 +176,7 @@ def build_eb_ruptures(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
                 # NB: the 0 below is a placeholder; the right eid will be
-                # set a bit later, in compute_ruptures
+                # set a bit later, in set_eids
                 events.append((0, ses_idx, occ_no, sampleid))
         if events:
             yield calc.EBRupture(
