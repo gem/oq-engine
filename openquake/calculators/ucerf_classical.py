@@ -94,7 +94,6 @@ def ucerf_classical_hazard_by_rupture_set(
     t0 = time.time()
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.imtls
-    max_dist = src_filter.integration_distance
     ucerf_source.src_filter = src_filter  # so that .iter_ruptures() work
 
     # prefilter the sites close to the rupture set
@@ -107,8 +106,7 @@ def ucerf_classical_hazard_by_rupture_set(
         rup_index = hdf5[rup_index_key]
         for i in rupset_idx:
             ridx.update(rup_index[i])
-        r_sites = ucerf_source.get_rupture_sites(
-            hdf5, ridx, src_filter.sitecol, max_dist[DEFAULT_TRT])
+        r_sites = ucerf_source.get_rupture_sites(hdf5, ridx, src_filter)
         if r_sites is None:  # return an empty probability map
             pm = ProbabilityMap(len(imtls.array), len(gsims))
             pm.calc_times = []  # TODO: fix .calc_times
@@ -119,7 +117,7 @@ def ucerf_classical_hazard_by_rupture_set(
     # compute the ProbabilityMap by using hazardlib.calc.hazard_curve.poe_map
     ucerf_source.rupset_idx = rupset_idx
     ucerf_source.num_ruptures = len(rupset_idx)
-    cmaker = ContextMaker(gsims, max_dist)
+    cmaker = ContextMaker(gsims, src_filter.integration_distance)
     imtls = DictArray(imtls)
     nsites = len(r_sites)
     ctx_mon = monitor('making contexts', measuremem=False)
