@@ -479,7 +479,7 @@ class UcerfSource(object):
         """
         return self.num_ruptures
 
-    def get_rupture_sites(self, hdf5, ridx, sites, integration_distance):
+    def get_rupture_sites(self, hdf5, ridx, src_filter):
         """
         Determines if a rupture is likely to be inside the integration distance
         by considering the set of fault plane centroids and returns the
@@ -489,8 +489,8 @@ class UcerfSource(object):
             Source of UCERF file as h5py.File object
         :param list ridx:
             List of indices composing the rupture sections
-        :param sites:
-            Sites for consideration
+        :param src_filter:
+            SourceFilter instance
         :param float integration_distance:
             Maximum distance from rupture to site for consideration
         :returns:
@@ -501,9 +501,11 @@ class UcerfSource(object):
             trace_idx = "{:s}/{:s}".format(self.idx_set["sec_idx"], str(idx))
             centroids.append(hdf5[trace_idx + "/Centroids"].value)
         centroids = numpy.concatenate(centroids)
-        distance = min_geodetic_distance(centroids[:, 0], centroids[:, 1],
-                                         sites.lons, sites.lats)
-        return sites.filter(distance <= integration_distance)
+        lons, lats = src_filter.sitecol.lons, src_filter.sitecol.lats
+        distance = min_geodetic_distance(
+            centroids[:, 0], centroids[:, 1], lons, lats)
+        idist = src_filter.integration_distance[DEFAULT_TRT]
+        return src_filter.sitecol.filter(distance <= idist)
 
     def get_background_sids(self, src_filter):
         """
@@ -532,9 +534,7 @@ class UcerfSource(object):
         trt = ctl.tectonic_region_type
         ridx = hdf5[self.idx_set["geol_idx"] + "/RuptureIndex"][iloc]
         surface_set = []
-        integration_distance = src_filter.integration_distance[trt]
-        r_sites = self.get_rupture_sites(
-            hdf5, ridx, src_filter.sitecol, integration_distance)
+        r_sites = self.get_rupture_sites(hdf5, ridx, src_filter)
         if r_sites is None:
             return None, None
         for idx in ridx:
