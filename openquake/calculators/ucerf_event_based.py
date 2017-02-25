@@ -91,7 +91,7 @@ class ImperfectPlanarSurface(PlanarSurface):
     IMPERFECT_RECTANGLE_TOLERANCE = numpy.inf
 
 
-def prefilter_ruptures(hdf5, ridx, idx_set, sites, integration_distance):
+def get_rupture_sites(hdf5, ridx, idx_set, sites, integration_distance):
     """
     Determines if a rupture is likely to be inside the integration distance
     by considering the set of fault plane centroids.
@@ -114,7 +114,7 @@ def prefilter_ruptures(hdf5, ridx, idx_set, sites, integration_distance):
     centroids = numpy.concatenate(centroids)
     distance = min_geodetic_distance(centroids[:, 0], centroids[:, 1],
                                      sites.lons, sites.lats)
-    return numpy.any(distance <= integration_distance)
+    return sites.filter(distance <= integration_distance)
 
 
 def get_ucerf_rupture(hdf5, iloc, idx_set, tom, src_filter,
@@ -136,8 +136,9 @@ def get_ucerf_rupture(hdf5, iloc, idx_set, tom, src_filter,
     ridx = hdf5[idx_set["geol_idx"] + "/RuptureIndex"][iloc]
     surface_set = []
     integration_distance = src_filter.integration_distance[DEFAULT_TRT]
-    if not prefilter_ruptures(
-            hdf5, ridx, idx_set, src_filter.sitecol, integration_distance):
+    r_sites = get_rupture_sites(
+        hdf5, ridx, idx_set, src_filter.sitecol, integration_distance)
+    if r_sites is None:
         return None, None
     for idx in ridx:
         # Build simple fault surface
