@@ -22,6 +22,7 @@ import logging
 import functools
 from datetime import datetime
 import numpy
+import h5py
 
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.baselib import parallel
@@ -35,7 +36,7 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base, classical
 from openquake.calculators.ucerf_event_based import (
-    UCERFControl, DEFAULT_TRT, UcerfSource)
+    UCERFControl, DEFAULT_TRT, UcerfSource, get_rupture_sites)
 # FIXME: the counting of effective ruptures has to be revised completely
 
 
@@ -95,11 +96,33 @@ def ucerf_classical_hazard_by_rupture_set(
     imtls = monitor.oqparam.imtls
     max_dist = src_filter.integration_distance
     ucerf_source.src_filter = src_filter  # so that .iter_ruptures() work
+
+    # prefilter the sites close to the rupture set
+    with h5py.File(ucerf_source.control.source_file, "r") as hdf5:
+        ridx = set()
+        # find the combination of rupture sections used in this model
+        rup_index_key = "/".join(
+            [ucerf_source.idx_set["geol_idx"], "RuptureIndex"])
+        # determine which of the rupture sections used in this set of indices
+        rup_index = hdf5[rup_index_key]
+        for i in rupset_idx:
+            ridx.update(rup_index[i])
+        r_sites = get_rupture_sites(
+            hdf5, ridx, ucerf_source.idx_set,
+            src_filter.sitecol, max_dist[DEFAULT_TRT])
+        if r_sites is None:  # return an empty probability map
+            pm = ProbabilityMap(len(imtls.array), len(gsims))
+            pm.calc_times = []  # TODO: fix .calc_times
+            pm.eff_ruptures = {ucerf_source.src_group_id: 0}
+            pm.grp_id = ucerf_source.src_group_id
+            return pm
+
+    # compute the ProbabilityMap by using hazardlib.calc.hazard_curve.poe_map
     ucerf_source.rupset_idx = rupset_idx
     ucerf_source.num_ruptures = len(rupset_idx)
     cmaker = ContextMaker(gsims, max_dist)
     imtls = DictArray(imtls)
-    nsites = len(src_filter.sitecol)
+    nsites = len(r_sites)
     ctx_mon = monitor('making contexts', measuremem=False)
     pne_mons = [monitor('%s.get_poes' % gsim, measuremem=False)
                 for gsim in gsims]
@@ -108,7 +131,7 @@ def ucerf_classical_hazard_by_rupture_set(
     pmap.grp_id = ucerf_source.src_group_id
     pmap.eff_ruptures = {pmap.grp_id: ucerf_source.num_ruptures}
     # NB: the effective ruptures can be less, some may have zero probability
-    upmap = poe_map(ucerf_source, src_filter.sitecol, imtls, cmaker,
+    upmap = poe_map(ucerf_source, r_sites, imtls, cmaker,
                     truncation_level, ctx_mon, pne_mons)
     pmap |= upmap
     pmap.calc_times.append(
