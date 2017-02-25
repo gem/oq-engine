@@ -36,7 +36,7 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base, classical
 from openquake.calculators.ucerf_event_based import (
-    UCERFControl, DEFAULT_TRT, UcerfSource, get_rupture_sites)
+    UCERFControl, DEFAULT_TRT, UcerfSource)
 # FIXME: the counting of effective ruptures has to be revised completely
 
 
@@ -107,9 +107,8 @@ def ucerf_classical_hazard_by_rupture_set(
         rup_index = hdf5[rup_index_key]
         for i in rupset_idx:
             ridx.update(rup_index[i])
-        r_sites = get_rupture_sites(
-            hdf5, ridx, ucerf_source.idx_set,
-            src_filter.sitecol, max_dist[DEFAULT_TRT])
+        r_sites = ucerf_source.get_rupture_sites(
+            hdf5, ridx, src_filter.sitecol, max_dist[DEFAULT_TRT])
         if r_sites is None:  # return an empty probability map
             pm = ProbabilityMap(len(imtls.array), len(gsims))
             pm.calc_times = []  # TODO: fix .calc_times
