@@ -91,98 +91,6 @@ class ImperfectPlanarSurface(PlanarSurface):
     IMPERFECT_RECTANGLE_TOLERANCE = numpy.inf
 
 
-def get_rupture_sites(hdf5, ridx, idx_set, sites, integration_distance):
-    """
-    Determines if a rupture is likely to be inside the integration distance
-    by considering the set of fault plane centroids.
-
-    :param hdf5:
-        Source of UCERF file as h5py.File object
-    :param list ridx:
-        List of indices composing the rupture sections
-    :param dict idx_set:
-        Set of indices for the branch
-    :param sites:
-        Sites for consideration (can be None!)
-    :param float integration_distance:
-        Maximum distance from rupture to site for consideration
-    """
-    centroids = []
-    for idx in ridx:
-        trace_idx = "{:s}/{:s}".format(idx_set["sec_idx"], str(idx))
-        centroids.append(hdf5[trace_idx + "/Centroids"].value)
-    centroids = numpy.concatenate(centroids)
-    distance = min_geodetic_distance(centroids[:, 0], centroids[:, 1],
-                                     sites.lons, sites.lats)
-    return sites.filter(distance <= integration_distance)
-
-
-def get_ucerf_rupture(hdf5, iloc, idx_set, tom, src_filter,
-                      mesh_spacing=DEFAULT_MESH_SPACING,
-                      trt=DEFAULT_TRT):
-    """
-    :param hdf5:
-        Source Model hdf5 object as instance of :class: h5py.File
-    :param int iloc:
-        Location of the rupture plane in the hdf5 file
-    :param dict idx_set:
-        Set of indices for the branch
-    :param tom:
-        Temporal occurrence model as instance of :class:
-        openquake.hazardlib.tom.TOM
-    :param src_filter:
-        Sites for consideration and maximum distance
-    """
-    ridx = hdf5[idx_set["geol_idx"] + "/RuptureIndex"][iloc]
-    surface_set = []
-    integration_distance = src_filter.integration_distance[DEFAULT_TRT]
-    r_sites = get_rupture_sites(
-        hdf5, ridx, idx_set, src_filter.sitecol, integration_distance)
-    if r_sites is None:
-        return None, None
-    for idx in ridx:
-        # Build simple fault surface
-        trace_idx = "{:s}/{:s}".format(idx_set["sec_idx"], str(idx))
-        rup_plane = hdf5[trace_idx + "/RupturePlanes"][:].astype("float64")
-        for jloc in range(0, rup_plane.shape[2]):
-            top_left = Point(rup_plane[0, 0, jloc],
-                             rup_plane[0, 1, jloc],
-                             rup_plane[0, 2, jloc])
-            top_right = Point(rup_plane[1, 0, jloc],
-                              rup_plane[1, 1, jloc],
-                              rup_plane[1, 2, jloc])
-            bottom_right = Point(rup_plane[2, 0, jloc],
-                                 rup_plane[2, 1, jloc],
-                                 rup_plane[2, 2, jloc])
-            bottom_left = Point(rup_plane[3, 0, jloc],
-                                rup_plane[3, 1, jloc],
-                                rup_plane[3, 2, jloc])
-            try:
-                surface_set.append(ImperfectPlanarSurface.from_corner_points(
-                    mesh_spacing,
-                    top_left,
-                    top_right,
-                    bottom_right,
-                    bottom_left))
-            except ValueError as evl:
-                raise ValueError(evl, trace_idx, top_left, top_right,
-                                 bottom_right, bottom_left)
-
-    rupture = ParametricProbabilisticRupture(
-        hdf5[idx_set["mag_idx"]][iloc],  # Magnitude
-        hdf5[idx_set["rake_idx"]][iloc],  # Rake
-        trt,  # Tectonic Region Type
-        surface_set[len(surface_set) // 2].get_middle_point(),  # Hypocentre
-        MultiSurface(surface_set),
-        CharacteristicFaultSource,
-        hdf5[idx_set["rate_idx"]][iloc],  # Rate of events
-        tom)
-
-    # Get rupture index code string
-    ridx_string = "-".join(str(val) for val in ridx)
-    return rupture, ridx_string
-
-
 def get_rupture_dimensions(mag, nodal_plane, msr, rupture_aspect_ratio,
                            upper_seismogenic_depth, lower_seismogenic_depth):
     """
@@ -571,6 +479,32 @@ class UcerfSource(object):
         """
         return self.num_ruptures
 
+    def get_rupture_sites(self, hdf5, ridx, sites, integration_distance):
+        """
+        Determines if a rupture is likely to be inside the integration distance
+        by considering the set of fault plane centroids and returns the
+        affected sites if any.
+
+        :param hdf5:
+            Source of UCERF file as h5py.File object
+        :param list ridx:
+            List of indices composing the rupture sections
+        :param sites:
+            Sites for consideration
+        :param float integration_distance:
+            Maximum distance from rupture to site for consideration
+        :returns:
+            The sites affected by the rupture (or None)
+        """
+        centroids = []
+        for idx in ridx:
+            trace_idx = "{:s}/{:s}".format(self.idx_set["sec_idx"], str(idx))
+            centroids.append(hdf5[trace_idx + "/Centroids"].value)
+        centroids = numpy.concatenate(centroids)
+        distance = min_geodetic_distance(centroids[:, 0], centroids[:, 1],
+                                         sites.lons, sites.lats)
+        return sites.filter(distance <= integration_distance)
+
     def get_background_sids(self, src_filter):
         """
         We can apply the filtering of the background sites as a pre-processing
@@ -583,6 +517,65 @@ class UcerfSource(object):
             return prefilter_background_model(
                 hdf5, self.idx_set["grid_key"], src_filter.sitecol,
                 integration_distance, ctl.msr, ctl.aspect)
+
+    def get_ucerf_rupture(self, hdf5, iloc, src_filter):
+        """
+        :param hdf5:
+            Source Model hdf5 object as instance of :class: h5py.File
+        :param int iloc:
+            Location of the rupture plane in the hdf5 file
+        :param src_filter:
+            Sites for consideration and maximum distance
+        """
+        ctl = self.control
+        mesh_spacing = ctl.mesh_spacing
+        trt = ctl.tectonic_region_type
+        ridx = hdf5[self.idx_set["geol_idx"] + "/RuptureIndex"][iloc]
+        surface_set = []
+        integration_distance = src_filter.integration_distance[trt]
+        r_sites = self.get_rupture_sites(
+            hdf5, ridx, src_filter.sitecol, integration_distance)
+        if r_sites is None:
+            return None, None
+        for idx in ridx:
+            # Build simple fault surface
+            trace_idx = "{:s}/{:s}".format(self.idx_set["sec_idx"], str(idx))
+            rup_plane = hdf5[trace_idx + "/RupturePlanes"][:].astype("float64")
+            for jloc in range(0, rup_plane.shape[2]):
+                top_left = Point(rup_plane[0, 0, jloc],
+                                 rup_plane[0, 1, jloc],
+                                 rup_plane[0, 2, jloc])
+                top_right = Point(rup_plane[1, 0, jloc],
+                                  rup_plane[1, 1, jloc],
+                                  rup_plane[1, 2, jloc])
+                bottom_right = Point(rup_plane[2, 0, jloc],
+                                     rup_plane[2, 1, jloc],
+                                     rup_plane[2, 2, jloc])
+                bottom_left = Point(rup_plane[3, 0, jloc],
+                                    rup_plane[3, 1, jloc],
+                                    rup_plane[3, 2, jloc])
+                try:
+                    surface_set.append(
+                        ImperfectPlanarSurface.from_corner_points(
+                            mesh_spacing, top_left, top_right,
+                            bottom_right, bottom_left))
+                except ValueError as evl:
+                    raise ValueError(evl, trace_idx, top_left, top_right,
+                                     bottom_right, bottom_left)
+
+        rupture = ParametricProbabilisticRupture(
+            hdf5[self.idx_set["mag_idx"]][iloc],
+            hdf5[self.idx_set["rake_idx"]][iloc],
+            trt,
+            surface_set[len(surface_set) // 2].get_middle_point(),
+            MultiSurface(surface_set),
+            CharacteristicFaultSource,
+            hdf5[self.idx_set["rate_idx"]][iloc],
+            ctl.tom)
+
+        # Get rupture index code string
+        ridx_string = "-".join(str(val) for val in ridx)
+        return rupture, ridx_string
 
     def generate_event_set(self, background_sids, src_filter):
         """
@@ -601,10 +594,7 @@ class UcerfSource(object):
             ruptures = []
             rupture_occ = []
             for idx, n_occ in zip(indices, occurrences[indices]):
-                ucerf_rup, _ = get_ucerf_rupture(
-                    hdf5, idx, self.idx_set, ctl.tom, src_filter,
-                    ctl.mesh_spacing, ctl.tectonic_region_type)
-
+                ucerf_rup, _ = self.get_ucerf_rupture(hdf5, idx, src_filter)
                 if ucerf_rup:
                     ruptures.append(ucerf_rup)
                     rupture_occ.append(n_occ)
@@ -634,13 +624,8 @@ class UcerfSource(object):
                 if not rate[ridx]:
                     # ruptures may have have zero rate
                     continue
-                rup, ridx_string = get_ucerf_rupture(
-                    hdf5, ridx,
-                    self.idx_set,
-                    ctl.tom,
-                    self.src_filter,
-                    ctl.mesh_spacing,
-                    ctl.tectonic_region_type)
+                rup, ridx_string = self.get_ucerf_rupture(
+                    hdf5, ridx, self.src_filter)
                 if rup:
                     yield rup
 
