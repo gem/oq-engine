@@ -40,7 +40,7 @@ def indent(text):
     return '  ' + '\n  '.join(text.splitlines())
 
 
-def count_eff_ruptures(sources, srcfilter, gsims, monitor):
+def count_eff_ruptures(sources, srcfilter, gsims, param, monitor):
     """
     Count the effective number of ruptures contained in the given sources
     within the integration distance and return a dictionary src_group_id ->
