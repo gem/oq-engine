@@ -98,6 +98,7 @@ def ucerf_classical_hazard_by_rupture_set(
 
     # prefilter the sites close to the rupture set
     with h5py.File(ucerf_source.control.source_file, "r") as hdf5:
+        mag = hdf5[ucerf_source.idx_set["mag_idx"]][rupset_idx].max()
         ridx = set()
         # find the combination of rupture sections used in this model
         rup_index_key = "/".join(
@@ -106,8 +107,8 @@ def ucerf_classical_hazard_by_rupture_set(
         rup_index = hdf5[rup_index_key]
         for i in rupset_idx:
             ridx.update(rup_index[i])
-        r_sites = ucerf_source.get_rupture_sites(hdf5, ridx, src_filter)
-        if r_sites is None:  # return an empty probability map
+        s_sites = ucerf_source.get_rupture_sites(hdf5, ridx, src_filter, mag)
+        if s_sites is None:  # return an empty probability map
             pm = ProbabilityMap(len(imtls.array), len(gsims))
             pm.calc_times = []  # TODO: fix .calc_times
             pm.eff_ruptures = {ucerf_source.src_group_id: 0}
@@ -119,7 +120,7 @@ def ucerf_classical_hazard_by_rupture_set(
     ucerf_source.num_ruptures = len(rupset_idx)
     cmaker = ContextMaker(gsims, src_filter.integration_distance)
     imtls = DictArray(imtls)
-    nsites = len(r_sites)
+    nsites = len(s_sites)
     ctx_mon = monitor('making contexts', measuremem=False)
     pne_mons = [monitor('%s.get_poes' % gsim, measuremem=False)
                 for gsim in gsims]
@@ -128,7 +129,7 @@ def ucerf_classical_hazard_by_rupture_set(
     pmap.grp_id = ucerf_source.src_group_id
     pmap.eff_ruptures = {pmap.grp_id: ucerf_source.num_ruptures}
     # NB: the effective ruptures can be less, some may have zero probability
-    upmap = poe_map(ucerf_source, r_sites, imtls, cmaker,
+    upmap = poe_map(ucerf_source, s_sites, imtls, cmaker,
                     truncation_level, ctx_mon, pne_mons)
     pmap |= upmap
     pmap.calc_times.append(
