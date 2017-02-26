@@ -682,8 +682,8 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     res = AccumDict()
     res.calc_times = AccumDict()
     serial = 1
-    event_mon = monitor('sampling ruptures', measuremem=False)
-    rup_mon = monitor('filtering ruptures', measuremem=False)
+    sampl_mon = monitor('sampling ruptures', measuremem=True)
+    filt_mon = monitor('filtering ruptures', measuremem=False)
     res.trt = DEFAULT_TRT
     t0 = time.time()
     ebruptures = []
@@ -691,10 +691,10 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     sitecol = src_filter.sitecol
     idist = src_filter.integration_distance
     for ses_idx, seed in param['ses_seeds']:
-        with event_mon:
+        with sampl_mon:
             rups, n_occs = src.generate_event_set(
                 background_sids, src_filter, seed)
-        with rup_mon:
+        with filt_mon:
             for rup, n_occ in zip(rups, n_occs):
                 rup.seed = seed
                 try:
@@ -711,7 +711,8 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                         calc.EBRupture(rup, indices, evs, src.source_id,
                                        src.src_group_id, serial))
                     serial += 1
-    res.num_events = event_based.set_eids(ebruptures, monitor.task_no)
+    res.num_events = event_based.set_eids(
+        ebruptures, getattr(monitor, 'task_no', 0))
     res[src.src_group_id] = ebruptures
     res.calc_times[src.src_group_id] = (
         src.source_id, len(sitecol), time.time() - t0)

@@ -119,7 +119,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
         dt = time.time() - t0
         calc_times.append((src.id, dt))
     res = AccumDict({grp_id: eb_ruptures})
-    res.num_events = set_eids(eb_ruptures, monitor.task_no)
+    res.num_events = set_eids(eb_ruptures, getattr(monitor, 'task_no', 0))
     res.calc_times = calc_times
     if gsims:  # we can pass an empty gsims list to disable saving of rup_data
         res.rup_data = {
