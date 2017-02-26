@@ -444,7 +444,7 @@ class UcerfSource(object):
         """
         return self.num_ruptures
 
-    def get_rupture_sites(self, hdf5, ridx, src_filter, mag=None):
+    def get_rupture_sites(self, hdf5, ridx, src_filter, mag):
         """
         Determines if a rupture is likely to be inside the integration distance
         by considering the set of fault plane centroids and returns the
@@ -592,7 +592,7 @@ class UcerfSource(object):
         """
         ctl = self.control
         with h5py.File(ctl.source_file, "r") as hdf5:
-            try:  # the task has set a subset of indices
+            try:  # the source has set a subset of indices
                 rupset_idx = self.rupset_idx
             except AttributeError:  # use all indices
                 rupset_idx = numpy.arange(self.num_ruptures)
