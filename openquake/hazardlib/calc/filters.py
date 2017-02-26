@@ -277,9 +277,10 @@ class SourceFilter(object):
             integration_distance and sitecol is not None)
         if self.use_rtree:
             fixed_lons, self.idl = fix_lons_idl(sitecol.lons)
-            self.index = rtree.index.Index()
-            for sid, lon, lat in zip(sitecol.sids, fixed_lons, sitecol.lats):
-                self.index.insert(sid, (lon, lat, lon, lat))
+            self.index = rtree.index.Index(
+                (sid, (lon, lat, lon, lat), None)
+                for sid, lon, lat in
+                zip(sitecol.sids, fixed_lons, sitecol.lats))
         if rtree is None:
             logging.info('Using distance filtering [no rtree]')
 
