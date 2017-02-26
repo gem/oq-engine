@@ -774,11 +774,13 @@ class IntegrationDistance(collections.Mapping):
             else:
                 self.dic[trt] = float(value)
 
-    def __call__(self, trt, mag):
-        maxdist = getdefault(self.dic, trt)
-        if isinstance(maxdist, float):  # scalar maximum distance
-            return maxdist
-        if not hasattr(self, 'interp'):
+    def __call__(self, trt, mag=None):
+        value = getdefault(self.dic, trt)
+        if isinstance(value, float):  # scalar maximum distance
+            return value
+        elif mag is None:  # get the maximum magnitude distance
+            return value[-1][1]
+        elif not hasattr(self, 'interp'):
             self.interp = {}  # function cache
         try:
             md = self.interp[trt]  # retrieve from the cache
@@ -789,11 +791,7 @@ class IntegrationDistance(collections.Mapping):
         return md(mag)
 
     def __getitem__(self, trt):
-        value = getdefault(self.dic, trt)
-        if isinstance(value, float):  # scalar maximum distance
-            return value
-        # get the maximum magnitude distance
-        return value[-1][1]
+        return self(trt)
 
     def __iter__(self):
         return iter(self.dic)
