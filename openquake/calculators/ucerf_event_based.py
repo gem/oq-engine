@@ -452,12 +452,12 @@ class UcerfSource(object):
 
         :param hdf5:
             Source of UCERF file as h5py.File object
-        :param list ridx:
+        :param ridx:
             List of indices composing the rupture sections
         :param src_filter:
             SourceFilter instance
-        :param float integration_distance:
-            Maximum distance from rupture to site for consideration
+        :param mag:
+            Magnitude of the rupture for consideration
         :returns:
             The sites affected by the rupture (or None)
         """
@@ -483,14 +483,14 @@ class UcerfSource(object):
         idist = src_filter.integration_distance(DEFAULT_TRT)
         lons, lats = src_filter.sitecol.lons, src_filter.sitecol.lats
         with h5py.File(ctl.source_file, 'r') as hdf5:
-            bg_locations = hdf5["Grid/Locations"][:].astype("float64")
+            bg_locations = hdf5["Grid/Locations"].value
             n_locations = bg_locations.shape[0]
             distances = min_idx_dst(lons, lats, numpy.zeros_like(lons),
                                     bg_locations[:, 0], bg_locations[:, 1],
                                     numpy.zeros(n_locations))[1]
             # Add buffer equal to half of length of median area from Mmax
             mmax_areas = ctl.msr.get_median_area(
-                hdf5["/".join(["Grid", branch_key, "MMax"])][:], 0.0)
+                hdf5["/".join(["Grid", branch_key, "MMax"])].value, 0.0)
             # for instance hdf5['Grid/FM0_0_MEANFS_MEANMSR/MMax']
             mmax_lengths = numpy.sqrt(mmax_areas / ctl.aspect)
             ok = distances <= (0.5 * mmax_lengths + idist)
