@@ -268,7 +268,10 @@ class SourceFilter(object):
         by default True, i.e. try to use the rtree module if available
     """
     def __init__(self, sitecol, integration_distance, use_rtree=True):
-        self.integration_distance = IntegrationDistance(integration_distance)
+        self.integration_distance = (
+            IntegrationDistance(integration_distance)
+            if isinstance(integration_distance, dict)
+            else integration_distance)
         self.sitecol = sitecol
         self.use_rtree = use_rtree and rtree and (
             integration_distance and sitecol is not None)
