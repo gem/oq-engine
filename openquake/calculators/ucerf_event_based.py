@@ -681,6 +681,7 @@ def compute_ruptures(sources, src_filter, gsims, monitor):
     res.calc_times = AccumDict()
     serial = 1
     event_mon = monitor('sampling ruptures', measuremem=False)
+    rup_mon = monitor('filtering ruptures', measuremem=False)
     res.num_events = 0
     res.trt = DEFAULT_TRT
     t0 = time.time()
@@ -694,24 +695,25 @@ def compute_ruptures(sources, src_filter, gsims, monitor):
     for ses_idx in range(1, monitor.ses_per_logic_tree_path + 1):
         with event_mon:
             rups, n_occs = src.generate_event_set(background_sids, src_filter)
-        for rup, n_occ in zip(rups, n_occs):
-            rup.seed = monitor.seed  # to think
-            try:
-                r_sites, rrup = idist.get_closest(sitecol, rup)
-            except FarAwayRupture:
-                continue
-            indices = r_sites.indices
-            events = []
-            for occ in range(n_occ):
-                events.append((eid, ses_idx, occ, 0))  # 0 is the sampling
-                eid += 1
-            if events:
-                evs = numpy.array(events, calc.event_dt)
-                ebruptures.append(
-                    calc.EBRupture(rup, indices, evs, src.source_id,
-                                   src.src_group_id, serial))
-                serial += 1
-                res.num_events += len(events)
+        with rup_mon:
+            for rup, n_occ in zip(rups, n_occs):
+                rup.seed = monitor.seed  # to think
+                try:
+                    r_sites, rrup = idist.get_closest(sitecol, rup)
+                except FarAwayRupture:
+                    continue
+                indices = r_sites.indices
+                events = []
+                for occ in range(n_occ):
+                    events.append((eid, ses_idx, occ, 0))  # 0 is the sampling
+                    eid += 1
+                if events:
+                    evs = numpy.array(events, calc.event_dt)
+                    ebruptures.append(
+                        calc.EBRupture(rup, indices, evs, src.source_id,
+                                       src.src_group_id, serial))
+                    serial += 1
+                    res.num_events += len(events)
     res[src.src_group_id] = ebruptures
     res.calc_times[src.src_group_id] = (
         src.source_id, len(sitecol), time.time() - t0)
