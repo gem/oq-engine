@@ -26,14 +26,13 @@ import logging
 import textwrap
 import collections
 from decimal import Decimal
-
 import numpy
-from scipy.interpolate import interp1d
 
 from openquake.baselib.python3compat import with_metaclass
 from openquake.baselib.general import distinct
 from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim
+from openquake.hazardlib.calc.filters import IntegrationDistance
 
 SCALEREL = scalerel.get_available_magnitude_scalerel()
 
@@ -731,18 +730,6 @@ def floatdict(value):
     return value
 
 
-def getdefault(dic_with_default, key):
-    """
-    :param dic_with_default: a dictionary with a 'default' key
-    :param key: a key that may be present in the dictionary or not
-    :returns: the value associated to the key, or to 'default'
-    """
-    try:
-        return dic_with_default[key]
-    except KeyError:
-        return dic_with_default['default']
-
-
 def maximum_distance(value):
     """
     :param value:
@@ -751,56 +738,6 @@ def maximum_distance(value):
         a IntegrationDistance mapping
     """
     return IntegrationDistance(floatdict(value))
-
-
-class IntegrationDistance(collections.Mapping):
-    """
-    Pickleable object wrapping a dictionary of integration distances per
-    tectonic region type.
-
-    >>> maxdist = IntegrationDistance({'default': [
-    ...          (1, 10), (2, 20), (3, 30), (4, 40), (5, 100), (6, 200),
-    ...          (7, 400), (8, 800)]})
-    >>> maxdist('Some TRT', mag=5.5)
-    array(150.0)
-    """
-    def __init__(self, dic):
-        self.dic = dic  # TRT -> float or list of pairs
-        self.magdist = {}  # TRT -> (magnitudes, distances)
-        for trt, value in dic.items():
-            if isinstance(value, list):  # assume a list of pairs (mag, dist)
-                value.sort()  # make sure the list is sorted by magnitude
-                self.magdist[trt] = zip(*value)
-            else:
-                self.dic[trt] = float(value)
-
-    def __call__(self, trt, mag=None):
-        value = getdefault(self.dic, trt)
-        if isinstance(value, float):  # scalar maximum distance
-            return value
-        elif mag is None:  # get the maximum magnitude distance
-            return value[-1][1]
-        elif not hasattr(self, 'interp'):
-            self.interp = {}  # function cache
-        try:
-            md = self.interp[trt]  # retrieve from the cache
-        except KeyError:  # fill the cache
-            magdist = getdefault(self.magdist, trt)
-            md = self.interp[trt] = interp1d(
-                *magdist, bounds_error=False, fill_value='extrapolate')
-        return md(mag)
-
-    def __getitem__(self, trt):
-        return self(trt)
-
-    def __iter__(self):
-        return iter(self.dic)
-
-    def __len__(self):
-        return len(self.dic)
-
-    def __repr__(self):
-        return repr(self.dic)
 
 
 # ########################### SOURCES/RUPTURES ############################# #

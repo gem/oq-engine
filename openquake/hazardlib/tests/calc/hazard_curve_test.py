@@ -18,11 +18,11 @@ import pickle
 import numpy
 
 import openquake.hazardlib
-from openquake.hazardlib import const, valid
+from openquake.hazardlib import const
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
-from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib.calc.filters import SourceFilter, IntegrationDistance
 from openquake.baselib.parallel import Sequential, Processmap
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim import akkar_bommer_2010
@@ -35,7 +35,7 @@ from openquake.hazardlib.source.point import PointSource
 
 class HazardCurvesFiltersTestCase(unittest.TestCase):
     def test_MagnitudeDistance_pickleable(self):
-        md = valid.IntegrationDistance(
+        md = IntegrationDistance(
             dict(default=[(1, 10), (2, 20), (3, 30), (4, 40), (5, 100),
                           (6, 200), (7, 400), (8, 800)]))
         md2 = pickle.loads(pickle.dumps(md))
