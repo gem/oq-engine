@@ -290,39 +290,6 @@ def generate_background_ruptures(tom, locations, occurrence, mag, npd,
     return ruptures
 
 
-def prefilter_background_model(hdf5, branch_key, sites, integration_distance,
-                               msr=WC1994(), aspect=1.5):
-    """
-    Identify those points within the integration distance
-
-    :param sites:
-        Sites under consideration
-    :param float integration_distance:
-        Maximum distance from rupture to site for consideration
-    :param msr:
-        Magnitude scaling relation
-    :param float aspect:
-        Aspect ratio
-    :returns:
-        List of site IDs within the integration distance
-    """
-    bg_locations = hdf5["Grid/Locations"][:].astype("float64")
-    n_locations = bg_locations.shape[0]
-    distances = min_idx_dst(sites.lons, sites.lats,
-                            numpy.zeros_like(sites.lons),
-                            bg_locations[:, 0],
-                            bg_locations[:, 1],
-                            numpy.zeros(n_locations))[1]
-    # Add buffer equal to half of length of median area from Mmax
-    mmax_areas = msr.get_median_area(
-        hdf5["/".join(["Grid", branch_key, "MMax"])][:], 0.0)
-    # for instance hdf5['Grid/FM0_0_MEANFS_MEANMSR/MMax']
-    mmax_lengths = numpy.sqrt(mmax_areas / aspect)
-    ok = distances <= (0.5 * mmax_lengths + integration_distance)
-    # get list of indices from array of booleans
-    return numpy.where(ok)[0].tolist()
-
-
 def sample_background_model(
         hdf5, branch_key, tom, filter_idx, min_mag, npd, hdd,
         upper_seismogenic_depth, lower_seismogenic_depth, msr=WC1994(),
@@ -356,12 +323,10 @@ def sample_background_model(
     :param float integration_distance:
         Maximum distance from rupture to site for consideration
     """
-    bg_magnitudes = hdf5["/".join(["Grid", branch_key, "Magnitude"])][:]
+    bg_magnitudes = hdf5["/".join(["Grid", branch_key, "Magnitude"])].value
     # Select magnitudes above the minimum magnitudes
     mag_idx = bg_magnitudes >= min_mag
     mags = bg_magnitudes[mag_idx]
-    # Filter out sites beyond integration distance
-    # valid_idx = prefilter_background_model(sites, integration_distance, msr)
     rates = hdf5["/".join(["Grid", branch_key, "RateArray"])][filter_idx, :]
     rates = rates[:, mag_idx]
     valid_locs = hdf5["Grid/Locations"][filter_idx, :]
@@ -479,7 +444,7 @@ class UcerfSource(object):
         """
         return self.num_ruptures
 
-    def get_rupture_sites(self, hdf5, ridx, src_filter):
+    def get_rupture_sites(self, hdf5, ridx, src_filter, mag=None):
         """
         Determines if a rupture is likely to be inside the integration distance
         by considering the set of fault plane centroids and returns the
@@ -504,7 +469,7 @@ class UcerfSource(object):
         lons, lats = src_filter.sitecol.lons, src_filter.sitecol.lats
         distance = min_geodetic_distance(
             centroids[:, 0], centroids[:, 1], lons, lats)
-        idist = src_filter.integration_distance[DEFAULT_TRT]
+        idist = src_filter.integration_distance(DEFAULT_TRT, mag)
         return src_filter.sitecol.filter(distance <= idist)
 
     def get_background_sids(self, src_filter):
@@ -514,11 +479,23 @@ class UcerfSource(object):
         themselves
         """
         ctl = self.control
-        integration_distance = src_filter.integration_distance[DEFAULT_TRT]
+        branch_key = self.idx_set["grid_key"]
+        idist = src_filter.integration_distance(DEFAULT_TRT)
+        lons, lats = src_filter.sitecol.lons, src_filter.sitecol.lats
         with h5py.File(ctl.source_file, 'r') as hdf5:
-            return prefilter_background_model(
-                hdf5, self.idx_set["grid_key"], src_filter.sitecol,
-                integration_distance, ctl.msr, ctl.aspect)
+            bg_locations = hdf5["Grid/Locations"][:].astype("float64")
+            n_locations = bg_locations.shape[0]
+            distances = min_idx_dst(lons, lats, numpy.zeros_like(lons),
+                                    bg_locations[:, 0], bg_locations[:, 1],
+                                    numpy.zeros(n_locations))[1]
+            # Add buffer equal to half of length of median area from Mmax
+            mmax_areas = ctl.msr.get_median_area(
+                hdf5["/".join(["Grid", branch_key, "MMax"])][:], 0.0)
+            # for instance hdf5['Grid/FM0_0_MEANFS_MEANMSR/MMax']
+            mmax_lengths = numpy.sqrt(mmax_areas / ctl.aspect)
+            ok = distances <= (0.5 * mmax_lengths + idist)
+            # get list of indices from array of booleans
+            return numpy.where(ok)[0].tolist()
 
     def get_ucerf_rupture(self, hdf5, iloc, src_filter):
         """
@@ -533,8 +510,9 @@ class UcerfSource(object):
         mesh_spacing = ctl.mesh_spacing
         trt = ctl.tectonic_region_type
         ridx = hdf5[self.idx_set["geol_idx"] + "/RuptureIndex"][iloc]
+        mag = hdf5[self.idx_set["mag_idx"]][iloc]
         surface_set = []
-        r_sites = self.get_rupture_sites(hdf5, ridx, src_filter)
+        r_sites = self.get_rupture_sites(hdf5, ridx, src_filter, mag)
         if r_sites is None:
             return None, None
         for idx in ridx:
@@ -564,7 +542,7 @@ class UcerfSource(object):
                                      bottom_right, bottom_left)
 
         rupture = ParametricProbabilisticRupture(
-            hdf5[self.idx_set["mag_idx"]][iloc],
+            mag,
             hdf5[self.idx_set["rake_idx"]][iloc],
             trt,
             surface_set[len(surface_set) // 2].get_middle_point(),
