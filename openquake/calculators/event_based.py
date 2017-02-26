@@ -27,7 +27,7 @@ import numpy
 
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, split_in_blocks
-from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
+from openquake.hazardlib.calc.filters import FarAwayRupture
 from openquake.hazardlib.probability_map import ProbabilityMap, PmapStats
 from openquake.hazardlib.geo.surface import PlanarSurface
 from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str
@@ -84,7 +84,6 @@ def compute_ruptures(sources, src_filter, gsims, monitor):
     rup_mon = monitor('filtering ruptures', measuremem=False)
     num_samples = monitor.samples
     num_events = 0
-    cmaker = ContextMaker(gsims, src_filter.integration_distance)
     # Compute and save stochastic event sets
     for src, s_sites in src_filter(sources):
         t0 = time.time()
@@ -96,8 +95,9 @@ def compute_ruptures(sources, src_filter, gsims, monitor):
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
-        for ebr in build_eb_ruptures(
-                src, num_occ_by_rup, cmaker, s_sites, monitor.seed, rup_mon):
+        for ebr in _build_eb_ruptures(
+                src, num_occ_by_rup, src_filter.integration_distance,
+                s_sites, monitor.seed, rup_mon):
             eb_ruptures.append(ebr)
             num_events += ebr.multiplicity
         dt = time.time() - t0
@@ -144,8 +144,8 @@ def sample_ruptures(src, num_ses, num_samples, seed):
     return num_occ_by_rup
 
 
-def build_eb_ruptures(
-        src, num_occ_by_rup, cmaker, s_sites, random_seed, rup_mon):
+def _build_eb_ruptures(
+        src, num_occ_by_rup, idist, s_sites, random_seed, rup_mon):
     """
     Filter the ruptures stored in the dictionary num_occ_by_rup and
     yield pairs (rupture, <list of associated EBRuptures>)
@@ -153,7 +153,7 @@ def build_eb_ruptures(
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
         with rup_mon:
             try:
-                r_sites, dists = cmaker.get_closest(s_sites, rup)
+                r_sites, dists = idist.get_closest(s_sites, rup)
             except FarAwayRupture:
                 # ignore ruptures which are far away
                 del num_occ_by_rup[rup]  # save memory
