@@ -275,7 +275,7 @@ class SourceFilter(object):
         self.sitecol = sitecol
         self.use_rtree = use_rtree and rtree and (
             integration_distance and sitecol is not None and
-            sitecol.at_sea_level())  # disable rtree
+            sitecol.at_sea_level())
         if self.use_rtree:
             fixed_lons, self.idl = fix_lons_idl(sitecol.lons)
             self.index = rtree.index.Index(
