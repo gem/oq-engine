@@ -278,10 +278,9 @@ class SourceFilter(object):
             sitecol.at_sea_level())
         if self.use_rtree:
             fixed_lons, self.idl = fix_lons_idl(sitecol.lons)
-            self.index = rtree.index.Index(
-                (sid, (lon, lat, lon, lat), None)
-                for sid, lon, lat in
-                zip(sitecol.sids, fixed_lons, sitecol.lats))
+            self.index = rtree.index.Index()
+            for sid, lon, lat in zip(sitecol.sids, fixed_lons, sitecol.lats):
+                self.index.insert(sid, (lon, lat, lon, lat))
         if rtree is None:
             logging.info('Using distance filtering [no rtree]')
 
@@ -334,6 +333,9 @@ class SourceFilter(object):
             if self.use_rtree:  # Rtree filtering, used in the controller
                 box = self.get_affected_box(src)
                 sids = numpy.array(sorted(self.index.intersection(box)))
+                if len(set(sids)) < len(sids):
+                    # sanity check against rtree bugs
+                    raise ValueError('sids=%s' % sids)
                 if len(sids):
                     src.nsites = len(sids)
                     yield src, FilteredSiteCollection(sids, sites.complete)
