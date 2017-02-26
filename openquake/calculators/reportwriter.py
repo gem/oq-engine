@@ -30,7 +30,7 @@ import time
 from openquake.baselib import parallel
 from openquake.baselib.general import humansize, AccumDict
 from openquake.baselib.python3compat import encode
-from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
+from openquake.hazardlib.calc.filters import FarAwayRupture
 from openquake.commonlib import readinput
 from openquake.calculators.classical import PSHACalculator
 from openquake.calculators import views
@@ -49,7 +49,7 @@ def count_eff_ruptures(sources, srcfilter, gsims, monitor):
     acc = AccumDict()
     acc.grp_id = sources[0].src_group_id
     acc.calc_times = []
-    cmaker = ContextMaker(gsims, srcfilter.integration_distance)
+    idist = srcfilter.integration_distance
     count = 0
     for src in sources:
         sites = srcfilter.get_close_sites(src)
@@ -57,7 +57,7 @@ def count_eff_ruptures(sources, srcfilter, gsims, monitor):
             for i, rup in enumerate(src.iter_ruptures()):
                 rup.serial = src.serial[i]  # added for debugging purposes
                 try:
-                    cmaker.get_closest(sites, rup)
+                    idist.get_closest(sites, rup)
                 except FarAwayRupture:
                     continue
                 else:
