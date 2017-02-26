@@ -31,6 +31,7 @@ from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
 from openquake.hazardlib.source.point import PointSource
+from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 
 
 class HazardCurvesFiltersTestCase(unittest.TestCase):
@@ -93,8 +94,6 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
                  openquake.hazardlib.site.Site(
                      Point(10, 10.7, -1), 4, True, 2, 3)]
         sitecol = openquake.hazardlib.site.SiteCollection(sites)
-
-        from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
         gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
         truncation_level = 1
         imts = {'PGA': [0.1, 0.5, 1.3]}
