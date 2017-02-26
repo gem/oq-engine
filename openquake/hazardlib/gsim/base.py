@@ -116,7 +116,7 @@ class ContextMaker(object):
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
-    def __init__(self, gsims, maximum_distance=IntegrationDistance({})):
+    def __init__(self, gsims, maximum_distance=IntegrationDistance(None)):
         self.gsims = gsims
         self.maximum_distance = maximum_distance
         for req in self.REQUIRES:

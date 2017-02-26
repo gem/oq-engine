@@ -186,9 +186,9 @@ class IntegrationDistance(collections.Mapping):
     that case the method returns all the sites and all the distances.
     """
     def __init__(self, dic):
-        self.dic = dic  # TRT -> float or list of pairs
+        self.dic = dic or {}  # TRT -> float or list of pairs
         self.magdist = {}  # TRT -> (magnitudes, distances)
-        for trt, value in dic.items():
+        for trt, value in self.dic.items():
             if isinstance(value, list):  # assume a list of pairs (mag, dist)
                 value.sort()  # make sure the list is sorted by magnitude
                 self.magdist[trt] = zip(*value)
