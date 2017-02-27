@@ -344,7 +344,7 @@ _devtest_innervm_run () {
             # cd _jenkins_deps/$dep
 
             add_local_pkg_repo "$dep"
-            ssh $lxc_ip "sudo apt-get install -y python-${dep}"
+            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python-${dep}"
         else
             echo "Dep type $dep_type not supported"
             exit 1
@@ -462,7 +462,7 @@ _builddoc_innervm_run () {
             # cd _jenkins_deps/$dep
 
             add_local_pkg_repo "$dep"
-            ssh $lxc_ip "sudo apt-get install -y python-${dep}"
+            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python-${dep}"
         else
             echo "Dep type $dep_type not supported"
             exit 1
@@ -1172,6 +1172,7 @@ while [ $# -gt 0 ]; do
             ;;
         -U|--unsigned)
             BUILD_UNSIGN=1
+            APT_FORCE_YES="--force-yes"
             ;;
         -L|--lxc_build)
             BUILD_ON_LXC=1
@@ -1336,7 +1337,7 @@ if [ $BUILD_ON_LXC -eq 1 ]; then
     _wait_ssh $lxc_ip
 
     set +e
-    _pkgbuild_innervm_run $lxc_ip $DPBP_FLAG
+    _pkgbuild_innervm_run $lxc_ip "$DPBP_FLAG"
     inner_ret=$?
     sudo $LXC_TERM -n $lxc_name
     set -e
