@@ -61,6 +61,7 @@ Current stable version is the **OpenQuake Engine 2.3** 'Degenkolb'. The document
 #### macOS
 
 * [Installing on macOS](https://github.com/gem/oq-engine/blob/master/doc/installing/macos.md)
+* [Installing from sources](https://github.com/gem/oq-engine/blob/master/doc/installing/development.md)
 
 #### Windows
 
