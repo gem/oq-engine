@@ -230,8 +230,8 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         self.assertEqualFiles('expected/realizations.csv', fname)
 
         # test for the mean gmv
-        got = writetmp(rst_table(self.calc.datastore['gmv'].value))
-        self.assertEqualFiles('expected/gmv.csv', got)
+        got = writetmp(rst_table(self.calc.datastore['gmdata'].value))
+        self.assertEqualFiles('expected/gmdata.csv', got)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_7(self):

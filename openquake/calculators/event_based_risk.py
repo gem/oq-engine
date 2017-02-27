@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
-    AccumDict, humansize, block_splitter, group_array)
+    AccumDict, block_splitter, group_array)
 from openquake.hazardlib.stats import compute_stats, compute_stats2
 from openquake.commonlib import config
 from openquake.calculators import base, event_based
@@ -178,8 +178,8 @@ def event_based_risk(riskinput, riskmodel, assetcol, monitor):
         if ass[r]:
             result['asslosses'][r] = numpy.concatenate(ass[r])
 
-    # store the size of the GMFs
-    result['gmfbytes'] = monitor.gmfbytes
+    # store info about the GMFs
+    result['gmdata'] = monitor.gmdata
     return result
 
 
@@ -499,13 +499,13 @@ class EbriskCalculator(base.RiskCalculator):
                     dset[:, r, l] = zero
 
         num_events = collections.Counter()
-        self.gmfbytes = 0
+        self.gmdata = {}
         for res in allres:
             start, stop = res.rlz_slice.start, res.rlz_slice.stop
             for dic in res:
                 if avg_losses:
                     self.save_avg_losses(dset, dic.pop('avglosses'), start)
-                self.gmfbytes += dic.pop('gmfbytes')
+                self.gmdata += dic.pop('gmdata')
                 self.save_losses(
                     dic.pop('agglosses'), dic.pop('asslosses'), start)
             logging.debug(
@@ -515,6 +515,7 @@ class EbriskCalculator(base.RiskCalculator):
                 save_events(self, res.ruptures_by_grp)
             num_events[res.sm_id] += res.num_events
         self.datastore['events'].attrs['num_events'] = sum(num_events.values())
+        event_based.save_gmdata(self, num_rlzs)
         return num_events
 
     def save_avg_losses(self, dset, dic, start):
@@ -545,15 +546,14 @@ class EbriskCalculator(base.RiskCalculator):
 
     def post_execute(self, num_events):
         """
-        Save an array of losses by taxonomy of shape (T, L, R).
+        Save risk data
         """
         event_based.EventBasedRuptureCalculator.__dict__['post_execute'](
             self, num_events)
-        if self.gmfbytes == 0:
+        gmv = sum(gm[:-2].sum() for gm in self.gmdata.values())
+        if not gmv:
             raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')
-        logging.info('Generated %s of GMFs', humansize(self.gmfbytes))
-        self.monitor.save_info({'gmfbytes': self.gmfbytes})
 
         A, E = len(self.assetcol), sum(num_events.values())
         if 'all_loss_ratios' in self.datastore:

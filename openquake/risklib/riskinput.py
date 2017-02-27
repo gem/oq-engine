@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import groupby, get_array
+from openquake.baselib.general import groupby, get_array, AccumDict
 from openquake.hazardlib import site, calc
 from openquake.risklib import scientific, riskmodels
 
@@ -32,6 +32,9 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
+BYTES_PER_RECORD = 13  # ground motion record (sid, eid, gmv, imti) = 13 bytes
+EVENTS = -2
+NBYTES = -1
 
 FIELDS = ('site_id', 'lon', 'lat', 'idx', 'taxonomy_id', 'area', 'number',
           'occupants', 'deductible-', 'insurance_limit-', 'retrofitted-')
@@ -452,8 +455,8 @@ class CompositeRiskModel(collections.Mapping):
                         row.r = rlz.ordinal
                         row.assets = assets
                         yield row
-        if hasattr(hazard_getter, 'gmfbytes'):  # for event based risk
-            monitor.gmfbytes = hazard_getter.gmfbytes
+        if hasattr(hazard_getter, 'gmdata'):  # for event based risk
+            monitor.gmdata = hazard_getter.gmdata
 
     def __toh5__(self):
         loss_types = hdf5.array_of_vstr(self._get_loss_types())
@@ -511,19 +514,20 @@ class GmfGetter(object):
                 ebr, sites, self.imts, self.gsims,
                 self.truncation_level, self.correlation_model)
             self.computers.append(computer)
-        self.gmfbytes = 0
+        # dictionary rlz -> array(imts, events, nbytes)
+        self.gmdata = AccumDict(accum=numpy.zeros(len(self.imts) + 2, F32))
 
     def __call__(self, rlz):
         gsim = self.gsims[rlz.ordinal]
         gmfdict = collections.defaultdict(dict)
-        self.num_eids = 0
+        gmdata = self.gmdata[rlz]
         for computer in self.computers:
             rup = computer.rupture
             if self.samples > 1:
                 eids = get_array(rup.events, sample=rlz.sampleid)['eid']
             else:
                 eids = rup.events['eid']
-            self.num_eids += len(eids)
+            gmdata[EVENTS] += len(eids)
             array = computer.compute(gsim, len(eids))  # (i, n, e)
             for imti, imt in enumerate(self.imts):
                 min_gmv = self.min_iml[imti]
@@ -535,11 +539,13 @@ class GmfGetter(object):
                                 dic[imt].append((gmv, eid))
                             else:
                                 dic[imt] = [(gmv, eid)]
+                            gmdata[NBYTES] += 13  # bytes per record
         for sid in self.sids:
             dic = gmfdict[sid]
-            for imt in dic:
-                dic[imt] = arr = numpy.array(dic[imt], self.dt)
-                self.gmfbytes += arr.nbytes
+            for imti, imt in enumerate(self.imts):
+                if imt in dic:
+                    dic[imt] = arr = numpy.array(dic[imt], self.dt)
+                    gmdata[imti] += arr['gmv'].sum()
             yield dic
 
     def get(self, rlz):
