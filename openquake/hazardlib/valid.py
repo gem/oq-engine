@@ -995,7 +995,7 @@ def simple_slice(value):
 vs30_type = ChoiceCI('measured', 'inferred')
 
 SiteParam = collections.namedtuple(
-    'SiteParam', 'z1pt0 z2pt5 measured vs30 lon lat depth backarc'.split())
+    'SiteParam', 'lon lat depth z1pt0 z2pt5 measured vs30 backarc'.split())
 
 
 def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat,
@@ -1008,10 +1008,11 @@ def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat,
 
     into a 7-tuple (z1pt0, z2pt5, measured, vs30, backarc, lon, lat)
     """
-    return SiteParam(positivefloat(z1pt0), positivefloat(z2pt5),
-                     vs30_type(vs30Type) == 'measured',
-                     positivefloat(vs30), longitude(lon),
-                     latitude(lat), float_(depth), boolean(backarc))
+    return SiteParam(z1pt0=positivefloat(z1pt0), z2pt5=positivefloat(z2pt5),
+                     measured=vs30_type(vs30Type) == 'measured',
+                     vs30=positivefloat(vs30), lon=longitude(lon),
+                     lat=latitude(lat), depth=float_(depth),
+                     backarc=boolean(backarc))
 
 # used for the exposure validation
 cost_type = Choice('structural', 'nonstructural', 'contents',
