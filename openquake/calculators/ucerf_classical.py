@@ -22,8 +22,8 @@ import logging
 import functools
 from datetime import datetime
 import numpy
+import h5py
 
-from openquake.baselib.performance import Monitor
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.baselib import parallel
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -75,33 +75,6 @@ def convert_UCERFSource(self, node):
 SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
-def _hazard_curves_per_rupture_subset(
-        rupset_idx, ucerf_source, sites, imtls, cmaker,
-        truncation_level=None, monitor=Monitor()):
-    """
-    Calculates the probabilities of exceedence from a set of rupture indices
-    """
-    imtls = DictArray(imtls)
-    ctx_mon = monitor('making contexts', measuremem=False)
-    pne_mons = [monitor('%s.get_poes' % gsim, measuremem=False)
-                for gsim in cmaker.gsims]
-    pmap = ProbabilityMap(len(imtls.array), len(cmaker.gsims))
-    pmap.calc_times = []
-    pmap.grp_id = ucerf_source.src_group_id
-    nsites = len(sites)
-    ucerf_source.rupset_idx = rupset_idx
-    ucerf_source.num_ruptures = len(rupset_idx)
-    pmap.eff_ruptures = {pmap.grp_id: ucerf_source.num_ruptures}
-    # NB: the effective ruptures can be less, some may have zero probability
-    t0 = time.time()
-    upmap = poe_map(ucerf_source, sites, imtls, cmaker,
-                    truncation_level, ctx_mon, pne_mons)
-    pmap |= upmap
-    pmap.calc_times.append(
-        (ucerf_source.source_id, nsites, time.time() - t0))
-    return pmap
-
-
 def ucerf_classical_hazard_by_rupture_set(
         rupset_idx, ucerf_source, src_filter, gsims, monitor):
     """
@@ -118,24 +91,51 @@ def ucerf_classical_hazard_by_rupture_set(
     :returns:
         a ProbabilityMap
     """
+    t0 = time.time()
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.imtls
-    max_dist = src_filter.integration_distance
-    rupset_idx, s_sites = \
-        ucerf_source.filter_sites_by_distance_from_rupture_set(
-            rupset_idx, src_filter.sitecol, max_dist[DEFAULT_TRT])
-    if len(s_sites):
-        ucerf_source.src_filter = src_filter  # so that .iter_ruptures() work
-        cmaker = ContextMaker(gsims, max_dist)
-        pm = _hazard_curves_per_rupture_subset(
-            rupset_idx, ucerf_source, s_sites, imtls, cmaker,
-            truncation_level, monitor=monitor)
-    else:  # return an empty probability map
-        pm = ProbabilityMap(len(imtls.array), len(gsims))
-        pm.calc_times = []  # TODO: fix .calc_times
-        pm.eff_ruptures = {ucerf_source.src_group_id: 0}
-        pm.grp_id = ucerf_source.src_group_id
-    return pm
+    ucerf_source.src_filter = src_filter  # so that .iter_ruptures() work
+
+    # prefilter the sites close to the rupture set
+    with h5py.File(ucerf_source.control.source_file, "r") as hdf5:
+        mag = hdf5[ucerf_source.idx_set["mag_idx"]][rupset_idx].max()
+        ridx = set()
+        # find the combination of rupture sections used in this model
+        rup_index_key = "/".join(
+            [ucerf_source.idx_set["geol_idx"], "RuptureIndex"])
+        # determine which of the rupture sections used in this set of indices
+        rup_index = hdf5[rup_index_key]
+        for i in rupset_idx:
+            ridx.update(rup_index[i])
+        s_sites = ucerf_source.get_rupture_sites(hdf5, ridx, src_filter, mag)
+        if s_sites is None:  # return an empty probability map
+            pm = ProbabilityMap(len(imtls.array), len(gsims))
+            pm.calc_times = []  # TODO: fix .calc_times
+            pm.eff_ruptures = {ucerf_source.src_group_id: 0}
+            pm.grp_id = ucerf_source.src_group_id
+            return pm
+
+    # compute the ProbabilityMap by using hazardlib.calc.hazard_curve.poe_map
+    ucerf_source.rupset_idx = rupset_idx
+    ucerf_source.num_ruptures = len(rupset_idx)
+    cmaker = ContextMaker(gsims, src_filter.integration_distance)
+    imtls = DictArray(imtls)
+    nsites = len(s_sites)
+    ctx_mon = monitor('making contexts', measuremem=False)
+    pne_mons = [monitor('%s.get_poes' % gsim, measuremem=False)
+                for gsim in gsims]
+    pmap = ProbabilityMap(len(imtls.array), len(cmaker.gsims))
+    pmap.calc_times = []
+    pmap.grp_id = ucerf_source.src_group_id
+    pmap.eff_ruptures = {pmap.grp_id: ucerf_source.num_ruptures}
+    # NB: the effective ruptures can be less, some may have zero probability
+    upmap = poe_map(ucerf_source, s_sites, imtls, cmaker,
+                    truncation_level, ctx_mon, pne_mons)
+    pmap |= upmap
+    pmap.calc_times.append(
+        (ucerf_source.source_id, nsites, time.time() - t0))
+    return pmap
+
 ucerf_classical_hazard_by_rupture_set.shared_dir_on = config.SHARED_DIR_ON
 
 
@@ -198,11 +198,8 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             self.csm.infos[grp_id, ucerf_source.source_id] = source.SourceInfo(
                 ucerf_source)
             logging.info('Getting the background point sources')
-            with self.monitor('getting background sources', autoflush=True):
-                background_sids = ucerf_source.get_background_sids(
-                    self.src_filter)
-                bckgnd_sources = ucerf_source.get_background_sources(
-                    background_sids)
+            bckgnd_sources = ucerf_source.get_background_sources(
+                self.src_filter)
 
             # since there are two kinds of tasks (background and rupture_set)
             # we divide the concurrent_tasks parameter by 2;
@@ -220,17 +217,16 @@ class UcerfPSHACalculator(classical.PSHACalculator):
             # parallelize by rupture subsets
             rup_sets = numpy.arange(ucerf_source.num_ruptures)
             taskname = 'ucerf_classical_hazard_by_rupture_set_%d' % grp_id
-            rup_res = parallel.Starmap.apply(
+            acc = parallel.Starmap.apply(
                 ucerf_classical_hazard_by_rupture_set,
                 (rup_sets, ucerf_source, self.src_filter, gsims, monitor),
                 concurrent_tasks=ct2, name=taskname
-            ).submit_all()
+            ).reduce(self.agg_dicts, acc)
 
             # compose probabilities from background sources
             for pmap in bg_res:
                 acc[grp_id] |= pmap
 
-            acc = functools.reduce(self.agg_dicts, rup_res, acc)
             with self.monitor('store source_info', autoflush=True):
                 self.store_source_info(self.csm.infos)
         self.datastore['csm_info'] = self.csm.info
