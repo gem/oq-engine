@@ -369,6 +369,10 @@ class FilteredSiteCollection(object):
         """Return a mesh with the given lons, lats, and depths"""
         return Mesh(self.lons, self.lats, self.depths)
 
+    def at_sea_level(self):
+        """True if all depths are zero"""
+        return (self.depths == 0).all()
+
     def filter(self, mask):
         """
         Create a FilteredSiteCollection with only a subset of sites
