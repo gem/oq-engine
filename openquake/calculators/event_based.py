@@ -402,12 +402,12 @@ def save_gmdata(calc, n_rlzs):
     dtlist = ([(imt, F32) for imt in calc.oqparam.imtls] +
               [('events', U32), ('nbytes', U32)])
     array = numpy.zeros(n_rlzs, dtlist)
-    for rlz in sorted(calc.gmdata):
-        data = calc.gmdata[rlz]  # (imts, events, nbytes)
+    for rlzi in sorted(calc.gmdata):
+        data = calc.gmdata[rlzi]  # (imts, events, nbytes)
         events = data[-2]
         nbytes = data[-1]
         gmv = data[:-2] / events / n_sites
-        array[rlz.ordinal] = tuple(gmv) + (events, nbytes)
+        array[rlzi] = tuple(gmv) + (events, nbytes)
     calc.datastore['gmdata'] = array
     logging.info('Generated %s of GMFs', humansize(array['nbytes'].sum()))
 
