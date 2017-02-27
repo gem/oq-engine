@@ -1,4 +1,13 @@
   [Michele Simionato]
+  * Added a command `oq normalize` to produce good `sites.csv` files
+  * Introduced a `ses_seed` parameter to specify the seed used to generate
+    the stochastic event sets; `random_seed` is used for the sampling only
+  * Changed the `build_rcurves` procedure to read the loss ratios directly from
+    the workers
+
+python-oq-engine (2.3.0-0~precise01) precise; urgency=low
+
+  [Michele Simionato]
   * `oq info --report` now filters the ruptures and reports the correct
     number of effective ruptures even for classical calculators
   * Stripped the TRT information from the event loss table CSV export
@@ -53,6 +62,8 @@
     export the loss maps anymore
   * Fixed `oq engine --make-html-report` when using Python 3
   * Fixed bug when running `oq info job.ini` with NRML 0.5 source models
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 23 Feb 2017 14:37:44 +0100
 
 python-oq-engine (2.2.0-0~precise01) precise; urgency=low
 

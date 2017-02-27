@@ -82,13 +82,15 @@ def build_agg_curve(cb_inputs, monitor):
     return result
 
 
-def build_rcurves(h5path, rlzname, cbs, assets, monitor):
+def build_rcurves(ext5path, rlzname, cbs, assets, monitor):
     """
+    :param ext5path: path of the .hdf5 file containing the loss ratios
     :param rlzname: string of the form `rlz-\d\d\d\d`
     :param cbs: list of `L` CurveBuilders instances
+    :param assets: list of Asset instances
     :param monitor: Monitor instance
     """
-    with hdf5.File(h5path, 'r') as f:
+    with hdf5.File(ext5path, 'r') as f:
         data = f['all_loss_ratios/' + rlzname].value
     result = {'rlzno': int(rlzname[4:])}  # strip rlz-
     losses_by_aid = group_array(data, 'aid')
