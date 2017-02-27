@@ -519,6 +519,7 @@ class GmfGetter(object):
 
     def __call__(self, rlz):
         gsim = self.gsims[rlz.ordinal]
+        dics = [{} for sid in self.sids]
         gmfdict = collections.defaultdict(
             lambda: [[] for _ in range(len(self.imts))])
         gmdata = self.gmdata[rlz.ordinal]
@@ -537,13 +538,14 @@ class GmfGetter(object):
                         if gmv > min_gmv:
                             gmfdict[sid][imti].append((gmv, eid))
                             gmdata[NBYTES] += BYTES_PER_RECORD
-        for sid in self.sids:
-            dic = {}
-            for imt, lst in zip(self.imts, gmfdict[sid]):
+        for sid, dic in zip(self.sids, dics):
+            gmv = gmfdict[sid]
+            for imti, imt in enumerate(self.imts):
+                lst = gmv[imti]
                 if lst:
                     dic[imt] = arr = numpy.array(lst, self.dt)
                     gmdata[imti] += arr['gmv'].sum()
-            yield dic
+        return dics
 
     def get(self, rlz):
         """:returns: array of dtype gmv_dt"""
