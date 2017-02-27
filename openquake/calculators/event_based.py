@@ -408,7 +408,7 @@ def save_gmdata(calc, n_rlzs):
         nbytes = data[-1]
         gmv = data[:-2] / events / n_sites
         array[rlz.ordinal] = tuple(gmv) + (events, nbytes)
-    calc.datastore.hdf5path['gmdata'] = array
+    calc.datastore['gmdata'] = array
     logging.info('Generated %s of GMFs', humansize(array['nbytes'].sum()))
 
 
