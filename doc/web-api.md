@@ -155,7 +155,7 @@ The number of lines of log
 
 #### POST /v1/calc/:calc_id/remove
 
-Remove the calculation specified by the parameter `calc_id`, by setting the field oq_job.relevant to False.
+Remove the calculation specified by the parameter `calc_id`.
 
 
 #### POST /v1/calc/run
