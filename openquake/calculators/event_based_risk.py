@@ -180,6 +180,7 @@ def event_based_risk(riskinput, riskmodel, assetcol, monitor):
 
     # store info about the GMFs
     result['gmdata'] = monitor.gmdata
+    delattr(monitor, 'gmdata')
     return result
 
 

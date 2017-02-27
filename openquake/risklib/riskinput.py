@@ -520,7 +520,7 @@ class GmfGetter(object):
     def __call__(self, rlz):
         gsim = self.gsims[rlz.ordinal]
         gmfdict = collections.defaultdict(dict)
-        gmdata = self.gmdata[rlz]
+        gmdata = self.gmdata[rlz.ordinal]
         for computer in self.computers:
             rup = computer.rupture
             if self.samples > 1:
