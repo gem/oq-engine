@@ -214,7 +214,7 @@ def get_mesh(oqparam):
     elif 'site_model' in oqparam.inputs:
         coords = [(param.lon, param.lat, param.depth)
                   for param in get_site_model(oqparam)]
-        mesh = geo.Mesh.from_coords(coords, from_site_model=True)
+        mesh = geo.Mesh.from_coords(coords)
         mesh.from_site_model = True
         return mesh
 
