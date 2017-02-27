@@ -339,22 +339,19 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
     gmfcoll = {}  # rlz -> gmfa
     for rlz in rlzs:
         gmfcoll[rlz] = []
-        for i, gmvdict in enumerate(getter(rlz)):
-            if gmvdict:
-                sid = getter.sids[i]
-                for imti, imt in enumerate(getter.imts):
-                    if oq.hazard_curves_from_gmfs:
-                        try:
-                            gmv = gmvdict[imt]
-                        except KeyError:
-                            # no gmv for the given imt, this may happen
-                            pass
-                        else:
-                            haz[sid][imt, rlz] = gmv
-                    for rec in gmvdict.get(imt, []):
-                        gmv = rec['gmv']
-                        gmfcoll[rlz].append(
-                            (sid, rec['eid'], imti, gmv))
+        gmfa = getter(rlz)
+        for i, sid in enumerate(getter.sids):
+            for imti, imt in enumerate(getter.imts):
+                recs = gmfa[i, imti]
+                try:
+                    len(recs)
+                except:
+                    continue
+                if oq.hazard_curves_from_gmfs:
+                    haz[sid][imt, rlz] = recs
+                for rec in recs:
+                    gmv = rec['gmv']
+                    gmfcoll[rlz].append((sid, rec['eid'], imti, gmv))
     for rlz in gmfcoll:
         gmfcoll[rlz] = numpy.array(gmfcoll[rlz], calc.gmv_dt)
     result = dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
