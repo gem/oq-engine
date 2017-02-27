@@ -252,8 +252,8 @@ def get_site_collection(oqparam, mesh=None, site_model_params=None):
     if oqparam.inputs.get('site_model'):
         sitecol = []
         if getattr(mesh, 'from_site_model', False):
-            for param in get_site_model(oqparam):
-                pt = geo.Point(param.lon, param.lat)
+            for param in sorted(get_site_model(oqparam)):
+                pt = geo.Point(param.lon, param.lat, param.depth)
                 sitecol.append(site.Site(
                     pt, param.vs30, param.measured,
                     param.z1pt0, param.z2pt5, param.backarc))
