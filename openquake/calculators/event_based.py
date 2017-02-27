@@ -343,11 +343,7 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
         for i, sid in enumerate(getter.sids):
             for imti, imt in enumerate(getter.imts):
                 recs = gmfa[i, imti]
-                try:
-                    len(recs)
-                except:
-                    continue
-                if oq.hazard_curves_from_gmfs:
+                if oq.hazard_curves_from_gmfs and len(recs):
                     haz[sid][imt, rlz] = recs
                 for rec in recs:
                     gmv = rec['gmv']
