@@ -215,7 +215,7 @@ class IntegrationDistance(collections.Mapping):
         """
         :param sites: a (Filtered)SiteColletion
         :param rupture: a rupture
-        :param distance_type: default 'rjb'
+        :param distance_type: default 'rrup'
         :returns: (close sites, close distances)
         :raises: a FarAwayRupture exception if the rupture is far away
         """
