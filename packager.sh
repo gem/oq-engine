@@ -272,7 +272,7 @@ _devtest_innervm_run () {
 
     gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
     # install package to manage repository properly
-    ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python-software-properties"
+    ssh $lxc_ip "sudo apt-get install -y python-software-properties"
 
     # add custom packages
     ssh $lxc_ip mkdir -p "repo"
@@ -305,7 +305,7 @@ _devtest_innervm_run () {
             # cd _jenkins_deps/$dep
 
             add_local_pkg_repo "$dep"
-            ssh $lxc_ip "sudo apt-get install -y python-${dep}"
+            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python-${dep}"
         else
             echo "Dep type $dep_type not supported"
             exit 1
@@ -380,10 +380,10 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get upgrade -y"
 
     # packaging related tests (install, remove, purge, install, reinstall)
-    ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
+    ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y ${GEM_DEB_PACKAGE}"
     ssh $lxc_ip "sudo apt-get remove -y ${GEM_DEB_PACKAGE}"
-    ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
-    ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
+    ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y ${GEM_DEB_PACKAGE}"
+    ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES --reinstall -y ${GEM_DEB_PACKAGE}"
 
     scp -r "$lxc_ip://usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" .
     scp -r "$lxc_ip://usr/share/doc/${GEM_DEB_PACKAGE}/README*" .
@@ -431,7 +431,7 @@ _builddoc_innervm_run () {
             # cd _jenkins_deps/$dep
 
             add_local_pkg_repo "$dep"
-            ssh $lxc_ip "sudo apt-get install --force-yes -y python-${dep}"
+            ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python-${dep}"
         else
             echo "Dep type $dep_type not supported"
             exit 1
