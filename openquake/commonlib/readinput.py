@@ -214,7 +214,9 @@ def get_mesh(oqparam):
     elif 'site_model' in oqparam.inputs:
         coords = [(param.lon, param.lat, param.depth)
                   for param in get_site_model(oqparam)]
-        return geo.Mesh.from_coords(coords, from_site_model=True)
+        mesh = geo.Mesh.from_coords(coords, from_site_model=True)
+        mesh.from_site_model = True
+        return mesh
 
 
 def get_site_model(oqparam):
@@ -249,7 +251,7 @@ def get_site_collection(oqparam, mesh=None, site_model_params=None):
         return
     if oqparam.inputs.get('site_model'):
         sitecol = []
-        if mesh.from_site_model:
+        if getattr(mesh, 'from_site_model', False):
             for param in get_site_model(oqparam):
                 pt = geo.Point(param.lon, param.lat)
                 sitecol.append(site.Site(
