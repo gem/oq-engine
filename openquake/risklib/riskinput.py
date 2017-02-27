@@ -395,7 +395,7 @@ class CompositeRiskModel(collections.Mapping):
     def __len__(self):
         return len(self._riskmodels)
 
-    def build_input(self, rlzs, hazards_by_site, assetcol, eps_dict):
+    def build_input(self, imts, rlzs, hazards_by_site, assetcol, eps_dict):
         """
         :param rlzs: a list of realizations
         :param hazards_by_site: an array of hazards per each site
@@ -403,7 +403,7 @@ class CompositeRiskModel(collections.Mapping):
         :param eps_dict: a dictionary of epsilons
         :returns: a :class:`RiskInput` instance
         """
-        return RiskInput(rlzs, hazards_by_site, assetcol, eps_dict)
+        return RiskInput(imts, rlzs, hazards_by_site, assetcol, eps_dict)
 
     def gen_outputs(self, riskinput, monitor, assetcol=None):
         """
@@ -436,6 +436,7 @@ class CompositeRiskModel(collections.Mapping):
                     [asset.ordinal for asset in group[taxonomy]])
                 dic[taxonomy].append((i, group[taxonomy], epsgetter))
                 taxonomies.add(taxonomy)
+        imti = {imt: i for i, imt in enumerate(riskinput.imts)}
         for rlz in riskinput.rlzs:
             with mon_hazard:
                 hazard = hazard_getter(rlz)
@@ -446,8 +447,12 @@ class CompositeRiskModel(collections.Mapping):
                         outs = [None] * len(self.lti)
                         for lt in self.loss_types:
                             imt = riskmodel.risk_functions[lt].imt
-                            haz = hazard[i].get(imt, ())
-                            if len(haz):
+                            haz = hazard[i, imti[imt]]
+                            try:
+                                n = len(haz)
+                            except:
+                                continue
+                            if n:
                                 out = riskmodel(lt, assets, haz, epsgetter)
                                 outs[self.lti[lt]] = out
                         row = MultiLoss(self.loss_types, outs)
@@ -469,14 +474,16 @@ class CompositeRiskModel(collections.Mapping):
 
 class PoeGetter(object):
     """
-    Callable yielding dictionaries {imt: curve} when called on a realization.
+    Callable yielding poe[sidx, imti] when called on a realization.
     """
-    def __init__(self, hazard_by_site):
+    def __init__(self, hazard_by_site, imts):
         self.hazard_by_site = hazard_by_site
+        self.imts = imts
 
     def __call__(self, rlz):
-        return [{imt: haz[imt][rlz] for imt in haz}
-                for haz in self.hazard_by_site]
+        return numpy.array(
+            [[haz[imt][rlz] for imt in self.imts]
+             for haz in self.hazard_by_site])
 
 
 gmv_dt = numpy.dtype([('sid', U32), ('eid', U32), ('imti', U8), ('gmv', F32)])
@@ -516,11 +523,11 @@ class GmfGetter(object):
         # dictionary rlzi -> array(imts, events, nbytes)
         self.gmdata = AccumDict(accum=numpy.zeros(len(self.imts) + 2, F32))
 
-    def __call__(self, rlz):
+    def gen(self, rlz):
+        """
+        :yields: tuples (sid, eid, imti, gmv)
+        """
         gsim = self.gsims[rlz.ordinal]
-        dics = [{} for sid in self.sids]
-        gmfdict = collections.defaultdict(
-            lambda: [[] for _ in range(len(self.imts))])
         gmdata = self.gmdata[rlz.ordinal]
         for computer in self.computers:
             rup = computer.rupture
@@ -535,27 +542,22 @@ class GmfGetter(object):
                 for eid, gmf in zip(eids, array[imti].T):
                     for sid, gmv in zip(computer.sites.sids, gmf):
                         if gmv > min_gmv:
-                            gmfdict[sid][imti].append((gmv, eid))
+                            gmdata[imti] += gmv
                             gmdata[NBYTES] += BYTES_PER_RECORD
-        for sid, dic in zip(self.sids, dics):
-            gmv = gmfdict[sid]
-            for imti, imt in enumerate(self.imts):
-                lst = gmv[imti]
-                if lst:
-                    dic[imt] = arr = numpy.array(lst, self.dt)
-                    gmdata[imti] += arr['gmv'].sum()
-        return dics
+                            yield sid, eid, imti, gmv
 
-    def get(self, rlz):
-        """:returns: array of dtype gmv_dt"""
-        gmfcoll = []
-        for i, gmvdict in enumerate(self(rlz)):
-            if gmvdict:
-                sid = self.sids[i]
-                for imti, imt in enumerate(self.imts):
-                    for rec in gmvdict.get(imt, []):
-                        gmfcoll.append((sid, rec['eid'], imti, rec['gmv']))
-        return numpy.array(gmfcoll, gmv_dt)
+    def __call__(self, rlz):
+        gmfa = numpy.zeros((len(self.sids), len(self.imts)), object)
+        gmfdict = collections.defaultdict(
+            lambda: [[] for _ in range(len(self.imts))])
+        for sid, eid, imti, gmv in self.gen(rlz):
+            gmfdict[sid][imti].append((gmv, eid))
+        for i, sid in enumerate(self.sids):
+            for imti, imt in enumerate(self.imts):
+                lst = gmfdict[sid][imti]
+                if lst:
+                    gmfa[i, imti] = numpy.array(lst, self.dt)
+        return gmfa
 
 
 class RiskInput(object):
@@ -569,7 +571,8 @@ class RiskInput(object):
     :param assets_by_site: array of assets, one per site
     :param eps_dict: dictionary of epsilons
     """
-    def __init__(self, rlzs, hazard_by_site, assets_by_site, eps_dict):
+    def __init__(self, imts, rlzs, hazard_by_site, assets_by_site, eps_dict):
+        self.imts = imts
         self.rlzs = rlzs
         self.hazard_by_site = hazard_by_site
         self.assets_by_site = assets_by_site
@@ -606,7 +609,7 @@ class RiskInput(object):
         :returns:
             list of hazard dictionaries imt -> rlz -> haz per each site
         """
-        return PoeGetter(self.hazard_by_site)
+        return PoeGetter(self.hazard_by_site, self.imts)
 
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
