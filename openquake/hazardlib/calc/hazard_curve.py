@@ -64,9 +64,9 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.general import DictArray, groupby
 from openquake.baselib.parallel import Sequential
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
+from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
-from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib.calc.filters import SourceFilter, FarAwayRupture
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.sourceconverter import SourceGroup
 
@@ -261,7 +261,7 @@ def calc_hazard_curves(
         sitecol = ss_filter.sitecol
     else:  # backward compatibility, a site collection was passed
         sitecol = ss_filter
-        ss_filter = SourceFilter(sitecol, None)
+        ss_filter = SourceFilter(sitecol, {})
 
     imtls = DictArray(imtls)
     pmap = ProbabilityMap(len(imtls.array), 1)
