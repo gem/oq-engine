@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import sys
 import unittest
 from nose.plugins.attrib import attr
 
@@ -153,6 +154,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_master(self):
+        if sys.platform == 'darwin':
+            raise unittest.SkipTest('MacOSX')
         self.assert_stats_ok(case_master, 'job.ini', individual_curves='false')
 
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
@@ -183,8 +186,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_miriam(self):
         # this is a case with a grid and asset-hazard association
         out = self.run_calc(case_miriam.__file__, 'job.ini', exports='csv')
-        if OLD_NUMPY:
-            raise unittest.SkipTest('numpy too old to export agg_loss_table')
 
         [fname] = out['agg_loss_table', 'csv']
         self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
