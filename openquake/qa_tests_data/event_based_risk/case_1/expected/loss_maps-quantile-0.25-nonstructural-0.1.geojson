@@ -10,7 +10,7 @@
             },
             "properties": {
                 "asset_ref": "a0",
-                "loss": 291.57305908203125
+                "loss": 392.0038146972656
             },
             "type": "Feature"
         },
@@ -24,7 +24,7 @@
             },
             "properties": {
                 "asset_ref": "a1",
-                "loss": 170.2894744873047
+                "loss": 69.13363647460938
             },
             "type": "Feature"
         },
@@ -38,7 +38,7 @@
             },
             "properties": {
                 "asset_ref": "a2",
-                "loss": 31.9167537689209
+                "loss": 48.82027816772461
             },
             "type": "Feature"
         },
@@ -52,7 +52,7 @@
             },
             "properties": {
                 "asset_ref": "a3",
-                "loss": 0.0
+                "loss": 472.59521484375
             },
             "type": "Feature"
         }
