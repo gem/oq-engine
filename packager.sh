@@ -272,7 +272,7 @@ _devtest_innervm_run () {
 
     gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
     # install package to manage repository properly
-    ssh $lxc_ip "sudo apt-get install -y python-software-properties"
+    ssh $lxc_ip "sudo apt-get install $APT_FORCE_YES -y python-software-properties"
 
     # add custom packages
     ssh $lxc_ip mkdir -p "repo"
@@ -855,6 +855,7 @@ while [ $# -gt 0 ]; do
             ;;
         -U|--unsigned)
             BUILD_UNSIGN=1
+            APT_FORCE_YES="--force-yes"
             ;;
         -L|--lxc_build)
             BUILD_ON_LXC=1
