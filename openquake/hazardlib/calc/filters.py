@@ -334,7 +334,10 @@ class SourceFilter(object):
                 box = self.get_affected_box(src)
                 sids = numpy.array(sorted(self.index.intersection(box)))
                 if len(set(sids)) < len(sids):
-                    # sanity check against rtree bugs
+                    # MS: sanity check against rtree bugs; what happened to me
+                    # is that by following the advice in http://toblerity.org/rtree/performance.html#use-stream-loading
+                    # self.index.intersection(box) started reporting duplicate
+                    # and wrong sids!
                     raise ValueError('sids=%s' % sids)
                 if len(sids):
                     src.nsites = len(sids)
