@@ -428,18 +428,17 @@ class CompositeRiskModel(collections.Mapping):
 
         # group the assets by taxonomy
         taxonomies = set()
-        with monitor('grouping assets by taxonomy'):
-            dic = collections.defaultdict(list)
-            for i, assets in enumerate(assets_by_site):
-                group = groupby(assets, by_taxonomy)
-                for taxonomy in group:
-                    epsgetter = riskinput.epsilon_getter(
-                        [asset.ordinal for asset in group[taxonomy]])
-                    dic[taxonomy].append((i, group[taxonomy], epsgetter))
-                    taxonomies.add(taxonomy)
+        dic = collections.defaultdict(list)
+        for i, assets in enumerate(assets_by_site):
+            group = groupby(assets, by_taxonomy)
+            for taxonomy in group:
+                epsgetter = riskinput.epsilon_getter(
+                    [asset.ordinal for asset in group[taxonomy]])
+                dic[taxonomy].append((i, group[taxonomy], epsgetter))
+                taxonomies.add(taxonomy)
         for rlz in riskinput.rlzs:
             with mon_hazard:
-                hazard = list(hazard_getter(rlz))
+                hazard = hazard_getter(rlz)
             for taxonomy in sorted(taxonomies):
                 riskmodel = self[taxonomy]
                 with mon_risk:
@@ -476,8 +475,8 @@ class PoeGetter(object):
         self.hazard_by_site = hazard_by_site
 
     def __call__(self, rlz):
-        for haz in self.hazard_by_site:
-            yield {imt: haz[imt][rlz] for imt in haz}
+        return [{imt: haz[imt][rlz] for imt in haz}
+                for haz in self.hazard_by_site]
 
 
 gmv_dt = numpy.dtype([('sid', U32), ('eid', U32), ('imti', U8), ('gmv', F32)])
