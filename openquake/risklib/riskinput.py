@@ -514,7 +514,7 @@ class GmfGetter(object):
                 ebr, sites, self.imts, self.gsims,
                 self.truncation_level, self.correlation_model)
             self.computers.append(computer)
-        # dictionary rlz -> array(imts, events, nbytes)
+        # dictionary rlzi -> array(imts, events, nbytes)
         self.gmdata = AccumDict(accum=numpy.zeros(len(self.imts) + 2, F32))
 
     def __call__(self, rlz):
