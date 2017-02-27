@@ -536,7 +536,7 @@ class GmfGetter(object):
                     for sid, gmv in zip(computer.sites.sids, gmf):
                         if gmv > min_gmv:
                             gmfdict[sid][imti].append((gmv, eid))
-                            gmdata[NBYTES] += 13  # bytes per record
+                            gmdata[NBYTES] += BYTES_PER_RECORD
         for sid in self.sids:
             dic = {}
             for imt, lst in zip(self.imts, gmfdict[sid]):
