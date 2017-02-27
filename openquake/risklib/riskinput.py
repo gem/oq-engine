@@ -448,11 +448,7 @@ class CompositeRiskModel(collections.Mapping):
                         for lt in self.loss_types:
                             imt = riskmodel.risk_functions[lt].imt
                             haz = hazard[i, imti[imt]]
-                            try:
-                                n = len(haz)
-                            except:
-                                continue
-                            if n:
+                            if len(haz):
                                 out = riskmodel(lt, assets, haz, epsgetter)
                                 outs[self.lti[lt]] = out
                         row = MultiLoss(self.loss_types, outs)
@@ -554,9 +550,7 @@ class GmfGetter(object):
             gmfdict[sid][imti].append((gmv, eid))
         for i, sid in enumerate(self.sids):
             for imti, imt in enumerate(self.imts):
-                lst = gmfdict[sid][imti]
-                if lst:
-                    gmfa[i, imti] = numpy.array(lst, self.dt)
+                gmfa[i, imti] = numpy.array(gmfdict[sid][imti], self.dt)
         return gmfa
 
 
