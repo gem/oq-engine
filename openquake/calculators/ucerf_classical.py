@@ -75,7 +75,7 @@ def convert_UCERFSource(self, node):
 SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
-def ucerf_classical_hazard_by_rupture_set(
+def ucerf_classical(
         rupset_idx, ucerf_source, src_filter, gsims, monitor):
     """
     :param rupset_idx:
@@ -120,23 +120,18 @@ def ucerf_classical_hazard_by_rupture_set(
     ucerf_source.num_ruptures = len(rupset_idx)
     cmaker = ContextMaker(gsims, src_filter.integration_distance)
     imtls = DictArray(imtls)
-    nsites = len(s_sites)
     ctx_mon = monitor('making contexts', measuremem=False)
     pne_mons = [monitor('%s.get_poes' % gsim, measuremem=False)
                 for gsim in gsims]
-    pmap = ProbabilityMap(len(imtls.array), len(cmaker.gsims))
-    pmap.calc_times = []
+    pmap = poe_map(ucerf_source, s_sites, imtls, cmaker,
+                   truncation_level, ctx_mon, pne_mons)
+    nsites = len(s_sites)
+    pmap.calc_times = [(ucerf_source.source_id, nsites, time.time() - t0)]
     pmap.grp_id = ucerf_source.src_group_id
     pmap.eff_ruptures = {pmap.grp_id: ucerf_source.num_ruptures}
-    # NB: the effective ruptures can be less, some may have zero probability
-    upmap = poe_map(ucerf_source, s_sites, imtls, cmaker,
-                    truncation_level, ctx_mon, pne_mons)
-    pmap |= upmap
-    pmap.calc_times.append(
-        (ucerf_source.source_id, nsites, time.time() - t0))
     return pmap
 
-ucerf_classical_hazard_by_rupture_set.shared_dir_on = config.SHARED_DIR_ON
+ucerf_classical.shared_dir_on = config.SHARED_DIR_ON
 
 
 @base.calculators.add('ucerf_psha')
@@ -144,7 +139,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
     """
     UCERF classical calculator.
     """
-    core_task = ucerf_classical_hazard_by_rupture_set
+    core_task = ucerf_classical
     is_stochastic = False
 
     def pre_execute(self):
@@ -216,9 +211,9 @@ class UcerfPSHACalculator(classical.PSHACalculator):
 
             # parallelize by rupture subsets
             rup_sets = numpy.arange(ucerf_source.num_ruptures)
-            taskname = 'ucerf_classical_hazard_by_rupture_set_%d' % grp_id
+            taskname = 'ucerf_classical_%d' % grp_id
             acc = parallel.Starmap.apply(
-                ucerf_classical_hazard_by_rupture_set,
+                ucerf_classical,
                 (rup_sets, ucerf_source, self.src_filter, gsims, monitor),
                 concurrent_tasks=ct2, name=taskname
             ).reduce(self.agg_dicts, acc)
