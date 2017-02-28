@@ -168,7 +168,7 @@ class BoundingBox(object):
     __nonzero__ = __bool__
 
 
-def classical(sources, src_filter, gsims, monitor):
+def classical(sources, src_filter, gsims, param, monitor):
     """
     :param sources:
         a non-empty sequence of sources of homogeneous tectonic region type
@@ -176,6 +176,8 @@ def classical(sources, src_filter, gsims, monitor):
         source filter
     :param gsims:
         a list of GSIMs for the current tectonic region type
+    :param param:
+        a dictionary of parameters
     :param monitor:
         a monitor instance
     :returns:
@@ -325,7 +327,7 @@ class PSHACalculator(base.HazardCalculator):
                 monitor.samples = self.rlzs_assoc.samples[sg.id]
                 for block in self.csm.split_sources(
                         sg.sources, self.src_filter, maxweight):
-                    yield block, self.src_filter, gsims, monitor
+                    yield block, self.src_filter, gsims, {}, monitor
 
     def store_source_info(self, infos):
         # save the calculation times per each source
