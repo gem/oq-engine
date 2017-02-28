@@ -15,15 +15,13 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import os
-import sys
 import h5py
 import unittest
 from openquake.baselib.general import writetmp
 from openquake.calculators.export import export
 from openquake.calculators.views import view
 from openquake.qa_tests_data import ucerf
-from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
+from openquake.calculators.tests import CalculatorTestCase
 
 from nose.plugins.attrib import attr
 
@@ -37,7 +35,7 @@ class UcerfTestCase(CalculatorTestCase):
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         # check that we get the expected number of events
         with open(fname) as f:
-            self.assertEqual(len(f.readlines()), 918)
+            self.assertEqual(len(f.readlines()), 974)
         # check the header and the first 18 events
         self.assertEqualFiles('expected/ruptures.csv', fname, lastline=19)
 
