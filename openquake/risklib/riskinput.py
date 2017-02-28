@@ -607,17 +607,17 @@ class RiskInput(object):
             self.__class__.__name__, ', '.join(self.taxonomies), self.weight)
 
 
-def make_eps(assets_by_site, num_samples, seed, correlation):
+def make_eps(assetcol, num_samples, seed, correlation):
     """
-    :param assets_by_site: a list of lists of assets
+    :param assetcol: an AssetCollection instance
     :param int num_samples: the number of ruptures
     :param int seed: a random seed
     :param float correlation: the correlation coefficient
     :returns: epsilons matrix of shape (num_assets, num_samples)
     """
-    all_assets = (a for assets in assets_by_site for a in assets)
+    all_assets = iter(assetcol)
     assets_by_taxo = groupby(all_assets, by_taxonomy)
-    num_assets = sum(map(len, assets_by_site))
+    num_assets = sum(map(len, assetcol.assets_by_site()))
     eps = numpy.zeros((num_assets, num_samples), numpy.float32)
     for taxonomy, assets in assets_by_taxo.items():
         # the association with the epsilons is done in order
