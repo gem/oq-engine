@@ -340,15 +340,15 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
         gmfcoll = {}  # rlz -> gmfa
         for rlz in rlzs:
             lst = []
-            gmfa = getter.get(rlz)
+            gmf = getter.get_array(rlz)  # array (num_sites, num_imts)
             for i, sid in enumerate(getter.sids):
                 for imti, imt in enumerate(getter.imts):
-                    haz[sid][imt, rlz] = recs = gmfa[i, imti]
+                    haz[sid][imt, rlz] = recs = gmf[i, imti]
                     for rec in recs:
                         lst.append((sid, rec['eid'], imti, rec['gmv']))
             gmfcoll[rlz] = numpy.array(lst, calc.gmv_dt)
     else:  # fast lane
-        gmfcoll = {rlz: numpy.fromiter(getter.gen(rlz), calc.gmv_dt)
+        gmfcoll = {rlz: numpy.fromiter(getter.gen_gmv(rlz), calc.gmv_dt)
                    for rlz in rlzs}
     result = dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
                   hcurves={}, gmdata=getter.gmdata)
