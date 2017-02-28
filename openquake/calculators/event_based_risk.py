@@ -35,6 +35,7 @@ from openquake.baselib.parallel import Starmap
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+U64 = numpy.uint64
 getweight = operator.attrgetter('weight')
 
 
@@ -50,8 +51,8 @@ def build_el_dtypes(loss_types, insured_losses):
     """
     I = insured_losses + 1
     L = len(loss_types)
-    ela_list = [('eid', U32), ('aid', U32), ('loss', (F32, (L, I)))]
-    elt_list = [('eid', U32), ('loss', (F32, (L, I)))]
+    ela_list = [('eid', U64), ('aid', U32), ('loss', (F32, (L, I)))]
+    elt_list = [('eid', U64), ('loss', (F32, (L, I)))]
     return numpy.dtype(ela_list), numpy.dtype(elt_list)
 
 
@@ -288,7 +289,7 @@ class EbrPostCalculator(base.RiskCalculator):
             self.datastore['agg_curve-stats'] = agg_curve_stats
 
 
-elt_dt = numpy.dtype([('eid', U32), ('loss', F32)])
+elt_dt = numpy.dtype([('eid', U64), ('loss', F32)])
 
 save_events = event_based.EventBasedRuptureCalculator.__dict__['save_events']
 
