@@ -439,7 +439,7 @@ class CompositeRiskModel(collections.Mapping):
         imti = {imt: i for i, imt in enumerate(riskinput.imts)}
         for rlz in riskinput.rlzs:
             with mon_hazard:
-                hazard = hazard_getter.get_array(rlz)
+                hazard = hazard_getter.get_hazard(rlz)
             for taxonomy in sorted(taxonomies):
                 riskmodel = self[taxonomy]
                 with mon_risk:
@@ -476,7 +476,7 @@ class PoeGetter(object):
         self.hazard_by_site = hazard_by_site
         self.imts = imts
 
-    def get_array(self, rlz):
+    def get_hazard(self, rlz):
         """
         :returns: a probability matrix (num_sites, num_imts)
         """
@@ -546,7 +546,7 @@ class GmfGetter(object):
                             gmdata[NBYTES] += BYTES_PER_RECORD
                             yield sid, eid, imti, gmv
 
-    def get_array(self, rlz):
+    def get_hazard(self, rlz):
         """
         :returns: array of arrays of shape (num_sites, num_imts)
         """
