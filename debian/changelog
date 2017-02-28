@@ -1,5 +1,7 @@
   [Michele Simionato]
-  * Change the UCERF event based calculators to parallelize by SES
+  * Fixed classical_risk: there was an error when computing the statistics
+    in the case of multiple assets of the same taxonomy on the same site
+  * Changed the UCERF event based calculators to parallelize by SES
   * Fixed a site model bug: when the sites are extracted from the site model
     there is no need to perform geospatial queries to get the parameters
   * Added a command `oq normalize` to produce good `sites.csv` files
