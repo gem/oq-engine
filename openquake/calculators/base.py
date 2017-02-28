@@ -340,7 +340,7 @@ class HazardCalculator(BaseCalculator):
             Site(sid, lon, lat) for sid, lon, lat in
             zip(sitecol.sids, sitecol.lons, sitecol.lats))
         assets_by_sid = general.AccumDict()
-        for assets in self.assets_by_site:
+        for assets in self.assetcol.assets_by_site():
             if len(assets):
                 lon, lat = assets[0].location
                 site, _ = siteobjects.get_closest(lon, lat, maximum_distance)
@@ -352,13 +352,16 @@ class HazardCalculator(BaseCalculator):
                 'maximum distance of %s km' % maximum_distance)
         mask = numpy.array([sid in assets_by_sid for sid in sitecol.sids])
         assets_by_site = [assets_by_sid.get(sid, []) for sid in sitecol.sids]
-        return sitecol.filter(mask), numpy.array(assets_by_site)
+        return sitecol.filter(mask), riskinput.AssetCollection(
+            assets_by_site, self.exposure.cost_calculator,
+            self.oqparam.time_event, time_events=hdf5.array_of_vstr(
+                sorted(self.exposure.time_events)))
 
     def count_assets(self):
         """
         Count how many assets are taken into consideration by the calculator
         """
-        return sum(len(assets) for assets in self.assets_by_site)
+        return len(self.assetcol)
 
     def compute_previous(self):
         precalc = calculators[self.pre_calculator](
@@ -476,13 +479,12 @@ class HazardCalculator(BaseCalculator):
             # may happen (i.e. having the sitecol saved inside asset_refs!!)
             self.datastore['asset_refs'] = arefs
             self.datastore.set_attrs('asset_refs', nbytes=arefs.nbytes)
-            self.cost_calculator = readinput.get_cost_calculator(self.oqparam)
         logging.info('Building the site collection')
         with self.monitor('building site collection', autoflush=True):
-            self.sitecol, self.assets_by_site = (
-                readinput.get_sitecol_assets(self.oqparam, self.exposure))
+            self.sitecol, self.assetcol = (
+                readinput.get_sitecol_assetcol(self.oqparam, self.exposure))
             logging.info('Read %d assets on %d sites',
-                         len(arefs), len(self.assets_by_site))
+                         len(arefs), len(self.sitecol))
 
     def get_min_iml(self, oq):
         # set the minimum_intensity
@@ -539,7 +541,7 @@ class HazardCalculator(BaseCalculator):
                 haz_sitecol = self.datastore.parent['sitecol']
             if haz_sitecol is not None and haz_sitecol != self.sitecol:
                 with self.monitor('assoc_assets_sites'):
-                    self.sitecol, self.assets_by_site = \
+                    self.sitecol, self.assetcol = \
                         self.assoc_assets_sites(haz_sitecol.complete)
                 ok_assets = self.count_assets()
                 num_sites = len(self.sitecol)
@@ -561,15 +563,6 @@ class HazardCalculator(BaseCalculator):
                     'The risk configuration file has time_event=%s but the '
                     'hazard was computed with time_event=%s' % (
                         oq.time_event, oq_hazard.time_event))
-
-        # asset collection
-        if hasattr(self, 'assets_by_site'):
-            self.assetcol = riskinput.AssetCollection(
-                self.assets_by_site, self.cost_calculator, oq.time_event,
-                time_events=hdf5.array_of_vstr(
-                    sorted(self.exposure.time_events)))
-        elif hasattr(self, '_assetcol'):
-            self.assets_by_site = self.assetcol.assets_by_site()
 
         if self.oqparam.job_type == 'risk':
             # check that we are covering all the taxonomies in the exposure
@@ -600,7 +593,7 @@ class RiskCalculator(HazardCalculator):
         oq = self.oqparam
         with self.monitor('building epsilons', autoflush=True):
             return riskinput.make_eps(
-                self.assets_by_site, num_ruptures,
+                self.assetcol, num_ruptures,
                 oq.master_seed, oq.asset_correlation)
 
     def build_riskinputs(self, hazards_by_rlz, eps=numpy.zeros(0)):
@@ -622,16 +615,17 @@ class RiskCalculator(HazardCalculator):
         num_tasks = math.ceil((self.oqparam.concurrent_tasks or 1) /
                               len(imtls))
         rlzs = sorted(hazards_by_rlz)
+        assets_by_site = self.assetcol.assets_by_site()
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
             idx_weight_pairs = [
                 (i, len(assets))
-                for i, assets in enumerate(self.assets_by_site)]
+                for i, assets in enumerate(assets_by_site)]
             blocks = general.split_in_blocks(
                 idx_weight_pairs, num_tasks, weight=operator.itemgetter(1))
             for block in blocks:
                 indices = numpy.array([idx for idx, _weight in block])
-                reduced_assets = self.assets_by_site[indices]
+                reduced_assets = assets_by_site[indices]
                 # dictionary of epsilons for the reduced assets
                 reduced_eps = collections.defaultdict(F32)
                 if len(eps):
