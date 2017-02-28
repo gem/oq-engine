@@ -336,20 +336,20 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
     with monitor('making contexts', measuremem=True):
         getter.init()
     haz = {sid: {} for sid in getter.sids}
-    gmfcoll = {}  # rlz -> gmfa
-    for rlz in rlzs:
-        gmfcoll[rlz] = []
-        gmfa = getter.get(rlz)
-        for i, sid in enumerate(getter.sids):
-            for imti, imt in enumerate(getter.imts):
-                recs = gmfa[i, imti]
-                if oq.hazard_curves_from_gmfs and len(recs):
-                    haz[sid][imt, rlz] = recs
-                for rec in recs:
-                    gmv = rec['gmv']
-                    gmfcoll[rlz].append((sid, rec['eid'], imti, gmv))
-    for rlz in gmfcoll:
-        gmfcoll[rlz] = numpy.array(gmfcoll[rlz], calc.gmv_dt)
+    if oq.hazard_curves_from_gmfs:
+        gmfcoll = {}  # rlz -> gmfa
+        for rlz in rlzs:
+            lst = []
+            gmfa = getter.get(rlz)
+            for i, sid in enumerate(getter.sids):
+                for imti, imt in enumerate(getter.imts):
+                    haz[sid][imt, rlz] = recs = gmfa[i, imti]
+                    for rec in recs:
+                        lst.append((sid, rec['eid'], imti, rec['gmv']))
+            gmfcoll[rlz] = numpy.array(lst, calc.gmv_dt)
+    else:  # fast lane
+        gmfcoll = {rlz: numpy.fromiter(getter.gen(rlz), calc.gmv_dt)
+                   for rlz in rlzs}
     result = dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
                   hcurves={}, gmdata=getter.gmdata)
     if oq.hazard_curves_from_gmfs:
