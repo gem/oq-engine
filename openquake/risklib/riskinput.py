@@ -439,7 +439,7 @@ class CompositeRiskModel(collections.Mapping):
         imti = {imt: i for i, imt in enumerate(riskinput.imts)}
         for rlz in riskinput.rlzs:
             with mon_hazard:
-                hazard = hazard_getter.get(rlz)
+                hazard = hazard_getter.get_array(rlz)
             for taxonomy in sorted(taxonomies):
                 riskmodel = self[taxonomy]
                 with mon_risk:
@@ -476,7 +476,7 @@ class PoeGetter(object):
         self.hazard_by_site = hazard_by_site
         self.imts = imts
 
-    def get(self, rlz):
+    def get_array(self, rlz):
         """
         :returns: a probability matrix (num_sites, num_imts)
         """
@@ -522,9 +522,10 @@ class GmfGetter(object):
         # dictionary rlzi -> array(imts, events, nbytes)
         self.gmdata = AccumDict(accum=numpy.zeros(len(self.imts) + 2, F32))
 
-    def gen(self, rlz):
+    def gen_gmv(self, rlz):
         """
-        :yields: tuples (sid, eid, imti, gmv)
+        Compute the GMFs for the given realization and populate the .gmdata
+        array. Yields tuples of the form (sid, eid, imti, gmv).
         """
         gsim = self.gsims[rlz.ordinal]
         gmdata = self.gmdata[rlz.ordinal]
@@ -545,14 +546,14 @@ class GmfGetter(object):
                             gmdata[NBYTES] += BYTES_PER_RECORD
                             yield sid, eid, imti, gmv
 
-    def get(self, rlz):
+    def get_array(self, rlz):
         """
         :returns: array of arrays of shape (num_sites, num_imts)
         """
         gmfa = numpy.zeros((len(self.sids), len(self.imts)), object)
         gmfdict = collections.defaultdict(
             lambda: [[] for _ in range(len(self.imts))])
-        for sid, eid, imti, gmv in self.gen(rlz):
+        for sid, eid, imti, gmv in self.gen_gmv(rlz):
             gmfdict[sid][imti].append((gmv, eid))
         for i, sid in enumerate(self.sids):
             for imti, imt in enumerate(self.imts):
