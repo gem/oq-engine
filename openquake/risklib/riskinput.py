@@ -557,7 +557,6 @@ class GmfGetter(object):
         for i, sid in enumerate(self.sids):
             for imti, imt in enumerate(self.imts):
                 gmfa[i, imti] = numpy.array(gmfdict[sid, imti], self.dt)
-        self.gmdata[rlz.ordinal] *= 8 / BYTES_PER_RECORD
         return gmfa
 
 
