@@ -40,12 +40,13 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
+U64 = numpy.uint64
 F64 = numpy.float64
 
-event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32),
+event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
 stored_event_dt = numpy.dtype([
-    ('eid', U32), ('rupserial', U32), ('year', U32),
+    ('eid', U64), ('rupserial', U32), ('year', U32),
     ('ses', U32), ('occ', U32), ('sample', U32), ('grp_id', U16)])
 
 # ############## utilities for the classical calculator ############### #
@@ -324,9 +325,6 @@ def fix_minimum_intensity(min_iml, imts):
     if 'default' in min_iml:
         del min_iml['default']
     return F32([min_iml.get(imt, 0) for imt in imts])
-
-
-gmv_dt = numpy.dtype([('sid', U16), ('eid', U32), ('imti', U8), ('gmv', F32)])
 
 
 def check_overflow(calc):
