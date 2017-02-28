@@ -592,22 +592,24 @@ def _get_exposure(fname, ok_cost_types, stop=None):
     if 'occupants' in ok_cost_types:
         cost_types.append(('occupants', 'per_area', 'people'))
     cost_types.sort(key=operator.itemgetter(0))
+    cost_types = numpy.array(cost_types, cost_type_dt)
+    insurance_limit_is_absolute = inslimit.attrib.get('isAbsolute', True),
+    deductible_is_absolute = deductible.attrib.get('isAbsolute', True),
     time_events = set()
-    exp = Exposure(
-        exposure['id'], exposure['category'],
-        ~description, numpy.array(cost_types, cost_type_dt), time_events,
-        inslimit.attrib.get('isAbsolute', True),
-        deductible.attrib.get('isAbsolute', True),
-        area.attrib, [], set(), [])
     cc = riskmodels.CostCalculator(
-        {}, {}, {},
-        exp.deductible_is_absolute, exp.insurance_limit_is_absolute)
-    for ct in exp.cost_types:
+        {}, {}, {}, deductible_is_absolute, insurance_limit_is_absolute)
+    for ct in cost_types:
         name = ct['name']  # structural, nonstructural, ...
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
-        cc.area_types[name] = exp.area['type']
+        cc.area_types[name] = area['type']
         cc.units[name] = ct['unit']
-    return exp, exposure.assets, cc
+    exp = Exposure(
+        exposure['id'], exposure['category'],
+        ~description, cost_types, time_events,
+        insurance_limit_is_absolute,
+        deductible_is_absolute,
+        area.attrib, [], set(), [], cc)
+    return exp, exposure.assets
 
 
 def get_cost_calculator(oqparam):
@@ -616,7 +618,7 @@ def get_cost_calculator(oqparam):
     """
     return _get_exposure(oqparam.inputs['exposure'],
                          set(oqparam.all_cost_types),
-                         stop='assets')[-1]
+                         stop='assets')[0].cost_calculator
 
 
 def get_exposure(oqparam):
@@ -636,7 +638,7 @@ def get_exposure(oqparam):
         region = None
     all_cost_types = set(oqparam.all_cost_types)
     fname = oqparam.inputs['exposure']
-    exposure, assets_node, cc = _get_exposure(fname, all_cost_types)
+    exposure, assets_node = _get_exposure(fname, all_cost_types)
     relevant_cost_types = all_cost_types - set(['occupants'])
     asset_refs = set()
     ignore_missing_costs = set(oqparam.ignore_missing_costs)
@@ -718,7 +720,8 @@ def get_exposure(oqparam):
         area = float(asset.attrib.get('area', 1))
         ass = riskmodels.Asset(
             idx, taxonomy, number, location, values, area,
-            deductibles, insurance_limits, retrofitteds, cc)
+            deductibles, insurance_limits, retrofitteds,
+            exposure.cost_calculator)
         exposure.assets.append(ass)
         exposure.taxonomies.add(taxonomy)
     if region:
@@ -737,7 +740,8 @@ def get_exposure(oqparam):
 Exposure = collections.namedtuple(
     'Exposure', ['id', 'category', 'description', 'cost_types', 'time_events',
                  'insurance_limit_is_absolute', 'deductible_is_absolute',
-                 'area', 'assets', 'taxonomies', 'asset_refs'])
+                 'area', 'assets', 'taxonomies', 'asset_refs',
+                 'cost_calculator'])
 
 
 def get_sitecol_assets(oqparam, exposure):
