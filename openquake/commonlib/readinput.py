@@ -214,7 +214,9 @@ def get_mesh(oqparam):
     elif 'site_model' in oqparam.inputs:
         coords = [(param.lon, param.lat, param.depth)
                   for param in get_site_model(oqparam)]
-        return geo.Mesh.from_coords(coords)
+        mesh = geo.Mesh.from_coords(coords)
+        mesh.from_site_model = True
+        return mesh
 
 
 def get_site_model(oqparam):
@@ -248,18 +250,25 @@ def get_site_collection(oqparam, mesh=None, site_model_params=None):
     if mesh is None:
         return
     if oqparam.inputs.get('site_model'):
+        sitecol = []
+        if getattr(mesh, 'from_site_model', False):
+            for param in sorted(get_site_model(oqparam)):
+                pt = geo.Point(param.lon, param.lat, param.depth)
+                sitecol.append(site.Site(
+                    pt, param.vs30, param.measured,
+                    param.z1pt0, param.z2pt5, param.backarc))
+            return site.SiteCollection(sitecol)
         if site_model_params is None:
             # read the parameters directly from their file
             site_model_params = geo.geodetic.GeographicObjects(
                 get_site_model(oqparam))
-        sitecol = []
         for pt in mesh:
+            # attach the closest site model params to each site
             param, dist = site_model_params.get_closest(
                 pt.longitude, pt.latitude)
             if dist >= MAX_SITE_MODEL_DISTANCE:
                 logging.warn('The site parameter associated to %s came from a '
                              'distance of %d km!' % (pt, dist))
-            # ignoring the depths here
             sitecol.append(
                 site.Site(pt, param.vs30, param.measured,
                           param.z1pt0, param.z2pt5, param.backarc))
