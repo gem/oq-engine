@@ -339,7 +339,7 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
     gmfcoll = {}  # rlz -> gmfa
     for rlz in rlzs:
         gmfcoll[rlz] = []
-        gmfa = getter(rlz)
+        gmfa = getter.get(rlz)
         for i, sid in enumerate(getter.sids):
             for imti, imt in enumerate(getter.imts):
                 recs = gmfa[i, imti]
