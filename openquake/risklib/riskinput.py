@@ -470,13 +470,16 @@ class CompositeRiskModel(collections.Mapping):
 
 class PoeGetter(object):
     """
-    Callable yielding poe[sidx, imti] when called on a realization.
+    Callable yielding a matrix of poes when called on a realization.
     """
     def __init__(self, hazard_by_site, imts):
         self.hazard_by_site = hazard_by_site
         self.imts = imts
 
-    def __call__(self, rlz):
+    def get(self, rlz):
+        """
+        :returns: a probability matrix (num_sites, num_imts)
+        """
         return numpy.array(
             [[haz[imt][rlz] for imt in self.imts]
              for haz in self.hazard_by_site])
