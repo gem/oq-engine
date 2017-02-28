@@ -433,7 +433,7 @@ class UcerfSource(object):
     def __init__(self, control, grp_id, branch_name, branch_id):
         self.control = control
         self.src_group_id = grp_id
-        self.source_id = branch_name
+        self.source_id = branch_id
         self.idx_set = build_idx_set(branch_id, control.start_date)
         with h5py.File(self.control.source_file, "r") as hdf5:
             self.num_ruptures = len(hdf5[self.idx_set["rate_idx"]])
