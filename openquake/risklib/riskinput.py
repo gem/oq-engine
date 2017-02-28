@@ -439,7 +439,7 @@ class CompositeRiskModel(collections.Mapping):
         imti = {imt: i for i, imt in enumerate(riskinput.imts)}
         for rlz in riskinput.rlzs:
             with mon_hazard:
-                hazard = hazard_getter(rlz)
+                hazard = hazard_getter.get(rlz)
             for taxonomy in sorted(taxonomies):
                 riskmodel = self[taxonomy]
                 with mon_risk:
@@ -456,7 +456,7 @@ class CompositeRiskModel(collections.Mapping):
                         row.assets = assets
                         yield row
         if hasattr(hazard_getter, 'gmdata'):  # for event based risk
-            monitor.gmdata = hazard_getter.gmdata
+            riskinput.gmdata = hazard_getter.gmdata
 
     def __toh5__(self):
         loss_types = hdf5.array_of_vstr(self._get_loss_types())
@@ -542,7 +542,10 @@ class GmfGetter(object):
                             gmdata[NBYTES] += BYTES_PER_RECORD
                             yield sid, eid, imti, gmv
 
-    def __call__(self, rlz):
+    def get(self, rlz):
+        """
+        :returns: array of arrays of shape (num_sites, num_imts)
+        """
         gmfa = numpy.zeros((len(self.sids), len(self.imts)), object)
         gmfdict = collections.defaultdict(
             lambda: [[] for _ in range(len(self.imts))])
