@@ -311,7 +311,7 @@ class ExposureTestCase(unittest.TestCase):
 </nrml>''')  # wrong cost type "aggregate"
 
     def test_get_exposure_metadata(self):
-        exp, _assets, _cc = readinput._get_exposure(
+        exp, _assets = readinput._get_exposure(
             self.exposure, ['structural'], stop='assets')
         self.assertEqual(exp.description, 'Exposure model for buildings')
         self.assertTrue(exp.insurance_limit_is_absolute)

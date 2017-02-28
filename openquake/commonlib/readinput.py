@@ -209,7 +209,7 @@ def get_mesh(oqparam):
         sitecol = datastore.read(oqparam.hazard_calculation_id)['sitecol']
         return geo.Mesh(sitecol.lons, sitecol.lats, sitecol.depths)
     elif 'exposure' in oqparam.inputs:
-        # the mesh is extracted from get_sitecol_assets
+        # the mesh is extracted from get_sitecol_assetcol
         return
     elif 'site_model' in oqparam.inputs:
         coords = [(param.lon, param.lat, param.depth)
@@ -744,7 +744,7 @@ Exposure = collections.namedtuple(
                  'cost_calculator'])
 
 
-def get_sitecol_assets(oqparam, exposure):
+def get_sitecol_assetcol(oqparam, exposure):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -760,7 +760,10 @@ def get_sitecol_assets(oqparam, exposure):
     for lonlat in zip(sitecol.lons, sitecol.lats):
         assets = assets_by_loc[lonlat]
         assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
-    return sitecol, numpy.array(assets_by_site)
+    return sitecol, riskinput.AssetCollection(
+                assets_by_site, exposure.cost_calculator,
+                oqparam.time_event, time_events=hdf5.array_of_vstr(
+                    sorted(exposure.time_events)))
 
 
 def get_mesh_csvdata(csvfile, imts, num_values, validvalues):
