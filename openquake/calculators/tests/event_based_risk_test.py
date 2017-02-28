@@ -86,7 +86,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqual(crm, ['RC%2B', 'RM', 'W%2F1'])
 
         # export a specific eid
-        [fname] = export(('all_loss_ratios:65545', 'csv'), self.calc.datastore)
+        [fname] = export(('all_loss_ratios:281474976710665', 'csv'),
+                         self.calc.datastore)
         self.assertEqualFiles('expected/losses-eid=65545.csv', fname)
 
         # test the case when all GMFs are filtered out
@@ -167,13 +168,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/ruptures_events.txt', fname)
 
         # export a specific eid
-        fnames = export(('all_loss_ratios:262144', 'csv'), self.calc.datastore)
+        fnames = export(('all_loss_ratios:1125899906842624', 'csv'),
+                        self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
         self.assertEqualFiles('expected/losses-eid=262144.csv', fname)
 
         # export a specific pair (sm_id, eid)
-        fnames = export(('all_loss_ratios:1:327680', 'csv'),
+        fnames = export(('all_loss_ratios:1:92233720368547758080', 'csv'),
                         self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
