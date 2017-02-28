@@ -179,8 +179,7 @@ def event_based_risk(riskinput, riskmodel, assetcol, monitor):
             result['asslosses'][r] = numpy.concatenate(ass[r])
 
     # store info about the GMFs
-    result['gmdata'] = monitor.gmdata
-    delattr(monitor, 'gmdata')
+    result['gmdata'] = riskinput.gmdata
     return result
 
 
