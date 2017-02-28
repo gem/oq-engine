@@ -57,7 +57,7 @@ def get_seq_ids(task_no, num_ids):
     :param num_ids: the number of indices to return
 
     >>> list(get_seq_ids(1, 3))
-    [65536, 65537, 65538]
+    [4294967296, 4294967297, 4294967298]
     """
     assert 0 <= task_no < TWO16, task_no
     assert 0 <= num_ids < TWO32, num_ids
