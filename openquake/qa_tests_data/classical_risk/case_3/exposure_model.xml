@@ -120,7 +120,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
             number="1.0943000E+04"
             taxonomy="DS"
             >
-                <location lat="2.7902000E+01" lon="8.5242100E+01"/>
+                <location lat="2.7164800E+01" lon="8.7080900E+01"/>
                 <costs>
                     <cost type="structural" value="1.1340000E+04"/>
                 </costs>
