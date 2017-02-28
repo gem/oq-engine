@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a site model bug: when the sites are extracted from the site model
+    there is no need to perform geospatial queries to get the parameters
   * Added a command `oq normalize` to produce good `sites.csv` files
   * Introduced a `ses_seed` parameter to specify the seed used to generate
     the stochastic event sets; `random_seed` is used for the sampling only
