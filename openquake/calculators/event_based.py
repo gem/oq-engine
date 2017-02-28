@@ -340,7 +340,7 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
         gmfcoll = {}  # rlz -> gmfa
         for rlz in rlzs:
             lst = []
-            gmf = getter.get_array(rlz)  # array (num_sites, num_imts)
+            gmf = getter.get_hazard(rlz)  # array (num_sites, num_imts)
             for i, sid in enumerate(getter.sids):
                 for imti, imt in enumerate(getter.imts):
                     haz[sid][imt, rlz] = recs = gmf[i, imti]
