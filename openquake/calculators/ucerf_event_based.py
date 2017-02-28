@@ -290,7 +290,7 @@ def generate_background_ruptures(tom, locations, occurrence, mag, npd,
 
 
 def sample_background_model(
-        hdf5, branch_key, tom, filter_idx, min_mag, npd, hdd,
+        hdf5, branch_key, tom, seed, filter_idx, min_mag, npd, hdd,
         upper_seismogenic_depth, lower_seismogenic_depth, msr=WC1994(),
         aspect=1.5, trt=DEFAULT_TRT):
     """
@@ -301,6 +301,8 @@ def sample_background_model(
     :param tom:
         Temporal occurrence model as instance of :class:
         openquake.hazardlib.tom.TOM
+    :param seed:
+        Random seed to use in the call to tom.sample_number_of_occurrences
     :param filter_idx:
         Sites for consideration (can be None!)
     :param float min_mag:
@@ -330,7 +332,7 @@ def sample_background_model(
     rates = rates[:, mag_idx]
     valid_locs = hdf5["Grid/Locations"][filter_idx, :]
     # Sample remaining rates
-    sampler = tom.sample_number_of_occurrences(rates)
+    sampler = tom.sample_number_of_occurrences(rates, seed)
     background_ruptures = []
     background_n_occ = []
     for i, mag in enumerate(mags):
@@ -431,7 +433,7 @@ class UcerfSource(object):
     def __init__(self, control, grp_id, branch_name, branch_id):
         self.control = control
         self.src_group_id = grp_id
-        self.source_id = branch_name
+        self.source_id = branch_id
         self.idx_set = build_idx_set(branch_id, control.start_date)
         with h5py.File(self.control.source_file, "r") as hdf5:
             self.num_ruptures = len(hdf5[self.idx_set["rate_idx"]])
@@ -554,7 +556,7 @@ class UcerfSource(object):
         ridx_string = "-".join(str(val) for val in ridx)
         return rupture, ridx_string
 
-    def generate_event_set(self, background_sids, src_filter):
+    def generate_event_set(self, background_sids, src_filter, seed):
         """
         Generates the event set corresponding to a particular branch
         """
@@ -562,7 +564,7 @@ class UcerfSource(object):
         ctl = self.control
         with h5py.File(ctl.source_file, 'r') as hdf5:
             rates = hdf5[self.idx_set["rate_idx"]].value
-            occurrences = ctl.tom.sample_number_of_occurrences(rates)
+            occurrences = ctl.tom.sample_number_of_occurrences(rates, seed)
             indices = numpy.where(occurrences)[0]
             logging.debug(
                 'Considering "%s", %d ruptures', self.source_id, len(indices))
@@ -578,7 +580,7 @@ class UcerfSource(object):
 
             # sample background sources
             background_ruptures, background_n_occ = sample_background_model(
-                hdf5, self.idx_set["grid_key"], ctl.tom, background_sids,
+                hdf5, self.idx_set["grid_key"], ctl.tom, seed, background_sids,
                 ctl.min_mag, ctl.npd, ctl.hdd, ctl.usd, ctl.lsd, ctl.msr,
                 ctl.aspect, ctl.tectonic_region_type)
             ruptures.extend(background_ruptures)
@@ -667,36 +669,34 @@ def build_idx_set(branch_id, start_date):
 # #################################################################### #
 
 
-def compute_ruptures(sources, src_filter, gsims, monitor):
+def compute_ruptures(sources, src_filter, gsims, param, monitor):
     """
-    :param sources: a sequence of UCERF sources
+    :param sources: a list with a single UCERF source
     :param src_filter: a SourceFilter instance
     :param gsims: a list of GSIMs
+    :param param: extra parameters
     :param monitor: a Monitor instance
     :returns: an AccumDict grp_id -> EBRuptures
     """
-    [src] = sources  # there is a single source per UCERF branch
+    [src] = sources
     res = AccumDict()
     res.calc_times = AccumDict()
     serial = 1
-    event_mon = monitor('sampling ruptures', measuremem=False)
-    rup_mon = monitor('filtering ruptures', measuremem=False)
-    res.num_events = 0
+    sampl_mon = monitor('sampling ruptures', measuremem=True)
+    filt_mon = monitor('filtering ruptures', measuremem=False)
     res.trt = DEFAULT_TRT
     t0 = time.time()
-    # set the seed before calling generate_event_set
-    numpy.random.seed(monitor.seed + src.src_group_id)
     ebruptures = []
-    eid = 0
     background_sids = src.get_background_sids(src_filter)
     sitecol = src_filter.sitecol
     idist = src_filter.integration_distance
-    for ses_idx in range(1, monitor.ses_per_logic_tree_path + 1):
-        with event_mon:
-            rups, n_occs = src.generate_event_set(background_sids, src_filter)
-        with rup_mon:
+    for ses_idx, seed in param['ses_seeds']:
+        with sampl_mon:
+            rups, n_occs = src.generate_event_set(
+                background_sids, src_filter, seed)
+        with filt_mon:
             for rup, n_occ in zip(rups, n_occs):
-                rup.seed = monitor.seed  # to think
+                rup.seed = seed
                 try:
                     r_sites, rrup = idist.get_closest(sitecol, rup)
                 except FarAwayRupture:
@@ -704,15 +704,15 @@ def compute_ruptures(sources, src_filter, gsims, monitor):
                 indices = r_sites.indices
                 events = []
                 for occ in range(n_occ):
-                    events.append((eid, ses_idx, occ, 0))  # 0 is the sampling
-                    eid += 1
+                    events.append((0, ses_idx, occ, 0))  # 0 is the sampling
                 if events:
                     evs = numpy.array(events, calc.event_dt)
                     ebruptures.append(
                         calc.EBRupture(rup, indices, evs, src.source_id,
                                        src.src_group_id, serial))
                     serial += 1
-                    res.num_events += len(events)
+    res.num_events = event_based.set_eids(
+        ebruptures, getattr(monitor, 'task_no', 0))
     res[src.src_group_id] = ebruptures
     res.calc_times[src.src_group_id] = (
         src.source_id, len(sitecol), time.time() - t0)
@@ -786,7 +786,11 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
                 save_ruptures=oq.save_ruptures,
                 seed=oq.ses_seed)
             gsims = ssm.gsim_lt.values[DEFAULT_TRT]
-            allargs.append((ssm.get_sources(), self.src_filter, gsims, mon))
+            srcs = ssm.get_sources()
+            for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
+                ses_seeds = [(ses_idx, oq.ses_seed + ses_idx)]
+                allargs.append((srcs, self.src_filter, gsims,
+                                dict(ses_seeds=ses_seeds), mon))
         return allargs
 
 
@@ -794,13 +798,14 @@ class List(list):
     """Trivial container returned by compute_losses"""
 
 
-def compute_losses(ssm, src_filter, assetcol, riskmodel,
+def compute_losses(ssm, ses_seeds, src_filter, assetcol, riskmodel,
                    imts, trunc_level, correl_model, min_iml, monitor):
     """
     Compute the losses for a single source model. Returns the ruptures
     as an attribute `.ruptures_by_grp` of the list of losses.
 
     :param ssm: CompositeSourceModel containing a single source model
+    :param ses_seeds: a list of pairs (ses_idx, seed)
     :param sitecol: a SiteCollection instance
     :param assetcol: an AssetCollection instance
     :param riskmodel: a RiskModel instance
@@ -814,7 +819,8 @@ def compute_losses(ssm, src_filter, assetcol, riskmodel,
     [grp] = ssm.src_groups
     res = List()
     gsims = ssm.gsim_lt.values[DEFAULT_TRT]
-    res.ruptures_by_grp = compute_ruptures(grp, src_filter, gsims, monitor)
+    res.ruptures_by_grp = compute_ruptures(
+        grp, src_filter, gsims, dict(ses_seeds=ses_seeds), monitor)
     [(grp_id, ebruptures)] = res.ruptures_by_grp.items()
     rlzs_assoc = ssm.info.get_rlzs_assoc()
     num_rlzs = len(rlzs_assoc.realizations)
@@ -863,14 +869,15 @@ class UCERFRiskCalculator(EbriskCalculator):
                 loss_ratios=oq.loss_ratios,
                 avg_losses=oq.avg_losses,
                 insured_losses=oq.insured_losses,
-                ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
                 maximum_distance=oq.maximum_distance,
                 samples=sm.samples,
-                save_ruptures=oq.save_ruptures,
-                seed=self.oqparam.ses_seed)
+                save_ruptures=oq.save_ruptures)
             ssm = self.csm.get_model(sm.ordinal)
-            yield (ssm, self.src_filter, self.assetcol, self.riskmodel,
-                   imts, oq.truncation_level, correl_model, min_iml, monitor)
+            for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
+                ses_seeds = [(ses_idx, oq.ses_seed + ses_idx)]
+                yield (ssm, ses_seeds, self.src_filter, self.assetcol,
+                       self.riskmodel, imts, oq.truncation_level,
+                       correl_model, min_iml, monitor)
 
     def execute(self):
         num_rlzs = len(self.rlzs_assoc.realizations)
