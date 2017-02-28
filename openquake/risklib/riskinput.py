@@ -551,13 +551,13 @@ class GmfGetter(object):
         :returns: array of arrays of shape (num_sites, num_imts)
         """
         gmfa = numpy.zeros((len(self.sids), len(self.imts)), object)
-        gmfdict = collections.defaultdict(
-            lambda: [[] for _ in range(len(self.imts))])
+        gmfdict = collections.defaultdict(list)
         for sid, eid, imti, gmv in self.gen_gmv(rlz):
-            gmfdict[sid][imti].append((gmv, eid))
+            gmfdict[sid, imti].append((gmv, eid))
         for i, sid in enumerate(self.sids):
             for imti, imt in enumerate(self.imts):
-                gmfa[i, imti] = numpy.array(gmfdict[sid][imti], self.dt)
+                gmfa[i, imti] = numpy.array(gmfdict[sid, imti], self.dt)
+        self.gmdata[rlz.ordinal] *= 8 / BYTES_PER_RECORD
         return gmfa
 
 
