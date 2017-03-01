@@ -37,7 +37,6 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 
-gmv_dt = numpy.dtype([('sid', U16), ('eid', U32), ('imti', U8), ('gmv', F32)])
 
 GMF_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
 GMF_WARNING = '''\
