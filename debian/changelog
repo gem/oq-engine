@@ -1,8 +1,8 @@
   [Michele Simionato]
   * Improved significantly the performance of the event based calculator
+    when computing the GMFs and not the hazard curves
   * Stored information about the mean ground motion in the datastore
   * Raised the limit on the event IDs from 2^16 to 2^32 per task
-    when computing the GMFs and not the hazard curves
   * Fixed classical_risk: there was an error when computing the statistics
     in the case of multiple assets of the same taxonomy on the same site
   * Changed the UCERF event based calculators to parallelize by SES
