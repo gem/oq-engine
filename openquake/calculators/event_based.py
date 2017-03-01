@@ -30,7 +30,7 @@ from openquake.baselib.general import AccumDict, split_in_blocks
 from openquake.hazardlib.calc.filters import FarAwayRupture
 from openquake.hazardlib.probability_map import ProbabilityMap, PmapStats
 from openquake.hazardlib.geo.surface import PlanarSurface
-from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str
+from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str, gmv_dt
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util, datastore
 from openquake.calculators import base
@@ -39,9 +39,12 @@ from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
+U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
-TWO16 = 2 ** 16
+TWO16 = 2 ** 16  # 65,536
+TWO32 = 2 ** 32  # 4,294,967,296
+TWO48 = 2 ** 48  # 281,474,976,710,656
 
 # ######################## rupture calculator ############################ #
 
@@ -54,12 +57,12 @@ def get_seq_ids(task_no, num_ids):
     :param num_ids: the number of indices to return
 
     >>> list(get_seq_ids(1, 3))
-    [65536, 65537, 65538]
+    [4294967296, 4294967297, 4294967298]
     """
     assert 0 <= task_no < TWO16, task_no
-    assert 0 <= num_ids < TWO16, num_ids
-    start = task_no * TWO16
-    return numpy.arange(start, start + num_ids, dtype=U32)
+    assert 0 <= num_ids < TWO32, num_ids
+    start = task_no * TWO32
+    return numpy.arange(start, start + num_ids, dtype=U64)
 
 
 def set_eids(ebruptures, task_no):
@@ -365,7 +368,7 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
                         gmfcoll[rlz].append(
                             (sid, rec['eid'], imti, rec['gmv']))
     for rlz in gmfcoll:
-        gmfcoll[rlz] = numpy.array(gmfcoll[rlz], calc.gmv_dt)
+        gmfcoll[rlz] = numpy.array(gmfcoll[rlz], gmv_dt)
     result = dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
                   hcurves={})
     if oq.hazard_curves_from_gmfs:
