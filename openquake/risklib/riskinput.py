@@ -32,7 +32,8 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
-BYTES_PER_RECORD = 13  # ground motion record (sid, eid, gmv, imti) = 13 bytes
+U64 = numpy.uint64
+BYTES_PER_RECORD = 17  # ground motion record (sid, eid, gmv, imti) = 17 bytes
 EVENTS = -2
 NBYTES = -1
 
@@ -485,7 +486,7 @@ class PoeGetter(object):
              for haz in self.hazard_by_site])
 
 
-gmv_dt = numpy.dtype([('sid', U32), ('eid', U32), ('imti', U8), ('gmv', F32)])
+gmv_dt = numpy.dtype([('sid', U32), ('eid', U64), ('imti', U8), ('gmv', F32)])
 
 
 class GmfGetter(object):
@@ -493,7 +494,7 @@ class GmfGetter(object):
     Callable yielding dictionaries {imt: array(gmv, eid)} when called
     on a realization.
     """
-    dt = numpy.dtype([('gmv', F32), ('eid', U32)])
+    dt = numpy.dtype([('gmv', F32), ('eid', U64)])
 
     def __init__(self, gsims, ebruptures, sitecol, imts, min_iml,
                  truncation_level, correlation_model, samples):
@@ -638,27 +639,6 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
         for asset, epsrow in zip(assets, epsilons):
             eps[asset.ordinal] = epsrow
     return eps
-
-
-class Gmvset(object):
-    """
-    Emulate a dataset containing ground motion values per event ID,
-    realization ordinal and IMT index.
-    """
-    dt = numpy.dtype([('gmv', F32), ('eid', U32), ('rlzi', U16), ('imti', U8)])
-
-    def __init__(self):
-        self.pairs = []
-
-    def append(self, gmv, eid, rlzi, imti):
-        self.pairs.append((gmv, eid, rlzi, imti))
-
-    @property
-    def value(self):
-        return numpy.array(self.pairs, self.dt)
-
-    def __len__(self):
-        return len(self.pairs)
 
 
 def str2rsi(key):
