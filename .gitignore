@@ -12,3 +12,4 @@ build-rpm
 dist
 *.swp
 *.egg-info
+local_settings.py
