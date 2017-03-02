@@ -68,7 +68,7 @@ class ArbitraryMFD(BaseMFD):
         """
         Returns the predefined annual occurrence rates.
         """
-        return list(zip(self.magnitudes, self.occurrence_rates)) 
+        return list(zip(self.magnitudes, self.occurrence_rates))
 
     def get_min_max_mag(self):
         """

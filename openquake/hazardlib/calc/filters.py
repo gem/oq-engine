@@ -60,8 +60,10 @@ the index can be compensed. Finally, there is a function
 """
 import sys
 import logging
+import collections
 from contextlib import contextmanager
 import numpy
+from scipy.interpolate import interp1d
 try:
     import rtree
 except ImportError:
@@ -120,6 +122,125 @@ def filter_sites_by_distance_to_rupture(rupture, integration_distance, sites):
     return sites.filter(jb_dist <= integration_distance)
 
 
+def getdefault(dic_with_default, key):
+    """
+    :param dic_with_default: a dictionary with a 'default' key
+    :param key: a key that may be present in the dictionary or not
+    :returns: the value associated to the key, or to 'default'
+    """
+    try:
+        return dic_with_default[key]
+    except KeyError:
+        return dic_with_default['default']
+
+
+def get_distances(rupture, mesh, param):
+    """
+    :param rupture: a rupture
+    :param mesh: a mesh of points
+    :param param: the kind of distance to compute (default rjb)
+    :returns: an array of distances from the given mesh
+    """
+    if param == 'rrup':
+        dist = rupture.surface.get_min_distance(mesh)
+    elif param == 'rx':
+        dist = rupture.surface.get_rx_distance(mesh)
+    elif param == 'ry0':
+        dist = rupture.surface.get_ry0_distance(mesh)
+    elif param == 'rjb':
+        dist = rupture.surface.get_joyner_boore_distance(mesh)
+    elif param == 'rhypo':
+        dist = rupture.hypocenter.distance_to_mesh(mesh)
+    elif param == 'repi':
+        dist = rupture.hypocenter.distance_to_mesh(mesh, with_depths=False)
+    elif param == 'rcdpp':
+        dist = rupture.get_cdppvalue(mesh)
+    elif param == 'azimuth':
+        dist = rupture.surface.get_azimuth(mesh)
+    else:
+        raise ValueError('Unknown distance measure %r' % param)
+    return dist
+
+
+class FarAwayRupture(Exception):
+    """Raised if the rupture is outside the maximum distance for all sites"""
+
+
+class IntegrationDistance(collections.Mapping):
+    """
+    Pickleable object wrapping a dictionary of integration distances per
+    tectonic region type. The integration distances can be scalars or
+    list of pairs (magnitude, distance). Here is an example using 'default'
+    as tectonic region type sot that the same values will be used for all
+    tectonic region types:
+
+    >>> maxdist = IntegrationDistance({'default': [
+    ...          (1, 10), (2, 20), (3, 30), (4, 40), (5, 100), (6, 200),
+    ...          (7, 400), (8, 800)]})
+    >>> maxdist('Some TRT', mag=5.5)
+    array(150.0)
+
+    It has also a method `.get_closest(sites, rupture)` returning the closest
+    sites to the rupture and their distances. The integration distance can be
+    missing if the sites have been already filtered (empty dictionary): in
+    that case the method returns all the sites and all the distances.
+    """
+    def __init__(self, dic):
+        self.dic = dic or {}  # TRT -> float or list of pairs
+        self.magdist = {}  # TRT -> (magnitudes, distances)
+        for trt, value in self.dic.items():
+            if isinstance(value, list):  # assume a list of pairs (mag, dist)
+                value.sort()  # make sure the list is sorted by magnitude
+                self.magdist[trt] = zip(*value)
+            else:
+                self.dic[trt] = float(value)
+
+    def __call__(self, trt, mag=None):
+        value = getdefault(self.dic, trt)
+        if isinstance(value, float):  # scalar maximum distance
+            return value
+        elif mag is None:  # get the maximum magnitude distance
+            return value[-1][1]
+        elif not hasattr(self, 'interp'):
+            self.interp = {}  # function cache
+        try:
+            md = self.interp[trt]  # retrieve from the cache
+        except KeyError:  # fill the cache
+            magdist = getdefault(self.magdist, trt)
+            md = self.interp[trt] = interp1d(
+                *magdist, bounds_error=False, fill_value='extrapolate')
+        return md(mag)
+
+    def get_closest(self, sites, rupture, distance_type='rrup'):
+        """
+        :param sites: a (Filtered)SiteColletion
+        :param rupture: a rupture
+        :param distance_type: default 'rrup'
+        :returns: (close sites, close distances)
+        :raises: a FarAwayRupture exception if the rupture is far away
+        """
+        distances = get_distances(rupture, sites.mesh, distance_type)
+        if not self.dic:  # for sites already filtered
+            return sites, distances
+        mask = distances <= self(rupture.tectonic_region_type, rupture.mag)
+        if mask.any():
+            return sites.filter(mask), distances[mask]
+        else:
+            raise FarAwayRupture
+
+    def __getitem__(self, trt):
+        return self(trt)
+
+    def __iter__(self):
+        return iter(self.dic)
+
+    def __len__(self):
+        return len(self.dic)
+
+    def __repr__(self):
+        return repr(self.dic)
+
+
 class SourceFilter(object):
     """
     The SourceFilter uses the rtree library if available. The index is
@@ -147,10 +268,14 @@ class SourceFilter(object):
         by default True, i.e. try to use the rtree module if available
     """
     def __init__(self, sitecol, integration_distance, use_rtree=True):
-        self.integration_distance = integration_distance
+        self.integration_distance = (
+            IntegrationDistance(integration_distance)
+            if isinstance(integration_distance, dict)
+            else integration_distance)
         self.sitecol = sitecol
         self.use_rtree = use_rtree and rtree and (
-            integration_distance and sitecol is not None)
+            integration_distance and sitecol is not None and
+            sitecol.at_sea_level())
         if self.use_rtree:
             fixed_lons, self.idl = fix_lons_idl(sitecol.lons)
             self.index = rtree.index.Index()
@@ -166,10 +291,7 @@ class SourceFilter(object):
         :param src: a source object
         :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
         """
-        try:
-            maxdist = self.integration_distance[src.tectonic_region_type]
-        except TypeError:  # passed a scalar, not a dictionary
-            maxdist = self.integration_distance
+        maxdist = self.integration_distance[src.tectonic_region_type]
         min_lon, min_lat, max_lon, max_lat = src.get_bounding_box(maxdist)
         if self.idl:  # apply IDL fix
             if min_lon < 0 and max_lon > 0:
@@ -191,7 +313,7 @@ class SourceFilter(object):
         min_lon, min_lat, max_lon, max_lat = self.get_affected_box(src)
         return (min_lon, min_lat), max_lon - min_lon, max_lat - min_lat
 
-    def affected(self, source):
+    def get_close_sites(self, source):
         """
         Returns the sites within the integration distance from the source,
         or None.
@@ -207,30 +329,32 @@ class SourceFilter(object):
             for source in sources:
                 yield source, sites
             return
-        for source in sources:
-            if self.use_rtree:  # Rtree filtering
-                box = self.get_affected_box(source)
+        for src in sources:
+            if self.use_rtree:  # Rtree filtering, used in the controller
+                box = self.get_affected_box(src)
                 sids = numpy.array(sorted(self.index.intersection(box)))
+                if len(set(sids)) < len(sids):
+                    # MS: sanity check against rtree bugs; what happened to me
+                    # is that by following the advice in http://toblerity.org/rtree/performance.html#use-stream-loading
+                    # self.index.intersection(box) started reporting duplicate
+                    # and wrong sids!
+                    raise ValueError('sids=%s' % sids)
                 if len(sids):
-                    source.nsites = len(sids)
-                    yield source, FilteredSiteCollection(sids, sites.complete)
+                    src.nsites = len(sids)
+                    yield src, FilteredSiteCollection(sids, sites.complete)
             elif not self.integration_distance:
-                yield source, sites
-            else:  # normal filtering
-                try:
-                    maxdist = self.integration_distance[
-                        source.tectonic_region_type]
-                except TypeError:  # passed a scalar, not a dictionary
-                    maxdist = self.integration_distance
-                with context(source):
-                    s_sites = source.filter_sites_by_distance_to_source(
+                yield src, sites
+            else:  # normal filtering, used in the workers
+                maxdist = self.integration_distance(src.tectonic_region_type)
+                with context(src):
+                    s_sites = src.filter_sites_by_distance_to_source(
                         maxdist, sites)
                 if s_sites is not None:
-                    source.nsites = len(s_sites)
-                    yield source, s_sites
+                    src.nsites = len(s_sites)
+                    yield src, s_sites
 
     def __getstate__(self):
         return dict(integration_distance=self.integration_distance,
                     sitecol=self.sitecol, use_rtree=False)
 
-source_site_noop_filter = SourceFilter(None, None)
+source_site_noop_filter = SourceFilter(None, {})

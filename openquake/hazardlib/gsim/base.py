@@ -35,6 +35,7 @@ import numpy
 
 from openquake.hazardlib import const
 from openquake.hazardlib import imt as imt_module
+from openquake.hazardlib.calc.filters import IntegrationDistance, get_distances
 from openquake.baselib.general import DeprecationWarning
 from openquake.baselib.python3compat import with_metaclass
 
@@ -109,45 +110,13 @@ class MetaGSIM(abc.ABCMeta):
             cls.instantiable = True
 
 
-def get_distances(rupture, mesh, param='rjb'):
-    """
-    :param rupture: a rupture
-    :param mesh: a mesh of points
-    :param param: the kind of distance to compute (default rjb)
-    :returns: an array of distances from the given mesh
-    """
-    if param == 'rrup':
-        dist = rupture.surface.get_min_distance(mesh)
-    elif param == 'rx':
-        dist = rupture.surface.get_rx_distance(mesh)
-    elif param == 'ry0':
-        dist = rupture.surface.get_ry0_distance(mesh)
-    elif param == 'rjb':
-        dist = rupture.surface.get_joyner_boore_distance(mesh)
-    elif param == 'rhypo':
-        dist = rupture.hypocenter.distance_to_mesh(mesh)
-    elif param == 'repi':
-        dist = rupture.hypocenter.distance_to_mesh(mesh, with_depths=False)
-    elif param == 'rcdpp':
-        dist = rupture.get_cdppvalue(mesh)
-    elif param == 'azimuth':
-        dist = rupture.surface.get_azimuth(mesh)
-    else:
-        raise ValueError('Unknown distance measure %r' % param)
-    return dist
-
-
-class FarAwayRupture(Exception):
-    """Raised if the rupture is outside the maximum distance for all sites"""
-
-
 class ContextMaker(object):
     """
     A class to manage the creation of contexts for distances, sites, rupture.
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
-    def __init__(self, gsims, maximum_distance=None):
+    def __init__(self, gsims, maximum_distance=IntegrationDistance(None)):
         self.gsims = gsims
         self.maximum_distance = maximum_distance
         for req in self.REQUIRES:
@@ -286,16 +255,8 @@ class ContextMaker(object):
             and distance parameters) is unknown.
         """
         rctx = self.make_rupture_context(rupture)
-        distances = get_distances(rupture, site_collection.mesh, 'rjb')
-        sites = site_collection
-        if self.maximum_distance:
-            mask = distances <= self.maximum_distance
-            if mask.any():
-                sites = site_collection.filter(mask)
-                distances = distances[mask]
-            else:
-                raise FarAwayRupture
-
+        sites, distances = self.maximum_distance.get_closest(
+            site_collection, rupture, 'rjb')
         sctx = self.make_sites_context(sites)
         dctx = self.make_distances_context(sites, rupture, {'rjb': distances})
         return (sctx, rctx, dctx)

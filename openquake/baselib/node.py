@@ -240,8 +240,9 @@ class StreamingXMLWriter(object):
         :param bytestream: the stream or file where to write the XML
         :param int indent: the indentation to use in the XML (default 4 spaces)
         """
-        # guard against a common error
-        assert not isinstance(bytestream, (io.StringIO, io.TextIOWrapper))
+        # guard against a common error, one must use io.BytesIO
+        if isinstance(bytestream, (io.StringIO, io.TextIOWrapper)):
+            raise TypeError('%r is not a byte stream' % bytestream)
         self.stream = bytestream
         self.indent = indent
         self.encoding = encoding
@@ -785,7 +786,9 @@ class ValidatingXmlParser(object):
         try:
             yield
         except ExpatError as err:
-            e = ExpatError(ErrorString(err.code))
+            msg = '%s: %s: %s' % (self.filename, err.lineno,
+                                  ErrorString(err.code))
+            e = ExpatError(msg)
             e.lineno = err.lineno
             e.offset = err.offset
             e.filename = self.filename

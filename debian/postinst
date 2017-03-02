@@ -14,7 +14,3 @@ if [ "$ownpkg" = "$PKGNAME" ]; then
         fi
     done
 fi
-
-if which pycompile >/dev/null 2>&1; then
-    pycompile -p "$PKGNAME"
-fi

@@ -71,13 +71,6 @@ class PointSourceCreationTestCase(unittest.TestCase):
             self.make_point_source(**kwargs)
         self.assertEqual(str(ae.exception), msg)
 
-    def test_negative_upper_seismogenic_depth(self):
-        self.assert_failed_creation(
-            ValueError,
-            'upper seismogenic depth must be non-negative',
-            upper_seismogenic_depth=-0.1
-        )
-
     def test_non_positive_rupture_mesh_spacing(self):
         msg = 'rupture mesh spacing must be positive'
         self.assert_failed_creation(ValueError, msg, rupture_mesh_spacing=-0.1)
@@ -95,6 +88,14 @@ class PointSourceCreationTestCase(unittest.TestCase):
             ValueError,
             'lower seismogenic depth must be below upper seismogenic depth',
             upper_seismogenic_depth=10, lower_seismogenic_depth=10
+        )
+
+    def test_upper_depth_inside_topo_range(self):
+        self.assert_failed_creation(
+            ValueError,
+            "Upper seismogenic depth must be greater than the maximum "
+            "elevation on Earth's surface (-8.848 km)",
+            upper_seismogenic_depth=-10
         )
 
     def test_hypocenter_depth_out_of_seismogenic_layer(self):
@@ -123,6 +124,9 @@ class PointSourceCreationTestCase(unittest.TestCase):
 
     def test_successfull_creation(self):
         self.make_point_source()
+
+    def test_upper_depth_topo(self):
+        self.make_point_source(upper_seismogenic_depth=-2)
 
 
 class PointSourceIterRupturesTestCase(unittest.TestCase):

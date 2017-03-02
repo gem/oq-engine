@@ -26,13 +26,13 @@ import logging
 import textwrap
 import collections
 from decimal import Decimal
-
 import numpy
 
 from openquake.baselib.python3compat import with_metaclass
+from openquake.baselib.general import distinct
 from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim
-from openquake.baselib.general import distinct
+from openquake.hazardlib.calc.filters import IntegrationDistance
 
 SCALEREL = scalerel.get_available_magnitude_scalerel()
 
@@ -371,15 +371,7 @@ def latitudes(value):
     return [latitude(v) for v in value.split(',')]
 
 
-def depth(value):
-    """
-    :param value: input string
-    :returns: float >= 0
-    """
-    dep = float_(value)
-    if dep < 0:
-        raise ValueError('depth %s < 0' % dep)
-    return dep
+depth = float_
 
 
 def lon_lat(value):
@@ -394,21 +386,47 @@ def lon_lat(value):
     return longitude(lon), latitude(lat)
 
 
+def point(value):
+    """
+    :param value: a tuple of coordinates as a string (2D or 3D)
+    :returns: a tuple of coordinates as a string (2D or 3D)
+    """
+    lst = value.split()
+    dim = len(lst)
+    if dim == 2:
+        return longitude(lst[0]), latitude(lst[1]), 0.
+    elif dim == 3:
+        return longitude(lst[0]), latitude(lst[1]), depth(lst[2])
+    else:
+        raise ValueError('Invalid point format: %s' % value)
+
+
 def coordinates(value):
     """
-    Convert a non-empty string into a list of lon-lat coordinates
+    Convert a non-empty string into a list of lon-lat coordinates.
+
     >>> coordinates('')
     Traceback (most recent call last):
     ...
     ValueError: Empty list of coordinates: ''
     >>> coordinates('1.1 1.2')
-    [(1.1, 1.2)]
+    [(1.1, 1.2, 0.0)]
     >>> coordinates('1.1 1.2, 2.2 2.3')
-    [(1.1, 1.2), (2.2, 2.3)]
+    [(1.1, 1.2, 0.0), (2.2, 2.3, 0.0)]
+    >>> coordinates('1.1 1.2 -0.4, 2.2 2.3 -0.5')
+    [(1.1, 1.2, -0.4), (2.2, 2.3, -0.5)]
+    >>> coordinates('0 0 0, 0 0 -1')
+    Traceback (most recent call last):
+    ...
+    ValueError: There are overlapping points in 0 0 0, 0 0 -1
     """
     if not value.strip():
         raise ValueError('Empty list of coordinates: %r' % value)
-    return list(map(lon_lat, value.split(',')))
+    points = list(map(point, value.split(',')))
+    num_distinct = len(set(pnt[:2] for pnt in points))
+    if num_distinct < len(points):
+        raise ValueError("There are overlapping points in %s" % value)
+    return points
 
 
 def wkt_polygon(value):
@@ -416,7 +434,7 @@ def wkt_polygon(value):
     Convert a string with a comma separated list of coordinates into
     a WKT polygon, by closing the ring.
     """
-    points = ['%s %s' % lon_lat for lon_lat in coordinates(value)]
+    points = ['%s %s' % (lon, lat) for lon, lat, dep in coordinates(value)]
     # close the linear polygon ring by appending the first coord to the end
     points.append(points[0])
     return 'POLYGON((%s))' % ', '.join(points)
@@ -691,6 +709,7 @@ def dictionary(value):
     return dic
 
 
+# used for the maximum distance parameter in the job.ini file
 def floatdict(value):
     """
     :param value:
@@ -706,9 +725,19 @@ def floatdict(value):
     [('active shallow crust', 250.0), ('default', 200)]
     """
     value = ast.literal_eval(value)
-    if isinstance(value, (int, float)):
+    if isinstance(value, (int, float, list)):
         return {'default': value}
     return value
+
+
+def maximum_distance(value):
+    """
+    :param value:
+        input string corresponding to a valid maximum distance
+    :returns:
+        a IntegrationDistance mapping
+    """
+    return IntegrationDistance(floatdict(value))
 
 
 # ########################### SOURCES/RUPTURES ############################# #
@@ -881,15 +910,33 @@ def positiveints(value):
     return ints
 
 
+def simple_slice(value):
+    """
+    >>> simple_slice('2:5')
+    (2, 5)
+    >>> simple_slice('0:None')
+    (0, None)
+    """
+    try:
+        start, stop = value.split(':')
+        start = ast.literal_eval(start)
+        stop = ast.literal_eval(stop)
+        if start is not None and stop is not None:
+            assert start < stop
+    except:
+        raise ValueError('invalid slice: %s' % value)
+    return (start, stop)
+
 # ############################## site model ################################ #
 
 vs30_type = ChoiceCI('measured', 'inferred')
 
 SiteParam = collections.namedtuple(
-    'SiteParam', 'z1pt0 z2pt5 measured vs30 lon lat backarc'.split())
+    'SiteParam', 'lon lat depth z1pt0 z2pt5 measured vs30 backarc'.split())
 
 
-def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat, backarc="false"):
+def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat,
+               depth=0, backarc="false"):
     """
     Used to convert a node like
 
@@ -898,10 +945,11 @@ def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat, backarc="false"):
 
     into a 7-tuple (z1pt0, z2pt5, measured, vs30, backarc, lon, lat)
     """
-    return SiteParam(positivefloat(z1pt0), positivefloat(z2pt5),
-                     vs30_type(vs30Type) == 'measured',
-                     positivefloat(vs30), longitude(lon),
-                     latitude(lat), boolean(backarc))
+    return SiteParam(z1pt0=positivefloat(z1pt0), z2pt5=positivefloat(z2pt5),
+                     measured=vs30_type(vs30Type) == 'measured',
+                     vs30=positivefloat(vs30), lon=longitude(lon),
+                     lat=latitude(lat), depth=float_(depth),
+                     backarc=boolean(backarc))
 
 # used for the exposure validation
 cost_type = Choice('structural', 'nonstructural', 'contents',

@@ -208,6 +208,35 @@ def block_splitter(items, max_weight, weight=lambda item: 1, kind=nokey):
         yield ws
 
 
+def split_in_slices(number, num_slices):
+    """
+    :param number: a positive number to split in slices
+    :param num_slices: the number of slices to return (at most)
+    :returns: a list of slices
+
+    >>> split_in_slices(4, 2)
+    [slice(0, 2, None), slice(2, 4, None)]
+    >>> split_in_slices(5, 1)
+    [slice(0, 5, None)]
+    >>> split_in_slices(5, 2)
+    [slice(0, 3, None), slice(3, 5, None)]
+    >>> split_in_slices(2, 4)
+    [slice(0, 1, None), slice(1, 2, None)]
+    """
+    assert number > 0, number
+    assert num_slices > 0, num_slices
+    blocksize = int(math.ceil(number / num_slices))
+    slices = []
+    start = 0
+    while True:
+        stop = min(start + blocksize, number)
+        slices.append(slice(start, stop))
+        if stop == number:
+            break
+        start += blocksize
+    return slices
+
+
 def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
     """
     Split the `sequence` in a number of WeightedSequences close to `hint`.
@@ -225,6 +254,9 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
      [<WeightedSequence ['A', 'B'], weight=2>, <WeightedSequence ['C', 'D'], weight=2>, <WeightedSequence ['E'], weight=1>]
 
     """
+    if isinstance(sequence, int):
+        return split_in_slices(sequence, hint)
+
     if hint == 0:  # do not split
         return sequence
     items = list(sequence) if key is nokey else sorted(sequence, key=key)
