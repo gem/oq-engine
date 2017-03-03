@@ -183,14 +183,13 @@ def get_mesh(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     if oqparam.sites:
-        lons, lats = zip(*sorted(oqparam.sites))
-        return geo.Mesh(numpy.array(lons), numpy.array(lats))
+        return geo.Mesh.from_coords(oqparam.sites)
     elif 'sites' in oqparam.inputs:
         csv_data = open(oqparam.inputs['sites'], 'U').read()
         coords = valid.coordinates(
             csv_data.strip().replace(',', ' ').replace('\n', ','))
-        lons, lats = zip(*sorted(coords))
-        return geo.Mesh(numpy.array(lons), numpy.array(lats))
+        start, stop = oqparam.sites_slice
+        return geo.Mesh.from_coords(coords[start:stop])
     elif oqparam.region:
         # close the linear polygon ring by appending the first
         # point to the end
@@ -208,22 +207,16 @@ def get_mesh(oqparam):
         return get_gmfs(oqparam)[0].mesh
     elif oqparam.hazard_calculation_id:
         sitecol = datastore.read(oqparam.hazard_calculation_id)['sitecol']
-        return geo.Mesh(sitecol.lons, sitecol.lats)
+        return geo.Mesh(sitecol.lons, sitecol.lats, sitecol.depths)
     elif 'exposure' in oqparam.inputs:
         # the mesh is extracted from get_sitecol_assets
         return
     elif 'site_model' in oqparam.inputs:
-        coords = [(param.lon, param.lat) for param in get_site_model(oqparam)]
-        lons, lats = zip(*sorted(coords))
-        return geo.Mesh(numpy.array(lons), numpy.array(lats))
-
-
-def sitecol_from_coords(oqparam, coords):
-    """
-    Return a SiteCollection instance from an ordered set of coordinates
-    """
-    lons, lats = zip(*coords)
-    return site.SiteCollection.from_points(lons, lats, oqparam)
+        coords = [(param.lon, param.lat, param.depth)
+                  for param in get_site_model(oqparam)]
+        mesh = geo.Mesh.from_coords(coords)
+        mesh.from_site_model = True
+        return mesh
 
 
 def get_site_model(oqparam):
@@ -257,18 +250,22 @@ def get_site_collection(oqparam, mesh=None, site_model_params=None):
     if mesh is None:
         return
     if oqparam.inputs.get('site_model'):
+        sitecol = []
+        if getattr(mesh, 'from_site_model', False):
+            for param in sorted(get_site_model(oqparam)):
+                pt = geo.Point(param.lon, param.lat, param.depth)
+                sitecol.append(site.Site(
+                    pt, param.vs30, param.measured,
+                    param.z1pt0, param.z2pt5, param.backarc))
+            return site.SiteCollection(sitecol)
         if site_model_params is None:
             # read the parameters directly from their file
             site_model_params = geo.geodetic.GeographicObjects(
                 get_site_model(oqparam))
-        sitecol = []
         for pt in mesh:
-            # NB: the mesh, when read from the datastore, is a 32 bit array;
-            # however, the underlying C library expects 64 bit floats, thus
-            # we have to cast float(pt.longitude), float(pt.latitude);
-            # we should change the geodetic speedups instead
-            param, dist = site_model_params.\
-                get_closest(float(pt.longitude), float(pt.latitude))
+            # attach the closest site model params to each site
+            param, dist = site_model_params.get_closest(
+                pt.longitude, pt.latitude)
             if dist >= MAX_SITE_MODEL_DISTANCE:
                 logging.warn('The site parameter associated to %s came from a '
                              'distance of %d km!' % (pt, dist))
@@ -278,7 +275,8 @@ def get_site_collection(oqparam, mesh=None, site_model_params=None):
         return site.SiteCollection(sitecol)
 
     # else use the default site params
-    return site.SiteCollection.from_points(mesh.lons, mesh.lats, oqparam)
+    return site.SiteCollection.from_points(
+        mesh.lons, mesh.lats, mesh.depths, oqparam)
 
 
 def get_gsim_lt(oqparam, trts=['*']):
@@ -370,7 +368,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
     :param in_memory:
         if True, keep in memory the sources, else just collect the TRTs
     :returns:
-        an iterator over :class:`openquake.commonlib.source.SourceModel`
+        an iterator over :class:`openquake.commonlib.logictree.SourceModel`
         tuples
     """
     converter = sourceconverter.SourceConverter(
@@ -634,8 +632,6 @@ def get_exposure(oqparam):
     """
     Read the full exposure in memory and build a list of
     :class:`openquake.risklib.riskmodels.Asset` instances.
-    If you don't want to keep everything in memory, use
-    get_exposure_lazy instead (for experts only).
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -921,7 +917,8 @@ def get_gmfs_from_txt(oqparam, fname):
             raise InvalidFile(
                 'The first line of %s is expected to contain comma separated'
                 'ordered coordinates, got %s instead' % (fname, firstline))
-        sitecol = sitecol_from_coords(oqparam, coords)
+        lons, lats, depths = zip(*coords)
+        sitecol = site.SiteCollection.from_points(lons, lats, depths, oqparam)
         if not oqparam.imtls:
             oqparam.set_risk_imtls(get_risk_models(oqparam))
         imts = list(oqparam.imtls)
@@ -987,8 +984,9 @@ def get_scenario_from_nrml(oqparam, fname):
     imt_dt = numpy.dtype([(imt, F32) for imt in imts])
     gmfset = nrml.read(fname).gmfCollection.gmfSet
     etags, sitecounts = _extract_etags_sitecounts(gmfset)
-    oqparam.sites = sorted(sitecounts)
-    site_idx = {lonlat: i for i, lonlat in enumerate(oqparam.sites)}
+    coords = sorted(sitecounts)
+    oqparam.sites = [(lon, lat, 0) for lon, lat in coords]
+    site_idx = {lonlat: i for i, lonlat in enumerate(coords)}
     oqparam.number_of_ground_motion_fields = num_events = len(etags)
     sitecol = get_site_collection(oqparam)
     num_sites = len(oqparam.sites)

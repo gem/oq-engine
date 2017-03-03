@@ -1,4 +1,55 @@
   [Michele Simionato]
+  * Raised the limit on the event IDs from 2^16 to 2^32 per task
+  * Fixed classical_risk: there was an error when computing the statistics
+    in the case of multiple assets of the same taxonomy on the same site
+  * Changed the UCERF event based calculators to parallelize by SES
+  * Fixed a site model bug: when the sites are extracted from the site model
+    there is no need to perform geospatial queries to get the parameters
+  * Added a command `oq normalize` to produce good `sites.csv` files
+  * Introduced a `ses_seed` parameter to specify the seed used to generate
+    the stochastic event sets; `random_seed` is used for the sampling only
+  * Changed the `build_rcurves` procedure to read the loss ratios directly from
+    the workers
+
+python-oq-engine (2.3.0-0~precise01) precise; urgency=low
+
+  [Michele Simionato]
+  * `oq info --report` now filters the ruptures and reports the correct
+    number of effective ruptures even for classical calculators
+  * Stripped the TRT information from the event loss table CSV export
+    and optimized its performance
+  * Fixed a bug when storing the GMPE logic tree file in the datastore
+  * Added a command `oq run_tiles` (experimental)
+  * Fixed the event based calculator so that it can run UCERF ruptures
+  * Fixed a bug in the scenario_risk calculator in case of multiple assets
+    of the same taxonomy on the same site with no insurance losses
+  * Now the event IDs are generated in the workers in the event based calculator
+    and there is a limit of 65536 tasks with 65536 ruptures each
+  * Changed the UCERF classical calculators to compute one branch at the time
+  * Fixed the header `occupants:float32` in the CSV risk exports involving
+    occupants
+  * Fixed the name of the zipped files downloaded by the Web UI: there
+    was a spurious dot
+  * Fixed the UCERF classical calculator in the case of sampling
+  * Reduced the size of the event tags in the event based calculators, thus
+    saving GB of disk space in UCERF calculations
+  * Fixed the name of the files downloaded by the Web UI: they must not
+    contain slashes
+  * Now deleting a calculation from the Web UI really deletes it, before
+    if was only hiding it
+
+  [Daniele Viganò]
+  * Moved the OpenQuake Engine manual sources inside doc/manual
+
+  [Michele Simionato]
+  * Introduced an experimental classical time dependent UCERF calculator
+  * Added a dynamic output for source group information
+  * Changed the UCERF rupture calculator to fully store the ruptures
+  * Fixed a bug in `combine_maps`: realizations with zero probability were
+    discarded, thus breaking the computation of the statistics
+  * Added a command `oq reset` to reset database and datastores
+  * Reduced the data transfer back and disk space occupation for UCERF
+    event based risk calculations
   * Tasks meant to be used with a shared directory are now marked with a
     boolean attribute `.shared_dir_on`
   * Added a warning when running event based risk calculations with sampling
@@ -17,6 +68,8 @@
     export the loss maps anymore
   * Fixed `oq engine --make-html-report` when using Python 3
   * Fixed bug when running `oq info job.ini` with NRML 0.5 source models
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 23 Feb 2017 14:37:44 +0100
 
 python-oq-engine (2.2.0-0~precise01) precise; urgency=low
 

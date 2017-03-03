@@ -18,13 +18,14 @@
 
 from nose.plugins.attrib import attr
 from openquake.baselib import parallel
+from openquake.baselib.python3compat import decode
 from openquake.hazardlib import InvalidFile
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase, check_platform
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
-    case_18, case_19, case_20, case_21, case_22, case_23, case_24)
+    case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25)
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -47,10 +48,10 @@ class ClassicalTestCase(CalculatorTestCase):
 
         if parallel.oq_distribute() != 'no':
             # make sure we saved the data transfer information in job_info
-            keys = set(self.calc.datastore['job_info'].__dict__)
-            self.assertIn('classical_max_received_per_task', keys)
-            self.assertIn('classical_tot_received', keys)
-            self.assertIn('classical_sent', keys)
+            keys = {decode(key) for key in dict(
+                self.calc.datastore['job_info'])}
+            self.assertIn('classical.received', keys)
+            self.assertIn('classical.sent', keys)
 
         # there is a single source
         self.assertEqual(len(self.calc.datastore['source_info']), 1)
@@ -305,6 +306,8 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
             'hazard_curve-smltp_b1_mfd3_mid_dip_dip45-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_b1_mfd3_mid_dip_dip60-gsimltp_Sad1997.csv'],
             case_21.__file__, delta=1E-7)
+        [fname] = export(('sourcegroups', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/sourcegroups.csv', fname)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_22(self):  # crossing date line calculation for Alaska
@@ -319,3 +322,8 @@ hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
     def test_case_24(self):  # UHS
         self.assert_curves_ok(['hazard_curve.csv', 'hazard_uhs.csv'],
                               case_24.__file__)
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_25(self):  # negative depths
+        self.assert_curves_ok(['hazard_curve-smltp_b1-gsimltp_b1.csv'],
+                              case_25.__file__)

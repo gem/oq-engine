@@ -72,7 +72,7 @@ export_dir = %s
                 'maximum_distance': {'default': 1},
                 'inputs': {'job_ini': job_config,
                            'site_model': site_model_input},
-                'sites': [(0.0, 0.0)],
+                'sites': [(0.0, 0.0, 0.0)],
                 'hazard_imtls': {'PGA': None},
                 'investigation_time': 50.0,
                 'risk_investigation_time': 50.0,
@@ -183,18 +183,21 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         oqparam.inputs = dict(site_model=sitemodel())
         expected = [
             valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
-                            vs30=1200.0, backarc=False, lon=0.0, lat=0.0),
+                            vs30=1200.0, backarc=False, lon=0.0, lat=0.0,
+                            depth=0.0),
             valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
-                            vs30=600.0, backarc=True, lon=0.0, lat=0.1),
+                            vs30=600.0, backarc=True, lon=0.0, lat=0.1,
+                            depth=0.0),
             valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
-                            vs30=200.0, backarc=False, lon=0.0, lat=0.2)]
+                            vs30=200.0, backarc=False, lon=0.0, lat=0.2,
+                            depth=0.0)]
         self.assertEqual(list(readinput.get_site_model(oqparam)), expected)
 
     def test_get_far_away_parameter(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.maximum_distance = 100
-        oqparam.sites = [(1.0, 0)]
+        oqparam.sites = [(1.0, 0, 0)]
         oqparam.inputs = dict(site_model=sitemodel())
         with mock.patch('logging.warn') as warn:
             readinput.get_site_collection(oqparam)

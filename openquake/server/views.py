@@ -41,11 +41,11 @@ from openquake.baselib.parallel import Starmap, safely_call
 from openquake.hazardlib import nrml
 from openquake.risklib import read_nrml
 
-from openquake.commonlib import readinput, oqvalidation
+from openquake.commonlib import readinput, oqvalidation, logs
 from openquake.calculators.export import export
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
-from openquake.engine import engine, logs
+from openquake.engine import engine
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import executor, utils, dbapi
 
@@ -308,10 +308,11 @@ def calc(request, id=None):
 @require_http_methods(['POST'])
 def calc_remove(request, calc_id):
     """
-    Remove the calculation id by setting the field oq_job.relevant to False.
+    Remove the calculation id
     """
+    user = utils.get_user_data(request)['name']
     try:
-        logs.dbcmd('set_relevant', calc_id, False)
+        logs.dbcmd('del_calc', calc_id, user)
     except dbapi.NotFound:
         return HttpResponseNotFound()
     return HttpResponse(content=json.dumps([]),
@@ -480,7 +481,7 @@ def get_traceback(request, calc_id):
 
 
 @cross_domain_ajax
-@require_http_methods(['GET'])
+@require_http_methods(['GET', 'HEAD'])
 def get_result(request, result_id):
     """
     Download a specific result, by ``result_id``.
@@ -532,12 +533,17 @@ def get_result(request, result_id):
     content_type = EXPORT_CONTENT_TYPE_MAP.get(
         export_type, DEFAULT_CONTENT_TYPE)
     try:
-        fname = 'output-%s-%s' % (result_id, os.path.basename(exported))
+        bname = os.path.basename(exported)
+        if bname.startswith('.'):
+            # the "." is added by `export_from_db`, strip it
+            bname = bname[1:]
+        fname = 'output-%s-%s' % (result_id, bname)
         # 'b' is needed when running the WebUI on Windows
         data = open(exported, 'rb').read()
         response = HttpResponse(data, content_type=content_type)
         response['Content-Length'] = len(data)
-        response['Content-Disposition'] = 'attachment; filename=%s' % fname
+        response['Content-Disposition'] = (
+            'attachment; filename=%s' % os.path.basename(fname))
         return response
     finally:
         shutil.rmtree(tmpdir)
@@ -565,7 +571,8 @@ def get_datastore(request, job_id):
     fname = job.ds_calc_dir + '.hdf5'
     response = FileResponse(
         FileWrapper(open(fname, 'rb')), content_type=HDF5)
-    response['Content-Disposition'] = 'attachment; filename=%s' % fname
+    response['Content-Disposition'] = (
+        'attachment; filename=%s' % os.path.basename(fname))
     return response
 
 

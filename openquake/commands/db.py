@@ -21,7 +21,7 @@ import inspect
 from decorator import getfullargspec
 from openquake.baselib import sap
 from openquake.calculators.views import rst_table
-from openquake.engine import logs
+from openquake.commonlib import logs
 from openquake.server import dbserver
 from openquake.server.db import actions
 

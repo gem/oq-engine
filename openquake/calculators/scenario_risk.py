@@ -63,10 +63,10 @@ def scenario_risk(riskinput, riskmodel, monitor):
             if out is None:  # this may happen
                 continue
             stats = numpy.zeros((len(assets), 2), (F32, I))  # mean, stddev
-            stats[:, 0] = out.mean(axis=1)  # shape (A, I)
-            stats[:, 1] = out.std(ddof=1, axis=1)
-            for asset, stat in zip(assets, stats):
-                result['avg'].append((l, r, asset.ordinal, stat))
+            for aid, asset in enumerate(assets):
+                stats[aid, 0] = out[aid].mean()
+                stats[aid, 1] = out[aid].std(ddof=1)
+                result['avg'].append((l, r, asset.ordinal, stats[aid]))
             agglosses = out.sum(axis=0)  # shape E, I
             for i in range(I):
                 result['agg'][:, l, r, i] += agglosses[:, i]

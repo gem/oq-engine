@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+    <sourceModel name="Area Source for test">
+
+        <areaSource id="1" name="Pernicana" tectonicRegion="Volcanic">
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                        	15.0191349916316 37.7811899943837
+				15.0515359785641 37.7938490323955
+				15.1117060168382 37.7960099994029
+				15.1262790119432 37.7919570127373
+				15.1376400384482 37.8038769637935
+				15.1156699841631 37.8150999842157
+				15.0473860215257 37.8179020127323
+				15.0098800045914 37.7859650121118	
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>-1.0</upperSeismoDepth>
+                <lowerSeismoDepth>6.0</lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>1.5</ruptAspectRatio>
+            <truncGutenbergRichterMFD aValue="2.0" bValue="0.8" minMag="2.5" maxMag="4.7" />
+            <nodalPlaneDist>
+                <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="-90.0" />
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth probability="1." depth="2.5" />
+            </hypoDepthDist>
+        </areaSource>
+        </sourceModel>
+</nrml>

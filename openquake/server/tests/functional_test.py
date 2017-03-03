@@ -22,10 +22,10 @@ running computations.
 """
 from __future__ import print_function
 import os
+import re
 import sys
 import json
 import time
-import getpass
 import unittest
 import subprocess
 import tempfile
@@ -35,6 +35,7 @@ from openquake.baselib.general import writetmp
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.manage import db
+from openquake.server.settings import DATABASE
 
 if requests.__version__ < '1.0.0':
     requests.Response.text = property(lambda self: self.content)
@@ -117,6 +118,11 @@ class EngineServerTestCase(unittest.TestCase):
         env['LOGNAME'] = env['USERNAME'] = 'openquake'
         cls.fd, cls.errfname = tempfile.mkstemp(prefix='webui')
         print('Errors saved in %s' % cls.errfname, file=sys.stderr)
+
+        # sanity check, `oq dbserver start` should have created the dbdir
+        dbdir = os.path.dirname(DATABASE['NAME'])
+        assert os.path.exists(dbdir), dbdir
+
         cls.proc = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
              cls.hostport, '--noreload', '--nothreading'],
@@ -161,6 +167,24 @@ class EngineServerTestCase(unittest.TestCase):
         with self.assertRaises(core.DataStoreExportError) as ctx:
             core.export_from_db(('XXX', 'csv'), job_id, datadir, '/tmp')
         self.assertIn('Could not export XXX in csv', str(ctx.exception))
+
+    def test_classical(self):
+        job_id = self.postzip('classical.zip')
+        self.wait()
+
+        # check that we get the expected outputs
+        results = self.get('%s/results' % job_id)
+        self.assertEqual(['hcurves', 'hmaps', 'realizations', 'sourcegroups',
+                          'uhs'], [r['name'] for r in results])
+
+        # check the filename of the hmaps
+        hmaps_id = results[1]['id']
+        resp = requests.head('http://%s/v1/calc/result/%s?export_type=csv' %
+                             (self.hostport, hmaps_id))
+        # remove output ID digits from the filename
+        contentdisp = re.sub(r'\d', '', resp.headers['Content-Disposition'])
+        self.assertEqual(
+            contentdisp, 'attachment; filename=output--hmaps-csv.zip')
 
     def test_err_1(self):
         # the rupture XML file has a syntax error

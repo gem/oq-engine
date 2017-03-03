@@ -1,13 +1,13 @@
 scenario risk
 =============
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_81099.hdf5 Thu Jan 26 14:30:38 2017
-engine_version                                 2.3.0-gite807292        
-hazardlib_version                              0.23.0-gite1ea7ea       
-============================================== ========================
+============================================ ========================
+gem-tstation:/mnt/ssd/oqdata/calc_85599.hdf5 Tue Feb 14 15:49:00 2017
+engine_version                               2.3.0-git1f56df2        
+hazardlib_version                            0.23.0-git6937706       
+============================================ ========================
 
-num_sites = 7, sitecol = 1.01 KB
+num_sites = 7, sitecol = 1.11 KB
 
 Parameters
 ----------
@@ -76,10 +76,10 @@ Slowest operations
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 computing gmfs          0.021     0.0       1     
-filtering sites         0.008     0.0       1     
-reading exposure        0.006     0.0       1     
+filtering sites         0.010     0.0       1     
+reading exposure        0.005     0.0       1     
 saving gmfs             0.003     0.0       1     
-building riskinputs     8.295E-04 0.0       1     
-building epsilons       2.108E-04 0.0       1     
-reading site collection 1.025E-05 0.0       1     
+building riskinputs     7.973E-04 0.0       1     
+building epsilons       2.196E-04 0.0       1     
+reading site collection 7.391E-06 0.0       1     
 ======================= ========= ========= ======
