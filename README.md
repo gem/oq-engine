@@ -67,6 +67,10 @@ The code name for version 2.3 is **Degenkolb**, in memory of [Henry Degenkolb](h
 * [Installing on Windows](https://github.com/gem/oq-engine/blob/engine-2.3/doc/installing/windows.md)
 * [Starting the software](https://github.com/gem/oq-engine/blob/engine-2.3/doc/running/windows.md)
 
+#### VirtualBox
+
+* [Download OVA appliance](https://www.globalquakemodel.org/ova/stable/)
+
 #### Docker
 
 * [Deploy a Docker container](https://github.com/gem/oq-engine/blob/engine-2.3/doc/installing/docker.md)
