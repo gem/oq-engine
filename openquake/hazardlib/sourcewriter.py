@@ -38,9 +38,10 @@ def build_area_source_geometry(area_source):
     :returns:
         Instance of :class:`openquake.baselib.node.Node`
     """
-    geom_str = ["%s %s" % lonlat for lonlat in
-                zip(area_source.polygon.lons, area_source.polygon.lats)]
-    poslist_node = Node("gml:posList", text=geom_str)
+    geom = []
+    for lon_lat in zip(area_source.polygon.lons, area_source.polygon.lats):
+        geom.extend(lon_lat)
+    poslist_node = Node("gml:posList", text=geom)
     linear_ring_node = Node("gml:LinearRing", nodes=[poslist_node])
     exterior_node = Node("gml:exterior", nodes=[linear_ring_node])
     polygon_node = Node("gml:Polygon", nodes=[exterior_node])
@@ -86,11 +87,13 @@ def build_linestring_node(line, with_depth=False):
     :returns:
         Instance of :class:`openquake.baselib.node.Node`
     """
-    if with_depth:
-        geom_str = ["%s %s %s" % (p.x, p.y, p.z) for p in line.points]
-    else:
-        geom_str = ["%s %s" % (p.x, p.y) for p in line.points]
-    poslist_node = Node("gml:posList", text=geom_str)
+    geom = []
+    for p in line.points:
+        if with_depth:
+            geom.extend((p.x, p.y, p.z))
+        else:
+            geom.extend((p.x, p.y))
+    poslist_node = Node("gml:posList", text=geom)
     return Node("gml:LineString", nodes=[poslist_node])
 
 
