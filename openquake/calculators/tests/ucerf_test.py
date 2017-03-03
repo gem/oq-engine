@@ -21,7 +21,7 @@ from openquake.baselib.general import writetmp
 from openquake.calculators.export import export
 from openquake.calculators.views import view
 from openquake.qa_tests_data import ucerf
-from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
+from openquake.calculators.tests import CalculatorTestCase
 
 from nose.plugins.attrib import attr
 
@@ -33,8 +33,19 @@ class UcerfTestCase(CalculatorTestCase):
             raise unittest.SkipTest  # UCERF requires vlen arrays
         self.run_calc(ucerf.__file__, 'job.ini')
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
-        # just check that we get the expected number of ruptures
-        self.assertEqual(open(fname).read().count('\n'), 918)
+        # check that we get the expected number of events
+        with open(fname) as f:
+            self.assertEqual(len(f.readlines()), 974)
+        # check the header and the first 18 events
+        self.assertEqualFiles('expected/ruptures.csv', fname, lastline=19)
+
+        # run a regular event based on top of the UCERF ruptures and
+        # check the generated hazard maps
+        self.run_calc(ucerf.__file__, 'job.ini',
+                      calculation_mode='event_based',
+                      hazard_calculation_id=str(self.calc.datastore.calc_id))
+        [fname] = export(('hmaps', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
 
     @attr('qa', 'hazard', 'ucerf')
     def test_classical(self):
@@ -46,6 +57,33 @@ class UcerfTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_curve-rlz-000.csv', f1)
         self.assertEqualFiles('expected/hazard_curve-rlz-001.csv', f2)
 
+        # make sure this runs
+        view('fullreport', self.calc.datastore)
+
+    @attr('qa', 'hazard', 'ucerf_td')
+    def test_classical_time_dep(self):
+        if h5py.__version__ < '2.6.0':
+            raise unittest.SkipTest  # UCERF requires vlen arrays
+        out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
+                            exports='csv')
+        fname = out['hcurves', 'csv'][0]
+        self.assertEqualFiles('expected/hazard_curve-td-mean.csv', fname,
+                              delta=1E-6)
+
+        # make sure this runs
+        view('fullreport', self.calc.datastore)
+
+    @attr('qa', 'hazard', 'ucerf_td')
+    def test_classical_time_dep_sampling(self):
+        if h5py.__version__ < '2.6.0':
+            raise unittest.SkipTest  # UCERF requires vlen arrays
+        out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
+                            number_of_logic_tree_samples='2',
+                            exports='csv')
+        fname = out['hcurves', 'csv'][0]
+        self.assertEqualFiles('expected/hazard_curve-sampling.csv', fname,
+                              delta=1E-6)
+
     @attr('qa', 'risk', 'ucerf')
     def test_event_based_risk(self):
         if h5py.__version__ < '2.6.0':
@@ -53,9 +91,8 @@ class UcerfTestCase(CalculatorTestCase):
         self.run_calc(ucerf.__file__, 'job_ebr.ini',
                       number_of_logic_tree_samples='2')
 
-        fnames = export(('agg_loss_table', 'csv'), self.calc.datastore)
-        for fname in fnames:
-            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
-
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname)
+
+        # make sure this runs
+        view('fullreport', self.calc.datastore)

@@ -32,6 +32,7 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
+U64 = numpy.uint64
 
 FIELDS = ('site_id', 'lon', 'lat', 'idx', 'taxonomy_id', 'area', 'number',
           'occupants', 'deductible-', 'insurance_limit-', 'retrofitted-')
@@ -46,6 +47,14 @@ class MultiLoss(object):
 
     def __getitem__(self, l):
         return self.values[l]
+
+
+def get_refs(assets, hdf5path):
+    """
+    Debugging method returning the string IDs of the assets from the datastore
+    """
+    with hdf5.File(hdf5path, 'r') as f:
+        return f['asset_refs'][[a.idx for a in assets]]
 
 
 class AssetCollection(object):
@@ -412,6 +421,8 @@ class CompositeRiskModel(collections.Mapping):
                               else assetcol.assets_by_site())
             hazard_getter = riskinput.hazard_getter(
                 mon_hazard(measuremem=False))
+            if hasattr(hazard_getter, 'init'):  # expensive operation
+                hazard_getter.init()
 
         # group the assets by taxonomy
         taxonomies = set()
@@ -426,7 +437,7 @@ class CompositeRiskModel(collections.Mapping):
                     taxonomies.add(taxonomy)
         for rlz in riskinput.rlzs:
             with mon_hazard:
-                hazard = hazard_getter(rlz)
+                hazard = list(hazard_getter(rlz))
             for taxonomy in sorted(taxonomies):
                 riskmodel = self[taxonomy]
                 with mon_risk:
@@ -457,39 +468,49 @@ class CompositeRiskModel(collections.Mapping):
 
 class PoeGetter(object):
     """
-    Callable returning a list of N dictionaries imt -> curve
-    when called on a realization.
+    Callable yielding dictionaries {imt: curve} when called on a realization.
     """
     def __init__(self, hazard_by_site):
         self.hazard_by_site = hazard_by_site
 
     def __call__(self, rlz):
-        return [{imt: haz[imt][rlz] for imt in haz}
-                for haz in self.hazard_by_site]
+        for haz in self.hazard_by_site:
+            yield {imt: haz[imt][rlz] for imt in haz}
+
+
+gmv_dt = numpy.dtype([('sid', U32), ('eid', U64), ('imti', U8), ('gmv', F32)])
 
 
 class GmfGetter(object):
     """
-    Callable returning a list of N dictionaries imt -> array(gmv, eid).
-    when called on a realization.
+    Callable yielding dictionaries {imt: array(gmv, eid)} when called
+    on a realization.
     """
-    dt = numpy.dtype([('gmv', F32), ('eid', U32)])
+    dt = numpy.dtype([('gmv', F32), ('eid', U64)])
 
     def __init__(self, gsims, ebruptures, sitecol, imts, min_iml,
                  truncation_level, correlation_model, samples):
         self.gsims = gsims
+        self.ebruptures = ebruptures
+        self.sitecol = sitecol
         self.imts = imts
         self.min_iml = min_iml
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.samples = samples
-        self.sids = sitecol.sids
+
+    def init(self):
+        """
+        Initialize the computers. Should be called on the workers
+        """
+        self.sids = self.sitecol.sids
         self.computers = []
-        for ebr in ebruptures:
-            sites = site.FilteredSiteCollection(ebr.sids, sitecol.complete)
+        for ebr in self.ebruptures:
+            sites = site.FilteredSiteCollection(
+                ebr.sids, self.sitecol.complete)
             computer = calc.gmf.GmfComputer(
-                ebr, sites, imts, set(gsims),
-                truncation_level, correlation_model)
+                ebr, sites, self.imts, self.gsims,
+                self.truncation_level, self.correlation_model)
             self.computers.append(computer)
         self.gmfbytes = 0
 
@@ -513,14 +534,23 @@ class GmfGetter(object):
                                 dic[imt].append((gmv, eid))
                             else:
                                 dic[imt] = [(gmv, eid)]
-        dicts = []  # a list of dictionaries imt -> array(gmv, eid)
         for sid in self.sids:
             dic = gmfdict[sid]
             for imt in dic:
                 dic[imt] = arr = numpy.array(dic[imt], self.dt)
                 self.gmfbytes += arr.nbytes
-            dicts.append(dic)
-        return dicts
+            yield dic
+
+    def get(self, rlz):
+        """:returns: array of dtype gmv_dt"""
+        gmfcoll = []
+        for i, gmvdict in enumerate(self(rlz)):
+            if gmvdict:
+                sid = self.sids[i]
+                for imti, imt in enumerate(self.imts):
+                    for rec in gmvdict.get(imt, []):
+                        gmfcoll.append((sid, rec['eid'], imti, rec['gmv']))
+        return numpy.array(gmfcoll, gmv_dt)
 
 
 class RiskInput(object):
@@ -602,27 +632,6 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
     return eps
 
 
-class Gmvset(object):
-    """
-    Emulate a dataset containing ground motion values per event ID,
-    realization ordinal and IMT index.
-    """
-    dt = numpy.dtype([('gmv', F32), ('eid', U32), ('rlzi', U16), ('imti', U8)])
-
-    def __init__(self):
-        self.pairs = []
-
-    def append(self, gmv, eid, rlzi, imti):
-        self.pairs.append((gmv, eid, rlzi, imti))
-
-    @property
-    def value(self):
-        return numpy.array(self.pairs, self.dt)
-
-    def __len__(self):
-        return len(self.pairs)
-
-
 def str2rsi(key):
     """
     Convert a string of the form 'rlz-XXXX/sid-YYYY/ZZZ'
@@ -694,10 +703,9 @@ class RiskInputFromRuptures(object):
         :returns:
             lists of N hazard dictionaries imt -> rlz -> Gmvs
         """
-        gg = GmfGetter(self.gsims, self.ses_ruptures, self.sitecol,
-                       self.imts, self.min_iml, self.trunc_level,
-                       self.correl_model, self.samples)
-        return gg
+        return GmfGetter(self.gsims, self.ses_ruptures, self.sitecol,
+                         self.imts, self.min_iml, self.trunc_level,
+                         self.correl_model, self.samples)
 
     def __repr__(self):
         return '<%s imts=%s, weight=%d>' % (

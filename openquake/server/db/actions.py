@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
 import os
+import glob
 import operator
 from datetime import datetime, timedelta
 
@@ -273,14 +274,29 @@ def del_calc(db, job_id, user):
     if dependent:
         return ('Cannot delete calculation %d: there are calculations '
                 'dependent from it: %s' % (job_id, [j.id for j in dependent]))
-    found = db('SELECT count(id) FROM job WHERE id=?x', job_id, scalar=True)
-    if not found:
+    try:
+        path = db('SELECT ds_calc_dir FROM job WHERE id=?x', job_id,
+                  scalar=True)
+    except NotFound:
         return ('Cannot delete calculation %d: ID does not exist' % job_id)
+
     deleted = db('DELETE FROM job WHERE id=?x AND user_name=?x',
                  job_id, user).rowcount
     if not deleted:
         return ('Cannot delete calculation %d: belongs to a different user'
                 % job_id)
+
+    # try to delete datastore and associated files
+    # path has typically the form /home/user/oqdata/calc_XXX
+    fnames = []
+    for fname in glob.glob(path + '.*'):
+        try:
+            os.remove(fname)
+        except OSError as exc:  # permission error
+            print('Could not remove %s: %s' % (fname, exc))
+        else:
+            fnames.append(fname)
+    return fnames
 
 
 def log(db, job_id, timestamp, level, process, message):
@@ -477,6 +493,14 @@ def set_relevant(db, job_id, flag):
         flag for the field job.relevant
     """
     db('UPDATE job SET relevant=?x WHERE id=?x', flag, job_id)
+
+
+def update_parent_child(db, parent_child):
+    """
+    Set hazard_calculation_id (parent) on a job_id (child)
+    """
+    db('UPDATE job SET hazard_calculation_id=?x WHERE id=?x',
+       *parent_child)
 
 
 def get_log_slice(db, job_id, start, stop):

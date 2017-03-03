@@ -1,0 +1,124 @@
+This Chapter summarises the structure of the information necessary to define
+the different input data to be used with the \glsdesc{acr:oqe} risk
+calculators. Input data for scenario-based and probabilistic seismic damage
+and risk analysis using the \glsdesc{acr:oqe} are organised into:
+
+\begin{itemize}
+
+  \item An exposure model file in the NRML format, as described in 
+    Section~\ref{sec:exposure}.
+
+  \item A file describing the \gls{vulnerabilitymodel}
+    (Section~\ref{sec:vulnerability}) for loss calculations, or a 
+  	file describing the \gls{fragilitymodel} (Section~\ref{sec:fragility})
+    for damage calculations. Optionally, a file describing the
+    \gls{consequencemodel} (Section~\ref{sec:consequence}) can also be
+  	provided in order to calculate losses from the estimated damage
+  	distributions.
+
+  \item A general calculation configuration file.
+
+  \item Hazard inputs. These include hazard curves for the classical
+    probabilistic damage and risk calculators, ground motion fields for the
+    scenario damage and risk calculators, or stochastic event sets for the
+    probabilistic event based calculators. As of \glsdesc{acr:oqe21}, in
+    general, there are five different ways in which hazard calculation
+    parameters or results can be provided to the \glsdesc{acr:oqe} in order to
+    run the subsequent risk calculations:
+
+    \begin{itemize}
+
+      \item Use a single configuration file for running the hazard and risk
+      calculations sequentially (preferred)
+
+      \item Use separate configuration files for running the hazard and risk
+      calculations sequentially (legacy)
+
+      \item Use a configuration file for the risk calculation along with all
+      hazard outputs from a previously completed, compatible
+      \glsdesc{acr:oqe} hazard calculation
+
+      % \item Use a configuration file for the risk calculation along with a
+      % specific hazard output from a previously completed, compatible
+      % \glsdesc{acr:oqe} hazard calculation
+
+      \item Use a configuration file for the risk calculation along with
+      hazard input files in the OpenQuake NRML format
+
+    \end{itemize}
+
+\end{itemize}
+
+The file formats for \glspl{exposuremodel}, \glspl{fragilitymodel},
+\glspl{consequencemodel}, and \glspl{vulnerabilitymodel} have been described
+earlier in Chapter~\ref{chap:riskinputs}. The configuration file is the primary
+file that provides the \glsdesc{acr:oqe} information regarding both the
+definition of the input models (e.g. exposure, site parameters, fragility,
+consequence, or vulnerability models) as well as the parameters governing the
+risk calculation.
+
+Information regarding the configuration file for running hazard calculations
+using the \glsdesc{acr:oqe} can be found in
+Section~\ref{sec:hazard_configuration_file}. Some initial mandatory parameters
+of the configuration file common to all of the risk calculators are presented
+in Listing~\ref{lst:config_example}. The remaining parameters that are
+specific to each risk calculator are discussed in subsequent sections.
+
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{ini}{oqum/risk/verbatim/config_example.ini}
+  \caption{Example minimal risk calculation configuration file (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/config_example.xml}{Download example})}
+  \label{lst:config_example}
+\end{listing}
+
+\begin{itemize}
+
+  \item \Verb+description+: a parameter that can be used to include some
+  information about the type of calculations that are going to be performed.
+
+  \item \Verb+calculation_mode+: this parameter specifies the type of
+  calculation to be run. Valid options for the \Verb+calculation_mode+ for
+  the risk calculators are: \Verb+scenario_damage+, \Verb+scenario_risk+,
+  \Verb+classical_damage+, \Verb+classical_risk+, \Verb+event_based_risk+,
+  and \Verb+classical_bcr+.
+
+  \item \Verb+exposure_file+: this parameter is used to specify the path to
+  the \gls{exposuremodel} file.
+
+\end{itemize}
+
+Depending on the type of risk calculation, other parameters besides the
+aforementioned ones may need to be provided. We illustrate in the following
+sections different examples of the configuration file for the different risk
+calculators.
+
+
+\section{Scenario Damage Calculator}
+\label{sec:config_scenario_damage}
+\input{oqum/risk/02_config_scenario_damage}
+
+\section{Scenario Risk Calculator}
+\label{sec:config_scenario_risk}
+\input{oqum/risk/02_config_scenario_risk}
+
+\section{Classical Probabilistic Seismic Damage Calculator}
+\label{sec:config_classical_damage}
+\input{oqum/risk/02_config_classical_damage}
+
+\section{Classical Probabilistic Seismic Risk Calculator}
+\label{sec:config_classical_risk}
+\input{oqum/risk/02_config_classical_risk}
+
+\section{Stochastic Event Based Seismic Risk Calculator}
+\label{sec:config_event_based_risk}
+\input{oqum/risk/02_config_event_based_risk}
+
+\section{Retrofit Benefit-Cost Ratio Calculator}
+\label{sec:config_benefit_cost}
+\input{oqum/risk/02_config_benefit_cost}
+
+\section{Exporting Risk Results}
+\label{sec:risk_export}
+\input{oqum/risk/02_export}
+
+
+\cleardoublepage

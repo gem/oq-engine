@@ -3,12 +3,12 @@ import tempfile
 import unittest
 import numpy
 from openquake.baselib import hdf5, general
-from openquake.hazardlib import nrml
+from openquake.hazardlib import nrml, tests
 from openquake.hazardlib.sourceconverter import (
     SourceConverter, RuptureConverter)
-from openquake.commonlib import nrml_examples, calc
+from openquake.commonlib import calc
 
-NRML_DIR = os.path.dirname(nrml_examples.__file__)
+NRML_DIR = os.path.dirname(tests.__file__)
 MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'source_model/mixed.xml')
 converter = SourceConverter(
     investigation_time=50.,

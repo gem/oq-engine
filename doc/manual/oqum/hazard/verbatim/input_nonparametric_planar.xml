@@ -1,0 +1,31 @@
+<nonParametricSeismicSource id="1" name="A Non Parametric Planar Source"
+                            tectonicRegion="Some TRT">
+    <singlePlaneRupture probs_occur="0.544 0.456">
+        <magnitude>8.3</magnitude> 
+        <rake>90.0</rake> 
+        <hypocenter depth="26.101" lat="40.726" lon="143.0"/> 
+        <planarSurface> 
+            <topLeft depth="9.0" lat="41.6" lon="143.1"/> 
+            <topRight depth="9.0" lat="40.2" lon="143.91"/> 
+            <bottomLeft depth="43.202" lat="41.252" lon="142.07"/> 
+            <bottomRight depth="43.202" lat="39.852" lon="142.91"/> 
+        </planarSurface> 
+    </singlePlaneRupture>
+    <multiPlanesRupture probs_occur="0.9244 0.0756">
+        <magnitude>6.9</magnitude> 
+        <rake>0.0</rake> 
+        <hypocenter depth="7.1423" lat="35.296" lon="139.31"/> 
+        <planarSurface> 
+            <topLeft depth="2.0" lat="35.363" lon="139.16"/> 
+            <topRight depth="2.0" lat="35.394" lon="138.99"/> 
+            <bottomLeft depth="14.728" lat="35.475" lon="139.19"/> 
+            <bottomRight depth="14.728" lat="35.505" lon="139.02"/> 
+        </planarSurface> 
+        <planarSurface> 
+            <topLeft depth="2.0" lat="35.169" lon="139.34"/> 
+            <topRight depth="2.0" lat="35.358" lon="139.17"/> 
+            <bottomLeft depth="12.285" lat="35.234" lon="139.45"/> 
+            <bottomRight depth="12.285" lat="35.423" lon="139.28"/> 
+        </planarSurface> 
+    </multiPlanesRupture>
+</nonParametricSeismicSource>

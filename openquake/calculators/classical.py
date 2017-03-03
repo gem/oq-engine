@@ -25,8 +25,7 @@ import numpy
 
 from openquake.baselib import parallel
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import AccumDict, block_splitter
-from openquake.hazardlib import sourceconverter
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -41,26 +40,6 @@ F32 = numpy.float32
 F64 = numpy.float64
 
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
-
-
-def split_filter_source(src, sites, src_filter, random_seed):
-    """
-    :param src: an heavy source
-    :param sites: sites affected by the source
-    :param src_filter: a SourceFilter instance
-    :random_seed: used only for event based calculations
-    :returns: a list of split sources
-    """
-    split_sources = []
-    start = 0
-    for split in sourceconverter.split_source(src):
-        if random_seed:
-            nr = split.num_ruptures
-            split.serial = src.serial[start:start + nr]
-            start += nr
-        if src_filter.affected(split) is not None:
-            split_sources.append(split)
-    return split_sources
 
 
 class BBdict(AccumDict):
@@ -189,7 +168,7 @@ class BoundingBox(object):
     __nonzero__ = __bool__
 
 
-def classical(sources, src_filter, gsims, monitor):
+def classical(sources, src_filter, gsims, param, monitor):
     """
     :param sources:
         a non-empty sequence of sources of homogeneous tectonic region type
@@ -197,6 +176,8 @@ def classical(sources, src_filter, gsims, monitor):
         source filter
     :param gsims:
         a list of GSIMs for the current tectonic region type
+    :param param:
+        a dictionary of parameters
     :param monitor:
         a monitor instance
     :returns:
@@ -250,7 +231,7 @@ class PSHACalculator(base.HazardCalculator):
         with self.monitor('aggregate curves', autoflush=True):
             for src_id, nsites, calc_time in pmap.calc_times:
                 src_id = src_id.split(':', 1)[0]
-                info = self.infos[pmap.grp_id, src_id]
+                info = self.csm.infos[pmap.grp_id, src_id]
                 info.calc_time += calc_time
                 info.num_sites = max(info.num_sites, nsites)
                 info.num_split += 1
@@ -304,71 +285,49 @@ class PSHACalculator(base.HazardCalculator):
             maximum_distance=oq.maximum_distance,
             disagg=oq.poes_disagg or oq.iml_disagg,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
-            seed=oq.random_seed)
+            seed=oq.ses_seed)
         with self.monitor('managing sources', autoflush=True):
-            src_groups = list(self.csm.src_groups)
-            iterargs = saving_sources_by_task(
-                self.gen_args(src_groups, oq, monitor), self.datastore)
+            allargs = self.gen_args(self.csm, monitor)
+            iterargs = saving_sources_by_task(allargs, self.datastore)
+            if isinstance(allargs, list):
+                # there is a trick here: if the arguments are known
+                # (a list, not an iterator), keep them as a list
+                # then the Starmap will understand the case of a single
+                # argument tuple and it will run in core the task
+                iterargs = list(iterargs)
             res = parallel.Starmap(
                 self.core_task.__func__, iterargs).submit_all()
         acc = reduce(self.agg_dicts, res, self.zerodict())
-        self.save_data_transfer(res)
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(self.infos)
+            self.store_source_info(self.csm.infos)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             partial(self.count_eff_ruptures, acc))
         self.datastore['csm_info'] = self.csm.info
         return acc
 
-    def gen_args(self, src_groups, oq, monitor):
+    def gen_args(self, csm, monitor):
         """
         Used in the case of large source model logic trees.
 
-        :param src_groups: a list of SourceGroup instances
-        :param oq: a :class:`openquake.commonlib.oqvalidation.OqParam` instance
+        :param csm: a CompositeSourceModel instance
         :param monitor: a :class:`openquake.baselib.performance.Monitor`
         :yields: (sources, sites, gsims, monitor) tuples
         """
-        ngroups = len(src_groups)
+        oq = self.oqparam
         maxweight = self.csm.get_maxweight(oq.concurrent_tasks)
         logging.info('Using a maxweight of %d', maxweight)
-        nheavy = nlight = 0
-        self.infos = {}
-        for sg in src_groups:
-            logging.info('Sending source group #%d of %d (%s, %d sources)',
-                         sg.id + 1, ngroups, sg.trt, len(sg.sources))
-            gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
-            if oq.poes_disagg or oq.iml_disagg:  # only for disaggregation
-                monitor.sm_id = self.rlzs_assoc.sm_ids[sg.id]
-            monitor.seed = self.rlzs_assoc.seed
-            monitor.samples = self.rlzs_assoc.samples[sg.id]
-            light = [src for src in sg.sources if src.weight <= maxweight]
-            for block in block_splitter(
-                    light, maxweight, weight=operator.attrgetter('weight')):
-                for src in block:
-                    self.infos[sg.id, src.source_id] = source.SourceInfo(src)
-                yield block, self.src_filter, gsims, monitor
-                nlight += 1
-            heavy = [src for src in sg.sources if src.weight > maxweight]
-            if not heavy:
-                continue
-            with self.monitor('split/filter heavy sources', autoflush=True):
-                for src in heavy:
-                    sites = self.src_filter.affected(src)
-                    self.infos[sg.id, src.source_id] = source.SourceInfo(src)
-                    sources = split_filter_source(
-                        src, sites, self.src_filter, self.random_seed)
-                    if len(sources) > 1:
-                        logging.info(
-                            'Splitting %s "%s" in %d sources',
-                            src.__class__.__name__,
-                            src.source_id, len(sources))
-                    for block in block_splitter(
-                            sources, maxweight,
-                            weight=operator.attrgetter('weight')):
-                        yield block, self.src_filter, gsims, monitor
-                        nheavy += 1
-        logging.info('Sent %d light and %d heavy tasks', nlight, nheavy)
+        ngroups = sum(len(sm.src_groups) for sm in csm.source_models)
+        for sm in csm.source_models:
+            for sg in sm.src_groups:
+                logging.info('Sending source group #%d of %d (%s, %d sources)',
+                             sg.id + 1, ngroups, sg.trt, len(sg.sources))
+                gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
+                if oq.poes_disagg or oq.iml_disagg:  # only for disaggregation
+                    monitor.sm_id = self.rlzs_assoc.sm_ids[sg.id]
+                monitor.samples = self.rlzs_assoc.samples[sg.id]
+                for block in self.csm.split_sources(
+                        sg.sources, self.src_filter, maxweight):
+                    yield block, self.src_filter, gsims, {}, monitor
 
     def store_source_info(self, infos):
         # save the calculation times per each source
@@ -485,7 +444,6 @@ class ClassicalCalculator(PSHACalculator):
                 build_hcurves_and_stats,
                 list(self.gen_args(pmap_by_grp))).submit_all()
         nbytes = reduce(self.save_hcurves, res, AccumDict())
-        self.save_data_transfer(res)
         return nbytes
 
     def gen_args(self, pmap_by_grp):

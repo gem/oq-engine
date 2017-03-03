@@ -1,0 +1,34 @@
+A rupture of magnitude Mw 7 in the central part of Nepal is considered in this
+demo. The characteristics of this rupture (geometry, dip, rake, hypocentre,
+upper and lower seismogenic depth) are defined in the \verb+fault_rupture.xml+
+file, and the hazard and risk calculation settings are specified in the
+\verb+job.ini+ file.
+
+To run the Scenario Damage demo, users should navigate to the folder where the
+required files have been placed and employ following command:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --run job_hazard.ini,job_risk.ini
+\end{minted}
+
+The hazard calculation should produce the following outputs:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+Calculation 8967 completed in 4 seconds. Results:
+  id | name
+9060 | gmfs
+9061 | realizations
+\end{minted}
+
+and the following outputs should be produced by the risk calculation:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+Calculation 8968 completed in 16 seconds. Results:
+  id | name
+9062 | csq_by_asset
+9063 | csq_by_taxon
+9064 | csq_total
+9065 | dmg_by_asset_and_collapse_map
+9066 | dmg_by_taxon
+9067 | dmg_total
+\end{minted}
