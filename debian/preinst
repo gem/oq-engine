@@ -10,7 +10,7 @@ set -e
 
 GEM_DEB_PACKAGE="python-oq-engine"
 
-for dir in  /usr/lib/python2.7/dist-packages/openquake/engine /usr/share/doc/${GEM_DEB_PACKAGE} /usr/lib/python2.7/dist-packages/openquake.engine-*egg-info
+for dir in /opt/openquake/lib/python2.7/site-packages/openquake/engine /usr/share/doc/${GEM_DEB_PACKAGE} /opt/openquake/lib/python2.7/site-packages/openquake.engine-*egg-info
 do
     rm -rf $dir
 done

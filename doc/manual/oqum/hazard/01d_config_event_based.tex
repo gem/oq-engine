@@ -1,0 +1,66 @@
+In the following we describe the sections of the configuration file that are
+required to complete event based PSHA calculations
+
+
+\textbf{Calculation type and model info}
+
+This part is almost identical to the corresponding one described in
+Section~\ref{subsec:config_classical_psha}. Note the setting of the
+\texttt{calculation\_mode} parameter which now corresponds to
+\texttt{event\_based}.
+
+\begin{minted}[firstline=1,linenos=true,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
+[general]
+description = A demo OpenQuake-engine .ini file for event based PSHA
+calculation_mode = event_based
+random_seed = 1024
+\end{minted}
+
+\textbf{Event based parameters}
+
+This section is used to specify the number of stochastic event sets to be
+generated for each logic tree realisation (each stochastic event set
+represents a potential realisation of seismicity during the
+\texttt{investigation\_time} specified in the
+\texttt{calculation\_configuration} part). Additionally, in this section the
+user can specify the spatial correlation model to be used for the generation
+of ground motion fields.
+
+\begin{minted}[firstline=1,linenos=false,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
+ses_per_logic_tree_path = 5
+ground_motion_correlation_model = JB2009
+ground_motion_correlation_params = {"vs30_clustering": True}
+\end{minted}
+
+The acceptable flags for the parameter \verb+vs30_clustering+ are \verb+False+
+and \verb+True+, with a capital \verb+F+ and \verb+T+ respectively. \verb+0+
+and \verb+1+ are also acceptable flags.
+
+\textbf{Output}
+
+This part substitutes the \texttt{Output} part described in  the configuration
+file example described in the Section~ \ref{subsec:config_classical_psha} at
+page~\pageref{subsec:config_classical_psha}.
+
+\begin{minted}[firstline=1,linenos=false,firstnumber=1,fontsize=\footnotesize,frame=single,bgcolor=lightgray]{ini}
+[output]
+export_dir = /tmp/xxx
+save_ruptures = true
+ground_motion_fields = true
+# post-process ground motion fields into hazard curves,
+# given the specified `intensity_measure_types_and_levels`
+hazard_curves_from_gmfs = true
+mean_hazard_curves = true
+quantile_hazard_curves = 0.15 0.5 0.85
+poes = 0.1 0.2
+\end{minted}
+
+Starting from \glsdesc{acr:oqe22}, it is now possible to export information
+about the ruptures directly in CSV format. In order to be able to export,
+however, one must set the parameter \Verb+save_ruptures+ to \Verb+true+ in the
+job configuration file. By default, the parameter is set to \Verb+false+.
+
+The option \verb=hazard_curves_from_gmfs= instructs the user to use the event-
+based ground motion values to provide hazard curves indicating the
+probabilities of exceeding the intensity measure levels set previously in the
+\verb=intensity_measure_types_and_levels= option.

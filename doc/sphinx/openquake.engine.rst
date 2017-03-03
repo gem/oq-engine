@@ -21,15 +21,6 @@ openquake.engine.engine module
     :undoc-members:
     :show-inheritance:
 
-openquake.engine.logs module
-----------------------------
-
-.. automodule:: openquake.engine.logs
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
 Module contents
 ---------------
 

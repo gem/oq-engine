@@ -18,21 +18,18 @@
 
 from __future__ import division
 import logging
-import copy
 import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import encode, decode
-from openquake.baselib.general import (
-    get_array, group_array, AccumDict)
+from openquake.baselib.general import get_array, group_array
 from openquake.hazardlib.geo.mesh import RectangularMesh, build_array
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import geo, tom
+from openquake.hazardlib import geo, tom, calc
 from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.commonlib import readinput, oqvalidation, util
-from openquake.hazardlib import valid
+from openquake.hazardlib.probability_map import ProbabilityMap, get_shape
+from openquake.commonlib import readinput, util
 
 
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
@@ -43,15 +40,14 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
+U64 = numpy.uint64
 F64 = numpy.float64
 
-event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32),
+event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
 stored_event_dt = numpy.dtype([
-    ('rupserial', U32), ('year', U32),
-    ('ses', U32), ('occ', U32),
-    ('sample', U32), ('grp_id', U16),
-    ('source_id', 'S%d' % valid.MAX_ID_LENGTH)])
+    ('eid', U64), ('rupserial', U32), ('year', U32),
+    ('ses', U32), ('occ', U32), ('sample', U32), ('grp_id', U16)])
 
 # ############## utilities for the classical calculator ############### #
 
@@ -63,15 +59,15 @@ def combine_pmaps(rlzs_assoc, results):
     :param results: dictionary src_group_id -> probability map
     :returns: a dictionary rlz -> aggregate probability map
     """
-    acc = AccumDict()
+    num_levels = get_shape(results.values())[1]
+    acc = {rlz: ProbabilityMap(num_levels, 1)
+           for rlz in rlzs_assoc.realizations}
     for grp_id in results:
         for i, gsim in enumerate(rlzs_assoc.gsims_by_grp_id[grp_id]):
             pmap = results[grp_id].extract(i)
             for rlz in rlzs_assoc.rlzs_assoc[grp_id, gsim]:
                 if rlz in acc:
                     acc[rlz] |= pmap
-                else:
-                    acc[rlz] = copy.copy(pmap)
     return acc
 
 # ######################### hazard maps ################################### #
@@ -321,7 +317,7 @@ def fix_minimum_intensity(min_iml, imts):
     if min_iml:
         for imt in imts:
             try:
-                min_iml[imt] = oqvalidation.getdefault(min_iml, imt)
+                min_iml[imt] = calc.filters.getdefault(min_iml, imt)
             except KeyError:
                 raise ValueError(
                     'The parameter `minimum_intensity` in the job.ini '
@@ -329,9 +325,6 @@ def fix_minimum_intensity(min_iml, imts):
     if 'default' in min_iml:
         del min_iml['default']
     return F32([min_iml.get(imt, 0) for imt in imts])
-
-
-gmv_dt = numpy.dtype([('sid', U16), ('eid', U32), ('imti', U8), ('gmv', F32)])
 
 
 def check_overflow(calc):
@@ -371,7 +364,10 @@ class RuptureData(object):
             ('strike', F64), ('dip', F64), ('rake', F64),
             ('boundary', hdf5.vstr)] + [(param, F64) for param in self.params])
 
-    def to_array(self, ebruptures):
+    def to_array(self, ebruptures, boundary=None):
+        """
+        Convert a list of ebruptures into an array of dtype RuptureRata.dt
+        """
         data = []
         for ebr in ebruptures:
             rup = ebr.rupture
@@ -379,9 +375,12 @@ class RuptureData(object):
             ruptparams = tuple(getattr(rc, param) for param in self.params)
             point = rup.surface.get_middle_point()
             multi_lons, multi_lats = rup.surface.get_surface_boundaries()
-            boundary = ','.join('((%s))' % ','.join(
-                '%.5f %.5f' % (lon, lat) for lon, lat in zip(lons, lats))
-                                for lons, lats in zip(multi_lons, multi_lats))
+            if boundary is None:
+                bounds = ','.join('((%s))' % ','.join(
+                    '%.5f %.5f' % (lon, lat) for lon, lat in zip(lons, lats))
+                    for lons, lats in zip(multi_lons, multi_lats))
+            else:
+                bounds = boundary
             try:
                 rate = ebr.rupture.occurrence_rate
             except AttributeError:  # for nonparametric sources
@@ -389,7 +388,7 @@ class RuptureData(object):
             data.append((ebr.serial, ebr.multiplicity, len(ebr.sids),
                          rate, rup.mag, point.x, point.y, point.z,
                          rup.surface.get_strike(), rup.surface.get_dip(),
-                         rup.rake, decode(boundary)) + ruptparams)
+                         rup.rake, decode(bounds)) + ruptparams)
         return numpy.array(data, self.dt)
 
 
@@ -491,8 +490,8 @@ class EBRupture(object):
         """
         tags = []
         for (eid, ses, occ, sampleid) in self.events:
-            tag = 'grp=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
-                self.grp_id, ses, self.source_id, self.serial, occ)
+            tag = 'grp=%02d~ses=%04d~rup=%d-%02d' % (
+                self.grp_id, ses, self.serial, occ)
             if sampleid > 0:
                 tag += '~sample=%d' % sampleid
             tags.append(encode(tag))
@@ -599,9 +598,9 @@ class EBRupture(object):
                 mesh_spacing, m.flatten())
         elif surface_class.endswith('MultiSurface'):
             mesh_spacing = attrs.pop('mesh_spacing')
-            self.rupture.surface.surfaces = [
+            self.rupture.surface.__init__([
                 geo.PlanarSurface.from_array(mesh_spacing, m1.flatten())
-                for m1 in m]
+                for m1 in m])
         else:  # fault surface
             surface.strike = surface.dip = None  # they will be computed
             surface.mesh = RectangularMesh(

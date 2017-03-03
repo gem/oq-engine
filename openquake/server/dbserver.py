@@ -68,7 +68,7 @@ class DbServer(object):
                     conn.close()
                     break
                 func = getattr(actions, cmd)
-                fut = executor.submit(safely_call, func, (self.db, ) + args)
+                fut = executor.submit(safely_call, func, (self.db,) + args)
 
                 def sendback(fut, conn=conn):
                     res, etype, _mon = fut.result()

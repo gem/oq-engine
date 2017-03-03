@@ -1,0 +1,110 @@
+Starting from \glsdesc{acr:oqe17}, the Scenario Damage calculator also accepts
+\glspl{consequencemodel} in addition to \glspl{fragilitymodel}, in order to
+estimate consequences based on the calculated damage distribution. The user
+may provide one \gls{consequencemodel} file corresponding to each loss type
+(amongst structural, nonstructural, contents, and business interruption) for
+which a \gls{fragilitymodel} file is provided. Whereas providing a
+\gls{fragilitymodel} file for at least one loss type is mandatory for running
+a Scenario Damage calculation, providing corresponding \gls{consequencemodel}
+files is optional.
+
+This section describes the schema currently used to store
+\glspl{consequencemodel}, which are optional inputs for the Scenario Damage
+Calculator. A \gls{consequencemodel} defines a set of
+\glspl{consequencefunction}, describing the distribution of the loss (or
+consequence) ratio conditional on a set of discrete limit (or damage) states.
+These \gls{consequencefunction} can be currently defined in \glsdesc{acr:oqe}
+by specifying the parameters of the continuous distribution of the loss ratio
+for each limit state specified in the fragility model for the corresponding
+loss type, for each taxonomy defined in the exposure model.
+
+An example \gls{consequencemodel} is shown in Listing~\ref{lst:input_consequence}.
+
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_consequence.xml}
+  \caption{Example consequence model (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/input_consequence.xml}{Download example})}
+  \label{lst:input_consequence}
+\end{listing}	
+
+The initial portion of the schema contains general information that describes
+some general aspects of the \gls{consequencemodel}. The information in this
+metadata section is common to all of the functions in the
+\gls{consequencemodel} and needs to be included at the beginning of every
+\gls{consequencemodel} file. The parameters are described below:
+
+\begin{itemize}
+
+  \item \Verb+id+: a unique string used to identify the \gls{consequencemodel}.
+    This string can contain letters~(a--z; A--Z), numbers~(0--9), dashes~(-), 
+    and underscores~(\_), with a maximum of 100~characters.
+
+  \item \Verb+assetCategory+: an optional string used to specify the type of
+    \glspl{asset} for which \glspl{consequencefunction} will be defined in
+    this file (e.g: buildings, lifelines).
+
+  \item \Verb+lossCategory+: mandatory; valid strings for this attribute are 
+    ``structural'', ``nonstructural'', ``contents'', and 
+    ``business\_interruption''.
+
+  \item \Verb+description+: mandatory; a brief string (ASCII) with further 
+    information about the \gls{consequencemodel}, for example, which building
+    typologies are covered or the source of the functions in the
+    \gls{consequencemodel}.
+
+  \item \Verb+limitStates+: mandatory; this field is used to define the number and 
+    nomenclature of each limit state. Four limit states are employed in the 
+    example above, but it is possible to use any number of discrete states. The 
+    limit states must be provided as a set of strings separated by whitespaces 
+    between each limit state. Each limit state string can contain
+    letters~(a--z; A--Z), numbers~(0--9), dashes~(-), and underscores~(\_). 
+    Please ensure that there is no whitespace within the name of any individual
+    limit state. The number and nomenclature of the limit states used in the
+    \gls{consequencemodel} should match those used in the corresponding
+    \gls{fragilitymodel}.
+
+\end{itemize}
+
+\inputminted[firstline=4,firstnumber=4,lastline=9,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_consequence.xml}
+
+The following snippet from the above \gls{consequencemodel} example file
+defines a \gls{consequencefunction} using a lognormal distribution to model
+the uncertainty in the consequence ratio for each limit state:
+
+\inputminted[firstline=11,firstnumber=11,lastline=16,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/risk/verbatim/input_consequence.xml}
+
+The following attributes are needed to define a \gls{consequencefunction}:
+
+\begin{itemize}
+
+  \item \Verb+id+: mandatory; a unique string used to identify the 
+    \gls{taxonomy} for which the function is being defined. This string is used
+    to relate the \gls{consequencefunction} with the relevant \gls{asset} in the 
+    \gls{exposuremodel}. This string can contain letters~(a--z; A--Z),
+    numbers~(0--9), dashes~(-), and underscores~(\_), with a maximum of
+    100~characters.
+
+  \item \Verb+dist+: mandatory; for vulnerability function which use a continuous 
+    distribution to model the uncertainty in the conditional loss ratios, 
+    this attribute should be set to either ``\Verb+LN+'' if using the lognormal
+    distribution, or to ``\Verb+BT+'' if using the Beta distribution
+    \footnote{Note that as of \glsdesc{acr:oqe18}, the uncertainty in the 
+    consequence ratios is ignored, and only the mean consequence ratios for the
+    set of limit states is considered when computing the consequences from the
+    damage distribution. Consideration of the uncertainty in the consequence
+    ratios is planned for future releases of the \glsdesc{acr:oqe}.}.
+
+  \item \Verb+params+: mandatory; this field is used to define the parameters of 
+    the continuous distribution used for modelling the uncertainty in the
+    loss ratios for each limit state for this 
+    \gls{consequencefunction}. For a lognormal distrbution, 
+    the two parameters required to specify the function are the mean and 
+    standard deviation of the consequence ratio. These parameters are defined for 
+    each limit state using the attributes \Verb+mean+ and \Verb+stddev+ 
+    respectively. The attribute \Verb+ls+ specifies the limit state for which 
+    the parameters are being defined. The parameters for each limit state
+    must be provided on a separate line. The number and names of the limit 
+    states in each \gls{consequencefunction} must be equal to the number of limit 
+    states defined in the corresponding \gls{fragilitymodel}
+    using the attribute \Verb+limitStates+.
+
+\end{itemize}

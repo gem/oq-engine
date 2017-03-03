@@ -63,10 +63,11 @@ class InvalidCalculationID(Exception):
 class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 
-rlz_dt = numpy.dtype([('uid', hdf5.vstr), ('model', hdf5.vstr),
-                      ('gsims', hdf5.vstr), ('weight', F32)])
+rlz_dt = numpy.dtype([('uid', 'S200'), ('model', 'S200'),
+                      ('gsims', 'S100'), ('weight', F32)])
 
-logversion = {True}
+logversion = True
+
 
 PRECALC_MAP = dict(
     classical=['psha'],
@@ -79,7 +80,7 @@ PRECALC_MAP = dict(
     ebrisk=['event_based', 'event_based_rupture', 'ebrisk',
             'event_based_risk'],
     event_based=['event_based', 'event_based_rupture', 'ebrisk',
-                 'event_based_risk'],
+                 'event_based_risk', 'ucerf_rupture'],
     event_based_risk=['event_based', 'ebrisk', 'event_based_risk',
                       'event_based_rupture'],
     ucerf_classical=['ucerf_psha'])
@@ -173,12 +174,13 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         Run the calculation and return the exported outputs.
         """
+        global logversion
         self.close = close
         self.set_log_format()
         if logversion:  # make sure this is logged only once
             logging.info('Using engine version %s', engine_version)
             logging.info('Using hazardlib version %s', hazardlib_version)
-            logversion.pop()
+            logversion = False
         if concurrent_tasks is None:  # use the default
             pass
         elif concurrent_tasks == 0:  # disable distribution temporarily
@@ -438,8 +440,7 @@ class HazardCalculator(BaseCalculator):
         job_info['hostname'] = socket.gethostname()
         if hasattr(self, 'riskmodel'):
             job_info['require_epsilons'] = bool(self.riskmodel.covs)
-        self.datastore.save('job_info', job_info)
-        self.datastore.flush()
+        self.monitor.save_info(job_info)
         try:
             self.csm_info = self.datastore['csm_info']
         except KeyError:
@@ -451,7 +452,6 @@ class HazardCalculator(BaseCalculator):
         """
         To be overridden to initialize the datasets needed by the calculation
         """
-        self.random_seed = None
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
         if self.precalc:
@@ -477,6 +477,8 @@ class HazardCalculator(BaseCalculator):
             self.datastore['asset_refs'] = arefs
             self.datastore.set_attrs('asset_refs', nbytes=arefs.nbytes)
             self.cost_calculator = readinput.get_cost_calculator(self.oqparam)
+        logging.info('Building the site collection')
+        with self.monitor('building site collection', autoflush=True):
             self.sitecol, self.assets_by_site = (
                 readinput.get_sitecol_assets(self.oqparam, self.exposure))
             logging.info('Read %d assets on %d sites',
@@ -575,19 +577,6 @@ class HazardCalculator(BaseCalculator):
             if self.riskmodel and missing:
                 raise RuntimeError('The exposure contains the taxonomies %s '
                                    'which are not in the risk model' % missing)
-
-    def save_data_transfer(self, iter_result):
-        """
-        Save information about the data transfer in the risk calculation
-        as attributes of agg_loss_table
-        """
-        if iter_result.received:  # nothing is received when OQ_DISTRIBUTE=no
-            tname = iter_result.name
-            self.datastore.save('job_info', {
-                tname + '_sent': iter_result.sent,
-                tname + '_max_received_per_task': max(iter_result.received),
-                tname + '_tot_received': sum(iter_result.received),
-                tname + '_num_tasks': len(iter_result.received)})
 
     def post_process(self):
         """For compatibility with the engine"""

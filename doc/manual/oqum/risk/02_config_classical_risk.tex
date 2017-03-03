@@ -1,0 +1,134 @@
+In order to run this calculator, the parameter \Verb+calculation_mode+ needs
+to be set to \Verb+classical_risk+.
+
+Most of the job configuration parameters required for running a classical
+probabilistic risk calculation are the same as those described in the previous
+section for the classical probabilistic damage calculator. The remaining
+parameters specific to the classical probabilistic risk calculator are
+illustrated through the examples below.
+
+\paragraph{Example 1}
+
+This example illustrates a classical probabilistic risk calculation which uses
+a single configuration file to first compute the hazard curves for the given
+source model and ground motion model and then calculate loss exceedance curves
+based on the hazard curves. An example job configuration file for running a
+classical probabilistic risk calculation is shown in
+Listing~\ref{lst:config_classical_risk_combined}.
+
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray,label=job.ini]{ini}{oqum/risk/verbatim/config_classical_risk_combined.ini}
+  \caption{Example combined configuration file for a classical probabilistic risk calculation (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/config_classical_risk_combined.ini}{Download example})}
+  \label{lst:config_classical_risk_combined}
+\end{listing}
+
+Apart from the calculation mode, the only difference with the example job
+configuration file shown in Example~1 of
+Section~\ref{sec:config_classical_damage} is the use of a vulnerability model
+instead of a fragility model.
+
+As with the Scenario Risk calculator, it is possible to specify one or more
+\gls{vulnerabilitymodel} files in the same job configuration file, using the
+parameters:
+
+\begin{itemize}
+
+  \item \Verb+structural_vulnerability_file+,
+
+  \item \Verb+nonstructural_vulnerability_file+,
+
+  \item \Verb+contents_vulnerability_file+,
+
+  \item \Verb+business_interruption_vulnerability_file+, and/or
+
+  \item \Verb+occupants_vulnerability_file+
+
+\end{itemize}
+
+It is important that the
+\Verb+lossCategory+ parameter in the metadata section for each provided
+vulnerability model file (``structural'', ``nonstructural'', ``contents'',
+``business\_interruption'', or ``occupants'') should match the loss type
+defined in the configuration file by the relevant keyword above.
+
+In this case, the hazard curves will be computed at each of the locations of
+the \glspl{asset} in the \gls{exposuremodel}, for each of the intensity
+measure types found in the provided set of \glspl{vulnerabilitymodel}. The
+above calculation can be run using the command line:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+user@ubuntu:~\$ oq engine --run job.ini
+\end{minted}
+
+After the calculation is completed, a message similar to the following will be
+displayed:
+
+\begin{minted}[fontsize=\footnotesize,frame=single,bgcolor=lightgray]{shell-session}
+Calculation 2749 completed in 24 seconds. Results:
+  id | name
+ 980 | loss_curves-rlzs
+ 981 | loss_curves-stats
+ 982 | loss_maps-rlzs
+ 983 | loss_maps-stats
+\end{minted}
+
+
+\paragraph{Example 2}
+
+This example illustrates a classical probabilistic risk calculation which uses
+separate configuration files for the hazard and risk parts of a classical
+probabilistic risk assessment. The first configuration file shown in
+Listing~\ref{lst:config_classical_risk_hazard} contains input models and
+parameters required for the computation of the hazard curves. The second
+configuration file shown in Listing~\ref{lst:config_classical_risk} contains
+input models and parameters required for the calculation of the loss
+exceedance curves and probabilistic loss maps for a portfolio of \glspl{asset}
+based on the hazard curves and \glspl{vulnerabilitymodel}.
+
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray,label=job\_hazard.ini]{ini}{oqum/risk/verbatim/config_classical_hazard.ini}
+  \caption{Example hazard configuration file for a classical probabilistic risk calculation (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/config_classical_hazard.ini}{Download example})}
+  \label{lst:config_classical_risk_hazard}
+\end{listing}
+
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray,label=job\_risk.ini]{ini}{oqum/risk/verbatim/config_classical_risk.ini}
+  \caption{Example risk configuration file for a classical probabilistic risk calculation (\href{https://raw.githubusercontent.com/GEMScienceTools/oq-engine-docs/master/oqum/risk/verbatim/config_classical_risk.ini}{Download example})}
+  \label{lst:config_classical_risk}
+\end{listing}
+
+Now, the above calculations described by the two configuration files
+``job\_hazard.ini'' and ``job\_risk.ini'' can be run sequentially or
+separately, as illustrated in Example~2 in
+Section~\ref{sec:config_scenario_damage}. The new parameters introduced in the
+above risk configuration file example
+(Listing~\ref{lst:config_classical_risk}) are described below:
+
+\begin{itemize}
+
+	\item \Verb+lrem_steps_per_interval+: this parameter controls the number of
+	  intermediate values between consecutive loss ratios (as defined in the 
+	  \gls{vulnerabilitymodel}) that are considered in the risk calculations.
+	  A larger number of loss ratios than those defined in each
+	  \gls{vulnerabilityfunction} should be considered, in order to better
+	  account for the uncertainty in the loss ratio distribution. If this
+	  parameter is not defined in the configuration file, the \glsdesc{acr:oqe}
+	  assumes the \Verb+lrem_steps_per_interval+ to be equal to 5. More details
+	  are provided in the OpenQuake Book (Risk).
+
+	\item \Verb+quantile_loss_curves+: this parameter can be used to request
+	  the computation of quantile loss curves for computations involving
+	  non-trivial logic trees. The quantiles for which the loss curves should
+	  be computed must be provided as a comma separated list. If this parameter
+	  is not included in the configuration file, quantile loss curves will not
+	  be computed. 
+
+	\item \Verb+conditional_loss_poes+: this parameter can be used to request
+	  the computation of probabilistic loss maps, which give the loss levels
+	  exceeded at the specified probabilities of exceedance over the time
+	  period specified by \Verb+risk_investigation_time+. The probabilities of
+	  exceedance for which the loss maps should be computed must be provided as
+	  a comma separated list. If this parameter is not included in the
+	  configuration file, probabilistic loss maps will not be computed.
+
+\end{itemize}

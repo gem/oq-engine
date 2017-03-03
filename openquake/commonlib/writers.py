@@ -106,7 +106,9 @@ htranslator = HeaderTranslator(
     '(nonstructural.*):float32',
     '(business_interruption.*):float32',
     '(contents.*):float32',
+    '(occupants):float32',
     '(occupants~.+):float32',
+    '(occupants_ins):float32',
     '(no_damage):float32',
     '(slight):float32',
     '(moderate):float32',
@@ -232,7 +234,7 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
             row = []
             for fields in all_fields:
                 val = extract_from(record, fields)
-                if fields == ['lon'] or fields == ['lat']:
+                if fields[0] in ('lon', 'lat', 'depth'):
                     row.append('%.5f' % val)
                 else:
                     row.append(scientificformat(val, fmt))
