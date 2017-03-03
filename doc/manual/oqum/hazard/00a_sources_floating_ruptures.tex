@@ -1,0 +1,143 @@
+Fault sources in the \gls{acr:oqe} are classified according to the method
+adopted to distribute ruptures over the fault surface. Two options are
+currently supported:
+
+\begin{itemize}
+
+    \item With the first option, ruptures with a surface lower than the
+    whole fault surface are floated so as to cover as much as possible
+    homogeneously the fault surface. This model is compatible with all the
+    supported magnitude-frequency distributions.
+
+    \item With the second option, ruptures always fill the entire fault
+    surface. This model is compatible with magnitude-frequency
+    distributions similar to a characteristic model (\`{a} la
+    \cite{schwartz1984}).
+
+\end{itemize}
+
+In this subsection we discuss the different fault source types that
+support floating ruptures. In the next subsection we will illustrate the fault
+typology available to model a characteristic rupturing behaviour.
+
+
+
+\subsubsection{Simple faults}
+\label{desc_simple_fault}
+\index{Source type!fault!simple geometry}
+\index{Simple fault|see{Source type}}
+
+Simple Faults are the most common source type used to model shallow faults;
+the ``simple'' adjective relates to the geometry description of the source
+which is obtained by projecting the fault trace (i.e. a polyline) along a
+characteristic dip direction.
+
+The parameters used to create an instance of this source type are described
+in the following paragraph.
+
+\paragraph{Source data}
+
+\begin{itemize}
+
+    \item A horizontal \gls{faulttrace} (usually a polyline). It is a list of
+    longitude-latitude tuples [degrees].
+
+    \item A \gls{frequencymagnitudedistribution}
+
+    \item A \gls{msr}
+
+    \item A representative value of the dip angle (specified following
+    the Aki-Richards convention; see \citet{aki2002}) [degrees]
+
+    \item Rake angle (specified following the Aki-Richards convention;
+    see \citet{aki2002}) [degrees]
+
+    \item Upper and lower depth values limiting the seismogenic interval [km]
+
+\end{itemize}
+
+For near-fault probabilistic seismic hazard analysis, two additional
+parameters are needed for characterising seismic sources:
+
+\begin{itemize}
+
+    \item A hypocentre list. It is a list of the possible hypocentral
+    positions, and the corresponding weights, e.g., alongStrike="0.25"
+    downDip="0.25" weight="0.25". Each hypocentral position is defined in
+    relative terms using as a reference the upper left corner of the rupture
+    and by specifying the fraction of rupture length and rupture width.
+
+    \item A slip list. It is a list of the possible rupture slip directions
+    [degrees], and their corresponding weights. The angle describing each slip
+    direction is measured counterclockwise using the fault strike direction as
+    reference.
+
+\end{itemize}
+
+In near-fault PSHA calculations, the hypocentre list and the slip list are
+mandatory. The weights in each list must always sum to one. The available GMPE
+which currently supports the near-fault directivity PSHA calculation in OQ-
+engine is the ChiouYoungs2014NearFaultEffect GMPE developed  by
+\citet{chiou2014update} (associated with an \texttt{Active Shallow Crust}
+tectonic region type).
+
+We provide two examples of simple fault source files. The first is an
+excerpt of an xml file used to describe the properties of a simple fault
+source and the second example shows the excerpt of an xml file used to
+describe the properties of a simple fault source that can be used to perform a PSHA calculation taking into account directivity effects.
+
+\begin{listing}[htbp]
+  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/input_simple_fault.xml}
+  \caption{Example simple fault}
+  \label{lst:example_simple_fault}
+\end{listing}
+%\input{oqum/hazard/verbatim/input_simple_fault}
+%\label{example_incremental_mfd}
+
+%Below is an excerpt of a simple fault source xml file for near-fault directivity PSHA calculations:
+
+%\begin{listing}[htbp]
+\inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/input_simple_fault_directivity.xml}
+\captionof{listing}{Example simple fault with added information to model directivity\label{lst:example_simple_fault_directivity}}
+
+%\end{listing}
+
+%\input{oqum/hazard/verbatim/input_simple_fault_directivity}
+
+%As with the previous examples, the red text highlights the parameters used to specify the source geometry, the parameters in green describe the rupture mechanism, the text in blue describes the magnitude-frequency distribution and the gray text describes the rupture properties.
+
+
+
+\subsubsection{Complex faults}
+\label{desc_complex_fault}
+\index{Source type!fault!complex geometry}
+\index{Complex fault|see{Source type}}
+
+A complex fault differs from simple fault just by the way the geometry of the
+fault surface is defined and the fault surface is later created. The input
+parameters used to describe complex faults are, for the most part, the same
+used to describe the simple fault typology.
+
+In the case of complex faults, the dip angle is not requested while the fault
+trace is substituted by two fault edges limiting the top and bottom of the fault
+surface. Additional curves lying over the fault surface can be specified to
+complement and refine the description of the fault surface geometry.
+Unlike the simple fault, these edges are not required to be horizontal
+and may vary in depth (positive values) or elevation (negative values i.e.
+the upper edge may represent the intersection between the exposed fault trace
+and the topographic surface).
+
+Usually, we use complex faults to model intraplate megathrust faults such as
+the big subduction structures active in the Pacific (Sumatra, South America,
+Japan) but this source typology can be used also to create - for example -
+listric fault sources with a realistic geometry.
+
+\inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/input_complex_fault.xml}
+\captionof{listing}{Example complex fault \label{lst:example_complex_fault}}
+
+%\input{oqum/hazard/verbatim/input_complex_fault}
+
+As with the previous examples, the red text highlights the parameters used to
+specify the source geometry, the parameters in green describe the rupture
+mechanism, the text in blue describes the magnitude-frequency distribution and
+the gray text describes the rupture properties.

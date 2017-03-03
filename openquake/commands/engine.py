@@ -21,8 +21,8 @@ import sys
 import getpass
 import logging
 from openquake.baselib import sap
-from openquake.commonlib import datastore, config
-from openquake.engine import engine as eng, logs
+from openquake.commonlib import datastore, config, logs
+from openquake.engine import engine as eng
 from openquake.engine.export import core
 from openquake.engine.utils import confirm
 from openquake.engine.tools.make_html_report import make_report
@@ -40,8 +40,8 @@ def get_job_id(job_id, username=None):
     return job_id
 
 
-def run_job(cfg_file, log_level, log_file, exports='',
-            hazard_calculation_id=None):
+def run_job(cfg_file, log_level='info', log_file=None, exports='',
+            hazard_calculation_id=None, **kw):
     """
     Run a job using the specified config file and other options.
 
@@ -61,11 +61,18 @@ def run_job(cfg_file, log_level, log_file, exports='',
     job_id, oqparam = eng.job_from_file(
         job_ini, getpass.getuser(), hazard_calculation_id)
     calc = eng.run_calc(job_id, oqparam, log_level, log_file, exports,
-                        hazard_calculation_id=hazard_calculation_id)
+                        hazard_calculation_id=hazard_calculation_id, **kw)
     calc.monitor.flush()
     for line in logs.dbcmd('list_outputs', job_id, False):
         print(line)
     return job_id
+
+
+def run_tile(job_ini, sites_slice):
+    """
+    Used in tiling calculations
+    """
+    return run_job(job_ini, sites_slice=(sites_slice.start, sites_slice.stop))
 
 
 def del_calculation(job_id, confirmed=False):

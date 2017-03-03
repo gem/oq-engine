@@ -75,8 +75,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
-        if OLD_NUMPY:
-            raise unittest.SkipTest('numpy too old to export agg_loss_table')
         self.assert_stats_ok(case_2, 'job.ini', individual_curves='true')
         fname = writetmp(view('mean_avg_losses', self.calc.datastore))
         self.assertEqualFiles('expected/mean_avg_losses.txt', fname)
@@ -84,9 +82,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # test the composite_risk_model keys (i.e. slash escaping)
         crm = sorted(self.calc.datastore.getitem('composite_risk_model'))
         self.assertEqual(crm, ['RC%2B', 'RM', 'W%2F1'])
+
         # export a specific eid
-        [fname] = export(('all_loss_ratios:0', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/losses-eid=0.csv', fname)
+        [fname] = export(('all_loss_ratios:4294967305', 'csv'),
+                         self.calc.datastore)
+        self.assertEqualFiles('expected/losses-eid=65545.csv', fname)
 
         # test the case when all GMFs are filtered out
         with self.assertRaises(RuntimeError) as ctx:
@@ -166,13 +166,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/ruptures_events.txt', fname)
 
         # export a specific eid
-        fnames = export(('all_loss_ratios:0', 'csv'), self.calc.datastore)
+        fnames = export(('all_loss_ratios:17179869184', 'csv'),
+                        self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
-        self.assertEqualFiles('expected/losses-eid=0.csv', fname)
+        self.assertEqualFiles('expected/losses-eid=262144.csv', fname)
 
         # export a specific pair (sm_id, eid)
-        fnames = export(('all_loss_ratios:1:0', 'csv'),
+        fnames = export(('all_loss_ratios:1:21474836480', 'csv'),
                         self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)

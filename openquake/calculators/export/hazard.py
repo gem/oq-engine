@@ -29,7 +29,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
 from openquake.calculators.export import export
-from openquake.commonlib import writers, hazard_writers, calc, util
+from openquake.commonlib import writers, hazard_writers, calc, util, source
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -37,7 +37,6 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 
-gmv_dt = numpy.dtype([('sid', U16), ('eid', U32), ('imti', U8), ('gmv', F32)])
 
 GMF_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
 GMF_WARNING = '''\
@@ -50,9 +49,16 @@ savez = numpy.savez_compressed
 
 def get_mesh(sitecol, complete=True):
     sc = sitecol.complete if complete else sitecol
-    mesh = numpy.zeros(len(sc), [('lon', F64), ('lat', F64)])
-    mesh['lon'] = sc.lons
-    mesh['lat'] = sc.lats
+    if sc.at_sea_level():
+        mesh = numpy.zeros(len(sc), [('lon', F64), ('lat', F64)])
+        mesh['lon'] = sc.lons
+        mesh['lat'] = sc.lats
+    else:
+        mesh = numpy.zeros(len(sc), [('lon', F64), ('lat', F64),
+                                     ('depth', F64)])
+        mesh['lon'] = sc.lons
+        mesh['lat'] = sc.lats
+        mesh['depth'] = sc.depths
     return mesh
 
 
@@ -61,11 +67,10 @@ def build_etags(events):
     An array of tags for the underlying seismic events
     """
     tags = []
-    for (serial, year, ses, occ, sampleid, grp_id, source_id) in events:
-        tag = b'grp=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
-            grp_id, ses, source_id, serial, occ)
+    for (eid, serial, year, ses, occ, sampleid, grp_id) in events:
+        tag = 'grp=%02d~ses=%04d~rup=%d-%02d' % (grp_id, ses, serial, occ)
         if sampleid > 0:
-            tag += b'~sample=%d' % sampleid
+            tag += '~sample=%d' % sampleid
         tags.append(tag)
     return numpy.array(tags)
 
@@ -352,13 +357,14 @@ def export_hcurves_by_imt_csv(key, kind, rlzs_assoc, fname, sitecol, pmap, oq):
     slicedic = oq.imtls.slicedic
     for imt, imls in oq.imtls.items():
         dest = add_imt(fname, imt)
-        lst = [('lon', F32), ('lat', F32)]
+        lst = [('lon', F32), ('lat', F32), ('depth', F32)]
         for iml in imls:
             lst.append((str(iml), F32))
         hcurves = numpy.zeros(nsites, lst)
-        for sid, lon, lat in zip(range(nsites), sitecol.lons, sitecol.lats):
+        for sid, lon, lat, dep in zip(
+                range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
             poes = pmap.setdefault(sid, 0).array[slicedic[imt]]
-            hcurves[sid] = (lon, lat) + tuple(poes)
+            hcurves[sid] = (lon, lat, dep) + tuple(poes)
         fnames.append(writers.write_csv(dest, hcurves, comment=_comment(
             rlzs_assoc, kind, oq.investigation_time) + ',imt=%s' % imt))
     return fnames
@@ -490,11 +496,10 @@ def export_uhs_xml(ekey, dstore):
     return sorted(fnames)
 
 
-# emulate a Django point
 class Location(object):
-    def __init__(self, xy):
-        self.x, self.y = xy
-        self.wkt = 'POINT(%s %s)' % tuple(xy)
+    def __init__(self, xyz):
+        self.x, self.y = tuple(xyz)[:2]
+        self.wkt = 'POINT(%s %s)' % (self.x, self.y)
 
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 HazardMap = collections.namedtuple('HazardMap', 'lon lat iml')
@@ -659,7 +664,8 @@ def export_gmf(ekey, dstore):
             events = dstore['events']
             if key not in events:  # source model producing zero ruptures
                 continue
-            etags = build_etags(events[key])
+            sm_events = events[key]
+            etags = dict(zip(sm_events['eid'], build_etags(sm_events)))
         for rlz in rlzs:
             try:
                 gmf_arr = gmf_data['%s/%04d' % (key, rlz.ordinal)].value
@@ -774,12 +780,7 @@ def export_gmf_data_csv(ekey, dstore):
     else:  # event based
         exporter = GmfExporter(dstore)
         sm_id, eid = get_sm_id_eid(ekey[0])
-        if eid is None:
-            logging.info('Exporting only the first event')
-            logging.info('Use the command `oq export gmf_data:*:* %d` '
-                         'to export everything', dstore.calc_id)
-            return exporter.export_one(0, 0)
-        elif eid == '*':
+        if eid in (None, '*'):
             return exporter.export_all()
         else:
             return exporter.export_one(int(sm_id), int(eid))
@@ -795,8 +796,9 @@ class GmfExporter(object):
     def export_one(self, sm_id, eid):
         fnames = []
         imts = list(self.oq.imtls)
-        event = self.dstore['events/sm-%04d' % sm_id][eid]
-        [etag] = build_etags([event])
+        events = self.dstore['events/sm-%04d' % sm_id]
+        ok_events = events[events['eid'] == eid]
+        [etag] = build_etags(ok_events)
         for rlzno in self.dstore['gmf_data/sm-%04d' % sm_id]:
             rlz = self.rlzs[int(rlzno)]
             gmfa = self.dstore['gmf_data/sm-%04d/%s' % (sm_id, rlzno)]
@@ -820,6 +822,8 @@ class GmfExporter(object):
                 rlz = self.rlzs[int(rlzno)]
                 gmf = self.dstore['gmf_data/%s/%s' % (sm_id, rlzno)].value
                 for eid, array in group_array(gmf, 'eid').items():
+                    if eid not in etag:
+                        continue
                     data, comment = _build_csv_data(
                         array, rlz, self.sitecol,
                         imts, self.oq.investigation_time)
@@ -872,6 +876,7 @@ def export_gmf_scenario_npz(ekey, dstore):
                 gmfa[imt] = arr[imti]
             dic[str(gsim)] = util.compose_arrays(sitemesh, gmfa)
     elif 'gmf_data' in dstore:  # event_based
+        dic['sitemesh'] = get_mesh(dstore['sitecol'])
         for sm_id in sorted(dstore['gmf_data']):
             for rlzno in sorted(dstore['gmf_data/' + sm_id]):
                 dic['rlz-' + rlzno] = dstore['gmf_data/%s/%s' % (sm_id, rlzno)]
@@ -1006,5 +1011,19 @@ def export_realizations(ekey, dstore):
     for i, rlz in enumerate(rlzs):
         data.append([i, rlz['uid'], rlz['model'], rlz['gsims'], rlz['weight']])
     path = dstore.export_path('realizations.csv')
+    writers.write_csv(path, data, fmt='%s')
+    return [path]
+
+
+@export.add(('sourcegroups', 'csv'))
+def export_sourcegroups(ekey, dstore):
+    csm_info = dstore['csm_info']
+    data = [['grp_id', 'trt', 'eff_ruptures']]
+    for i, sm in enumerate(csm_info.source_models):
+        for src_group in sm.src_groups:
+            trt = source.capitalize(src_group.trt)
+            er = src_group.eff_ruptures
+            data.append((src_group.id, trt, er))
+    path = dstore.export_path('sourcegroups.csv')
     writers.write_csv(path, data, fmt='%s')
     return [path]

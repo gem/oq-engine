@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <logicTree
+    logicTreeID="lt1"
+    >
+        <logicTreeBranchingLevel
+        branchingLevelID="bl1"
+        >
+            <logicTreeBranchSet
+            branchSetID="bs1"
+            uncertaintyType="sourceModel"
+            >
+                <logicTreeBranch
+                branchID="tdltbr0000"
+                >
+                    <uncertaintyModel>
+                        FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2_BPTLow
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        0.2
+                    </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch
+                branchID="tdltbr0001"
+                >
+                    <uncertaintyModel>
+                        FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2_BPTMid
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        0.4
+                    </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch
+                branchID="tdltbr0002"
+                >
+                    <uncertaintyModel>
+                        FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2_BPTHigh
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        0.3
+                    </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch
+                branchID="tdltbr0003"
+                >
+                    <uncertaintyModel>
+                        FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2_Poisson
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        0.1
+                    </uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+    </logicTree>
+</nrml>                

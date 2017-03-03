@@ -1,0 +1,48 @@
+This Chapter summarises the structure of the information necessary to define
+a PSHA input model to be used with the \glsdesc{acr:oqe}.
+
+Input data for probabilistic based seismic hazard analysis (Classical, Event
+based, Disaggregation, and UHS) are organised into:
+
+\begin{itemize}
+
+	\item A general configuration file.
+
+    \item A file describing the Seismic Source System, that is the set of
+	initial source models and associated epistemic uncertainties needed to
+	model the seismic activity in the region of interest.
+
+    \item A file describing the Ground Motion System, that is the set of
+	ground motion prediction equations, per tectonic region type, needed to
+	model the ground motion shaking in the region of interest.
+
+\end{itemize}
+
+Figure~\ref{fig:psha_input} summarises the structure of a PSHA input model
+for the \glsdesc{acr:oqe} and the relationships between the different files.
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=14cm]{figures/hazard/psha_input_structure.pdf}
+\caption{PSHA Input Model structure}
+\label{fig:psha_input}
+\end{figure}
+
+
+\section{Defining Logic Trees}
+\input{oqum/hazard/01a_logic_trees.tex}
+\label{sec:hazard_logic_trees}
+
+\section{The Seismic Source System}
+\input{oqum/hazard/01b_seismic_source_system}
+\label{sec:seismic_source_system}
+
+\section{The Ground Motion System}
+\index{Input!Ground motion system}
+\label{sec:ground_motion_system}
+\input{oqum/hazard/01c_ground_motion_system}
+
+\section{Configuration file}
+\index{Input!Configuration file!Hazard}
+\label{sec:hazard_configuration_file}
+\input{oqum/hazard/01d_config.tex}

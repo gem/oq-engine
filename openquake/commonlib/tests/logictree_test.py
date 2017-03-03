@@ -2435,7 +2435,7 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
             for smpath in source.collect_source_model_paths(smlt):
                 pass
         exc = ctx.exception
-        self.assertEqual('not well-formed (invalid token)', str(exc))
+        self.assertIn('not well-formed (invalid token)', str(exc))
         self.assertEqual(exc.lineno, 5)
         self.assertEqual(exc.offset, 61)
         self.assertEqual(exc.filename, smlt)
