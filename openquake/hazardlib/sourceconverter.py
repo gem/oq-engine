@@ -638,6 +638,12 @@ class SourceConverter(RuptureConverter):
                             char_mag=mfd_node["characteristicMag"],
                             char_rate=mfd_node["characteristicRate"],
                             bin_width=mfd_node["binWidth"])
+            elif mfd_node.tag.endswith('multiMFD'):
+                data = [~node for node in mfd_node]  # size m x n
+                return mfd.MultiMFD(mfd_node['kind'],
+                                    mfd_node['size'],
+                                    zip(*data),  # size n x m
+                                    self.width_of_mfd_bin)
 
     def convert_npdist(self, node):
         """
@@ -724,6 +730,32 @@ class SourceConverter(RuptureConverter):
             nodal_plane_distribution=self.convert_npdist(node),
             hypocenter_distribution=self.convert_hpdist(node),
             temporal_occurrence_model=self.tom)
+
+    def convert_multiPointSource(self, node):
+        """
+        Convert the given node into a MultiPointSource object.
+
+        :param node: a node with tag multiPointGeometry
+        :returns: a :class:`openquake.hazardlib.source.MultiPointSource`
+        """
+        geom = node.multiPointGeometry
+        #n = geom['npoints']
+        lon_lat = ~geom.posList.reshape(2, -1)  # shape 2 x n
+        msr = valid.SCALEREL[~node.magScaleRel]()
+        return source.MultiPointSource(
+            source_id=node['id'],
+            name=node['name'],
+            tectonic_region_type=node.attrib.get('tectonicRegion'),
+            mfd=self.convert_mfdist(node),
+            rupture_mesh_spacing=self.rupture_mesh_spacing,
+            magnitude_scaling_relationship=msr,
+            rupture_aspect_ratio=~node.ruptAspectRatio,
+            upper_seismogenic_depth=~geom.upperSeismoDepth,
+            lower_seismogenic_depth=~geom.lowerSeismoDepth,
+            nodal_plane_distribution=self.convert_npdist(node),
+            hypocenter_distribution=self.convert_hpdist(node),
+            temporal_occurrence_model=self.tom,
+            mesh=geo.Mesh(*lon_lat))
 
     def convert_simpleFaultSource(self, node):
         """

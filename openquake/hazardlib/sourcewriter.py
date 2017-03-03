@@ -216,6 +216,23 @@ def build_youngs_coppersmith_mfd(mfd):
                  "binWidth": mfd.bin_width})
 
 
+@obj_to_node.add('MultiMFD')
+def build_multi_mfd(mfd):
+    """
+    Parses the MultiMFD as a Node
+
+    :param mfd:
+        MFD as instance of :class:
+        `openquake.hazardlib.mfd.multi_mfd.MultiMFD`
+    :returns:
+        Instance of :class:`openquake.baselib.node.Node`
+    """
+    attrs = dict(kind=mfd.kind, size=mfd.size)
+    nodes = [Node(name, text=mfd.array[name])
+             for name in mfd.array.dtype.names]
+    return Node("multiMFD", attrs, nodes=nodes)
+
+
 def build_nodal_plane_dist(npd):
     """
     Returns the nodal plane distribution as a Node instance
@@ -421,6 +438,35 @@ def build_rupture_node(rupt, probs_occur):
     elif geom == 'griddedSurface':
         name = 'griddedRupture'
     return Node(name, {'probs_occur': probs_occur}, nodes=rupt_nodes)
+
+
+@obj_to_node.add('MultiPointSource')
+def build_multi_point_source_node(multi_point_source):
+    """
+    Parses a point source to a Node class
+
+    :param point_source:
+        MultiPoint source as instance of :class:
+        `openquake.hazardlib.source.point.MultiPointSource`
+    :returns:
+        Instance of :class:`openquake.baselib.node.Node`
+    """
+    # parse geometry
+    mesh_node = Node('gml:posList', text=['%s %s' % (p.x, p.y)
+                                          for p in multi_point_source.mesh])
+    upper_depth_node = Node(
+        "upperSeismoDepth", text=multi_point_source.upper_seismogenic_depth)
+    lower_depth_node = Node(
+        "lowerSeismoDepth", text=multi_point_source.lower_seismogenic_depth)
+    source_nodes = [Node(
+        "multiPointGeometry", {'npoints': len(multi_point_source.mesh)},
+        nodes=[mesh_node, upper_depth_node, lower_depth_node])]
+    # parse common distributed attributes
+    source_nodes.extend(get_distributed_seismicity_source_nodes(
+        multi_point_source))
+    return Node("multiPointSource",
+                get_source_attributes(multi_point_source),
+                nodes=source_nodes)
 
 
 @obj_to_node.add('PointSource')
