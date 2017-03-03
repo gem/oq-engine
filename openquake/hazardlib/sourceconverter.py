@@ -639,10 +639,10 @@ class SourceConverter(RuptureConverter):
                             char_rate=mfd_node["characteristicRate"],
                             bin_width=mfd_node["binWidth"])
             elif mfd_node.tag.endswith('multiMFD'):
-                data = [~node for node in mfd_node]  # size m x n
+                data = [~node for node in mfd_node]  # size a x n
                 return mfd.MultiMFD(mfd_node['kind'],
                                     mfd_node['size'],
-                                    zip(*data),  # size n x m
+                                    zip(*data),  # size n x a
                                     self.width_of_mfd_bin)
 
     def convert_npdist(self, node):
@@ -739,8 +739,7 @@ class SourceConverter(RuptureConverter):
         :returns: a :class:`openquake.hazardlib.source.MultiPointSource`
         """
         geom = node.multiPointGeometry
-        #n = geom['npoints']
-        lon_lat = ~geom.posList.reshape(2, -1)  # shape 2 x n
+        lon_lat = ~geom.posList.reshape(2, -1)  # shape 2 x N
         msr = valid.SCALEREL[~node.magScaleRel]()
         return source.MultiPointSource(
             source_id=node['id'],

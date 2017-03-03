@@ -227,10 +227,15 @@ def build_multi_mfd(mfd):
     :returns:
         Instance of :class:`openquake.baselib.node.Node`
     """
-    attrs = dict(kind=mfd.kind, size=mfd.size)
-    nodes = [Node(name, text=mfd.array[name])
-             for name in mfd.array.dtype.names]
-    return Node("multiMFD", attrs, nodes=nodes)
+    node = Node("multiMFD", dict(kind=mfd.kind))
+    npoints = len(mfd.array)
+    for name in mfd.array.dtype.names:
+        if name in ('magnitudes', 'occurRates'):
+            attrs = dict(rows=npoints, cols=mfd.size)
+        else:
+            attrs = {}
+        node.append(Node(name, attrs, mfd.array[name].flatten()))
+    return node
 
 
 def build_nodal_plane_dist(npd):
@@ -459,7 +464,7 @@ def build_multi_point_source_node(multi_point_source):
     lower_depth_node = Node(
         "lowerSeismoDepth", text=multi_point_source.lower_seismogenic_depth)
     source_nodes = [Node(
-        "multiPointGeometry", {'npoints': len(multi_point_source.mesh)},
+        "multiPointGeometry",
         nodes=[mesh_node, upper_depth_node, lower_depth_node])]
     # parse common distributed attributes
     source_nodes.extend(get_distributed_seismicity_source_nodes(

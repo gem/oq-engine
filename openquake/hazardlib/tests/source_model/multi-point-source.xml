@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Some Source Model"
+    >
+        <sourceGroup
+        name="group 1"
+        tectonicRegion="Stable Continental Crust"
+        >
+<multiPointSource
+id="mp1"
+name="multi point source"
+>
+    <multiPointGeometry>
+        <gml:posList>
+            0 0.5 1 1.0
+        </gml:posList>
+        <upperSeismoDepth>
+            10
+        </upperSeismoDepth>
+        <lowerSeismoDepth>
+            20
+        </lowerSeismoDepth>
+    </multiPointGeometry>
+    <magScaleRel>
+        PeerMSR
+    </magScaleRel>
+    <ruptAspectRatio>
+        1.000000000E+00
+    </ruptAspectRatio>
+    <multiMFD
+    kind="incrementalMFD"
+    >
+        <min_mag>
+            4.500000000E+00 4.500000000E+00
+        </min_mag>
+        <bin_width>
+            2.000000000E+00 2.000000000E+00
+        </bin_width>
+        <occurRates
+        cols="3"
+        rows="2"
+        >
+          3.000000119E-01 1.000000015E-01 5.000000075E-02
+          4.000000060E-01 2.000000030E-01 1.000000015E-01
+        </occurRates>
+    </multiMFD>
+    <nodalPlaneDist>
+        <nodalPlane dip="20" probability=".5" rake="3" strike="1"/>
+        <nodalPlane dip="2" probability=".5" rake="4" strike="2"/>
+    </nodalPlaneDist>
+    <hypoDepthDist>
+        <hypoDepth depth="4" probability="1"/>
+    </hypoDepthDist>
+</multiPointSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

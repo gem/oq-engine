@@ -176,7 +176,7 @@ validators = {
     'minMag': valid.positivefloat,
     'binWidth': valid.positivefloat,
     'probability': valid.probability,
-    'occurRates': valid.positivefloats,
+    'occurRates': valid.probabilities,
     'probs_occur': valid.pmf,
     'weight': valid.probability,
     'uncertaintyWeight': decimal.Decimal,

@@ -44,7 +44,7 @@ class MultiMFD(BaseMFD):
         self.kind = kind
         self.size = size
         self.width_of_mfd_bin = width_of_mfd_bin
-        n = len(all_args[0])
+        n = len(all_args)
         if kind == 'arbitraryMFD':
             self.mfd_class = ArbitraryMFD
             self.array = numpy.zeros(n, [('magnitudes', (F32, size)),
