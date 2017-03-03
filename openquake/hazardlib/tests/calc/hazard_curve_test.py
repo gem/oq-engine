@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
+import pickle
 import numpy
 
 import openquake.hazardlib
@@ -21,7 +22,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
-from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib.calc.filters import SourceFilter, IntegrationDistance
 from openquake.baselib.parallel import Sequential, Processmap
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim import akkar_bommer_2010
@@ -30,9 +31,17 @@ from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
 from openquake.hazardlib.source.point import PointSource
+from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 
 
 class HazardCurvesFiltersTestCase(unittest.TestCase):
+    def test_MagnitudeDistance_pickleable(self):
+        md = IntegrationDistance(
+            dict(default=[(1, 10), (2, 20), (3, 30), (4, 40), (5, 100),
+                          (6, 200), (7, 400), (8, 800)]))
+        md2 = pickle.loads(pickle.dumps(md))
+        self.assertEqual(md.dic, md2.dic)
+
     def test_point_sources(self):
         sources = [
             openquake.hazardlib.source.PointSource(
@@ -80,11 +89,11 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         ]
         sites = [openquake.hazardlib.site.Site(Point(11, 10), 1, True, 2, 3),
                  openquake.hazardlib.site.Site(Point(10, 16), 2, True, 2, 3),
-                 openquake.hazardlib.site.Site(Point(10, 10.6), 3, True, 2, 3),
-                 openquake.hazardlib.site.Site(Point(10, 10.7), 4, True, 2, 3)]
+                 openquake.hazardlib.site.Site(
+                     Point(10, 10.6, 1), 3, True, 2, 3),
+                 openquake.hazardlib.site.Site(
+                     Point(10, 10.7, -1), 4, True, 2, 3)]
         sitecol = openquake.hazardlib.site.SiteCollection(sites)
-
-        from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
         gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
         truncation_level = 1
         imts = {'PGA': [0.1, 0.5, 1.3]}
@@ -125,6 +134,11 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         self.assertEqual(result.shape, (4, 3))  # 4 sites, 3 levels
         numpy.testing.assert_allclose(result[0], 0)  # no contrib to site 1
         numpy.testing.assert_allclose(result[1], 0)  # no contrib to site 2
+
+        # test that depths are kept after filtering (sites 3 and 4 remain)
+        s_filter = SourceFilter(sitecol, {'default': 100})
+        numpy.testing.assert_array_equal(
+            s_filter.get_close_sites(sources[0]).depths, ([1, -1]))
 
 
 # this example originally came from the Hazard Modeler Toolkit

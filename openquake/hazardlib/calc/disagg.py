@@ -34,7 +34,7 @@ from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box, cross_idl
 from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
+from openquake.hazardlib.gsim.base import ContextMaker
 
 # a 6-uple containing float 4 arrays mags, dists, lons, lats,
 # 1 int array trts and a list of dictionaries pnes
@@ -85,7 +85,7 @@ def _collect_bins_data(trt_num, sources, site, curves, src_group_id,
                     try:
                         sctx, rctx, dctx = cmaker.make_contexts(
                             sitecol, rupture)
-                    except FarAwayRupture:
+                    except filters.FarAwayRupture:
                         continue
                 # extract rupture parameters of interest
                 mags.append(rupture.mag)

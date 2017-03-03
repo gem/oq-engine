@@ -1,11 +1,39 @@
+  [Michele Simionato]
+  * Enabled rtree filtering only if the site collection is at sea level
+  * Added a `parallel.Computer` base class
+  * Changed the default distance from filtering from Rjb to Rrup
+  * Saved data transfer information automatically in `parallel.Starmap`
+
+python-oq-hazardlib (0.23.0-0~precise01) precise; urgency=low
+
   [Graeme Weatherill]
-  * Added new version of Pezeshk et al. (2011) GMPE adjusted for NEHRP BC Site condition
-  
+  * Implemented modification of selected GMPEs for use in Armenia
+
+  [Michele Simionato]
+  * Monitored the calculation time for the PoEs for each GSIM
+  * Introduced a magnitude-dependent integration distance
+
+  [Robin Gee, Michele Simionato]
+  * Implemented support for sites above the level of the sea
+
+  [Michele Simionato]
+  * Made the parallelization library more robust against unexpected exceptions
+  * Used always the same algorithm for computing quantiles (before there
+    was a special case in absence of weights)
+  * Extended `calc_hazard_curves` to manage mutex sources and ruptures and
+    removed `calc_hazard_curves_ext`
+
+  [Graeme Weatherill]
+  * Added new version of Pezeshk et al. (2011) GMPE adjusted for NEHRP BC Site
+    condition
+
   [Michele Simionato]
   * Parallelized `calc_hazard_curves_ext` and added an example of use
     in the docstring of `openquake.hazardlib.calc.hazard_curves`
   * Added NRML support for GriddedSurface and GriddedRupture objects
   * Removed the warning about missing rtree
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 23 Feb 2017 10:59:37 +0100
 
 python-oq-hazardlib (0.22.0-0~precise01) precise; urgency=low
 
@@ -232,7 +260,7 @@ python-oq-hazardlib (0.16.0-0~precise01) precise; urgency=low
   * Adds Montalva et al. (2015) GMPE
 
   [Robin Gee]
-  * Adds Tusa and Langer (2015) GMPE
+  * Adds Tusa and Langer (2016) GMPE
 
  -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 17 Nov 2015 10:31:52 +0100
 

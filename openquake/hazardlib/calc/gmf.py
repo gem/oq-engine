@@ -59,6 +59,9 @@ class GmfComputer(object):
     :param imts:
         a sorted list of Intensity Measure Type strings
 
+    :param gsims:
+        a set of GSIM instances
+
     :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
         distribution, or ``None``.
@@ -78,15 +81,15 @@ class GmfComputer(object):
     # seed is extracted from the underlying rupture and salted in such a
     # way to produce different numbers even if the method is called twice
     # with the same `gsim`. This ensures that different GMPE logic tree
-    # realizations produce different numbers even in the case of complex
-    # logic trees.
+    # realizations produce different numbers even in the case of sampling.
+    # If all GMPEs are different the salt is 0 and the rupture seed is used.
     def __init__(self, rupture, sites, imts, gsims,
                  truncation_level=None, correlation_model=None, samples=0):
         assert sites, sites
         self.rupture = rupture
         self.sites = sites
         self.imts = [from_string(imt) for imt in imts]
-        self.gsims = gsims
+        self.gsims = sorted(set(gsims))
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.samples = samples

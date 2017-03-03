@@ -30,39 +30,6 @@ from openquake.hazardlib import valid
 MAXWEIGHT = 200  # tuned by M. Simionato
 
 
-class SourceModel(object):
-    """
-    A container of SourceGroup instances with some additional attributes
-    describing the source model in the logic tree.
-    """
-    def __init__(self, name, weight, path, src_groups, num_gsim_paths, ordinal,
-                 samples):
-        self.name = name
-        self.weight = weight
-        self.path = path
-        self.src_groups = src_groups
-        self.num_gsim_paths = num_gsim_paths
-        self.ordinal = ordinal
-        self.samples = samples
-
-    @property
-    def num_sources(self):
-        return sum(len(sg) for sg in self.src_groups)
-
-    def get_skeleton(self):
-        """
-        Return an empty copy of the source model, i.e. without sources,
-        but with the proper attributes for each SourceGroup contained within.
-        """
-        src_groups = []
-        for grp in self.src_groups:
-            sg = copy.copy(grp)
-            sg.sources = []
-            src_groups.append(sg)
-        return self.__class__(self.name, self.weight, self.path, src_groups,
-                              self.num_gsim_paths, self.ordinal, self.samples)
-
-
 class SourceGroup(collections.Sequence):
     """
     A container for the following parameters:
@@ -343,6 +310,25 @@ def split_source(src):
         # characteristic and nonparametric sources are not split
         # since they are small anyway
         yield src
+
+
+def split_filter_source(src, src_filter):
+    """
+    :param src: a source to split
+    :param src_filter: a SourceFilter instance
+    :returns: a list of split sources
+    """
+    has_serial = hasattr(src, 'serial')
+    split_sources = []
+    start = 0
+    for split in split_source(src):
+        if has_serial:
+            nr = split.num_ruptures
+            split.serial = src.serial[start:start + nr]
+            start += nr
+        if src_filter.get_close_sites(split) is not None:
+            split_sources.append(split)
+    return split_sources
 
 
 def split_coords_2d(seq):
