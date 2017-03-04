@@ -20,15 +20,13 @@ def convert_xml_hdf5(input_file, output_file):
             d = os.path.dirname(input_file)
             raise ValueError('Please upgrade with `oq upgrade_nrml %s`' % d)
         elif inp['xmlns'].endswith('nrml/0.5'):  # current version
-            groups = inp.sourceModel
+            sm = inp.sourceModel
         else:  # not a NRML
             raise ValueError('Unknown NRML:' % inp['xmlns'])
-        for i, group in enumerate(groups, 1):
+        for group in sm:
             for src in group:  # make the trt implicit
                 del src.attrib['tectonicRegion']
-            dic = node.node_to_dict(group)
-            dic['tag'] += ';%d' % i
-            out.save(dic)
+        out.save(node.node_to_dict(sm))
     return output_file
 
 
