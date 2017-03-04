@@ -267,7 +267,7 @@ class File(h5py.File):
         else:
             return h5obj
 
-    def _save(self, nodedict, root=''):
+    def save(self, nodedict, root=''):
         """
         :param nodedict:
             a dictionary with keys 'tag', 'attrib', 'text', 'nodes'
@@ -276,15 +276,17 @@ class File(h5py.File):
         getitem = super(File, self).__getitem__
         tag = nodedict['tag']
         text = nodedict.get('text', None)
+        if hasattr(text, 'strip'):
+            text = text.strip()
         attrib = nodedict.get('attrib', {})
         path = os.path.join(root, tag)
         nodes = nodedict.get('nodes', [])
-        if text is not None:
+        if text:
             setitem(path, text)
         elif attrib and not nodes:
             setitem(path, numpy.nan)
         for subdict in resolve_duplicates(nodes):
-            self._save(subdict, path)
+            self.save(subdict, path)
         if attrib:
             dset = getitem(path)
             for k, v in attrib.items():

@@ -599,7 +599,7 @@ def node_to_dict(node):
 
     :param node: a Node-compatible object
     """
-    dic = dict(tag=node.tag)
+    dic = dict(tag=striptag(node.tag))
     if node.attrib:
         dic['attrib'] = node.attrib
     if node.text is not None:

@@ -529,4 +529,4 @@ def hdf5write(h5file, obj, root=''):
     `openquake.baselib.hdf5.File`
     """
     dic = node_to_dict(obj_to_node(obj))
-    h5file._save(dic, root)
+    h5file.save(dic, root)
