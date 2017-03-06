@@ -28,7 +28,8 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils as geo_utils
 
-mesh_dt = numpy.dtype([('lon', float), ('lat', float), ('depth', float)])
+F32 = numpy.float32
+point3d = numpy.dtype([('lon', F32), ('lat', F32), ('depth', F32)])
 
 
 def build_array(lons_lats_depths):
@@ -37,7 +38,7 @@ def build_array(lons_lats_depths):
     lon, lat, depth and shape (n,) + lons.shape.
     """
     shape = (len(lons_lats_depths),) + lons_lats_depths[0][0].shape
-    arr = numpy.zeros(shape, mesh_dt)
+    arr = numpy.zeros(shape, point3d)
     for i, (lons, lats, depths) in enumerate(lons_lats_depths):
         arr['lon'][i] = lons
         arr['lat'][i] = lats

@@ -18,8 +18,10 @@
 
 import os
 import ast
+import operator
 import tempfile
 import importlib
+import itertools
 try:  # with Python 3
     from urllib.parse import quote_plus, unquote_plus
 except ImportError:  # with Python 2
@@ -264,6 +266,40 @@ class File(h5py.File):
             return obj
         else:
             return h5obj
+
+    def save(self, nodedict, root=''):
+        """
+        :param nodedict:
+            a dictionary with keys 'tag', 'attrib', 'text', 'nodes'
+        """
+        setitem = super(File, self).__setitem__
+        getitem = super(File, self).__getitem__
+        tag = nodedict['tag']
+        text = nodedict.get('text', None)
+        if hasattr(text, 'strip'):
+            text = text.strip()
+        attrib = nodedict.get('attrib', {})
+        path = os.path.join(root, tag)
+        nodes = nodedict.get('nodes', [])
+        if text:
+            setitem(path, text)
+        elif attrib and not nodes:
+            setitem(path, numpy.nan)
+        for subdict in _resolve_duplicates(nodes):
+            self.save(subdict, path)
+        if attrib:
+            dset = getitem(path)
+            for k, v in attrib.items():
+                dset.attrs[k] = v
+
+
+def _resolve_duplicates(dicts):
+    for tag, grp in itertools.groupby(dicts, operator.itemgetter('tag')):
+        group = list(grp)
+        if len(group) > 1:  # there are duplicate tags
+            for i, dic in enumerate(group, 1):
+                dic['tag'] += ';%d' % i
+    return dicts
 
 
 def array_of_vstr(lst):

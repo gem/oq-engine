@@ -157,9 +157,18 @@ param=yyy
             "tag": "root",
             "text": None
             }
+        expected_dict = {
+            "nodes": [
+                {
+                    "tag": "a",
+                    "text": "A"
+                    }
+                ],
+            "tag": "root",
+            }
         node = n.node_from_dict(input_dict)
         output_dict = n.node_to_dict(node)
-        self.assertEqual(input_dict, output_dict)
+        self.assertEqual(expected_dict, output_dict)
 
         # test deepcopy
         self.assertEqual(node, copy.deepcopy(node))

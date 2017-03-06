@@ -22,7 +22,7 @@ Source model XML Writer
 
 import os
 from openquake.baselib.general import CallableDict
-from openquake.baselib.node import Node
+from openquake.baselib.node import Node, node_to_dict
 from openquake.hazardlib import nrml
 
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
@@ -38,9 +38,10 @@ def build_area_source_geometry(area_source):
     :returns:
         Instance of :class:`openquake.baselib.node.Node`
     """
-    geom_str = ["%s %s" % lonlat for lonlat in
-                zip(area_source.polygon.lons, area_source.polygon.lats)]
-    poslist_node = Node("gml:posList", text=geom_str)
+    geom = []
+    for lon_lat in zip(area_source.polygon.lons, area_source.polygon.lats):
+        geom.extend(lon_lat)
+    poslist_node = Node("gml:posList", text=geom)
     linear_ring_node = Node("gml:LinearRing", nodes=[poslist_node])
     exterior_node = Node("gml:exterior", nodes=[linear_ring_node])
     polygon_node = Node("gml:Polygon", nodes=[exterior_node])
@@ -86,11 +87,13 @@ def build_linestring_node(line, with_depth=False):
     :returns:
         Instance of :class:`openquake.baselib.node.Node`
     """
-    if with_depth:
-        geom_str = ["%s %s %s" % (p.x, p.y, p.z) for p in line.points]
-    else:
-        geom_str = ["%s %s" % (p.x, p.y) for p in line.points]
-    poslist_node = Node("gml:posList", text=geom_str)
+    geom = []
+    for p in line.points:
+        if with_depth:
+            geom.extend((p.x, p.y, p.z))
+        else:
+            geom.extend((p.x, p.y))
+    poslist_node = Node("gml:posList", text=geom)
     return Node("gml:LineString", nodes=[poslist_node])
 
 
@@ -569,3 +572,12 @@ def write_source_model(dest, groups, name=None):
     with open(dest, 'wb') as f:
         nrml.write([source_model], f, '%s')
     return dest
+
+
+def hdf5write(h5file, obj, root=''):
+    """
+    Write a generic object serializable to a Node-like object into a :class:
+    `openquake.baselib.hdf5.File`
+    """
+    dic = node_to_dict(obj_to_node(obj))
+    h5file.save(dic, root)
