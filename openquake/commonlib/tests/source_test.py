@@ -24,26 +24,27 @@ from io import BytesIO
 import numpy
 from numpy.testing import assert_allclose
 
-from openquake.hazardlib import site
-from openquake.hazardlib import geo
-from openquake.hazardlib import mfd
-from openquake.hazardlib import pmf
-from openquake.hazardlib import scalerel
+from openquake.hazardlib import site, geo, mfd, pmf, scalerel, tests as htests
 from openquake.hazardlib import source, sourceconverter as s
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.filters import context
-from openquake.commonlib import tests, nrml_examples, readinput
+from openquake.commonlib import tests, readinput
 from openquake.commonlib.source import CompositionInfo
 from openquake.hazardlib import nrml
 from openquake.baselib.general import assert_close
 
 # directory where the example files are
-NRML_DIR = os.path.dirname(nrml_examples.__file__)
+NRML_DIR = os.path.dirname(htests.__file__)
 
 # Test NRML to use (contains 1 of each source type).
-MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'source_model/mixed.xml')
-ALT_MFDS_SRC_MODEL = os.path.join(NRML_DIR,
-                                  'source_model/alternative-mfds.xml')
+MIXED_SRC_MODEL = os.path.join(
+    NRML_DIR, 'source_model/mixed.xml')
+
+ALT_MFDS_SRC_MODEL = os.path.join(
+    NRML_DIR, 'source_model/alternative-mfds.xml')
+
+NONPARAMETRIC_SOURCE = os.path.join(
+    NRML_DIR, 'source_model/nonparametric-source.xml')
 
 DUPLICATE_ID_SRC_MODEL = os.path.join(
     os.path.dirname(__file__), 'data', 'invalid_source_model.xml')
@@ -59,9 +60,6 @@ SINGLE_PLANE_RUPTURE = os.path.join(
 
 MULTI_PLANES_RUPTURE = os.path.join(
     os.path.dirname(__file__), 'data', 'multi-planes-rupture.xml')
-
-NONPARAMETRIC_SOURCE = os.path.join(
-    os.path.dirname(__file__), 'data', 'nonparametric-source.xml')
 
 
 class NrmlSourceToHazardlibTestCase(unittest.TestCase):
