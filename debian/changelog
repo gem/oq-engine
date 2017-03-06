@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Moved in hazardlib the tests for the sourcewriter (from the engine)
   * Enabled rtree filtering only if the site collection is at sea level
   * Added a `parallel.Computer` base class
   * Changed the default distance from filtering from Rjb to Rrup
