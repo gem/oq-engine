@@ -38,7 +38,7 @@ from django.shortcuts import render
 from openquake.baselib.general import groupby, writetmp
 from openquake.baselib.python3compat import unicode
 from openquake.baselib.parallel import Starmap, safely_call
-from openquake.hazardlib import nrml
+from openquake.hazardlib import nrml, gsim
 from openquake.risklib import read_nrml
 
 from openquake.commonlib import readinput, oqvalidation, logs
@@ -190,6 +190,16 @@ def get_engine_version(request):
     Return a string with the openquake.engine version
     """
     return HttpResponse(oqversion)
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def get_available_gsims(request):
+    """
+    Return a string with the openquake.engine version
+    """
+    gsims = list(gsim.get_available_gsims())
+    return HttpResponse(content=json.dumps(gsims), content_type=JSON)
 
 
 def _make_response(error_msg, error_line, valid):

@@ -205,3 +205,7 @@ Logout
 
 Return a string with the openquake.engine version
 
+
+#### GET /v1/available_gsims/
+
+Return a list of strings with the available GSIMs
