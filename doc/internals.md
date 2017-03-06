@@ -20,7 +20,7 @@ $ python -m openquake.server.manage [help]
 
 ### DbServer
 
-Sometimes it's useful to run the DbServer in background for debug purposes. It can be started like this:
+Sometimes it's useful to run the DbServer in foreground for debug purposes. It can be started like this:
 
 ```bash
 $ oq dbserver start
