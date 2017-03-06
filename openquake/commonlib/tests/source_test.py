@@ -37,9 +37,14 @@ from openquake.baselib.general import assert_close
 NRML_DIR = os.path.dirname(htests.__file__)
 
 # Test NRML to use (contains 1 of each source type).
-MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'source_model/mixed.xml')
-ALT_MFDS_SRC_MODEL = os.path.join(NRML_DIR,
-                                  'source_model/alternative-mfds.xml')
+MIXED_SRC_MODEL = os.path.join(
+    NRML_DIR, 'source_model/mixed.xml')
+
+ALT_MFDS_SRC_MODEL = os.path.join(
+    NRML_DIR, 'source_model/alternative-mfds.xml')
+
+NONPARAMETRIC_SOURCE = os.path.join(
+    NRML_DIR, 'source_model/nonparametric-source.xml')
 
 DUPLICATE_ID_SRC_MODEL = os.path.join(
     os.path.dirname(__file__), 'data', 'invalid_source_model.xml')
@@ -55,9 +60,6 @@ SINGLE_PLANE_RUPTURE = os.path.join(
 
 MULTI_PLANES_RUPTURE = os.path.join(
     os.path.dirname(__file__), 'data', 'multi-planes-rupture.xml')
-
-NONPARAMETRIC_SOURCE = os.path.join(
-    os.path.dirname(__file__), 'data', 'nonparametric-source.xml')
 
 
 class NrmlSourceToHazardlibTestCase(unittest.TestCase):
