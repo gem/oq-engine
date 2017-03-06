@@ -398,6 +398,7 @@ class CompositeRiskModel(collections.Mapping):
 
     def build_input(self, imts, rlzs, hazards_by_site, assetcol, eps_dict):
         """
+        :param imts: a list of IMT strings
         :param rlzs: a list of realizations
         :param hazards_by_site: an array of hazards per each site
         :param assetcol: AssetCollection instance
@@ -472,6 +473,11 @@ class CompositeRiskModel(collections.Mapping):
 class PoeGetter(object):
     """
     Callable yielding a matrix of poes when called on a realization.
+
+    :param hazard_by_site:
+        a list of dictionaries imt -> rlz -> poes, one per site
+    :param imts:
+        a list of IMT strings
     """
     def __init__(self, hazard_by_site, imts):
         self.hazard_by_site = hazard_by_site
@@ -566,6 +572,7 @@ class RiskInput(object):
     Contains all the assets and hazard values associated to a given
     imt and site.
 
+    :param imts: a list of IMT strings
     :param rlzs: the realizations
     :param imt_taxonomies: a pair (IMT, taxonomies)
     :param hazard_by_site: array of hazards, one per site
