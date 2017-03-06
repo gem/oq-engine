@@ -17,7 +17,7 @@ def convert_xml_hdf5(input_file, output_file):
     with hdf5.File(output_file, 'w') as out:
         inp = nrml.read(input_file)
         if inp['xmlns'].endswith('nrml/0.4'):  # old version
-            d = os.path.dirname(input_file)
+            d = os.path.dirname(input_file) or '.'
             raise ValueError('Please upgrade with `oq upgrade_nrml %s`' % d)
         elif inp['xmlns'].endswith('nrml/0.5'):  # current version
             sm = inp.sourceModel
