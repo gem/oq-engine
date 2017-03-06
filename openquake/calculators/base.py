@@ -648,7 +648,7 @@ class RiskCalculator(HazardCalculator):
                             hdata[i][imt][rlz] = haz
                 # build the riskinputs
                 ri = self.riskmodel.build_input(
-                    rlzs, hdata, reduced_assets, reduced_eps)
+                    list(imtls), rlzs, hdata, reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
             assert riskinputs

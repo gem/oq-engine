@@ -68,6 +68,10 @@ Current stable version is the **OpenQuake Engine 2.3** 'Degenkolb'. The document
 * [Installing on Windows](https://github.com/gem/oq-engine/blob/master/doc/installing/windows.md)
 * [Starting the software](https://github.com/gem/oq-engine/blob/master/doc/running/windows.md)
 
+#### VirtualBox
+
+* [Download OVA appliance](https://www.globalquakemodel.org/ova/stable/)
+
 #### Docker
 
 * [Deploy a Docker container](https://github.com/gem/oq-engine/blob/master/doc/installing/docker.md)
