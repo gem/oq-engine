@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Saved the rupture mesh with 32 floats instead of 64 bit floats
   * Raised the limit on the event IDs from 2^16 to 2^32 per task
   * Fixed classical_risk: there was an error when computing the statistics
     in the case of multiple assets of the same taxonomy on the same site
