@@ -26,7 +26,7 @@ import collections
 import numpy
 
 from openquake.baselib.python3compat import zip
-from openquake.baselib.general import AccumDict, split_in_blocks
+from openquake.baselib.general import AccumDict, split_in_blocks, humansize
 from openquake.hazardlib.calc.filters import FarAwayRupture
 from openquake.hazardlib.probability_map import ProbabilityMap, PmapStats
 from openquake.hazardlib.geo.surface import PlanarSurface
@@ -349,28 +349,22 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
     with monitor('making contexts', measuremem=True):
         getter.init()
     haz = {sid: {} for sid in getter.sids}
-    gmfcoll = {}  # rlz -> gmfa
-    for rlz in rlzs:
-        gmfcoll[rlz] = []
-        for i, gmvdict in enumerate(getter(rlz)):
-            if gmvdict:
-                sid = getter.sids[i]
+    if oq.hazard_curves_from_gmfs:
+        gmfcoll = {}  # rlz -> gmfa
+        for rlz in rlzs:
+            lst = []
+            gmf = getter.get_hazard(rlz)  # array (num_sites, num_imts)
+            for i, sid in enumerate(getter.sids):
                 for imti, imt in enumerate(getter.imts):
-                    if oq.hazard_curves_from_gmfs:
-                        try:
-                            gmv = gmvdict[imt]
-                        except KeyError:
-                            # no gmv for the given imt, this may happen
-                            pass
-                        else:
-                            haz[sid][imt, rlz] = gmv
-                    for rec in gmvdict.get(imt, []):
-                        gmfcoll[rlz].append(
-                            (sid, rec['eid'], imti, rec['gmv']))
-    for rlz in gmfcoll:
-        gmfcoll[rlz] = numpy.array(gmfcoll[rlz], gmv_dt)
+                    haz[sid][imt, rlz] = recs = gmf[i, imti]
+                    for rec in recs:
+                        lst.append((sid, rec['eid'], imti, rec['gmv']))
+            gmfcoll[rlz] = numpy.array(lst, gmv_dt)
+    else:  # fast lane
+        gmfcoll = {rlz: numpy.fromiter(getter.gen_gmv(rlz), gmv_dt)
+                   for rlz in rlzs}
     result = dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
-                  hcurves={})
+                  hcurves={}, gmdata=getter.gmdata)
     if oq.hazard_curves_from_gmfs:
         with monitor('building hazard curves', measuremem=False):
             duration = oq.investigation_time * oq.ses_per_logic_tree_path
@@ -403,6 +397,27 @@ def get_ruptures_by_grp(dstore):
     return ruptures_by_grp
 
 
+def save_gmdata(calc, n_rlzs):
+    """
+    Save a composite array `gmdata` in the datastore.
+
+    :param calc: a calculator with a dictionary .gmdata {rlz: data}
+    :param n_rlzs: the total number of realizations
+    """
+    n_sites = len(calc.sitecol)
+    dtlist = ([(imt, F32) for imt in calc.oqparam.imtls] +
+              [('events', U32), ('nbytes', U32)])
+    array = numpy.zeros(n_rlzs, dtlist)
+    for rlzi in sorted(calc.gmdata):
+        data = calc.gmdata[rlzi]  # (imts, events, nbytes)
+        events = data[-2]
+        nbytes = data[-1]
+        gmv = data[:-2] / events / n_sites
+        array[rlzi] = tuple(gmv) + (events, nbytes)
+    calc.datastore['gmdata'] = array
+    logging.info('Generated %s of GMFs', humansize(array['nbytes'].sum()))
+
+
 @base.calculators.add('event_based')
 class EventBasedCalculator(ClassicalCalculator):
     """
@@ -426,6 +441,7 @@ class EventBasedCalculator(ClassicalCalculator):
         """
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
+        self.gmdata += res['gmdata']
         if res['gmfcoll'] is not None:
             with sav_mon:
                 for rlz, array in res['gmfcoll'].items():
@@ -489,12 +505,14 @@ class EventBasedCalculator(ClassicalCalculator):
         self.sm_id = {tuple(sm.path): sm.ordinal
                       for sm in self.csm.info.source_models}
         L = len(oq.imtls.array)
+        rlzs = self.rlzs_assoc.realizations
         res = parallel.Starmap(
             self.core_task.__func__, self.gen_args(ruptures_by_grp)
         ).submit_all()
+        self.gmdata = {}
         acc = functools.reduce(self.combine_pmaps_and_save_gmfs, res, {
-            rlz.ordinal: ProbabilityMap(L, 1)
-            for rlz in self.rlzs_assoc.realizations})
+            rlz.ordinal: ProbabilityMap(L, 1) for rlz in rlzs})
+        save_gmdata(self, len(rlzs))
         return acc
 
     def post_execute(self, result):
