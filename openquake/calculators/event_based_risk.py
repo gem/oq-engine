@@ -551,6 +551,7 @@ class EbriskCalculator(base.RiskCalculator):
         """
         event_based.EventBasedRuptureCalculator.__dict__['post_execute'](
             self, num_events)
+        # gmv[:-2] are the total gmv per each IMT
         gmv = sum(gm[:-2].sum() for gm in self.gmdata.values())
         if not gmv:
             raise RuntimeError('No GMFs were generated, perhaps they were '
