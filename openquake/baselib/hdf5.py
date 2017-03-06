@@ -285,7 +285,7 @@ class File(h5py.File):
             setitem(path, text)
         elif attrib and not nodes:
             setitem(path, numpy.nan)
-        for subdict in resolve_duplicates(nodes):
+        for subdict in _resolve_duplicates(nodes):
             self.save(subdict, path)
         if attrib:
             dset = getitem(path)
@@ -293,7 +293,7 @@ class File(h5py.File):
                 dset.attrs[k] = v
 
 
-def resolve_duplicates(dicts):
+def _resolve_duplicates(dicts):
     for tag, grp in itertools.groupby(dicts, operator.itemgetter('tag')):
         group = list(grp)
         if len(group) > 1:  # there are duplicate tags
