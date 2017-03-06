@@ -46,7 +46,8 @@ class SourceWriterTestCase(unittest.TestCase):
         with os.fdopen(fd, 'wb'):
             write_source_model(name, groups, 'Test Source Model')
         with hdf5.File.temporary() as f:
-            hdf5write(f, groups[0])
+            for group in groups:
+                hdf5write(f, group)
         print('written %s' % f.path)
         if open(name).read() != open(fname).read():
             raise Exception('Different files: %s %s' % (name, fname))
