@@ -882,6 +882,6 @@ class UCERFRiskCalculator(EbriskCalculator):
     def execute(self):
         num_rlzs = len(self.rlzs_assoc.realizations)
         self.grp_trt = self.csm.info.grp_trt()
-        allres = parallel.Starmap(compute_losses, self.gen_args()).submit_all()
-        num_events = self.save_results(allres, num_rlzs)
+        res = parallel.Starmap(compute_losses, self.gen_args()).submit_all()
+        num_events = self.save_results(res, num_rlzs)
         return num_events
