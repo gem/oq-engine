@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Some Source Model"
+    >
+        <sourceGroup
+        name="group 1"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <simpleFaultSource
+            id="2A"
+            name="Mount Diablo Thrust YC Characteristic Rate"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            -1.2182290E+02 3.7730100E+01 -1.2203880E+02 3.7877100E+01
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip>
+                        4.5000000E+01
+                    </dip>
+                    <upperSeismoDepth>
+                        1.0000000E+01
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        2.0000000E+01
+                    </lowerSeismoDepth>
+                </simpleFaultGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.5000000E+00
+                </ruptAspectRatio>
+                <YoungsCoppersmithMFD bValue="1.0000000E+00" binWidth="1.0000000E-01" characteristicMag="7.0000000E+00" characteristicRate="5.0000000E-03" minMag="5.0000000E+00"/>
+                <rake>
+                    3.0000000E+01
+                </rake>
+            </simpleFaultSource>
+            <simpleFaultSource
+            id="2B"
+            name="Mount Diablo Thrust YC Total Moment Rate"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            -1.2182290E+02 3.7730100E+01 -1.2203880E+02 3.7877100E+01
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip>
+                        4.5000000E+01
+                    </dip>
+                    <upperSeismoDepth>
+                        1.0000000E+01
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        2.0000000E+01
+                    </lowerSeismoDepth>
+                </simpleFaultGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.5000000E+00
+                </ruptAspectRatio>
+                <YoungsCoppersmithMFD bValue="1.0000000E+00" binWidth="1.0000000E-01" characteristicMag="7.0000000E+00" minMag="5.0000000E+00" totalMomentRate="1.0500000E+19"/>
+                <rake>
+                    3.0000000E+01
+                </rake>
+            </simpleFaultSource>
+        </sourceGroup>
+        <sourceGroup
+        name="group 2"
+        tectonicRegion="Subduction Interface"
+        >
+            <characteristicFaultSource
+            id="1"
+            name="characteristic source, complex fault arbitrary mfd"
+            tectonicRegion="Subduction Interface"
+            >
+                <arbitraryMFD>
+                    <occurRates>
+                        6.0000000E-04 8.0000000E-04 4.0000000E-04
+                    </occurRates>
+                    <magnitudes>
+                        8.6000000E+00 8.8000000E+00 9.0000000E+00
+                    </magnitudes>
+                </arbitraryMFD>
+                <rake>
+                    6.0000000E+01
+                </rake>
+                <surface>
+                    <complexFaultGeometry>
+                        <faultTopEdge>
+                            <gml:LineString>
+                                <gml:posList>
+                                    -1.2470400E+02 4.0363000E+01 5.4932600E+00 -1.2497700E+02 4.1214000E+01 4.9885600E+00 -1.2514000E+02 4.2096000E+01 4.8973400E+00
+                                </gml:posList>
+                            </gml:LineString>
+                        </faultTopEdge>
+                        <intermediateEdge>
+                            <gml:LineString>
+                                <gml:posList>
+                                    -1.2470400E+02 4.0363000E+01 5.5932600E+00 -1.2497700E+02 4.1214000E+01 5.0885600E+00 -1.2514000E+02 4.2096000E+01 4.9973400E+00
+                                </gml:posList>
+                            </gml:LineString>
+                        </intermediateEdge>
+                        <intermediateEdge>
+                            <gml:LineString>
+                                <gml:posList>
+                                    -1.2470400E+02 4.0363000E+01 5.6932600E+00 -1.2497700E+02 4.1214000E+01 5.1885600E+00 -1.2514000E+02 4.2096000E+01 5.0973400E+00
+                                </gml:posList>
+                            </gml:LineString>
+                        </intermediateEdge>
+                        <faultBottomEdge>
+                            <gml:LineString>
+                                <gml:posList>
+                                    -1.2382900E+02 4.0347000E+01 2.0384900E+01 -1.2413700E+02 4.1218000E+01 1.7413900E+01 -1.2425200E+02 4.2115000E+01 1.7527400E+01
+                                </gml:posList>
+                            </gml:LineString>
+                        </faultBottomEdge>
+                    </complexFaultGeometry>
+                </surface>
+            </characteristicFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
