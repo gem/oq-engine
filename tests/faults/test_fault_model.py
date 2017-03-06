@@ -528,10 +528,7 @@ class TestmtkActiveFault(unittest.TestCase):
         collapse model
         '''
         # Build test data
-        try:
-            mags = COLLAPSE_DATA[0, :-1]
-        except:
-            import pdb; pdb.set_trace()
+        mags = COLLAPSE_DATA[0, :-1]
         weights = COLLAPSE_DATA[1:-1, -1]
         rates = COLLAPSE_DATA[1:-1:, :-1]
         expected_rate = COLLAPSE_DATA[-1, :-1]
