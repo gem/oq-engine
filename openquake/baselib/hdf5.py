@@ -283,7 +283,7 @@ class File(h5py.File):
         if hasattr(text, 'strip'):
             text = text.strip()
         attrib = nodedict.get('attrib', {})
-        path = os.path.join(root, tag)
+        path = '/'.join([root, tag])
         nodes = nodedict.get('nodes', [])
         if text:
             setitem(path, text)
