@@ -1,6 +1,6 @@
   [Daniele Viganò]
   * Use threads instead of processes in DbServer because SQLite3
-    isn't fork-safe on macOS
+    isn't fork-safe on macOS Sierra
 
   [Michele Simionato]
   * Extended the command `oq to_hdf5` to manage source model files too
