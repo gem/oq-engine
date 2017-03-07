@@ -20,7 +20,8 @@ import os
 import copy
 import unittest
 import tempfile
-from openquake.hazardlib.sourcewriter import write_source_model
+from openquake.baselib import hdf5
+from openquake.hazardlib.sourcewriter import write_source_model, hdf5write
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.nrml import SourceModelParser
 
@@ -44,6 +45,10 @@ class SourceWriterTestCase(unittest.TestCase):
         fd, name = tempfile.mkstemp(suffix='.xml')
         with os.fdopen(fd, 'wb'):
             write_source_model(name, groups, 'Test Source Model')
+        with hdf5.File.temporary() as f:
+            for group in groups:
+                hdf5write(f, group)
+        print('written %s' % f.path)
         if open(name).read() != open(fname).read():
             raise Exception('Different files: %s %s' % (name, fname))
         os.remove(name)
