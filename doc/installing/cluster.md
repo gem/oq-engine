@@ -7,7 +7,7 @@ Both services run on a single "master" node. It is not necessary and not recomme
 Running OpenQuake on an *MPI cluster* is currently not supported. See the [FAQ](../faq.md#mpi-support) for more information.
 
 ## Initial install
-On all nodes, install the `python-oq-engine package` as described in OpenQuake Engine installation for [Ubuntu](ubuntu.md) or [RedHat](rhel.md).
+On all nodes, install the `python-oq-engine` package as described in OpenQuake Engine installation for [Ubuntu](ubuntu.md) or [RedHat](rhel.md).
 
 Note: you have to **restart every celery node** after a configuration change.
 
@@ -115,7 +115,7 @@ The **worker nodes** must be able to connect to the master on port 5672, and por
 
 ## Storage requirements
 
-Storage requirements depend a lot on the type of calculations you want to run. On a worker node you will need just the space for the operating system, the logs and the OpenQuake installation: less than 20GB are usually enough. Workers can be also diskless (using iSCSI or NFS for example). Starting from OpenQuake 2.3 the software and all its libraries are loated in `/opt/openquake`.
+Storage requirements depend a lot on the type of calculations you want to run. On a worker node you will need just the space for the operating system, the logs and the OpenQuake installation: less than 20GB are usually enough. Workers can be also diskless (using iSCSI or NFS for example). Starting from OpenQuake 2.3 the software and all its libraries are located in `/opt/openquake`.
 
 On the master node you will also need space for:
 - the users' **home** directory (usually located under `/home`): it contains the calculations datastore (`hdf5` files located in the `oqdata` folder)
