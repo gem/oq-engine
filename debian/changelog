@@ -1,4 +1,15 @@
   [Michele Simionato]
+  * Extended the command `oq to_hdf5` to manage source model files too
+  * Improved significantly the performance of the event based calculator
+    when computing the GMFs and not the hazard curves
+  * Stored information about the mean ground motion in the datastore
+  * Saved the rupture mesh with 32 floats instead of 64 bit floats
+  * Raised the limit on the event IDs from 2^16 to 2^32 per task
+  * Fixed classical_risk: there was an error when computing the statistics
+    in the case of multiple assets of the same taxonomy on the same site
+  * Changed the UCERF event based calculators to parallelize by SES
+  * Fixed a site model bug: when the sites are extracted from the site model
+    there is no need to perform geospatial queries to get the parameters
   * Added a command `oq normalize` to produce good `sites.csv` files
   * Introduced a `ses_seed` parameter to specify the seed used to generate
     the stochastic event sets; `random_seed` is used for the sampling only

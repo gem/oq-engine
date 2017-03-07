@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import groupby, get_array
+from openquake.baselib.general import groupby, get_array, AccumDict
 from openquake.hazardlib import site, calc
 from openquake.risklib import scientific, riskmodels
 
@@ -32,6 +32,10 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
+U64 = numpy.uint64
+BYTES_PER_RECORD = 17  # ground motion record (sid, eid, gmv, imti) = 17 bytes
+EVENTS = -2
+NBYTES = -1
 
 FIELDS = ('site_id', 'lon', 'lat', 'idx', 'taxonomy_id', 'area', 'number',
           'occupants', 'deductible-', 'insurance_limit-', 'retrofitted-')
@@ -392,15 +396,16 @@ class CompositeRiskModel(collections.Mapping):
     def __len__(self):
         return len(self._riskmodels)
 
-    def build_input(self, rlzs, hazards_by_site, assetcol, eps_dict):
+    def build_input(self, imts, rlzs, hazards_by_site, assetcol, eps_dict):
         """
+        :param imts: a list of IMT strings
         :param rlzs: a list of realizations
         :param hazards_by_site: an array of hazards per each site
         :param assetcol: AssetCollection instance
         :param eps_dict: a dictionary of epsilons
         :returns: a :class:`RiskInput` instance
         """
-        return RiskInput(rlzs, hazards_by_site, assetcol, eps_dict)
+        return RiskInput(imts, rlzs, hazards_by_site, assetcol, eps_dict)
 
     def gen_outputs(self, riskinput, monitor, assetcol=None):
         """
@@ -425,18 +430,18 @@ class CompositeRiskModel(collections.Mapping):
 
         # group the assets by taxonomy
         taxonomies = set()
-        with monitor('grouping assets by taxonomy'):
-            dic = collections.defaultdict(list)
-            for i, assets in enumerate(assets_by_site):
-                group = groupby(assets, by_taxonomy)
-                for taxonomy in group:
-                    epsgetter = riskinput.epsilon_getter(
-                        [asset.ordinal for asset in group[taxonomy]])
-                    dic[taxonomy].append((i, group[taxonomy], epsgetter))
-                    taxonomies.add(taxonomy)
+        dic = collections.defaultdict(list)
+        for i, assets in enumerate(assets_by_site):
+            group = groupby(assets, by_taxonomy)
+            for taxonomy in group:
+                epsgetter = riskinput.epsilon_getter(
+                    [asset.ordinal for asset in group[taxonomy]])
+                dic[taxonomy].append((i, group[taxonomy], epsgetter))
+                taxonomies.add(taxonomy)
+        imti = {imt: i for i, imt in enumerate(riskinput.imts)}
         for rlz in riskinput.rlzs:
             with mon_hazard:
-                hazard = list(hazard_getter(rlz))
+                hazard = hazard_getter.get_hazard(rlz)
             for taxonomy in sorted(taxonomies):
                 riskmodel = self[taxonomy]
                 with mon_risk:
@@ -444,7 +449,7 @@ class CompositeRiskModel(collections.Mapping):
                         outs = [None] * len(self.lti)
                         for lt in self.loss_types:
                             imt = riskmodel.risk_functions[lt].imt
-                            haz = hazard[i].get(imt, ())
+                            haz = hazard[i, imti[imt]]
                             if len(haz):
                                 out = riskmodel(lt, assets, haz, epsgetter)
                                 outs[self.lti[lt]] = out
@@ -452,8 +457,8 @@ class CompositeRiskModel(collections.Mapping):
                         row.r = rlz.ordinal
                         row.assets = assets
                         yield row
-        if hasattr(hazard_getter, 'gmfbytes'):  # for event based risk
-            monitor.gmfbytes = hazard_getter.gmfbytes
+        if hasattr(hazard_getter, 'gmdata'):  # for event based risk
+            riskinput.gmdata = hazard_getter.gmdata
 
     def __toh5__(self):
         loss_types = hdf5.array_of_vstr(self._get_loss_types())
@@ -467,17 +472,27 @@ class CompositeRiskModel(collections.Mapping):
 
 class PoeGetter(object):
     """
-    Callable yielding dictionaries {imt: curve} when called on a realization.
+    Callable yielding a matrix of poes when called on a realization.
+
+    :param hazard_by_site:
+        a list of dictionaries imt -> rlz -> poes, one per site
+    :param imts:
+        a list of IMT strings
     """
-    def __init__(self, hazard_by_site):
+    def __init__(self, hazard_by_site, imts):
         self.hazard_by_site = hazard_by_site
+        self.imts = imts
 
-    def __call__(self, rlz):
-        for haz in self.hazard_by_site:
-            yield {imt: haz[imt][rlz] for imt in haz}
+    def get_hazard(self, rlz):
+        """
+        :returns: a probability matrix (num_sites, num_imts)
+        """
+        return numpy.array(
+            [[haz[imt][rlz] for imt in self.imts]
+             for haz in self.hazard_by_site])
 
 
-gmv_dt = numpy.dtype([('sid', U32), ('eid', U32), ('imti', U8), ('gmv', F32)])
+gmv_dt = numpy.dtype([('sid', U32), ('eid', U64), ('imti', U8), ('gmv', F32)])
 
 
 class GmfGetter(object):
@@ -485,7 +500,7 @@ class GmfGetter(object):
     Callable yielding dictionaries {imt: array(gmv, eid)} when called
     on a realization.
     """
-    dt = numpy.dtype([('gmv', F32), ('eid', U32)])
+    dt = numpy.dtype([('gmv', F32), ('eid', U64)])
 
     def __init__(self, gsims, ebruptures, sitecol, imts, min_iml,
                  truncation_level, correlation_model, samples):
@@ -511,45 +526,45 @@ class GmfGetter(object):
                 ebr, sites, self.imts, self.gsims,
                 self.truncation_level, self.correlation_model)
             self.computers.append(computer)
-        self.gmfbytes = 0
+        # dictionary rlzi -> array(imts, events, nbytes)
+        self.gmdata = AccumDict(accum=numpy.zeros(len(self.imts) + 2, F32))
 
-    def __call__(self, rlz):
+    def gen_gmv(self, rlz):
+        """
+        Compute the GMFs for the given realization and populate the .gmdata
+        array. Yields tuples of the form (sid, eid, imti, gmv).
+        """
         gsim = self.gsims[rlz.ordinal]
-        gmfdict = collections.defaultdict(dict)
+        gmdata = self.gmdata[rlz.ordinal]
         for computer in self.computers:
             rup = computer.rupture
             if self.samples > 1:
                 eids = get_array(rup.events, sample=rlz.sampleid)['eid']
             else:
                 eids = rup.events['eid']
+            gmdata[EVENTS] += len(eids)
             array = computer.compute(gsim, len(eids))  # (i, n, e)
             for imti, imt in enumerate(self.imts):
                 min_gmv = self.min_iml[imti]
                 for eid, gmf in zip(eids, array[imti].T):
                     for sid, gmv in zip(computer.sites.sids, gmf):
                         if gmv > min_gmv:
-                            dic = gmfdict[sid]
-                            if imt in dic:
-                                dic[imt].append((gmv, eid))
-                            else:
-                                dic[imt] = [(gmv, eid)]
-        for sid in self.sids:
-            dic = gmfdict[sid]
-            for imt in dic:
-                dic[imt] = arr = numpy.array(dic[imt], self.dt)
-                self.gmfbytes += arr.nbytes
-            yield dic
+                            gmdata[imti] += gmv
+                            gmdata[NBYTES] += BYTES_PER_RECORD
+                            yield sid, eid, imti, gmv
 
-    def get(self, rlz):
-        """:returns: array of dtype gmv_dt"""
-        gmfcoll = []
-        for i, gmvdict in enumerate(self(rlz)):
-            if gmvdict:
-                sid = self.sids[i]
-                for imti, imt in enumerate(self.imts):
-                    for rec in gmvdict.get(imt, []):
-                        gmfcoll.append((sid, rec['eid'], imti, rec['gmv']))
-        return numpy.array(gmfcoll, gmv_dt)
+    def get_hazard(self, rlz):
+        """
+        :returns: array of arrays of shape (num_sites, num_imts)
+        """
+        gmfa = numpy.zeros((len(self.sids), len(self.imts)), object)
+        gmfdict = collections.defaultdict(list)
+        for sid, eid, imti, gmv in self.gen_gmv(rlz):
+            gmfdict[sid, imti].append((gmv, eid))
+        for i, sid in enumerate(self.sids):
+            for imti, imt in enumerate(self.imts):
+                gmfa[i, imti] = numpy.array(gmfdict[sid, imti], self.dt)
+        return gmfa
 
 
 class RiskInput(object):
@@ -557,13 +572,15 @@ class RiskInput(object):
     Contains all the assets and hazard values associated to a given
     imt and site.
 
+    :param imts: a list of IMT strings
     :param rlzs: the realizations
     :param imt_taxonomies: a pair (IMT, taxonomies)
     :param hazard_by_site: array of hazards, one per site
     :param assets_by_site: array of assets, one per site
     :param eps_dict: dictionary of epsilons
     """
-    def __init__(self, rlzs, hazard_by_site, assets_by_site, eps_dict):
+    def __init__(self, imts, rlzs, hazard_by_site, assets_by_site, eps_dict):
+        self.imts = imts
         self.rlzs = rlzs
         self.hazard_by_site = hazard_by_site
         self.assets_by_site = assets_by_site
@@ -600,7 +617,7 @@ class RiskInput(object):
         :returns:
             list of hazard dictionaries imt -> rlz -> haz per each site
         """
-        return PoeGetter(self.hazard_by_site)
+        return PoeGetter(self.hazard_by_site, self.imts)
 
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
@@ -629,27 +646,6 @@ def make_eps(assetcol, num_samples, seed, correlation):
         for asset, epsrow in zip(assets, epsilons):
             eps[asset.ordinal] = epsrow
     return eps
-
-
-class Gmvset(object):
-    """
-    Emulate a dataset containing ground motion values per event ID,
-    realization ordinal and IMT index.
-    """
-    dt = numpy.dtype([('gmv', F32), ('eid', U32), ('rlzi', U16), ('imti', U8)])
-
-    def __init__(self):
-        self.pairs = []
-
-    def append(self, gmv, eid, rlzi, imti):
-        self.pairs.append((gmv, eid, rlzi, imti))
-
-    @property
-    def value(self):
-        return numpy.array(self.pairs, self.dt)
-
-    def __len__(self):
-        return len(self.pairs)
 
 
 def str2rsi(key):
