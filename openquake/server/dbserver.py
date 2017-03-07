@@ -34,7 +34,9 @@ from openquake.server.db import actions
 from openquake.server import dbapi
 from openquake.server.settings import DATABASE
 
-executor = ThreadPoolExecutor(1)  # there is a single db process
+# using a ThreadPool because SQLite3 isn't fork-safe on macOS Sierra
+# ref: https://bugs.python.org/issue27126
+executor = ThreadPoolExecutor(1)
 
 
 class DbServer(object):
