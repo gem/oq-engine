@@ -202,26 +202,29 @@ def area_to_point_sources(area_src):
     area_mfd = area_src.mfd
 
     if isinstance(area_mfd, mfd.TruncatedGRMFD):
-        new_a_val = math.log10(10 ** area_mfd.a_val / float(num_points))
         new_mfd = mfd.TruncatedGRMFD(
-            a_val=new_a_val,
+            a_val=area_mfd.a_val - math.log10(num_points),
             b_val=area_mfd.b_val,
             bin_width=area_mfd.bin_width,
             min_mag=area_mfd.min_mag,
             max_mag=area_mfd.max_mag)
     elif isinstance(area_mfd, mfd.EvenlyDiscretizedMFD):
-        new_occur_rates = [float(x) / num_points
-                           for x in area_mfd.occurrence_rates]
+        new_occur_rates = [x / num_points for x in area_mfd.occurrence_rates]
         new_mfd = mfd.EvenlyDiscretizedMFD(
             min_mag=area_mfd.min_mag,
             bin_width=area_mfd.bin_width,
             occurrence_rates=new_occur_rates)
     elif isinstance(area_mfd, mfd.ArbitraryMFD):
-        new_occur_rates = [float(x) / num_points
-                           for x in area_mfd.occurrence_rates]
+        new_occur_rates = [x / num_points for x in area_mfd.occurrence_rates]
         new_mfd = mfd.ArbitraryMFD(
             magnitudes=area_mfd.magnitudes,
             occurrence_rates=new_occur_rates)
+    elif isinstance(area_mfd, mfd.YoungsCoppersmith1985MFD):
+        new_mfd = mfd.YoungsCoppersmith1985MFD.from_characteristic_rate(
+            area_mfd.min_mag, area_mfd.b_val, area_mfd.char_mag,
+            area_mfd.char_rate / num_points, area_mfd.bin_width)
+    else:
+        raise TypeError('Unknown MFD: %s' % area_mfd)
 
     for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):
         pt = source.PointSource(
