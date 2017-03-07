@@ -269,6 +269,10 @@ class File(h5py.File):
 
     def save(self, nodedict, root=''):
         """
+        Save a node dictionary in the .hdf5 file, starting from the root
+        dataset. A common application is to convert XML files into .hdf5
+        files, see the usage in :mod:`openquake.commands.to_hdf5`.
+
         :param nodedict:
             a dictionary with keys 'tag', 'attrib', 'text', 'nodes'
         """
@@ -294,6 +298,12 @@ class File(h5py.File):
 
 
 def _resolve_duplicates(dicts):
+    # when node dictionaries with duplicated tags are passed (for instance
+    # [{'tag': 'SourceGroup', ...}, {'tag': 'SourceGroup', ...}])
+    # add an incremental number to the tag, preceded by a semicolon:
+    # [{'tag': 'SourceGroup;1', ...}, {'tag': 'SourceGroup;2', ...}])
+    # in this way the dictionaries can be saved in HDF5 format without
+    # name conflicts and by respecting the ordering
     for tag, grp in itertools.groupby(dicts, operator.itemgetter('tag')):
         group = list(grp)
         if len(group) > 1:  # there are duplicate tags
