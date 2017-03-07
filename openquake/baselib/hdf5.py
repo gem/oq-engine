@@ -308,7 +308,7 @@ def _resolve_duplicates(dicts):
         group = list(grp)
         if len(group) > 1:  # there are duplicate tags
             for i, dic in enumerate(group, 1):
-                dic['tag'] += ';%d' % i
+                dic['tag'] += '-%d' % i
     return dicts
 
 
