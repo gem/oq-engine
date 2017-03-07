@@ -196,7 +196,7 @@ def get_engine_version(request):
 @require_http_methods(['GET'])
 def get_available_gsims(request):
     """
-    Return a string with the openquake.engine version
+    Return a list of strings with the available GSIMs
     """
     gsims = list(gsim.get_available_gsims())
     return HttpResponse(content=json.dumps(gsims), content_type=JSON)
