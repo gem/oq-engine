@@ -177,7 +177,7 @@ Response: Redirects to [/v1/calc/:calc_id](#get-v1calchazardcalc_id), where `cal
 
 #### POST /v1/valid/
 
-Leverage oq-risklib to check if a given XML text is a valid NRML.
+Check if a given XML text is a valid NRML.
 
 Parameters:
 
@@ -186,6 +186,7 @@ Parameters:
 Response:
 
 a JSON object, containing:
+
     * valid: a boolean indicating if the provided text is a valid NRML
     * error_msg: the error message, if any error was found (None otherwise)
     * error_line: line of the given XML where the error was found (None if no error was found or if it was not a validation error)
