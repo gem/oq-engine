@@ -203,7 +203,7 @@ def area_to_point_sources(area_src):
 
     if isinstance(area_mfd, mfd.TruncatedGRMFD):
         new_mfd = mfd.TruncatedGRMFD(
-            a_val=math.log10(10 ** area_mfd.a_val / num_points),
+            a_val=area_mfd.a_val - math.log10(num_points),
             b_val=area_mfd.b_val,
             bin_width=area_mfd.bin_width,
             min_mag=area_mfd.min_mag,
