@@ -71,7 +71,7 @@ def classical_risk(riskinput, riskmodel, monitor):
             row = rows[0]
             for l in l_idxs:
                 for i, asset in enumerate(assets):
-                    avgs = numpy.array([r.average_losses[l] for r in rows])
+                    avgs = numpy.array([r.average_losses[l][i] for r in rows])
                     avg_stats = compute_stats(
                         avgs, oq.quantile_loss_curves, weights)
                     # row is index by the loss type index l and row[l]
