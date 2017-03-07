@@ -281,7 +281,6 @@ def del_calc(db, job_id, user):
     except NotFound:
         return ('Cannot delete calculation %d: ID does not exist' % job_id)
 
-    print(owner, user)
     deleted = db('DELETE FROM job WHERE id=?x AND user_name=?x',
                  job_id, user).rowcount
     if not deleted:
