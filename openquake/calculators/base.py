@@ -83,7 +83,8 @@ PRECALC_MAP = dict(
                  'event_based_risk', 'ucerf_rupture'],
     event_based_risk=['event_based', 'ebrisk', 'event_based_risk',
                       'event_based_rupture'],
-    ucerf_classical=['ucerf_psha'])
+    ucerf_classical=['ucerf_psha'],
+    ucerf_hazard=['ucerf_rupture'])
 
 
 def set_array(longarray, shortarray):
@@ -642,7 +643,7 @@ class RiskCalculator(HazardCalculator):
                             hdata[i][imt][rlz] = haz
                 # build the riskinputs
                 ri = self.riskmodel.build_input(
-                    rlzs, hdata, reduced_assets, reduced_eps)
+                    list(imtls), rlzs, hdata, reduced_assets, reduced_eps)
                 if ri.weight > 0:
                     riskinputs.append(ri)
             assert riskinputs

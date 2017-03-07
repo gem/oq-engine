@@ -24,9 +24,10 @@ from nose.plugins.attrib import attr
 
 import numpy.testing
 
-from openquake.baselib.general import group_array
+from openquake.baselib.general import group_array, writetmp
 from openquake.commonlib.datastore import read
 from openquake.commonlib.util import max_rel_diff_index
+from openquake.calculators.views import rst_table
 from openquake.calculators.export import export
 from openquake.calculators.event_based import get_mean_curves
 from openquake.calculators.tests import CalculatorTestCase
@@ -132,7 +133,8 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
-        [fname] = export(('gmf_data:65536', 'csv'), self.calc.datastore)
+        [fname] = export(('gmf_data:4294967296', 'csv'),
+                         self.calc.datastore)
         self.assertEqualFiles('expected/gmf-65536.csv', fname)
 
         # test that the .npz export runs
@@ -227,6 +229,10 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
 
         [fname] = out['realizations', 'csv']
         self.assertEqualFiles('expected/realizations.csv', fname)
+
+        # test for the mean gmv
+        got = writetmp(rst_table(self.calc.datastore['gmdata'].value))
+        self.assertEqualFiles('expected/gmdata.csv', got)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_7(self):
