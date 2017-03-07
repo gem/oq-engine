@@ -19,7 +19,7 @@ install:
 script:
   - nosetests --with-doctest -vsx -a'!slow'
   - cat /tmp/webui*
-  - bin/oq info -r demos/hazard
+  - bin/run-demos.sh
   - bin/oq reset --yes
 
 after_success:
