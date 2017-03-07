@@ -265,7 +265,7 @@ def del_calc(db, job_id, user):
     Delete a calculation and all associated outputs, if possible.
 
     :param db: a :class:`openquake.server.dbapi.Db` instance
-    :param job_id: job ID
+    :param job_id: job ID, can be an integer or a string
     :param user: username
     :returns: None if everything went fine or an error message
     """
