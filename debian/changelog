@@ -3,6 +3,7 @@
     isn't fork-safe on macOS Sierra
 
   [Michele Simionato]
+  * Fixed a TypeError when deleting a calculation from the WebUI
   * Extended the command `oq to_hdf5` to manage source model files too
   * Improved significantly the performance of the event based calculator
     when computing the GMFs and not the hazard curves
