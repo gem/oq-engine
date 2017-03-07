@@ -276,16 +276,17 @@ def del_calc(db, job_id, user):
         return ('Cannot delete calculation %d: there are calculations '
                 'dependent from it: %s' % (job_id, [j.id for j in dependent]))
     try:
-        user, path = db('SELECT user_name, ds_calc_dir FROM job WHERE id=?x',
-                        job_id, one=True)
+        owner, path = db('SELECT user_name, ds_calc_dir FROM job WHERE id=?x',
+                         job_id, one=True)
     except NotFound:
         return ('Cannot delete calculation %d: ID does not exist' % job_id)
 
+    print(owner, user)
     deleted = db('DELETE FROM job WHERE id=?x AND user_name=?x',
                  job_id, user).rowcount
     if not deleted:
-        return ('Cannot delete calculation %d: belongs to a different user '
-                '(%s)' % (job_id, user))
+        return ('Cannot delete calculation %d: it belongs to '
+                '%s and you are %s' % (job_id, owner, user))
 
     # try to delete datastore and associated files
     # path has typically the form /home/user/oqdata/calc_XXX
