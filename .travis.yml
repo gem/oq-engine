@@ -17,9 +17,9 @@ install:
   - pip install -e .
 
 script:
+  - bin/run-demos.sh
   - nosetests --with-doctest -vsx -a'!slow'
   - cat /tmp/webui*
-  - bin/run-demos.sh
   - bin/oq reset --yes
 
 after_success:
