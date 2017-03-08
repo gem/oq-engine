@@ -15,8 +15,6 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import h5py
-import unittest
 from openquake.baselib.general import writetmp
 from openquake.calculators.export import export
 from openquake.calculators.views import view, rst_table
@@ -48,9 +46,15 @@ class UcerfTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'ucerf')
     def test_event_based_sampling(self):
         self.run_calc(ucerf.__file__, 'job_ebh.ini')
+
+        # check the GMFs
         gmdata = self.calc.datastore['gmdata'].value
         got = writetmp(rst_table(gmdata, fmt='%s'))
         self.assertEqualFiles('expected/gmdata.csv', got)
+
+        # check the mean hazard map
+        got = writetmp(view('hmap', self.calc.datastore))
+        self.assertEqualFiles('expected/hmap.rst', got)
 
     @attr('qa', 'hazard', 'ucerf')
     def test_classical(self):
