@@ -36,7 +36,7 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base, classical
 from openquake.calculators.ucerf_event_based import (
-    UCERFControl, DEFAULT_TRT, UcerfSource)
+    UCERFControl, DEFAULT_TRT, UcerfSource, get_composite_source_model)
 # FIXME: the counting of effective ruptures has to be revised completely
 
 
@@ -148,23 +148,7 @@ class UcerfPSHACalculator(classical.PSHACalculator):
         """
         logging.warn('%s is still experimental', self.__class__.__name__)
         self.sitecol = readinput.get_site_collection(self.oqparam)
-        self.gsim_lt = readinput.get_gsim_lt(self.oqparam, [DEFAULT_TRT])
-        self.smlt = readinput.get_source_model_lt(self.oqparam)
-        parser = nrml.SourceModelParser(
-            SourceConverter(self.oqparam.investigation_time,
-                            self.oqparam.rupture_mesh_spacing))
-        [self.src_group] = parser.parse_src_groups(
-            self.oqparam.inputs["source_model"])
-        source_models = []
-        for sm in self.smlt.gen_source_models(self.gsim_lt):
-            sg = copy.copy(self.src_group)
-            sg.id = sm.ordinal
-            sm.src_groups = [sg]
-            # sm.path[0]=ltbrTrueMean, sm.name=FM0_0/MEANFS/MEANMSR/MeanRates
-            sg.sources = [UcerfSource(sg[0], sm.ordinal, sm.path[0], sm.name)]
-            source_models.append(sm)
-        self.csm = source.CompositeSourceModel(
-            self.gsim_lt, self.smlt, source_models, set_weight=True)
+        self.csm = get_composite_source_model(self.oqparam)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
         self.rup_data = {}
         self.num_tiles = 1

@@ -723,6 +723,28 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
 compute_ruptures.shared_dir_on = config.SHARED_DIR_ON
 
 
+def get_composite_source_model(oq):
+    """
+    :param oq: :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :returns: a `class:`openquake.commonlib.source.CompositeSourceModel`
+    """
+    gsim_lt = readinput.get_gsim_lt(oq, [DEFAULT_TRT])
+    smlt = readinput.get_source_model_lt(oq)
+    [src_group] = nrml.parse(
+        oq.inputs["source_model"],
+        SourceConverter(oq.investigation_time, oq.rupture_mesh_spacing))
+    [src] = src_group
+    source_models = []
+    for sm in smlt.gen_source_models(gsim_lt):
+        sg = copy.copy(src_group)
+        sg.id = sm.ordinal
+        sm.src_groups = [sg]
+        sg.sources = [UcerfSource(sg[0], sm.ordinal, sm.path[0], sm.name)]
+        source_models.append(sm)
+    return source.CompositeSourceModel(
+        gsim_lt, smlt, source_models, set_weight=True)
+
+
 @base.calculators.add('ucerf_rupture')
 class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
     """
@@ -738,31 +760,11 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         oq = self.oqparam
         self.read_risk_data()  # read the site collection
         self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
-        self.gsim_lt = readinput.get_gsim_lt(oq, [DEFAULT_TRT])
-        self.smlt = readinput.get_source_model_lt(oq)
         self.monitor.save_info(dict(hostname=socket.gethostname()))
-        parser = nrml.SourceModelParser(
-            SourceConverter(oq.investigation_time, oq.rupture_mesh_spacing))
-        [src_group] = parser.parse_src_groups(oq.inputs["source_model"])
-        [src] = src_group
-        branches = sorted(self.smlt.branches.items())
-        source_models = []
-        num_gsim_paths = self.gsim_lt.get_num_paths()
-        for grp_id, rlz in enumerate(self.smlt):
-            [name] = rlz.lt_path
-            sg = copy.copy(src_group)
-            sg.id = grp_id
-            # i.e, branch_name='ltbr0001'
-            # branch_id='FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2'
-            sg.sources = [UcerfSource(src, grp_id, name, rlz.value)]
-            sm = logictree.SourceModel(
-                name, rlz.weight, [name], [sg], num_gsim_paths, grp_id, 1)
-            source_models.append(sm)
-        self.csm = source.CompositeSourceModel(
-            self.gsim_lt, self.smlt, source_models, set_weight=True)
+        self.csm = get_composite_source_model(oq)
         self.datastore['csm_info'] = self.csm.info
-        logging.info('Found %d x %d logic tree branches', len(branches),
-                     self.gsim_lt.get_num_paths())
+        logging.info('Found %d source model logic tree branches',
+                     len(self.csm.source_models))
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
         self.infos = []
         self.eid = collections.Counter()  # sm_id -> event_id
