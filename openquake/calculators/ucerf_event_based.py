@@ -556,7 +556,7 @@ class UcerfSource(object):
         ridx_string = "-".join(str(val) for val in ridx)
         return rupture, ridx_string
 
-    def generate_event_set(self, background_sids, src_filter, seed):
+    def generate_event_set(self, background_sids, src_filter, samples, seed):
         """
         Generates the event set corresponding to a particular branch
         """
@@ -693,7 +693,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     for ses_idx, seed in param['ses_seeds']:
         with sampl_mon:
             rups, n_occs = src.generate_event_set(
-                background_sids, src_filter, seed)
+                background_sids, src_filter, param['samples'], seed)
         with filt_mon:
             for rup, n_occ in zip(rups, n_occs):
                 rup.seed = seed
@@ -781,18 +781,18 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         # branch then `parallel.Starmap` will run the task in core
         for sm_id in range(len(csm.source_models)):
             ssm = csm.get_model(sm_id)
+            [sm] = ssm.source_models
             mon = monitor.new(
                 ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
                 maximum_distance=oq.maximum_distance,
-                samples=ssm.source_models[0].samples,
                 save_ruptures=oq.save_ruptures,
                 seed=oq.ses_seed)
             gsims = ssm.gsim_lt.values[DEFAULT_TRT]
             srcs = ssm.get_sources()
             for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
                 ses_seeds = [(ses_idx, oq.ses_seed + ses_idx)]
-                allargs.append((srcs, self.src_filter, gsims,
-                                dict(ses_seeds=ses_seeds), mon))
+                param = dict(ses_seeds=ses_seeds, samples=sm.samples)
+                allargs.append((srcs, self.src_filter, gsims, param, mon))
         return allargs
 
 
