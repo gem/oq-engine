@@ -32,7 +32,7 @@ from openquake.baselib.python3compat import zip
 from openquake.baselib import parallel
 from openquake.hazardlib import nrml
 from openquake.risklib import riskinput
-from openquake.commonlib import readinput, source, calc, config, logictree
+from openquake.commonlib import readinput, source, calc, config
 from openquake.calculators import base, event_based
 from openquake.calculators.event_based_risk import (
     EbriskCalculator, build_el_dtypes, event_based_risk)
@@ -556,7 +556,7 @@ class UcerfSource(object):
         ridx_string = "-".join(str(val) for val in ridx)
         return rupture, ridx_string
 
-    def generate_event_set(self, background_sids, src_filter, samples, seed):
+    def generate_event_set(self, background_sids, src_filter, seed):
         """
         Generates the event set corresponding to a particular branch
         """
@@ -690,33 +690,35 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     background_sids = src.get_background_sids(src_filter)
     sitecol = src_filter.sitecol
     idist = src_filter.integration_distance
-    for ses_idx, seed in param['ses_seeds']:
-        with sampl_mon:
-            rups, n_occs = src.generate_event_set(
-                background_sids, src_filter, param['samples'], seed)
-        with filt_mon:
-            for rup, n_occ in zip(rups, n_occs):
-                rup.seed = seed
-                try:
-                    r_sites, rrup = idist.get_closest(sitecol, rup)
-                except FarAwayRupture:
-                    continue
-                indices = r_sites.indices
-                events = []
-                for occ in range(n_occ):
-                    events.append((0, ses_idx, occ, 0))  # 0 is the sampling
-                if events:
-                    evs = numpy.array(events, calc.event_dt)
-                    ebruptures.append(
-                        calc.EBRupture(rup, indices, evs, src.source_id,
-                                       src.src_group_id, serial))
-                    serial += 1
+    for sample in range(param['samples']):
+        for ses_idx, ses_seed in param['ses_seeds']:
+            seed = sample * 65536 + ses_seed
+            with sampl_mon:
+                rups, n_occs = src.generate_event_set(
+                    background_sids, src_filter, seed)
+            with filt_mon:
+                for rup, n_occ in zip(rups, n_occs):
+                    rup.seed = seed
+                    try:
+                        r_sites, rrup = idist.get_closest(sitecol, rup)
+                    except FarAwayRupture:
+                        continue
+                    indices = r_sites.indices
+                    events = []
+                    for occ in range(n_occ):
+                        events.append((0, ses_idx, occ, sample))
+                    if events:
+                        evs = numpy.array(events, calc.event_dt)
+                        ebruptures.append(
+                            calc.EBRupture(rup, indices, evs, src.source_id,
+                                           src.src_group_id, serial))
+                        serial += 1
     res.num_events = event_based.set_eids(
         ebruptures, getattr(monitor, 'task_no', 0))
     res[src.src_group_id] = ebruptures
     res.calc_times[src.src_group_id] = (
         src.source_id, len(sitecol), time.time() - t0)
-    if monitor.save_ruptures:
+    if param['save_ruptures']:
         res.rup_data = {src.src_group_id: calc.RuptureData(DEFAULT_TRT, gsims)
                         .to_array(ebruptures)}
     return res
@@ -782,17 +784,13 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         for sm_id in range(len(csm.source_models)):
             ssm = csm.get_model(sm_id)
             [sm] = ssm.source_models
-            mon = monitor.new(
-                ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
-                maximum_distance=oq.maximum_distance,
-                save_ruptures=oq.save_ruptures,
-                seed=oq.ses_seed)
             gsims = ssm.gsim_lt.values[DEFAULT_TRT]
             srcs = ssm.get_sources()
             for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
                 ses_seeds = [(ses_idx, oq.ses_seed + ses_idx)]
-                param = dict(ses_seeds=ses_seeds, samples=sm.samples)
-                allargs.append((srcs, self.src_filter, gsims, param, mon))
+                param = dict(ses_seeds=ses_seeds, samples=sm.samples,
+                             save_ruptures=oq.save_ruptures)
+                allargs.append((srcs, self.src_filter, gsims, param, monitor))
         return allargs
 
 
@@ -821,8 +819,10 @@ def compute_losses(ssm, ses_seeds, src_filter, assetcol, riskmodel,
     [grp] = ssm.src_groups
     res = List()
     gsims = ssm.gsim_lt.values[DEFAULT_TRT]
+    # FIXME: sampling is silently ignored for ucerf_risk
     res.ruptures_by_grp = compute_ruptures(
-        grp, src_filter, gsims, dict(ses_seeds=ses_seeds), monitor)
+        grp, src_filter, gsims, dict(ses_seeds=ses_seeds, samples=1,
+                                     save_ruptures=False), monitor)
     [(grp_id, ebruptures)] = res.ruptures_by_grp.items()
     rlzs_assoc = ssm.info.get_rlzs_assoc()
     num_rlzs = len(rlzs_assoc.realizations)
