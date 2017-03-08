@@ -265,7 +265,7 @@ def get_site_collection(oqparam, mesh=None, site_model_params=None):
             # attach the closest site model params to each site
             param, dist = site_model_params.get_closest(
                 pt.longitude, pt.latitude)
-            if dist >= oqparam.site_model_distance:
+            if dist >= oqparam.max_site_model_distance:
                 logging.warn('The site parameter associated to %s came from a '
                              'distance of %d km!' % (pt, dist))
             sitecol.append(
