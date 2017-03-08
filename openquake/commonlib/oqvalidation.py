@@ -29,6 +29,7 @@ from openquake.commonlib import logictree
 from openquake.commonlib.riskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
+TWO16 = 2 ** 16  # 65536
 
 
 class OqParam(valid.ParamSet):
@@ -192,6 +193,13 @@ class OqParam(valid.ParamSet):
                 and self.asset_correlation not in (0, 1)):
             raise ValueError('asset_correlation != {0, 1} is no longer'
                              ' supported')
+
+        if self.ses_per_logic_tree_path >= TWO16:
+            raise ValueError('ses_per_logic_tree_path too big: %d' %
+                             self.ses_per_logic_tree_path)
+        if self.number_of_logic_tree_samples >= TWO16:
+            raise ValueError('number_of_logic_tree_samples too big: %d' %
+                             self.number_of_logic_tree_samples)
 
     def check_gsims(self, gsims):
         """
