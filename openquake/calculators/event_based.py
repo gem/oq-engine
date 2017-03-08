@@ -103,14 +103,13 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     eb_ruptures = []
     calc_times = []
     rup_mon = monitor('filtering ruptures', measuremem=False)
-    num_samples = monitor.samples
     # Compute and save stochastic event sets
     for src, s_sites in src_filter(sources):
         t0 = time.time()
         if s_sites is None:
             continue
         num_occ_by_rup = sample_ruptures(
-            src, monitor.ses_per_logic_tree_path, num_samples,
+            src, monitor.ses_per_logic_tree_path, param['samples'],
             monitor.seed)
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.

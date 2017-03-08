@@ -15,11 +15,9 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-import h5py
-import unittest
 from openquake.baselib.general import writetmp
 from openquake.calculators.export import export
-from openquake.calculators.views import view
+from openquake.calculators.views import view, rst_table
 from openquake.qa_tests_data import ucerf
 from openquake.calculators.tests import CalculatorTestCase
 
@@ -29,8 +27,6 @@ from nose.plugins.attrib import attr
 class UcerfTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'ucerf')
     def test_event_based(self):
-        if h5py.__version__ < '2.6.0':
-            raise unittest.SkipTest  # UCERF requires vlen arrays
         self.run_calc(ucerf.__file__, 'job.ini')
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         # check that we get the expected number of events
@@ -48,9 +44,20 @@ class UcerfTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
 
     @attr('qa', 'hazard', 'ucerf')
+    def test_event_based_sampling(self):
+        self.run_calc(ucerf.__file__, 'job_ebh.ini')
+
+        # check the GMFs
+        gmdata = self.calc.datastore['gmdata'].value
+        got = writetmp(rst_table(gmdata, fmt='%s'))
+        self.assertEqualFiles('expected/gmdata.csv', got)
+
+        # check the mean hazard map
+        got = writetmp(view('hmap', self.calc.datastore))
+        self.assertEqualFiles('expected/hmap.rst', got)
+
+    @attr('qa', 'hazard', 'ucerf')
     def test_classical(self):
-        if h5py.__version__ < '2.6.0':
-            raise unittest.SkipTest  # UCERF requires vlen arrays
         out = self.run_calc(ucerf.__file__, 'job_classical_redux.ini',
                             exports='csv')
         [f1, f2] = out['hcurves', 'csv']
@@ -62,8 +69,6 @@ class UcerfTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'ucerf_td')
     def test_classical_time_dep(self):
-        if h5py.__version__ < '2.6.0':
-            raise unittest.SkipTest  # UCERF requires vlen arrays
         out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
                             exports='csv')
         fname = out['hcurves', 'csv'][0]
@@ -75,8 +80,6 @@ class UcerfTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'ucerf_td')
     def test_classical_time_dep_sampling(self):
-        if h5py.__version__ < '2.6.0':
-            raise unittest.SkipTest  # UCERF requires vlen arrays
         out = self.run_calc(ucerf.__file__, 'job_classical_time_dep_redux.ini',
                             number_of_logic_tree_samples='2',
                             exports='csv')
@@ -86,8 +89,6 @@ class UcerfTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'ucerf')
     def test_event_based_risk(self):
-        if h5py.__version__ < '2.6.0':
-            raise unittest.SkipTest  # UCERF requires vlen arrays
         self.run_calc(ucerf.__file__, 'job_ebr.ini',
                       number_of_logic_tree_samples='2')
 
