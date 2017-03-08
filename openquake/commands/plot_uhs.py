@@ -29,8 +29,7 @@ def make_figure(indices, n_sites, imtls, poes, pmap_by_rlz):
     :param poes: PoEs used to compute the hazard maps
     :param pmap_by_rlz: a dictionary realization tag -> pmap
     """
-    # NB: matplotlib is imported inside, otherwise nosetest would fail in an
-    # installation without matplotlib
+    # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
 
     fig = plt.figure()
