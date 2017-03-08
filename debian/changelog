@@ -1,3 +1,8 @@
+  [Michele Simionato]
+  * Introduced a configuration parameter `max_site_model_distance` with default of
+    5 km
+  * Implemented sampling in the UCERF event based hazard calculator
+
   [Daniele Viganò]
   * Use threads instead of processes in DbServer because SQLite3
     isn't fork-safe on macOS Sierra
