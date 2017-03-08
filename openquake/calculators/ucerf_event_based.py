@@ -692,7 +692,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     idist = src_filter.integration_distance
     for sample in range(param['samples']):
         for ses_idx, ses_seed in param['ses_seeds']:
-            seed = sample * 65536 + ses_seed
+            seed = sample * event_based.TWO16 + ses_seed
             with sampl_mon:
                 rups, n_occs = src.generate_event_set(
                     background_sids, src_filter, seed)
@@ -764,9 +764,9 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
         self.monitor.save_info(dict(hostname=socket.gethostname()))
         self.csm = get_composite_source_model(oq)
-        self.datastore['csm_info'] = self.csm.info
         logging.info('Found %d source model logic tree branches',
                      len(self.csm.source_models))
+        self.datastore['csm_info'] = self.csm.info
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
         self.infos = []
         self.eid = collections.Counter()  # sm_id -> event_id
