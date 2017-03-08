@@ -1,4 +1,4 @@
-#!/usr/bin/env/python
+#!/usr/bin/env python
 
 '''
 Parser for moment tensor catalogue in GCMT format into a set of GCMT classes

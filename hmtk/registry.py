@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (c) 2013, GEM Foundation
+# Copyright (c) 2017, GEM Foundation
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
