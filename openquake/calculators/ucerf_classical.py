@@ -30,13 +30,13 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.calc.hazard_curve import pmap_from_grp, poe_map
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib import valid, nrml
+from openquake.hazardlib import valid
 from openquake.commonlib import source, readinput, config
 from openquake.hazardlib.sourceconverter import SourceConverter
 
 from openquake.calculators import base, classical
 from openquake.calculators.ucerf_event_based import (
-    UCERFControl, DEFAULT_TRT, UcerfSource, get_composite_source_model)
+    UCERFControl, get_composite_source_model)
 # FIXME: the counting of effective ruptures has to be revised completely
 
 
