@@ -10,6 +10,7 @@ def plot_sites(calc_id):
     Plot the sites and the bounding boxes of the sources, enlarged by
     the maximum distance
     """
+    # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as p
     from matplotlib.patches import Rectangle
     dstore = datastore.read(calc_id)
