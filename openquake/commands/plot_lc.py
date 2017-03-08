@@ -17,15 +17,13 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
+import matplotlib.pyplot as plt
 import numpy
 from openquake.baselib import sap
 from openquake.commonlib import datastore
 
 
 def make_figure(asset, loss_ratios, rcurves):
-    # NB: matplotlib is imported inside, otherwise nosetest would fail in an
-    # installation without matplotlib
-    import matplotlib.pyplot as plt
     loss_types = rcurves.dtype.names
     S, I = rcurves.shape
     num_lt = len(loss_types)

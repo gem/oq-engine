@@ -1,4 +1,5 @@
 from __future__ import division
+import matplotlib.pyplot as p
 from openquake.baselib import sap
 from openquake.commonlib import datastore
 from openquake.hazardlib.calc.filters import SourceFilter
@@ -10,7 +11,6 @@ def plot_sites(calc_id):
     Plot the sites and the bounding boxes of the sources, enlarged by
     the maximum distance
     """
-    import matplotlib.pyplot as p
     from matplotlib.patches import Rectangle
     dstore = datastore.read(calc_id)
     sitecol = dstore['sitecol']
