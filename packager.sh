@@ -98,6 +98,7 @@ sig_hand () {
     echo "signal trapped"
     if [ "$lxc_name" != "" ]; then
         set +e
+        scp "${lxc_ip}:/tmp/dbserver.log" "out_${BUILD_UBUVER}/"
         scp "${lxc_ip}:/tmp/webui*" "out_${BUILD_UBUVER}/"
         scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
         scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/ssh.history"
@@ -1279,7 +1280,11 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     cp debian/control debian/control.orig
     for dep_item in $GEM_DEPENDS; do
         dep="$(echo "$dep_item" | cut -d '|' -f 1)"
-        sed -i "s/\(python-${dep}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3${BUILD_UBUVER}01~dev0\4/g"  debian/control
+        if [ "$dep" = "oq-libs" ]; then
+            sed -i "s/\(python-${dep}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3dev0\4/g"  debian/control
+        else
+            sed -i "s/\(python-${dep}\) \(([<>= ]\+\)\([^)]\+\)\()\)/\1 \2\3${BUILD_UBUVER}01~dev0\4/g"  debian/control
+        fi
     done
 
     if [ "$pkg_maj" = "$ini_maj" -a "$pkg_min" = "$ini_min" -a \

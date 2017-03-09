@@ -47,6 +47,18 @@ MPI support may be added in the future if sponsored by someone. If you would lik
 
 ***
 
+### Python scripts that import openquake
+
+On **Ubuntu** and **RHEL** if a third party python script (or a Jupyter notebook) needs to import openquake as a library (as an example: `from openquake.commonlib import readinput`) you must configure the `PYTHONPATH` first:
+
+```bash
+export PYTHONPATH="/opt/openquake/lib/python2.7/site-packages:$PYTHONPATH"
+```
+
+To make this change permanent, add it at the bottom of `.bashrc` or `.bash_profile` when using `bash` or `.zshrc` if `zsh` is used instead.
+
+***
+
 ### error: [Errno 111] Connection refused
 
 A more detailed stack trace:
