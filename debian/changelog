@@ -1,4 +1,20 @@
   [Michele Simionato]
+  * Introduced a configuration parameter `max_site_model_distance` with default of
+    5 km
+  * Implemented sampling in the UCERF event based hazard calculator
+
+  [Daniele Viganò]
+  * Use threads instead of processes in DbServer because SQLite3
+    isn't fork-safe on macOS Sierra
+
+  [Michele Simionato]
+  * Fixed a TypeError when deleting a calculation from the WebUI
+  * Extended the command `oq to_hdf5` to manage source model files too
+  * Improved significantly the performance of the event based calculator
+    when computing the GMFs and not the hazard curves
+  * Stored information about the mean ground motion in the datastore
+  * Saved the rupture mesh with 32 floats instead of 64 bit floats
+  * Raised the limit on the event IDs from 2^16 to 2^32 per task
   * Fixed classical_risk: there was an error when computing the statistics
     in the case of multiple assets of the same taxonomy on the same site
   * Changed the UCERF event based calculators to parallelize by SES

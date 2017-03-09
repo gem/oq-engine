@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import (
-    AccumDict, humansize, block_splitter, group_array)
+    AccumDict, block_splitter, group_array)
 from openquake.hazardlib.stats import compute_stats, compute_stats2
 from openquake.commonlib import config
 from openquake.calculators import base, event_based
@@ -35,6 +35,7 @@ from openquake.baselib.parallel import Starmap
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+U64 = numpy.uint64
 getweight = operator.attrgetter('weight')
 
 
@@ -50,8 +51,8 @@ def build_el_dtypes(loss_types, insured_losses):
     """
     I = insured_losses + 1
     L = len(loss_types)
-    ela_list = [('eid', U32), ('aid', U32), ('loss', (F32, (L, I)))]
-    elt_list = [('eid', U32), ('loss', (F32, (L, I)))]
+    ela_list = [('eid', U64), ('aid', U32), ('loss', (F32, (L, I)))]
+    elt_list = [('eid', U64), ('loss', (F32, (L, I)))]
     return numpy.dtype(ela_list), numpy.dtype(elt_list)
 
 
@@ -178,8 +179,8 @@ def event_based_risk(riskinput, riskmodel, assetcol, monitor):
         if ass[r]:
             result['asslosses'][r] = numpy.concatenate(ass[r])
 
-    # store the size of the GMFs
-    result['gmfbytes'] = monitor.gmfbytes
+    # store info about the GMFs
+    result['gmdata'] = riskinput.gmdata
     return result
 
 
@@ -288,7 +289,7 @@ class EbrPostCalculator(base.RiskCalculator):
             self.datastore['agg_curve-stats'] = agg_curve_stats
 
 
-elt_dt = numpy.dtype([('eid', U32), ('loss', F32)])
+elt_dt = numpy.dtype([('eid', U64), ('loss', F32)])
 
 save_events = event_based.EventBasedRuptureCalculator.__dict__['save_events']
 
@@ -499,13 +500,13 @@ class EbriskCalculator(base.RiskCalculator):
                     dset[:, r, l] = zero
 
         num_events = collections.Counter()
-        self.gmfbytes = 0
+        self.gmdata = {}
         for res in allres:
             start, stop = res.rlz_slice.start, res.rlz_slice.stop
             for dic in res:
                 if avg_losses:
                     self.save_avg_losses(dset, dic.pop('avglosses'), start)
-                self.gmfbytes += dic.pop('gmfbytes')
+                self.gmdata += dic.pop('gmdata')
                 self.save_losses(
                     dic.pop('agglosses'), dic.pop('asslosses'), start)
             logging.debug(
@@ -515,6 +516,7 @@ class EbriskCalculator(base.RiskCalculator):
                 save_events(self, res.ruptures_by_grp)
             num_events[res.sm_id] += res.num_events
         self.datastore['events'].attrs['num_events'] = sum(num_events.values())
+        event_based.save_gmdata(self, num_rlzs)
         return num_events
 
     def save_avg_losses(self, dset, dic, start):
@@ -545,15 +547,15 @@ class EbriskCalculator(base.RiskCalculator):
 
     def post_execute(self, num_events):
         """
-        Save an array of losses by taxonomy of shape (T, L, R).
+        Save risk data
         """
         event_based.EventBasedRuptureCalculator.__dict__['post_execute'](
             self, num_events)
-        if self.gmfbytes == 0:
+        # gmv[:-2] are the total gmv per each IMT
+        gmv = sum(gm[:-2].sum() for gm in self.gmdata.values())
+        if not gmv:
             raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')
-        logging.info('Generated %s of GMFs', humansize(self.gmfbytes))
-        self.monitor.save_info({'gmfbytes': self.gmfbytes})
 
         A, E = len(self.assetcol), sum(num_events.values())
         if 'all_loss_ratios' in self.datastore:
