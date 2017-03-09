@@ -32,7 +32,7 @@ from openquake.baselib.python3compat import zip
 from openquake.baselib import parallel
 from openquake.hazardlib import nrml
 from openquake.risklib import riskinput
-from openquake.commonlib import readinput, source, calc, config, logictree
+from openquake.commonlib import readinput, source, calc, config
 from openquake.calculators import base, event_based
 from openquake.calculators.event_based_risk import (
     EbriskCalculator, build_el_dtypes, event_based_risk)
@@ -690,37 +690,61 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     background_sids = src.get_background_sids(src_filter)
     sitecol = src_filter.sitecol
     idist = src_filter.integration_distance
-    for ses_idx, seed in param['ses_seeds']:
-        with sampl_mon:
-            rups, n_occs = src.generate_event_set(
-                background_sids, src_filter, seed)
-        with filt_mon:
-            for rup, n_occ in zip(rups, n_occs):
-                rup.seed = seed
-                try:
-                    r_sites, rrup = idist.get_closest(sitecol, rup)
-                except FarAwayRupture:
-                    continue
-                indices = r_sites.indices
-                events = []
-                for occ in range(n_occ):
-                    events.append((0, ses_idx, occ, 0))  # 0 is the sampling
-                if events:
-                    evs = numpy.array(events, calc.event_dt)
-                    ebruptures.append(
-                        calc.EBRupture(rup, indices, evs, src.source_id,
-                                       src.src_group_id, serial))
-                    serial += 1
+    for sample in range(param['samples']):
+        for ses_idx, ses_seed in param['ses_seeds']:
+            seed = sample * event_based.TWO16 + ses_seed
+            with sampl_mon:
+                rups, n_occs = src.generate_event_set(
+                    background_sids, src_filter, seed)
+            with filt_mon:
+                for rup, n_occ in zip(rups, n_occs):
+                    rup.seed = seed
+                    try:
+                        r_sites, rrup = idist.get_closest(sitecol, rup)
+                    except FarAwayRupture:
+                        continue
+                    indices = r_sites.indices
+                    events = []
+                    for occ in range(n_occ):
+                        events.append((0, ses_idx, occ, sample))
+                    if events:
+                        evs = numpy.array(events, calc.event_dt)
+                        ebruptures.append(
+                            calc.EBRupture(rup, indices, evs, src.source_id,
+                                           src.src_group_id, serial))
+                        serial += 1
     res.num_events = event_based.set_eids(
         ebruptures, getattr(monitor, 'task_no', 0))
     res[src.src_group_id] = ebruptures
     res.calc_times[src.src_group_id] = (
         src.source_id, len(sitecol), time.time() - t0)
-    if monitor.save_ruptures:
+    if param['save_ruptures']:
         res.rup_data = {src.src_group_id: calc.RuptureData(DEFAULT_TRT, gsims)
                         .to_array(ebruptures)}
     return res
 compute_ruptures.shared_dir_on = config.SHARED_DIR_ON
+
+
+def get_composite_source_model(oq):
+    """
+    :param oq: :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :returns: a `class:`openquake.commonlib.source.CompositeSourceModel`
+    """
+    gsim_lt = readinput.get_gsim_lt(oq, [DEFAULT_TRT])
+    smlt = readinput.get_source_model_lt(oq)
+    [src_group] = nrml.parse(
+        oq.inputs["source_model"],
+        SourceConverter(oq.investigation_time, oq.rupture_mesh_spacing))
+    [src] = src_group
+    source_models = []
+    for sm in smlt.gen_source_models(gsim_lt):
+        sg = copy.copy(src_group)
+        sg.id = sm.ordinal
+        sm.src_groups = [sg]
+        sg.sources = [UcerfSource(sg[0], sm.ordinal, sm.path[0], sm.name)]
+        source_models.append(sm)
+    return source.CompositeSourceModel(
+        gsim_lt, smlt, source_models, set_weight=True)
 
 
 @base.calculators.add('ucerf_rupture')
@@ -738,31 +762,11 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         oq = self.oqparam
         self.read_risk_data()  # read the site collection
         self.src_filter = SourceFilter(self.sitecol, oq.maximum_distance)
-        self.gsim_lt = readinput.get_gsim_lt(oq, [DEFAULT_TRT])
-        self.smlt = readinput.get_source_model_lt(oq)
         self.monitor.save_info(dict(hostname=socket.gethostname()))
-        parser = nrml.SourceModelParser(
-            SourceConverter(oq.investigation_time, oq.rupture_mesh_spacing))
-        [src_group] = parser.parse_src_groups(oq.inputs["source_model"])
-        [src] = src_group
-        branches = sorted(self.smlt.branches.items())
-        source_models = []
-        num_gsim_paths = self.gsim_lt.get_num_paths()
-        for grp_id, rlz in enumerate(self.smlt):
-            [name] = rlz.lt_path
-            sg = copy.copy(src_group)
-            sg.id = grp_id
-            # i.e, branch_name='ltbr0001'
-            # branch_id='FM3_1/ABM/Shaw09Mod/DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2'
-            sg.sources = [UcerfSource(src, grp_id, name, rlz.value)]
-            sm = logictree.SourceModel(
-                name, rlz.weight, [name], [sg], num_gsim_paths, grp_id, 1)
-            source_models.append(sm)
-        self.csm = source.CompositeSourceModel(
-            self.gsim_lt, self.smlt, source_models, set_weight=True)
+        self.csm = get_composite_source_model(oq)
+        logging.info('Found %d source model logic tree branches',
+                     len(self.csm.source_models))
         self.datastore['csm_info'] = self.csm.info
-        logging.info('Found %d x %d logic tree branches', len(branches),
-                     self.gsim_lt.get_num_paths())
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
         self.infos = []
         self.eid = collections.Counter()  # sm_id -> event_id
@@ -779,18 +783,14 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         # branch then `parallel.Starmap` will run the task in core
         for sm_id in range(len(csm.source_models)):
             ssm = csm.get_model(sm_id)
-            mon = monitor.new(
-                ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
-                maximum_distance=oq.maximum_distance,
-                samples=ssm.source_models[0].samples,
-                save_ruptures=oq.save_ruptures,
-                seed=oq.ses_seed)
+            [sm] = ssm.source_models
             gsims = ssm.gsim_lt.values[DEFAULT_TRT]
             srcs = ssm.get_sources()
             for ses_idx in range(1, oq.ses_per_logic_tree_path + 1):
                 ses_seeds = [(ses_idx, oq.ses_seed + ses_idx)]
-                allargs.append((srcs, self.src_filter, gsims,
-                                dict(ses_seeds=ses_seeds), mon))
+                param = dict(ses_seeds=ses_seeds, samples=sm.samples,
+                             save_ruptures=oq.save_ruptures)
+                allargs.append((srcs, self.src_filter, gsims, param, monitor))
         return allargs
 
 
@@ -819,8 +819,10 @@ def compute_losses(ssm, ses_seeds, src_filter, assetcol, riskmodel,
     [grp] = ssm.src_groups
     res = List()
     gsims = ssm.gsim_lt.values[DEFAULT_TRT]
+    # FIXME: sampling is silently ignored for ucerf_risk
     res.ruptures_by_grp = compute_ruptures(
-        grp, src_filter, gsims, dict(ses_seeds=ses_seeds), monitor)
+        grp, src_filter, gsims, dict(ses_seeds=ses_seeds, samples=1,
+                                     save_ruptures=False), monitor)
     [(grp_id, ebruptures)] = res.ruptures_by_grp.items()
     rlzs_assoc = ssm.info.get_rlzs_assoc()
     num_rlzs = len(rlzs_assoc.realizations)
@@ -882,6 +884,6 @@ class UCERFRiskCalculator(EbriskCalculator):
     def execute(self):
         num_rlzs = len(self.rlzs_assoc.realizations)
         self.grp_trt = self.csm.info.grp_trt()
-        allres = parallel.Starmap(compute_losses, self.gen_args()).submit_all()
-        num_events = self.save_results(allres, num_rlzs)
+        res = parallel.Starmap(compute_losses, self.gen_args()).submit_all()
+        num_events = self.save_results(res, num_rlzs)
         return num_events
