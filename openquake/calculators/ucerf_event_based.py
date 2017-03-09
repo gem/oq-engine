@@ -721,6 +721,9 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     if param['save_ruptures']:
         res.rup_data = {src.src_group_id: calc.RuptureData(DEFAULT_TRT, gsims)
                         .to_array(ebruptures)}
+    else:
+        res.events_by_grp = {grp_id: event_based.get_events(res[grp_id])
+                             for grp_id in res}
     return res
 compute_ruptures.shared_dir_on = config.SHARED_DIR_ON
 
@@ -820,10 +823,10 @@ def compute_losses(ssm, ses_seeds, src_filter, assetcol, riskmodel,
     res = List()
     gsims = ssm.gsim_lt.values[DEFAULT_TRT]
     # FIXME: sampling is silently ignored for ucerf_risk
-    res.ruptures_by_grp = compute_ruptures(
+    ruptures_by_grp = compute_ruptures(
         grp, src_filter, gsims, dict(ses_seeds=ses_seeds, samples=1,
                                      save_ruptures=False), monitor)
-    [(grp_id, ebruptures)] = res.ruptures_by_grp.items()
+    [(grp_id, ebruptures)] = ruptures_by_grp.items()
     rlzs_assoc = ssm.info.get_rlzs_assoc()
     num_rlzs = len(rlzs_assoc.realizations)
     ri = riskinput.RiskInputFromRuptures(
@@ -834,6 +837,7 @@ def compute_losses(ssm, ses_seeds, src_filter, assetcol, riskmodel,
     res.num_events = len(ri.eids)
     start = res.sm_id * num_rlzs
     res.rlz_slice = slice(start, start + num_rlzs)
+    res.events_by_grp = ruptures_by_grp.events_by_grp
     return res
 compute_losses.shared_dir_on = config.SHARED_DIR_ON
 
