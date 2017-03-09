@@ -28,8 +28,8 @@ from openquake.commands import engine
 @sap.Script
 def run_tiles(num_tiles, job_ini, poolsize=0):
     """
-    Run a calculation by splitting the sites into tiles.
-    WARNING: this is experimental and meant only for GEM users
+    Run a hazard calculation by splitting the sites into tiles.
+    WARNING: this is experimental and meant only for internal users
     """
     t0 = time.time()
     oq = readinput.get_oqparam(job_ini)

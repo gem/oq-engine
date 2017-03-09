@@ -24,8 +24,7 @@ import logging
 
 from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.baselib import sap
-from openquake.hazardlib import valid
-from openquake.risklib import scientific
+from openquake.hazardlib import valid, stats
 from openquake.commonlib import datastore
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import rmsep
@@ -59,7 +58,7 @@ def get_hcurves_and_means(dstore):
     N = len(dstore['sitecol'])
     mean_curves = zero_curves(N, oq.imtls)
     for imt in oq.imtls:
-        mean_curves[imt] = scientific.mean_curve(
+        mean_curves[imt] = stats.mean_curve(
             [curves_by_rlz[rlz][imt] for rlz in sorted(curves_by_rlz)],
             weights)
     return curves_by_rlz, mean_curves
