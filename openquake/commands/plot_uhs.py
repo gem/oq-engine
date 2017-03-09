@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
+import matplotlib.pyplot as plt
 from openquake.baselib import sap
 from openquake.commonlib import datastore, calc
 
@@ -29,10 +30,6 @@ def make_figure(indices, n_sites, imtls, poes, pmap_by_rlz):
     :param poes: PoEs used to compute the hazard maps
     :param pmap_by_rlz: a dictionary realization tag -> pmap
     """
-    # NB: matplotlib is imported inside, otherwise nosetest would fail in an
-    # installation without matplotlib
-    import matplotlib.pyplot as plt
-
     fig = plt.figure()
     n_poes = len(poes)
     uhs_by_rlz = {rlz: calc.make_uhs(pmap_by_rlz[rlz], imtls, poes, n_sites)
