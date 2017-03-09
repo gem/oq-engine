@@ -98,6 +98,7 @@ sig_hand () {
     echo "signal trapped"
     if [ "$lxc_name" != "" ]; then
         set +e
+        scp "${lxc_ip}:/tmp/dbserver.log" "out_${BUILD_UBUVER}/"
         scp "${lxc_ip}:/tmp/webui*" "out_${BUILD_UBUVER}/"
         scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
         scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/ssh.history"
