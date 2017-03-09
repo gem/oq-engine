@@ -177,7 +177,7 @@ Response: Redirects to [/v1/calc/:calc_id](#get-v1calchazardcalc_id), where `cal
 
 #### POST /v1/valid/
 
-Leverage oq-risklib to check if a given XML text is a valid NRML.
+Check if a given XML text is a valid NRML.
 
 Parameters:
 
@@ -186,22 +186,27 @@ Parameters:
 Response:
 
 a JSON object, containing:
+
     * valid: a boolean indicating if the provided text is a valid NRML
     * error_msg: the error message, if any error was found (None otherwise)
     * error_line: line of the given XML where the error was found (None if no error was found or if it was not a validation error)
 
 
-#### POST /v1/ajax_login/
+#### POST /accounts/ajax_login/
 
 Attempt to login, given the parameters `username` and `password`
 
 
-#### POST /v1/ajax_logout/
+#### POST /accounts/ajax_logout/
 
 Logout
 
 
-#### GET /v1/version/
+#### GET /engine_version
 
-Return a string with the openquake.engine version
+Return a string with the OpenQuake engine version
 
+
+#### GET /v1/available_gsims
+
+Return a list of strings with the available GSIMs
