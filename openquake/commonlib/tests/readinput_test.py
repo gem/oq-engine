@@ -197,6 +197,7 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.maximum_distance = 100
+        oqparam.max_site_model_distance = 5
         oqparam.sites = [(1.0, 0, 0)]
         oqparam.inputs = dict(site_model=sitemodel())
         with mock.patch('logging.warn') as warn:

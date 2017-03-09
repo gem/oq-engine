@@ -25,14 +25,14 @@ import decimal
 import functools
 import itertools
 import numpy
-import h5py
 
 from openquake.baselib.general import (
     humansize, groupby, AccumDict, CallableDict)
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.python3compat import unicode, decode
+from openquake.hazardlib import valid
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import util, source
+from openquake.commonlib import util, source, calc
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv, FIVEDIGITS)
 
@@ -673,3 +673,27 @@ def view_task_slowest(token, dstore):
     srcs = set(decode(s).split(':', 1)[0] for s in sources)
     return 'taskno=%d, weight=%d, duration=%d s, sources="%s"' % (
         taskno, weight, duration, ' '.join(sorted(srcs)))
+
+
+@view.add('hmap')
+def view_hmap(token, dstore):
+    """
+    Display the highest 20 points of the mean hazard map. Called as
+    $ oq show hmap:0.1  # 10% PoE
+    """
+    try:
+        poe = valid.probability(token.split(':')[1])
+    except IndexError:
+        poe = 0.1
+    try:
+        mean = dstore['hcurves/mean']
+    except KeyError:  # there is a single realization
+        mean = dstore['hcurves/rlz-000']
+    oq = dstore['oqparam']
+    hmap = calc.make_hmap(mean, oq.imtls, [poe])
+    items = sorted([(hmap[sid].array.sum(), sid) for sid in hmap])[-20:]
+    dt = numpy.dtype([('sid', U32)] + [(imt, F32) for imt in oq.imtls])
+    array = numpy.zeros(len(items), dt)
+    for i, (maxvalue, sid) in enumerate(reversed(items)):
+        array[i] = (sid, ) + tuple(hmap[sid].array[:, 0])
+    return rst_table(array)
