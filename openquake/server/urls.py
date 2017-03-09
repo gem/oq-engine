@@ -27,6 +27,7 @@ urlpatterns = [
     url(r'^engine_version$', views.get_engine_version),
     url(r'^v1/calc/', include('openquake.server.v1.calc_urls')),
     url(r'^v1/valid/', views.validate_nrml),
+    url(r'^v1/available_gsims$', views.get_available_gsims),
     url(r'^engine/?$', views.web_engine, name="index"),
     url(r'^engine/(\d+)/outputs$',
         views.web_engine_get_outputs, name="outputs"),
