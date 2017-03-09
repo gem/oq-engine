@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a view `get_available_gsims` to the WebUI and fixed the API docs
   * Introduced a configuration parameter `max_site_model_distance` with default of
     5 km
   * Implemented sampling in the UCERF event based hazard calculator
