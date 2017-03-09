@@ -11,6 +11,7 @@ The official supported distributions to develop the OpenQuake Engine and its lib
 - RedHat Enterprise Linux 7 
 - CentOS 7
 - Scientific Linux 7
+- macOS 10.11 and 10.12
 
 This guide may work also on other Linux releases/distributions.
 
@@ -36,28 +37,30 @@ sudo yum install git hdf5-devel geos-devel python-virtualenv python-pip
 ```
 
 ### macOS
-*This procedure refers to the stock Python shipped by Apple on macOS. If you are using a different python (from brew, macports, conda) you may need to adapt the following commands.*
+*This procedure refers to the official Python distribution from [python.org](https://python.org). If you are using a different python (from brew, macports, conda) you may need to adapt the following commands.*
+
+#### Xcode
 
 You must install [Xcode](https://itunes.apple.com/app/xcode/id497799835?mt=12) first.
-`pip` needs to be manually installed too:
 
-```bash
-curl https://bootstrap.pypa.io/get-pip.py | sudo python
-```
+#### Python 
 
-and finally *virtualenv*
+You need to download Python from [python.org](https://python.org): https://www.python.org/ftp/python/2.7.13/python-2.7.13-macosx10.6.pkg
 
-```bash
-sudo pip install virtualenv
-```
 
 ## Build the development environment
 
-A development environment will be built using a python *virtualenv*
+Let's create a working dir called openquake first
 
 ```bash
-virtualenv openquake
-source openquake/bin/activate
+mkdir $HOME/openquake && cd $HOME/openquake
+```
+
+then build a development environment using python *virtualenv*
+
+```bash
+python -m virtualenv oqenv 
+source oqenv/bin/activate
 ```
 
 ## Install the code
@@ -76,8 +79,9 @@ git clone https://github.com/gem/oq-engine.git
 git clone https://github.com/gem/oq-hazardlib.git
 ```
 
-### Install OpenQuake <sup>[1](#note1)</sup> <sup>[2](#note2)</sup>
+### Install OpenQuake 
 
+You may want to install binary dependencies (in the form of python wheels: see [1](#note1) for Linux and [2](#note2) for macOS.
 
 ```bash
 pip install -e oq-hazardlib/
@@ -106,7 +110,21 @@ cd ..
 
 ## Loading and unloading the development environment
 
-To exit from the OpenQuake development environment type `deactivate`. Before using again the OpenQuake software the environment must be loaded back running `source openquake/bin/activate`(assuming that it has been installed under 'openquake'). For more information about *virtualenv* and its you see http://docs.python-guide.org/en/latest/dev/virtualenvs/
+To exit from the OpenQuake development environment type `deactivate`. Before using again the OpenQuake software the environment must be loaded back running `source oqenv/bin/activate`(assuming that it has been installed under 'oqenv'). For more information about *virtualenv* and its you see http://docs.python-guide.org/en/latest/dev/virtualenvs/
+
+To load the virtual environment automatically at every login, add the following line at the bottom of your `~/.bashrc` (Linux) or `~/.profile` (macOS):
+
+```bash
+source $HOME/openquake/qoenv/bin/activate
+```
+
+You can also add a short-hand command to enable it:
+
+```bash
+alias oqenv="source $HOME/openquake/qoenv/bin/activate"
+```
+
+Put it again at the bottom of `~/.bashrc` or `~/.profile`; close and re-open the terminal. You can now load your environment just typing `oqenv`.
 
 ### Multiple installations
 
