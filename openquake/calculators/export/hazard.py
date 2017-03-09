@@ -818,7 +818,7 @@ class GmfExporter(object):
     def export_all(self):
         fnames = []
         imts = list(self.oq.imtls)
-        with self.dstore.ext5():
+        with self.dstore.ext5() as ext5:
             for sm_id in ext5['gmf_data']:
                 events = self.dstore['events/' + sm_id]
                 etag = dict(zip(range(len(events)), build_etags(events)))
@@ -832,10 +832,11 @@ class GmfExporter(object):
                             array, rlz, self.sitecol,
                             imts, self.oq.investigation_time)
                         fname = self.dstore.build_fname(
-                            'gmf', '%s-rlz-%03d' % (etag[eid], rlz.ordinal), 'csv')
+                            'gmf', '%s-rlz-%03d' % (etag[eid], rlz.ordinal),
+                            'csv')
                         logging.info('Exporting %s', fname)
                         writers.write_csv(fname, data, comment=comment)
-                       fnames.append(fname)
+                        fnames.append(fname)
         return fnames
 
 
