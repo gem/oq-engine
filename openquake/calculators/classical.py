@@ -324,10 +324,10 @@ class PSHACalculator(base.HazardCalculator):
                 gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
                 if oq.poes_disagg or oq.iml_disagg:  # only for disaggregation
                     monitor.sm_id = self.rlzs_assoc.sm_ids[sg.id]
-                monitor.samples = self.rlzs_assoc.samples[sg.id]
+                param = dict(samples=sm.samples)
                 for block in self.csm.split_sources(
                         sg.sources, self.src_filter, maxweight):
-                    yield block, self.src_filter, gsims, {}, monitor
+                    yield block, self.src_filter, gsims, param, monitor
 
     def store_source_info(self, infos):
         # save the calculation times per each source
