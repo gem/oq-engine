@@ -30,8 +30,7 @@ def make_figure(indices, imtls, spec_curves, curves=(), label=''):
     :param curves: a dictionary of dictionaries IMT -> array
     :param label: the label associated to `spec_curves`
     """
-    # NB: matplotlib is imported inside, otherwise nosetest would fail in an
-    # installation without matplotlib
+    # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
 
     fig = plt.figure()
