@@ -6,16 +6,21 @@ To develop with the OpenQuake Engine and Hazardlib an installation from sources 
 must remove the openquake package if it was already installed.*
 
 The official supported distributions to develop the OpenQuake Engine and its libraries are
+
+### Linux
+
 - Ubuntu 14.04 LTS (Trusty) 
 - Ubuntu 16.04 LTS (Xenial)
 - RedHat Enterprise Linux 7 
 - CentOS 7
 - Scientific Linux 7
-- macOS 10.11 and 10.12
 
 This guide may work also on other Linux releases/distributions.
 
-Guidelines are provided for *macOS* too.
+### macOS
+
+- macOS 10.11 (El Capitan)
+- macOS 10.12 (Sierra)
 
 ## Prerequisites
 
@@ -46,7 +51,6 @@ You must install [Xcode](https://itunes.apple.com/app/xcode/id497799835?mt=12) f
 #### Python 
 
 You need to download Python from [python.org](https://python.org): https://www.python.org/ftp/python/2.7.13/python-2.7.13-macosx10.6.pkg
-
 
 ## Build the development environment
 
@@ -81,7 +85,7 @@ git clone https://github.com/gem/oq-hazardlib.git
 
 ### Install OpenQuake 
 
-You may want to install binary dependencies (in the form of python wheels: see [1](#note1) for Linux and [2](#note2) for macOS.
+You may want to install binary dependencies (in the form of python wheels: see [1](#note1) and [2](#note2).
 
 ```bash
 pip install -e oq-hazardlib/
