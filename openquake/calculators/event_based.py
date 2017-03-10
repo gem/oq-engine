@@ -313,7 +313,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
                 mul = numpy.average(multiplicity, weights=numsites)
                 self.datastore.set_attrs(
                     dset.name, sites_per_rupture=spr,
-                    multiplicity=mul, nbytes=datastore.get_nbytes(dset))
+                    multiplicity=mul, nbytes=hdf5.get_nbytes(dset))
         self.datastore.set_nbytes('rup_data')
 
 
@@ -515,6 +515,14 @@ class EventBasedCalculator(ClassicalCalculator):
         save_gmdata(self, len(rlzs))
         return acc
 
+    def save_gmf_bytes(self):
+        """Save the attribute nbytes in the gmf_data datasets"""
+        with self.datastore.ext5('r+') as ext5:
+            for sm_id in ext5['gmf_data']:
+                for rlzno in ext5['gmf_data/' + sm_id]:
+                    ext5.set_nbytes('gmf_data/%s/%s' % (sm_id, rlzno))
+            ext5.set_nbytes('gmf_data')
+
     def post_execute(self, result):
         """
         :param result:
@@ -545,16 +553,8 @@ class EventBasedCalculator(ClassicalCalculator):
                 if kind == 'mean' and not self.oqparam.mean_hazard_curves:
                     continue
                 self.datastore['hcurves/' + kind] = stat
-
-        '''
-        if ('gmf_data' in self.datastore and 'nbytes' not
-                in self.datastore['gmf_data'].attrs):
-            self.datastore.set_nbytes('gmf_data')
-            for sm_id in self.datastore['gmf_data']:
-                for rlzno in self.datastore['gmf_data/' + sm_id]:
-                    self.datastore.set_nbytes(
-                        'gmf_data/%s/%s' % (sm_id, rlzno))
-        '''
+        if os.path.exists(self.datastore.ext5path):
+            self.save_gmf_bytes()
         if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
             if not os.path.exists(export_dir):

@@ -886,7 +886,7 @@ def export_gmf_scenario_npz(ekey, dstore):
             for sm_id in sorted(ext5['gmf_data']):
                 for rlzno in sorted(ext5['gmf_data/' + sm_id]):
                     dic['rlz-' + rlzno] = ext5[
-                        'gmf_data/%s/%s' % (sm_id, rlzno)]
+                        'gmf_data/%s/%s' % (sm_id, rlzno)].value
     else:  # nothing to export
         return []
     savez(fname, **dic)
