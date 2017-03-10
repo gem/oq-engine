@@ -421,9 +421,12 @@ class CompositeRiskModel(collections.Mapping):
         mon_hazard = monitor('building hazard')
         mon_risk = monitor('computing risk', measuremem=False)
         with mon_context:
-            assets_by_site = (riskinput.assets_by_site if assetcol is None
-                              else assetcol.assets_by_site())
-            sids = sorted(set(assetcol.array['site_id']))
+            if assetcol is None:
+                assets_by_site = riskinput.assets_by_site
+                sids = range(len(assets_by_site))
+            else:
+                assets_by_site = assetcol.assets_by_site()
+                sids = sorted(set(assetcol.array['site_id']))
             hazard_getter = riskinput.hazard_getter(
                 mon_hazard(measuremem=False))
             if hasattr(hazard_getter, 'init'):  # expensive operation
