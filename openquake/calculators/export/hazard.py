@@ -24,7 +24,6 @@ import collections
 
 import numpy
 
-from openquake.baselib import hdf5
 from openquake.baselib.general import (
     groupby, humansize, get_array, group_array, DictArray)
 from openquake.hazardlib.imt import from_string
@@ -653,8 +652,7 @@ def export_gmf(ekey, dstore):
     if n_gmfs:
         etags = numpy.array(
             sorted([b'scenario-%010d~ses=1' % i for i in range(n_gmfs)]))
-    f = dstore.ext5()
-    gmf_data = f['gmf_data']
+    gmf_data = dstore['gmf_data']
     nbytes = gmf_data.attrs['nbytes']
     logging.info('Internal size of the GMFs: %s', humansize(nbytes))
     if nbytes > GMF_MAX_SIZE:
