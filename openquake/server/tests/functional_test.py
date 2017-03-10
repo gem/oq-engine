@@ -216,6 +216,10 @@ class EngineServerTestCase(unittest.TestCase):
         tb_str = self.postzip('archive_err_3.zip')
         self.assertIn('Could not find any file of the form', tb_str)
 
+    def test_available_gsims(self):
+        resp = requests.get('http://%s/v1/available_gsims' % self.hostport)
+        self.assertIn('ChiouYoungs2014PEER', resp.text)
+
     # tests for nrml validation
 
     def test_validate_nrml_valid(self):
