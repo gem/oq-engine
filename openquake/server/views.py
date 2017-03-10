@@ -38,7 +38,7 @@ from django.shortcuts import render
 from openquake.baselib.general import groupby, writetmp
 from openquake.baselib.python3compat import unicode
 from openquake.baselib.parallel import Starmap, safely_call
-from openquake.hazardlib import nrml
+from openquake.hazardlib import nrml, gsim
 from openquake.risklib import read_nrml
 
 from openquake.commonlib import readinput, oqvalidation, logs
@@ -192,6 +192,16 @@ def get_engine_version(request):
     return HttpResponse(oqversion)
 
 
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def get_available_gsims(request):
+    """
+    Return a list of strings with the available GSIMs
+    """
+    gsims = list(gsim.get_available_gsims())
+    return HttpResponse(content=json.dumps(gsims), content_type=JSON)
+
+
 def _make_response(error_msg, error_line, valid):
     response_data = dict(error_msg=error_msg,
                          error_line=error_line,
@@ -312,11 +322,16 @@ def calc_remove(request, calc_id):
     """
     user = utils.get_user_data(request)['name']
     try:
-        logs.dbcmd('del_calc', calc_id, user)
+        message = logs.dbcmd('del_calc', calc_id, user)
     except dbapi.NotFound:
         return HttpResponseNotFound()
-    return HttpResponse(content=json.dumps([]),
-                        content_type=JSON, status=200)
+    if isinstance(message, list):  # list of removed files
+        return HttpResponse(content=json.dumps(message),
+                            content_type=JSON, status=200)
+    else:  # FIXME: the error is not passed properly to the javascript
+        logging.error(message)
+        return HttpResponse(content=message,
+                            content_type='text/plain', status=500)
 
 
 def log_to_json(log):

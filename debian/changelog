@@ -1,4 +1,17 @@
   [Michele Simionato]
+  * Now the ucerf_risk calculators transfer only the events, not the ruptures,
+    thus reducing the data transfer of several orders of magnitude
+  * Added a view `get_available_gsims` to the WebUI and fixed the API docs
+  * Introduced a configuration parameter `max_site_model_distance` with default of
+    5 km
+  * Implemented sampling in the UCERF event based hazard calculator
+
+  [Daniele Viganò]
+  * Use threads instead of processes in DbServer because SQLite3
+    isn't fork-safe on macOS Sierra
+
+  [Michele Simionato]
+  * Fixed a TypeError when deleting a calculation from the WebUI
   * Extended the command `oq to_hdf5` to manage source model files too
   * Improved significantly the performance of the event based calculator
     when computing the GMFs and not the hazard curves
