@@ -33,7 +33,7 @@ from openquake.calculators import base, views, export
 from openquake.commonlib import logs
 
 TERMINATE = valid.boolean(
-    config.get('celery', 'terminate_workers_on_revoke') or 'false')
+    config.get('distribution', 'terminate_workers_on_revoke') or 'false')
 
 USE_CELERY = config.get('distribution', 'oq_distribute') == 'celery'
 
