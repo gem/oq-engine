@@ -151,6 +151,8 @@ class ClassicalDamageTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_6a(self):
+        # this is a tricky test where the region_constraint discards an asset
+        # so the risk sites are different from the hazard sites
         self.check(case_6a)
 
     @attr('qa', 'risk', 'classical_damage')
