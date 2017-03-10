@@ -103,14 +103,13 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     eb_ruptures = []
     calc_times = []
     rup_mon = monitor('filtering ruptures', measuremem=False)
-    num_samples = monitor.samples
     # Compute and save stochastic event sets
     for src, s_sites in src_filter(sources):
         t0 = time.time()
         if s_sites is None:
             continue
         num_occ_by_rup = sample_ruptures(
-            src, monitor.ses_per_logic_tree_path, num_samples,
+            src, monitor.ses_per_logic_tree_path, param['samples'],
             monitor.seed)
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
@@ -194,6 +193,20 @@ def _count(ruptures):
     return sum(ebr.multiplicity for ebr in ruptures)
 
 
+def get_events(ebruptures):
+    """
+    Extract an array of dtype stored_event_dt from a list of EBRuptures
+    """
+    events = []
+    year = 0  # to be set later
+    for ebr in ebruptures:
+        for event in ebr.events:
+            rec = (event['eid'], ebr.serial, year, event['ses'], event['occ'],
+                   event['sample'], ebr.grp_id)
+            events.append(rec)
+    return numpy.array(events, calc.stored_event_dt)
+
+
 @base.calculators.add('event_based_rupture')
 class EventBasedRuptureCalculator(PSHACalculator):
     """
@@ -248,32 +261,22 @@ class EventBasedRuptureCalculator(PSHACalculator):
         if hasattr(ruptures_by_grp_id, 'eff_ruptures'):
             acc.eff_ruptures += ruptures_by_grp_id.eff_ruptures
         acc += ruptures_by_grp_id
-        self.save_events(ruptures_by_grp_id)
+        self.save_ruptures(ruptures_by_grp_id)
         return acc
 
-    def save_events(self, ruptures_by_grp_id):
+    def save_ruptures(self, ruptures_by_grp_id):
         """Extend the 'events' dataset with the given ruptures"""
         with self.monitor('saving ruptures', autoflush=True):
             for grp_id, ebrs in ruptures_by_grp_id.items():
-                events = []
                 sm_id = self.sm_by_grp[grp_id]
-                for ebr in ebrs:
-                    for event in ebr.events:
-                        rec = (event['eid'],
-                               ebr.serial,
-                               0,  # year to be set
-                               event['ses'],
-                               event['occ'],
-                               event['sample'],
-                               grp_id)
-                        events.append(rec)
-                    if self.oqparam.save_ruptures:
+                if self.oqparam.save_ruptures:
+                    for ebr in ebrs:
                         key = 'ruptures/grp-%02d/%s' % (grp_id, ebr.serial)
                         self.datastore[key] = ebr
-                if events:
+                events = get_events(ebrs)
+                if len(events):
                     ev = 'events/sm-%04d' % sm_id
-                    self.datastore.extend(
-                        ev, numpy.array(events, calc.stored_event_dt))
+                    self.datastore.extend(ev, events)
 
             # save rup_data
             if hasattr(ruptures_by_grp_id, 'rup_data'):
@@ -459,7 +462,7 @@ class EventBasedCalculator(ClassicalCalculator):
         agg_mon.flush()
         self.datastore.flush()
         if 'ruptures' in res:
-            vars(EventBasedRuptureCalculator)['save_events'](
+            vars(EventBasedRuptureCalculator)['save_ruptures'](
                 self, res['ruptures'])
         return acc
 

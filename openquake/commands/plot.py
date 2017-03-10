@@ -30,8 +30,7 @@ def make_figure(indices, imtls, spec_curves, curves=(), label=''):
     :param curves: a dictionary of dictionaries IMT -> array
     :param label: the label associated to `spec_curves`
     """
-    # NB: matplotlib is imported inside, otherwise nosetest would fail in an
-    # installation without matplotlib
+    # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
 
     fig = plt.figure()
@@ -76,8 +75,14 @@ def plot(calc_id, other_id=None, sites='0'):
         plt = make_figure(valid, oq.imtls, mean_curves,
                           {} if single_curve else curves_by_rlz, 'mean')
     else:
-        mean1 = haz['hcurves/mean']
-        mean2 = other['hcurves/mean']
+        try:
+            mean1 = haz['hcurves/mean'].convert(oq.imtls)
+        except KeyError:
+            mean1 = haz['hcurves/rlz-000'].convert(oq.imtls)
+        try:
+            mean2 = other['hcurves/mean'].convert(oq.imtls)
+        except KeyError:
+            mean2 = other['hcurves/rlz-000'].convert(oq.imtls)
         plt = make_figure(valid, oq.imtls, mean1, {'mean': mean2}, 'reference')
     plt.show()
 

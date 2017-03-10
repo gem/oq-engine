@@ -291,7 +291,8 @@ class EbrPostCalculator(base.RiskCalculator):
 
 elt_dt = numpy.dtype([('eid', U64), ('loss', F32)])
 
-save_events = event_based.EventBasedRuptureCalculator.__dict__['save_events']
+save_ruptures = event_based.EventBasedRuptureCalculator.__dict__[
+    'save_ruptures']
 
 
 class EpsilonMatrix0(object):
@@ -513,7 +514,12 @@ class EbriskCalculator(base.RiskCalculator):
                 'Saving results for source model #%d, realizations %d:%d',
                 res.sm_id + 1, start, stop)
             if hasattr(res, 'ruptures_by_grp'):
-                save_events(self, res.ruptures_by_grp)
+                save_ruptures(self, res.ruptures_by_grp)
+            elif hasattr(res, 'events_by_grp'):
+                for grp_id in res.events_by_grp:
+                    events = res.events_by_grp[grp_id]
+                    ev = 'events/sm-%04d' % self.sm_by_grp[grp_id]
+                    self.datastore.extend(ev, events)
             num_events[res.sm_id] += res.num_events
         self.datastore['events'].attrs['num_events'] = sum(num_events.values())
         event_based.save_gmdata(self, num_rlzs)
