@@ -60,6 +60,7 @@ install_requires = [
     'docutils >=0.11, <0.14',
     'decorator >=3.4, <4.1',
     'django >=1.6, <1.11',
+    'matplotlib >=1.5, <2.0',
     'requests >=2.2, <2.13',
     # pyshp is fragile, we want only versions we have tested
     'pyshp >=1.2.3, <1.2.11',
@@ -75,7 +76,6 @@ extras_require = {
     'prctl': ["python-prctl ==1.6.1"],
     'rtree':  ["Rtree >=0.8.2, <0.8.4"],
     'celery':  ["celery >=3.1, <4.0"],
-    'plotting':  ["matplotlib >=1.5"],
 }
 
 setup(

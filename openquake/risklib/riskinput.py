@@ -423,8 +423,12 @@ class CompositeRiskModel(collections.Mapping):
         mon_hazard = monitor('building hazard')
         mon_risk = monitor('computing risk', measuremem=False)
         with mon_context:
-            assets_by_site = (riskinput.assets_by_site if assetcol is None
-                              else assetcol.assets_by_site())
+            if assetcol is None:
+                assets_by_site = riskinput.assets_by_site
+                sids = range(len(assets_by_site))
+            else:
+                assets_by_site = assetcol.assets_by_site()
+                sids = sorted(set(assetcol.array['site_id']))
             hazard_getter = riskinput.hazard_getter(
                 mon_hazard(measuremem=False))
             if hasattr(hazard_getter, 'init'):  # expensive operation
@@ -433,12 +437,12 @@ class CompositeRiskModel(collections.Mapping):
         # group the assets by taxonomy
         taxonomies = set()
         dic = collections.defaultdict(list)
-        for i, assets in enumerate(assets_by_site):
+        for sid, assets in zip(sids, assets_by_site):
             group = groupby(assets, by_taxonomy)
             for taxonomy in group:
                 epsgetter = riskinput.epsilon_getter(
                     [asset.ordinal for asset in group[taxonomy]])
-                dic[taxonomy].append((i, group[taxonomy], epsgetter))
+                dic[taxonomy].append((sid, group[taxonomy], epsgetter))
                 taxonomies.add(taxonomy)
         imti = {imt: i for i, imt in enumerate(riskinput.imts)}
         for rlz in riskinput.rlzs:
@@ -447,11 +451,11 @@ class CompositeRiskModel(collections.Mapping):
             for taxonomy in sorted(taxonomies):
                 riskmodel = self[taxonomy]
                 with mon_risk:
-                    for i, assets, epsgetter in dic[taxonomy]:
+                    for sid, assets, epsgetter in dic[taxonomy]:
                         outs = [None] * len(self.lti)
                         for lt in self.loss_types:
                             imt = riskmodel.risk_functions[lt].imt
-                            haz = hazard[i, imti[imt]]
+                            haz = hazard[sid, imti[imt]]
                             if len(haz):
                                 out = riskmodel(lt, assets, haz, epsgetter)
                                 outs[self.lti[lt]] = out

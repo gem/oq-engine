@@ -47,7 +47,6 @@ read_nrml.update_validators()
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
-MAX_SITE_MODEL_DISTANCE = 5  # km, given by Graeme Weatherill
 
 F32 = numpy.float32
 
@@ -266,7 +265,7 @@ def get_site_collection(oqparam, mesh=None, site_model_params=None):
             # attach the closest site model params to each site
             param, dist = site_model_params.get_closest(
                 pt.longitude, pt.latitude)
-            if dist >= MAX_SITE_MODEL_DISTANCE:
+            if dist >= oqparam.max_site_model_distance:
                 logging.warn('The site parameter associated to %s came from a '
                              'distance of %d km!' % (pt, dist))
             sitecol.append(
