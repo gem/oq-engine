@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Now we save the GMFs on the .ext5 file, not the datastore
   * Now the ucerf_risk calculators transfer only the events, not the ruptures,
     thus reducing the data transfer of several orders of magnitude
   * Added a view `get_available_gsims` to the WebUI and fixed the API docs
