@@ -25,7 +25,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import groupby, get_array, AccumDict
-from openquake.hazardlib import site, calc
+from openquake.hazardlib import site, calc, valid
 from openquake.risklib import scientific, riskmodels
 
 U8 = numpy.uint8
@@ -118,7 +118,8 @@ class AssetCollection(object):
                     a['idx'],
                     self.taxonomies[a['taxonomy_id']],
                     number=a['number'],
-                    location=(a['lon'], a['lat']),
+                    location=(valid.longitude(a['lon']),  # round coordinates
+                              valid.latitude(a['lat'])),
                     values=values,
                     area=a['area'],
                     deductibles={lt[self.D:]: a[lt] for lt in self.deduc},
