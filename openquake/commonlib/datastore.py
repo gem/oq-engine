@@ -310,7 +310,8 @@ class DataStore(collections.MutableMapping):
         """
         if key is None:
             return os.path.getsize(self.hdf5path)
-        return ByteCounter.get_nbytes(h5py.File.__getitem__(self.hdf5, key))
+        return hdf5.ByteCounter.get_nbytes(
+            h5py.File.__getitem__(self.hdf5, key))
 
     def get(self, key, default):
         """
