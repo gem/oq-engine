@@ -20,9 +20,9 @@ In all the nodes, the following file should be modified to enable the *Celery* s
 `/etc/openquake/openquake.cfg:`
 
 ```
-[celery]
+[distribution]
 # enable celery only if you have a cluster
-use_celery = true
+oq_distribute = celery
 ```
 
 ## OpenQuake Engine 'worker' node configuration File
