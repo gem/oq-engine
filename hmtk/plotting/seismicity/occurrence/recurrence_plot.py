@@ -65,8 +65,6 @@ def plot_recurrence_model(input_model, catalogue, completeness, dmag,
     """
     if figure_size is None:
         figure_size=(10, 8)
-    if filename is None:
-      	filename = "recurrence_model"
     if dmag is None:
         dmag = 0.1
     annual_rates, cumulative_rates = _get_recurrence_model(input_model)
