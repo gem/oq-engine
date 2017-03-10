@@ -652,7 +652,10 @@ def export_gmf(ekey, dstore):
     if n_gmfs:
         etags = numpy.array(
             sorted([b'scenario-%010d~ses=1' % i for i in range(n_gmfs)]))
-    gmf_data = dstore['gmf_data']
+    try:
+        gmf_data = dstore['gmf_data']  # for scenario
+    except KeyError:
+        gmf_data = dstore.ext5()['gmf_data']   # for event based
     nbytes = gmf_data.attrs['nbytes']
     logging.info('Internal size of the GMFs: %s', humansize(nbytes))
     if nbytes > GMF_MAX_SIZE:
