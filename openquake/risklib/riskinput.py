@@ -563,9 +563,9 @@ class GmfGetter(object):
         gmfdict = collections.defaultdict(list)
         for sid, eid, imti, gmv in self.gen_gmv(rlz):
             gmfdict[sid, imti].append((gmv, eid))
-        for i, sid in enumerate(self.sids):
+        for sid in self.sids:
             for imti, imt in enumerate(self.imts):
-                gmfa[i, imti] = numpy.array(gmfdict[sid, imti], self.dt)
+                gmfa[sid, imti] = numpy.array(gmfdict[sid, imti], self.dt)
         return gmfa
 
 
