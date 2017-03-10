@@ -170,10 +170,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             for l, aid, losses, statpoes, statloss in result['stat_curves']:
                 stat_curves_lt = stat_curves[ltypes[l]]
                 for s in range(self.Q1):
-                    try:
-                        stat_curves_lt['avg'][aid, s] = statloss[s]
-                    except:
-                        import pdb; pdb.set_trace()
+                    stat_curves_lt['avg'][aid, s] = statloss[s]
                     base.set_array(stat_curves_lt['poes'][aid, s], statpoes[s])
                     base.set_array(stat_curves_lt['losses'][aid, s], losses)
             self.datastore['loss_curves-stats'] = stat_curves

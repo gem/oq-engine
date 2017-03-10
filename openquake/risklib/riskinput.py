@@ -634,8 +634,7 @@ def make_eps(assetcol, num_samples, seed, correlation):
     """
     all_assets = iter(assetcol)
     assets_by_taxo = groupby(all_assets, by_taxonomy)
-    num_assets = sum(map(len, assetcol.assets_by_site()))
-    eps = numpy.zeros((num_assets, num_samples), numpy.float32)
+    eps = numpy.zeros((len(assetcol), num_samples), numpy.float32)
     for taxonomy, assets in assets_by_taxo.items():
         # the association with the epsilons is done in order
         assets.sort(key=operator.attrgetter('idx'))
