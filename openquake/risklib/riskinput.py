@@ -68,6 +68,7 @@ class AssetCollection(object):
         self.cc = cost_calculator
         self.time_event = time_event
         self.time_events = time_events
+        self.tot_sites = len(assets_by_site)
         self.array, self.taxonomies = self.build_asset_collection(
             assets_by_site, time_event)
         fields = self.array.dtype.names
@@ -84,11 +85,9 @@ class AssetCollection(object):
         :returns: numpy array of lists with the assets by each site
         """
         assetcol = self.array
-        site_ids = sorted(set(assetcol['site_id']))
-        assets_by_site = [[] for sid in site_ids]
-        index = dict(zip(site_ids, range(len(site_ids))))
+        assets_by_site = [[] for sid in range(self.tot_sites)]
         for i, ass in enumerate(assetcol):
-            assets_by_site[index[ass['site_id']]].append(self[i])
+            assets_by_site[ass['site_id']].append(self[i])
         return numpy.array(assets_by_site)
 
     def values(self):
@@ -144,6 +143,7 @@ class AssetCollection(object):
                  'deduc': ' '.join(self.deduc),
                  'i_lim': ' '.join(self.i_lim),
                  'retro': ' '.join(self.retro),
+                 'tot_sites': self.tot_sites,
                  'nbytes': self.array.nbytes}
         return dict(array=self.array, taxonomies=self.taxonomies,
                     cost_calculator=self.cc), attrs
@@ -152,6 +152,7 @@ class AssetCollection(object):
         for name in ('time_events', 'loss_types', 'deduc', 'i_lim', 'retro'):
             setattr(self, name, attrs[name].split())
         self.time_event = attrs['time_event']
+        self.tot_sites = attrs['tot_sites']
         self.nbytes = attrs['nbytes']
         self.array = dic['array'].value
         self.taxonomies = dic['taxonomies'].value
