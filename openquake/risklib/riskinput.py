@@ -425,10 +425,8 @@ class CompositeRiskModel(collections.Mapping):
         with mon_context:
             if assetcol is None:
                 assets_by_site = riskinput.assets_by_site
-                sids = range(len(assets_by_site))
             else:
                 assets_by_site = assetcol.assets_by_site()
-                sids = sorted(set(assetcol.array['site_id']))
             hazard_getter = riskinput.hazard_getter(
                 mon_hazard(measuremem=False))
             if hasattr(hazard_getter, 'init'):  # expensive operation
@@ -437,7 +435,7 @@ class CompositeRiskModel(collections.Mapping):
         # group the assets by taxonomy
         taxonomies = set()
         dic = collections.defaultdict(list)
-        for sid, assets in zip(sids, assets_by_site):
+        for sid, assets in enumerate(assets_by_site):
             group = groupby(assets, by_taxonomy)
             for taxonomy in group:
                 epsgetter = riskinput.epsilon_getter(
