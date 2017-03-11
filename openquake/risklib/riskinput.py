@@ -405,7 +405,8 @@ class CompositeRiskModel(collections.Mapping):
         :param eps_dict: a dictionary of epsilons
         :returns: a :class:`RiskInput` instance
         """
-        return RiskInput(imts, rlzs, hazards_by_site, assetcol, eps_dict)
+        return RiskInput(
+            PoeGetter(hazards_by_site, imts), rlzs, assetcol, eps_dict)
 
     def gen_outputs(self, riskinput, monitor, assetcol=None):
         """
@@ -437,7 +438,7 @@ class CompositeRiskModel(collections.Mapping):
                     [asset.ordinal for asset in group[taxonomy]])
                 dic[taxonomy].append((i, group[taxonomy], epsgetter))
                 taxonomies.add(taxonomy)
-        imti = {imt: i for i, imt in enumerate(riskinput.imts)}
+        imti = {imt: i for i, imt in enumerate(hazard_getter.imts)}
         for rlz in riskinput.rlzs:
             with mon_hazard:
                 hazard = hazard_getter.get_hazard(rlz)
@@ -503,6 +504,7 @@ class GmfGetter(object):
 
     def __init__(self, gsims, ebruptures, sitecol, imts, min_iml,
                  truncation_level, correlation_model, samples):
+        assert sitecol is sitecol.complete
         self.gsims = gsims
         self.ebruptures = ebruptures
         self.sitecol = sitecol
@@ -578,9 +580,8 @@ class RiskInput(object):
     :param assets_by_site: array of assets, one per site
     :param eps_dict: dictionary of epsilons
     """
-    def __init__(self, imts, rlzs, hazard_by_site, assets_by_site, eps_dict):
-        self.hazard_getter = PoeGetter(hazard_by_site, imts)
-        self.imts = imts
+    def __init__(self, hazard_getter, rlzs, assets_by_site, eps_dict):
+        self.hazard_getter = hazard_getter
         self.rlzs = rlzs
         self.assets_by_site = assets_by_site
         self.eps = eps_dict
@@ -629,19 +630,12 @@ class RiskInputFromRuptures(object):
     :param min_iml: an array with the minimum intensity per IMT
     :params epsilons: a matrix of epsilons (or None)
     """
-    def __init__(self, trt, rlzs_assoc, imts, sitecol, ses_ruptures,
-                 trunc_level, correl_model, min_iml, epsilons=None):
-        assert sitecol is sitecol.complete
-        grp_id = ses_ruptures[0].grp_id
-        samples = rlzs_assoc.samples[grp_id]
-        gsims = [dic[trt] for dic in rlzs_assoc.gsim_by_trt]
-        self.hazard_getter = GmfGetter(
-            gsims, ses_ruptures, sitecol, imts, min_iml, trunc_level,
-            correl_model, samples)
-        self.imts = imts
-        self.rlzs = rlzs_assoc.get_rlzs_by_grp_id()[grp_id]
-        self.weight = sum(sr.weight for sr in ses_ruptures)
-        self.eids = numpy.concatenate([r.events['eid'] for r in ses_ruptures])
+    def __init__(self, gmfgetter, rlzs, epsilons=None):
+        self.hazard_getter = gmfgetter
+        self.rlzs = rlzs
+        self.weight = sum(sr.weight for sr in gmfgetter.ebruptures)
+        self.eids = numpy.concatenate(
+            [r.events['eid'] for r in gmfgetter.ebruptures])
         if epsilons is not None:
             self.eps = epsilons  # matrix N x E, events in this block
             self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
