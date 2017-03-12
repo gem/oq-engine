@@ -759,12 +759,17 @@ class BaseStarmap(object):
         self.imap = self.pool.imap_unordered(
             functools.partial(safely_call, func), allargs)
 
+    def submit_all(self, progress=logging.info):
+        """
+        :returns: an :class:`IterResult` instance
+        """
+        futs = (mkfuture(res) for res in self.imap)
+        return IterResult(futs, self.func.__name__, self.num_tasks, progress)
+
     def reduce(self, agg=operator.add, acc=None, progress=logging.info):
         if acc is None:
             acc = AccumDict()
-        futures = (mkfuture(res) for res in self.imap)
-        for res in IterResult(
-                futures, self.func.__name__, self.num_tasks, progress):
+        for res in self.submit_all(progress):
             acc = agg(acc, res)
         if self.pool:
             self.pool.close()
