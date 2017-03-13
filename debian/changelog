@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed bug in scenario_risk: the output `all_losses-rlzs` was aggregated
+    incorrectly
   * Now the ucerf_risk calculators transfer only the events, not the ruptures,
     thus reducing the data transfer of several orders of magnitude
   * Added a view `get_available_gsims` to the WebUI and fixed the API docs
