@@ -146,7 +146,9 @@ import logging
 import operator
 import traceback
 import functools
+import subprocess
 import multiprocessing.dummy
+from multiprocessing.connection import Client, Listener
 from concurrent.futures import as_completed, ProcessPoolExecutor, Future
 import numpy
 from openquake.baselib import hdf5
@@ -210,7 +212,7 @@ def check_mem_usage(monitor=Monitor(),
                      used_mem_percent, hostname)
 
 
-def safely_call(func, args, pickle=False):
+def safely_call(func, args, pickle=False, conn=None):
     """
     Call the given function with the given arguments safely, i.e.
     by trapping the exceptions. Return a pair (result, exc_type)
@@ -251,6 +253,10 @@ def safely_call(func, args, pickle=False):
 
     if pickle:  # it is impossible to measure the pickling time :-(
         res = Pickled(res)
+    if conn:  # send the result via the connection
+        conn.send(res)
+        conn.close()
+        return None
     return res
 
 
@@ -812,3 +818,68 @@ class Processmap(BaseStarmap):
     >>> sorted(c.items())
     [('d', 1), ('e', 1), ('h', 1), ('l', 3), ('o', 2), ('r', 1), ('w', 1)]
     """
+
+# ######################## support for grid engine ######################## #
+
+
+def qsub(func, allargs, authkey=None):
+    """
+    """
+    thisfile = os.path.abspath(__file__)
+    host = socket.gethostbyname(socket.gethostname())
+    listener = Listener((host, 0), backlog=5, authkey=authkey)
+    port = listener._listener._socket.getsockname()[1]
+    subprocess.run(
+        ['qsub', '-b', 'y', '-t', '1-%d' % len(allargs),
+         sys.executable, thisfile, ':%d' % port])
+    conndict = {}
+    for i, args in enumerate(allargs, 1):
+        monitor = args[-1]
+        monitor.task_no = i
+        conn = _getconn(listener)
+        conn.send((func, args))
+        for data, task_no in _getdata(conndict):
+            yield data
+            del conndict[task_no]
+        conndict[i] = conn
+    for task_no in sorted(conndict):
+        conn = conndict[task_no]
+        try:
+            data = conn.recv()
+        finally:
+            conn.close()
+        yield data
+    listener.close()
+
+
+def _getdata(conndict):
+    for task_no in sorted(conndict):
+        conn = conndict[task_no]
+        if conn.poll():
+            try:
+                data = conn.recv()
+            finally:
+                conn.close()
+            yield data, task_no
+
+
+def _getconn(listener):
+    while True:
+        try:
+            conn = listener.accept()
+        except KeyboardInterrupt:
+            return
+        except:
+            # unauthenticated connection, for instance by a port scanner
+            continue
+        return conn
+
+
+def main(hostport):
+    host, port = hostport.split(':')
+    conn = Client((host, int(port)))
+    func, args = conn.recv()
+    safely_call(func, args, False, conn)
+
+if __name__ == '__main__':
+    main(sys.argv[1])
