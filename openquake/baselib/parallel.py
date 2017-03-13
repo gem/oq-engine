@@ -658,11 +658,10 @@ class Starmap(object):
             task_no += 1
             if task_no == 1:  # first time
                 self.progress('Submitting %s "%s" tasks', nargs, self.name)
-            if isinstance(args[-1], Monitor):  # add incremental task number
+            if isinstance(args[-1], Monitor):
+                # add incremental task number and task weight
                 args[-1].task_no = task_no
-                weight = getattr(args[0], 'weight', None)
-                if weight:
-                    args[-1].weight = weight
+                args[-1].weight = getattr(args[0], 'weight', 1.)
             self.submit(*args)
         if not task_no:
             self.progress('No %s tasks were submitted', self.name)
