@@ -95,10 +95,12 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         base.RiskCalculator.pre_execute(self)
 
         logging.info('Building the epsilons')
+        A = len(self.assetcol)
+        E = self.oqparam.number_of_ground_motion_fields
         if self.oqparam.ignore_covs:
-            eps = None
+            eps = numpy.zeros((A, E), numpy.float32)
         else:
-            eps = self.make_eps(self.oqparam.number_of_ground_motion_fields)
+            eps = self.make_eps(E)
         self.datastore['etags'], gmfs = calc.get_gmfs(
             self.datastore, self.precalc)
         hazard_by_rlz = {rlz: gmfs[rlz.ordinal]
