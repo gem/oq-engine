@@ -386,6 +386,10 @@ class EbriskCalculator(base.RiskCalculator):
         grp_trt = csm_info.grp_trt()
         ignore_covs = self.oqparam.ignore_covs
         for grp_id in grp_ids:
+            trt = grp_trt[grp_id]
+            gsims = [dic[trt] for dic in rlzs_assoc.gsim_by_trt]
+            rlzs = rlzs_assoc.get_rlzs_by_grp_id()[grp_id]
+            samples = rlzs_assoc.samples[grp_id]
             for rupts in block_splitter(
                     ruptures_by_grp.get(grp_id, []), ruptures_per_block):
                 if ignore_covs or not self.riskmodel.covs:
@@ -397,9 +401,10 @@ class EbriskCalculator(base.RiskCalculator):
                     eps = EpsilonMatrix0(
                         len(self.assetcol), seeds[start: start + n_events])
                     start += n_events
-                ri = riskinput.RiskInputFromRuptures(
-                    grp_trt[grp_id], rlzs_assoc, imts, sitecol,
-                    rupts, trunc_level, correl_model, min_iml, eps)
+                getter = riskinput.GmfGetter(
+                    gsims, rupts, sitecol, imts, min_iml, trunc_level,
+                    correl_model, samples)
+                ri = riskinput.RiskInputFromRuptures(getter, rlzs, eps)
                 allargs.append((ri, riskmodel, assetcol, monitor))
 
         self.vals = self.assetcol.values()
@@ -452,7 +457,6 @@ class EbriskCalculator(base.RiskCalculator):
         if self.oqparam.hazard_curves_from_gmfs:
             logging.warn('To compute the hazard curves change '
                          'calculation_mode = event_based')
-
         ruptures_by_grp = (
             self.precalc.result if self.precalc
             else event_based.get_ruptures_by_grp(self.datastore.parent))
@@ -521,7 +525,6 @@ class EbriskCalculator(base.RiskCalculator):
                     ev = 'events/sm-%04d' % self.sm_by_grp[grp_id]
                     self.datastore.extend(ev, events)
             num_events[res.sm_id] += res.num_events
-        self.datastore['events'].attrs['num_events'] = sum(num_events.values())
         event_based.save_gmdata(self, num_rlzs)
         return num_events
 
