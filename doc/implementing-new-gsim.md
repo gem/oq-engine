@@ -25,7 +25,5 @@ nosetests
 - Create a new .rst file (needed to generate automatically documentation) in this directory (several examples available):
 https://github.com/gem/oq-hazardlib/tree/master/doc/sphinx/gsim
 
-- Check that the new code fulfils PEP8 standards (usually we do this using tools such as pep8 https://pypi.python.org/pypi/pep8) 
+- Check that the new code fulfils PEP8 standards (usually we do this using tools such as flake8 https://pypi.python.org/pypi/flake8) 
 http://legacy.python.org/dev/peps/pep-0008/
-
-- Run pylint to check your code.
