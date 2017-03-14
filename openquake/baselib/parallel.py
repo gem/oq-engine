@@ -658,11 +658,10 @@ class Starmap(object):
             task_no += 1
             if task_no == 1:  # first time
                 self.progress('Submitting %s "%s" tasks', nargs, self.name)
-            if isinstance(args[-1], Monitor):  # add incremental task number
+            if isinstance(args[-1], Monitor):
+                # add incremental task number and task weight
                 args[-1].task_no = task_no
-                weight = getattr(args[0], 'weight', None)
-                if weight:
-                    args[-1].weight = weight
+                args[-1].weight = getattr(args[0], 'weight', 1.)
             self.submit(*args)
         if not task_no:
             self.progress('No %s tasks were submitted', self.name)
@@ -759,12 +758,17 @@ class BaseStarmap(object):
         self.imap = self.pool.imap_unordered(
             functools.partial(safely_call, func), allargs)
 
+    def submit_all(self, progress=logging.info):
+        """
+        :returns: an :class:`IterResult` instance
+        """
+        futs = (mkfuture(res) for res in self.imap)
+        return IterResult(futs, self.func.__name__, self.num_tasks, progress)
+
     def reduce(self, agg=operator.add, acc=None, progress=logging.info):
         if acc is None:
             acc = AccumDict()
-        futures = (mkfuture(res) for res in self.imap)
-        for res in IterResult(
-                futures, self.func.__name__, self.num_tasks, progress):
+        for res in self.submit_all(progress):
             acc = agg(acc, res)
         if self.pool:
             self.pool.close()
