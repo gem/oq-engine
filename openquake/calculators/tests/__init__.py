@@ -38,14 +38,6 @@ def strip_calc_id(fname):
     return re.sub('_\d+\.', '.', name)
 
 
-def check_platform(*supported):
-    """
-    Skip the test if the platform is not the reference one
-    """
-    if platform.dist()[-1] not in supported:
-        raise unittest.SkipTest
-
-
 def columns(line):
     data = []
     if ',' in line:  # csv file
