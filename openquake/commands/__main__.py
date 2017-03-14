@@ -26,7 +26,7 @@ from openquake.commonlib import __version__
 from openquake import commands
 from openquake.commonlib import config
 
-USE_CELERY = config.flag_set('celery', 'use_celery')
+USE_CELERY = config.get('distribution', 'oq_distribute') == 'celery'
 
 # the environment variable has the precedence over the configuration file
 if 'OQ_DISTRIBUTE' not in os.environ and USE_CELERY:
