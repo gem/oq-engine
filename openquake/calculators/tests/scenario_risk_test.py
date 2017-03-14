@@ -17,15 +17,28 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from nose.plugins.attrib import attr
-
+import numpy
 from openquake.qa_tests_data.scenario_risk import (
-    case_1, case_2, case_2d, case_1g, case_3, case_4, case_5, occupants,
-    case_6a, case_master)
+    case_1, case_2, case_2d, case_1g, case_3, case_4, case_5,
+    case_6a, case_7, occupants, case_master)
 
 from openquake.baselib.general import writetmp
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.calculators.views import view
 from openquake.calculators.export import export
+
+
+def tot_loss(dstore):
+    all_losses = dstore['all_losses-rlzs'].value  # shape (A, E, R)
+    names = all_losses.dtype.names
+    R = all_losses.shape[-1]
+    tot = numpy.zeros(R, [('rlz', int)] + [(name, numpy.float32)
+                                           for name in names])
+    for r in range(R):
+        for name in names:
+            tot[name][r] = all_losses[name][:, :, r].sum()
+        tot['rlz'][r] = r
+    return tot
 
 
 class ScenarioRiskTestCase(CalculatorTestCase):
@@ -123,3 +136,13 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini', exports='npz')
+
+    @attr('qa', 'risk', 'scenario_risk')
+    def test_case_7(self):
+        # check independence from concurrent_tasks
+        self.run_calc(case_7.__file__, 'job.ini', concurrent_tasks='10')
+        tot10 = tot_loss(self.calc.datastore)
+        self.run_calc(case_7.__file__, 'job.ini', concurrent_tasks='20')
+        tot20 = tot_loss(self.calc.datastore)
+        for name in tot10.dtype.names:
+            numpy.testing.assert_almost_equal(tot10[name], tot20[name])

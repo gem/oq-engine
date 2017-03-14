@@ -195,12 +195,14 @@ class OqParam(valid.ParamSet):
             raise ValueError('asset_correlation != {0, 1} is no longer'
                              ' supported')
 
-        if self.ses_per_logic_tree_path >= TWO16:
-            raise ValueError('ses_per_logic_tree_path too big: %d' %
-                             self.ses_per_logic_tree_path)
-        if self.number_of_logic_tree_samples >= TWO16:
-            raise ValueError('number_of_logic_tree_samples too big: %d' %
-                             self.number_of_logic_tree_samples)
+        # checks for ucerf
+        if 'ucerf' in self.calculation_mode:
+            if self.ses_per_logic_tree_path >= TWO16:
+                raise ValueError('ses_per_logic_tree_path too big: %d' %
+                                 self.ses_per_logic_tree_path)
+            if self.number_of_logic_tree_samples >= TWO16:
+                raise ValueError('number_of_logic_tree_samples too big: %d' %
+                                 self.number_of_logic_tree_samples)
 
     def check_gsims(self, gsims):
         """
