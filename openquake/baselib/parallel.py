@@ -659,6 +659,12 @@ class Starmap(object):
             self.progress('Executing "%s" in process', self.name)
             fut = mkfuture(safely_call(self.task_func, args))
             return IterResult([fut], self.name)
+
+        if self.distribute == 'qsub':
+            allargs = list(self.task_args)
+            return IterResult(qsub(self.task_func, allargs),
+                              self.name, len(allargs), self.progress)
+
         task_no = 0
         for args in self.task_args:
             task_no += 1
@@ -823,32 +829,42 @@ class Processmap(BaseStarmap):
 
 def qsub(func, allargs, authkey=None):
     """
+    Map functions to arguments by means of the Grid Engine.
+
+    :param func: a pickleable callable object
+    :param allargs: a list of tuples of arguments
+    :param authkey: authentication token used to send back the results
+    :returns: an iterable over results of the form (res, etype, mon)
     """
     thisfile = os.path.abspath(__file__)
     host = socket.gethostbyname(socket.gethostname())
     listener = Listener((host, 0), backlog=5, authkey=authkey)
-    port = listener._listener._socket.getsockname()[1]
-    subprocess.run(
-        ['qsub', '-b', 'y', '-t', '1-%d' % len(allargs),
-         sys.executable, thisfile, ':%d' % port])
-    conndict = {}
-    for i, args in enumerate(allargs, 1):
-        monitor = args[-1]
-        monitor.task_no = i
-        conn = _getconn(listener)
-        conn.send((func, args))
-        for data, task_no in _getdata(conndict):
+    try:
+        hostport = listener._listener._socket.getsockname()
+        subprocess.run(
+            ['qsub', '-b', 'y', '-t', '1-%d' % len(allargs),
+             sys.executable, thisfile, '%s:%d' % hostport])
+        conndict = {}
+        for i, args in enumerate(allargs, 1):
+            monitor = args[-1]
+            monitor.task_no = i
+            monitor.weight = getattr(args[0], 'weight', 1.)
+            conn = _getconn(listener)  # get the first connected task
+            conn.send((func, args))  # send its arguments
+            for data, task_no in _getdata(conndict):
+                yield data  # yield the data received by other tasks, if any
+                del conndict[task_no]
+            conndict[i] = conn
+        # yield the rest of the data
+        for task_no in sorted(conndict):
+            conn = conndict[task_no]
+            try:
+                data = conn.recv()
+            finally:
+                conn.close()
             yield data
-            del conndict[task_no]
-        conndict[i] = conn
-    for task_no in sorted(conndict):
-        conn = conndict[task_no]
-        try:
-            data = conn.recv()
-        finally:
-            conn.close()
-        yield data
-    listener.close()
+    finally:
+        listener.close()
 
 
 def _getdata(conndict):
