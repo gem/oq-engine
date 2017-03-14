@@ -402,10 +402,7 @@ class ProbabilisticEventBased(RiskModel):
         means, covs, idxs = vf.interpolate(gmvs)
         for i, asset in enumerate(assets):
             epsilons = epsgetter(asset.ordinal, eids)
-            if epsilons is not None:
-                ratios = vf.sample(means, covs, idxs, epsilons)
-            else:
-                ratios = means
+            ratios = vf.sample(means, covs, idxs, epsilons)
             loss_ratios[i, idxs, 0] = ratios
             if self.insured_losses and loss_type != 'occupants':
                 loss_ratios[i, idxs, 1] = scientific.insured_losses(
@@ -510,7 +507,6 @@ class Scenario(RiskModel):
         loss_ratio_matrix = numpy.zeros((len(assets), E))
         for i, eps in enumerate(epsilons):
             loss_ratio_matrix[i, idxs] = vf.sample(means, covs, idxs, eps)
-
         loss_matrix[:, :, 0] = (loss_ratio_matrix.T * values).T
 
         if self.insured_losses and loss_type != "occupants":
