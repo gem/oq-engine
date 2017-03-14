@@ -841,8 +841,9 @@ def qsub(func, allargs, authkey=None):
     listener = Listener((host, 0), backlog=5, authkey=authkey)
     try:
         hostport = listener._listener._socket.getsockname()
-        subprocess.call(['qsub', '-b', 'y', '-t', '1-%d' % len(allargs),
-                         sys.executable, thisfile, '%s:%d' % hostport])
+        subprocess.call(
+            ['qsub', '-b', 'y', '-t', '1-%d' % len(allargs), '-N',
+             func.__name__, sys.executable, thisfile, '%s:%d' % hostport])
         conndict = {}
         for i, args in enumerate(allargs, 1):
             monitor = args[-1]
