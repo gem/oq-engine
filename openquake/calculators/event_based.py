@@ -33,7 +33,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap, PmapStats
 from openquake.hazardlib.geo.surface import PlanarSurface
 from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str, gmv_dt
 from openquake.baselib import parallel
-from openquake.commonlib import calc, util, datastore
+from openquake.commonlib import calc, util
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 
@@ -303,15 +303,15 @@ class EventBasedRuptureCalculator(PSHACalculator):
             numpy.random.seed(self.oqparam.ses_seed)
             for sm in sorted(self.datastore['events']):
                 set_random_years(self.datastore, 'events/' + sm, inv_time)
-        hdf5 = self.datastore.hdf5
-        if 'ruptures' in hdf5:
+        h5 = self.datastore.hdf5
+        if 'ruptures' in h5:
             self.datastore.set_nbytes('ruptures')
-        if 'events' in hdf5:
+        if 'events' in h5:
             self.datastore.set_attrs('events', num_events=num_events)
             self.datastore.set_nbytes('events')
-        if 'rup_data' not in hdf5:
+        if 'rup_data' not in h5:
             return
-        for dset in hdf5['rup_data'].values():
+        for dset in h5['rup_data'].values():
             if len(dset):
                 numsites = dset['numsites']
                 multiplicity = dset['multiplicity']
