@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Fixed bug in event_based_risk: it was impossible to use vulnerability
+    functions with "PM" distribution
+  * Fixed bug in event_based_risk: the ebrisk calculator is required as
+    precalculator of event_based_risk, not others
   * Fixed bug in scenario_risk: the output `all_losses-rlzs` was aggregated
     incorrectly
   * Now the ucerf_risk calculators transfer only the events, not the ruptures,
