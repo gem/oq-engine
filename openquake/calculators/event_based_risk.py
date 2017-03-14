@@ -452,7 +452,6 @@ class EbriskCalculator(base.RiskCalculator):
         if self.oqparam.hazard_curves_from_gmfs:
             logging.warn('To compute the hazard curves change '
                          'calculation_mode = event_based')
-
         ruptures_by_grp = (
             self.precalc.result if self.precalc
             else event_based.get_ruptures_by_grp(self.datastore.parent))
