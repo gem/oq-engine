@@ -26,7 +26,7 @@ from openquake.calculators.export import export
 from openquake.calculators.tests import check_platform
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_master, case_miriam,
-    occupants)
+    occupants, case_1g)
 
 
 class EventBasedRiskTestCase(CalculatorTestCase):
@@ -54,10 +54,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
         self.assert_stats_ok(case_1, 'job.ini', individual_curves='false')
-
-        # the numbers in the xml and geojson files are extremely sensitive to
-        # the libraries; while waiting for the opt project we skip this test
-        check_platform('xenial')
         ekeys = [
             ('rcurves-stats', 'xml'),
             ('rcurves-stats', 'geojson'),
@@ -72,6 +68,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             for fname in export(ekey, self.calc.datastore):
                 self.assertEqualFiles(
                     'expected/%s' % strip_calc_id(fname), fname)
+
+    @attr('qa', 'risk', 'event_based_risk')
+    def test_case_1g(self):
+        # vulnerability function with PMF
+        self.run_calc(case_1g.__file__, 'job.ini')
+        fname = writetmp(view('mean_avg_losses', self.calc.datastore))
+        self.assertEqualFiles('expected/avg_losses.txt', fname)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):

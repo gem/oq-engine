@@ -23,7 +23,6 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip, decode
-from openquake.baselib.performance import Monitor
 from openquake.baselib.general import groupby, get_array, AccumDict
 from openquake.hazardlib import site, calc
 from openquake.risklib import scientific, riskmodels
@@ -405,7 +404,8 @@ class CompositeRiskModel(collections.Mapping):
         :param eps_dict: a dictionary of epsilons
         :returns: a :class:`RiskInput` instance
         """
-        return RiskInput(imts, rlzs, hazards_by_site, assetcol, eps_dict)
+        return RiskInput(
+            PoeGetter(hazards_by_site, imts), rlzs, assetcol, eps_dict)
 
     def gen_outputs(self, riskinput, monitor, assetcol=None):
         """
@@ -420,6 +420,7 @@ class CompositeRiskModel(collections.Mapping):
         mon_context = monitor('building context')
         mon_hazard = monitor('building hazard')
         mon_risk = monitor('computing risk', measuremem=False)
+        hazard_getter = riskinput.hazard_getter
         with mon_context:
             if assetcol is None:
                 assets_by_site = riskinput.assets_by_site
@@ -427,8 +428,6 @@ class CompositeRiskModel(collections.Mapping):
             else:
                 assets_by_site = assetcol.assets_by_site()
                 sids = sorted(set(assetcol.array['site_id']))
-            hazard_getter = riskinput.hazard_getter(
-                mon_hazard(measuremem=False))
             if hasattr(hazard_getter, 'init'):  # expensive operation
                 hazard_getter.init()
 
@@ -442,7 +441,7 @@ class CompositeRiskModel(collections.Mapping):
                     [asset.ordinal for asset in group[taxonomy]])
                 dic[taxonomy].append((sid, group[taxonomy], epsgetter))
                 taxonomies.add(taxonomy)
-        imti = {imt: i for i, imt in enumerate(riskinput.imts)}
+        imti = {imt: i for i, imt in enumerate(hazard_getter.imts)}
         for rlz in riskinput.rlzs:
             with mon_hazard:
                 hazard = hazard_getter.get_hazard(rlz)
@@ -508,6 +507,7 @@ class GmfGetter(object):
 
     def __init__(self, gsims, ebruptures, sitecol, imts, min_iml,
                  truncation_level, correlation_model, samples):
+        assert sitecol is sitecol.complete
         self.gsims = gsims
         self.ebruptures = ebruptures
         self.sitecol = sitecol
@@ -576,17 +576,18 @@ class RiskInput(object):
     Contains all the assets and hazard values associated to a given
     imt and site.
 
-    :param imts: a list of IMT strings
-    :param rlzs: the realizations
-    :param imt_taxonomies: a pair (IMT, taxonomies)
-    :param hazard_by_site: array of hazards, one per site
-    :param assets_by_site: array of assets, one per site
-    :param eps_dict: dictionary of epsilons
+    :param hazard_getter:
+        a callable returning the hazard data for a given realization
+    :param rlzs:
+        the realizations contained in the riskinput object
+    :param assets_by_site:
+        array of assets, one per site
+    :param eps_dict:
+        dictionary of epsilons
     """
-    def __init__(self, imts, rlzs, hazard_by_site, assets_by_site, eps_dict):
-        self.imts = imts
+    def __init__(self, hazard_getter, rlzs, assets_by_site, eps_dict):
+        self.hazard_getter = hazard_getter
         self.rlzs = rlzs
-        self.hazard_by_site = hazard_by_site
         self.assets_by_site = assets_by_site
         self.eps = eps_dict
         taxonomies_set = set()
@@ -614,18 +615,48 @@ class RiskInput(object):
             [self.eps[aid] for aid in asset_ordinals]
             if self.eps else None)
 
-    def hazard_getter(self, monitor=Monitor()):
-        """
-        :param monitor:
-            a :class:`openquake.baselib.performance.Monitor` instance
-        :returns:
-            list of hazard dictionaries imt -> rlz -> haz per each site
-        """
-        return PoeGetter(self.hazard_by_site, self.imts)
-
     def __repr__(self):
         return '<%s taxonomy=%s, %d asset(s)>' % (
             self.__class__.__name__, ', '.join(self.taxonomies), self.weight)
+
+
+class RiskInputFromRuptures(object):
+    """
+    Contains all the assets associated to the given IMT and a subsets of
+    the ruptures for a given calculation.
+
+    :param hazard_getter:
+        a callable returning the hazard data for a given realization
+    :param rlzs:
+        the realizations contained in the riskinput object
+    :params epsilons:
+        a matrix of epsilons (or None)
+    """
+    def __init__(self, hazard_getter, rlzs, epsilons=None):
+        self.hazard_getter = hazard_getter
+        self.rlzs = rlzs
+        self.weight = sum(sr.weight for sr in hazard_getter.ebruptures)
+        self.eids = numpy.concatenate(
+            [r.events['eid'] for r in hazard_getter.ebruptures])
+        if epsilons is not None:
+            self.eps = epsilons  # matrix N x E, events in this block
+            self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
+
+    def epsilon_getter(self, asset_ordinals):
+        """
+        :param asset_ordinals: ordinals of the assets
+        :returns: a closure returning an array of epsilons from the event IDs
+        """
+        if not hasattr(self, 'eps'):
+            return lambda aid, eids: None
+
+        def geteps(aid, eids):
+            return self.eps[aid, [self.eid2idx[eid] for eid in eids]]
+        return geteps
+
+    def __repr__(self):
+        return '<%s imts=%s, weight=%d>' % (
+            self.__class__.__name__, self.imts, self.weight)
 
 
 def make_eps(assets_by_site, num_samples, seed, correlation):
@@ -667,66 +698,3 @@ def rsi2str(rlzi, sid, imt):
     'rlz-XXXX/sid-YYYY/ZZZ'
     """
     return 'rlz-%04d/sid-%04d/%s' % (rlzi, sid, imt)
-
-
-class RiskInputFromRuptures(object):
-    """
-    Contains all the assets associated to the given IMT and a subsets of
-    the ruptures for a given calculation.
-
-    :param trt: a tectonic region type string
-    :param rlzs_assoc: a RlzsAssoc instance
-    :param imts: a list of intensity measure type strings
-    :param sitecol: SiteCollection instance
-    :param ses_ruptures: ordered array of EBRuptures
-    :param trunc_level: truncation level for the GSIMs
-    :param correl_model: correlation model for the GSIMs
-    :param min_iml: an array with the minimum intensity per IMT
-    :params epsilons: a matrix of epsilons (or None)
-    """
-    def __init__(self, trt, rlzs_assoc, imts, sitecol, ses_ruptures,
-                 trunc_level, correl_model, min_iml, epsilons=None):
-        assert sitecol is sitecol.complete
-        self.imts = imts
-        self.sitecol = sitecol
-        self.ses_ruptures = numpy.array(ses_ruptures)
-        grp_id = ses_ruptures[0].grp_id
-        self.trt = trt
-        self.trunc_level = trunc_level
-        self.correl_model = correl_model
-        self.min_iml = min_iml
-        self.gsims = [dic[trt] for dic in rlzs_assoc.gsim_by_trt]
-        self.samples = rlzs_assoc.samples[grp_id]
-        self.rlzs = rlzs_assoc.get_rlzs_by_grp_id()[grp_id]
-        self.weight = sum(sr.weight for sr in ses_ruptures)
-        self.eids = numpy.concatenate([r.events['eid'] for r in ses_ruptures])
-        if epsilons is not None:
-            self.eps = epsilons  # matrix N x E, events in this block
-            self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
-
-    def epsilon_getter(self, asset_ordinals):
-        """
-        :param asset_ordinals: ordinals of the assets
-        :returns: a closure returning an array of epsilons from the event IDs
-        """
-        if not hasattr(self, 'eps'):
-            return lambda aid, eids: None
-
-        def geteps(aid, eids):
-            return self.eps[aid, [self.eid2idx[eid] for eid in eids]]
-        return geteps
-
-    def hazard_getter(self, monitor=Monitor()):
-        """
-        :param monitor:
-            a :class:`openquake.baselib.performance.Monitor` instance
-        :returns:
-            lists of N hazard dictionaries imt -> rlz -> Gmvs
-        """
-        return GmfGetter(self.gsims, self.ses_ruptures, self.sitecol,
-                         self.imts, self.min_iml, self.trunc_level,
-                         self.correl_model, self.samples)
-
-    def __repr__(self):
-        return '<%s imts=%s, weight=%d>' % (
-            self.__class__.__name__, self.imts, self.weight)
