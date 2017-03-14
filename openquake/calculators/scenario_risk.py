@@ -20,6 +20,7 @@ import logging
 
 import numpy
 
+from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict
 from openquake.commonlib import calc
 from openquake.risklib import scientific
@@ -59,20 +60,20 @@ def scenario_risk(riskinput, riskmodel, monitor):
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
         r = outputs.r
         assets = outputs.assets
-        for l, out in enumerate(outputs):
-            if out is None:  # this may happen
+        for l, losses in enumerate(outputs):
+            if losses is None:  # this may happen
                 continue
             stats = numpy.zeros((len(assets), 2), (F32, I))  # mean, stddev
-            for aid, asset in enumerate(assets):
-                stats[aid, 0] = out[aid].mean()
-                stats[aid, 1] = out[aid].std(ddof=1)
-                result['avg'].append((l, r, asset.ordinal, stats[aid]))
-            agglosses = out.sum(axis=0)  # shape E, I
+            for a, asset in enumerate(assets):
+                stats[a, 0] = losses[a].mean()
+                stats[a, 1] = losses[a].std(ddof=1)
+                result['avg'].append((l, r, asset.ordinal, stats[a]))
+            agglosses = losses.sum(axis=0)  # shape E, I
             for i in range(I):
                 result['agg'][:, l, r, i] += agglosses[:, i]
             if all_losses:
                 aids = [asset.ordinal for asset in outputs.assets]
-                result['all_losses'][l, r] = AccumDict(zip(aids, out))
+                result['all_losses'][l, r] += AccumDict(zip(aids, losses))
     return result
 
 
@@ -95,10 +96,12 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         base.RiskCalculator.pre_execute(self)
 
         logging.info('Building the epsilons')
+        A = len(self.assetcol)
+        E = self.oqparam.number_of_ground_motion_fields
         if self.oqparam.ignore_covs:
-            eps = None
+            eps = numpy.zeros((A, E), numpy.float32)
         else:
-            eps = self.make_eps(self.oqparam.number_of_ground_motion_fields)
+            eps = self.make_eps(E)
         self.datastore['etags'], gmfs = calc.get_gmfs(
             self.datastore, self.precalc)
         hazard_by_rlz = {rlz: gmfs[rlz.ordinal]
