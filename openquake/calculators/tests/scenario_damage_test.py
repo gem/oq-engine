@@ -26,13 +26,6 @@ from openquake.qa_tests_data.scenario_damage import (
 
 from openquake.calculators.tests import CalculatorTestCase
 
-try:
-    from shapely.geos import geos_version
-except:
-    old_geos = True
-else:
-    old_geos = geos_version < (3, 4, 2)
-
 
 class ScenarioDamageTestCase(CalculatorTestCase):
     def assert_ok(self, pkg, job_ini, exports='xml', kind='dmg'):
@@ -71,10 +64,6 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_3(self):
-        if old_geos:
-            # in Ubuntu 12.04 avoid a mysterious finalization segfault
-            # due to HDF5 that only happens in this test
-            raise unittest.SkipTest
         self.assert_ok(case_3, 'job_risk.ini')
 
     @attr('qa', 'risk', 'scenario_damage')
