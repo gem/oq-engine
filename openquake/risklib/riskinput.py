@@ -577,6 +577,8 @@ class RiskInput(object):
         a callable returning the hazard data for a given realization
     :param rlzs:
         the realizations contained in the riskinput object
+    :param assets_by_site:
+        array of assets, one per site
     :param eps_dict:
         dictionary of epsilons
     """
