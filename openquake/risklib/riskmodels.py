@@ -498,9 +498,10 @@ class Scenario(RiskModel):
             assets = assets[ok]
             epsilons = epsilons[ok]
 
-        # a matrix of N x E x I elements
         E = len(epsilons[0])
         I = self.insured_losses + 1
+
+        # a matrix of A x E x I elements
         loss_matrix = numpy.empty((len(assets), E, I))
         loss_matrix.fill(numpy.nan)
 
