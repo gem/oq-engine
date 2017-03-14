@@ -573,12 +573,12 @@ class RiskInput(object):
     Contains all the assets and hazard values associated to a given
     imt and site.
 
-    :param imts: a list of IMT strings
-    :param rlzs: the realizations
-    :param imt_taxonomies: a pair (IMT, taxonomies)
-    :param hazard_by_site: array of hazards, one per site
-    :param assets_by_site: array of assets, one per site
-    :param eps_dict: dictionary of epsilons
+    :param hazard_getter:
+        a callable returning the hazard data for a given realization
+    :param rlzs:
+        the realizations contained in the riskinput object
+    :param eps_dict:
+        dictionary of epsilons
     """
     def __init__(self, hazard_getter, rlzs, assets_by_site, eps_dict):
         self.hazard_getter = hazard_getter
@@ -620,22 +620,19 @@ class RiskInputFromRuptures(object):
     Contains all the assets associated to the given IMT and a subsets of
     the ruptures for a given calculation.
 
-    :param trt: a tectonic region type string
-    :param rlzs_assoc: a RlzsAssoc instance
-    :param imts: a list of intensity measure type strings
-    :param sitecol: SiteCollection instance
-    :param ses_ruptures: ordered array of EBRuptures
-    :param trunc_level: truncation level for the GSIMs
-    :param correl_model: correlation model for the GSIMs
-    :param min_iml: an array with the minimum intensity per IMT
-    :params epsilons: a matrix of epsilons (or None)
+    :param hazard_getter:
+        a callable returning the hazard data for a given realization
+    :param rlzs:
+        the realizations contained in the riskinput object
+    :params epsilons:
+        a matrix of epsilons (or None)
     """
-    def __init__(self, gmfgetter, rlzs, epsilons=None):
-        self.hazard_getter = gmfgetter
+    def __init__(self, hazard_getter, rlzs, epsilons=None):
+        self.hazard_getter = hazard_getter
         self.rlzs = rlzs
-        self.weight = sum(sr.weight for sr in gmfgetter.ebruptures)
+        self.weight = sum(sr.weight for sr in hazard_getter.ebruptures)
         self.eids = numpy.concatenate(
-            [r.events['eid'] for r in gmfgetter.ebruptures])
+            [r.events['eid'] for r in hazard_getter.ebruptures])
         if epsilons is not None:
             self.eps = epsilons  # matrix N x E, events in this block
             self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
