@@ -45,9 +45,7 @@
 '''
 Module to test :hmtk.faults.tectonic_regionalisation class
 '''
-import os
 import unittest
-import numpy as np
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from hmtk.faults.tectonic_regionalisation import (_check_list_weights,
                                                   TectonicRegion,
@@ -59,15 +57,10 @@ class TestCheckUtil(unittest.TestCase):
     Simply tests the hmtk.faults.tectonic_regionalisation._check_list_weights
     function
     '''
-    def setUp(self):
-        '''
-        '''
-
     def test_correct_instance(self):
-        '''
-        Tests the instance when the list of parameters is entered correctly
-        as a tuple with weights summing to 1.0
-        '''
+        # Tests the instance when the list of parameters is entered correctly
+        # as a tuple with weights summing to 1.0
+
         # Single entry
         params = [('Something', 1.0)]
         self.assertListEqual(params, _check_list_weights(params, 'Test 0'))
@@ -77,9 +70,7 @@ class TestCheckUtil(unittest.TestCase):
         self.assertListEqual(params, _check_list_weights(params, 'Test 1'))
 
     def test_error_weights_not_1(self):
-        '''
-        Tests that an error is raised when the weights do not sum to 1.0
-        '''
+        # Tests that an error is raised when the weights do not sum to 1.0
         params = [('Something', 0.5), ('Something Else', 0.4)]
         with self.assertRaises(ValueError) as ae:
             _check_list_weights(params, 'Bad Test 1')
@@ -87,15 +78,12 @@ class TestCheckUtil(unittest.TestCase):
                          'Bad Test 1 weights do not sum to 1.0!')
 
     def test_incorrect_format(self):
-        '''
-        Tests that an error is raised if the input is not iterable
-        '''
+        # Tests that an error is raised if the input is not iterable
         params = None
         with self.assertRaises(ValueError) as ae:
             _check_list_weights(params, 'Bad Test 2')
         self.assertEqual(str(ae.exception),
-                         'Bad Test 2 must be formatted with a list of ',
-                         'tuples')
+                         'Bad Test 2 must be formatted with a list of tuples')
 
 
 class TestTectonicRegion(unittest.TestCase):
@@ -104,19 +92,10 @@ class TestTectonicRegion(unittest.TestCase):
     has been raised correctly
     '''
     def setUp(self):
-        '''
-        '''
         self.tect_reg = None
 
     def test_all_defaults(self):
-        '''
-        Tests correct instanstiation with default values
-        '''
-#        expected_dict = {'id': '001',
-#                         'region_name': 'Test 0',
-#                         'shear_modulus': [(30., 1.0)],
-#                         'disp_length_ratio': [(1.25E-5, 1.0)],
-#                         'scaling_rel': [(WC1994, 1.0)]}
+        # Tests correct instantiation with default values
         self.tect_reg = TectonicRegion('001', 'Test 0')
         self.assertEqual(self.tect_reg.id, '001')
         self.assertEqual(self.tect_reg.region_name, 'Test 0')
