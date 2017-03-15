@@ -1,4 +1,4 @@
-Hazard Modeller's Toolkit (hmtk)
+Hazard Modeller's Toolkit (hmtk) [![Build Status](https://travis-ci.org/GEMScienceTools/hmtk.svg?branch=master)](https://travis-ci.org/GEMScienceTools/hmtk)
 ====
 
 This is the web repository of the Hazard Modeller's Toolkit (hmtk). 
