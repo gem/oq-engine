@@ -55,16 +55,14 @@ import collections
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap
-from matplotlib.colors import LogNorm, Normalize
-from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.geo.line import Line
-from openquake.hazardlib.geo.polygon import Polygon
+from matplotlib.colors import Normalize
 from hmtk.sources.area_source import mtkAreaSource
 from hmtk.sources.point_source import mtkPointSource
 from hmtk.plotting.beachball import Beach
 from hmtk.plotting.plotting_utils import DISSIMILAR_COLOURLIST
 from hmtk.sources.simple_fault_source import mtkSimpleFaultSource
 from hmtk.sources.complex_fault_source import mtkComplexFaultSource
+
 
 DEFAULT_SYMBOLOGY = [(-np.inf, 1., 'k.'), # M < 1
                      (1., 2., 'g*'), # 1 < M < 2
