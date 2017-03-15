@@ -80,6 +80,7 @@ extras_require = {
         'matplotlib >=1.5',
         'basemap >=1.0',
         'pyproj >=1.9',
+    ]
 }
 
 setup(
