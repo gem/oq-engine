@@ -298,7 +298,7 @@ class Shift(object):
         for key in STRAIN_VARIABLES:
             self.strain.data[key] = self.strain.data[key] / SECS_PER_YEAR
 
-        if not 'region' in self.strain.data.keys():
+        if 'region' not in self.strain.data.keys():
             raise ValueError('Cannot implment  SHIFT methodology without '
                              'definition of regionalisation')
         else:
@@ -314,21 +314,22 @@ class Shift(object):
 
         for region in regionalisation_zones:
             id0 = self.strain.data['region'] == region
-            if 'IPL' in region:
+            if b'IPL' in region:
                 # For intra-plate seismicity everything is refered to
                 # the background rate
                 continue
 
-            elif 'OSR_special_1' in region:
+            elif b'OSR_special_1' in region:
                 # Special case 1 - normal and transform faulting
                 calculated_rate = self.get_rate_osr_normal_transform(
                     self.threshold_moment, id0)
 
-            elif 'OSR_special_2' in region:
+            elif b'OSR_special_2' in region:
                 # Special case 2 - convergent and transform faulting
                 calculated_rate = self.get_rate_osr_convergent_transform(
                     self.threshold_moment, id0)
             else:
+                region = region.decode('utf-8')
                 calculated_rate = \
                     self.regionalisation[region]['adjustment_factor'] * \
                     self.continuum_seismicity(self.threshold_moment,
@@ -517,13 +518,15 @@ class Shift(object):
         definition in Bird & Liu (2007)
         '''
         # Treat trivial cases of subduction zones and oceanic types
-        self.strain.data['region'][self.strain.data['region'] == 'IPL'] = \
-            ['IPL']
-        self.strain.data['region'][self.strain.data['region'] == 'S'] = ['SUB']
-        self.strain.data['region'][self.strain.data['region'] == 'O'] = ['OCB']
+        self.strain.data['region'][
+            self.strain.data['region'] == b'IPL'] = ['IPL']
+        self.strain.data['region'][
+            self.strain.data['region'] == b'S'] = ['SUB']
+        self.strain.data['region'][
+            self.strain.data['region'] == b'O'] = ['OCB']
 
         # Continental types
-        id0 = self.strain.data['region'] == 'C'
+        id0 = self.strain.data['region'] == b'C'
         self.strain.data['region'][id0] = ['CTF']
         id0_pos_err = np.logical_and(
             self.strain.data['err'] > 0.,
@@ -537,8 +540,7 @@ class Shift(object):
         self.strain.data['region'][np.logical_and(id0, id0_neg_err)] = 'CRB'
 
         # Ridge Types
-        id0 = self.strain.data['region'] == 'R'
-        #self.data['region'][id0] = 'OSRnor'
+        id0 = self.strain.data['region'] == b'R'
         for iloc in np.where(id0)[0]:
             cond = (self.strain.data['e1h'][iloc] > 0.0 and
                     self.strain.data['e2h'][iloc] > 0.0)
