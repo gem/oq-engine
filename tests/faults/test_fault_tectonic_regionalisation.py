@@ -6,18 +6,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-#License as published by the Free Software Foundation, either version
-#3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-#DISCLAIMER
+# DISCLAIMER
 #
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-#is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-#Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -43,7 +43,7 @@
 # liability for use of the software.
 
 '''
-Module to test :hmtk.faults.tectonic_reionalisation class
+Module to test :hmtk.faults.tectonic_regionalisation class
 '''
 import os
 import unittest
@@ -82,9 +82,9 @@ class TestCheckUtil(unittest.TestCase):
         '''
         params = [('Something', 0.5), ('Something Else', 0.4)]
         with self.assertRaises(ValueError) as ae:
-            _ = _check_list_weights(params, 'Bad Test 1')
-            self.assertEqual(ae.exception.message,
-                             'Bad Test 1 weights do not sum to 1.0!')
+            _check_list_weights(params, 'Bad Test 1')
+        self.assertEqual(str(ae.exception),
+                         'Bad Test 1 weights do not sum to 1.0!')
 
     def test_incorrect_format(self):
         '''
@@ -92,10 +92,11 @@ class TestCheckUtil(unittest.TestCase):
         '''
         params = None
         with self.assertRaises(ValueError) as ae:
-            _ = _check_list_weights(params, 'Bad Test 2')
-            self.assertEqual(ae.exception.message,
-                             'Bad Test 2 must be formatted with a list of ',
-                             'tuples')
+            _check_list_weights(params, 'Bad Test 2')
+        self.assertEqual(str(ae.exception),
+                         'Bad Test 2 must be formatted with a list of ',
+                         'tuples')
+
 
 class TestTectonicRegion(unittest.TestCase):
     '''

@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -51,8 +51,6 @@ to parser the fault from a Yaml format to a fault source
 '''
 import os
 import unittest
-import numpy
-import yaml
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.scalerel.peer import PeerMSR
 from hmtk.faults.fault_geometries import (SimpleFaultGeometry,
@@ -71,7 +69,7 @@ BAD_GEOMETRY_FILE = os.path.join(BASE_FILE_PATH,
 SIMPLE_GEOMETRY_FILE = os.path.join(BASE_FILE_PATH,
                                     'simple_fault_example.yml')
 COMPLEX_GEOMETRY_FILE = os.path.join(BASE_FILE_PATH,
-                                  'complex_fault_example.yml')
+                                     'complex_fault_example.yml')
 
 
 class TestYamlParserPeripherals(unittest.TestCase):
@@ -79,20 +77,17 @@ class TestYamlParserPeripherals(unittest.TestCase):
     Class to test all the peripherical functions to the Yaml parser
     '''
     def setUp(self):
-        '''
-        '''
         self.data = None
 
     def test_weight_list_to_tuple(self):
-        '''
-        Test weight list to tuple function
-        '''
+        # Test weight list to tuple function
+
         # Test 1 - number of values not equal to number of weights
         self.data = {'Value': [1.0, 2.0, 3.0],
                      'Weight': [0.5, 0.5]}
         with self.assertRaises(ValueError) as ae:
-            _ = weight_list_to_tuple(self.data, 'Test Values')
-        self.assertEqual(ae.exception.message,
+            weight_list_to_tuple(self.data, 'Test Values')
+        self.assertEqual(str(ae.exception),
                          'Number of weights do not correspond to number of '
                          'attributes in Test Values')
 
@@ -100,8 +95,8 @@ class TestYamlParserPeripherals(unittest.TestCase):
         self.data = {'Value': [1.0, 2.0, 3.0],
                      'Weight': [0.3, 0.3, 0.3]}
         with self.assertRaises(ValueError) as ae:
-            _ = weight_list_to_tuple(self.data, 'Test Values')
-        self.assertEqual(ae.exception.message,
+            weight_list_to_tuple(self.data, 'Test Values')
+        self.assertEqual(str(ae.exception),
                          'Weights do not sum to 1.0 in Test Values')
 
         # Test good output
@@ -112,9 +107,7 @@ class TestYamlParserPeripherals(unittest.TestCase):
                              weight_list_to_tuple(self.data, 'Test Values'))
 
     def test_parse_region_list_to_tuples(self):
-        '''
-        Tests the function to parse a region list to a set of tuples
-        '''
+        # Tests the function to parse a region list to a set of tuples
         self.data = {
             'Shear_Modulus': {'Value': [30.], 'Weight': [1.0]},
             'Displacement_Length_Ratio': {'Value': [1.25E-5], 'Weight': [1.0]},
@@ -142,18 +135,15 @@ class TestYamlParserPeripherals(unittest.TestCase):
             expected_output['Magnitude_Scaling_Relation'][0][1],
             output[0]['Shear_Modulus'][0][1])
 
-
     def test_get_scaling_relation_tuple(self):
-        '''
-        Tests the function to get the scaling relation tuple
-        '''
+        # Tests the function to get the scaling relation tuple
         # Test with an unsupported MSR
         self.data = {'Value': ['BadMSR'],
                      'Weight': [1.0]}
         with self.assertRaises(ValueError) as ae:
-            _ = get_scaling_relation_tuple(self.data)
-        self.assertEqual(ae.exception.message,
-                        'Scaling relation BadMSR not supported!')
+            get_scaling_relation_tuple(self.data)
+        self.assertEqual(str(ae.exception),
+                         'Scaling relation BadMSR not supported!')
 
         # Test with both supported MSRs
         self.data = {'Value': ['WC1994', 'PeerMSR'],
@@ -170,36 +160,27 @@ class TestFaultYamlParser(unittest.TestCase):
     Main test class of the Fault Yaml Parser function
     '''
     def setUp(self):
-        '''
-        '''
         self.parser = None
         self.fault_geometry = None
 
-
     def test_bad_input_fault_model(self):
-        '''
-        Test that when Yaml is missing 'Fault_Model' atribute an error is
-        raised
-        '''
+        # Test that when Yaml is missing 'Fault_Model' atribute an error is
+        # raised
         with self.assertRaises(ValueError) as ae:
             self.parser = FaultYmltoSource(BAD_INPUT_FILE)
-        self.assertEqual(ae.exception.message,
+        self.assertEqual(str(ae.exception),
                          'Fault Model not defined in input file!')
 
     def test_bad_geometry_input(self):
-        '''
-        Tests that an unknown geomtry error is raised when not recognised
-        '''
+        # Tests that an unknown geomtry error is raised when not recognised
         self.parser = FaultYmltoSource(BAD_GEOMETRY_FILE)
         with self.assertRaises(ValueError) as ae:
             self.parser.read_file()
-        self.assertEqual(ae.exception.message,
+        self.assertEqual(str(ae.exception),
                          'Unrecognised or unsupported fault geometry!')
 
     def test_simple_fault_input(self):
-        '''
-        Tests a simple fault input
-        '''
+        # Tests a simple fault input
         self.parser = FaultYmltoSource(SIMPLE_GEOMETRY_FILE)
         fault_model, tect_reg = self.parser.read_file()
         # Test that the area is correct and the slip rate
@@ -207,17 +188,17 @@ class TestFaultYamlParser(unittest.TestCase):
                                3851.9052498454062)
         expected_slip = [(18.0, 0.3), (20.0, 0.5), (23.0, 0.2)]
         for iloc, slip in enumerate(expected_slip):
-            self.assertAlmostEqual(slip[0], fault_model.faults[0].slip[iloc][0])
-            self.assertAlmostEqual(slip[1], fault_model.faults[0].slip[iloc][1])
+            self.assertAlmostEqual(
+                slip[0], fault_model.faults[0].slip[iloc][0])
+            self.assertAlmostEqual(
+                slip[1], fault_model.faults[0].slip[iloc][1])
 
         self.assertTrue(isinstance(fault_model.faults[0].geometry,
                                    SimpleFaultGeometry))
 
     def test_complex_fault_input(self):
-        '''
-        Tests a complex fault input
-        Quick test - just ensure that the area and the slip rate are expected
-        '''
+        # Tests a complex fault input
+        # Quick test - just ensure that the area and the slip rate are expected
         self.parser = FaultYmltoSource(COMPLEX_GEOMETRY_FILE)
         fault_model, tect_reg = self.parser.read_file(2.0)
         # Test that the area is correct and the slip rate
@@ -225,8 +206,10 @@ class TestFaultYamlParser(unittest.TestCase):
                                13745.614848626545)
         expected_slip = [(18.0, 0.3), (20.0, 0.5), (23.0, 0.2)]
         for iloc, slip in enumerate(expected_slip):
-            self.assertAlmostEqual(slip[0], fault_model.faults[0].slip[iloc][0])
-            self.assertAlmostEqual(slip[1], fault_model.faults[0].slip[iloc][1])
+            self.assertAlmostEqual(
+                slip[0], fault_model.faults[0].slip[iloc][0])
+            self.assertAlmostEqual(
+                slip[1], fault_model.faults[0].slip[iloc][1])
 
         self.assertTrue(isinstance(fault_model.faults[0].geometry,
                                    ComplexFaultGeometry))

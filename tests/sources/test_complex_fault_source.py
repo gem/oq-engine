@@ -101,8 +101,8 @@ class TestComplexFaultSource(unittest.TestCase):
         self.assertEqual(self.fault_source.id, '101')
         self.assertEqual(self.fault_source.name, 'A complex fault')
         self.assertEqual(self.fault_source.typology, 'ComplexFault')
-        self.assertListEqual(self.fault_source.__dict__.keys(),
-                             SOURCE_ATTRIBUTES)
+        self.assertListEqual(sorted(self.fault_source.__dict__),
+                             sorted(SOURCE_ATTRIBUTES))
 
     def test_get_minmax_edges(self):
         '''
@@ -134,14 +134,14 @@ class TestComplexFaultSource(unittest.TestCase):
         '''
         self.fault_source = mtkComplexFaultSource('101', 'A complex fault')
         # Test case when input as list of nhlib.geo.line.Line
-        self.fault_source.create_geometry(self.trace_line, mesh_spacing = 2.0)
+        self.fault_source.create_geometry(self.trace_line, mesh_spacing=2.0)
         self.assertIsInstance(self.fault_source.geometry, ComplexFaultSurface)
         # Use the dip as a simple indicator of geometrical success!
         self.assertAlmostEqual(self.fault_source.dip, 40.5398531, 2)
 
         # Create a second instance
         fault2 = mtkComplexFaultSource('101', 'A complex fault')
-        fault2.create_geometry(self.trace_array, mesh_spacing = 2.0)
+        fault2.create_geometry(self.trace_array, mesh_spacing=2.0)
         self.assertIsInstance(fault2.geometry, ComplexFaultSurface)
         # Compare it to the first
         self.assertAlmostEqual(self.fault_source.dip, fault2.dip)
@@ -153,8 +153,8 @@ class TestComplexFaultSource(unittest.TestCase):
         self.fault_source = mtkComplexFaultSource('101', 'A complex fault')
         with self.assertRaises(ValueError) as ver:
             self.fault_source.create_geometry(bad_traces)
-        self.assertEqual(ver.exception.message, 'Complex fault geometry '
-                                                'incorrectly defined')
+        self.assertEqual(str(ver.exception), 'Complex fault geometry '
+                         'incorrectly defined')
 
         # If an edge is not defined from either a nhlib.geo.line.Line instance
         # or numpy.ndarray then ensure error is raised
@@ -166,8 +166,8 @@ class TestComplexFaultSource(unittest.TestCase):
         self.fault_source = mtkComplexFaultSource('101', 'A complex fault')
         with self.assertRaises(ValueError) as ver:
             self.fault_source.create_geometry(bad_traces)
-        self.assertEqual(ver.exception.message, 'Unrecognised or unsupported '
-                                                'geometry definition')
+        self.assertEqual(str(ver.exception), 'Unrecognised or unsupported '
+                         'geometry definition')
 
     def test_select_within_distance(self):
         '''
@@ -176,7 +176,7 @@ class TestComplexFaultSource(unittest.TestCase):
         # Create fault
         self.fault_source = mtkComplexFaultSource('101', 'A complex fault')
         # Test case when input as list of nhlib.geo.line.Line
-        self.fault_source.create_geometry(self.trace_line, mesh_spacing = 2.0)
+        self.fault_source.create_geometry(self.trace_line, mesh_spacing=2.0)
         self.assertIsInstance(self.fault_source.geometry, ComplexFaultSurface)
 
         # Create simple catalogue
@@ -205,7 +205,7 @@ class TestComplexFaultSource(unittest.TestCase):
         selector0 = CatalogueSelector(self.catalogue)
         with self.assertRaises(ValueError) as ver:
             self.fault_source.select_catalogue(selector0, 40.0)
-        self.assertEqual(ver.exception.message,
+        self.assertEqual(str(ver.exception),
                          'No events found in catalogue!')
 
     def test_create_oqhazardlib_complex_fault_source(self):

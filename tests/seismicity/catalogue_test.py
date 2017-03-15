@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -48,7 +48,7 @@
 # -*- coding: utf-8 -*-
 
 """
-
+Tests for the catalogue module
 """
 
 import unittest
@@ -59,65 +59,59 @@ from openquake.hazardlib.geo.utils import spherical_to_cartesian
 from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.utils import decimal_time
 
+
 class CatalogueTestCase(unittest.TestCase):
     """
     Unit tests for the Catalogue class
     """
     def setUp(self):
         self.data_array = np.array([
-                               [1900, 5.00], # E
-                               [1910, 6.00], # E
-                               [1920, 7.00], # I
-                               [1930, 5.00], # E
-                               [1970, 5.50], # I
-                               [1960, 5.01], # I
-                               [1960, 6.99], # I
-                               ])
-        self.mt_table = np.array([[1920, 7.0],
-                                  [1940, 6.0],
-                                  [1950, 5.5],
-                                  [1960, 5.0],
-                                ])
+            [1900, 5.00],  # E
+            [1910, 6.00],  # E
+            [1920, 7.00],  # I
+            [1930, 5.00],  # E
+            [1970, 5.50],  # I
+            [1960, 5.01],  # I
+            [1960, 6.99],  # I
+        ])
+        self.mt_table = np.array([
+            [1920, 7.0],
+            [1940, 6.0],
+            [1950, 5.5],
+            [1960, 5.0],
+        ])
 
     def test_load_from_array(self):
-        """
-        Tests the creation of a catalogue from an array and a key list
-        """
+        # Tests the creation of a catalogue from an array and a key list
         cat = Catalogue()
-        cat.load_from_array(['year','magnitude'], self.data_array)
-        self.assertTrue(np.allclose(cat.data['magnitude'],self.data_array[:,1]))
-        self.assertTrue(np.allclose(cat.data['year'],
-                                    self.data_array[:,0].astype(int)))
+        cat.load_from_array(['year', 'magnitude'], self.data_array)
+        np.testing.assert_allclose(cat.data['magnitude'],
+                                   self.data_array[:, 1])
+        np.testing.assert_allclose(cat.data['year'],
+                                   self.data_array[:, 0].astype(int))
 
     def test_load_to_array(self):
-        """
-        Tests the creation of a catalogue from an array and a key list
-        """
+        # Tests the creation of a catalogue from an array and a key list
         cat = Catalogue()
-        cat.load_from_array(['year','magnitude'], self.data_array)
-        data = cat.load_to_array(['year','magnitude'])
-        self.assertTrue(np.allclose(data, self.data_array))
+        cat.load_from_array(['year', 'magnitude'], self.data_array)
+        data = cat.load_to_array(['year', 'magnitude'])
+        np.testing.assert_allclose(data, self.data_array)
 
     def test_catalogue_mt_filter(self):
-        """
-        Tests the catalogue magnitude-time filter
-        """
+        # Tests the catalogue magnitude-time filter
         cat = Catalogue()
-        cat.load_from_array(['year','magnitude'], self.data_array)
+        cat.load_from_array(['year', 'magnitude'], self.data_array)
         cat.data['eventID'] = np.arange(0, 7)
         cat.catalogue_mt_filter(self.mt_table)
         mag = np.array([7.0, 5.5, 5.01, 6.99])
         yea = np.array([1920, 1970, 1960, 1960])
-        self.assertTrue(np.allclose(cat.data['magnitude'],mag))
-        self.assertTrue(np.allclose(cat.data['year'],yea))
-
+        np.testing.assert_allclose(cat.data['magnitude'], mag)
+        np.testing.assert_allclose(cat.data['year'], yea)
 
     def test_get_decimal_time(self):
-        '''
-        Tests the decimal time function. The function itself is tested in
-        tests.seismicity.utils so only minimal testing is undertaken here to
-        ensure coverage
-        '''
+        # Tests the decimal time function. The function itself is tested in
+        # tests.seismicity.utils so only minimal testing is undertaken here to
+        # ensure coverage
         time_dict = {'year': np.array([1990, 2000]),
                      'month': np.array([3, 9]),
                      'day': np.ones(2, dtype=int),
@@ -138,10 +132,8 @@ class CatalogueTestCase(unittest.TestCase):
                                              cat.get_decimal_time())
 
     def test_hypocentres_as_mesh(self):
-        '''
-        Tests the function to render the hypocentres to a
-        nhlib.geo.mesh.Mesh object.
-        '''
+        # Tests the function to render the hypocentres to a
+        # hazardlib.geo.mesh.Mesh object.
         cat = Catalogue()
         cat.data['longitude'] = np.array([2., 3.])
         cat.data['latitude'] = np.array([2., 3.])
@@ -149,13 +141,10 @@ class CatalogueTestCase(unittest.TestCase):
         self.assertTrue(isinstance(cat.hypocentres_as_mesh(), Mesh))
 
     def test_hypocentres_to_cartesian(self):
-        '''
-        Tests the function to render the hypocentres to a cartesian array.
-        The invoked function nhlib.geo.utils.spherical_to_cartesian is
-        tested as part of the nhlib suite. The test here is included for
-        coverage
-        '''
-
+        # Tests the function to render the hypocentres to a cartesian array.
+        # The invoked function nhlib.geo.utils.spherical_to_cartesian is
+        # tested as part of the nhlib suite. The test here is included for
+        # coverage
         cat = Catalogue()
         cat.data['longitude'] = np.array([2., 3.])
         cat.data['latitude'] = np.array([2., 3.])
@@ -167,9 +156,7 @@ class CatalogueTestCase(unittest.TestCase):
         np.testing.assert_array_almost_equal(expected_data, model_output)
 
     def test_purge_catalogue(self):
-        '''
-        Tests the function to purge the catalogue of invalid events
-        '''
+        # Tests the function to purge the catalogue of invalid events
         cat1 = Catalogue()
         cat1.data['eventID'] = np.array([100, 101, 102], dtype=int)
         cat1.data['magnitude'] = np.array([4., 5., 6.], dtype=float)
@@ -180,14 +167,11 @@ class CatalogueTestCase(unittest.TestCase):
         np.testing.assert_array_almost_equal(cat1.data['magnitude'],
                                              np.array([5.]))
         np.testing.assert_array_equal(cat1.data['eventID'],
-                                             np.array([101]))
+                                      np.array([101]))
         self.assertListEqual(cat1.data['Agency'], ['YYY'])
 
-
     def test_update_start_end_year(self):
-        """
-        Tests the correct usage of the update start year
-        """
+        # Tests the correct usage of the update start year
         cat1 = Catalogue()
         cat1.data['year'] = np.array([1900, 1950, 2000])
         # Update start year
@@ -218,26 +202,19 @@ class TestGetDistributions(unittest.TestCase):
     and magnitude-time distribution
     """
     def setUp(self):
-        """
-        """
         self.catalogue = Catalogue()
 
-
     def test_depth_distribution_no_depth_error(self):
-        """
-        Checks to ensure error is raised when no depths are found in catalogue
-        """
+        # ensure error is raised when no depths are found in catalogue
         depth_bins = np.arange(0., 60., 10.)
         self.catalogue.data['depth'] = np.array([])
         with self.assertRaises(ValueError) as ae:
             self.catalogue.get_depth_distribution(depth_bins)
-        self.assertEqual(ae.exception.message,
+        self.assertEqual(str(ae.exception),
                          'Depths missing in catalogue')
 
     def test_depth_distribution_simple(self):
-        """
-        Tests the calculation of the depth histogram with no uncertainties
-        """
+        # Tests the calculation of the depth histogram with no uncertainties
         # Without normalisation
         self.catalogue.data['depth'] = np.arange(5., 50., 5.)
         depth_bins = np.arange(0., 60., 10.)
@@ -252,9 +229,8 @@ class TestGetDistributions(unittest.TestCase):
                                                   normalisation=True))
 
     def test_depth_distribution_uncertainties(self):
-        """
-        Tests the depth distribution with uncertainties
-        """
+        # Tests the depth distribution with uncertainties
+
         # Without normalisation
         self.catalogue.data['depth'] = np.arange(5., 50., 5.)
         self.catalogue.data['depthError'] = 3. * np.ones_like(
@@ -274,14 +250,11 @@ class TestGetDistributions(unittest.TestCase):
         self.assertTrue(np.all(np.fabs(array_diff) < 0.03))
 
 
-
 class TestMagnitudeDepthDistribution(unittest.TestCase):
     """
     Tests the method for generating the magnitude depth distribution
     """
     def setUp(self):
-        """
-        """
         self.catalogue = Catalogue()
         x, y = np.meshgrid(np.arange(5., 50., 10.), np.arange(5.5, 9.0, 1.))
         nx, ny = np.shape(x)
@@ -289,20 +262,17 @@ class TestMagnitudeDepthDistribution(unittest.TestCase):
         self.catalogue.data['magnitude'] = (y.reshape([nx * ny, 1])).flatten()
 
     def test_depth_distribution_no_depth_error(self):
-        """
-        Checks to ensure error is raised when no depths are found in catalogue
-        """
+        # ensure error is raised when no depths are found in catalogue
         depth_bins = np.arange(0., 60., 10.)
         self.catalogue.data['depth'] = np.array([])
         with self.assertRaises(ValueError) as ae:
             self.catalogue.get_depth_distribution(depth_bins)
-        self.assertEqual(ae.exception.message,
+        self.assertEqual(str(ae.exception),
                          'Depths missing in catalogue')
 
     def test_distribution_no_uncertainties(self):
-        """
-        Tests the magnitude-depth distribution without uncertainties
-        """
+        # Tests the magnitude-depth distribution without uncertainties
+
         # Without normalisation
         depth_bins = np.arange(0., 60., 10.)
         mag_bins = np.arange(5., 10., 1.)
@@ -315,14 +285,12 @@ class TestMagnitudeDepthDistribution(unittest.TestCase):
         # With normalisation
         np.testing.assert_array_almost_equal(
             expected_array / np.sum(expected_array),
-            self.catalogue.get_magnitude_depth_distribution(mag_bins,
-                depth_bins, normalisation=True))
+            self.catalogue.get_magnitude_depth_distribution(
+                mag_bins, depth_bins, normalisation=True))
 
     def test_depth_to_pmf(self):
-        """
-        Tests the function to get depth pmf assuming a simple PMF can be
-        extracted
-        """
+        # Tests the function to get depth pmf assuming a simple PMF can be
+        # extracted
         self.catalogue.data["depth"] = np.array([2.5, 2.5, 7.5, 12.5, 12.5])
         self.catalogue.data["depthError"] = np.array([0.1, 0.1, 0.1, 0.1, 0.1])
         # Test case with good data
@@ -335,10 +303,8 @@ class TestMagnitudeDepthDistribution(unittest.TestCase):
             self.assertAlmostEqual(val, expected_output[iloc][1])
 
     def test_depth_to_pmf_default(self):
-        """
-        Tests the function to get depth pmf assuming no depths are found in
-        catalogue - takes a default value
-        """
+        # Tests the function to get depth pmf assuming no depths are found in
+        # catalogue - takes a default value
         self.catalogue.data["depth"] = np.array([])
         self.catalogue.data["depthError"] = np.array([])
         depth_bins = np.array([0.0, 5.0, 10.0, 15.0])
@@ -348,9 +314,7 @@ class TestMagnitudeDepthDistribution(unittest.TestCase):
         self.assertAlmostEqual(output_pmf.data[0][1], 10.0)
 
     def test_mag_depth_distribution_uncertainties(self):
-        """
-        Tests the magnitude depth distribution with uncertainties
-        """
+        # Tests the magnitude depth distribution with uncertainties
         self.catalogue.data['depthError'] = 3.0 * np.ones_like(
             self.catalogue.data['depth'])
         self.catalogue.data['sigmaMagnitude'] = 0.1 * np.ones_like(
@@ -377,13 +341,9 @@ class TestMagnitudeTimeDistribution(unittest.TestCase):
     Simple class to test the magnitude time density distribution
     """
     def setUp(self):
-        """
-        """
         self.catalogue = Catalogue()
         x, y = np.meshgrid(np.arange(1915., 2010., 10.),
                            np.arange(5.5, 9.0, 1.0))
-
-
         nx, ny = np.shape(x)
         self.catalogue.data['magnitude'] = (y.reshape([nx * ny, 1])).flatten()
         x = (x.reshape([nx * ny, 1])).flatten()
@@ -394,25 +354,23 @@ class TestMagnitudeTimeDistribution(unittest.TestCase):
         self.catalogue.data['minute'] = np.ones_like(x, dtype=int)
         self.catalogue.data['second'] = np.ones_like(x, dtype=float)
 
-
     def test_magnitude_time_distribution_no_uncertainties(self):
-        """
-        Tests the magnitude-depth distribution without uncertainties
-        """
+        # Tests the magnitude-depth distribution without uncertainties
         mag_range = np.arange(5., 10., 1.)
         time_range = np.arange(1910., 2020., 10.)
         # Without normalisation
         expected_array = np.ones([len(time_range) - 1, len(mag_range) - 1],
                                  dtype=float)
-        np.testing.assert_array_almost_equal(expected_array,
-            self.catalogue.get_magnitude_time_distribution(mag_range,
-                                                           time_range))
+        np.testing.assert_array_almost_equal(
+            expected_array,
+            self.catalogue.get_magnitude_time_distribution(
+                mag_range, time_range))
         # With Normalisation
         np.testing.assert_array_almost_equal(
             expected_array / np.sum(expected_array),
-            self.catalogue.get_magnitude_time_distribution(mag_range,
-                                                           time_range,
-                                                           normalisation=True))
+            self.catalogue.get_magnitude_time_distribution(
+                mag_range, time_range, normalisation=True))
+
 
 class TestCatalogueConcatenate(unittest.TestCase):
 
@@ -433,19 +391,15 @@ class TestCatalogueConcatenate(unittest.TestCase):
         self.cat2 = cat2
 
     def test_concatenate(self):
-        """
-        Tests concatenation for correct case - catalogues the same
-        """
+        # Tests concatenation for correct case - catalogues the same
         self.cat1.concatenate(self.cat2)
         self.assertEqual(self.cat1.end_year, 2000)
         self.assertEqual(self.cat1.start_year, 1900)
         self.assertEqual(len(self.cat1.data['magnitude']), 6)
 
     def test_warning_merge_data(self):
-        """
-        Tests concatenation for the case when catalogues contain different
-        attributes
-        """
+        # Tests concatenation for the case when catalogues contain different
+        # attributes
         self.cat2.data['month'] = np.array([1.0, 2.0, 3.0])
         with self.assertRaises(Warning):
             self.cat1.concatenate(self.cat2)

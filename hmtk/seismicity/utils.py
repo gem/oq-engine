@@ -44,18 +44,17 @@
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
-
-#!/usr/bin/env/python
-
-'''Utility functions for seismicity calculations'''
+'''
+Utility functions for seismicity calculations
+'''
+from __future__ import division
 import numpy as np
-from math import fabs
-from scipy.stats import truncnorm
 from shapely import geometry
 try:
     from scipy.stats._continuous_distns import (truncnorm_gen,
                                                 _norm_cdf, _norm_sf,
                                                 _norm_ppf, _norm_isf)
+
     class hmtk_truncnorm_gen(truncnorm_gen):
         """
         At present, the scipy.stats.truncnorm.rvs object does not support
@@ -285,11 +284,10 @@ def piecewise_linear_scalar(params, xval):
         Piecewise linear function evaluated at point xval (float)
     '''
     n_params = len(params)
-    if fabs(float(n_params / 2) - float(n_params) / 2.) > 1E-7:
+    n_seg, remainder = divmod(n_params, 2)
+    if remainder:
         raise ValueError(
             'Piecewise Function requires 2 * nsegments parameters')
-
-    n_seg = n_params / 2
 
     if n_seg == 1:
         return params[1] + params[0] * xval

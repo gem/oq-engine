@@ -89,9 +89,10 @@ class TestRenderAspectRatio(unittest.TestCase):
         option is not selected. Should raise ValueError
         '''
         with self.assertRaises(ValueError) as ae:
-            _ = conv.render_aspect_ratio(None)
-            self.assertEqual(ae.exception.message,
-                             'Rupture aspect ratio not defined!')
+            conv.render_aspect_ratio(None)
+        self.assertEqual(str(ae.exception),
+                         'Rupture aspect ratio not defined!')
+
 
 class TestRenderMSRToHazardlib(unittest.TestCase):
     """
@@ -131,9 +132,9 @@ class TestRenderMSRToHazardlib(unittest.TestCase):
         option is not selected. Should raise ValueError
         '''
         with self.assertRaises(ValueError) as ae:
-            _ = conv.mag_scale_rel_to_hazardlib('rubbish')
-            self.assertEqual(ae.exception.message,
-                             'Magnitude Scaling Relation rubbish Defined!')
+            conv.mag_scale_rel_to_hazardlib('rubbish')
+        self.assertEqual(str(ae.exception),
+                         'Magnitude Scaling Relation rubbish Defined!')
 
 
 class TestNPDtoPMF(unittest.TestCase):
@@ -182,9 +183,9 @@ class TestNPDtoPMF(unittest.TestCase):
         and no defaults are permitted. Should raise ValueError
         '''
         with self.assertRaises(ValueError) as ae:
-            output = conv.npd_to_pmf(None)
-            self.assertEqual(ae.exception.message,
-                'Nodal Plane distribution not defined')
+            conv.npd_to_pmf(None)
+        self.assertEqual(str(ae.exception),
+                         'Nodal Plane distribution not defined')
 
 
 class TestHDDtoHazardlib(unittest.TestCase):
@@ -225,9 +226,9 @@ class TestHDDtoHazardlib(unittest.TestCase):
         Tests raises value error when no input and no defaults are selected
         """
         with self.assertRaises(ValueError) as ae:
-            output = conv.hdd_to_pmf(None)
-            self.assertEqual(ae.exception.message,
-                'Hypocentral depth distribution not defined!')
+            conv.hdd_to_pmf(None)
+        self.assertEqual(str(ae.exception),
+                         'Hypocentral depth distribution not defined!')
 
 
 class TestConvertSourceGeometries(unittest.TestCase):

@@ -103,14 +103,12 @@ class mtkSourceModel(object):
             If set to False, ValueErrors will be raised when an essential
             attribute is missing.
         '''
-        source_model = self.convert_to_oqhazardlib(PoissonTOM(1.0),
-                                                   2.0, # Default values 
-                                                   2.0,
-                                                   10.0,
-                                                   use_defaults=use_defaults)
+        source_model = self.convert_to_oqhazardlib(
+            PoissonTOM(1.0), 2.0, 2.0, 10.0, use_defaults=use_defaults)
         write_source_model(filename, source_model, name=self.name)
 
-    def convert_to_oqhazardlib(self, tom, simple_mesh_spacing=1.0,
+    def convert_to_oqhazardlib(
+            self, tom, simple_mesh_spacing=1.0,
             complex_mesh_spacing=2.0, area_discretisation=10.0,
             use_defaults=False):
         """
@@ -143,7 +141,3 @@ class mtkSourceModel(object):
             else:
                 raise ValueError('Source type not recognised!')
         return oq_source_model
-        
-    
-
-

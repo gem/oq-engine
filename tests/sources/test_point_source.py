@@ -73,42 +73,39 @@ SOURCE_ATTRIBUTES = ['mfd', 'name', 'geometry', 'nodal_plane_dist', 'typology',
                      'lower_depth', 'id', 'hypo_depth_dist', 'mag_scale_rel',
                      'trt']
 
+
 class TestPointSource(unittest.TestCase):
     '''
     Tester class for hmtk.sources.point_source.mtkAreaSource
     '''
     def setUp(self):
-        warnings.simplefilter("ignore") # Suppress warnings during test
+        warnings.simplefilter("ignore")  # Suppress warnings during test
         self.catalogue = Catalogue()
         self.point_source = mtkPointSource('101', 'A Point Source')
 
     def test_point_source_instantiation(self):
-        '''
-        Tests the core (minimal) instantiation of the class
-        '''
+        # Tests the core (minimal) instantiation of the class
 
         # Check source has all required attributes
-        self.assertListEqual(self.point_source.__dict__.keys(),
-                             SOURCE_ATTRIBUTES)
+        self.assertListEqual(sorted(self.point_source.__dict__),
+                             sorted(SOURCE_ATTRIBUTES))
         self.assertEqual(self.point_source.id, '101')
         self.assertEqual(self.point_source.name, 'A Point Source')
         self.assertEqual(self.point_source.typology, 'Point')
 
     def test_depth_checker(self):
-        '''
-        Tests the checker to ensure correct depth values
-        '''
+        # Tests the checker to ensure correct depth values
         # Bad Case - Negative upper depths
         with self.assertRaises(ValueError) as ver:
             self.point_source._check_seismogenic_depths(-1.0, 20.)
-        self.assertEqual(ver.exception.message,
+        self.assertEqual(str(ver.exception),
                          'Upper seismogenic depth must be greater than or '
                          'equal to 0.0!')
 
         # Bad Case - Lower depth smaller than upper depth
         with self.assertRaises(ValueError) as ver:
             self.point_source._check_seismogenic_depths(30., 20.)
-        self.assertEqual(ver.exception.message,
+        self.assertEqual(str(ver.exception),
                          'Lower seismogenic depth must take a greater value '
                          'than upper seismogenic depth')
         # Good Case
@@ -116,11 +113,8 @@ class TestPointSource(unittest.TestCase):
         self.assertAlmostEqual(0.0, self.point_source.upper_depth)
         self.assertAlmostEqual(20.0, self.point_source.lower_depth)
 
-
     def test_geometry_inputs(self):
-        '''
-        Tests the geometry definitions
-        '''
+        # Tests the geometry definitions
         simple_point = Point(2.0, 3.0)
         simple_point_array = np.array([2.0, 3.0])
 
@@ -144,20 +138,15 @@ class TestPointSource(unittest.TestCase):
         self.assertAlmostEqual(0.0, self.point_source.upper_depth)
         self.assertAlmostEqual(30.0, self.point_source.lower_depth)
 
-
         # For any other input type - check ValueError is raised
         self.point_source = mtkPointSource('101', 'A Point Source')
         with self.assertRaises(ValueError) as ver:
             self.point_source.create_geometry('a bad input', 0.0, 30.0)
-        self.assertEqual(ver.exception.message,
+        self.assertEqual(str(ver.exception),
                          'Unrecognised or unsupported geometry definition')
 
-
-
     def test_select_events_in_circular_distance(self):
-        '''
-        Basic test of method to select events within a distance of the point
-        '''
+        # Basic test of method to select events within a distance of the point
         self.point_source = mtkPointSource('101', 'A Point Source')
         simple_point = Point(4.5, 4.5)
 
@@ -186,10 +175,9 @@ class TestPointSource(unittest.TestCase):
             self.point_source.catalogue.data['depth'])
 
         # Simple case - 100 km hypocentral distance (hypocentre at 70 km)
-        self.point_source.select_catalogue_within_distance(selector0,
-                                                         100.,
-                                                         'hypocentral',
-                                                         70.)
+        self.point_source.select_catalogue_within_distance(
+            selector0, 100., 'hypocentral', 70.)
+
         np.testing.assert_array_almost_equal(
             np.array([1]),
             self.point_source.catalogue.data['eventID'])
@@ -206,12 +194,8 @@ class TestPointSource(unittest.TestCase):
             np.array([1.]),
             self.point_source.catalogue.data['depth'])
 
-
     def test_select_events_within_cell(self):
-        '''
-        Tests the selection of events within a cell centred on the point
-        '''
-
+        # Tests the selection of events within a cell centred on the point
         self.point_source = mtkPointSource('101', 'A Point Source')
         simple_point = Point(4.5, 4.5)
         self.point_source.create_geometry(simple_point, 0., 30.)
@@ -237,10 +221,8 @@ class TestPointSource(unittest.TestCase):
             self.point_source.catalogue.data['depth'])
 
     def test_select_catalogue(self):
-        '''
-        Tests the select_catalogue function - essentially a wrapper to the
-        two selection functions
-        '''
+        # Tests the select_catalogue function - essentially a wrapper to the
+        # two selection functions
         self.point_source = mtkPointSource('101', 'A Point Source')
         simple_point = Point(4.5, 4.5)
         self.point_source.create_geometry(simple_point, 0., 30.)
@@ -251,7 +233,7 @@ class TestPointSource(unittest.TestCase):
 
         with self.assertRaises(ValueError) as ver:
             self.point_source.select_catalogue(selector0, 100.)
-            self.assertEqual(ver.exception.message,
+            self.assertEqual(str(ver.exception),
                              'No events found in catalogue!')
 
         # Create a catalogue
@@ -262,7 +244,8 @@ class TestPointSource(unittest.TestCase):
         self.catalogue.data['depth'] = np.ones(7, dtype=float)
         selector0 = CatalogueSelector(self.catalogue)
 
-        # To ensure that square function is called - compare against direct instance
+        # To ensure that square function is called - compare against direct
+        # instance
         # First implementation - compare select within distance
         self.point_source.select_catalogue_within_distance(selector0,
                                                            100.,
@@ -288,13 +271,11 @@ class TestPointSource(unittest.TestCase):
         # 'circle' nor 'square'
         with self.assertRaises(ValueError) as ver:
             self.point_source.select_catalogue(selector0, 100., 'bad input')
-        self.assertEqual(ver.exception.message,
+        self.assertEqual(str(ver.exception),
                          'Unrecognised selection type for point source!')
 
     def test_create_oq_hazardlib_point_source(self):
-        """
-        Tests the function to create a point source model
-        """
+        # Tests the function to create a point source model
         mfd1 = TruncatedGRMFD(5.0, 8.0, 0.1, 3.0, 1.0)
         self.point_source = mtkPointSource(
             '001',
@@ -308,9 +289,8 @@ class TestPointSource(unittest.TestCase):
             mfd=mfd1,
             nodal_plane_dist=None,
             hypo_depth_dist=None)
-        test_source = self.point_source.create_oqhazardlib_source(TOM,
-                                                                  2.0,
-                                                                  True)
+        test_source = self.point_source.create_oqhazardlib_source(
+            TOM, 2.0, True)
         self.assertIsInstance(test_source, PointSource)
         self.assertIsInstance(test_source.mfd, TruncatedGRMFD)
         self.assertAlmostEqual(test_source.mfd.b_val, 1.0)

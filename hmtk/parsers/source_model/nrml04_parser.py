@@ -96,6 +96,7 @@ def int_(value):
     else:
         return None
 
+
 def get_taglist(node):
     """
     Return a list of tags (with NRML namespace removed) representing the
@@ -104,19 +105,20 @@ def get_taglist(node):
     return [re.sub(r'\{[^}]*\}', "", copy(subnode.tag))
             for subnode in node.nodes]
 
+
 def linestring_node_to_line(node, with_depth=False):
     """
     Returns an instance of a Linestring node to :class:
     openquake.hazardlib.geo.line.Line
     """
     assert "LineString" in node.tag
-    crds = map(float, node.nodes[0].text.split())
+    crds = [float(x) for x in node.nodes[0].text.split()]
     if with_depth:
         return Line([Point(crds[iloc], crds[iloc + 1], crds[iloc + 2])
-                 for iloc in range(0, len(crds), 3)])
+                     for iloc in range(0, len(crds), 3)])
     else:
         return Line([Point(crds[iloc], crds[iloc + 1])
-                     for iloc in range(0, len(crds), 2)])  
+                     for iloc in range(0, len(crds), 2)])
 
 
 def node_to_point_geometry(node):
@@ -139,6 +141,7 @@ def node_to_point_geometry(node):
     assert lower_depth > upper_depth
     return point, upper_depth, lower_depth
 
+
 def node_to_area_geometry(node):
     """
     Reads an area geometry node and returns the polygon, upper depth and lower
@@ -147,8 +150,8 @@ def node_to_area_geometry(node):
     assert "areaGeometry" in node.tag
     for subnode in node.nodes:
         if "Polygon" in subnode.tag:
-            crds = map(float,
-                subnode.nodes[0].nodes[0].nodes[0].text.split())
+            crds = [float(x)
+                    for x in subnode.nodes[0].nodes[0].nodes[0].text.split()]
             polygon = Polygon([Point(crds[iloc], crds[iloc + 1])
                                for iloc in range(0, len(crds), 2)])
         elif "upperSeismoDepth" in subnode.tag:
@@ -160,6 +163,7 @@ def node_to_area_geometry(node):
             pass
     assert lower_depth > upper_depth
     return polygon, upper_depth, lower_depth
+
 
 def node_to_simple_fault_geometry(node):
     """
@@ -222,12 +226,13 @@ def node_to_truncated_gr(node, bin_width=0.1):
     if not all([node.attrib[key]
                 for key in ["minMag", "maxMag", "aValue", "bValue"]]):
         return None
-    tgr  = dict([(key, float_(node.attrib[key])) for key in node.attrib.keys()])
+    tgr = dict((key, float_(node.attrib[key])) for key in node.attrib.keys())
     return mfd.truncated_gr.TruncatedGRMFD(min_mag=tgr["minMag"],
                                            max_mag=tgr["maxMag"],
                                            bin_width=bin_width,
                                            a_val=tgr["aValue"],
                                            b_val=tgr["bValue"])
+
 
 def node_to_evenly_discretized(node):
     """
@@ -239,11 +244,12 @@ def node_to_evenly_discretized(node):
                 node.nodes[0].text]):
         return None
     # Text to float
-    rates = map(float, node.nodes[0].text.split())
+    rates = [float(x) for x in node.nodes[0].text.split()]
     return mfd.evenly_discretized.EvenlyDiscretizedMFD(
         float(node.attrib["minMag"]),
         float(node.attrib["binWidth"]),
         rates)
+
 
 def node_to_mfd(node, taglist):
     """
@@ -258,6 +264,7 @@ def node_to_mfd(node, taglist):
     else:
         mfd = None
     return mfd
+
 
 def node_to_nodal_planes(node):
     """
@@ -275,7 +282,8 @@ def node_to_nodal_planes(node):
                          float(plane.attrib["rake"]))
         npd_pmf.append((float(plane.attrib["probability"]), npd))
     return PMF(npd_pmf)
- 
+
+
 def node_to_hdd(node):
     """
     Parses the node to a hpyocentral depth distribution PMF
@@ -290,6 +298,7 @@ def node_to_hdd(node):
                      float(subnode.attrib["depth"])))
     return PMF(hdds)
 
+
 def parse_point_source_node(node, mfd_spacing=0.1):
     """
     Returns an "areaSource" node into an instance of the :class:
@@ -301,7 +310,7 @@ def parse_point_source_node(node, mfd_spacing=0.1):
     point_id, name, trt = (node.attrib["id"],
                           node.attrib["name"],
                           node.attrib["tectonicRegion"])
-    assert point_id # Defensive validation!
+    assert point_id  # Defensive validation!
     # Process geometry
     location, upper_depth, lower_depth = node_to_point_geometry(
         node.nodes[pnt_taglist.index("pointGeometry")])
@@ -326,6 +335,7 @@ def parse_point_source_node(node, mfd_spacing=0.1):
                           nodal_plane_dist=npds,
                           hypo_depth_dist=hdds)
 
+
 def parse_area_source_node(node, mfd_spacing=0.1):
     """
     Returns an "areaSource" node into an instance of the :class:
@@ -337,7 +347,7 @@ def parse_area_source_node(node, mfd_spacing=0.1):
     area_id, name, trt = (node.attrib["id"],
                           node.attrib["name"],
                           node.attrib["tectonicRegion"])
-    assert area_id # Defensive validation!
+    assert area_id  # Defensive validation!
     # Process geometry
     polygon, upper_depth, lower_depth = node_to_area_geometry(
         node.nodes[area_taglist.index("areaGeometry")])

@@ -82,31 +82,27 @@ class TestAreaSource(unittest.TestCase):
         self.area_source = mtkAreaSource('101', 'A Source')
 
     def test_area_source_instantiation(self):
-        '''
-        Tests the core (minimal) instantiation of the class
-        '''
+        # Tests the core (minimal) instantiation of the class
         # Check source has all required attributes
-        self.assertListEqual(self.area_source.__dict__.keys(),
-                             SOURCE_ATTRIBUTES)
+        self.assertListEqual(sorted(self.area_source.__dict__),
+                             sorted(SOURCE_ATTRIBUTES))
         self.assertEqual(self.area_source.id, '101')
         self.assertEqual(self.area_source.name, 'A Source')
         self.assertEqual(self.area_source.typology, 'Area')
 
     def test_depth_checker(self):
-        '''
-        Tests the checker to ensure correct depth values
-        '''
+        # Tests the checker to ensure correct depth values
         # Bad Case - Negative upper depths
         with self.assertRaises(ValueError) as ver:
             self.area_source._check_seismogenic_depths(-1.0, 20.)
-        self.assertEqual(ver.exception.message,
+        self.assertEqual(str(ver.exception),
                          'Upper seismogenic depth must be greater than or '
                          'equal to 0.0!')
 
         # Bad Case - Lower depth smaller than upper depth
         with self.assertRaises(ValueError) as ver:
             self.area_source._check_seismogenic_depths(30., 20.)
-        self.assertEqual(ver.exception.message,
+        self.assertEqual(str(ver.exception),
                          'Lower seismogenic depth must take a greater value '
                          'than upper seismogenic depth')
         # Good Case
@@ -114,11 +110,8 @@ class TestAreaSource(unittest.TestCase):
         self.assertAlmostEqual(0.0, self.area_source.upper_depth)
         self.assertAlmostEqual(20.0, self.area_source.lower_depth)
 
-
     def test_geometry_inputs(self):
-        '''
-        Tests the geometry definition
-        '''
+        # Tests the geometry definition
         simple_polygon = polygon.Polygon([point.Point(2.0, 3.0),
                                           point.Point(3.0, 3.0),
                                           point.Point(3.0, 2.0),
@@ -127,7 +120,7 @@ class TestAreaSource(unittest.TestCase):
         simple_polygon_array = np.array([[2.0, 3.0],
                                          [3.0, 3.0],
                                          [3.0, 2.0],
-                                         [ 2.0, 2.0]])
+                                         [2.0, 2.0]])
         # Using nhlib.geo.polygon.Polygon class as input
         self.area_source.create_geometry(simple_polygon, 0.0, 30.0)
         # Check that geometry is an instance of nhlib.geo.polygon.Polygon
@@ -160,7 +153,7 @@ class TestAreaSource(unittest.TestCase):
         self.area_source = mtkAreaSource('101', 'A Source')
         with self.assertRaises(ValueError) as ver:
             self.area_source.create_geometry('a bad input', 0.0, 30.0)
-        self.assertEqual(ver.exception.message,
+        self.assertEqual(str(ver.exception),
                          'Unrecognised or unsupported geometry definition')
 
         # For numpy array with only two rows
@@ -169,14 +162,12 @@ class TestAreaSource(unittest.TestCase):
                                          [3.0, 3.0]])
         with self.assertRaises(ValueError) as ver:
             self.area_source.create_geometry(simple_polygon_array, 0.0, 30.0)
-        self.assertEqual(ver.exception.message,
+        self.assertEqual(str(ver.exception),
                          'Incorrectly formatted polygon geometry - '
                          'needs three or more vertices')
 
     def test_select_events_in_source(self):
-        '''
-        Basic test of method to select events from catalogue in polygon
-        '''
+        # Basic test of method to select events from catalogue in polygon
         self.area_source = mtkAreaSource('101', 'A Source')
         simple_polygon = polygon.Polygon([point.Point(2.0, 3.0),
                                           point.Point(3.0, 3.0),
@@ -223,12 +214,10 @@ class TestAreaSource(unittest.TestCase):
 
         with self.assertRaises(ValueError) as ver:
             self.area_source.select_catalogue(selector0, 0.0)
-            self.assertEqual(ver.exception.message,
+            self.assertEqual(str(ver.exception),
                              'No events found in catalogue!')
 
     def test_create_oqhazardlib_source(self):
-        """
-        """
         # Define a complete source
         area_geom = polygon.Polygon([point.Point(10., 10.),
                                      point.Point(12., 10.),

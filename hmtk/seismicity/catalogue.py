@@ -102,7 +102,7 @@ class Catalogue(object):
         self.number_earthquakes = 0
 
     def get_number_events(self):
-        return len(self.data[list(self.data)[0]])
+        return len(self.data['eventID'])
 
     def add_event(self):
         raise NotImplementedError
@@ -168,13 +168,6 @@ class Catalogue(object):
         it is modified by declustering or completeness-based filtering)
         """
         self.start_year = np.min(self.data['year'])
-#    def catalogue_mt_filter(self, mt_table):
-#        if not 'eventID' in keys:
-#            self.data['eventID'] = np.array(range(0, np.shape(data_array)[0]),
-#                                            dtype=int)
-#
-#        for i, key in enumerate(keys):
-#            self.data[key] = data_array[:, i]
 
     def catalogue_mt_filter(self, mt_table, flag=None):
         """
@@ -341,7 +334,7 @@ class Catalogue(object):
         while np.sum(depth_hist) > 1.0:
             depth_hist[-1] -= (np.sum(depth_hist) - 1.0)
             depth_hist = np.around(depth_hist, 3)
-        
+
         pmf_list = []
         for iloc, prob in enumerate(depth_hist):
             pmf_list.append((prob,
