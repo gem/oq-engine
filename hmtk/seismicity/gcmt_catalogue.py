@@ -1,4 +1,4 @@
-#!/usr/bin/env/python
+#!/usr/bin/env python
 
 """
 Implements sets of classes for mapping components of the focal mechanism

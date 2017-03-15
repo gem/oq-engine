@@ -1,11 +1,11 @@
-#!/usr/bin/env/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 #
 # LICENSE
 #
-# Copyright (c) 2015, GEM Foundation
+# Copyright (c) 2015-2017, GEM Foundation
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-#DISCLAIMER
+# DISCLAIMER
 #
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
 # is released as a prototype implementation on behalf of
