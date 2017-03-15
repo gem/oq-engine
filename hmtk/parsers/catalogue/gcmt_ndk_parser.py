@@ -21,7 +21,7 @@ def _read_date_from_string(str1):
     Reads the date from a string in the format YYYY/MM/DD and returns
     :class: datetime.date
     """
-    full_date = map(int, str1.split('/'))
+    full_date = [int(x) for x in str1.split('/')]
     return datetime.date(full_date[0], full_date[1], full_date[2])
 
 
@@ -30,7 +30,7 @@ def _read_time_from_string(str1):
     Reads the time from a string in the format HH:MM:SS.S and returns
     :class: datetime.time
     """
-    full_time = map(float, str1.split(':'))
+    full_time = [float(x) for x in str1.split(':')]
     hour = int(full_time[0])
     minute = int(full_time[1])
     if full_time[2] > 59.99:
@@ -281,7 +281,7 @@ class ParseNDKtoGCMT(object):
         hypo.latitude = float(linestring[27:33])
         hypo.longitude = float(linestring[34:41])
         hypo.depth = float(linestring[42:47])
-        magnitudes = map(float, (linestring[48:55]).split(' '))
+        magnitudes = [float(x) for x in linestring[48:55].split(' ')]
         if magnitudes[0] > 0.:
             hypo.m_b = magnitudes[0]
         if magnitudes[1] > 0.:
@@ -295,9 +295,10 @@ class ParseNDKtoGCMT(object):
         """
         gcmt.identifier = ndk_string[:16]
         inversion_data = re.split('[A-Z:]+', ndk_string[17:61])
-        gcmt.metadata['BODY'] = map(float, inversion_data[1].split())
-        gcmt.metadata['SURFACE'] = map(float, inversion_data[2].split())
-        gcmt.metadata['MANTLE'] = map(float, inversion_data[3].split())
+        gcmt.metadata['BODY'] = [float(x) for x in inversion_data[1].split()]
+        gcmt.metadata['SURFACE'] = [
+            float(x) for x in inversion_data[2].split()]
+        gcmt.metadata['MANTLE'] = [float(x) for x in inversion_data[3].split()]
         further_meta = re.split('[: ]+', ndk_string[62:])
         gcmt.metadata['CMT'] = int(further_meta[1])
         gcmt.metadata['FUNCTION'] = {'TYPE': further_meta[2],
@@ -318,7 +319,7 @@ class ParseNDKtoGCMT(object):
 
         data = ndk_string[:58].split()
         centroid.centroid_type = data[0].rstrip(':')
-        data = map(float, data[1:])
+        data = [float(x) for x in data[1:]]
         time_diff = data[0]
         if fabs(time_diff) > 1E-6:
             centroid._get_centroid_time(time_diff)
