@@ -27,6 +27,10 @@ from openquake.baselib.general import groupby, get_array, AccumDict
 from openquake.hazardlib import site, calc, valid
 from openquake.risklib import scientific, riskmodels
 
+
+class ValidationError(Exception):
+    pass
+
 U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -307,6 +311,7 @@ class CompositeRiskModel(collections.Mapping):
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
         self.loss_types = self.make_curve_builders(oqparam)
+        expected_loss_types = set(self.loss_types)
         taxonomies = set()
         for taxonomy, riskmodel in self._riskmodels.items():
             taxonomies.add(taxonomy)
@@ -315,6 +320,11 @@ class CompositeRiskModel(collections.Mapping):
             for vf in riskmodel.risk_functions.values():
                 if hasattr(vf, 'covs') and vf.covs.any():
                     self.covs += 1
+            missing = expected_loss_types - set(riskmodel.risk_functions)
+            if missing:
+                raise ValidationError(
+                    'Missing vulnerability function for taxonomy %s and loss'
+                    ' type %s' % (taxonomy, ', '.join(missing)))
         self.taxonomies = sorted(taxonomies)
 
     def get_min_iml(self):
