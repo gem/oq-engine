@@ -108,11 +108,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             self.save_params()
             self.read_exposure()  # define .assets_by_site
             self.load_riskmodel()
-            self.assetcol = riskinput.AssetCollection(
-                self.assets_by_site, self.cost_calculator,
-                oq.time_event)
-            self.sitecol, self.assets_by_site = self.assoc_assets_sites(
-                haz_sitecol)
+            self.sitecol, self.assetcol = self.assoc_assets_sites(haz_sitecol)
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
             [rlz] = self.rlzs_assoc.realizations
@@ -133,7 +129,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         self.riskinputs = self.build_riskinputs(curves_by_rlz)
         self.monitor.oqparam = oq
 
-        self.N = sum(len(assets) for assets in self.assets_by_site)
+        self.N = len(self.assetcol)
         self.L = len(self.riskmodel.loss_types)
         self.R = len(self.rlzs_assoc.realizations)
         self.I = oq.insured_losses
