@@ -667,8 +667,7 @@ def make_eps(assetcol, num_samples, seed, correlation):
     :param float correlation: the correlation coefficient
     :returns: epsilons matrix of shape (num_assets, num_samples)
     """
-    all_assets = iter(assetcol)
-    assets_by_taxo = groupby(all_assets, by_taxonomy)
+    assets_by_taxo = groupby(assetcol, by_taxonomy)
     eps = numpy.zeros((len(assetcol), num_samples), numpy.float32)
     for taxonomy, assets in assets_by_taxo.items():
         # the association with the epsilons is done in order
