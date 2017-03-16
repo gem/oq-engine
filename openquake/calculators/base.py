@@ -329,7 +329,7 @@ class HazardCalculator(BaseCalculator):
     def assoc_assets_sites(self, sitecol):
         """
         :param sitecol: a sequence of sites
-        :returns: a pair (filtered_sites, assets_by_site)
+        :returns: a pair (filtered sites, asset collection)
 
         The new site collection is different from the original one
         if some assets were discarded or if there were missing assets

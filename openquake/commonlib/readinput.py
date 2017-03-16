@@ -757,8 +757,7 @@ def get_sitecol_assetcol(oqparam, exposure):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        two sequences of the same length: the site collection and an
-        array with the assets per each site, collected by taxonomy
+        the site collection and the asset collection
     """
     assets_by_loc = groupby(exposure.assets, key=lambda a: a.location)
     lons, lats = zip(*sorted(assets_by_loc))
