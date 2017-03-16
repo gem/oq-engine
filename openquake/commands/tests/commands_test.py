@@ -288,9 +288,6 @@ class SourceModelShapefileConverterTestCase(unittest.TestCase):
     - more tests will follow
     """
     def setUp(self):
-        if not hasattr(shapefile, '__version__'):
-            # for versions < 1.2.3
-            raise unittest.SkipTest('shapefile library too old')
         self.OUTDIR = tempfile.mkdtemp()
 
     def test_roundtrip_invalid(self):

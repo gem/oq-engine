@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import sys
 import unittest
 from nose.plugins.attrib import attr
 
@@ -22,7 +23,6 @@ from openquake.baselib.general import writetmp
 from openquake.calculators.views import view
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
-from openquake.calculators.tests import check_platform
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_master, case_miriam,
     occupants, case_1g)
@@ -150,11 +150,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_master(self):
+        if sys.platform == 'darwin':
+            raise unittest.SkipTest('MacOSX')
         self.assert_stats_ok(case_master, 'job.ini', individual_curves='false')
 
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
         for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                                  delta=1E-5)
 
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-5)
