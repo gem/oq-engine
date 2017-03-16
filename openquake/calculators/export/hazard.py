@@ -652,7 +652,10 @@ def export_gmf(ekey, dstore):
     if n_gmfs:
         etags = numpy.array(
             sorted([b'scenario-%010d~ses=1' % i for i in range(n_gmfs)]))
-    gmf_data = dstore['gmf_data']
+    try:
+        gmf_data = dstore['gmf_data']  # for scenario
+    except KeyError:
+        gmf_data = dstore.ext5()['gmf_data']   # for event based
     nbytes = gmf_data.attrs['nbytes']
     logging.info('Internal size of the GMFs: %s', humansize(nbytes))
     if nbytes > GMF_MAX_SIZE:
@@ -799,39 +802,42 @@ class GmfExporter(object):
         events = self.dstore['events/sm-%04d' % sm_id]
         ok_events = events[events['eid'] == eid]
         [etag] = build_etags(ok_events)
-        for rlzno in self.dstore['gmf_data/sm-%04d' % sm_id]:
-            rlz = self.rlzs[int(rlzno)]
-            gmfa = self.dstore['gmf_data/sm-%04d/%s' % (sm_id, rlzno)]
-            gmf = gmfa[gmfa['eid'] == eid]
-            data, comment = _build_csv_data(gmf, rlz, self.sitecol, imts,
-                                            self.oq.investigation_time)
-            fname = self.dstore.build_fname(
-                'gmf', '%s-rlz-%03d' % (etag, rlz.ordinal), 'csv')
-            logging.info('Exporting %s', fname)
-            writers.write_csv(fname, data, comment=comment)
-            fnames.append(fname)
+        with self.dstore.ext5() as ext5:
+            for rlzno in ext5['gmf_data/sm-%04d' % sm_id]:
+                rlz = self.rlzs[int(rlzno)]
+                gmfa = ext5['gmf_data/sm-%04d/%s' % (sm_id, rlzno)]
+                gmf = gmfa[gmfa['eid'] == eid]
+                data, comment = _build_csv_data(gmf, rlz, self.sitecol, imts,
+                                                self.oq.investigation_time)
+                fname = self.dstore.build_fname(
+                    'gmf', '%s-rlz-%03d' % (etag, rlz.ordinal), 'csv')
+                logging.info('Exporting %s', fname)
+                writers.write_csv(fname, data, comment=comment)
+                fnames.append(fname)
         return fnames
 
     def export_all(self):
         fnames = []
         imts = list(self.oq.imtls)
-        for sm_id in self.dstore['gmf_data']:
-            events = self.dstore['events/' + sm_id]
-            etag = dict(zip(range(len(events)), build_etags(events)))
-            for rlzno in self.dstore['gmf_data/' + sm_id]:
-                rlz = self.rlzs[int(rlzno)]
-                gmf = self.dstore['gmf_data/%s/%s' % (sm_id, rlzno)].value
-                for eid, array in group_array(gmf, 'eid').items():
-                    if eid not in etag:
-                        continue
-                    data, comment = _build_csv_data(
-                        array, rlz, self.sitecol,
-                        imts, self.oq.investigation_time)
-                    fname = self.dstore.build_fname(
-                        'gmf', '%s-rlz-%03d' % (etag[eid], rlz.ordinal), 'csv')
-                    logging.info('Exporting %s', fname)
-                    writers.write_csv(fname, data, comment=comment)
-                    fnames.append(fname)
+        with self.dstore.ext5() as ext5:
+            for sm_id in ext5['gmf_data']:
+                events = self.dstore['events/' + sm_id]
+                etag = dict(zip(range(len(events)), build_etags(events)))
+                for rlzno in ext5['gmf_data/' + sm_id]:
+                    rlz = self.rlzs[int(rlzno)]
+                    gmf = ext5['gmf_data/%s/%s' % (sm_id, rlzno)].value
+                    for eid, array in group_array(gmf, 'eid').items():
+                        if eid not in etag:
+                            continue
+                        data, comment = _build_csv_data(
+                            array, rlz, self.sitecol,
+                            imts, self.oq.investigation_time)
+                        fname = self.dstore.build_fname(
+                            'gmf', '%s-rlz-%03d' % (etag[eid], rlz.ordinal),
+                            'csv')
+                        logging.info('Exporting %s', fname)
+                        writers.write_csv(fname, data, comment=comment)
+                        fnames.append(fname)
         return fnames
 
 
@@ -875,11 +881,13 @@ def export_gmf_scenario_npz(ekey, dstore):
             for imti, imt in enumerate(imts):
                 gmfa[imt] = arr[imti]
             dic[str(gsim)] = util.compose_arrays(sitemesh, gmfa)
-    elif 'gmf_data' in dstore:  # event_based
+    elif 'event_based' in oq.calculation_mode:
         dic['sitemesh'] = get_mesh(dstore['sitecol'])
-        for sm_id in sorted(dstore['gmf_data']):
-            for rlzno in sorted(dstore['gmf_data/' + sm_id]):
-                dic['rlz-' + rlzno] = dstore['gmf_data/%s/%s' % (sm_id, rlzno)]
+        with dstore.ext5() as ext5:
+            for sm_id in sorted(ext5['gmf_data']):
+                for rlzno in sorted(ext5['gmf_data/' + sm_id]):
+                    dic['rlz-' + rlzno] = ext5[
+                        'gmf_data/%s/%s' % (sm_id, rlzno)].value
     else:  # nothing to export
         return []
     savez(fname, **dic)
