@@ -656,7 +656,7 @@ class RiskInputFromRuptures(object):
 
     def __repr__(self):
         return '<%s imts=%s, weight=%d>' % (
-            self.__class__.__name__, self.imts, self.weight)
+            self.__class__.__name__, self.hazard_getter.imts, self.weight)
 
 
 def make_eps(assetcol, num_samples, seed, correlation):
