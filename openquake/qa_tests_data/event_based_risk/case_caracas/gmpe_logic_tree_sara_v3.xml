@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID='lt1'>
+
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                    applyToTectonicRegionType="Subduction Interface">
+                <logicTreeBranch branchID="Zhao_et_al_2006_SInter">
+                    <uncertaintyModel>ZhaoEtAl2006SInter</uncertaintyModel>
+                    <uncertaintyWeight>0.3333</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="Abrahamson_et_al_2015_SInter_High">
+                    <uncertaintyModel>AbrahamsonEtAl2015SInterHigh</uncertaintyModel>
+                    <uncertaintyWeight>0.3333</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="MontalvaEtAl2016SInter">
+                    <uncertaintyModel>MontalvaEtAl2016SInter</uncertaintyModel>
+                    <uncertaintyWeight>0.3334</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        <logicTreeBranchingLevel branchingLevelID="bl2">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2"
+                    applyToTectonicRegionType="Subduction IntraSlab">
+                <logicTreeBranch branchID="Abrahamson_et_al_2015_SSlab">
+                    <uncertaintyModel>AbrahamsonEtAl2015SSlab</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="MontalvaEtAl2016SSlab">
+                    <uncertaintyModel>MontalvaEtAl2016SSlab</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        <logicTreeBranchingLevel branchingLevelID="bl3">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs3"
+                    applyToTectonicRegionType="Active Shallow Crust">
+                <logicTreeBranch branchID="Akkar_et_al_Rjb2014">
+                    <uncertaintyModel>AkkarEtAlRjb2014</uncertaintyModel>
+                    <uncertaintyWeight>0.3333</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="Bindi_et_al_2014Rjb">
+                    <uncertaintyModel>BindiEtAl2014Rjb</uncertaintyModel>
+                    <uncertaintyWeight>0.3333</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="Boore_et_al_2014">
+                    <uncertaintyModel>BooreEtAl2014</uncertaintyModel>
+                    <uncertaintyWeight>0.3334</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        <logicTreeBranchingLevel branchingLevelID="bl4">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs4"
+                    applyToTectonicRegionType="Stable Shallow Crust">
+                    <logicTreeBranch branchID="AtkinsonBoore2006Modified2011">
+                        <uncertaintyModel>AtkinsonBoore2006Modified2011</uncertaintyModel>
+                        <uncertaintyWeight>0.25</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="Tavakoli_Pezeshk_2005">
+                        <uncertaintyModel>TavakoliPezeshk2005</uncertaintyModel>
+                        <uncertaintyWeight>0.50</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="DrouetBrazil2015_with_depth">
+                        <uncertaintyModel>DrouetBrazil2015withDepth</uncertaintyModel>
+                        <uncertaintyWeight>0.25</uncertaintyWeight>
+                    </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        
+    </logicTree>
+</nrml>
