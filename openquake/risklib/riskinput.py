@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.general import groupby, get_array, AccumDict
-from openquake.hazardlib import site, calc
+from openquake.hazardlib import site, calc, valid
 from openquake.risklib import scientific, riskmodels
 
 U8 = numpy.uint8
@@ -67,6 +67,7 @@ class AssetCollection(object):
         self.cc = cost_calculator
         self.time_event = time_event
         self.time_events = time_events
+        self.tot_sites = len(assets_by_site)
         self.array, self.taxonomies = self.build_asset_collection(
             assets_by_site, time_event)
         fields = self.array.dtype.names
@@ -83,11 +84,9 @@ class AssetCollection(object):
         :returns: numpy array of lists with the assets by each site
         """
         assetcol = self.array
-        site_ids = sorted(set(assetcol['site_id']))
-        assets_by_site = [[] for sid in site_ids]
-        index = dict(zip(site_ids, range(len(site_ids))))
+        assets_by_site = [[] for sid in range(self.tot_sites)]
         for i, ass in enumerate(assetcol):
-            assets_by_site[index[ass['site_id']]].append(self[i])
+            assets_by_site[ass['site_id']].append(self[i])
         return numpy.array(assets_by_site)
 
     def values(self):
@@ -118,7 +117,8 @@ class AssetCollection(object):
                     a['idx'],
                     self.taxonomies[a['taxonomy_id']],
                     number=a['number'],
-                    location=(a['lon'], a['lat']),
+                    location=(valid.longitude(a['lon']),  # round coordinates
+                              valid.latitude(a['lat'])),
                     values=values,
                     area=a['area'],
                     deductibles={lt[self.D:]: a[lt] for lt in self.deduc},
@@ -143,6 +143,7 @@ class AssetCollection(object):
                  'deduc': ' '.join(self.deduc),
                  'i_lim': ' '.join(self.i_lim),
                  'retro': ' '.join(self.retro),
+                 'tot_sites': self.tot_sites,
                  'nbytes': self.array.nbytes}
         return dict(array=self.array, taxonomies=self.taxonomies,
                     cost_calculator=self.cc), attrs
@@ -151,6 +152,7 @@ class AssetCollection(object):
         for name in ('time_events', 'loss_types', 'deduc', 'i_lim', 'retro'):
             setattr(self, name, attrs[name].split())
         self.time_event = attrs['time_event']
+        self.tot_sites = attrs['tot_sites']
         self.nbytes = attrs['nbytes']
         self.array = dic['array'].value
         self.taxonomies = dic['taxonomies'].value
@@ -424,17 +426,15 @@ class CompositeRiskModel(collections.Mapping):
         with mon_context:
             if assetcol is None:
                 assets_by_site = riskinput.assets_by_site
-                sids = range(len(assets_by_site))
             else:
                 assets_by_site = assetcol.assets_by_site()
-                sids = sorted(set(assetcol.array['site_id']))
             if hasattr(hazard_getter, 'init'):  # expensive operation
                 hazard_getter.init()
 
         # group the assets by taxonomy
         taxonomies = set()
         dic = collections.defaultdict(list)
-        for sid, assets in zip(sids, assets_by_site):
+        for sid, assets in enumerate(assets_by_site):
             group = groupby(assets, by_taxonomy)
             for taxonomy in group:
                 epsgetter = riskinput.epsilon_getter(
@@ -565,9 +565,9 @@ class GmfGetter(object):
         gmfdict = collections.defaultdict(list)
         for sid, eid, imti, gmv in self.gen_gmv(rlz):
             gmfdict[sid, imti].append((gmv, eid))
-        for i, sid in enumerate(self.sids):
+        for sid in self.sids:
             for imti, imt in enumerate(self.imts):
-                gmfa[i, imti] = numpy.array(gmfdict[sid, imti], self.dt)
+                gmfa[sid, imti] = numpy.array(gmfdict[sid, imti], self.dt)
         return gmfa
 
 
@@ -656,21 +656,19 @@ class RiskInputFromRuptures(object):
 
     def __repr__(self):
         return '<%s imts=%s, weight=%d>' % (
-            self.__class__.__name__, self.imts, self.weight)
+            self.__class__.__name__, self.hazard_getter.imts, self.weight)
 
 
-def make_eps(assets_by_site, num_samples, seed, correlation):
+def make_eps(assetcol, num_samples, seed, correlation):
     """
-    :param assets_by_site: a list of lists of assets
+    :param assetcol: an AssetCollection instance
     :param int num_samples: the number of ruptures
     :param int seed: a random seed
     :param float correlation: the correlation coefficient
     :returns: epsilons matrix of shape (num_assets, num_samples)
     """
-    all_assets = (a for assets in assets_by_site for a in assets)
-    assets_by_taxo = groupby(all_assets, by_taxonomy)
-    num_assets = sum(map(len, assets_by_site))
-    eps = numpy.zeros((num_assets, num_samples), numpy.float32)
+    assets_by_taxo = groupby(assetcol, by_taxonomy)
+    eps = numpy.zeros((len(assetcol), num_samples), numpy.float32)
     for taxonomy, assets in assets_by_taxo.items():
         # the association with the epsilons is done in order
         assets.sort(key=operator.attrgetter('idx'))

@@ -502,8 +502,8 @@ def view_exposure_info(token, dstore):
     ra_flag = ['relative', 'absolute']
     data = [('#assets', len(assetcol)),
             ('#taxonomies', len(taxonomies)),
-            ('deductibile', ra_flag[cc.deduct_abs]),
-            ('insurance_limit', ra_flag[cc.limit_abs]),
+            ('deductibile', ra_flag[int(cc.deduct_abs)]),
+            ('insurance_limit', ra_flag[int(cc.limit_abs)]),
             ]
     return rst_table(data) + '\n\n' + view_assets_by_site(token, dstore)
 
