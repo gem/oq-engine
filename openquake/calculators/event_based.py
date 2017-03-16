@@ -25,6 +25,7 @@ import collections
 
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, split_in_blocks, humansize
 from openquake.hazardlib.calc.filters import FarAwayRupture
@@ -32,7 +33,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap, PmapStats
 from openquake.hazardlib.geo.surface import PlanarSurface
 from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str, gmv_dt
 from openquake.baselib import parallel
-from openquake.commonlib import calc, util, datastore
+from openquake.commonlib import calc, util
 from openquake.calculators import base
 from openquake.calculators.classical import ClassicalCalculator, PSHACalculator
 
@@ -302,15 +303,15 @@ class EventBasedRuptureCalculator(PSHACalculator):
             numpy.random.seed(self.oqparam.ses_seed)
             for sm in sorted(self.datastore['events']):
                 set_random_years(self.datastore, 'events/' + sm, inv_time)
-        hdf5 = self.datastore.hdf5
-        if 'ruptures' in hdf5:
+        h5 = self.datastore.hdf5
+        if 'ruptures' in h5:
             self.datastore.set_nbytes('ruptures')
-        if 'events' in hdf5:
+        if 'events' in h5:
             self.datastore.set_attrs('events', num_events=num_events)
             self.datastore.set_nbytes('events')
-        if 'rup_data' not in hdf5:
+        if 'rup_data' not in h5:
             return
-        for dset in hdf5['rup_data'].values():
+        for dset in h5['rup_data'].values():
             if len(dset):
                 numsites = dset['numsites']
                 multiplicity = dset['multiplicity']
@@ -318,7 +319,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
                 mul = numpy.average(multiplicity, weights=numsites)
                 self.datastore.set_attrs(
                     dset.name, sites_per_rupture=spr,
-                    multiplicity=mul, nbytes=datastore.get_nbytes(dset))
+                    multiplicity=mul, nbytes=hdf5.get_nbytes(dset))
         self.datastore.set_nbytes('rup_data')
 
 
@@ -453,7 +454,7 @@ class EventBasedCalculator(ClassicalCalculator):
                     if len(array):
                         sm_id = self.sm_id[rlz.sm_lt_path]
                         key = 'gmf_data/sm-%04d/%04d' % (sm_id, rlz.ordinal)
-                        self.datastore.extend(key, array)
+                        hdf5.extend3(self.datastore.ext5path, key, array)
         slicedic = self.oqparam.imtls.slicedic
         with agg_mon:
             for key, poes in res['hcurves'].items():
@@ -520,6 +521,14 @@ class EventBasedCalculator(ClassicalCalculator):
         save_gmdata(self, len(rlzs))
         return acc
 
+    def save_gmf_bytes(self):
+        """Save the attribute nbytes in the gmf_data datasets"""
+        with self.datastore.ext5('r+') as ext5:
+            for sm_id in ext5['gmf_data']:
+                for rlzno in ext5['gmf_data/' + sm_id]:
+                    ext5.set_nbytes('gmf_data/%s/%s' % (sm_id, rlzno))
+            ext5.set_nbytes('gmf_data')
+
     def post_execute(self, result):
         """
         :param result:
@@ -550,15 +559,8 @@ class EventBasedCalculator(ClassicalCalculator):
                 if kind == 'mean' and not self.oqparam.mean_hazard_curves:
                     continue
                 self.datastore['hcurves/' + kind] = stat
-
-        if ('gmf_data' in self.datastore and 'nbytes' not
-                in self.datastore['gmf_data'].attrs):
-            self.datastore.set_nbytes('gmf_data')
-            for sm_id in self.datastore['gmf_data']:
-                for rlzno in self.datastore['gmf_data/' + sm_id]:
-                    self.datastore.set_nbytes(
-                        'gmf_data/%s/%s' % (sm_id, rlzno))
-
+        if os.path.exists(self.datastore.ext5path):
+            self.save_gmf_bytes()
         if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
             if not os.path.exists(export_dir):
