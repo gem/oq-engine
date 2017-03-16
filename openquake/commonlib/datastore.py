@@ -37,43 +37,6 @@ if not DATADIR:
         DATADIR = os.path.join(os.path.expanduser('~'), 'oqdata')
 
 
-def get_nbytes(dset):
-    """
-    If the dataset has an attribute 'nbytes', return it. Otherwise get the size
-    of the underlying array. Returns None if the dataset is actually a group.
-    """
-    if 'nbytes' in dset.attrs:
-        # look if the dataset has an attribute nbytes
-        return dset.attrs['nbytes']
-    elif hasattr(dset, 'value'):
-        # else extract nbytes from the underlying array
-        return dset.size * numpy.zeros(1, dset.dtype).nbytes
-
-
-class ByteCounter(object):
-    """
-    A visitor used to measure the dimensions of a HDF5 dataset or group.
-    Use it as ByteCounter.get_nbytes(dset_or_group).
-    """
-    @classmethod
-    def get_nbytes(cls, dset):
-        nbytes = get_nbytes(dset)
-        if nbytes is not None:
-            return nbytes
-        # else dip in the tree
-        self = cls()
-        dset.visititems(self)
-        return self.nbytes
-
-    def __init__(self, nbytes=0):
-        self.nbytes = nbytes
-
-    def __call__(self, name, dset_or_group):
-        nbytes = get_nbytes(dset_or_group)
-        if nbytes:
-            self.nbytes += nbytes
-
-
 def get_calc_ids(datadir=DATADIR):
     """
     Extract the available calculation IDs from the datadir, in order.
@@ -216,12 +179,7 @@ class DataStore(collections.MutableMapping):
         """
         Set the `nbytes` attribute on the HDF5 object identified by `key`.
         """
-        obj = h5py.File.__getitem__(self.hdf5, key)
-        if nbytes is not None:  # size set from outside
-            obj.attrs['nbytes'] = nbytes
-        else:  # recursively determine the size of the datagroup
-            obj.attrs['nbytes'] = nbytes = ByteCounter.get_nbytes(obj)
-        return nbytes
+        return self.hdf5.set_nbytes(key, nbytes)
 
     def set_attrs(self, key, **kw):
         """
@@ -352,7 +310,8 @@ class DataStore(collections.MutableMapping):
         """
         if key is None:
             return os.path.getsize(self.hdf5path)
-        return ByteCounter.get_nbytes(h5py.File.__getitem__(self.hdf5, key))
+        return hdf5.ByteCounter.get_nbytes(
+            h5py.File.__getitem__(self.hdf5, key))
 
     def get(self, key, default):
         """
