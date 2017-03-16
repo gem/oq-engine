@@ -162,7 +162,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-5)
 
-        # check rurp_data is stored correctly
+        # check rup_data is stored correctly
         fname = writetmp(view('ruptures_events', self.calc.datastore))
         self.assertEqualFiles('expected/ruptures_events.txt', fname)
 
