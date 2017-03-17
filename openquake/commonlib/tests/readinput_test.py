@@ -26,10 +26,13 @@ from io import BytesIO, StringIO
 
 from numpy.testing import assert_allclose
 
-from openquake.hazardlib import valid
-from openquake.commonlib import readinput, writers
 from openquake.baselib import general
+from openquake.hazardlib import valid
+from openquake.risklib.riskinput import ValidationError
+from openquake.commonlib import readinput, writers
 from openquake.qa_tests_data.classical import case_1, case_2
+from openquake.qa_tests_data.event_based_risk import case_caracas
+
 
 TMP = tempfile.gettempdir()
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
@@ -807,3 +810,10 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
         csm = readinput.get_composite_source_model(oq, in_memory=False)
         srcs = csm.get_sources()  # a single PointSource
         self.assertEqual(len(srcs), 1)
+
+
+class GetCompositeRiskModelTestCase(unittest.TestCase):
+    def test_missing_vulnerability_function(self):
+        oq = readinput.get_oqparam('job.ini', case_caracas)
+        with self.assertRaises(ValidationError):
+            readinput.get_risk_model(oq)
