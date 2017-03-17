@@ -89,6 +89,10 @@ class GmfComputer(object):
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.samples = samples
+        # `rupture` can be a high level rupture object containing a low
+        # level hazardlib rupture object as a .rupture attribute
+        if hasattr(rupture, 'rupture'):
+            rupture = rupture.rupture
         self.ctx = ContextMaker(gsims).make_contexts(sites, rupture)
 
     def compute(self, gsim, num_events, seed=None):
