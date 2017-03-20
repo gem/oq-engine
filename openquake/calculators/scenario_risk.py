@@ -52,7 +52,8 @@ def scenario_risk(riskinput, riskmodel, monitor):
     """
     E = monitor.oqparam.number_of_ground_motion_fields
     L = len(riskmodel.loss_types)
-    R = len(riskinput.rlzs)
+    R = sum(
+        len(rlzs) for rlzs in riskinput.hazard_getter.rlzs_by_gsim.values())
     I = monitor.oqparam.insured_losses + 1
     all_losses = monitor.oqparam.all_losses
     result = dict(agg=numpy.zeros((E, L, R, I), F64), avg=[],
