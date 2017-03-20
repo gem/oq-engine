@@ -340,12 +340,10 @@ def set_random_years(dstore, events_sm, investigation_time):
 
 # ######################## GMF calculator ############################ #
 
-def compute_gmfs_and_curves(getter, rlzs, monitor):
+def compute_gmfs_and_curves(getter, monitor):
     """
     :param getter:
         a GmfGetter instance
-    :param rlzs:
-        realizations for the current source group
     :param monitor:
         a Monitor instance
     :returns:
@@ -359,29 +357,31 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
     if oq.hazard_curves_from_gmfs:
         hc_mon = monitor('building hazard curves', measuremem=False)
         duration = oq.investigation_time * oq.ses_per_logic_tree_path
-        hazard = getter.get_hazard(rlzs)  # (rlzi, sid, imti) -> (gmv, eid)
-        for rlz in rlzs:
-            lst = []
-            rlzi = rlz.ordinal
-            for sid in getter.sids:
-                for imti, imt in enumerate(getter.imts):
-                    array = hazard[rlzi, sid, imti]
-                    if len(array) == 0:  # no data
-                        continue
-                    for rec in array:
-                        lst.append((sid, rec['eid'], imti, rec['gmv']))
-                    with hc_mon:
-                        poes = calc._gmvs_to_haz_curve(
-                            array['gmv'], oq.imtls[imt], oq.investigation_time,
-                            duration)
-                        hcurves[rsi2str(rlzi, sid, imt)] = poes
-            gmfcoll[rlz] = numpy.array(lst, gmv_dt)
+        for gsim in getter.rlzs_by_gsim:
+            hazard = getter.get_hazard(gsim)  # (rlzi, sid, imti) -> (gmv, eid)
+            for rlz in getter.rlzs_by_gsim[gsim]:
+                lst = []
+                rlzi = rlz.ordinal
+                for sid in getter.sids:
+                    for imti, imt in enumerate(getter.imts):
+                        array = hazard[rlzi, sid, imti]
+                        if len(array) == 0:  # no data
+                            continue
+                        for rec in array:
+                            lst.append((sid, rec['eid'], imti, rec['gmv']))
+                        with hc_mon:
+                            poes = calc._gmvs_to_haz_curve(
+                                array['gmv'], oq.imtls[imt],
+                                oq.investigation_time, duration)
+                            hcurves[rsi2str(rlzi, sid, imt)] = poes
+                gmfcoll[rlz] = numpy.array(lst, gmv_dt)
     else:  # fast lane
-        data = numpy.fromiter(getter.gen_gmv(rlzs), gmv_dt)
-        rlzi = data['eid'] // TWO48
-        data['eid'] %= TWO48
-        for rlz in rlzs:
-            gmfcoll[rlz] = data[rlzi == rlz.ordinal]
+        for gsim in getter.rlzs_by_gsim:
+            data = numpy.fromiter(getter.gen_gmv(gsim), gmv_dt)
+            rlzi = data['eid'] // TWO48
+            data['eid'] %= TWO48
+            for rlz in getter.rlzs_by_gsim[gsim]:
+                gmfcoll[rlz] = data[rlzi == rlz.ordinal]
     return dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
                 hcurves=hcurves, gmdata=getter.gmdata)
 
@@ -481,21 +481,18 @@ class EventBasedCalculator(ClassicalCalculator):
         monitor.oqparam = oq
         imts = list(oq.imtls)
         min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
-        self.grp_trt = self.csm.info.grp_trt()
-        rlzs_by_grp = self.rlzs_assoc.get_rlzs_by_grp_id()
         correl_model = oq.get_correl_model()
         for grp_id in ruptures_by_grp:
             ruptures = ruptures_by_grp[grp_id]
             if not ruptures:
                 continue
+            rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
             for block in split_in_blocks(ruptures, oq.concurrent_tasks or 1):
-                trt = self.grp_trt[grp_id]
-                gsims = [dic[trt] for dic in self.rlzs_assoc.gsim_by_trt]
                 samples = self.rlzs_assoc.samples[grp_id]
-                getter = GmfGetter(gsims, block, self.sitecol,
+                getter = GmfGetter(rlzs_by_gsim, block, self.sitecol,
                                    imts, min_iml, oq.truncation_level,
                                    correl_model, samples)
-                yield getter, rlzs_by_grp[grp_id], monitor
+                yield getter, monitor
 
     def execute(self):
         """

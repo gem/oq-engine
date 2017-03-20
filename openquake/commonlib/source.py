@@ -171,6 +171,16 @@ class RlzsAssoc(collections.Mapping):
             return
         return self.realizations[int(mo.group(1))]
 
+    def get_rlzs_by_gsim(self, grp_id):
+        """
+        Returns a dictionary gsim > rlzs for the given grp_id
+        """
+        rlzs_by_gsim = {}
+        for gid, gsim in sorted(self.rlzs_assoc):
+            if gid == grp_id:
+                rlzs_by_gsim[gsim] = self[gid, gsim]
+        return rlzs_by_gsim
+
     def get_rlzs_by_grp_id(self):
         """
         Returns a dictionary grp_id > [sorted rlzs]

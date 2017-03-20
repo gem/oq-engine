@@ -36,7 +36,8 @@ def classical_damage(riskinput, riskmodel, monitor):
         a nested dictionary rlz_idx -> asset -> <damage array>
     """
     with monitor:
-        result = {i: AccumDict() for i in range(len(riskinput.rlzs))}
+        R = len(riskinput.rlzs)
+        result = {i: AccumDict() for i in range(R)}
         for outputs in riskmodel.gen_outputs(riskinput, monitor):
             for l, out in enumerate(outputs):
                 ordinals = [a.ordinal for a in outputs.assets]
