@@ -133,7 +133,7 @@ def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
         addr = (dbhost, int(port))
         DATABASE['PORT'] = int(port)
     else:
-        addr = config.DBS_LISTEN
+        addr = config.DBS_ADDRESS
 
     if dbpath:
         DATABASE['NAME'] = dbpath
