@@ -31,7 +31,8 @@ from openquake.baselib.general import AccumDict, split_in_blocks, humansize
 from openquake.hazardlib.calc.filters import FarAwayRupture
 from openquake.hazardlib.probability_map import ProbabilityMap, PmapStats
 from openquake.hazardlib.geo.surface import PlanarSurface
-from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str, gmv_dt
+from openquake.risklib.riskinput import (GmfGetter, str2rsi, rsi2str, gmv_dt,
+                                         TWO48)
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util
 from openquake.calculators import base
@@ -45,7 +46,6 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16  # 65,536
 TWO32 = 2 ** 32  # 4,294,967,296
-TWO48 = 2 ** 48  # 281,474,976,710,656
 
 # ######################## rupture calculator ############################ #
 
@@ -354,11 +354,11 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
     oq = monitor.oqparam
     with monitor('making contexts', measuremem=True):
         getter.init()
-    hcurves = {}
+    hcurves = {}  # key -> poes
+    gmfcoll = {}  # rlz -> gmfa
     if oq.hazard_curves_from_gmfs:
         hc_mon = monitor('building hazard curves', measuremem=False)
         duration = oq.investigation_time * oq.ses_per_logic_tree_path
-        gmfcoll = {}  # rlz -> gmfa
         hazard = getter.get_hazard(rlzs)  # (rlzi, sid, imti) -> (gmv, eid)
         for rlz in rlzs:
             lst = []
@@ -377,8 +377,11 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
                         hcurves[rsi2str(rlzi, sid, imt)] = poes
             gmfcoll[rlz] = numpy.array(lst, gmv_dt)
     else:  # fast lane
-        gmfcoll = {rlz: numpy.fromiter(getter.gen_gmv(rlz), gmv_dt)
-                   for rlz in rlzs}
+        data = numpy.fromiter(getter.gen_gmv(rlzs), gmv_dt)
+        rlzi = data['eid'] // TWO48
+        data['eid'] %= TWO48
+        for rlz in rlzs:
+            gmfcoll[rlz] = data[rlzi == rlz.ordinal]
     return dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
                 hcurves=hcurves, gmdata=getter.gmdata)
 
