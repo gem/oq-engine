@@ -361,12 +361,12 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
         gmfcoll = {}  # rlz -> gmfa
         hazard = getter.get_hazard(rlzs)  # (rlzi, sid, imti) -> (gmv, eid)
         for rlz in rlzs:
-            rlzi = rlz.ordinal
             lst = []
-            for i, sid in enumerate(getter.sids):
+            rlzi = rlz.ordinal
+            for sid in getter.sids:
                 for imti, imt in enumerate(getter.imts):
-                    array = hazard[rlzi, i, imti]
-                    if len(array) == 0:
+                    array = hazard[rlzi, sid, imti]
+                    if len(array) == 0:  # no data
                         continue
                     for rec in array:
                         lst.append((sid, rec['eid'], imti, rec['gmv']))
@@ -374,8 +374,7 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
                         poes = calc._gmvs_to_haz_curve(
                             array['gmv'], oq.imtls[imt], oq.investigation_time,
                             duration)
-                        key = rsi2str(rlzi, sid, imt)
-                        hcurves[key] = poes
+                        hcurves[rsi2str(rlzi, sid, imt)] = poes
             gmfcoll[rlz] = numpy.array(lst, gmv_dt)
     else:  # fast lane
         gmfcoll = {rlz: numpy.fromiter(getter.gen_gmv(rlz), gmv_dt)
