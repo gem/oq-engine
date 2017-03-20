@@ -37,6 +37,7 @@ from openquake.commonlib import logictree
 
 MAXWEIGHT = sourceconverter.MAXWEIGHT
 MAX_INT = 2 ** 31 - 1
+TWO16 = 2 ** 16
 U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
@@ -414,6 +415,10 @@ class CompositionInfo(object):
             elif trts:
                 logging.warn('No realizations for %s, %s',
                              '_'.join(smodel.path), smodel.name)
+            if len(rlzs) > TWO16:
+                raise ValueError(
+                    'The source model %s has %d realizations, the maximum '
+                    'is %d' % (smodel.name, len(rlzs), TWO16))
         # NB: realizations could be filtered away by logic tree reduction
         if assoc.realizations:
             assoc._init()
