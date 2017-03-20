@@ -36,6 +36,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
+TWO48 = 2 ** 48  # 281,474,976,710,656
 BYTES_PER_RECORD = 17  # ground motion record (sid, eid, gmv, imti) = 17 bytes
 EVENTS = -2
 NBYTES = -1
@@ -547,38 +548,41 @@ class GmfGetter(object):
         # dictionary rlzi -> array(imts, events, nbytes)
         self.gmdata = AccumDict(accum=numpy.zeros(len(self.imts) + 2, F32))
 
-    def gen_gmv(self, rlz):
+    def gen_gmv(self, rlzs):
         """
         Compute the GMFs for the given realization and populate the .gmdata
         array. Yields tuples of the form (sid, eid, imti, gmv).
         """
-        gsim = self.gsims[rlz.ordinal]
-        gmdata = self.gmdata[rlz.ordinal]
-        for computer in self.computers:
-            rup = computer.rupture
-            if self.samples > 1:
-                eids = get_array(rup.events, sample=rlz.sampleid)['eid']
-            else:
-                eids = rup.events['eid']
-            gmdata[EVENTS] += len(eids)
-            array = computer.compute(gsim, len(eids))  # (i, n, e)
-            for imti, imt in enumerate(self.imts):
-                min_gmv = self.min_iml[imti]
-                for eid, gmf in zip(eids, array[imti].T):
-                    for sid, gmv in zip(computer.sites.sids, gmf):
-                        if gmv > min_gmv:
-                            gmdata[imti] += gmv
-                            gmdata[NBYTES] += BYTES_PER_RECORD
-                            yield sid, eid, imti, gmv
+        for rlz in rlzs:
+            rlzi = rlz.ordinal
+            offset = rlzi * TWO48
+            gsim = self.gsims[rlzi]
+            gmdata = self.gmdata[rlzi]
+            for computer in self.computers:
+                rup = computer.rupture
+                if self.samples > 1:
+                    eids = get_array(rup.events, sample=rlz.sampleid)['eid']
+                else:
+                    eids = rup.events['eid']
+                gmdata[EVENTS] += len(eids)
+                array = computer.compute(gsim, len(eids))  # (i, n, e)
+                for imti, imt in enumerate(self.imts):
+                    min_gmv = self.min_iml[imti]
+                    for eid, gmf in zip(eids, array[imti].T):
+                        for sid, gmv in zip(computer.sites.sids, gmf):
+                            if gmv > min_gmv:
+                                gmdata[imti] += gmv
+                                gmdata[NBYTES] += BYTES_PER_RECORD
+                                yield sid, eid + offset, imti, gmv
 
     def get_hazard(self, rlzs):
         """
         :returns: dictionary (rlzi, sid, imti) -> array(gmv, eid)
         """
         dic = collections.defaultdict(list)
-        for rlz in rlzs:
-            for sid, eid, imti, gmv in self.gen_gmv(rlz):
-                dic[rlz.ordinal, sid, imti].append((gmv, eid))
+        for sid, eid, imti, gmv in self.gen_gmv(rlzs):
+            rlzi, eid = divmod(eid, TWO48)
+            dic[rlzi, sid, imti].append((gmv, eid))
         for key in dic:
             dic[key] = numpy.array(dic[key], self.dt)
         return dic
