@@ -29,7 +29,7 @@ $ oq dbserver start
 A custom binging address and port can be specified at startup time as a custom db path too:
 
 ```bash
-$ python -m openquake.server.dbserver 0.0.0.0:1985 /tmp/customdb.sqlite3
+$ oq dbserver start 0.0.0.0:1985 /tmp/customdb.sqlite3
 ```
 
 ### Celery
