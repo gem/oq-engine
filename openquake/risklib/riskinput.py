@@ -560,11 +560,11 @@ class GmfGetter(object):
         """
         for rlz in self.rlzs_by_gsim[gsim]:
             rlzi = rlz.ordinal
-            offset = rlzi * TWO48
+            offset = U64(rlzi * TWO48)  # see https://github.com/numpy/numpy/issues/7126
             gmdata = self.gmdata[rlzi]
             for computer in self.computers:
                 rup = computer.rupture
-                if self.samples > 1:
+                if self.samples > 1:  # only for oversampling
                     eids = get_array(rup.events, sample=rlz.sampleid)['eid']
                 else:
                     eids = rup.events['eid']
@@ -585,8 +585,8 @@ class GmfGetter(object):
         """
         dic = collections.defaultdict(list)
         for sid, eid, imti, gmv in self.gen_gmv(gsim):
-            rlzi, eid = divmod(eid, TWO48)
-            dic[rlzi, sid, imti].append((gmv, eid))
+            rlzi, eid_ = divmod(int(eid), TWO48)  # to avoid silent cast to float6
+            dic[rlzi, sid, imti].append((gmv, eid_))
         for key in dic:
             dic[key] = numpy.array(dic[key], self.dt)
         return dic
