@@ -575,15 +575,12 @@ class GmfGetter(object):
         """
         :returns: dictionary (rlzi, sid, imti) -> array(gmv, eid)
         """
-        dic = {}
+        dic = collections.defaultdict(list)
         for rlz in rlzs:
-            gmfdict = collections.defaultdict(list)
             for sid, eid, imti, gmv in self.gen_gmv(rlz):
-                gmfdict[sid, imti].append((gmv, eid))
-            for sid in self.sids:
-                for imti, imt in enumerate(self.imts):
-                    dic[rlz.ordinal, sid, imti] = numpy.array(
-                        gmfdict[sid, imti], self.dt)
+                dic[rlz.ordinal, sid, imti].append((gmv, eid))
+        for key in dic:
+            dic[key] = numpy.array(dic[key], self.dt)
         return dic
 
 
