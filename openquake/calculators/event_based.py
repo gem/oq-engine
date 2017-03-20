@@ -354,34 +354,34 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
     oq = monitor.oqparam
     with monitor('making contexts', measuremem=True):
         getter.init()
-    haz = {sid: {} for sid in getter.sids}
+    hcurves = {}
     if oq.hazard_curves_from_gmfs:
+        hc_mon = monitor('building hazard curves', measuremem=False)
+        duration = oq.investigation_time * oq.ses_per_logic_tree_path
         gmfcoll = {}  # rlz -> gmfa
+        hazard = getter.get_hazard(rlzs)  # (rlzi, sid, imti) -> (gmv, eid)
         for rlz in rlzs:
+            rlzi = rlz.ordinal
             lst = []
-            gmf = getter.get_hazard(rlz)  # array (num_sites, num_imts)
             for i, sid in enumerate(getter.sids):
                 for imti, imt in enumerate(getter.imts):
-                    haz[sid][imt, rlz] = recs = gmf[i, imti]
-                    for rec in recs:
+                    array = hazard[rlzi, i, imti]
+                    if len(array) == 0:
+                        continue
+                    for rec in array:
                         lst.append((sid, rec['eid'], imti, rec['gmv']))
+                    with hc_mon:
+                        poes = calc._gmvs_to_haz_curve(
+                            array['gmv'], oq.imtls[imt], oq.investigation_time,
+                            duration)
+                        key = rsi2str(rlzi, sid, imt)
+                        hcurves[key] = poes
             gmfcoll[rlz] = numpy.array(lst, gmv_dt)
     else:  # fast lane
         gmfcoll = {rlz: numpy.fromiter(getter.gen_gmv(rlz), gmv_dt)
                    for rlz in rlzs}
-    result = dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
-                  hcurves={}, gmdata=getter.gmdata)
-    if oq.hazard_curves_from_gmfs:
-        with monitor('building hazard curves', measuremem=False):
-            duration = oq.investigation_time * oq.ses_per_logic_tree_path
-            for sid, haz_by_imt_rlz in haz.items():
-                for imt, rlz in haz_by_imt_rlz:
-                    gmvs = haz_by_imt_rlz[imt, rlz]['gmv']
-                    poes = calc._gmvs_to_haz_curve(
-                        gmvs, oq.imtls[imt], oq.investigation_time, duration)
-                    key = rsi2str(rlz.ordinal, sid, imt)
-                    result['hcurves'][key] = poes
-    return result
+    return dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
+                hcurves=hcurves, gmdata=getter.gmdata)
 
 
 def get_ruptures_by_grp(dstore):
