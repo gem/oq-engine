@@ -452,9 +452,10 @@ class CompositeRiskModel(collections.Mapping):
                 dic[taxonomy].append((sid, group[taxonomy], epsgetter))
                 taxonomies.add(taxonomy)
         imti = {imt: i for i, imt in enumerate(hazard_getter.imts)}
+        with mon_hazard:
+            hazard = hazard_getter.get_hazard(riskinput.rlzs)
         for rlz in riskinput.rlzs:
-            with mon_hazard:
-                hazard = hazard_getter.get_hazard(rlz)
+            rlzi = rlz.ordinal
             for taxonomy in sorted(taxonomies):
                 riskmodel = self[taxonomy]
                 with mon_risk:
@@ -462,7 +463,7 @@ class CompositeRiskModel(collections.Mapping):
                         outs = [None] * len(self.lti)
                         for lt in self.loss_types:
                             imt = riskmodel.risk_functions[lt].imt
-                            haz = hazard[sid, imti[imt]]
+                            haz = hazard[rlzi, sid, imti[imt]]
                             if len(haz):
                                 out = riskmodel(lt, assets, haz, epsgetter)
                                 outs[self.lti[lt]] = out
@@ -496,13 +497,16 @@ class PoeGetter(object):
         self.hazard_by_site = hazard_by_site
         self.imts = imts
 
-    def get_hazard(self, rlz):
+    def get_hazard(self, rlzs):
         """
         :returns: a probability matrix (num_sites, num_imts)
         """
-        return numpy.array(
-            [[haz[imt][rlz] for imt in self.imts]
-             for haz in self.hazard_by_site])
+        dic = {}
+        for rlz in rlzs:
+            for sid, haz in enumerate(self.hazard_by_site):
+                for imti, imt in enumerate(self.imts):
+                    dic[rlz.ordinal, sid, imti] = haz[imt][rlz]
+        return dic
 
 
 gmv_dt = numpy.dtype([('sid', U32), ('eid', U64), ('imti', U8), ('gmv', F32)])
@@ -567,18 +571,20 @@ class GmfGetter(object):
                             gmdata[NBYTES] += BYTES_PER_RECORD
                             yield sid, eid, imti, gmv
 
-    def get_hazard(self, rlz):
+    def get_hazard(self, rlzs):
         """
-        :returns: array of arrays of shape (num_sites, num_imts)
+        :returns: dictionary (rlzi, sid, imti) -> array(gmv, eid)
         """
-        gmfa = numpy.zeros((len(self.sids), len(self.imts)), object)
-        gmfdict = collections.defaultdict(list)
-        for sid, eid, imti, gmv in self.gen_gmv(rlz):
-            gmfdict[sid, imti].append((gmv, eid))
-        for sid in self.sids:
-            for imti, imt in enumerate(self.imts):
-                gmfa[sid, imti] = numpy.array(gmfdict[sid, imti], self.dt)
-        return gmfa
+        dic = {}
+        for rlz in rlzs:
+            gmfdict = collections.defaultdict(list)
+            for sid, eid, imti, gmv in self.gen_gmv(rlz):
+                gmfdict[sid, imti].append((gmv, eid))
+            for sid in self.sids:
+                for imti, imt in enumerate(self.imts):
+                    dic[rlz.ordinal, sid, imti] = numpy.array(
+                        gmfdict[sid, imti], self.dt)
+        return dic
 
 
 class RiskInput(object):
