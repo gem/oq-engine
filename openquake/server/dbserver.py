@@ -32,6 +32,7 @@ from openquake.hazardlib import valid
 from openquake.commonlib import config, logs
 from openquake.server.db import actions
 from openquake.server import dbapi
+from openquake.server import __file__ as server_path
 from openquake.server.settings import DATABASE
 
 # using a ThreadPool because SQLite3 isn't fork-safe on macOS Sierra
@@ -104,7 +105,6 @@ def check_foreign():
     Check if we the DbServer is the right one
     """
     if not config.flag_set('dbserver', 'multi_user'):
-        server_path = __file__
         remote_server_path = logs.dbcmd('get_path')
         if server_path != remote_server_path:
             return('You are trying to contact a DbServer from another'
