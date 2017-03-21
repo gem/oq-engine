@@ -22,7 +22,7 @@ import numpy
 
 from openquake.baselib.general import groupby, AccumDict
 from openquake.hazardlib.stats import compute_stats
-from openquake.risklib import scientific, riskinput
+from openquake.risklib import scientific
 from openquake.commonlib import readinput, source
 from openquake.calculators import base
 
@@ -63,11 +63,12 @@ def classical_risk(riskinput, riskmodel, monitor):
                 result['loss_curves'].append((l, r, aid, lcurve))
 
     # compute statistics
-    if len(riskinput.rlzs) > 1:
+    rlzs = riskinput.rlzs
+    if len(rlzs) > 1:
         l_idxs = range(len(riskmodel.lti))
         for assets, rows in groupby(
                 all_outputs, lambda o: tuple(o.assets)).items():
-            weights = [riskinput.rlzs[row.r].weight for row in rows]
+            weights = [rlzs[row.r].weight for row in rows]
             row = rows[0]
             for l in l_idxs:
                 for i, asset in enumerate(assets):
