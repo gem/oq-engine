@@ -457,8 +457,7 @@ class CompositeRiskModel(collections.Mapping):
         for gsim in hazard_getter.rlzs_by_gsim:
             with mon_hazard:
                 hazard = hazard_getter.get_hazard(gsim)
-            for rlz in hazard_getter.rlzs_by_gsim[gsim]:
-                rlzi = rlz.ordinal
+            for r, rlz in enumerate(hazard_getter.rlzs_by_gsim[gsim]):
                 for taxonomy in sorted(taxonomies):
                     riskmodel = self[taxonomy]
                     with mon_risk:
@@ -466,7 +465,7 @@ class CompositeRiskModel(collections.Mapping):
                             outs = [None] * len(self.lti)
                             for lt in self.loss_types:
                                 imt = riskmodel.risk_functions[lt].imt
-                                haz = hazard[rlzi, sid, imti[imt]]
+                                haz = hazard[r, sid, imti[imt]]
                                 if len(haz):
                                     out = riskmodel(lt, assets, haz, epsgetter)
                                     outs[self.lti[lt]] = out
@@ -507,10 +506,10 @@ class PoeGetter(object):
         """
         dic = {}
         for gsim in self.rlzs_by_gsim:
-            for rlz in self.rlzs_by_gsim[gsim]:
+            for r, rlz in enumerate(self.rlzs_by_gsim[gsim]):
                 for sid, haz in enumerate(self.hazard_by_site):
                     for imti, imt in enumerate(self.imts):
-                        dic[rlz.ordinal, sid, imti] = haz[imt][rlz]
+                        dic[r, sid, imti] = haz[imt][rlz]
         return dic
 
 
@@ -558,10 +557,10 @@ class GmfGetter(object):
         Compute the GMFs for the given realization and populate the .gmdata
         array. Yields tuples of the form (sid, eid, imti, gmv).
         """
-        for rlz in self.rlzs_by_gsim[gsim]:
-            rlzi = rlz.ordinal
-            offset = U64(rlzi * TWO48)  # see https://github.com/numpy/numpy/issues/7126
-            gmdata = self.gmdata[rlzi]
+        for r, rlz in enumerate(self.rlzs_by_gsim[gsim]):
+            offset = U64(r * TWO48)
+            # see https://github.com/numpy/numpy/issues/7126
+            gmdata = self.gmdata[rlz.ordinal]
             for computer in self.computers:
                 rup = computer.rupture
                 if self.samples > 1:  # only for oversampling
@@ -585,7 +584,8 @@ class GmfGetter(object):
         """
         dic = collections.defaultdict(list)
         for sid, eid, imti, gmv in self.gen_gmv(gsim):
-            rlzi, eid_ = divmod(int(eid), TWO48)  # to avoid silent cast to float6
+            # NB: int(eid) to avoid silent cast to float64
+            rlzi, eid_ = divmod(int(eid), TWO48)
             dic[rlzi, sid, imti].append((gmv, eid_))
         for key in dic:
             dic[key] = numpy.array(dic[key], self.dt)
