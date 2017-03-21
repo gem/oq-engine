@@ -29,9 +29,10 @@ from concurrent.futures import ThreadPoolExecutor
 from openquake.baselib import sap
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import valid
-from openquake.commonlib import config
+from openquake.commonlib import config, logs
 from openquake.server.db import actions
 from openquake.server import dbapi
+from openquake.server import __file__ as server_path
 from openquake.server.settings import DATABASE
 
 # using a ThreadPool because SQLite3 isn't fork-safe on macOS Sierra
@@ -99,6 +100,19 @@ def get_status(address=None):
     return 'not-running' if err else 'running'
 
 
+def check_foreign():
+    """
+    Check if we the DbServer is the right one
+    """
+    if not config.flag_set('dbserver', 'multi_user'):
+        remote_server_path = logs.dbcmd('get_path')
+        if server_path != remote_server_path:
+            return('You are trying to contact a DbServer from another'
+                   + ' instance (%s)\n' % remote_server_path
+                   + 'Check the configuration or stop the foreign'
+                   + ' DbServer instance')
+
+
 def ensure_on():
     """
     Start the DbServer if it is off
@@ -122,18 +136,21 @@ def ensure_on():
 
 
 @sap.Script
-def run_server(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
+def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
+               loglevel='WARN'):
     """
     Run the DbServer on the given database file and port. If not given,
     use the settings in openquake.cfg.
     """
-    if dbpathport:  # assume a string of the form "dbpath:port"
-        dbpath, port = dbpathport.split(':')
-        addr = (DATABASE['HOST'], int(port))
-        DATABASE['NAME'] = dbpath
+    if dbhostport:  # assume a string of the form "dbhost:port"
+        dbhost, port = dbhostport.split(':')
+        addr = (dbhost, int(port))
         DATABASE['PORT'] = int(port)
     else:
         addr = config.DBS_ADDRESS
+
+    if dbpath:
+        DATABASE['NAME'] = dbpath
 
     # create the db directory if needed
     dirname = os.path.dirname(DATABASE['NAME'])
@@ -151,7 +168,8 @@ def run_server(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
     DbServer(db, addr, config.DBS_AUTHKEY).loop()
 
-run_server.arg('dbpathport', 'dbpath:port')
+run_server.arg('dbhostport', 'dbhost:port')
+run_server.arg('dbpath', 'dbpath')
 run_server.arg('logfile', 'log file')
 run_server.opt('loglevel', 'WARN or INFO')
 
