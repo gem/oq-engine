@@ -376,11 +376,14 @@ def compute_gmfs_and_curves(getter, monitor):
                 gmfcoll[rlz] = numpy.array(lst, gmv_dt)
     else:  # fast lane
         for gsim in getter.rlzs_by_gsim:
+            # the following is tricky; `getter.gen_gmv` produces long
+            # event ids (64 bit) containing both a realization index (16 bit)
+            # and a short event id (48 bit); we manage them here
             data = numpy.fromiter(getter.gen_gmv(gsim), gmv_dt)
-            rids = data['eid'] // TWO48
-            data['eid'] %= TWO48
+            r_indices = data['eid'] // TWO48  # extract realization indices
+            data['eid'] %= TWO48  # got back to short event IDs
             for r, rlz in enumerate(getter.rlzs_by_gsim[gsim]):
-                gmfcoll[rlz] = data[rids == r]
+                gmfcoll[rlz] = data[r_indices == r]  # extract data for r
     return dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
                 hcurves=hcurves, gmdata=getter.gmdata)
 
