@@ -1,3 +1,7 @@
+import os
+from openquake.server.settings import (INSTALLED_APPS, STANDALONE_APPS,
+                                       TEMPLATES)
+
 STANDALONE = True
 
 INSTALLED_APPS += (
