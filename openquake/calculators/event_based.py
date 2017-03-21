@@ -488,7 +488,7 @@ class EventBasedCalculator(ClassicalCalculator):
             if not ruptures:
                 continue
             rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
-            for block in split_in_blocks(ruptures, oq.concurrent_tasks or 1):
+            for block in split_in_blocks(ruptures, oq.ruptures_per_block):
                 samples = self.rlzs_assoc.samples[grp_id]
                 getter = GmfGetter(rlzs_by_gsim, block, self.sitecol,
                                    imts, min_iml, oq.truncation_level,
