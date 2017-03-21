@@ -358,7 +358,8 @@ def compute_gmfs_and_curves(getter, monitor):
         hc_mon = monitor('building hazard curves', measuremem=False)
         duration = oq.investigation_time * oq.ses_per_logic_tree_path
         for gsim in getter.rlzs_by_gsim:
-            hazard = getter.get_hazard(gsim)  # (r, sid, imti) -> (gmv, eid)
+            with monitor('building hazard', measuremem=True):
+                hazard = getter.get_hazard(gsim)  # (r, sid, imti) -> gmv_eid
             for r, rlz in enumerate(getter.rlzs_by_gsim[gsim]):
                 lst = []
                 for sid in getter.sids:
@@ -376,7 +377,8 @@ def compute_gmfs_and_curves(getter, monitor):
                 gmfcoll[rlz] = numpy.array(lst, gmv_dt)
     else:  # fast lane
         for gsim in getter.rlzs_by_gsim:
-            data = numpy.fromiter(getter.gen_gmv(gsim), gmv_dt)
+            with monitor('building hazard', measuremem=True):
+                data = numpy.fromiter(getter.gen_gmv(gsim), gmv_dt)
             rids = data['eid'] // TWO48
             data['eid'] %= TWO48
             for r, rlz in enumerate(getter.rlzs_by_gsim[gsim]):
