@@ -122,7 +122,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         os.makedirs(datastore.DATADIR)
 
     dbserver.ensure_on()
-    # check if we are taliking to the right server
+    # check if we are talking to the right server
     err = dbserver.check_foreign()
     if err:
         sys.exit(err)
