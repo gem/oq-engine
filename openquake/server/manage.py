@@ -22,7 +22,7 @@ import sys
 import sqlite3
 from django.core.management import execute_from_command_line
 from openquake.server.settings import DATABASE
-from openquake.server import executor
+from openquake.server import executor, dbserver
 from openquake.server.db import actions
 from openquake.server.dbapi import Db
 from openquake.commonlib import logs
@@ -53,6 +53,10 @@ if __name__ == "__main__":
     if 'runserver' in sys.argv:
         if '--nothreading' in sys.argv:
             logs.dbcmd = dbcmd  # turn this on when debugging
+        # check if we are talking to the right server
+        err = dbserver.check_foreign()
+        if err:
+            sys.exit(err)
         logs.dbcmd('upgrade_db')  # make sure the DB exists
         logs.dbcmd('reset_is_running')  # reset the flag is_running
 
