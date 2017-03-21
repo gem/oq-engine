@@ -27,7 +27,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
-from openquake.baselib.general import AccumDict, split_in_blocks, humansize
+from openquake.baselib.general import AccumDict, block_splitter, humansize
 from openquake.hazardlib.calc.filters import FarAwayRupture
 from openquake.hazardlib.probability_map import ProbabilityMap, PmapStats
 from openquake.hazardlib.geo.surface import PlanarSurface
@@ -358,7 +358,8 @@ def compute_gmfs_and_curves(getter, monitor):
         hc_mon = monitor('building hazard curves', measuremem=False)
         duration = oq.investigation_time * oq.ses_per_logic_tree_path
         for gsim in getter.rlzs_by_gsim:
-            hazard = getter.get_hazard(gsim)  # (r, sid, imti) -> (gmv, eid)
+            with monitor('building hazard', measuremem=True):
+                hazard = getter.get_hazard(gsim)  # (r, sid, imti) -> gmv_eid
             for r, rlz in enumerate(getter.rlzs_by_gsim[gsim]):
                 lst = []
                 for sid in getter.sids:
@@ -376,10 +377,11 @@ def compute_gmfs_and_curves(getter, monitor):
                 gmfcoll[rlz] = numpy.array(lst, gmv_dt)
     else:  # fast lane
         for gsim in getter.rlzs_by_gsim:
-            # the following is tricky; `getter.gen_gmv` produces long
-            # event ids (64 bit) containing both a realization index (16 bit)
-            # and a short event id (48 bit); we manage them here
-            data = numpy.fromiter(getter.gen_gmv(gsim), gmv_dt)
+            with monitor('building hazard', measuremem=True):
+                # the following is tricky; `getter.gen_gmv` produces long
+                # event ids (64 bit) containing both a realization index (16 bit)
+                # and a short event id (48 bit); we manage them here
+                data = numpy.fromiter(getter.gen_gmv(gsim), gmv_dt)
             r_indices = data['eid'] // TWO48  # extract realization indices
             data['eid'] %= TWO48  # got back to short event IDs
             for r, rlz in enumerate(getter.rlzs_by_gsim[gsim]):
@@ -489,7 +491,7 @@ class EventBasedCalculator(ClassicalCalculator):
             if not ruptures:
                 continue
             rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
-            for block in split_in_blocks(ruptures, oq.concurrent_tasks or 1):
+            for block in block_splitter(ruptures, oq.ruptures_per_block):
                 samples = self.rlzs_assoc.samples[grp_id]
                 getter = GmfGetter(rlzs_by_gsim, block, self.sitecol,
                                    imts, min_iml, oq.truncation_level,
