@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Optimized the event based calculators by reducing the number of calls
+    to the GmfComputer and by using larger arrays
   * Added a check on missing vulnerability functions for some loss type
     for some taxonomy
   * Now we save the GMFs on the .ext5 file, not the datastore
