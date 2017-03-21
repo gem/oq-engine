@@ -27,7 +27,7 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
-from openquake.baselib.general import AccumDict, split_in_blocks, humansize
+from openquake.baselib.general import AccumDict, block_splitter, humansize
 from openquake.hazardlib.calc.filters import FarAwayRupture
 from openquake.hazardlib.probability_map import ProbabilityMap, PmapStats
 from openquake.hazardlib.geo.surface import PlanarSurface
@@ -488,7 +488,7 @@ class EventBasedCalculator(ClassicalCalculator):
             if not ruptures:
                 continue
             rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
-            for block in split_in_blocks(ruptures, oq.ruptures_per_block):
+            for block in block_splitter(ruptures, oq.ruptures_per_block):
                 samples = self.rlzs_assoc.samples[grp_id]
                 getter = GmfGetter(rlzs_by_gsim, block, self.sitecol,
                                    imts, min_iml, oq.truncation_level,
