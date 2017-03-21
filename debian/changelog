@@ -1,3 +1,7 @@
+  [Daniele Viganò]
+  * Introduced an optional argument for 'oq dbserver' command line 
+    to be able to override its default interface binding behaviour
+
   [Michele Simionato]
   * Optimized the event based calculators by reducing the number of calls
     to the GmfComputer and by using larger arrays
