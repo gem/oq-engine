@@ -23,6 +23,7 @@ from datetime import datetime, timedelta
 
 from openquake.hazardlib import valid
 from openquake.commonlib import datastore
+from openquake.server import __file__ as server_path
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
 from openquake.server.dbapi import NotFound
@@ -372,6 +373,15 @@ def fetch(db, templ, *args):
     :param args: arguments to pass to the template
     """
     return db(templ, *args)
+
+
+def get_path(db):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :returns: the full path to the dbserver codebase
+    """
+    return server_path
 
 
 def get_dbpath(db):
