@@ -1,6 +1,6 @@
   [Daniele Viganò]
-  * Added a check to verify that an 'oq' client is talinking to
-    the right DbServer
+  * Added a check to verify that an 'oq' client is talking to the
+    right DbServer instance
   * Introduced an optional argument for 'oq dbserver' command line 
     to be able to override its default interface binding behaviour
 
