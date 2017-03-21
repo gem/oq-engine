@@ -122,13 +122,7 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         os.makedirs(datastore.DATADIR)
 
     dbserver.ensure_on()
-
-    # check if the db is the right one
-    if not config.flag_set('dbserver', 'multi_user'):
-        server_path = dbserver.__file__
-        remote_server_path = logs.dbcmd('get_path')
-        if server_path != remote_server_path:
-            logging.warning('talking to a foreign DbServer')
+    dbserver.check_foreign()
 
     if upgrade_db:
         logs.set_level('info')
