@@ -31,7 +31,8 @@ from openquake.baselib.general import AccumDict, split_in_blocks, humansize
 from openquake.hazardlib.calc.filters import FarAwayRupture
 from openquake.hazardlib.probability_map import ProbabilityMap, PmapStats
 from openquake.hazardlib.geo.surface import PlanarSurface
-from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str, gmv_dt
+from openquake.risklib.riskinput import (GmfGetter, str2rsi, rsi2str, gmv_dt,
+                                         TWO48)
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util
 from openquake.calculators import base
@@ -45,7 +46,6 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16  # 65,536
 TWO32 = 2 ** 32  # 4,294,967,296
-TWO48 = 2 ** 48  # 281,474,976,710,656
 
 # ######################## rupture calculator ############################ #
 
@@ -340,12 +340,10 @@ def set_random_years(dstore, events_sm, investigation_time):
 
 # ######################## GMF calculator ############################ #
 
-def compute_gmfs_and_curves(getter, rlzs, monitor):
+def compute_gmfs_and_curves(getter, monitor):
     """
     :param getter:
         a GmfGetter instance
-    :param rlzs:
-        realizations for the current source group
     :param monitor:
         a Monitor instance
     :returns:
@@ -354,34 +352,40 @@ def compute_gmfs_and_curves(getter, rlzs, monitor):
     oq = monitor.oqparam
     with monitor('making contexts', measuremem=True):
         getter.init()
-    haz = {sid: {} for sid in getter.sids}
+    hcurves = {}  # key -> poes
+    gmfcoll = {}  # rlz -> gmfa
     if oq.hazard_curves_from_gmfs:
-        gmfcoll = {}  # rlz -> gmfa
-        for rlz in rlzs:
-            lst = []
-            gmf = getter.get_hazard(rlz)  # array (num_sites, num_imts)
-            for i, sid in enumerate(getter.sids):
-                for imti, imt in enumerate(getter.imts):
-                    haz[sid][imt, rlz] = recs = gmf[i, imti]
-                    for rec in recs:
-                        lst.append((sid, rec['eid'], imti, rec['gmv']))
-            gmfcoll[rlz] = numpy.array(lst, gmv_dt)
+        hc_mon = monitor('building hazard curves', measuremem=False)
+        duration = oq.investigation_time * oq.ses_per_logic_tree_path
+        for gsim in getter.rlzs_by_gsim:
+            hazard = getter.get_hazard(gsim)  # (r, sid, imti) -> (gmv, eid)
+            for r, rlz in enumerate(getter.rlzs_by_gsim[gsim]):
+                lst = []
+                for sid in getter.sids:
+                    for imti, imt in enumerate(getter.imts):
+                        array = hazard[r, sid, imti]
+                        if len(array) == 0:  # no data
+                            continue
+                        for rec in array:
+                            lst.append((sid, rec['eid'], imti, rec['gmv']))
+                        with hc_mon:
+                            poes = calc._gmvs_to_haz_curve(
+                                array['gmv'], oq.imtls[imt],
+                                oq.investigation_time, duration)
+                            hcurves[rsi2str(rlz.ordinal, sid, imt)] = poes
+                gmfcoll[rlz] = numpy.array(lst, gmv_dt)
     else:  # fast lane
-        gmfcoll = {rlz: numpy.fromiter(getter.gen_gmv(rlz), gmv_dt)
-                   for rlz in rlzs}
-    result = dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
-                  hcurves={}, gmdata=getter.gmdata)
-    if oq.hazard_curves_from_gmfs:
-        with monitor('building hazard curves', measuremem=False):
-            duration = oq.investigation_time * oq.ses_per_logic_tree_path
-            for sid, haz_by_imt_rlz in haz.items():
-                for imt, rlz in haz_by_imt_rlz:
-                    gmvs = haz_by_imt_rlz[imt, rlz]['gmv']
-                    poes = calc._gmvs_to_haz_curve(
-                        gmvs, oq.imtls[imt], oq.investigation_time, duration)
-                    key = rsi2str(rlz.ordinal, sid, imt)
-                    result['hcurves'][key] = poes
-    return result
+        for gsim in getter.rlzs_by_gsim:
+            # the following is tricky; `getter.gen_gmv` produces long
+            # event ids (64 bit) containing both a realization index (16 bit)
+            # and a short event id (48 bit); we manage them here
+            data = numpy.fromiter(getter.gen_gmv(gsim), gmv_dt)
+            r_indices = data['eid'] // TWO48  # extract realization indices
+            data['eid'] %= TWO48  # got back to short event IDs
+            for r, rlz in enumerate(getter.rlzs_by_gsim[gsim]):
+                gmfcoll[rlz] = data[r_indices == r]  # extract data for r
+    return dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
+                hcurves=hcurves, gmdata=getter.gmdata)
 
 
 def get_ruptures_by_grp(dstore):
@@ -479,21 +483,18 @@ class EventBasedCalculator(ClassicalCalculator):
         monitor.oqparam = oq
         imts = list(oq.imtls)
         min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
-        self.grp_trt = self.csm.info.grp_trt()
-        rlzs_by_grp = self.rlzs_assoc.get_rlzs_by_grp_id()
         correl_model = oq.get_correl_model()
         for grp_id in ruptures_by_grp:
             ruptures = ruptures_by_grp[grp_id]
             if not ruptures:
                 continue
+            rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
             for block in split_in_blocks(ruptures, oq.concurrent_tasks or 1):
-                trt = self.grp_trt[grp_id]
-                gsims = [dic[trt] for dic in self.rlzs_assoc.gsim_by_trt]
                 samples = self.rlzs_assoc.samples[grp_id]
-                getter = GmfGetter(gsims, block, self.sitecol,
+                getter = GmfGetter(rlzs_by_gsim, block, self.sitecol,
                                    imts, min_iml, oq.truncation_level,
                                    correl_model, samples)
-                yield getter, rlzs_by_grp[grp_id], monitor
+                yield getter, monitor
 
     def execute(self):
         """
