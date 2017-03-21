@@ -107,7 +107,9 @@ def check_foreign():
         server_path = __file__
         remote_server_path = logs.dbcmd('get_path')
         if server_path != remote_server_path:
-            logging.warning('talking to a foreign DbServer')
+            sys.exit('You are trying to contact ad DbServer from another'
+                     + ' instance: check the configuration or stop'
+                     + ' the already running DbServer instance')
 
 
 def ensure_on():
