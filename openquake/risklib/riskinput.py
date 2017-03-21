@@ -558,29 +558,41 @@ class GmfGetter(object):
         Compute the GMFs for the given realization and populate the .gmdata
         array. Yields tuples of the form (sid, eid, imti, gmv).
         """
+        rlzs = self.rlzs_by_gsim[gsim]
         # short event IDs (48 bit) are enlarged to long event IDs (64 bit)
         # containing information about the realization index (16 bit);
         # the information is used in .get_hazard and compute_gmfs_and_curves
-        for r, rlz in enumerate(self.rlzs_by_gsim[gsim]):
-            offset = U64(r * TWO48)
-            # see https://github.com/numpy/numpy/issues/7126
-            gmdata = self.gmdata[rlz.ordinal]
-            for computer in self.computers:
-                rup = computer.rupture
-                if self.samples > 1:  # only for oversampling
-                    eids = get_array(rup.events, sample=rlz.sampleid)['eid']
-                else:
-                    eids = rup.events['eid']
-                gmdata[EVENTS] += len(eids)
-                array = computer.compute(gsim, len(eids))  # (i, n, e)
+        for computer in self.computers:
+            rup = computer.rupture
+            sids = computer.sites.sids
+            if self.samples > 1:
+                all_eids = [get_array(rup.events, sample=rlz.sampleid)['eid']
+                            for rlz in rlzs]
+            else:
+                all_eids = [rup.events['eid']] * len(rlzs)
+            num_events = sum(len(eids) for eids in all_eids)
+            # NB: the trick for performance is to keep the call to
+            # compute.compute outside of the loop over the realizations
+            # it is better to have few calls producing big arrays
+            array = computer.compute(gsim, num_events)  # (i, n, e)
+            n = 0
+            for r, rlz in enumerate(rlzs):
+                e = len(all_eids[r])
+                offset = U64(r * TWO48)
+                # casting to U64 to avoid the issue described in
+                # https://github.com/numpy/numpy/issues/7126
+                gmdata = self.gmdata[rlz.ordinal]
+                gmdata[EVENTS] += e
                 for imti, imt in enumerate(self.imts):
                     min_gmv = self.min_iml[imti]
-                    for eid, gmf in zip(eids, array[imti].T):
-                        for sid, gmv in zip(computer.sites.sids, gmf):
+                    for i, eid in enumerate(all_eids[r]):
+                        gmf = array[imti, :, n + i]
+                        for sid, gmv in zip(sids, gmf):
                             if gmv > min_gmv:
                                 gmdata[imti] += gmv
                                 gmdata[NBYTES] += BYTES_PER_RECORD
                                 yield sid, eid + offset, imti, gmv
+                n += e
 
     def get_hazard(self, gsim):
         """
