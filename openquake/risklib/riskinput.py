@@ -457,8 +457,7 @@ class CompositeRiskModel(collections.Mapping):
         for gsim in hazard_getter.rlzs_by_gsim:
             with mon_hazard:
                 hazard = hazard_getter.get_hazard(gsim)
-            for rlz in hazard_getter.rlzs_by_gsim[gsim]:
-                rlzi = rlz.ordinal
+            for r, rlz in enumerate(hazard_getter.rlzs_by_gsim[gsim]):
                 for taxonomy in sorted(taxonomies):
                     riskmodel = self[taxonomy]
                     with mon_risk:
@@ -466,7 +465,7 @@ class CompositeRiskModel(collections.Mapping):
                             outs = [None] * len(self.lti)
                             for lt in self.loss_types:
                                 imt = riskmodel.risk_functions[lt].imt
-                                haz = hazard[rlzi, sid, imti[imt]]
+                                haz = hazard[r, sid, imti[imt]]
                                 if len(haz):
                                     out = riskmodel(lt, assets, haz, epsgetter)
                                     outs[self.lti[lt]] = out
@@ -507,10 +506,10 @@ class PoeGetter(object):
         """
         dic = {}
         for gsim in self.rlzs_by_gsim:
-            for rlz in self.rlzs_by_gsim[gsim]:
+            for r, rlz in enumerate(self.rlzs_by_gsim[gsim]):
                 for sid, haz in enumerate(self.hazard_by_site):
                     for imti, imt in enumerate(self.imts):
-                        dic[rlz.ordinal, sid, imti] = haz[imt][rlz]
+                        dic[r, sid, imti] = haz[imt][rlz]
         return dic
 
 
@@ -573,17 +572,16 @@ class GmfGetter(object):
             # it is better to have few calls producing big arrays
             array = computer.compute(gsim, num_events)  # (i, n, e)
             n = 0
-            for rlz, eids in zip(rlzs, all_eids):
-                e = len(eids)
-                rlzi = rlz.ordinal
-                offset = U64(rlzi * TWO48)
+            for r, rlz in enumerate(rlzs):
+                e = len(all_eids[r])
+                offset = U64(r * TWO48)
                 # casting to U64 to avoid the issue described in
                 # https://github.com/numpy/numpy/issues/7126
-                gmdata = self.gmdata[rlzi]
+                gmdata = self.gmdata[rlz.ordinal]
                 gmdata[EVENTS] += e
                 for imti, imt in enumerate(self.imts):
                     min_gmv = self.min_iml[imti]
-                    for i, eid in enumerate(eids):
+                    for i, eid in enumerate(all_eids[r]):
                         gmf = array[imti, :, n + i]
                         for sid, gmv in zip(sids, gmf):
                             if gmv > min_gmv:
