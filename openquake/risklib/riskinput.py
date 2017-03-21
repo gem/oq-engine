@@ -522,8 +522,6 @@ class GmfGetter(object):
     Callable yielding dictionaries {imt: array(gmv, eid)} when called
     on a realization.
     """
-    dt = numpy.dtype([('gmv', F32), ('eid', U64)])
-
     def __init__(self, rlzs_by_gsim, ebruptures, sitecol, imts, min_iml,
                  truncation_level, correlation_model, samples):
         assert sitecol is sitecol.complete
@@ -596,14 +594,41 @@ class GmfGetter(object):
         """
         :returns: dictionary (rlzi, sid, imti) -> array(gmv, eid)
         """
-        dic = collections.defaultdict(list)
-        for sid, eid, imti, gmv in self.gen_gmv(gsim):
-            # NB: int(eid) to avoid silent cast to float64
-            rlzi, eid_ = divmod(int(eid), TWO48)
-            dic[rlzi, sid, imti].append((gmv, eid_))
-        for key in dic:
-            dic[key] = numpy.array(dic[key], self.dt)
-        return dic
+        return get_gmfdict(self.gen_gmv(gsim))
+
+gmv_eid_dt = numpy.dtype([('gmv', F32), ('eid', U64)])
+
+
+def get_gmfdict(data):
+    dic = collections.defaultdict(list)
+    for sid, eid, imti, gmv in data:
+        # NB: int(eid) to avoid silent cast to float64
+        rlzi, eid_ = divmod(int(eid), TWO48)
+        dic[rlzi, sid, imti].append((gmv, eid_))
+    for key in dic:
+        dic[key] = numpy.array(dic[key], gmv_eid_dt)
+    return dic
+
+
+class GmfDataGetter(object):
+    """
+    Extracts a dictionary of GMVs from the underlying .ext5 file
+    """
+    def __init__(self, ext5path, grp_id, rlzs_by_gsim, start=0, stop=None):
+        self.ext5path = ext5path
+        self.grp_id = grp_id
+        self.rlzs_by_gsim = rlzs_by_gsim
+        self.start = start
+        self.stop = stop
+
+    def get_hazard(self, gsim):
+        """
+        :returns: dictionary (rlzi, sid, imti) -> array(gmv, eid)
+        """
+        with hdf5.File(self.ext5path) as f:
+            dset = f['gmf_data/%02d/%s' % (self.grp_id, gsim)]
+            data = dset[self.start:self.stop]
+        return get_gmfdict(data)
 
 
 def get_rlzs(riskinput):
