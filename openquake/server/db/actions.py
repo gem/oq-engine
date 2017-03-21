@@ -23,10 +23,10 @@ from datetime import datetime, timedelta
 
 from openquake.hazardlib import valid
 from openquake.commonlib import datastore
+from openquake.server import __file__ as server_path
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
 from openquake.server.dbapi import NotFound
-from openquake.server.dbserver import __file__ as server_path
 
 JOB_TYPE = '''CASE
 WHEN calculation_mode LIKE '%risk'
