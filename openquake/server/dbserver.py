@@ -29,7 +29,7 @@ from concurrent.futures import ThreadPoolExecutor
 from openquake.baselib import sap
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import valid
-from openquake.commonlib import config
+from openquake.commonlib import config, logs
 from openquake.server.db import actions
 from openquake.server import dbapi
 from openquake.server.settings import DATABASE
@@ -97,6 +97,20 @@ def get_status(address=None):
     finally:
         sock.close()
     return 'not-running' if err else 'running'
+
+
+def check_foreign():
+    """
+    Check if we the DbServer is the right one
+    """
+    if not config.flag_set('dbserver', 'multi_user'):
+        server_path = __file__
+        remote_server_path = logs.dbcmd('get_path')
+        if server_path != remote_server_path:
+            return('You are trying to contact a DbServer from another'
+                   + ' instance (%s)\n' % remote_server_path
+                   + 'Check the configuration or stop the foreign'
+                   + ' DbServer instance')
 
 
 def ensure_on():
