@@ -383,12 +383,9 @@ class EbriskCalculator(base.RiskCalculator):
         # prepare the risk inputs
         ruptures_per_block = self.oqparam.ruptures_per_block
         start = 0
-        grp_trt = csm_info.grp_trt()
         ignore_covs = self.oqparam.ignore_covs
         for grp_id in grp_ids:
-            trt = grp_trt[grp_id]
-            gsims = [dic[trt] for dic in rlzs_assoc.gsim_by_trt]
-            rlzs = rlzs_assoc.get_rlzs_by_grp_id()[grp_id]
+            rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
             samples = rlzs_assoc.samples[grp_id]
             for rupts in block_splitter(
                     ruptures_by_grp.get(grp_id, []), ruptures_per_block):
@@ -402,9 +399,9 @@ class EbriskCalculator(base.RiskCalculator):
                         len(self.assetcol), seeds[start: start + n_events])
                     start += n_events
                 getter = riskinput.GmfGetter(
-                    gsims, rupts, sitecol, imts, min_iml, trunc_level,
+                    rlzs_by_gsim, rupts, sitecol, imts, min_iml, trunc_level,
                     correl_model, samples)
-                ri = riskinput.RiskInputFromRuptures(getter, rlzs, eps)
+                ri = riskinput.RiskInputFromRuptures(getter, eps)
                 allargs.append((ri, riskmodel, assetcol, monitor))
 
         self.vals = self.assetcol.values()
