@@ -12,6 +12,6 @@ Index: oq-engine/openquake/engine/openquake.cfg
 +multi_user = true
 +file = /var/lib/openquake/db.sqlite3
 +log = /var/lib/openquake/dbserver.log
+ # dbserver master node ip address
  host = localhost
  # port 1908 has a good reputation:
- # https://isc.sans.edu/port.html?port=1908

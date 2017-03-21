@@ -26,6 +26,12 @@ Sometimes it's useful to run the DbServer in foreground for debug purposes. It c
 $ oq dbserver start
 ```
 
+A custom binging address and port can be specified at startup time as a custom db path too:
+
+```bash
+$ oq dbserver start 0.0.0.0:1985 /tmp/customdb.sqlite3
+```
+
 ### Celery
 
 Celery can be manually started via this command:

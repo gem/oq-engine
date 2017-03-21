@@ -122,18 +122,21 @@ def ensure_on():
 
 
 @sap.Script
-def run_server(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
+def run_server(dbhostport=None, dbpath=None, logfile=DATABASE['LOG'],
+               loglevel='WARN'):
     """
     Run the DbServer on the given database file and port. If not given,
     use the settings in openquake.cfg.
     """
-    if dbpathport:  # assume a string of the form "dbpath:port"
-        dbpath, port = dbpathport.split(':')
-        addr = (DATABASE['HOST'], int(port))
-        DATABASE['NAME'] = dbpath
+    if dbhostport:  # assume a string of the form "dbhost:port"
+        dbhost, port = dbhostport.split(':')
+        addr = (dbhost, int(port))
         DATABASE['PORT'] = int(port)
     else:
         addr = config.DBS_ADDRESS
+
+    if dbpath:
+        DATABASE['NAME'] = dbpath
 
     # create the db directory if needed
     dirname = os.path.dirname(DATABASE['NAME'])
@@ -151,7 +154,8 @@ def run_server(dbpathport=None, logfile=DATABASE['LOG'], loglevel='WARN'):
     logging.basicConfig(level=getattr(logging, loglevel), filename=logfile)
     DbServer(db, addr, config.DBS_AUTHKEY).loop()
 
-run_server.arg('dbpathport', 'dbpath:port')
+run_server.arg('dbhostport', 'dbhost:port')
+run_server.arg('dbpath', 'dbpath')
 run_server.arg('logfile', 'log file')
 run_server.opt('loglevel', 'WARN or INFO')
 

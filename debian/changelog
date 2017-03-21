@@ -1,3 +1,7 @@
+  [Daniele Viganò]
+  * Introduced an optional argument for 'oq dbserver' command line 
+    to be able to override its default interface binding behaviour
+
   [Michele Simionato]
   * Added a check on missing vulnerability functions for some loss type
     for some taxonomy
