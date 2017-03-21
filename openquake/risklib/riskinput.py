@@ -36,6 +36,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
+TWO48 = 2 ** 48  # 281,474,976,710,656
 BYTES_PER_RECORD = 17  # ground motion record (sid, eid, gmv, imti) = 17 bytes
 EVENTS = -2
 NBYTES = -1
@@ -407,17 +408,18 @@ class CompositeRiskModel(collections.Mapping):
     def __len__(self):
         return len(self._riskmodels)
 
-    def build_input(self, imts, rlzs, hazards_by_site, assetcol, eps_dict):
+    def build_input(self, imts, rlzs_by_gsim, hazards_by_site, assetcol,
+                    eps_dict):
         """
         :param imts: a list of IMT strings
-        :param rlzs: a list of realizations
+        :param rlzs_by_gsim: a dictionary of realizations by GSIM
         :param hazards_by_site: an array of hazards per each site
         :param assetcol: AssetCollection instance
         :param eps_dict: a dictionary of epsilons
         :returns: a :class:`RiskInput` instance
         """
         return RiskInput(
-            PoeGetter(hazards_by_site, imts), rlzs, assetcol, eps_dict)
+            PoeGetter(rlzs_by_gsim, hazards_by_site, imts), assetcol, eps_dict)
 
     def gen_outputs(self, riskinput, monitor, assetcol=None):
         """
@@ -452,24 +454,25 @@ class CompositeRiskModel(collections.Mapping):
                 dic[taxonomy].append((sid, group[taxonomy], epsgetter))
                 taxonomies.add(taxonomy)
         imti = {imt: i for i, imt in enumerate(hazard_getter.imts)}
-        for rlz in riskinput.rlzs:
+        for gsim in hazard_getter.rlzs_by_gsim:
             with mon_hazard:
-                hazard = hazard_getter.get_hazard(rlz)
-            for taxonomy in sorted(taxonomies):
-                riskmodel = self[taxonomy]
-                with mon_risk:
-                    for sid, assets, epsgetter in dic[taxonomy]:
-                        outs = [None] * len(self.lti)
-                        for lt in self.loss_types:
-                            imt = riskmodel.risk_functions[lt].imt
-                            haz = hazard[sid, imti[imt]]
-                            if len(haz):
-                                out = riskmodel(lt, assets, haz, epsgetter)
-                                outs[self.lti[lt]] = out
-                        row = MultiLoss(self.loss_types, outs)
-                        row.r = rlz.ordinal
-                        row.assets = assets
-                        yield row
+                hazard = hazard_getter.get_hazard(gsim)
+            for r, rlz in enumerate(hazard_getter.rlzs_by_gsim[gsim]):
+                for taxonomy in sorted(taxonomies):
+                    riskmodel = self[taxonomy]
+                    with mon_risk:
+                        for sid, assets, epsgetter in dic[taxonomy]:
+                            outs = [None] * len(self.lti)
+                            for lt in self.loss_types:
+                                imt = riskmodel.risk_functions[lt].imt
+                                haz = hazard[r, sid, imti[imt]]
+                                if len(haz):
+                                    out = riskmodel(lt, assets, haz, epsgetter)
+                                    outs[self.lti[lt]] = out
+                            row = MultiLoss(self.loss_types, outs)
+                            row.r = rlz.ordinal
+                            row.assets = assets
+                            yield row
         if hasattr(hazard_getter, 'gmdata'):  # for event based risk
             riskinput.gmdata = hazard_getter.gmdata
 
@@ -485,24 +488,30 @@ class CompositeRiskModel(collections.Mapping):
 
 class PoeGetter(object):
     """
-    Callable yielding a matrix of poes when called on a realization.
-
+    :param rlzs_by_gsim:
+        a dictionary gsim -> realizations for that GSIM
     :param hazard_by_site:
         a list of dictionaries imt -> rlz -> poes, one per site
     :param imts:
         a list of IMT strings
     """
-    def __init__(self, hazard_by_site, imts):
+    def __init__(self, rlzs_by_gsim, hazard_by_site, imts):
+        self.rlzs_by_gsim = rlzs_by_gsim
         self.hazard_by_site = hazard_by_site
         self.imts = imts
 
-    def get_hazard(self, rlz):
+    def get_hazard(self, gsim):
         """
+        :param gsim: a GSIM instance
         :returns: a probability matrix (num_sites, num_imts)
         """
-        return numpy.array(
-            [[haz[imt][rlz] for imt in self.imts]
-             for haz in self.hazard_by_site])
+        dic = {}
+        for gsim in self.rlzs_by_gsim:
+            for r, rlz in enumerate(self.rlzs_by_gsim[gsim]):
+                for sid, haz in enumerate(self.hazard_by_site):
+                    for imti, imt in enumerate(self.imts):
+                        dic[r, sid, imti] = haz[imt][rlz]
+        return dic
 
 
 gmv_dt = numpy.dtype([('sid', U32), ('eid', U64), ('imti', U8), ('gmv', F32)])
@@ -510,15 +519,15 @@ gmv_dt = numpy.dtype([('sid', U32), ('eid', U64), ('imti', U8), ('gmv', F32)])
 
 class GmfGetter(object):
     """
-    Callable yielding dictionaries {imt: array(gmv, eid)} when called
-    on a realization.
+    An hazard getter with methods .gen_gmv and .get_hazard returning
+    ground motion values.
     """
     dt = numpy.dtype([('gmv', F32), ('eid', U64)])
 
-    def __init__(self, gsims, ebruptures, sitecol, imts, min_iml,
+    def __init__(self, rlzs_by_gsim, ebruptures, sitecol, imts, min_iml,
                  truncation_level, correlation_model, samples):
         assert sitecol is sitecol.complete
-        self.gsims = gsims
+        self.rlzs_by_gsim = rlzs_by_gsim
         self.ebruptures = ebruptures
         self.sitecol = sitecol
         self.imts = imts
@@ -533,52 +542,81 @@ class GmfGetter(object):
         """
         self.sids = self.sitecol.sids
         self.computers = []
+        gsims = sorted(self.rlzs_by_gsim)
         for ebr in self.ebruptures:
             sites = site.FilteredSiteCollection(
                 ebr.sids, self.sitecol.complete)
             computer = calc.gmf.GmfComputer(
-                ebr, sites, self.imts, self.gsims,
+                ebr, sites, self.imts, gsims,
                 self.truncation_level, self.correlation_model)
             self.computers.append(computer)
         # dictionary rlzi -> array(imts, events, nbytes)
         self.gmdata = AccumDict(accum=numpy.zeros(len(self.imts) + 2, F32))
 
-    def gen_gmv(self, rlz):
+    def gen_gmv(self, gsim):
         """
         Compute the GMFs for the given realization and populate the .gmdata
         array. Yields tuples of the form (sid, eid, imti, gmv).
         """
-        gsim = self.gsims[rlz.ordinal]
-        gmdata = self.gmdata[rlz.ordinal]
+        rlzs = self.rlzs_by_gsim[gsim]
+        # short event IDs (48 bit) are enlarged to long event IDs (64 bit)
+        # containing information about the realization index (16 bit);
+        # the information is used in .get_hazard and compute_gmfs_and_curves
         for computer in self.computers:
             rup = computer.rupture
+            sids = computer.sites.sids
             if self.samples > 1:
-                eids = get_array(rup.events, sample=rlz.sampleid)['eid']
+                all_eids = [get_array(rup.events, sample=rlz.sampleid)['eid']
+                            for rlz in rlzs]
             else:
-                eids = rup.events['eid']
-            gmdata[EVENTS] += len(eids)
-            array = computer.compute(gsim, len(eids))  # (i, n, e)
-            for imti, imt in enumerate(self.imts):
-                min_gmv = self.min_iml[imti]
-                for eid, gmf in zip(eids, array[imti].T):
-                    for sid, gmv in zip(computer.sites.sids, gmf):
-                        if gmv > min_gmv:
-                            gmdata[imti] += gmv
-                            gmdata[NBYTES] += BYTES_PER_RECORD
-                            yield sid, eid, imti, gmv
+                all_eids = [rup.events['eid']] * len(rlzs)
+            num_events = sum(len(eids) for eids in all_eids)
+            # NB: the trick for performance is to keep the call to
+            # compute.compute outside of the loop over the realizations
+            # it is better to have few calls producing big arrays
+            array = computer.compute(gsim, num_events)  # (i, n, e)
+            n = 0
+            for r, rlz in enumerate(rlzs):
+                e = len(all_eids[r])
+                offset = U64(r * TWO48)
+                # casting to U64 to avoid the issue described in
+                # https://github.com/numpy/numpy/issues/7126
+                gmdata = self.gmdata[rlz.ordinal]
+                gmdata[EVENTS] += e
+                for imti, imt in enumerate(self.imts):
+                    min_gmv = self.min_iml[imti]
+                    for i, eid in enumerate(all_eids[r]):
+                        gmf = array[imti, :, n + i]
+                        for sid, gmv in zip(sids, gmf):
+                            if gmv > min_gmv:
+                                gmdata[imti] += gmv
+                                gmdata[NBYTES] += BYTES_PER_RECORD
+                                yield sid, eid + offset, imti, gmv
+                n += e
 
-    def get_hazard(self, rlz):
+    def get_hazard(self, gsim):
         """
-        :returns: array of arrays of shape (num_sites, num_imts)
+        :param gsim: a GSIM instance
+        :returns: a dictionary (rlzi, sid, imti) -> array(gmv, eid)
         """
-        gmfa = numpy.zeros((len(self.sids), len(self.imts)), object)
-        gmfdict = collections.defaultdict(list)
-        for sid, eid, imti, gmv in self.gen_gmv(rlz):
-            gmfdict[sid, imti].append((gmv, eid))
-        for sid in self.sids:
-            for imti, imt in enumerate(self.imts):
-                gmfa[sid, imti] = numpy.array(gmfdict[sid, imti], self.dt)
-        return gmfa
+        dic = collections.defaultdict(list)
+        for sid, eid, imti, gmv in self.gen_gmv(gsim):
+            # NB: int(eid) to avoid silent cast to float64
+            rlzi, eid_ = divmod(int(eid), TWO48)
+            dic[rlzi, sid, imti].append((gmv, eid_))
+        for key in dic:
+            dic[key] = numpy.array(dic[key], self.dt)
+        return dic
+
+
+def get_rlzs(riskinput):
+    """
+    Returns the realizations contained in the riskinput object.
+    """
+    all_rlzs = []
+    for gsim, rlzs in sorted(riskinput.hazard_getter.rlzs_by_gsim.items()):
+        all_rlzs.extend(rlzs)
+    return all_rlzs
 
 
 class RiskInput(object):
@@ -588,16 +626,13 @@ class RiskInput(object):
 
     :param hazard_getter:
         a callable returning the hazard data for a given realization
-    :param rlzs:
-        the realizations contained in the riskinput object
     :param assets_by_site:
         array of assets, one per site
     :param eps_dict:
         dictionary of epsilons
     """
-    def __init__(self, hazard_getter, rlzs, assets_by_site, eps_dict):
+    def __init__(self, hazard_getter, assets_by_site, eps_dict):
         self.hazard_getter = hazard_getter
-        self.rlzs = rlzs
         self.assets_by_site = assets_by_site
         self.eps = eps_dict
         taxonomies_set = set()
@@ -610,6 +645,8 @@ class RiskInput(object):
         self.taxonomies = sorted(taxonomies_set)
         self.eids = None  # for API compatibility with RiskInputFromRuptures
         self.weight = len(self.aids)
+
+    rlzs = property(get_rlzs)
 
     @property
     def imt_taxonomies(self):
@@ -637,20 +674,19 @@ class RiskInputFromRuptures(object):
 
     :param hazard_getter:
         a callable returning the hazard data for a given realization
-    :param rlzs:
-        the realizations contained in the riskinput object
     :params epsilons:
         a matrix of epsilons (or None)
     """
-    def __init__(self, hazard_getter, rlzs, epsilons=None):
+    def __init__(self, hazard_getter, epsilons=None):
         self.hazard_getter = hazard_getter
-        self.rlzs = rlzs
         self.weight = sum(sr.weight for sr in hazard_getter.ebruptures)
         self.eids = numpy.concatenate(
             [r.events['eid'] for r in hazard_getter.ebruptures])
         if epsilons is not None:
             self.eps = epsilons  # matrix N x E, events in this block
             self.eid2idx = dict(zip(self.eids, range(len(self.eids))))
+
+    rlzs = property(get_rlzs)
 
     def epsilon_getter(self, asset_ordinals):
         """
