@@ -358,13 +358,12 @@ def compute_gmfs_and_curves(getter, monitor):
         hc_mon = monitor('building hazard curves', measuremem=False)
         duration = oq.investigation_time * oq.ses_per_logic_tree_path
         for gsim in getter.rlzs_by_gsim:
-            hazard = getter.get_hazard(gsim)  # (rlzi, sid, imti) -> (gmv, eid)
-            for rlz in getter.rlzs_by_gsim[gsim]:
+            hazard = getter.get_hazard(gsim)  # (r, sid, imti) -> (gmv, eid)
+            for r, rlz in enumerate(getter.rlzs_by_gsim[gsim]):
                 lst = []
-                rlzi = rlz.ordinal
                 for sid in getter.sids:
                     for imti, imt in enumerate(getter.imts):
-                        array = hazard[rlzi, sid, imti]
+                        array = hazard[r, sid, imti]
                         if len(array) == 0:  # no data
                             continue
                         for rec in array:
@@ -373,15 +372,15 @@ def compute_gmfs_and_curves(getter, monitor):
                             poes = calc._gmvs_to_haz_curve(
                                 array['gmv'], oq.imtls[imt],
                                 oq.investigation_time, duration)
-                            hcurves[rsi2str(rlzi, sid, imt)] = poes
+                            hcurves[rsi2str(rlz.ordinal, sid, imt)] = poes
                 gmfcoll[rlz] = numpy.array(lst, gmv_dt)
     else:  # fast lane
         for gsim in getter.rlzs_by_gsim:
             data = numpy.fromiter(getter.gen_gmv(gsim), gmv_dt)
-            rlzi = data['eid'] // TWO48
+            rids = data['eid'] // TWO48
             data['eid'] %= TWO48
-            for rlz in getter.rlzs_by_gsim[gsim]:
-                gmfcoll[rlz] = data[rlzi == rlz.ordinal]
+            for r, rlz in enumerate(getter.rlzs_by_gsim[gsim]):
+                gmfcoll[rlz] = data[rids == r]
     return dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
                 hcurves=hcurves, gmdata=getter.gmdata)
 
