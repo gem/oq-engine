@@ -488,8 +488,8 @@ class CompositeRiskModel(collections.Mapping):
 
 class PoeGetter(object):
     """
-    Callable yielding a matrix of poes when called on a realization.
-
+    :param rlzs_by_gsim:
+        a dictionary gsim -> realizations for that GSIM
     :param hazard_by_site:
         a list of dictionaries imt -> rlz -> poes, one per site
     :param imts:
@@ -502,6 +502,7 @@ class PoeGetter(object):
 
     def get_hazard(self, gsim):
         """
+        :param gsim: a GSIM instance
         :returns: a probability matrix (num_sites, num_imts)
         """
         dic = {}
@@ -518,8 +519,8 @@ gmv_dt = numpy.dtype([('sid', U32), ('eid', U64), ('imti', U8), ('gmv', F32)])
 
 class GmfGetter(object):
     """
-    Callable yielding dictionaries {imt: array(gmv, eid)} when called
-    on a realization.
+    An hazard getter with methods .gen_gmv and .get_hazard returning
+    ground motion values.
     """
     dt = numpy.dtype([('gmv', F32), ('eid', U64)])
 
@@ -558,6 +559,9 @@ class GmfGetter(object):
         array. Yields tuples of the form (sid, eid, imti, gmv).
         """
         rlzs = self.rlzs_by_gsim[gsim]
+        # short event IDs (48 bit) are enlarged to long event IDs (64 bit)
+        # containing information about the realization index (16 bit);
+        # the information is used in .get_hazard and compute_gmfs_and_curves
         for computer in self.computers:
             rup = computer.rupture
             sids = computer.sites.sids
@@ -592,7 +596,8 @@ class GmfGetter(object):
 
     def get_hazard(self, gsim):
         """
-        :returns: dictionary (rlzi, sid, imti) -> array(gmv, eid)
+        :param gsim: a GSIM instance
+        :returns: a dictionary (rlzi, sid, imti) -> array(gmv, eid)
         """
         dic = collections.defaultdict(list)
         for sid, eid, imti, gmv in self.gen_gmv(gsim):
@@ -606,7 +611,7 @@ class GmfGetter(object):
 
 def get_rlzs(riskinput):
     """
-    Returns the list of realizations contained in the getter
+    Returns the realizations contained in the riskinput object.
     """
     all_rlzs = []
     for gsim, rlzs in sorted(riskinput.hazard_getter.rlzs_by_gsim.items()):
@@ -621,8 +626,6 @@ class RiskInput(object):
 
     :param hazard_getter:
         a callable returning the hazard data for a given realization
-    :param rlzs:
-        the realizations contained in the riskinput object
     :param assets_by_site:
         array of assets, one per site
     :param eps_dict:
@@ -671,8 +674,6 @@ class RiskInputFromRuptures(object):
 
     :param hazard_getter:
         a callable returning the hazard data for a given realization
-    :param rlzs:
-        the realizations contained in the riskinput object
     :params epsilons:
         a matrix of epsilons (or None)
     """
