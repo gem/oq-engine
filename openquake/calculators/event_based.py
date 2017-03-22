@@ -378,8 +378,8 @@ def compute_gmfs_and_curves(getter, monitor):
     else:  # fast lane
         for gsim in getter.rlzs_by_gsim:
             with monitor('building hazard', measuremem=True):
-                # the following is tricky; `getter.gen_gmv` produces long
-                # event ids (64 bit) containing both a realization index (16 bit)
+                # the following is tricky; `getter.gen_gmv` produces long event
+                # ids (64 bit) containing both a realization index (16 bit)
                 # and a short event id (48 bit); we manage them here
                 data = numpy.fromiter(getter.gen_gmv(gsim), gmv_dt)
             r_indices = data['eid'] // TWO48  # extract realization indices
