@@ -51,7 +51,7 @@ PY_MODULES = ['openquake.commands.__main__']
 
 install_requires = [
     'mock >=1.0, <1.4',
-    'h5py >=2.2, <2.7',
+    'h5py >=2.2, <2.8',
     'nose >=1.3, <1.4',
     'numpy >=1.8, <1.12',
     'scipy >=0.13, <0.18',
