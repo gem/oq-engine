@@ -141,10 +141,10 @@ def _aggregate(outputs, compositemodel, taxid, agg, ass, idx, result,
                 # losses by taxonomy
                 t = taxid[asset.taxonomy]
                 if monitor.insured_losses:
-                    losses_by_taxon[t, l, r] += losses[:, 0].sum()
-                    losses_by_taxon[t, L + l, r] += losses[:, 1].sum()
+                    losses_by_taxon[t, r, l] += losses[:, 0].sum()
+                    losses_by_taxon[t, r, L + l] += losses[:, 1].sum()
                 else:
-                    losses_by_taxon[t, l, r] += losses.sum()
+                    losses_by_taxon[t, r, l] += losses.sum()
 
         # asset losses
         if monitor.loss_ratios:
@@ -179,7 +179,7 @@ def event_based_risk(riskinput, riskmodel, assetcol, monitor):
     agg = AccumDict(accum=numpy.zeros((E, L, I), F32))  # r -> array
     ass = AccumDict(accum=[])
     result = dict(agglosses=AccumDict(), asslosses=AccumDict(),
-                  losses_by_taxon=numpy.zeros((T, L * I, R), F32))
+                  losses_by_taxon=numpy.zeros((T, R, L * I), F32))
     if monitor.avg_losses:
         result['avglosses'] = AccumDict(accum=numpy.zeros((A, I), F64))
 
@@ -505,7 +505,7 @@ class EbriskCalculator(base.RiskCalculator):
         self.A = len(self.assetcol)
         self.I = I = self.oqparam.insured_losses + 1
         self.datastore.create_dset('losses_by_taxon', F32,
-                                   (self.T, self.L * I, self.R))
+                                   (self.T, self.R, self.L * I))
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
             # since we are using a composite array, we must use fillvalue=None
@@ -569,11 +569,10 @@ class EbriskCalculator(base.RiskCalculator):
                 key = 'all_loss_ratios/rlz-%03d' % (r + offset)
                 hdf5.extend3(self.datastore.ext5path, key, asslosses[r])
 
-        # saving losses by taxonomy
-        num_rlzs = losses_by_taxon.shape[-1]
+        # saving losses by taxonomy is ultra-fast, so it is not monitored
         dset = self.datastore['losses_by_taxon']
-        for r in range(num_rlzs):
-            dset[:, :, r + offset] = losses_by_taxon[:, :, r]
+        for r in range(losses_by_taxon.shape[1]):
+            dset[:, r + offset, :] += losses_by_taxon[:, r, :]
 
     def post_execute(self, num_events):
         """

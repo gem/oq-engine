@@ -407,12 +407,12 @@ def portfolio_loss_from_agg_loss_table(agg_loss_table, loss_dt):
 
 
 def portfolio_loss_from_losses_by_taxon(losses_by_taxon, loss_dt):
-    R = losses_by_taxon.shape[-1]
+    R = losses_by_taxon.shape[1]  # shape (T, R, L')
     data = numpy.zeros(R, loss_dt)
     rlzids = [str(r) for r in range(R)]
     for r in range(R):
         for l, lt in enumerate(loss_dt.names):
-            data[r][lt] = losses_by_taxon[:, l, r].sum()
+            data[r][lt] = losses_by_taxon[:, r, l].sum()
     return rlzids, data
 
 
@@ -425,7 +425,6 @@ def view_portfolio_loss(token, dstore):
     """
     oq = dstore['oqparam']
     if 'losses_by_taxon' in dstore:
-        oq.insured_losses = False
         rlzids, data = portfolio_loss_from_losses_by_taxon(
             dstore['losses_by_taxon'], oq.loss_dt())
     else:
