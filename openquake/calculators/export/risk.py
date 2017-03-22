@@ -939,7 +939,7 @@ def export_losses_by_taxon_csv(ekey, dstore):
     taxonomies = add_quotes(dstore['assetcol/taxonomies'].value)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
-    value = dstore[ekey[0]].value  # matrix of shape (T, L, R)
+    value = dstore[ekey[0]].value  # matrix of shape (T, L', R)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dt = numpy.dtype([('taxonomy', taxonomies.dtype)]
                      + [(lt, F64) for lt in loss_types])
