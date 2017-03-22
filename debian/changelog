@@ -1,7 +1,11 @@
+  [Michele Simionato]
+  * Fixed the calculator event based UCERF so that average losses can
+    be stored
+
   [Daniele Viganò]
   * Added a check to verify that an 'oq' client is talking to the
     right DbServer instance
-  * Introduced an optional argument for 'oq dbserver' command line 
+  * Introduced an optional argument for 'oq dbserver' command line
     to be able to override its default interface binding behaviour
 
   [Michele Simionato]
