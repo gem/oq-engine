@@ -79,9 +79,12 @@ class GmfComputer(object):
     # seed is extracted from the underlying rupture.
     def __init__(self, rupture, sites, imts, gsims,
                  truncation_level=None, correlation_model=None, samples=0):
-        assert sites, sites
-        assert imts, imts
-        assert gsims, gsims
+        if len(sites) == 0:
+            raise ValueError('No sites')
+        elif len(imts) == 0:
+            raise ValueError('No IMTs')
+        elif len(gsims) == 0:
+            raise ValueError('No GSIMs')
         self.rupture = rupture
         self.sites = sites
         self.imts = [from_string(imt) for imt in imts]

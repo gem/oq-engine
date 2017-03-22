@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added input checks to the GmfComputer
   * Fixed bug when splitting area sources into point sources for
     YoungsCoppersmith1985MFD
   * Added a method `hdf5.File.save` to save node dictionaries in HDF5 format
