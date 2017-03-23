@@ -424,9 +424,9 @@ def view_portfolio_loss(token, dstore):
     extracted from the event loss table.
     """
     oq = dstore['oqparam']
-    if 'losses_by_taxon' in dstore:
+    if 'losses_by_taxon-rlzs' in dstore:
         rlzids, data = portfolio_loss_from_losses_by_taxon(
-            dstore['losses_by_taxon'], oq.loss_dt())
+            dstore['losses_by_taxon-rlzs'], oq.loss_dt())
     else:
         rlzids, data = portfolio_loss_from_agg_loss_table(
             dstore['agg_loss_table'], oq.loss_dt())

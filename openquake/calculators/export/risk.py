@@ -23,6 +23,7 @@ import numpy
 
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import AccumDict, get_array, group_array
+from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific, riskinput
 from openquake.calculators.export import export
 from openquake.calculators.export.hazard import (
@@ -933,17 +934,24 @@ def export_rcurves_rlzs(ekey, dstore):
 
 
 # used by ebr calculator
-@export.add(('losses_by_taxon', 'csv'))
+@export.add(('losses_by_taxon-rlzs', 'csv'), ('losses_by_taxon-stats', 'csv'))
 def export_losses_by_taxon_csv(ekey, dstore):
     oq = dstore['oqparam']
     taxonomies = add_quotes(dstore['assetcol/taxonomies'].value)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     loss_types = oq.loss_dt().names
-    value = dstore[ekey[0]].value  # matrix of shape (T, R, L')
+    key, kind = ekey[0].split('-')
+    value = dstore[key + '-rlzs'].value
+    if kind == 'stats':
+        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
+        weights = dstore['realizations']['weight']
+        value = compute_stats2(value, oq.quantile_loss_curves, weights)
+    else:  # rlzs
+        tags = rlzs
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dt = numpy.dtype([('taxonomy', taxonomies.dtype)] + oq.loss_dt_list())
-    for rlz, values in zip(rlzs, value.transpose(1, 0, 2)):
-        fname = dstore.build_fname(ekey[0], rlz, ekey[1])
+    for tag, values in zip(tags, value.transpose(1, 0, 2)):
+        fname = dstore.build_fname(ekey[0], tag, ekey[1])
         array = numpy.zeros(len(values), dt)
         array['taxonomy'] = taxonomies
         for l, lt in enumerate(loss_types):
