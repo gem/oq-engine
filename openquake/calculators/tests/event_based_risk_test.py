@@ -34,7 +34,7 @@ def check_agg_loss_table(dstore, loss_dt):
     L1 = len(loss_dt.names)
     L = L1 // 2
     data1 = numpy.zeros(L1, numpy.float32)
-    for dset in sorted(dstore['agg_loss_table'].values()):
+    for dset in dstore['agg_loss_table'].values():
         for l, lt in enumerate(loss_dt.names):
             i = lt.endswith('_ins')
             data1[l] += dset['loss'][:, l - L * i, i].sum()
