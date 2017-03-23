@@ -504,7 +504,7 @@ class EbriskCalculator(base.RiskCalculator):
         self.T = len(self.assetcol.taxonomies)
         self.A = len(self.assetcol)
         self.I = I = self.oqparam.insured_losses + 1
-        self.datastore.create_dset('losses_by_taxon', F32,
+        self.datastore.create_dset('losses_by_taxon-rlzs', F32,
                                    (self.T, self.R, self.L * I))
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
@@ -570,7 +570,7 @@ class EbriskCalculator(base.RiskCalculator):
                 hdf5.extend3(self.datastore.ext5path, key, asslosses[r])
 
         # saving losses by taxonomy is ultra-fast, so it is not monitored
-        dset = self.datastore['losses_by_taxon']
+        dset = self.datastore['losses_by_taxon-rlzs']
         for r in range(losses_by_taxon.shape[1]):
             dset[:, r + offset, :] += losses_by_taxon[:, r, :]
 
