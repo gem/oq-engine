@@ -150,10 +150,9 @@ def export_ses_csv(ekey, dstore):
         dic = groupby(etags, util.get_serial)
         for r in dstore['rup_data/grp-%02d' % grp_id]:
             for etag in dic[r['rupserial']]:
-                boundary = 'MULTIPOLYGON(%s)' % r['boundary']
                 rows.append(
                     (etag, r['mag'], r['lon'], r['lat'], r['depth'],
-                     trt, r['strike'], r['dip'], r['rake'], boundary))
+                     trt, r['strike'], r['dip'], r['rake'], r['boundary']))
     rows.sort(key=operator.itemgetter(0))
     writers.write_csv(dest, rows, header=header, sep='\t')
     return [dest]
@@ -168,7 +167,8 @@ def export_rup_data(ekey, dstore):
         data = rupture_data[trt].value
         data.sort(order='rupserial')
         if len(data):
-            paths.append(writers.write_csv(dstore.export_path(fname), data))
+            paths.append(
+                writers.write_csv(dstore.export_path(fname), data, sep='\t'))
     return paths
 
 
