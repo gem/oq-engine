@@ -140,11 +140,8 @@ def _aggregate(outputs, compositemodel, taxid, agg, ass, idx, result,
 
                 # losses by taxonomy
                 t = taxid[asset.taxonomy]
-                if monitor.insured_losses:
-                    losses_by_taxon[t, r, l] += losses[:, 0].sum()
-                    losses_by_taxon[t, r, L + l] += losses[:, 1].sum()
-                else:
-                    losses_by_taxon[t, r, l] += losses.sum()
+                for i in range(I):
+                    losses_by_taxon[t, r, l + L * i] += losses[:, i].sum()
 
         # asset losses
         if monitor.loss_ratios:
