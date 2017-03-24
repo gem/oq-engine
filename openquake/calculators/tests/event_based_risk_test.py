@@ -171,7 +171,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_master(self):
         if sys.platform == 'darwin':
             raise unittest.SkipTest('MacOSX')
-        self.assert_stats_ok(case_master, 'job.ini', individual_curves='false')
+        self.run_calc(case_master.__file__, 'job.ini',
+                      exports='csv', individual_curves='false')
+        fnames = export(('avg_losses-stats', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                                  delta=1E-5)
 
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
         for fname in fnames:
