@@ -83,6 +83,7 @@ def expose_outputs(dstore):
     exportable = set(ekey[0] for ekey in export.export)
     calcmode = oq.calculation_mode
     dskeys = set(dstore) & exportable  # exportable datastore keys
+    dskeys.add('fullreport')
     if 'scenario' not in calcmode:  # export sourcegroups.csv
         dskeys.add('sourcegroups')
     if oq.uniform_hazard_spectra:
