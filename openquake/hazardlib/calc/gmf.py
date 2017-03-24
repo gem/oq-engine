@@ -26,6 +26,7 @@ import scipy.stats
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.calc.filters import IntegrationDistance
 
 
 class CorrelationButNoInterIntraStdDevs(Exception):
@@ -78,7 +79,8 @@ class GmfComputer(object):
     # IMTs, N the number of affected sites and E the number of events. The
     # seed is extracted from the underlying rupture.
     def __init__(self, rupture, sites, imts, gsims,
-                 truncation_level=None, correlation_model=None, samples=0):
+                 truncation_level=None, correlation_model=None, samples=0,
+                 maximum_distance=IntegrationDistance(None)):
         if len(sites) == 0:
             raise ValueError('No sites')
         elif len(imts) == 0:
@@ -92,11 +94,13 @@ class GmfComputer(object):
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.samples = samples
+        self.maximum_distance = maximum_distance
         # `rupture` can be a high level rupture object containing a low
         # level hazardlib rupture object as a .rupture attribute
         if hasattr(rupture, 'rupture'):
             rupture = rupture.rupture
-        self.ctx = ContextMaker(gsims).make_contexts(sites, rupture)
+        self.ctx = ContextMaker(gsims, maximum_distance).make_contexts(
+            sites, rupture)
 
     def compute(self, gsim, num_events, seed=None):
         """
