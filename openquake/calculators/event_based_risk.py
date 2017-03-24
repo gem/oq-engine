@@ -122,7 +122,7 @@ def _aggregate(outputs, compositemodel, taxid, agg, ass, idx, result,
             for i, asset in enumerate(outs.assets):
                 ratios = loss_ratios[i]
                 aid = asset.ordinal
-                losses = ratios * asset.value(loss_type)
+                losses = ratios * asset.value(loss_type)  # shape (E, I)
 
                 # average losses
                 if monitor.avg_losses:
