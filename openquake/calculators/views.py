@@ -440,7 +440,7 @@ def view_mean_avg_losses(token, dstore):
         array = dstore['avg_losses-stats']  # shape (N, S)
     except KeyError:
         array = dstore['avg_losses-rlzs']  # shape (N, R)
-    data = numpy.array([tuple(row) for row in array[:, 0]], dt)
+    data = numpy.array([tuple(row) for row in array], dt)
     assets = util.get_assets(dstore)
     losses = util.compose_arrays(assets, data)
     losses.sort()
