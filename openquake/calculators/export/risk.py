@@ -74,28 +74,6 @@ def copy_to(elt, rup_data, rupserials):
 # ############################### exporters ############################## #
 
 
-# helper for exporting the average losses for event_based_risk
-#  _gen_triple('avg_losses-rlzs', array, quantiles, insured)
-# yields ('avg_losses', 'rlz-000', data), ...
-# whereas  _gen_triple('avg_losses-stats', array, quantiles, insured)
-# yields ('avg_losses', 'mean', data), ...
-# the data contains both insured and non-insured losses merged together
-def _gen_triple(longname, array, quantiles, insured):
-    # the array has shape (A, R, L, I)
-    name, kind = longname.split('-')
-    if kind == 'stats':
-        tags = ['mean'] + ['quantile-%s' % q for q in quantiles]
-    else:
-        tags = ['rlz-%03d' % r for r in range(array.shape[1])]
-    for r, tag in enumerate(tags):
-        avg = array[:, r, :]  # shape (A, L, I)
-        if insured:
-            data = numpy.concatenate([avg[:, :, 0], avg[:, :, 1]], axis=1)
-        else:
-            data = avg[:, :, 0]
-        yield name, tag, data
-
-
 # this is used by event_based_risk
 @export.add(('avg_losses-rlzs', 'csv'), ('avg_losses-stats', 'csv'))
 def export_avg_losses(ekey, dstore):
@@ -103,17 +81,24 @@ def export_avg_losses(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    avg_losses = dstore[ekey[0]].value  # shape (A, R, L, I)
     oq = dstore['oqparam']
     dt = oq.loss_dt()
     assets = get_assets(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for name, tag, data in _gen_triple(
-            ekey[0], avg_losses, oq.quantile_loss_curves, oq.insured_losses):
-        losses = numpy.array([tuple(row) for row in data], dt)
+    name, kind = ekey[0].split('-')
+    value = dstore[name + '-rlzs'].value  # shape (A, R, L')
+    if kind == 'stats':
+        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
+        weights = dstore['realizations']['weight']
+        value = compute_stats2(value, oq.quantile_loss_curves, weights)
+    else:  # rlzs
+        tags = ['rlz-%03d' % r for r in range(len(dstore['realizations']))]
+    for tag, values in zip(tags, value.transpose(1, 0, 2)):
         dest = dstore.build_fname(name, tag, 'csv')
-        data = compose_arrays(assets, losses)
-        writer.save(data, dest)
+        array = numpy.zeros(len(values), dt)
+        for l, lt in enumerate(dt.names):
+            array[lt] = values[:, l]
+        writer.save(compose_arrays(assets, array), dest)
     return writer.getsaved()
 
 
