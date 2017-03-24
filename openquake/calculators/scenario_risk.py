@@ -123,8 +123,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             # agg losses
             res = result['agg']
             E, L, R, I = res.shape
-            if I == 1:
-                res = res.reshape(E, L, R)
             mean, std = scientific.mean_std(res)
             agglosses = numpy.zeros(R, multi_stat_dt)
             for l, lt in enumerate(ltypes):
@@ -138,6 +136,14 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             self.datastore['losses_by_asset'] = avglosses
             self.datastore['agglosses-rlzs'] = agglosses
 
+            # losses by event
+            dset = self.datastore.create_dset(
+                'losses_by_event', F32, (E, R, L * I))
+            for r in range(R):
+                for l in range(L):
+                    for i in range(I):
+                        dset[:, r, l + L * i] = res[:, l, r, i]
+            
             if self.oqparam.all_losses:
                 loss_dt = self.oqparam.loss_dt()
                 array = numpy.zeros((A, E, R), loss_dt)

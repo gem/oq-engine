@@ -136,6 +136,24 @@ def export_losses_by_asset(ekey, dstore):
     return writer.getsaved()
 
 
+# this is used by scenario_risk
+@export.add(('losses_by_event', 'csv'))
+def export_losses_by_event(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    loss_dt = dstore['oqparam'].loss_dt()
+    all_losses = dstore[ekey[0]].value
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    for rlz in rlzs:
+        dest = dstore.build_fname('losses_by_event', rlz, 'csv')
+        data = all_losses[:, rlz.ordinal].view(loss_dt)
+        writer.save(data, dest)
+    return writer.getsaved()
+
+
 def _compact(array):
     # convert an array of shape (a, e) into an array of shape (a,)
     dt = array.dtype
