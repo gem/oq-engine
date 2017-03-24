@@ -1,3 +1,7 @@
+  [Paolo Tormene]
+  * Fixed clockwise order of vertices of surface boundaries, as needed for
+    WKT MULTIPOLYGON strings while exporting ruptures
+
   [Michele Simionato]
   * Added input checks to the GmfComputer
   * Fixed bug when splitting area sources into point sources for
