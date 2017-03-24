@@ -175,7 +175,7 @@ class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
         """
         Return a composite array with the Probability Mass Function
         """
-        return numpy.array(self.data, pmf_dt)
+        return numpy.array(self.pmf.data, pmf_dt)
 
     def get_probability_no_exceedance(self, poes):
         """
