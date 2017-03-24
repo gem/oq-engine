@@ -245,10 +245,6 @@ class EbrPostCalculator(base.RiskCalculator):
         if R > 1:
             weights = self.datastore['realizations']['weight']
             quantiles = self.oqparam.quantile_loss_curves
-            if 'avg_losses-rlzs' in self.datastore:
-                with self.monitor('computing avg_losses-stats'):
-                    self.datastore['avg_losses-stats'] = compute_stats2(
-                        self.datastore['avg_losses-rlzs'], quantiles, weights)
             if self.oqparam.loss_ratios:
                 with self.monitor('computing rcurves-stats'):
                     self.datastore['rcurves-stats'] = compute_stats2(
@@ -510,13 +506,8 @@ class EbriskCalculator(base.RiskCalculator):
         if avg_losses:
             # since we are using a composite array, we must use fillvalue=None
             # and then set the array to 0 manually (to avoid bogus numbers)
-            zero = numpy.zeros(self.A, (F32, (I,)))
             dset = self.datastore.create_dset(
-                'avg_losses-rlzs', (F32, (I,)), (self.A, self.R, self.L),
-                fillvalue=None)
-            for r in range(self.R):
-                for l in range(self.L):
-                    dset[:, r, l] = zero
+                'avg_losses-rlzs', F32, (self.A, self.R, self.L * I))
 
         num_events = collections.Counter()
         self.gmdata = {}
@@ -550,8 +541,8 @@ class EbriskCalculator(base.RiskCalculator):
         with self.monitor('saving avg_losses-rlzs'):
             for (l, r), losses in dic.items():
                 vs = self.vals[self.riskmodel.loss_types[l]]
-                new = numpy.array([losses[:, i] * vs for i in range(self.I)])
-                dset[:, r + start, l] += new.T  # shape (A, I)
+                for i in range(self.I):
+                    dset[:, r + start, l + self.L * i] += losses[:, i] * vs
 
     def save_losses(self, agglosses, asslosses, losses_by_taxon, offset):
         """
