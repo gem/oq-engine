@@ -174,8 +174,8 @@ class EngineServerTestCase(unittest.TestCase):
 
         # check that we get the expected outputs
         results = self.get('%s/results' % job_id)
-        self.assertEqual(['hcurves', 'hmaps', 'realizations', 'sourcegroups',
-                          'uhs'], [r['name'] for r in results])
+        self.assertEqual(['fullreport', 'hcurves', 'hmaps', 'realizations',
+                          'sourcegroups', 'uhs'], [r['name'] for r in results])
 
         # check the filename of the hmaps
         hmaps_id = results[1]['id']
