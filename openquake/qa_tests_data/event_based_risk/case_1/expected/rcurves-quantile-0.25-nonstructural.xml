@@ -29,7 +29,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 0.010 0.020 0.100 0.200 0.300 0.400 0.500 0.600 0.700 0.800 0.900 1.000
             </lossRatios>
             <averageLoss>
-                8.10519E+01
+                -1.00000E+00
             </averageLoss>
         </lossCurve>
         <lossCurve
@@ -50,7 +50,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 0.010 0.020 0.100 0.200 0.300 0.400 0.500 0.600 0.700 0.800 0.900 1.000
             </lossRatios>
             <averageLoss>
-                1.93806E+01
+                -1.00000E+00
             </averageLoss>
         </lossCurve>
         <lossCurve
@@ -71,7 +71,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 0.010 0.020 0.100 0.200 0.300 0.400 0.500 0.600 0.700 0.800 0.900 1.000
             </lossRatios>
             <averageLoss>
-                1.37876E+01
+                -1.00000E+00
             </averageLoss>
         </lossCurve>
         <lossCurve
@@ -92,7 +92,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 0.010 0.020 0.100 0.200 0.300 0.400 0.500 0.600 0.700 0.800 0.900 1.000
             </lossRatios>
             <averageLoss>
-                8.50614E+01
+                -1.00000E+00
             </averageLoss>
         </lossCurve>
     </lossCurves>

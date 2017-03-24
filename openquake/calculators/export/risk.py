@@ -891,7 +891,10 @@ def export_rcurves_rlzs(ekey, dstore):
     aref = dstore['asset_refs'].value
     kind = ekey[0].split('-')[1]  # rlzs or stats
     if oq.avg_losses:
-        acurves = dstore['avg_losses-' + kind]
+        try:
+            acurves = dstore['avg_losses-' + kind]
+        except KeyError:  # missing stats curves
+            oq.avg_losses = False
     rcurves = dstore[ekey[0]]
     [loss_ratios] = dstore['loss_ratios']
     fnames = []
