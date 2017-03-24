@@ -178,7 +178,7 @@ class EngineServerTestCase(unittest.TestCase):
                           'sourcegroups', 'uhs'], [r['name'] for r in results])
 
         # check the filename of the hmaps
-        hmaps_id = results[1]['id']
+        hmaps_id = results[2]['id']
         resp = requests.head('http://%s/v1/calc/result/%s?export_type=csv' %
                              (self.hostport, hmaps_id))
         # remove output ID digits from the filename
