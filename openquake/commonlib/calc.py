@@ -23,7 +23,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import encode, decode
 from openquake.baselib.general import get_array, group_array
-from openquake.hazardlib.geo.mesh import RectangularMesh, build_array
+from openquake.hazardlib.geo.mesh import RectangularMesh, surface_to_mesh
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, tom, calc
@@ -562,22 +562,11 @@ class EBRupture(object):
         attrs['rupture_class'] = hdf5.cls2dotname(rup.__class__)
         attrs['surface_class'] = hdf5.cls2dotname(rup.surface.__class__)
         surface = self.rupture.surface
-        if isinstance(surface, geo.MultiSurface):  # multiplanar surfaces
-            n = len(surface.surfaces)
-            arr = build_array([[s.corner_lons, s.corner_lats, s.corner_depths]
-                               for s in surface.surfaces]).reshape(n, 2, 2)
+        if hasattr(surface, 'surfaces'):
             attrs['mesh_spacing'] = surface.surfaces[0].mesh_spacing
         else:
-            mesh = surface.mesh
-            if mesh is None:  # planar surface
-                arr = build_array([[surface.corner_lons,
-                                    surface.corner_lats,
-                                    surface.corner_depths]]).reshape(1, 2, 2)
-                attrs['mesh_spacing'] = surface.mesh_spacing
-            else:  # general surface
-                shp = (1,) + mesh.lons.shape
-                arr = build_array(
-                    [[mesh.lons, mesh.lats, mesh.depths]]).reshape(shp)
+            attrs['mesh_spacing'] = surface.mesh_spacing
+        arr = surface_to_mesh(surface)
         attrs['nbytes'] = self.sids.nbytes + self.events.nbytes + arr.nbytes
         return dict(sids=self.sids, events=self.events, mesh=arr), attrs
 
