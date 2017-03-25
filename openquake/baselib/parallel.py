@@ -478,8 +478,8 @@ class Computer(object):
 
     def run(self, *args, **kw):
         """
-        Run the computer with the given arguments; one specify extra arguments
-        `acc` and `Starmap`.
+        Run the computer with the given arguments; one can specify the extra
+        arguments `acc` and `Starmap`.
         """
         acc = kw.get('acc')
         starmap = kw.get('Starmap', Starmap)
