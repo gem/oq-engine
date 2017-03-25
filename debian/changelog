@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * The `avg` field in the loss curves is computed as the integral of the curve
+    again, and it is not extracted from the avg_losses output anymore
+  * Made the `fullreport` exportable
   * Fixed the `rup_data` export, since the boundary field was broken
   * Restored the output `losses_by_taxon` in the event_based_risk calculator
   * Fixed the calculator event based UCERF so that average losses can
