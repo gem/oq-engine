@@ -566,9 +566,9 @@ class EBRupture(object):
             attrs['mesh_spacing'] = surface.surfaces[0].mesh_spacing
         else:
             attrs['mesh_spacing'] = getattr(surface, 'mesh_spacing', numpy.nan)
-        arr = surface_to_mesh(surface)
-        attrs['nbytes'] = self.sids.nbytes + self.events.nbytes + arr.nbytes
-        return dict(sids=self.sids, events=self.events, mesh=arr), attrs
+        mesh = surface_to_mesh(surface)
+        attrs['nbytes'] = self.sids.nbytes + self.events.nbytes + mesh.nbytes
+        return dict(sids=self.sids, events=self.events, mesh=mesh), attrs
 
     def __fromh5__(self, dic, attrs):
         attrs = dict(attrs)
