@@ -45,7 +45,8 @@ def make_rupture(rupture_class, **kwargs):
     kwargs = default_arguments
     rupture = rupture_class(**kwargs)
     for key in kwargs:
-        assert getattr(rupture, key) is kwargs[key]
+        if key != 'pmf':
+            assert getattr(rupture, key) is kwargs[key]
     return rupture
 
 
