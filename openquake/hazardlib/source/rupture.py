@@ -23,15 +23,19 @@ Module :mod:`openquake.hazardlib.source.rupture` defines classes
 import abc
 import numpy
 import math
-from openquake.hazardlib.geo.nodalplane import NodalPlane
+import itertools
+from openquake.baselib import hdf5
 from openquake.baselib.slots import with_slots
+from openquake.baselib.python3compat import with_metaclass
+from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 from openquake.hazardlib.near_fault import (get_plane_equation, projection_pp,
                                             directp, average_s_rad,
                                             isochone_ratio)
-from openquake.baselib.python3compat import with_metaclass
+from openquake.hazardlib.source.base import BaseSeismicSource
+from openquake.hazardlib.geo.surface.base import BaseSurface
 
 pmf_dt = numpy.dtype([('prob', float), ('occ', numpy.uint32)])
 
@@ -167,15 +171,9 @@ class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
                 'numbers of ruptures must be defined with unit step')
         super(NonParametricProbabilisticRupture, self).__init__(
             mag, rake, tectonic_region_type, hypocenter, surface,
-            source_typology, rupture_slip_direction
-        )
-        self.pmf = pmf
-
-    def pmf_array(self):
-        """
-        Return a composite array with the Probability Mass Function
-        """
-        return numpy.array(self.pmf.data, pmf_dt)
+            source_typology, rupture_slip_direction)
+        # an array of probabilities with sum 1
+        self.pmf = numpy.array([y for (y, x) in pmf.data], numpy.float32)
 
     def get_probability_no_exceedance(self, poes):
         """
@@ -198,7 +196,7 @@ class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
         # Converting from 1d to 2d
         if len(poes.shape) == 1:
             poes = numpy.reshape(poes, (-1, len(poes)))
-        p_kT = numpy.array([float(p) for (p, _) in self.pmf.data])
+        p_kT = self.pmf
         prob_no_exceed = numpy.array(
             [v * ((1 - poes) ** i) for i, v in enumerate(p_kT)]
         )
@@ -214,7 +212,7 @@ class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
         Uses 'Inverse Transform Sampling' method.
         """
         # compute cdf from pmf
-        cdf = numpy.cumsum([float(p) for p, _ in self.pmf.data])
+        cdf = numpy.cumsum(self.pmf)
 
         rn = numpy.random.random()
         [n_occ] = numpy.digitize([rn], cdf)
@@ -448,3 +446,33 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
             cdpp[iloc] = dpp_target - mean_dpp
 
         return cdpp
+
+
+def get_subclasses(cls):
+    for subclass in cls.__subclasses__():
+        yield subclass
+        for ssc in get_subclasses(subclass):
+            yield ssc
+
+
+def typology_dicts():
+    """
+    :returns:
+        a pair of dictionaries, {source_typo, rupture_typo, surface_typo: no}
+        and {no: source_typo, rupture_typo, surface_typo} where `no` is number
+        between 0 and 255.
+    """
+    source_typo = map(
+        hdf5.cls2dotname, get_subclasses(BaseSeismicSource))
+    rupture_typo = map(
+        hdf5.cls2dotname, get_subclasses(BaseProbabilisticRupture))
+    surface_typo = map(
+        hdf5.cls2dotname, get_subclasses(BaseSurface))
+    d1, d2, n = {}, {}, 0
+    for src, rup, sur in itertools.product(
+            source_typo, rupture_typo, surface_typo):
+        d1[src, rup, sur] = n
+        d2[n] = src, rup, sur
+        n += 1
+    assert n < 256, n
+    return d1, d2
