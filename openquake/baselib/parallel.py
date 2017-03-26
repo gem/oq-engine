@@ -484,7 +484,9 @@ class Computer(object):
         acc = kw.get('acc')
         starmap = kw.get('Starmap', Starmap)
         wakeup_pool()  # if not already started
-        return starmap(self, self.gen_args(*args)).reduce(self.aggregate, acc)
+        with self.monitor('complete runtime', measuremem=True, autoflush=True):
+            return starmap(self, self.gen_args(*args)).reduce(
+                self.aggregate, acc)
 
 
 class Starmap(object):
