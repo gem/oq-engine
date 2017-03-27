@@ -67,7 +67,7 @@ def extend(dset, array):
     dset[length:newlength] = array
 
 
-def extend3(hdf5path, key, array):
+def extend3(hdf5path, key, array, **attrs):
     """
     Extend an HDF5 file dataset with the given array
     """
@@ -78,6 +78,8 @@ def extend3(hdf5path, key, array):
             dset = create(h5, key, array.dtype,
                           shape=(None,) + array.shape[1:])
         extend(dset, array)
+        for key, val in attrs.items():
+            dset.attrs[key] = val
         h5.flush()
 
 

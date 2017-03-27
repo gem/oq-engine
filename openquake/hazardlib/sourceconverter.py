@@ -489,7 +489,7 @@ class RuptureConverter(object):
         """
         with context(self.fname, node):
             surfaces = [node.simpleFaultGeometry]
-        rupt = source.rupture.Rupture(
+        rupt = source.rupture.BaseRupture(
             mag=mag, rake=rake, tectonic_region_type=None,
             hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
@@ -507,7 +507,7 @@ class RuptureConverter(object):
         """
         with context(self.fname, node):
             surfaces = [node.complexFaultGeometry]
-        rupt = source.rupture.Rupture(
+        rupt = source.rupture.BaseRupture(
             mag=mag, rake=rake, tectonic_region_type=None,
             hypocenter=hypocenter,
             surface=self.convert_surfaces(surfaces),
@@ -525,7 +525,7 @@ class RuptureConverter(object):
         """
         with context(self.fname, node):
             surfaces = [node.planarSurface]
-        rupt = source.rupture.Rupture(
+        rupt = source.rupture.BaseRupture(
             mag=mag, rake=rake,
             tectonic_region_type=None,
             hypocenter=hypocenter,
@@ -544,7 +544,7 @@ class RuptureConverter(object):
         """
         with context(self.fname, node):
             surfaces = list(node.getnodes('planarSurface'))
-        rupt = source.rupture.Rupture(
+        rupt = source.rupture.BaseRupture(
             mag=mag, rake=rake,
             tectonic_region_type=None,
             hypocenter=hypocenter,
@@ -563,7 +563,7 @@ class RuptureConverter(object):
         """
         with context(self.fname, node):
             surfaces = [node.griddedSurface]
-        rupt = source.rupture.Rupture(
+        rupt = source.rupture.BaseRupture(
             mag=mag, rake=rake,
             tectonic_region_type=None,
             hypocenter=hypocenter,
