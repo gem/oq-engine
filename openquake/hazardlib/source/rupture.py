@@ -177,20 +177,21 @@ class NonParametricProbabilisticRupture(BaseRupture):
     """
     def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
                  source_typology, pmf, rupture_slip_direction=None):
-        x = numpy.array([x for (y, x) in pmf.data])
-        if not x[0] == 0:
+        occ = numpy.array([occ for (prob, occ) in pmf.data])
+        if not occ[0] == 0:
             raise ValueError('minimum number of ruptures must be zero')
-        if not numpy.all(numpy.sort(x) == x):
+        if not numpy.all(numpy.sort(occ) == occ):
             raise ValueError(
                 'numbers of ruptures must be defined in increasing order')
-        if not numpy.all(numpy.diff(x) == 1):
+        if not numpy.all(numpy.diff(occ) == 1):
             raise ValueError(
                 'numbers of ruptures must be defined with unit step')
         super(NonParametricProbabilisticRupture, self).__init__(
             mag, rake, tectonic_region_type, hypocenter, surface,
             source_typology, rupture_slip_direction)
         # an array of probabilities with sum 1
-        self.pmf = numpy.array([y for (y, x) in pmf.data], numpy.float32)
+        self.pmf = numpy.array(
+            [prob for (prob, occ) in pmf.data], numpy.float32)
 
     def get_probability_no_exceedance(self, poes):
         """
