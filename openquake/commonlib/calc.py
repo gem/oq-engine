@@ -626,19 +626,28 @@ class RuptureSerializer(object):
     """
     def __init__(self, datastore):
         self.datastore = datastore
-        self.sids = set()
+        self.sids = {}
+        self.data = []
 
     def save(self, ebruptures):
         for ebr in ebruptures:
+            sidx = len(self.sids)
             sids_tup = tuple(ebr.sids)
             if sids_tup not in self.sids:
-                self.datastore.extend('sids', numpy.array(ebr.sids, sids_dt))
-                self.sids.add(sids_tup)
-            ebr.sidx = len(self.sids) - 1
-        for ebr in ebruptures:
+                self.data.append(ebr.sids)
+                self.sids[sids_tup] = sidx + 1
+                ebr.sidx = sidx
+            else:
+                ebr.sidx = sidx - 1
             key = 'ruptures/grp-%02d/%s' % (ebr.grp_id, ebr.serial)
             self.datastore[key] = ebr
         self.datastore.flush()
 
     def close(self):
         self.sids.clear()
+        dset = self.datastore.create_dset(
+            'sids', sids_dt, (len(self.data),), fillvalue=None)
+        for i, val in enumerate(self.data):
+            dset[i] = val
+        self.datastore.flush()
+        self.data[:] = []
