@@ -28,6 +28,7 @@ from openquake.baselib.general import (
     groupby, humansize, get_array, group_array, DictArray)
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
+from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.commonlib import writers, hazard_writers, calc, util, source
 
@@ -1035,3 +1036,12 @@ def export_sourcegroups(ekey, dstore):
     path = dstore.export_path('sourcegroups.csv')
     writers.write_csv(path, data, fmt='%s')
     return [path]
+
+
+# because of the code in server.views.calc_results we are not visualizing
+# .txt outputs, so we use .rst here
+@export.add(('fullreport', 'rst'))
+def export_fullreport(ekey, dstore):
+    with open(dstore.export_path('report.rst'), 'w') as f:
+        f.write(view('fullreport', dstore))
+    return [f.name]
