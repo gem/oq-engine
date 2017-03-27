@@ -13,12 +13,13 @@ The **OpenQuake Engine** is an open source application that allows users to comp
  
 -### Current stable
 +The code name for version 2.3 is **Degenkolb**, in memory of [Henry Degenkolb](https://en.wikipedia.org/wiki/Henry_J._Degenkolb).
++* [What's new](https://github.com/gem/oq-engine/blob/engine-2.3/doc/whats-new.md)
  
 -Current stable version is the **OpenQuake Engine 2.2** 'Cornell'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-2.2#openquake-engine.
+-* [What's new](https://github.com/gem/oq-engine/blob/engine-2.2/doc/whats-new.md)
+
 +## Documentation
- 
 -## Documentation (master tree)
-+* [What's new](https://github.com/gem/oq-engine/blob/master/doc/whats-new.md)
 -->
 Jenkins (Python 2): [![Build Status](https://ci.openquake.org/job/master_oq-engine/badge/icon)](https://ci.openquake.org/job/master_oq-engine/)
 
@@ -27,6 +28,7 @@ Travis CI (Python 3): [![Build Status](https://travis-ci.org/gem/oq-engine.svg?b
 ### Current stable
 
 Current stable version is the **OpenQuake Engine 2.3** 'Degenkolb'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-2.3#openquake-engine.
+* [What's new](https://github.com/gem/oq-engine/blob/engine-2.3/doc/whats-new.md)
 
 ## Documentation (master tree)
 
