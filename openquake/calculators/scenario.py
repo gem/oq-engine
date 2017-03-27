@@ -58,6 +58,8 @@ class ScenarioCalculator(base.HazardCalculator):
             calc.event_dt)
         rupture = calc.EBRupture(
             rup, self.sitecol.sids, events, 'single_rupture', 0, 0)
+        rupture.sidx = 0
+        self.datastore['sids'] = self.sitecol.sids
         self.datastore['ruptures/grp-00/0'] = rupture
         self.computer = GmfComputer(
             rupture, self.sitecol, oq.imtls, self.gsims,
