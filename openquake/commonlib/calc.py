@@ -650,4 +650,4 @@ class RuptureSerializer(object):
         for i, val in enumerate(self.data):
             dset[i] = val
         self.datastore.flush()
-        self.data[:] = []
+        del self.data[:]
