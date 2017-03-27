@@ -110,14 +110,14 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
         if s_sites is None:
             continue
         num_occ_by_rup = sample_ruptures(
-            src, monitor.ses_per_logic_tree_path, param['samples'],
-            monitor.seed)
+            src, param['ses_per_logic_tree_path'], param['samples'],
+            param['seed'])
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
         for ebr in _build_eb_ruptures(
                 src, num_occ_by_rup, src_filter.integration_distance,
-                s_sites, monitor.seed, rup_mon):
+                s_sites, param['seed'], rup_mon):
             eb_ruptures.append(ebr)
         dt = time.time() - t0
         calc_times.append((src.id, dt))
@@ -378,8 +378,8 @@ def compute_gmfs_and_curves(getter, monitor):
     else:  # fast lane
         for gsim in getter.rlzs_by_gsim:
             with monitor('building hazard', measuremem=True):
-                # the following is tricky; `getter.gen_gmv` produces long
-                # event ids (64 bit) containing both a realization index (16 bit)
+                # the following is tricky; `getter.gen_gmv` produces long event
+                # ids (64 bit) containing both a realization index (16 bit)
                 # and a short event id (48 bit); we manage them here
                 data = numpy.fromiter(getter.gen_gmv(gsim), gmv_dt)
             r_indices = data['eid'] // TWO48  # extract realization indices

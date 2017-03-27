@@ -21,9 +21,9 @@ import collections
 
 import numpy
 
-from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import AccumDict, get_array, group_array
+from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific, riskinput
 from openquake.calculators.export import export
 from openquake.calculators.export.hazard import (
@@ -74,28 +74,6 @@ def copy_to(elt, rup_data, rupserials):
 # ############################### exporters ############################## #
 
 
-# helper for exporting the average losses for event_based_risk
-#  _gen_triple('avg_losses-rlzs', array, quantiles, insured)
-# yields ('avg_losses', 'rlz-000', data), ...
-# whereas  _gen_triple('avg_losses-stats', array, quantiles, insured)
-# yields ('avg_losses', 'mean', data), ...
-# the data contains both insured and non-insured losses merged together
-def _gen_triple(longname, array, quantiles, insured):
-    # the array has shape (A, R, L, I)
-    name, kind = longname.split('-')
-    if kind == 'stats':
-        tags = ['mean'] + ['quantile-%s' % q for q in quantiles]
-    else:
-        tags = ['rlz-%03d' % r for r in range(array.shape[1])]
-    for r, tag in enumerate(tags):
-        avg = array[:, r, :]  # shape (A, L, I)
-        if insured:
-            data = numpy.concatenate([avg[:, :, 0], avg[:, :, 1]], axis=1)
-        else:
-            data = avg[:, :, 0]
-        yield name, tag, data
-
-
 # this is used by event_based_risk
 @export.add(('avg_losses-rlzs', 'csv'), ('avg_losses-stats', 'csv'))
 def export_avg_losses(ekey, dstore):
@@ -103,17 +81,24 @@ def export_avg_losses(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    avg_losses = dstore[ekey[0]].value  # shape (A, R, L, I)
     oq = dstore['oqparam']
     dt = oq.loss_dt()
     assets = get_assets(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for name, tag, data in _gen_triple(
-            ekey[0], avg_losses, oq.quantile_loss_curves, oq.insured_losses):
-        losses = numpy.array([tuple(row) for row in data], dt)
+    name, kind = ekey[0].split('-')
+    value = dstore[name + '-rlzs'].value  # shape (A, R, L')
+    if kind == 'stats':
+        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
+        weights = dstore['realizations']['weight']
+        value = compute_stats2(value, oq.quantile_loss_curves, weights)
+    else:  # rlzs
+        tags = ['rlz-%03d' % r for r in range(len(dstore['realizations']))]
+    for tag, values in zip(tags, value.transpose(1, 0, 2)):
         dest = dstore.build_fname(name, tag, 'csv')
-        data = compose_arrays(assets, losses)
-        writer.save(data, dest)
+        array = numpy.zeros(len(values), dt)
+        for l, lt in enumerate(dt.names):
+            array[lt] = values[:, l]
+        writer.save(compose_arrays(assets, array), dest)
     return writer.getsaved()
 
 
@@ -900,13 +885,9 @@ def export_loss_curves_stats(ekey, dstore):
             ('rcurves-stats', 'xml'),
             ('rcurves-stats', 'geojson'))
 def export_rcurves_rlzs(ekey, dstore):
-    oq = dstore['oqparam']
     riskmodel = riskinput.read_composite_risk_model(dstore)
     assetcol = dstore['assetcol']
     aref = dstore['asset_refs'].value
-    kind = ekey[0].split('-')[1]  # rlzs or stats
-    if oq.avg_losses:
-        acurves = dstore['avg_losses-' + kind]
     rcurves = dstore[ekey[0]]
     [loss_ratios] = dstore['loss_ratios']
     fnames = []
@@ -917,15 +898,14 @@ def export_rcurves_rlzs(ekey, dstore):
             dstore, writercls, ekey[0]):
         if ltype not in loss_ratios.dtype.names:
             continue  # ignore loss type
-        l = riskmodel.lti[ltype]
-        poes = rcurves[ltype][:, r, ins]
+        the_poes = rcurves[ltype][:, r, ins]
         curves = []
         for aid, ass in enumerate(assetcol):
             loc = Location(*ass.location)
             losses = loss_ratios[ltype] * ass.value(ltype)
-            # -1 means that the average was not computed
-            avg = acurves[aid, r, l][ins] if oq.avg_losses else -1
-            curve = LossCurve(loc, aref[ass.idx], poes[aid],
+            poes = the_poes[aid]
+            avg = scientific.average_loss([losses, poes])
+            curve = LossCurve(loc, aref[ass.idx], poes,
                               losses, loss_ratios[ltype], avg, None)
             curves.append(curve)
         writer.serialize(curves)
@@ -934,17 +914,24 @@ def export_rcurves_rlzs(ekey, dstore):
 
 
 # used by ebr calculator
-@export.add(('losses_by_taxon', 'csv'))
+@export.add(('losses_by_taxon-rlzs', 'csv'), ('losses_by_taxon-stats', 'csv'))
 def export_losses_by_taxon_csv(ekey, dstore):
+    oq = dstore['oqparam']
     taxonomies = add_quotes(dstore['assetcol/taxonomies'].value)
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
-    value = dstore[ekey[0]].value  # matrix of shape (T, L, R)
+    loss_types = oq.loss_dt().names
+    key, kind = ekey[0].split('-')
+    value = dstore[key + '-rlzs'].value
+    if kind == 'stats':
+        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
+        weights = dstore['realizations']['weight']
+        value = compute_stats2(value, oq.quantile_loss_curves, weights)
+    else:  # rlzs
+        tags = rlzs
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    dt = numpy.dtype([('taxonomy', taxonomies.dtype)]
-                     + [(lt, F64) for lt in loss_types])
-    for rlz, values in zip(rlzs, value.transpose(2, 0, 1)):
-        fname = dstore.build_fname(ekey[0], rlz, ekey[1])
+    dt = numpy.dtype([('taxonomy', taxonomies.dtype)] + oq.loss_dt_list())
+    for tag, values in zip(tags, value.transpose(1, 0, 2)):
+        fname = dstore.build_fname(ekey[0], tag, ekey[1])
         array = numpy.zeros(len(values), dt)
         array['taxonomy'] = taxonomies
         for l, lt in enumerate(loss_types):

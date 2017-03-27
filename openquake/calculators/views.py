@@ -391,31 +391,6 @@ def view_totlosses(token, dstore):
     return rst_table(zero, fmt='%.6E')
 
 
-def portfolio_loss_from_agg_loss_table(agg_loss_table, loss_dt):
-    ins = loss_dt.names[-1].endswith('_ins')
-    L = len(loss_dt.names) // 2 if ins else len(loss_dt.names)
-    data = numpy.zeros(len(agg_loss_table), loss_dt)
-    rlzids = []
-    for rlz, dset in sorted(agg_loss_table.items()):
-        rlzi = int(rlz.split('-')[1])  # rlz-000 -> 0 etc
-        rlzids.append(rlzi)
-        loss = dset['loss'].sum(axis=0)
-        for l, name in enumerate(loss_dt.names):
-            data[rlzi][name] = (loss[l - L, 1] if name.endswith('_ins')
-                                else loss[l, 0])
-    return rlzids, data
-
-
-def portfolio_loss_from_losses_by_taxon(losses_by_taxon, loss_dt):
-    R = losses_by_taxon.shape[-1]
-    data = numpy.zeros(R, loss_dt)
-    rlzids = [str(r) for r in range(R)]
-    for r in range(R):
-        for l, lt in enumerate(loss_dt.names):
-            data[r][lt] = losses_by_taxon[:, l, r].sum()
-    return rlzids, data
-
-
 # for event based risk
 @view.add('portfolio_loss')
 def view_portfolio_loss(token, dstore):
@@ -424,15 +399,16 @@ def view_portfolio_loss(token, dstore):
     extracted from the event loss table.
     """
     oq = dstore['oqparam']
-    if 'losses_by_taxon' in dstore:
-        oq.insured_losses = False
-        rlzids, data = portfolio_loss_from_losses_by_taxon(
-            dstore['losses_by_taxon'], oq.loss_dt())
-    else:
-        rlzids, data = portfolio_loss_from_agg_loss_table(
-            dstore['agg_loss_table'], oq.loss_dt())
+    loss_dt = oq.loss_dt()
+    losses_by_taxon = dstore['losses_by_taxon-rlzs']
+    R = losses_by_taxon.shape[1]  # shape (T, R, L')
+    data = numpy.zeros(R, loss_dt)
+    rlzids = [str(r) for r in range(R)]
+    for r in range(R):
+        for l, lt in enumerate(loss_dt.names):
+            data[r][lt] = losses_by_taxon[:, r, l].sum()
     array = util.compose_arrays(numpy.array(rlzids), data, 'rlz')
-    # this is very sensitive to rounding errors, so I a using a low precision
+    # this is very sensitive to rounding errors, so I am using a low precision
     return rst_table(array, fmt='%.5E')
 
 
@@ -464,7 +440,7 @@ def view_mean_avg_losses(token, dstore):
         array = dstore['avg_losses-stats']  # shape (N, S)
     except KeyError:
         array = dstore['avg_losses-rlzs']  # shape (N, R)
-    data = numpy.array([tuple(row) for row in array[:, 0]], dt)
+    data = numpy.array([tuple(row) for row in array], dt)
     assets = util.get_assets(dstore)
     losses = util.compose_arrays(assets, data)
     losses.sort()
