@@ -149,6 +149,7 @@ class BaseRupture(with_metaclass(abc.ABCMeta)):
             This method is using random numbers. In order to reproduce the
             same results numpy random numbers generator needs to be seeded, see
             http://docs.scipy.org/doc/numpy/reference/generated/numpy.random.seed.html
+
         :returns:
             int, Number of rupture occurrences
         """
