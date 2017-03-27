@@ -626,19 +626,19 @@ class RuptureSerializer(object):
     """
     def __init__(self, datastore):
         self.datastore = datastore
-        self.sids = {}
+        self.sids = set()
         self.data = []
 
     def save(self, ebruptures):
         """
-        Collect the ruptures and a dictionary of unique site ID.
+        Collect the ruptures and a set of site IDs tuples.
         """
         for ebr in ebruptures:
             sidx = len(self.sids)
             sids_tup = tuple(ebr.sids)
             if sids_tup not in self.sids:
                 self.data.append(ebr.sids)
-                self.sids[sids_tup] = sidx + 1
+                self.sids.add(sids_tup)
                 ebr.sidx = sidx
             else:
                 ebr.sidx = sidx - 1
