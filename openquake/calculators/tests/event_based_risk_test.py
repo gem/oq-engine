@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import sys
 import unittest
+import numpy
 from nose.plugins.attrib import attr
 
 from openquake.baselib.general import writetmp
@@ -26,6 +27,24 @@ from openquake.calculators.export import export
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_master, case_miriam,
     occupants, case_1g)
+
+
+# used for a sanity check
+def check_agg_loss_table(dstore, loss_dt):
+    L1 = len(loss_dt.names)
+    L = L1 // 2
+    data1 = numpy.zeros(L1, numpy.float32)
+    for dset in dstore['agg_loss_table'].values():
+        for l, lt in enumerate(loss_dt.names):
+            i = lt.endswith('_ins')
+            data1[l] += dset['loss'][:, l - L * i, i].sum()
+
+    # check the sums are consistent with the ones coming from losses_by_taxon
+    data2 = numpy.zeros(L1, numpy.float32)
+    lbt = dstore['losses_by_taxon-rlzs']
+    for l in range(L1):
+        data2[l] += lbt[:, :, l].sum()
+    numpy.testing.assert_allclose(data1, data2, 1E-6)
 
 
 class EventBasedRiskTestCase(CalculatorTestCase):
@@ -52,7 +71,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
-        self.assert_stats_ok(case_1, 'job.ini', individual_curves='false')
+        self.run_calc(case_1.__file__, 'job.ini',
+                      exports='csv', individual_curves='false')
         ekeys = [
             ('rcurves-stats', 'xml'),
             ('rcurves-stats', 'geojson'),
@@ -152,12 +172,23 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_master(self):
         if sys.platform == 'darwin':
             raise unittest.SkipTest('MacOSX')
-        self.assert_stats_ok(case_master, 'job.ini', individual_curves='false')
+        self.run_calc(case_master.__file__, 'job.ini',
+                      exports='csv', individual_curves='false')
+        fnames = export(('avg_losses-stats', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                                  delta=1E-5)
 
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=1E-5)
+
+        fnames = export(('losses_by_taxon-stats', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+        check_agg_loss_table(self.calc.datastore, self.calc.oqparam.loss_dt())
 
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-5)
