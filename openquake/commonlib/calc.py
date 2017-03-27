@@ -24,6 +24,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.python3compat import encode, decode
 from openquake.baselib.general import get_array, group_array
 from openquake.hazardlib.geo.mesh import RectangularMesh, surface_to_mesh
+from openquake.hazardlib.source.rupture import Rupture
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, tom, calc
@@ -48,6 +49,8 @@ event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('occ', U32),
 stored_event_dt = numpy.dtype([
     ('eid', U64), ('rupserial', U32), ('year', U32),
     ('ses', U32), ('occ', U32), ('sample', U32), ('grp_id', U16)])
+
+Rupture.init()  # initialize rupture codes
 
 # ############## utilities for the classical calculator ############### #
 
@@ -558,9 +561,7 @@ class EBRupture(object):
             attrs['pmf'] = rup.pmf
         attrs['seed'] = rup.seed
         attrs['hypo'] = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
-        attrs['source_class'] = hdf5.cls2dotname(rup.source_typology)
-        attrs['rupture_class'] = hdf5.cls2dotname(rup.__class__)
-        attrs['surface_class'] = hdf5.cls2dotname(rup.surface.__class__)
+        attrs['code'] = rup.code
         surface = self.rupture.surface
         if hasattr(surface, 'surfaces'):
             attrs['mesh_spacing'] = surface.surfaces[0].mesh_spacing
@@ -574,16 +575,15 @@ class EBRupture(object):
         attrs = dict(attrs)
         self.sids = dic['sids'].value
         self.events = dic['events'].value
-        surface_class = attrs['surface_class']
-        surface_cls = hdf5.dotname2cls(surface_class)
-        self.rupture = object.__new__(hdf5.dotname2cls(attrs['rupture_class']))
+        rupture_cls, surface_cls, source_cls = Rupture.types[attrs['code']]
+        self.rupture = object.__new__(rupture_cls)
         self.rupture.surface = surface = object.__new__(surface_cls)
         m = dic['mesh'].value
-        if surface_class.endswith('PlanarSurface'):
+        if surface_cls.__name__.endswith('PlanarSurface'):
             mesh_spacing = attrs.pop('mesh_spacing')
             self.rupture.surface = geo.PlanarSurface.from_array(
                 mesh_spacing, m.flatten())
-        elif surface_class.endswith('MultiSurface'):
+        elif surface_cls.__name__.endswith('MultiSurface'):
             mesh_spacing = attrs.pop('mesh_spacing')
             self.rupture.surface.__init__([
                 geo.PlanarSurface.from_array(mesh_spacing, m1.flatten())
@@ -600,13 +600,11 @@ class EBRupture(object):
             logging.error('rupture_slip_direction not implemented yet')
         self.rupture.rupture_slip_direction = None
         self.rupture.hypocenter = Point(*attrs.pop('hypo'))
-        self.rupture.source_typology = hdf5.dotname2cls(
-            attrs.pop('source_class'))
+        self.rupture.source_typology = source_cls
         self.source_id = attrs.pop('source_id')
         self.grp_id = attrs.pop('grp_id')
         self.serial = attrs.pop('serial')
-        del attrs['rupture_class']
-        del attrs['surface_class']
+        del attrs['code']
         vars(self.rupture).update(attrs)
 
     def __lt__(self, other):
