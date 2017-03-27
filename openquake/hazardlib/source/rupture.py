@@ -77,7 +77,13 @@ class Rupture(object):
 
     @classmethod
     def init(cls):
-        """Initialize the class dictionaries"""
+        """
+        Initialize the class dictionaries `._code` and .`types` encoding the
+        bidirectional correspondence between an integer in the range 0..255
+        (the code) and a triplet of classes (rupture_class, surface_class,
+        source_class). This is useful when serializing the rupture to and
+        from HDF5.
+        """
         source_classes = get_subclasses(BaseSeismicSource)
         rupture_classes = get_subclasses(BaseProbabilisticRupture)
         surface_classes = get_subclasses(BaseSurface)
