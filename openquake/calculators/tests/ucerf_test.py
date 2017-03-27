@@ -31,7 +31,7 @@ class UcerfTestCase(CalculatorTestCase):
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         # check that we get the expected number of events
         with open(fname) as f:
-            self.assertEqual(len(f.readlines()), 974)
+            self.assertEqual(len(f.readlines()), 36)
         # check the header and the first 18 events
         self.assertEqualFiles('expected/ruptures.csv', fname, lastline=19)
 
