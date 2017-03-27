@@ -19,6 +19,7 @@
 from __future__ import division
 import logging
 import numpy
+import h5py
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import encode, decode
@@ -49,6 +50,8 @@ event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('occ', U32),
 stored_event_dt = numpy.dtype([
     ('eid', U64), ('rupserial', U32), ('year', U32),
     ('ses', U32), ('occ', U32), ('sample', U32), ('grp_id', U16)])
+
+sids_dt = h5py.special_dtype(vlen=U32)
 
 BaseRupture.init()  # initialize rupture codes
 
@@ -568,12 +571,12 @@ class EBRupture(object):
         else:
             attrs['mesh_spacing'] = getattr(surface, 'mesh_spacing', numpy.nan)
         mesh = surface_to_mesh(surface)
-        attrs['nbytes'] = self.sids.nbytes + self.events.nbytes + mesh.nbytes
-        return dict(sids=self.sids, events=self.events, mesh=mesh), attrs
+        attrs['nbytes'] = self.events.nbytes + mesh.nbytes
+        attrs['sidx'] = self.sidx
+        return dict(events=self.events, mesh=mesh), attrs
 
     def __fromh5__(self, dic, attrs):
         attrs = dict(attrs)
-        self.sids = dic['sids'].value
         self.events = dic['events'].value
         rupture_cls, surface_cls, source_cls = BaseRupture.types[attrs['code']]
         self.rupture = object.__new__(rupture_cls)
@@ -604,6 +607,7 @@ class EBRupture(object):
         self.source_id = attrs.pop('source_id')
         self.grp_id = attrs.pop('grp_id')
         self.serial = attrs.pop('serial')
+        self.sidx = attrs.pop('sidx')
         del attrs['code']
         vars(self.rupture).update(attrs)
 
@@ -613,3 +617,28 @@ class EBRupture(object):
     def __repr__(self):
         return '<%s #%d, grp_id=%d>' % (self.__class__.__name__,
                                         self.serial, self.grp_id)
+
+
+class RuptureSerializer(object):
+    """
+    Serialize event based ruptures on an HDF5 files. Populates the dataset
+    `ruptures`, `sids` and optionally `pmfs`.
+    """
+    def __init__(self, datastore):
+        self.datastore = datastore
+        self.sids = set()
+
+    def save(self, ebruptures):
+        for ebr in ebruptures:
+            sids_tup = tuple(ebr.sids)
+            if sids_tup not in self.sids:
+                self.datastore.extend('sids', numpy.array(ebr.sids, sids_dt))
+                self.sids.add(sids_tup)
+            ebr.sidx = len(self.sids) - 1
+        for ebr in ebruptures:
+            key = 'ruptures/grp-%02d/%s' % (ebr.grp_id, ebr.serial)
+            self.datastore[key] = ebr
+        self.datastore.flush()
+
+    def close(self):
+        self.sids.clear()
