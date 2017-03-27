@@ -74,28 +74,6 @@ def copy_to(elt, rup_data, rupserials):
 # ############################### exporters ############################## #
 
 
-# helper for exporting the average losses for event_based_risk
-#  _gen_triple('avg_losses-rlzs', array, quantiles, insured)
-# yields ('avg_losses', 'rlz-000', data), ...
-# whereas  _gen_triple('avg_losses-stats', array, quantiles, insured)
-# yields ('avg_losses', 'mean', data), ...
-# the data contains both insured and non-insured losses merged together
-def _gen_triple(longname, array, quantiles, insured):
-    # the array has shape (A, R, L, I)
-    name, kind = longname.split('-')
-    if kind == 'stats':
-        tags = ['mean'] + ['quantile-%s' % q for q in quantiles]
-    else:
-        tags = ['rlz-%03d' % r for r in range(array.shape[1])]
-    for r, tag in enumerate(tags):
-        avg = array[:, r, :]  # shape (A, L, I)
-        if insured:
-            data = numpy.concatenate([avg[:, :, 0], avg[:, :, 1]], axis=1)
-        else:
-            data = avg[:, :, 0]
-        yield name, tag, data
-
-
 # this is used by event_based_risk
 @export.add(('avg_losses-rlzs', 'csv'), ('avg_losses-stats', 'csv'))
 def export_avg_losses(ekey, dstore):
@@ -103,17 +81,24 @@ def export_avg_losses(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    avg_losses = dstore[ekey[0]].value  # shape (A, R, L, I)
     oq = dstore['oqparam']
     dt = oq.loss_dt()
     assets = get_assets(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for name, tag, data in _gen_triple(
-            ekey[0], avg_losses, oq.quantile_loss_curves, oq.insured_losses):
-        losses = numpy.array([tuple(row) for row in data], dt)
+    name, kind = ekey[0].split('-')
+    value = dstore[name + '-rlzs'].value  # shape (A, R, L')
+    if kind == 'stats':
+        tags = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
+        weights = dstore['realizations']['weight']
+        value = compute_stats2(value, oq.quantile_loss_curves, weights)
+    else:  # rlzs
+        tags = ['rlz-%03d' % r for r in range(len(dstore['realizations']))]
+    for tag, values in zip(tags, value.transpose(1, 0, 2)):
         dest = dstore.build_fname(name, tag, 'csv')
-        data = compose_arrays(assets, losses)
-        writer.save(data, dest)
+        array = numpy.zeros(len(values), dt)
+        for l, lt in enumerate(dt.names):
+            array[lt] = values[:, l]
+        writer.save(compose_arrays(assets, array), dest)
     return writer.getsaved()
 
 
@@ -900,13 +885,9 @@ def export_loss_curves_stats(ekey, dstore):
             ('rcurves-stats', 'xml'),
             ('rcurves-stats', 'geojson'))
 def export_rcurves_rlzs(ekey, dstore):
-    oq = dstore['oqparam']
     riskmodel = riskinput.read_composite_risk_model(dstore)
     assetcol = dstore['assetcol']
     aref = dstore['asset_refs'].value
-    kind = ekey[0].split('-')[1]  # rlzs or stats
-    if oq.avg_losses:
-        acurves = dstore['avg_losses-' + kind]
     rcurves = dstore[ekey[0]]
     [loss_ratios] = dstore['loss_ratios']
     fnames = []
@@ -917,15 +898,14 @@ def export_rcurves_rlzs(ekey, dstore):
             dstore, writercls, ekey[0]):
         if ltype not in loss_ratios.dtype.names:
             continue  # ignore loss type
-        l = riskmodel.lti[ltype]
-        poes = rcurves[ltype][:, r, ins]
+        the_poes = rcurves[ltype][:, r, ins]
         curves = []
         for aid, ass in enumerate(assetcol):
             loc = Location(*ass.location)
             losses = loss_ratios[ltype] * ass.value(ltype)
-            # -1 means that the average was not computed
-            avg = acurves[aid, r, l][ins] if oq.avg_losses else -1
-            curve = LossCurve(loc, aref[ass.idx], poes[aid],
+            poes = the_poes[aid]
+            avg = scientific.average_loss([losses, poes])
+            curve = LossCurve(loc, aref[ass.idx], poes,
                               losses, loss_ratios[ltype], avg, None)
             curves.append(curve)
         writer.serialize(curves)
