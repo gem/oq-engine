@@ -647,7 +647,10 @@ class RuptureSerializer(object):
         self.sids.clear()
         dset = self.datastore.create_dset(
             'sids', sids_dt, (len(self.data),), fillvalue=None)
+        nbytes = 0
         for i, val in enumerate(self.data):
             dset[i] = val
+            nbytes += val.nbytes
+        self.datastore.set_attrs('sids', nbytes=nbytes)
         self.datastore.flush()
         del self.data[:]
