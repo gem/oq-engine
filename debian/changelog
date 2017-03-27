@@ -1,7 +1,16 @@
+  [Michele Simionato]
+  * The `avg` field in the loss curves is computed as the integral of the curve
+    again, and it is not extracted from the avg_losses output anymore
+  * Made the `fullreport` exportable
+  * Fixed the `rup_data` export, since the boundary field was broken
+  * Restored the output `losses_by_taxon` in the event_based_risk calculator
+  * Fixed the calculator event based UCERF so that average losses can
+    be stored
+
   [Daniele Viganò]
   * Added a check to verify that an 'oq' client is talking to the
     right DbServer instance
-  * Introduced an optional argument for 'oq dbserver' command line 
+  * Introduced an optional argument for 'oq dbserver' command line
     to be able to override its default interface binding behaviour
 
   [Michele Simionato]
