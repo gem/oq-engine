@@ -24,7 +24,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.python3compat import encode, decode
 from openquake.baselib.general import get_array, group_array
 from openquake.hazardlib.geo.mesh import RectangularMesh, surface_to_mesh
-from openquake.hazardlib.source.rupture import Rupture
+from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, tom, calc
@@ -50,7 +50,7 @@ stored_event_dt = numpy.dtype([
     ('eid', U64), ('rupserial', U32), ('year', U32),
     ('ses', U32), ('occ', U32), ('sample', U32), ('grp_id', U16)])
 
-Rupture.init()  # initialize rupture codes
+BaseRupture.init()  # initialize rupture codes
 
 # ############## utilities for the classical calculator ############### #
 
@@ -575,7 +575,7 @@ class EBRupture(object):
         attrs = dict(attrs)
         self.sids = dic['sids'].value
         self.events = dic['events'].value
-        rupture_cls, surface_cls, source_cls = Rupture.types[attrs['code']]
+        rupture_cls, surface_cls, source_cls = BaseRupture.types[attrs['code']]
         self.rupture = object.__new__(rupture_cls)
         self.rupture.surface = surface = object.__new__(surface_cls)
         m = dic['mesh'].value
