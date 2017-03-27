@@ -97,10 +97,10 @@ def expose_outputs(dstore):
         dskeys.add('avg_losses-stats')
     if oq.conditional_loss_poes:  # expose loss_maps outputs
         if 'rcurves-rlzs' in dstore or 'loss_curves-rlzs' in dstore:
-            if rlzs:
+            if len(rlzs) > 1:
                 dskeys.add('loss_maps-rlzs')
         if 'rcurves-stats' in dstore or 'loss_curves-stats' in dstore:
-            if rlzs:
+            if len(rlzs) > 1:
                 dskeys.add('loss_maps-stats')
     if 'all_loss_ratios' in dskeys:
         dskeys.remove('all_loss_ratios')  # export only specific IDs

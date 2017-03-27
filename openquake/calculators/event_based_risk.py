@@ -504,8 +504,6 @@ class EbriskCalculator(base.RiskCalculator):
                                    (self.T, self.R, self.L * I))
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
-            # since we are using a composite array, we must use fillvalue=None
-            # and then set the array to 0 manually (to avoid bogus numbers)
             dset = self.datastore.create_dset(
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L * I))
 
