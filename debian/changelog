@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized the serialization of ruptures on HDF5 by using a `sids` output
   * The `avg` field in the loss curves is computed as the integral of the curve
     again, and it is not extracted from the avg_losses output anymore
   * Made the `fullreport` exportable

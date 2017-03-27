@@ -225,6 +225,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
         self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
         self.min_iml = calc.fix_minimum_intensity(
             oq.minimum_intensity, oq.imtls)
+        self.rupser = calc.RuptureSerializer(self.datastore)
 
     def count_eff_ruptures(self, ruptures_by_grp_id, src_group):
         """
@@ -271,9 +272,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
             for grp_id, ebrs in ruptures_by_grp_id.items():
                 sm_id = self.sm_by_grp[grp_id]
                 if self.oqparam.save_ruptures:
-                    for ebr in ebrs:
-                        key = 'ruptures/grp-%02d/%s' % (grp_id, ebr.serial)
-                        self.datastore[key] = ebr
+                    self.rupser.save(ebrs)
                 events = get_events(ebrs)
                 if len(events):
                     ev = 'events/sm-%04d' % sm_id
@@ -291,6 +290,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """
         Save the SES collection
         """
+        # self.rupser.close()
         num_events = sum(_count(ruptures) for ruptures in result.values())
         if num_events == 0:
             raise RuntimeError(
@@ -404,8 +404,9 @@ def get_ruptures_by_grp(dstore):
     for grp in dstore['ruptures']:
         grp_id = int(grp[4:])  # strip 'grp-'
         for serial in dstore['ruptures/' + grp]:
-            sr = dstore['ruptures/%s/%s' % (grp, serial)]
-            ruptures_by_grp[grp_id].append(sr)
+            ebr = dstore['ruptures/%s/%s' % (grp, serial)]
+            ebr.sids = dstore['sids'][ebr.sidx]
+            ruptures_by_grp[grp_id].append(ebr)
     return ruptures_by_grp
 
 

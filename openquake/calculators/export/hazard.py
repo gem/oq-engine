@@ -119,8 +119,9 @@ def export_ruptures_xml(ekey, dstore):
     ruptures = []
     for grp_id in dstore['ruptures']:
         for serial in dstore['ruptures/%s' % grp_id]:
-            sr = dstore['ruptures/%s/%s' % (grp_id, serial)]
-            ruptures.extend(sr.export(mesh, sm_by_grp))
+            ebr = dstore['ruptures/%s/%s' % (grp_id, serial)]
+            ebr.sids = dstore['sids'][ebr.sidx]
+            ruptures.extend(ebr.export(mesh, sm_by_grp))
     ses_coll = SESCollection(
         groupby(ruptures, operator.attrgetter('ses_idx')),
         oq.investigation_time)
