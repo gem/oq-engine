@@ -46,7 +46,9 @@ def make_rupture(rupture_class, **kwargs):
     rupture = rupture_class(**kwargs)
     for key in kwargs:
         if key != 'pmf':
-            assert getattr(rupture, key) is kwargs[key]
+            # for pmf .pmf is a numpy array whereas pmf is a PMF instance
+            assert getattr(rupture, key) is kwargs[key], (
+                getattr(rupture, key), kwargs[key])
     return rupture
 
 
