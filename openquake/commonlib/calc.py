@@ -621,8 +621,8 @@ class EBRupture(object):
 
 class RuptureSerializer(object):
     """
-    Serialize event based ruptures on an HDF5 files. Populates the dataset
-    `ruptures`, `sids` and optionally `pmfs`.
+    Serialize event based ruptures on an HDF5 files. Populate the datasets
+    `ruptures` and `sids`.
     """
     def __init__(self, datastore):
         self.datastore = datastore
@@ -630,6 +630,9 @@ class RuptureSerializer(object):
         self.data = []
 
     def save(self, ebruptures):
+        """
+        Collect the ruptures and a dictionary of unique site ID.
+        """
         for ebr in ebruptures:
             sidx = len(self.sids)
             sids_tup = tuple(ebr.sids)
@@ -644,6 +647,9 @@ class RuptureSerializer(object):
         self.datastore.flush()
 
     def close(self):
+        """
+        Flush the ruptures and the site IDs on the datastore
+        """
         self.sids.clear()
         dset = self.datastore.create_dset(
             'sids', sids_dt, (len(self.data),), fillvalue=None)
