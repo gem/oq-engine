@@ -75,6 +75,23 @@ class Rupture(object):
     _slots_ = '''mag rake tectonic_region_type hypocenter surface
     source_typology rupture_slip_direction'''.split()
 
+    @classmethod
+    def init(cls):
+        """Initialize the class dictionaries"""
+        source_classes = get_subclasses(BaseSeismicSource)
+        rupture_classes = get_subclasses(BaseProbabilisticRupture)
+        surface_classes = get_subclasses(BaseSurface)
+        code, types, n = {}, {}, 0
+        for src, rup, sur in itertools.product(
+                source_classes, rupture_classes, surface_classes):
+            code[rup, sur, src] = n
+            types[n] = rup, sur, src
+            n += 1
+        if n >= 256:
+            raise ValueError('Too many rupture codes: %d' % n)
+        cls._code = code
+        cls.types = types
+
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
                  surface, source_typology, rupture_slip_direction=None):
         if not mag > 0:
@@ -87,6 +104,12 @@ class Rupture(object):
         self.surface = surface
         self.source_typology = source_typology
         self.rupture_slip_direction = rupture_slip_direction
+
+    @property
+    def code(self):
+        """Returns the code (integer in the range 0 .. 255) of the rupture"""
+        return self._code[self.__class__, self.surface.__class__,
+                          self.source_typology]
 
 
 class BaseProbabilisticRupture(with_metaclass(abc.ABCMeta, Rupture)):
@@ -453,26 +476,3 @@ def get_subclasses(cls):
         yield subclass
         for ssc in get_subclasses(subclass):
             yield ssc
-
-
-def typology_dicts():
-    """
-    :returns:
-        a pair of dictionaries, {source_typo, rupture_typo, surface_typo: no}
-        and {no: source_typo, rupture_typo, surface_typo} where `no` is number
-        between 0 and 255.
-    """
-    source_typo = map(
-        hdf5.cls2dotname, get_subclasses(BaseSeismicSource))
-    rupture_typo = map(
-        hdf5.cls2dotname, get_subclasses(BaseProbabilisticRupture))
-    surface_typo = map(
-        hdf5.cls2dotname, get_subclasses(BaseSurface))
-    d1, d2, n = {}, {}, 0
-    for src, rup, sur in itertools.product(
-            source_typo, rupture_typo, surface_typo):
-        d1[src, rup, sur] = n
-        d2[n] = src, rup, sur
-        n += 1
-    assert n < 256, n
-    return d1, d2
