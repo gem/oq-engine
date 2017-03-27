@@ -396,8 +396,8 @@ class ProbabilisticEventBased(RiskModel):
         gmvs, eids = gmvs_eids['gmv'], gmvs_eids['eid']
         E = len(gmvs)
         I = self.insured_losses + 1
-        N = len(assets)
-        loss_ratios = numpy.zeros((N, E, I), F32)
+        A = len(assets)
+        loss_ratios = numpy.zeros((A, E, I), F32)
         vf = self.risk_functions[loss_type]
         means, covs, idxs = vf.interpolate(gmvs)
         for i, asset in enumerate(assets):
