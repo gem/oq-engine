@@ -662,8 +662,9 @@ def export_gmf(ekey, dstore):
     if nbytes > GMF_MAX_SIZE:
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
-    for sm_id, rlzs in sorted(rlzs_assoc.rlzs_by_smodel.items()):
-        key = 'sm-%04d' % sm_id
+    grp_rlzs = sorted(rlzs_assoc.get_rlzs_by_grp_id().items())
+    for grp_id, rlzs in grp_rlzs:
+        key = 'grp-%02d' % grp_id
         if not n_gmfs:  # event based
             events = dstore['events']
             if key not in events:  # source model producing zero ruptures
@@ -677,7 +678,7 @@ def export_gmf(ekey, dstore):
                 continue
             ruptures = []
             for eid, gmfa in group_array(gmf_arr, 'eid').items():
-                rup = util.Rupture(sm_id, eid, etags[eid],
+                rup = util.Rupture(grp_id, eid, etags[eid],
                                    sorted(set(gmfa['sid'])))
                 rup.gmfa = gmfa
                 ruptures.append(rup)
@@ -802,13 +803,12 @@ class GmfExporter(object):
         rlzs = self.rlzs_assoc.realizations
         imts = list(self.oq.imtls)
         events = self.dstore['events/grp-%02d' % grp_id]
-        sm_id = self.rlzs_assoc.sm_ids[grp_id]
         ok_events = events[events['eid'] == eid]
         [etag] = build_etags(ok_events)
         with self.dstore.ext5() as ext5:
-            for rlzno in ext5['gmf_data/sm-%04d' % sm_id]:
+            for rlzno in ext5['gmf_data/grp-%02d' % grp_id]:
                 rlz = rlzs[int(rlzno)]
-                gmfa = ext5['gmf_data/sm-%04d/%s' % (sm_id, rlzno)]
+                gmfa = ext5['gmf_data/grp-%02d/%s' % (grp_id, rlzno)]
                 gmf = gmfa[gmfa['eid'] == eid]
                 data, comment = _build_csv_data(gmf, rlz, self.sitecol, imts,
                                                 self.oq.investigation_time)
@@ -824,12 +824,12 @@ class GmfExporter(object):
         rlzs = self.rlzs_assoc.realizations
         imts = list(self.oq.imtls)
         with self.dstore.ext5() as ext5:
-            for sm_id in ext5['gmf_data']:
-                events = self.dstore['events/' + sm_id]
+            for grp in ext5['gmf_data']:
+                events = self.dstore['events/' + grp]
                 etag = dict(zip(range(len(events)), build_etags(events)))
-                for rlzno in ext5['gmf_data/' + sm_id]:
+                for rlzno in ext5['gmf_data/' + grp]:
                     rlz = rlzs[int(rlzno)]
-                    gmf = ext5['gmf_data/%s/%s' % (sm_id, rlzno)].value
+                    gmf = ext5['gmf_data/%s/%s' % (grp, rlzno)].value
                     for eid, array in group_array(gmf, 'eid').items():
                         if eid not in etag:
                             continue
@@ -888,10 +888,10 @@ def export_gmf_scenario_npz(ekey, dstore):
     elif 'event_based' in oq.calculation_mode:
         dic['sitemesh'] = get_mesh(dstore['sitecol'])
         with dstore.ext5() as ext5:
-            for sm_id in sorted(ext5['gmf_data']):
-                for rlzno in sorted(ext5['gmf_data/' + sm_id]):
+            for grp in sorted(ext5['gmf_data']):
+                for rlzno in sorted(ext5['gmf_data/' + grp]):
                     dic['rlz-' + rlzno] = ext5[
-                        'gmf_data/%s/%s' % (sm_id, rlzno)].value
+                        'gmf_data/%s/%s' % (grp, rlzno)].value
     else:  # nothing to export
         return []
     savez(fname, **dic)

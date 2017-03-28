@@ -92,7 +92,7 @@ class EventBasedTestCase(CalculatorTestCase):
             self.assertEqual(list(oq.imtls), ['PGA'])
             dstore = read(self.calc.datastore.calc_id)
             with dstore.ext5() as ext5:
-                gmf = group_array(ext5['gmf_data/sm-0000/0000'], 'sid')
+                gmf = group_array(ext5['gmf_data/grp-00/0000'], 'sid')
             gmvs_site_0 = gmf[0]['gmv']
             gmvs_site_1 = gmf[1]['gmv']
             joint_prob_0_5 = joint_prob_of_occurrence(
