@@ -40,6 +40,13 @@ class UcerfTestCase(CalculatorTestCase):
         self.run_calc(ucerf.__file__, 'job.ini',
                       calculation_mode='event_based',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
+
+        # check the GMFs
+        gmdata = self.calc.datastore['gmdata'].value
+        got = writetmp(rst_table(gmdata, fmt='%s'))
+        self.assertEqualFiles('expected/gmdata_eb.csv', got)
+
+        # check the mean hazard map
         [fname] = export(('hmaps', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
 
