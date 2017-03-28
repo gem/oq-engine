@@ -291,7 +291,7 @@ class PolygonEdgesTestCase(unittest.TestCase):
 class PolygonFromWktTestCase(unittest.TestCase):
     def test(self):
         wkt_string = 'POLYGON((22. -15.,24. -15.,24. -10.,22. -15.))'
-        poly = polygon.Polygon._from_wkt(wkt_string)
+        poly = polygon.Polygon.from_wkt(wkt_string)
         self.assertEqual(list(poly.lats), [-15, -15, -10])
         self.assertEqual(list(poly.lons), [22, 24, 24])
         self.assertEqual(poly.lats.dtype, 'float')
