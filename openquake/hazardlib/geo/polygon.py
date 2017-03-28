@@ -89,7 +89,7 @@ class Polygon(object):
         :param wkt_string:
             A standard WKT polygon string
         :returns:
-            New :class:`Polygon` object. 
+            New :class:`Polygon` object.
         """
         # Avoid calling class' constructor
         polygon = object.__new__(cls)
