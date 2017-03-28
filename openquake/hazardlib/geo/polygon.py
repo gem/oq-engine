@@ -87,7 +87,7 @@ class Polygon(object):
         Create a polygon object from a WKT (Well-Known Text) string.
 
         :param wkt_string:
-            A standard WKT polygon string
+            A standard WKT polygon string.
         :returns:
             New :class:`Polygon` object.
         """
