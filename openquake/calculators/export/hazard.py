@@ -63,12 +63,12 @@ def get_mesh(sitecol, complete=True):
     return mesh
 
 
-def build_etags(events):
+def build_etags(events, grp_id):
     """
     An array of tags for the underlying seismic events
     """
     tags = []
-    for (eid, serial, year, ses, occ, sampleid, grp_id) in events:
+    for (eid, serial, year, ses, occ, sampleid) in events:
         tag = 'grp=%02d~ses=%04d~rup=%d-%02d' % (grp_id, ses, serial, occ)
         if sampleid > 0:
             tag += '~sample=%d' % sampleid
@@ -117,10 +117,8 @@ def export_ruptures_xml(ekey, dstore):
     sm_by_grp = dstore['csm_info'].get_sm_by_grp()
     mesh = get_mesh(dstore['sitecol'])
     ruptures = []
-    for grp_id in dstore['ruptures']:
-        for serial in dstore['ruptures/%s' % grp_id]:
-            ebr = dstore['ruptures/%s/%s' % (grp_id, serial)]
-            ebr.sids = dstore['sids'][ebr.sidx]
+    for grp_id in sm_by_grp:
+        for ebr in calc.get_ruptures(dstore, grp_id):
             ruptures.extend(ebr.export(mesh, sm_by_grp))
     ses_coll = SESCollection(
         groupby(ruptures, operator.attrgetter('ses_idx')),
@@ -147,7 +145,7 @@ def export_ses_csv(ekey, dstore):
     rows = []
     for grp_id, trt in sorted(grp_trt.items()):
         grp = 'grp-%02d' % grp_id
-        etags = build_etags(dstore['events/' + grp])
+        etags = build_etags(dstore['events/' + grp], grp_id)
         dic = groupby(etags, util.get_serial)
         for r in dstore['rup_data/grp-%02d' % grp_id]:
             for etag in dic[r['rupserial']]:
@@ -670,7 +668,7 @@ def export_gmf(ekey, dstore):
             if key not in events:  # source model producing zero ruptures
                 continue
             sm_events = events[key]
-            etags = dict(zip(sm_events['eid'], build_etags(sm_events)))
+            etags = dict(zip(sm_events['eid'], build_etags(sm_events, grp_id)))
         for rlz in rlzs:
             try:
                 gmf_arr = gmf_data['%s/%04d' % (key, rlz.ordinal)].value
@@ -804,7 +802,7 @@ class GmfExporter(object):
         imts = list(self.oq.imtls)
         events = self.dstore['events/grp-%02d' % grp_id]
         ok_events = events[events['eid'] == eid]
-        [etag] = build_etags(ok_events)
+        [etag] = build_etags(ok_events, grp_id)
         with self.dstore.ext5() as ext5:
             for rlzno in ext5['gmf_data/grp-%02d' % grp_id]:
                 rlz = rlzs[int(rlzno)]
@@ -825,8 +823,10 @@ class GmfExporter(object):
         imts = list(self.oq.imtls)
         with self.dstore.ext5() as ext5:
             for grp in ext5['gmf_data']:
+                grp_id = int(grp[4:])  # strip grp-
                 events = self.dstore['events/' + grp]
-                etag = dict(zip(range(len(events)), build_etags(events)))
+                etag = dict(zip(range(len(events)),
+                                build_etags(events, grp_id)))
                 for rlzno in ext5['gmf_data/' + grp]:
                     rlz = rlzs[int(rlzno)]
                     gmf = ext5['gmf_data/%s/%s' % (grp, rlzno)].value

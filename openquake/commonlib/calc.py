@@ -26,6 +26,7 @@ from openquake.baselib.python3compat import encode, decode
 from openquake.baselib.general import get_array, group_array
 from openquake.hazardlib.geo.mesh import surface_to_mesh, point3d
 from openquake.hazardlib.source.rupture import BaseRupture
+from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, tom, calc
@@ -48,7 +49,7 @@ event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
 stored_event_dt = numpy.dtype([
     ('eid', U64), ('rupserial', U32), ('year', U32),
-    ('ses', U32), ('occ', U32), ('sample', U32), ('grp_id', U16)])
+    ('ses', U32), ('occ', U32), ('sample', U32)])
 
 sids_dt = h5py.special_dtype(vlen=U32)
 
@@ -621,3 +622,38 @@ class RuptureSerializer(object):
         self.datastore.set_attrs('sids', nbytes=nbytes)
         self.datastore.flush()
         del self.data[:]
+
+
+def get_ruptures(dstore, grp_id):
+    """
+    Extracts the ruptures of the given grp_id
+    """
+    oq = dstore['oqparam']
+    mesh_spacing = oq.rupture_mesh_spacing
+    # oq.complex_fault_mesh_spacing
+    events = dstore['events/grp-%02d' % grp_id]
+    for rec in dstore['ruptures/grp-%02d' % grp_id]:
+        mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])
+        rupture_cls, surface_cls, source_cls = BaseRupture.types[rec['code']]
+        rupture = object.__new__(rupture_cls)
+        rupture.surface = object.__new__(surface_cls)
+        rupture.source_typology = source_cls
+        rupture.mag = rec['mag']
+        rupture.rake = rec['rake']
+        rupture.occurrence_rate = rec['occurrence_rate']
+        if surface_cls is geo.PlanarSurface:
+            rupture.surface = geo.PlanarSurface.from_array(
+                mesh_spacing, rec['points'])
+        elif surface_cls.__name__.endswith('MultiSurface'):
+            rupture.surface.__init__([
+                geo.PlanarSurface.from_array(mesh_spacing, m1.flatten())
+                for m1 in mesh])
+        else:  # fault surface, strike and dip will be computed
+            rupture.surface.strike = rupture.surface.dip = None
+            m = mesh[0]
+            rupture.surface.mesh = RectangularMesh(
+                m['lon'], m['lat'], m['depth'])
+        sids = dstore['sids'][rec['sidx']]
+        evs = events[events['serial'] == rec['serial']]
+        ebr = calc.EBRupture(rupture, sids, evs, grp_id, rec['serial'])
+        yield ebr
