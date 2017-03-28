@@ -30,8 +30,6 @@ from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, block_splitter, humansize
 from openquake.hazardlib.calc.filters import FarAwayRupture
 from openquake.hazardlib.probability_map import ProbabilityMap, PmapStats
-from openquake.hazardlib.source.rupture import BaseRupture
-from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo.surface import PlanarSurface
 from openquake.risklib.riskinput import (GmfGetter, str2rsi, rsi2str, gmv_dt,
                                          TWO48)
@@ -205,7 +203,7 @@ def get_events(ebruptures):
     for ebr in ebruptures:
         for event in ebr.events:
             rec = (event['eid'], ebr.serial, year, event['ses'], event['occ'],
-                   event['sample'], ebr.grp_id)
+                   event['sample'])
             events.append(rec)
     return numpy.array(events, calc.stored_event_dt)
 
@@ -394,39 +392,6 @@ def compute_gmfs_and_curves(getter, monitor):
                 hcurves=hcurves, gmdata=getter.gmdata)
 
 
-def get_ruptures(dstore, grp_id):
-    """
-    Extracts the ruptures of the given grp_id
-    """
-    oq = dstore['oqparam']
-    mesh_spacing = oq.rupture_mesh_spacing
-    # oq.complex_fault_mesh_spacing
-    for rec in dstore['ruptures/grp-%02d' % grp_id]:
-        mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])
-        rupture_cls, surface_cls, source_cls = BaseRupture.types[rec['code']]
-        rupture = object.__new__(rupture_cls)
-        rupture.surface = object.__new__(surface_cls)
-        rupture.source_typology = source_cls
-        rupture.mag = rec['mag']
-        rupture.rake = rec['rake']
-        rupture.occurrence_rate = rec['occurrence_rate']
-        if surface_cls.__name__.endswith('PlanarSurface'):
-            rupture.surface = PlanarSurface.from_array(
-                mesh_spacing, rec['points'])
-        elif surface_cls.__name__.endswith('MultiSurface'):
-            rupture.surface.__init__([
-                PlanarSurface.from_array(mesh_spacing, m1.flatten())
-                for m1 in mesh])
-        else:  # fault surface, strike and dip will be computed
-            rupture.surface.strike = rupture.surface.dip = None
-            m = mesh[0]
-            rupture.surface.mesh = RectangularMesh(
-                m['lon'], m['lat'], m['depth'])
-        sids = dstore['sids'][rec['sidx']]
-        ebr = calc.EBRupture(rupture, sids, events, grp_id, rec['serial'])
-        yield ebr
-
-
 def get_ruptures_by_grp(dstore):
     """
     Extracts the dictionary `ruptures_by_grp` from the given calculator
@@ -440,7 +405,7 @@ def get_ruptures_by_grp(dstore):
     ruptures_by_grp = AccumDict(accum=[])
     for grp in dstore['ruptures']:
         grp_id = int(grp[4:])  # strip 'grp-'
-        ruptures_by_grp[grp_id] = list(get_ruptures(dstore, grp_id))
+        ruptures_by_grp[grp_id] = list(calc.get_ruptures(dstore, grp_id))
     return ruptures_by_grp
 
 
