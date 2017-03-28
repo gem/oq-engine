@@ -401,18 +401,18 @@ def get_ruptures(dstore, grp_id):
     oq = dstore['oqparam']
     mesh_spacing = oq.rupture_mesh_spacing
     # oq.complex_fault_mesh_spacing
-    for rec in dstore['ruptures/%02d' % grp_id]:
-        mesh = rec.mesh.reshape(rec.sx, rec.sy, rec.sz)
-        rupture_cls, surface_cls, source_cls = BaseRupture.types[rec.code]
+    for rec in dstore['ruptures/grp-%02d' % grp_id]:
+        mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])
+        rupture_cls, surface_cls, source_cls = BaseRupture.types[rec['code']]
         rupture = object.__new__(rupture_cls)
         rupture.surface = object.__new__(surface_cls)
         rupture.source_typology = source_cls
-        rupture.mag = rec.mag
-        rupture.rake = rec.rake
-        rupture.occurrence_rate = rec.occurrence_rate
+        rupture.mag = rec['mag']
+        rupture.rake = rec['rake']
+        rupture.occurrence_rate = rec['occurrence_rate']
         if surface_cls.__name__.endswith('PlanarSurface'):
             rupture.surface = PlanarSurface.from_array(
-                mesh_spacing, rec.mesh)
+                mesh_spacing, rec['points'])
         elif surface_cls.__name__.endswith('MultiSurface'):
             rupture.surface.__init__([
                 PlanarSurface.from_array(mesh_spacing, m1.flatten())
@@ -422,8 +422,8 @@ def get_ruptures(dstore, grp_id):
             m = mesh[0]
             rupture.surface.mesh = RectangularMesh(
                 m['lon'], m['lat'], m['depth'])
-        sids = dstore['sids'][rec.sidx]
-        ebr = calc.EBRupture(rupture, sids, events, grp_id, rec.serial)
+        sids = dstore['sids'][rec['sidx']]
+        ebr = calc.EBRupture(rupture, sids, events, grp_id, rec['serial'])
         yield ebr
 
 
