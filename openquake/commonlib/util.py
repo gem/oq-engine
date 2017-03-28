@@ -158,9 +158,14 @@ class Rupture(object):
     """
     Simplified Rupture class with attributes etag, indices, ses_idx,
     used in export.
+
+    :param grp_id: source group ID
+    :param eid: event ID
+    :param etag: tag associated to the event
+    :param indices: site indices
     """
-    def __init__(self, sm_id, eid, etag, indices=None):
-        self.sm_id = sm_id
+    def __init__(self, grp_id, eid, etag, indices=None):
+        self.grp_id = grp_id
         self.eid = eid
         if isinstance(etag, int):  # scenario
             self.etag = 'scenario-%010d' % etag
