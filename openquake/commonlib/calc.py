@@ -472,11 +472,10 @@ class EBRupture(object):
               'source_class', 'pmf', 'occurrence_rate',
               'time_span', 'rupture_slip_direction']
 
-    def __init__(self, rupture, sids, events, source_id, grp_id, serial):
+    def __init__(self, rupture, sids, events, grp_id, serial):
         self.rupture = rupture
         self.sids = sids
         self.events = events
-        self.source_id = source_id
         self.grp_id = grp_id
         self.serial = serial
 
@@ -552,8 +551,7 @@ class EBRupture(object):
 
     def __toh5__(self):
         rup = self.rupture
-        attrs = dict(source_id=self.source_id, grp_id=self.grp_id,
-                     serial=self.serial)
+        attrs = dict(grp_id=self.grp_id, serial=self.serial)
         for par in self.params:
             val = getattr(self.rupture, par, None)
             if val is not None:
@@ -604,7 +602,6 @@ class EBRupture(object):
         self.rupture.rupture_slip_direction = None
         self.rupture.hypocenter = Point(*attrs.pop('hypo'))
         self.rupture.source_typology = source_cls
-        self.source_id = attrs.pop('source_id')
         self.grp_id = attrs.pop('grp_id')
         self.serial = attrs.pop('serial')
         self.sidx = attrs.pop('sidx')

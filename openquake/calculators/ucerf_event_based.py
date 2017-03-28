@@ -710,7 +710,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                     if events:
                         evs = numpy.array(events, calc.event_dt)
                         ebruptures.append(
-                            calc.EBRupture(rup, indices, evs, src.source_id,
+                            calc.EBRupture(rup, indices, evs,
                                            src.src_group_id, serial))
                         serial += 1
     res.num_events = event_based.set_eids(
