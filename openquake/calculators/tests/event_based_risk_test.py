@@ -197,14 +197,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = writetmp(view('ruptures_events', self.calc.datastore))
         self.assertEqualFiles('expected/ruptures_events.txt', fname)
 
-        # export a specific eid
-        fnames = export(('all_loss_ratios:17179869184', 'csv'),
-                        self.calc.datastore)
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
-        self.assertEqualFiles('expected/losses-eid=262144.csv', fname)
-
-        # export a specific pair (sm_id, eid)
+        # export a specific pair (grp_id, eid)
         fnames = export(('all_loss_ratios:1:21474836480', 'csv'),
                         self.calc.datastore)
         for fname in fnames:
