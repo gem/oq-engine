@@ -27,7 +27,7 @@ from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific, riskinput
 from openquake.calculators.export import export
 from openquake.calculators.export.hazard import (
-    build_etags, get_sm_id_eid, savez)
+    build_etags, get_grp_id_eid, savez)
 from openquake.commonlib import writers, risk_writers
 from openquake.commonlib.util import get_assets, compose_arrays
 from openquake.commonlib.risk_writers import (
@@ -182,24 +182,21 @@ def export_agg_losses_ebr(ekey, dstore):
                   ('centroid_lat', F64),
                   ('centroid_depth', F64)] if has_rup_data else []
     oq = dstore['oqparam']
-    csm_info = dstore['csm_info']
     dtlist = [('event_tag', (numpy.string_, 100)),
               ('year', U32),
               ] + extra_list + oq.loss_dt_list()
     elt_dt = numpy.dtype(dtlist)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    sm_ids = sorted(rlzs_assoc.rlzs_by_smodel)
+    grp_rlzs = sorted(rlzs_assoc.get_rlzs_by_grp_id().items())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for sm_id in sm_ids:
-        rlzs = rlzs_assoc.rlzs_by_smodel[sm_id]
+    for grp_id, rlzs in grp_rlzs:
         try:
-            events = dstore['events/sm-%04d' % sm_id]
+            events = dstore['events/grp-%02d' % grp_id]
         except KeyError:
             continue
         if not len(events):
             continue
-        rup_data = rup_data_dict(
-            dstore, csm_info.get_grp_ids(sm_id)) if has_rup_data else {}
+        rup_data = rup_data_dict(dstore, [grp_id]) if has_rup_data else {}
         event_by_eid = {event['eid']: event for event in events}
         for rlz in rlzs:
             rlzname = 'rlz-%03d' % rlz.ordinal
@@ -239,46 +236,44 @@ def export_all_loss_ratios(ekey, dstore):
               ('aid', U32)] + oq.loss_dt_list()
     elt_dt = numpy.dtype(dtlist)
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    sm_id, eid = get_sm_id_eid(ekey[0])
-    if sm_id is None:
+    grp_id, eid = get_grp_id_eid(ekey[0])
+    if grp_id is None:
         return []
-    sm_id, eid = int(sm_id), int(eid)
-    sm_ids = [sm_id]
+    grp_id, eid = int(grp_id), int(eid)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for sm_id in sm_ids:
-        rlzs = rlzs_assoc.rlzs_by_smodel[sm_id]
-        events = dstore['events/sm-%04d' % sm_id]
-        ok_events = events[events['eid'] == eid]
-        if len(ok_events) == 0:
-            continue
-        [event_tag] = build_etags(ok_events)
-        for rlz in rlzs:
-            exportname = 'losses-sm=%04d-eid=%d' % (sm_id, eid)
-            dest = dstore.build_fname(exportname, rlz, 'csv')
-            losses_by_aid = AccumDict()
-            rlzname = 'rlz-%03d' % rlz.ordinal
-            with dstore.ext5() as ext5:
-                ass_losses = ext5['all_loss_ratios'][rlzname].value
-            data = get_array(ass_losses, eid=eid)
-            losses_by_aid = group_array(data, 'aid')
-            elt = numpy.zeros(len(losses_by_aid), elt_dt)
-            elt['event_tag'] = event_tag
-            elt['year'] = ok_events[0]['year']
-            elt['aid'] = sorted(losses_by_aid)
-            for i, aid in numpy.ndenumerate(elt['aid']):
-                # there is a single eid
-                losses = losses_by_aid[aid]['loss'][0, :, :]  # shape (L, I)
-                for l, loss_type in enumerate(loss_types):
-                    value = assetcol[int(aid)].value(loss_type, oq.time_event)
-                    loss = value * losses[l]
-                    if oq.insured_losses:
-                        elt[loss_type][i] = loss[0]
-                        elt[loss_type + '_ins'][i] = loss[1]
-                    else:
-                        elt[loss_type][i] = loss
+    rlzs = rlzs_assoc.get_rlzs_by_grp_id()[grp_id]
+    events = dstore['events/grp-%02d' % grp_id]
+    ok_events = events[events['eid'] == eid]
+    if len(ok_events) == 0:
+        return []
+    [event_tag] = build_etags(ok_events)
+    for rlz in rlzs:
+        exportname = 'losses-grp=%02d-eid=%d' % (grp_id, eid)
+        dest = dstore.build_fname(exportname, rlz, 'csv')
+        losses_by_aid = AccumDict()
+        rlzname = 'rlz-%03d' % rlz.ordinal
+        with dstore.ext5() as ext5:
+            ass_losses = ext5['all_loss_ratios'][rlzname].value
+        data = get_array(ass_losses, eid=eid)
+        losses_by_aid = group_array(data, 'aid')
+        elt = numpy.zeros(len(losses_by_aid), elt_dt)
+        elt['event_tag'] = event_tag
+        elt['year'] = ok_events[0]['year']
+        elt['aid'] = sorted(losses_by_aid)
+        for i, aid in numpy.ndenumerate(elt['aid']):
+            # there is a single eid
+            losses = losses_by_aid[aid]['loss'][0, :, :]  # shape (L, I)
+            for l, loss_type in enumerate(loss_types):
+                value = assetcol[int(aid)].value(loss_type, oq.time_event)
+                loss = value * losses[l]
+                if oq.insured_losses:
+                    elt[loss_type][i] = loss[0]
+                    elt[loss_type + '_ins'][i] = loss[1]
+                else:
+                    elt[loss_type][i] = loss
 
-            elt.sort(order='event_tag')
-            writer.save(elt, dest)
+        elt.sort(order='event_tag')
+        writer.save(elt, dest)
     return writer.getsaved()
 
 
