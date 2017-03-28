@@ -626,7 +626,7 @@ class RuptureSerializer(object):
     """
     def __init__(self, datastore):
         self.datastore = datastore
-        self.sids = set()
+        self.sids = {}  # dictionary sids -> sidx
         self.data = []
 
     def save(self, ebruptures):
@@ -634,14 +634,12 @@ class RuptureSerializer(object):
         Collect the ruptures and a set of site IDs tuples.
         """
         for ebr in ebruptures:
-            sidx = len(self.sids)
             sids_tup = tuple(ebr.sids)
-            if sids_tup not in self.sids:
+            try:
+                ebr.sidx = self.sids[sids_tup]
+            except KeyError:
+                ebr.sidx = self.sids[sids_tup] = len(self.sids)
                 self.data.append(ebr.sids)
-                self.sids.add(sids_tup)
-                ebr.sidx = sidx
-            else:
-                ebr.sidx = sidx - 1
             key = 'ruptures/grp-%02d/%s' % (ebr.grp_id, ebr.serial)
             self.datastore[key] = ebr
         self.datastore.flush()
