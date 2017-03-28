@@ -24,7 +24,8 @@ import h5py
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import encode, decode
 from openquake.baselib.general import get_array, group_array
-from openquake.hazardlib.geo.mesh import RectangularMesh, surface_to_mesh
+from openquake.hazardlib.geo.mesh import (
+    RectangularMesh, surface_to_mesh, point3d)
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
@@ -468,10 +469,6 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the tags of the corresponding seismic events.
     """
-    params = ['mag', 'rake', 'tectonic_region_type', 'hypo',
-              'source_class', 'pmf', 'occurrence_rate',
-              'time_span', 'rupture_slip_direction']
-
     def __init__(self, rupture, sids, events, source_id, grp_id, serial):
         self.rupture = rupture
         self.sids = sids
@@ -550,80 +547,19 @@ class EBRupture(object):
                 new.lons[3], new.lats[3], new.depths[3])
             yield new
 
-    def __toh5__(self):
-        rup = self.rupture
-        attrs = dict(source_id=self.source_id, grp_id=self.grp_id,
-                     serial=self.serial)
-        for par in self.params:
-            val = getattr(self.rupture, par, None)
-            if val is not None:
-                attrs[par] = val
-        if hasattr(rup, 'temporal_occurrence_model'):
-            attrs['time_span'] = rup.temporal_occurrence_model.time_span
-        if hasattr(rup, 'pmf'):
-            attrs['pmf'] = rup.pmf
-        attrs['seed'] = rup.seed
-        attrs['hypo'] = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
-        attrs['code'] = rup.code
-        surface = self.rupture.surface
-        if hasattr(surface, 'surfaces'):
-            attrs['mesh_spacing'] = surface.surfaces[0].mesh_spacing
-        else:
-            attrs['mesh_spacing'] = getattr(surface, 'mesh_spacing', numpy.nan)
-        mesh = surface_to_mesh(surface)
-        attrs['nbytes'] = self.events.nbytes + mesh.nbytes
-        attrs['sidx'] = self.sidx
-        return dict(events=self.events, mesh=mesh), attrs
-
-    def __fromh5__(self, dic, attrs):
-        attrs = dict(attrs)
-        self.events = dic['events'].value
-        rupture_cls, surface_cls, source_cls = BaseRupture.types[attrs['code']]
-        self.rupture = object.__new__(rupture_cls)
-        self.rupture.surface = surface = object.__new__(surface_cls)
-        m = dic['mesh'].value
-        if surface_cls.__name__.endswith('PlanarSurface'):
-            mesh_spacing = attrs.pop('mesh_spacing')
-            self.rupture.surface = geo.PlanarSurface.from_array(
-                mesh_spacing, m.flatten())
-        elif surface_cls.__name__.endswith('MultiSurface'):
-            mesh_spacing = attrs.pop('mesh_spacing')
-            self.rupture.surface.__init__([
-                geo.PlanarSurface.from_array(mesh_spacing, m1.flatten())
-                for m1 in m])
-        else:  # fault surface
-            surface.strike = surface.dip = None  # they will be computed
-            surface.mesh = RectangularMesh(
-                m['lon'][0], m['lat'][0], m['depth'][0])
-        time_span = attrs.pop('time_span', None)
-        if time_span:
-            self.rupture.temporal_occurrence_model = tom.PoissonTOM(time_span)
-        self.rupture.surface_nodes = ()
-        if 'rupture_slip_direction' in attrs:
-            logging.error('rupture_slip_direction not implemented yet')
-        self.rupture.rupture_slip_direction = None
-        self.rupture.hypocenter = Point(*attrs.pop('hypo'))
-        self.rupture.source_typology = source_cls
-        self.source_id = attrs.pop('source_id')
-        self.grp_id = attrs.pop('grp_id')
-        self.serial = attrs.pop('serial')
-        self.sidx = attrs.pop('sidx')
-        del attrs['code']
-        vars(self.rupture).update(attrs)
-
-    def __lt__(self, other):
-        return self.serial < other.serial
-
-    def __repr__(self):
-        return '<%s #%d, grp_id=%d>' % (self.__class__.__name__,
-                                        self.serial, self.grp_id)
-
 
 class RuptureSerializer(object):
     """
     Serialize event based ruptures on an HDF5 files. Populate the datasets
     `ruptures` and `sids`.
     """
+    dt = numpy.dtype([
+        ('serial', U32), ('code', U8), ('sidx', U32), ('seed', U32),
+        ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
+        ('hypo', point3d), ('points', h5py.special_dtype(vlen=point3d)),
+        ('sx', U8), ('sy', U8), ('sz', U8),
+        ])
+
     def __init__(self, datastore):
         self.datastore = datastore
         self.sids = {}  # dictionary sids -> sidx
@@ -633,6 +569,7 @@ class RuptureSerializer(object):
         """
         Collect the ruptures and a set of site IDs tuples.
         """
+        # set the reference to the sids (sidx) correctly
         for ebr in ebruptures:
             sids_tup = tuple(ebr.sids)
             try:
@@ -640,9 +577,19 @@ class RuptureSerializer(object):
             except KeyError:
                 ebr.sidx = self.sids[sids_tup] = len(self.sids)
                 self.data.append(ebr.sids)
-            key = 'ruptures/grp-%02d/%s' % (ebr.grp_id, ebr.serial)
-            self.datastore[key] = ebr
+
+        # store the ruptures in a compact format
+        array = numpy.array([self._tuple(ebr) for ebr in ebruptures], self.dt)
+        self.datastore.extend('ruptures/grp-%02d' % ebr.grp_id, array)
         self.datastore.flush()
+
+    def _tuple(self, ebrupture):
+        rup = ebrupture.rupture
+        mesh = surface_to_mesh(rup.surface)
+        sx, sy, sz = mesh.shape
+        hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
+        return (ebrupture.serial, rup.code, ebrupture.sidx, rup.seed,
+                rup.mag, rup.rake, rup.occurrence_rate, hypo, mesh, sx, sy, sz)
 
     def close(self):
         """
