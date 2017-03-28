@@ -43,7 +43,7 @@ class UcerfTestCase(CalculatorTestCase):
 
         # check the GMFs
         gmdata = self.calc.datastore['gmdata'].value
-        got = writetmp(rst_table(gmdata, fmt='%s'))
+        got = writetmp(rst_table(gmdata, fmt='%.6f'))
         self.assertEqualFiles('expected/gmdata_eb.csv', got)
 
         # check the mean hazard map
