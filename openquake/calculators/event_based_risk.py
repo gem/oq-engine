@@ -407,8 +407,8 @@ class EbriskCalculator(base.RiskCalculator):
                         len(self.assetcol), seeds[start: start + n_events])
                     start += n_events
                 getter = riskinput.GmfGetter(
-                    rlzs_by_gsim, rupts, sitecol, imts, min_iml, trunc_level,
-                    correl_model, samples)
+                    grp_id, rlzs_by_gsim, rupts, sitecol, imts, min_iml,
+                    trunc_level, correl_model, samples)
                 ri = riskinput.RiskInputFromRuptures(getter, eps)
                 allargs.append((ri, riskmodel, assetcol, monitor))
 
@@ -523,8 +523,7 @@ class EbriskCalculator(base.RiskCalculator):
             elif hasattr(res, 'events_by_grp'):
                 for grp_id in res.events_by_grp:
                     events = res.events_by_grp[grp_id]
-                    ev = 'events/sm-%04d' % self.sm_by_grp[grp_id]
-                    self.datastore.extend(ev, events)
+                    self.datastore.extend('events/grp-%02d' % grp_id, events)
             num_events[res.sm_id] += res.num_events
         event_based.save_gmdata(self, num_rlzs)
         return num_events
