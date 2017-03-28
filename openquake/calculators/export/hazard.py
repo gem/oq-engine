@@ -144,11 +144,10 @@ def export_ses_csv(ekey, dstore):
               'strike dip rake boundary').split()
     csm_info = dstore['csm_info']
     grp_trt = csm_info.grp_trt()
-    sm_by_grp = csm_info.get_sm_by_grp()
     rows = []
     for grp_id, trt in sorted(grp_trt.items()):
-        sm = 'sm-%04d' % sm_by_grp[grp_id]
-        etags = build_etags(dstore['events/' + sm])
+        grp = 'grp-%02d' % grp_id
+        etags = build_etags(dstore['events/' + grp])
         dic = groupby(etags, util.get_serial)
         for r in dstore['rup_data/grp-%02d' % grp_id]:
             for etag in dic[r['rupserial']]:
@@ -740,23 +739,23 @@ def export_gmf_txt(key, dest, sitecol, imts, ruptures, rlz,
     return {key: [dest]}
 
 
-def get_sm_id_eid(key):
+def get_grp_id_eid(key):
     """
-    Extracts sm_id and eid from the export key.
+    Extracts grp_id and eid from the export key.
 
-    >>> get_sm_id_eid('gmf:1:2')
+    >>> get_grp_id_eid('gmf:1:2')
     ['1', '2']
-    >>> get_sm_id_eid('gmf:3')
+    >>> get_grp_id_eid('gmf:3')
     ['0', '3']
-    >>> get_sm_id_eid('gmf')
+    >>> get_grp_id_eid('gmf')
     [None, None]
     """
     n = key.count(':')
-    if n == 1:  # passed the eid, sm_id assumed to be zero
+    if n == 1:  # passed the eid, grp_id assumed to be zero
         return ['0', key.split(':')[1]]
-    elif n == 2:  # passed both eid and sm_id
+    elif n == 2:  # passed both eid and grp_id
         return key.split(':')[1:]
-    else:  # eid and sm_id both unspecified, exporting nothing
+    else:  # eid and grp_id both unspecified, exporting nothing
         return [None, None]
 
 
@@ -784,29 +783,31 @@ def export_gmf_data_csv(ekey, dstore):
         return writer.getsaved()
     else:  # event based
         exporter = GmfExporter(dstore)
-        sm_id, eid = get_sm_id_eid(ekey[0])
+        grp_id, eid = get_grp_id_eid(ekey[0])
         if eid in (None, '*'):
             return exporter.export_all()
         else:
-            return exporter.export_one(int(sm_id), int(eid))
+            return exporter.export_one(int(grp_id), int(eid))
 
 
 class GmfExporter(object):
     def __init__(self, dstore):
         self.dstore = dstore
         self.oq = dstore['oqparam']
-        self.rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+        self.rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
         self.sitecol = dstore['sitecol'].complete
 
-    def export_one(self, sm_id, eid):
+    def export_one(self, grp_id, eid):
         fnames = []
+        rlzs = self.rlzs_assoc.realizations
         imts = list(self.oq.imtls)
-        events = self.dstore['events/sm-%04d' % sm_id]
+        events = self.dstore['events/grp-%02d' % grp_id]
+        sm_id = self.rlzs_assoc.sm_ids[grp_id]
         ok_events = events[events['eid'] == eid]
         [etag] = build_etags(ok_events)
         with self.dstore.ext5() as ext5:
             for rlzno in ext5['gmf_data/sm-%04d' % sm_id]:
-                rlz = self.rlzs[int(rlzno)]
+                rlz = rlzs[int(rlzno)]
                 gmfa = ext5['gmf_data/sm-%04d/%s' % (sm_id, rlzno)]
                 gmf = gmfa[gmfa['eid'] == eid]
                 data, comment = _build_csv_data(gmf, rlz, self.sitecol, imts,
@@ -820,13 +821,14 @@ class GmfExporter(object):
 
     def export_all(self):
         fnames = []
+        rlzs = self.rlzs_assoc.realizations
         imts = list(self.oq.imtls)
         with self.dstore.ext5() as ext5:
             for sm_id in ext5['gmf_data']:
                 events = self.dstore['events/' + sm_id]
                 etag = dict(zip(range(len(events)), build_etags(events)))
                 for rlzno in ext5['gmf_data/' + sm_id]:
-                    rlz = self.rlzs[int(rlzno)]
+                    rlz = rlzs[int(rlzno)]
                     gmf = ext5['gmf_data/%s/%s' % (sm_id, rlzno)].value
                     for eid, array in group_array(gmf, 'eid').items():
                         if eid not in etag:
