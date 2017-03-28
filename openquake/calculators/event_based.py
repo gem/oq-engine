@@ -246,7 +246,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
         zd = AccumDict()
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()
-        self.sm_by_grp = self.csm.info.get_sm_by_grp()
         self.grp_trt = self.csm.info.grp_trt()
         return zd
 
@@ -270,12 +269,11 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """Extend the 'events' dataset with the given ruptures"""
         with self.monitor('saving ruptures', autoflush=True):
             for grp_id, ebrs in ruptures_by_grp_id.items():
-                sm_id = self.sm_by_grp[grp_id]
                 if self.oqparam.save_ruptures:
                     self.rupser.save(ebrs)
                 events = get_events(ebrs)
                 if len(events):
-                    ev = 'events/sm-%04d' % sm_id
+                    ev = 'events/grp-%02d' % grp_id
                     self.datastore.extend(ev, events)
 
             # save rup_data
