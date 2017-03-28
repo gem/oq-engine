@@ -556,6 +556,9 @@ class RuptureSerializer(object):
         ('hypo', point3d), ('sx', U8), ('sy', U8), ('sz', U8),
         ('points', h5py.special_dtype(vlen=point3d)),
         ])
+    pmfs_dt = numpy.dtype([
+        ('serial', U32), ('pmf', h5py.special_dtype(vlen=F32)),
+    ])
 
     def __init__(self, datastore):
         self.datastore = datastore
@@ -566,6 +569,8 @@ class RuptureSerializer(object):
         """
         Collect the ruptures and a set of site IDs tuples.
         """
+        nbytes = 0
+        pmfs = []
         # set the reference to the sids (sidx) correctly
         for ebr in ebruptures:
             sids_tup = tuple(ebr.sids)
@@ -575,9 +580,22 @@ class RuptureSerializer(object):
                 ebr.sidx = self.sids[sids_tup] = len(self.sids)
                 self.data.append(ebr.sids)
 
+            rup = ebr.rupture
+            if hasattr(rup, 'pmf'):
+                pmfs.append((ebr.serial, rup.pmf))
+                nbytes += 4 + rup.pmf.nbytes
+
         # store the ruptures in a compact format
         array = numpy.array([self._tuple(ebr) for ebr in ebruptures], self.dt)
         self.datastore.extend('ruptures/grp-%02d' % ebr.grp_id, array)
+        if pmfs:
+            self.datastore.extend('pmfs/grp-%02d' % ebr.grp_id,
+                                  numpy.array(pmfs, self.pmfs_dt))
+            dset = self.datastore.getitem('pmfs/grp-%02d' % ebr.grp_id)
+            if 'nbytes' in dset.attrs:
+                dset.attrs['nbytes'] += nbytes
+            else:
+                dset.attrs['nbytes'] = nbytes
         self.datastore.flush()
 
     def _tuple(self, ebrupture):
@@ -585,9 +603,9 @@ class RuptureSerializer(object):
         mesh = surface_to_mesh(rup.surface)
         sx, sy, sz = mesh.shape
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
+        rate = getattr(rup, 'occurrence_rate', numpy.nan)
         return (ebrupture.serial, rup.code, ebrupture.sidx, rup.seed,
-                rup.mag, rup.rake, rup.occurrence_rate, hypo, sx, sy, sz,
-                mesh.flatten())
+                rup.mag, rup.rake, rate, hypo, sx, sy, sz, mesh.flatten())
 
     def close(self):
         """
