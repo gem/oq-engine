@@ -185,7 +185,7 @@ def _build_eb_ruptures(
             yield calc.EBRupture(
                 rup, r_sites.indices,
                 numpy.array(events, calc.event_dt),
-                src.source_id, src.src_group_id, serial)
+                src.src_group_id, serial)
 
 
 def _count(ruptures):
