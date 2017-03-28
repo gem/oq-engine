@@ -710,7 +710,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                     if events:
                         evs = numpy.array(events, calc.event_dt)
                         ebruptures.append(
-                            calc.EBRupture(rup, indices, evs, src.source_id,
+                            calc.EBRupture(rup, indices, evs,
                                            src.src_group_id, serial))
                         serial += 1
     res.num_events = event_based.set_eids(
@@ -776,6 +776,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         self.sm_by_grp = self.csm.info.get_sm_by_grp()
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
+        self.rupser = calc.RuptureSerializer(self.datastore)
 
     def gen_args(self, csm, monitor):
         """
