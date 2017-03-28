@@ -19,6 +19,7 @@
 """
 Module :mod:`openquake.hazardlib.geo.polygon` defines :class:`Polygon`.
 """
+import re
 import numpy
 import shapely.geometry
 
@@ -79,6 +80,48 @@ class Polygon(object):
         pairs.append(pairs[0])
 
         return 'POLYGON((%s))' % ', '.join(pairs)
+
+    @classmethod
+    def _from_wkt(cls, wkt_string):
+        """
+        Create a polygon object from a WKT (Well-Known Text) string.
+
+        :param wkt_string:
+            A standard WKT string, either a simple or a composite polygon
+        :returns:
+            New :class:`Polygon` object. 
+        """
+        # Avoid calling class' constructor
+        polygon = object.__new__(cls)
+
+        if type(wkt_string) != str:
+            raise ValueError('input is not a WKT string')
+        if wkt_string[0:7] != 'POLYGON':
+            raise ValueError('input string is not a WKT polygon')
+
+        # Extract polygon groups (if composite polygon)
+        wkt_string = wkt_string.split('((')[1]
+        wkt_string = wkt_string.split('))')[0]
+        wkt_string = wkt_string.split('),(')
+
+        # Extract lat/lon coordinates from polygon groups
+        lons = []
+        lats = []
+        for wkt_group in wkt_string:
+            wkt_array = wkt_group.split(',')
+            # Note: last element of is redundant (closed polygon)
+            # and thus it is removed from the array
+            for wkt_point in wkt_array[:-1]:
+                point = re.split(' +', wkt_point)
+                lons.append(float(point[0]))
+                lats.append(float(point[1]))
+
+        # Fill the polygon object
+        polygon.lons = numpy.array(lons)
+        polygon.lats = numpy.array(lats)
+        polygon._projection = None
+        polygon._polygon2d = None
+        return polygon
 
     @classmethod
     def _from_2d(cls, polygon2d, proj):

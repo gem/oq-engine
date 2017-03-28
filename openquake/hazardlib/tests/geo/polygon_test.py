@@ -288,6 +288,15 @@ class PolygonEdgesTestCase(unittest.TestCase):
 
         self.assertTrue(self.poly.intersects(mesh).all())
 
+class PolygonFromWktTestCase(unittest.TestCase):
+    def test(self):
+        wkt_string = 'POLYGON((22. -15.,24. -15.,24. -10.,22. -15.))'
+        poly = polygon.Polygon._from_wkt(wkt_string)
+        self.assertEqual(list(poly.lats), [-15, -15, -10])
+        self.assertEqual(list(poly.lons), [22, 24, 24])
+        self.assertEqual(poly.lats.dtype, 'float')
+        self.assertEqual(poly.lons.dtype, 'float')
+        self.assertTrue(poly.wkt != '')
 
 class PolygonFrom2dTestCase(unittest.TestCase):
     def test(self):
