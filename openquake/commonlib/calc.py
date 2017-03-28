@@ -19,6 +19,7 @@
 from __future__ import division
 import logging
 import numpy
+import h5py
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import encode, decode
@@ -49,6 +50,8 @@ event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('occ', U32),
 stored_event_dt = numpy.dtype([
     ('eid', U64), ('rupserial', U32), ('year', U32),
     ('ses', U32), ('occ', U32), ('sample', U32), ('grp_id', U16)])
+
+sids_dt = h5py.special_dtype(vlen=U32)
 
 BaseRupture.init()  # initialize rupture codes
 
@@ -469,11 +472,10 @@ class EBRupture(object):
               'source_class', 'pmf', 'occurrence_rate',
               'time_span', 'rupture_slip_direction']
 
-    def __init__(self, rupture, sids, events, source_id, grp_id, serial):
+    def __init__(self, rupture, sids, events, grp_id, serial):
         self.rupture = rupture
         self.sids = sids
         self.events = events
-        self.source_id = source_id
         self.grp_id = grp_id
         self.serial = serial
 
@@ -549,8 +551,7 @@ class EBRupture(object):
 
     def __toh5__(self):
         rup = self.rupture
-        attrs = dict(source_id=self.source_id, grp_id=self.grp_id,
-                     serial=self.serial)
+        attrs = dict(grp_id=self.grp_id, serial=self.serial)
         for par in self.params:
             val = getattr(self.rupture, par, None)
             if val is not None:
@@ -568,12 +569,12 @@ class EBRupture(object):
         else:
             attrs['mesh_spacing'] = getattr(surface, 'mesh_spacing', numpy.nan)
         mesh = surface_to_mesh(surface)
-        attrs['nbytes'] = self.sids.nbytes + self.events.nbytes + mesh.nbytes
-        return dict(sids=self.sids, events=self.events, mesh=mesh), attrs
+        attrs['nbytes'] = self.events.nbytes + mesh.nbytes
+        attrs['sidx'] = self.sidx
+        return dict(events=self.events, mesh=mesh), attrs
 
     def __fromh5__(self, dic, attrs):
         attrs = dict(attrs)
-        self.sids = dic['sids'].value
         self.events = dic['events'].value
         rupture_cls, surface_cls, source_cls = BaseRupture.types[attrs['code']]
         self.rupture = object.__new__(rupture_cls)
@@ -601,9 +602,9 @@ class EBRupture(object):
         self.rupture.rupture_slip_direction = None
         self.rupture.hypocenter = Point(*attrs.pop('hypo'))
         self.rupture.source_typology = source_cls
-        self.source_id = attrs.pop('source_id')
         self.grp_id = attrs.pop('grp_id')
         self.serial = attrs.pop('serial')
+        self.sidx = attrs.pop('sidx')
         del attrs['code']
         vars(self.rupture).update(attrs)
 
@@ -613,3 +614,44 @@ class EBRupture(object):
     def __repr__(self):
         return '<%s #%d, grp_id=%d>' % (self.__class__.__name__,
                                         self.serial, self.grp_id)
+
+
+class RuptureSerializer(object):
+    """
+    Serialize event based ruptures on an HDF5 files. Populate the datasets
+    `ruptures` and `sids`.
+    """
+    def __init__(self, datastore):
+        self.datastore = datastore
+        self.sids = {}  # dictionary sids -> sidx
+        self.data = []
+
+    def save(self, ebruptures):
+        """
+        Collect the ruptures and a set of site IDs tuples.
+        """
+        for ebr in ebruptures:
+            sids_tup = tuple(ebr.sids)
+            try:
+                ebr.sidx = self.sids[sids_tup]
+            except KeyError:
+                ebr.sidx = self.sids[sids_tup] = len(self.sids)
+                self.data.append(ebr.sids)
+            key = 'ruptures/grp-%02d/%s' % (ebr.grp_id, ebr.serial)
+            self.datastore[key] = ebr
+        self.datastore.flush()
+
+    def close(self):
+        """
+        Flush the ruptures and the site IDs on the datastore
+        """
+        self.sids.clear()
+        dset = self.datastore.create_dset(
+            'sids', sids_dt, (len(self.data),), fillvalue=None)
+        nbytes = 0
+        for i, val in enumerate(self.data):
+            dset[i] = val
+            nbytes += val.nbytes
+        self.datastore.set_attrs('sids', nbytes=nbytes)
+        self.datastore.flush()
+        del self.data[:]

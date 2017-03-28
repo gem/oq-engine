@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized the serialization of ruptures on HDF5 by using a `sids` output
   * Changed the Web UI button from "Run Risk" to "Continue"
   * The `avg` field in the loss curves is computed as the integral of the curve
     again, and it is not extracted from the avg_losses output anymore

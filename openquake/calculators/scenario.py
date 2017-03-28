@@ -57,7 +57,9 @@ class ScenarioCalculator(base.HazardCalculator):
              for eid in range(oq.number_of_ground_motion_fields)],
             calc.event_dt)
         rupture = calc.EBRupture(
-            rup, self.sitecol.sids, events, 'single_rupture', 0, 0)
+            rup, self.sitecol.sids, events, 0, 0)
+        rupture.sidx = 0
+        self.datastore['sids'] = self.sitecol.sids
         self.datastore['ruptures/grp-00/0'] = rupture
         self.computer = GmfComputer(
             rupture, self.sitecol, oq.imtls, self.gsims,
