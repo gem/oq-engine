@@ -67,7 +67,7 @@ def extend(dset, array):
     dset[length:newlength] = array
 
 
-def extend3(hdf5path, key, array):
+def extend3(hdf5path, key, array, **attrs):
     """
     Extend an HDF5 file dataset with the given array
     """
@@ -78,6 +78,8 @@ def extend3(hdf5path, key, array):
             dset = create(h5, key, array.dtype,
                           shape=(None,) + array.shape[1:])
         extend(dset, array)
+        for key, val in attrs.items():
+            dset.attrs[key] = val
         h5.flush()
 
 
@@ -202,6 +204,43 @@ def dotname2cls(dotname):
     return getattr(importlib.import_module(modname), clsname)
 
 
+def get_nbytes(dset):
+    """
+    If the dataset has an attribute 'nbytes', return it. Otherwise get the size
+    of the underlying array. Returns None if the dataset is actually a group.
+    """
+    if 'nbytes' in dset.attrs:
+        # look if the dataset has an attribute nbytes
+        return dset.attrs['nbytes']
+    elif hasattr(dset, 'value'):
+        # else extract nbytes from the underlying array
+        return dset.size * numpy.zeros(1, dset.dtype).nbytes
+
+
+class ByteCounter(object):
+    """
+    A visitor used to measure the dimensions of a HDF5 dataset or group.
+    Use it as ByteCounter.get_nbytes(dset_or_group).
+    """
+    @classmethod
+    def get_nbytes(cls, dset):
+        nbytes = get_nbytes(dset)
+        if nbytes is not None:
+            return nbytes
+        # else dip in the tree
+        self = cls()
+        dset.visititems(self)
+        return self.nbytes
+
+    def __init__(self, nbytes=0):
+        self.nbytes = nbytes
+
+    def __call__(self, name, dset_or_group):
+        nbytes = get_nbytes(dset_or_group)
+        if nbytes:
+            self.nbytes += nbytes
+
+
 class File(h5py.File):
     """
     Subclass of :class:`h5py.File` able to store and retrieve objects
@@ -266,6 +305,17 @@ class File(h5py.File):
             return obj
         else:
             return h5obj
+
+    def set_nbytes(self, key, nbytes=None):
+        """
+        Set the `nbytes` attribute on the HDF5 object identified by `key`.
+        """
+        obj = super(File, self).__getitem__(key)
+        if nbytes is not None:  # size set from outside
+            obj.attrs['nbytes'] = nbytes
+        else:  # recursively determine the size of the datagroup
+            obj.attrs['nbytes'] = nbytes = ByteCounter.get_nbytes(obj)
+        return nbytes
 
     def save(self, nodedict, root=''):
         """

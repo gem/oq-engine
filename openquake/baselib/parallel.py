@@ -484,13 +484,15 @@ class Computer(object):
 
     def run(self, *args, **kw):
         """
-        Run the computer with the given arguments; one specify extra arguments
-        `acc` and `Starmap`.
+        Run the computer with the given arguments; one can specify the extra
+        arguments `acc` and `Starmap`.
         """
         acc = kw.get('acc')
         starmap = kw.get('Starmap', Starmap)
         wakeup_pool()  # if not already started
-        return starmap(self, self.gen_args(*args)).reduce(self.aggregate, acc)
+        with self.monitor('complete runtime', measuremem=True, autoflush=True):
+            return starmap(self, self.gen_args(*args)).reduce(
+                self.aggregate, acc)
 
 
 class Starmap(object):
@@ -661,6 +663,7 @@ class Starmap(object):
             return IterResult([fut], self.name)
 
         if self.distribute == 'qsub':
+            logging.warn('EXPERIMENTAL: sending tasks to the grid engine')
             allargs = list(self.task_args)
             return IterResult(qsub(self.task_func, allargs),
                               self.name, len(allargs), self.progress)
