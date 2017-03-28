@@ -24,13 +24,11 @@ import h5py
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import encode, decode
 from openquake.baselib.general import get_array, group_array
-from openquake.hazardlib.geo.mesh import (
-    RectangularMesh, surface_to_mesh, point3d)
+from openquake.hazardlib.geo.mesh import surface_to_mesh, point3d
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, tom, calc
-from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.probability_map import ProbabilityMap, get_shape
 from openquake.commonlib import readinput, util
 
@@ -469,11 +467,10 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the tags of the corresponding seismic events.
     """
-    def __init__(self, rupture, sids, events, source_id, grp_id, serial):
+    def __init__(self, rupture, sids, events, grp_id, serial):
         self.rupture = rupture
         self.sids = sids
         self.events = events
-        self.source_id = source_id
         self.grp_id = grp_id
         self.serial = serial
 
@@ -556,8 +553,8 @@ class RuptureSerializer(object):
     dt = numpy.dtype([
         ('serial', U32), ('code', U8), ('sidx', U32), ('seed', U32),
         ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
-        ('hypo', point3d), ('points', h5py.special_dtype(vlen=point3d)),
-        ('sx', U8), ('sy', U8), ('sz', U8),
+        ('hypo', point3d), ('sx', U8), ('sy', U8), ('sz', U8),
+        ('points', h5py.special_dtype(vlen=point3d)),
         ])
 
     def __init__(self, datastore):
@@ -589,7 +586,8 @@ class RuptureSerializer(object):
         sx, sy, sz = mesh.shape
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         return (ebrupture.serial, rup.code, ebrupture.sidx, rup.seed,
-                rup.mag, rup.rake, rup.occurrence_rate, hypo, mesh, sx, sy, sz)
+                rup.mag, rup.rake, rup.occurrence_rate, hypo, sx, sy, sz,
+                mesh.flatten())
 
     def close(self):
         """
