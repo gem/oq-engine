@@ -20,7 +20,6 @@ import os
 import re
 import logging
 import unittest
-import platform
 
 import numpy
 

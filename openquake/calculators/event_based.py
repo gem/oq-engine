@@ -187,7 +187,7 @@ def _build_eb_ruptures(
             yield calc.EBRupture(
                 rup, r_sites.indices,
                 numpy.array(events, calc.event_dt),
-                src.source_id, src.src_group_id, serial)
+                src.src_group_id, serial)
 
 
 def _count(ruptures):
@@ -423,8 +423,7 @@ def get_ruptures(dstore, grp_id):
             rupture.surface.mesh = RectangularMesh(
                 m['lon'], m['lat'], m['depth'])
         sids = dstore['sids'][rec.sidx]
-        ebr = calc.EBRupture(
-            rupture, sids, events, source_id, grp_id, rec.serial)
+        ebr = calc.EBRupture(rupture, sids, events, grp_id, rec.serial)
         yield ebr
 
 
