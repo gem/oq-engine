@@ -653,7 +653,6 @@ def get_ruptures(dstore, grp_id):
     Extracts the ruptures of the given grp_id
     """
     oq = dstore['oqparam']
-    mesh_spacing = oq.rupture_mesh_spacing
     # oq.complex_fault_mesh_spacing
     trt = dstore['csm_info'].grp_trt()[grp_id]
     grp = 'grp-%02d' % grp_id
@@ -663,16 +662,21 @@ def get_ruptures(dstore, grp_id):
         rupture_cls, surface_cls, source_cls = BaseRupture.types[rec['code']]
         rupture = object.__new__(rupture_cls)
         rupture.surface = object.__new__(surface_cls)
+        # MISSING: test with complex_fault_mesh_spacing != rupture_mesh_spacing
+        if 'Complex' in surface_cls.__name__:
+            mesh_spacing = oq.complex_fault_mesh_spacing
+        else:
+            mesh_spacing = oq.rupture_mesh_spacing
         rupture.source_typology = source_cls
         rupture.mag = rec['mag']
         rupture.rake = rec['rake']
         rupture.seed = rec['seed']
         rupture.hypocenter = geo.Point(*rec['hypo'])
         rupture.occurrence_rate = rec['occurrence_rate']
+        rupture.tectonic_region_type = trt
         pmfx = rec['pmfx']
         if pmfx != -1:
             rupture.pmf = dstore['pmfs/' + grp][pmfx]
-        rupture.tectonic_region_type = trt
         if surface_cls is geo.PlanarSurface:
             rupture.surface = geo.PlanarSurface.from_array(
                 mesh_spacing, rec['points'])
@@ -688,4 +692,5 @@ def get_ruptures(dstore, grp_id):
         sids = dstore['sids'][rec['sidx']]
         evs = events[rec['eidx1']:rec['eidx2']]
         ebr = EBRupture(rupture, sids, evs, grp_id, rec['serial'])
+        # not implemented: rupture_slip_direction
         yield ebr
