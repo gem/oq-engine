@@ -555,7 +555,7 @@ class RuptureSerializer(object):
     """
     dt = numpy.dtype([
         ('serial', U32), ('code', U8), ('sidx', U32),
-        ('eidx1', U32), ('eidx2', U32), ('seed', U32),
+        ('eidx1', U32), ('eidx2', U32), ('pmfx', U32), ('seed', U32),
         ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
         ('hypo', point3d), ('sx', U8), ('sy', U8), ('sz', U8),
         ('points', h5py.special_dtype(vlen=point3d)),
@@ -578,8 +578,10 @@ class RuptureSerializer(object):
             hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
             rate = getattr(rup, 'occurrence_rate', numpy.nan)
             tup = (ebrupture.serial, rup.code, ebrupture.sidx,
-                   ebrupture.eidx1, ebrupture.eidx2, rup.seed,
-                   rup.mag, rup.rake, rate, hypo, sx, sy, sz, mesh.flatten())
+                   ebrupture.eidx1, ebrupture.eidx2,
+                   getattr(ebrupture, 'pmfx', 0),
+                   rup.seed, rup.mag, rup.rake, rate, hypo,
+                   sx, sy, sz, mesh.flatten())
             lst.append(tup)
         return numpy.array(lst, cls.dt)
 
@@ -596,7 +598,6 @@ class RuptureSerializer(object):
         :param offset: the last event index saved
         """
         nbytes = 0
-        pmfs = []
         # set the reference to the sids (sidx) correctly
         for ebr in ebruptures:
             mul = ebr.multiplicity
@@ -612,16 +613,16 @@ class RuptureSerializer(object):
 
             rup = ebr.rupture
             if hasattr(rup, 'pmf'):
-                pmfs.append((ebr.serial, rup.pmf))
+                pmfs = numpy.array([(ebr.serial, rup.pmf)], self.pmfs_dt)
+                dset = self.datastore.extend(
+                    'pmfs/grp-%02d' % ebr.grp_id, pmfs)
+                ebr.pmfx = len(dset) - 1
                 nbytes += 4 + rup.pmf.nbytes
 
         # store the ruptures in a compact format
         self.datastore.extend('ruptures/grp-%02d' % ebr.grp_id,
                               self.array(ebruptures))
         if pmfs:
-            dset = self.datastore.extend('pmfs/grp-%02d' % ebr.grp_id,
-                                         numpy.array(pmfs, self.pmfs_dt))
-            dset = self.datastore.getitem('pmfs/grp-%02d' % ebr.grp_id)
             if 'nbytes' in dset.attrs:
                 dset.attrs['nbytes'] += nbytes
             else:
@@ -664,6 +665,7 @@ def get_ruptures(dstore, grp_id):
         rupture.seed = rec['seed']
         rupture.hypocenter = tuple(rec['hypo'])
         rupture.occurrence_rate = rec['occurrence_rate']
+        rupture.pmfx = rec['pmfx']
         rupture.tectonic_region_type = trt
         if surface_cls is geo.PlanarSurface:
             rupture.surface = geo.PlanarSurface.from_array(
