@@ -203,7 +203,7 @@ def get_events(ebruptures):
     for ebr in ebruptures:
         for event in ebr.events:
             rec = (event['eid'], ebr.serial, year, event['ses'], event['occ'],
-                   event['sample'], ebr.grp_id)
+                   event['sample'])
             events.append(rec)
     return numpy.array(events, calc.stored_event_dt)
 
