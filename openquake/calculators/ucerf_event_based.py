@@ -710,7 +710,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
                     if events:
                         evs = numpy.array(events, calc.event_dt)
                         ebruptures.append(
-                            calc.EBRupture(rup, indices, evs, src.source_id,
+                            calc.EBRupture(rup, indices, evs,
                                            src.src_group_id, serial))
                         serial += 1
     res.num_events = event_based.set_eids(
@@ -776,6 +776,7 @@ class UCERFRuptureCalculator(event_based.EventBasedRuptureCalculator):
         self.sm_by_grp = self.csm.info.get_sm_by_grp()
         if not self.oqparam.imtls:
             raise ValueError('Missing intensity_measure_types!')
+        self.rupser = calc.RuptureSerializer(self.datastore)
 
     def gen_args(self, csm, monitor):
         """
@@ -831,7 +832,7 @@ def compute_losses(ssm, ses_seeds, src_filter, assetcol, riskmodel,
     num_rlzs = len(rlzs_assoc.realizations)
     rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
     getter = riskinput.GmfGetter(
-        rlzs_by_gsim, ebruptures, src_filter.sitecol, imts, min_iml,
+        grp_id, rlzs_by_gsim, ebruptures, src_filter.sitecol, imts, min_iml,
         trunc_level, correl_model, rlzs_assoc.samples[grp_id])
     ri = riskinput.RiskInputFromRuptures(getter)
     res.append(event_based_risk(ri, riskmodel, assetcol, monitor))

@@ -283,9 +283,7 @@ class PSHACalculator(base.HazardCalculator):
             truncation_level=oq.truncation_level,
             imtls=oq.imtls,
             maximum_distance=oq.maximum_distance,
-            disagg=oq.poes_disagg or oq.iml_disagg,
-            ses_per_logic_tree_path=oq.ses_per_logic_tree_path,
-            seed=oq.ses_seed)
+            disagg=oq.poes_disagg or oq.iml_disagg)
         with self.monitor('managing sources', autoflush=True):
             allargs = self.gen_args(self.csm, monitor)
             iterargs = saving_sources_by_task(allargs, self.datastore)
@@ -324,7 +322,9 @@ class PSHACalculator(base.HazardCalculator):
                 gsims = self.rlzs_assoc.gsims_by_grp_id[sg.id]
                 if oq.poes_disagg or oq.iml_disagg:  # only for disaggregation
                     monitor.sm_id = self.rlzs_assoc.sm_ids[sg.id]
-                param = dict(samples=sm.samples)
+                param = dict(
+                    samples=sm.samples, seed=oq.ses_seed,
+                    ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
                 for block in self.csm.split_sources(
                         sg.sources, self.src_filter, maxweight):
                     yield block, self.src_filter, gsims, param, monitor
