@@ -156,7 +156,7 @@ def export_agg_losses(ekey, dstore):
     """
     agg_losses = dstore[ekey[0]].value
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    etags = build_etags(dstore['events'])
+    etags = build_etags(dstore['events'], 0)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz in rlzs:
         losses = agg_losses[:, rlz.ordinal]
