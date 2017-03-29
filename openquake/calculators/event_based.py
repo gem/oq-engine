@@ -269,13 +269,13 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """Extend the 'events' dataset with the given ruptures"""
         with self.monitor('saving ruptures', autoflush=True):
             for grp_id, ebrs in ruptures_by_grp_id.items():
-                if not ebrs:
-                    continue
-                if self.oqparam.save_ruptures:
-                    self.rupser.save(ebrs)
-                events = get_events(ebrs)
-                ev = 'events/grp-%02d' % grp_id
-                self.datastore.extend(ev, events)
+                if len(ebrs):
+                    events = get_events(ebrs)
+                    dset = self.datastore.extend(
+                        'events/grp-%02d' % grp_id, events)
+                    if self.oqparam.save_ruptures:
+                        initial_eidx = len(dset) - len(events)
+                        self.rupser.save(ebrs, initial_eidx)
 
             # save rup_data
             if hasattr(ruptures_by_grp_id, 'rup_data'):
