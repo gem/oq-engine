@@ -156,7 +156,7 @@ def export_agg_losses(ekey, dstore):
     """
     agg_losses = dstore[ekey[0]].value
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    etags = build_etags(dstore['events'])
+    etags = build_etags(dstore['events'], 0)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz in rlzs:
         losses = agg_losses[:, rlz.ordinal]
@@ -207,7 +207,7 @@ def export_agg_losses_ebr(ekey, dstore):
             losses = data['loss']
             rlz_events = numpy.array([event_by_eid[eid] for eid in eids])
             elt = numpy.zeros(len(eids), elt_dt)
-            elt['event_tag'] = build_etags(rlz_events)
+            elt['event_tag'] = build_etags(rlz_events, grp_id)
             elt['year'] = rlz_events['year']
             if rup_data:
                 copy_to(elt, rup_data, rlz_events['rupserial'])
@@ -246,7 +246,7 @@ def export_all_loss_ratios(ekey, dstore):
     ok_events = events[events['eid'] == eid]
     if len(ok_events) == 0:
         return []
-    [event_tag] = build_etags(ok_events)
+    [event_tag] = build_etags(ok_events, grp_id)
     for rlz in rlzs:
         exportname = 'losses-grp=%02d-eid=%d' % (grp_id, eid)
         dest = dstore.build_fname(exportname, rlz, 'csv')
