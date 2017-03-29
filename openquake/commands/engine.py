@@ -20,6 +20,7 @@ import os
 import sys
 import getpass
 import logging
+import codecs
 from openquake.baselib import sap
 from openquake.commonlib import datastore, config, logs
 from openquake.engine import engine as eng
@@ -27,6 +28,10 @@ from openquake.engine.export import core
 from openquake.engine.utils import confirm
 from openquake.engine.tools.make_html_report import make_report
 from openquake.server import dbserver
+
+# Hack: force utf-8 output on Windows
+if sys.platform == 'win32':
+    sys.stdout = codecs.getwriter('utf8')(sys.stdout)
 
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
