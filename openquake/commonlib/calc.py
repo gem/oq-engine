@@ -474,6 +474,7 @@ class EBRupture(object):
         self.events = events
         self.grp_id = grp_id
         self.serial = serial
+        self.sidx = self.eidx1 = self.eidx2 = None  # to be set when needed
 
     @property
     def weight(self):
@@ -488,9 +489,10 @@ class EBRupture(object):
         An array of tags for the underlying seismic events
         """
         tags = []
-        for (eid, ses, occ, sampleid) in self.events:
+        for ev in self.events:
             tag = 'grp=%02d~ses=%04d~rup=%d-%02d' % (
-                self.grp_id, ses, self.serial, occ)
+                self.grp_id, ev['ses'], self.serial, ev['occ'])
+            sampleid = ev['sample']
             if sampleid > 0:
                 tag += '~sample=%d' % sampleid
             tags.append(encode(tag))
@@ -552,7 +554,8 @@ class RuptureSerializer(object):
     `ruptures` and `sids`.
     """
     dt = numpy.dtype([
-        ('serial', U32), ('code', U8), ('sidx', U32), ('seed', U32),
+        ('serial', U32), ('code', U8), ('sidx', U32),
+        ('eidx1', U32), ('eidx2', U32), ('seed', U32),
         ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
         ('hypo', point3d), ('sx', U8), ('sy', U8), ('sz', U8),
         ('points', h5py.special_dtype(vlen=point3d)),
@@ -566,14 +569,21 @@ class RuptureSerializer(object):
         self.sids = {}  # dictionary sids -> sidx
         self.data = []
 
-    def save(self, ebruptures):
+    def save(self, ebruptures, eidx):
         """
-        Collect the ruptures and a set of site IDs tuples.
+        Populate a dictionary of site IDs tuples and save the ruptures.
+
+        :param ebruptures: a list of EBRupture objects to save
+        :param offset: the last event index saved
         """
         nbytes = 0
         pmfs = []
         # set the reference to the sids (sidx) correctly
         for ebr in ebruptures:
+            mul = ebr.multiplicity
+            ebr.eidx1 = eidx
+            ebr.eidx2 = eidx + mul
+            eidx += mul
             sids_tup = tuple(ebr.sids)
             try:
                 ebr.sidx = self.sids[sids_tup]
@@ -605,7 +615,8 @@ class RuptureSerializer(object):
         sx, sy, sz = mesh.shape
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
-        return (ebrupture.serial, rup.code, ebrupture.sidx, rup.seed,
+        return (ebrupture.serial, rup.code, ebrupture.sidx,
+                ebrupture.eidx1, ebrupture.eidx2, rup.seed,
                 rup.mag, rup.rake, rate, hypo, sx, sy, sz, mesh.flatten())
 
     def close(self):
@@ -654,6 +665,6 @@ def get_ruptures(dstore, grp_id):
             rupture.surface.mesh = RectangularMesh(
                 m['lon'], m['lat'], m['depth'])
         sids = dstore['sids'][rec['sidx']]
-        evs = events[events['serial'] == rec['serial']]
-        ebr = calc.EBRupture(rupture, sids, evs, grp_id, rec['serial'])
+        evs = events[rec['eidx1']:rec['eidx2']]
+        ebr = EBRupture(rupture, sids, evs, grp_id, rec['serial'])
         yield ebr
