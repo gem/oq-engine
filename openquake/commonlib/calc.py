@@ -560,12 +560,13 @@ class RuptureSerializer(object):
         ('hypo', point3d), ('sx', U8), ('sy', U8), ('sz', U8),
         ('points', h5py.special_dtype(vlen=point3d)),
         ])
+
     pmfs_dt = numpy.dtype([
         ('serial', U32), ('pmf', h5py.special_dtype(vlen=F32)),
     ])
 
     @classmethod
-    def to_array(cls, ebruptures):
+    def array(cls, ebruptures):
         """
         Convert a list of EBRuptures into a numpy composite array
         """
@@ -616,10 +617,10 @@ class RuptureSerializer(object):
 
         # store the ruptures in a compact format
         self.datastore.extend('ruptures/grp-%02d' % ebr.grp_id,
-                              self.to_array(ebruptures))
+                              self.array(ebruptures))
         if pmfs:
-            self.datastore.extend('pmfs/grp-%02d' % ebr.grp_id,
-                                  numpy.array(pmfs, self.pmfs_dt))
+            dset = self.datastore.extend('pmfs/grp-%02d' % ebr.grp_id,
+                                         numpy.array(pmfs, self.pmfs_dt))
             dset = self.datastore.getitem('pmfs/grp-%02d' % ebr.grp_id)
             if 'nbytes' in dset.attrs:
                 dset.attrs['nbytes'] += nbytes
