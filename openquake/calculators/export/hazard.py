@@ -68,8 +68,10 @@ def build_etags(events, grp_id):
     An array of tags for the underlying seismic events
     """
     tags = []
-    for eid, serial, year, ses, occ, sampleid in events:
-        tag = 'grp=%02d~ses=%04d~rup=%d-%02d' % (grp_id, ses, serial, occ)
+    for ev in events:
+        tag = 'grp=%02d~ses=%04d~rup=%d-%02d' % (
+            grp_id, ev['ses'], ev['rupserial'], ev['occ'])
+        sampleid = ev['sample']
         if sampleid > 0:
             tag += '~sample=%d' % sampleid
         tags.append(tag)
@@ -138,7 +140,7 @@ def export_ses_csv(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    if 'events' not in dstore:  # scenario
+    if 'rup_data' not in dstore:  # scenario
         return []
     dest = dstore.export_path('ruptures.csv')
     header = ('id mag centroid_lon centroid_lat centroid_depth trt '
