@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2016 GEM Foundation
+# Copyright (C) 2010-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,6 +27,7 @@ with attributes `value`, `weight`, `lt_path` and `ordinal`.
 import os
 import re
 import sys
+import copy
 import random
 import itertools
 import collections
@@ -34,19 +35,18 @@ import operator
 from collections import namedtuple
 from decimal import Decimal
 
+from openquake.baselib import node
 from openquake.baselib.general import groupby
 from openquake.baselib.python3compat import raise_
 import openquake.hazardlib
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.gsim_table import GMPETable
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import geo
-from openquake.risklib import valid
-from openquake.commonlib import nrml, writers
-from openquake.commonlib.sourceconverter import (
+from openquake.hazardlib import geo, valid, nrml
+from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 
-from openquake.commonlib.node import (
+from openquake.baselib.node import (
     node_from_xml, striptag, node_from_elem, Node as N, context)
 
 #: Minimum value for a seed number
@@ -54,6 +54,44 @@ MIN_SINT_32 = -(2 ** 31)
 #: Maximum value for a seed number
 MAX_SINT_32 = (2 ** 31) - 1
 
+
+class SourceModel(object):
+    """
+    A container of SourceGroup instances with some additional attributes
+    describing the source model in the logic tree.
+    """
+    def __init__(self, name, weight, path, src_groups, num_gsim_paths, ordinal,
+                 samples):
+        self.name = name
+        self.weight = weight
+        self.path = path
+        self.src_groups = src_groups
+        self.num_gsim_paths = num_gsim_paths
+        self.ordinal = ordinal
+        self.samples = samples
+
+    @property
+    def num_sources(self):
+        return sum(len(sg) for sg in self.src_groups)
+
+    def get_skeleton(self):
+        """
+        Return an empty copy of the source model, i.e. without sources,
+        but with the proper attributes for each SourceGroup contained within.
+        """
+        src_groups = []
+        for grp in self.src_groups:
+            sg = copy.copy(grp)
+            sg.sources = []
+            src_groups.append(sg)
+        return self.__class__(self.name, self.weight, self.path, src_groups,
+                              self.num_gsim_paths, self.ordinal, self.samples)
+
+    def __repr__(self):
+        samples = ', samples=%d' % self.samples if self.samples > 1 else ''
+        return '<%s #%d %s, path=%s, weight=%s%s>' % (
+            self.__class__.__name__, self.ordinal, self.name,
+            '_'.join(self.path), self.weight, samples)
 
 Realization = namedtuple('Realization', 'value weight lt_path ordinal lt_uid')
 Realization.uid = property(lambda self: '_'.join(self.lt_uid))  # unique ID
@@ -446,7 +484,7 @@ class SourceModelLogicTree(object):
         root = nrml.read(filename)
         try:
             tree = root.logicTree
-        except NameError:
+        except AttributeError:
             raise ValidationError(
                 root, self.filename, "missing logicTree node")
         self.parse_tree(tree, validate)
@@ -555,15 +593,27 @@ class SourceModelLogicTree(object):
             if branch_id in self.branches:
                 raise ValidationError(
                     branchnode, self.filename,
-                    "branchID '%s' is not unique" % branch_id
-                )
+                    "branchID '%s' is not unique" % branch_id)
             self.branches[branch_id] = branch
             branchset.branches.append(branch)
         if weight_sum != 1.0:
             raise ValidationError(
                 branchset_node, self.filename,
-                "branchset weights don't sum up to 1.0"
-            )
+                "branchset weights don't sum up to 1.0")
+
+    def gen_source_models(self, gsim_lt):
+        """
+        Yield empty SourceModel instances (one per effective realization)
+        """
+        samples_by_lt_path = self.samples_by_lt_path()
+        for i, rlz in enumerate(get_effective_rlzs(self)):
+            smpath = rlz.lt_path
+            num_samples = samples_by_lt_path[smpath]
+            num_gsim_paths = (num_samples if self.num_samples
+                              else gsim_lt.get_num_paths())
+            yield SourceModel(
+                rlz.value, rlz.weight / num_samples, smpath, [],
+                num_gsim_paths, i, num_samples)
 
     def sample_path(self, rnd):
         """
@@ -1072,7 +1122,7 @@ class GsimLogicTree(object):
         a sequence of distinct tectonic region types
     :param ltnode:
         usually None, but it can also be a
-        :class:`openquake.commonlib.nrml.Node` object describing the
+        :class:`openquake.hazardlib.nrml.Node` object describing the
         GSIM logic tree XML file, to avoid reparsing it
     """
     @classmethod
@@ -1131,7 +1181,7 @@ class GsimLogicTree(object):
         """
         :returns: an XML string representing the logic tree
         """
-        return writers.tostring(self._ltnode).decode('utf-8')
+        return nrml.convert(self._ltnode)
 
     def reduce(self, trts):
         """

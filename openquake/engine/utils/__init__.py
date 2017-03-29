@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2016 GEM Foundation
+# Copyright (C) 2012-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,6 +25,11 @@ HARD_MEM_LIMIT = int(config.get('memory', 'hard_mem_limit'))
 
 parallel.check_mem_usage.__defaults__ = (
     Monitor(), SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
+
+try:
+    raw_input
+except NameError:  # Python 3
+    raw_input = input
 
 
 def confirm(prompt):

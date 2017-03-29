@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from openquake.baselib import sap
-from openquake.commonlib.node import node_from_xml
+from openquake.baselib.node import node_from_xml
 
 @sap.Script
 def print_slowest(xunit_fname, numtests=20):

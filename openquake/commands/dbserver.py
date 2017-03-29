@@ -16,15 +16,15 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import sys
-from openquake.risklib import valid
+from openquake.hazardlib import valid
 from openquake.baselib import sap
-from openquake.engine import logs
+from openquake.commonlib import logs
 from openquake.commonlib import config
 from openquake.server import dbserver as dbs
 
 
 @sap.Script
-def dbserver(cmd):
+def dbserver(cmd, dbhostport=None, dbpath=None):
     """
     start/stop/restart the database server, or return its status
     """
@@ -42,14 +42,16 @@ def dbserver(cmd):
             print('dbserver already stopped')
     elif cmd == 'start':
         if status == 'not-running':
-            dbs.run_server()
+            dbs.run_server(dbhostport, dbpath)
         else:
             print('dbserver already running')
     elif cmd == 'restart':
         if status == 'running':
             logs.dbcmd('stop')
             print('dbserver stopped')
-        dbs.run_server()
+        dbs.run_server(dbhostport, dbpath)
 
 dbserver.arg('cmd', 'dbserver command',
              choices='start stop status restart'.split())
+dbserver.arg('dbhostport', 'dbhost:port')
+dbserver.arg('dbpath', 'dbpath')

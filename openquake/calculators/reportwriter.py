@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,6 +30,7 @@ import time
 from openquake.baselib import parallel
 from openquake.baselib.general import humansize, AccumDict
 from openquake.baselib.python3compat import encode
+from openquake.hazardlib.calc.filters import FarAwayRupture
 from openquake.commonlib import readinput
 from openquake.calculators.classical import PSHACalculator
 from openquake.calculators import views
@@ -39,16 +40,29 @@ def indent(text):
     return '  ' + '\n  '.join(text.splitlines())
 
 
-def count_eff_ruptures(sources, sitecol, gsims, monitor):
+def count_eff_ruptures(sources, srcfilter, gsims, param, monitor):
     """
-    Count the number of ruptures contained in the given sources and return
-    a dictionary src_group_id -> num_ruptures. All sources belong to the
-    same tectonic region type.
+    Count the effective number of ruptures contained in the given sources
+    within the integration distance and return a dictionary src_group_id ->
+    num_ruptures. All sources must belong to the same tectonic region type.
     """
     acc = AccumDict()
     acc.grp_id = sources[0].src_group_id
     acc.calc_times = []
-    acc.eff_ruptures = {acc.grp_id: sum(src.num_ruptures for src in sources)}
+    idist = srcfilter.integration_distance
+    count = 0
+    for src in sources:
+        sites = srcfilter.get_close_sites(src)
+        if sites is not None:
+            for i, rup in enumerate(src.iter_ruptures()):
+                rup.serial = src.serial[i]  # added for debugging purposes
+                try:
+                    idist.get_closest(sites, rup)
+                except FarAwayRupture:
+                    continue
+                else:
+                    count += 1
+    acc.eff_ruptures = {acc.grp_id: count}
     return acc
 
 
@@ -79,10 +93,11 @@ class ReportWriter(object):
         self.dstore = dstore
         self.oq = oq = dstore['oqparam']
         self.text = (decode(oq.description) + '\n' + '=' * len(oq.description))
-        info = dstore['job_info']
+        info = {decode(k): decode(v)
+                for k, v in dict(dstore['job_info']).items()}
         dpath = dstore.hdf5path
         mtime = os.path.getmtime(dpath)
-        host = '%s:%s' % (info.hostname, decode(dpath))
+        host = '%s:%s' % (info['hostname'], decode(dpath))
         updated = str(time.ctime(mtime))
         versions = sorted(dstore['/'].attrs.items())
         self.text += '\n\n' + views.rst_table([[host, updated]] + versions)
@@ -117,7 +132,7 @@ class ReportWriter(object):
             self.add('ruptures_per_trt')
         if 'scenario' not in oq.calculation_mode:
             self.add('job_info')
-        if 'events' in ds:
+        if 'rup_data' in ds:
             self.add('ruptures_events')
         if oq.calculation_mode in ('event_based_risk',):
             self.add('avglosses_data_transfer')
@@ -159,6 +174,10 @@ def build_report(job_ini, output_dir=None):
     # some taken is care so that the real calculation is not run:
     # the goal is to extract information about the source management only
     with mock.patch.object(PSHACalculator, 'core_task', count_eff_ruptures):
+        PSHACalculator.is_stochastic = True  # to call .init_serials()
+        if calc.pre_calculator == 'ebrisk':
+            # compute the ruptures only, not the risk
+            calc.pre_calculator = 'event_based_rupture'
         calc.pre_execute()
     if hasattr(calc, '_composite_source_model'):
         calc.datastore['csm_info'] = calc.csm.info

@@ -57,6 +57,8 @@ The output should look something like this:
    3 | uhs
 ```
 
+To interrupt a running calculation simply press `CTRL-C` twice and close the command prompt window.
+
 ## More commands
 For a list of additional commands, type `oq engine --help`.
 

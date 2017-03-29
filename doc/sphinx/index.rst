@@ -15,13 +15,14 @@ Contents:
    effective-realizations
    event-based-with-large-logic-tree
    how-to-change-the-XML-for-sources
-
+   internals
+              
    openquake.risklib
    openquake.commonlib
    openquake.calculators           
    openquake.engine
    openquake.server
-
+   openquake.commands
 
 Indices and tables
 ==================

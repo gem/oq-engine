@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -189,9 +189,6 @@ class RunShowExportTestCase(unittest.TestCase):
         self.assertIn('See the output with hdfview', str(self.p))
 
     def test_show_calc(self):
-        # test show all
-        with Print.patch() as p:
-            show('all')
         with Print.patch() as p:
             show('contents', self.calc_id)
         self.assertIn('sitecol', str(p))
@@ -200,6 +197,11 @@ class RunShowExportTestCase(unittest.TestCase):
             show('sitecol', self.calc_id)
         self.assertEqual(str(p), '<SiteCollection with 1 sites>')
 
+        with Print.patch() as p:
+            show('slow_sources', self.calc_id)
+        self.assertIn('grp_id source_id source_class num_ruptures calc_time '
+                      'num_sites num_split', str(p))
+
     def test_show_attrs(self):
         with Print.patch() as p:
             show_attrs('hcurve', self.calc_id)
@@ -207,7 +209,7 @@ class RunShowExportTestCase(unittest.TestCase):
                          self.calc_id, str(p))
         with Print.patch() as p:
             show_attrs('hcurves', self.calc_id)
-        self.assertEqual("nbytes 48", str(p))
+        self.assertEqual("nbytes 24", str(p))
 
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
@@ -286,9 +288,6 @@ class SourceModelShapefileConverterTestCase(unittest.TestCase):
     - more tests will follow
     """
     def setUp(self):
-        if not hasattr(shapefile, '__version__'):
-            # for versions < 1.2.3
-            raise unittest.SkipTest('shapefile library too old')
         self.OUTDIR = tempfile.mkdtemp()
 
     def test_roundtrip_invalid(self):
@@ -320,7 +319,7 @@ class DbTestCase(unittest.TestCase):
     def test_db(self):
         # the some db commands bypassing the dbserver
         with Print.patch(), mock.patch(
-                'openquake.engine.logs.dbcmd', manage.dbcmd):
+                'openquake.commonlib.logs.dbcmd', manage.dbcmd):
             db('version_db')
             try:
                 db('calc_info 1')

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,15 +24,16 @@ from nose.plugins.attrib import attr
 
 import numpy.testing
 
-from openquake.baselib.general import group_array
+from openquake.baselib.general import group_array, writetmp
 from openquake.commonlib.datastore import read
 from openquake.commonlib.util import max_rel_diff_index
+from openquake.calculators.views import rst_table
 from openquake.calculators.export import export
 from openquake.calculators.event_based import get_mean_curves
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
-    blocksize, case_1, case_2, case_4, case_5, case_6, case_7, case_12,
-    case_13, case_17, case_18)
+    blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
+    case_8, case_12, case_13, case_17, case_18)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -90,7 +91,8 @@ class EventBasedTestCase(CalculatorTestCase):
             oq = self.calc.oqparam
             self.assertEqual(list(oq.imtls), ['PGA'])
             dstore = read(self.calc.datastore.calc_id)
-            gmf = group_array(dstore['gmf_data/sm-0000/0000'], 'sid')
+            with dstore.ext5() as ext5:
+                gmf = group_array(ext5['gmf_data/grp-00/0000'], 'sid')
             gmvs_site_0 = gmf[0]['gmv']
             gmvs_site_1 = gmf[1]['gmv']
             joint_prob_0_5 = joint_prob_of_occurrence(
@@ -132,9 +134,12 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
-        [fname] = export(('gmf_data:0', 'csv'), self.calc.datastore)
-        self.assertEqualFiles(
-            'expected/gmf-grp=00~ses=0002~src=1~rup=1-01-rlz-000.csv', fname)
+        [fname] = export(('gmf_data:4294967296', 'csv'),
+                         self.calc.datastore)
+        self.assertEqualFiles('expected/gmf-65536.csv', fname)
+
+        # test that the .npz export runs
+        export(('gmf_data', 'npz'), self.calc.datastore)
 
         [fname] = out['hcurves', 'xml']
         self.assertEqualFiles(
@@ -181,6 +186,13 @@ class EventBasedTestCase(CalculatorTestCase):
             'expected/hc-smltp_b1-gsimltp_b1-ltr_1.csv', ltr[1])
 
     @attr('qa', 'hazard', 'event_based')
+    def test_case_3(self):  # 1 site, 1 rupture, 2 GSIMs
+        out = self.run_calc(case_3.__file__, 'job.ini', exports='txt')
+        [f1, f2] = out['gmf_data', 'txt']
+        self.assertEqualFiles('expected/gmf-rlz-000.txt', f1)
+        self.assertEqualFiles('expected/gmf-rlz-001.txt', f2)
+
+    @attr('qa', 'hazard', 'event_based')
     def test_case_4(self):
         out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
         [fname] = out['hcurves', 'csv']
@@ -219,6 +231,10 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         [fname] = out['realizations', 'csv']
         self.assertEqualFiles('expected/realizations.csv', fname)
 
+        # test for the mean gmv
+        got = writetmp(rst_table(self.calc.datastore['gmdata'].value))
+        self.assertEqualFiles('expected/gmdata.csv', got)
+
     @attr('qa', 'hazard', 'event_based')
     def test_case_7(self):
         # 2 models x 3 GMPEs, 10 samples * 40 SES
@@ -237,6 +253,12 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
             reldiff, _index = max_rel_diff_index(
                 mean_cl[imt], mean_eb[imt], min_value=0.1)
             self.assertLess(reldiff, 0.20)
+
+    @attr('qa', 'hazard', 'event_based')
+    def test_case_8(self):
+        out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
+        [fname] = out['rup_data', 'csv']
+        self.assertEqualFiles('expected/rup_data.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_12(self):

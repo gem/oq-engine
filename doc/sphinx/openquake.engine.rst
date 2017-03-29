@@ -6,22 +6,12 @@ Subpackages
 
 .. toctree::
 
-    openquake.engine.bin
     openquake.engine.export
-    openquake.engine.tests
     openquake.engine.tools
     openquake.engine.utils
 
 Submodules
 ----------
-
-openquake.commonlib.config module
-------------------------------
-
-.. automodule:: openquake.commonlib.config
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 openquake.engine.engine module
 ------------------------------
@@ -30,15 +20,6 @@ openquake.engine.engine module
     :members:
     :undoc-members:
     :show-inheritance:
-
-openquake.engine.logs module
-----------------------------
-
-.. automodule:: openquake.engine.logs
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 
 Module contents
 ---------------

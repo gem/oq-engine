@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,9 +26,13 @@ from io import BytesIO, StringIO
 
 from numpy.testing import assert_allclose
 
-from openquake.risklib import valid
-from openquake.commonlib import readinput, writers
 from openquake.baselib import general
+from openquake.hazardlib import valid
+from openquake.risklib.riskinput import ValidationError
+from openquake.commonlib import readinput, writers
+from openquake.qa_tests_data.classical import case_1, case_2
+from openquake.qa_tests_data.event_based_risk import case_caracas
+
 
 TMP = tempfile.gettempdir()
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
@@ -71,7 +75,7 @@ export_dir = %s
                 'maximum_distance': {'default': 1},
                 'inputs': {'job_ini': job_config,
                            'site_model': site_model_input},
-                'sites': [(0.0, 0.0)],
+                'sites': [(0.0, 0.0, 0.0)],
                 'hazard_imtls': {'PGA': None},
                 'investigation_time': 50.0,
                 'risk_investigation_time': 50.0,
@@ -182,18 +186,22 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         oqparam.inputs = dict(site_model=sitemodel())
         expected = [
             valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
-                            vs30=1200.0, backarc=False, lon=0.0, lat=0.0),
+                            vs30=1200.0, backarc=False, lon=0.0, lat=0.0,
+                            depth=0.0),
             valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
-                            vs30=600.0, backarc=True, lon=0.0, lat=0.1),
+                            vs30=600.0, backarc=True, lon=0.0, lat=0.1,
+                            depth=0.0),
             valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
-                            vs30=200.0, backarc=False, lon=0.0, lat=0.2)]
+                            vs30=200.0, backarc=False, lon=0.0, lat=0.2,
+                            depth=0.0)]
         self.assertEqual(list(readinput.get_site_model(oqparam)), expected)
 
     def test_get_far_away_parameter(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.maximum_distance = 100
-        oqparam.sites = [(1.0, 0)]
+        oqparam.max_site_model_distance = 5
+        oqparam.sites = [(1.0, 0, 0)]
         oqparam.inputs = dict(site_model=sitemodel())
         with mock.patch('logging.warn') as warn:
             readinput.get_site_collection(oqparam)
@@ -307,7 +315,7 @@ class ExposureTestCase(unittest.TestCase):
 </nrml>''')  # wrong cost type "aggregate"
 
     def test_get_exposure_metadata(self):
-        exp, _assets, _cc = readinput._get_exposure(
+        exp, _assets = readinput._get_exposure(
             self.exposure, ['structural'], stop='assets')
         self.assertEqual(exp.description, 'Exposure model for buildings')
         self.assertTrue(exp.insurance_limit_is_absolute)
@@ -786,3 +794,26 @@ class TestLoadCurvesTestCase(unittest.TestCase):
         self.assertEqual(str(hcurves), '''\
 [([0.098727, 0.098265, 0.094956], [0.098728, 0.098216, 0.094945, 0.092947])
  ([0.98728, 0.98266, 0.94957], [0.98728, 0.98226, 0.94947, 0.92947])]''')
+
+
+class GetCompositeSourceModelTestCase(unittest.TestCase):
+    # test the case in_memory=False, used when running `oq info job.ini`
+
+    def test_nrml05(self):
+        oq = readinput.get_oqparam('job.ini', case_1)
+        csm = readinput.get_composite_source_model(oq, in_memory=False)
+        srcs = csm.get_sources()  # a single PointSource
+        self.assertEqual(len(srcs), 1)
+
+    def test_nrml04(self):
+        oq = readinput.get_oqparam('job.ini', case_2)
+        csm = readinput.get_composite_source_model(oq, in_memory=False)
+        srcs = csm.get_sources()  # a single PointSource
+        self.assertEqual(len(srcs), 1)
+
+
+class GetCompositeRiskModelTestCase(unittest.TestCase):
+    def test_missing_vulnerability_function(self):
+        oq = readinput.get_oqparam('job.ini', case_caracas)
+        with self.assertRaises(ValidationError):
+            readinput.get_risk_model(oq)

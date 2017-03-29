@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (C) 2016 GEM Foundation
+#  Copyright (C) 2016-2017 GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -17,11 +17,13 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
 import os
+import glob
 import operator
 from datetime import datetime, timedelta
 
-from openquake.risklib import valid
+from openquake.hazardlib import valid
 from openquake.commonlib import datastore
+from openquake.server import __file__ as server_path
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
 from openquake.server.dbapi import NotFound
@@ -264,23 +266,39 @@ def del_calc(db, job_id, user):
     Delete a calculation and all associated outputs, if possible.
 
     :param db: a :class:`openquake.server.dbapi.Db` instance
-    :param job_id: job ID
+    :param job_id: job ID, can be an integer or a string
     :param user: username
     :returns: None if everything went fine or an error message
     """
+    job_id = int(job_id)
     dependent = db(
         'SELECT id FROM job WHERE hazard_calculation_id=?x', job_id)
     if dependent:
         return ('Cannot delete calculation %d: there are calculations '
                 'dependent from it: %s' % (job_id, [j.id for j in dependent]))
-    deleted = db('DELETE FROM job WHERE id=?x', job_id).rowcount
-    if not deleted:
+    try:
+        owner, path = db('SELECT user_name, ds_calc_dir FROM job WHERE id=?x',
+                         job_id, one=True)
+    except NotFound:
         return ('Cannot delete calculation %d: ID does not exist' % job_id)
+
     deleted = db('DELETE FROM job WHERE id=?x AND user_name=?x',
                  job_id, user).rowcount
     if not deleted:
-        return ('Cannot delete calculation %d: belongs to a different user'
-                % job_id)
+        return ('Cannot delete calculation %d: it belongs to '
+                '%s and you are %s' % (job_id, owner, user))
+
+    # try to delete datastore and associated files
+    # path has typically the form /home/user/oqdata/calc_XXX
+    fnames = []
+    for fname in glob.glob(path + '.*'):
+        try:
+            os.remove(fname)
+        except OSError as exc:  # permission error
+            print('Could not remove %s: %s' % (fname, exc))
+        else:
+            fnames.append(fname)
+    return fnames
 
 
 def log(db, job_id, timestamp, level, process, message):
@@ -355,6 +373,15 @@ def fetch(db, templ, *args):
     :param args: arguments to pass to the template
     """
     return db(templ, *args)
+
+
+def get_path(db):
+    """
+    :param db:
+        a :class:`openquake.server.dbapi.Db` instance
+    :returns: the full path to the dbserver codebase
+    """
+    return server_path
 
 
 def get_dbpath(db):
@@ -477,6 +504,14 @@ def set_relevant(db, job_id, flag):
         flag for the field job.relevant
     """
     db('UPDATE job SET relevant=?x WHERE id=?x', flag, job_id)
+
+
+def update_parent_child(db, parent_child):
+    """
+    Set hazard_calculation_id (parent) on a job_id (child)
+    """
+    db('UPDATE job SET hazard_calculation_id=?x WHERE id=?x',
+       *parent_child)
 
 
 def get_log_slice(db, job_id, start, stop):

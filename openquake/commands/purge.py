@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,7 +22,7 @@ import re
 import getpass
 from openquake.baselib import sap
 from openquake.commonlib import datastore
-from openquake.engine.logs import dbcmd
+from openquake.commonlib.logs import dbcmd
 
 
 def purge_one(calc_id, user):
@@ -33,9 +33,22 @@ def purge_one(calc_id, user):
     err = dbcmd('del_calc', calc_id, user)
     if err:
         print(err)
-    if os.path.exists(hdf5path):
+    if os.path.exists(hdf5path):  # not removed yet
         os.remove(hdf5path)
         print('Removed %s' % hdf5path)
+
+
+# used in the reset command
+def purge_all(user=None):
+    """
+    Remove all calculations of the given user
+    """
+    user = user or getpass.getuser()
+    for fname in os.listdir(datastore.DATADIR):
+        mo = re.match('calc_(\d+)\.hdf5', fname)
+        if mo is not None:
+            calc_id = int(mo.group(1))
+            purge_one(calc_id, user)
 
 
 @sap.Script
@@ -43,20 +56,12 @@ def purge(calc_id):
     """
     Remove the given calculation. If calc_id is 0, remove all calculations.
     """
-    user = getpass.getuser()
-    if not calc_id:
-        for fname in os.listdir(datastore.DATADIR):
-            mo = re.match('calc_(\d+)\.hdf5', fname)
-            if mo is not None:
-                calc_id = int(mo.group(1))
-                purge_one(calc_id, user)
-    else:
-        if calc_id < 0:
-            try:
-                calc_id = datastore.get_calc_ids()[calc_id]
-            except IndexError:
-                print('Calculation %d not found' % calc_id)
-                return
-        purge_one(calc_id, user)
+    if calc_id < 0:
+        try:
+            calc_id = datastore.get_calc_ids()[calc_id]
+        except IndexError:
+            print('Calculation %d not found' % calc_id)
+            return
+    purge_one(calc_id, getpass.getuser())
 
 purge.arg('calc_id', 'calculation ID', type=int)

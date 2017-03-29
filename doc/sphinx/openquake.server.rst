@@ -1,8 +1,19 @@
 openquake.server package
 ========================
 
+Subpackages
+-----------
+
+.. toctree::
+
+    openquake.server.db
+    openquake.server.v1
+
+Submodules
+----------
+
 openquake.server.dbapi module
---------------------------------
+-----------------------------
 
 .. automodule:: openquake.server.dbapi
     :members:
@@ -37,14 +48,6 @@ openquake.server.settings module
 --------------------------------
 
 .. automodule:: openquake.server.settings
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-openquake.server.stop module
-----------------------------
-
-.. automodule:: openquake.server.stop
     :members:
     :undoc-members:
     :show-inheritance:

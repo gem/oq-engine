@@ -1,18 +1,17 @@
 openquake.calculators package
 =============================
 
+Subpackages
+-----------
+
+.. toctree::
+
+    openquake.calculators.export
+
 openquake.calculators.base module
 ---------------------------------
 
 .. automodule:: openquake.calculators.base
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-openquake.calculators.calc module
----------------------------------
-
-.. automodule:: openquake.calculators.calc
     :members:
     :undoc-members:
     :show-inheritance:
@@ -73,13 +72,6 @@ openquake.calculators.event_based_risk module
     :undoc-members:
     :show-inheritance:
 
-openquake.calculators.risk module
----------------------------------
-
-.. automodule:: openquake.calculators.risk
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 openquake.calculators.scenario module
 -------------------------------------
@@ -105,6 +97,14 @@ openquake.calculators.scenario_risk module
     :undoc-members:
     :show-inheritance:
 
+openquake.calculators.ucerf_event_classical module
+--------------------------------------------------
+
+.. automodule:: openquake.calculators.ucerf_classical
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 openquake.calculators.ucerf_event_based module
 ----------------------------------------------
 
@@ -117,15 +117,6 @@ openquake.calculators.views module
 ----------------------------------
 
 .. automodule:: openquake.calculators.views
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: openquake.calculators
     :members:
     :undoc-members:
     :show-inheritance:

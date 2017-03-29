@@ -1,4 +1,138 @@
   [Michele Simionato]
+  * Optimized the serialization of ruptures on HDF5 by using a `sids` output
+  * Changed the Web UI button from "Run Risk" to "Continue"
+  * The `avg` field in the loss curves is computed as the integral of the curve
+    again, and it is not extracted from the avg_losses output anymore
+  * Made the `fullreport` exportable
+  * Fixed the `rup_data` export, since the boundary field was broken
+  * Restored the output `losses_by_taxon` in the event_based_risk calculator
+  * Fixed the calculator event based UCERF so that average losses can
+    be stored
+
+  [Daniele Viganò]
+  * Added a check to verify that an 'oq' client is talking to the
+    right DbServer instance
+  * Introduced an optional argument for 'oq dbserver' command line
+    to be able to override its default interface binding behaviour
+
+  [Michele Simionato]
+  * Optimized the event based calculators by reducing the number of calls
+    to the GmfComputer and by using larger arrays
+  * Added a check on missing vulnerability functions for some loss type
+    for some taxonomy
+  * Now we save the GMFs on the .ext5 file, not the datastore
+  * Fixed bug in event_based_risk: it was impossible to use vulnerability
+    functions with "PM" distribution
+  * Fixed bug in event_based_risk: the ebrisk calculator is required as
+    precalculator of event_based_risk, not others
+  * Fixed bug in scenario_risk: the output `all_losses-rlzs` was aggregated
+    incorrectly
+  * Now the ucerf_risk calculators transfer only the events, not the ruptures,
+    thus reducing the data transfer of several orders of magnitude
+  * Added a view `get_available_gsims` to the WebUI and fixed the API docs
+  * Introduced a configuration parameter `max_site_model_distance` with default
+    of 5 km
+  * Implemented sampling in the UCERF event based hazard calculator
+
+  [Daniele Viganò]
+  * Use threads instead of processes in DbServer because SQLite3
+    isn't fork-safe on macOS Sierra
+
+  [Michele Simionato]
+  * Fixed a TypeError when deleting a calculation from the WebUI
+  * Extended the command `oq to_hdf5` to manage source model files too
+  * Improved significantly the performance of the event based calculator
+    when computing the GMFs and not the hazard curves
+  * Stored information about the mean ground motion in the datastore
+  * Saved the rupture mesh with 32 floats instead of 64 bit floats
+  * Raised the limit on the event IDs from 2^16 to 2^32 per task
+  * Fixed classical_risk: there was an error when computing the statistics
+    in the case of multiple assets of the same taxonomy on the same site
+  * Changed the UCERF event based calculators to parallelize by SES
+  * Fixed a site model bug: when the sites are extracted from the site model
+    there is no need to perform geospatial queries to get the parameters
+  * Added a command `oq normalize` to produce good `sites.csv` files
+  * Introduced a `ses_seed` parameter to specify the seed used to generate
+    the stochastic event sets; `random_seed` is used for the sampling only
+  * Changed the `build_rcurves` procedure to read the loss ratios directly from
+    the workers
+
+python-oq-engine (2.3.0-0~precise01) precise; urgency=low
+
+  [Michele Simionato]
+  * `oq info --report` now filters the ruptures and reports the correct
+    number of effective ruptures even for classical calculators
+  * Stripped the TRT information from the event loss table CSV export
+    and optimized its performance
+  * Fixed a bug when storing the GMPE logic tree file in the datastore
+  * Added a command `oq run_tiles` (experimental)
+  * Fixed the event based calculator so that it can run UCERF ruptures
+  * Fixed a bug in the scenario_risk calculator in case of multiple assets
+    of the same taxonomy on the same site with no insurance losses
+  * Now the event IDs are generated in the workers in the event based calculator
+    and there is a limit of 65536 tasks with 65536 ruptures each
+  * Changed the UCERF classical calculators to compute one branch at the time
+  * Fixed the header `occupants:float32` in the CSV risk exports involving
+    occupants
+  * Fixed the name of the zipped files downloaded by the Web UI: there
+    was a spurious dot
+  * Fixed the UCERF classical calculator in the case of sampling
+  * Reduced the size of the event tags in the event based calculators, thus
+    saving GB of disk space in UCERF calculations
+  * Fixed the name of the files downloaded by the Web UI: they must not
+    contain slashes
+  * Now deleting a calculation from the Web UI really deletes it, before
+    if was only hiding it
+
+  [Daniele Viganò]
+  * Moved the OpenQuake Engine manual sources inside doc/manual
+
+  [Michele Simionato]
+  * Introduced an experimental classical time dependent UCERF calculator
+  * Added a dynamic output for source group information
+  * Changed the UCERF rupture calculator to fully store the ruptures
+  * Fixed a bug in `combine_maps`: realizations with zero probability were
+    discarded, thus breaking the computation of the statistics
+  * Added a command `oq reset` to reset database and datastores
+  * Reduced the data transfer back and disk space occupation for UCERF
+    event based risk calculations
+  * Tasks meant to be used with a shared directory are now marked with a
+    boolean attribute `.shared_dir_on`
+  * Added a warning when running event based risk calculations with sampling
+  * Made sure that the openquake.cfg file is read only once
+
+  [Daniele Viganò]
+  * Moved the openquake.cfg config file inside the python package
+    under openquake/engine/openquake.cfg
+  * Removed support to OQ_LOCAL_CFG_PATH and OQ_SITE_CFG_PATH vars;
+    only the OQ_CONFIG_FILE enviroment variable is read
+
+  [Michele Simionato]
+  * If there is a single realization, do not compute the statistics
+  * Changed the separator from comma to tab for the output `ruptures`
+  * If there are no conditional_loss_poes, the engine does not try to
+    export the loss maps anymore
+  * Fixed `oq engine --make-html-report` when using Python 3
+  * Fixed bug when running `oq info job.ini` with NRML 0.5 source models
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 23 Feb 2017 14:37:44 +0100
+
+python-oq-engine (2.2.0-0~precise01) precise; urgency=low
+
+  [Michele Simionato]
+  * Fixed an HDF5 bug by not using a `vstr` array for the asset references
+  * Fixed a wrong error message generated by `oq purge`
+  * Added information about the rupture in the event loss table exports
+  * Fixed a bug and added a test calculation with nonparametric sources
+  * Fixed the classical UCERF calculator when there is more than one branch
+  * Added .npz exporter for gmf_data for event based calculations
+
+  [Daniele Viganò]
+  * Port WebUI/API server to Django 1.9 and 1.10
+  * Add dependencies to setup.py
+  * Update Copyright to 2017
+
+  [Michele Simionato]
   * Increased the splitting of ComplexFaultSources
   * Added a way to reuse the CompositeSourceModel from a previous computation
   * Turned the loss maps into dynamically generated outputs
@@ -64,6 +198,8 @@
   * Introduced a parameter `iml_disagg` in the disaggregation calculator
   * Fixed `oq reduce` to preserve the NRML version
   * Fixed a bug when splitting the fault sources by magnitude
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 23 Jan 2017 14:36:48 +0100
 
 python-oq-engine (2.1.0-0~precise01) precise; urgency=low
 

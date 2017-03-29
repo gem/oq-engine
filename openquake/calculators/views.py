@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,15 +25,14 @@ import decimal
 import functools
 import itertools
 import numpy
-import h5py
 
 from openquake.baselib.general import (
     humansize, groupby, AccumDict, CallableDict)
 from openquake.baselib.performance import perf_dt
 from openquake.baselib.python3compat import unicode, decode
+from openquake.hazardlib import valid
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.risklib import scientific
-from openquake.commonlib import util, source
+from openquake.commonlib import util, source, calc
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv, FIVEDIGITS)
 
@@ -183,7 +182,7 @@ def view_slow_sources(token, dstore, maxrows=20):
     Returns the slowest sources
     """
     info = dstore['source_info'].value
-    info.sort(order='max_calc_time')
+    info.sort(order='calc_time')
     return rst_table(info[::-1][:maxrows])
 
 
@@ -286,11 +285,9 @@ def view_params(token, dstore):
               'ses_per_logic_tree_path', 'truncation_level',
               'rupture_mesh_spacing', 'complex_fault_mesh_spacing',
               'width_of_mfd_bin', 'area_source_discretization',
-              'random_seed', 'master_seed']
+              'ground_motion_correlation_model', 'random_seed', 'master_seed']
     if 'risk' in oq.calculation_mode:
         params.append('avg_losses')
-    if 'classical' in oq.calculation_mode:
-        params.append('sites_per_tile')
     return rst_table([(param, repr(getattr(oq, param, None)))
                       for param in params])
 
@@ -317,14 +314,26 @@ def view_inputs(token, dstore):
         header=['Name', 'File'])
 
 
+def _humansize(literal):
+    dic = ast.literal_eval(decode(literal))
+    if isinstance(dic, dict):
+        items = sorted(dic.items(), key=operator.itemgetter(1), reverse=True)
+        lst = ['%s %s' % (k, humansize(v)) for k, v in items]
+        return ', '.join(lst)
+    elif isinstance(dic, int):
+        return humansize(dic)
+    else:
+        return dic
+
+
 @view.add('job_info')
 def view_job_info(token, dstore):
     """
     Determine the amount of data transferred from the controller node
     to the workers and back in a classical calculation.
     """
-    job_info = h5py.File.__getitem__(dstore.hdf5, 'job_info')
-    rows = [(k, ast.literal_eval(decode(v))) for k, v in job_info]
+    job_info = dict(dstore.hdf5['job_info'])
+    rows = [(k, _humansize(v)) for k, v in sorted(job_info.items())]
     return rst_table(rows)
 
 
@@ -382,32 +391,6 @@ def view_totlosses(token, dstore):
     return rst_table(zero, fmt='%.6E')
 
 
-def portfolio_loss_from_agg_loss_table(agg_loss_table, loss_dt):
-    data = numpy.zeros(len(agg_loss_table), loss_dt)
-    rlzids = []
-    for rlz, dset in sorted(agg_loss_table.items()):
-        rlzi = int(rlz.split('-')[1])  # rlz-000 -> 0 etc
-        rlzids.append(rlzi)
-        for loss_type, losses in dset.items():
-            loss = losses['loss'].sum(axis=0)
-            if loss.shape == (2,):
-                data[rlzi][loss_type] = loss[0]
-                data[rlzi][loss_type + '_ins'] = loss[1]
-            else:
-                data[rlzi][loss_type] = loss
-    return rlzids, data
-
-
-def portfolio_loss_from_losses_by_taxon(losses_by_taxon, loss_dt):
-    R = losses_by_taxon.shape[-1]
-    data = numpy.zeros(R, loss_dt)
-    rlzids = [str(r) for r in range(R)]
-    for r in range(R):
-        for l, lt in enumerate(loss_dt.names):
-            data[r][lt] = losses_by_taxon[:, l, r].sum()
-    return rlzids, data
-
-
 # for event based risk
 @view.add('portfolio_loss')
 def view_portfolio_loss(token, dstore):
@@ -416,15 +399,16 @@ def view_portfolio_loss(token, dstore):
     extracted from the event loss table.
     """
     oq = dstore['oqparam']
-    if 'losses_by_taxon' in dstore:
-        oq.insured_losses = False
-        rlzids, data = portfolio_loss_from_losses_by_taxon(
-            dstore['losses_by_taxon'], oq.loss_dt())
-    else:
-        rlzids, data = portfolio_loss_from_agg_loss_table(
-            dstore['agg_loss_table'], oq.loss_dt())
+    loss_dt = oq.loss_dt()
+    losses_by_taxon = dstore['losses_by_taxon-rlzs']
+    R = losses_by_taxon.shape[1]  # shape (T, R, L')
+    data = numpy.zeros(R, loss_dt)
+    rlzids = [str(r) for r in range(R)]
+    for r in range(R):
+        for l, lt in enumerate(loss_dt.names):
+            data[r][lt] = losses_by_taxon[:, r, l].sum()
     array = util.compose_arrays(numpy.array(rlzids), data, 'rlz')
-    # this is very sensitive to rounding errors, so I a using a low precision
+    # this is very sensitive to rounding errors, so I am using a low precision
     return rst_table(array, fmt='%.5E')
 
 
@@ -456,7 +440,7 @@ def view_mean_avg_losses(token, dstore):
         array = dstore['avg_losses-stats']  # shape (N, S)
     except KeyError:
         array = dstore['avg_losses-rlzs']  # shape (N, R)
-    data = numpy.array([tuple(row) for row in array[:, 0]], dt)
+    data = numpy.array([tuple(row) for row in array], dt)
     assets = util.get_assets(dstore)
     losses = util.compose_arrays(assets, data)
     losses.sort()
@@ -494,8 +478,8 @@ def view_exposure_info(token, dstore):
     ra_flag = ['relative', 'absolute']
     data = [('#assets', len(assetcol)),
             ('#taxonomies', len(taxonomies)),
-            ('deductibile', ra_flag[cc.deduct_abs]),
-            ('insurance_limit', ra_flag[cc.limit_abs]),
+            ('deductibile', ra_flag[int(cc.deduct_abs)]),
+            ('insurance_limit', ra_flag[int(cc.limit_abs)]),
             ]
     return rst_table(data) + '\n\n' + view_assets_by_site(token, dstore)
 
@@ -662,6 +646,30 @@ def view_task_slowest(token, dstore):
     i = dstore['task_info/classical']['duration'].argmax()
     taskno, weight, duration = dstore['task_info/classical'][i]
     sources = dstore['task_sources'][taskno - 1].split()
-    srcs = set(src.split(':', 1)[0] for src in sources)
+    srcs = set(decode(s).split(':', 1)[0] for s in sources)
     return 'taskno=%d, weight=%d, duration=%d s, sources="%s"' % (
         taskno, weight, duration, ' '.join(sorted(srcs)))
+
+
+@view.add('hmap')
+def view_hmap(token, dstore):
+    """
+    Display the highest 20 points of the mean hazard map. Called as
+    $ oq show hmap:0.1  # 10% PoE
+    """
+    try:
+        poe = valid.probability(token.split(':')[1])
+    except IndexError:
+        poe = 0.1
+    try:
+        mean = dstore['hcurves/mean']
+    except KeyError:  # there is a single realization
+        mean = dstore['hcurves/rlz-000']
+    oq = dstore['oqparam']
+    hmap = calc.make_hmap(mean, oq.imtls, [poe])
+    items = sorted([(hmap[sid].array.sum(), sid) for sid in hmap])[-20:]
+    dt = numpy.dtype([('sid', U32)] + [(imt, F32) for imt in oq.imtls])
+    array = numpy.zeros(len(items), dt)
+    for i, (maxvalue, sid) in enumerate(reversed(items)):
+        array[i] = (sid, ) + tuple(hmap[sid].array[:, 0])
+    return rst_table(array)

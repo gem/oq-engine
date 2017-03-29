@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -33,25 +33,35 @@ from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest)
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django.shortcuts import render_to_response
-from django.template import RequestContext
-from django.contrib.auth import authenticate, login, logout
+from django.shortcuts import render
+
+from openquake.baselib.general import groupby, writetmp
+from openquake.baselib.python3compat import unicode
+from openquake.baselib.parallel import Starmap, safely_call
+from openquake.hazardlib import nrml, gsim
+from openquake.risklib import read_nrml
+
+from openquake.commonlib import readinput, oqvalidation, logs
+from openquake.calculators.export import export
+from openquake.engine import __version__ as oqversion
+from openquake.engine.export import core
+from openquake.engine import engine
+from openquake.engine.export.core import DataStoreExportError
+from openquake.server import executor, utils, dbapi
+
+from django.conf import settings
+if settings.LOCKDOWN:
+    from django.contrib.auth import authenticate, login, logout
 try:
     from django.http import FileResponse  # Django >= 1.8
 except ImportError:
     from django.http import StreamingHttpResponse as FileResponse
-from django.core.servers.basehttp import FileWrapper
+try:
+    from wsgiref.util import FileWrapper  # Django >= 1.9
+except ImportError:
+    from django.core.servers.basehttp import FileWrapper
 
-from openquake.baselib.general import groupby, writetmp
-from openquake.baselib.python3compat import unicode
-from openquake.commonlib import nrml, readinput, oqvalidation
-from openquake.baselib.parallel import TaskManager, safely_call
-from openquake.calculators.export import export
-from openquake.engine import __version__ as oqversion
-from openquake.engine.export import core
-from openquake.engine import engine, logs
-from openquake.engine.export.core import DataStoreExportError
-from openquake.server import executor, utils, dbapi
+read_nrml.update_validators()  # update risk validators
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -182,6 +192,16 @@ def get_engine_version(request):
     return HttpResponse(oqversion)
 
 
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def get_available_gsims(request):
+    """
+    Return a list of strings with the available GSIMs
+    """
+    gsims = list(gsim.get_available_gsims())
+    return HttpResponse(content=json.dumps(gsims), content_type=JSON)
+
+
 def _make_response(error_msg, error_line, valid):
     response_data = dict(error_msg=error_msg,
                          error_line=error_line,
@@ -298,14 +318,20 @@ def calc(request, id=None):
 @require_http_methods(['POST'])
 def calc_remove(request, calc_id):
     """
-    Remove the calculation id by setting the field oq_job.relevant to False.
+    Remove the calculation id
     """
+    user = utils.get_user_data(request)['name']
     try:
-        logs.dbcmd('set_relevant', calc_id, False)
+        message = logs.dbcmd('del_calc', calc_id, user)
     except dbapi.NotFound:
         return HttpResponseNotFound()
-    return HttpResponse(content=json.dumps([]),
-                        content_type=JSON, status=200)
+    if isinstance(message, list):  # list of removed files
+        return HttpResponse(content=json.dumps(message),
+                            content_type=JSON, status=200)
+    else:  # FIXME: the error is not passed properly to the javascript
+        logging.error(message)
+        return HttpResponse(content=message,
+                            content_type='text/plain', status=500)
 
 
 def log_to_json(log):
@@ -379,7 +405,7 @@ def run_calc(request):
     try:
         job_id, fut = submit_job(einfo[0], user['name'], hazard_job_id)
         # restart the process pool at the end of each job
-        fut .add_done_callback(lambda f: TaskManager.restart())
+        fut .add_done_callback(lambda f: Starmap.restart())
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = str(exc)
@@ -470,7 +496,7 @@ def get_traceback(request, calc_id):
 
 
 @cross_domain_ajax
-@require_http_methods(['GET'])
+@require_http_methods(['GET', 'HEAD'])
 def get_result(request, result_id):
     """
     Download a specific result, by ``result_id``.
@@ -522,12 +548,17 @@ def get_result(request, result_id):
     content_type = EXPORT_CONTENT_TYPE_MAP.get(
         export_type, DEFAULT_CONTENT_TYPE)
     try:
-        fname = 'output-%s-%s' % (result_id, os.path.basename(exported))
+        bname = os.path.basename(exported)
+        if bname.startswith('.'):
+            # the "." is added by `export_from_db`, strip it
+            bname = bname[1:]
+        fname = 'output-%s-%s' % (result_id, bname)
         # 'b' is needed when running the WebUI on Windows
         data = open(exported, 'rb').read()
         response = HttpResponse(data, content_type=content_type)
         response['Content-Length'] = len(data)
-        response['Content-Disposition'] = 'attachment; filename=%s' % fname
+        response['Content-Disposition'] = (
+            'attachment; filename=%s' % os.path.basename(fname))
         return response
     finally:
         shutil.rmtree(tmpdir)
@@ -555,25 +586,23 @@ def get_datastore(request, job_id):
     fname = job.ds_calc_dir + '.hdf5'
     response = FileResponse(
         FileWrapper(open(fname, 'rb')), content_type=HDF5)
-    response['Content-Disposition'] = 'attachment; filename=%s' % fname
+    response['Content-Disposition'] = (
+        'attachment; filename=%s' % os.path.basename(fname))
     return response
 
 
 def web_engine(request, **kwargs):
-    return render_to_response("engine/index.html",
-                              dict(),
-                              context_instance=RequestContext(request))
+    return render(request, "engine/index.html",
+                  dict())
 
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs(request, calc_id, **kwargs):
-    return render_to_response("engine/get_outputs.html",
-                              dict([('calc_id', calc_id)]),
-                              context_instance=RequestContext(request))
+    return render(request, "engine/get_outputs.html",
+                  dict([('calc_id', calc_id)]))
 
 
 @require_http_methods(['GET'])
 def license(request, **kwargs):
-    return render_to_response("engine/license.html",
-                              context_instance=RequestContext(request))
+    return render(request, "engine/license.html")

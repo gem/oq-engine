@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -37,43 +37,6 @@ if not DATADIR:
         DATADIR = os.path.join(os.path.expanduser('~'), 'oqdata')
 
 
-def get_nbytes(dset):
-    """
-    If the dataset has an attribute 'nbytes', return it. Otherwise get the size
-    of the underlying array. Returns None if the dataset is actually a group.
-    """
-    if 'nbytes' in dset.attrs:
-        # look if the dataset has an attribute nbytes
-        return dset.attrs['nbytes']
-    elif hasattr(dset, 'value'):
-        # else extract nbytes from the underlying array
-        return dset.size * numpy.zeros(1, dset.dtype).nbytes
-
-
-class ByteCounter(object):
-    """
-    A visitor used to measure the dimensions of a HDF5 dataset or group.
-    Use it as ByteCounter.get_nbytes(dset_or_group).
-    """
-    @classmethod
-    def get_nbytes(cls, dset):
-        nbytes = get_nbytes(dset)
-        if nbytes is not None:
-            return nbytes
-        # else dip in the tree
-        self = cls()
-        dset.visititems(self)
-        return self.nbytes
-
-    def __init__(self, nbytes=0):
-        self.nbytes = nbytes
-
-    def __call__(self, name, dset_or_group):
-        nbytes = get_nbytes(dset_or_group)
-        if nbytes:
-            self.nbytes += nbytes
-
-
 def get_calc_ids(datadir=DATADIR):
     """
     Extract the available calculation IDs from the datadir, in order.
@@ -88,7 +51,7 @@ def get_calc_ids(datadir=DATADIR):
     return sorted(calc_ids)
 
 
-def get_last_calc_id(datadir):
+def get_last_calc_id(datadir=DATADIR):
     """
     Extract the latest calculation ID from the given directory.
     If none is found, return 0.
@@ -97,6 +60,19 @@ def get_last_calc_id(datadir):
     if not calcs:
         return 0
     return calcs[-1]
+
+
+def hdf5new(datadir=DATADIR):
+    """
+    Return a new `hdf5.File by` instance with name determined by the last
+    calculation in the datadir (plus one). Set the .path attribute to the
+    generated filename.
+    """
+    calc_id = get_last_calc_id(datadir) + 1
+    fname = os.path.join(datadir, 'calc_%d.hdf5' % calc_id)
+    new = hdf5.File(fname, 'w')
+    new.path = fname
+    return new
 
 
 def read(calc_id, mode='r', datadir=DATADIR):
@@ -169,11 +145,18 @@ class DataStore(collections.MutableMapping):
         self.calc_dir = os.path.join(datadir, 'calc_%s' % self.calc_id)
         self.export_dir = export_dir
         self.hdf5path = self.calc_dir + '.hdf5'
+        self.ext5path = self.calc_dir + '.ext5'
         mode = mode or 'r+' if os.path.exists(self.hdf5path) else 'w'
         self.hdf5 = hdf5.File(self.hdf5path, mode, libver='latest')
         self.attrs = self.hdf5.attrs
         for name, value in params:
             self.attrs[name] = value
+
+    def ext5(self, mode='r'):
+        """
+        Return the calc_XXX.ext5 file
+        """
+        return hdf5.File(self.ext5path, mode)
 
     def getitem(self, name):
         """
@@ -196,12 +179,7 @@ class DataStore(collections.MutableMapping):
         """
         Set the `nbytes` attribute on the HDF5 object identified by `key`.
         """
-        obj = h5py.File.__getitem__(self.hdf5, key)
-        if nbytes is not None:  # size set from outside
-            obj.attrs['nbytes'] = nbytes
-        else:  # recursively determine the size of the datagroup
-            obj.attrs['nbytes'] = nbytes = ByteCounter.get_nbytes(obj)
-        return nbytes
+        return self.hdf5.set_nbytes(key, nbytes)
 
     def set_attrs(self, key, **kw):
         """
@@ -314,8 +292,10 @@ class DataStore(collections.MutableMapping):
     def close(self):
         """Close the underlying hdf5 file"""
         if self.parent != ():
+            self.parent.flush()
             self.parent.close()
         if self.hdf5:  # is open
+            self.hdf5.flush()
             self.hdf5.close()
 
     def clear(self):
@@ -330,7 +310,8 @@ class DataStore(collections.MutableMapping):
         """
         if key is None:
             return os.path.getsize(self.hdf5path)
-        return ByteCounter.get_nbytes(h5py.File.__getitem__(self.hdf5, key))
+        return hdf5.ByteCounter.get_nbytes(
+            h5py.File.__getitem__(self.hdf5, key))
 
     def get(self, key, default):
         """

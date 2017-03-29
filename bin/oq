@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2016 GEM Foundation
+# Copyright (C) 2013-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,6 +21,9 @@ import sys
 import os
 
 if os.path.realpath(__file__) == '/opt/openquake/bin/oq':
+    # custom pythonpath is pushed in position 1 instead of 0 because
+    # sys.path[0] is populated at runtime by python itself. See:
+    # https://docs.python.org/2/library/sys.html#sys.path
     sys.path.insert(1, '/opt/openquake/lib/python' + str(sys.version_info[0]) +
                     '.' + str(sys.version_info[1]) + '/site-packages')
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,33 +17,40 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from django.conf import settings
-from django.conf.urls import patterns, url, include
+from django.conf.urls import url, include
 from django.views.generic.base import RedirectView
 
-urlpatterns = patterns(
-    '',
+from openquake.server import views
+
+urlpatterns = [
     url(r'^$', RedirectView.as_view(url='/engine/', permanent=True)),
-    url(r'^engine_version$', 'openquake.server.views.get_engine_version'),
+    url(r'^engine_version$', views.get_engine_version),
     url(r'^v1/calc/', include('openquake.server.v1.calc_urls')),
-    url(r'^v1/valid/', 'openquake.server.views.validate_nrml'),
-    url(r'^engine/?$', 'openquake.server.views.web_engine', name="index"),
+    url(r'^v1/valid/', views.validate_nrml),
+    url(r'^v1/available_gsims$', views.get_available_gsims),
+    url(r'^engine/?$', views.web_engine, name="index"),
     url(r'^engine/(\d+)/outputs$',
-        'openquake.server.views.web_engine_get_outputs', name="outputs"),
-    url(r'^engine/license$', 'openquake.server.views.license',
+        views.web_engine_get_outputs, name="outputs"),
+    url(r'^engine/license$', views.license,
         name="license"),
-)
+]
+
+for app in settings.STANDALONE_APPS:
+    app_name = app.split('_')[1]
+    urlpatterns.append(url(r'^%s/' % app_name, include('%s.urls' % app,
+                       namespace='%s' % app_name)))
 
 if settings.LOCKDOWN:
     from django.contrib import admin
+    from django.contrib.auth.views import login, logout
 
     admin.autodiscover()
-    urlpatterns += patterns(
-        '',
+    urlpatterns += [
         url(r'^admin/', include(admin.site.urls)),
-        url(r'^accounts/login/$', 'django.contrib.auth.views.login',
+        url(r'^accounts/login/$', login,
             {'template_name': 'account/login.html'}, name="login"),
-        url(r'^accounts/logout/$', 'django.contrib.auth.views.logout',
+        url(r'^accounts/logout/$', logout,
             {'template_name': 'account/logout.html'}, name="logout"),
-        url(r'^accounts/ajax_login/$', 'openquake.server.views.ajax_login'),
-        url(r'^accounts/ajax_logout/$', 'openquake.server.views.ajax_logout'),
-    )
+        url(r'^accounts/ajax_login/$', views.ajax_login),
+        url(r'^accounts/ajax_logout/$', views.ajax_logout),
+    ]

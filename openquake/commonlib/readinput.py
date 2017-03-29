@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,20 +30,23 @@ from shapely import wkt, geometry
 
 from openquake.baselib.general import groupby, AccumDict, writetmp
 from openquake.baselib.python3compat import configparser, encode
+from openquake.baselib.node import Node, context
 from openquake.baselib import hdf5
-from openquake.hazardlib import geo, site, imt
+from openquake.hazardlib import (
+    geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.calc.hazard_curve import zero_curves
-from openquake.risklib import riskmodels, valid, riskinput
+from openquake.risklib import riskmodels, riskinput, read_nrml
 from openquake.commonlib import datastore
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.node import Node, context
-from openquake.commonlib import nrml, logictree, InvalidFile
+from openquake.commonlib import logictree
 from openquake.commonlib.riskmodels import get_risk_models
-from openquake.commonlib import source, sourceconverter
+from openquake.commonlib import source
+
+read_nrml.update_validators()
+
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
-MAX_SITE_MODEL_DISTANCE = 5  # km, given by Graeme Weatherill
 
 F32 = numpy.float32
 
@@ -179,14 +182,13 @@ def get_mesh(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     if oqparam.sites:
-        lons, lats = zip(*sorted(oqparam.sites))
-        return geo.Mesh(numpy.array(lons), numpy.array(lats))
+        return geo.Mesh.from_coords(oqparam.sites)
     elif 'sites' in oqparam.inputs:
         csv_data = open(oqparam.inputs['sites'], 'U').read()
         coords = valid.coordinates(
             csv_data.strip().replace(',', ' ').replace('\n', ','))
-        lons, lats = zip(*sorted(coords))
-        return geo.Mesh(numpy.array(lons), numpy.array(lats))
+        start, stop = oqparam.sites_slice
+        return geo.Mesh.from_coords(coords[start:stop])
     elif oqparam.region:
         # close the linear polygon ring by appending the first
         # point to the end
@@ -204,22 +206,16 @@ def get_mesh(oqparam):
         return get_gmfs(oqparam)[0].mesh
     elif oqparam.hazard_calculation_id:
         sitecol = datastore.read(oqparam.hazard_calculation_id)['sitecol']
-        return geo.Mesh(sitecol.lons, sitecol.lats)
+        return geo.Mesh(sitecol.lons, sitecol.lats, sitecol.depths)
     elif 'exposure' in oqparam.inputs:
-        # the mesh is extracted from get_sitecol_assets
+        # the mesh is extracted from get_sitecol_assetcol
         return
     elif 'site_model' in oqparam.inputs:
-        coords = [(param.lon, param.lat) for param in get_site_model(oqparam)]
-        lons, lats = zip(*sorted(coords))
-        return geo.Mesh(numpy.array(lons), numpy.array(lats))
-
-
-def sitecol_from_coords(oqparam, coords):
-    """
-    Return a SiteCollection instance from an ordered set of coordinates
-    """
-    lons, lats = zip(*coords)
-    return site.SiteCollection.from_points(lons, lats, oqparam)
+        coords = [(param.lon, param.lat, param.depth)
+                  for param in get_site_model(oqparam)]
+        mesh = geo.Mesh.from_coords(coords)
+        mesh.from_site_model = True
+        return mesh
 
 
 def get_site_model(oqparam):
@@ -253,19 +249,23 @@ def get_site_collection(oqparam, mesh=None, site_model_params=None):
     if mesh is None:
         return
     if oqparam.inputs.get('site_model'):
+        sitecol = []
+        if getattr(mesh, 'from_site_model', False):
+            for param in sorted(get_site_model(oqparam)):
+                pt = geo.Point(param.lon, param.lat, param.depth)
+                sitecol.append(site.Site(
+                    pt, param.vs30, param.measured,
+                    param.z1pt0, param.z2pt5, param.backarc))
+            return site.SiteCollection(sitecol)
         if site_model_params is None:
             # read the parameters directly from their file
             site_model_params = geo.geodetic.GeographicObjects(
                 get_site_model(oqparam))
-        sitecol = []
         for pt in mesh:
-            # NB: the mesh, when read from the datastore, is a 32 bit array;
-            # however, the underlying C library expects 64 bit floats, thus
-            # we have to cast float(pt.longitude), float(pt.latitude);
-            # we should change the geodetic speedups instead
-            param, dist = site_model_params.\
-                get_closest(float(pt.longitude), float(pt.latitude))
-            if dist >= MAX_SITE_MODEL_DISTANCE:
+            # attach the closest site model params to each site
+            param, dist = site_model_params.get_closest(
+                pt.longitude, pt.latitude)
+            if dist >= oqparam.max_site_model_distance:
                 logging.warn('The site parameter associated to %s came from a '
                              'distance of %d km!' % (pt, dist))
             sitecol.append(
@@ -274,7 +274,8 @@ def get_site_collection(oqparam, mesh=None, site_model_params=None):
         return site.SiteCollection(sitecol)
 
     # else use the default site params
-    return site.SiteCollection.from_points(mesh.lons, mesh.lats, oqparam)
+    return site.SiteCollection.from_points(
+        mesh.lons, mesh.lats, mesh.depths, oqparam)
 
 
 def get_gsim_lt(oqparam, trts=['*']):
@@ -366,7 +367,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
     :param in_memory:
         if True, keep in memory the sources, else just collect the TRTs
     :returns:
-        an iterator over :class:`openquake.commonlib.source.SourceModel`
+        an iterator over :class:`openquake.commonlib.logictree.SourceModel`
         tuples
     """
     converter = sourceconverter.SourceConverter(
@@ -375,19 +376,14 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         oqparam.complex_fault_mesh_spacing,
         oqparam.width_of_mfd_bin,
         oqparam.area_source_discretization)
-    parser = source.SourceModelParser(converter)
+    parser = nrml.SourceModelParser(converter)
+    gsim_file = oqparam.inputs.get('gsim_logic_tree')
 
     # consider only the effective realizations
-    rlzs = logictree.get_effective_rlzs(source_model_lt)
-    samples_by_lt_path = source_model_lt.samples_by_lt_path()
-    num_source_models = len(rlzs)
-    for i, rlz in enumerate(rlzs):
-        sm = rlz.value  # name of the source model
-        smpath = rlz.lt_path
-        num_samples = samples_by_lt_path[smpath]
-        fname = possibly_gunzip(os.path.join(oqparam.base_path, sm))
+    for sm in source_model_lt.gen_source_models(gsim_lt):
+        fname = possibly_gunzip(os.path.join(oqparam.base_path, sm.name))
         if in_memory:
-            apply_unc = source_model_lt.make_apply_uncertainties(smpath)
+            apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
             try:
                 src_groups = parser.parse_src_groups(fname, apply_unc)
             except ValueError as e:
@@ -403,26 +399,26 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
                     raise
         else:  # just collect the TRT models
             smodel = nrml.read(fname).sourceModel
-            src_groups = sourceconverter.SourceGroup.collect(smodel)
+            src_groups = []
+            if smodel[0].tag.endswith('sourceGroup'):  # NRML 0.5 format
+                for sg_node in smodel:
+                    sg = sourceconverter.SourceGroup(sg_node['tectonicRegion'])
+                    sg.sources = sg_node.nodes
+                    src_groups.append(sg)
+            else:  # NRML 0.4 format: smodel is a list of source nodes
+                src_groups.extend(sourceconverter.SourceGroup.collect(smodel))
+        sm.src_groups = src_groups
         trts = [mod.trt for mod in src_groups]
         source_model_lt.tectonic_region_types.update(trts)
-
-        gsim_file = oqparam.inputs.get('gsim_logic_tree')
+        logging.info('Processed source model %d with %d gsim path(s)',
+                     sm.ordinal + 1, sm.num_gsim_paths)
         if gsim_file:  # check TRTs
             for src_group in src_groups:
                 if src_group.trt not in gsim_lt.values:
                     raise ValueError(
                         "Found in %r a tectonic region type %r inconsistent "
                         "with the ones in %r" % (sm, src_group.trt, gsim_file))
-        else:
-            gsim_lt = logictree.GsimLogicTree.from_(oqparam.gsim)
-        weight = rlz.weight / num_samples
-        num_gsim_paths = (num_samples if oqparam.number_of_logic_tree_samples
-                          else gsim_lt.get_num_paths())
-        logging.info('Processed source model %d/%d with %d gsim path(s)',
-                     i + 1, num_source_models, num_gsim_paths)
-        yield source.SourceModel(
-            sm, weight, smpath, src_groups, num_gsim_paths, i, num_samples)
+        yield sm
 
     # log if some source file is being used more than once
     for fname, hits in parser.fname_hits.items():
@@ -560,12 +556,6 @@ cost_type_dt = numpy.dtype([('name', hdf5.vstr),
                             ('unit', hdf5.vstr)])
 
 
-class DuplicatedID(Exception):
-    """
-    Raised when two assets with the same ID are found in an exposure model
-    """
-
-
 def _get_exposure(fname, ok_cost_types, stop=None):
     """
     :param fname:
@@ -581,19 +571,19 @@ def _get_exposure(fname, ok_cost_types, stop=None):
     description = exposure.description
     try:
         conversions = exposure.conversions
-    except NameError:
+    except AttributeError:
         conversions = Node('conversions', nodes=[Node('costTypes', [])])
     try:
         inslimit = conversions.insuranceLimit
-    except NameError:
+    except AttributeError:
         inslimit = Node('insuranceLimit', text=True)
     try:
         deductible = conversions.deductible
-    except NameError:
+    except AttributeError:
         deductible = Node('deductible', text=True)
     try:
         area = conversions.area
-    except NameError:
+    except AttributeError:
         # NB: the area type cannot be an empty string because when sending
         # around the CostCalculator object we would run into this numpy bug
         # about pickling dictionaries with empty strings:
@@ -610,22 +600,24 @@ def _get_exposure(fname, ok_cost_types, stop=None):
     if 'occupants' in ok_cost_types:
         cost_types.append(('occupants', 'per_area', 'people'))
     cost_types.sort(key=operator.itemgetter(0))
+    cost_types = numpy.array(cost_types, cost_type_dt)
+    insurance_limit_is_absolute = inslimit.attrib.get('isAbsolute', True),
+    deductible_is_absolute = deductible.attrib.get('isAbsolute', True),
     time_events = set()
-    exp = Exposure(
-        exposure['id'], exposure['category'],
-        ~description, numpy.array(cost_types, cost_type_dt), time_events,
-        inslimit.attrib.get('isAbsolute', True),
-        deductible.attrib.get('isAbsolute', True),
-        area.attrib, [], set(), [])
     cc = riskmodels.CostCalculator(
-        {}, {}, {},
-        exp.deductible_is_absolute, exp.insurance_limit_is_absolute)
-    for ct in exp.cost_types:
+        {}, {}, {}, deductible_is_absolute, insurance_limit_is_absolute)
+    for ct in cost_types:
         name = ct['name']  # structural, nonstructural, ...
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
-        cc.area_types[name] = exp.area['type']
+        cc.area_types[name] = area['type']
         cc.units[name] = ct['unit']
-    return exp, exposure.assets, cc
+    exp = Exposure(
+        exposure['id'], exposure['category'],
+        ~description, cost_types, time_events,
+        insurance_limit_is_absolute,
+        deductible_is_absolute,
+        area.attrib, [], set(), [], cc)
+    return exp, exposure.assets
 
 
 def get_cost_calculator(oqparam):
@@ -634,15 +626,13 @@ def get_cost_calculator(oqparam):
     """
     return _get_exposure(oqparam.inputs['exposure'],
                          set(oqparam.all_cost_types),
-                         stop='assets')[-1]
+                         stop='assets')[0].cost_calculator
 
 
 def get_exposure(oqparam):
     """
     Read the full exposure in memory and build a list of
     :class:`openquake.risklib.riskmodels.Asset` instances.
-    If you don't want to keep everything in memory, use
-    get_exposure_lazy instead (for experts only).
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -656,7 +646,7 @@ def get_exposure(oqparam):
         region = None
     all_cost_types = set(oqparam.all_cost_types)
     fname = oqparam.inputs['exposure']
-    exposure, assets_node, cc = _get_exposure(fname, all_cost_types)
+    exposure, assets_node = _get_exposure(fname, all_cost_types)
     relevant_cost_types = all_cost_types - set(['occupants'])
     asset_refs = set()
     ignore_missing_costs = set(oqparam.ignore_missing_costs)
@@ -669,7 +659,7 @@ def get_exposure(oqparam):
         with context(fname, asset):
             asset_id = asset['id'].encode('utf8')
             if asset_id in asset_refs:
-                raise DuplicatedID(asset_id)
+                raise read_nrml.DuplicatedID(asset_id)
             asset_refs.add(asset_id)
             exposure.asset_refs.append(asset_id)
             taxonomy = asset['taxonomy']
@@ -694,11 +684,11 @@ def get_exposure(oqparam):
                 continue
         try:
             costs = asset.costs
-        except NameError:
+        except AttributeError:
             costs = Node('costs', [])
         try:
             occupancies = asset.occupancies
-        except NameError:
+        except AttributeError:
             occupancies = Node('occupancies', [])
         for cost in costs:
             with context(fname, cost):
@@ -738,7 +728,8 @@ def get_exposure(oqparam):
         area = float(asset.attrib.get('area', 1))
         ass = riskmodels.Asset(
             idx, taxonomy, number, location, values, area,
-            deductibles, insurance_limits, retrofitteds, cc)
+            deductibles, insurance_limits, retrofitteds,
+            exposure.cost_calculator)
         exposure.assets.append(ass)
         exposure.taxonomies.add(taxonomy)
     if region:
@@ -747,8 +738,6 @@ def get_exposure(oqparam):
                      len(exposure.assets), out_of_region)
         if len(exposure.assets) == 0:
             raise RuntimeError('Could not find any asset within the region!')
-    else:
-        logging.info('Read %d assets', len(exposure.assets))
 
     # sanity check
     values = any(len(ass.values) + ass.number for ass in exposure.assets)
@@ -759,16 +748,16 @@ def get_exposure(oqparam):
 Exposure = collections.namedtuple(
     'Exposure', ['id', 'category', 'description', 'cost_types', 'time_events',
                  'insurance_limit_is_absolute', 'deductible_is_absolute',
-                 'area', 'assets', 'taxonomies', 'asset_refs'])
+                 'area', 'assets', 'taxonomies', 'asset_refs',
+                 'cost_calculator'])
 
 
-def get_sitecol_assets(oqparam, exposure):
+def get_sitecol_assetcol(oqparam, exposure):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        two sequences of the same length: the site collection and an
-        array with the assets per each site, collected by taxonomy
+        the site collection and the asset collection
     """
     assets_by_loc = groupby(exposure.assets, key=lambda a: a.location)
     lons, lats = zip(*sorted(assets_by_loc))
@@ -778,7 +767,10 @@ def get_sitecol_assets(oqparam, exposure):
     for lonlat in zip(sitecol.lons, sitecol.lats):
         assets = assets_by_loc[lonlat]
         assets_by_site.append(sorted(assets, key=operator.attrgetter('idx')))
-    return sitecol, numpy.array(assets_by_site)
+    return sitecol, riskinput.AssetCollection(
+                assets_by_site, exposure.cost_calculator,
+                oqparam.time_event, time_events=hdf5.array_of_vstr(
+                    sorted(exposure.time_events)))
 
 
 def get_mesh_csvdata(csvfile, imts, num_values, validvalues):
@@ -930,7 +922,8 @@ def get_gmfs_from_txt(oqparam, fname):
             raise InvalidFile(
                 'The first line of %s is expected to contain comma separated'
                 'ordered coordinates, got %s instead' % (fname, firstline))
-        sitecol = sitecol_from_coords(oqparam, coords)
+        lons, lats, depths = zip(*coords)
+        sitecol = site.SiteCollection.from_points(lons, lats, depths, oqparam)
         if not oqparam.imtls:
             oqparam.set_risk_imtls(get_risk_models(oqparam))
         imts = list(oqparam.imtls)
@@ -996,8 +989,9 @@ def get_scenario_from_nrml(oqparam, fname):
     imt_dt = numpy.dtype([(imt, F32) for imt in imts])
     gmfset = nrml.read(fname).gmfCollection.gmfSet
     etags, sitecounts = _extract_etags_sitecounts(gmfset)
-    oqparam.sites = sorted(sitecounts)
-    site_idx = {lonlat: i for i, lonlat in enumerate(oqparam.sites)}
+    coords = sorted(sitecounts)
+    oqparam.sites = [(lon, lat, 0) for lon, lat in coords]
+    site_idx = {lonlat: i for i, lonlat in enumerate(coords)}
     oqparam.number_of_ground_motion_fields = num_events = len(etags)
     sitecol = get_site_collection(oqparam)
     num_sites = len(oqparam.sites)

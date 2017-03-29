@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,7 +24,7 @@ import cProfile
 import pstats
 
 from openquake.baselib import performance, general, sap
-from openquake.risklib import valid
+from openquake.hazardlib import valid
 from openquake.commonlib import readinput, datastore, oqvalidation
 from openquake.calculators import base, views
 CT = oqvalidation.OqParam.concurrent_tasks.default

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,7 +23,8 @@ import mock
 import numpy
 from numpy.testing import assert_almost_equal
 from openquake.baselib.general import writetmp
-from openquake.commonlib import InvalidFile, nrml, nrml_examples, riskmodels
+from openquake.hazardlib import InvalidFile, nrml
+from openquake.commonlib import nrml_examples, riskmodels
 from openquake.qa_tests_data.scenario_damage import case_4b
 
 EXAMPLES_DIR = os.path.dirname(nrml_examples.__file__)

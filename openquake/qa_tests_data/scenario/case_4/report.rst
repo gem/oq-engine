@@ -1,30 +1,31 @@
 Scenario QA Test, Case 1
 ========================
 
-============================================== ========================
-gem-tstation:/home/michele/ssd/calc_66945.hdf5 Wed Nov  9 08:14:05 2016
-engine_version                                 2.2.0-git54d01f4        
-hazardlib_version                              0.22.0-git173c60c       
-============================================== ========================
+============================================ ========================
+gem-tstation:/mnt/ssd/oqdata/calc_85522.hdf5 Tue Feb 14 15:36:35 2017
+engine_version                               2.3.0-git1f56df2        
+hazardlib_version                            0.23.0-git6937706       
+============================================ ========================
 
-num_sites = 3, sitecol = 831 B
+num_sites = 3, sitecol = 917 B
 
 Parameters
 ----------
-============================ =================
-calculation_mode             'scenario'       
-number_of_logic_tree_samples 0                
-maximum_distance             {u'default': 200}
-investigation_time           None             
-ses_per_logic_tree_path      1                
-truncation_level             1.0              
-rupture_mesh_spacing         1.0              
-complex_fault_mesh_spacing   1.0              
-width_of_mfd_bin             None             
-area_source_discretization   None             
-random_seed                  3                
-master_seed                  0                
-============================ =================
+=============================== ==================
+calculation_mode                'scenario'        
+number_of_logic_tree_samples    0                 
+maximum_distance                {'default': 200.0}
+investigation_time              None              
+ses_per_logic_tree_path         1                 
+truncation_level                1.0               
+rupture_mesh_spacing            1.0               
+complex_fault_mesh_spacing      1.0               
+width_of_mfd_bin                None              
+area_source_discretization      None              
+ground_motion_correlation_model None              
+random_seed                     3                 
+master_seed                     0                 
+=============================== ==================
 
 Input files
 -----------
@@ -49,6 +50,6 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.011     0.0       1     
-reading site collection 6.981E-04 0.0       1     
+filtering sites         0.012     0.0       1     
+reading site collection 7.641E-04 0.0       1     
 ======================= ========= ========= ======

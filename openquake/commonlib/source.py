@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2016 GEM Foundation
+# Copyright (C) 2010-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,14 +27,17 @@ import random
 
 import numpy
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import groupby, group_array
-from openquake.commonlib import logictree, sourceconverter, InvalidFile
-from openquake.commonlib import nrml, node
+from openquake.baselib.general import (
+    groupby, group_array, block_splitter, writetmp)
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile
+from openquake.commonlib import logictree
+
 
 MAXWEIGHT = sourceconverter.MAXWEIGHT
 MAX_INT = 2 ** 31 - 1
+TWO16 = 2 ** 16
 U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
@@ -78,89 +81,11 @@ class LtRealization(object):
         return hash(repr(self))
 
 
-class SourceModel(object):
-    """
-    A container of SourceGroup instances with some additional attributes
-    describing the source model in the logic tree.
-    """
-    def __init__(self, name, weight, path, src_groups, num_gsim_paths, ordinal,
-                 samples):
-        self.name = name
-        self.weight = weight
-        self.path = path
-        self.src_groups = src_groups
-        self.num_gsim_paths = num_gsim_paths
-        self.ordinal = ordinal
-        self.samples = samples
-
-    @property
-    def num_sources(self):
-        return sum(len(sg) for sg in self.src_groups)
-
-    def get_skeleton(self):
-        """
-        Return an empty copy of the source model, i.e. without sources,
-        but with the proper attributes for each SourceGroup contained within.
-        """
-        src_groups = [sourceconverter.SourceGroup(
-            sg.trt, [], sg.min_mag, sg.max_mag, sg.id)
-                      for sg in self.src_groups]
-        return self.__class__(self.name, self.weight, self.path, src_groups,
-                              self.num_gsim_paths, self.ordinal, self.samples)
-
-
 def capitalize(words):
     """
     Capitalize words separated by spaces.
-
-    >>> capitalize('active shallow crust')
-    'Active Shallow Crust'
     """
-    return ' '.join(w.capitalize() for w in words.split(' '))
-
-
-class SourceModelParser(object):
-    """
-    A source model parser featuring a cache.
-
-    :param converter:
-        :class:`openquake.commonlib.source.SourceConverter` instance
-    """
-    def __init__(self, converter):
-        self.converter = converter
-        self.groups = {}  # cache fname -> groups
-        self.fname_hits = collections.Counter()  # fname -> number of calls
-
-    def parse_src_groups(self, fname, apply_uncertainties=None):
-        """
-        :param fname:
-            the full pathname of the source model file
-        :param apply_uncertainties:
-            a function modifying the sources (or None)
-        """
-        try:
-            groups = self.groups[fname]
-        except KeyError:
-            groups = self.groups[fname] = self.parse_groups(fname)
-        # NB: deepcopy is *essential* here
-        groups = [copy.deepcopy(g) for g in groups]
-        for group in groups:
-            for src in group:
-                if apply_uncertainties:
-                    apply_uncertainties(src)
-                    src.num_ruptures = src.count_ruptures()
-        self.fname_hits[fname] += 1
-        return groups
-
-    def parse_groups(self, fname):
-        """
-        Parse all the groups and return them ordered by number of sources.
-        It does not count the ruptures, so it is relatively fast.
-
-        :param fname:
-            the full pathname of the source model file
-        """
-        return nrml.parse(fname, self.converter)
+    return ' '.join(w.capitalize() for w in decode(words).split(' '))
 
 
 class RlzsAssoc(collections.Mapping):
@@ -232,6 +157,11 @@ class RlzsAssoc(collections.Mapping):
         """Flat list with all the realizations"""
         return sum(self.rlzs_by_smodel.values(), [])
 
+    @property
+    def weights(self):
+        """Array with the weight of the realizations"""
+        return numpy.array([rlz.weight for rlz in self.realizations])
+
     def get_rlz(self, rlzstr):
         """
         Get a Realization instance for a string of the form 'rlz-\d+'
@@ -240,6 +170,16 @@ class RlzsAssoc(collections.Mapping):
         if not mo:
             return
         return self.realizations[int(mo.group(1))]
+
+    def get_rlzs_by_gsim(self, grp_id):
+        """
+        Returns a dictionary gsim > rlzs for the given grp_id
+        """
+        rlzs_by_gsim = {}
+        for gid, gsim in sorted(self.rlzs_assoc):
+            if gid == grp_id:
+                rlzs_by_gsim[gsim] = self[gid, gsim]
+        return rlzs_by_gsim
 
     def get_rlzs_by_grp_id(self):
         """
@@ -344,7 +284,7 @@ class CompositionInfo(object):
         """
         weight = 1
         gsim_lt = gsimlt or logictree.GsimLogicTree.from_('FromFile')
-        fakeSM = SourceModel(
+        fakeSM = logictree.SourceModel(
             'fake', weight,  'b1',
             [sourceconverter.SourceGroup('*', eff_ruptures=1)],
             gsim_lt.get_num_paths(), ordinal=0, samples=1)
@@ -400,8 +340,20 @@ class CompositionInfo(object):
         vars(self).update(attrs)
         self.gsim_fname = decode(self.gsim_fname)
         if self.gsim_fname.endswith('.xml'):
-            self.gsim_lt = logictree.GsimLogicTree(
-                self.gsim_fname, sorted(self.trts))
+            trts = sorted(self.trts)
+            if 'gmpe_table' in self.gsim_lt_xml:
+                # the canadian gsims depends on external files which are not
+                # in the datastore; I am storing the path to the original
+                # file so that the external files can be found; unfortunately,
+                # this means that copying the datastore on a different machine
+                # and exporting from there works only if the gsim_fname and all
+                # the external files are copied in the exact same place
+                self.gsim_lt = logictree.GsimLogicTree(self.gsim_fname, trts)
+            else:
+                # regular case: read the logic tree from self.gsim_lt_xml,
+                # so that you do not need to copy anything except the datastore
+                tmp = writetmp(self.gsim_lt_xml, suffix='.xml')
+                self.gsim_lt = logictree.GsimLogicTree(tmp, trts)
         else:  # fake file with the name of the GSIM
             self.gsim_lt = logictree.GsimLogicTree.from_(self.gsim_fname)
         self.source_models = []
@@ -414,8 +366,9 @@ class CompositionInfo(object):
             path = tuple(str(decode(rec['path'])).split('_'))
             trts = set(sg.trt for sg in srcgroups)
             num_gsim_paths = self.gsim_lt.reduce(trts).get_num_paths()
-            sm = SourceModel(rec['name'], rec['weight'], path, srcgroups,
-                             num_gsim_paths, sm_id, rec['samples'])
+            sm = logictree.SourceModel(
+                rec['name'], rec['weight'], path, srcgroups,
+                num_gsim_paths, sm_id, rec['samples'])
             self.source_models.append(sm)
 
     def get_num_rlzs(self, source_model=None):
@@ -472,6 +425,10 @@ class CompositionInfo(object):
             elif trts:
                 logging.warn('No realizations for %s, %s',
                              '_'.join(smodel.path), smodel.name)
+            if len(rlzs) > TWO16:
+                raise ValueError(
+                    'The source model %s has %d realizations, the maximum '
+                    'is %d' % (smodel.name, len(rlzs), TWO16))
         # NB: realizations could be filtered away by logic tree reduction
         if assoc.realizations:
             assoc._init()
@@ -485,6 +442,12 @@ class CompositionInfo(object):
             for src_group in smodel.src_groups:
                 if src_group.id == src_group_id:
                     return smodel
+
+    def get_grp_ids(self, sm_id):
+        """
+        :returns: a list of source group IDs for the given source model ID
+        """
+        return [sg.id for sg in self.source_models[sm_id].src_groups]
 
     def get_sm_by_rlz(self, realizations):
         """
@@ -534,7 +497,8 @@ class CompositeSourceModel(collections.Sequence):
     :param source_model_lt:
         a :class:`openquake.commonlib.logictree.SourceModelLogicTree` instance
     :param source_models:
-        a list of :class:`openquake.commonlib.source.SourceModel` tuples
+        a list of :class:`openquake.hazardlib.sourceconverter.SourceModel`
+        tuples
     """
     def __init__(self, gsim_lt, source_model_lt, source_models,
                  set_weight=False):
@@ -553,6 +517,9 @@ class CompositeSourceModel(collections.Sequence):
             self.source_model_lt.num_samples,
             [sm.get_skeleton() for sm in self.source_models],
             self.weight)
+        # dictionary src_group_id, source_id -> SourceInfo,
+        # populated by the split_sources method
+        self.infos = {}
 
     def get_model(self, sm_id):
         """
@@ -580,15 +547,16 @@ class CompositeSourceModel(collections.Sequence):
         source_models = []
         weight = 0
         for sm in self.source_models:
-            src_groups = [copy.copy(src) for src in sm.src_groups]
+            src_groups = [copy.copy(sg) for sg in sm.src_groups]
             for src_group in src_groups:
                 sources = []
                 for src, sites in src_filter(src_group.sources):
                     sources.append(src)
                     weight += src.weight
                 src_group.sources = sources
-            newsm = SourceModel(sm.name, sm.weight, sm.path, src_groups,
-                                sm.num_gsim_paths, sm.ordinal, sm.samples)
+            newsm = logictree.SourceModel(
+                sm.name, sm.weight, sm.path, src_groups,
+                sm.num_gsim_paths, sm.ordinal, sm.samples)
             source_models.append(newsm)
         new = self.__class__(self.gsim_lt, self.source_model_lt, source_models,
                              set_weight=True)
@@ -664,6 +632,34 @@ class CompositeSourceModel(collections.Sequence):
         """
         ct = concurrent_tasks or 1
         return max(math.ceil(self.weight / ct), MAXWEIGHT)
+
+    def split_sources(self, sources, src_filter, maxweight=MAXWEIGHT):
+        """
+        Split a set of sources of the same source group; light sources
+        (i.e. with weight <= maxweight) are not split.
+
+        :param sources: sources of the same source group
+        :param src_filter: SourceFilter instance
+        :param maxweight: weight used to decide if a source is light
+        :yields: blocks of sources of weight around maxweight
+        """
+        light = [src for src in sources if src.weight <= maxweight]
+        for src in light:
+            self.infos[src.src_group_id, src.source_id] = SourceInfo(src)
+        for block in block_splitter(
+                light, maxweight, weight=operator.attrgetter('weight')):
+            yield block
+        heavy = [src for src in sources if src.weight > maxweight]
+        for src in heavy:
+            self.infos[src.src_group_id, src.source_id] = SourceInfo(src)
+            srcs = sourceconverter.split_filter_source(src, src_filter)
+            if len(srcs) > 1:
+                logging.info(
+                    'Splitting %s "%s" in %d sources', src.__class__.__name__,
+                    src.source_id, len(srcs))
+            for block in block_splitter(
+                    srcs, maxweight, weight=operator.attrgetter('weight')):
+                yield block
 
     def __repr__(self):
         """

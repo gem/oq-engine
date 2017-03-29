@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,6 @@ import os
 import re
 import logging
 import unittest
-import platform
 
 import numpy
 
@@ -36,14 +35,6 @@ class DifferentFiles(Exception):
 def strip_calc_id(fname):
     name = os.path.basename(fname)
     return re.sub('_\d+\.', '.', name)
-
-
-def check_platform(*supported):
-    """
-    Skip the test if the platform is not the reference one
-    """
-    if platform.dist()[-1] not in supported:
-        raise unittest.SkipTest
 
 
 def columns(line):
@@ -126,7 +117,7 @@ class CalculatorTestCase(unittest.TestCase):
 
     def assertEqualFiles(
             self, fname1, fname2, make_comparable=lambda lines: lines,
-            delta=None):
+            delta=None, lastline=None):
         """
         Make sure the expected and actual files have the same content.
         `make_comparable` is a function processing the lines of the
@@ -139,7 +130,7 @@ class CalculatorTestCase(unittest.TestCase):
             open(expected, 'w').write('')
         actual = os.path.join(self.calc.oqparam.export_dir, fname2)
         expected_lines = make_comparable(open(expected).readlines())
-        actual_lines = make_comparable(open(actual).readlines())
+        actual_lines = make_comparable(open(actual).readlines()[:lastline])
         try:
             self.assertEqual(len(expected_lines), len(actual_lines))
             for exp, got in zip(expected_lines, actual_lines):

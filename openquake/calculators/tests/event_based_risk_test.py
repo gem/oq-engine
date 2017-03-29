@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,16 +15,36 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import sys
+import unittest
+import numpy
 from nose.plugins.attrib import attr
 
 from openquake.baselib.general import writetmp
 from openquake.calculators.views import view
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
-from openquake.calculators.tests import check_platform
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_master, case_miriam,
-    occupants)
+    occupants, case_1g)
+
+
+# used for a sanity check
+def check_agg_loss_table(dstore, loss_dt):
+    L1 = len(loss_dt.names)
+    L = L1 // 2
+    data1 = numpy.zeros(L1, numpy.float32)
+    for dset in dstore['agg_loss_table'].values():
+        for l, lt in enumerate(loss_dt.names):
+            i = lt.endswith('_ins')
+            data1[l] += dset['loss'][:, l - L * i, i].sum()
+
+    # check the sums are consistent with the ones coming from losses_by_taxon
+    data2 = numpy.zeros(L1, numpy.float32)
+    lbt = dstore['losses_by_taxon-rlzs']
+    for l in range(L1):
+        data2[l] += lbt[:, :, l].sum()
+    numpy.testing.assert_allclose(data1, data2, 1E-6)
 
 
 class EventBasedRiskTestCase(CalculatorTestCase):
@@ -51,15 +71,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
-        self.assert_stats_ok(case_1, 'job.ini', individual_curves='false')
-
-        # the numbers in the xml and geojson files are extremely sensitive to
-        # the libraries; while waiting for the opt project we skip this test
-        check_platform('xenial')
+        self.run_calc(case_1.__file__, 'job.ini',
+                      exports='csv', individual_curves='false')
         ekeys = [
             ('rcurves-stats', 'xml'),
             ('rcurves-stats', 'geojson'),
 
+            ('loss_maps-stats', 'csv'),
             ('loss_maps-stats', 'xml'),
             ('loss_maps-stats', 'geojson'),
 
@@ -71,6 +89,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                     'expected/%s' % strip_calc_id(fname), fname)
 
     @attr('qa', 'risk', 'event_based_risk')
+    def test_case_1g(self):
+        # vulnerability function with PMF
+        self.run_calc(case_1g.__file__, 'job.ini')
+        fname = writetmp(view('mean_avg_losses', self.calc.datastore))
+        self.assertEqualFiles('expected/avg_losses.txt', fname)
+
+    @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
         self.assert_stats_ok(case_2, 'job.ini', individual_curves='true')
         fname = writetmp(view('mean_avg_losses', self.calc.datastore))
@@ -79,9 +104,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # test the composite_risk_model keys (i.e. slash escaping)
         crm = sorted(self.calc.datastore.getitem('composite_risk_model'))
         self.assertEqual(crm, ['RC%2B', 'RM', 'W%2F1'])
+
         # export a specific eid
-        [fname] = export(('all_loss_ratios:0', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/losses-eid=0.csv', fname)
+        [fname] = export(('all_loss_ratios:4294967305', 'csv'),
+                         self.calc.datastore)
+        self.assertEqualFiles('expected/losses-eid=65545.csv', fname)
 
         # test the case when all GMFs are filtered out
         with self.assertRaises(RuntimeError) as ctx:
@@ -126,6 +153,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
+        # this is a case without loss_ratios in the .ini file
+        # we check that no risk curves are generated
+        self.assertNotIn('rcurves-rlzs', self.calc.datastore)
+        self.assertNotIn('rcurves-stats', self.calc.datastore)
+
     @attr('qa', 'risk', 'event_based_risk')
     def test_occupants(self):
         out = self.run_calc(occupants.__file__, 'job.ini',
@@ -138,11 +170,25 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_master(self):
-        self.assert_stats_ok(case_master, 'job.ini', individual_curves='false')
+        if sys.platform == 'darwin':
+            raise unittest.SkipTest('MacOSX')
+        self.run_calc(case_master.__file__, 'job.ini',
+                      exports='csv', individual_curves='false')
+        fnames = export(('avg_losses-stats', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                                  delta=1E-5)
 
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
         for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                                  delta=1E-5)
+
+        fnames = export(('losses_by_taxon-stats', 'csv'), self.calc.datastore)
+        for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+        check_agg_loss_table(self.calc.datastore, self.calc.oqparam.loss_dt())
 
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-5)
@@ -151,14 +197,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = writetmp(view('ruptures_events', self.calc.datastore))
         self.assertEqualFiles('expected/ruptures_events.txt', fname)
 
-        # export a specific eid
-        fnames = export(('all_loss_ratios:0', 'csv'), self.calc.datastore)
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
-        self.assertEqualFiles('expected/losses-eid=0.csv', fname)
-
-        # export a specific pair (sm_id, eid)
-        fnames = export(('all_loss_ratios:1:0', 'csv'),
+        # export a specific pair (grp_id, eid)
+        fnames = export(('all_loss_ratios:1:21474836480', 'csv'),
                         self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
@@ -167,6 +207,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_miriam(self):
         # this is a case with a grid and asset-hazard association
         out = self.run_calc(case_miriam.__file__, 'job.ini', exports='csv')
+
         [fname] = out['agg_loss_table', 'csv']
         self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
                               fname)

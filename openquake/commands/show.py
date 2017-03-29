@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,12 +24,12 @@ import logging
 
 from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.baselib import sap
-from openquake.risklib import scientific, valid
+from openquake.hazardlib import valid, stats
 from openquake.commonlib import datastore
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import rmsep
 from openquake.commonlib import config
-from openquake.engine import logs
+from openquake.commonlib import logs
 from openquake.calculators.views import view
 
 MULTI_USER = valid.boolean(config.get('dbserver', 'multi_user') or 'false')
@@ -58,7 +58,7 @@ def get_hcurves_and_means(dstore):
     N = len(dstore['sitecol'])
     mean_curves = zero_curves(N, oq.imtls)
     for imt in oq.imtls:
-        mean_curves[imt] = scientific.mean_curve(
+        mean_curves[imt] = stats.mean_curve(
             [curves_by_rlz[rlz][imt] for rlz in sorted(curves_by_rlz)],
             weights)
     return curves_by_rlz, mean_curves

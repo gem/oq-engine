@@ -4,16 +4,35 @@
 
 The **OpenQuake Engine** is an open source application that allows users to compute **seismic hazard** and **seismic risk** of earthquakes on a global scale. It runs on Linux, macOS and Windows, on laptops, workstations, standalone servers and multi-node clusters.
 
+<!-- GEM BEGIN: apply the following patch with the proper values for the next release
+-Jenkins (Python 2): [![Build Status](https://ci.openquake.org/job/master_oq-engine/badge/icon)](https://ci.openquake.org/job/master_oq-engine/)
++## OpenQuake Engine version 2.3 (Degenkolb)
+ 
+-Travis CI (Python 3): [![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine)
++Starting from OpenQuake version 2.0 we have introduced a "code name" to honour earthquake scientists.
+ 
+-### Current stable
++The code name for version 2.3 is **Degenkolb**, in memory of [Henry Degenkolb](https://en.wikipedia.org/wiki/Henry_J._Degenkolb).
++* [What's new](https://github.com/gem/oq-engine/blob/engine-2.3/doc/whats-new.md)
+ 
+-Current stable version is the **OpenQuake Engine 2.2** 'Cornell'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-2.2#openquake-engine.
+-* [What's new](https://github.com/gem/oq-engine/blob/engine-2.2/doc/whats-new.md)
+
++## Documentation
+-## Documentation (master tree)
+-->
 Jenkins (Python 2): [![Build Status](https://ci.openquake.org/job/master_oq-engine/badge/icon)](https://ci.openquake.org/job/master_oq-engine/)
 
 Travis CI (Python 3): [![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine)
 
 ### Current stable
 
-Current stable version is the **OpenQuake Engine 2.1** 'Benioff'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-2.1#openquake-engine.
+Current stable version is the **OpenQuake Engine 2.3** 'Degenkolb'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-2.3#openquake-engine.
+* [What's new](https://github.com/gem/oq-engine/blob/engine-2.3/doc/whats-new.md)
 
 ## Documentation (master tree)
 
+<!-- GEM END -->
 ### General overview
 
 * [About](https://github.com/gem/oq-engine/blob/master/doc/about.md)
@@ -21,8 +40,8 @@ Current stable version is the **OpenQuake Engine 2.1** 'Benioff'. The documentat
 * [Manuals](http://www.globalquakemodel.org/openquake/support/documentation/engine/#manual-latest-stable)
 * [Source Code/API Documentation](http://docs.openquake.org/oq-engine/)
 * [Development Philosophy and Coding Guidelines](https://github.com/gem/oq-engine/blob/master/doc/development-guidelines.md)
-* [Developers Notes](https://github.com/gem/oq-engine/blob/master/doc/development-notes.md)
-* [Architecture](https://github.com/gem/oq-engine/blob/master/doc/architecture.md)
+* [Developers Notes](https://github.com/gem/oq-engine/blob/master/doc/developers-notes.md)
+* [Architecture](https://github.com/gem/oq-engine/blob/master/doc/sphinx/architecture.rst)
 * [Calculation Workflow](https://github.com/gem/oq-engine/blob/master/doc/calculation-workflow.md)
 * [Hardware Suggestions](https://github.com/gem/oq-engine/blob/master/doc/hardware-suggestions.md)
 * [Continuous integration and testing](https://github.com/gem/oq-engine/blob/master/doc/testing.md)
@@ -44,11 +63,20 @@ Current stable version is the **OpenQuake Engine 2.1** 'Benioff'. The documentat
 #### macOS
 
 * [Installing on macOS](https://github.com/gem/oq-engine/blob/master/doc/installing/macos.md)
+* [Installing from sources](https://github.com/gem/oq-engine/blob/master/doc/installing/development.md)
 
 #### Windows
 
 * [Installing on Windows](https://github.com/gem/oq-engine/blob/master/doc/installing/windows.md)
 * [Starting the software](https://github.com/gem/oq-engine/blob/master/doc/running/windows.md)
+
+#### VirtualBox
+
+* [Download OVA appliance](https://www.globalquakemodel.org/ova/stable/)
+
+#### Docker
+
+* [Deploy a Docker container](https://github.com/gem/oq-engine/blob/master/doc/installing/docker.md)
 
 ### Running the OpenQuake Engine
 

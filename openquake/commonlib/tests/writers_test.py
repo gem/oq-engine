@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,8 +21,8 @@ import unittest
 import tempfile
 from io import BytesIO
 from openquake.baselib.performance import memory_info
-from openquake.commonlib.writers import tostring, StreamingXMLWriter, write_csv
-from openquake.commonlib.node import Node
+from openquake.commonlib.writers import write_csv
+from openquake.baselib.node import Node, tostring, StreamingXMLWriter
 from xml.etree import ElementTree as etree
 
 import numpy

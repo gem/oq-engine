@@ -50,7 +50,7 @@ The output should look something like this:
    3 | uhs
 ```
 
-To interrupt a running calculation simply press `CTRL-C`.
+To interrupt a running calculation simply press `CTRL-C` twice.
 
 ## More commands
 For a list of additional commands, type `oq engine --help`.

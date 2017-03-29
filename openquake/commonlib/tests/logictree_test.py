@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2016 GEM Foundation
+# Copyright (C) 2010-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -38,7 +38,7 @@ from mock import Mock
 import openquake.hazardlib
 from openquake.hazardlib import geo
 from openquake.baselib.general import writetmp
-from openquake.risklib import valid
+from openquake.hazardlib import valid
 from openquake.commonlib import logictree, readinput, tests, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.pmf import PMF
@@ -2029,7 +2029,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
                 <logicTree logicTreeID="lt1"/>
             </logicTreeSet>
         """)
-        self.parse_invalid(xml, NameError,
+        self.parse_invalid(xml, AttributeError,
                            "No subnode named 'logicTree' found in 'nrml'")
 
     def test_not_a_gsim_logic_tree(self):
@@ -2435,7 +2435,7 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
             for smpath in source.collect_source_model_paths(smlt):
                 pass
         exc = ctx.exception
-        self.assertEqual('not well-formed (invalid token)', str(exc))
+        self.assertIn('not well-formed (invalid token)', str(exc))
         self.assertEqual(exc.lineno, 5)
         self.assertEqual(exc.offset, 61)
         self.assertEqual(exc.filename, smlt)

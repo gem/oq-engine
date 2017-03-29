@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,8 +20,8 @@ import numpy
 
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
+from openquake.risklib.riskinput import gmv_dt
 from openquake.commonlib import readinput, source, calc
-from openquake.calculators.export.hazard import gmv_dt
 from openquake.calculators import base
 
 
@@ -57,7 +57,9 @@ class ScenarioCalculator(base.HazardCalculator):
              for eid in range(oq.number_of_ground_motion_fields)],
             calc.event_dt)
         rupture = calc.EBRupture(
-            rup, self.sitecol.sids, events, 'single_rupture', 0, 0)
+            rup, self.sitecol.sids, events, 0, 0)
+        rupture.sidx = 0
+        self.datastore['sids'] = self.sitecol.sids
         self.datastore['ruptures/grp-00/0'] = rupture
         self.computer = GmfComputer(
             rupture, self.sitecol, oq.imtls, self.gsims,
@@ -92,7 +94,7 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         with self.monitor('saving gmfs', autoflush=True):
             for rlzi, gsim in enumerate(self.gsims):
-                rlzstr = 'gmf_data/sm-0000/%04d' % rlzi
+                rlzstr = 'gmf_data/grp-00/%04d' % rlzi
                 self.datastore[rlzstr] = gmfa_by_rlzi[rlzi]
                 self.datastore.set_attrs(rlzstr, gsim=str(gsim))
             self.datastore.set_nbytes('gmf_data')

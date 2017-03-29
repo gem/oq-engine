@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2016 GEM Foundation
+# Copyright (C) 2010-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,27 +24,27 @@ from io import BytesIO
 import numpy
 from numpy.testing import assert_allclose
 
-from openquake.hazardlib import site
-from openquake.hazardlib import geo
-from openquake.hazardlib import mfd
-from openquake.hazardlib import pmf
-from openquake.hazardlib import scalerel
-from openquake.hazardlib import source
+from openquake.hazardlib import site, geo, mfd, pmf, scalerel, tests as htests
+from openquake.hazardlib import source, sourceconverter as s
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.filters import context
-from openquake.commonlib import tests, nrml_examples, readinput
-from openquake.commonlib import sourceconverter as s
-from openquake.commonlib.source import SourceModelParser, CompositionInfo
-from openquake.commonlib import nrml
+from openquake.commonlib import tests, readinput
+from openquake.commonlib.source import CompositionInfo
+from openquake.hazardlib import nrml
 from openquake.baselib.general import assert_close
 
 # directory where the example files are
-NRML_DIR = os.path.dirname(nrml_examples.__file__)
+NRML_DIR = os.path.dirname(htests.__file__)
 
 # Test NRML to use (contains 1 of each source type).
-MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'source_model/mixed.xml')
-ALT_MFDS_SRC_MODEL = os.path.join(NRML_DIR,
-                                  'source_model/alternative-mfds.xml')
+MIXED_SRC_MODEL = os.path.join(
+    NRML_DIR, 'source_model/mixed.xml')
+
+ALT_MFDS_SRC_MODEL = os.path.join(
+    NRML_DIR, 'source_model/alternative-mfds.xml')
+
+NONPARAMETRIC_SOURCE = os.path.join(
+    NRML_DIR, 'source_model/nonparametric-source.xml')
 
 DUPLICATE_ID_SRC_MODEL = os.path.join(
     os.path.dirname(__file__), 'data', 'invalid_source_model.xml')
@@ -61,9 +61,6 @@ SINGLE_PLANE_RUPTURE = os.path.join(
 MULTI_PLANES_RUPTURE = os.path.join(
     os.path.dirname(__file__), 'data', 'multi-planes-rupture.xml')
 
-NONPARAMETRIC_SOURCE = os.path.join(
-    os.path.dirname(__file__), 'data', 'nonparametric-source.xml')
-
 
 class NrmlSourceToHazardlibTestCase(unittest.TestCase):
     """Tests for converting NRML source model objects to the hazardlib
@@ -72,7 +69,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.parser = SourceModelParser(s.SourceConverter(
+        cls.parser = nrml.SourceModelParser(s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
             complex_fault_mesh_spacing=1,  # km
@@ -356,19 +353,16 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         assert_close(self._expected_complex, self.cmplx)
 
     def test_characteristic_simple(self):
-        self.char_simple.surface_node = None
         assert_close(self._expected_char_simple, self.char_simple)
 
     def test_characteristic_complex(self):
-        self.char_complex.surface_node = None
         assert_close(self._expected_char_complex, self.char_complex)
 
     def test_characteristic_multi(self):
-        self.char_multi.surface_node = None
         assert_close(self._expected_char_multi, self.char_multi)
 
     def test_duplicate_id(self):
-        parser = SourceModelParser(s.SourceConverter(
+        parser = nrml.SourceModelParser(s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,
             complex_fault_mesh_spacing=1,
@@ -471,7 +465,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 </nrml>
 """)
         [area] = nrml.read(area_file).sourceModel
-        with self.assertRaises(NameError) as ctx:
+        with self.assertRaises(AttributeError) as ctx:
             self.parser.converter.convert_node(area)
         self.assertIn(
             "node areaSource: No subnode named 'nodalPlaneDist'"
@@ -664,7 +658,7 @@ class SourceGroupTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.parser = SourceModelParser(s.SourceConverter(
+        cls.parser = nrml.SourceModelParser(s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
             complex_fault_mesh_spacing=1,  # km
@@ -731,7 +725,7 @@ class RuptureConverterTestCase(unittest.TestCase):
     <simpleFaultRupture>
         <magnitude>7.65</magnitude>
         <rake>15.0</rake>
-        <hypocenter lon="0.0" lat="0.0" depth="-5.0"/>
+        <hypocenter lon="0.0" lat="91.0" depth="5.0"/>
         <simpleFaultGeometry>
                 <gml:LineString>
                     <gml:posList>
@@ -908,8 +902,9 @@ xmlns:gml="http://www.opengis.net/gml"
             reference_depth_to_1pt0km_per_sec=100.,
             reference_depth_to_2pt5km_per_sec=5.0,
             reference_backarc=False)
-        sitecol = site.SiteCollection.from_points([102.32], [-2.9107], mod)
-        parser = SourceModelParser(s.SourceConverter(
+        sitecol = site.SiteCollection.from_points(
+            [102.32], [-2.9107], [0], mod)
+        parser = nrml.SourceModelParser(s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
             complex_fault_mesh_spacing=1,  # km

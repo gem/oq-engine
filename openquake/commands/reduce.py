@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,10 +20,9 @@
 from __future__ import print_function
 import random
 import shutil
-from openquake.risklib import valid
+from openquake.hazardlib import valid, nrml
 from openquake.baselib.python3compat import encode
 from openquake.baselib import sap
-from openquake.commonlib import nrml
 
 
 def random_filter(objects, reduction_factor, seed=42):

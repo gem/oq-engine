@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,10 +22,10 @@ import sys
 import sqlite3
 from django.core.management import execute_from_command_line
 from openquake.server.settings import DATABASE
-from openquake.server import executor
+from openquake.server import executor, dbserver
 from openquake.server.db import actions
 from openquake.server.dbapi import Db
-from openquake.engine import logs
+from openquake.commonlib import logs
 
 db = Db(sqlite3.connect, DATABASE['NAME'], isolation_level=None,
         detect_types=sqlite3.PARSE_DECLTYPES, timeout=20)
@@ -49,9 +49,16 @@ def dbcmd(action, *args):
 if __name__ == "__main__":
     os.environ.setdefault(
         "DJANGO_SETTINGS_MODULE", "openquake.server.settings")
-    if '--nothreading' in sys.argv:
-        logs.dbcmd = dbcmd  # turn this on when debugging
-    logs.dbcmd('upgrade_db')  # make sure the DB exists
-    logs.dbcmd('reset_is_running')  # reset the flag is_running
+
+    if 'runserver' in sys.argv:
+        if '--nothreading' in sys.argv:
+            logs.dbcmd = dbcmd  # turn this on when debugging
+        # check if we are talking to the right server
+        err = dbserver.check_foreign()
+        if err:
+            sys.exit(err)
+        logs.dbcmd('upgrade_db')  # make sure the DB exists
+        logs.dbcmd('reset_is_running')  # reset the flag is_running
+
     with executor:
         execute_from_command_line(sys.argv)

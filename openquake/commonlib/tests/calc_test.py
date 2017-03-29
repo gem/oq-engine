@@ -3,10 +3,12 @@ import tempfile
 import unittest
 import numpy
 from openquake.baselib import hdf5, general
-from openquake.commonlib import nrml_examples, calc, source, nrml
-from openquake.commonlib.sourceconverter import SourceConverter, RuptureConverter
+from openquake.hazardlib import nrml, tests
+from openquake.hazardlib.sourceconverter import (
+    SourceConverter, RuptureConverter)
+from openquake.commonlib import calc
 
-NRML_DIR = os.path.dirname(nrml_examples.__file__)
+NRML_DIR = os.path.dirname(tests.__file__)
 MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'source_model/mixed.xml')
 converter = SourceConverter(
     investigation_time=50.,
@@ -37,7 +39,7 @@ planar = general.writetmp('''\
 
 class SerializeRuptureTestCase(unittest.TestCase):
     def test(self):
-        groups = source.SourceModelParser(converter).parse_groups(
+        groups = nrml.SourceModelParser(converter).parse_groups(
             MIXED_SRC_MODEL)
         ([point], [cmplx], [area, simple],
          [char_simple, char_complex, char_multi]) = groups
@@ -56,8 +58,8 @@ class SerializeRuptureTestCase(unittest.TestCase):
         with hdf5.File(self.path, 'r+') as f:
             for rup in src.iter_ruptures():
                 rup.seed = 0
-                ebr = calc.EBRupture(
-                    rup, self.sids, self.events, src.source_id, 0, self.i)
+                ebr = calc.EBRupture(rup, self.sids, self.events, 0, self.i)
+                ebr.sidx = 0
                 f[str(self.i)] = ebr
                 self.i += 1
         with hdf5.File(self.path, 'r') as f:
@@ -73,7 +75,8 @@ class SerializeRuptureTestCase(unittest.TestCase):
         conv = RuptureConverter(1.0, 1.0)
         rup = conv.convert_node(rup_node)
         rup.seed = 0
-        ebr1 = calc.EBRupture(rup, sids, events, '*', 0, 0)
+        ebr1 = calc.EBRupture(rup, sids, events, 0, 0)
+        ebr1.sidx = 0
         with hdf5.File(self.path, 'w') as f:
             f['ebr'] = ebr1
         with hdf5.File(self.path, 'r') as f:

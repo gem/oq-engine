@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,11 +24,9 @@ import importlib
 from openquake.baselib import sap
 from openquake.commonlib import __version__
 from openquake import commands
-
-from openquake.risklib import valid
 from openquake.commonlib import config
 
-USE_CELERY = valid.boolean(config.get('celery', 'use_celery') or 'false')
+USE_CELERY = config.get('distribution', 'oq_distribute') == 'celery'
 
 # the environment variable has the precedence over the configuration file
 if 'OQ_DISTRIBUTE' not in os.environ and USE_CELERY:
@@ -38,6 +36,7 @@ if 'OQ_DISTRIBUTE' not in os.environ and USE_CELERY:
 if USE_CELERY and 'run' in sys.argv:
     sys.exit('You are on a cluster and you are using oq run?? '
              'Use oq engine --run instead!')
+
 
 def oq():
     modnames = ['openquake.commands.%s' % mod[:-3]

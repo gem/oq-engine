@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -135,7 +135,7 @@ def get_assets(dstore):
 
 def get_ses_idx(etag):
     """
-    >>> get_ses_idx("grp=00~ses=0007~src=1-3~rup=018-01")
+    >>> get_ses_idx("grp=00~ses=0007~rup=018-01")
     7
     """
     return int(decode(etag).split('~')[1][4:])
@@ -143,13 +143,13 @@ def get_ses_idx(etag):
 
 def get_serial(etag):
     """
-    >>> print(get_serial("grp=00~ses=0007~src=1-3~rup=018-01"))
+    >>> print(get_serial("grp=00~ses=0007~rup=018-01"))
     18
     """
     try:
-        trt, ses, src, rup = decode(etag).split('~')
+        trt, ses, rup = decode(etag).split('~')
     except ValueError:
-        trt, ses, src, rup, sample = decode(etag).split('~')
+        trt, ses, rup, sample = decode(etag).split('~')
     serial = rup.split('=')[1].split('-')[0]
     return int(serial)
 
@@ -158,9 +158,14 @@ class Rupture(object):
     """
     Simplified Rupture class with attributes etag, indices, ses_idx,
     used in export.
+
+    :param grp_id: source group ID
+    :param eid: event ID
+    :param etag: tag associated to the event
+    :param indices: site indices
     """
-    def __init__(self, sm_id, eid, etag, indices=None):
-        self.sm_id = sm_id
+    def __init__(self, grp_id, eid, etag, indices=None):
+        self.grp_id = grp_id
         self.eid = eid
         if isinstance(etag, int):  # scenario
             self.etag = 'scenario-%010d' % etag

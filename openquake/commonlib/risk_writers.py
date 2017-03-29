@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2016 GEM Foundation
+# Copyright (C) 2010-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,10 +26,10 @@ import numpy
 
 from xml.etree import ElementTree as et
 
-from openquake.commonlib.nrml import SERIALIZE_NS_MAP
+from openquake.hazardlib.nrml import SERIALIZE_NS_MAP
 from openquake.baselib.general import groupby, writetmp
-from openquake.commonlib.node import Node
-from openquake.commonlib import nrml
+from openquake.baselib.node import Node
+from openquake.hazardlib import nrml
 from openquake.commonlib.writers import FIVEDIGITS
 
 

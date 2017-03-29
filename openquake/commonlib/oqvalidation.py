@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2016 GEM Foundation
+# Copyright (C) 2014-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,40 +24,12 @@ from openquake.baselib import parallel
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import correlation
-from openquake.risklib import valid
+from openquake.hazardlib import valid
 from openquake.commonlib import logictree
 from openquake.commonlib.riskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
-
-
-def getdefault(dic_with_default, key):
-    """
-    :param dic_with_default: a dictionary with a 'default' key
-    :param key: a key that may be present in the dictionary or not
-    :returns: the value associated to the key, or to 'default'
-    """
-    try:
-        return dic_with_default[key]
-    except KeyError:
-        return dic_with_default['default']
-
-
-def fix_maximum_distance(max_dist, trts):
-    """
-    Make sure the dictionary maximum_distance (provided by the user in the
-    job.ini file) is filled for all tectonic region types and has no key
-    named 'default'.
-    """
-    for trt in trts:
-        try:
-            max_dist[trt] = getdefault(max_dist, trt)
-        except KeyError:
-            raise ValueError(
-                'The parameter `maximum_distance` in the job.ini '
-                'file is missing the TRT %r' % trt)
-    if 'default' in max_dist:
-        del max_dist['default']
+TWO16 = 2 ** 16  # 65536
 
 
 class OqParam(valid.ParamSet):
@@ -68,6 +40,7 @@ class OqParam(valid.ParamSet):
         z2pt5='reference_depth_to_2pt5km_per_sec',
         backarc='reference_backarc',
     )
+    all_losses = valid.Param(valid.boolean, False)
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
@@ -113,7 +86,7 @@ class OqParam(valid.ParamSet):
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 0)
-    maximum_distance = valid.Param(valid.floatdict)  # km
+    maximum_distance = valid.Param(valid.maximum_distance)  # km
     asset_hazard_distance = valid.Param(valid.positivefloat, 5)  # km
     mean_hazard_curves = valid.Param(valid.boolean, False)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
@@ -145,9 +118,11 @@ class OqParam(valid.ParamSet):
         valid.NoneOr(valid.positivefloat), None)
     save_ruptures = valid.Param(valid.boolean, False)
     ses_per_logic_tree_path = valid.Param(valid.positiveint, 1)
+    ses_seed = valid.Param(valid.positiveint, 42)
+    max_site_model_distance = valid.Param(valid.positivefloat, 5)  # by Graeme
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     sites_disagg = valid.Param(valid.NoneOr(valid.coordinates), [])
-    sites_per_tile = valid.Param(valid.positiveint, 10000)
+    sites_slice = valid.Param(valid.simple_slice, (None, None))
     specific_assets = valid.Param(valid.namelist, [])
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
@@ -219,6 +194,15 @@ class OqParam(valid.ParamSet):
                 and self.asset_correlation not in (0, 1)):
             raise ValueError('asset_correlation != {0, 1} is no longer'
                              ' supported')
+
+        # checks for ucerf
+        if 'ucerf' in self.calculation_mode:
+            if self.ses_per_logic_tree_path >= TWO16:
+                raise ValueError('ses_per_logic_tree_path too big: %d' %
+                                 self.ses_per_logic_tree_path)
+            if self.number_of_logic_tree_samples >= TWO16:
+                raise ValueError('number_of_logic_tree_samples too big: %d' %
+                                 self.number_of_logic_tree_samples)
 
     def check_gsims(self, gsims):
         """
@@ -438,7 +422,6 @@ class OqParam(valid.ParamSet):
             missing = ', '.join(set(self._gsims_by_trt) - trts)
             self.error = 'missing distance for %s and no default' % missing
             return False
-        fix_maximum_distance(self.maximum_distance, self._gsims_by_trt)
         return True
 
     def is_valid_intensity_measure_types(self):

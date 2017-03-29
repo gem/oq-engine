@@ -7,7 +7,7 @@ Both services run on a single "master" node. It is not necessary and not recomme
 Running OpenQuake on an *MPI cluster* is currently not supported. See the [FAQ](../faq.md#mpi-support) for more information.
 
 ## Initial install
-On all nodes, install the `python-oq-engine package` as described in OpenQuake Engine installation for [Ubuntu](ubuntu.md) or [RedHat](rhel.md).
+On all nodes, install the `python-oq-engine` package as described in OpenQuake Engine installation for [Ubuntu](ubuntu.md) or [RedHat](rhel.md).
 
 Note: you have to **restart every celery node** after a configuration change.
 
@@ -20,9 +20,9 @@ In all the nodes, the following file should be modified to enable the *Celery* s
 `/etc/openquake/openquake.cfg:`
 
 ```
-[celery]
+[distribution]
 # enable celery only if you have a cluster
-use_celery = true
+oq_distribute = celery
 ```
 
 ## OpenQuake Engine 'worker' node configuration File
@@ -32,9 +32,9 @@ On all worker nodes, the `/etc/openquake/openquake.cfg` file should be also modi
 [amqp]
 host = w.x.y.z
 port = 5672
-user = guest
-password = guest
-vhost = /
+user = openquake
+password = openquake
+vhost = openquake
 # This is where tasks will be enqueued.
 celery_queue = celery
 
@@ -44,7 +44,7 @@ multi_user = true
 file = /var/lib/openquake/db.sqlite3
 log = /var/lib/openquake/dbserver.log
 host = w.x.y.z
-port = 1999
+port = 1908
 authkey = changeme
 ```
 
@@ -57,6 +57,35 @@ The required daemons are:
 - RabbitMQ
 - OpenQuake Engine DbServer
 - OpenQuake Engine WebUI (optional)
+
+
+##### RabbitMQ
+
+A _user_ and _vhost_ are automatically added to the RabbitMQ configuration during the installation on `python-oq-engine`.
+
+You can verify that the `openquake` user and vhost exist running:
+
+```bash
+# Check the user
+sudo rabbitmqctl list_users | grep openquake 
+
+# Check the vhost
+sudo rabbitmqctl list_vhosts | grep openquake 
+```
+
+If, for any reason, the `openquake` user and vhost are missing they can be set up running:
+
+```bash
+# Add the user
+sudo rabbitmqctl add_user openquake openquake
+
+# Add the vhost
+sudo rabbitmqctl add_vhost openquake
+sudo rabbitmqctl set_permissions -p openquake openquake ".*" ".*" ".*"
+```
+
+For more information please refer to https://www.rabbitmq.com/man/rabbitmqctl.1.man.html.
+
 
 #### Worker nodes
 - Celery
@@ -78,19 +107,20 @@ Additionally, access to the RabbitMQ, and DbServer ports should be limited (agai
 The following ports must be open on the **master node**:
 
 * 5672 for RabbitMQ
-* 1999 for DbServer
+* 1908 for DbServer
 * 8800 for the API/WebUI (optional)
 
-The **worker nodes** must be able to connect to the master on port 5672, and port 1999.
+The **worker nodes** must be able to connect to the master on port 5672, and port 1908.
 
 
 ## Storage requirements
 
-Storage requirements depend a lot on the type of calculations you want to run. On a worker node you will need just the space for the operating system, the logs and the OpenQuake installation: less than 20GB are usually enough. Workers can be also diskless (using iSCSI or NFS for example).
+Storage requirements depend a lot on the type of calculations you want to run. On a worker node you will need just the space for the operating system, the logs and the OpenQuake installation: less than 20GB are usually enough. Workers can be also diskless (using iSCSI or NFS for example). Starting from OpenQuake 2.3 the software and all its libraries are located in `/opt/openquake`.
 
 On the master node you will also need space for:
 - the users' **home** directory (usually located under `/home`): it contains the calculations datastore (`hdf5` files located in the `oqdata` folder)
-- *RabbitMQ* mnesia dir (on RHEL usually located under `/var/lib/rabbitmq`)
+- the OpenQuake database (located under `/var/lib/openquake`): it contains only logs and metadata, the expected size is tens of megabyte
+- *RabbitMQ* mnesia dir (usually located under `/var/lib/rabbitmq`)
 
 On large installations we strongly suggest to create separate partition for `/home`, `/var` and *RabbitMQ* (`/var/lib/rabbitmq`).
 

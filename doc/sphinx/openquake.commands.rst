@@ -1,7 +1,31 @@
 openquake.commands package
 ==========================
 
-openquake.commands.export module
+db command
+----------------------------
+
+.. automodule:: openquake.commands.db
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+dbserver command
+--------------------------------
+
+.. automodule:: openquake.commands.dbserver
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+engine command
+--------------------------------
+
+.. automodule:: openquake.commands.engine
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+export command
 --------------------------------
 
 .. automodule:: openquake.commands.export
@@ -9,7 +33,15 @@ openquake.commands.export module
     :undoc-members:
     :show-inheritance:
 
-openquake.commands.info module
+from_shapefile command
+----------------------------------------
+
+.. automodule:: openquake.commands.from_shapefile
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+info command
 ------------------------------
 
 .. automodule:: openquake.commands.info
@@ -17,7 +49,23 @@ openquake.commands.info module
     :undoc-members:
     :show-inheritance:
 
-openquake.commands.plot module
+normalize command
+-----------------------------------
+
+.. automodule:: openquake.commands.normalize
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+plot_agg_curve command
+----------------------------------------
+
+.. automodule:: openquake.commands.plot_agg_curve
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+plot command
 ------------------------------
 
 .. automodule:: openquake.commands.plot
@@ -25,7 +73,7 @@ openquake.commands.plot module
     :undoc-members:
     :show-inheritance:
 
-openquake.commands.plot_sites module
+plot_sites command
 ------------------------------------
 
 .. automodule:: openquake.commands.plot_sites
@@ -33,7 +81,15 @@ openquake.commands.plot_sites module
     :undoc-members:
     :show-inheritance:
 
-openquake.commands.purge module
+plot_uhs command
+----------------------------------
+
+.. automodule:: openquake.commands.plot_uhs
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+purge command
 -------------------------------
 
 .. automodule:: openquake.commands.purge
@@ -41,15 +97,23 @@ openquake.commands.purge module
     :undoc-members:
     :show-inheritance:
 
-openquake.commands.reduce module
+reduce command
 --------------------------------
 
 .. automodule:: openquake.commands.reduce
     :members:
     :undoc-members:
     :show-inheritance:
+  
+reset command
+-------------------------------
 
-openquake.commands.run module
+.. automodule:: openquake.commands.reset
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+run command
 -----------------------------
 
 .. automodule:: openquake.commands.run
@@ -57,7 +121,15 @@ openquake.commands.run module
     :undoc-members:
     :show-inheritance:
 
-openquake.commands.show module
+run_tiles command
+------------------------------------
+
+.. automodule:: openquake.commands.run_tiles
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+show command
 ------------------------------
 
 .. automodule:: openquake.commands.show
@@ -65,7 +137,7 @@ openquake.commands.show module
     :undoc-members:
     :show-inheritance:
 
-openquake.commands.show_attrs module
+show_attrs command
 ------------------------------------
 
 .. automodule:: openquake.commands.show_attrs
@@ -73,7 +145,7 @@ openquake.commands.show_attrs module
     :undoc-members:
     :show-inheritance:
 
-openquake.commands.tidy module
+tidy command
 ------------------------------
 
 .. automodule:: openquake.commands.tidy
@@ -81,7 +153,23 @@ openquake.commands.tidy module
     :undoc-members:
     :show-inheritance:
 
-openquake.commands.upgrade_nrml module
+to_hdf5 command
+---------------------------------
+
+.. automodule:: openquake.commands.to_hdf5
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+to_shapefile command
+--------------------------------------
+
+.. automodule:: openquake.commands.to_shapefile
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+upgrade_nrml command
 --------------------------------------
 
 .. automodule:: openquake.commands.upgrade_nrml
@@ -89,11 +177,10 @@ openquake.commands.upgrade_nrml module
     :undoc-members:
     :show-inheritance:
 
+webui command
+--------------------------------
 
-Module contents
----------------
-
-.. automodule:: openquake.commands
+.. automodule:: openquake.commands.webui
     :members:
     :undoc-members:
     :show-inheritance:

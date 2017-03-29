@@ -1,0 +1,87 @@
+An \glsdesc{acr:oqe} \gls{seismicsourceinputmodel} contains a list of sources
+belonging to a finite set of possible typologies. Each source type is defined
+by a set of parameters - called source data - which are used to specify the
+source geometry and the properties of seismicity occurrence.
+
+Currently the \glsdesc{acr:oqe} supports the following source types:
+
+\begin{itemize}
+
+
+    
+    \item Sources for modelling distributed seismicity:
+
+    \begin{itemize}
+
+        \item \Gls{pointsource} - The elemental source type used to model
+        distributed seismicity. Grid and area sources (described below) are
+        different containers of point sources.
+
+        \item \Gls{areasource} - So far, the most frequently adopted source
+        type in national and regional PSHA models.
+
+        \item \Gls{gridsource} - A replacement for area sources admitting
+        spatially variable seismicity occurrence properties.
+
+    \end{itemize}
+
+    \item Fault sources with floating ruptures:
+
+    \begin{itemize}
+
+        \item \Gls{simplefaultsource} - The simplest fault model in the
+        \glsdesc{acr:oqe}. This source is habitually used to describe shallow
+        seismogenic faults.
+
+        \item \Gls{complexfaultsource} - Often used to model subduction
+        interface sources with a complex geometry.
+
+    \end{itemize}
+
+    \item Fault sources with ruptures always covering the entire fault surface:
+
+    \begin{itemize}
+
+        \item \Gls{charfaultsource} - A typology of source where ruptures
+        always fill the entire fault surface.
+        
+        \item \Gls{nonparametricsource} - A typology of source representing a collection of ruptures, each with their associated probabilities of 0, 1, 2 ... occurrences in the investigation time
+
+    \end{itemize}
+
+    \item Sources for representing individual earthquake ruptures
+    
+    \begin{itemize}
+        \item Planar fault rupture - an individual fault rupture represented as a single rectangular plane
+        \item Multi-planar fault rupture - an individual rupture represented as a collection of rectangular planes
+        \item Simple fault rupture - an individual fault rupture represented as a simple fault surface
+        \item Complex fault rupture - an individual fault rupture represented as a complex fault surface
+    \end{itemize}
+
+\end{itemize}
+
+The \glsdesc{acr:oqe} contains some basic assumptions for the definition of
+these source typologies:
+
+\begin{itemize}
+
+    \item In the case of area and fault sources, the seismicity is
+    homogeneously distributed over the source;
+
+    \item Seismicity temporal occurrence follows a Poissonian model.
+
+\end{itemize}
+
+The above sets of sources may be referred to as ``parametric'' sources, that is to say that the generation of the \Gls{earthquakeruptureforecast} is done by the OpenQuake engine based on the parameters of the sources set by the user. In some cases, particularly if the user wishes for the temporal occurrence model to be non-Poissonian (such as the lognormal or Brownian Passage Time models) a different type of behaviour is needed. For this OpenQuake-engine supports a \Gls{nonparametricsource} in which the \Gls{earthquakeruptureforecast} is provided explicitly by the user as a set of ruptures and their corresponding probabilities of occurrence.
+
+\subsection{Source typologies for modelling distributed seismicity}
+\input{oqum/hazard/00a_sources_distributed_seismicity}
+
+\subsection{Fault sources with floating ruptures}
+\input{oqum/hazard/00a_sources_floating_ruptures}
+
+\subsection{Fault sources without floating ruptures}
+\input{oqum/hazard/00a_sources_nonfloating_ruptures}
+
+\subsection{Non-Parametric Sources}
+\input{oqum/hazard/00a_sources_nonparametric}

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2016 GEM Foundation
+# Copyright (C) 2010-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,17 +25,17 @@ import signal
 import traceback
 
 from openquake.baselib.performance import Monitor
-from openquake.risklib import valid
+from openquake.hazardlib import valid
 from openquake.baselib import parallel
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import datastore, config, readinput
 from openquake.calculators import base, views, export
-from openquake.engine import logs
+from openquake.commonlib import logs
 
 TERMINATE = valid.boolean(
-    config.get('celery', 'terminate_workers_on_revoke') or 'false')
+    config.get('distribution', 'terminate_workers_on_revoke') or 'false')
 
-USE_CELERY = valid.boolean(config.get('celery', 'use_celery') or 'false')
+USE_CELERY = config.get('distribution', 'oq_distribute') == 'celery'
 
 if USE_CELERY:
     import celery.task.control
@@ -83,18 +83,26 @@ def expose_outputs(dstore):
     exportable = set(ekey[0] for ekey in export.export)
     calcmode = oq.calculation_mode
     dskeys = set(dstore) & exportable  # exportable datastore keys
+    dskeys.add('fullreport')
+    try:
+        rlzs = list(dstore['realizations'])
+    except KeyError:
+        rlzs = []
+    if 'scenario' not in calcmode:  # export sourcegroups.csv
+        dskeys.add('sourcegroups')
     if oq.uniform_hazard_spectra:
         dskeys.add('uhs')  # export them
     if oq.hazard_maps:
         dskeys.add('hmaps')  # export them
-    if 'rcurves-rlzs' in dstore or 'loss_curves-rlzs' in dstore:
-        dskeys.add('loss_maps-rlzs')
-    if 'rcurves-stats' in dstore or 'loss_curves-stats' in dstore:
-        dskeys.add('loss_maps-stats')
-    try:
-        rlzs = dstore['realizations']
-    except KeyError:
-        rlzs = []
+    if 'avg_losses-rlzs' in dstore and rlzs:
+        dskeys.add('avg_losses-stats')
+    if oq.conditional_loss_poes:  # expose loss_maps outputs
+        if 'rcurves-rlzs' in dstore or 'loss_curves-rlzs' in dstore:
+            if len(rlzs) > 1:
+                dskeys.add('loss_maps-rlzs')
+        if 'rcurves-stats' in dstore or 'loss_curves-stats' in dstore:
+            if len(rlzs) > 1:
+                dskeys.add('loss_maps-stats')
     if 'all_loss_ratios' in dskeys:
         dskeys.remove('all_loss_ratios')  # export only specific IDs
     if 'realizations' in dskeys and len(rlzs) <= 1:
@@ -155,7 +163,7 @@ def job_from_file(cfg_file, username, hazard_calculation_id=None):
 
 
 def run_calc(job_id, oqparam, log_level, log_file, exports,
-             hazard_calculation_id=None):
+             hazard_calculation_id=None, **kw):
     """
     Run a calculation.
 
@@ -180,7 +188,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         tb = 'None\n'
         try:
             logs.dbcmd('set_status', job_id, 'executing')
-            _do_run_calc(calc, exports, hazard_calculation_id)
+            _do_run_calc(calc, exports, hazard_calculation_id, **kw)
             expose_outputs(calc.datastore)
             records = views.performance_view(calc.datastore)
             logs.dbcmd('save_performance', job_id, records)
@@ -202,7 +210,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             # taking further action, so that the real error can propagate
             try:
                 if USE_CELERY:
-                    celery_cleanup(TERMINATE, parallel.TaskManager.task_ids)
+                    celery_cleanup(TERMINATE, parallel.Starmap.task_ids)
             except:
                 # log the finalization error only if there is no real error
                 if tb == 'None\n':
@@ -210,7 +218,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     return calc
 
 
-def _do_run_calc(calc, exports, hazard_calculation_id):
+def _do_run_calc(calc, exports, hazard_calculation_id, **kw):
     with calc.monitor:
         calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id,
-                 close=False)  # don't close the datastore too soon
+                 close=False, **kw)  # don't close the datastore too soon

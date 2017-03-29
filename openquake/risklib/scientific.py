@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2016 GEM Foundation
+# Copyright (C) 2012-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,7 +30,6 @@ from numpy.testing import assert_equal
 from scipy import interpolate, stats, random
 
 from openquake.baselib.general import CallableDict
-from openquake.hazardlib.stats import mean_curve, quantile_curve
 from openquake.risklib import utils
 from openquake.baselib.python3compat import with_metaclass
 
@@ -53,36 +52,6 @@ def build_dtypes(curve_resolution, conditional_loss_poes, insured=False):
         lst += [(name + '_ins', pair) for name, pair in lst]
     loss_maps_dt = numpy.dtype(lst) if lst else None
     return loss_curve_dt, loss_maps_dt
-
-
-class Output(object):
-    """
-    A generic container of attributes. Only assets, loss_type, hid and weight
-    are always defined.
-
-    :param assets: a list of assets with the same taxonomy
-    :param loss_type: a loss type string
-    :param hid: ordinal of the hazard realization (can be None)
-    :param weight: weight of the realization (can be None)
-    """
-    def __init__(self, assets, loss_type, hid=None, weight=0, **attrs):
-        self.assets = assets
-        self.loss_type = loss_type
-        self.hid = hid
-        self.weight = weight
-        vars(self).update(attrs)
-
-    @property
-    def taxonomy(self):
-        return self.assets[0].taxonomy
-
-    def __repr__(self):
-        return '<%s %s, hid=%s>' % (
-            self.__class__.__name__, self.loss_type, self.hid)
-
-    def __str__(self):
-        items = '\n'.join('%s=%s' % item for item in vars(self).items())
-        return '<%s\n%s>' % (self.__class__.__name__, items)
 
 
 def fine_graining(points, steps):
@@ -213,6 +182,8 @@ class VulnerabilityFunction(object):
         :returns:
            array of E' loss ratios
         """
+        if epsilons is None:
+            return means
         self.set_distribution(epsilons)
         return self.distribution.sample(means, covs, None, idxs)
 
@@ -908,7 +879,7 @@ class CurveBuilder(object):
     """
     Build loss ratio curves. The loss ratios can be provided
     by the user or automatically generated (user_provided=False).
-    The usage is something like this:
+    The usage is something like this::
 
       builder = CurveBuilder(loss_type, loss_ratios, ses_ratio,
                              user_provided=True)
@@ -943,7 +914,9 @@ class CurveBuilder(object):
                 loss_ratios = ratios_by_aid[aid]['loss']
             except KeyError:   # no loss ratios
                 continue
-            counts = numpy.array([(loss_ratios >= ratio).sum(axis=0)
+            # loss_ratios has shape (E, L, I)
+            lrs = loss_ratios[:, self.index]
+            counts = numpy.array([(lrs >= ratio).sum(axis=0)
                                   for ratio in self.ratios])
             poes = build_poes(counts, 1. / self.ses_ratio)
             if len(poes.shape) == 1:

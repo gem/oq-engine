@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2016 GEM Foundation
+# Copyright (C) 2015-2017 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,7 +29,7 @@ from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.baselib import parallel
-from openquake.commonlib import sourceconverter
+from openquake.hazardlib import sourceconverter
 from openquake.calculators import base, classical
 
 DISAGG_RES_FMT = 'disagg/poe-%(poe)s-rlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
@@ -229,7 +229,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                         (src_filter, srcs, src_group.id, self.rlzs_assoc,
                          trt_names, curves_dict, bin_edges, oq, self.monitor))
 
-        results = parallel.starmap(compute_disagg, all_args).reduce(
+        results = parallel.Starmap(compute_disagg, all_args).reduce(
             self.agg_result)
         self.save_disagg_results(results)
 
