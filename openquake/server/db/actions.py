@@ -187,7 +187,7 @@ def list_calculations(db, job_type, user_name):
                     status = 'failed'
             start_time = job.start_time
             yield ('%6d | %10s | %s| %s' % (
-                job.id, status, start_time, descr)).encode('utf-8')
+                job.id, status, start_time, descr))
 
 
 def list_outputs(db, job_id, full=True):
