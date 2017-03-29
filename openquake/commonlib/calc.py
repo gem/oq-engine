@@ -642,6 +642,7 @@ def get_ruptures(dstore, grp_id):
     oq = dstore['oqparam']
     mesh_spacing = oq.rupture_mesh_spacing
     # oq.complex_fault_mesh_spacing
+    trt = dstore['csm_info'].grp_trt()[grp_id]
     events = dstore['events/grp-%02d' % grp_id]
     for rec in dstore['ruptures/grp-%02d' % grp_id]:
         mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])
@@ -651,7 +652,9 @@ def get_ruptures(dstore, grp_id):
         rupture.source_typology = source_cls
         rupture.mag = rec['mag']
         rupture.rake = rec['rake']
+        rupture.hypocenter = tuple(rec['hypo'])
         rupture.occurrence_rate = rec['occurrence_rate']
+        rupture.tectonic_region_type = trt
         if surface_cls is geo.PlanarSurface:
             rupture.surface = geo.PlanarSurface.from_array(
                 mesh_spacing, rec['points'])
