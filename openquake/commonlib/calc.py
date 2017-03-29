@@ -571,15 +571,14 @@ class EBRupture(object):
         else:
             attrs['mesh_spacing'] = getattr(surface, 'mesh_spacing', numpy.nan)
         mesh = surface_to_mesh(surface)
-        attrs['nbytes'] = self.events.nbytes + mesh.nbytes
+        attrs['nbytes'] = mesh.nbytes
         attrs['sidx'] = self.sidx
         attrs['eidx1'] = self.eidx1
         attrs['eidx2'] = self.eidx2
-        return dict(events=self.events, mesh=mesh), attrs
+        return dict(mesh=mesh), attrs
 
     def __fromh5__(self, dic, attrs):
         attrs = dict(attrs)
-        self.events = dic['events'].value
         rupture_cls, surface_cls, source_cls = BaseRupture.types[attrs['code']]
         self.rupture = object.__new__(rupture_cls)
         self.rupture.surface = surface = object.__new__(surface_cls)
