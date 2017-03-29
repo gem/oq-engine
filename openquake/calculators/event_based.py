@@ -110,14 +110,14 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
         if s_sites is None:
             continue
         num_occ_by_rup = sample_ruptures(
-            src, monitor.ses_per_logic_tree_path, param['samples'],
-            monitor.seed)
+            src, param['ses_per_logic_tree_path'], param['samples'],
+            param['seed'])
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
         for ebr in _build_eb_ruptures(
                 src, num_occ_by_rup, src_filter.integration_distance,
-                s_sites, monitor.seed, rup_mon):
+                s_sites, param['seed'], rup_mon):
             eb_ruptures.append(ebr)
         dt = time.time() - t0
         calc_times.append((src.id, dt))
@@ -185,7 +185,7 @@ def _build_eb_ruptures(
             yield calc.EBRupture(
                 rup, r_sites.indices,
                 numpy.array(events, calc.event_dt),
-                src.source_id, src.src_group_id, serial)
+                src.src_group_id, serial)
 
 
 def _count(ruptures):
@@ -225,6 +225,7 @@ class EventBasedRuptureCalculator(PSHACalculator):
         self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
         self.min_iml = calc.fix_minimum_intensity(
             oq.minimum_intensity, oq.imtls)
+        self.rupser = calc.RuptureSerializer(self.datastore)
 
     def count_eff_ruptures(self, ruptures_by_grp_id, src_group):
         """
@@ -245,7 +246,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
         zd = AccumDict()
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()
-        self.sm_by_grp = self.csm.info.get_sm_by_grp()
         self.grp_trt = self.csm.info.grp_trt()
         return zd
 
@@ -269,14 +269,11 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """Extend the 'events' dataset with the given ruptures"""
         with self.monitor('saving ruptures', autoflush=True):
             for grp_id, ebrs in ruptures_by_grp_id.items():
-                sm_id = self.sm_by_grp[grp_id]
                 if self.oqparam.save_ruptures:
-                    for ebr in ebrs:
-                        key = 'ruptures/grp-%02d/%s' % (grp_id, ebr.serial)
-                        self.datastore[key] = ebr
+                    self.rupser.save(ebrs)
                 events = get_events(ebrs)
                 if len(events):
-                    ev = 'events/sm-%04d' % sm_id
+                    ev = 'events/grp-%02d' % grp_id
                     self.datastore.extend(ev, events)
 
             # save rup_data
@@ -291,6 +288,8 @@ class EventBasedRuptureCalculator(PSHACalculator):
         """
         Save the SES collection
         """
+        if hasattr(self, 'rupser'):
+            self.rupser.close()
         num_events = sum(_count(ruptures) for ruptures in result.values())
         if num_events == 0:
             raise RuntimeError(
@@ -352,8 +351,9 @@ def compute_gmfs_and_curves(getter, monitor):
     oq = monitor.oqparam
     with monitor('making contexts', measuremem=True):
         getter.init()
+    grp_id = getter.grp_id
     hcurves = {}  # key -> poes
-    gmfcoll = {}  # rlz -> gmfa
+    gmfcoll = {}  # grp_id, rlz -> gmfa
     if oq.hazard_curves_from_gmfs:
         hc_mon = monitor('building hazard curves', measuremem=False)
         duration = oq.investigation_time * oq.ses_per_logic_tree_path
@@ -374,7 +374,7 @@ def compute_gmfs_and_curves(getter, monitor):
                                 array['gmv'], oq.imtls[imt],
                                 oq.investigation_time, duration)
                             hcurves[rsi2str(rlz.ordinal, sid, imt)] = poes
-                gmfcoll[rlz] = numpy.array(lst, gmv_dt)
+                gmfcoll[grp_id, rlz] = numpy.array(lst, gmv_dt)
     else:  # fast lane
         for gsim in getter.rlzs_by_gsim:
             with monitor('building hazard', measuremem=True):
@@ -385,7 +385,8 @@ def compute_gmfs_and_curves(getter, monitor):
             r_indices = data['eid'] // TWO48  # extract realization indices
             data['eid'] %= TWO48  # got back to short event IDs
             for r, rlz in enumerate(getter.rlzs_by_gsim[gsim]):
-                gmfcoll[rlz] = data[r_indices == r]  # extract data for r
+                # extract data for realization r
+                gmfcoll[grp_id, rlz] = data[r_indices == r]
     return dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
                 hcurves=hcurves, gmdata=getter.gmdata)
 
@@ -404,8 +405,9 @@ def get_ruptures_by_grp(dstore):
     for grp in dstore['ruptures']:
         grp_id = int(grp[4:])  # strip 'grp-'
         for serial in dstore['ruptures/' + grp]:
-            sr = dstore['ruptures/%s/%s' % (grp, serial)]
-            ruptures_by_grp[grp_id].append(sr)
+            ebr = dstore['ruptures/%s/%s' % (grp, serial)]
+            ebr.sids = dstore['sids'][ebr.sidx]
+            ruptures_by_grp[grp_id].append(ebr)
     return ruptures_by_grp
 
 
@@ -456,10 +458,9 @@ class EventBasedCalculator(ClassicalCalculator):
         self.gmdata += res['gmdata']
         if res['gmfcoll'] is not None:
             with sav_mon:
-                for rlz, array in res['gmfcoll'].items():
+                for (gid, rlz), array in res['gmfcoll'].items():
                     if len(array):
-                        sm_id = self.sm_id[rlz.sm_lt_path]
-                        key = 'gmf_data/sm-%04d/%04d' % (sm_id, rlz.ordinal)
+                        key = 'gmf_data/grp-%02d/%04d' % (gid, rlz.ordinal)
                         hdf5.extend3(self.datastore.ext5path, key, array)
         slicedic = self.oqparam.imtls.slicedic
         with agg_mon:
@@ -493,7 +494,7 @@ class EventBasedCalculator(ClassicalCalculator):
             rlzs_by_gsim = self.rlzs_assoc.get_rlzs_by_gsim(grp_id)
             for block in block_splitter(ruptures, oq.ruptures_per_block):
                 samples = self.rlzs_assoc.samples[grp_id]
-                getter = GmfGetter(rlzs_by_gsim, block, self.sitecol,
+                getter = GmfGetter(grp_id, rlzs_by_gsim, block, self.sitecol,
                                    imts, min_iml, oq.truncation_level,
                                    correl_model, samples)
                 yield getter, monitor
