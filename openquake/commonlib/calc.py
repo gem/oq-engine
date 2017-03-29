@@ -40,6 +40,7 @@ MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
 
 U8 = numpy.uint8
 U16 = numpy.uint16
+I32 = numpy.int32
 U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
@@ -555,7 +556,7 @@ class RuptureSerializer(object):
     """
     dt = numpy.dtype([
         ('serial', U32), ('code', U8), ('sidx', U32),
-        ('eidx1', U32), ('eidx2', U32), ('pmfx', U32), ('seed', U32),
+        ('eidx1', U32), ('eidx2', U32), ('pmfx', I32), ('seed', U32),
         ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
         ('hypo', point3d), ('sx', U8), ('sy', U8), ('sz', U8),
         ('points', h5py.special_dtype(vlen=point3d)),
@@ -579,7 +580,7 @@ class RuptureSerializer(object):
             rate = getattr(rup, 'occurrence_rate', numpy.nan)
             tup = (ebrupture.serial, rup.code, ebrupture.sidx,
                    ebrupture.eidx1, ebrupture.eidx2,
-                   getattr(ebrupture, 'pmfx', 0),
+                   getattr(ebrupture, 'pmfx', -1),
                    rup.seed, rup.mag, rup.rake, rate, hypo,
                    sx, sy, sz, mesh.flatten())
             lst.append(tup)
@@ -655,8 +656,9 @@ def get_ruptures(dstore, grp_id):
     mesh_spacing = oq.rupture_mesh_spacing
     # oq.complex_fault_mesh_spacing
     trt = dstore['csm_info'].grp_trt()[grp_id]
-    events = dstore['events/grp-%02d' % grp_id]
-    for rec in dstore['ruptures/grp-%02d' % grp_id]:
+    grp = 'grp-%02d' % grp_id
+    events = dstore['events/' + grp]
+    for rec in dstore['ruptures/' + grp]:
         mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])
         rupture_cls, surface_cls, source_cls = BaseRupture.types[rec['code']]
         rupture = object.__new__(rupture_cls)
@@ -667,7 +669,9 @@ def get_ruptures(dstore, grp_id):
         rupture.seed = rec['seed']
         rupture.hypocenter = geo.Point(*rec['hypo'])
         rupture.occurrence_rate = rec['occurrence_rate']
-        rupture.pmfx = rec['pmfx']
+        pmfx = rec['pmfx']
+        if pmfx != -1:
+            rupture.pmf = dstore['pmfs/' + grp][pmfx]
         rupture.tectonic_region_type = trt
         if surface_cls is geo.PlanarSurface:
             rupture.surface = geo.PlanarSurface.from_array(
