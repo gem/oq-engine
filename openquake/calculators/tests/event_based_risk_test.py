@@ -71,7 +71,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
-        self.assert_stats_ok(case_1, 'job.ini', individual_curves='false')
+        self.run_calc(case_1.__file__, 'job.ini',
+                      exports='csv', individual_curves='false')
         ekeys = [
             ('rcurves-stats', 'xml'),
             ('rcurves-stats', 'geojson'),
@@ -171,7 +172,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_master(self):
         if sys.platform == 'darwin':
             raise unittest.SkipTest('MacOSX')
-        self.assert_stats_ok(case_master, 'job.ini', individual_curves='false')
+        self.run_calc(case_master.__file__, 'job.ini',
+                      exports='csv', individual_curves='false')
+        fnames = export(('avg_losses-stats', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                                  delta=1E-5)
 
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
         for fname in fnames:
@@ -191,14 +197,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = writetmp(view('ruptures_events', self.calc.datastore))
         self.assertEqualFiles('expected/ruptures_events.txt', fname)
 
-        # export a specific eid
-        fnames = export(('all_loss_ratios:17179869184', 'csv'),
-                        self.calc.datastore)
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
-        self.assertEqualFiles('expected/losses-eid=262144.csv', fname)
-
-        # export a specific pair (sm_id, eid)
+        # export a specific pair (grp_id, eid)
         fnames = export(('all_loss_ratios:1:21474836480', 'csv'),
                         self.calc.datastore)
         for fname in fnames:
