@@ -484,21 +484,6 @@ class EBRupture(object):
         return len(self.sids) * len(self.events)
 
     @property
-    def etags(self):
-        """
-        An array of tags for the underlying seismic events
-        """
-        tags = []
-        for ev in self.events:
-            tag = 'grp=%02d~ses=%04d~rup=%d-%02d' % (
-                self.grp_id, ev['ses'], self.serial, ev['occ'])
-            sampleid = ev['sample']
-            if sampleid > 0:
-                tag += '~sample=%d' % sampleid
-            tags.append(encode(tag))
-        return numpy.array(tags)
-
-    @property
     def eids(self):
         """
         An array with the underlying event IDs
@@ -518,7 +503,7 @@ class EBRupture(object):
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
-        for eid, etag in zip(self.eids, self.etags):
+        for eid, etag in zip(self.eids, build_etags(self.events, self.grp_id)):
             new = util.Rupture(sm_by_grp[self.grp_id], eid, etag, self.sids)
             new.mesh = mesh[self.sids]
             new.etag = etag
@@ -546,6 +531,21 @@ class EBRupture(object):
             new.bottom_right_corner = None if iffs or ims else (
                 new.lons[3], new.lats[3], new.depths[3])
             yield new
+
+
+def build_etags(events, grp_id):
+    """
+    An array of tags for the underlying seismic events
+    """
+    tags = []
+    for ev in events:
+        tag = 'grp=%02d~ses=%04d~rup=%d-%02d' % (
+            grp_id, ev['ses'], ev['rupserial'], ev['occ'])
+        sampleid = ev['sample']
+        if sampleid > 0:
+            tag += '~sample=%d' % sampleid
+        tags.append(tag)
+    return numpy.array(tags)
 
 
 class RuptureSerializer(object):
