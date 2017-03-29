@@ -122,7 +122,7 @@ def _aggregate(outputs, compositemodel, taxid, agg, ass, idx, result,
             for i, asset in enumerate(outs.assets):
                 ratios = loss_ratios[i]
                 aid = asset.ordinal
-                losses = ratios * asset.value(loss_type)
+                losses = ratios * asset.value(loss_type)  # shape (E, I)
 
                 # average losses
                 if monitor.avg_losses:
@@ -140,11 +140,8 @@ def _aggregate(outputs, compositemodel, taxid, agg, ass, idx, result,
 
                 # losses by taxonomy
                 t = taxid[asset.taxonomy]
-                if monitor.insured_losses:
-                    losses_by_taxon[t, r, l] += losses[:, 0].sum()
-                    losses_by_taxon[t, r, L + l] += losses[:, 1].sum()
-                else:
-                    losses_by_taxon[t, r, l] += losses.sum()
+                for i in range(I):
+                    losses_by_taxon[t, r, l + L * i] += losses[:, i].sum()
 
         # asset losses
         if monitor.loss_ratios:
@@ -245,10 +242,6 @@ class EbrPostCalculator(base.RiskCalculator):
         if R > 1:
             weights = self.datastore['realizations']['weight']
             quantiles = self.oqparam.quantile_loss_curves
-            if 'avg_losses-rlzs' in self.datastore:
-                with self.monitor('computing avg_losses-stats'):
-                    self.datastore['avg_losses-stats'] = compute_stats2(
-                        self.datastore['avg_losses-rlzs'], quantiles, weights)
             if self.oqparam.loss_ratios:
                 with self.monitor('computing rcurves-stats'):
                     self.datastore['rcurves-stats'] = compute_stats2(
@@ -414,8 +407,8 @@ class EbriskCalculator(base.RiskCalculator):
                         len(self.assetcol), seeds[start: start + n_events])
                     start += n_events
                 getter = riskinput.GmfGetter(
-                    rlzs_by_gsim, rupts, sitecol, imts, min_iml, trunc_level,
-                    correl_model, samples)
+                    grp_id, rlzs_by_gsim, rupts, sitecol, imts, min_iml,
+                    trunc_level, correl_model, samples)
                 ri = riskinput.RiskInputFromRuptures(getter, eps)
                 allargs.append((ri, riskmodel, assetcol, monitor))
 
@@ -508,15 +501,8 @@ class EbriskCalculator(base.RiskCalculator):
                                    (self.T, self.R, self.L * I))
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
-            # since we are using a composite array, we must use fillvalue=None
-            # and then set the array to 0 manually (to avoid bogus numbers)
-            zero = numpy.zeros(self.A, (F32, (I,)))
             dset = self.datastore.create_dset(
-                'avg_losses-rlzs', (F32, (I,)), (self.A, self.R, self.L),
-                fillvalue=None)
-            for r in range(self.R):
-                for l in range(self.L):
-                    dset[:, r, l] = zero
+                'avg_losses-rlzs', F32, (self.A, self.R, self.L * I))
 
         num_events = collections.Counter()
         self.gmdata = {}
@@ -537,8 +523,7 @@ class EbriskCalculator(base.RiskCalculator):
             elif hasattr(res, 'events_by_grp'):
                 for grp_id in res.events_by_grp:
                     events = res.events_by_grp[grp_id]
-                    ev = 'events/sm-%04d' % self.sm_by_grp[grp_id]
-                    self.datastore.extend(ev, events)
+                    self.datastore.extend('events/grp-%02d' % grp_id, events)
             num_events[res.sm_id] += res.num_events
         event_based.save_gmdata(self, num_rlzs)
         return num_events
@@ -550,8 +535,8 @@ class EbriskCalculator(base.RiskCalculator):
         with self.monitor('saving avg_losses-rlzs'):
             for (l, r), losses in dic.items():
                 vs = self.vals[self.riskmodel.loss_types[l]]
-                new = numpy.array([losses[:, i] * vs for i in range(self.I)])
-                dset[:, r + start, l] += new.T  # shape (A, I)
+                for i in range(self.I):
+                    dset[:, r + start, l + self.L * i] += losses[:, i] * vs
 
     def save_losses(self, agglosses, asslosses, losses_by_taxon, offset):
         """

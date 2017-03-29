@@ -19,11 +19,13 @@
 from __future__ import division
 import logging
 import numpy
+import h5py
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import encode, decode
 from openquake.baselib.general import get_array, group_array
-from openquake.hazardlib.geo.mesh import RectangularMesh, build_array
+from openquake.hazardlib.geo.mesh import RectangularMesh, surface_to_mesh
+from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, tom, calc
@@ -48,6 +50,10 @@ event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('occ', U32),
 stored_event_dt = numpy.dtype([
     ('eid', U64), ('rupserial', U32), ('year', U32),
     ('ses', U32), ('occ', U32), ('sample', U32), ('grp_id', U16)])
+
+sids_dt = h5py.special_dtype(vlen=U32)
+
+BaseRupture.init()  # initialize rupture codes
 
 # ############## utilities for the classical calculator ############### #
 
@@ -289,7 +295,7 @@ def get_gmfs(dstore, precalc=None):
 
     # else read from the datastore
     for i, rlz in enumerate(rlzs):
-        data = group_array(dstore['gmf_data/sm-0000/%04d' % i], 'sid')
+        data = group_array(dstore['gmf_data/grp-00/%04d' % i], 'sid')
         for sid, array in data.items():
             if sid in risk_indices:
                 for imti, imt in enumerate(oq.imtls):
@@ -466,11 +472,10 @@ class EBRupture(object):
               'source_class', 'pmf', 'occurrence_rate',
               'time_span', 'rupture_slip_direction']
 
-    def __init__(self, rupture, sids, events, source_id, grp_id, serial):
+    def __init__(self, rupture, sids, events, grp_id, serial):
         self.rupture = rupture
         self.sids = sids
         self.events = events
-        self.source_id = source_id
         self.grp_id = grp_id
         self.serial = serial
 
@@ -546,8 +551,7 @@ class EBRupture(object):
 
     def __toh5__(self):
         rup = self.rupture
-        attrs = dict(source_id=self.source_id, grp_id=self.grp_id,
-                     serial=self.serial)
+        attrs = dict(grp_id=self.grp_id, serial=self.serial)
         for par in self.params:
             val = getattr(self.rupture, par, None)
             if val is not None:
@@ -555,46 +559,32 @@ class EBRupture(object):
         if hasattr(rup, 'temporal_occurrence_model'):
             attrs['time_span'] = rup.temporal_occurrence_model.time_span
         if hasattr(rup, 'pmf'):
-            attrs['pmf'] = rup.pmf_array()
+            attrs['pmf'] = rup.pmf
         attrs['seed'] = rup.seed
         attrs['hypo'] = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
-        attrs['source_class'] = hdf5.cls2dotname(rup.source_typology)
-        attrs['rupture_class'] = hdf5.cls2dotname(rup.__class__)
-        attrs['surface_class'] = hdf5.cls2dotname(rup.surface.__class__)
+        attrs['code'] = rup.code
         surface = self.rupture.surface
-        if isinstance(surface, geo.MultiSurface):  # multiplanar surfaces
-            n = len(surface.surfaces)
-            arr = build_array([[s.corner_lons, s.corner_lats, s.corner_depths]
-                               for s in surface.surfaces]).reshape(n, 2, 2)
+        if hasattr(surface, 'surfaces'):
             attrs['mesh_spacing'] = surface.surfaces[0].mesh_spacing
         else:
-            mesh = surface.mesh
-            if mesh is None:  # planar surface
-                arr = build_array([[surface.corner_lons,
-                                    surface.corner_lats,
-                                    surface.corner_depths]]).reshape(1, 2, 2)
-                attrs['mesh_spacing'] = surface.mesh_spacing
-            else:  # general surface
-                shp = (1,) + mesh.lons.shape
-                arr = build_array(
-                    [[mesh.lons, mesh.lats, mesh.depths]]).reshape(shp)
-        attrs['nbytes'] = self.sids.nbytes + self.events.nbytes + arr.nbytes
-        return dict(sids=self.sids, events=self.events, mesh=arr), attrs
+            attrs['mesh_spacing'] = getattr(surface, 'mesh_spacing', numpy.nan)
+        mesh = surface_to_mesh(surface)
+        attrs['nbytes'] = self.events.nbytes + mesh.nbytes
+        attrs['sidx'] = self.sidx
+        return dict(events=self.events, mesh=mesh), attrs
 
     def __fromh5__(self, dic, attrs):
         attrs = dict(attrs)
-        self.sids = dic['sids'].value
         self.events = dic['events'].value
-        surface_class = attrs['surface_class']
-        surface_cls = hdf5.dotname2cls(surface_class)
-        self.rupture = object.__new__(hdf5.dotname2cls(attrs['rupture_class']))
+        rupture_cls, surface_cls, source_cls = BaseRupture.types[attrs['code']]
+        self.rupture = object.__new__(rupture_cls)
         self.rupture.surface = surface = object.__new__(surface_cls)
         m = dic['mesh'].value
-        if surface_class.endswith('PlanarSurface'):
+        if surface_cls.__name__.endswith('PlanarSurface'):
             mesh_spacing = attrs.pop('mesh_spacing')
             self.rupture.surface = geo.PlanarSurface.from_array(
                 mesh_spacing, m.flatten())
-        elif surface_class.endswith('MultiSurface'):
+        elif surface_cls.__name__.endswith('MultiSurface'):
             mesh_spacing = attrs.pop('mesh_spacing')
             self.rupture.surface.__init__([
                 geo.PlanarSurface.from_array(mesh_spacing, m1.flatten())
@@ -611,13 +601,11 @@ class EBRupture(object):
             logging.error('rupture_slip_direction not implemented yet')
         self.rupture.rupture_slip_direction = None
         self.rupture.hypocenter = Point(*attrs.pop('hypo'))
-        self.rupture.source_typology = hdf5.dotname2cls(
-            attrs.pop('source_class'))
-        self.source_id = attrs.pop('source_id')
+        self.rupture.source_typology = source_cls
         self.grp_id = attrs.pop('grp_id')
         self.serial = attrs.pop('serial')
-        del attrs['rupture_class']
-        del attrs['surface_class']
+        self.sidx = attrs.pop('sidx')
+        del attrs['code']
         vars(self.rupture).update(attrs)
 
     def __lt__(self, other):
@@ -626,3 +614,44 @@ class EBRupture(object):
     def __repr__(self):
         return '<%s #%d, grp_id=%d>' % (self.__class__.__name__,
                                         self.serial, self.grp_id)
+
+
+class RuptureSerializer(object):
+    """
+    Serialize event based ruptures on an HDF5 files. Populate the datasets
+    `ruptures` and `sids`.
+    """
+    def __init__(self, datastore):
+        self.datastore = datastore
+        self.sids = {}  # dictionary sids -> sidx
+        self.data = []
+
+    def save(self, ebruptures):
+        """
+        Collect the ruptures and a set of site IDs tuples.
+        """
+        for ebr in ebruptures:
+            sids_tup = tuple(ebr.sids)
+            try:
+                ebr.sidx = self.sids[sids_tup]
+            except KeyError:
+                ebr.sidx = self.sids[sids_tup] = len(self.sids)
+                self.data.append(ebr.sids)
+            key = 'ruptures/grp-%02d/%s' % (ebr.grp_id, ebr.serial)
+            self.datastore[key] = ebr
+        self.datastore.flush()
+
+    def close(self):
+        """
+        Flush the ruptures and the site IDs on the datastore
+        """
+        self.sids.clear()
+        dset = self.datastore.create_dset(
+            'sids', sids_dt, (len(self.data),), fillvalue=None)
+        nbytes = 0
+        for i, val in enumerate(self.data):
+            dset[i] = val
+            nbytes += val.nbytes
+        self.datastore.set_attrs('sids', nbytes=nbytes)
+        self.datastore.flush()
+        del self.data[:]

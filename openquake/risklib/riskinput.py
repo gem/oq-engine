@@ -524,9 +524,10 @@ class GmfGetter(object):
     """
     dt = numpy.dtype([('gmv', F32), ('eid', U64)])
 
-    def __init__(self, rlzs_by_gsim, ebruptures, sitecol, imts, min_iml,
-                 truncation_level, correlation_model, samples):
+    def __init__(self, grp_id, rlzs_by_gsim, ebruptures, sitecol, imts,
+                 min_iml, truncation_level, correlation_model, samples):
         assert sitecol is sitecol.complete
+        self.grp_id = grp_id
         self.rlzs_by_gsim = rlzs_by_gsim
         self.ebruptures = ebruptures
         self.sitecol = sitecol
