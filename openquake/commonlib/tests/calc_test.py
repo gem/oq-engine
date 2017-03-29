@@ -31,10 +31,6 @@ planar = general.writetmp('''\
 </nrml>''')
 
 
-                ebr.eidx1 = 0
-                ebr.eidx2 = 1
-        ebr1.eidx1 = 0
-        ebr1.eidx2 = 1
 class HazardMapsTestCase(unittest.TestCase):
 
     def test_compute_hazard_map(self):
