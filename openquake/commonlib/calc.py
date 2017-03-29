@@ -652,6 +652,7 @@ def get_ruptures(dstore, grp_id):
         rupture.source_typology = source_cls
         rupture.mag = rec['mag']
         rupture.rake = rec['rake']
+        rupture.seed = rec['seed']
         rupture.hypocenter = tuple(rec['hypo'])
         rupture.occurrence_rate = rec['occurrence_rate']
         rupture.tectonic_region_type = trt
