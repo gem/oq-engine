@@ -22,14 +22,14 @@ import numpy
 import h5py
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import encode, decode
+from openquake.baselib.python3compat import decode
 from openquake.baselib.general import get_array, group_array
-from openquake.hazardlib.geo.mesh import surface_to_mesh, point3d
+from openquake.hazardlib.geo.mesh import (
+    surface_to_mesh, point3d, RectangularMesh)
 from openquake.hazardlib.source.rupture import BaseRupture
-from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import geo, tom, calc
+from openquake.hazardlib import geo, calc
 from openquake.hazardlib.probability_map import ProbabilityMap, get_shape
 from openquake.commonlib import readinput, util
 
@@ -665,7 +665,7 @@ def get_ruptures(dstore, grp_id):
         rupture.mag = rec['mag']
         rupture.rake = rec['rake']
         rupture.seed = rec['seed']
-        rupture.hypocenter = tuple(rec['hypo'])
+        rupture.hypocenter = geo.Point(*rec['hypo'])
         rupture.occurrence_rate = rec['occurrence_rate']
         rupture.pmfx = rec['pmfx']
         rupture.tectonic_region_type = trt
