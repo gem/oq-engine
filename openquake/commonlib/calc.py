@@ -49,7 +49,7 @@ event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
 stored_event_dt = numpy.dtype([
     ('eid', U64), ('rupserial', U32), ('year', U32),
-    ('ses', U32), ('occ', U32), ('sample', U32), ('grp_id', U16)])
+    ('ses', U32), ('occ', U32), ('sample', U32)])
 
 sids_dt = h5py.special_dtype(vlen=U32)
 
