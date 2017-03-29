@@ -478,6 +478,7 @@ class EBRupture(object):
         self.events = events
         self.grp_id = grp_id
         self.serial = serial
+        self.sidx = self.eidx1 = self.eidx2 = None  # to be set when needed
 
     @property
     def weight(self):
@@ -492,9 +493,10 @@ class EBRupture(object):
         An array of tags for the underlying seismic events
         """
         tags = []
-        for (eid, ses, occ, sampleid) in self.events:
+        for ev in self.events:
             tag = 'grp=%02d~ses=%04d~rup=%d-%02d' % (
-                self.grp_id, ses, self.serial, occ)
+                self.grp_id, ev['ses'], self.serial, ev['occ'])
+            sampleid = ev['sample']
             if sampleid > 0:
                 tag += '~sample=%d' % sampleid
             tags.append(encode(tag))
@@ -571,6 +573,8 @@ class EBRupture(object):
         mesh = surface_to_mesh(surface)
         attrs['nbytes'] = self.events.nbytes + mesh.nbytes
         attrs['sidx'] = self.sidx
+        attrs['eidx1'] = self.eidx1
+        attrs['eidx2'] = self.eidx2
         return dict(events=self.events, mesh=mesh), attrs
 
     def __fromh5__(self, dic, attrs):
@@ -605,6 +609,8 @@ class EBRupture(object):
         self.grp_id = attrs.pop('grp_id')
         self.serial = attrs.pop('serial')
         self.sidx = attrs.pop('sidx')
+        self.eidx1 = attrs.pop('eidx1')
+        self.eidx2 = attrs.pop('eidx2')
         del attrs['code']
         vars(self.rupture).update(attrs)
 
@@ -626,11 +632,18 @@ class RuptureSerializer(object):
         self.sids = {}  # dictionary sids -> sidx
         self.data = []
 
-    def save(self, ebruptures):
+    def save(self, ebruptures, eidx):
         """
-        Collect the ruptures and a set of site IDs tuples.
+        Populate a dictionary of site IDs tuples and save the ruptures.
+
+        :param ebruptures: a list of EBRupture objects to save
+        :param offset: the last event index saved
         """
         for ebr in ebruptures:
+            mul = ebr.multiplicity
+            ebr.eidx1 = eidx
+            ebr.eidx2 = eidx + mul
+            eidx += mul
             sids_tup = tuple(ebr.sids)
             try:
                 ebr.sidx = self.sids[sids_tup]
