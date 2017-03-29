@@ -105,7 +105,7 @@ def export_ruptures_xml(ekey, dstore):
     mesh = get_mesh(dstore['sitecol'])
     ruptures = []
     for grp in dstore['ruptures']:
-        grp_id = int(grp[:4])  # strip grp-
+        grp_id = int(grp[4:])  # strip grp-
         for ebr in calc.get_ruptures(dstore, grp_id):
             ruptures.extend(ebr.export(mesh, sm_by_grp))
     ses_coll = SESCollection(
