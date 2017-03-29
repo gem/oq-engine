@@ -636,7 +636,7 @@ class RuptureSerializer(object):
         Populate a dictionary of site IDs tuples and save the ruptures.
 
         :param ebruptures: a list of EBRupture objects to save
-        :param offset: the last event index saved
+        :param eidx: the last event index saved
         """
         for ebr in ebruptures:
             mul = ebr.multiplicity
