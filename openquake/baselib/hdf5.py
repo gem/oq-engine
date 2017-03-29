@@ -59,12 +59,17 @@ def create(hdf5, name, dtype, shape=(None,), compression=None,
 
 def extend(dset, array):
     """
-    Extend an extensible dataset with an array of a compatible dtype
+    Extend an extensible dataset with an array of a compatible dtype.
+
+    :param dset: an h5py dataset
+    :param array: an array of length L
+    :returns: the total length of the dataset (i.e. initial length + L)
     """
     length = len(dset)
     newlength = length + len(array)
     dset.resize((newlength,) + array.shape[1:])
     dset[length:newlength] = array
+    return newlength
 
 
 def extend3(hdf5path, key, array, **attrs):
@@ -77,10 +82,11 @@ def extend3(hdf5path, key, array, **attrs):
         except KeyError:
             dset = create(h5, key, array.dtype,
                           shape=(None,) + array.shape[1:])
-        extend(dset, array)
+        length = extend(dset, array)
         for key, val in attrs.items():
             dset.attrs[key] = val
         h5.flush()
+    return length
 
 
 class LiteralAttrs(object):
