@@ -564,6 +564,24 @@ class RuptureSerializer(object):
         ('serial', U32), ('pmf', h5py.special_dtype(vlen=F32)),
     ])
 
+    @classmethod
+    def to_array(cls, ebruptures):
+        """
+        Convert a list of EBRuptures into a numpy composite array
+        """
+        lst = []
+        for ebrupture in ebruptures:
+            rup = ebrupture.rupture
+            mesh = surface_to_mesh(rup.surface)
+            sx, sy, sz = mesh.shape
+            hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
+            rate = getattr(rup, 'occurrence_rate', numpy.nan)
+            tup = (ebrupture.serial, rup.code, ebrupture.sidx,
+                   ebrupture.eidx1, ebrupture.eidx2, rup.seed,
+                   rup.mag, rup.rake, rate, hypo, sx, sy, sz, mesh.flatten())
+            lst.append(tup)
+        return numpy.array(lst, cls.dt)
+
     def __init__(self, datastore):
         self.datastore = datastore
         self.sids = {}  # dictionary sids -> sidx
@@ -597,8 +615,8 @@ class RuptureSerializer(object):
                 nbytes += 4 + rup.pmf.nbytes
 
         # store the ruptures in a compact format
-        array = numpy.array([self._tuple(ebr) for ebr in ebruptures], self.dt)
-        self.datastore.extend('ruptures/grp-%02d' % ebr.grp_id, array)
+        self.datastore.extend('ruptures/grp-%02d' % ebr.grp_id,
+                              self.to_array(ebruptures))
         if pmfs:
             self.datastore.extend('pmfs/grp-%02d' % ebr.grp_id,
                                   numpy.array(pmfs, self.pmfs_dt))
@@ -608,16 +626,6 @@ class RuptureSerializer(object):
             else:
                 dset.attrs['nbytes'] = nbytes
         self.datastore.flush()
-
-    def _tuple(self, ebrupture):
-        rup = ebrupture.rupture
-        mesh = surface_to_mesh(rup.surface)
-        sx, sy, sz = mesh.shape
-        hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
-        rate = getattr(rup, 'occurrence_rate', numpy.nan)
-        return (ebrupture.serial, rup.code, ebrupture.sidx,
-                ebrupture.eidx1, ebrupture.eidx2, rup.seed,
-                rup.mag, rup.rake, rate, hypo, sx, sy, sz, mesh.flatten())
 
     def close(self):
         """
