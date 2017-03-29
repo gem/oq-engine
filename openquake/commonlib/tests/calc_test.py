@@ -60,6 +60,8 @@ class SerializeRuptureTestCase(unittest.TestCase):
                 rup.seed = 0
                 ebr = calc.EBRupture(rup, self.sids, self.events, 0, self.i)
                 ebr.sidx = 0
+                ebr.eidx1 = 0
+                ebr.eidx2 = 1
                 f[str(self.i)] = ebr
                 self.i += 1
         with hdf5.File(self.path, 'r') as f:
@@ -77,6 +79,8 @@ class SerializeRuptureTestCase(unittest.TestCase):
         rup.seed = 0
         ebr1 = calc.EBRupture(rup, sids, events, 0, 0)
         ebr1.sidx = 0
+        ebr1.eidx1 = 0
+        ebr1.eidx2 = 1
         with hdf5.File(self.path, 'w') as f:
             f['ebr'] = ebr1
         with hdf5.File(self.path, 'r') as f:

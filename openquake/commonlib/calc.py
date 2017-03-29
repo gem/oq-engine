@@ -49,7 +49,7 @@ event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
 stored_event_dt = numpy.dtype([
     ('eid', U64), ('rupserial', U32), ('year', U32),
-    ('ses', U32), ('occ', U32), ('sample', U32), ('grp_id', U16)])
+    ('ses', U32), ('occ', U32), ('sample', U32)])
 
 sids_dt = h5py.special_dtype(vlen=U32)
 
@@ -478,6 +478,7 @@ class EBRupture(object):
         self.events = events
         self.grp_id = grp_id
         self.serial = serial
+        self.sidx = self.eidx1 = self.eidx2 = None  # to be set when needed
 
     @property
     def weight(self):
@@ -485,20 +486,6 @@ class EBRupture(object):
         Weight of the EBRupture
         """
         return len(self.sids) * len(self.events)
-
-    @property
-    def etags(self):
-        """
-        An array of tags for the underlying seismic events
-        """
-        tags = []
-        for (eid, ses, occ, sampleid) in self.events:
-            tag = 'grp=%02d~ses=%04d~rup=%d-%02d' % (
-                self.grp_id, ses, self.serial, occ)
-            if sampleid > 0:
-                tag += '~sample=%d' % sampleid
-            tags.append(encode(tag))
-        return numpy.array(tags)
 
     @property
     def eids(self):
@@ -520,7 +507,7 @@ class EBRupture(object):
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
-        for eid, etag in zip(self.eids, self.etags):
+        for eid, etag in zip(self.eids, build_etags(self.events, self.grp_id)):
             new = util.Rupture(sm_by_grp[self.grp_id], eid, etag, self.sids)
             new.mesh = mesh[self.sids]
             new.etag = etag
@@ -569,13 +556,14 @@ class EBRupture(object):
         else:
             attrs['mesh_spacing'] = getattr(surface, 'mesh_spacing', numpy.nan)
         mesh = surface_to_mesh(surface)
-        attrs['nbytes'] = self.events.nbytes + mesh.nbytes
+        attrs['nbytes'] = mesh.nbytes
         attrs['sidx'] = self.sidx
-        return dict(events=self.events, mesh=mesh), attrs
+        attrs['eidx1'] = self.eidx1
+        attrs['eidx2'] = self.eidx2
+        return dict(mesh=mesh), attrs
 
     def __fromh5__(self, dic, attrs):
         attrs = dict(attrs)
-        self.events = dic['events'].value
         rupture_cls, surface_cls, source_cls = BaseRupture.types[attrs['code']]
         self.rupture = object.__new__(rupture_cls)
         self.rupture.surface = surface = object.__new__(surface_cls)
@@ -605,6 +593,8 @@ class EBRupture(object):
         self.grp_id = attrs.pop('grp_id')
         self.serial = attrs.pop('serial')
         self.sidx = attrs.pop('sidx')
+        self.eidx1 = attrs.pop('eidx1')
+        self.eidx2 = attrs.pop('eidx2')
         del attrs['code']
         vars(self.rupture).update(attrs)
 
@@ -614,6 +604,21 @@ class EBRupture(object):
     def __repr__(self):
         return '<%s #%d, grp_id=%d>' % (self.__class__.__name__,
                                         self.serial, self.grp_id)
+
+
+def build_etags(events, grp_id):
+    """
+    An array of tags for the underlying seismic events
+    """
+    tags = []
+    for ev in events:
+        tag = 'grp=%02d~ses=%04d~rup=%d-%02d' % (
+            grp_id, ev['ses'], ev['rupserial'], ev['occ'])
+        sampleid = ev['sample']
+        if sampleid > 0:
+            tag += '~sample=%d' % sampleid
+        tags.append(tag)
+    return numpy.array(tags)
 
 
 class RuptureSerializer(object):
@@ -626,11 +631,18 @@ class RuptureSerializer(object):
         self.sids = {}  # dictionary sids -> sidx
         self.data = []
 
-    def save(self, ebruptures):
+    def save(self, ebruptures, eidx):
         """
-        Collect the ruptures and a set of site IDs tuples.
+        Populate a dictionary of site IDs tuples and save the ruptures.
+
+        :param ebruptures: a list of EBRupture objects to save
+        :param eidx: the last event index saved
         """
         for ebr in ebruptures:
+            mul = ebr.multiplicity
+            ebr.eidx1 = eidx
+            ebr.eidx2 = eidx + mul
+            eidx += mul
             sids_tup = tuple(ebr.sids)
             try:
                 ebr.sidx = self.sids[sids_tup]
