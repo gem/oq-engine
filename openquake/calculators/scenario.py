@@ -52,14 +52,15 @@ class ScenarioCalculator(base.HazardCalculator):
                 'All sites were filtered out! maximum_distance=%s km' %
                 maxdist)
         # eid, ses, occ, sample
-        events = numpy.array(
-            [(eid, 1, 1, 0)
-             for eid in range(oq.number_of_ground_motion_fields)],
-            calc.event_dt)
-        rupture = calc.EBRupture(
-            rup, self.sitecol.sids, events, 0, 0)
+        events = numpy.zeros(oq.number_of_ground_motion_fields,
+                             calc.stored_event_dt)
+        events['eid'] = numpy.arange(oq.number_of_ground_motion_fields)
+        rupture = calc.EBRupture(rup, self.sitecol.sids, events, 0, 0)
         rupture.sidx = 0
+        rupture.eidx1 = 0
+        rupture.eidx2 = len(events)
         self.datastore['sids'] = self.sitecol.sids
+        self.datastore['events/grp-00'] = events
         self.datastore['ruptures/grp-00/0'] = rupture
         self.computer = GmfComputer(
             rupture, self.sitecol, oq.imtls, self.gsims,
