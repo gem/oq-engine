@@ -117,10 +117,11 @@ def export_ruptures_xml(ekey, dstore):
     sm_by_grp = dstore['csm_info'].get_sm_by_grp()
     mesh = get_mesh(dstore['sitecol'])
     ruptures = []
-    for grp_id in dstore['ruptures']:
-        for serial in dstore['ruptures/%s' % grp_id]:
-            ebr = dstore['ruptures/%s/%s' % (grp_id, serial)]
+    for grp in dstore['ruptures']:
+        for serial in dstore['ruptures/%s' % grp]:
+            ebr = dstore['ruptures/%s/%s' % (grp, serial)]
             ebr.sids = dstore['sids'][ebr.sidx]
+            ebr.events = dstore['events/' + grp][ebr.eidx1:ebr.eidx2]
             ruptures.extend(ebr.export(mesh, sm_by_grp))
     ses_coll = SESCollection(
         groupby(ruptures, operator.attrgetter('ses_idx')),
