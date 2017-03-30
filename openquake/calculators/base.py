@@ -436,7 +436,7 @@ class HazardCalculator(BaseCalculator):
             # there is a precalculator
             precalc_id = self.oqparam.hazard_calculation_id
             self.precalc = (self.compute_previous() if precalc_id is None
-                            else self.read_previous(precalc_id))
+                            else self.read_previous(int(precalc_id)))
             self.init()
         else:  # we are in a basic calculator
             self.precalc = None
