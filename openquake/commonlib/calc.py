@@ -629,9 +629,14 @@ class RuptureSerializer(object):
 
         # store the ruptures in a compact format
         array, nbytes = self.get_array_nbytes(ebruptures)
-        self.nbytes += nbytes
-        self.datastore.extend('ruptures/grp-%02d' % ebr.grp_id,
-                              array, nbytes=self.nbytes)
+        key = 'ruptures/grp-%02d' % ebr.grp_id
+        try:
+            dset = self.datastore.getitem(key)
+        except KeyError:  # not created yet
+            previous = 0
+        else:
+            previous = dset.attrs['nbytes']
+        self.datastore.extend(key, array, nbytes=previous + nbytes)
 
         # save nbytes occupied by the PMFs
         if pmfbytes:
