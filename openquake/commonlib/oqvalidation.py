@@ -116,7 +116,7 @@ class OqParam(valid.ParamSet):
     ruptures_per_block = valid.Param(valid.positiveint, 1000)
     complex_fault_mesh_spacing = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
-    save_ruptures = valid.Param(valid.boolean, False)
+    save_ruptures = valid.Param(valid.boolean, True)
     ses_per_logic_tree_path = valid.Param(valid.positiveint, 1)
     ses_seed = valid.Param(valid.positiveint, 42)
     max_site_model_distance = valid.Param(valid.positivefloat, 5)  # by Graeme
