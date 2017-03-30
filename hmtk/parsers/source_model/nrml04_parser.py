@@ -49,8 +49,6 @@
 Parser for input in a NRML format, with partial validation
 """
 import re
-import decimal
-import numpy as np
 from copy import copy
 from openquake.baselib.node import node_from_xml
 from openquake.hazardlib.geo.point import Point
@@ -69,6 +67,7 @@ from hmtk.parsers.source_model.base import BaseSourceModelParser
 
 SCALERELS = get_available_scalerel()
 
+
 def string_(string):
     """
     Returns string or None
@@ -78,6 +77,7 @@ def string_(string):
     else:
         return None
 
+
 def float_(value):
     """
     Returns float of a value, or None
@@ -86,6 +86,7 @@ def float_(value):
         return float(value)
     else:
         return None
+
 
 def int_(value):
     """
@@ -145,7 +146,7 @@ def node_to_point_geometry(node):
 def node_to_area_geometry(node):
     """
     Reads an area geometry node and returns the polygon, upper depth and lower
-    depth    
+    depth
     """
     assert "areaGeometry" in node.tag
     for subnode in node.nodes:
@@ -187,6 +188,7 @@ def node_to_simple_fault_geometry(node):
     assert lower_depth > upper_depth
     return trace, dip, upper_depth, lower_depth
 
+
 def node_to_complex_fault_geometry(node):
     """
     Reads a complex fault geometry node and returns an
@@ -209,6 +211,7 @@ def node_to_complex_fault_geometry(node):
             pass
     return [top_edge] + intermediate_edges + [bottom_edge]
 
+
 def node_to_scalerel(node):
     """
     Parses a node to an instance of a supported scaling relation class
@@ -216,6 +219,7 @@ def node_to_scalerel(node):
     if not node.text:
         return None
     return SCALERELS[node.text.strip()]()
+
 
 def node_to_truncated_gr(node, bin_width=0.1):
     """
@@ -226,7 +230,7 @@ def node_to_truncated_gr(node, bin_width=0.1):
     if not all([node.attrib[key]
                 for key in ["minMag", "maxMag", "aValue", "bValue"]]):
         return None
-    tgr = dict((key, float_(node.attrib[key])) for key in node.attrib.keys())
+    tgr = dict((key, float_(node.attrib[key])) for key in node.attrib)
     return mfd.truncated_gr.TruncatedGRMFD(min_mag=tgr["minMag"],
                                            max_mag=tgr["maxMag"],
                                            bin_width=bin_width,
@@ -274,7 +278,7 @@ def node_to_nodal_planes(node):
         return None
     npd_pmf = []
     for plane in node.nodes:
-        if not all([plane.attrib[key] for key in plane.attrib.keys()]):
+        if not all(plane.attrib[key] for key in plane.attrib):
             # One plane fails - return None
             return None
         npd = NodalPlane(float(plane.attrib["strike"]),
@@ -308,8 +312,8 @@ def parse_point_source_node(node, mfd_spacing=0.1):
     pnt_taglist = get_taglist(node)
     # Get metadata
     point_id, name, trt = (node.attrib["id"],
-                          node.attrib["name"],
-                          node.attrib["tectonicRegion"])
+                           node.attrib["name"],
+                           node.attrib["tectonicRegion"])
     assert point_id  # Defensive validation!
     # Process geometry
     location, upper_depth, lower_depth = node_to_point_geometry(
@@ -408,6 +412,7 @@ def parse_simple_fault_node(node, mfd_spacing=0.1, mesh_spacing=1.0):
                                  mesh_spacing)
     return simple_fault
 
+
 def parse_complex_fault_node(node, mfd_spacing=0.1, mesh_spacing=4.0):
     """
     Parses a "complexFaultSource" node and returns an instance of the :class:
@@ -439,13 +444,14 @@ def parse_complex_fault_node(node, mfd_spacing=0.1, mesh_spacing=4.0):
     complex_fault.create_geometry(edges, mesh_spacing)
     return complex_fault
 
+
 class nrmlSourceModelParser(BaseSourceModelParser):
     """
     Parser for a source model in NRML format, permitting partial validation
     such that not all fields need to be specified for the file to be parsed
     """
     def read_file(self, identifier, mfd_spacing=0.1, simple_mesh_spacing=1.0,
-        complex_mesh_spacing=4.0, area_discretization=10.):
+                  complex_mesh_spacing=4.0, area_discretization=10.):
         """
         Reads in the source model in returns an instance of the :class:
         hmtk.sourcs.source_model.mtkSourceModel
