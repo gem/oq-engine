@@ -38,8 +38,8 @@ def webui(cmd, hostport='127.0.0.1:8800'):
     django application
     """
 
-    db_owner = os.path.expanduser(config.get('dbserver', 'file'))
-    if not os.access(db_owner, os.W_OK):
+    db_path = os.path.expanduser(config.get('dbserver', 'file'))
+    if not os.access(db_path, os.W_OK):
         sys.exit('This command must be run by the proper user: '
                  'see the documentation for details')
     if cmd == 'start':
