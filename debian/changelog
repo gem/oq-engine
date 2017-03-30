@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed to rupture storage to use variable length-arrays, with a speedup
+    of two orders of magnitude
   * Avoided storing twice the rupture events
   * Optimized the serialization of ruptures on HDF5 by using a `sids` output
   * Changed the Web UI button from "Run Risk" to "Continue"
