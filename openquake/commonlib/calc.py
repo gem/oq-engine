@@ -554,8 +554,6 @@ class RuptureSerializer(object):
     Serialize event based ruptures on an HDF5 files. Populate the datasets
     `ruptures` and `sids`.
     """
-    # NB: remember to change the number of bytes (the 52 below) if you
-    # change the structure of a rupture record
     rupture_dt = numpy.dtype([
         ('serial', U32), ('code', U8), ('sidx', U32),
         ('eidx1', U32), ('eidx2', U32), ('pmfx', I32), ('seed', U32),
@@ -587,9 +585,7 @@ class RuptureSerializer(object):
                    rup.seed, rup.mag, rup.rake, rate, hypo,
                    sx, sy, sz, mesh.flatten())
             lst.append(tup)
-            # for a planar surface the mesh has 4 points of 4x3 bytes each,
-            # so each rupture record takes exactly 52 + 48 = 100 bytes
-            nbytes += 52 + mesh.nbytes
+            nbytes += cls.rupture_dt.itemsize + mesh.nbytes
         return numpy.array(lst, cls.rupture_dt), nbytes
 
     def __init__(self, datastore):
@@ -667,7 +663,6 @@ def get_ruptures(dstore, grp_id):
     Extracts the ruptures of the given grp_id
     """
     oq = dstore['oqparam']
-    # oq.complex_fault_mesh_spacing
     trt = dstore['csm_info'].grp_trt()[grp_id]
     grp = 'grp-%02d' % grp_id
     events = dstore['events/' + grp]
