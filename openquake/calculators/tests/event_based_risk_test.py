@@ -137,6 +137,15 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.run_calc(case_3.__file__, 'job.ini',
                       exports='xml', individual_curves='false',
                       concurrent_tasks='4')
+
+        # test the number of bytes saved in the rupture records
+        grp00 = self.calc.datastore.get_attr('ruptures/grp-00', 'nbytes')
+        grp02 = self.calc.datastore.get_attr('ruptures/grp-02', 'nbytes')
+        grp03 = self.calc.datastore.get_attr('ruptures/grp-03', 'nbytes')
+        self.assertEqual(grp00, 500)
+        self.assertEqual(grp02, 500)
+        self.assertEqual(grp03, 200)
+
         [fname] = export(('agg_curve-stats', 'xml'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
