@@ -105,10 +105,8 @@ def export_ruptures_xml(ekey, dstore):
     mesh = get_mesh(dstore['sitecol'])
     ruptures = []
     for grp in dstore['ruptures']:
-        for serial in dstore['ruptures/%s' % grp]:
-            ebr = dstore['ruptures/%s/%s' % (grp, serial)]
-            ebr.sids = dstore['sids'][ebr.sidx]
-            ebr.events = dstore['events/' + grp][ebr.eidx1:ebr.eidx2]
+        grp_id = int(grp[4:])  # strip grp-
+        for ebr in calc.get_ruptures(dstore, grp_id):
             ruptures.extend(ebr.export(mesh, sm_by_grp))
     ses_coll = SESCollection(
         groupby(ruptures, operator.attrgetter('ses_idx')),
@@ -864,8 +862,9 @@ def export_gmf_scenario_npz(ekey, dstore):
         gsims = rlzs_assoc.gsims_by_grp_id[0]  # there is a single grp_id
         E = oq.number_of_ground_motion_fields
         correl_model = oq.get_correl_model()
+        [ebrupture] = calc.get_ruptures(dstore, 0)
         computer = gmf.GmfComputer(
-            dstore['ruptures/grp-00/0'], dstore['sitecol'], oq.imtls,
+            ebrupture, dstore['sitecol'], oq.imtls,
             gsims, oq.truncation_level, correl_model)
         gmf_dt = numpy.dtype([(imt, (F32, E)) for imt in oq.imtls])
         imts = list(oq.imtls)

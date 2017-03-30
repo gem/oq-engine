@@ -405,11 +405,7 @@ def get_ruptures_by_grp(dstore):
     ruptures_by_grp = AccumDict(accum=[])
     for grp in dstore['ruptures']:
         grp_id = int(grp[4:])  # strip 'grp-'
-        for serial in dstore['ruptures/' + grp]:
-            ebr = dstore['ruptures/%s/%s' % (grp, serial)]
-            ebr.sids = dstore['sids'][ebr.sidx]
-            ebr.events = dstore['events/' + grp][ebr.eidx1:ebr.eidx2]
-            ruptures_by_grp[grp_id].append(ebr)
+        ruptures_by_grp[grp_id] = list(calc.get_ruptures(dstore, grp_id))
     return ruptures_by_grp
 
 
