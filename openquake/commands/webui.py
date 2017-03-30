@@ -15,9 +15,12 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
 import sys
 import subprocess
 from openquake.baselib import sap
+from openquake.commonlib import config
 from openquake.server import dbserver
 
 
@@ -34,8 +37,13 @@ def webui(cmd, hostport='127.0.0.1:8800'):
     start the webui server in foreground or perform other operation on the
     django application
     """
-    dbserver.ensure_on()  # start the dbserver in a subproces
+
+    db_owner = os.path.expanduser(config.get('dbserver', 'file'))
+    if not os.access(db_owner, os.W_OK):
+        sys.exit('This command must be run by the proper user: '
+                 'see the documentation for details')
     if cmd == 'start':
+        dbserver.ensure_on()  # start the dbserver in a subproces
         rundjango('runserver', hostport)
     elif cmd == 'migrate':
         rundjango('migrate')
