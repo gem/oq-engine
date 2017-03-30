@@ -55,7 +55,7 @@ def scenario_risk(riskinput, riskmodel, monitor):
     R = len(riskinput.rlzs)
     I = monitor.oqparam.insured_losses + 1
     all_losses = monitor.oqparam.all_losses
-    result = dict(agg=numpy.zeros((E, L, R, I), F64), avg=[],
+    result = dict(agg=numpy.zeros((E, L * I, R), F64), avg=[],
                   all_losses=AccumDict(accum={}))
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
         r = outputs.r
@@ -63,14 +63,14 @@ def scenario_risk(riskinput, riskmodel, monitor):
         for l, losses in enumerate(outputs):
             if losses is None:  # this may happen
                 continue
-            stats = numpy.zeros((len(assets), 2), (F32, I))  # mean, stddev
+            stats = numpy.zeros((len(assets), 2, I), F32)  # mean, stddev
             for a, asset in enumerate(assets):
                 stats[a, 0] = losses[a].mean()
                 stats[a, 1] = losses[a].std(ddof=1)
                 result['avg'].append((l, r, asset.ordinal, stats[a]))
             agglosses = losses.sum(axis=0)  # shape E, I
             for i in range(I):
-                result['agg'][:, l, r, i] += agglosses[:, i]
+                result['agg'][:, l + L * i, r] += agglosses[:, i]
             if all_losses:
                 aids = [asset.ordinal for asset in outputs.assets]
                 result['all_losses'][l, r] += AccumDict(zip(aids, losses))
@@ -113,33 +113,29 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         Compute stats for the aggregated distributions and save
         the results on the datastore.
         """
+        loss_dt = self.oqparam.loss_dt()
         ltypes = self.riskmodel.loss_types
         I = self.oqparam.insured_losses + 1
-        stat_dt = numpy.dtype([('mean', (F32, I)), ('stddev', (F32, I))])
-        multi_stat_dt = numpy.dtype([(lt, stat_dt) for lt in ltypes])
         with self.monitor('saving outputs', autoflush=True):
             A = len(self.assetcol)
 
             # agg losses
             res = result['agg']
-            E, L, R, I = res.shape
-            if I == 1:
-                res = res.reshape(E, L, R)
+            E, LI, R = res.shape
             mean, std = scientific.mean_std(res)
-            agglosses = numpy.zeros(R, multi_stat_dt)
-            for l, lt in enumerate(ltypes):
-                agglosses[lt]['mean'] = numpy.float32(mean[l])
-                agglosses[lt]['stddev'] = numpy.float32(std[l])
+            agglosses = numpy.zeros((R, LI, 2), F32)
+            for l in range(LI):
+                agglosses[:, l, 0] = F32(mean[l])
+                agglosses[:, l, 1] = F32(std[l])
 
             # average losses
-            avglosses = numpy.zeros((A, R), multi_stat_dt)
+            avglosses = numpy.zeros((A, R, LI, 2), F32)
             for (l, r, aid, stat) in result['avg']:
-                avglosses[ltypes[l]][aid, r] = stat
+                avglosses[aid, r, l] = stat
             self.datastore['losses_by_asset'] = avglosses
             self.datastore['agglosses-rlzs'] = agglosses
 
             if self.oqparam.all_losses:
-                loss_dt = self.oqparam.loss_dt()
                 array = numpy.zeros((A, E, R), loss_dt)
                 for (l, r), losses_by_aid in result['all_losses'].items():
                     for aid in losses_by_aid:
