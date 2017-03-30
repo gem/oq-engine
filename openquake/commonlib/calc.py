@@ -567,7 +567,7 @@ class RuptureSerializer(object):
     ])
 
     @classmethod
-    def array(cls, ebruptures):
+    def to_array(cls, ebruptures):
         """
         Convert a list of EBRuptures into a numpy composite array
         """
@@ -622,7 +622,7 @@ class RuptureSerializer(object):
 
         # store the ruptures in a compact format
         self.datastore.extend('ruptures/grp-%02d' % ebr.grp_id,
-                              self.array(ebruptures))
+                              self.to_array(ebruptures))
 
         # save nbytes occupied by the PMFs
         if nbytes:
