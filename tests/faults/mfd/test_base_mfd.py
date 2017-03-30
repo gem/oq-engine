@@ -1,4 +1,4 @@
-#!/usr/bin/env/python
+#!/usr/bin/env python
 
 '''
 Module to test :class: hmtk.faults.mfd.base.BaseMFDfromSlip  and the additional
