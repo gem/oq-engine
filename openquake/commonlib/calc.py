@@ -554,7 +554,9 @@ class RuptureSerializer(object):
     Serialize event based ruptures on an HDF5 files. Populate the datasets
     `ruptures` and `sids`.
     """
-    dt = numpy.dtype([
+    # NB: remember to change the number of bytes (the 52 below) if you
+    # change the structure of a rupture record
+    rupture_dt = numpy.dtype([
         ('serial', U32), ('code', U8), ('sidx', U32),
         ('eidx1', U32), ('eidx2', U32), ('pmfx', I32), ('seed', U32),
         ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
@@ -567,11 +569,12 @@ class RuptureSerializer(object):
     ])
 
     @classmethod
-    def to_array(cls, ebruptures):
+    def get_array_nbytes(cls, ebruptures):
         """
         Convert a list of EBRuptures into a numpy composite array
         """
         lst = []
+        nbytes = 0
         for ebrupture in ebruptures:
             rup = ebrupture.rupture
             mesh = surface_to_mesh(rup.surface)
@@ -584,12 +587,16 @@ class RuptureSerializer(object):
                    rup.seed, rup.mag, rup.rake, rate, hypo,
                    sx, sy, sz, mesh.flatten())
             lst.append(tup)
-        return numpy.array(lst, cls.dt)
+            # for a planar surface the mesh has 4 points of 4x3 bytes each,
+            # so each rupture record takes exactly 52 + 48 = 100 bytes
+            nbytes += 52 + mesh.nbytes
+        return numpy.array(lst, cls.rupture_dt), nbytes
 
     def __init__(self, datastore):
         self.datastore = datastore
         self.sids = {}  # dictionary sids -> sidx
         self.data = []
+        self.nbytes = 0
 
     def save(self, ebruptures, eidx):
         """
@@ -598,7 +605,7 @@ class RuptureSerializer(object):
         :param ebruptures: a list of EBRupture objects to save
         :param eidx: the last event index saved
         """
-        nbytes = 0
+        pmfbytes = 0
         # set the reference to the sids (sidx) correctly
         for ebr in ebruptures:
             mul = ebr.multiplicity
@@ -618,18 +625,20 @@ class RuptureSerializer(object):
                 dset = self.datastore.extend(
                     'pmfs/grp-%02d' % ebr.grp_id, pmfs)
                 ebr.pmfx = len(dset) - 1
-                nbytes += 4 + rup.pmf.nbytes
+                pmfbytes += 4 + rup.pmf.nbytes
 
         # store the ruptures in a compact format
+        array, nbytes = self.get_array_nbytes(ebruptures)
+        self.nbytes += nbytes
         self.datastore.extend('ruptures/grp-%02d' % ebr.grp_id,
-                              self.to_array(ebruptures))
+                              array, nbytes=self.nbytes)
 
         # save nbytes occupied by the PMFs
-        if nbytes:
+        if pmfbytes:
             if 'nbytes' in dset.attrs:
-                dset.attrs['nbytes'] += nbytes
+                dset.attrs['nbytes'] += pmfbytes
             else:
-                dset.attrs['nbytes'] = nbytes
+                dset.attrs['nbytes'] = pmfbytes
         self.datastore.flush()
 
     def close(self):
