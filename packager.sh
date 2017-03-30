@@ -664,6 +664,15 @@ celery_wait $GEM_MAXLOOP"
         oq engine --dc 1 --yes
         oq purge -1; oq reset --yes"
         scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
+
+        # WebUI command check
+        webui_fail_msg="This command must be run by the proper user: see the documentation for details"
+        webui_fail=$(oq webui migrate 2>&1 || true)
+        if [ "$webui_fail" != "$webui_fail_msg" ]; then
+            echo "The 'oq webui' command is broken: it reports\n\t$webui_fail\ninstead of\n\t$webui_fail_msg"
+            exit 1
+        fi
+        sudo -u openquake oq webui migrate
     fi
 
     scp -r "${lxc_ip}:/usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" "out_${BUILD_UBUVER}/"
