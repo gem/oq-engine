@@ -621,7 +621,7 @@ class RuptureSerializer(object):
                 dset = self.datastore.extend(
                     'pmfs/grp-%02d' % ebr.grp_id, pmfs)
                 ebr.pmfx = len(dset) - 1
-                pmfbytes += 4 + rup.pmf.nbytes
+                pmfbytes += self.pmfs_dt.itemsize + rup.pmf.nbytes
 
         # store the ruptures in a compact format
         array, nbytes = self.get_array_nbytes(ebruptures)
