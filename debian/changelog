@@ -1,7 +1,5 @@
   [Daniele Viganò]
   * The 'oq webui' command now works on a multi-user installation
-  * Subprocess calls can be now safely used when Linux binary packages
-    are used
 
   [Paolo Tormene]
   * The 'Continue' button in the Web UI is now available also for risk
