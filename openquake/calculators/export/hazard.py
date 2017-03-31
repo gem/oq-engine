@@ -123,7 +123,8 @@ def export_ses_csv(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    if 'rup_data' not in dstore:  # scenario
+    oq = dstore['oqparam']
+    if 'scenario' in oq.calculation_mode:
         return []
     dest = dstore.export_path('ruptures.csv')
     header = ('id mag centroid_lon centroid_lat centroid_depth trt '
@@ -143,20 +144,6 @@ def export_ses_csv(ekey, dstore):
     rows.sort(key=operator.itemgetter(0))
     writers.write_csv(dest, rows, header=header, sep='\t')
     return [dest]
-
-
-@export.add(('rup_data', 'csv'))
-def export_rup_data(ekey, dstore):
-    rupture_data = dstore[ekey[0]]
-    paths = []
-    for trt in sorted(rupture_data):
-        fname = 'rup_data_%s.csv' % trt.lower().replace(' ', '_')
-        data = rupture_data[trt].value
-        data.sort(order='rupserial')
-        if len(data):
-            paths.append(
-                writers.write_csv(dstore.export_path(fname), data, sep='\t'))
-    return paths
 
 
 # #################### export Ground Motion fields ########################## #
