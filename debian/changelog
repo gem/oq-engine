@@ -1,7 +1,7 @@
   [Michele Simionato]
   * Added an .npz export for the output `losses_by_asset`
   * Exported the scenario_risk aggregate losses in a nicer format
-  
+
   [Daniele Viganò]
   * The 'oq webui' command now works on a multi-user installation
 
