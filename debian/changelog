@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Exported the scenario_risk aggregate losses in a nicer format
+  
   [Daniele Viganò]
   * The 'oq webui' command now works on a multi-user installation
 
