@@ -90,10 +90,11 @@ def expose_outputs(dstore):
         rlzs = []
     if 'scenario' not in calcmode:  # export sourcegroups.csv
         dskeys.add('sourcegroups')
-    if oq.uniform_hazard_spectra:
-        dskeys.add('uhs')  # export them
-    if oq.hazard_maps:
-        dskeys.add('hmaps')  # export them
+    if 'hcurves' in dstore:
+        if oq.uniform_hazard_spectra:
+            dskeys.add('uhs')  # export them
+        if oq.hazard_maps:
+            dskeys.add('hmaps')  # export them
     if 'avg_losses-rlzs' in dstore and rlzs:
         dskeys.add('avg_losses-stats')
     if oq.conditional_loss_poes:  # expose loss_maps outputs
