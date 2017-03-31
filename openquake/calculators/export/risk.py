@@ -37,6 +37,7 @@ Output = collections.namedtuple('Output', 'ltype path array')
 F32 = numpy.float32
 F64 = numpy.float64
 U32 = numpy.uint32
+stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
 
 
 def add_quotes(values):
@@ -108,8 +109,7 @@ def export_losses_by_asset(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    loss_dt = dstore['oqparam'].loss_dt()
-    stat_dt = numpy.dtype([('mean', loss_dt), ('stddev', loss_dt)])
+    loss_dt = dstore['oqparam'].loss_dt(stat_dt)
     avg_losses = dstore[ekey[0]].value
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = get_assets(dstore)
@@ -117,7 +117,7 @@ def export_losses_by_asset(ekey, dstore):
     for rlz in rlzs:
         losses = avg_losses[:, rlz.ordinal]
         dest = dstore.build_fname('losses_by_asset', rlz, 'csv')
-        data = compose_arrays(assets, losses.copy().view(stat_dt)[:, 0])
+        data = compose_arrays(assets, losses.copy().view(loss_dt)[:, 0])
         writer.save(data, dest)
     return writer.getsaved()
 
@@ -683,50 +683,6 @@ def export_loss_maps_stats_xml_geojson(ekey, dstore):
             curves.append(curve)
         writer.serialize(curves)
         fnames.append(writer._dest)
-    return sorted(fnames)
-
-
-# this is used by scenario_risk
-@export.add(('losses_by_asset', 'xml'), ('losses_by_asset', 'geojson'))
-def export_loss_map_xml_geojson(ekey, dstore):
-    oq = dstore['oqparam']
-    cc = dstore['assetcol/cost_calculator']
-    unit_by_lt = cc.units
-    unit_by_lt['occupants'] = 'people'
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    loss_map = dstore[ekey[0]]
-    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
-    assetcol = dstore['assetcol/array'].value
-    aref = dstore['asset_refs'].value
-    R = len(rlzs)
-    fnames = []
-    export_type = ekey[1]
-    writercls = (risk_writers.LossMapGeoJSONWriter
-                 if export_type == 'geojson' else
-                 risk_writers.LossMapXMLWriter)
-    for lt in loss_types:
-        alosses = loss_map[lt]
-        for ins in range(oq.insured_losses + 1):
-            means = alosses['mean' + ('_ins' if ins else '')]
-            stddevs = alosses['stddev' + ('_ins' if ins else '')]
-            for r in range(R):
-                rlz = rlzs[r]
-                unit = unit_by_lt[lt]
-                root = ekey[0][:-5]  # strip -rlzs
-                name = '%s-%s%s' % (root, lt, '_ins' if ins else '')
-                fname = dstore.build_fname(name, rlz, ekey[1])
-                data = []
-                for ass, mean, stddev in zip(
-                        assetcol, means[:, r], stddevs[:, r]):
-                    loc = Location(ass['lon'], ass['lat'])
-                    lm = LossMap(loc, decode(aref[ass['idx']]), mean, stddev)
-                    data.append(lm)
-                writer = writercls(
-                    fname, oq.investigation_time, poe=None, loss_type=lt,
-                    gsim_tree_path=rlz.uid, unit=unit,
-                    risk_investigation_time=oq.risk_investigation_time)
-                writer.serialize(data)
-                fnames.append(fname)
     return sorted(fnames)
 
 agg_dt = numpy.dtype([('unit', (bytes, 6)), ('mean', F32), ('stddev', F32)])

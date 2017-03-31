@@ -1,4 +1,4 @@
-asset_ref,taxonomy,lon,lat,mean~structural:float32,stddev~structural:float32
+asset_ref,taxonomy,lon,lat,structural~mean,structural~stddev
 bridge1012,"concrete_spl",70.05100,39.65000,0.00000E+00,0.00000E+00
 road125,"EMCA_PRIM_2L",71.68100,40.05000,0.00000E+00,0.00000E+00
 road291,"EMCA_PRIM_2L",71.68100,40.05000,0.00000E+00,0.00000E+00
