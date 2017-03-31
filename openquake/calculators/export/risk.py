@@ -108,6 +108,8 @@ def export_losses_by_asset(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
+    loss_dt = dstore['oqparam'].loss_dt()
+    stat_dt = numpy.dtype([('mean', loss_dt), ('stddev', loss_dt)])
     avg_losses = dstore[ekey[0]].value
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = get_assets(dstore)
@@ -115,7 +117,7 @@ def export_losses_by_asset(ekey, dstore):
     for rlz in rlzs:
         losses = avg_losses[:, rlz.ordinal]
         dest = dstore.build_fname('losses_by_asset', rlz, 'csv')
-        data = compose_arrays(assets, losses)
+        data = compose_arrays(assets, losses.copy().view(stat_dt)[:, 0])
         writer.save(data, dest)
     return writer.getsaved()
 
@@ -733,7 +735,8 @@ agg_dt = numpy.dtype([('unit', (bytes, 6)), ('mean', F32), ('stddev', F32)])
 # this is used by scenario_risk
 @export.add(('agglosses-rlzs', 'csv'))
 def export_agglosses(ekey, dstore):
-    I = dstore['oqparam'].insured_losses + 1
+    oq = dstore['oqparam']
+    loss_dt = oq.loss_dt()
     cc = dstore['assetcol/cost_calculator']
     unit_by_lt = cc.units
     unit_by_lt['occupants'] = 'people'
@@ -742,16 +745,13 @@ def export_agglosses(ekey, dstore):
     for rlz in dstore['csm_info'].get_rlzs_assoc().realizations:
         gsim, = rlz.gsim_rlz.value
         loss = agglosses[rlz.ordinal]
-        losses = numpy.zeros(
-            I, numpy.dtype([(lt, agg_dt) for lt in loss.dtype.names]))
-        header = []
-        for lt in loss.dtype.names:
-            losses[lt]['unit'] = unit_by_lt[lt]
-            header.append('%s-unit' % lt)
-            losses[lt]['mean'] = loss[lt]['mean']
-            header.append('%s-mean' % lt)
-            losses[lt]['stddev'] = loss[lt]['stddev']
-            header.append('%s-stddev' % lt)
+        losses = []
+        header = ['loss_type', 'unit', 'mean', 'stddev']
+        for l, lt in enumerate(loss_dt.names):
+            unit = unit_by_lt[lt.replace('_ins', '')]
+            mean = loss[l]['mean']
+            stddev = loss[l]['stddev']
+            losses.append((lt, unit, mean, stddev))
         dest = dstore.build_fname('agglosses', gsim, 'csv')
         writers.write_csv(dest, losses, header=header)
         fnames.append(dest)
