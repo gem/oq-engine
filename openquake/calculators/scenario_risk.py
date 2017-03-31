@@ -122,17 +122,19 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             # agg losses
             res = result['agg']
             E, LI, R = res.shape
+            L = LI // I
             mean, std = scientific.mean_std(res)
             agglosses = numpy.zeros((R, LI, 2), F32)
             for l in range(LI):
                 agglosses[:, l, 0] = F32(mean[l])
                 agglosses[:, l, 1] = F32(std[l])
 
-            # average losses
-            avglosses = numpy.zeros((A, R, LI, 2), F32)
+            # losses by asset
+            losses_by_asset = numpy.zeros((A, R, LI, 2), F32)
             for (l, r, aid, stat) in result['avg']:
-                avglosses[aid, r, l] = stat
-            self.datastore['losses_by_asset'] = avglosses
+                for i in range(I):
+                    losses_by_asset[aid, r, l + L * i] = stat[:, i]
+            self.datastore['losses_by_asset'] = losses_by_asset
             self.datastore['agglosses-rlzs'] = agglosses
 
             if self.oqparam.all_losses:
