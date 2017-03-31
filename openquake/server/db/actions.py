@@ -186,7 +186,7 @@ def list_calculations(db, job_type, user_name):
                 else:
                     status = 'failed'
             start_time = job.start_time
-            yield ('%6d | %10s | %s| %s' % (
+            yield ('%6d | %10s | %s | %s' % (
                 job.id, status, start_time, descr))
 
 
