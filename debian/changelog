@@ -1,5 +1,13 @@
   [Michele Simionato]
   * Exported the scenario_risk aggregate losses in a nicer format
+
+  [Paolo Tormene]
+  * The 'Continue' button in the Web UI is now available also for risk
+    calculations
+
+  [Michele Simionato]
+  * Fixed a Python 3 bug in the WebUI when continuing a calculation: the
+    hazard_calculation_id was passed as a string and not as an integer
   * Changed to rupture storage to use variable length-arrays, with a speedup
     of two orders of magnitude
   * Avoided storing twice the rupture events
