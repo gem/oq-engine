@@ -385,6 +385,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         if in_memory:
             apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
             try:
+                logging.info('Parsing %s', fname)
                 src_groups = parser.parse_src_groups(fname, apply_unc)
             except ValueError as e:
                 if str(e) in ('Surface does not conform with Aki & '
