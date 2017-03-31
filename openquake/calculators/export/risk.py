@@ -103,16 +103,36 @@ def export_losses_by_asset(ekey, dstore):
     :param dstore: datastore object
     """
     loss_dt = dstore['oqparam'].loss_dt(stat_dt)
-    avg_losses = dstore[ekey[0]].value
+    losses_by_asset = dstore[ekey[0]].value
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = get_assets(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz in rlzs:
-        losses = avg_losses[:, rlz.ordinal]
+        losses = losses_by_asset[:, rlz.ordinal]
         dest = dstore.build_fname('losses_by_asset', rlz, 'csv')
         data = compose_arrays(assets, losses.copy().view(loss_dt)[:, 0])
         writer.save(data, dest)
     return writer.getsaved()
+
+
+@export.add(('losses_by_asset', 'npz'))
+def export_losses_by_asset_npz(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    loss_dt = dstore['oqparam'].loss_dt()
+    losses_by_asset = dstore[ekey[0]].value
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    assets = get_assets(dstore)
+    dic = {}
+    for rlz in rlzs:
+        losses = losses_by_asset[:, rlz.ordinal]['mean'].copy()
+        data = compose_arrays(assets, losses.view(loss_dt)[:, 0])
+        dic['rlz-%03d' % rlz.ordinal] = data
+    fname = dstore.export_path('%s.%s' % ekey)
+    savez(fname, **dic)
+    return [fname]
 
 
 def _compact(array):
@@ -183,15 +203,21 @@ def export_agg_losses_ebr(ekey, dstore):
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     grp_rlzs = sorted(rlzs_assoc.get_rlzs_by_grp_id().items())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+
+    # populate rup_data and event_by_eid
+    rup_data = {}
+    event_by_eid = {}
     for grp_id, rlzs in grp_rlzs:
         try:
             events = dstore['events/grp-%02d' % grp_id]
         except KeyError:
             continue
-        if not len(events):
-            continue
-        event_by_eid = {event['eid']: event for event in events}
-        rup_data = get_rup_data(calc.get_ruptures(dstore, grp_id))
+        for event in events:
+            event_by_eid[event['eid']] = event
+        if has_rup_data:
+            rup_data.update(get_rup_data(calc.get_ruptures(dstore, grp_id)))
+
+    for grp_id, rlzs in grp_rlzs:
         for rlz in rlzs:
             rlzname = 'rlz-%03d' % rlz.ordinal
             if rlzname not in agg_losses:
@@ -678,6 +704,7 @@ def export_loss_maps_stats_xml_geojson(ekey, dstore):
         fnames.append(writer._dest)
     return sorted(fnames)
 
+
 agg_dt = numpy.dtype([('unit', (bytes, 6)), ('mean', F32), ('stddev', F32)])
 
 
@@ -828,7 +855,6 @@ def export_loss_curves_stats(ekey, dstore):
             ('rcurves-stats', 'xml'),
             ('rcurves-stats', 'geojson'))
 def export_rcurves_rlzs(ekey, dstore):
-    riskmodel = riskinput.read_composite_risk_model(dstore)
     assetcol = dstore['assetcol']
     aref = dstore['asset_refs'].value
     rcurves = dstore[ekey[0]]
@@ -914,6 +940,7 @@ def export_loss_curves_rlzs(ekey, dstore):
         writer.serialize(curves)
         fnames.append(writer._dest)
     return sorted(fnames)
+
 
 BcrData = collections.namedtuple(
     'BcrData', ['location', 'asset_ref', 'average_annual_loss_original',
