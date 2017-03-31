@@ -21,7 +21,7 @@ import sys
 import getpass
 import logging
 from openquake.baselib import sap
-from openquake.baselib.utf8 import print
+from openquake.baselib.safeprint import print
 from openquake.commonlib import datastore, config, logs
 from openquake.engine import engine as eng
 from openquake.engine.export import core
