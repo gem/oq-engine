@@ -856,8 +856,6 @@ def export_loss_curves_stats(ekey, dstore):
             ('rcurves-stats', 'xml'),
             ('rcurves-stats', 'geojson'))
 def export_rcurves_rlzs(ekey, dstore):
-    # FIXME: riskmodel is assigned but never used
-    riskmodel = riskinput.read_composite_risk_model(dstore)
     assetcol = dstore['assetcol']
     aref = dstore['asset_refs'].value
     rcurves = dstore[ekey[0]]
