@@ -29,6 +29,7 @@ from openquake.calculators import base
 
 F32 = numpy.float32
 F64 = numpy.float64  # higher precision to avoid task order dependency
+stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
 
 
 def scenario_risk(riskinput, riskmodel, monitor):
@@ -55,7 +56,7 @@ def scenario_risk(riskinput, riskmodel, monitor):
     R = len(riskinput.rlzs)
     I = monitor.oqparam.insured_losses + 1
     all_losses = monitor.oqparam.all_losses
-    result = dict(agg=numpy.zeros((E, L * I, R), F64), avg=[],
+    result = dict(agg=numpy.zeros((E, R, L * I), F64), avg=[],
                   all_losses=AccumDict(accum={}))
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
         r = outputs.r
@@ -63,14 +64,14 @@ def scenario_risk(riskinput, riskmodel, monitor):
         for l, losses in enumerate(outputs):
             if losses is None:  # this may happen
                 continue
-            stats = numpy.zeros((len(assets), 2, I), F32)  # mean, stddev
+            stats = numpy.zeros((len(assets), I), stat_dt)  # mean, stddev
             for a, asset in enumerate(assets):
-                stats[a, 0] = losses[a].mean()
-                stats[a, 1] = losses[a].std(ddof=1)
+                stats['mean'][a] = losses[a].mean()
+                stats['stddev'][a] = losses[a].std(ddof=1)
                 result['avg'].append((l, r, asset.ordinal, stats[a]))
             agglosses = losses.sum(axis=0)  # shape E, I
             for i in range(I):
-                result['agg'][:, l + L * i, r] += agglosses[:, i]
+                result['agg'][:, r, l + L * i] += agglosses[:, i]
             if all_losses:
                 aids = [asset.ordinal for asset in outputs.assets]
                 result['all_losses'][l, r] += AccumDict(zip(aids, losses))
@@ -114,26 +115,24 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         the results on the datastore.
         """
         loss_dt = self.oqparam.loss_dt()
-        ltypes = self.riskmodel.loss_types
         I = self.oqparam.insured_losses + 1
         with self.monitor('saving outputs', autoflush=True):
             A = len(self.assetcol)
 
             # agg losses
             res = result['agg']
-            E, LI, R = res.shape
+            E, R, LI = res.shape
             L = LI // I
-            mean, std = scientific.mean_std(res)
-            agglosses = numpy.zeros((R, LI, 2), F32)
-            for l in range(LI):
-                agglosses[:, l, 0] = F32(mean[l])
-                agglosses[:, l, 1] = F32(std[l])
+            mean, std = scientific.mean_std(res)  # shape (R, LI)
+            agglosses = numpy.zeros((R, L * I), stat_dt)
+            agglosses['mean'] = F32(mean)
+            agglosses['stddev'] = F32(std)
 
             # losses by asset
-            losses_by_asset = numpy.zeros((A, R, LI, 2), F32)
+            losses_by_asset = numpy.zeros((A, R, L * I), stat_dt)
             for (l, r, aid, stat) in result['avg']:
                 for i in range(I):
-                    losses_by_asset[aid, r, l + L * i] = stat[:, i]
+                    losses_by_asset[aid, r, l + L * i] = stat[i]
             self.datastore['losses_by_asset'] = losses_by_asset
             self.datastore['agglosses-rlzs'] = agglosses
 
@@ -142,7 +141,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                 for (l, r), losses_by_aid in result['all_losses'].items():
                     for aid in losses_by_aid:
                         lba = losses_by_aid[aid]  # (E, I)
-                        array[ltypes[l]][aid, :, r] = lba[:, 0]
-                        if I == 2:
-                            array[ltypes[l] + '_ins'][aid, :, r] = lba[:, 1]
+                        for i in range(I):
+                            lt = loss_dt.names[l + L * i]
+                            array[lt][aid, :, r] = lba[:, i]
                 self.datastore['all_losses-rlzs'] = array
