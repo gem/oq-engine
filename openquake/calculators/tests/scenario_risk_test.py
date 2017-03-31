@@ -91,10 +91,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'scenario_risk')
     def test_occupants(self):
         out = self.run_calc(occupants.__file__, 'job_haz.ini,job_risk.ini',
-                            exports='csv,xml')
-
-        [fname] = out['losses_by_asset', 'xml']
-        self.assertEqualFiles('expected/loss_map.xml', fname)
+                            exports='csv')
 
         [fname] = out['losses_by_asset', 'csv']
         self.assertEqualFiles('expected/asset-loss.csv', fname)
