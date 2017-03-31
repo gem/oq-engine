@@ -1,3 +1,7 @@
+  [Paolo Tormene]
+  * The 'Continue' button in the Web UI is now available also for risk
+    calculations
+
   [Michele Simionato]
   * Changed to rupture storage to use variable length-arrays, with a speedup
     of two orders of magnitude
