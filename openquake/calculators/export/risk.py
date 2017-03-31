@@ -136,7 +136,7 @@ def export_losses_by_asset_npz(ekey, dstore):
     for rlz in rlzs:
         losses = losses_by_asset[:, rlz.ordinal]['mean'].copy()
         data = compose_arrays(assets, losses.view(loss_dt)[:, 0])
-        dic['losses_by_asset-%03d' % rlz.ordinal] = data
+        dic['rlz-%03d' % rlz.ordinal] = data
     fname = dstore.export_path('%s.%s' % ekey)
     savez(fname, **dic)
     return [fname]
@@ -705,6 +705,7 @@ def export_loss_maps_stats_xml_geojson(ekey, dstore):
         fnames.append(writer._dest)
     return sorted(fnames)
 
+
 agg_dt = numpy.dtype([('unit', (bytes, 6)), ('mean', F32), ('stddev', F32)])
 
 
@@ -855,6 +856,7 @@ def export_loss_curves_stats(ekey, dstore):
             ('rcurves-stats', 'xml'),
             ('rcurves-stats', 'geojson'))
 def export_rcurves_rlzs(ekey, dstore):
+    # FIXME: riskmodel is assigned but never used
     riskmodel = riskinput.read_composite_risk_model(dstore)
     assetcol = dstore['assetcol']
     aref = dstore['asset_refs'].value
@@ -941,6 +943,7 @@ def export_loss_curves_rlzs(ekey, dstore):
         writer.serialize(curves)
         fnames.append(writer._dest)
     return sorted(fnames)
+
 
 BcrData = collections.namedtuple(
     'BcrData', ['location', 'asset_ref', 'average_annual_loss_original',
