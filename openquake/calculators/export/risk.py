@@ -110,16 +110,36 @@ def export_losses_by_asset(ekey, dstore):
     :param dstore: datastore object
     """
     loss_dt = dstore['oqparam'].loss_dt(stat_dt)
-    avg_losses = dstore[ekey[0]].value
+    losses_by_asset = dstore[ekey[0]].value
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = get_assets(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz in rlzs:
-        losses = avg_losses[:, rlz.ordinal]
+        losses = losses_by_asset[:, rlz.ordinal]
         dest = dstore.build_fname('losses_by_asset', rlz, 'csv')
         data = compose_arrays(assets, losses.copy().view(loss_dt)[:, 0])
         writer.save(data, dest)
     return writer.getsaved()
+
+
+@export.add(('losses_by_asset', 'npz'))
+def export_losses_by_asset_npz(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    loss_dt = dstore['oqparam'].loss_dt()
+    losses_by_asset = dstore[ekey[0]].value
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    assets = get_assets(dstore)
+    dic = {}
+    for rlz in rlzs:
+        losses = losses_by_asset[:, rlz.ordinal]['mean'].copy()
+        data = compose_arrays(assets, losses.view(loss_dt)[:, 0])
+        dic['losses_by_asset-%03d' % rlz.ordinal] = data
+    fname = dstore.export_path('%s.%s' % ekey)
+    savez(fname, **dic)
+    return [fname]
 
 
 def _compact(array):
