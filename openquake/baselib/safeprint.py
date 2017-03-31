@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
-import sys
+from sys import stdout
 
 try:
     import __builtin__
@@ -27,7 +27,11 @@ except ImportError:
 
 
 def print(*args, **kwargs):
-    conv_str = ()
+    ret_str = ()
+    # when stdout is redirected to a file, python 2 uses ascii for the writer;
+    # python 3 uses what is configured in the system (i.e. 'utf-8')
+    str_encoding = stdout.encoding if stdout.encoding is not None else 'ascii'
     for s in args:
-        conv_str = s.encode('utf-8').decode(sys.stdout.encoding, 'ignore')
-    return __builtin__.print(conv_str, **kwargs)
+        ret_str = s.encode('utf-8').decode(str_encoding, 'ignore')
+
+    return __builtin__.print(ret_str, **kwargs)
