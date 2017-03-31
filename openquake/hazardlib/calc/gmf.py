@@ -70,6 +70,10 @@ class GmfComputer(object):
         :mod:`openquake.hazardlib.correlation`. Can be ``None``, in which
         case non-correlated ground motion fields are calculated.
         Correlation model is not used if ``truncation_level`` is zero.
+
+    :param maximum_distance:
+       Instance of :class:`openquake.hazardlib.calc.filters.IntegrationDistance`
+       By default there is no maximum_distance.
     """
     # The GmfComputer is called from the OpenQuake Engine. In that case
     # the rupture is an higher level containing a
@@ -79,7 +83,7 @@ class GmfComputer(object):
     # IMTs, N the number of affected sites and E the number of events. The
     # seed is extracted from the underlying rupture.
     def __init__(self, rupture, sites, imts, gsims,
-                 truncation_level=None, correlation_model=None, samples=0,
+                 truncation_level=None, correlation_model=None,
                  maximum_distance=IntegrationDistance(None)):
         if len(sites) == 0:
             raise ValueError('No sites')
@@ -93,7 +97,6 @@ class GmfComputer(object):
         self.gsims = sorted(gsims)
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
-        self.samples = samples
         self.maximum_distance = maximum_distance
         # `rupture` can be a high level rupture object containing a low
         # level hazardlib rupture object as a .rupture attribute
