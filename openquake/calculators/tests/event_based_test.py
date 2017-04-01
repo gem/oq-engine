@@ -20,6 +20,7 @@ from __future__ import division
 import os
 import re
 import math
+import platform
 from nose.plugins.attrib import attr
 
 import numpy.testing
@@ -214,9 +215,8 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
             self.assertEqualFiles('expected/%s' % exp, got, sorted)
 
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
-        if 'TRAVIS_BRANCH' in os.environ:  # avoid rounding errors
-            return
-        self.assertEqualFiles('expected/ruptures.csv', fname)
+        if 'Ubuntu-16.04' in platform.platform():  # reference platform
+            self.assertEqualFiles('expected/ruptures.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_6(self):
