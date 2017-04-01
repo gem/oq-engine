@@ -65,19 +65,6 @@ def get_mesh(sitecol, complete=True):
     return mesh
 
 
-def build_etags(events):
-    """
-    An array of tags for the underlying seismic events
-    """
-    tags = []
-    for (eid, serial, year, ses, occ, sampleid, grp_id) in events:
-        tag = 'grp=%02d~ses=%04d~rup=%d-%02d' % (grp_id, ses, serial, occ)
-        if sampleid > 0:
-            tag += '~sample=%d' % sampleid
-        tags.append(tag)
-    return numpy.array(tags)
-
-
 class SES(object):
     """
     Stochastic Event Set: A container for 1 or more ruptures associated with a
@@ -119,10 +106,9 @@ def export_ruptures_xml(ekey, dstore):
     sm_by_grp = dstore['csm_info'].get_sm_by_grp()
     mesh = get_mesh(dstore['sitecol'])
     ruptures = []
-    for grp_id in dstore['ruptures']:
-        for serial in dstore['ruptures/%s' % grp_id]:
-            ebr = dstore['ruptures/%s/%s' % (grp_id, serial)]
-            ebr.sids = dstore['sids'][ebr.sidx]
+    for grp in dstore['ruptures']:
+        grp_id = int(grp[4:])  # strip grp-
+        for ebr in calc.get_ruptures(dstore, grp_id):
             ruptures.extend(ebr.export(mesh, sm_by_grp))
     ses_coll = SESCollection(
         groupby(ruptures, operator.attrgetter('ses_idx')),
@@ -139,7 +125,7 @@ def export_ses_csv(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    if 'events' not in dstore:  # scenario
+    if 'rup_data' not in dstore:  # scenario
         return []
     dest = dstore.export_path('ruptures.csv')
     header = ('id mag centroid_lon centroid_lat centroid_depth trt '
@@ -149,7 +135,7 @@ def export_ses_csv(ekey, dstore):
     rows = []
     for grp_id, trt in sorted(grp_trt.items()):
         grp = 'grp-%02d' % grp_id
-        etags = build_etags(dstore['events/' + grp])
+        etags = calc.build_etags(dstore['events/' + grp], grp_id)
         dic = groupby(etags, util.get_serial)
         for r in dstore['rup_data/grp-%02d' % grp_id]:
             for etag in dic[r['rupserial']]:
@@ -682,7 +668,8 @@ def export_gmf(ekey, dstore):
             if key not in events:  # source model producing zero ruptures
                 continue
             sm_events = events[key]
-            etags = dict(zip(sm_events['eid'], build_etags(sm_events)))
+            etags = dict(zip(sm_events['eid'],
+                             calc.build_etags(sm_events, grp_id)))
         for rlz in rlzs:
             try:
                 gmf_arr = gmf_data['%s/%04d' % (key, rlz.ordinal)].value
@@ -816,7 +803,7 @@ class GmfExporter(object):
         imts = list(self.oq.imtls)
         events = self.dstore['events/grp-%02d' % grp_id]
         ok_events = events[events['eid'] == eid]
-        [etag] = build_etags(ok_events)
+        [etag] = calc.build_etags(ok_events, grp_id)
         with self.dstore.ext5() as ext5:
             for rlzno in ext5['gmf_data/grp-%02d' % grp_id]:
                 rlz = rlzs[int(rlzno)]
@@ -837,8 +824,10 @@ class GmfExporter(object):
         imts = list(self.oq.imtls)
         with self.dstore.ext5() as ext5:
             for grp in ext5['gmf_data']:
+                grp_id = int(grp[4:])  # strip grp-
                 events = self.dstore['events/' + grp]
-                etag = dict(zip(range(len(events)), build_etags(events)))
+                etag = dict(zip(range(len(events)),
+                                calc.build_etags(events, grp_id)))
                 for rlzno in ext5['gmf_data/' + grp]:
                     rlz = rlzs[int(rlzno)]
                     gmf = ext5['gmf_data/%s/%s' % (grp, rlzno)].value
@@ -885,8 +874,9 @@ def export_gmf_scenario_npz(ekey, dstore):
         gsims = rlzs_assoc.gsims_by_grp_id[0]  # there is a single grp_id
         E = oq.number_of_ground_motion_fields
         correl_model = oq.get_correl_model()
+        [ebrupture] = calc.get_ruptures(dstore, 0)
         computer = gmf.GmfComputer(
-            dstore['ruptures/grp-00/0'], dstore['sitecol'], oq.imtls,
+            ebrupture, dstore['sitecol'], oq.imtls,
             gsims, oq.truncation_level, correl_model)
         gmf_dt = numpy.dtype([(imt, (F32, E)) for imt in oq.imtls])
         imts = list(oq.imtls)

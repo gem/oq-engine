@@ -22,14 +22,14 @@ import numpy
 import h5py
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import encode, decode
+from openquake.baselib.python3compat import decode
 from openquake.baselib.general import get_array, group_array
-from openquake.hazardlib.geo.mesh import RectangularMesh, surface_to_mesh
+from openquake.hazardlib.geo.mesh import (
+    surface_to_mesh, point3d, RectangularMesh)
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import geo, tom, calc
-from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib import geo, calc
 from openquake.hazardlib.probability_map import ProbabilityMap, get_shape
 from openquake.commonlib import readinput, util
 
@@ -40,6 +40,7 @@ MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
 
 U8 = numpy.uint8
 U16 = numpy.uint16
+I32 = numpy.int32
 U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
@@ -49,7 +50,7 @@ event_dt = numpy.dtype([('eid', U64), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
 stored_event_dt = numpy.dtype([
     ('eid', U64), ('rupserial', U32), ('year', U32),
-    ('ses', U32), ('occ', U32), ('sample', U32), ('grp_id', U16)])
+    ('ses', U32), ('occ', U32), ('sample', U32)])
 
 sids_dt = h5py.special_dtype(vlen=U32)
 
@@ -468,16 +469,13 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the tags of the corresponding seismic events.
     """
-    params = ['mag', 'rake', 'tectonic_region_type', 'hypo',
-              'source_class', 'pmf', 'occurrence_rate',
-              'time_span', 'rupture_slip_direction']
-
     def __init__(self, rupture, sids, events, grp_id, serial):
         self.rupture = rupture
         self.sids = sids
         self.events = events
         self.grp_id = grp_id
         self.serial = serial
+        self.sidx = self.eidx1 = self.eidx2 = None  # to be set when needed
 
     @property
     def weight(self):
@@ -485,20 +483,6 @@ class EBRupture(object):
         Weight of the EBRupture
         """
         return len(self.sids) * len(self.events)
-
-    @property
-    def etags(self):
-        """
-        An array of tags for the underlying seismic events
-        """
-        tags = []
-        for (eid, ses, occ, sampleid) in self.events:
-            tag = 'grp=%02d~ses=%04d~rup=%d-%02d' % (
-                self.grp_id, ses, self.serial, occ)
-            if sampleid > 0:
-                tag += '~sample=%d' % sampleid
-            tags.append(encode(tag))
-        return numpy.array(tags)
 
     @property
     def eids(self):
@@ -520,7 +504,7 @@ class EBRupture(object):
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
-        for eid, etag in zip(self.eids, self.etags):
+        for eid, etag in zip(self.eids, build_etags(self.events, self.grp_id)):
             new = util.Rupture(sm_by_grp[self.grp_id], eid, etag, self.sids)
             new.mesh = mesh[self.sids]
             new.etag = etag
@@ -549,71 +533,20 @@ class EBRupture(object):
                 new.lons[3], new.lats[3], new.depths[3])
             yield new
 
-    def __toh5__(self):
-        rup = self.rupture
-        attrs = dict(grp_id=self.grp_id, serial=self.serial)
-        for par in self.params:
-            val = getattr(self.rupture, par, None)
-            if val is not None:
-                attrs[par] = val
-        if hasattr(rup, 'temporal_occurrence_model'):
-            attrs['time_span'] = rup.temporal_occurrence_model.time_span
-        if hasattr(rup, 'pmf'):
-            attrs['pmf'] = rup.pmf
-        attrs['seed'] = rup.seed
-        attrs['hypo'] = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
-        attrs['code'] = rup.code
-        surface = self.rupture.surface
-        if hasattr(surface, 'surfaces'):
-            attrs['mesh_spacing'] = surface.surfaces[0].mesh_spacing
-        else:
-            attrs['mesh_spacing'] = getattr(surface, 'mesh_spacing', numpy.nan)
-        mesh = surface_to_mesh(surface)
-        attrs['nbytes'] = self.events.nbytes + mesh.nbytes
-        attrs['sidx'] = self.sidx
-        return dict(events=self.events, mesh=mesh), attrs
 
-    def __fromh5__(self, dic, attrs):
-        attrs = dict(attrs)
-        self.events = dic['events'].value
-        rupture_cls, surface_cls, source_cls = BaseRupture.types[attrs['code']]
-        self.rupture = object.__new__(rupture_cls)
-        self.rupture.surface = surface = object.__new__(surface_cls)
-        m = dic['mesh'].value
-        if surface_cls.__name__.endswith('PlanarSurface'):
-            mesh_spacing = attrs.pop('mesh_spacing')
-            self.rupture.surface = geo.PlanarSurface.from_array(
-                mesh_spacing, m.flatten())
-        elif surface_cls.__name__.endswith('MultiSurface'):
-            mesh_spacing = attrs.pop('mesh_spacing')
-            self.rupture.surface.__init__([
-                geo.PlanarSurface.from_array(mesh_spacing, m1.flatten())
-                for m1 in m])
-        else:  # fault surface
-            surface.strike = surface.dip = None  # they will be computed
-            surface.mesh = RectangularMesh(
-                m['lon'][0], m['lat'][0], m['depth'][0])
-        time_span = attrs.pop('time_span', None)
-        if time_span:
-            self.rupture.temporal_occurrence_model = tom.PoissonTOM(time_span)
-        self.rupture.surface_nodes = ()
-        if 'rupture_slip_direction' in attrs:
-            logging.error('rupture_slip_direction not implemented yet')
-        self.rupture.rupture_slip_direction = None
-        self.rupture.hypocenter = Point(*attrs.pop('hypo'))
-        self.rupture.source_typology = source_cls
-        self.grp_id = attrs.pop('grp_id')
-        self.serial = attrs.pop('serial')
-        self.sidx = attrs.pop('sidx')
-        del attrs['code']
-        vars(self.rupture).update(attrs)
-
-    def __lt__(self, other):
-        return self.serial < other.serial
-
-    def __repr__(self):
-        return '<%s #%d, grp_id=%d>' % (self.__class__.__name__,
-                                        self.serial, self.grp_id)
+def build_etags(events, grp_id):
+    """
+    An array of tags for the underlying seismic events
+    """
+    tags = []
+    for ev in events:
+        tag = 'grp=%02d~ses=%04d~rup=%d-%02d' % (
+            grp_id, ev['ses'], ev['rupserial'], ev['occ'])
+        sampleid = ev['sample']
+        if sampleid > 0:
+            tag += '~sample=%d' % sampleid
+        tags.append(tag)
+    return numpy.array(tags)
 
 
 class RuptureSerializer(object):
@@ -621,24 +554,92 @@ class RuptureSerializer(object):
     Serialize event based ruptures on an HDF5 files. Populate the datasets
     `ruptures` and `sids`.
     """
+    rupture_dt = numpy.dtype([
+        ('serial', U32), ('code', U8), ('sidx', U32),
+        ('eidx1', U32), ('eidx2', U32), ('pmfx', I32), ('seed', U32),
+        ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
+        ('hypo', point3d), ('sx', U8), ('sy', U8), ('sz', U8),
+        ('points', h5py.special_dtype(vlen=point3d)),
+        ])
+
+    pmfs_dt = numpy.dtype([
+        ('serial', U32), ('pmf', h5py.special_dtype(vlen=F32)),
+    ])
+
+    @classmethod
+    def get_array_nbytes(cls, ebruptures):
+        """
+        Convert a list of EBRuptures into a numpy composite array
+        """
+        lst = []
+        nbytes = 0
+        for ebrupture in ebruptures:
+            rup = ebrupture.rupture
+            mesh = surface_to_mesh(rup.surface)
+            sx, sy, sz = mesh.shape
+            hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
+            rate = getattr(rup, 'occurrence_rate', numpy.nan)
+            tup = (ebrupture.serial, rup.code, ebrupture.sidx,
+                   ebrupture.eidx1, ebrupture.eidx2,
+                   getattr(ebrupture, 'pmfx', -1),
+                   rup.seed, rup.mag, rup.rake, rate, hypo,
+                   sx, sy, sz, mesh.flatten())
+            lst.append(tup)
+            nbytes += cls.rupture_dt.itemsize + mesh.nbytes
+        return numpy.array(lst, cls.rupture_dt), nbytes
+
     def __init__(self, datastore):
         self.datastore = datastore
         self.sids = {}  # dictionary sids -> sidx
         self.data = []
+        self.nbytes = 0
 
-    def save(self, ebruptures):
+    def save(self, ebruptures, eidx):
         """
-        Collect the ruptures and a set of site IDs tuples.
+        Populate a dictionary of site IDs tuples and save the ruptures.
+
+        :param ebruptures: a list of EBRupture objects to save
+        :param eidx: the last event index saved
         """
+        pmfbytes = 0
+        # set the reference to the sids (sidx) correctly
         for ebr in ebruptures:
+            mul = ebr.multiplicity
+            ebr.eidx1 = eidx
+            ebr.eidx2 = eidx + mul
+            eidx += mul
             sids_tup = tuple(ebr.sids)
             try:
                 ebr.sidx = self.sids[sids_tup]
             except KeyError:
                 ebr.sidx = self.sids[sids_tup] = len(self.sids)
                 self.data.append(ebr.sids)
-            key = 'ruptures/grp-%02d/%s' % (ebr.grp_id, ebr.serial)
-            self.datastore[key] = ebr
+
+            rup = ebr.rupture
+            if hasattr(rup, 'pmf'):
+                pmfs = numpy.array([(ebr.serial, rup.pmf)], self.pmfs_dt)
+                dset = self.datastore.extend(
+                    'pmfs/grp-%02d' % ebr.grp_id, pmfs)
+                ebr.pmfx = len(dset) - 1
+                pmfbytes += self.pmfs_dt.itemsize + rup.pmf.nbytes
+
+        # store the ruptures in a compact format
+        array, nbytes = self.get_array_nbytes(ebruptures)
+        key = 'ruptures/grp-%02d' % ebr.grp_id
+        try:
+            dset = self.datastore.getitem(key)
+        except KeyError:  # not created yet
+            previous = 0
+        else:
+            previous = dset.attrs['nbytes']
+        self.datastore.extend(key, array, nbytes=previous + nbytes)
+
+        # save nbytes occupied by the PMFs
+        if pmfbytes:
+            if 'nbytes' in dset.attrs:
+                dset.attrs['nbytes'] += pmfbytes
+            else:
+                dset.attrs['nbytes'] = pmfbytes
         self.datastore.flush()
 
     def close(self):
@@ -655,3 +656,50 @@ class RuptureSerializer(object):
         self.datastore.set_attrs('sids', nbytes=nbytes)
         self.datastore.flush()
         del self.data[:]
+
+
+def get_ruptures(dstore, grp_id):
+    """
+    Extracts the ruptures of the given grp_id
+    """
+    oq = dstore['oqparam']
+    trt = dstore['csm_info'].grp_trt()[grp_id]
+    grp = 'grp-%02d' % grp_id
+    events = dstore['events/' + grp]
+    for rec in dstore['ruptures/' + grp]:
+        mesh = rec['points'].reshape(rec['sx'], rec['sy'], rec['sz'])
+        rupture_cls, surface_cls, source_cls = BaseRupture.types[rec['code']]
+        rupture = object.__new__(rupture_cls)
+        rupture.surface = object.__new__(surface_cls)
+        # MISSING: test with complex_fault_mesh_spacing != rupture_mesh_spacing
+        if 'Complex' in surface_cls.__name__:
+            mesh_spacing = oq.complex_fault_mesh_spacing
+        else:
+            mesh_spacing = oq.rupture_mesh_spacing
+        rupture.source_typology = source_cls
+        rupture.mag = rec['mag']
+        rupture.rake = rec['rake']
+        rupture.seed = rec['seed']
+        rupture.hypocenter = geo.Point(*rec['hypo'])
+        rupture.occurrence_rate = rec['occurrence_rate']
+        rupture.tectonic_region_type = trt
+        pmfx = rec['pmfx']
+        if pmfx != -1:
+            rupture.pmf = dstore['pmfs/' + grp][pmfx]
+        if surface_cls is geo.PlanarSurface:
+            rupture.surface = geo.PlanarSurface.from_array(
+                mesh_spacing, rec['points'])
+        elif surface_cls.__name__.endswith('MultiSurface'):
+            rupture.surface.__init__([
+                geo.PlanarSurface.from_array(mesh_spacing, m1.flatten())
+                for m1 in mesh])
+        else:  # fault surface, strike and dip will be computed
+            rupture.surface.strike = rupture.surface.dip = None
+            m = mesh[0]
+            rupture.surface.mesh = RectangularMesh(
+                m['lon'], m['lat'], m['depth'])
+        sids = dstore['sids'][rec['sidx']]
+        evs = events[rec['eidx1']:rec['eidx2']]
+        ebr = EBRupture(rupture, sids, evs, grp_id, rec['serial'])
+        # not implemented: rupture_slip_direction
+        yield ebr

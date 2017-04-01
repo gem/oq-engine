@@ -121,7 +121,7 @@ def _get_base_url(request):
     return base_url
 
 
-def _prepare_job(request, hazard_job_id, candidates):
+def _prepare_job(request, candidates):
     """
     Creates a temporary directory, move uploaded files there and
     select the job file by looking at the candidate names.
@@ -387,11 +387,11 @@ def run_calc(request):
     hazard_job_id = request.POST.get('hazard_job_id')
 
     if hazard_job_id:
+        hazard_job_id = int(hazard_job_id)
         candidates = ("job_risk.ini", "job.ini")
     else:
         candidates = ("job_hazard.ini", "job_haz.ini", "job.ini")
-    einfo, exctype, monitor = safely_call(
-        _prepare_job, (request, hazard_job_id, candidates))
+    einfo, exctype, monitor = safely_call(_prepare_job, (request, candidates))
     if exctype:
         return HttpResponse(json.dumps(einfo.splitlines()),
                             content_type=JSON, status=500)
