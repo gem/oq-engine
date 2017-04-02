@@ -780,6 +780,15 @@ class BaseStarmap(object):
         futs = (mkfuture(res) for res in self.imap)
         return IterResult(futs, self.func.__name__, self.num_tasks, progress)
 
+    def __iter__(self):
+        try:
+            for res in self.submit_all():
+                yield res
+        finally:
+            if self.pool:
+                self.pool.close()
+                self.pool.join()
+
     def reduce(self, agg=operator.add, acc=None, progress=logging.info):
         if acc is None:
             acc = AccumDict()
