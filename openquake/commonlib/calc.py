@@ -277,12 +277,12 @@ def get_gmfs(dstore, precalc=None):
     # NB: if the hazard site collection has N sites, the hazard
     # filtered site collection for the nonzero GMFs has N' <= N sites
     # whereas the risk site collection associated to the assets
-    # has N'' <= N' sites
+    # has S <= N' sites
     if dstore.parent:
         haz_sitecol = dstore.parent['sitecol']  # N' values
     else:
         haz_sitecol = sitecol
-    risk_indices = set(sitecol.indices)  # N'' values
+    S = len(haz_sitecol)
     N = len(haz_sitecol.complete)
     imt_dt = numpy.dtype([(str(imt), F32) for imt in oq.imtls])
     E = oq.number_of_ground_motion_fields
@@ -296,12 +296,11 @@ def get_gmfs(dstore, precalc=None):
 
     # else read from the datastore
     for i, rlz in enumerate(rlzs):
-        data = group_array(dstore['gmf_data/grp-00/%04d' % i], 'sid')
-        for sid, array in data.items():
-            if sid in risk_indices:
-                for imti, imt in enumerate(oq.imtls):
-                    a = get_array(array, imti=imti)
-                    gmfs[imt][i, sid, a['eid']] = a['gmv']
+        data = dstore['gmf_data/grp-00/%04d' % i]
+        for s, sid in enumerate(haz_sitecol.sids):
+            for imti, imt in enumerate(oq.imtls):
+                idx = E * (S * imti + s)
+                gmfs[imt][i, sid] = data[idx:idx + E]['gmv']
     return etags, gmfs
 
 
