@@ -20,11 +20,13 @@ import re
 import os
 import logging
 import operator
+import tempfile
 import collections
+from zipfile import ZipFile, ZIP_DEFLATED
 
 import numpy
 
-from openquake.baselib import parallel
+from openquake.baselib import parallel, performance
 from openquake.baselib.general import (
     groupby, humansize, get_array, group_array, DictArray)
 from openquake.hazardlib.imt import from_string
@@ -579,30 +581,38 @@ def _extract(hmap, imt, j):
     return tup
 
 
-def convert_hcurves(keys, calc_id):
+def convert_hcurves(keys, calc_id, mon):
+    dic = {}
+    save_mon = mon('saving hcurves')
     with datastore.read(calc_id) as dstore:
         mesh = get_mesh(dstore['sitecol'])
         imtls = dstore['oqparam'].imtls
-        dic = {}
         for key in keys:
             curves = dstore['hcurves/%s' % key].convert(imtls, len(mesh))
-            dic[key] = util.compose_arrays(mesh, curves)
+            fh, path = tempfile.mkstemp(suffix='.npy')
+            os.close(fh)
+            with save_mon:
+                numpy.save(path, util.compose_arrays(mesh, curves))
+            dic[key] = path
     return dic
 
 
 @export.add(('hcurves', 'npz'))
 def export_hcurves_npz(ekey, dstore):
-    imtls = dstore['oqparam'].imtls
-    fname = dstore.export_path('%s.%s' % ekey)
-    arr = numpy.zeros(1, imtls.dt)
-    for imt in imtls:
-        arr[imt] = imtls[imt]
-    dic = dict(imtls=arr[0])
-    keys = list(dstore[ekey[0]])
-    dstore.close()
-    pmap = parallel.Processmap.apply(convert_hcurves, (keys, dstore.calc_id))
-    dic.update(pmap.reduce())
-    savez(fname, **dic)
+    with dstore:
+        imtls = dstore['oqparam'].imtls
+        fname = dstore.export_path('%s.%s' % ekey)
+        arr = numpy.zeros(1, imtls.dt)
+        for imt in imtls:
+            arr[imt] = imtls[imt]
+        keys = list(dstore[ekey[0]])
+    mon = performance.Monitor(hdf5path=datastore.hdf5new().path)
+    with ZipFile(fname, 'w', ZIP_DEFLATED, allowZip64=True) as z:
+        z.writestr('imtls.npy', bytes(arr[0]))
+        for dic in parallel.Processmap.apply(
+                convert_hcurves, (keys, dstore.calc_id, mon)):
+            for key, path in dic.items():
+                z.write(path, key + '.npy')
     return [fname]
 
 
