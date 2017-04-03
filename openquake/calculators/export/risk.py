@@ -200,24 +200,24 @@ def export_agg_losses_ebr(ekey, dstore):
               ('year', U32),
               ] + extra_list + oq.loss_dt_list()
     elt_dt = numpy.dtype(dtlist)
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    grp_rlzs = sorted(rlzs_assoc.get_rlzs_by_grp_id().items())
+    csm_info = dstore['csm_info']
+    rlzs_assoc = csm_info.get_rlzs_assoc()
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    for sm_id, rlzs in rlzs_assoc.rlzs_by_smodel.items():
+        # populate rup_data and event_by_eid
+        rup_data = {}
+        event_by_eid = {}
+        for grp_id in csm_info.get_grp_ids(sm_id):
+            try:
+                events = dstore['events/grp-%02d' % grp_id]
+            except KeyError:
+                continue
+            for event in events:
+                event_by_eid[event['eid']] = event
+            if has_rup_data:
+                rup_data.update(
+                    get_rup_data(calc.get_ruptures(dstore, grp_id)))
 
-    # populate rup_data and event_by_eid
-    rup_data = {}
-    event_by_eid = {}
-    for grp_id, rlzs in grp_rlzs:
-        try:
-            events = dstore['events/grp-%02d' % grp_id]
-        except KeyError:
-            continue
-        for event in events:
-            event_by_eid[event['eid']] = event
-        if has_rup_data:
-            rup_data.update(get_rup_data(calc.get_ruptures(dstore, grp_id)))
-
-    for grp_id, rlzs in grp_rlzs:
         for rlz in rlzs:
             rlzname = 'rlz-%03d' % rlz.ordinal
             if rlzname not in agg_losses:
@@ -227,7 +227,7 @@ def export_agg_losses_ebr(ekey, dstore):
             losses = data['loss']
             rlz_events = numpy.array([event_by_eid[eid] for eid in eids])
             elt = numpy.zeros(len(eids), elt_dt)
-            elt['event_tag'] = calc.build_etags(rlz_events, grp_id)
+            elt['event_tag'] = rlz_events['eid']
             elt['year'] = rlz_events['year']
             if rup_data:
                 copy_to(elt, rup_data, rlz_events['rupserial'])
