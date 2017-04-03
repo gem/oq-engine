@@ -364,9 +364,9 @@ class RuptureData(object):
         self.dt = numpy.dtype([
             ('rupserial', U32), ('multiplicity', U16),
             ('numsites', U32), ('occurrence_rate', F64),
-            ('mag', F64), ('lon', F32), ('lat', F32), ('depth', F32),
-            ('strike', F64), ('dip', F64), ('rake', F64),
-            ('boundary', hdf5.vstr)] + [(param, F64) for param in self.params])
+            ('mag', F32), ('lon', F32), ('lat', F32), ('depth', F32),
+            ('strike', F32), ('dip', F32), ('rake', F32),
+            ('boundary', hdf5.vstr)] + [(param, F32) for param in self.params])
 
     def to_array(self, ebruptures):
         """
