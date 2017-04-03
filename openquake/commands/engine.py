@@ -21,7 +21,7 @@ import sys
 import getpass
 import logging
 from openquake.baselib import sap
-from openquake.baselib.safeprint import print
+from openquake.baselib.general import safeprint
 from openquake.commonlib import datastore, config, logs
 from openquake.engine import engine as eng
 from openquake.engine.export import core
@@ -65,7 +65,7 @@ def run_job(cfg_file, log_level='info', log_file=None, exports='',
                         hazard_calculation_id=hazard_calculation_id, **kw)
     calc.monitor.flush()
     for line in logs.dbcmd('list_outputs', job_id, False):
-        print(line)
+        safeprint(line)
     return job_id
 
 
@@ -86,7 +86,7 @@ def del_calculation(job_id, confirmed=False):
         try:
             logs.dbcmd('del_calc', job_id, getpass.getuser())
         except RuntimeError as err:
-            print(err)
+            safeprint(err)
 
 
 @sap.Script
@@ -138,11 +138,11 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         sys.exit(0)
 
     if version_db:
-        print(logs.dbcmd('version_db'))
+        safeprint(logs.dbcmd('version_db'))
         sys.exit(0)
 
     if what_if_I_upgrade:
-        print(logs.dbcmd('what_if_I_upgrade', 'extract_upgrade_scripts'))
+        safeprint(logs.dbcmd('what_if_I_upgrade', 'extract_upgrade_scripts'))
         sys.exit(0)
 
     # check if the db is outdated
@@ -180,9 +180,9 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     elif list_hazard_calculations:
         for line in logs.dbcmd(
                 'list_calculations', 'hazard', getpass.getuser()):
-            print(line)
+            safeprint(line)
     elif run_hazard is not None:
-        print('WARN: --rh/--run-hazard are deprecated, use --run instead',
+        safeprint('WARN: --rh/--run-hazard are deprecated, use --run instead',
               file=sys.stderr)
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
@@ -193,9 +193,9 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
     # risk
     elif list_risk_calculations:
         for line in logs.dbcmd('list_calculations', 'risk', getpass.getuser()):
-            print(line)
+            safeprint(line)
     elif run_risk is not None:
-        print('WARN: --rr/--run-risk are deprecated, use --run instead',
+        safeprint('WARN: --rr/--run-risk are deprecated, use --run instead',
               file=sys.stderr)
         if hazard_calculation_id is None:
             sys.exit(MISSING_HAZARD_MSG)
@@ -208,17 +208,17 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
 
     # export
     elif make_html_report:
-        print('Written %s' % make_report(make_html_report))
+        safeprint('Written %s' % make_report(make_html_report))
         sys.exit(0)
 
     elif list_outputs is not None:
         hc_id = get_job_id(list_outputs)
         for line in logs.dbcmd('list_outputs', hc_id):
-            print(line)
+            safeprint(line)
     elif show_log is not None:
         hc_id = get_job_id(show_log)
         for line in logs.dbcmd('get_log', hc_id):
-            print(line)
+            safeprint(line)
 
     elif export_output is not None:
         output_id, target_dir = export_output
@@ -226,14 +226,14 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         for line in core.export_output(
                 dskey, calc_id, datadir, os.path.expanduser(target_dir),
                 exports or 'csv,xml'):
-            print(line)
+            safeprint(line)
 
     elif export_outputs is not None:
         job_id, target_dir = export_outputs
         hc_id = get_job_id(job_id)
         for line in core.export_outputs(
                 hc_id, os.path.expanduser(target_dir), exports or 'csv,xml'):
-            print(line)
+            safeprint(line)
 
     elif delete_uncompleted_calculations:
         logs.dbcmd('delete_uncompleted_calculations', getpass.getuser())
