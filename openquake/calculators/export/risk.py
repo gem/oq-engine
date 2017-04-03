@@ -206,8 +206,9 @@ def export_agg_losses_ebr(ekey, dstore):
     for sm_id, rlzs in rlzs_assoc.rlzs_by_smodel.items():
         # populate rup_data and event_by_eid
         rup_data = {}
-        event_by_eid = {}
+        event_by_grp = {}  # grp_id -> eid -> event
         for grp_id in csm_info.get_grp_ids(sm_id):
+            event_by_grp[grp_id] = event_by_eid = {}
             try:
                 events = dstore['events/grp-%02d' % grp_id]
             except KeyError:
@@ -225,12 +226,12 @@ def export_agg_losses_ebr(ekey, dstore):
             data = agg_losses[rlzname].value
             eids = data['eid']
             losses = data['loss']
-            rlz_events = numpy.array([event_by_eid[eid] for eid in eids])
+            etags, years, serials = get_etags_years_serials(event_by_grp, eids)
             elt = numpy.zeros(len(eids), elt_dt)
-            elt['event_tag'] = rlz_events['eid']
-            elt['year'] = rlz_events['year']
+            elt['event_tag'] = etags
+            elt['year'] = years
             if rup_data:
-                copy_to(elt, rup_data, rlz_events['rupserial'])
+                copy_to(elt, rup_data, serials)
             for i, ins in enumerate(
                     ['', '_ins'] if oq.insured_losses else ['']):
                 for l, loss_type in enumerate(loss_types):
@@ -239,6 +240,24 @@ def export_agg_losses_ebr(ekey, dstore):
             dest = dstore.build_fname('agg_losses', rlz, 'csv')
             writer.save(elt, dest)
     return writer.getsaved()
+
+
+def get_etags_years_serials(events_by_grp, eids):
+    etags = []
+    years = []
+    serials = []
+    for eid in eids:
+        for grp_id, event_by_eid in events_by_grp.items():
+            try:
+                event = event_by_eid[eid]
+            except KeyError:
+                continue
+            else:
+                etags.extend(calc.build_etags([event], grp_id))
+                years.append(event['year'])
+                serials.append(event['rupserial'])
+                break
+    return numpy.array(etags), numpy.array(years), numpy.array(serials)
 
 
 # this is used by event_based_risk
