@@ -45,31 +45,24 @@ def add_quotes(values):
     return numpy.array(['"%s"' % val for val in values], (bytes, 100))
 
 
-def rup_data_dict(dstore, grp_ids):
-    """
-    Extract a dictionary of arrays keyed by the rupture serial number
-    from the datastore for the given source group IDs.
-    """
-    rdict = {}
-    for grp_id in grp_ids:
-        for rec in dstore['rup_data/grp-%02d' % grp_id]:
-            rdict[rec['rupserial']] = rec
-    return rdict
+def get_rup_data(ebruptures):
+    dic = {}
+    for ebr in ebruptures:
+        point = ebr.rupture.surface.get_middle_point()
+        dic[ebr.serial] = (ebr.rupture.mag, point.x, point.y, point.z)
+    return dic
 
 
 def copy_to(elt, rup_data, rupserials):
     """
-    Copy information from the rup_data dictionary into the elt array for
+    Copy information from the ruptures into the elt array for
     the given rupture serials.
     """
     assert len(elt) == len(rupserials), (len(elt), len(rupserials))
     for i, serial in numpy.ndenumerate(rupserials):
         rec = elt[i]
-        rdata = rup_data[serial]
-        rec['magnitude'] = rdata['mag']
-        rec['centroid_lon'] = rdata['lon']
-        rec['centroid_lat'] = rdata['lat']
-        rec['centroid_depth'] = rdata['depth']
+        (rec['magnitude'], rec['centroid_lon'], rec['centroid_lat'],
+         rec['centroid_depth']) = rup_data[serial]
 
 # ############################### exporters ############################## #
 
@@ -197,7 +190,7 @@ def export_agg_losses_ebr(ekey, dstore):
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     name, ext = export.keyfunc(ekey)
     agg_losses = dstore[name]
-    has_rup_data = 'rup_data' in dstore
+    has_rup_data = 'ruptures' in dstore
     extra_list = [('magnitude', F64),
                   ('centroid_lon', F64),
                   ('centroid_lat', F64),
@@ -222,7 +215,7 @@ def export_agg_losses_ebr(ekey, dstore):
         for event in events:
             event_by_eid[event['eid']] = event
         if has_rup_data:
-            rup_data.update(rup_data_dict(dstore, [grp_id]))
+            rup_data.update(get_rup_data(calc.get_ruptures(dstore, grp_id)))
 
     for grp_id, rlzs in grp_rlzs:
         for rlz in rlzs:
