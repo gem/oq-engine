@@ -832,8 +832,7 @@ def safeprint(*args, **kwargs):
     new_args = []
     # when stdout is redirected to a file, python 2 uses ascii for the writer;
     # python 3 uses what is configured in the system (i.e. 'utf-8')
-    str_encoding = (sys.stdout.encoding
-                    if sys.stdout.encoding is not None else 'ascii')
+    str_encoding = sys.stdout.encoding or 'ascii'
     for s in args:
         new_args.append(s.encode('utf-8').decode(str_encoding, 'ignore'))
 
