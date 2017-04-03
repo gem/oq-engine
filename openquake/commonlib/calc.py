@@ -295,7 +295,7 @@ def get_gmfs(dstore, precalc=None):
         for s, sid in enumerate(haz_sitecol.sids):
             for imti, imt in enumerate(oq.imtls):
                 idx = E * (S * imti + s)
-                array = data[idx:idx + E]
+                array = data[idx: idx + E]
                 if numpy.unique(array['sid']) != [sid]:  # sanity check
                     raise ValueError('The GMFs have been stored incorrectly')
                 gmfs[imt][i, sid] = array['gmv']
