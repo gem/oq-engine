@@ -19,6 +19,7 @@
 import os
 import re
 import logging
+import tempfile
 import unittest
 
 import numpy
@@ -84,17 +85,17 @@ class CalculatorTestCase(unittest.TestCase):
         inis = job_ini.split(',')
         assert len(inis) in (1, 2), inis
         self.calc = self.get_calc(testfile, inis[0], **kw)
+        edir = tempfile.mkdtemp()
         with self.calc.monitor:
-            result = self.calc.run()
+            result = self.calc.run(export_dir=edir)
         if len(inis) == 2:
             hc_id = self.calc.datastore.calc_id
             self.calc = self.get_calc(
                 testfile, inis[1], hazard_calculation_id=str(hc_id), **kw)
             with self.calc.monitor:
-                result.update(self.calc.run())
+                result.update(self.calc.run(export_dir=edir))
         # reopen datastore, since some tests need to export from it
         dstore = datastore.read(self.calc.datastore.calc_id)
-        dstore.export_dir = dstore['oqparam'].export_dir
         self.calc.datastore = dstore
         return result
 
