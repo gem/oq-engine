@@ -123,19 +123,23 @@ def export_ses_csv(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    if 'rup_data' not in dstore:  # scenario
+    oq = dstore['oqparam']
+    if 'scenario' in oq.calculation_mode:
         return []
     dest = dstore.export_path('ruptures.csv')
     header = ('id mag centroid_lon centroid_lat centroid_depth trt '
               'strike dip rake boundary').split()
     csm_info = dstore['csm_info']
     grp_trt = csm_info.grp_trt()
+    gsims = csm_info.get_rlzs_assoc().gsims_by_grp_id
     rows = []
     for grp_id, trt in sorted(grp_trt.items()):
+        rup_data = calc.RuptureData(trt, gsims[grp_id]).to_array(
+            calc.get_ruptures(dstore, grp_id))
         grp = 'grp-%02d' % grp_id
         etags = calc.build_etags(dstore['events/' + grp], grp_id)
         dic = groupby(etags, util.get_serial)
-        for r in dstore['rup_data/grp-%02d' % grp_id]:
+        for r in rup_data:
             for etag in dic[r['rupserial']]:
                 rows.append(
                     (etag, r['mag'], r['lon'], r['lat'], r['depth'],
@@ -143,20 +147,6 @@ def export_ses_csv(ekey, dstore):
     rows.sort(key=operator.itemgetter(0))
     writers.write_csv(dest, rows, header=header, sep='\t')
     return [dest]
-
-
-@export.add(('rup_data', 'csv'))
-def export_rup_data(ekey, dstore):
-    rupture_data = dstore[ekey[0]]
-    paths = []
-    for trt in sorted(rupture_data):
-        fname = 'rup_data_%s.csv' % trt.lower().replace(' ', '_')
-        data = rupture_data[trt].value
-        data.sort(order='rupserial')
-        if len(data):
-            paths.append(
-                writers.write_csv(dstore.export_path(fname), data, sep='\t'))
-    return paths
 
 
 # #################### export Ground Motion fields ########################## #
