@@ -126,10 +126,12 @@ class CalculatorTestCase(unittest.TestCase):
         but in some tests a sorting function is passed, because some
         files can be equal only up to the ordering.
         """
-        expected = os.path.join(self.testdir, fname1)
+        expected = os.path.abspath(os.path.join(self.testdir, fname1))
         if not os.path.exists(expected) and self.OVERWRITE_EXPECTED:
             open(expected, 'w').write('')
-        actual = os.path.join(self.calc.oqparam.export_dir, fname2)
+        actual = os.path.abspath(
+            os.path.join(self.calc.oqparam.export_dir, fname2))
+        import pdb; pdb.set_trace()
         expected_lines = make_comparable(open(expected).readlines())
         actual_lines = make_comparable(open(actual).readlines()[:lastline])
         try:
