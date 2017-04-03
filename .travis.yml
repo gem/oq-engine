@@ -18,7 +18,6 @@ install:
 
 script:
   - bin/run-demos.sh
-  - python -m openquake.commands engine --lhc
   - nosetests --with-doctest -vsx -a'!slow'
   - cat /tmp/webui*
   - bin/oq reset --yes
