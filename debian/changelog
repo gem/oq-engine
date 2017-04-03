@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added an export test for the event loss table in the case of multiple TRTs
+  * Removed the experimental `rup_data` output
   * Added an .npz export for the output `losses_by_asset`
   * Exported the scenario_risk aggregate losses in a nicer format
 
