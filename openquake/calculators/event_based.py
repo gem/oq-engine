@@ -124,9 +124,6 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     res = AccumDict({grp_id: eb_ruptures})
     res.num_events = set_eids(eb_ruptures, getattr(monitor, 'task_no', 0))
     res.calc_times = calc_times
-    if gsims:  # we can pass an empty gsims list to disable saving of rup_data
-        res.rup_data = {
-            grp_id: calc.RuptureData(trt, gsims).to_array(eb_ruptures)}
     return res
 
 
@@ -277,14 +274,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
                         initial_eidx = len(dset) - len(events)
                         self.rupser.save(ebrs, initial_eidx)
 
-            # save rup_data
-            if hasattr(ruptures_by_grp_id, 'rup_data'):
-                for grp_id, data in sorted(
-                        ruptures_by_grp_id.rup_data.items()):
-                    if len(data):
-                        key = 'rup_data/grp-%02d' % grp_id
-                        self.rup_data = self.datastore.extend(key, data)
-
     def post_execute(self, result):
         """
         Save the SES collection
@@ -309,18 +298,6 @@ class EventBasedRuptureCalculator(PSHACalculator):
         if 'events' in h5:
             self.datastore.set_attrs('events', num_events=num_events)
             self.datastore.set_nbytes('events')
-        if 'rup_data' not in h5:
-            return
-        for dset in h5['rup_data'].values():
-            if len(dset):
-                numsites = dset['numsites']
-                multiplicity = dset['multiplicity']
-                spr = numpy.average(numsites, weights=multiplicity)
-                mul = numpy.average(multiplicity, weights=numsites)
-                self.datastore.set_attrs(
-                    dset.name, sites_per_rupture=spr,
-                    multiplicity=mul, nbytes=hdf5.get_nbytes(dset))
-        self.datastore.set_nbytes('rup_data')
 
 
 def set_random_years(dstore, events_sm, investigation_time):
