@@ -23,7 +23,6 @@ import h5py
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import get_array, group_array
 from openquake.hazardlib.geo.mesh import (
     surface_to_mesh, point3d, RectangularMesh)
 from openquake.hazardlib.source.rupture import BaseRupture
@@ -274,14 +273,10 @@ def get_gmfs(dstore, precalc=None):
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     rlzs = rlzs_assoc.realizations
     sitecol = dstore['sitecol']
-    # NB: if the hazard site collection has N sites, the hazard
-    # filtered site collection for the nonzero GMFs has N' <= N sites
-    # whereas the risk site collection associated to the assets
-    # has S <= N' sites
     if dstore.parent:
-        haz_sitecol = dstore.parent['sitecol']  # N' values
+        haz_sitecol = dstore.parent['sitecol']  # S sites
     else:
-        haz_sitecol = sitecol
+        haz_sitecol = sitecol  # N sites
     S = len(haz_sitecol)
     N = len(haz_sitecol.complete)
     imt_dt = numpy.dtype([(str(imt), F32) for imt in oq.imtls])
@@ -300,7 +295,10 @@ def get_gmfs(dstore, precalc=None):
         for s, sid in enumerate(haz_sitecol.sids):
             for imti, imt in enumerate(oq.imtls):
                 idx = E * (S * imti + s)
-                gmfs[imt][i, sid] = data[idx:idx + E]['gmv']
+                array = data[idx:idx + E]
+                if numpy.unique(array['sid']) != [sid]:  # sanity check
+                    raise ValueError('The GMFs have been stored incorrectly')
+                gmfs[imt][i, sid] = array['gmv']
     return etags, gmfs
 
 
