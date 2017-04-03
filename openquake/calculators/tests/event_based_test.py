@@ -259,7 +259,7 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
     def test_case_8(self):
         out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
         [fname] = out['ruptures', 'csv']
-        if REFERENCE_PLATFORM:
+        if REFERENCE_OS:
             self.assertEqualFiles('expected/rup_data.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
