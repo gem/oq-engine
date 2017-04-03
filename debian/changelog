@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a performance bug in `get_gmfs`: now the scenario risk and damage
+    calculators are orders of magnitude faster for big arrays
   * Added an .npz export for the output `losses_by_asset`
   * Exported the scenario_risk aggregate losses in a nicer format
 
