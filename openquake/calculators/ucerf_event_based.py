@@ -718,10 +718,7 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     res[src.src_group_id] = ebruptures
     res.calc_times[src.src_group_id] = (
         src.source_id, len(sitecol), time.time() - t0)
-    if param['save_ruptures']:
-        res.rup_data = {src.src_group_id: calc.RuptureData(DEFAULT_TRT, gsims)
-                        .to_array(ebruptures)}
-    else:
+    if not param['save_ruptures']:
         res.events_by_grp = {grp_id: event_based.get_events(res[grp_id])
                              for grp_id in res}
     return res
