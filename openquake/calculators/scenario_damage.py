@@ -179,13 +179,12 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
         # consequence distributions
         if result['c_asset']:
-            c_asset = numpy.zeros((N, R, L, 2), F32)
+            stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
+            c_asset = numpy.zeros((N, R, L), stat_dt)
             for (l, r, a, stat) in result['c_asset']:
                 c_asset[a, r, l] = stat
-            multi_stat_dt = self.oqparam.loss_dt(
-                [('mean', F32), ('stddev', F32)])
-            self.datastore['csq_by_asset'] = dist_by_asset(
-                c_asset, multi_stat_dt)
+            multi_stat_dt = self.oqparam.loss_dt(stat_dt)
+            self.datastore['csq_by_asset'] = c_asset
             self.datastore['csq_by_taxon'] = dist_by_taxon(
                 result['c_taxon'], multi_stat_dt)
             self.datastore['csq_total'] = dist_total(
