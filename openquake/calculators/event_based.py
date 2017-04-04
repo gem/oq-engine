@@ -31,8 +31,7 @@ from openquake.baselib.general import AccumDict, block_splitter, humansize
 from openquake.hazardlib.calc.filters import FarAwayRupture
 from openquake.hazardlib.probability_map import ProbabilityMap, PmapStats
 from openquake.hazardlib.geo.surface import PlanarSurface
-from openquake.risklib.riskinput import (GmfGetter, str2rsi, rsi2str, gmv_dt,
-                                         TWO48)
+from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str, gmv_dt
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util
 from openquake.calculators import base
@@ -46,6 +45,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16  # 65,536
 TWO32 = 2 ** 32  # 4,294,967,296
+TWO48 = 2 ** 48  # 281,474,976,710,656
 
 # ######################## rupture calculator ############################ #
 
@@ -70,14 +70,19 @@ def set_eids(ebruptures, task_no):
     """
     Set event IDs on the given list of ebruptures produced by the given task.
 
+    :param ebruptures: a non-empty list of ruptures with the same grp_id
+    :param task_no: the number of the task generating the ruptures
     :returns: the total number of events
     """
+    if not ebruptures:
+        return 0
     num_events = sum(ebr.multiplicity for ebr in ebruptures)
     eids = get_seq_ids(task_no, num_events)
     start = 0
+    offset = U64(ebruptures[0].grp_id * TWO48)  # first 16 bits for grp_id
     for ebr in ebruptures:
         m = ebr.multiplicity
-        ebr.events['eid'] = eids[start: start + m]
+        ebr.events['eid'] = eids[start: start + m] + offset
         start += m
     return num_events
 
@@ -100,7 +105,6 @@ def compute_ruptures(sources, src_filter, gsims, param, monitor):
     # NB: by construction each block is a non-empty list with
     # sources of the same src_group_id
     grp_id = sources[0].src_group_id
-    trt = sources[0].tectonic_region_type
     eb_ruptures = []
     calc_times = []
     rup_mon = monitor('filtering ruptures', measuremem=False)
@@ -317,6 +321,10 @@ def set_random_years(dstore, events_sm, investigation_time):
 
 # ######################## GMF calculator ############################ #
 
+dt = numpy.dtype([('rlzi', U32), ('sid', U32), ('eid', U64),
+                  ('imti', U8), ('gmv', F32)])
+
+
 def compute_gmfs_and_curves(getter, monitor):
     """
     :param getter:
@@ -356,15 +364,15 @@ def compute_gmfs_and_curves(getter, monitor):
     else:  # fast lane
         for gsim in getter.rlzs_by_gsim:
             with monitor('building hazard', measuremem=True):
-                # the following is tricky; `getter.gen_gmv` produces long event
-                # ids (64 bit) containing both a realization index (16 bit)
-                # and a short event id (48 bit); we manage them here
-                data = numpy.fromiter(getter.gen_gmv(gsim), gmv_dt)
-            r_indices = data['eid'] // TWO48  # extract realization indices
-            data['eid'] %= TWO48  # got back to short event IDs
-            for r, rlz in enumerate(getter.rlzs_by_gsim[gsim]):
-                # extract data for realization r
-                gmfcoll[grp_id, rlz] = data[r_indices == r]
+                data = numpy.fromiter(getter.gen_gmv(gsim), dt)
+                r_indices = data['rlzi']
+                for r, rlz in enumerate(getter.rlzs_by_gsim[gsim]):
+                    # extract data for realization r
+                    rdata = data[r_indices == r]
+                    array = numpy.zeros(len(rdata), gmv_dt)
+                    for name in gmv_dt.names:
+                        array[name] = rdata[name]
+                    gmfcoll[grp_id, rlz] = array
     return dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
                 hcurves=hcurves, gmdata=getter.gmdata)
 
