@@ -347,10 +347,11 @@ def compute_gmfs_and_curves(getter, monitor):
             with monitor('building hazard', measuremem=True):
                 hazard = getter.get_hazard(gsim)  # (r, sid, imti) -> gmv_eid
             for r, rlz in enumerate(getter.rlzs_by_gsim[gsim]):
+                hazardr = hazard[r]
                 lst = []
                 for sid in getter.sids:
                     for imti, imt in enumerate(getter.imts):
-                        array = hazard[r, sid, imti]
+                        array = hazardr.get((sid, imti), [])
                         if len(array) == 0:  # no data
                             continue
                         for rec in array:
