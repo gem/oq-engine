@@ -160,6 +160,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         R = len(self.rlzs_assoc.realizations)
         D = len(dstates)
         N = len(self.assetcol)
+        T = len(self.assetcol.taxonomies)
 
         # damage distributions
         dt_list = []
@@ -187,5 +188,10 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             self.datastore['csq_by_asset'] = c_asset
             self.datastore['csq_by_taxon'] = dist_by_taxon(
                 result['c_taxon'], multi_stat_dt)
+            # c_taxon = numpy.zeros((T, R, L), stat_dt)
+            # res = result['c_taxon']
+            # for t, r, l in itertools.product(range(T), range(R), range(L)):
+            #    c_taxon[t, r, l] = scientific.mean_std(res[t, r, l])
+            # self.datastore['csq_by_taxon'] = c_taxon
             self.datastore['csq_total'] = dist_total(
                 result['c_taxon'], multi_stat_dt)
