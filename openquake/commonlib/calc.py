@@ -362,7 +362,7 @@ class RuptureData(object):
         self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
                              set('mag strike dip rake hypo_depth'.split()))
         self.dt = numpy.dtype([
-            ('rupserial', U32), ('multiplicity', U16),
+            ('rupserial', U32), ('multiplicity', U16), ('eidx', U32),
             ('numsites', U32), ('occurrence_rate', F64),
             ('mag', F32), ('lon', F32), ('lat', F32), ('depth', F32),
             ('strike', F32), ('dip', F32), ('rake', F32),
@@ -386,11 +386,11 @@ class RuptureData(object):
                 rate = ebr.rupture.occurrence_rate
             except AttributeError:  # for nonparametric sources
                 rate = numpy.nan
-            data.append((ebr.serial, ebr.multiplicity, len(ebr.sids),
-                         rate, rup.mag, point.x, point.y, point.z,
-                         rup.surface.get_strike(), rup.surface.get_dip(),
-                         rup.rake, 'MULTIPOLYGON(%s)' % decode(bounds)) +
-                        ruptparams)
+            data.append(
+                (ebr.serial, ebr.multiplicity, ebr.eidx1, len(ebr.sids), rate,
+                 rup.mag, point.x, point.y, point.z, rup.surface.get_strike(),
+                 rup.surface.get_dip(), rup.rake,
+                 'MULTIPOLYGON(%s)' % decode(bounds)) + ruptparams)
         return numpy.array(data, self.dt)
 
 
@@ -698,5 +698,8 @@ def get_ruptures(dstore, grp_id):
         sids = dstore['sids'][rec['sidx']]
         evs = events[rec['eidx1']:rec['eidx2']]
         ebr = EBRupture(rupture, sids, evs, grp_id, rec['serial'])
+        ebr.eidx1 = rec['eidx1']
+        ebr.eidx2 = rec['eidx2']
+        ebr.sidx = rec['sidx']
         # not implemented: rupture_slip_direction
         yield ebr
