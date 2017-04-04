@@ -345,7 +345,9 @@ def compute_gmfs_and_curves(getter, monitor):
         duration = oq.investigation_time * oq.ses_per_logic_tree_path
         for gsim in getter.rlzs_by_gsim:
             with monitor('building hazard', measuremem=True):
-                hazard = getter.get_hazard(gsim)  # (r, sid, imti) -> gmv_eid
+                gmfcoll[grp_id, gsim] = data = numpy.fromiter(
+                    getter.gen_gmv(gsim), dt)
+                hazard = getter.get_hazard(gsim, data)
             for r, rlz in enumerate(getter.rlzs_by_gsim[gsim]):
                 hazardr = hazard[r]
                 lst = []
@@ -361,19 +363,11 @@ def compute_gmfs_and_curves(getter, monitor):
                                 array['gmv'], oq.imtls[imt],
                                 oq.investigation_time, duration)
                             hcurves[rsi2str(rlz.ordinal, sid, imt)] = poes
-                gmfcoll[grp_id, rlz] = numpy.array(lst, gmv_dt)
     else:  # fast lane
         for gsim in getter.rlzs_by_gsim:
             with monitor('building hazard', measuremem=True):
-                data = numpy.fromiter(getter.gen_gmv(gsim), dt)
-                r_indices = data['rlzi']
-                for r, rlz in enumerate(getter.rlzs_by_gsim[gsim]):
-                    # extract data for realization r
-                    rdata = data[r_indices == r]
-                    array = numpy.zeros(len(rdata), gmv_dt)
-                    for name in gmv_dt.names:
-                        array[name] = rdata[name]
-                    gmfcoll[grp_id, rlz] = array
+                gmfcoll[grp_id, gsim] = numpy.fromiter(
+                    getter.gen_gmv(gsim), dt)
     return dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
                 hcurves=hcurves, gmdata=getter.gmdata)
 
@@ -442,9 +436,9 @@ class EventBasedCalculator(ClassicalCalculator):
         self.gmdata += res['gmdata']
         if res['gmfcoll'] is not None:
             with sav_mon:
-                for (gid, rlz), array in res['gmfcoll'].items():
+                for (grp_id, gsim), array in res['gmfcoll'].items():
                     if len(array):
-                        key = 'gmf_data/grp-%02d/%04d' % (gid, rlz.ordinal)
+                        key = 'gmf_data/grp-%02d/%s' % (grp_id, gsim)
                         hdf5.extend3(self.datastore.ext5path, key, array)
         slicedic = self.oqparam.imtls.slicedic
         with agg_mon:
@@ -515,6 +509,8 @@ class EventBasedCalculator(ClassicalCalculator):
             for sm_id in ext5['gmf_data']:
                 for rlzno in ext5['gmf_data/' + sm_id]:
                     ext5.set_nbytes('gmf_data/%s/%s' % (sm_id, rlzno))
+            ext5['gmf_data'].attrs['num_sites'] = len(self.sitecol.complete)
+            ext5['gmf_data'].attrs['num_imts'] = len(self.oqparam.imtls)
             ext5.set_nbytes('gmf_data')
 
     def post_execute(self, result):
