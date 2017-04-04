@@ -96,7 +96,7 @@ def export_avg_losses(ekey, dstore):
 
 
 # this is used by scenario_risk
-@export.add(('losses_by_asset', 'csv'))
+@export.add(('losses_by_asset', 'csv'), ('csq_by_asset', 'csv'))
 def export_losses_by_asset(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -463,7 +463,7 @@ def export_loss_maps_csv(ekey, dstore):
     return writer.getsaved()
 
 
-@export.add(('damages-rlzs', 'csv'), ('csq_by_asset', 'csv'))
+@export.add(('damages-rlzs', 'csv'))
 def export_rlzs_by_asset_csv(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = get_assets(dstore)
