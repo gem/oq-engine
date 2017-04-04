@@ -127,7 +127,7 @@ def export_ses_csv(ekey, dstore):
     if 'scenario' in oq.calculation_mode:
         return []
     dest = dstore.export_path('ruptures.csv')
-    header = ('id mag centroid_lon centroid_lat centroid_depth trt '
+    header = ('serial mag centroid_lon centroid_lat centroid_depth trt '
               'strike dip rake eid multiplicity boundary').split()
     csm_info = dstore['csm_info']
     grp_trt = csm_info.grp_trt()
