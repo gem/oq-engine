@@ -23,7 +23,7 @@ from openquake.qa_tests_data.scenario_risk import (
     case_6a, case_7, occupants, case_master)
 
 from openquake.baselib.general import writetmp
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 
@@ -52,6 +52,9 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # check the exported GMFs
         [fname] = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf-FromFile-PGA.csv', fname)
+
+        [fname] = out['losses_by_event', 'csv']
+        self.assertEqualFiles('expected/losses_by_event.csv', fname)
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_2(self):
@@ -133,6 +136,10 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini', exports='npz')
+        # check losses_by_taxon
+        fnames = export(('losses_by_taxon-rlzs', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_7(self):

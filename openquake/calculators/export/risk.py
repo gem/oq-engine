@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import AccumDict, get_array, group_array
 from openquake.hazardlib.stats import compute_stats2
-from openquake.risklib import scientific, riskinput
+from openquake.risklib import scientific
 from openquake.calculators.export import export
 from openquake.calculators.export.hazard import get_grp_id_eid, savez
 from openquake.commonlib import writers, risk_writers, calc
@@ -115,6 +115,24 @@ def export_losses_by_asset(ekey, dstore):
     return writer.getsaved()
 
 
+# this is used by scenario_risk
+@export.add(('losses_by_event', 'csv'))
+def export_losses_by_event(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    loss_dt = dstore['oqparam'].loss_dt()
+    all_losses = dstore[ekey[0]].value
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    for rlz in rlzs:
+        dest = dstore.build_fname('losses_by_event', rlz, 'csv')
+        data = all_losses[:, rlz.ordinal].copy().view(loss_dt)
+        writer.save(data, dest)
+    return writer.getsaved()
+
+
 @export.add(('losses_by_asset', 'npz'))
 def export_losses_by_asset_npz(ekey, dstore):
     """
@@ -133,7 +151,6 @@ def export_losses_by_asset_npz(ekey, dstore):
     fname = dstore.export_path('%s.%s' % ekey)
     savez(fname, **dic)
     return [fname]
-
 
 def _compact(array):
     # convert an array of shape (a, e) into an array of shape (a,)
@@ -901,7 +918,7 @@ def export_rcurves_rlzs(ekey, dstore):
     return sorted(fnames)
 
 
-# used by ebr calculator
+# used by event_based_risk and scenario_risk
 @export.add(('losses_by_taxon-rlzs', 'csv'), ('losses_by_taxon-stats', 'csv'))
 def export_losses_by_taxon_csv(ekey, dstore):
     oq = dstore['oqparam']
@@ -919,7 +936,7 @@ def export_losses_by_taxon_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dt = numpy.dtype([('taxonomy', taxonomies.dtype)] + oq.loss_dt_list())
     for tag, values in zip(tags, value.transpose(1, 0, 2)):
-        fname = dstore.build_fname(ekey[0], tag, ekey[1])
+        fname = dstore.build_fname(key, tag, ekey[1])
         array = numpy.zeros(len(values), dt)
         array['taxonomy'] = taxonomies
         for l, lt in enumerate(loss_types):

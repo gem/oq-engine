@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Added an output `losses_by_event` to the scenario_risk calculator
+  * Changed the output `ruptures.csv` to avoid duplications
+  * Added an output `losses_by_taxon` to the scenario_risk calculator
   * Fixed a performance bug in `get_gmfs`: now the scenario risk and damage
     calculators are orders of magnitude faster for big arrays
   * Added an export test for the event loss table in the case of multiple TRTs
