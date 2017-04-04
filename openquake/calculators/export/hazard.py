@@ -759,63 +759,20 @@ def export_gmf_data_csv(ekey, dstore):
                 writer.save(data, dest)
         return writer.getsaved()
     else:  # event based
-        exporter = GmfExporter(dstore)
-        grp_id, eid = get_grp_id_eid(ekey[0])
-        if eid in (None, '*'):
-            return exporter.export_all()
-        else:
-            return exporter.export_one(int(grp_id), int(eid))
+        eid = ekey[0].split(':')[1] if ':' in ekey[0] else None
+        return export_gmfs(dstore, eid)
 
 
-class GmfExporter(object):
-    def __init__(self, dstore):
-        self.dstore = dstore
-        self.oq = dstore['oqparam']
-        self.rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-        self.sitecol = dstore['sitecol'].complete
-
-    def export_one(self, grp_id, eid):
-        fnames = []
-        rlzs = self.rlzs_assoc.realizations
-        imts = list(self.oq.imtls)
-        events = self.dstore['events/grp-%02d' % grp_id]
-        ok_events = events[events['eid'] == eid]
-        [etag] = calc.build_etags(ok_events, grp_id)
-        with self.dstore.ext5() as ext5:
-            for rlzno in ext5['gmf_data/grp-%02d' % grp_id]:
-                rlz = rlzs[int(rlzno)]
-                gmfa = ext5['gmf_data/grp-%02d/%s' % (grp_id, rlzno)]
-                gmf = gmfa[gmfa['eid'] == eid]
-                data, comment = _build_csv_data(gmf, rlz, self.sitecol, imts,
-                                                self.oq.investigation_time)
-                fname = self.dstore.build_fname(
-                    'gmf', '%s-rlz-%03d' % (etag, rlz.ordinal), 'csv')
-                logging.info('Exporting %s', fname)
-                writers.write_csv(fname, data, comment=comment)
-                fnames.append(fname)
-        return fnames
-
-    def export_all(self):
-        header = [['sid', 'eid', 'imti', 'gmv']]
-        rlzs = self.rlzs_assoc.realizations
-        files = []  # fileobj in append mode
-        for rlz in rlzs:
-            path = self.dstore.build_fname('gmf', rlz, 'csv')
-            open(path, 'w').close()  # reset file if already present
-            f = open(path, 'a')
-            files.append(f)
-            writers.write_csv(f, header)
-        with self.dstore.ext5() as ext5:
-            for grp in ext5['gmf_data']:
-                for rlzno in ext5['gmf_data/' + grp]:
-                    rlzi = int(rlzno)
-                    f = files[rlzi]
-                    gmfa = ext5['gmf_data/%s/%s' % (grp, rlzno)].value
-                    logging.info('%s: exporting %s', grp, f.name)
-                    writers.write_csv(files[rlzi], gmfa, header='no-header')
-        for f in files:
-            f.close()
-        return [f.name for f in files]
+def export_gmfs(dstore, eid):
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    rlzs = rlzs_assoc.realizations
+    fnames = [dstore.build_fname('gmf', rlz, 'csv') for rlz in rlzs]
+    multiwriter = writers.CsvMultiWriter(
+        fnames, header=['sid', 'eid', 'imti', 'gmv'])
+    with dstore.ext5() as ext5:
+        multiwriter.write(calc.GmfDataGetter.gen_gmfs(ext5['gmf_data'], eid))
+    multiwriter.close()
+    return fnames
 
 
 def _build_csv_data(array, rlz, sitecol, imts, investigation_time):
