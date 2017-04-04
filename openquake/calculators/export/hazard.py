@@ -796,31 +796,26 @@ class GmfExporter(object):
         return fnames
 
     def export_all(self):
-        fnames = []
+        header = ['sid', 'eid', 'imti', 'gmv']
         rlzs = self.rlzs_assoc.realizations
-        imts = list(self.oq.imtls)
+        files = []  # fileobj in append mode
+        for rlz in rlzs:
+            path = self.dstore.build_fname('gmf', rlz, 'csv')
+            open(path, 'w').close()  # reset file if already present
+            f = open(path, 'a')
+            files.append(f)
+            writers.write_csv(f, header)
         with self.dstore.ext5() as ext5:
             for grp in ext5['gmf_data']:
-                grp_id = int(grp[4:])  # strip grp-
-                events = self.dstore['events/' + grp]
-                etag = dict(zip(range(len(events)),
-                                calc.build_etags(events, grp_id)))
                 for rlzno in ext5['gmf_data/' + grp]:
-                    rlz = rlzs[int(rlzno)]
+                    rlzi = int(rlzno)
+                    f = files[rlzi]
                     gmf = ext5['gmf_data/%s/%s' % (grp, rlzno)].value
-                    for eid, array in group_array(gmf, 'eid').items():
-                        if eid not in etag:
-                            continue
-                        data, comment = _build_csv_data(
-                            array, rlz, self.sitecol,
-                            imts, self.oq.investigation_time)
-                        fname = self.dstore.build_fname(
-                            'gmf', '%s-rlz-%03d' % (etag[eid], rlz.ordinal),
-                            'csv')
-                        logging.info('Exporting %s', fname)
-                        writers.write_csv(fname, data, comment=comment)
-                        fnames.append(fname)
-        return fnames
+                    logging.info('Exporting %s', f.name)
+                    writers.write_csv(files[rlzi], gmf)
+        for f in files:
+            f.close()
+        return [f.name for f in files]
 
 
 def _build_csv_data(array, rlz, sitecol, imts, investigation_time):
