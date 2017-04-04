@@ -624,10 +624,11 @@ class GmfDataGetter(object):
         """
         :returns: dictionary (rlzi, sid, imti) -> array(gmv, eid)
         """
+        rlzs = self.rlzs_by_gsim[gsim]
         with hdf5.File(self.ext5path) as f:
             dset = f['gmf_data/%02d/%s' % (self.grp_id, gsim)]
             data = dset[self.start:self.stop]
-        return get_gmfdict(data, self.rlzs_by_gsim[gsim])
+        return get_gmfdict(data, rlzs)
 
 
 def get_rlzs(riskinput):
