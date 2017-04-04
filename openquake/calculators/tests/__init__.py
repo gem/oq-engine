@@ -29,6 +29,9 @@ from openquake.baselib.performance import Monitor
 from openquake.commonlib import readinput, oqvalidation, datastore
 
 
+REFERENCE_OS = 'Ubuntu-16.04' in platform.platform()
+
+
 class DifferentFiles(Exception):
     pass
 
