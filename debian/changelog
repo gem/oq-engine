@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * The event IDs are now unique and a constraint on the maximum
+    number of source groups (65,536) has been added
   * Added an output `losses_by_event` to the scenario_risk calculator
   * Changed the output `ruptures.csv` to avoid duplications
   * Added an output `losses_by_taxon` to the scenario_risk calculator

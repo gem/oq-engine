@@ -36,7 +36,6 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
-TWO48 = 2 ** 48  # 281,474,976,710,656
 BYTES_PER_RECORD = 17  # ground motion record (sid, eid, gmv, imti) = 17 bytes
 EVENTS = -2
 NBYTES = -1
@@ -579,9 +578,6 @@ class GmfGetter(object):
             n = 0
             for r, rlz in enumerate(rlzs):
                 e = len(all_eids[r])
-                offset = U64(r * TWO48)
-                # casting to U64 to avoid the issue described in
-                # https://github.com/numpy/numpy/issues/7126
                 gmdata = self.gmdata[rlz.ordinal]
                 gmdata[EVENTS] += e
                 for imti, imt in enumerate(self.imts):
@@ -592,7 +588,7 @@ class GmfGetter(object):
                             if gmv > min_gmv:
                                 gmdata[imti] += gmv
                                 gmdata[NBYTES] += BYTES_PER_RECORD
-                                yield sid, eid + offset, imti, gmv
+                                yield r, sid, eid, imti, gmv
                 n += e
 
     def get_hazard(self, gsim):
@@ -601,10 +597,8 @@ class GmfGetter(object):
         :returns: a dictionary (rlzi, sid, imti) -> array(gmv, eid)
         """
         dic = collections.defaultdict(list)
-        for sid, eid, imti, gmv in self.gen_gmv(gsim):
-            # NB: int(eid) to avoid silent cast to float64
-            rlzi, eid_ = divmod(int(eid), TWO48)
-            dic[rlzi, sid, imti].append((gmv, eid_))
+        for rlzi, sid, eid, imti, gmv in self.gen_gmv(gsim):
+            dic[rlzi, sid, imti].append((gmv, eid))
         for key in dic:
             dic[key] = numpy.array(dic[key], self.dt)
         return dic
