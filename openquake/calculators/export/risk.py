@@ -470,7 +470,7 @@ def export_rlzs_by_asset_csv(ekey, dstore):
     value = dstore[ekey[0]].value  # matrix N x R or T x R
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz, values in zip(rlzs, value.T):
-        fname = dstore.build_fname(ekey[0], rlz.gsim_rlz, ekey[1])
+        fname = dstore.build_fname(ekey[0], rlz, ekey[1])
         writer.save(compose_arrays(assets, values), fname)
     return writer.getsaved()
 
