@@ -36,7 +36,6 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
-TWO48 = 2 ** 48  # 281,474,976,710,656
 BYTES_PER_RECORD = 17  # ground motion record (sid, eid, gmv, imti) = 17 bytes
 EVENTS = -2
 NBYTES = -1
