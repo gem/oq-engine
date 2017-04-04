@@ -540,6 +540,8 @@ class GmfGetter(object):
         """
         Initialize the computers. Should be called on the workers
         """
+        self.N = len(self.sitecol.complete)
+        self.I = len(self.imts)
         self.sids = self.sitecol.sids
         self.computers = []
         gsims = sorted(self.rlzs_by_gsim)
@@ -591,16 +593,16 @@ class GmfGetter(object):
                                 yield r, sid, eid, imti, gmv
                 n += e
 
-    def get_hazard(self, gsim):
+    def get_hazard(self, gsim, data=None):
         """
         :param gsim: a GSIM instance
         :returns: an array (rlzi, sid, imti) -> array(gmv, eid)
         """
+        if data is None:
+            data = self.gen_gmv(gsim)
         R = len(self.rlzs_by_gsim[gsim])
-        N = len(self.sitecol.complete)
-        I = len(self.imts)
-        gmfa = numpy.zeros((R, N, I), object)
-        for rlzi, sid, eid, imti, gmv in self.gen_gmv(gsim):
+        gmfa = numpy.zeros((R, self.N, self.I), object)
+        for rlzi, sid, eid, imti, gmv in data:
             lst = gmfa[rlzi, sid, imti]
             if lst == 0:
                 gmfa[rlzi, sid, imti] = [(gmv, eid)]
@@ -613,34 +615,40 @@ class GmfGetter(object):
 gmv_eid_dt = numpy.dtype([('gmv', F32), ('eid', U64)])
 
 
-def get_gmfdict(data, rlzs):
-    out = [collections.defaultdict(list) for _ in rlzs]
-    for rlzi, sid, eid, imti, gmv in data:
-        out[rlzi][sid, imti].append((gmv, eid))
-    return [{key: numpy.array(dic[key], gmv_eid_dt) for key in dic}
-            for dic in out]
-
-
-class GmfDataGetter(object):
+class GmfDataGetter(GmfGetter):
     """
     Extracts a dictionary of GMVs from the underlying .ext5 file
     """
-    def __init__(self, ext5path, grp_id, rlzs_by_gsim, start=0, stop=None):
-        self.ext5path = ext5path
+    def __init__(self, gmf_data, grp_id, rlzs_by_gsim, start=0, stop=None):
+        self.gmf_data = gmf_data
         self.grp_id = grp_id
         self.rlzs_by_gsim = rlzs_by_gsim
+        self.N = gmf_data.attrs['num_sites']  # used by get_hazard
+        self.I = gmf_data.attr['num_imts']  # used by get_hazard
         self.start = start
         self.stop = stop
 
-    def get_hazard(self, gsim):
+    def init(self):
+        pass
+
+    def gen_gmv(self, gsim):
+        dset = self.gmf_data['%02d/%s' % (self.grp_id, gsim)]
+        for rec in dset[self.start:self.stop]:
+            yield rec
+
+    @classmethod
+    def gen_gmfs(cls, gmf_data, rlzs_assoc, N, I, eid=None):
         """
-        :returns: dictionary (rlzi, sid, imti) -> array(gmv, eid)
+        Yield records
         """
-        rlzs = self.rlzs_by_gsim[gsim]
-        with hdf5.File(self.ext5path) as f:
-            dset = f['gmf_data/%02d/%s' % (self.grp_id, gsim)]
-            data = dset[self.start:self.stop]
-        return get_gmfdict(data, rlzs)
+        for grp_id in rlzs_assoc.gsims_by_grp_id:
+            rlzs_by_gsim = rlzs_assoc.get_rlzs_by_grp_id(grp_id)
+            getter = cls(gmf_data, grp_id, rlzs_by_gsim, N, I)
+            for gsim, rlzs in rlzs_by_gsim.items():
+                for rec in getter.get_gmv(gsim):
+                    if eid is None or eid == rec['eid']:
+                        rec['rlzi'] = rlzs[rec['rlzi']].ordinal
+                        yield rec
 
 
 def get_rlzs(riskinput):
