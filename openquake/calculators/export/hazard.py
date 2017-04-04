@@ -127,8 +127,8 @@ def export_ses_csv(ekey, dstore):
     if 'scenario' in oq.calculation_mode:
         return []
     dest = dstore.export_path('ruptures.csv')
-    header = ('id mag centroid_lon centroid_lat centroid_depth trt '
-              'strike dip rake boundary').split()
+    header = ('serial mag centroid_lon centroid_lat centroid_depth trt '
+              'strike dip rake eid multiplicity boundary').split()
     csm_info = dstore['csm_info']
     grp_trt = csm_info.grp_trt()
     gsims = csm_info.get_rlzs_assoc().gsims_by_grp_id
@@ -136,15 +136,14 @@ def export_ses_csv(ekey, dstore):
     for grp_id, trt in sorted(grp_trt.items()):
         rup_data = calc.RuptureData(trt, gsims[grp_id]).to_array(
             calc.get_ruptures(dstore, grp_id))
-        grp = 'grp-%02d' % grp_id
-        etags = calc.build_etags(dstore['events/' + grp], grp_id)
-        dic = groupby(etags, util.get_serial)
+        events = dstore['events/grp-%02d' % grp_id]
         for r in rup_data:
-            for etag in dic[r['rupserial']]:
-                rows.append(
-                    (etag, r['mag'], r['lon'], r['lat'], r['depth'],
-                     trt, r['strike'], r['dip'], r['rake'], r['boundary']))
-    rows.sort(key=operator.itemgetter(0))
+            event = events[r['eidx']]
+            rows.append(
+                (r['rupserial'], r['mag'], r['lon'], r['lat'], r['depth'],
+                 trt, r['strike'], r['dip'], r['rake'], event['eid'],
+                 r['multiplicity'], r['boundary']))
+    rows.sort()  # by rupture serial
     writers.write_csv(dest, rows, header=header, sep='\t')
     return [dest]
 
