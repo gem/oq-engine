@@ -465,7 +465,7 @@ class CompositeRiskModel(collections.Mapping):
                             outs = [None] * len(self.lti)
                             for lt in self.loss_types:
                                 imt = riskmodel.risk_functions[lt].imt
-                                haz = hazardr.get((sid, imti[imt]), [])
+                                haz = hazardr[sid, imti[imt]]
                                 if len(haz):
                                     out = riskmodel(lt, assets, haz, epsgetter)
                                     outs[self.lti[lt]] = out
@@ -594,9 +594,21 @@ class GmfGetter(object):
     def get_hazard(self, gsim):
         """
         :param gsim: a GSIM instance
-        :returns: a list of dictionaries (sid, imti) -> array(gmv, eid)
+        :returns: an array (rlzi, sid, imti) -> array(gmv, eid)
         """
-        return get_gmfdict(self.gen_gmv(gsim), self.rlzs_by_gsim[gsim])
+        R = len(self.rlzs_by_gsim[gsim])
+        N = len(self.sitecol.complete)
+        I = len(self.imts)
+        gmfa = numpy.zeros((R, N, I), object)
+        for rlzi, sid, eid, imti, gmv in self.gen_gmv(gsim):
+            lst = gmfa[rlzi, sid, imti]
+            if lst == 0:
+                gmfa[rlzi, sid, imti] = [(gmv, eid)]
+            else:
+                lst.append((gmv, eid))
+        for idx, lst in numpy.ndenumerate(gmfa):
+            gmfa[idx] = numpy.array(lst or [], gmv_eid_dt)
+        return gmfa
 
 gmv_eid_dt = numpy.dtype([('gmv', F32), ('eid', U64)])
 
