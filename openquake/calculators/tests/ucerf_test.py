@@ -19,7 +19,7 @@ from openquake.baselib.general import writetmp
 from openquake.calculators.export import export
 from openquake.calculators.views import view, rst_table
 from openquake.qa_tests_data import ucerf
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
 
 from nose.plugins.attrib import attr
 
@@ -31,15 +31,23 @@ class UcerfTestCase(CalculatorTestCase):
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         # check that we get the expected number of events
         with open(fname) as f:
-            self.assertEqual(len(f.readlines()), 974)
-        # check the header and the first 18 events
-        self.assertEqualFiles('expected/ruptures.csv', fname, lastline=19)
+            self.assertEqual(len(f.readlines()), 36)
+        if REFERENCE_OS:
+            # check the header and the first 18 events
+            self.assertEqualFiles('expected/ruptures.csv', fname, lastline=19)
 
         # run a regular event based on top of the UCERF ruptures and
         # check the generated hazard maps
         self.run_calc(ucerf.__file__, 'job.ini',
                       calculation_mode='event_based',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
+
+        # check the GMFs
+        gmdata = self.calc.datastore['gmdata'].value
+        got = writetmp(rst_table(gmdata, fmt='%.6f'))
+        self.assertEqualFiles('expected/gmdata_eb.csv', got)
+
+        # check the mean hazard map
         [fname] = export(('hmaps', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
 

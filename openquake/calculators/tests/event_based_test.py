@@ -30,7 +30,7 @@ from openquake.commonlib.util import max_rel_diff_index
 from openquake.calculators.views import rst_table
 from openquake.calculators.export import export
 from openquake.calculators.event_based import get_mean_curves
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, REFERENCE_OS
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
     case_8, case_12, case_13, case_17, case_18)
@@ -92,7 +92,7 @@ class EventBasedTestCase(CalculatorTestCase):
             self.assertEqual(list(oq.imtls), ['PGA'])
             dstore = read(self.calc.datastore.calc_id)
             with dstore.ext5() as ext5:
-                gmf = group_array(ext5['gmf_data/sm-0000/0000'], 'sid')
+                gmf = group_array(ext5['gmf_data/grp-00/0000'], 'sid')
             gmvs_site_0 = gmf[0]['gmv']
             gmvs_site_1 = gmf[1]['gmv']
             joint_prob_0_5 = joint_prob_of_occurrence(
@@ -214,7 +214,8 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
             self.assertEqualFiles('expected/%s' % exp, got, sorted)
 
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/ruptures.csv', fname)
+        if REFERENCE_OS:
+            self.assertEqualFiles('expected/ruptures.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_6(self):
@@ -257,8 +258,9 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
     @attr('qa', 'hazard', 'event_based')
     def test_case_8(self):
         out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
-        [fname] = out['rup_data', 'csv']
-        self.assertEqualFiles('expected/rup_data.csv', fname)
+        [fname] = out['ruptures', 'csv']
+        if REFERENCE_OS:
+            self.assertEqualFiles('expected/rup_data.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_12(self):
