@@ -141,26 +141,18 @@ def get_ses_idx(etag):
     return int(decode(etag).split('~')[1][4:])
 
 
-def get_serial(etag):
-    """
-    >>> print(get_serial("grp=00~ses=0007~rup=018-01"))
-    18
-    """
-    try:
-        trt, ses, rup = decode(etag).split('~')
-    except ValueError:
-        trt, ses, rup, sample = decode(etag).split('~')
-    serial = rup.split('=')[1].split('-')[0]
-    return int(serial)
-
-
 class Rupture(object):
     """
     Simplified Rupture class with attributes etag, indices, ses_idx,
     used in export.
+
+    :param grp_id: source group ID
+    :param eid: event ID
+    :param etag: tag associated to the event
+    :param indices: site indices
     """
-    def __init__(self, sm_id, eid, etag, indices=None):
-        self.sm_id = sm_id
+    def __init__(self, grp_id, eid, etag, indices=None):
+        self.grp_id = grp_id
         self.eid = eid
         if isinstance(etag, int):  # scenario
             self.etag = 'scenario-%010d' % etag

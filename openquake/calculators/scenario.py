@@ -52,13 +52,17 @@ class ScenarioCalculator(base.HazardCalculator):
                 'All sites were filtered out! maximum_distance=%s km' %
                 maxdist)
         # eid, ses, occ, sample
-        events = numpy.array(
-            [(eid, 1, 1, 0)
-             for eid in range(oq.number_of_ground_motion_fields)],
-            calc.event_dt)
-        rupture = calc.EBRupture(
-            rup, self.sitecol.sids, events, 'single_rupture', 0, 0)
-        self.datastore['ruptures/grp-00/0'] = rupture
+        events = numpy.zeros(oq.number_of_ground_motion_fields,
+                             calc.stored_event_dt)
+        events['eid'] = numpy.arange(oq.number_of_ground_motion_fields)
+        rupture = calc.EBRupture(rup, self.sitecol.sids, events, 0, 0)
+        rupture.sidx = 0
+        rupture.eidx1 = 0
+        rupture.eidx2 = len(events)
+        self.datastore['sids'] = self.sitecol.sids
+        self.datastore['events/grp-00'] = events
+        array, nbytes = calc.RuptureSerializer.get_array_nbytes([rupture])
+        self.datastore.extend('ruptures/grp-00', array, nbytes=nbytes)
         self.computer = GmfComputer(
             rupture, self.sitecol, oq.imtls, self.gsims,
             trunc_level, correl_model)
@@ -92,7 +96,7 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         with self.monitor('saving gmfs', autoflush=True):
             for rlzi, gsim in enumerate(self.gsims):
-                rlzstr = 'gmf_data/sm-0000/%04d' % rlzi
+                rlzstr = 'gmf_data/grp-00/%04d' % rlzi
                 self.datastore[rlzstr] = gmfa_by_rlzi[rlzi]
                 self.datastore.set_attrs(rlzstr, gsim=str(gsim))
             self.datastore.set_nbytes('gmf_data')

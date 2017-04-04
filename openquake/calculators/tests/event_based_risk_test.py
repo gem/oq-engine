@@ -137,6 +137,15 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.run_calc(case_3.__file__, 'job.ini',
                       exports='xml', individual_curves='false',
                       concurrent_tasks='4')
+
+        # test the number of bytes saved in the rupture records
+        grp00 = self.calc.datastore.get_attr('ruptures/grp-00', 'nbytes')
+        grp02 = self.calc.datastore.get_attr('ruptures/grp-02', 'nbytes')
+        grp03 = self.calc.datastore.get_attr('ruptures/grp-03', 'nbytes')
+        self.assertEqual(grp00, 540)
+        self.assertEqual(grp02, 540)
+        self.assertEqual(grp03, 216)
+
         [fname] = export(('agg_curve-stats', 'xml'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
@@ -193,18 +202,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-5)
 
-        # check rup_data is stored correctly
+        # check ruptures are stored correctly
         fname = writetmp(view('ruptures_events', self.calc.datastore))
         self.assertEqualFiles('expected/ruptures_events.txt', fname)
 
-        # export a specific eid
-        fnames = export(('all_loss_ratios:17179869184', 'csv'),
-                        self.calc.datastore)
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
-        self.assertEqualFiles('expected/losses-eid=262144.csv', fname)
-
-        # export a specific pair (sm_id, eid)
+        # export a specific pair (grp_id, eid)
         fnames = export(('all_loss_ratios:1:21474836480', 'csv'),
                         self.calc.datastore)
         for fname in fnames:

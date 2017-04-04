@@ -36,7 +36,6 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
-TWO48 = 2 ** 48  # 281,474,976,710,656
 BYTES_PER_RECORD = 17  # ground motion record (sid, eid, gmv, imti) = 17 bytes
 EVENTS = -2
 NBYTES = -1
@@ -522,9 +521,10 @@ class GmfGetter(object):
     An hazard getter with methods .gen_gmv and .get_hazard returning
     ground motion values.
     """
-    def __init__(self, rlzs_by_gsim, ebruptures, sitecol, imts, min_iml,
-                 truncation_level, correlation_model, samples):
+    def __init__(self, grp_id, rlzs_by_gsim, ebruptures, sitecol, imts,
+                 min_iml, truncation_level, correlation_model, samples):
         assert sitecol is sitecol.complete
+        self.grp_id = grp_id
         self.rlzs_by_gsim = rlzs_by_gsim
         self.ebruptures = ebruptures
         self.sitecol = sitecol
@@ -576,9 +576,6 @@ class GmfGetter(object):
             n = 0
             for r, rlz in enumerate(rlzs):
                 e = len(all_eids[r])
-                offset = U64(r * TWO48)
-                # casting to U64 to avoid the issue described in
-                # https://github.com/numpy/numpy/issues/7126
                 gmdata = self.gmdata[rlz.ordinal]
                 gmdata[EVENTS] += e
                 for imti, imt in enumerate(self.imts):
@@ -589,7 +586,7 @@ class GmfGetter(object):
                             if gmv > min_gmv:
                                 gmdata[imti] += gmv
                                 gmdata[NBYTES] += BYTES_PER_RECORD
-                                yield sid, eid + offset, imti, gmv
+                                yield r, sid, eid, imti, gmv
                 n += e
 
     def get_hazard(self, gsim):
@@ -604,10 +601,8 @@ gmv_eid_dt = numpy.dtype([('gmv', F32), ('eid', U64)])
 
 def get_gmfdict(data):
     dic = collections.defaultdict(list)
-    for sid, eid, imti, gmv in data:
-        # NB: int(eid) to avoid silent cast to float64
-        rlzi, eid_ = divmod(int(eid), TWO48)
-        dic[rlzi, sid, imti].append((gmv, eid_))
+    for rlzi, sid, eid, imti, gmv in data:
+        dic[rlzi, sid, imti].append((gmv, eid))
     for key in dic:
         dic[key] = numpy.array(dic[key], gmv_eid_dt)
     return dic

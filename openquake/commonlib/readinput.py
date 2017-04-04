@@ -47,7 +47,7 @@ read_nrml.update_validators()
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
-
+TWO16 = 2 ** 16  # 65,536
 F32 = numpy.float32
 
 
@@ -385,6 +385,7 @@ def get_source_models(oqparam, gsim_lt, source_model_lt, in_memory=True):
         if in_memory:
             apply_unc = source_model_lt.make_apply_uncertainties(sm.path)
             try:
+                logging.info('Parsing %s', fname)
                 src_groups = parser.parse_src_groups(fname, apply_unc)
             except ValueError as e:
                 if str(e) in ('Surface does not conform with Aki & '
@@ -462,6 +463,9 @@ def get_composite_source_model(oqparam, in_memory=True):
                 src.id = idx
                 idx += 1
             grp_id += 1
+            if grp_id >= TWO16:
+                # the limit is really needed only for event based calculations
+                raise ValueError('There is a limit of %d src groups!' % TWO16)
         smodels.append(source_model)
     csm = source.CompositeSourceModel(
         gsim_lt, source_model_lt, smodels, in_memory)
