@@ -57,7 +57,7 @@ def scenario_risk(riskinput, riskmodel, monitor):
     I = monitor.oqparam.insured_losses + 1
     all_losses = monitor.oqparam.all_losses
     lbt = AccumDict(accum=numpy.zeros((R, L * I), F32))
-    result = dict(agg=numpy.zeros((E, R, L * I), F64), avg=[],
+    result = dict(agg=numpy.zeros((E, R, L * I), F32), avg=[],
                   losses_by_taxon=lbt, all_losses=AccumDict(accum={}))
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
         r = outputs.r
@@ -147,6 +147,9 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                     losses_by_asset[aid, r, l + L * i] = stat[i]
             self.datastore['losses_by_asset'] = losses_by_asset
             self.datastore['agglosses-rlzs'] = agglosses
+
+            # losses by event
+            self.datastore['losses_by_event'] = res  # shape (E, R, LI)
 
             if self.oqparam.all_losses:
                 array = numpy.zeros((A, E, R), loss_dt)
