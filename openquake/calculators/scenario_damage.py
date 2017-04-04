@@ -29,47 +29,47 @@ F64 = numpy.float64
 
 def dist_by_asset(data, multi_stat_dt):
     """
-    :param data: array of shape (N, L, R, 2, ...)
+    :param data: array of shape (N, R, L, 2, ...)
     :param multi_stat_dt: numpy dtype for statistical outputs
     :returns: array of shape (N, R) with records of type multi_stat_dt
     """
-    N, L, R = data.shape[:3]
+    N, R, L = data.shape[:3]
     out = numpy.zeros((N, R), multi_stat_dt)
     for l, lt in enumerate(multi_stat_dt.names):
         out_lt = out[lt]
         for n, r in itertools.product(range(N), range(R)):
-            out_lt[n, r] = data[n, l, r]
+            out_lt[n, r] = data[n, r, l]
     return out
 
 
 def dist_by_taxon(data, multi_stat_dt):
     """
-    :param data: array of shape (T, L, R, ...)
+    :param data: array of shape (T, R, L, ...)
     :param multi_stat_dt: numpy dtype for statistical outputs
     :returns: array of shape (T, R) with records of type multi_stat_dt
     """
-    T, L, R = data.shape[:3]
+    T, R, L = data.shape[:3]
     out = numpy.zeros((T, R), multi_stat_dt)
     for l, lt in enumerate(multi_stat_dt.names):
         out_lt = out[lt]
         for t, r in itertools.product(range(T), range(R)):
-            out_lt[t, r] = scientific.mean_std(data[t, l, r])
+            out_lt[t, r] = scientific.mean_std(data[t, r, l])
     return out
 
 
 def dist_total(data, multi_stat_dt):
     """
-    :param data: array of shape (T, L, R, ...)
+    :param data: array of shape (T, R, L, ...)
     :param multi_stat_dt: numpy dtype for statistical outputs
     :returns: array of shape (R,) with records of type multi_stat_dt
     """
-    T, L, R = data.shape[:3]
+    T, R, L = data.shape[:3]
     total = data.sum(axis=0)
     out = numpy.zeros(R, multi_stat_dt)
     for l, lt in enumerate(multi_stat_dt.names):
         out_lt = out[lt]
         for r in range(R):
-            out_lt[r] = scientific.mean_std(total[l, r])
+            out_lt[r] = scientific.mean_std(total[r, l])
     return out
 
 
@@ -85,9 +85,9 @@ def scenario_damage(riskinput, riskmodel, monitor):
         :class:`openquake.baselib.performance.Monitor` instance
     :returns:
         a dictionary {'d_asset': [(l, r, a, mean-stddev), ...],
-                      'd_taxonomy': damage array of shape T, L, R, E, D,
+                      'd_taxonomy': damage array of shape T, R, L, E, D,
                       'c_asset': [(l, r, a, mean-stddev), ...],
-                      'c_taxonomy': damage array of shape T, L, R, E}
+                      'c_taxonomy': damage array of shape T, R, L, E}
 
     `d_asset` and `d_taxonomy` are related to the damage distributions
     whereas `c_asset` and `c_taxonomy` are the consequence distributions.
@@ -101,8 +101,8 @@ def scenario_damage(riskinput, riskmodel, monitor):
     E = monitor.oqparam.number_of_ground_motion_fields
     T = len(monitor.taxonomies)
     taxo2idx = {taxo: i for i, taxo in enumerate(monitor.taxonomies)}
-    result = dict(d_asset=[], d_taxon=numpy.zeros((T, L, R, E, D), F64),
-                  c_asset=[], c_taxon=numpy.zeros((T, L, R, E), F64))
+    result = dict(d_asset=[], d_taxon=numpy.zeros((T, R, L, E, D), F64),
+                  c_asset=[], c_taxon=numpy.zeros((T, R, L, E), F64))
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
         r = outputs.r
         for l, damages in enumerate(outputs):
@@ -119,11 +119,11 @@ def scenario_damage(riskinput, riskmodel, monitor):
                     result['c_asset'].append(
                         (l, r, asset.ordinal,
                          scientific.mean_std(consequences)))
-                    result['c_taxon'][t, l, r, :] += consequences
+                    result['c_taxon'][t, r, l, :] += consequences
                     # TODO: consequences for the occupants
                 result['d_asset'].append(
                     (l, r, asset.ordinal, scientific.mean_std(damages)))
-                result['d_taxon'][t, l, r, :] += damages
+                result['d_taxon'][t, r, l, :] += damages
     return result
 
 
@@ -167,9 +167,9 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             dt_list.append((ltype, numpy.dtype([('mean', (F32, D)),
                                                 ('stddev', (F32, D))])))
         multi_stat_dt = numpy.dtype(dt_list)
-        d_asset = numpy.zeros((N, L, R, 2, D), F32)
+        d_asset = numpy.zeros((N, R, L, 2, D), F32)
         for (l, r, a, stat) in result['d_asset']:
-            d_asset[a, l, r] = stat
+            d_asset[a, r, l] = stat
         self.datastore['dmg_by_asset'] = dist_by_asset(
             d_asset, multi_stat_dt)
         self.datastore['dmg_by_taxon'] = dist_by_taxon(
@@ -179,11 +179,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
         # consequence distributions
         if result['c_asset']:
-            c_asset = numpy.zeros((N, L, R, 2), F32)
+            c_asset = numpy.zeros((N, R, L, 2), F32)
             for (l, r, a, stat) in result['c_asset']:
-                c_asset[a, l, r] = stat
-            multi_stat_dt = numpy.dtype(
-                [(lt, [('mean', F32), ('stddev', F32)]) for lt in ltypes])
+                c_asset[a, r, l] = stat
+            multi_stat_dt = self.oqparam.loss_dt(
+                [('mean', F32), ('stddev', F32)])
             self.datastore['csq_by_asset'] = dist_by_asset(
                 c_asset, multi_stat_dt)
             self.datastore['csq_by_taxon'] = dist_by_taxon(
