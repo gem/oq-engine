@@ -141,19 +141,6 @@ def get_ses_idx(etag):
     return int(decode(etag).split('~')[1][4:])
 
 
-def get_serial(etag):
-    """
-    >>> print(get_serial("grp=00~ses=0007~rup=018-01"))
-    18
-    """
-    try:
-        trt, ses, rup = decode(etag).split('~')
-    except ValueError:
-        trt, ses, rup, sample = decode(etag).split('~')
-    serial = rup.split('=')[1].split('-')[0]
-    return int(serial)
-
-
 class Rupture(object):
     """
     Simplified Rupture class with attributes etag, indices, ses_idx,
