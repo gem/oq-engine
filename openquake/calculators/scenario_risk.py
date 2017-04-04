@@ -56,8 +56,9 @@ def scenario_risk(riskinput, riskmodel, monitor):
     R = len(riskinput.rlzs)
     I = monitor.oqparam.insured_losses + 1
     all_losses = monitor.oqparam.all_losses
+    lbt = AccumDict(accum=numpy.zeros((R, L * I), F32))
     result = dict(agg=numpy.zeros((E, R, L * I), F64), avg=[],
-                  all_losses=AccumDict(accum={}))
+                  losses_by_taxon=lbt, all_losses=AccumDict(accum={}))
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
         r = outputs.r
         assets = outputs.assets
@@ -69,6 +70,8 @@ def scenario_risk(riskinput, riskmodel, monitor):
                 stats['mean'][a] = losses[a].mean()
                 stats['stddev'][a] = losses[a].std(ddof=1)
                 result['avg'].append((l, r, asset.ordinal, stats[a]))
+                for i in range(I):
+                    lbt[asset.taxonomy][r, l + L * i] += losses[a].sum()
             agglosses = losses.sum(axis=0)  # shape E, I
             for i in range(I):
                 result['agg'][:, r, l + L * i] += agglosses[:, i]
@@ -127,6 +130,15 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             agglosses = numpy.zeros((R, L * I), stat_dt)
             agglosses['mean'] = F32(mean)
             agglosses['stddev'] = F32(std)
+
+            # losses by taxonomy
+            taxid = {t: i for i, t in enumerate(
+                sorted(self.assetcol.taxonomies))}
+            T = len(taxid)
+            dset = self.datastore.create_dset(
+                'losses_by_taxon-rlzs', F32, (T, R, LI))
+            for tax, array in result['losses_by_taxon'].items():
+                dset[taxid[tax]] = array
 
             # losses by asset
             losses_by_asset = numpy.zeros((A, R, L * I), stat_dt)
