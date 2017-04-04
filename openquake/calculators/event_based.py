@@ -351,7 +351,7 @@ def compute_gmfs_and_curves(getter, monitor):
                 lst = []
                 for sid in getter.sids:
                     for imti, imt in enumerate(getter.imts):
-                        array = hazardr.get((sid, imti), [])
+                        array = hazardr[sid, imti]
                         if len(array) == 0:  # no data
                             continue
                         for rec in array:
