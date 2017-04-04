@@ -796,7 +796,7 @@ class GmfExporter(object):
         return fnames
 
     def export_all(self):
-        header = ['sid', 'eid', 'imti', 'gmv']
+        header = [['sid', 'eid', 'imti', 'gmv']]
         rlzs = self.rlzs_assoc.realizations
         files = []  # fileobj in append mode
         for rlz in rlzs:
@@ -810,9 +810,9 @@ class GmfExporter(object):
                 for rlzno in ext5['gmf_data/' + grp]:
                     rlzi = int(rlzno)
                     f = files[rlzi]
-                    gmf = ext5['gmf_data/%s/%s' % (grp, rlzno)].value
-                    logging.info('Exporting %s', f.name)
-                    writers.write_csv(files[rlzi], gmf)
+                    gmfa = ext5['gmf_data/%s/%s' % (grp, rlzno)].value
+                    logging.info('%s: exporting %s', grp, f.name)
+                    writers.write_csv(files[rlzi], gmfa, header='no-header')
         for f in files:
             f.close()
         return [f.name for f in files]
