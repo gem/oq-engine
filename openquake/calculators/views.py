@@ -376,19 +376,8 @@ def view_totlosses(token, dstore):
     sanity check for the correctness of the implementation.
     """
     oq = dstore['oqparam']
-    if oq.insured_losses:
-        stats = ('mean', 'mean_ins')
-    else:
-        stats = ('mean',)
-    avglosses = dstore['losses_by_asset'].value
-    dtlist = [('%s-%s' % (name, stat), numpy.float32)
-              for name in avglosses.dtype.names for stat in stats]
-    zero = numpy.zeros(avglosses.shape[1:], numpy.dtype(dtlist))
-    for name in avglosses.dtype.names:
-        for stat in stats:
-            for rec in avglosses:
-                zero['%s-%s' % (name, stat)] += rec[name][stat]
-    return rst_table(zero, fmt='%.6E')
+    tot_losses = dstore['losses_by_asset']['mean'].sum(axis=0)
+    return rst_table(tot_losses.view(oq.loss_dt()), fmt='%.6E')
 
 
 # for event based risk
@@ -503,7 +492,7 @@ def view_assetcol(token, dstore):
 
 @view.add('ruptures_events')
 def view_ruptures_events(token, dstore):
-    num_ruptures = sum(len(v) for v in dstore['rup_data'].values())
+    num_ruptures = sum(len(v) for v in dstore['ruptures'].values())
     num_events = sum(len(v) for v in dstore['events'].values())
     mult = round(num_events / num_ruptures, 3)
     lst = [('Total number of ruptures', num_ruptures),

@@ -63,19 +63,6 @@ def get_mesh(sitecol, complete=True):
     return mesh
 
 
-def build_etags(events):
-    """
-    An array of tags for the underlying seismic events
-    """
-    tags = []
-    for (eid, serial, year, ses, occ, sampleid, grp_id) in events:
-        tag = 'grp=%02d~ses=%04d~rup=%d-%02d' % (grp_id, ses, serial, occ)
-        if sampleid > 0:
-            tag += '~sample=%d' % sampleid
-        tags.append(tag)
-    return numpy.array(tags)
-
-
 class SES(object):
     """
     Stochastic Event Set: A container for 1 or more ruptures associated with a
@@ -117,10 +104,10 @@ def export_ruptures_xml(ekey, dstore):
     sm_by_grp = dstore['csm_info'].get_sm_by_grp()
     mesh = get_mesh(dstore['sitecol'])
     ruptures = []
-    for grp_id in dstore['ruptures']:
-        for serial in dstore['ruptures/%s' % grp_id]:
-            sr = dstore['ruptures/%s/%s' % (grp_id, serial)]
-            ruptures.extend(sr.export(mesh, sm_by_grp))
+    for grp in dstore['ruptures']:
+        grp_id = int(grp[4:])  # strip grp-
+        for ebr in calc.get_ruptures(dstore, grp_id):
+            ruptures.extend(ebr.export(mesh, sm_by_grp))
     ses_coll = SESCollection(
         groupby(ruptures, operator.attrgetter('ses_idx')),
         oq.investigation_time)
@@ -136,41 +123,29 @@ def export_ses_csv(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    if 'events' not in dstore:  # scenario
+    oq = dstore['oqparam']
+    if 'scenario' in oq.calculation_mode:
         return []
     dest = dstore.export_path('ruptures.csv')
-    header = ('id mag centroid_lon centroid_lat centroid_depth trt '
-              'strike dip rake boundary').split()
+    header = ('serial mag centroid_lon centroid_lat centroid_depth trt '
+              'strike dip rake eid multiplicity boundary').split()
     csm_info = dstore['csm_info']
     grp_trt = csm_info.grp_trt()
-    sm_by_grp = csm_info.get_sm_by_grp()
+    gsims = csm_info.get_rlzs_assoc().gsims_by_grp_id
     rows = []
     for grp_id, trt in sorted(grp_trt.items()):
-        sm = 'sm-%04d' % sm_by_grp[grp_id]
-        etags = build_etags(dstore['events/' + sm])
-        dic = groupby(etags, util.get_serial)
-        for r in dstore['rup_data/grp-%02d' % grp_id]:
-            for etag in dic[r['rupserial']]:
-                rows.append(
-                    (etag, r['mag'], r['lon'], r['lat'], r['depth'],
-                     trt, r['strike'], r['dip'], r['rake'], r['boundary']))
-    rows.sort(key=operator.itemgetter(0))
+        rup_data = calc.RuptureData(trt, gsims[grp_id]).to_array(
+            calc.get_ruptures(dstore, grp_id))
+        events = dstore['events/grp-%02d' % grp_id]
+        for r in rup_data:
+            event = events[r['eidx']]
+            rows.append(
+                (r['rupserial'], r['mag'], r['lon'], r['lat'], r['depth'],
+                 trt, r['strike'], r['dip'], r['rake'], event['eid'],
+                 r['multiplicity'], r['boundary']))
+    rows.sort()  # by rupture serial
     writers.write_csv(dest, rows, header=header, sep='\t')
     return [dest]
-
-
-@export.add(('rup_data', 'csv'))
-def export_rup_data(ekey, dstore):
-    rupture_data = dstore[ekey[0]]
-    paths = []
-    for trt in sorted(rupture_data):
-        fname = 'rup_data_%s.csv' % trt.lower().replace(' ', '_')
-        data = rupture_data[trt].value
-        data.sort(order='rupserial')
-        if len(data):
-            paths.append(
-                writers.write_csv(dstore.export_path(fname), data, sep='\t'))
-    return paths
 
 
 # #################### export Ground Motion fields ########################## #
@@ -662,14 +637,16 @@ def export_gmf(ekey, dstore):
     if nbytes > GMF_MAX_SIZE:
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
-    for sm_id, rlzs in sorted(rlzs_assoc.rlzs_by_smodel.items()):
-        key = 'sm-%04d' % sm_id
+    grp_rlzs = sorted(rlzs_assoc.get_rlzs_by_grp_id().items())
+    for grp_id, rlzs in grp_rlzs:
+        key = 'grp-%02d' % grp_id
         if not n_gmfs:  # event based
             events = dstore['events']
             if key not in events:  # source model producing zero ruptures
                 continue
             sm_events = events[key]
-            etags = dict(zip(sm_events['eid'], build_etags(sm_events)))
+            etags = dict(zip(sm_events['eid'],
+                             calc.build_etags(sm_events, grp_id)))
         for rlz in rlzs:
             try:
                 gmf_arr = gmf_data['%s/%04d' % (key, rlz.ordinal)].value
@@ -677,7 +654,7 @@ def export_gmf(ekey, dstore):
                 continue
             ruptures = []
             for eid, gmfa in group_array(gmf_arr, 'eid').items():
-                rup = util.Rupture(sm_id, eid, etags[eid],
+                rup = util.Rupture(grp_id, eid, etags[eid],
                                    sorted(set(gmfa['sid'])))
                 rup.gmfa = gmfa
                 ruptures.append(rup)
@@ -739,23 +716,23 @@ def export_gmf_txt(key, dest, sitecol, imts, ruptures, rlz,
     return {key: [dest]}
 
 
-def get_sm_id_eid(key):
+def get_grp_id_eid(key):
     """
-    Extracts sm_id and eid from the export key.
+    Extracts grp_id and eid from the export key.
 
-    >>> get_sm_id_eid('gmf:1:2')
+    >>> get_grp_id_eid('gmf:1:2')
     ['1', '2']
-    >>> get_sm_id_eid('gmf:3')
+    >>> get_grp_id_eid('gmf:3')
     ['0', '3']
-    >>> get_sm_id_eid('gmf')
+    >>> get_grp_id_eid('gmf')
     [None, None]
     """
     n = key.count(':')
-    if n == 1:  # passed the eid, sm_id assumed to be zero
+    if n == 1:  # passed the eid, grp_id assumed to be zero
         return ['0', key.split(':')[1]]
-    elif n == 2:  # passed both eid and sm_id
+    elif n == 2:  # passed both eid and grp_id
         return key.split(':')[1:]
-    else:  # eid and sm_id both unspecified, exporting nothing
+    else:  # eid and grp_id both unspecified, exporting nothing
         return [None, None]
 
 
@@ -783,30 +760,31 @@ def export_gmf_data_csv(ekey, dstore):
         return writer.getsaved()
     else:  # event based
         exporter = GmfExporter(dstore)
-        sm_id, eid = get_sm_id_eid(ekey[0])
+        grp_id, eid = get_grp_id_eid(ekey[0])
         if eid in (None, '*'):
             return exporter.export_all()
         else:
-            return exporter.export_one(int(sm_id), int(eid))
+            return exporter.export_one(int(grp_id), int(eid))
 
 
 class GmfExporter(object):
     def __init__(self, dstore):
         self.dstore = dstore
         self.oq = dstore['oqparam']
-        self.rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+        self.rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
         self.sitecol = dstore['sitecol'].complete
 
-    def export_one(self, sm_id, eid):
+    def export_one(self, grp_id, eid):
         fnames = []
+        rlzs = self.rlzs_assoc.realizations
         imts = list(self.oq.imtls)
-        events = self.dstore['events/sm-%04d' % sm_id]
+        events = self.dstore['events/grp-%02d' % grp_id]
         ok_events = events[events['eid'] == eid]
-        [etag] = build_etags(ok_events)
+        [etag] = calc.build_etags(ok_events, grp_id)
         with self.dstore.ext5() as ext5:
-            for rlzno in ext5['gmf_data/sm-%04d' % sm_id]:
-                rlz = self.rlzs[int(rlzno)]
-                gmfa = ext5['gmf_data/sm-%04d/%s' % (sm_id, rlzno)]
+            for rlzno in ext5['gmf_data/grp-%02d' % grp_id]:
+                rlz = rlzs[int(rlzno)]
+                gmfa = ext5['gmf_data/grp-%02d/%s' % (grp_id, rlzno)]
                 gmf = gmfa[gmfa['eid'] == eid]
                 data, comment = _build_csv_data(gmf, rlz, self.sitecol, imts,
                                                 self.oq.investigation_time)
@@ -819,14 +797,17 @@ class GmfExporter(object):
 
     def export_all(self):
         fnames = []
+        rlzs = self.rlzs_assoc.realizations
         imts = list(self.oq.imtls)
         with self.dstore.ext5() as ext5:
-            for sm_id in ext5['gmf_data']:
-                events = self.dstore['events/' + sm_id]
-                etag = dict(zip(range(len(events)), build_etags(events)))
-                for rlzno in ext5['gmf_data/' + sm_id]:
-                    rlz = self.rlzs[int(rlzno)]
-                    gmf = ext5['gmf_data/%s/%s' % (sm_id, rlzno)].value
+            for grp in ext5['gmf_data']:
+                grp_id = int(grp[4:])  # strip grp-
+                events = self.dstore['events/' + grp]
+                etag = dict(zip(range(len(events)),
+                                calc.build_etags(events, grp_id)))
+                for rlzno in ext5['gmf_data/' + grp]:
+                    rlz = rlzs[int(rlzno)]
+                    gmf = ext5['gmf_data/%s/%s' % (grp, rlzno)].value
                     for eid, array in group_array(gmf, 'eid').items():
                         if eid not in etag:
                             continue
@@ -870,8 +851,9 @@ def export_gmf_scenario_npz(ekey, dstore):
         gsims = rlzs_assoc.gsims_by_grp_id[0]  # there is a single grp_id
         E = oq.number_of_ground_motion_fields
         correl_model = oq.get_correl_model()
+        [ebrupture] = calc.get_ruptures(dstore, 0)
         computer = gmf.GmfComputer(
-            dstore['ruptures/grp-00/0'], dstore['sitecol'], oq.imtls,
+            ebrupture, dstore['sitecol'], oq.imtls,
             gsims, oq.truncation_level, correl_model)
         gmf_dt = numpy.dtype([(imt, (F32, E)) for imt in oq.imtls])
         imts = list(oq.imtls)
@@ -885,10 +867,10 @@ def export_gmf_scenario_npz(ekey, dstore):
     elif 'event_based' in oq.calculation_mode:
         dic['sitemesh'] = get_mesh(dstore['sitecol'])
         with dstore.ext5() as ext5:
-            for sm_id in sorted(ext5['gmf_data']):
-                for rlzno in sorted(ext5['gmf_data/' + sm_id]):
+            for grp in sorted(ext5['gmf_data']):
+                for rlzno in sorted(ext5['gmf_data/' + grp]):
                     dic['rlz-' + rlzno] = ext5[
-                        'gmf_data/%s/%s' % (sm_id, rlzno)].value
+                        'gmf_data/%s/%s' % (grp, rlzno)].value
     else:  # nothing to export
         return []
     savez(fname, **dic)
