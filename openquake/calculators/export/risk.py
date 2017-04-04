@@ -918,7 +918,7 @@ def export_rcurves_rlzs(ekey, dstore):
     return sorted(fnames)
 
 
-# used by ebr calculator
+# used by event_based_risk and scenario_risk
 @export.add(('losses_by_taxon-rlzs', 'csv'), ('losses_by_taxon-stats', 'csv'))
 def export_losses_by_taxon_csv(ekey, dstore):
     oq = dstore['oqparam']
@@ -936,7 +936,7 @@ def export_losses_by_taxon_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     dt = numpy.dtype([('taxonomy', taxonomies.dtype)] + oq.loss_dt_list())
     for tag, values in zip(tags, value.transpose(1, 0, 2)):
-        fname = dstore.build_fname(ekey[0], tag, ekey[1])
+        fname = dstore.build_fname(key, tag, ekey[1])
         array = numpy.zeros(len(values), dt)
         array['taxonomy'] = taxonomies
         for l, lt in enumerate(loss_types):
