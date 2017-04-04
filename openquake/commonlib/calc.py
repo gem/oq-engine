@@ -23,7 +23,6 @@ import h5py
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import get_array, group_array
 from openquake.hazardlib.geo.mesh import (
     surface_to_mesh, point3d, RectangularMesh)
 from openquake.hazardlib.source.rupture import BaseRupture
@@ -274,15 +273,11 @@ def get_gmfs(dstore, precalc=None):
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     rlzs = rlzs_assoc.realizations
     sitecol = dstore['sitecol']
-    # NB: if the hazard site collection has N sites, the hazard
-    # filtered site collection for the nonzero GMFs has N' <= N sites
-    # whereas the risk site collection associated to the assets
-    # has N'' <= N' sites
     if dstore.parent:
-        haz_sitecol = dstore.parent['sitecol']  # N' values
+        haz_sitecol = dstore.parent['sitecol']  # S sites
     else:
-        haz_sitecol = sitecol
-    risk_indices = set(sitecol.indices)  # N'' values
+        haz_sitecol = sitecol  # N sites
+    S = len(haz_sitecol)
     N = len(haz_sitecol.complete)
     imt_dt = numpy.dtype([(str(imt), F32) for imt in oq.imtls])
     E = oq.number_of_ground_motion_fields
@@ -296,12 +291,14 @@ def get_gmfs(dstore, precalc=None):
 
     # else read from the datastore
     for i, rlz in enumerate(rlzs):
-        data = group_array(dstore['gmf_data/grp-00/%04d' % i], 'sid')
-        for sid, array in data.items():
-            if sid in risk_indices:
-                for imti, imt in enumerate(oq.imtls):
-                    a = get_array(array, imti=imti)
-                    gmfs[imt][i, sid, a['eid']] = a['gmv']
+        data = dstore['gmf_data/grp-00/%04d' % i]
+        for s, sid in enumerate(haz_sitecol.sids):
+            for imti, imt in enumerate(oq.imtls):
+                idx = E * (S * imti + s)
+                array = data[idx: idx + E]
+                if numpy.unique(array['sid']) != [sid]:  # sanity check
+                    raise ValueError('The GMFs have been stored incorrectly')
+                gmfs[imt][i, sid] = array['gmv']
     return etags, gmfs
 
 
@@ -367,9 +364,9 @@ class RuptureData(object):
         self.dt = numpy.dtype([
             ('rupserial', U32), ('multiplicity', U16),
             ('numsites', U32), ('occurrence_rate', F64),
-            ('mag', F64), ('lon', F32), ('lat', F32), ('depth', F32),
-            ('strike', F64), ('dip', F64), ('rake', F64),
-            ('boundary', hdf5.vstr)] + [(param, F64) for param in self.params])
+            ('mag', F32), ('lon', F32), ('lat', F32), ('depth', F32),
+            ('strike', F32), ('dip', F32), ('rake', F32),
+            ('boundary', hdf5.vstr)] + [(param, F32) for param in self.params])
 
     def to_array(self, ebruptures):
         """

@@ -20,12 +20,16 @@ import os
 import re
 import logging
 import unittest
+import platform
 
 import numpy
 
 from openquake.calculators import base
 from openquake.baselib.performance import Monitor
 from openquake.commonlib import readinput, oqvalidation, datastore
+
+
+REFERENCE_OS = 'Ubuntu-16.04' in platform.platform()
 
 
 class DifferentFiles(Exception):
