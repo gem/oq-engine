@@ -317,6 +317,10 @@ def set_random_years(dstore, events_sm, investigation_time):
 
 # ######################## GMF calculator ############################ #
 
+dt = numpy.dtype([('rlzi', U32), ('sid', U32), ('eid', U64),
+                  ('imti', U8), ('gmv', F32)])
+
+
 def compute_gmfs_and_curves(getter, monitor):
     """
     :param getter:
@@ -356,15 +360,15 @@ def compute_gmfs_and_curves(getter, monitor):
     else:  # fast lane
         for gsim in getter.rlzs_by_gsim:
             with monitor('building hazard', measuremem=True):
-                # the following is tricky; `getter.gen_gmv` produces long event
-                # ids (64 bit) containing both a realization index (16 bit)
-                # and a short event id (48 bit); we manage them here
-                data = numpy.fromiter(getter.gen_gmv(gsim), gmv_dt)
-            r_indices = data['eid'] // TWO48  # extract realization indices
-            data['eid'] %= TWO48  # got back to short event IDs
-            for r, rlz in enumerate(getter.rlzs_by_gsim[gsim]):
-                # extract data for realization r
-                gmfcoll[grp_id, rlz] = data[r_indices == r]
+                data = numpy.fromiter(getter.gen_gmv(gsim), dt)
+                r_indices = data['rlzi']
+                for r, rlz in enumerate(getter.rlzs_by_gsim[gsim]):
+                    # extract data for realization r
+                    rdata = data[r_indices == r]
+                    array = numpy.zeros(len(rdata), gmv_dt)
+                    for name in gmv_dt.names:
+                        array[name] = rdata[name]
+                    gmfcoll[grp_id, rlz] = array
     return dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
                 hcurves=hcurves, gmdata=getter.gmdata)
 
