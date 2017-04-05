@@ -66,28 +66,11 @@ def _check_list_weights(parameter, name):
     Checks that the weights in a list of tuples sums to 1.0
     '''
     if not isinstance(parameter, list):
-        raise ValueError('%s must be formulated with a list of tuples' % name)
+        raise ValueError('%s must be formatted with a list of tuples' % name)
     weight = np.sum([val[1] for val in parameter])
     if fabs(weight - 1.) > 1E-8:
         raise ValueError('%s weights do not sum to 1.0!' % name)
     return parameter
-
-
-    #~ if isinstance(parameter, dict):
-        #~ if isinstance(parameter['Model'], float):
-            #~ parameter['Model'] = [parameter['Model']]
-        #~ if isinstance(parameter['Weight'], float):
-            #~ parameter['Weight'] = [parameter['Weight']]
-        #~ assert len(parameter['Model']) == len(parameter['Weight']) , \
-            #~ 'Number of weights not equal to number of models in %s' % name
-        #~ assert fabs(np.sum(np.array(parameter['Weight'])) - 1.) < 1E-15 , \
-            #~ 'Weights for value %s must sum to 1.0' % name
-        #~ return (parameter['Model'], parameter['Weight'])
-    #~ else:
-        #~ if not parameter:
-            #~ return (None, None)
-        #~ else:
-           #~ return ([parameter], [1.0])
 
 
 class TectonicRegion(object):

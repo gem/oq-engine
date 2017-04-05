@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,15 +38,14 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
 #!/usr/bin/env python
-
 '''Tests for revised Stepp (1971) completeness analysis procedure'''
 import os
 import unittest
@@ -128,7 +127,7 @@ class TestSteppCompleteness(unittest.TestCase):
         with self.assertRaises(ValueError) as ae:
             _, _ = self.process._get_time_limits_from_config(self.config,
                                                              decimal_years)
-            self.assertEqual(ae.exception.message,
+            self.assertEqual(str(ae.exception),
                 'Catalogue duration smaller than time bin width - '
                 'change time window size!')
         # Test 3:  Time input as bins
@@ -146,7 +145,7 @@ class TestSteppCompleteness(unittest.TestCase):
         with self.assertRaises(ValueError) as ae:
             _, _ = self.process._get_time_limits_from_config(self.config,
                                                              decimal_years)
-            self.assertEqual(ae.exception.message,
+            self.assertEqual(str(ae.exception),
                 'Configuration time windows must be ordered from '
                 'recent to oldest')
 
@@ -166,7 +165,7 @@ class TestSteppCompleteness(unittest.TestCase):
         bad_magnitudes = np.arange(4.1, 4.5, 0.1)
         with self.assertRaises(ValueError) as ae:
             _ = self.process._get_magnitudes_from_spacing(bad_magnitudes, 0.5)
-            self.assertEqual(ae.exception.message,
+            self.assertEqual(str(ae.exception),
                 'Bin width greater than magnitude range!')
 
 

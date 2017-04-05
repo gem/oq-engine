@@ -205,7 +205,7 @@ class mtkAreaSource(object):
                           % (self.id, self.name))
 
     def create_oqhazardlib_source(self, tom, mesh_spacing, area_discretisation,
-            use_defaults=False):
+                                  use_defaults=False):
         """
         Converts the source model into an instance of the :class:
         openquake.hazardlib.source.area.AreaSource

@@ -89,9 +89,10 @@ class TestRenderAspectRatio(unittest.TestCase):
         option is not selected. Should raise ValueError
         '''
         with self.assertRaises(ValueError) as ae:
-            _ = conv.render_aspect_ratio(None)
-            self.assertEqual(ae.exception.message,
-                             'Rupture aspect ratio not defined!')
+            conv.render_aspect_ratio(None)
+        self.assertEqual(str(ae.exception),
+                         'Rupture aspect ratio not defined!')
+
 
 class TestRenderMSRToHazardlib(unittest.TestCase):
     """
@@ -117,23 +118,19 @@ class TestRenderMSRToHazardlib(unittest.TestCase):
                               WC1994)
 
     def test_missing_value_with_default(self):
-        """
-        Tests the case when the attibute is missing but the use_defaults
-        option is selected
-        """
+        # Tests the case when the attibute is missing but the use_defaults
+        # option is selected
         self.assertIsInstance(
             conv.mag_scale_rel_to_hazardlib(None, use_default=True),
             WC1994)
 
     def test_missing_value_no_default(self):
-        '''
-        Tests the case when the attribute is missing and the use_defaults
-        option is not selected. Should raise ValueError
-        '''
+        # Tests the case when the attribute is missing and the use_defaults
+        # option is not selected. Should raise ValueError
         with self.assertRaises(ValueError) as ae:
-            _ = conv.mag_scale_rel_to_hazardlib('rubbish')
-            self.assertEqual(ae.exception.message,
-                             'Magnitude Scaling Relation rubbish Defined!')
+            conv.mag_scale_rel_to_hazardlib('rubbish')
+        self.assertEqual(str(ae.exception),
+                         'Magnitude scaling relation rubbish not supported!')
 
 
 class TestNPDtoPMF(unittest.TestCase):
@@ -142,20 +139,15 @@ class TestNPDtoPMF(unittest.TestCase):
     openquake.hazardlib.pmf.PMF
     """
     def setUp(self):
-        """
-        """
-        #~ self.npd_as_list = [models.NodalPlane(0.5, 0., 90., 0.),
-                            #~ models.NodalPlane(0.5, 90., 90., 180.)]
         self.npd_as_pmf = PMF([(0.5, NodalPlane(0., 90., 0.)),
                                (0.5, NodalPlane(90., 90., 180.))])
 
         self.npd_as_pmf_bad = PMF([(0.5, None),
-                                    (0.5, NodalPlane(90., 90., 180.))])
+                                   (0.5, NodalPlane(90., 90., 180.))])
 
     def test_class_as_pmf(self):
-        """
-        Tests the case when a PMF is already input
-        """
+        # Tests the case when a PMF is already input
+
         output = conv.npd_to_pmf(self.npd_as_pmf)
         self.assertAlmostEqual(output.data[0][0], 0.5)
         self.assertAlmostEqual(output.data[0][1].strike, 0.)
@@ -167,9 +159,8 @@ class TestNPDtoPMF(unittest.TestCase):
         self.assertAlmostEqual(output.data[1][1].rake, 180.)
 
     def test_default(self):
-        """
-        Tests the case when the default class is raised
-        """
+        # Tests the case when the default class is raised
+
         output = conv.npd_to_pmf(None, True)
         self.assertAlmostEqual(output.data[0][0], 1.0)
         self.assertAlmostEqual(output.data[0][1].strike, 0.)
@@ -177,14 +168,13 @@ class TestNPDtoPMF(unittest.TestCase):
         self.assertAlmostEqual(output.data[0][1].rake, 0.)
 
     def test_render_nodal_planes_null(self):
-        '''
-        Tests the rendering of the nodal planes when no input is specified
-        and no defaults are permitted. Should raise ValueError
-        '''
+        # Tests the rendering of the nodal planes when no input is specified
+        # and no defaults are permitted. Should raise ValueError
+
         with self.assertRaises(ValueError) as ae:
-            output = conv.npd_to_pmf(None)
-            self.assertEqual(ae.exception.message,
-                'Nodal Plane distribution not defined')
+            conv.npd_to_pmf(None)
+        self.assertEqual(str(ae.exception),
+                         'Nodal Plane distribution not defined')
 
 
 class TestHDDtoHazardlib(unittest.TestCase):
@@ -193,17 +183,11 @@ class TestHDDtoHazardlib(unittest.TestCase):
     distribution to the :class: openquake.hazardlib.pmf.PMF
     """
     def setUp(self):
-        """
-        """
-        #~ self.depth_as_list = [models.HypocentralDepth(0.5, 5.),
-                              #~ models.HypocentralDepth(0.5, 10.)]
-
         self.depth_as_pmf = PMF([(0.5, 5.), (0.5, 10.)])
 
     def test_input_as_pmf(self):
-        """
-        Tests the function when a valid PMF is input
-        """
+        # Tests the function when a valid PMF is input
+
         output = conv.hdd_to_pmf(self.depth_as_pmf)
         self.assertIsInstance(output, PMF)
         self.assertAlmostEqual(output.data[0][0], 0.5)
@@ -212,22 +196,20 @@ class TestHDDtoHazardlib(unittest.TestCase):
         self.assertAlmostEqual(output.data[1][1], 10.)
 
     def test_default_input(self):
-        """
-        Tests the case when a default value is selected
-        """
+        # Tests the case when a default value is selected
+
         output = conv.hdd_to_pmf(None, True)
         self.assertIsInstance(output, PMF)
         self.assertAlmostEqual(output.data[0][0], 1.0)
         self.assertAlmostEqual(output.data[0][1], 10.0)
 
     def test_bad_input(self):
-        """
-        Tests raises value error when no input and no defaults are selected
-        """
+        # Tests raises value error when no input and no defaults are selected
+
         with self.assertRaises(ValueError) as ae:
-            output = conv.hdd_to_pmf(None)
-            self.assertEqual(ae.exception.message,
-                'Hypocentral depth distribution not defined!')
+            conv.hdd_to_pmf(None)
+        self.assertEqual(str(ae.exception),
+                         'Hypocentral depth distribution not defined!')
 
 
 class TestConvertSourceGeometries(unittest.TestCase):
@@ -237,8 +219,6 @@ class TestConvertSourceGeometries(unittest.TestCase):
     set of edges to linestrings
     '''
     def setUp(self):
-        '''
-        '''
         self.simple_edge = Line([Point(10.5, 10.5, 1.0),
                                  Point(11.35, 11.45, 2.0)])
 
@@ -249,18 +229,14 @@ class TestConvertSourceGeometries(unittest.TestCase):
         self.complex_edge = [top_edge, int_edge, low_edge]
 
     def test_simple_trace_to_wkt(self):
-        '''
-        Tests the conversion of a simple trace to a 2-D linestring
-        '''
+        # Tests the conversion of a simple trace to a 2-D linestring
         expected = 'LINESTRING (10.5 10.5, 11.35 11.45)'
         self.assertEqual(
             conv.simple_trace_to_wkt_linestring(self.simple_edge),
             expected)
 
     def test_simple_edge_to_wkt(self):
-        '''
-        Tests the conversion of a simple trace to a 3-D linestring
-        '''
+        # Tests the conversion of a simple trace to a 3-D linestring
         expected = 'LINESTRING (10.5 10.5 1.0, 11.35 11.45 2.0)'
         self.assertEqual(
             conv.simple_edge_to_wkt_linestring(self.simple_edge),

@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-#License as published by the Free Software Foundation, either version
-#3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-#DISCLAIMER
+# DISCLAIMER
 #
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-#is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-#Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
-#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-#for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -159,7 +159,7 @@ CMT_DURATION_S = 25.7474 * SECS_PER_YEAR
 
 # Apply SI conversion adjustments from Bird (2007)'s code
 # TODO This is ugly - reconsider this (maybe require only inputs in SI)
-for reg_type in BIRD_GLOBAL_PARAMETERS.keys():
+for reg_type in BIRD_GLOBAL_PARAMETERS:
     reg = BIRD_GLOBAL_PARAMETERS[reg_type]
 
     reg['corner_moment'] = moment_function(reg['corner_mag'])
@@ -298,7 +298,7 @@ class Shift(object):
         for key in STRAIN_VARIABLES:
             self.strain.data[key] = self.strain.data[key] / SECS_PER_YEAR
 
-        if not 'region' in self.strain.data.keys():
+        if 'region' not in self.strain.data:
             raise ValueError('Cannot implment  SHIFT methodology without '
                              'definition of regionalisation')
         else:
@@ -314,21 +314,22 @@ class Shift(object):
 
         for region in regionalisation_zones:
             id0 = self.strain.data['region'] == region
-            if 'IPL' in region:
+            if b'IPL' in region:
                 # For intra-plate seismicity everything is refered to
                 # the background rate
                 continue
 
-            elif 'OSR_special_1' in region:
+            elif b'OSR_special_1' in region:
                 # Special case 1 - normal and transform faulting
                 calculated_rate = self.get_rate_osr_normal_transform(
                     self.threshold_moment, id0)
 
-            elif 'OSR_special_2' in region:
+            elif b'OSR_special_2' in region:
                 # Special case 2 - convergent and transform faulting
                 calculated_rate = self.get_rate_osr_convergent_transform(
                     self.threshold_moment, id0)
             else:
+                region = region.decode('utf-8')
                 calculated_rate = \
                     self.regionalisation[region]['adjustment_factor'] * \
                     self.continuum_seismicity(self.threshold_moment,
@@ -517,13 +518,15 @@ class Shift(object):
         definition in Bird & Liu (2007)
         '''
         # Treat trivial cases of subduction zones and oceanic types
-        self.strain.data['region'][self.strain.data['region'] == 'IPL'] = \
-            ['IPL']
-        self.strain.data['region'][self.strain.data['region'] == 'S'] = ['SUB']
-        self.strain.data['region'][self.strain.data['region'] == 'O'] = ['OCB']
+        self.strain.data['region'][
+            self.strain.data['region'] == b'IPL'] = ['IPL']
+        self.strain.data['region'][
+            self.strain.data['region'] == b'S'] = ['SUB']
+        self.strain.data['region'][
+            self.strain.data['region'] == b'O'] = ['OCB']
 
         # Continental types
-        id0 = self.strain.data['region'] == 'C'
+        id0 = self.strain.data['region'] == b'C'
         self.strain.data['region'][id0] = ['CTF']
         id0_pos_err = np.logical_and(
             self.strain.data['err'] > 0.,
@@ -537,8 +540,7 @@ class Shift(object):
         self.strain.data['region'][np.logical_and(id0, id0_neg_err)] = 'CRB'
 
         # Ridge Types
-        id0 = self.strain.data['region'] == 'R'
-        #self.data['region'][id0] = 'OSRnor'
+        id0 = self.strain.data['region'] == b'R'
         for iloc in np.where(id0)[0]:
             cond = (self.strain.data['e1h'][iloc] > 0.0 and
                     self.strain.data['e2h'][iloc] > 0.0)

@@ -61,17 +61,10 @@ KREEMER_POLY_SAMPLE = getlines(os.path.join(BASE_DATA_PATH,
 
 
 class TestBuildKreemerCell(unittest.TestCase):
-    '''
-
-    '''
     def setUp(self):
-        '''
-        '''
         self.data = KREEMER_POLY_SAMPLE
 
     def test_build_kreemer_polygon(self):
-        '''
-        '''
         expected_output_1 = np.array([[179.4, -66.],
                                       [180., -66.],
                                       [180., -65.5],
@@ -96,28 +89,20 @@ class TestKreemerRegionalisation(unittest.TestCase):
     Class to test the Kreemer Regionalisation
     '''
     def setUp(self):
-        '''
-
-        '''
         self.reader = None
         self.model = None
 
     def test_simple_instantiation(self):
-        '''
-        Tests the basic instantiation with a filename and nothing more
-        '''
+        # Tests the basic instantiation with a filename and nothing more
         filename = 'a filename'
         expected_dict = {'filename': filename,
                          'strain': None}
         self.reader = KreemerRegionalisation(filename)
-        self.assertDictEqual(expected_dict,
-                             self.reader.__dict__)
+        self.assertDictEqual(expected_dict, self.reader.__dict__)
 
     def test_point_in_tectonic_region(self):
-        '''
-        Basic check to ensure that a point is correctly identified as being
-        inside the regional polygon
-        '''
+        # Basic check to ensure that a point is correctly identified as being
+        # inside the regional polygon
         # Setup Model
         polygon = {'long_lims': [-1.0, 1.0],
                    'lat_lims': [-1.0, 1.0],
@@ -134,31 +119,28 @@ class TestKreemerRegionalisation(unittest.TestCase):
 
         self.reader = KreemerRegionalisation('a filename')
         self.reader.strain = self.model
-        marker = self.reader._point_in_tectonic_region(polygon)
-        expected_region = ['', 'XXX', 'XXX', 'XXX', 'XXX', '', '']
+        self.reader._point_in_tectonic_region(polygon)
+        expected_region = [b'', b'XXX', b'XXX', b'XXX', b'XXX', b'', b'']
         for iloc in range(0, 7):
-            self.assertTrue(expected_region[iloc] ==
-                            self.reader.strain.data['region'][iloc])
+            self.assertEqual(
+                expected_region[iloc], self.reader.strain.data['region'][iloc])
         np.testing.assert_array_almost_equal(
             self.reader.strain.data['area'],
             np.array([0., 1., 1., 1., 1., 0., 0.]))
 
-
     def test_define_kreemer_regionalisation(self):
-        '''
-        Tests the function to retrieve the polygons from the regionalisation
-        file in the format defined by Corner Kreemer
-        '''
+        # Tests the function to retrieve the polygons from the regionalisation
+        # file in the format defined by Corner Kreemer
         self.reader = KreemerRegionalisation(KREEMER_2POLY_FILE)
         expected_output = [{'area': 1.0,
                             'cell': None,
-                            'lat_lims': np.array([-66. , -65.5]),
-                            'long_lims': np.array([ 179.4,  180. ]),
+                            'lat_lims': np.array([-66., -65.5]),
+                            'long_lims': np.array([179.4, 180.]),
                             'region_type': 'R'},
                            {'area': 1.0,
                             'cell': None,
-                            'lat_lims': np.array([-66. , -65.5]),
-                            'long_lims': np.array([-180. , -179.4]),
+                            'lat_lims': np.array([-66., -65.5]),
+                            'long_lims': np.array([-180., -179.4]),
                             'region_type': 'R'}]
         simple_polygons = self.reader.define_kreemer_regionalisation()
         for iloc, polygon in enumerate(simple_polygons):
@@ -169,12 +151,9 @@ class TestKreemerRegionalisation(unittest.TestCase):
                 else:
                     self.assertEqual(polygon[key], expected_output[iloc][key])
 
-
     def test_full_regionalisation_workflow(self):
-        '''
-        Tests the function to apply the full Kreemer regoinalisation workflow
-        using a simple 2 polygon case
-        '''
+        # Tests the function to apply the full Kreemer regionalisation workflow
+        # using a simple 2 polygon case
         self.reader = KreemerRegionalisation(KREEMER_2REG_FILE)
         self.model = GeodeticStrain()
         self.model.data = {'longitude': np.array([179.7, -179.7, 10.0]),
@@ -184,6 +163,6 @@ class TestKreemerRegionalisation(unittest.TestCase):
                            'exy': 1E-9 * np.ones(3)}
         self.model = self.reader.get_regionalisation(self.model)
         np.testing.assert_array_equal(self.model.data['region'],
-                                      np.array(['R', 'C', 'IPL']))
+                                      np.array([b'R', b'C', b'IPL']))
         np.testing.assert_array_equal(self.model.data['area'],
                                       np.array([1., 5., np.nan]))

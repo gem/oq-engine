@@ -63,7 +63,7 @@ def get_available_mfds():
             modname, _ext = os.path.splitext(fname)
             mod = importlib.import_module(
                 'hmtk.faults.mfd.' + modname)
-            for cls in mod.__dict__.itervalues():
+            for cls in mod.__dict__.values():
                 if inspect.isclass(cls) and issubclass(cls, BaseMFDfromSlip):
                     mfds[cls.__name__] = cls
     return OrderedDict((k, mfds[k]) for k in sorted(mfds))

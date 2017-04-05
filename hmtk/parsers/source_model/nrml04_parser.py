@@ -49,8 +49,6 @@
 Parser for input in a NRML format, with partial validation
 """
 import re
-import decimal
-import numpy as np
 from copy import copy
 from openquake.baselib.node import node_from_xml
 from openquake.hazardlib.geo.point import Point
@@ -69,6 +67,7 @@ from hmtk.parsers.source_model.base import BaseSourceModelParser
 
 SCALERELS = get_available_scalerel()
 
+
 def string_(string):
     """
     Returns string or None
@@ -77,6 +76,7 @@ def string_(string):
         return string
     else:
         return None
+
 
 def float_(value):
     """
@@ -87,6 +87,7 @@ def float_(value):
     else:
         return None
 
+
 def int_(value):
     """
     Returns int or None
@@ -96,6 +97,7 @@ def int_(value):
     else:
         return None
 
+
 def get_taglist(node):
     """
     Return a list of tags (with NRML namespace removed) representing the
@@ -104,19 +106,20 @@ def get_taglist(node):
     return [re.sub(r'\{[^}]*\}', "", copy(subnode.tag))
             for subnode in node.nodes]
 
+
 def linestring_node_to_line(node, with_depth=False):
     """
     Returns an instance of a Linestring node to :class:
     openquake.hazardlib.geo.line.Line
     """
     assert "LineString" in node.tag
-    crds = map(float, node.nodes[0].text.split())
+    crds = [float(x) for x in node.nodes[0].text.split()]
     if with_depth:
         return Line([Point(crds[iloc], crds[iloc + 1], crds[iloc + 2])
-                 for iloc in range(0, len(crds), 3)])
+                     for iloc in range(0, len(crds), 3)])
     else:
         return Line([Point(crds[iloc], crds[iloc + 1])
-                     for iloc in range(0, len(crds), 2)])  
+                     for iloc in range(0, len(crds), 2)])
 
 
 def node_to_point_geometry(node):
@@ -139,16 +142,17 @@ def node_to_point_geometry(node):
     assert lower_depth > upper_depth
     return point, upper_depth, lower_depth
 
+
 def node_to_area_geometry(node):
     """
     Reads an area geometry node and returns the polygon, upper depth and lower
-    depth    
+    depth
     """
     assert "areaGeometry" in node.tag
     for subnode in node.nodes:
         if "Polygon" in subnode.tag:
-            crds = map(float,
-                subnode.nodes[0].nodes[0].nodes[0].text.split())
+            crds = [float(x)
+                    for x in subnode.nodes[0].nodes[0].nodes[0].text.split()]
             polygon = Polygon([Point(crds[iloc], crds[iloc + 1])
                                for iloc in range(0, len(crds), 2)])
         elif "upperSeismoDepth" in subnode.tag:
@@ -160,6 +164,7 @@ def node_to_area_geometry(node):
             pass
     assert lower_depth > upper_depth
     return polygon, upper_depth, lower_depth
+
 
 def node_to_simple_fault_geometry(node):
     """
@@ -183,6 +188,7 @@ def node_to_simple_fault_geometry(node):
     assert lower_depth > upper_depth
     return trace, dip, upper_depth, lower_depth
 
+
 def node_to_complex_fault_geometry(node):
     """
     Reads a complex fault geometry node and returns an
@@ -205,6 +211,7 @@ def node_to_complex_fault_geometry(node):
             pass
     return [top_edge] + intermediate_edges + [bottom_edge]
 
+
 def node_to_scalerel(node):
     """
     Parses a node to an instance of a supported scaling relation class
@@ -212,6 +219,7 @@ def node_to_scalerel(node):
     if not node.text:
         return None
     return SCALERELS[node.text.strip()]()
+
 
 def node_to_truncated_gr(node, bin_width=0.1):
     """
@@ -222,12 +230,13 @@ def node_to_truncated_gr(node, bin_width=0.1):
     if not all([node.attrib[key]
                 for key in ["minMag", "maxMag", "aValue", "bValue"]]):
         return None
-    tgr  = dict([(key, float_(node.attrib[key])) for key in node.attrib.keys()])
+    tgr = dict((key, float_(node.attrib[key])) for key in node.attrib)
     return mfd.truncated_gr.TruncatedGRMFD(min_mag=tgr["minMag"],
                                            max_mag=tgr["maxMag"],
                                            bin_width=bin_width,
                                            a_val=tgr["aValue"],
                                            b_val=tgr["bValue"])
+
 
 def node_to_evenly_discretized(node):
     """
@@ -239,11 +248,12 @@ def node_to_evenly_discretized(node):
                 node.nodes[0].text]):
         return None
     # Text to float
-    rates = map(float, node.nodes[0].text.split())
+    rates = [float(x) for x in node.nodes[0].text.split()]
     return mfd.evenly_discretized.EvenlyDiscretizedMFD(
         float(node.attrib["minMag"]),
         float(node.attrib["binWidth"]),
         rates)
+
 
 def node_to_mfd(node, taglist):
     """
@@ -259,6 +269,7 @@ def node_to_mfd(node, taglist):
         mfd = None
     return mfd
 
+
 def node_to_nodal_planes(node):
     """
     Parses the nodal plane distribution to a PMF
@@ -267,7 +278,7 @@ def node_to_nodal_planes(node):
         return None
     npd_pmf = []
     for plane in node.nodes:
-        if not all([plane.attrib[key] for key in plane.attrib.keys()]):
+        if not all(plane.attrib[key] for key in plane.attrib):
             # One plane fails - return None
             return None
         npd = NodalPlane(float(plane.attrib["strike"]),
@@ -275,7 +286,8 @@ def node_to_nodal_planes(node):
                          float(plane.attrib["rake"]))
         npd_pmf.append((float(plane.attrib["probability"]), npd))
     return PMF(npd_pmf)
- 
+
+
 def node_to_hdd(node):
     """
     Parses the node to a hpyocentral depth distribution PMF
@@ -290,6 +302,7 @@ def node_to_hdd(node):
                      float(subnode.attrib["depth"])))
     return PMF(hdds)
 
+
 def parse_point_source_node(node, mfd_spacing=0.1):
     """
     Returns an "areaSource" node into an instance of the :class:
@@ -299,9 +312,9 @@ def parse_point_source_node(node, mfd_spacing=0.1):
     pnt_taglist = get_taglist(node)
     # Get metadata
     point_id, name, trt = (node.attrib["id"],
-                          node.attrib["name"],
-                          node.attrib["tectonicRegion"])
-    assert point_id # Defensive validation!
+                           node.attrib["name"],
+                           node.attrib["tectonicRegion"])
+    assert point_id  # Defensive validation!
     # Process geometry
     location, upper_depth, lower_depth = node_to_point_geometry(
         node.nodes[pnt_taglist.index("pointGeometry")])
@@ -326,6 +339,7 @@ def parse_point_source_node(node, mfd_spacing=0.1):
                           nodal_plane_dist=npds,
                           hypo_depth_dist=hdds)
 
+
 def parse_area_source_node(node, mfd_spacing=0.1):
     """
     Returns an "areaSource" node into an instance of the :class:
@@ -337,7 +351,7 @@ def parse_area_source_node(node, mfd_spacing=0.1):
     area_id, name, trt = (node.attrib["id"],
                           node.attrib["name"],
                           node.attrib["tectonicRegion"])
-    assert area_id # Defensive validation!
+    assert area_id  # Defensive validation!
     # Process geometry
     polygon, upper_depth, lower_depth = node_to_area_geometry(
         node.nodes[area_taglist.index("areaGeometry")])
@@ -398,6 +412,7 @@ def parse_simple_fault_node(node, mfd_spacing=0.1, mesh_spacing=1.0):
                                  mesh_spacing)
     return simple_fault
 
+
 def parse_complex_fault_node(node, mfd_spacing=0.1, mesh_spacing=4.0):
     """
     Parses a "complexFaultSource" node and returns an instance of the :class:
@@ -429,13 +444,14 @@ def parse_complex_fault_node(node, mfd_spacing=0.1, mesh_spacing=4.0):
     complex_fault.create_geometry(edges, mesh_spacing)
     return complex_fault
 
+
 class nrmlSourceModelParser(BaseSourceModelParser):
     """
     Parser for a source model in NRML format, permitting partial validation
     such that not all fields need to be specified for the file to be parsed
     """
     def read_file(self, identifier, mfd_spacing=0.1, simple_mesh_spacing=1.0,
-        complex_mesh_spacing=4.0, area_discretization=10.):
+                  complex_mesh_spacing=4.0, area_discretization=10.):
         """
         Reads in the source model in returns an instance of the :class:
         hmtk.sourcs.source_model.mtkSourceModel

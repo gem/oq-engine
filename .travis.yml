@@ -3,7 +3,7 @@ sudo: false
 language: python
 
 python:
- - "2.7"
+ - "3.5"
 
 addons:
   apt:
@@ -16,9 +16,9 @@ install:
   # Make sure pip is up-to-date and has support for wheels
   - pip install -U pip
   # Install oq-hazardlib dependencies
-  - pip install -r oq-hazardlib/requirements-py27-linux64.txt
+  - pip install -r oq-hazardlib/requirements-py35-linux64.txt
   # Install HMTK extra dependencies
-  - pip install -r requirements-py27-linux64.txt
+  - pip install -r requirements-py35-linux64.txt
   - pip install -e oq-hazardlib/
   - pip install -e .
 

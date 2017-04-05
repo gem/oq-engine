@@ -102,7 +102,7 @@ class Catalogue(object):
         self.number_earthquakes = 0
 
     def get_number_events(self):
-        return len(self.data[self.data.keys()[0]])
+        return len(self.data['eventID'])
 
     def add_event(self):
         raise NotImplementedError
@@ -168,13 +168,6 @@ class Catalogue(object):
         it is modified by declustering or completeness-based filtering)
         """
         self.start_year = np.min(self.data['year'])
-#    def catalogue_mt_filter(self, mt_table):
-#        if not 'eventID' in keys:
-#            self.data['eventID'] = np.array(range(0, np.shape(data_array)[0]),
-#                                            dtype=int)
-#
-#        for i, key in enumerate(keys):
-#            self.data[key] = data_array[:, i]
 
     def catalogue_mt_filter(self, mt_table, flag=None):
         """
@@ -275,7 +268,7 @@ class Catalogue(object):
         :param np.ndarray id0:
             Pointer array indicating the locations of selected events
         '''
-        for key in self.data.keys():
+        for key in self.data:
             if isinstance(
                     self.data[key], np.ndarray) and len(self.data[key]) > 0:
                 # Dictionary element is numpy array - use logical indexing
@@ -341,7 +334,7 @@ class Catalogue(object):
         while np.sum(depth_hist) > 1.0:
             depth_hist[-1] -= (np.sum(depth_hist) - 1.0)
             depth_hist = np.around(depth_hist, 3)
-        
+
         pmf_list = []
         for iloc, prob in enumerate(depth_hist):
             pmf_list.append((prob,
@@ -474,7 +467,7 @@ def _merge_data(dat1, dat2):
     """
 
     cnt = 0
-    for key in dat1.keys():
+    for key in dat1:
         flg1 = len(dat1[key]) > 0
         flg2 = len(dat2[key]) > 0
         if flg1 != flg2:
@@ -485,7 +478,7 @@ def _merge_data(dat1, dat2):
                       ' attributes')
         return None
     else:
-        for key in dat1.keys():
+        for key in dat1:
             if isinstance(dat1[key], np.ndarray):
                 dat1[key] = np.concatenate((dat1[key], dat2[key]), axis=0)
             elif isinstance(dat1[key], list):

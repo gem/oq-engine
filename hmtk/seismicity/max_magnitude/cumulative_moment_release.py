@@ -108,7 +108,8 @@ class CumulativeMoment(BaseMaximumMagnitude):
         Checks the configuration file for the number of bootstraps.
         Returns 1 if not found or invalid (i.e. < 0)
         '''
-        if config.get('number_bootstraps', 0) < 1:
+        nb = config['number_bootstraps'] or 0
+        if nb < 1:
             config['number_bootstraps'] = 1
         return config
 

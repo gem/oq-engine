@@ -80,10 +80,8 @@ class MmaxTestCase(unittest.TestCase):
         #self.completeness = np.array([])
 
     def test_get_observed_mmax_good_data(self):
-        """
-        Asserts that the observed Mmax and corresponding sigma MMax are
-        returned when data are availavle
-        """
+        # Asserts that the observed Mmax and corresponding sigma MMax are
+        # returned when data are availavle
         test_catalogue = {
             'magnitude': np.array([3.4, 4.5, 7.6, 5.4, 4.3]),
             'sigmaMagnitude': np.array([0.1, 0.2, 0.3, 0.2, 0.1])
@@ -94,10 +92,8 @@ class MmaxTestCase(unittest.TestCase):
         self.assertAlmostEqual(mmax_sig, 0.3)
 
     def test_get_observed_mmax_from_input(self):
-        """
-        Tests that the input mmax and its uncertainty are returned when
-        specified in the config
-        """
+        # Tests that the input mmax and its uncertainty are returned when
+        # specified in the config
         # Test 3: Finds the mmax from the input file
         self.config['input_mmax'] = 8.5
         self.config['input_mmax_uncertainty'] = 0.35
@@ -148,15 +144,13 @@ class MmaxTestCase(unittest.TestCase):
         # NaNs
         test_catalogue = {
             'magnitude': np.array([3.4, 4.5, 7.6, 5.4, 4.3]),
-            'sigmaMagnitude': np.array([np.nan, np.nan, np.nan, np.nan, np.nan])
+            'sigmaMagnitude': np.array([np.nan] * 5)
             }
         self._get_observed_mmax_error(test_catalogue, self.config)
 
     def test_observed_mmax_catalogue_uncertainty_config(self):
-        """
-        Tests the case when the observed Mmax must be read from the catalogue
-        but the uncertainty is specified in the config
-        """
+        # Tests the case when the observed Mmax must be read from the catalogue
+        # but the uncertainty is specified in the config
         self.config['input_mmax'] = None
         self.config['input_mmax_uncertainty'] = 0.5
         test_catalogue = {
@@ -168,10 +162,8 @@ class MmaxTestCase(unittest.TestCase):
         self.assertAlmostEqual(mmax_sig, 0.5)
 
     def test_mmax_uncertainty_largest_in_catalogue(self):
-        """
-        When largest mmax has a NaN sigmaMagnitude, take the largest
-        sigmaMagnitude found in catalogue
-        """
+        # When largest mmax has a NaN sigmaMagnitude, take the largest
+        # sigmaMagnitude found in catalogue
         self.config['input_mmax'] = None
         self.config['input_mmax_uncertainty'] = None
         test_catalogue = {
@@ -183,18 +175,13 @@ class MmaxTestCase(unittest.TestCase):
         self.assertAlmostEqual(mmax_sig, 0.4)
 
     def _get_observed_mmax_error(self, test_catalogue, test_config):
-        """
-        Tests the get_observed_mmax exceptions are raised
-        """
+        # Tests the get_observed_mmax exceptions are raised
         with self.assertRaises(ValueError) as ae:
             mmax, mmax_sig = _get_observed_mmax(test_catalogue, self.config)
-        self.assertEqual(ae.exception.message,
+        self.assertEqual(str(ae.exception),
                          'Input mmax uncertainty must be specified!')
 
 #    def test_get_observed_mmax(self):
-#        '''
-#        Tests the function to _get_observed_mmax from data
-#        '''
 #        test_catalogue = {
 #            'magnitude': np.array([3.4, 4.5, 7.6, 5.4, 4.3]),
 #            'sigmaMagnitude': np.array([0.1, 0.2, 0.3, 0.2, 0.1])
@@ -217,12 +204,9 @@ class MmaxTestCase(unittest.TestCase):
 #        self.assertAlmostEqual(mmax, 8.5)
 #        self.assertAlmostEqual(mmax_sig, 0.35)
 
-
     def test_get_magnitude_vector_properties(self):
-        '''
-        Tests the function to retreive mmin and number of earthquakes if
-        required for certain functions
-        '''
+        # Tests the function to retreive mmin and number of earthquakes if
+        # required for certain functions
         test_catalogue = {
             'magnitude': np.array([3.4, 4.5, 7.6, 5.4, 3.8]),
             'sigmaMagnitude': np.array([0.1, 0.2, 0.3, 0.2, 0.1])
@@ -250,7 +234,7 @@ class TestCumulativeMoment(unittest.TestCase):
     module
     '''
     def setUp(self):
-        filename = os.path.join(BASE_DATA_PATH,'completeness_test_cat.csv')
+        filename = os.path.join(BASE_DATA_PATH, 'completeness_test_cat.csv')
         parser0 = CsvCatalogueParser(filename)
         self.catalogue = parser0.read_file()
 
@@ -259,9 +243,7 @@ class TestCumulativeMoment(unittest.TestCase):
         self.model = CumulativeMoment()
 
     def test_check_config(self):
-        '''
-        Tests the configuration checker
-        '''
+        # Tests the configuration checker
         # Test 1: No bootstraps specified
         self.config['number_bootstraps'] = None
         fixed_config = self.model.check_config(self.config)
@@ -276,24 +258,22 @@ class TestCumulativeMoment(unittest.TestCase):
         self.assertEqual(1000, fixed_config['number_bootstraps'])
 
     def test_cumulative_moment(self):
-        '''
-        Tests the cumulative moment function
-        '''
+        # Tests the cumulative moment function
+
         # Test 1: Ordinary behaviour using the completeness_test_cat.csv
         self.assertAlmostEqual(7.5, self.model.cumulative_moment(
             self.catalogue.data['year'],
             self.catalogue.data['magnitude']), 1)
 
         # Test 2: If catalogue is less than or equal to 1 year duration
-        id0 = self.catalogue.data['year'].astype(int)  == 1990
+        id0 = self.catalogue.data['year'].astype(int) == 1990
         self.assertTrue(np.isinf(self.model.cumulative_moment(
             self.catalogue.data['year'][id0],
             self.catalogue.data['magnitude'][id0])))
 
     def test_get_mmax_cumulative_moment(self):
-        '''
-        Tests the cumulative moment function sampled with uncertainty
-        '''
+        # Tests the cumulative moment function sampled with uncertainty
+
         # Test 1: Case when no sigma is found on magnitude
         self.catalogue.data['backup'] = np.copy(
             self.catalogue.data['sigmaMagnitude'])
@@ -312,7 +292,7 @@ class TestCumulativeMoment(unittest.TestCase):
 
         # Test 3: Ordinary test case with uncertainty - seeded random generator
         self.config['number_bootstraps'] = 1000
-                # Can fix the seed (used for testing!)
+        # Can fix the seed (used for testing!)
         np.random.seed(123456)
         mmax, sigma_mmax = self.model.get_mmax(self.catalogue, self.config)
         self.assertAlmostEqual(7.518906927, mmax)
@@ -327,7 +307,7 @@ class TestKijkoSellevolFixedb(unittest.TestCase):
         '''
         Set up test class
         '''
-        filename = os.path.join(BASE_DATA_PATH,'completeness_test_cat.csv')
+        filename = os.path.join(BASE_DATA_PATH, 'completeness_test_cat.csv')
         parser0 = CsvCatalogueParser(filename)
         self.catalogue = parser0.read_file()
         self.config = {'b-value': 1.0,
@@ -338,10 +318,8 @@ class TestKijkoSellevolFixedb(unittest.TestCase):
         self.model = KijkoSellevolFixedb()
 
     def test_integral_function(self):
-        '''
-        Tests the integral of the Kijko & Sellevol fixed-b estimator
-        define in Equation 6 of Kijko  (2004)
-        '''
+        # Tests the integral of the Kijko & Sellevol fixed-b estimator
+        # define in Equation 6 of Kijko  (2004)
         # Simple test case 1 - all good parameters
         mmax = 8.5
         mmin = 5.0
@@ -350,8 +328,6 @@ class TestKijkoSellevolFixedb(unittest.TestCase):
         neq = 100.
         self.assertAlmostEqual(self.model._ks_intfunc(mval, neq, mmax, mmin,
                                beta), 0.04151379)
-
-
 
         # Test case 4 - Number of earthquakes is 0
         mmax = 8.5
@@ -362,23 +338,22 @@ class TestKijkoSellevolFixedb(unittest.TestCase):
 
         # Test case 5 - beta is negative
         neq = 100.
-        self.assertAlmostEqual(0.0,
-            self.model._ks_intfunc(mval, neq, mmax, mmin, -0.5))
-
+        self.assertAlmostEqual(
+            0.0, self.model._ks_intfunc(mval, neq, mmax, mmin, -0.5))
 
     def test_get_mmin(self):
-        '''
-        Tests the main method to calculate Mmax
+        # Tests the main method to calculate Mmax
 
-        BEHAVIOUR NOTE 1: the estimator of mmax is dependent on the mmin
-        If mmin < mmin_observed then the integral will not reach stability
-        (or give rubbish) therefore if the mmin specified in the config
-        is less than mmin_obs it will be overwritten by mmin_observed
+        # BEHAVIOUR NOTE 1: the estimator of mmax is dependent on the mmin
+        # If mmin < mmin_observed then the integral will not reach stability
+        # (or give rubbish) therefore if the mmin specified in the config
+        # is less than mmin_obs it will be overwritten by mmin_observed
 
-        BEHAVIOUR NOTE 2: Negative or very small b-values (< 1E-16) will result
-        in immediate stability of the integral, thus giving mmax == mmax_obs.
-        If b-value == 0 then will give a divide by zero warning
-        '''
+        # BEHAVIOUR NOTE 2: Negative or very small b-values (< 1E-16) will
+        # result in immediate stability of the integral, thus giving
+        # mmax == mmax_obs.
+        # If b-value == 0 then will give a divide by zero warning
+
         # Test good working case b = 1, mmin = 5.0
         mmax, sigma_mmax = self.model.get_mmax(self.catalogue, self.config)
         self.assertAlmostEqual(mmax, 7.6994981)
@@ -396,25 +371,24 @@ class TestKijkoSellevolFixedb(unittest.TestCase):
         self.assertAlmostEqual(mmax_1, mmax_2)
 
         # Case where the maximum magnitude is overriden
-#        self.config['input_mmax'] = 7.6
-#        self.config['b-value'] = 1.0
-#        self.config['input_mmax_uncertainty'] = 0.2
-#        mmax_1, sigma_mmax_1 = self.model.get_mmax(self.catalogue, self.config)
-#        self.assertAlmostEqual(mmax_1, 8.1380422)
-#        self.assertAlmostEqual(sigma_mmax_1, 0.57401164)
+        # self.config['input_mmax'] = 7.6
+        # self.config['b-value'] = 1.0
+        # self.config['input_mmax_uncertainty'] = 0.2
+        # mmax_1, sigma_mmax_1 = self.model.get_mmax(self.catalogue, self.config)
+        # self.assertAlmostEqual(mmax_1, 8.1380422)
+        # self.assertAlmostEqual(sigma_mmax_1, 0.57401164)
 
     def test_raise_runTimeWarning(self):
         """Test case with b-value = 0
         """
         self.config['input_mmin'] = 5.0
         self.config['b-value'] = 0.0
-        with warnings.catch_warnings(True) as cm:
+        with warnings.catch_warnings(record=True) as cm:
             self.model.get_mmax(self.catalogue, self.config)
             assert len(cm) > 0
 
     def test_raise_valueError(self):
-        """Simple test case 2 - Mmin == Mmax (returns inf)
-        """
+        # Simple test case 2 - Mmin == Mmax (returns inf)
         mmin = 6.0
         mmax = 6.0
         mval = 6.5
@@ -422,14 +396,12 @@ class TestKijkoSellevolFixedb(unittest.TestCase):
         neq = 100.
         with self.assertRaises(ValueError) as cm:
             self.model._ks_intfunc(mval, neq, mmax, mmin, beta)
-        self.assertEqual(cm.exception.message,
-                'Maximum magnitude smaller than minimum magnitude'
-                ' in Kijko & Sellevol (Fixed-b) integral')
-
+        self.assertEqual(str(cm.exception),
+                         'Maximum magnitude smaller than minimum magnitude'
+                         ' in Kijko & Sellevol (Fixed-b) integral')
 
     def test_raise_valueError_1(self):
-        """Test case 3 - Mmin > MMax (raises value Error)
-        """
+        # Test case 3 - Mmin > MMax (raises value Error)
         mmin = 6.2
         mmax = 6.0
         mval = 6.5
@@ -438,9 +410,9 @@ class TestKijkoSellevolFixedb(unittest.TestCase):
         with self.assertRaises(ValueError) as ae:
             self.model._ks_intfunc(mval, neq, mmax, mmin, beta)
         exception = ae.exception
-        self.assertEqual(exception.message,
-               'Maximum magnitude smaller than minimum magnitude'
-               ' in Kijko & Sellevol (Fixed-b) integral')
+        self.assertEqual(str(exception),
+                         'Maximum magnitude smaller than minimum magnitude'
+                         ' in Kijko & Sellevol (Fixed-b) integral')
 
 
 class TestKijkoSellevolBayes(unittest.TestCase):
@@ -448,7 +420,7 @@ class TestKijkoSellevolBayes(unittest.TestCase):
     Test the hmtk.seismicity.max_magnitude.KijkoSellevolBayes module
     '''
     def setUp(self):
-        filename = os.path.join(BASE_DATA_PATH,'completeness_test_cat.csv')
+        filename = os.path.join(BASE_DATA_PATH, 'completeness_test_cat.csv')
         parser0 = CsvCatalogueParser(filename)
         self.catalogue = parser0.read_file()
         self.config = {'b-value': 1.0,
@@ -461,10 +433,8 @@ class TestKijkoSellevolBayes(unittest.TestCase):
         self.model = KijkoSellevolBayes()
 
     def test_ksb_intfunc(self):
-        '''
-        Tests the integral function of the Kijko-Sellevol-Bayes estimator
-        of mmax
-        '''
+        # Tests the integral function of the Kijko-Sellevol-Bayes estimator
+        # of mmax
         neq = 100.
         mval = 6.0
         mmin = 5.0
@@ -491,10 +461,8 @@ class TestKijkoSellevolBayes(unittest.TestCase):
             95.7451687)
 
     def test_get_mmax(self):
-        '''
-        Tests the function to calculate mmax using the Kijko-Sellevol-Bayes
-        operator
-        '''
+        # Tests the function to calculate mmax using the Kijko-Sellevol-Bayes
+        # operator
         # Good case - b = 1., sigma_b = 0.05, mmin = 5.0
         mmax, mmax_sigma = self.model.get_mmax(self.catalogue, self.config)
         self.assertAlmostEqual(mmax, 7.6902450)
@@ -530,7 +498,6 @@ class TestKijkoSellevolBayes(unittest.TestCase):
         self.assertTrue(np.isnan(mmax))
         self.assertTrue(np.isnan(mmax_sigma))
 
-
     def _get_pval_qval(self, bval, sigma_b):
         '''
         Get the p-value and q-value from b and sigma b
@@ -541,12 +508,13 @@ class TestKijkoSellevolBayes(unittest.TestCase):
         qval = (beta / sigma_beta) ** 2.
         return pval, qval
 
+
 class TestKijkoNPG(unittest.TestCase):
     '''
     Class to test the Kijko Nonparametric Gaussian function
     '''
     def setUp(self):
-        filename = os.path.join(BASE_DATA_PATH,'completeness_test_cat.csv')
+        filename = os.path.join(BASE_DATA_PATH, 'completeness_test_cat.csv')
         parser0 = CsvCatalogueParser(filename)
         self.catalogue = parser0.read_file()
         self.config = {'maximum_iterations': 1000,
@@ -557,31 +525,28 @@ class TestKijkoNPG(unittest.TestCase):
 
 
     def test_get_exponential_values(self):
-        '''
-        Tests the function to derive an exponentially spaced set of values.
-        Tested against Kijko implementation
-        '''
+        # Tests the function to derive an exponentially spaced set of values.
+        # Tested against Kijko implementation
         min_mag = 5.8
         max_mag = 7.4
         expected_output = np.array(
             [5.8, 5.87609089, 5.94679912, 6.01283617, 6.07478116, 6.13311177,
              6.18822664, 6.24046187, 6.29010351, 6.33739696, 6.38255438,
-             6.42576041, 6.46717674, 6.50694576, 6.5451935 , 6.58203209,
+             6.42576041, 6.46717674, 6.50694576, 6.5451935, 6.58203209,
              6.61756168, 6.65187211, 6.68504428, 6.71715129, 6.74825943,
              6.77842898, 6.80771492, 6.83616754, 6.86383296, 6.89075356,
-             6.9169684 , 6.94251354, 6.96742235, 6.99172576, 7.0154525,
-             7.0386293 , 7.06128109, 7.08343111, 7.10510113, 7.1263115,
+             6.9169684, 6.94251354, 6.96742235, 6.99172576, 7.0154525,
+             7.0386293, 7.06128109, 7.08343111, 7.10510113, 7.1263115,
              7.14708132, 7.16742851, 7.18736994, 7.20692147, 7.22609806,
              7.24491382, 7.26338207, 7.28151542, 7.2993258, 7.31682451,
              7.33402228, 7.35092928, 7.36755517, 7.38390916, 7.4])
-        self.assertTrue(np.allclose(expected_output,
-            _get_exponential_spaced_values(min_mag, max_mag, 51)))
-
+        np.testing.assert_almost_equal(
+            expected_output,
+            _get_exponential_spaced_values(min_mag, max_mag, 51))
 
     def test_h_smooth(self):
-        '''
-        Function to test the smoothing factor functiob h_smooth
-        '''
+        # Function to test the smoothing factor functiob h_smooth
+
         # Test 1: Good magnitude range (4.0 - 8.0)
         mag = np.arange(4.5, 8.1, 0.1)
         self.assertAlmostEqual(self.model.h_smooth(mag), 0.46)
@@ -591,9 +556,8 @@ class TestKijkoNPG(unittest.TestCase):
         self.assertAlmostEqual(self.model.h_smooth(mag), 0.0)
 
     def test_gauss_cdf(self):
-        '''
-        Tests the Gaussian cumulative distribution function
-        '''
+        # Tests the Gaussian cumulative distribution function
+
         # Simple case where x = -3 to 3 with a step of 1.
         xvals = np.arange(-7., 8., 1.)
         yvals_expected = np.array(
@@ -615,22 +579,17 @@ class TestKijkoNPG(unittest.TestCase):
         idx = np.flipud(np.argsort(self.catalogue.data['magnitude']))
         test_mag = self.catalogue.data['magnitude'][idx[:100]]
         h_fact = self.model.h_smooth(test_mag)
-        mvals = _get_exponential_spaced_values(np.min(test_mag),
-                                               np.max(test_mag),
-                                               51)
-
-        self.assertAlmostEqual(0.11026752,
-            self.model._kijko_npg_intfunc_simps(mvals, test_mag,
-            np.max(test_mag), h_fact, 100.))
-
+        mvals = _get_exponential_spaced_values(
+            np.min(test_mag), np.max(test_mag),  51)
+        self.assertAlmostEqual(
+            0.11026752,
+            self.model._kijko_npg_intfunc_simps(
+                mvals, test_mag, np.max(test_mag), h_fact, 100.))
 
     def test_get_mmax(self):
-        '''
-        Tests the main get_mmax function. These test results are derived by
-        applying Kijko's implementation to the top 100 events in the test
-        catalogue
-        '''
-
+        # Tests the main get_mmax function. These test results are derived by
+        # applying Kijko's implementation to the top 100 events in the test
+        # catalogue
         mmax, mmax_sig = self.model.get_mmax(self.catalogue, self.config)
 
         self.assertAlmostEqual(mmax, 7.5434318)

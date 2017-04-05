@@ -97,22 +97,25 @@ class TestStrainCsvReader(unittest.TestCase):
         Tests the reader on a simple strain file
         '''
         self.model = ReadStrainCsv(IN_FILE)
-        strain =self.model.read_data()
+        strain = self.model.read_data()
         # First test - check longitude and latitude
-        exp_longitude = np.array([ -74.2,  -74.1,  -74. ,  -73.9,  -72.9,
-            -72.8,   46.2,   46.3, 46.4,  176.9,  177. ,177.1,  -74.1,  -74.,
-            -73.9,  -73.8,  -112.2, -112.1, -112. , -111.9, -111.8])
-        exp_latitude = np.array([-55.7, -55.7, -55.7, -55.7, -55.7, -55.7,
-            -38.2, -38.2, -38.2,  -38.2, -38.2, -38.2, -38.1, -38.1, -38.1,
-            -38.1, -24.8, -24.8, -24.8, -24.8, -24.8])
-        region = np.array(['IPL', 'IPL', 'IPL', 'IPL', 'R', 'R', 'O', 'O',
-                           'O', 'C', 'C', 'C', 'S', 'S', 'S', 'S', 'R', 'R',
-                           'R', 'R', 'R'])
-        str_2nd_inv = np.array([0., 0.,   0., 0.0, 6.97660913e-07,
-            4.64676812e-07, 3.51209339e-08, 3.59874978e-08, 3.69339952e-08,
-            9.96827969e-08, 8.17414827e-08, 5.58344876e-08, 3.42756721e-07,
-            3.42576969e-07, 3.55996685e-07, 3.35017194e-07, 1.11642096e-06,
-            2.39838312e-06, 2.73038946e-06, 2.46489650e-06, 1.14653444e-06])
+        exp_longitude = np.array(
+            [-74.2, -74.1, -74., -73.9, -72.9, -72.8, 46.2, 46.3, 46.4, 176.9,
+             177., 177.1, -74.1,  -74., -73.9, -73.8, -112.2, -112.1, -112.,
+             -111.9, -111.8])
+        exp_latitude = np.array(
+            [-55.7, -55.7, -55.7, -55.7, -55.7, -55.7, -38.2, -38.2, -38.2,
+             -38.2, -38.2, -38.2, -38.1, -38.1, -38.1,
+             -38.1, -24.8, -24.8, -24.8, -24.8, -24.8])
+        region = np.array([b'IPL', b'IPL', b'IPL', b'IPL', b'R', b'R', b'O',
+                           b'O', b'O', b'C', b'C', b'C', b'S', b'S', b'S',
+                           b'S', b'R', b'R', b'R', b'R', b'R'])
+        str_2nd_inv = np.array(
+            [0., 0.,   0., 0.0, 6.97660913e-07,
+             4.64676812e-07, 3.51209339e-08, 3.59874978e-08, 3.69339952e-08,
+             9.96827969e-08, 8.17414827e-08, 5.58344876e-08, 3.42756721e-07,
+             3.42576969e-07, 3.55996685e-07, 3.35017194e-07, 1.11642096e-06,
+             2.39838312e-06, 2.73038946e-06, 2.46489650e-06, 1.14653444e-06])
 
         np.testing.assert_array_almost_equal(exp_longitude,
                                              strain.data['longitude'])
@@ -121,12 +124,14 @@ class TestStrainCsvReader(unittest.TestCase):
                                              strain.data['latitude'])
 
         np.testing.assert_array_equal(region, strain.data['region'])
-        #self.assertListEqual(region, strain.data['region'])
+
         # Take from 4th value to avoid log10(0.) for IPL regions
-        np.testing.assert_array_almost_equal(np.log10(str_2nd_inv[4:]),
+        np.testing.assert_array_almost_equal(
+            np.log10(str_2nd_inv[4:]),
             np.log10(strain.data['2nd_inv'][4:]))
 
-        self.assertListEqual(strain.data_variables,
+        self.assertListEqual(
+            strain.data_variables,
             ['longitude', 'latitude', 'exx', 'eyy', 'exy', '2nd_inv',
              'dilatation', 'err', 'e1h', 'e2h'])
 

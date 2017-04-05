@@ -96,9 +96,9 @@ class TestSourceModel(unittest.TestCase):
 
         # Input incorrectly - source not as list
         with self.assertRaises(ValueError) as ver:
-            self.source_model = mtkSourceModel('1002', 'Bad Model',
-                mtkPointSource('103', 'Point 3'))
-            self.assertEqual(ver.exception.message,
+            self.source_model = mtkSourceModel(
+                '1002', 'Bad Model', mtkPointSource('103', 'Point 3'))
+            self.assertEqual(str(ver.exception),
                              'Sources must be input as list!')
 
     def test_nrml_writer(self):
@@ -150,6 +150,5 @@ class TestSourceModel(unittest.TestCase):
                                                                   10.0,
                                                                   True)
 
-            self.assertEqual(ver.exception.message,
+            self.assertEqual(str(ver.exception),
                              'Source type not recognised!')
-

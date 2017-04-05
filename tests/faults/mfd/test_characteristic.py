@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-#License as published by the Free Software Foundation, either version
-#3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-#DISCLAIMER
+# DISCLAIMER
 #
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-#is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-#Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
-#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-#for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -52,9 +52,11 @@ Module to test :hmtk.faults.mfd.characterisric.Characteristic class
 
 import unittest
 import numpy as np
-from math import log
 from openquake.hazardlib.scalerel import WC1994
 from hmtk.faults.mfd.characteristic import Characteristic
+
+aaae = np.testing.assert_array_almost_equal
+
 
 class TestSimpleCharacteristic(unittest.TestCase):
     '''
@@ -67,12 +69,12 @@ class TestSimpleCharacteristic(unittest.TestCase):
         '''
         self.model = Characteristic()
         self.config = {'MFD_spacing': 0.1,
-                      'Model_Weight': 1.0,
-                      'Maximum_Magnitude': None,
-                      'Maximum_Uncertainty': None,
-                      'Lower_Bound': -2.,
-                      'Upper_Bound': 2.,
-                      'Sigma': None}
+                       'Model_Weight': 1.0,
+                       'Maximum_Magnitude': None,
+                       'Maximum_Uncertainty': None,
+                       'Lower_Bound': -2.,
+                       'Upper_Bound': 2.,
+                       'Sigma': None}
         self.msr = WC1994()
 
     def test_model_setup(self):
@@ -126,32 +128,31 @@ class TestSimpleCharacteristic(unittest.TestCase):
 
         '''
 
-        # Test case 1: Ordinatry fault with Area 8500 km ** 2 (Mmax ~ 8.0), and a slip
-        # rate of 5 mm/yr. Double truncated Gaussian between [-2, 2] standard
-        # deviations with sigma = 0.12
+        # Test case 1: Ordinatry fault with Area 8500 km ** 2 (Mmax ~ 8.0),
+        # and a slip rate of 5 mm/yr. Double truncated Gaussian between [-2, 2]
+        # standard deviations with sigma = 0.12
         self.config = {'MFD_spacing': 0.1,
-                      'Model_Weight': 1.0,
-                      'Maximum_Magnitude': None,
-                      'Maximum_Uncertainty': None,
-                      'Lower_Bound': -2.,
-                      'Upper_Bound': 2.,
-                      'Sigma': 0.12}
+                       'Model_Weight': 1.0,
+                       'Maximum_Magnitude': None,
+                       'Maximum_Uncertainty': None,
+                       'Lower_Bound': -2.,
+                       'Upper_Bound': 2.,
+                       'Sigma': 0.12}
         self.model = Characteristic()
         self.model.setUp(self.config)
         self.model.get_mmax(self.config, self.msr, 0., 8500.)
         _, _, _ = self.model.get_mfd(5.0, 8500.)
-        np.testing.assert_array_almost_equal(
-            self.model.occurrence_rate,
-            np.array([4.20932867e-05, 2.10890168e-04, 3.80422666e-04,
-                      3.56294331e-04, 1.73223702e-04, 2.14781079e-05]))
+        aaae(self.model.occurrence_rate,
+             np.array([4.20932867e-05, 2.10890168e-04, 3.80422666e-04,
+                       3.56294331e-04, 1.73223702e-04, 2.14781079e-05]))
         expected_rate = np.sum(self.model.occurrence_rate)
         # Test case 2: Same fault with no standard deviation
         self.config['Sigma'] = None
         self.model.setUp(self.config)
         self.model.get_mmax(self.config, self.msr, 0., 8500.)
         _, _, _ = self.model.get_mfd(5.0, 8500.)
-        self.assertAlmostEqual(0.0011844, self.model.occurrence_rate)
+        aaae(0.0011844, self.model.occurrence_rate)
         # As a final check - ensure that the sum of the activity rates from the
         # truncated Gaussian model is equal to the rate from the model with no
         # variance
-        self.assertAlmostEqual(expected_rate, self.model.occurrence_rate, 3)
+        aaae(expected_rate, self.model.occurrence_rate, 3)

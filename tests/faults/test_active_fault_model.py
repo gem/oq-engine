@@ -6,18 +6,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-#License as published by the Free Software Foundation, either version
-#3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-#DISCLAIMER
+# DISCLAIMER
 #
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-#is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-#Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -49,7 +49,6 @@ Module to test :hmtk.faults.active_fault_model.mtkActiveFaultModel
 
 import unittest
 import numpy as np
-from hmtk.models import IncrementalMFD
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.scalerel.wc1994 import WC1994
@@ -80,47 +79,38 @@ class TestmtkActiveFaultModel(unittest.TestCase):
         self.assertListEqual(self.model.faults, [])
 
     def test_instatiation_all_correct(self):
-        '''
-        Tests instatiation of the class with correct data
-        '''
-        self.model = mtkActiveFaultModel('001', 'A Fault Model', faults = [])
+        # Tests instatiation of the class with correct data
+        self.model = mtkActiveFaultModel('001', 'A Fault Model', faults=[])
         self.assertEqual(self.model.id, '001')
         self.assertEqual(self.model.name, 'A Fault Model')
         self.assertListEqual(self.model.faults, [])
 
     def test_instantiation_bad_fault(self):
-        '''
-        Tests instantiation with a bad fault input - should raise error
-        '''
+        # Tests instantiation with a bad fault input - should raise error
         with self.assertRaises(ValueError) as ae:
             self.model = mtkActiveFaultModel('001',
                                              'A Fault Model',
                                              'bad input')
-            self.assertEqual(ae.exception.message,
+            self.assertEqual(str(ae.exception),
                              'Faults must be input as list')
 
     def test_get_number_faults(self):
-        '''
-        Tests the count of the number of faults
-        '''
+        # Tests the count of the number of faults
+
         # No faults
-        self.model = mtkActiveFaultModel('001', 'A Fault Model', faults = [])
+        self.model = mtkActiveFaultModel('001', 'A Fault Model', faults=[])
         self.assertEqual(self.model.get_number_faults(), 0)
 
         # Two faults
-        self.model = mtkActiveFaultModel(identifier = '001',
-                                         name = 'A Fault Model',
-                                         faults = [mtkActiveFault,
-                                                   mtkActiveFault])
+        self.model = mtkActiveFaultModel(
+            identifier='001', name='A Fault Model',
+            faults=[mtkActiveFault, mtkActiveFault])
         self.assertEqual(self.model.get_number_faults(), 2)
 
     def test_build_fault_model(self):
-        '''
-        Tests the constuction of a fault model with two faults (1 simple,
-        1 complex) each with two mfd rates - should produce four sources
-        '''
-        self.model = mtkActiveFaultModel('001', 'A Fault Model', faults = [])
-
+        # Tests the constuction of a fault model with two faults (1 simple,
+        # 1 complex) each with two mfd rates - should produce four sources
+        self.model = mtkActiveFaultModel('001', 'A Fault Model', faults=[])
         x0 = Point(30., 30., 0.)
         x1 = x0.point_at(30., 0., 30.)
         x2 = x1.point_at(30., 0., 60.)
@@ -129,26 +119,27 @@ class TestmtkActiveFaultModel(unittest.TestCase):
         simple_fault = SimpleFaultGeometry(trace, 90., 0., 20.)
         # Creates a trace ~60 km long made of 3 points
         upper_edge = Line([x0, x1, x2])
-        lower_edge = Line([x0.point_at(40., 20., 130.),
-                x1.point_at(42., 25., 130.),
-                x2.point_at(41., 22., 130.)])
+        lower_edge = Line(
+            [x0.point_at(40., 20., 130.),
+             x1.point_at(42., 25., 130.),
+             x2.point_at(41., 22., 130.)])
         complex_fault = ComplexFaultGeometry([upper_edge, lower_edge], 2.0)
         config = [{'MFD_spacing': 0.1,
-                  'Maximum_Magnitude': 7.0,
-                  'Maximum_Uncertainty': None,
-                  'Model_Name': 'Characteristic',
-                  'Model_Weight': 0.5,
-                  'Sigma': 0.1,
-                  'Lower_Bound': -1.,
-                  'Upper_Bound': 1.},
+                   'Maximum_Magnitude': 7.0,
+                   'Maximum_Uncertainty': None,
+                   'Model_Name': 'Characteristic',
+                   'Model_Weight': 0.5,
+                   'Sigma': 0.1,
+                   'Lower_Bound': -1.,
+                   'Upper_Bound': 1.},
                   {'MFD_spacing': 0.1,
-                  'Maximum_Magnitude': 7.5,
-                  'Maximum_Uncertainty': None,
-                  'Model_Name': 'Characteristic',
-                  'Model_Weight': 0.5,
-                  'Sigma': 0.1,
-                  'Lower_Bound': -1.,
-                  'Upper_Bound': 1.}]
+                   'Maximum_Magnitude': 7.5,
+                   'Maximum_Uncertainty': None,
+                   'Model_Name': 'Characteristic',
+                   'Model_Weight': 0.5,
+                   'Sigma': 0.1,
+                   'Lower_Bound': -1.,
+                   'Upper_Bound': 1.}]
         fault1 = mtkActiveFault('001', 'Simple Fault 1', simple_fault,
                                 [(10.0, 1.0)], -90., None,
                                 aspect_ratio=1.0,

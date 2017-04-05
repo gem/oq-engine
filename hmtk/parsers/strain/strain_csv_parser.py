@@ -206,7 +206,7 @@ class WriteStrainCsv(object):
             strain - Instance of strain class with updated data dictionary
             output_variables - Updated list of headers
         '''
-        output_variables = strain.data.keys()
+        output_variables = list(strain.data)
         cond = (isinstance(strain.target_magnitudes, np.ndarray) or
                 isinstance(strain.target_magnitudes, list))
         if cond:
