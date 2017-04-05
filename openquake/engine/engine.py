@@ -88,6 +88,8 @@ def expose_outputs(dstore):
         rlzs = list(dstore['realizations'])
     except KeyError:
         rlzs = []
+    if oq.ground_motion_fields:
+        dskeys.add('gmf_data')
     if 'scenario' not in calcmode:  # export sourcegroups.csv
         dskeys.add('sourcegroups')
     if 'hcurves' in dstore:
