@@ -19,7 +19,7 @@ from decimal import Decimal
 
 from openquake.hazardlib.source.non_parametric import \
     NonParametricSeismicSource
-from openquake.hazardlib.source.rupture import Rupture, \
+from openquake.hazardlib.source.rupture import BaseRupture, \
     NonParametricProbabilisticRupture
 from openquake.hazardlib.geo import Point, Polygon
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
@@ -39,11 +39,11 @@ def make_non_parametric_source():
         top_left=Point(-1., 0., 0.), top_right=Point(1., 0., 0.),
         bottom_right=Point(1., 0., 10.), bottom_left=Point(-1., 0., 10.)
     )
-    rup1 = Rupture(
+    rup1 = BaseRupture(
         mag=5., rake=90., tectonic_region_type='ASC',
         hypocenter=Point(0., 0., 5.), surface=surf1, source_typology=None
     )
-    rup2 = Rupture(
+    rup2 = BaseRupture(
         mag=6, rake=0, tectonic_region_type='ASC',
         hypocenter=Point(0., 0., 5.), surface=surf2, source_typology=None
     )
@@ -118,7 +118,8 @@ class NonParametricSourceTestCase(unittest.TestCase):
                 rup.surface.bottom_right, exp_rup.surface.bottom_right
             )
             self.assertEqual(rup.source_typology, exp_rup.source_typology)
-            self.assertEqual(rup.pmf.data, exp_pmf.data)
+            numpy.testing.assert_allclose(
+                rup.pmf, [prob for prob, occ in exp_pmf.data])
 
     def test_count_ruptures(self):
         source, _ = self.make_non_parametric_source()

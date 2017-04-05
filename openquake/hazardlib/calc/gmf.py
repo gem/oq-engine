@@ -20,14 +20,13 @@
 Module :mod:`~openquake.hazardlib.calc.gmf` exports
 :func:`ground_motion_fields`.
 """
-
-import collections
 import numpy
 import scipy.stats
 
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.calc.filters import IntegrationDistance
 
 
 class CorrelationButNoInterIntraStdDevs(Exception):
@@ -71,6 +70,10 @@ class GmfComputer(object):
         :mod:`openquake.hazardlib.correlation`. Can be ``None``, in which
         case non-correlated ground motion fields are calculated.
         Correlation model is not used if ``truncation_level`` is zero.
+
+    :param maximum_distance:
+       Instance of :class:`openquake.hazardlib.calc.filters.IntegrationDistance`
+       By default there is no maximum_distance.
     """
     # The GmfComputer is called from the OpenQuake Engine. In that case
     # the rupture is an higher level containing a
@@ -78,27 +81,29 @@ class GmfComputer(object):
     # attribute. Then the `.compute(gsim, num_events)` method is called and
     # a matrix of size (I, N, E) is returned, where I is the number of
     # IMTs, N the number of affected sites and E the number of events. The
-    # seed is extracted from the underlying rupture and salted in such a
-    # way to produce different numbers even if the method is called twice
-    # with the same `gsim`. This ensures that different GMPE logic tree
-    # realizations produce different numbers even in the case of sampling.
-    # If all GMPEs are different the salt is 0 and the rupture seed is used.
+    # seed is extracted from the underlying rupture.
     def __init__(self, rupture, sites, imts, gsims,
-                 truncation_level=None, correlation_model=None, samples=0):
-        assert sites, sites
+                 truncation_level=None, correlation_model=None,
+                 maximum_distance=IntegrationDistance(None)):
+        if len(sites) == 0:
+            raise ValueError('No sites')
+        elif len(imts) == 0:
+            raise ValueError('No IMTs')
+        elif len(gsims) == 0:
+            raise ValueError('No GSIMs')
         self.rupture = rupture
         self.sites = sites
         self.imts = [from_string(imt) for imt in imts]
-        self.gsims = sorted(set(gsims))
+        self.gsims = sorted(gsims)
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
-        self.samples = samples
+        self.maximum_distance = maximum_distance
         # `rupture` can be a high level rupture object containing a low
         # level hazardlib rupture object as a .rupture attribute
         if hasattr(rupture, 'rupture'):
             rupture = rupture.rupture
-            self.salt = collections.Counter()  # associate a salt to the gsims
-        self.ctx = ContextMaker(gsims).make_contexts(sites, rupture)
+        self.ctx = ContextMaker(gsims, maximum_distance).make_contexts(
+            sites, rupture)
 
     def compute(self, gsim, num_events, seed=None):
         """
@@ -111,9 +116,6 @@ class GmfComputer(object):
             seed = seed or self.rupture.rupture.seed
         except AttributeError:
             pass
-        if hasattr(self, 'salt'):  # when called from the engine
-            seed += self.salt[gsim]
-            self.salt[gsim] += 1
         if seed is not None:
             numpy.random.seed(seed)
         result = numpy.zeros(

@@ -1,4 +1,13 @@
   [Michele Simionato]
+  * Experimental support for the Grid Engine
+  * Fixed the serialization to HDF5 of nonparametric ruptures
+
+  [Paolo Tormene]
+  * Fixed clockwise order of vertices of surface boundaries, as needed for
+    WKT MULTIPOLYGON strings while exporting ruptures
+
+  [Michele Simionato]
+  * Added input checks to the GmfComputer
   * Fixed bug when splitting area sources into point sources for
     YoungsCoppersmith1985MFD
   * Added a method `hdf5.File.save` to save node dictionaries in HDF5 format

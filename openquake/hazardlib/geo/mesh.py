@@ -46,6 +46,28 @@ def build_array(lons_lats_depths):
     return arr
 
 
+def surface_to_mesh(surface):
+    """
+    :param surface: a Surface object
+    :returns: a 3D array of dtype point3d
+    """
+    if hasattr(surface, 'surfaces'):  # multiplanar surfaces
+        n = len(surface.surfaces)
+        arr = build_array([[s.corner_lons, s.corner_lats, s.corner_depths]
+                           for s in surface.surfaces]).reshape(n, 2, 2)
+    else:
+        mesh = surface.mesh
+        if mesh is None:  # planar surface
+            arr = build_array([[surface.corner_lons,
+                                surface.corner_lats,
+                                surface.corner_depths]]).reshape(1, 2, 2)
+        else:  # general surface
+            shp = (1,) + mesh.lons.shape
+            arr = build_array(
+                [[mesh.lons, mesh.lats, mesh.depths]]).reshape(shp)
+    return arr
+
+
 class Mesh(object):
     """
     Mesh object represent a collection of points and provides the most

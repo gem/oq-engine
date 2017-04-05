@@ -21,7 +21,7 @@ import numpy.testing as npt
 
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.source import NonParametricSeismicSource
-from openquake.hazardlib.source.rupture import Rupture
+from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.geo.surface import PlanarSurface, SimpleFaultSurface
@@ -68,8 +68,8 @@ def _create_rupture(distance, magnitude,
     from openquake.hazardlib.geo.mesh import Mesh
     mesh = Mesh(numpy.array([0.0]), numpy.array([0.0]))
     assert abs(surface.get_joyner_boore_distance(mesh)-distance) < 1e-2
-    return Rupture(mag, rake, tectonic_region_type, hypocenter,
-                   surface, NonParametricSeismicSource)
+    return BaseRupture(mag, rake, tectonic_region_type, hypocenter,
+                       surface, NonParametricSeismicSource)
 
 
 def _create_non_param_sourceA(rjb, magnitude, pmf,
