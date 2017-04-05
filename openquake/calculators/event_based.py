@@ -31,7 +31,8 @@ from openquake.baselib.general import AccumDict, block_splitter, humansize
 from openquake.hazardlib.calc.filters import FarAwayRupture
 from openquake.hazardlib.probability_map import ProbabilityMap, PmapStats
 from openquake.hazardlib.geo.surface import PlanarSurface
-from openquake.risklib.riskinput import GmfGetter, str2rsi, rsi2str, gmv_dt
+from openquake.risklib.riskinput import (
+    GmfGetter, str2rsi, rsi2str, gmf_data_dt)
 from openquake.baselib import parallel
 from openquake.commonlib import calc, util
 from openquake.calculators import base
@@ -321,10 +322,6 @@ def set_random_years(dstore, events_sm, investigation_time):
 
 # ######################## GMF calculator ############################ #
 
-dt = numpy.dtype([('rlzi', U32), ('sid', U32), ('eid', U64),
-                  ('imti', U8), ('gmv', F32)])
-
-
 def compute_gmfs_and_curves(getter, monitor):
     """
     :param getter:
@@ -346,7 +343,7 @@ def compute_gmfs_and_curves(getter, monitor):
         for gsim in getter.rlzs_by_gsim:
             with monitor('building hazard', measuremem=True):
                 gmfcoll[grp_id, gsim] = data = numpy.fromiter(
-                    getter.gen_gmv(gsim), dt)
+                    getter.gen_gmv(gsim), gmf_data_dt)
                 hazard = getter.get_hazard(gsim, data)
             for r, rlz in enumerate(getter.rlzs_by_gsim[gsim]):
                 hazardr = hazard[r]
@@ -367,7 +364,7 @@ def compute_gmfs_and_curves(getter, monitor):
         for gsim in getter.rlzs_by_gsim:
             with monitor('building hazard', measuremem=True):
                 gmfcoll[grp_id, gsim] = numpy.fromiter(
-                    getter.gen_gmv(gsim), dt)
+                    getter.gen_gmv(gsim), gmf_data_dt)
     return dict(gmfcoll=gmfcoll if oq.ground_motion_fields else None,
                 hcurves=hcurves, gmdata=getter.gmdata)
 
