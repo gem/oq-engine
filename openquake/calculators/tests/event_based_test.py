@@ -216,7 +216,7 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         out = self.run_calc(case_5.__file__, 'job.ini', exports='txt,csv')
         fnames = out['gmf_data', 'txt']
         for exp, got in zip(expected, fnames):
-            self.assertEqualFiles('expected/%s' % exp, got, sorted, delta=1E-5)
+            self.assertEqualFiles('expected/%s' % exp, got, sorted, delta=1E-6)
 
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         if REFERENCE_OS:
@@ -314,7 +314,7 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         out = self.run_calc(case_18.__file__, 'job.ini', exports='txt')
         fnames = out['gmf_data', 'txt']
         for exp, got in zip(expected, fnames):
-            self.assertEqualFiles('expected/%s' % exp, got, sorted)
+            self.assertEqualFiles('expected/%s' % exp, got, sorted, delta=1E-6)
 
     @attr('qa', 'hazard', 'event_based')
     def test_overflow(self):

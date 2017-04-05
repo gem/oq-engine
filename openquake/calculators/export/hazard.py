@@ -638,33 +638,34 @@ def export_gmf(ekey, dstore):
     if nbytes > GMF_MAX_SIZE:
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
+    ruptures_by_rlz = collections.defaultdict(list)
     for grp_id, gsim in rlzs_assoc:
         key = 'grp-%02d' % grp_id
         if not n_gmfs:  # event based
-            events = dstore['events']
-            if key not in events:  # source model producing zero ruptures
+            try:
+                events = dstore['events/' + key]
+            except KeyError:  # source model producing zero ruptures
                 continue
-            sm_events = events[key]
-            etags = dict(zip(sm_events['eid'],
-                             calc.build_etags(sm_events, grp_id)))
+            etags = dict(zip(events['eid'], calc.build_etags(events, grp_id)))
         try:
             data = gmf_data['%s/%s' % (key, gsim)].value
         except KeyError:  # no GMFs for the given realization
             continue
         for rlzi, rlz in enumerate(rlzs_assoc[grp_id, gsim]):
+            ruptures = ruptures_by_rlz[rlz]
             gmf_arr = get_array(data, rlzi=rlzi)
-            ruptures = []
             for eid, gmfa in group_array(gmf_arr, 'eid').items():
                 rup = util.Rupture(grp_id, eid, etags[eid],
                                    sorted(set(gmfa['sid'])))
                 rup.gmfa = gmfa
                 ruptures.append(rup)
-            ruptures.sort(key=operator.attrgetter('etag'))
-            fname = dstore.build_fname('gmf', rlz, fmt)
-            fnames.append(fname)
-            globals()['export_gmf_%s' % fmt](
-                ('gmf', fmt), fname, sitecol, oq.imtls, ruptures, rlz,
-                investigation_time)
+    for rlz in sorted(ruptures_by_rlz):
+        ruptures_by_rlz[rlz].sort(key=operator.attrgetter('etag'))
+        fname = dstore.build_fname('gmf', rlz, fmt)
+        fnames.append(fname)
+        globals()['export_gmf_%s' % fmt](
+            ('gmf', fmt), fname, sitecol, oq.imtls, ruptures_by_rlz[rlz],
+            rlz, investigation_time)
     return fnames
 
 
