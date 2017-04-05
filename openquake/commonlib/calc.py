@@ -271,7 +271,6 @@ def get_gmfs(dstore, precalc=None):
         return etags, [gmfs_by_imt]
 
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    rlzs = rlzs_assoc.realizations
     sitecol = dstore['sitecol']
     if dstore.parent:
         haz_sitecol = dstore.parent['sitecol']  # S sites
@@ -290,12 +289,13 @@ def get_gmfs(dstore, precalc=None):
         return etags, gmfs
 
     # else read from the datastore
-    for i, rlz in enumerate(rlzs):
-        data = dstore['gmf_data/grp-00/%04d' % i]
+    gsims = sorted(dstore['gmf_data/grp-00'])
+    for i, gsim in enumerate(gsims):
+        dset = dstore['gmf_data/grp-00/' + gsim]
         for s, sid in enumerate(haz_sitecol.sids):
             for imti, imt in enumerate(oq.imtls):
                 idx = E * (S * imti + s)
-                array = data[idx: idx + E]
+                array = dset[idx: idx + E]
                 if numpy.unique(array['sid']) != [sid]:  # sanity check
                     raise ValueError('The GMFs have been stored incorrectly')
                 gmfs[imt][i, sid] = array['gmv']
