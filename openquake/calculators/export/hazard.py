@@ -30,6 +30,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
 from openquake.calculators.views import view
 from openquake.calculators.export import export
+from openquake.risklib.riskinput import GmfDataGetter
 from openquake.commonlib import writers, hazard_writers, calc, util, source
 
 F32 = numpy.float32
@@ -637,8 +638,7 @@ def export_gmf(ekey, dstore):
     if nbytes > GMF_MAX_SIZE:
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
-    grp_rlzs = sorted(rlzs_assoc.get_rlzs_by_grp_id().items())
-    for grp_id, rlzs in grp_rlzs:
+    for grp_id, gsim in rlzs_assoc:
         key = 'grp-%02d' % grp_id
         if not n_gmfs:  # event based
             events = dstore['events']
@@ -647,11 +647,12 @@ def export_gmf(ekey, dstore):
             sm_events = events[key]
             etags = dict(zip(sm_events['eid'],
                              calc.build_etags(sm_events, grp_id)))
-        for rlz in rlzs:
-            try:
-                gmf_arr = gmf_data['%s/%04d' % (key, rlz.ordinal)].value
-            except KeyError:  # no GMFs for the given realization
-                continue
+        try:
+            data = gmf_data['%s/%s' % (key, gsim)].value
+        except KeyError:  # no GMFs for the given realization
+            continue
+        for rlzi, rlz in enumerate(rlzs_assoc[grp_id, gsim]):
+            gmf_arr = get_array(data, rlzi=rlzi)
             ruptures = []
             for eid, gmfa in group_array(gmf_arr, 'eid').items():
                 rup = util.Rupture(grp_id, eid, etags[eid],
@@ -759,7 +760,7 @@ def export_gmf_data_csv(ekey, dstore):
                 writer.save(data, dest)
         return writer.getsaved()
     else:  # event based
-        eid = ekey[0].split(':')[1] if ':' in ekey[0] else None
+        eid = int(ekey[0].split(':')[1]) if ':' in ekey[0] else None
         return export_gmfs(dstore, eid)
 
 
@@ -770,7 +771,8 @@ def export_gmfs(dstore, eid):
     multiwriter = writers.CsvMultiWriter(
         fnames, header=['sid', 'eid', 'imti', 'gmv'])
     with dstore.ext5() as ext5:
-        multiwriter.write(calc.GmfDataGetter.gen_gmfs(ext5['gmf_data'], eid))
+        multiwriter.write(
+            GmfDataGetter.gen_gmfs(ext5['gmf_data'], rlzs_assoc, eid))
     multiwriter.close()
     return fnames
 
