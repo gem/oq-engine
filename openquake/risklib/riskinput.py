@@ -36,7 +36,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
-BYTES_PER_RECORD = 17  # ground motion record (sid, eid, gmv, imti) = 17 bytes
+TWO48 = 2 ** 48
 EVENTS = -2
 NBYTES = -1
 
@@ -516,6 +516,9 @@ class PoeGetter(object):
 
 
 gmv_dt = numpy.dtype([('sid', U32), ('eid', U64), ('imti', U8), ('gmv', F32)])
+gmf_data_dt = numpy.dtype([('rlzi', U16), ('sid', U32), ('eid', U64),
+                           ('imti', U8), ('gmv', F32)])
+BYTES_PER_RECORD = gmf_data_dt.itemsize
 
 
 class GmfGetter(object):
@@ -624,7 +627,7 @@ class GmfDataGetter(GmfGetter):
         self.grp_id = grp_id
         self.rlzs_by_gsim = rlzs_by_gsim
         self.N = gmf_data.attrs['num_sites']  # used by get_hazard
-        self.I = gmf_data.attr['num_imts']  # used by get_hazard
+        self.I = gmf_data.attrs['num_imts']  # used by get_hazard
         self.start = start
         self.stop = stop
 
@@ -632,20 +635,24 @@ class GmfDataGetter(GmfGetter):
         pass
 
     def gen_gmv(self, gsim):
-        dset = self.gmf_data['%02d/%s' % (self.grp_id, gsim)]
+        dset = self.gmf_data['grp-%02d/%s' % (self.grp_id, gsim)]
         for rec in dset[self.start:self.stop]:
             yield rec
 
     @classmethod
-    def gen_gmfs(cls, gmf_data, rlzs_assoc, N, I, eid=None):
+    def gen_gmfs(cls, gmf_data, rlzs_assoc, eid=None):
         """
-        Yield records
+        Yield GMF records
         """
-        for grp_id in rlzs_assoc.gsims_by_grp_id:
-            rlzs_by_gsim = rlzs_assoc.get_rlzs_by_grp_id(grp_id)
-            getter = cls(gmf_data, grp_id, rlzs_by_gsim, N, I)
+        if eid is not None:  # extract the grp_id from the eid
+            grp_ids = [eid // TWO48]
+        else:
+            grp_ids = rlzs_assoc.gsims_by_grp_id
+        for grp_id in grp_ids:
+            rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
+            getter = cls(gmf_data, grp_id, rlzs_by_gsim)
             for gsim, rlzs in rlzs_by_gsim.items():
-                for rec in getter.get_gmv(gsim):
+                for rec in getter.gen_gmv(gsim):
                     if eid is None or eid == rec['eid']:
                         rec['rlzi'] = rlzs[rec['rlzi']].ordinal
                         yield rec
