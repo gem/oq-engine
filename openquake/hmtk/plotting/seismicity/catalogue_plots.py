@@ -1,4 +1,4 @@
-#!/usr/bin/env/python
+#!/usr/bin/env python
 
 """
 Collection of tools for plotting descriptive statistics of a catalogue

@@ -1,7 +1,7 @@
-#!/usr/bin/env/python
+#!/usr/bin/env python
 # LICENSE
 #
-# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
+# Copyright (c) 2010-2017, GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
 #
 # The Hazard Modeller's Toolkit (openquake.hmtk) is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public License

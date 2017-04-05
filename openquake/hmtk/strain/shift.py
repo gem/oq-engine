@@ -4,23 +4,23 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (c) 2010-2017, GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-#License as published by the Free Software Foundation, either version
-#3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-#DISCLAIMER
+# DISCLAIMER
 #
 # The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein
-#is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-#Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-#for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -159,7 +159,7 @@ CMT_DURATION_S = 25.7474 * SECS_PER_YEAR
 
 # Apply SI conversion adjustments from Bird (2007)'s code
 # TODO This is ugly - reconsider this (maybe require only inputs in SI)
-for reg_type in BIRD_GLOBAL_PARAMETERS.keys():
+for reg_type in BIRD_GLOBAL_PARAMETERS:
     reg = BIRD_GLOBAL_PARAMETERS[reg_type]
 
     reg['corner_moment'] = moment_function(reg['corner_mag'])
@@ -298,7 +298,7 @@ class Shift(object):
         for key in STRAIN_VARIABLES:
             self.strain.data[key] = self.strain.data[key] / SECS_PER_YEAR
 
-        if 'region' not in self.strain.data.keys():
+        if 'region' not in self.strain.data:
             raise ValueError('Cannot implment  SHIFT methodology without '
                              'definition of regionalisation')
         else:
