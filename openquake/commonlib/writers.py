@@ -278,7 +278,7 @@ class CsvMultiWriter(object):
     Write records on multiple files at the same time, depending on the index
     in the first field of the record.
     """
-    def __init__(self, fnames, sep=',', fmt='%12.8E', header=None):
+    def __init__(self, fnames, sep=',', fmt='%.6E', header=None):
         self.sep = sep
         self.fmt = fmt
         self.files = []
@@ -291,9 +291,10 @@ class CsvMultiWriter(object):
 
     def write(self, records):
         for rec in records:
-            f = self.files[rec[0]]
+            tup = tuple(rec)
+            f = self.files[tup[0]]
             f.write(self.sep.join(scientificformat(col, self.fmt)
-                                  for col in rec[1:]) + '\n')
+                                  for col in tup[1:]) + '\n')
 
     def close(self):
         for f in self.files:
