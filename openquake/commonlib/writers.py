@@ -273,34 +273,6 @@ class CsvWriter(object):
         return sorted(self.fnames)
 
 
-class CsvMultiWriter(object):
-    """
-    Write records on multiple files at the same time, depending on the index
-    in the first field of the record.
-    """
-    def __init__(self, fnames, sep=',', fmt='%.6E', header=None):
-        self.sep = sep
-        self.fmt = fmt
-        self.files = []
-        for fname in fnames:
-            open(fname, 'w').close()  # cleanup if exists
-            f = open(fname, 'a')
-            if header:
-                f.write(self.sep.join(header) + '\n')
-            self.files.append(f)
-
-    def write(self, records):
-        for rec in records:
-            tup = tuple(rec)
-            f = self.files[tup[0]]
-            f.write(self.sep.join(scientificformat(col, self.fmt)
-                                  for col in tup[1:]) + '\n')
-
-    def close(self):
-        for f in self.files:
-            f.close()
-
-
 def castable_to_int(s):
     """
     Return True if the string `s` can be interpreted as an integer
