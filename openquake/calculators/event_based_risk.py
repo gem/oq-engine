@@ -104,10 +104,10 @@ build_rcurves.shared_dir_on = config.SHARED_DIR_ON
 
 
 def _aggregate(outputs, compositemodel, taxid, agg, ass, idx, result,
-               monitor):
+               param):
     # update the result dictionary and the agg array with each output
     L = len(compositemodel.lti)
-    I = monitor.insured_losses + 1
+    I = param['insured_losses'] + 1
     losses_by_taxon = result['losses_by_taxon']
     for outs in outputs:
         r = outs.r
@@ -125,13 +125,13 @@ def _aggregate(outputs, compositemodel, taxid, agg, ass, idx, result,
                 losses = ratios * asset.value(loss_type)  # shape (E, I)
 
                 # average losses
-                if monitor.avg_losses:
-                    rat = ratios.sum(axis=0) * monitor.ses_ratio
+                if param['avg_losses']:
+                    rat = ratios.sum(axis=0) * param['ses_ratio']
                     for i in range(I):
                         result['avglosses'][l + L * i, r][aid] += rat[i]
 
                 # asset losses
-                if monitor.loss_ratios:
+                if param['loss_ratios']:
                     for eid, loss in zip(eids, ratios):
                         if loss.sum() > 0:
                             assr[eid, aid][l] += loss
@@ -145,27 +145,28 @@ def _aggregate(outputs, compositemodel, taxid, agg, ass, idx, result,
                     losses_by_taxon[t, r, l + L * i] += losses[:, i].sum()
 
         # asset losses
-        if monitor.loss_ratios:
+        if param['loss_ratios']:
             ass[r].append(numpy.array([
                 (eid, aid, loss) for (eid, aid), loss in assr.items()
-            ], monitor.ela_dt))
+            ], param['ela_dt']))
 
 
-def event_based_risk(riskinput, riskmodel, assetcol, monitor):
+def event_based_risk(riskinput, riskmodel, param, monitor):
     """
     :param riskinput:
         a :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
-    :param assetcol:
-        AssetCollection instance
+    :param param:
+        a dictionary of parameters
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
+    assetcol = param['assetcol']
     A = len(assetcol)
-    I = monitor.insured_losses + 1
+    I = param['insured_losses'] + 1
     eids = riskinput.eids
     E = len(eids)
     L = len(riskmodel.lti)
@@ -179,17 +180,17 @@ def event_based_risk(riskinput, riskmodel, assetcol, monitor):
     result = dict(agglosses=AccumDict(), asslosses=AccumDict(),
                   losses_by_taxon=numpy.zeros((T, R, L * I), F32),
                   aids=None)
-    if monitor.avg_losses:
+    if param['avg_losses']:
         result['avglosses'] = AccumDict(accum=numpy.zeros(A, F64))
     else:
         result['avglosses'] = {}
     outputs = riskmodel.gen_outputs(riskinput, monitor, assetcol)
-    _aggregate(outputs, riskmodel, taxid, agg, ass, idx, result, monitor)
+    _aggregate(outputs, riskmodel, taxid, agg, ass, idx, result, param)
     for r in sorted(agg):
         records = [(eids[i], loss) for i, loss in enumerate(agg[r])
                    if loss.sum() > 0]
         if records:
-            result['agglosses'][r] = numpy.array(records, monitor.elt_dt)
+            result['agglosses'][r] = numpy.array(records, param['elt_dt'])
     for r in ass:
         if ass[r]:
             result['asslosses'][r] = numpy.concatenate(ass[r])
@@ -438,7 +439,8 @@ class EbriskCalculator(base.RiskCalculator):
             self.riskmodel.loss_types, oq.insured_losses)
         csm_info = self.datastore['csm_info']
         for sm in csm_info.source_models:
-            monitor = self.monitor.new(
+            param = dict(
+                assetcol=self.assetcol,
                 ses_ratio=oq.ses_ratio,
                 ela_dt=ela_dt, elt_dt=elt_dt,
                 loss_ratios=oq.loss_ratios,
@@ -449,8 +451,8 @@ class EbriskCalculator(base.RiskCalculator):
                 samples=sm.samples,
                 seed=self.oqparam.random_seed)
             yield (sm.ordinal, ruptures_by_grp, self.sitecol.complete,
-                   self.assetcol, self.riskmodel, imts, oq.truncation_level,
-                   correl_model, min_iml, monitor)
+                   param, self.riskmodel, imts, oq.truncation_level,
+                   correl_model, min_iml, self.monitor)
 
     def execute(self):
         """
