@@ -113,6 +113,9 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         hazard_by_rlz = {rlz: gmfs[rlz.ordinal]
                          for rlz in self.rlzs_assoc.realizations}
         self.riskinputs = self.build_riskinputs(hazard_by_rlz, eps)
+        self.param['number_of_ground_motion_fields'] = E
+        self.param['insured_losses'] = self.oqparam.insured_losses
+        self.param['all_losses'] = self.oqparam.all_losses
 
     def post_execute(self, result):
         """
