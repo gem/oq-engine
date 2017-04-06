@@ -104,10 +104,10 @@ build_rcurves.shared_dir_on = config.SHARED_DIR_ON
 
 
 def _aggregate(outputs, compositemodel, taxid, agg, ass, idx, result,
-               monitor):
+               param):
     # update the result dictionary and the agg array with each output
     L = len(compositemodel.lti)
-    I = monitor.insured_losses + 1
+    I = param['insured_losses'] + 1
     losses_by_taxon = result['losses_by_taxon']
     for outs in outputs:
         r = outs.r
@@ -125,12 +125,13 @@ def _aggregate(outputs, compositemodel, taxid, agg, ass, idx, result,
                 losses = ratios * asset.value(loss_type)  # shape (E, I)
 
                 # average losses
-                if monitor.avg_losses:
-                    result['avglosses'][l, r][aid] += (
-                        ratios.sum(axis=0) * monitor.ses_ratio)
+                if param['avg_losses']:
+                    rat = ratios.sum(axis=0) * param['ses_ratio']
+                    for i in range(I):
+                        result['avglosses'][l + L * i, r][aid] += rat[i]
 
                 # asset losses
-                if monitor.loss_ratios:
+                if param['loss_ratios']:
                     for eid, loss in zip(eids, ratios):
                         if loss.sum() > 0:
                             assr[eid, aid][l] += loss
@@ -144,27 +145,28 @@ def _aggregate(outputs, compositemodel, taxid, agg, ass, idx, result,
                     losses_by_taxon[t, r, l + L * i] += losses[:, i].sum()
 
         # asset losses
-        if monitor.loss_ratios:
+        if param['loss_ratios']:
             ass[r].append(numpy.array([
                 (eid, aid, loss) for (eid, aid), loss in assr.items()
-            ], monitor.ela_dt))
+            ], param['ela_dt']))
 
 
-def event_based_risk(riskinput, riskmodel, assetcol, monitor):
+def event_based_risk(riskinput, riskmodel, param, monitor):
     """
     :param riskinput:
         a :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
-    :param assetcol:
-        AssetCollection instance
+    :param param:
+        a dictionary of parameters
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
+    assetcol = param['assetcol']
     A = len(assetcol)
-    I = monitor.insured_losses + 1
+    I = param['insured_losses'] + 1
     eids = riskinput.eids
     E = len(eids)
     L = len(riskmodel.lti)
@@ -176,17 +178,19 @@ def event_based_risk(riskinput, riskmodel, assetcol, monitor):
     agg = AccumDict(accum=numpy.zeros((E, L, I), F32))  # r -> array
     ass = AccumDict(accum=[])
     result = dict(agglosses=AccumDict(), asslosses=AccumDict(),
-                  losses_by_taxon=numpy.zeros((T, R, L * I), F32))
-    if monitor.avg_losses:
-        result['avglosses'] = AccumDict(accum=numpy.zeros((A, I), F64))
-
+                  losses_by_taxon=numpy.zeros((T, R, L * I), F32),
+                  aids=None)
+    if param['avg_losses']:
+        result['avglosses'] = AccumDict(accum=numpy.zeros(A, F64))
+    else:
+        result['avglosses'] = {}
     outputs = riskmodel.gen_outputs(riskinput, monitor, assetcol)
-    _aggregate(outputs, riskmodel, taxid, agg, ass, idx, result, monitor)
+    _aggregate(outputs, riskmodel, taxid, agg, ass, idx, result, param)
     for r in sorted(agg):
         records = [(eids[i], loss) for i, loss in enumerate(agg[r])
                    if loss.sum() > 0]
         if records:
-            result['agglosses'][r] = numpy.array(records, monitor.elt_dt)
+            result['agglosses'][r] = numpy.array(records, param['elt_dt'])
     for r in ass:
         if ass[r]:
             result['asslosses'][r] = numpy.concatenate(ass[r])
@@ -435,7 +439,8 @@ class EbriskCalculator(base.RiskCalculator):
             self.riskmodel.loss_types, oq.insured_losses)
         csm_info = self.datastore['csm_info']
         for sm in csm_info.source_models:
-            monitor = self.monitor.new(
+            param = dict(
+                assetcol=self.assetcol,
                 ses_ratio=oq.ses_ratio,
                 ela_dt=ela_dt, elt_dt=elt_dt,
                 loss_ratios=oq.loss_ratios,
@@ -446,8 +451,8 @@ class EbriskCalculator(base.RiskCalculator):
                 samples=sm.samples,
                 seed=self.oqparam.random_seed)
             yield (sm.ordinal, ruptures_by_grp, self.sitecol.complete,
-                   self.assetcol, self.riskmodel, imts, oq.truncation_level,
-                   correl_model, min_iml, monitor)
+                   param, self.riskmodel, imts, oq.truncation_level,
+                   correl_model, min_iml, self.monitor)
 
     def execute(self):
         """
@@ -501,7 +506,7 @@ class EbriskCalculator(base.RiskCalculator):
                                    (self.T, self.R, self.L * I))
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
-            dset = self.datastore.create_dset(
+            self.dset = self.datastore.create_dset(
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L * I))
 
         num_events = collections.Counter()
@@ -509,12 +514,8 @@ class EbriskCalculator(base.RiskCalculator):
         for res in allres:
             start, stop = res.rlz_slice.start, res.rlz_slice.stop
             for dic in res:
-                if avg_losses:
-                    self.save_avg_losses(dset, dic.pop('avglosses'), start)
                 self.gmdata += dic.pop('gmdata')
-                self.save_losses(
-                    dic.pop('agglosses'), dic.pop('asslosses'),
-                    dic.pop('losses_by_taxon'), start)
+                self.save_losses(dic, start)
             logging.debug(
                 'Saving results for source model #%d, realizations %d:%d',
                 res.sm_id + 1, start, stop)
@@ -528,24 +529,20 @@ class EbriskCalculator(base.RiskCalculator):
         event_based.save_gmdata(self, num_rlzs)
         return num_events
 
-    def save_avg_losses(self, dset, dic, start):
-        """
-        Save a dictionary (l, r) -> losses of average losses
-        """
-        with self.monitor('saving avg_losses-rlzs'):
-            for (l, r), losses in dic.items():
-                vs = self.vals[self.riskmodel.loss_types[l]]
-                for i in range(self.I):
-                    dset[:, r + start, l + self.L * i] += losses[:, i] * vs
-
-    def save_losses(self, agglosses, asslosses, losses_by_taxon, offset):
+    def save_losses(self, dic, offset=0):
         """
         Save the event loss tables incrementally.
 
-        :param agglosses: a dictionary r -> (eid, loss)
-        :param asslosses: a dictionary lr -> (eid, aid, loss)
-        :param offset: realization offset
+        :param dic:
+            dictionary with agglosses, asslosses, losses_by_taxon, avglosses
+        :param offset:
+            realization offset
         """
+        aids = dic.pop('aids')
+        agglosses = dic.pop('agglosses')
+        asslosses = dic.pop('asslosses')
+        losses_by_taxon = dic.pop('losses_by_taxon')
+        avglosses = dic.pop('avglosses')
         with self.monitor('saving event loss tables', autoflush=True):
             for r in agglosses:
                 key = 'agg_loss_table/rlz-%03d' % (r + offset)
@@ -557,7 +554,19 @@ class EbriskCalculator(base.RiskCalculator):
         # saving losses by taxonomy is ultra-fast, so it is not monitored
         dset = self.datastore['losses_by_taxon-rlzs']
         for r in range(losses_by_taxon.shape[1]):
-            dset[:, r + offset, :] += losses_by_taxon[:, r, :]
+            if aids is None:
+                dset[:, r + offset, :] += losses_by_taxon[:, r, :]
+            else:
+                dset[aids, r + offset, :] += losses_by_taxon[:, r, :]
+
+        with self.monitor('saving avg_losses-rlzs'):
+            for (li, r), ratios in avglosses.items():
+                l = li if li < self.L else li - self.L
+                vs = self.vals[self.riskmodel.loss_types[l]]
+                if aids is None:
+                    self.dset[:, r + offset, li] += ratios * vs
+                else:
+                    self.dset[aids, r + offset, li] += ratios * vs
 
     def post_execute(self, num_events):
         """

@@ -32,7 +32,7 @@ F64 = numpy.float64  # higher precision to avoid task order dependency
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
 
 
-def scenario_risk(riskinput, riskmodel, monitor):
+def scenario_risk(riskinput, riskmodel, param, monitor):
     """
     Core function for a scenario computation.
 
@@ -40,6 +40,8 @@ def scenario_risk(riskinput, riskmodel, monitor):
         a of :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
+    :param param:
+        dictionary of extra parameters
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     :returns:
@@ -51,11 +53,11 @@ def scenario_risk(riskinput, riskmodel, monitor):
         R the number of realizations  and statistics is an array of shape
         (n, R, 4), with n the number of assets in the current riskinput object
     """
-    E = monitor.oqparam.number_of_ground_motion_fields
+    E = param['number_of_ground_motion_fields']
     L = len(riskmodel.loss_types)
     R = len(riskinput.rlzs)
-    I = monitor.oqparam.insured_losses + 1
-    all_losses = monitor.oqparam.all_losses
+    I = param['insured_losses'] + 1
+    all_losses = param['all_losses']
     lbt = AccumDict(accum=numpy.zeros((R, L * I), F32))
     result = dict(agg=numpy.zeros((E, R, L * I), F32), avg=[],
                   losses_by_taxon=lbt, all_losses=AccumDict(accum={}))
@@ -111,6 +113,9 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         hazard_by_rlz = {rlz: gmfs[rlz.ordinal]
                          for rlz in self.rlzs_assoc.realizations}
         self.riskinputs = self.build_riskinputs(hazard_by_rlz, eps)
+        self.param['number_of_ground_motion_fields'] = E
+        self.param['insured_losses'] = self.oqparam.insured_losses
+        self.param['all_losses'] = self.oqparam.all_losses
 
     def post_execute(self, result):
         """
