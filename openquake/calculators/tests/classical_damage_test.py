@@ -177,9 +177,9 @@ class ClassicalDamageTestCase(CalculatorTestCase):
             case_8a.__file__, 'job_haz.ini,job_risk.ini', exports='csv')
         f1, f2 = out['damages-rlzs', 'csv']
         self.assertEqualFiles(
-            'expected/damages-rlzs-SadighEtAl1997().csv', f1)
-        self.assertEqualFiles(
             'expected/damages-rlzs-AkkarBommer2010().csv', f2)
+        self.assertEqualFiles(
+            'expected/damages-rlzs-SadighEtAl1997().csv', f1)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_poe_1(self):
