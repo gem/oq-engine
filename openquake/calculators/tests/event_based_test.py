@@ -92,7 +92,8 @@ class EventBasedTestCase(CalculatorTestCase):
             self.assertEqual(list(oq.imtls), ['PGA'])
             dstore = read(self.calc.datastore.calc_id)
             with dstore.ext5() as ext5:
-                gmf = group_array(ext5['gmf_data/grp-00/0000'], 'sid')
+                gmf = group_array(
+                    ext5['gmf_data/grp-00/BooreAtkinson2008()'], 'sid')
             gmvs_site_0 = gmf[0]['gmv']
             gmvs_site_1 = gmf[1]['gmv']
             joint_prob_0_5 = joint_prob_of_occurrence(
@@ -175,6 +176,9 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/gmf-smltp_b1-gsimltp_b1-ltr_1.txt', ltr[1])
 
+        [fname] = export(('gmf_data', 'csv'),  self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
         ltr0 = out['gmf_data', 'xml'][0]
         self.assertEqualFiles('expected/gmf-smltp_b1-gsimltp_b1-ltr_0.xml',
                               ltr0)
@@ -211,7 +215,7 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         out = self.run_calc(case_5.__file__, 'job.ini', exports='txt,csv')
         fnames = out['gmf_data', 'txt']
         for exp, got in zip(expected, fnames):
-            self.assertEqualFiles('expected/%s' % exp, got, sorted)
+            self.assertEqualFiles('expected/%s' % exp, got, sorted, delta=1E-6)
 
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         if REFERENCE_OS:
@@ -309,7 +313,7 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         out = self.run_calc(case_18.__file__, 'job.ini', exports='txt')
         fnames = out['gmf_data', 'txt']
         for exp, got in zip(expected, fnames):
-            self.assertEqualFiles('expected/%s' % exp, got, sorted)
+            self.assertEqualFiles('expected/%s' % exp, got, sorted, delta=1E-6)
 
     @attr('qa', 'hazard', 'event_based')
     def test_overflow(self):

@@ -220,7 +220,7 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
         dest.write('# %s\n' % comment)
 
     someheader = header or autoheader
-    if someheader:
+    if header != 'no-header' and someheader:
         dest.write(sep.join(htranslator.write(someheader)) + u'\n')
 
     if autoheader:

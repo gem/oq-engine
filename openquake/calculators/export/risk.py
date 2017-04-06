@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import AccumDict, get_array, group_array
 from openquake.hazardlib.stats import compute_stats2
-from openquake.risklib import scientific, riskinput
+from openquake.risklib import scientific
 from openquake.calculators.export import export
 from openquake.calculators.export.hazard import get_grp_id_eid, savez
 from openquake.commonlib import writers, risk_writers, calc
@@ -115,6 +115,24 @@ def export_losses_by_asset(ekey, dstore):
     return writer.getsaved()
 
 
+# this is used by scenario_risk
+@export.add(('losses_by_event', 'csv'))
+def export_losses_by_event(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    loss_dt = dstore['oqparam'].loss_dt()
+    all_losses = dstore[ekey[0]].value
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    for rlz in rlzs:
+        dest = dstore.build_fname('losses_by_event', rlz, 'csv')
+        data = all_losses[:, rlz.ordinal].copy().view(loss_dt)
+        writer.save(data, dest)
+    return writer.getsaved()
+
+
 @export.add(('losses_by_asset', 'npz'))
 def export_losses_by_asset_npz(ekey, dstore):
     """
@@ -133,7 +151,6 @@ def export_losses_by_asset_npz(ekey, dstore):
     fname = dstore.export_path('%s.%s' % ekey)
     savez(fname, **dic)
     return [fname]
-
 
 def _compact(array):
     # convert an array of shape (a, e) into an array of shape (a,)
@@ -482,7 +499,7 @@ def export_csq_by_taxon_csv(ekey, dstore):
     value = dstore[ekey[0]].value  # matrix T x R
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz, values in zip(rlzs, value.T):
-        fname = dstore.build_fname(ekey[0], rlz.gsim_rlz, ekey[1])
+        fname = dstore.build_fname(ekey[0], rlz, ekey[1])
         writer.save(compose_arrays(taxonomies, values, 'taxonomy'), fname)
     return writer.getsaved()
 
@@ -493,7 +510,7 @@ def export_csq_total_csv(ekey, dstore):
     value = dstore[ekey[0]].value
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz, values in zip(rlzs, value):
-        fname = dstore.build_fname(ekey[0], rlz.gsim_rlz, ekey[1])
+        fname = dstore.build_fname(ekey[0], rlz, ekey[1])
         writer.save(numpy.array([values], value.dtype), fname)
     return writer.getsaved()
 
@@ -540,7 +557,7 @@ def export_dmg_by_asset_csv(ekey, dstore):
     assets = get_assets(dstore)
     for rlz in rlzs:
         dmg_by_asset = build_damage_array(data[:, rlz.ordinal], damage_dt)
-        fname = dstore.build_fname(ekey[0], rlz.gsim_rlz, ekey[1])
+        fname = dstore.build_fname(ekey[0], rlz, ekey[1])
         writer.save(compose_arrays(assets, dmg_by_asset), fname)
     return writer.getsaved()
 
@@ -554,7 +571,7 @@ def export_dmg_by_taxon_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt='%.6E')
     for rlz in rlzs:
         dmg_by_taxon = build_damage_array(data[:, rlz.ordinal], damage_dt)
-        fname = dstore.build_fname(ekey[0], rlz.gsim_rlz, ekey[1])
+        fname = dstore.build_fname(ekey[0], rlz, ekey[1])
         array = compose_arrays(taxonomies, dmg_by_taxon, 'taxonomy')
         writer.save(array, fname)
     return writer.getsaved()
@@ -568,7 +585,7 @@ def export_dmg_totalcsv(ekey, dstore):
     writer = writers.CsvWriter(fmt='%.6E')
     for rlz in rlzs:
         dmg_total = build_damage_array(data[rlz.ordinal], damage_dt)
-        fname = dstore.build_fname(ekey[0], rlz.gsim_rlz, ekey[1])
+        fname = dstore.build_fname(ekey[0], rlz, ekey[1])
         writer.save(dmg_total, fname)
     return writer.getsaved()
 
@@ -738,7 +755,6 @@ def export_agglosses(ekey, dstore):
     agglosses = dstore[ekey[0]]
     fnames = []
     for rlz in dstore['csm_info'].get_rlzs_assoc().realizations:
-        gsim, = rlz.gsim_rlz.value
         loss = agglosses[rlz.ordinal]
         losses = []
         header = ['loss_type', 'unit', 'mean', 'stddev']
@@ -747,7 +763,7 @@ def export_agglosses(ekey, dstore):
             mean = loss[l]['mean']
             stddev = loss[l]['stddev']
             losses.append((lt, unit, mean, stddev))
-        dest = dstore.build_fname('agglosses', gsim, 'csv')
+        dest = dstore.build_fname('agglosses', rlz, 'csv')
         writers.write_csv(dest, losses, header=header)
         fnames.append(dest)
     return sorted(fnames)
