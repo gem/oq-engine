@@ -32,7 +32,7 @@ F64 = numpy.float64  # higher precision to avoid task order dependency
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
 
 
-def scenario_risk(riskinput, riskmodel, monitor):
+def scenario_risk(riskinput, riskmodel, param, monitor):
     """
     Core function for a scenario computation.
 
@@ -40,6 +40,8 @@ def scenario_risk(riskinput, riskmodel, monitor):
         a of :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
+    :param param:
+        dictionary of extra parameters
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     :returns:
