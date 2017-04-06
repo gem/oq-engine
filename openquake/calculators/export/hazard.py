@@ -741,10 +741,10 @@ def get_grp_id_eid(key):
 @export.add(('gmf_data', 'csv'))
 def export_gmf_data_csv(ekey, dstore):
     oq = dstore['oqparam']
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     if 'scenario' in oq.calculation_mode:
         imtls = dstore['oqparam'].imtls
-        rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-        gsims = [str(rlz.gsim_rlz) for rlz in rlzs]
+        gsims = [str(rlz.gsim_rlz) for rlz in rlzs_assoc.realizations]
         n_gmfs = oq.number_of_ground_motion_fields
         fields = ['%03d' % i for i in range(n_gmfs)]
         dt = numpy.dtype([(f, F32) for f in fields])
@@ -762,10 +762,24 @@ def export_gmf_data_csv(ekey, dstore):
         return writer.getsaved()
     else:  # event based
         eid = int(ekey[0].split(':')[1]) if ':' in ekey[0] else None
-        return export_gmfs(dstore, eid)
+        with dstore.ext5() as ext5:
+            gmfa = numpy.fromiter(
+                GmfDataGetter.gen_gmfs(ext5['gmf_data'], rlzs_assoc, eid))
+        fnames = []
+        for rlzi, data in group_array(gmfa, 'rlzi').items():
+            rlz = rlzs_assoc.realizations[rlzi]
+            data, comment = _build_csv_data(
+                data, rlz, dstore['sitecol'], oq.imtls, oq.investigation_time)
+            tag = '%s-rlz-' % eid if eid else 'rlz-'
+            fname = dstore.build_fname('gmf', '%s%03d' % (tag, rlzi), 'csv')
+            logging.info('Exporting %s', fname)
+            writers.write_csv(fname, data, comment=comment)
+            fnames.append(fname)
+        return fnames
 
 
-def export_gmfs(dstore, eid):
+# new csv format (sid, eid, imti, gmv), not used right now
+def export_gmfs_new(dstore, eid):
     rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     rlzs = rlzs_assoc.realizations
     fnames = [dstore.build_fname('gmf', rlz, 'csv') for rlz in rlzs]
