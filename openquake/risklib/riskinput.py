@@ -599,6 +599,7 @@ class GmfGetter(object):
     def get_hazard(self, gsim, data=None):
         """
         :param gsim: a GSIM instance
+        :param data: if given, an iterator of records of dtype gmf_data_dt
         :returns: an array (rlzi, sid, imti) -> array(gmv, eid)
         """
         if data is None:
