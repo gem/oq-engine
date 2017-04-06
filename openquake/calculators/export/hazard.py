@@ -766,30 +766,28 @@ def export_gmf_data_csv(ekey, dstore):
             gmfa = numpy.fromiter(
                 GmfDataGetter.gen_gmfs(ext5['gmf_data'], rlzs_assoc, eid),
                 gmf_data_dt)
+        if eid is None:  # new format
+            return export_gmfs_new(dstore, gmfa, rlzs_assoc.realizations)
+        # old format for single eid
         fnames = []
         imts = list(oq.imtls)
-        for rlzi, data in group_array(gmfa, 'rlzi').items():
+        for rlzi, array in group_array(gmfa, 'rlzi').items():
             rlz = rlzs_assoc.realizations[rlzi]
             data, comment = _build_csv_data(
-                data, rlz, dstore['sitecol'], imts, oq.investigation_time)
-            tag = '%s-rlz-' % eid if eid else 'rlz-'
-            fname = dstore.build_fname('gmf', '%s%03d' % (tag, rlzi), 'csv')
-            logging.info('Exporting %s', fname)
+                array, rlz, dstore['sitecol'], imts, oq.investigation_time)
+            fname = dstore.build_fname(
+                'gmf', '%d-rlz-%03d' % (eid, rlzi), 'csv')
             writers.write_csv(fname, data, comment=comment)
             fnames.append(fname)
         return fnames
 
 
-# new csv format (sid, eid, imti, gmv), not used right now
-def export_gmfs_new(dstore, eid):
-    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
-    rlzs = rlzs_assoc.realizations
+# new csv format (sid, eid, imti, gmv)
+def export_gmfs_new(dstore, gmfa, rlzs):
     fnames = [dstore.build_fname('gmf', rlz, 'csv') for rlz in rlzs]
     multiwriter = writers.CsvMultiWriter(
         fnames, header=['sid', 'eid', 'imti', 'gmv'])
-    with dstore.ext5() as ext5:
-        multiwriter.write(
-            GmfDataGetter.gen_gmfs(ext5['gmf_data'], rlzs_assoc, eid))
+    multiwriter.write(gmfa)
     multiwriter.close()
     return fnames
 
