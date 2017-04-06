@@ -53,11 +53,11 @@ def scenario_risk(riskinput, riskmodel, param, monitor):
         R the number of realizations  and statistics is an array of shape
         (n, R, 4), with n the number of assets in the current riskinput object
     """
-    E = monitor.oqparam.number_of_ground_motion_fields
+    E = param['number_of_ground_motion_fields']
     L = len(riskmodel.loss_types)
     R = len(riskinput.rlzs)
-    I = monitor.oqparam.insured_losses + 1
-    all_losses = monitor.oqparam.all_losses
+    I = param['insured_losses'] + 1
+    all_losses = param['all_losses']
     lbt = AccumDict(accum=numpy.zeros((R, L * I), F32))
     result = dict(agg=numpy.zeros((E, R, L * I), F32), avg=[],
                   losses_by_taxon=lbt, all_losses=AccumDict(accum={}))
