@@ -30,7 +30,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
 from openquake.calculators.views import view
 from openquake.calculators.export import export
-from openquake.risklib.riskinput import GmfDataGetter
+from openquake.risklib.riskinput import GmfDataGetter, gmf_data_dt
 from openquake.commonlib import writers, hazard_writers, calc, util, source
 
 F32 = numpy.float32
@@ -764,12 +764,14 @@ def export_gmf_data_csv(ekey, dstore):
         eid = int(ekey[0].split(':')[1]) if ':' in ekey[0] else None
         with dstore.ext5() as ext5:
             gmfa = numpy.fromiter(
-                GmfDataGetter.gen_gmfs(ext5['gmf_data'], rlzs_assoc, eid))
+                GmfDataGetter.gen_gmfs(ext5['gmf_data'], rlzs_assoc, eid),
+                gmf_data_dt)
         fnames = []
+        imts = list(oq.imtls)
         for rlzi, data in group_array(gmfa, 'rlzi').items():
             rlz = rlzs_assoc.realizations[rlzi]
             data, comment = _build_csv_data(
-                data, rlz, dstore['sitecol'], oq.imtls, oq.investigation_time)
+                data, rlz, dstore['sitecol'], imts, oq.investigation_time)
             tag = '%s-rlz-' % eid if eid else 'rlz-'
             fname = dstore.build_fname('gmf', '%s%03d' % (tag, rlzi), 'csv')
             logging.info('Exporting %s', fname)
