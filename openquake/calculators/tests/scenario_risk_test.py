@@ -53,6 +53,9 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf-FromFile-PGA.csv', fname)
 
+        [fname] = out['losses_by_event', 'csv']
+        self.assertEqualFiles('expected/losses_by_event.csv', fname)
+
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job_risk.ini', exports='csv')
@@ -86,7 +89,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/totlosses.txt', fname)
 
         [fname] = out['agglosses-rlzs', 'csv']
-        self.assertEqualFiles('expected/agglosses.csv', fname)
+        self.assertEqualFiles('expected/agglosses.csv', fname, delta=1E-6)
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_occupants(self):
