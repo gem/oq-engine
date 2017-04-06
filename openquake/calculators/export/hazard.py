@@ -20,17 +20,20 @@ import re
 import os
 import logging
 import operator
+import tempfile
 import collections
 
 import numpy
 
+from openquake.baselib import parallel, performance
 from openquake.baselib.general import (
-    groupby, humansize, get_array, group_array, DictArray)
+    groupby, humansize, get_array, group_array, DictArray, NpzWriter)
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg, gmf
 from openquake.calculators.views import view
 from openquake.calculators.export import export
-from openquake.commonlib import writers, hazard_writers, calc, util, source
+from openquake.commonlib import (
+    writers, hazard_writers, calc, util, datastore, source)
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -566,20 +569,37 @@ def _extract(hmap, imt, j):
     return tup
 
 
+def save_hcurves_npy(keys, calc_id, npzwriter, mon):
+    save_mon = mon('saving hcurves in npy')
+    dic = {}  # key -> .npy temporary file path
+    with datastore.read(calc_id) as dstore:
+        mesh = get_mesh(dstore['sitecol'])
+        imtls = dstore['oqparam'].imtls
+        for key in keys:
+            curves = dstore['hcurves/%s' % key].convert(imtls, len(mesh))
+            arr = util.compose_arrays(mesh, curves)
+            with save_mon:
+                dic[key] = npzwriter.write(key, arr, npz=False)
+    return dic
+
+
 @export.add(('hcurves', 'npz'))
 def export_hcurves_npz(ekey, dstore):
-    mesh = get_mesh(dstore['sitecol'])
-    imtls = dstore['oqparam'].imtls
-    fname = dstore.export_path('%s.%s' % ekey)
-    arr = numpy.zeros(1, imtls.dt)
-    for imt in imtls:
-        arr[imt] = imtls[imt]
-    dic = dict(imtls=arr[0])
-    for dskey in dstore[ekey[0]]:
-        curves = dstore['%s/%s' % (ekey[0], dskey)].convert(
-            imtls, len(mesh))
-        dic[dskey] = util.compose_arrays(mesh, curves)
-    savez(fname, **dic)
+    with dstore:
+        imtls = dstore['oqparam'].imtls
+        fname = dstore.export_path('%s.%s' % ekey)
+        arr = numpy.zeros(1, imtls.dt)
+        for imt in imtls:
+            arr[imt] = imtls[imt]
+        keys = list(dstore[ekey[0]])
+    mon = performance.Monitor('zipping npy', hdf5path=datastore.hdf5new().path)
+    npzwriter = NpzWriter(fname)
+    npzwriter.write('imtls', arr[0])
+    for dic in parallel.Processmap.apply(
+            save_hcurves_npy, (keys, dstore.calc_id, npzwriter, mon)):
+        with mon:
+            npzwriter.add_npydict(dic)
+    mon.flush()
     return [fname]
 
 
