@@ -30,7 +30,7 @@ from openquake.calculators import base
 F32 = numpy.float32
 
 
-def classical_risk(riskinput, riskmodel, monitor):
+def classical_risk(riskinput, riskmodel, param, monitor):
     """
     Compute and return the average losses for each asset.
 
@@ -38,6 +38,8 @@ def classical_risk(riskinput, riskmodel, monitor):
         a :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
+    :param param:
+        dictionary of extra parameters
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
