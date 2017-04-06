@@ -73,7 +73,7 @@ def dist_total(data, multi_stat_dt):
     return out
 
 
-def scenario_damage(riskinput, riskmodel, monitor):
+def scenario_damage(riskinput, riskmodel, param, monitor):
     """
     Core function for a damage computation.
 
@@ -83,6 +83,8 @@ def scenario_damage(riskinput, riskmodel, monitor):
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
+    :param param:
+        dictionary of extra parameters
     :returns:
         a dictionary {'d_asset': [(l, r, a, mean-stddev), ...],
                       'd_taxonomy': damage array of shape T, L, R, E, D,
