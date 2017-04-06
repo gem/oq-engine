@@ -63,10 +63,9 @@ def gmf_ebrisk(riskinput, riskmodel, taxid, monitor):
                   losses_by_taxon=numpy.zeros((T, R, L * I), F32),
                   aids=numpy.array(aids, U16))
     if monitor.avg_losses:
-        acc = AccumDict(accum=numpy.zeros(A, F32))
-        acc.aids = aids
-        result['avglosses'] = acc
-
+        result['avglosses'] = AccumDict(accum=numpy.zeros(A, F32))
+    else:
+        result['avglosses'] = {}
     outputs = riskmodel.gen_outputs(riskinput, monitor)
     ebr._aggregate(outputs, riskmodel, taxid, agg, ass, idx, result, monitor)
     for r in sorted(agg):
@@ -84,7 +83,7 @@ def gmf_ebrisk(riskinput, riskmodel, taxid, monitor):
 
 
 @base.calculators.add('gmf_ebrisk')
-class GmfEbRiskCalculator(ebr.RiskCalculator):
+class GmfEbRiskCalculator(base.RiskCalculator):
     """
     Run an event based risk calculation starting from precomputed GMFs
     """
