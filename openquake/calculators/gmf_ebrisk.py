@@ -25,7 +25,7 @@ from openquake.baselib.general import AccumDict
 from openquake.commonlib import calc
 from openquake.calculators import base, event_based_risk as ebr
 
-
+U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64  # higher precision to avoid task order dependency
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
@@ -39,11 +39,18 @@ def gmf_ebrisk(riskinput, riskmodel, taxid, monitor):
         a of :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
+    :param taxid:
+        dictionary taxonomy string -> taxonomy id
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
     I = monitor.insured_losses + 1
     eids = riskinput.eids
+    aids = []
+    for assets in riskinput.assets_by_site:
+        for asset in assets:
+            aids.append(asset.ordinal)
+    A = len(aids)
     E = len(eids)
     L = len(riskmodel.lti)
     T = len(taxid)
@@ -53,9 +60,12 @@ def gmf_ebrisk(riskinput, riskmodel, taxid, monitor):
     agg = AccumDict(accum=numpy.zeros((E, L, I), F32))  # r -> array
     ass = AccumDict(accum=[])
     result = dict(agglosses=AccumDict(), asslosses=AccumDict(),
-                  losses_by_taxon=numpy.zeros((T, R, L * I), F32))
+                  losses_by_taxon=numpy.zeros((T, R, L * I), F32),
+                  aids=numpy.array(aids, U16))
     if monitor.avg_losses:
-        result['avglosses'] = AccumDict(accum=numpy.zeros((A, I), F32))
+        acc = AccumDict(accum=numpy.zeros(A, F32))
+        acc.aids = aids
+        result['avglosses'] = acc
 
     outputs = riskmodel.gen_outputs(riskinput, monitor)
     ebr._aggregate(outputs, riskmodel, taxid, agg, ass, idx, result, monitor)
@@ -84,7 +94,6 @@ class GmfEbRiskCalculator(ebr.RiskCalculator):
 
     def pre_execute(self):
         base.RiskCalculator.pre_execute(self)
-
         logging.info('Building the epsilons')
         A = len(self.assetcol)
         E = self.oqparam.number_of_ground_motion_fields
@@ -97,6 +106,23 @@ class GmfEbRiskCalculator(ebr.RiskCalculator):
         hazard_by_rlz = {rlz: gmfs[rlz.ordinal]
                          for rlz in self.rlzs_assoc.realizations}
         self.riskinputs = self.build_riskinputs(hazard_by_rlz, eps)
+        self.extra_args = (self.make_taxid(),)
 
     def post_execute(self, result):
-        pass
+        self.L = len(self.riskmodel.lti)
+        self.T = len(self.assetcol.taxonomies)
+        self.A = len(self.assetcol)
+        self.I = I = self.oqparam.insured_losses + 1
+        self.datastore.create_dset('losses_by_taxon-rlzs', F32,
+                                   (self.T, self.R, self.L * I))
+        avg_losses = self.oqparam.avg_losses
+        if avg_losses:
+            self.dset = self.datastore.create_dset(
+                'avg_losses-rlzs', F32, (self.A, self.R, self.L * I))
+
+    def combine(self, dummy, res):
+        """
+        :param dummy: unused parameter
+        :param res: a result dictionary
+        """
+        self.save_losses(res)
