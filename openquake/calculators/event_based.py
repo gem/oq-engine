@@ -322,16 +322,17 @@ def set_random_years(dstore, events_sm, investigation_time):
 
 # ######################## GMF calculator ############################ #
 
-def compute_gmfs_and_curves(getter, monitor):
+def compute_gmfs_and_curves(getter, oq, monitor):
     """
     :param getter:
         a GmfGetter instance
+    :param oq:
+        an OqParam instance
     :param monitor:
         a Monitor instance
     :returns:
         a dictionary with keys gmfcoll and hcurves
    """
-    oq = monitor.oqparam
     with monitor('making contexts', measuremem=True):
         getter.init()
     grp_id = getter.grp_id
@@ -458,7 +459,6 @@ class EventBasedCalculator(ClassicalCalculator):
         """
         oq = self.oqparam
         monitor = self.monitor(self.core_task.__name__)
-        monitor.oqparam = oq
         imts = list(oq.imtls)
         min_iml = calc.fix_minimum_intensity(oq.minimum_intensity, imts)
         correl_model = oq.get_correl_model()
@@ -472,7 +472,7 @@ class EventBasedCalculator(ClassicalCalculator):
                 getter = GmfGetter(grp_id, rlzs_by_gsim, block, self.sitecol,
                                    imts, min_iml, oq.truncation_level,
                                    correl_model, samples)
-                yield getter, monitor
+                yield getter, oq, monitor
 
     def execute(self):
         """
