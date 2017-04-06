@@ -30,7 +30,7 @@ from openquake.calculators import base
 F32 = numpy.float32
 
 
-def classical_risk(riskinput, riskmodel, monitor):
+def classical_risk(riskinput, riskmodel, param, monitor):
     """
     Compute and return the average losses for each asset.
 
@@ -38,11 +38,12 @@ def classical_risk(riskinput, riskmodel, monitor):
         a :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
+    :param param:
+        dictionary of extra parameters
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
-    oq = monitor.oqparam
-    ins = oq.insured_losses
+    ins = param['insured_losses']
     result = dict(loss_curves=[], stat_curves=[])
     all_outputs = list(riskmodel.gen_outputs(riskinput, monitor))
     for outputs in all_outputs:
@@ -74,7 +75,7 @@ def classical_risk(riskinput, riskmodel, monitor):
                 for i, asset in enumerate(assets):
                     avgs = numpy.array([r.average_losses[l][i] for r in rows])
                     avg_stats = compute_stats(
-                        avgs, oq.quantile_loss_curves, weights)
+                        avgs, param['quantile_loss_curves'], weights)
                     # row is index by the loss type index l and row[l]
                     # is a pair loss_curves, insured_loss_curves
                     # loss_curves[i, 0] are the i-th losses,
@@ -82,7 +83,7 @@ def classical_risk(riskinput, riskmodel, monitor):
                     losses = row[l][0][i, 0]
                     poes_stats = compute_stats(
                         numpy.array([row[l][0][i, 1] for row in rows]),
-                        oq.quantile_loss_curves, weights)
+                        param['quantile_loss_curves'], weights)
                     result['stat_curves'].append(
                         (l, asset.ordinal, losses, poes_stats, avg_stats))
     return result
@@ -128,8 +129,8 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                     # missing; this happen in test_case_5
                     curves_by_rlz[rlz] = pmap.convert(oq.imtls, nsites)
         self.riskinputs = self.build_riskinputs(curves_by_rlz)
-        self.monitor.oqparam = oq
-
+        self.param = dict(insured_losses=oq.insured_losses,
+                          quantile_loss_curves=oq.quantile_loss_curves)
         self.N = len(self.assetcol)
         self.L = len(self.riskmodel.loss_types)
         self.R = len(self.rlzs_assoc.realizations)

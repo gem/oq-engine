@@ -73,7 +73,7 @@ def dist_total(data, multi_stat_dt):
     return out
 
 
-def scenario_damage(riskinput, riskmodel, monitor):
+def scenario_damage(riskinput, riskmodel, param, monitor):
     """
     Core function for a damage computation.
 
@@ -83,6 +83,8 @@ def scenario_damage(riskinput, riskmodel, monitor):
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
+    :param param:
+        dictionary of extra parameters
     :returns:
         a dictionary {'d_asset': [(l, r, a, mean-stddev), ...],
                       'd_taxonomy': damage array of shape T, R, L, E, D,
@@ -94,13 +96,13 @@ def scenario_damage(riskinput, riskmodel, monitor):
     If there is no consequence model `c_asset` is an empty list and
     `c_taxonomy` is a zero-value array.
     """
-    c_models = monitor.consequence_models
+    c_models = param['consequence_models']
     L = len(riskmodel.loss_types)
     R = len(riskinput.rlzs)
     D = len(riskmodel.damage_states)
-    E = monitor.oqparam.number_of_ground_motion_fields
-    T = len(monitor.taxonomies)
-    taxo2idx = {taxo: i for i, taxo in enumerate(monitor.taxonomies)}
+    E = param['number_of_ground_motion_fields']
+    T = len(param['taxonomies'])
+    taxo2idx = {taxo: i for i, taxo in enumerate(param['taxonomies'])}
     result = dict(d_asset=[], d_taxon=numpy.zeros((T, R, L, E, D), F64),
                   c_asset=[], c_taxon=numpy.zeros((T, R, L, E), F64))
     for outputs in riskmodel.gen_outputs(riskinput, monitor):
@@ -140,14 +142,16 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         if 'gmfs' in self.oqparam.inputs:
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
-        self.monitor.consequence_models = riskmodels.get_risk_models(
+        self.param['number_of_ground_motion_fields'] = (
+            self.oqparam.number_of_ground_motion_fields)
+        self.param['consequence_models'] = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
         self.datastore['etags'], gmfs = calc.get_gmfs(
             self.datastore, self.precalc)
         rlzs = self.csm_info.get_rlzs_assoc().realizations
         self.riskinputs = self.build_riskinputs(
             {rlz: gmf for rlz, gmf in zip(rlzs, gmfs)})
-        self.monitor.taxonomies = sorted(self.taxonomies)
+        self.param['taxonomies'] = sorted(self.taxonomies)
 
     def post_execute(self, result):
         """
