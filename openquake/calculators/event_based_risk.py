@@ -126,8 +126,9 @@ def _aggregate(outputs, compositemodel, taxid, agg, ass, idx, result,
 
                 # average losses
                 if monitor.avg_losses:
-                    result['avglosses'][l, r][aid] += (
-                        ratios.sum(axis=0) * monitor.ses_ratio)
+                    rat = ratios.sum(axis=0) * monitor.ses_ratio
+                    for i in range(I):
+                        result['avglosses'][l + L * i, r][aid] += rat[i]
 
                 # asset losses
                 if monitor.loss_ratios:
@@ -176,10 +177,12 @@ def event_based_risk(riskinput, riskmodel, assetcol, monitor):
     agg = AccumDict(accum=numpy.zeros((E, L, I), F32))  # r -> array
     ass = AccumDict(accum=[])
     result = dict(agglosses=AccumDict(), asslosses=AccumDict(),
-                  losses_by_taxon=numpy.zeros((T, R, L * I), F32))
+                  losses_by_taxon=numpy.zeros((T, R, L * I), F32),
+                  aids=None)
     if monitor.avg_losses:
-        result['avglosses'] = AccumDict(accum=numpy.zeros((A, I), F64))
-
+        result['avglosses'] = AccumDict(accum=numpy.zeros(A, F64))
+    else:
+        result['avglosses'] = {}
     outputs = riskmodel.gen_outputs(riskinput, monitor, assetcol)
     _aggregate(outputs, riskmodel, taxid, agg, ass, idx, result, monitor)
     for r in sorted(agg):
@@ -501,7 +504,7 @@ class EbriskCalculator(base.RiskCalculator):
                                    (self.T, self.R, self.L * I))
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
-            dset = self.datastore.create_dset(
+            self.dset = self.datastore.create_dset(
                 'avg_losses-rlzs', F32, (self.A, self.R, self.L * I))
 
         num_events = collections.Counter()
@@ -509,12 +512,8 @@ class EbriskCalculator(base.RiskCalculator):
         for res in allres:
             start, stop = res.rlz_slice.start, res.rlz_slice.stop
             for dic in res:
-                if avg_losses:
-                    self.save_avg_losses(dset, dic.pop('avglosses'), start)
                 self.gmdata += dic.pop('gmdata')
-                self.save_losses(
-                    dic.pop('agglosses'), dic.pop('asslosses'),
-                    dic.pop('losses_by_taxon'), start)
+                self.save_losses(dic, start)
             logging.debug(
                 'Saving results for source model #%d, realizations %d:%d',
                 res.sm_id + 1, start, stop)
@@ -528,24 +527,20 @@ class EbriskCalculator(base.RiskCalculator):
         event_based.save_gmdata(self, num_rlzs)
         return num_events
 
-    def save_avg_losses(self, dset, dic, start):
-        """
-        Save a dictionary (l, r) -> losses of average losses
-        """
-        with self.monitor('saving avg_losses-rlzs'):
-            for (l, r), losses in dic.items():
-                vs = self.vals[self.riskmodel.loss_types[l]]
-                for i in range(self.I):
-                    dset[:, r + start, l + self.L * i] += losses[:, i] * vs
-
-    def save_losses(self, agglosses, asslosses, losses_by_taxon, offset):
+    def save_losses(self, dic, offset=0):
         """
         Save the event loss tables incrementally.
 
-        :param agglosses: a dictionary r -> (eid, loss)
-        :param asslosses: a dictionary lr -> (eid, aid, loss)
-        :param offset: realization offset
+        :param dic:
+            dictionary with agglosses, asslosses, losses_by_taxon, avglosses
+        :param offset:
+            realization offset
         """
+        aids = dic.pop('aids')
+        agglosses = dic.pop('agglosses')
+        asslosses = dic.pop('asslosses')
+        losses_by_taxon = dic.pop('losses_by_taxon')
+        avglosses = dic.pop('avglosses')
         with self.monitor('saving event loss tables', autoflush=True):
             for r in agglosses:
                 key = 'agg_loss_table/rlz-%03d' % (r + offset)
@@ -557,7 +552,19 @@ class EbriskCalculator(base.RiskCalculator):
         # saving losses by taxonomy is ultra-fast, so it is not monitored
         dset = self.datastore['losses_by_taxon-rlzs']
         for r in range(losses_by_taxon.shape[1]):
-            dset[:, r + offset, :] += losses_by_taxon[:, r, :]
+            if aids is None:
+                dset[:, r + offset, :] += losses_by_taxon[:, r, :]
+            else:
+                dset[aids, r + offset, :] += losses_by_taxon[:, r, :]
+
+        with self.monitor('saving avg_losses-rlzs'):
+            for (li, r), ratios in avglosses.items():
+                l = li if li < self.L else li - self.L
+                vs = self.vals[self.riskmodel.loss_types[l]]
+                if aids is None:
+                    self.dset[:, r + offset, li] += ratios * vs
+                else:
+                    self.dset[aids, r + offset, li] += ratios * vs
 
     def post_execute(self, num_events):
         """
