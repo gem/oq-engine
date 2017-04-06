@@ -176,9 +176,8 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/gmf-smltp_b1-gsimltp_b1-ltr_1.txt', ltr[1])
 
-        fnames = export(('gmf_data', 'csv'),  self.calc.datastore)
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+        [fname] = export(('gmf_data', 'csv'),  self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
         ltr0 = out['gmf_data', 'xml'][0]
         self.assertEqualFiles('expected/gmf-smltp_b1-gsimltp_b1-ltr_0.xml',
