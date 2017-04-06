@@ -767,7 +767,9 @@ def export_gmf_data_csv(ekey, dstore):
                 GmfDataGetter.gen_gmfs(ext5['gmf_data'], rlzs_assoc, eid),
                 gmf_data_dt)
         if eid is None:  # new format
-            return export_gmfs_new(dstore, gmfa, rlzs_assoc.realizations)
+            fname = dstore.build_fname('gmf', 'data', 'csv')
+            writers.write_csv(fname, gmfa)
+            return [fname]
         # old format for single eid
         fnames = []
         imts = list(oq.imtls)
@@ -780,16 +782,6 @@ def export_gmf_data_csv(ekey, dstore):
             writers.write_csv(fname, data, comment=comment)
             fnames.append(fname)
         return fnames
-
-
-# new csv format (sid, eid, imti, gmv)
-def export_gmfs_new(dstore, gmfa, rlzs):
-    fnames = [dstore.build_fname('gmf', rlz, 'csv') for rlz in rlzs]
-    multiwriter = writers.CsvMultiWriter(
-        fnames, header=['sid', 'eid', 'imti', 'gmv'])
-    multiwriter.write(gmfa)
-    multiwriter.close()
-    return fnames
 
 
 def _build_csv_data(array, rlz, sitecol, imts, investigation_time):
