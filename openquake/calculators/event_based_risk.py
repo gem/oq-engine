@@ -206,8 +206,8 @@ class EbrPostCalculator(base.RiskCalculator):
 
     def cb_inputs(self, table):
         loss_table = self.datastore[table]
-        cbs = self.riskmodel.curve_builders
-        return [(cbs, rlzstr, loss_table[rlzstr].value)
+        cb = self.riskmodel.curve_builder
+        return [(cb, rlzstr, loss_table[rlzstr].value)
                 for rlzstr in loss_table]
 
     def save_rcurves(self, acc, res):
@@ -231,7 +231,7 @@ class EbrPostCalculator(base.RiskCalculator):
             assets = list(self.assetcol)
             mon = self.monitor('build_rcurves')
             ltypes = self.riskmodel.loss_types
-            cbs = self.riskmodel.curve_builders
+            cbs = self.riskmodel.curve_builder
             self.multi_lr_dt = numpy.dtype([(ltype, (F32, len(cb.ratios)))
                                             for ltype, cb in zip(ltypes, cbs)])
             rcurves = self.datastore.create_dset(
@@ -267,7 +267,7 @@ class EbrPostCalculator(base.RiskCalculator):
         """
         oq = self.oqparam
         cr = {cb.loss_type: cb.curve_resolution
-              for cb in self.riskmodel.curve_builders}
+              for cb in self.riskmodel.curve_builder}
         loss_curve_dt, _ = scientific.build_loss_dtypes(
             cr, oq.conditional_loss_poes)
         lts = self.riskmodel.loss_types
