@@ -30,7 +30,9 @@ http://ftp.openquake.org/wheelhouse/linux/py27/PyYAML-3.12-cp27-cp27mu-manylinux
 # of Rtree (experimental wheel, optional feature)
 http://ftp.openquake.org/wheelhouse/linux/py27/Rtree-0.8.2-cp27-cp27mu-manylinux1_x86_64.whl
 
-# Plotting stuff
+### Plotting ###
+# comment the following lines to skip installation
+# of the plotting libraries (optional feature)
 http://ftp.openquake.org/wheelhouse/linux/py27/matplotlib-1.5.3-cp27-cp27mu-manylinux1_x86_64.whl
 http://ftp.openquake.org/wheelhouse/linux/py/pyparsing-2.1.10-py2.py3-none-any.whl
 http://ftp.openquake.org/wheelhouse/linux/py/python_dateutil-2.6.0-py2.py3-none-any.whl
