@@ -105,11 +105,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         crm = sorted(self.calc.datastore.getitem('composite_risk_model'))
         self.assertEqual(crm, ['RC%2B', 'RM', 'W%2F1'])
 
-        # export a specific eid
-        [fname] = export(('all_loss_ratios:4294967305', 'csv'),
-                         self.calc.datastore)
-        self.assertEqualFiles('expected/losses-eid=65545.csv', fname)
-
         # test the case when all GMFs are filtered out
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_2.__file__, 'job.ini', minimum_intensity='10.0')
@@ -205,12 +200,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # check ruptures are stored correctly
         fname = writetmp(view('ruptures_events', self.calc.datastore))
         self.assertEqualFiles('expected/ruptures_events.txt', fname)
-
-        # export a specific pair (grp_id, eid)
-        fnames = export(('all_loss_ratios:1:21474836480', 'csv'),
-                        self.calc.datastore)
-        for fname in fnames:
-            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_miriam(self):
