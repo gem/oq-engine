@@ -950,6 +950,46 @@ class CurveBuilder(object):
             self.ratios, self.user_provided)
 
 
+class MultiCurveBuilder(object):
+    """
+    Build curves for all loss types at the same time
+    """
+    def __init__(self, cbs, insured_losses):
+        self.cbs = cbs
+        self.I = insured_losses + 1
+        loss_ratios = {cb.loss_type: cb.curve_resolution
+                       for cb in cbs if cb.user_provided}
+        self.loss_curve_dt, _ = build_loss_dtypes(
+            loss_ratios, [], insured_losses)
+
+    def __iter__(self):
+        return iter(self.cbs)
+
+    def __len__(self):
+        return len(self.cbs)
+
+    def build(self, asset, loss_ratios):
+        """"
+        :param assets: a list of assets
+        :param loss_ratios: an array of loss ratios of shape (E, L, I)
+        :returns: a record of dtype loss_curve_dt
+        """
+        rec = numpy.zeros(1, self.loss_curve_dt)[0]
+        for cb in self.cbs:
+            lt = cb.loss_type
+            aval = asset.value(lt)
+            for i in range(self.I):
+                lti = lt + '_ins' * i
+                lrs = loss_ratios[:, cb.index, i]
+                counts = numpy.array([(lrs >= ratio).sum(axis=0)
+                                      for ratio in cb.ratios])
+                poes = build_poes(counts, 1. / cb.ses_ratio).T
+                rec['poes'][lti] = poes
+                rec['losses'][lti] = losses = aval * cb.ratios
+                rec['avg'][lti] = average_loss([losses, poes])
+        return rec
+
+
 # should I use the ses_ratio here?
 def build_poes(counts, nses):
     """
