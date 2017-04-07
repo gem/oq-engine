@@ -152,6 +152,7 @@ def export_losses_by_asset_npz(ekey, dstore):
     savez(fname, **dic)
     return [fname]
 
+
 def _compact(array):
     # convert an array of shape (a, e) into an array of shape (a,)
     dt = array.dtype
