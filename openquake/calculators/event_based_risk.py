@@ -20,6 +20,7 @@ import logging
 import operator
 import collections
 import numpy
+import h5py
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
@@ -36,6 +37,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 U64 = numpy.uint64
+floats32 = h5py.special_dtype(vlen=F32)
 getweight = operator.attrgetter('weight')
 
 
@@ -112,7 +114,6 @@ def _aggregate(outputs, compositemodel, taxid, agg, ass, idx, result,
     for outs in outputs:
         r = outs.r
         aggr = agg[r]  # array of zeros of shape (E, L, I)
-        assr = AccumDict(accum=numpy.zeros((L, I), F32))
         for l, out in enumerate(outs):
             if out is None:  # for GMFs below the minimum_intensity
                 continue
@@ -132,9 +133,10 @@ def _aggregate(outputs, compositemodel, taxid, agg, ass, idx, result,
 
                 # asset losses
                 if param['loss_ratios']:
-                    for eid, loss in zip(eids, ratios):
-                        if loss.sum() > 0:
-                            assr[eid, aid][l] += loss
+                    for i in range(I):
+                        for ratio in ratios[:, i]:
+                            if ratio > 0:
+                                ass[aid, r, l + L * i].append(ratio)
 
                 # agglosses
                 aggr[indices, l] += losses
@@ -144,11 +146,9 @@ def _aggregate(outputs, compositemodel, taxid, agg, ass, idx, result,
                 for i in range(I):
                     losses_by_taxon[t, r, l + L * i] += losses[:, i].sum()
 
-        # asset losses
-        if param['loss_ratios']:
-            ass[r].append(numpy.array([
-                (eid, aid, loss) for (eid, aid), loss in assr.items()
-            ], param['ela_dt']))
+    # convert to arrays if non-empty
+    for a, r, li in ass:
+        ass[a, r, li] = numpy.array(ass[a, r, li], F32)
 
 
 def event_based_risk(riskinput, riskmodel, param, monitor):
@@ -176,8 +176,8 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
             for gsim, rlzs in riskinput.hazard_getter.rlzs_by_gsim.items())
     idx = dict(zip(eids, range(E)))
     agg = AccumDict(accum=numpy.zeros((E, L, I), F32))  # r -> array
-    ass = AccumDict(accum=[])
-    result = dict(agglosses=AccumDict(), asslosses=AccumDict(),
+    asslosses = AccumDict(accum=[])  # aid, r, li -> losses
+    result = dict(agglosses=AccumDict(), asslosses=asslosses,
                   losses_by_taxon=numpy.zeros((T, R, L * I), F32),
                   aids=None)
     if param['avg_losses']:
@@ -185,15 +185,12 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     else:
         result['avglosses'] = {}
     outputs = riskmodel.gen_outputs(riskinput, monitor, assetcol)
-    _aggregate(outputs, riskmodel, taxid, agg, ass, idx, result, param)
+    _aggregate(outputs, riskmodel, taxid, agg, asslosses, idx, result, param)
     for r in sorted(agg):
         records = [(eids[i], loss) for i, loss in enumerate(agg[r])
                    if loss.sum() > 0]
         if records:
             result['agglosses'][r] = numpy.array(records, param['elt_dt'])
-    for r in ass:
-        if ass[r]:
-            result['asslosses'][r] = numpy.concatenate(ass[r])
 
     # store info about the GMFs
     result['gmdata'] = riskinput.gmdata
@@ -236,9 +233,8 @@ class EbrPostCalculator(base.RiskCalculator):
                                             for ltype, cb in zip(ltypes, cbs)])
             rcurves = self.datastore.create_dset(
                 'rcurves-rlzs', self.multi_lr_dt, (A, R, I), fillvalue=None)
-            with self.datastore.ext5() as ext5:
-                allargs = [(self.datastore.ext5path, rlzname, cbs, assets, mon)
-                           for rlzname in ext5['all_loss_ratios']]
+            allargs = [(self.datastore.hdf5path, rlzname, cbs, assets, mon)
+                       for rlzname in self.datastore['all_loss_ratios']]
             parallel.Starmap(build_rcurves, allargs).reduce(self.save_rcurves)
 
         # build rcurves-stats (sequentially)
@@ -502,8 +498,15 @@ class EbriskCalculator(base.RiskCalculator):
         self.T = len(self.assetcol.taxonomies)
         self.A = len(self.assetcol)
         self.I = I = self.oqparam.insured_losses + 1
+
         self.datastore.create_dset('losses_by_taxon-rlzs', F32,
                                    (self.T, self.R, self.L * I))
+
+        if self.oqparam.loss_ratios:  # save all_loss_ratios
+            self.alt_nbytes = 0
+            self.loss_ratios_dset = self.datastore.create_dset(
+                'all_loss_ratios', floats32, (self.A, self.R, self.L * I),
+                fillvalue=None)
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
             self.dset = self.datastore.create_dset(
@@ -547,9 +550,11 @@ class EbriskCalculator(base.RiskCalculator):
             for r in agglosses:
                 key = 'agg_loss_table/rlz-%03d' % (r + offset)
                 self.datastore.extend(key, agglosses[r])
-            for r in asslosses:
-                key = 'all_loss_ratios/rlz-%03d' % (r + offset)
-                hdf5.extend3(self.datastore.ext5path, key, asslosses[r])
+            for aid, r, li in asslosses:
+                data = self.loss_ratios_dset[aid, r + offset, li]
+                newdata = numpy.concatenate([data, asslosses[aid, r, li]])
+                self.loss_ratios_dset[aid, r + offset, li] = newdata
+                self.alt_nbytes += newdata.nbytes
 
         # saving losses by taxonomy is ultra-fast, so it is not monitored
         dset = self.datastore['losses_by_taxon-rlzs']
@@ -580,15 +585,6 @@ class EbriskCalculator(base.RiskCalculator):
             raise RuntimeError('No GMFs were generated, perhaps they were '
                                'all below the minimum_intensity threshold')
 
-        A, E = len(self.assetcol), sum(num_events.values())
-        if 'all_loss_ratios' in self.datastore:
-            for rlzname in self.datastore['all_loss_ratios']:
-                self.datastore.set_nbytes('all_loss_ratios/' + rlzname)
-            self.datastore.set_nbytes('all_loss_ratios')
-            asslt = self.datastore['all_loss_ratios']
-            for rlz, dset in asslt.items():
-                dset.attrs['nonzero_fraction'] = len(dset) / (A * E)
-
         if 'agg_loss_table' not in self.datastore:
             logging.warning(
                 'No losses were generated: most likely there is an error in y'
@@ -597,6 +593,7 @@ class EbriskCalculator(base.RiskCalculator):
             for rlzname in self.datastore['agg_loss_table']:
                 self.datastore.set_nbytes('agg_loss_table/' + rlzname)
             self.datastore.set_nbytes('agg_loss_table')
+            E = sum(num_events.values())
             agglt = self.datastore['agg_loss_table']
             for rlz, dset in agglt.items():
                 dset.attrs['nonzero_fraction'] = len(dset) / E
