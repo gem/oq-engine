@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Renamed the `csq_` outputs of the scenario_damage to `losses_`
   * Changed the way scenario_damage are stored internally to be more
     consistent with the other calculators
   * Removed the GSIM from the exported file name of the risk outputs
