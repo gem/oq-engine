@@ -188,8 +188,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             for (l, r, a, stat) in result['c_asset']:
                 c_asset[a, r, l] = stat
             multi_stat_dt = self.oqparam.loss_dt(stat_dt)
-            self.datastore['csq_by_asset'] = c_asset
-            self.datastore['csq_by_taxon'] = dist_by_taxon(
+            self.datastore['losses_by_asset'] = c_asset
+            self.datastore['losses_by_taxon'] = dist_by_taxon(
                 result['c_taxon'], multi_stat_dt)
-            self.datastore['csq_total'] = dist_total(
+            self.datastore['losses_total'] = dist_total(
                 result['c_taxon'], multi_stat_dt)
