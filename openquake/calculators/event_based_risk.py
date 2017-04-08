@@ -400,12 +400,13 @@ class EbriskCalculator(base.RiskCalculator):
         if self.oqparam.hazard_curves_from_gmfs:
             logging.warn('To compute the hazard curves change '
                          'calculation_mode = event_based')
-        ruptures_by_grp = (
-            self.precalc.result if self.precalc
-            else event_based.get_ruptures_by_grp(self.datastore.parent))
-        # the ordering of the ruptures is essential for repeatibility
-        for grp in ruptures_by_grp:
-            ruptures_by_grp[grp].sort(key=operator.attrgetter('serial'))
+        with self.monitor('reading ruptures', autoflush=True):
+            ruptures_by_grp = (
+                self.precalc.result if self.precalc
+                else event_based.get_ruptures_by_grp(self.datastore.parent))
+            # the ordering of the ruptures is essential for repeatibility
+            for grp in ruptures_by_grp:
+                ruptures_by_grp[grp].sort(key=operator.attrgetter('serial'))
         num_rlzs = 0
         allres = []
         source_models = self.csm.info.source_models
@@ -430,18 +431,20 @@ class EbriskCalculator(base.RiskCalculator):
         :param num_rlzs: the total number of realizations
         :returns: the total number of events
         """
+        self.T = sum(ires.num_tasks for ires in allres)
         self.L = len(self.riskmodel.lti)
         self.R = num_rlzs
-        self.T = len(self.assetcol.taxonomies)
         self.A = len(self.assetcol)
         self.I = I = self.oqparam.insured_losses + 1
+        num_tax = len(self.assetcol.taxonomies)
         self.datastore.create_dset('losses_by_taxon-rlzs', F32,
-                                   (self.T, self.R, self.L * I))
+                                   (num_tax, self.R, self.L * I))
 
         if self.oqparam.loss_ratios:  # save all_loss_ratios
-            self.alr_nbytes = self.A * self.R * self.L * self.I * 8
+            self.alr_nbytes = 0
             self.datastore.create_dset(
-                'all_loss_ratios', floats32, (self.A, self.R, self.L * I),
+                'all_loss_ratios', floats32,
+                (self.A, self.R, self.L * I, self.T),
                 fillvalue=None)
 
         avg_losses = self.oqparam.avg_losses
@@ -451,11 +454,13 @@ class EbriskCalculator(base.RiskCalculator):
 
         num_events = collections.Counter()
         self.gmdata = {}
+        taskno = 0
         for res in allres:
             start, stop = res.rlz_slice.start, res.rlz_slice.stop
             for dic in res:
                 self.gmdata += dic.pop('gmdata')
-                self.save_losses(dic, start)
+                self.save_losses(dic, taskno, start)
+                taskno += 1
             logging.debug(
                 'Saving results for source model #%d, realizations %d:%d',
                 res.sm_id + 1, start, stop)
@@ -469,7 +474,7 @@ class EbriskCalculator(base.RiskCalculator):
         event_based.save_gmdata(self, num_rlzs)
         return num_events
 
-    def save_losses(self, dic, offset=0):
+    def save_losses(self, dic, taskno, offset=0):
         """
         Save the event loss tables incrementally.
 
@@ -495,9 +500,7 @@ class EbriskCalculator(base.RiskCalculator):
                     for (aid, li), ratios in numpy.ndenumerate(asslosses[r]):
                         if isinstance(ratios, int):  # 0 means no data
                             continue
-                        data = dset[aid, r + offset, li]
-                        newdata = numpy.concatenate([data, ratios])
-                        dset[aid, r + offset, li] = newdata
+                        dset[aid, r + offset, li, taskno] = ratios
                         self.alr_nbytes += ratios.nbytes
 
         # saving losses by taxonomy is ultra-fast, so it is not monitored
@@ -543,4 +546,9 @@ class EbriskCalculator(base.RiskCalculator):
                 dset.attrs['nonzero_fraction'] = len(dset) / E
 
         if 'all_loss_ratios' in self.datastore:
-            self.datastore.set_attrs('all_loss_ratios', nbytes=self.alr_nbytes)
+            size1 = self.A * self.R * self.L * self.I * self.T * 4
+            overhead = 2 * size1  # 8 bytes of overhead for a vlen field
+            eff_vlen = self.alr_nbytes / size1  # effective vlen
+            self.datastore.set_attrs('all_loss_ratios',
+                                     nbytes=overhead + self.alr_nbytes,
+                                     vlen=eff_vlen)
