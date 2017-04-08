@@ -83,26 +83,6 @@ def build_agg_curve(cb_inputs, monitor):
     return result
 
 
-def build_rcurves(ext5path, rlzname, cbs, assets, monitor):
-    """
-    :param ext5path: path of the .hdf5 file containing the loss ratios
-    :param rlzname: string of the form `rlz-\d\d\d\d`
-    :param cbs: list of `L` CurveBuilders instances
-    :param assets: list of Asset instances
-    :param monitor: Monitor instance
-    """
-    with hdf5.File(ext5path, 'r') as f:
-        data = f['all_loss_ratios/' + rlzname].value
-    result = {'rlzno': int(rlzname[4:])}  # strip rlz-
-    losses_by_aid = group_array(data, 'aid')
-    for cb in cbs:
-        aids, curves = cb(assets, losses_by_aid)
-        if len(aids):
-            result[cb.loss_type] = aids, curves
-    return result
-build_rcurves.shared_dir_on = config.SHARED_DIR_ON
-
-
 def _aggregate(outputs, compositemodel, taxid, agg, ass, idx, result,
                param):
     # update the result dictionary and the agg array with each output
@@ -221,36 +201,7 @@ class EbrPostCalculator(base.RiskCalculator):
         self.datastore['rcurves-rlzs'][:, rlzno, :] = rcurves
 
     def execute(self):
-        R = len(self.rlzs_assoc.realizations)
         self.vals = self.assetcol.values()
-
-        # build rcurves-rlzs
-        if self.oqparam.loss_ratios:
-            A = len(self.assetcol)
-            I = self.oqparam.insured_losses + 1
-            assets = list(self.assetcol)
-            mon = self.monitor('build_rcurves')
-            ltypes = self.riskmodel.loss_types
-            cbs = self.riskmodel.curve_builders
-            self.multi_lr_dt = numpy.dtype([(ltype, (F32, len(cb.ratios)))
-                                            for ltype, cb in zip(ltypes, cbs)])
-            rcurves = self.datastore.create_dset(
-                'rcurves-rlzs', self.multi_lr_dt, (A, R, I), fillvalue=None)
-            with self.datastore.ext5() as ext5:
-                allargs = [(self.datastore.ext5path, rlzname, cbs, assets, mon)
-                           for rlzname in ext5['all_loss_ratios']]
-            parallel.Starmap(build_rcurves, allargs).reduce(self.save_rcurves)
-
-        # build rcurves-stats (sequentially)
-        # this is a fundamental output, being used to compute loss_maps-stats
-        if R > 1:
-            weights = self.datastore['realizations']['weight']
-            quantiles = self.oqparam.quantile_loss_curves
-            if self.oqparam.loss_ratios:
-                with self.monitor('computing rcurves-stats'):
-                    self.datastore['rcurves-stats'] = compute_stats2(
-                        rcurves.value, quantiles, weights)
-
         # build an aggregate loss curve per realization
         if 'agg_loss_table' in self.datastore:
             with self.monitor('building agg_curve'):
