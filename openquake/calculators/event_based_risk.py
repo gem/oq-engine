@@ -431,7 +431,6 @@ class EbriskCalculator(base.RiskCalculator):
         :param num_rlzs: the total number of realizations
         :returns: the total number of events
         """
-        self.T = sum(ires.num_tasks for ires in allres)
         self.L = len(self.riskmodel.lti)
         self.R = num_rlzs
         self.A = len(self.assetcol)
@@ -441,6 +440,7 @@ class EbriskCalculator(base.RiskCalculator):
                                    (num_tax, self.R, self.L * I))
 
         if self.oqparam.loss_ratios:  # save all_loss_ratios
+            self.T = sum(ires.num_tasks for ires in allres)
             self.alr_nbytes = 0
             self.datastore.create_dset(
                 'all_loss_ratios', floats32,
