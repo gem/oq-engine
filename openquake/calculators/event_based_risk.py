@@ -439,7 +439,7 @@ class EbriskCalculator(base.RiskCalculator):
                                    (self.T, self.R, self.L * I))
 
         if self.oqparam.loss_ratios:  # save all_loss_ratios
-            self.alt_nbytes = 0
+            self.alr_nbytes = self.A * self.R * self.L * self.I * 8
             self.datastore.create_dset(
                 'all_loss_ratios', floats32, (self.A, self.R, self.L * I),
                 fillvalue=None)
@@ -498,7 +498,7 @@ class EbriskCalculator(base.RiskCalculator):
                         data = dset[aid, r + offset, li]
                         newdata = numpy.concatenate([data, ratios])
                         dset[aid, r + offset, li] = newdata
-                        self.alt_nbytes += newdata.nbytes
+                        self.alr_nbytes += ratios.nbytes
 
         # saving losses by taxonomy is ultra-fast, so it is not monitored
         dset = self.datastore['losses_by_taxon-rlzs']
@@ -541,3 +541,6 @@ class EbriskCalculator(base.RiskCalculator):
             agglt = self.datastore['agg_loss_table']
             for rlz, dset in agglt.items():
                 dset.attrs['nonzero_fraction'] = len(dset) / E
+
+        if 'all_loss_ratios' in self.datastore:
+            self.datastore.set_attrs('all_loss_ratios', nbytes=self.alr_nbytes)
