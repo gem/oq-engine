@@ -61,23 +61,9 @@ class Output(object):
     def __getitem__(self, l):
         return self.values[l]
 
+    @property
     def aids(self):
         return numpy.array([a.ordinal for a in self.assets])
-
-    def get_loss_ratios(self):
-        # called only by event based, returns a dict (aid, li) -> ratios
-        L = len(self.loss_types)
-        dic = collections.defaultdict(list)
-        for l, out in enumerate(self):
-            if out is None:
-                continue
-            ratios_by_asset, eids = out
-            for asset, ratios in zip(self.assets, ratios_by_asset):
-                aid = asset.ordinal
-                for eid, ratio in zip(eids, ratios):
-                    for i, rat in enumerate(ratio):
-                        dic[aid, l + L * i].append(rat)
-        return dic
 
 
 def get_refs(assets, hdf5path):
