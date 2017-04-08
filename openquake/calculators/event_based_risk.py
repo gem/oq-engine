@@ -125,8 +125,9 @@ def _aggregate(outputs, compositemodel, taxid, agg, idx, result, param):
                 if param['loss_ratios']:
                     for i in range(I):
                         li = l + L * i
-                        for loss in losses:
-                            ass.append((aid, r, li, loss[i]))
+                        for loss in losses[:, i]:
+                            if loss > 0:
+                                ass.append((aid, r, li, loss))
 
     data = sorted(ass)  # sort by aid
     lrs_idx = result['lrs_idx']  # shape (A, 2)
