@@ -37,7 +37,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 U64 = numpy.uint64
-floats32 = h5py.special_dtype(vlen=F32)
 getweight = operator.attrgetter('weight')
 
 
@@ -85,22 +84,20 @@ def build_agg_curve(cb_inputs, monitor):
     return result
 
 
-def build_rcurves(ext5path, rlzname, cbs, assets, monitor):
+def build_rcurves(aids, ext5path, cb, monitor):
     """
     :param ext5path: path of the .hdf5 file containing the loss ratios
-    :param rlzname: string of the form `rlz-\d\d\d\d`
-    :param cbs: list of `L` CurveBuilders instances
     :param assets: list of Asset instances
+    :param cb: a MultiCurveBuilders instance
     :param monitor: Monitor instance
+    :returns: a dictionary aid, r -> PoEs
     """
+    result = {}  # aid, r -> poes
     with hdf5.File(ext5path, 'r') as f:
-        data = f['all_loss_ratios/' + rlzname].value
-    result = {'rlzno': int(rlzname[4:])}  # strip rlz-
-    losses_by_aid = group_array(data, 'aid')
-    for cb in cbs:
-        aids, curves = cb(assets, losses_by_aid)
-        if len(aids):
-            result[cb.loss_type] = aids, curves
+        dset = f['all_loss_ratios']
+        for aid in aids:
+            for r, ratios in enumerate(dset[aid]):
+                result[aid, r] = cb.get_poes(ratios)
     return result
 build_rcurves.shared_dir_on = config.SHARED_DIR_ON
 
@@ -110,6 +107,7 @@ def _aggregate(outputs, compositemodel, taxid, agg, ass, idx, result,
     # update the result dictionary and the agg array with each output
     L = len(compositemodel.lti)
     I = param['insured_losses'] + 1
+    LI = L * I
     losses_by_taxon = result['losses_by_taxon']
     for outs in outputs:
         r = outs.r
@@ -120,8 +118,8 @@ def _aggregate(outputs, compositemodel, taxid, agg, ass, idx, result,
             loss_ratios, eids = out
             loss_type = compositemodel.loss_types[l]
             indices = numpy.array([idx[eid] for eid in eids])
-            for i, asset in enumerate(outs.assets):
-                ratios = loss_ratios[i]
+            for aid, asset in enumerate(outs.assets):
+                ratios = loss_ratios[aid]
                 aid = asset.ordinal
                 losses = ratios * asset.value(loss_type)  # shape (E, I)
 
@@ -133,10 +131,9 @@ def _aggregate(outputs, compositemodel, taxid, agg, ass, idx, result,
 
                 # asset losses
                 if param['loss_ratios']:
-                    for i in range(I):
-                        for ratio in ratios[:, i]:
-                            if ratio > 0:
-                                ass[aid, r, l + L * i].append(ratio)
+                    if aid == 3 and r == 0:
+                        print(l, ratios)
+                    ass[aid, r].append(ratios)
 
                 # agglosses
                 aggr[indices, l] += losses
@@ -145,10 +142,14 @@ def _aggregate(outputs, compositemodel, taxid, agg, ass, idx, result,
                 t = taxid[asset.taxonomy]
                 for i in range(I):
                     losses_by_taxon[t, r, l + L * i] += losses[:, i].sum()
-
-    # convert to arrays if non-empty
-    for a, r, li in ass:
-        ass[a, r, li] = numpy.array(ass[a, r, li], F32)
+    for a, r in ass:
+        arr = numpy.concatenate(ass[a, r])  # shape (L * E, I)
+        try:
+            arr2 = arr.reshape(len(arr) / LI, LI)
+        except:
+            import pdb; pdb.set_trace()
+        ass[a, r] = numpy.fromiter((ratio for ratio in arr2
+                                    if ratio.sum() > 0), param['loss_dt'])
 
 
 def event_based_risk(riskinput, riskmodel, param, monitor):
@@ -176,7 +177,7 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
             for gsim, rlzs in riskinput.hazard_getter.rlzs_by_gsim.items())
     idx = dict(zip(eids, range(E)))
     agg = AccumDict(accum=numpy.zeros((E, L, I), F32))  # r -> array
-    asslosses = AccumDict(accum=[])  # aid, r, li -> losses
+    asslosses = AccumDict(accum=[])  # aid, r -> list of ratios
     result = dict(agglosses=AccumDict(), asslosses=asslosses,
                   losses_by_taxon=numpy.zeros((T, R, L * I), F32),
                   aids=None)
@@ -208,14 +209,8 @@ class EbrPostCalculator(base.RiskCalculator):
                 for rlzstr in loss_table]
 
     def save_rcurves(self, acc, res):
-        A = len(self.assetcol)
-        I = self.oqparam.insured_losses + 1
-        rcurves = numpy.zeros((A, I), self.multi_lr_dt)
-        rlzno = res.pop('rlzno')
-        for lt in res:
-            aids, curves = res[lt]
-            rcurves[lt][aids] = curves
-        self.datastore['rcurves-rlzs'][:, rlzno, :] = rcurves
+        for aid in res:
+            self.datastore['rcurves-rlzs'][aid] = res[aid]
 
     def execute(self):
         R = len(self.rlzs_assoc.realizations)
@@ -225,17 +220,15 @@ class EbrPostCalculator(base.RiskCalculator):
         if self.oqparam.loss_ratios:
             A = len(self.assetcol)
             I = self.oqparam.insured_losses + 1
-            assets = list(self.assetcol)
             mon = self.monitor('build_rcurves')
-            ltypes = self.riskmodel.loss_types
-            cbs = self.riskmodel.curve_builder
-            self.multi_lr_dt = numpy.dtype([(ltype, (F32, len(cb.ratios)))
-                                            for ltype, cb in zip(ltypes, cbs)])
+            cb = self.riskmodel.curve_builder
+            self.multi_lr_dt = cb.dt
             rcurves = self.datastore.create_dset(
                 'rcurves-rlzs', self.multi_lr_dt, (A, R, I), fillvalue=None)
-            allargs = [(self.datastore.hdf5path, rlzname, cbs, assets, mon)
-                       for rlzname in self.datastore['all_loss_ratios']]
-            parallel.Starmap(build_rcurves, allargs).reduce(self.save_rcurves)
+            hdf5path = self.datastore.ext5path
+            parallel.Starmap.apply(
+                build_rcurves, (numpy.arange(A), hdf5path, cb, mon)
+            ).reduce(self.save_rcurves)
 
         # build rcurves-stats (sequentially)
         # this is a fundamental output, being used to compute loss_maps-stats
@@ -438,7 +431,7 @@ class EbriskCalculator(base.RiskCalculator):
             param = dict(
                 assetcol=self.assetcol,
                 ses_ratio=oq.ses_ratio,
-                ela_dt=ela_dt, elt_dt=elt_dt,
+                loss_dt=oq.loss_dt(), elt_dt=elt_dt,
                 loss_ratios=oq.loss_ratios,
                 avg_losses=oq.avg_losses,
                 insured_losses=oq.insured_losses,
@@ -498,15 +491,17 @@ class EbriskCalculator(base.RiskCalculator):
         self.T = len(self.assetcol.taxonomies)
         self.A = len(self.assetcol)
         self.I = I = self.oqparam.insured_losses + 1
-
+        self.loss_sdt = h5py.special_dtype(vlen=self.oqparam.loss_dt())
         self.datastore.create_dset('losses_by_taxon-rlzs', F32,
                                    (self.T, self.R, self.L * I))
 
         if self.oqparam.loss_ratios:  # save all_loss_ratios
             self.alt_nbytes = 0
-            self.loss_ratios_dset = self.datastore.create_dset(
-                'all_loss_ratios', floats32, (self.A, self.R, self.L * I),
-                fillvalue=None)
+            with self.datastore.ext5('w') as ext5:
+                hdf5.create(
+                    ext5, 'all_loss_ratios', self.loss_sdt, (self.A, self.R),
+                    fillvalue=None)
+
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
             self.dset = self.datastore.create_dset(
@@ -546,15 +541,20 @@ class EbriskCalculator(base.RiskCalculator):
         asslosses = dic.pop('asslosses')
         losses_by_taxon = dic.pop('losses_by_taxon')
         avglosses = dic.pop('avglosses')
-        with self.monitor('saving event loss tables', autoflush=True):
+        with self.monitor('saving event loss table', autoflush=True):
             for r in agglosses:
                 key = 'agg_loss_table/rlz-%03d' % (r + offset)
                 self.datastore.extend(key, agglosses[r])
-            for aid, r, li in asslosses:
-                data = self.loss_ratios_dset[aid, r + offset, li]
-                newdata = numpy.concatenate([data, asslosses[aid, r, li]])
-                self.loss_ratios_dset[aid, r + offset, li] = newdata
-                self.alt_nbytes += newdata.nbytes
+
+        with self.monitor('saving loss ratios', autoflush=True):
+            with self.datastore.ext5('r+') as ext5:
+                dset = ext5['all_loss_ratios']
+                for aid, r in asslosses:
+                    ratios = asslosses[aid, r]  # E records of loss_dt
+                    data = dset[aid, r + offset]
+                    newdata = numpy.concatenate([data, ratios])
+                    dset[aid, r + offset] = newdata
+                    self.alt_nbytes += newdata.nbytes
 
         # saving losses by taxonomy is ultra-fast, so it is not monitored
         dset = self.datastore['losses_by_taxon-rlzs']

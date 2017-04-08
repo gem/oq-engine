@@ -911,7 +911,7 @@ class CurveBuilder(object):
         for asset in assets:
             aid = asset.ordinal
             try:
-                loss_ratios = ratios_by_aid[aid]['loss']
+                loss_ratios = ratios_by_aid[aid]
             except KeyError:   # no loss ratios
                 continue
             # loss_ratios has shape (E, L, I)
@@ -961,12 +961,29 @@ class MultiCurveBuilder(object):
                        for cb in cbs if cb.user_provided}
         self.loss_curve_dt, _ = build_loss_dtypes(
             loss_ratios, [], insured_losses)
+        dtlist = [(cb.loss_type, (F32, len(cb.ratios)))
+                  for cb in cbs]
+        if insured_losses:
+            for cb in cbs:
+                dtlist.append((cb.loss_type + '_ins', (F32, len(cb.ratios))))
+        self.dt = numpy.dtype(dtlist)
 
     def __iter__(self):
         return iter(self.cbs)
 
     def __len__(self):
         return len(self.cbs)
+
+    def get_poes(self, loss_ratios):
+        poes = numpy.zeros(1, self.dt)
+        for cb in self.cbs:
+            lt = cb.loss_type
+            for i in range(self.I):
+                lti = lt + '_ins' * i
+                counts = numpy.array([(loss_ratios[lti] >= ratio).sum(axis=0)
+                                      for ratio in cb.ratios])
+                poes[lti] = build_poes(counts, 1. / cb.ses_ratio)
+        return poes
 
     def build(self, asset, loss_ratios):
         """"
