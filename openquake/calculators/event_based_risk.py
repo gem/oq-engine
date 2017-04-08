@@ -18,6 +18,7 @@
 from __future__ import division
 import logging
 import operator
+import itertools
 import collections
 import numpy
 import h5py
@@ -32,12 +33,15 @@ from openquake.baselib import parallel
 from openquake.risklib import riskinput, scientific
 from openquake.baselib.parallel import Starmap
 
+U8 = numpy.uint8
+U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 U64 = numpy.uint64
 floats32 = h5py.special_dtype(vlen=F32)
 getweight = operator.attrgetter('weight')
+lrs_dt = numpy.dtype([('rlzi', U16), ('li', U8), ('ratio', F32)])
 
 
 def build_el_dtypes(loss_types, insured_losses):
@@ -84,17 +88,14 @@ def build_agg_curve(cb_inputs, monitor):
     return result
 
 
-def _aggregate(outputs, compositemodel, taxid, agg, ass, idx, result,
-               param):
+def _aggregate(outputs, compositemodel, taxid, agg, idx, result, param):
     # update the result dictionary and the agg array with each output
     L = len(compositemodel.lti)
     I = param['insured_losses'] + 1
     losses_by_taxon = result['losses_by_taxon']
+    ass = result['asslosses']
     for outs in outputs:
         r = outs.r
-        if param['loss_ratios']:
-            for (aid, li), losses in outs.get_loss_ratios().items():
-                ass[r][aid, li] = numpy.array(losses, F32)
         aggr = agg[r]  # array of zeros of shape (E, L, I)
         for l, out in enumerate(outs):
             if out is None:  # for GMFs below the minimum_intensity
@@ -120,6 +121,22 @@ def _aggregate(outputs, compositemodel, taxid, agg, ass, idx, result,
                 t = taxid[asset.taxonomy]
                 for i in range(I):
                     losses_by_taxon[t, r, l + L * i] += losses[:, i].sum()
+
+                if param['loss_ratios']:
+                    for i in range(I):
+                        li = l + L * i
+                        for loss in losses:
+                            ass.append((aid, r, li, loss[i]))
+
+    data = sorted(ass)  # sort by aid
+    lrs_idx = result['lrs_idx']  # shape (A, 2)
+    n = 0
+    for aid, rows in itertools.groupby(data, operator.itemgetter(0)):
+        nrows = sum(1 for row in rows)
+        n1 = n + nrows
+        lrs_idx[aid] = [n, n1]
+        n = n1
+    result['asslosses'] = numpy.fromiter((row[1:] for row in data), lrs_dt)
 
 
 def event_based_risk(riskinput, riskmodel, param, monitor):
@@ -147,8 +164,8 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
             for gsim, rlzs in riskinput.hazard_getter.rlzs_by_gsim.items())
     idx = dict(zip(eids, range(E)))
     agg = AccumDict(accum=numpy.zeros((E, L, I), F32))  # r -> array
-    asslosses = AccumDict(accum=numpy.zeros((A, L * I), object))
-    result = dict(agglosses=AccumDict(), asslosses=asslosses,
+    result = dict(agglosses=AccumDict(), asslosses=[],
+                  lrs_idx=numpy.zeros((A, 2), U32),
                   losses_by_taxon=numpy.zeros((T, R, L * I), F32),
                   aids=None)
     if param['avg_losses']:
@@ -156,7 +173,7 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     else:
         result['avglosses'] = {}
     outputs = riskmodel.gen_outputs(riskinput, monitor, assetcol)
-    _aggregate(outputs, riskmodel, taxid, agg, asslosses, idx, result, param)
+    _aggregate(outputs, riskmodel, taxid, agg, idx, result, param)
     for r in sorted(agg):
         records = [(eids[i], loss) for i, loss in enumerate(agg[r])
                    if loss.sum() > 0]
@@ -443,9 +460,7 @@ class EbriskCalculator(base.RiskCalculator):
             self.T = sum(ires.num_tasks for ires in allres)
             self.alr_nbytes = 0
             self.datastore.create_dset(
-                'all_loss_ratios', floats32,
-                (self.A, self.R, self.L * I, self.T),
-                fillvalue=None)
+                'all_loss_ratios/indices', U32, (self.A, self.T, 2))
 
         avg_losses = self.oqparam.avg_losses
         if avg_losses:
@@ -455,6 +470,7 @@ class EbriskCalculator(base.RiskCalculator):
         num_events = collections.Counter()
         self.gmdata = {}
         taskno = 0
+        self.start = 0
         for res in allres:
             start, stop = res.rlz_slice.start, res.rlz_slice.stop
             for dic in res:
@@ -488,6 +504,7 @@ class EbriskCalculator(base.RiskCalculator):
         asslosses = dic.pop('asslosses')
         losses_by_taxon = dic.pop('losses_by_taxon')
         avglosses = dic.pop('avglosses')
+        lrs_idx = dic.pop('lrs_idx')
         with self.monitor('saving event loss table', autoflush=True):
             for r in agglosses:
                 key = 'agg_loss_table/rlz-%03d' % (r + offset)
@@ -495,13 +512,12 @@ class EbriskCalculator(base.RiskCalculator):
 
         if self.oqparam.loss_ratios:
             with self.monitor('saving loss ratios', autoflush=True):
-                dset = self.datastore['all_loss_ratios']
-                for r in asslosses:
-                    for (aid, li), ratios in numpy.ndenumerate(asslosses[r]):
-                        if isinstance(ratios, int):  # 0 means no data
-                            continue
-                        dset[aid, r + offset, li, taskno] = ratios
-                        self.alr_nbytes += ratios.nbytes
+                lrs_idx += self.start
+                self.start += len(asslosses)
+                self.datastore['all_loss_ratios/indices'][:, taskno] = lrs_idx
+                asslosses['rlzi'] += offset
+                self.datastore.extend('all_loss_ratios/data', asslosses)
+                self.alr_nbytes += asslosses.nbytes
 
         # saving losses by taxonomy is ultra-fast, so it is not monitored
         dset = self.datastore['losses_by_taxon-rlzs']
@@ -546,9 +562,10 @@ class EbriskCalculator(base.RiskCalculator):
                 dset.attrs['nonzero_fraction'] = len(dset) / E
 
         if 'all_loss_ratios' in self.datastore:
-            size1 = self.A * self.R * self.L * self.I * self.T * 4
-            overhead = 2 * size1  # 8 bytes of overhead for a vlen field
-            eff_vlen = self.alr_nbytes / size1  # effective vlen
-            self.datastore.set_attrs('all_loss_ratios',
-                                     nbytes=overhead + self.alr_nbytes,
-                                     vlen=eff_vlen)
+            pass
+            #size1 = self.A * self.R * self.L * self.I * self.T * 4
+            #overhead = 2 * size1  # 8 bytes of overhead for a vlen field
+            #eff_vlen = self.alr_nbytes / size1  # effective vlen
+            #self.datastore.set_attrs('all_loss_ratios',
+            #                         nbytes=overhead + self.alr_nbytes,
+            #                         vlen=eff_vlen)
