@@ -660,7 +660,7 @@ class Starmap(object):
             [args] = self.task_args
             self.progress('Executing "%s" in process', self.name)
             fut = mkfuture(safely_call(self.task_func, args))
-            return IterResult([fut], self.name)
+            return IterResult([fut], self.name, nargs)
 
         if self.distribute == 'qsub':
             logging.warn('EXPERIMENTAL: sending tasks to the grid engine')
