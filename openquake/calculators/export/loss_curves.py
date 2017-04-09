@@ -43,6 +43,7 @@ class BaseLossCurveExporter(with_metaclass(abc.ABCMeta)):
         self.str2asset = {
             aref: self.assetcol[aid]
             for (aid, aref) in enumerate(self.dstore['asset_refs'])}
+        self.asset_refs = self.dstore['asset_refs'].value
         self.loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
 
     @abc.abstractmethod
@@ -64,10 +65,15 @@ class BaseLossCurveExporter(with_metaclass(abc.ABCMeta)):
             raise ValueError('Wrong specification: %s' % what)
         if spec.startswith('sid-'):  # passed the site ID
             sid = int(spec[4:])
-            aids = list(get_array(self.assetcol.array, site_id=sid)['idx'])
+            aids = []
+            arefs = []
+            for aid, rec in enumerate(self.assetcol.array):
+                if rec['site_id'] == sid:
+                    aids.append(aid)
+                    arefs.append(self.asset_refs[rec['idx']])
         else:  # passed the asset name
             aids = [self.str2asset[spec].ordinal]
-        arefs = self.dstore['asset_refs'][aids]
+            arefs = [spec]
         return aids, arefs, spec, rlzi
 
     def export_csv(self, spec, asset_refs, curves_by_rlzi):
