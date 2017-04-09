@@ -563,10 +563,10 @@ class EbriskCalculator(base.RiskCalculator):
                 dset.attrs['nonzero_fraction'] = len(dset) / E
 
         if 'all_loss_ratios' in self.datastore:
-            pass
-            #size1 = self.A * self.R * self.L * self.I * self.T * 4
-            #overhead = 2 * size1  # 8 bytes of overhead for a vlen field
-            #eff_vlen = self.alr_nbytes / size1  # effective vlen
-            #self.datastore.set_attrs('all_loss_ratios',
-            #                         nbytes=overhead + self.alr_nbytes,
-            #                         vlen=eff_vlen)
+            for name in ('indices', 'data'):
+                dset = self.datastore['all_loss_ratios/' + name]
+                nbytes = dset.size * dset.dtype.itemsize
+                self.datastore.set_attrs(
+                    'all_loss_ratios/' + name,
+                    nbytes=nbytes, bytes_per_asset=nbytes / self.A)
+
