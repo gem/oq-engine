@@ -597,9 +597,10 @@ def get_loss_maps(dstore, kind):
     name = 'loss_curves-%s' % kind
     if name in dstore:  # classical_risk
         loss_curves = dstore[name]
-    loss_maps = scientific.broadcast(
-        scientific.loss_maps, loss_curves, oq.conditional_loss_poes)
-    return loss_maps
+        loss_maps = scientific.broadcast(
+            scientific.loss_maps, loss_curves, oq.conditional_loss_poes)
+        return loss_maps
+    return []
 
 
 # used by event_based_risk and classical_risk
