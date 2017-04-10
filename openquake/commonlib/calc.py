@@ -32,7 +32,7 @@ from openquake.hazardlib import geo, calc
 from openquake.hazardlib.probability_map import ProbabilityMap, get_shape
 from openquake.commonlib import readinput, util
 
-
+TWO16 = 2 ** 16
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
 # in this way even on 32 bit machines Python will not have to convert
 # the generated seed into a long integer
@@ -555,7 +555,7 @@ class RuptureSerializer(object):
         ('serial', U32), ('code', U8), ('sidx', U32),
         ('eidx1', U32), ('eidx2', U32), ('pmfx', I32), ('seed', U32),
         ('mag', F32), ('rake', F32), ('occurrence_rate', F32),
-        ('hypo', point3d), ('sx', U8), ('sy', U8), ('sz', U8),
+        ('hypo', point3d), ('sx', U16), ('sy', U8), ('sz', U8),
         ('points', h5py.special_dtype(vlen=point3d)),
         ])
 
@@ -574,13 +574,18 @@ class RuptureSerializer(object):
             rup = ebrupture.rupture
             mesh = surface_to_mesh(rup.surface)
             sx, sy, sz = mesh.shape
+            points = mesh.flatten()
+            # sanity checks
+            assert sx < TWO16, sx
+            assert sy < 256, sy
+            assert sz < 256, sz
             hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
             rate = getattr(rup, 'occurrence_rate', numpy.nan)
             tup = (ebrupture.serial, rup.code, ebrupture.sidx,
                    ebrupture.eidx1, ebrupture.eidx2,
                    getattr(ebrupture, 'pmfx', -1),
                    rup.seed, rup.mag, rup.rake, rate, hypo,
-                   sx, sy, sz, mesh.flatten())
+                   sx, sy, sz, points)
             lst.append(tup)
             nbytes += cls.rupture_dt.itemsize + mesh.nbytes
         return numpy.array(lst, cls.rupture_dt), nbytes
