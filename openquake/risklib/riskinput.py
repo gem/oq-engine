@@ -36,7 +36,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
-BYTES_PER_RECORD = 17  # ground motion record (sid, eid, gmv, imti) = 17 bytes
+TWO48 = 2 ** 48
 EVENTS = -2
 NBYTES = -1
 
@@ -458,6 +458,7 @@ class CompositeRiskModel(collections.Mapping):
             with mon_hazard:
                 hazard = hazard_getter.get_hazard(gsim)
             for r, rlz in enumerate(hazard_getter.rlzs_by_gsim[gsim]):
+                hazardr = hazard[r]
                 for taxonomy in sorted(taxonomies):
                     riskmodel = self[taxonomy]
                     with mon_risk:
@@ -465,7 +466,7 @@ class CompositeRiskModel(collections.Mapping):
                             outs = [None] * len(self.lti)
                             for lt in self.loss_types:
                                 imt = riskmodel.risk_functions[lt].imt
-                                haz = hazard[r, sid, imti[imt]]
+                                haz = hazardr[sid, imti[imt]]
                                 if len(haz):
                                     out = riskmodel(lt, assets, haz, epsgetter)
                                     outs[self.lti[lt]] = out
@@ -503,18 +504,22 @@ class PoeGetter(object):
     def get_hazard(self, gsim):
         """
         :param gsim: a GSIM instance
-        :returns: a probability matrix (num_sites, num_imts)
+        :returns: a list of dictionaries (num_sites, num_imts)
         """
-        dic = {}
+        rlzs = self.rlzs_by_gsim[gsim]
+        out = [{} for _ in rlzs]
         for gsim in self.rlzs_by_gsim:
-            for r, rlz in enumerate(self.rlzs_by_gsim[gsim]):
+            for r, rlz in enumerate(rlzs):
                 for sid, haz in enumerate(self.hazard_by_site):
                     for imti, imt in enumerate(self.imts):
-                        dic[r, sid, imti] = haz[imt][rlz]
-        return dic
+                        out[r][sid, imti] = haz[imt][rlz]
+        return out
 
 
 gmv_dt = numpy.dtype([('sid', U32), ('eid', U64), ('imti', U8), ('gmv', F32)])
+gmf_data_dt = numpy.dtype([('rlzi', U16), ('sid', U32), ('eid', U64),
+                           ('imti', U8), ('gmv', F32)])
+BYTES_PER_RECORD = gmf_data_dt.itemsize
 
 
 class GmfGetter(object):
@@ -522,8 +527,6 @@ class GmfGetter(object):
     An hazard getter with methods .gen_gmv and .get_hazard returning
     ground motion values.
     """
-    dt = numpy.dtype([('gmv', F32), ('eid', U64)])
-
     def __init__(self, grp_id, rlzs_by_gsim, ebruptures, sitecol, imts,
                  min_iml, truncation_level, correlation_model, samples):
         assert sitecol is sitecol.complete
@@ -541,6 +544,8 @@ class GmfGetter(object):
         """
         Initialize the computers. Should be called on the workers
         """
+        self.N = len(self.sitecol.complete)
+        self.I = len(self.imts)
         self.sids = self.sitecol.sids
         self.computers = []
         gsims = sorted(self.rlzs_by_gsim)
@@ -592,17 +597,67 @@ class GmfGetter(object):
                                 yield r, sid, eid, imti, gmv
                 n += e
 
-    def get_hazard(self, gsim):
+    def get_hazard(self, gsim, data=None):
         """
         :param gsim: a GSIM instance
-        :returns: a dictionary (rlzi, sid, imti) -> array(gmv, eid)
+        :param data: if given, an iterator of records of dtype gmf_data_dt
+        :returns: an array (rlzi, sid, imti) -> array(gmv, eid)
         """
-        dic = collections.defaultdict(list)
-        for rlzi, sid, eid, imti, gmv in self.gen_gmv(gsim):
-            dic[rlzi, sid, imti].append((gmv, eid))
-        for key in dic:
-            dic[key] = numpy.array(dic[key], self.dt)
-        return dic
+        if data is None:
+            data = self.gen_gmv(gsim)
+        R = len(self.rlzs_by_gsim[gsim])
+        gmfa = numpy.zeros((R, self.N, self.I), object)
+        for rlzi, sid, eid, imti, gmv in data:
+            lst = gmfa[rlzi, sid, imti]
+            if lst == 0:
+                gmfa[rlzi, sid, imti] = [(gmv, eid)]
+            else:
+                lst.append((gmv, eid))
+        for idx, lst in numpy.ndenumerate(gmfa):
+            gmfa[idx] = numpy.array(lst or [], gmv_eid_dt)
+        return gmfa
+
+gmv_eid_dt = numpy.dtype([('gmv', F32), ('eid', U64)])
+
+
+class GmfDataGetter(GmfGetter):
+    """
+    Extracts a dictionary of GMVs from the underlying .ext5 file
+    """
+    def __init__(self, gmf_data, grp_id, rlzs_by_gsim, start=0, stop=None):
+        self.gmf_data = gmf_data
+        self.grp_id = grp_id
+        self.rlzs_by_gsim = rlzs_by_gsim
+        self.N = gmf_data.attrs['num_sites']  # used by get_hazard
+        self.I = gmf_data.attrs['num_imts']  # used by get_hazard
+        self.start = start
+        self.stop = stop
+
+    def init(self):
+        pass
+
+    def gen_gmv(self, gsim):
+        dset = self.gmf_data['grp-%02d/%s' % (self.grp_id, gsim)]
+        for rec in dset[self.start:self.stop]:
+            yield rec
+
+    @classmethod
+    def gen_gmfs(cls, gmf_data, rlzs_assoc, eid=None):
+        """
+        Yield GMF records
+        """
+        if eid is not None:  # extract the grp_id from the eid
+            grp_ids = [eid // TWO48]
+        else:
+            grp_ids = rlzs_assoc.gsims_by_grp_id
+        for grp_id in grp_ids:
+            rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(grp_id)
+            getter = cls(gmf_data, grp_id, rlzs_by_gsim)
+            for gsim, rlzs in rlzs_by_gsim.items():
+                for rec in getter.gen_gmv(gsim):
+                    if eid is None or eid == rec['eid']:
+                        rec['rlzi'] = rlzs[rec['rlzi']].ordinal
+                        yield rec
 
 
 def get_rlzs(riskinput):

@@ -480,37 +480,25 @@ def export_loss_maps_csv(ekey, dstore):
     return writer.getsaved()
 
 
-@export.add(('damages-rlzs', 'csv'), ('csq_by_asset', 'csv'))
+@export.add(('damages-rlzs', 'csv'))
 def export_rlzs_by_asset_csv(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = get_assets(dstore)
     value = dstore[ekey[0]].value  # matrix N x R or T x R
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz, values in zip(rlzs, value.T):
-        fname = dstore.build_fname(ekey[0], rlz.gsim_rlz, ekey[1])
+        fname = dstore.build_fname(ekey[0], rlz, ekey[1])
         writer.save(compose_arrays(assets, values), fname)
     return writer.getsaved()
 
 
-@export.add(('csq_by_taxon', 'csv'))
-def export_csq_by_taxon_csv(ekey, dstore):
-    taxonomies = add_quotes(dstore['assetcol/taxonomies'].value)
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    value = dstore[ekey[0]].value  # matrix T x R
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    for rlz, values in zip(rlzs, value.T):
-        fname = dstore.build_fname(ekey[0], rlz.gsim_rlz, ekey[1])
-        writer.save(compose_arrays(taxonomies, values, 'taxonomy'), fname)
-    return writer.getsaved()
-
-
-@export.add(('csq_total', 'csv'))
-def export_csq_total_csv(ekey, dstore):
+@export.add(('losses_total', 'csv'))
+def export_losses_total_csv(ekey, dstore):
     rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     value = dstore[ekey[0]].value
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     for rlz, values in zip(rlzs, value):
-        fname = dstore.build_fname(ekey[0], rlz.gsim_rlz, ekey[1])
+        fname = dstore.build_fname(ekey[0], rlz, ekey[1])
         writer.save(numpy.array([values], value.dtype), fname)
     return writer.getsaved()
 
@@ -557,7 +545,7 @@ def export_dmg_by_asset_csv(ekey, dstore):
     assets = get_assets(dstore)
     for rlz in rlzs:
         dmg_by_asset = build_damage_array(data[:, rlz.ordinal], damage_dt)
-        fname = dstore.build_fname(ekey[0], rlz.gsim_rlz, ekey[1])
+        fname = dstore.build_fname(ekey[0], rlz, ekey[1])
         writer.save(compose_arrays(assets, dmg_by_asset), fname)
     return writer.getsaved()
 
@@ -571,7 +559,7 @@ def export_dmg_by_taxon_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt='%.6E')
     for rlz in rlzs:
         dmg_by_taxon = build_damage_array(data[:, rlz.ordinal], damage_dt)
-        fname = dstore.build_fname(ekey[0], rlz.gsim_rlz, ekey[1])
+        fname = dstore.build_fname(ekey[0], rlz, ekey[1])
         array = compose_arrays(taxonomies, dmg_by_taxon, 'taxonomy')
         writer.save(array, fname)
     return writer.getsaved()
@@ -585,7 +573,7 @@ def export_dmg_totalcsv(ekey, dstore):
     writer = writers.CsvWriter(fmt='%.6E')
     for rlz in rlzs:
         dmg_total = build_damage_array(data[rlz.ordinal], damage_dt)
-        fname = dstore.build_fname(ekey[0], rlz.gsim_rlz, ekey[1])
+        fname = dstore.build_fname(ekey[0], rlz, ekey[1])
         writer.save(dmg_total, fname)
     return writer.getsaved()
 
@@ -755,7 +743,6 @@ def export_agglosses(ekey, dstore):
     agglosses = dstore[ekey[0]]
     fnames = []
     for rlz in dstore['csm_info'].get_rlzs_assoc().realizations:
-        gsim, = rlz.gsim_rlz.value
         loss = agglosses[rlz.ordinal]
         losses = []
         header = ['loss_type', 'unit', 'mean', 'stddev']
@@ -764,7 +751,7 @@ def export_agglosses(ekey, dstore):
             mean = loss[l]['mean']
             stddev = loss[l]['stddev']
             losses.append((lt, unit, mean, stddev))
-        dest = dstore.build_fname('agglosses', gsim, 'csv')
+        dest = dstore.build_fname('agglosses', rlz, 'csv')
         writers.write_csv(dest, losses, header=header)
         fnames.append(dest)
     return sorted(fnames)
@@ -916,6 +903,19 @@ def export_rcurves_rlzs(ekey, dstore):
         writer.serialize(curves)
         fnames.append(writer._dest)
     return sorted(fnames)
+
+
+# used by scenario_damage
+@export.add(('losses_by_taxon', 'csv'))
+def export_csq_by_taxon_csv(ekey, dstore):
+    taxonomies = add_quotes(dstore['assetcol/taxonomies'].value)
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
+    value = dstore[ekey[0]].value  # matrix T x R
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    for rlz, values in zip(rlzs, value.T):
+        fname = dstore.build_fname(ekey[0], rlz, ekey[1])
+        writer.save(compose_arrays(taxonomies, values, 'taxonomy'), fname)
+    return writer.getsaved()
 
 
 # used by event_based_risk and scenario_risk

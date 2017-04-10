@@ -26,7 +26,7 @@ bcr_dt = numpy.dtype([('annual_loss_orig', F32), ('annual_loss_retro', F32),
                       ('bcr', F32)])
 
 
-def classical_bcr(riskinput, riskmodel, bcr_dt, monitor):
+def classical_bcr(riskinput, riskmodel, param, monitor):
     """
     Compute and return the average losses for each asset.
 
@@ -34,8 +34,8 @@ def classical_bcr(riskinput, riskmodel, bcr_dt, monitor):
         a :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
-    :param bcr_dt:
-        data type with fields annual_loss_orig, annual_loss_retro, bcr
+    :param param:
+        dictionary of extra parameters
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
@@ -57,10 +57,6 @@ class ClassicalBCRCalculator(classical_risk.ClassicalRiskCalculator):
     Classical BCR Risk calculator
     """
     core_task = classical_bcr
-
-    def pre_execute(self):
-        super(ClassicalBCRCalculator, self).pre_execute()
-        self.extra_args = (bcr_dt,)
 
     def post_execute(self, result):
         bcr_data = numpy.zeros((self.N, self.R), self.oqparam.loss_dt(bcr_dt))
