@@ -36,16 +36,14 @@ class LossCurveExporter(object):
     def parse(self, what):
         """
         :param what:
-            can be 'asset1/rlz-1', 'sid-1/rlz-2', ...
+            can be 'ref-asset1/rlz-1', 'sid-1/rlz-2', ...
         """
-        splits = what.split('/')
-        spec = splits[0]
-        if len(splits) == 1:
-            rlzi = None
-        elif len(splits) == 2:
-            rlzi = int(splits[1][4:])
-        else:
-            raise ValueError('Wrong specification: %s' % what)
+        spec, key = what.split('/')
+        if not spec.startswith(('ref-', 'sid-')):
+            raise ValueError('Wrong specification in %s' % what)
+        if not (key in ('', 'stats', 'mean') or key.startswith(('rlz-')) or
+                key.startswith('quantile-')):
+            raise ValueError('Wrong export key in %s' % what)
         if spec.startswith('sid-'):  # passed the site ID
             sid = int(spec[4:])
             aids = []
@@ -55,18 +53,18 @@ class LossCurveExporter(object):
                     aids.append(aid)
                     arefs.append(self.asset_refs[rec['idx']])
         else:  # passed the asset name
-            aids = [self.str2asset[spec].ordinal]
-            arefs = [spec]
-        return aids, arefs, spec, rlzi
+            arefs = [spec[4:]]
+            aids = [self.str2asset[arefs[0]].ordinal]
+        return aids, arefs, spec, key
 
-    def export_csv(self, spec, asset_refs, curves_by_rlzi):
+    def export_csv(self, spec, asset_refs, curves_dict):
         """
         :param asset_ref: name of the asset
-        :param curves_by_rlzi: a dictionary rlzi -> loss curve record
+        :param curves_dict: a dictionary tag -> loss curves
         """
         writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-        for rlzi in sorted(curves_by_rlzi):
-            recs = curves_by_rlzi[rlzi]
+        for key in sorted(curves_dict):
+            recs = curves_dict[key]
             data = [['asset', 'loss_type', 'loss', 'poe']]
             for loss_type in self.loss_types:
                 array = recs[loss_type]
@@ -75,7 +73,7 @@ class LossCurveExporter(object):
                     for loss, poe in zip(losses, poes):
                         data.append((aref, loss_type, loss, poe))
             dest = self.dstore.build_fname(
-                'loss_curves', '%s-rlz-%03d' % (spec, rlzi), 'csv')
+                'loss_curves', '%s-%s' % (spec, key), 'csv')
             writer.save(data, dest)
         return writer.getsaved()
 
@@ -85,23 +83,49 @@ class LossCurveExporter(object):
         :param what: string describing what to export
         :returns: list of exported file names
         """
-        aids, arefs, spec, rlzi = self.parse(what)
-        curves = self.export_curves_by_rlzi(aids, rlzi)
+        aids, arefs, spec, key = self.parse(what)
+        if not key or key.startswith('rlz-'):
+            curves = self.export_curves_rlzs(aids, key)
+        else:  # statistical exports
+            curves = self.export_curves_stats(aids, key)
         return getattr(self, 'export_' + export_type)(spec, arefs, curves)
 
-    def export_curves_by_rlzi(self, aids, rlzi=None):
+    def export_curves_rlzs(self, aids, key):
         """
-        :returns: a dictionary rlzi -> record of dtype loss_curve_dt
+        :returns: a dictionary key -> record of dtype loss_curve_dt
         """
         if 'loss_curves-rlzs' in self.dstore:  # classical_risk
             data = self.dstore['loss_curves-rlzs'][aids]  # shape (A, R)
-            return {rlzi: data[:, rlzi]} if rlzi else dict(enumerate(data.T))
+            if key:
+                rlzi = int(key[4:])
+                return {key: data[:, rlzi]}
+            return {'rlz-%03d' % rlzi: data[:, rlzi] for rlzi in range(self.R)}
+
         # otherwise event_based
         builder = self.dstore['riskmodel'].curve_builder
         assets = [self.assetcol[aid] for aid in aids]
         ratios = riskinput.LossRatiosGetter(
             self.dstore['all_loss_ratios']).get(aids, rlzi)
-        if rlzi is None:  # return a dictionary will all realizations
-            return {r: builder.build_curves(assets, ratios, r)
-                    for r in range(self.R)}
-        return {rlzi: builder.build_curves(assets, ratios, rlzi)}
+        if key:
+            rlzi = int(key[4:])
+            return {rlzi: builder.build_curves(assets, ratios, rlzi)}
+        # return a dictionary will all realizations
+        return {'rlz-%03d' % rlzi: builder.build_curves(assets, ratios, rlzi)
+                for rlzi in range(self.R)}
+
+    def export_curves_stats(self, aids, key):
+        """
+        :returns: a dictionary rlzi -> record of dtype loss_curve_dt
+        """
+        oq = self.dstore['oqparam']
+        stats = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
+        stat2idx = {stat: s for s, stat in enumerate(stats)}
+        if 'loss_curves-stats' in self.dstore:  # classical_risk
+            dset = self.dstore['loss_curves-stats']
+            data = dset[aids]  # shape (A, S)
+            if key == 'stats':
+                return {stat: data[:, s] for s, stat in enumerate(stats)}
+            else:  # a specific statistics
+                return {key: data[stat2idx[key]]}
+        # otherwise event_based
+        raise NotImplementedError
