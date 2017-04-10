@@ -46,10 +46,17 @@ FIELDS = ('site_id', 'lon', 'lat', 'idx', 'taxonomy_id', 'area', 'number',
 by_taxonomy = operator.attrgetter('taxonomy')
 
 
-class MultiLoss(object):
-    def __init__(self, loss_types, values):
+class Output(object):
+    """
+    A container for the losses of the assets on the given site ID for
+    the given realization ordinal.
+    """
+    def __init__(self, loss_types, assets, values, sid, rlzi):
         self.loss_types = loss_types
+        self.assets = assets
         self.values = values
+        self.sid = sid
+        self.r = rlzi
 
     def __getitem__(self, l):
         return self.values[l]
@@ -469,10 +476,9 @@ class CompositeRiskModel(collections.Mapping):
                                 if len(haz):
                                     out = riskmodel(lt, assets, haz, epsgetter)
                                     outs[self.lti[lt]] = out
-                            row = MultiLoss(self.loss_types, outs)
-                            row.r = rlz.ordinal
-                            row.assets = assets
-                            yield row
+                            yield Output(self.loss_types, assets, outs,
+                                         sid, rlz.ordinal)
+
         if hasattr(hazard_getter, 'gmdata'):  # for event based risk
             riskinput.gmdata = hazard_getter.gmdata
 
