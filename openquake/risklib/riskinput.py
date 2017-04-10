@@ -803,3 +803,24 @@ def rsi2str(rlzi, sid, imt):
     'rlz-XXXX/sid-YYYY/ZZZ'
     """
     return 'rlz-%04d/sid-%04d/%s' % (rlzi, sid, imt)
+
+
+class LossRatiosGetter(object):
+    """
+    Given a small set of asset ordinals returns a dictionary of the form
+
+    aid, rlzi, li -> loss ratios
+    """
+    def __init__(self, all_loss_ratios_dset):
+        self.all_loss_ratios_dset = all_loss_ratios_dset
+
+    def get(self, aids, rlzi=None):
+        data = self.all_loss_ratios_dset['data']
+        dic = collections.defaultdict(list)  # (aid, rlzi, li) -> ratios
+        for aid in aids:
+            indices = self.all_loss_ratios['indices'][aid]  # (T, 2)
+            array = numpy.concatenate([data[idx[0]:idx[1]] for idx in indices])
+            for rec in array:
+                if rlzi is None or rlzi == rec['rlzi']:
+                    dic[aid, rec['rlzi'], rec['li']].append(rec['ratio'])
+        return dic
