@@ -15,25 +15,11 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
-"""This module provides the classes
-:class:`ClassicalLossCurveExporter` and
-:class:`EventBasedLossCurveExporter` to export loss curves from the
-datastore. Each instance has a method `.export(export_type, what)`
-rlzi=None)` to export the data of a given asset in the given export
-type and a method `.export_sid(sid, export_type, rlzi=None)` to export
-the data of all assets on the given site ID. If the realization index
-`rlzi` is given only the data for the chose realization are exported,
-otherwise the data for all realizations are exported.
-
-"""
-import abc
-from openquake.baselib.python3compat import with_metaclass
-from openquake.baselib.general import get_array
 from openquake.commonlib import writers
+from openquake.risklib import riskinput
 
 
-class BaseLossCurveExporter(with_metaclass(abc.ABCMeta)):
+class LossCurveExporter(object):
     """
     Abstract Base Class with common methods for its subclasses
     """
@@ -45,10 +31,7 @@ class BaseLossCurveExporter(with_metaclass(abc.ABCMeta)):
             for (aid, aref) in enumerate(self.dstore['asset_refs'])}
         self.asset_refs = self.dstore['asset_refs'].value
         self.loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
-
-    @abc.abstractmethod
-    def export(self, assert_ref, export_type, rlzi=None):
-        pass
+        self.R = len(dstore['realizations'])
 
     def parse(self, what):
         """
@@ -96,16 +79,6 @@ class BaseLossCurveExporter(with_metaclass(abc.ABCMeta)):
             writer.save(data, dest)
         return writer.getsaved()
 
-
-class ClassicalLossCurveExporter(BaseLossCurveExporter):
-
-    def export_curves_by_rlzi(self, aids, rlzi=None):
-        """
-        :returns: a dictionary rlzi -> record of dtype loss_curve_dt
-        """
-        data = self.dstore['loss_curves-rlzs'][aids]  # shape (A, R)
-        return {rlzi: data[:, rlzi]} if rlzi else dict(enumerate(data.T))
-
     def export(self, export_type, what):
         """
         :param export_type: 'csv', 'json', ...
@@ -116,9 +89,19 @@ class ClassicalLossCurveExporter(BaseLossCurveExporter):
         curves = self.export_curves_by_rlzi(aids, rlzi)
         return getattr(self, 'export_' + export_type)(spec, arefs, curves)
 
-
-class EventBasedLossCurveExporter(BaseLossCurveExporter):
-    """Not implemented yet"""
-
-    def export(self, assert_ref, export_type, rlzi=None):
-        pass
+    def export_curves_by_rlzi(self, aids, rlzi=None):
+        """
+        :returns: a dictionary rlzi -> record of dtype loss_curve_dt
+        """
+        if 'loss_curves-rlzs' in self.dstore:  # classical_risk
+            data = self.dstore['loss_curves-rlzs'][aids]  # shape (A, R)
+            return {rlzi: data[:, rlzi]} if rlzi else dict(enumerate(data.T))
+        # otherwise event_based
+        builder = self.dstore['riskmodel'].curve_builder
+        assets = [self.assetcol[aid] for aid in aids]
+        ratios = riskinput.LossRatiosGetter(
+            self.dstore['all_loss_ratios']).get(aids, rlzi)
+        if rlzi is None:  # return a dictionary will all realizations
+            return {r: builder.build_curves(assets, ratios, r)
+                    for r in range(self.R)}
+        return {rlzi: builder.build_curves(assets, ratios, rlzi)}
