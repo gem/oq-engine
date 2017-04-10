@@ -63,27 +63,32 @@ class ClassicalRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'classical_risk')
     def test_case_3(self):
-        out = self.run_calc(case_3.__file__, 'job.ini', exports='csv')
-        [fname] = out['loss_curves-rlzs', 'csv']
+        self.run_calc(case_3.__file__, 'job.ini', exports='csv')
+        [fname] = export(('loss_curves/sid-0/', 'csv'),
+                         self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves-000.csv', fname)
+        [fname] = export(('loss_curves/ref-a8/', 'csv'),
+                         self.calc.datastore)
+        self.assertEqualFiles('expected/loss_curves-ref-a8-000.csv', fname)
 
     @attr('qa', 'risk', 'classical_risk')
     def test_case_4(self):
-        out = self.run_calc(case_4.__file__, 'job_haz.ini,job_risk.ini',
-                            exports='csv,xml')
+        self.run_calc(case_4.__file__, 'job_haz.ini,job_risk.ini',
+                      exports='csv,xml')
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_maps-b1,b1.csv', fnames[0])
         self.assertEqualFiles('expected/loss_maps-b1,b2.csv', fnames[1])
 
-        fnames = out['loss_curves-rlzs', 'csv']
+        fnames = export(('loss_curves/sid-0/', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves-000.csv', fnames[0])
         self.assertEqualFiles('expected/loss_curves-001.csv', fnames[1])
 
         [fname] = export(('loss_maps-stats', 'xml'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_maps-mean-structural.xml', fname)
 
-        [fname] = out['loss_curves-stats', 'xml']
-        self.assertEqualFiles('expected/loss_curves-mean-structural.xml',
+        [fname] = export(('loss_curves/sid-1/stats', 'csv'),
+                         self.calc.datastore)
+        self.assertEqualFiles('expected/loss_curves-sid-1-mean.csv',
                               fname)
 
     # test with 1 hazard site and 2 risk sites using assoc_assets_sites
