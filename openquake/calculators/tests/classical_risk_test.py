@@ -67,6 +67,9 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         [fname] = export(('loss_curves:sid-0/', 'csv'),
                          self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves-000.csv', fname)
+        [fname] = export(('loss_curves:ref-a8/', 'csv'),
+                         self.calc.datastore)
+        self.assertEqualFiles('expected/loss_curves-ref-a8-000.csv', fname)
 
     @attr('qa', 'risk', 'classical_risk')
     def test_case_4(self):

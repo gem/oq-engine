@@ -15,6 +15,7 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+from openquake.baselib.python3compat import decode
 from openquake.commonlib import writers
 
 
@@ -26,7 +27,7 @@ class LossCurveExporter(object):
         self.dstore = dstore
         self.assetcol = dstore['assetcol']
         self.str2asset = {
-            aref: self.assetcol[aid]
+            decode(aref): self.assetcol[aid]
             for (aid, aref) in enumerate(self.dstore['asset_refs'])}
         self.asset_refs = self.dstore['asset_refs'].value
         self.loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
