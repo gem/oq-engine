@@ -22,7 +22,7 @@ from openquake.baselib.general import AccumDict
 from openquake.calculators import base, classical_risk
 
 
-def classical_damage(riskinput, riskmodel, monitor):
+def classical_damage(riskinput, riskmodel, param, monitor):
     """
     Core function for a classical damage computation.
 
@@ -30,6 +30,8 @@ def classical_damage(riskinput, riskmodel, monitor):
         a :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
+    :param param:
+        dictionary of extra parameters
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     :returns:
