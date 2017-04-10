@@ -974,37 +974,30 @@ class MultiCurveBuilder(object):
     def __len__(self):
         return len(self.cbs)
 
-    def get_poes(self, loss_ratios):
-        poes = numpy.zeros(1, self.dt)
-        for cb in self.cbs:
-            lt = cb.loss_type
-            for i in range(self.I):
-                lti = lt + '_ins' * i
-                counts = numpy.array([(loss_ratios[lti] >= ratio).sum(axis=0)
-                                      for ratio in cb.ratios])
-                poes[lti] = build_poes(counts, 1. / cb.ses_ratio)
-        return poes
-
-    def build(self, asset, loss_ratios):
+    def build_curves(self, assets, loss_ratios, rlzi):
         """"
         :param assets: a list of assets
-        :param loss_ratios: an array of loss ratios of shape (E, L, I)
-        :returns: a record of dtype loss_curve_dt
+        :param loss_ratios: a dictionary (aid, rlzi, li) -> loss_ratios
+        :param rlzi: a realization index
+        :returns: A curves of dtype loss_curve_dt
         """
-        rec = numpy.zeros(1, self.loss_curve_dt)[0]
+        array = numpy.zeros(len(assets), self.loss_curve_dt)
+        L = len(self.cbs)
         for cb in self.cbs:
             lt = cb.loss_type
-            aval = asset.value(lt)
-            for i in range(self.I):
-                lti = lt + '_ins' * i
-                lrs = loss_ratios[:, cb.index, i]
-                counts = numpy.array([(lrs >= ratio).sum(axis=0)
-                                      for ratio in cb.ratios])
-                poes = build_poes(counts, 1. / cb.ses_ratio).T
-                rec['poes'][lti] = poes
-                rec['losses'][lti] = losses = aval * cb.ratios
-                rec['avg'][lti] = average_loss([losses, poes])
-        return rec
+            for a, asset in enumerate(assets):
+                aid = asset.ordinal
+                aval = asset.value(lt)
+                for i in range(self.I):
+                    lti = lt + '_ins' * i
+                    lrs = loss_ratios[aid, rlzi, cb.index + L * i]
+                    counts = numpy.array([(lrs >= ratio).sum(axis=0)
+                                          for ratio in cb.ratios])
+                    poes = build_poes(counts, 1. / cb.ses_ratio).T
+                    array[a]['poes'][lti] = poes
+                    array[a]['losses'][lti] = losses = aval * cb.ratios
+                    array[a]['avg'][lti] = average_loss([losses, poes])
+        return array
 
 
 # should I use the ses_ratio here?
