@@ -21,7 +21,7 @@ from openquake.commonlib import writers
 
 class LossCurveExporter(object):
     """
-    Exporter for the loss curves. The most importante method is
+    Exporter for the loss curves. The most important method is
     `.export(export_type, what)` where `export_type` is a string like 'csv',
     and `what` is a string called export specifier. Here are some examples
     for the export specifier:
