@@ -22,11 +22,11 @@ import collections
 import numpy
 
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import AccumDict, get_array, group_array
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
-from openquake.calculators.export import export
-from openquake.calculators.export.hazard import get_grp_id_eid, savez
+from openquake.calculators.export import export, loss_curves
+from openquake.calculators.export.hazard import savez
 from openquake.commonlib import writers, risk_writers, calc
 from openquake.commonlib.util import get_assets, compose_arrays
 from openquake.commonlib.risk_writers import (
@@ -294,20 +294,12 @@ def export_rcurves(ekey, dstore):
 
 
 # this is used by classical_risk
-@export.add(('loss_curves-rlzs', 'csv'))
+@export.add(('loss_curves', 'csv'))
 def export_loss_curves(ekey, dstore):
-    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
-    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
-    assets = get_assets(dstore)
-    curves = dstore[ekey[0]]
-    name = ekey[0].split('-')[0]
-    writer = writers.CsvWriter(fmt='%9.6E')
-    for rlz in rlzs:
-        for ltype in loss_types:
-            array = compose_arrays(assets, curves[ltype][:, rlz.ordinal])
-            path = dstore.build_fname('%s-%s' % (name, ltype), rlz, 'csv')
-            writer.save(array, path)
-    return writer.getsaved()
+    if '/' not in ekey[0]:  # full loss curves are not exportable
+        return []
+    what = ekey[0].split('/', 1)[1]
+    return loss_curves.LossCurveExporter(dstore).export('csv', what)
 
 
 @export.add(('dmg_by_asset', 'xml'))
