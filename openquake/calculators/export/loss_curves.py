@@ -26,9 +26,8 @@ class LossCurveExporter(object):
     def __init__(self, dstore):
         self.dstore = dstore
         self.assetcol = dstore['assetcol']
-        self.str2asset = {
-            decode(aref): self.assetcol[aid]
-            for (aid, aref) in enumerate(self.dstore['asset_refs'])}
+        arefs = [decode(aref) for aref in self.dstore['asset_refs']]
+        self.str2asset = {arefs[asset.idx]: asset for asset in self.assetcol}
         self.asset_refs = self.dstore['asset_refs'].value
         self.loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
         self.R = len(dstore['realizations'])
