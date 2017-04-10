@@ -66,6 +66,7 @@ install_requires = [
     'shapely >=1.3, <1.6',
     'docutils >=0.11, <0.14',
     'decorator >=3.4, <4.1',
+    'matplotlib >=1.5',
     'PyYAML',
 ]
 
@@ -77,7 +78,6 @@ if sys.version < '3':
 extras_require = {
     'rtree':  ["Rtree >=0.8.2, <0.8.4"],
     'plotting':  [
-        'matplotlib >=1.5',
         'basemap >=1.0',
         'pyproj >=1.9',
     ]

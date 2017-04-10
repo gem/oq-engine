@@ -4,7 +4,7 @@
 
 # GEM Mirror
 # We also provide pre-compiled manylinux1 wheels for
-# h5py, Shapely and psutil
+# h5py, Shapely, psutil, Rtree, PyYAML, Basemap
 
 http://ftp.openquake.org/wheelhouse/linux/py/setuptools-28.8.0-py2.py3-none-any.whl
 http://ftp.openquake.org/wheelhouse/linux/py27/pkgconfig-1.1.0-cp27-none-any.whl
@@ -30,10 +30,12 @@ http://ftp.openquake.org/wheelhouse/linux/py27/PyYAML-3.12-cp27-cp27mu-manylinux
 # of Rtree (experimental wheel, optional feature)
 http://ftp.openquake.org/wheelhouse/linux/py27/Rtree-0.8.2-cp27-cp27mu-manylinux1_x86_64.whl
 
-# Plotting stuff
+### Plotting ###
+# comment the following lines to skip installation
+# of the plotting libraries (optional feature)
 http://ftp.openquake.org/wheelhouse/linux/py27/matplotlib-1.5.3-cp27-cp27mu-manylinux1_x86_64.whl
 http://ftp.openquake.org/wheelhouse/linux/py/pyparsing-2.1.10-py2.py3-none-any.whl
-http://ftp.openquake.org/wheelhouse/linux/py/cycler-0.10.0-py2.py3-none-any.whl
 http://ftp.openquake.org/wheelhouse/linux/py/python_dateutil-2.6.0-py2.py3-none-any.whl
+http://ftp.openquake.org/wheelhouse/linux/py/cycler-0.10.0-py2.py3-none-any.whl
 http://ftp.openquake.org/wheelhouse/linux/py27/pyproj-1.9.5.1-cp27-cp27mu-manylinux1_x86_64.whl
 http://ftp.openquake.org/wheelhouse/linux/py27/basemap-1.1.0-cp27-cp27mu-manylinux1_x86_64.whl
