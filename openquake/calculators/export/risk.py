@@ -22,11 +22,11 @@ import collections
 import numpy
 
 from openquake.baselib.python3compat import decode
-from openquake.baselib.general import AccumDict, get_array, group_array
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.export import export, loss_curves
-from openquake.calculators.export.hazard import get_grp_id_eid, savez
+from openquake.calculators.export.hazard import savez
 from openquake.commonlib import writers, risk_writers, calc
 from openquake.commonlib.util import get_assets, compose_arrays
 from openquake.commonlib.risk_writers import (
@@ -294,7 +294,7 @@ def export_rcurves(ekey, dstore):
 
 
 # this is used by classical_risk
-@export.add(('loss_curves-rlzs', 'csv'))
+@export.add(('loss_curves', 'csv'))
 def export_loss_curves(ekey, dstore):
     if ':' not in ekey[0]:  # full loss curves are not exportable
         return []
