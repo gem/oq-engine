@@ -21,7 +21,22 @@ from openquake.commonlib import writers
 
 class LossCurveExporter(object):
     """
-    Abstract Base Class with common methods for its subclasses
+    Exporter for the loss curves. The most importante method is
+    `.export(export_type, what)` where `export_type` is a string like 'csv',
+    and `what` is a string called export specifier. Here are some examples
+    for the export specifier:
+
+    sid-42/   # export loss curves of site #42 for all realizations
+    sid-42/rlz-003   # export all loss curves of site #42, realization #3
+    sid-42/stats   # export statistical loss curves of site #42
+    sid-42/mean   # export mean loss curves of site #42
+    sid-42/quantile-0.1   # export quantile loss curves of site #42
+
+    ref-a1/   # export loss curves of asset a1 for all realizations
+    ref-a1/rlz-003   # export loss curves of asset a1, realization 3
+    ref-a1/stats     # export statistical loss curves of asset a1
+    ref-a1/mean     # export mean loss curves of asset a1
+    ref-a1/quantile-0.1    # export quantile loss curves of asset a1
     """
     def __init__(self, dstore):
         self.dstore = dstore
