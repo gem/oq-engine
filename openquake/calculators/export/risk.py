@@ -299,8 +299,7 @@ def export_loss_curves(ekey, dstore):
     if ':' not in ekey[0]:  # full loss curves are not exportable
         return []
     what = ekey[0].split(':', 1)[1]
-    exporter = loss_curves.ClassicalLossCurveExporter(dstore)
-    return exporter.export('csv', what)
+    return loss_curves.LossCurveExporter(dstore).export('csv', what)
 
 
 @export.add(('dmg_by_asset', 'xml'))
