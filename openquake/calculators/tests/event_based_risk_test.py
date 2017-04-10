@@ -128,9 +128,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         grp00 = self.calc.datastore.get_attr('ruptures/grp-00', 'nbytes')
         grp02 = self.calc.datastore.get_attr('ruptures/grp-02', 'nbytes')
         grp03 = self.calc.datastore.get_attr('ruptures/grp-03', 'nbytes')
-        self.assertEqual(grp00, 540)
-        self.assertEqual(grp02, 540)
-        self.assertEqual(grp03, 216)
+        self.assertEqual(grp00, 545)
+        self.assertEqual(grp02, 545)
+        self.assertEqual(grp03, 218)
 
         [fname] = export(('agg_curve-stats', 'xml'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
@@ -174,11 +174,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=1E-5)
-
-        # fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
-        # for fname in fnames:
-        #     self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-        #                           delta=1E-5)
 
         fnames = export(('losses_by_taxon-stats', 'csv'), self.calc.datastore)
         for fname in fnames:
