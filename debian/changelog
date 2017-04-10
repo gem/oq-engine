@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the CSV exporter for the loss curves: now it exports all the
+    curves for a given site
   * Fixed the save_ruptures procedure when there are more than 256
     surfaces in the MultiSurface;
   * Renamed the `csq_` outputs of the scenario_damage to `losses_`

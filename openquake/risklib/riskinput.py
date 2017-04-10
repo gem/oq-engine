@@ -94,9 +94,8 @@ class AssetCollection(object):
         """
         :returns: numpy array of lists with the assets by each site
         """
-        assetcol = self.array
         assets_by_site = [[] for sid in range(self.tot_sites)]
-        for i, ass in enumerate(assetcol):
+        for i, ass in enumerate(self.array):
             assets_by_site[ass['site_id']].append(self[i])
         return numpy.array(assets_by_site)
 
