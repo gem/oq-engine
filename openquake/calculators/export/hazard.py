@@ -722,18 +722,18 @@ def get_grp_id_eid(key):
     """
     Extracts grp_id and eid from the export key.
 
-    >>> get_grp_id_eid('gmf:1:2')
+    >>> get_grp_id_eid('gmf/1/2')
     ['1', '2']
-    >>> get_grp_id_eid('gmf:3')
+    >>> get_grp_id_eid('gmf/3')
     ['0', '3']
     >>> get_grp_id_eid('gmf')
     [None, None]
     """
-    n = key.count(':')
+    n = key.count('/')
     if n == 1:  # passed the eid, grp_id assumed to be zero
-        return ['0', key.split(':')[1]]
+        return ['0', key.split('/')[1]]
     elif n == 2:  # passed both eid and grp_id
-        return key.split(':')[1:]
+        return key.split('/')[1:]
     else:  # eid and grp_id both unspecified, exporting nothing
         return [None, None]
 
@@ -761,7 +761,7 @@ def export_gmf_data_csv(ekey, dstore):
                 writer.save(data, dest)
         return writer.getsaved()
     else:  # event based
-        eid = int(ekey[0].split(':')[1]) if ':' in ekey[0] else None
+        eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
         with dstore.ext5() as ext5:
             gmfa = numpy.fromiter(
                 GmfDataGetter.gen_gmfs(ext5['gmf_data'], rlzs_assoc, eid),

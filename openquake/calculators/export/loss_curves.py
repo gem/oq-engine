@@ -15,20 +15,35 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+from openquake.baselib.python3compat import decode
 from openquake.commonlib import writers
 from openquake.risklib import riskinput
 
 
 class LossCurveExporter(object):
     """
-    Abstract Base Class with common methods for its subclasses
+    Exporter for the loss curves. The most important method is
+    `.export(export_type, what)` where `export_type` is a string like 'csv',
+    and `what` is a string called export specifier. Here are some examples
+    for the export specifier:
+
+    sid-42/   # export loss curves of site #42 for all realizations
+    sid-42/rlz-003   # export all loss curves of site #42, realization #3
+    sid-42/stats   # export statistical loss curves of site #42
+    sid-42/mean   # export mean loss curves of site #42
+    sid-42/quantile-0.1   # export quantile loss curves of site #42
+
+    ref-a1/   # export loss curves of asset a1 for all realizations
+    ref-a1/rlz-003   # export loss curves of asset a1, realization 3
+    ref-a1/stats     # export statistical loss curves of asset a1
+    ref-a1/mean     # export mean loss curves of asset a1
+    ref-a1/quantile-0.1    # export quantile loss curves of asset a1
     """
     def __init__(self, dstore):
         self.dstore = dstore
         self.assetcol = dstore['assetcol']
-        self.str2asset = {
-            aref: self.assetcol[aid]
-            for (aid, aref) in enumerate(self.dstore['asset_refs'])}
+        arefs = [decode(aref) for aref in self.dstore['asset_refs']]
+        self.str2asset = {arefs[asset.idx]: asset for asset in self.assetcol}
         self.asset_refs = self.dstore['asset_refs'].value
         self.loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
         self.R = len(dstore['realizations'])
