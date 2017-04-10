@@ -722,9 +722,9 @@ def get_grp_id_eid(key):
     """
     Extracts grp_id and eid from the export key.
 
-    >>> get_grp_id_eid('gmf:1:2')
+    >>> get_grp_id_eid('gmf/1/2')
     ['1', '2']
-    >>> get_grp_id_eid('gmf:3')
+    >>> get_grp_id_eid('gmf/3')
     ['0', '3']
     >>> get_grp_id_eid('gmf')
     [None, None]
