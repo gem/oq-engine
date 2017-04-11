@@ -32,7 +32,7 @@ Patch1: openquake.cfg.patch
 Requires(pre): shadow-utils
 
 Requires: python-oq-libs >= 1.0.0 python-oq-hazardlib >= 0.24.0
-Requires: sudo systemd python rabbitmq-server
+Requires: sudo systemd python
 
 BuildRequires: systemd python-setuptools
 
@@ -40,6 +40,20 @@ Obsoletes: python-oq-risklib
 Provides: python-oq-risklib
 
 %description
+
+OpenQuake is an open source application that allows users to
+compute seismic hazard and seismic risk of earthquakes on a global scale.
+
+Copyright (C) 2010-2017 GEM Foundation
+
+%package cluster
+Summary: OpenQuake Engine multi-node cluster support
+Group: Applications/Engineering
+Requires: %{name}%{?_isa} = %{version}-%{release} rabbitmq-server
+
+%description cluster
+
+OpenQuake Engine multi-node cluster support
 
 OpenQuake is an open source application that allows users to
 compute seismic hazard and seismic risk of earthquakes on a global scale.
@@ -128,6 +142,14 @@ rm -rf %{buildroot}
 %{_sysconfdir}/openquake/openquake.cfg
 %{_unitdir}/openquake-dbserver.service
 %{_unitdir}/openquake-webui.service
+
+%preun cluster
+%systemd_preun openquake-celery.service
+
+%postun cluster
+%systemd_postun_with_restart openquake-celery.service
+
+%files cluster
 %{_unitdir}/openquake-celery.service
 
 %changelog
