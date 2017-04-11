@@ -875,13 +875,13 @@ class DiscreteDistribution(Distribution):
 # Event Based
 #
 
-class CurveBuilder(object):
+class LossTypeCurveBuilder(object):
     """
     Build loss ratio curves. The loss ratios can be provided
     by the user or automatically generated (user_provided=False).
     The usage is something like this::
 
-      builder = CurveBuilder(loss_type, loss_ratios, ses_ratio,
+      builder = LossTypeCurveBuilder(loss_type, loss_ratios, ses_ratio,
                              user_provided=True)
       counts = builder.build_counts(loss_matrix)
     """
@@ -950,7 +950,7 @@ class CurveBuilder(object):
             self.ratios, self.user_provided)
 
 
-class MultiCurveBuilder(object):
+class CurveBuilder(object):
     """
     Build curves for all loss types at the same time
     """

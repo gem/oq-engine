@@ -367,24 +367,24 @@ class CompositeRiskModel(collections.Mapping):
                 if len(curve_resolutions) > 1:  # example in test_case_5
                     logging.info(
                         'Different num_loss_ratios:\n%s', '\n'.join(lines))
-                cb = scientific.CurveBuilder(
+                cb = scientific.LossTypeCurveBuilder(
                     loss_type, max(curve_resolutions), ratios, ses_ratio,
                     True, oqparam.conditional_loss_poes,
                     oqparam.insured_losses)
             elif loss_type in oqparam.loss_ratios:  # loss_ratios provided
-                cb = scientific.CurveBuilder(
+                cb = scientific.LossTypeCurveBuilder(
                     loss_type, oqparam.loss_curve_resolution,
                     oqparam.loss_ratios[loss_type], ses_ratio, True,
                     oqparam.conditional_loss_poes, oqparam.insured_losses)
             else:  # no loss_ratios provided
-                cb = scientific.CurveBuilder(
+                cb = scientific.LossTypeCurveBuilder(
                     loss_type, oqparam.loss_curve_resolution,
                     default_loss_ratios, ses_ratio, False,
                     oqparam.conditional_loss_poes, oqparam.insured_losses)
             cbs.append(cb)
             cb.index = l
             self.lti[loss_type] = l
-        self.curve_builder = scientific.MultiCurveBuilder(
+        self.curve_builder = scientific.CurveBuilder(
             cbs, oqparam.insured_losses, oqparam.conditional_loss_poes)
         return loss_types
 
