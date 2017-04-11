@@ -23,10 +23,8 @@ import collections
 import numpy
 import h5py
 
-from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
-from openquake.baselib.general import (
-    AccumDict, block_splitter, group_array)
+from openquake.baselib.general import AccumDict, block_splitter
 from openquake.hazardlib.stats import compute_stats, compute_stats2
 from openquake.calculators import base, event_based
 from openquake.baselib import parallel
