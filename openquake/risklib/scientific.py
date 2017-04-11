@@ -1013,8 +1013,7 @@ class MultiCurveBuilder(object):
         :param rlzs: a list of realizations
         :returns: A maps of dtype loss_maps_dt
         """
-        if not self.clp:
-            return []
+        assert self.clp, 'No conditional_loss_poes in the job.ini!'
         L = len(self.cbs)
         LI = L * self.I
         loss_maps = numpy.zeros((len(assets), len(rlzs)), self.loss_maps_dt)
