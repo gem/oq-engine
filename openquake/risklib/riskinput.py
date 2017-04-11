@@ -822,23 +822,5 @@ class LossRatiosGetter(object):
             for idx in indices:
                 for rec in data[idx[0]: idx[1]]:
                     if rlzi is None or rlzi == rec['rlzi']:
-                        dic[aid, rec['rlzi'], rec['li']].append(rec['ratio'])
-        return dic
-
-    def get_counts(self, aids, ref_ratios, rlzi=None):
-        data = self.dset['all_loss_ratios/data']
-        dic = {}  # (aid, rlzi, li) -> counts
-        for aid in aids:
-            indices = self.dset['all_loss_ratios/indices'][aid]  # (T, 2)
-            for idx in indices:
-                for rec in data[idx[0]: idx[1]]:
-                    if rlzi is None or rlzi == rec['rlzi']:
-                        ratios = ref_ratios[rec['li']]
-                        key = aid, rec['rlzi'], rec['li']
-                        counts = numpy.array([rec['ratio'] >= ratio
-                                              for ratio in ratios])
-                        if key in dic:
-                            dic[key] += counts
-                        else:
-                            dic[key] = counts
+                        dic[aid, rec['rlzi']].append(rec['ratios'])
         return dic
