@@ -203,31 +203,36 @@ class EbrPostCalculator(base.RiskCalculator):
         return [(cb, rlzstr, loss_table[rlzstr].value)
                 for rlzstr in loss_table]
 
+    def gen_args(self):
+        rlzs = self.rlzs_assoc.realizations
+        assets_by_site = self.assetcol.assets_by_site()
+        getter = riskinput.LossRatiosGetter(self.datastore)
+        mon = self.monitor('getting loss ratios', measuremem=True)
+        for assets in assets_by_site:
+            if assets:
+                aids = [asset.ordinal for asset in assets]
+                with mon:
+                    all_ratios = getter.get_all(aids)  # for all rlzs
+                yield assets, all_ratios, rlzs, self.monitor('build_maps')
+
     def execute(self):
         self.vals = self.assetcol.values()
 
         # build loss maps
-        if 'all_loss_ratios' in self.datastore:
-            logging.info('Building loss_maps')
-            mon1 = self.monitor('getting loss ratios', measuremem=True)
-            mon2 = self.monitor('building loss_maps', measuremem=True)
-            rlzs = self.rlzs_assoc.realizations
+        if ('all_loss_ratios' in self.datastore
+                 and self.oqparam.conditional_loss_poes):
+            A = len(self.assetcol)
+            R = len(self.datastore['realizations'])
             builder = self.riskmodel.curve_builder
-            assets_by_site = self.assetcol.assets_by_site()
-            getter = riskinput.LossRatiosGetter(self.datastore)
-            data = []
-            for assets in assets_by_site:
-                if assets:
-                    aids = [asset.ordinal for asset in assets]
-                    with mon1:
-                        all_ratios = getter.get_all(aids)  # for all rlzs
-                    with mon2:
-                        data.append(
-                            builder.build_maps(assets, all_ratios, rlzs))
-            loss_maps = numpy.concatenate(data)
-            self.datastore['loss_maps-rlzs'] = loss_maps
-            self.datastore.set_attrs(
-                'loss_maps-rlzs', nbytes=loss_maps.nbytes)
+            dset = self.datastore.create_dset(
+                'loss_maps-rlzs', builder.loss_maps_dt, (A, R), fillvalue=None)
+            nbytes = 0
+            logging.info('Building loss_maps')
+            for dic in parallel.Starmap(builder, self.gen_args()):
+                for aid, loss_maps in dic.items():
+                    dset[aid, :] = loss_maps
+                    nbytes += loss_maps.nbytes
+            self.datastore.set_attrs('loss_maps-rlzs', nbytes=nbytes)
 
         # build an aggregate loss curve per realization
         if 'agg_loss_table' in self.datastore:
