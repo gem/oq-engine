@@ -153,6 +153,8 @@ if $rabbit_started; then
 fi
 ) >/dev/null || true
 
+%files master
+
 %post worker
 %systemd_post openquake-celery.service
 
