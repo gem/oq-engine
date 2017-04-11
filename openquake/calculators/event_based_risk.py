@@ -125,9 +125,9 @@ def _aggregate(outputs, compositemodel, taxid, agg, idx, result, param):
                 if param['loss_ratios']:
                     for i in range(I):
                         li = l + L * i
-                        for loss in losses[:, i]:
-                            if loss > 0:
-                                ass.append((aid, r, li, loss))
+                        for ratio in ratios[:, i]:
+                            if ratio > 0:
+                                ass.append((aid, r, li, ratio))
 
     data = sorted(ass)  # sort by aid
     lrs_idx = result['lrs_idx']  # shape (A, 2)
@@ -196,12 +196,31 @@ class EbrPostCalculator(base.RiskCalculator):
         return [(cb, rlzstr, loss_table[rlzstr].value)
                 for rlzstr in loss_table]
 
-    def save_rcurves(self, acc, res):
-        for aid in res:
-            self.datastore['rcurves-rlzs'][aid] = res[aid]
-
     def execute(self):
         self.vals = self.assetcol.values()
+
+        # build loss maps
+        if 'all_loss_ratios' in self.datastore:
+            logging.info('Building loss_maps')
+            mon1 = self.monitor('getting loss ratios')
+            mon2 = self.monitor('building loss_maps')
+            builder = self.riskmodel.curve_builder
+            rlzs = self.rlzs_assoc.realizations
+            assets_by_site = self.assetcol.assets_by_site()
+            getter = riskinput.LossRatiosGetter(self.datastore)
+            data = []
+            for assets in assets_by_site:
+                if assets:
+                    aids = [asset.ordinal for asset in assets]
+                    with mon1:
+                        ratios = getter.get(aids)
+                    with mon2:
+                        data.append(builder.build_maps(assets, ratios, rlzs))
+            loss_maps = numpy.concatenate(data)
+            self.datastore['loss_maps-rlzs'] = loss_maps
+            self.datastore.set_attrs(
+                'loss_maps-rlzs', nbytes=loss_maps.nbytes)
+
         # build an aggregate loss curve per realization
         if 'agg_loss_table' in self.datastore:
             with self.monitor('building agg_curve'):
