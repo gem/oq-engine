@@ -816,7 +816,7 @@ class LossRatiosGetter(object):
 
     def get(self, aids, rlzi=None):
         data = self.dset['all_loss_ratios/data']
-        dic = collections.defaultdict(list)  # (aid, rlzi, li) -> ratios
+        dic = collections.defaultdict(list)  # (aid, rlzi) -> ratios
         for aid in aids:
             indices = self.dset['all_loss_ratios/indices'][aid]  # (T, 2)
             for idx in indices:
@@ -824,3 +824,12 @@ class LossRatiosGetter(object):
                     if rlzi is None or rlzi == rec['rlzi']:
                         dic[aid, rec['rlzi']].append(rec['ratios'])
         return dic
+
+    def get_all(self, aids):
+        data = self.dset['all_loss_ratios/data']
+        arrays = []
+        for aid in aids:
+            indices = self.dset['all_loss_ratios/indices'][aid]  # (T, 2)
+            arr = numpy.concatenate([data[idx[0]: idx[1]] for idx in indices])
+            arrays.append(arr)
+        return arrays

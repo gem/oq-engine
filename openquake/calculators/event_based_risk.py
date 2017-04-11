@@ -210,8 +210,8 @@ class EbrPostCalculator(base.RiskCalculator):
             logging.info('Building loss_maps')
             mon1 = self.monitor('getting loss ratios')
             mon2 = self.monitor('building loss_maps')
-            builder = self.riskmodel.curve_builder
             rlzs = self.rlzs_assoc.realizations
+            builder = self.riskmodel.curve_builder
             assets_by_site = self.assetcol.assets_by_site()
             getter = riskinput.LossRatiosGetter(self.datastore)
             data = []
@@ -219,9 +219,10 @@ class EbrPostCalculator(base.RiskCalculator):
                 if assets:
                     aids = [asset.ordinal for asset in assets]
                     with mon1:
-                        ratios = getter.get(aids)
+                        all_ratios = getter.get_all(aids)
                     with mon2:
-                        data.append(builder.build_maps(assets, ratios, rlzs))
+                        data.append(
+                            builder.build_maps(assets, all_ratios, rlzs))
             loss_maps = numpy.concatenate(data)
             self.datastore['loss_maps-rlzs'] = loss_maps
             self.datastore.set_attrs(
