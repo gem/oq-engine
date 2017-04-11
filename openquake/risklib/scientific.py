@@ -1006,18 +1006,32 @@ class MultiCurveBuilder(object):
         return curves
 
     def build_maps(self, assets, loss_ratios, rlzs):
+        """"
+        :param assets: a list of assets
+        :param counts: a list of dictionaries rlzi -> loss ratios
+        :param rlzs: a list of realizations
+        :returns: A maps of dtype loss_maps_dt
+        """
         if not self.clp:
             return []
-        dicts = [group_array(array, 'rlzi') for array in loss_ratios]
+        L = len(self.cbs)
+        LI = L * self.I
         loss_maps = numpy.zeros((len(assets), len(rlzs)), self.loss_maps_dt)
-        for rlz in rlzs:
-            r = rlz.ordinal
-            for a, curve in enumerate(self.build_curves(assets, dicts, r)):
-                for lt in curve.dtype.names:
-                    c = curve[lt]
-                    loss_maps[lt][a, r] = tuple(
-                        conditional_loss_ratio(c['losses'], c['poes'], poe)
-                        for poe in self.clp)
+        for a, asset in enumerate(assets):
+            dic = group_array(loss_ratios[a], 'rlzi')
+            for cb in self.cbs:
+                losses = asset.value(cb.loss_type) * cb.ratios
+                for rlz in rlzs:
+                    r = rlz.ordinal
+                    ratios = dic[r]['ratios'].reshape(-1, LI)
+                    for i in range(self.I):
+                        lrs = ratios[:, cb.index + L * i]
+                        counts = numpy.array([(lrs >= ratio).sum()
+                                              for ratio in cb.ratios], F32)
+                        poes = 1. - numpy.exp(- counts * cb.ses_ratio)
+                        loss_maps[cb.loss_type + '_ins' * i][a, r] = tuple(
+                            conditional_loss_ratio(losses, poes, poe)
+                            for poe in self.clp)
         return loss_maps
 
 
