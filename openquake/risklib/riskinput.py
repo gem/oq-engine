@@ -807,29 +807,37 @@ def rsi2str(rlzi, sid, imt):
 
 class LossRatiosGetter(object):
     """
-    Given a small set of asset ordinals returns a dictionary of the form
-
-    aid, rlzi, li -> loss ratios
+    Read loss ratios from the datastore for all realizations or for a specific
+    realization.
     """
     def __init__(self, all_loss_ratios_dset):
         self.dset = all_loss_ratios_dset
 
     def get(self, aids, rlzi=None):
+        """
+        :param aids: a list of A asset ordinals
+        :param rlzi: None or a realization ordinal
+        :returns: a dictionary aid, rlzi -> loss ratios
+        """
         data = self.dset['all_loss_ratios/data']
+        indices = self.dset['all_loss_ratios/indices'][aids]  # (A, T, 2)
         dic = collections.defaultdict(list)  # (aid, rlzi) -> ratios
-        for aid in aids:
-            indices = self.dset['all_loss_ratios/indices'][aid]  # (T, 2)
-            for idx in indices:
+        for aid, idxs in zip(aids, indices):
+            for idx in idxs:
                 for rec in data[idx[0]: idx[1]]:
                     if rlzi is None or rlzi == rec['rlzi']:
                         dic[aid, rec['rlzi']].append(rec['ratios'])
         return dic
 
     def get_all(self, aids):
+        """
+        :param aids: a list of A asset ordinals
+        :returns: a list of A composite arrays of dtype `lrs_dt`
+        """
         data = self.dset['all_loss_ratios/data']
+        indices = self.dset['all_loss_ratios/indices'][aids]  # (A, T, 2)
         arrays = []
-        for aid in aids:
-            indices = self.dset['all_loss_ratios/indices'][aid]  # (T, 2)
-            arr = numpy.concatenate([data[idx[0]: idx[1]] for idx in indices])
+        for aid, idxs in zip(aids, indices):
+            arr = numpy.concatenate([data[idx[0]: idx[1]] for idx in idxs])
             arrays.append(arr)
         return arrays
