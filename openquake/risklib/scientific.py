@@ -29,7 +29,7 @@ import numpy
 from numpy.testing import assert_equal
 from scipy import interpolate, stats, random
 
-from openquake.baselib.general import CallableDict
+from openquake.baselib.general import CallableDict, group_array
 from openquake.risklib import utils
 from openquake.baselib.python3compat import with_metaclass
 
@@ -978,40 +978,41 @@ class MultiCurveBuilder(object):
     def build_curves(self, assets, loss_ratios, rlzi):
         """"
         :param assets: a list of assets
-        :param counts: a dictionary (aid, rlzi) -> loss_ratios
+        :param counts: a list of dictionaries rlzi -> loss ratios
         :param rlzi: a realization index
         :returns: A curves of dtype loss_curve_dt
         """
-        array = numpy.zeros(len(assets), self.loss_curve_dt)
+        curves = numpy.zeros(len(assets), self.loss_curve_dt)
         L = len(self.cbs)
         LI = L * self.I
-        for cb in self.cbs:
-            lt = cb.loss_type
-            for a, asset in enumerate(assets):
-                aid = asset.ordinal
-                ratios = numpy.array(loss_ratios[aid, rlzi]).reshape(-1, LI)
-                if len(ratios) == 0:
-                    continue
-                aval = asset.value(lt)
+        for a, asset in enumerate(assets):
+            try:
+                data = loss_ratios[a][rlzi]
+            except KeyError:  # no ratios for the given realization
+                continue
+            ratios = data['ratios'].reshape(-1, LI)
+            for cb in self.cbs:
+                lt = cb.loss_type
+                losses = asset.value(lt) * cb.ratios
                 for i in range(self.I):
-                    arr = array[a][lt + '_ins' * i]
+                    arr = curves[a][lt + '_ins' * i]
                     lrs = ratios[:, cb.index + L * i]
                     counts = numpy.array([(lrs >= ratio).sum()
                                           for ratio in cb.ratios], F32)
                     poes = 1. - numpy.exp(- counts * cb.ses_ratio)
                     arr['poes'] = poes
-                    arr['losses'] = losses = aval * cb.ratios
+                    arr['losses'] = losses
                     arr['avg'] = average_loss([losses, poes])
-        return array
+        return curves
 
     def build_maps(self, assets, loss_ratios, rlzs):
         if not self.clp:
             return []
+        dicts = [group_array(array, 'rlzi') for array in loss_ratios]
         loss_maps = numpy.zeros((len(assets), len(rlzs)), self.loss_maps_dt)
         for rlz in rlzs:
             r = rlz.ordinal
-            for a, curve in enumerate(
-                    self.build_curves(assets, loss_ratios, r)):
+            for a, curve in enumerate(self.build_curves(assets, dicts, r)):
                 for lt in curve.dtype.names:
                     c = curve[lt]
                     loss_maps[lt][a, r] = tuple(
