@@ -227,7 +227,6 @@ class EbrPostCalculator(base.RiskCalculator):
             dset = self.datastore.create_dset(
                 'loss_maps-rlzs', builder.loss_maps_dt, (A, R), fillvalue=None)
             nbytes = 0
-            logging.info('Building loss_maps')
             for dic in parallel.Starmap(builder, self.gen_args()):
                 for aid, loss_maps in dic.items():
                     dset[aid, :] = loss_maps
