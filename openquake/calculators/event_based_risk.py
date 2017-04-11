@@ -124,24 +124,25 @@ def _aggregate(outputs, compositemodel, taxid, agg, idx, result, param):
                 if param['loss_ratios']:
                     for i in range(I):
                         li = l + L * i
-                        for ratio in ratios[:, i]:
+                        for eid, ratio in zip(eids, ratios[:, i]):
                             if ratio > 0:
-                                ass.append((aid, r, li, ratio))
+                                ass.append((aid, r, eid, li, ratio))
 
     data = sorted(ass)  # sort by aid, r
     lrs_idx = result['lrs_idx']  # shape (A, 2)
     n = 0
     all_ratios = []
-    for aid, group in itertools.groupby(data, operator.itemgetter(0)):
-        nrows = 0
-        for r, rows in itertools.groupby(group, operator.itemgetter(1)):
-            ratios = numpy.zeros(L * I, F32)
-            for row in rows:
-                nrows += 1
-                ratios[row[2]] = row[3]  # li -> ratio
-            all_ratios.append((r, ratios))
-        lrs_idx[aid] = [n, n + nrows]
-        n += nrows
+    for aid, agroup in itertools.groupby(data, operator.itemgetter(0)):
+        for r, rgroup in itertools.groupby(agroup, operator.itemgetter(1)):
+            for e, egroup in itertools.groupby(
+                    rgroup, operator.itemgetter(2)):
+                ratios = numpy.zeros(L * I, F32)
+                for rec in egroup:
+                    ratios[rec[3]] = rec[4]
+                all_ratios.append((r, ratios))
+        n1 = len(all_ratios)
+        lrs_idx[aid] = [n, n1]
+        n = n1
     result['asslosses'] = numpy.array(all_ratios, param['lrs_dt'])
 
 
