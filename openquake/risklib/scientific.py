@@ -968,6 +968,7 @@ class MultiCurveBuilder(object):
             for cb in cbs:
                 dtlist.append((cb.loss_type + '_ins', (F32, len(cb.ratios))))
         self.dt = numpy.dtype(dtlist)
+        self.__name__ = 'build_maps'
 
     def __iter__(self):
         return iter(self.cbs)
@@ -1005,7 +1006,7 @@ class MultiCurveBuilder(object):
                     arr['avg'] = average_loss([losses, poes])
         return curves
 
-    def build_maps(self, assets, loss_ratios, rlzs):
+    def __call__(self, assets, loss_ratios, rlzs, mon):
         """"
         :param assets: a list of assets
         :param counts: a list of dictionaries rlzi -> loss ratios
@@ -1017,13 +1018,18 @@ class MultiCurveBuilder(object):
         L = len(self.cbs)
         LI = L * self.I
         loss_maps = numpy.zeros((len(assets), len(rlzs)), self.loss_maps_dt)
+        aids = []
         for a, asset in enumerate(assets):
+            aids.append(asset.ordinal)
             dic = group_array(loss_ratios[a], 'rlzi')
             for cb in self.cbs:
                 losses = asset.value(cb.loss_type) * cb.ratios
                 for rlz in rlzs:
                     r = rlz.ordinal
-                    ratios = dic[r]['ratios'].reshape(-1, LI)
+                    try:
+                        ratios = dic[r]['ratios'].reshape(-1, LI)
+                    except KeyError:
+                        continue  # no ratios for the given realization
                     for i in range(self.I):
                         lrs = ratios[:, cb.index + L * i]
                         counts = numpy.array([(lrs >= ratio).sum()
@@ -1032,7 +1038,7 @@ class MultiCurveBuilder(object):
                         loss_maps[cb.loss_type + '_ins' * i][a, r] = tuple(
                             conditional_loss_ratio(losses, poes, poe)
                             for poe in self.clp)
-        return loss_maps
+        return dict(zip(aids, loss_maps))
 
 
 # should I use the ses_ratio here?
