@@ -95,24 +95,8 @@ cp -R demos %{buildroot}/%{_datadir}/openquake/engine
 cp -R utils %{buildroot}/%{_datadir}/openquake/engine
 
 %post
-(if ! rabbitmqctl status &>/dev/null; then
-    systemctl start rabbitmq-server.service
-    rabbit_started=true
-fi
-if ! rabbitmqctl list_users | grep %{oquser}; then
-    rabbitmqctl add_user %{oquser} %{oquser}
-fi
-if ! rabbitmqctl list_vhosts | grep %{oquser}; then
-    rabbitmqctl add_vhost %{oquser}
-    rabbitmqctl set_permissions -p %{oquser} %{oquser} ".*" ".*" ".*"
-fi
-if $rabbit_started; then
-    systemctl stop rabbitmq-server.service
-fi
-) >/dev/null || true
 %systemd_post openquake-dbserver.service
 %systemd_post openquake-webui.service
-%systemd_post openquake-celery.service
 
 %clean
 rm -rf %{buildroot}
@@ -120,12 +104,10 @@ rm -rf %{buildroot}
 %preun
 %systemd_preun openquake-dbserver.service
 %systemd_preun openquake-webui.service
-%systemd_preun openquake-celery.service
 
 %postun
 %systemd_postun_with_restart openquake-dbserver.service
 %systemd_postun_with_restart openquake-webui.service
-%systemd_postun_with_restart openquake-celery.service
 
 %files
 %defattr(-,root,root)
@@ -142,6 +124,24 @@ rm -rf %{buildroot}
 %{_sysconfdir}/openquake/openquake.cfg
 %{_unitdir}/openquake-dbserver.service
 %{_unitdir}/openquake-webui.service
+
+%post cluster
+(if ! rabbitmqctl status &>/dev/null; then
+    systemctl start rabbitmq-server.service
+    rabbit_started=true
+fi
+if ! rabbitmqctl list_users | grep %{oquser}; then
+    rabbitmqctl add_user %{oquser} %{oquser}
+fi
+if ! rabbitmqctl list_vhosts | grep %{oquser}; then
+    rabbitmqctl add_vhost %{oquser}
+    rabbitmqctl set_permissions -p %{oquser} %{oquser} ".*" ".*" ".*"
+fi
+if $rabbit_started; then
+    systemctl stop rabbitmq-server.service
+fi
+) >/dev/null || true
+%systemd_post openquake-celery.service
 
 %preun cluster
 %systemd_preun openquake-celery.service
