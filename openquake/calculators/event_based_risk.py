@@ -92,7 +92,7 @@ def _aggregate(outputs, compositemodel, taxid, agg, idx, result, param):
     L = len(compositemodel.lti)
     I = param['insured_losses'] + 1
     losses_by_taxon = result['losses_by_taxon']
-    ass = result['asslosses']
+    ass = result['assratios']
     for outs in outputs:
         r = outs.r
         aggr = agg[r]  # array of zeros of shape (E, L, I)
@@ -143,7 +143,7 @@ def _aggregate(outputs, compositemodel, taxid, agg, idx, result, param):
         n1 = len(all_ratios)
         lrs_idx[aid] = [n, n1]
         n = n1
-    result['asslosses'] = numpy.array(all_ratios, param['lrs_dt'])
+    result['assratios'] = numpy.array(all_ratios, param['lrs_dt'])
 
 
 def event_based_risk(riskinput, riskmodel, param, monitor):
@@ -172,7 +172,7 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, L * I))])
     idx = dict(zip(eids, range(E)))
     agg = AccumDict(accum=numpy.zeros((E, L, I), F32))  # r -> array
-    result = dict(agglosses=AccumDict(), asslosses=[],
+    result = dict(agglosses=AccumDict(), assratios=[],
                   lrs_idx=numpy.zeros((A, 2), U32),
                   losses_by_taxon=numpy.zeros((T, R, L * I), F32),
                   aids=None)
@@ -527,13 +527,13 @@ class EbriskCalculator(base.RiskCalculator):
         Save the event loss tables incrementally.
 
         :param dic:
-            dictionary with agglosses, asslosses, losses_by_taxon, avglosses
+            dictionary with agglosses, assratios, losses_by_taxon, avglosses
         :param offset:
             realization offset
         """
         aids = dic.pop('aids')
         agglosses = dic.pop('agglosses')
-        asslosses = dic.pop('asslosses')
+        assratios = dic.pop('assratios')
         losses_by_taxon = dic.pop('losses_by_taxon')
         avglosses = dic.pop('avglosses')
         lrs_idx = dic.pop('lrs_idx')
@@ -545,11 +545,11 @@ class EbriskCalculator(base.RiskCalculator):
         if self.oqparam.loss_ratios:
             with self.monitor('saving loss ratios', autoflush=True):
                 lrs_idx += self.start
-                self.start += len(asslosses)
+                self.start += len(assratios)
                 self.datastore['all_loss_ratios/indices'][:, taskno] = lrs_idx
-                asslosses['rlzi'] += offset
-                self.datastore.extend('all_loss_ratios/data', asslosses)
-                self.alr_nbytes += asslosses.nbytes
+                assratios['rlzi'] += offset
+                self.datastore.extend('all_loss_ratios/data', assratios)
+                self.alr_nbytes += assratios.nbytes
 
         # saving losses by taxonomy is ultra-fast, so it is not monitored
         dset = self.datastore['losses_by_taxon-rlzs']
