@@ -385,7 +385,7 @@ class CompositeRiskModel(collections.Mapping):
             cb.index = l
             self.lti[loss_type] = l
         self.curve_builder = scientific.MultiCurveBuilder(
-            cbs, oqparam.insured_losses)
+            cbs, oqparam.insured_losses, oqparam.conditional_loss_poes)
         return loss_types
 
     def get_loss_ratios(self):
@@ -812,15 +812,33 @@ class LossRatiosGetter(object):
     aid, rlzi, li -> loss ratios
     """
     def __init__(self, all_loss_ratios_dset):
-        self.all_loss_ratios_dset = all_loss_ratios_dset
+        self.dset = all_loss_ratios_dset
 
     def get(self, aids, rlzi=None):
-        data = self.all_loss_ratios_dset['data']
+        data = self.dset['all_loss_ratios/data']
         dic = collections.defaultdict(list)  # (aid, rlzi, li) -> ratios
         for aid in aids:
-            indices = self.all_loss_ratios['indices'][aid]  # (T, 2)
-            array = numpy.concatenate([data[idx[0]:idx[1]] for idx in indices])
-            for rec in array:
-                if rlzi is None or rlzi == rec['rlzi']:
-                    dic[aid, rec['rlzi'], rec['li']].append(rec['ratio'])
+            indices = self.dset['all_loss_ratios/indices'][aid]  # (T, 2)
+            for idx in indices:
+                for rec in data[idx[0]: idx[1]]:
+                    if rlzi is None or rlzi == rec['rlzi']:
+                        dic[aid, rec['rlzi'], rec['li']].append(rec['ratio'])
+        return dic
+
+    def get_counts(self, aids, ref_ratios, rlzi=None):
+        data = self.dset['all_loss_ratios/data']
+        dic = {}  # (aid, rlzi, li) -> counts
+        for aid in aids:
+            indices = self.dset['all_loss_ratios/indices'][aid]  # (T, 2)
+            for idx in indices:
+                for rec in data[idx[0]: idx[1]]:
+                    if rlzi is None or rlzi == rec['rlzi']:
+                        ratios = ref_ratios[rec['li']]
+                        key = aid, rec['rlzi'], rec['li']
+                        counts = numpy.array([rec['ratio'] >= ratio
+                                              for ratio in ratios])
+                        if key in dic:
+                            dic[key] += counts
+                        else:
+                            dic[key] = counts
         return dic

@@ -119,8 +119,7 @@ class LossCurveExporter(object):
         # otherwise event_based
         builder = self.dstore['riskmodel'].curve_builder
         assets = [self.assetcol[aid] for aid in aids]
-        ratios = riskinput.LossRatiosGetter(
-            self.dstore['all_loss_ratios']).get(aids, rlzi)
+        ratios = riskinput.LossRatiosGetter(self.dstore).get(aids, rlzi)
         if key:
             rlzi = int(key[4:])
             return {rlzi: builder.build_curves(assets, ratios, rlzi)}
