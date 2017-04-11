@@ -61,10 +61,6 @@ class Output(object):
     def __getitem__(self, l):
         return self.values[l]
 
-    @property
-    def aids(self):
-        return numpy.array([a.ordinal for a in self.assets])
-
 
 def get_refs(assets, hdf5path):
     """
