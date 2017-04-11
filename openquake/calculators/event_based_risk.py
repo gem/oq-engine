@@ -41,7 +41,6 @@ F64 = numpy.float64
 U64 = numpy.uint64
 floats32 = h5py.special_dtype(vlen=F32)
 getweight = operator.attrgetter('weight')
-lrs_dt = numpy.dtype([('rlzi', U16), ('li', U8), ('ratio', F32)])
 
 
 def build_el_dtypes(loss_types, insured_losses):
@@ -129,15 +128,21 @@ def _aggregate(outputs, compositemodel, taxid, agg, idx, result, param):
                             if ratio > 0:
                                 ass.append((aid, r, li, ratio))
 
-    data = sorted(ass)  # sort by aid
+    data = sorted(ass)  # sort by aid, r
     lrs_idx = result['lrs_idx']  # shape (A, 2)
     n = 0
-    for aid, rows in itertools.groupby(data, operator.itemgetter(0)):
-        nrows = sum(1 for row in rows)
-        n1 = n + nrows
-        lrs_idx[aid] = [n, n1]
-        n = n1
-    result['asslosses'] = numpy.fromiter((row[1:] for row in data), lrs_dt)
+    all_ratios = []
+    for aid, group in itertools.groupby(data, operator.itemgetter(0)):
+        nrows = 0
+        for r, rows in itertools.groupby(group, operator.itemgetter(1)):
+            ratios = numpy.zeros(L * I, F32)
+            for row in rows:
+                nrows += 1
+                ratios[row[2]] = row[3]  # li -> ratio
+            all_ratios.append((r, ratios))
+        lrs_idx[aid] = [n, n + nrows]
+        n += nrows
+    result['asslosses'] = numpy.array(all_ratios, param['lrs_dt'])
 
 
 def event_based_risk(riskinput, riskmodel, param, monitor):
@@ -163,6 +168,7 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     T = len(taxid)
     R = sum(len(rlzs)
             for gsim, rlzs in riskinput.hazard_getter.rlzs_by_gsim.items())
+    param['lrs_dt'] = numpy.dtype([('rlzi', U16), ('ratios', (F32, L * I))])
     idx = dict(zip(eids, range(E)))
     agg = AccumDict(accum=numpy.zeros((E, L, I), F32))  # r -> array
     result = dict(agglosses=AccumDict(), asslosses=[],

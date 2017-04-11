@@ -978,21 +978,24 @@ class MultiCurveBuilder(object):
     def build_curves(self, assets, loss_ratios, rlzi):
         """"
         :param assets: a list of assets
-        :param counts: a dictionary (aid, rlzi, li) -> loss_ratios
+        :param counts: a dictionary (aid, rlzi) -> loss_ratios
         :param rlzi: a realization index
         :returns: A curves of dtype loss_curve_dt
         """
         array = numpy.zeros(len(assets), self.loss_curve_dt)
         L = len(self.cbs)
+        LI = L * self.I
         for cb in self.cbs:
             lt = cb.loss_type
             for a, asset in enumerate(assets):
                 aid = asset.ordinal
+                ratios = numpy.array(loss_ratios[aid, rlzi]).reshape(-1, LI)
+                if len(ratios) == 0:
+                    continue
                 aval = asset.value(lt)
                 for i in range(self.I):
                     arr = array[a][lt + '_ins' * i]
-                    lrs = numpy.array(
-                        loss_ratios[aid, rlzi, cb.index + L * i], F32)
+                    lrs = ratios[:, cb.index + L * i]
                     counts = numpy.array([(lrs >= ratio).sum()
                                           for ratio in cb.ratios], F32)
                     poes = 1. - numpy.exp(- counts * cb.ses_ratio)
