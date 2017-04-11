@@ -954,13 +954,14 @@ class MultiCurveBuilder(object):
     """
     Build curves for all loss types at the same time
     """
-    def __init__(self, cbs, insured_losses):
+    def __init__(self, cbs, insured_losses, conditional_loss_poes=()):
         self.cbs = cbs
         self.I = insured_losses + 1
-        loss_ratios = {cb.loss_type: cb.curve_resolution
+        self.clp = conditional_loss_poes
+        loss_ratios = {cb.loss_type: len(cb.ratios)
                        for cb in cbs if cb.user_provided}
-        self.loss_curve_dt, _ = build_loss_dtypes(
-            loss_ratios, [], insured_losses)
+        self.loss_curve_dt, self.loss_maps_dt = build_loss_dtypes(
+            loss_ratios, conditional_loss_poes, insured_losses)
         dtlist = [(cb.loss_type, (F32, len(cb.ratios)))
                   for cb in cbs]
         if insured_losses:
@@ -977,7 +978,7 @@ class MultiCurveBuilder(object):
     def build_curves(self, assets, loss_ratios, rlzi):
         """"
         :param assets: a list of assets
-        :param loss_ratios: a dictionary (aid, rlzi, li) -> loss_ratios
+        :param counts: a dictionary (aid, rlzi, li) -> loss_ratios
         :param rlzi: a realization index
         :returns: A curves of dtype loss_curve_dt
         """
@@ -989,15 +990,29 @@ class MultiCurveBuilder(object):
                 aid = asset.ordinal
                 aval = asset.value(lt)
                 for i in range(self.I):
-                    lti = lt + '_ins' * i
-                    lrs = loss_ratios[aid, rlzi, cb.index + L * i]
-                    counts = numpy.array([(lrs >= ratio).sum(axis=0)
-                                          for ratio in cb.ratios])
-                    poes = build_poes(counts, 1. / cb.ses_ratio).T
-                    array[a]['poes'][lti] = poes
-                    array[a]['losses'][lti] = losses = aval * cb.ratios
-                    array[a]['avg'][lti] = average_loss([losses, poes])
+                    arr = array[a][lt + '_ins' * i]
+                    lrs = numpy.array(
+                        loss_ratios[aid, rlzi, cb.index + L * i], F32)
+                    counts = numpy.array([(lrs >= ratio).sum()
+                                          for ratio in cb.ratios], F32)
+                    poes = 1. - numpy.exp(- counts * cb.ses_ratio)
+                    arr['poes'] = poes
+                    arr['losses'] = losses = aval * cb.ratios
+                    arr['avg'] = average_loss([losses, poes])
         return array
+
+    def build_maps(self, assets, loss_ratios, rlzs):
+        loss_maps = numpy.zeros((len(assets), len(rlzs)), self.loss_maps_dt)
+        for rlz in rlzs:
+            r = rlz.ordinal
+            for a, curve in enumerate(
+                    self.build_curves(assets, loss_ratios, r)):
+                for lt in curve.dtype.names:
+                    c = curve[lt]
+                    loss_maps[lt][a, r] = tuple(
+                        conditional_loss_ratio(c['losses'], c['poes'], poe)
+                        for poe in self.clp)
+        return loss_maps
 
 
 # should I use the ses_ratio here?
