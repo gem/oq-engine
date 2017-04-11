@@ -1002,6 +1002,8 @@ class MultiCurveBuilder(object):
         return array
 
     def build_maps(self, assets, loss_ratios, rlzs):
+        if not self.clp:
+            return []
         loss_maps = numpy.zeros((len(assets), len(rlzs)), self.loss_maps_dt)
         for rlz in rlzs:
             r = rlz.ordinal
