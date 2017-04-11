@@ -40,20 +40,31 @@ Obsoletes: python-oq-risklib
 Provides: python-oq-risklib
 
 %description
+OpenQuake is an open source application that allows users to
+compute seismic hazard and seismic risk of earthquakes on a global scale.
+
+Copyright (C) 2010-2017 GEM Foundation
+
+%package master
+Summary: OpenQuake Engine multi-node cluster support (master node)
+Group: Applications/Engineering
+Requires: %{name}%{?_isa} = %{version}-%{release} rabbitmq-server
+
+%description master
+OpenQuake Engine multi-node cluster support (master node)
 
 OpenQuake is an open source application that allows users to
 compute seismic hazard and seismic risk of earthquakes on a global scale.
 
 Copyright (C) 2010-2017 GEM Foundation
 
-%package cluster
-Summary: OpenQuake Engine multi-node cluster support
+%package worker
+Summary: OpenQuake Engine multi-node cluster support (worker node)
 Group: Applications/Engineering
-Requires: %{name}%{?_isa} = %{version}-%{release} rabbitmq-server
+Requires: %{name}%{?_isa} = %{version}-%{release}
 
-%description cluster
-
-OpenQuake Engine multi-node cluster support
+%description worker
+OpenQuake Engine multi-node cluster support (worker node)
 
 OpenQuake is an open source application that allows users to
 compute seismic hazard and seismic risk of earthquakes on a global scale.
@@ -125,7 +136,7 @@ rm -rf %{buildroot}
 %{_unitdir}/openquake-dbserver.service
 %{_unitdir}/openquake-webui.service
 
-%post cluster
+%post master
 (if ! rabbitmqctl status &>/dev/null; then
     systemctl start rabbitmq-server.service
     rabbit_started=true
@@ -141,15 +152,17 @@ if $rabbit_started; then
     systemctl stop rabbitmq-server.service
 fi
 ) >/dev/null || true
+
+%post worker
 %systemd_post openquake-celery.service
 
-%preun cluster
+%preun worker
 %systemd_preun openquake-celery.service
 
-%postun cluster
+%postun worker
 %systemd_postun_with_restart openquake-celery.service
 
-%files cluster
+%files worker
 %{_unitdir}/openquake-celery.service
 
 %changelog
