@@ -562,32 +562,16 @@ def get_loss_maps(dstore, kind):
     :param kind: 'rlzs' or 'stats'
     """
     oq = dstore['oqparam']
-    name = 'rcurves-%s' % kind
+    name = 'loss_maps-%s' % kind
     if name in dstore:  # event_based risk
-        values = dstore['assetcol'].values()
-        _, loss_maps_dt = scientific.build_loss_dtypes(
-            {lt: len(oq.loss_ratios[lt]) for lt in oq.loss_ratios},
-            oq.conditional_loss_poes, oq.insured_losses)
-        rcurves = dstore[name].value  # to support Ubuntu 14
-        A, R, I = rcurves.shape
-        ins = ['', '_ins']
-        loss_maps = numpy.zeros((A, R), loss_maps_dt)
-        for ltype, lratios in oq.loss_ratios.items():
-            for (a, r, i) in indices(A, R, I):
-                rcurve = rcurves[ltype][a, r, i]
-                losses = numpy.array(lratios) * values[ltype][a]
-                tup = tuple(
-                    scientific.conditional_loss_ratio(losses, rcurve, poe)
-                    for poe in oq.conditional_loss_poes)
-                loss_maps[ltype + ins[i]][a, r] = tup
-        return loss_maps
+        return dstore[name].value
     name = 'loss_curves-%s' % kind
     if name in dstore:  # classical_risk
         loss_curves = dstore[name]
         loss_maps = scientific.broadcast(
             scientific.loss_maps, loss_curves, oq.conditional_loss_poes)
         return loss_maps
-    return []
+    raise KeyError('loss_maps/loss_curves missing in %s' % dstore)
 
 
 # used by event_based_risk and classical_risk
