@@ -968,7 +968,6 @@ class CurveBuilder(object):
             for cb in cbs:
                 dtlist.append((cb.loss_type + '_ins', (F32, len(cb.ratios))))
         self.dt = numpy.dtype(dtlist)
-        self.__name__ = 'build_maps'
 
     def __iter__(self):
         return iter(self.cbs)
@@ -1006,20 +1005,21 @@ class CurveBuilder(object):
                     arr['avg'] = average_loss([losses, poes])
         return curves
 
-    def __call__(self, assets, loss_ratios, rlzs, mon):
+    def build_maps(self, assets, getter, rlzs, mon):
         """"
         :param assets: a list of assets
-        :param counts: a list of dictionaries rlzi -> loss ratios
+        :param getter: a LossRatiosGetter instance
         :param rlzs: a list of realizations
-        :returns: A maps of dtype loss_maps_dt
+        :returns: aids and maps
         """
         assert self.clp, 'No conditional_loss_poes in the job.ini!'
         L = len(self.cbs)
         LI = L * self.I
         loss_maps = numpy.zeros((len(assets), len(rlzs)), self.loss_maps_dt)
-        aids = []
+        with mon('getting loss ratios'):
+            aids = [asset.ordinal for asset in assets]
+            loss_ratios = getter.get_all(aids)
         for a, asset in enumerate(assets):
-            aids.append(asset.ordinal)
             dic = group_array(loss_ratios[a], 'rlzi')
             for cb in self.cbs:
                 losses = asset.value(cb.loss_type) * cb.ratios
@@ -1037,7 +1037,7 @@ class CurveBuilder(object):
                         loss_maps[cb.loss_type + '_ins' * i][a, r] = tuple(
                             conditional_loss_ratio(losses, poes, poe)
                             for poe in self.clp)
-        return dict(zip(aids, loss_maps))
+        return aids, loss_maps
 
 
 # should I use the ses_ratio here?
