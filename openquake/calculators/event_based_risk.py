@@ -21,11 +21,10 @@ import operator
 import itertools
 import collections
 import numpy
-import h5py
 
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, block_splitter
-from openquake.hazardlib.stats import compute_stats, compute_stats2
+from openquake.hazardlib.stats import compute_stats
 from openquake.calculators import base, event_based
 from openquake.baselib import parallel
 from openquake.risklib import riskinput, scientific
@@ -198,14 +197,10 @@ def build_loss_maps(assets, builder, getter, rlzs, quantiles, monitor):
     `openquake.risklib.scientific.CurveBuilder.build_maps`.
     :returns: assets IDs and loss maps for the given chunk of assets
     """
-    aids, loss_maps = builder.build_maps(assets, getter, rlzs, monitor)
-    res = {'aids': aids, 'loss_maps-rlzs': loss_maps}
-    if len(rlzs) > 1:
-        weights = [rlz.weight for rlz in rlzs]
-        loss_maps_stats = scientific.broadcast(
-            compute_stats2, loss_maps, quantiles, weights)
-        res['loss_maps-stats'] = loss_maps_stats
-    return res
+    aids, loss_maps, loss_maps_stats = builder.build_maps(
+        assets, getter, rlzs, quantiles, monitor)
+    return {'aids': aids, 'loss_maps-rlzs': loss_maps,
+            'loss_maps-stats': loss_maps_stats}
 
 
 @base.calculators.add('event_based_risk')
