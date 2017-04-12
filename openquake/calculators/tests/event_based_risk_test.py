@@ -82,7 +82,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fnames = export(('loss_maps-stats', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=1E-5)
+                                  delta=1E-4)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1g(self):

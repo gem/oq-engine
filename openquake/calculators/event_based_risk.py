@@ -199,8 +199,10 @@ def build_loss_maps(assets, builder, getter, rlzs, quantiles, monitor):
     """
     aids, loss_maps, loss_maps_stats = builder.build_maps(
         assets, getter, rlzs, quantiles, monitor)
-    return {'aids': aids, 'loss_maps-rlzs': loss_maps,
-            'loss_maps-stats': loss_maps_stats}
+    res = {'aids': aids, 'loss_maps-rlzs': loss_maps}
+    if loss_maps_stats is not None:
+        res['loss_maps-stats'] = loss_maps_stats
+    return res
 
 
 @base.calculators.add('event_based_risk')
