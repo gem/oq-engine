@@ -806,8 +806,8 @@ class LossRatiosGetter(object):
     Read loss ratios from the datastore for all realizations or for a specific
     realization.
     """
-    def __init__(self, all_loss_ratios_dset):
-        self.dset = all_loss_ratios_dset
+    def __init__(self, dstore):
+        self.dstore = dstore  # a closed DataSstore
 
     def get(self, aids, rlzi=None):
         """
@@ -830,10 +830,11 @@ class LossRatiosGetter(object):
         :param aids: a list of A asset ordinals
         :returns: a list of A composite arrays of dtype `lrs_dt`
         """
-        data = self.dset['all_loss_ratios/data']
-        indices = self.dset['all_loss_ratios/indices'][aids]  # (A, T, 2)
-        arrays = []
-        for aid, idxs in zip(aids, indices):
-            arr = numpy.concatenate([data[idx[0]: idx[1]] for idx in idxs])
-            arrays.append(arr)
+        with self.dstore as ds:
+            data = ds['all_loss_ratios/data']
+            indices = ds['all_loss_ratios/indices'][aids]  # (A, T, 2)
+            arrays = []
+            for aid, idxs in zip(aids, indices):
+                arr = numpy.concatenate([data[idx[0]: idx[1]] for idx in idxs])
+                arrays.append(arr)
         return arrays

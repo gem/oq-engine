@@ -191,6 +191,16 @@ def event_based_risk(riskinput, riskmodel, param, monitor):
     return result
 
 
+def build_loss_maps(assets, builder, getter, rlzs, monitor):
+    """
+    Thin wrapper over :meth:
+    `openquake.risklib.scientific.CurveBuilder.build_maps`.
+    :returns: assets IDs and loss maps for the given chunk of assets
+    """
+    aids, loss_maps = builder.build_maps(assets, getter, rlzs, monitor)
+    return dict(aids=aids, loss_maps=loss_maps)
+
+
 @base.calculators.add('event_based_risk')
 class EbrPostCalculator(base.RiskCalculator):
     pre_calculator = 'ebrisk'
@@ -201,35 +211,41 @@ class EbrPostCalculator(base.RiskCalculator):
         return [(cb, rlzstr, loss_table[rlzstr].value)
                 for rlzstr in loss_table]
 
-    def gen_args(self):
-        rlzs = self.rlzs_assoc.realizations
-        assets_by_site = self.assetcol.assets_by_site()
-        getter = riskinput.LossRatiosGetter(self.datastore)
-        mon = self.monitor('getting loss ratios', measuremem=True)
-        for assets in assets_by_site:
-            if assets:
-                aids = [asset.ordinal for asset in assets]
-                with mon:
-                    all_ratios = getter.get_all(aids)  # for all rlzs
-                yield assets, all_ratios, rlzs, self.monitor('build_maps')
+    def save_loss_maps(self, nbytes, res):
+        """
+        Save the loss maps by opening and closing the datastore and
+        return the total number of stored bytes.
+        """
+        with self.datastore as dstore:
+            nbytes += res['loss_maps'].nbytes
+            dstore['loss_maps-rlzs'][res['aids']] = res['loss_maps']
+            dstore.set_attrs('loss_maps-rlzs', nbytes=nbytes)
+        return nbytes
 
     def execute(self):
-        self.vals = self.assetcol.values()
-
         # build loss maps
         if ('all_loss_ratios' in self.datastore
                  and self.oqparam.conditional_loss_poes):
+            rlzs = self.rlzs_assoc.realizations
+            builder = self.riskmodel.curve_builder
+            getter = riskinput.LossRatiosGetter(self.datastore)
             A = len(self.assetcol)
             R = len(self.datastore['realizations'])
-            builder = self.riskmodel.curve_builder
-            dset = self.datastore.create_dset(
+            self.datastore.create_dset(
                 'loss_maps-rlzs', builder.loss_maps_dt, (A, R), fillvalue=None)
-            nbytes = 0
-            for dic in parallel.Starmap(builder, self.gen_args()):
-                for aid, loss_maps in dic.items():
-                    dset[aid, :] = loss_maps
-                    nbytes += loss_maps.nbytes
-            self.datastore.set_attrs('loss_maps-rlzs', nbytes=nbytes)
+            # close the datastore, process the loss maps, then reopen it
+            # NB: we must fork after closing the datastore and not before,
+            # otherwise the 'all_loss_ratios' dataset is not seen by the
+            # children; this is why the regular Starmap would not work here;
+            # also, in this way everything is local and there is no need
+            # to use a shared directory; the calculation is fast enough
+            # (minutes) even for the largest event based I ever saw
+            self.datastore.close()
+            parallel.Processmap.apply(
+                build_loss_maps,
+                (self.assetcol, builder, getter, rlzs, self.monitor)
+            ).reduce(self.save_loss_maps, acc=0)
+            self.datastore.open()
 
         # build an aggregate loss curve per realization
         if 'agg_loss_table' in self.datastore:
@@ -237,6 +253,7 @@ class EbrPostCalculator(base.RiskCalculator):
                 self.build_agg_curve()
 
     def post_execute(self):
+        # override the base class method to avoid doing bad stuff
         pass
 
     def build_agg_curve(self):
