@@ -1029,21 +1029,21 @@ class CurveBuilder(object):
             loss_ratios = getter.get_all(aids)
         for a, asset in enumerate(assets):
             dic = group_array(loss_ratios[a], 'rlzi')
-            for cb in self.cbs:
-                losses = asset.value(cb.loss_type) * cb.ratios
-                for rlz in rlzs:
-                    r = rlz.ordinal
-                    try:
-                        ratios = dic[r]['ratios'].reshape(-1, LI)
-                    except KeyError:
-                        continue  # no ratios for the given realization
+            losses = [asset.value(cb.loss_type) * cb.ratios for cb in self]
+            for rlz in rlzs:
+                r = rlz.ordinal
+                try:
+                    ratios = dic[r]['ratios'].reshape(-1, LI)
+                except KeyError:
+                    continue  # no ratios for the given realization
+                for cb in self.cbs:
                     for i in range(self.I):
                         lrs = ratios[:, cb.index + L * i]
                         counts = numpy.array([(lrs >= ratio).sum()
                                               for ratio in cb.ratios], F32)
                         poes = 1. - numpy.exp(- counts * cb.ses_ratio)
                         loss_maps[cb.loss_type + '_ins' * i][a, r] = tuple(
-                            conditional_loss_ratio(losses, poes, poe)
+                            conditional_loss_ratio(losses[cb.index], poes, poe)
                             for poe in self.clp)
         return aids, loss_maps
 
