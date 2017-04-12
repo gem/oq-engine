@@ -30,6 +30,7 @@ from numpy.testing import assert_equal
 from scipy import interpolate, stats, random
 
 from openquake.baselib.general import CallableDict, group_array
+from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import utils
 from openquake.baselib.python3compat import with_metaclass
 
@@ -952,7 +953,11 @@ class LossTypeCurveBuilder(object):
 
 class CurveBuilder(object):
     """
-    Build curves for all loss types at the same time
+    Build curves for all loss types at the same time.
+
+    :param cbs: a list of :class:`LossTypeCurveBuilder` instances
+    :param insured_losses: insured losses flag from the job.ini
+    :param conditional_loss_poes: list of PoEs from the job.ini
     """
     def __init__(self, cbs, insured_losses, conditional_loss_poes=()):
         self.cbs = cbs
@@ -962,13 +967,12 @@ class CurveBuilder(object):
                        for cb in cbs if cb.user_provided}
         self.loss_curve_dt, self.loss_maps_dt = build_loss_dtypes(
             loss_ratios, conditional_loss_poes, insured_losses)
-        dtlist = [(cb.loss_type, (F32, len(cb.ratios)))
-                  for cb in cbs]
-        if insured_losses:
-            for cb in cbs:
-                dtlist.append((cb.loss_type + '_ins', (F32, len(cb.ratios))))
+        dtlist = []
+        for i in range(self.I):
+            for cb in self.cbs:
+                lt = cb.loss_type + '_ins' * i
+                dtlist.append((lt, (F32, len(cb.ratios))))
         self.dt = numpy.dtype(dtlist)
-        self.__name__ = 'build_maps'
 
     def __iter__(self):
         return iter(self.cbs)
@@ -979,7 +983,7 @@ class CurveBuilder(object):
     def build_curves(self, assets, loss_ratios, rlzi):
         """"
         :param assets: a list of assets
-        :param counts: a list of dictionaries rlzi -> loss ratios
+        :param loss_ratios: a list of dictionaries rlzi -> loss ratios
         :param rlzi: a realization index
         :returns: A curves of dtype loss_curve_dt
         """
@@ -1006,38 +1010,82 @@ class CurveBuilder(object):
                     arr['avg'] = average_loss([losses, poes])
         return curves
 
-    def __call__(self, assets, loss_ratios, rlzs, mon):
+    def build_maps(self, assets, getter, rlzs, quantiles, mon):
         """"
-        :param assets: a list of assets
-        :param counts: a list of dictionaries rlzi -> loss ratios
-        :param rlzs: a list of realizations
-        :returns: A maps of dtype loss_maps_dt
+        :param assets:
+            a list of assets
+        :param getter:
+            a :class:`openquake.risklib.riskinput.LossRatiosGetter` instance
+        :param rlzs:
+            a list of realizations
+        :param quantiles:
+            a list of quantiles
+        :returns:
+            aids, loss_maps, loss_maps_stats
         """
         assert self.clp, 'No conditional_loss_poes in the job.ini!'
+        lti = {cb.loss_type: i for i, cb in enumerate(self)}
+        for lt, i in sorted(lti.items()):
+            lti[lt + '_ins'] = i
+        with mon('getting loss ratios'):
+            aids = [asset.ordinal for asset in assets]
+            loss_ratios = getter.get_all(aids)
+        losses = {}
+        for cb in self.cbs:
+            losses[cb.loss_type] = [asset.value(cb.loss_type) * cb.ratios
+                                    for asset in assets]
+            losses[cb.loss_type + '_ins'] = losses[cb.loss_type]
+        all_poes = self.build_all_poes(aids, loss_ratios, rlzs)
+        loss_maps = self._build_maps(losses, all_poes)
+        if len(rlzs) > 1:
+            weights = [rlz.weight for rlz in rlzs]
+            stat_poes = compute_stats2(all_poes, quantiles, weights)
+            loss_maps_stats = self._build_maps(losses, stat_poes)
+        else:
+            loss_maps_stats = None
+        return aids, loss_maps, loss_maps_stats
+
+    def _build_maps(self, losses, all_poes):
+        loss_maps = numpy.zeros(all_poes.shape, self.loss_maps_dt)
+        for a, poes in enumerate(all_poes):
+            for lt in all_poes.dtype.names:
+                alosses = losses[lt][a]
+                for r, the_poes in enumerate(poes[lt]):
+                    loss_maps[lt][a, r] = tuple(
+                        conditional_loss_ratio(alosses, the_poes, poe)
+                        for poe in self.clp)
+        return loss_maps
+
+    def build_all_poes(self, aids, loss_ratios, rlzs):
+        """"
+        :param aids:
+            a list of asset IDs
+        :param loss_ratios:
+            a list of loss ratios
+        :param rlzs:
+            a list of realizations
+        :yields:
+            a matrix of shape (A, R) of PoEs
+        """
         L = len(self.cbs)
         LI = L * self.I
-        loss_maps = numpy.zeros((len(assets), len(rlzs)), self.loss_maps_dt)
-        aids = []
-        for a, asset in enumerate(assets):
-            aids.append(asset.ordinal)
+        poes = numpy.zeros((len(aids), len(rlzs)), self.dt)
+        for a, aid in enumerate(aids):
             dic = group_array(loss_ratios[a], 'rlzi')
-            for cb in self.cbs:
-                losses = asset.value(cb.loss_type) * cb.ratios
-                for rlz in rlzs:
-                    r = rlz.ordinal
-                    try:
-                        ratios = dic[r]['ratios'].reshape(-1, LI)
-                    except KeyError:
-                        continue  # no ratios for the given realization
+            for rlz in rlzs:
+                r = rlz.ordinal
+                try:
+                    ratios = dic[r]['ratios'].reshape(-1, LI)
+                except KeyError:
+                    continue  # no ratios for the given realization
+                for cb in self.cbs:
                     for i in range(self.I):
-                        lrs = ratios[:, cb.index + L * i]
+                        lt = cb.index + L * i
+                        lrs = ratios[:, lt]
                         counts = numpy.array([(lrs >= ratio).sum()
                                               for ratio in cb.ratios], F32)
-                        poes = 1. - numpy.exp(- counts * cb.ses_ratio)
-                        loss_maps[cb.loss_type + '_ins' * i][a, r] = tuple(
-                            conditional_loss_ratio(losses, poes, poe)
-                            for poe in self.clp)
-        return dict(zip(aids, loss_maps))
+                        poes[a, r][lt] = 1. - numpy.exp(-counts * cb.ses_ratio)
+        return poes
 
 
 # should I use the ses_ratio here?
