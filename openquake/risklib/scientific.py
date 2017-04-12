@@ -952,7 +952,11 @@ class LossTypeCurveBuilder(object):
 
 class CurveBuilder(object):
     """
-    Build curves for all loss types at the same time
+    Build curves for all loss types at the same time.
+
+    :param cbs: a list of :class:`LossTypeCurveBuilder` instances
+    :param insured_losses: insured losses flag from the job.ini
+    :param conditional_loss_poes: list of PoEs from the job.ini
     """
     def __init__(self, cbs, insured_losses, conditional_loss_poes=()):
         self.cbs = cbs
@@ -978,7 +982,7 @@ class CurveBuilder(object):
     def build_curves(self, assets, loss_ratios, rlzi):
         """"
         :param assets: a list of assets
-        :param counts: a list of dictionaries rlzi -> loss ratios
+        :param loss_ratios: a list of dictionaries rlzi -> loss ratios
         :param rlzi: a realization index
         :returns: A curves of dtype loss_curve_dt
         """
@@ -1007,10 +1011,14 @@ class CurveBuilder(object):
 
     def build_maps(self, assets, getter, rlzs, mon):
         """"
-        :param assets: a list of assets
-        :param getter: a LossRatiosGetter instance
-        :param rlzs: a list of realizations
-        :returns: aids and maps
+        :param assets:
+            a list of assets
+        :param getter:
+            a :class:`openquake.risklib.riskinput.LossRatiosGetter` instance
+        :param rlzs:
+            a list of realizations
+        :returns:
+            aids and maps
         """
         assert self.clp, 'No conditional_loss_poes in the job.ini!'
         L = len(self.cbs)
