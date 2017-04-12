@@ -312,10 +312,10 @@ class CompositeRiskModel(collections.Mapping):
         self.init(oqparam)
 
     def init(self, oqparam):
-        self.loss_types = []
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
-        self.loss_types = self.make_curve_builder(oqparam)
+        self.curve_builder = self.make_curve_builder(oqparam)
+        self.loss_types = [cb.loss_type for cb in self.curve_builder]
         expected_loss_types = set(self.loss_types)
         taxonomies = set()
         for taxonomy, riskmodel in self._riskmodels.items():
@@ -340,9 +340,7 @@ class CompositeRiskModel(collections.Mapping):
         return {imt: min(iml[imt]) for imt in iml}
 
     def make_curve_builder(self, oqparam):
-        """
-        Populate the inner lists .loss_types, .curve_builder.
-        """
+        # NB: populate the inner lists .loss_types too
         cbs = []
         default_loss_ratios = numpy.linspace(
             0, 1, oqparam.loss_curve_resolution + 1)[1:]
@@ -380,9 +378,8 @@ class CompositeRiskModel(collections.Mapping):
             cbs.append(cb)
             cb.index = l
             self.lti[loss_type] = l
-        self.curve_builder = scientific.CurveBuilder(
+        return scientific.CurveBuilder(
             cbs, oqparam.insured_losses, oqparam.conditional_loss_poes)
-        return loss_types
 
     def get_loss_ratios(self):
         """
@@ -805,9 +802,11 @@ class LossRatiosGetter(object):
     """
     Read loss ratios from the datastore for all realizations or for a specific
     realization.
+
+    :param dstore: a DataStore instance
     """
-    def __init__(self, all_loss_ratios_dset):
-        self.dset = all_loss_ratios_dset
+    def __init__(self, dstore):
+        self.dstore = dstore
 
     def get(self, aids, rlzi=None):
         """
@@ -830,10 +829,11 @@ class LossRatiosGetter(object):
         :param aids: a list of A asset ordinals
         :returns: a list of A composite arrays of dtype `lrs_dt`
         """
-        data = self.dset['all_loss_ratios/data']
-        indices = self.dset['all_loss_ratios/indices'][aids]  # (A, T, 2)
-        arrays = []
-        for aid, idxs in zip(aids, indices):
-            arr = numpy.concatenate([data[idx[0]: idx[1]] for idx in idxs])
-            arrays.append(arr)
-        return arrays
+        with self.dstore as ds:
+            data = ds['all_loss_ratios/data']
+            indices = ds['all_loss_ratios/indices'][aids]  # (A, T, 2)
+            loss_ratio_data = []
+            for aid, idxs in zip(aids, indices):
+                arr = numpy.concatenate([data[idx[0]: idx[1]] for idx in idxs])
+                loss_ratio_data.append(arr)
+        return loss_ratio_data
