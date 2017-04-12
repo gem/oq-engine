@@ -966,11 +966,12 @@ class CurveBuilder(object):
                        for cb in cbs if cb.user_provided}
         self.loss_curve_dt, self.loss_maps_dt = build_loss_dtypes(
             loss_ratios, conditional_loss_poes, insured_losses)
-        dtlist = [(cb.loss_type, (F32, len(cb.ratios)))
-                  for cb in cbs]
-        if insured_losses:
-            for cb in cbs:
-                dtlist.append((cb.loss_type + '_ins', (F32, len(cb.ratios))))
+        dtlist = []
+        for i in range(self.I):
+            for cb in self.cbs:
+                lt = cb.loss_type + '_ins' * i
+                lst.append((lt, F32))
+                dtlist.append((lt, (F32, len(cb.ratios))))
         self.dt = numpy.dtype(dtlist)
 
     def __iter__(self):
@@ -1021,15 +1022,40 @@ class CurveBuilder(object):
             aids and maps
         """
         assert self.clp, 'No conditional_loss_poes in the job.ini!'
-        L = len(self.cbs)
-        LI = L * self.I
+        lti = {cb.loss_type: i for i, cb in enumerate(self)}
+        for lt, i in sorted(lti.items()):
+            lti[lt + '_ins'] = i
         loss_maps = numpy.zeros((len(assets), len(rlzs)), self.loss_maps_dt)
         with mon('getting loss ratios'):
             aids = [asset.ordinal for asset in assets]
             loss_ratios = getter.get_all(aids)
-        for a, asset in enumerate(assets):
+        losses = [[asset.value(cb.loss_type) * cb.ratios for cb in self]
+                  for asset in assets]
+        for a, poes in enumerate(self.build_poes(aids, loss_ratios, rlzs)):
+            for lt in poes.dtype.names:
+                alosses = losses[a][lti[lt]]
+                for r, the_poes in enumerate(poes[lt]):
+                    loss_maps[lt][a, r] = tuple(
+                        conditional_loss_ratio(alosses, the_poes, poe)
+                        for poe in self.clp)
+        return aids, loss_maps
+
+    def build_poes(self, aids, loss_ratios, rlzs):
+        """"
+        :param aids:
+            a list of asset IDs
+        :param loss_ratios:
+            a list of loss ratios
+        :param rlzs:
+            a list of realizations
+        :yields:
+            quartet (lt, a, r, poes)
+        """
+        L = len(self.cbs)
+        LI = L * self.I
+        for a, aid in enumerate(aids):
             dic = group_array(loss_ratios[a], 'rlzi')
-            losses = [asset.value(cb.loss_type) * cb.ratios for cb in self]
+            poes = numpy.zeros(len(rlzs), self.dt)
             for rlz in rlzs:
                 r = rlz.ordinal
                 try:
@@ -1038,14 +1064,12 @@ class CurveBuilder(object):
                     continue  # no ratios for the given realization
                 for cb in self.cbs:
                     for i in range(self.I):
-                        lrs = ratios[:, cb.index + L * i]
+                        lt = cb.index + L * i
+                        lrs = ratios[:, lt]
                         counts = numpy.array([(lrs >= ratio).sum()
                                               for ratio in cb.ratios], F32)
-                        poes = 1. - numpy.exp(- counts * cb.ses_ratio)
-                        loss_maps[cb.loss_type + '_ins' * i][a, r] = tuple(
-                            conditional_loss_ratio(losses[cb.index], poes, poe)
-                            for poe in self.clp)
-        return aids, loss_maps
+                        poes[r][lt] = 1. - numpy.exp(- counts * cb.ses_ratio)
+            yield poes
 
 
 # should I use the ses_ratio here?
