@@ -170,14 +170,9 @@ class DataStore(collections.MutableMapping):
 
     def set_parent(self, parent):
         """
-        Give a parent to a datastore and update its .attrs with the parent
-        attributes, which are assumed to be literal strings.
+        Give a parent to a datastore
         """
         self.parent = parent
-        # merge parent attrs into child attrs
-        for name, value in self.parent.hdf5.attrs.items():
-            if name not in self.hdf5.attrs:  # add missing parameter
-                self.hdf5.attrs[name] = value
 
     def set_nbytes(self, key, nbytes=None):
         """
