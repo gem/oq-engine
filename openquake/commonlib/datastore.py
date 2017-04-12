@@ -140,17 +140,21 @@ class DataStore(collections.MutableMapping):
                                  'retrieve the %s' % (len(calc_ids), calc_id))
         else:  # use the given datastore
             self.calc_id = calc_id
+        self.export_dir = export_dir
+        self.params = params
+        self.mode = mode
         self.parent = ()  # can be set later
         self.datadir = datadir
         self.calc_dir = os.path.join(datadir, 'calc_%s' % self.calc_id)
-        self.export_dir = export_dir
         self.hdf5path = self.calc_dir + '.hdf5'
         self.ext5path = self.calc_dir + '.ext5'
-        mode = mode or 'r+' if os.path.exists(self.hdf5path) else 'w'
+        self.open()
+
+    def open(self):
+        mode = self.mode or 'r+' if os.path.exists(self.hdf5path) else 'w'
         self.hdf5 = hdf5.File(self.hdf5path, mode, libver='latest')
-        self.attrs = self.hdf5.attrs
-        for name, value in params:
-            self.attrs[name] = value
+        if self.parent != () and not self.parent.hdf5:
+            self.parent.open()
 
     def ext5(self, mode='r'):
         """
@@ -166,14 +170,9 @@ class DataStore(collections.MutableMapping):
 
     def set_parent(self, parent):
         """
-        Give a parent to a datastore and update its .attrs with the parent
-        attributes, which are assumed to be literal strings.
+        Give a parent to a datastore
         """
         self.parent = parent
-        # merge parent attrs into child attrs
-        for name, value in self.parent.attrs.items():
-            if name not in self.attrs:  # add missing parameter
-                self.attrs[name] = value
 
     def set_nbytes(self, key, nbytes=None):
         """
@@ -290,7 +289,8 @@ class DataStore(collections.MutableMapping):
         """Flush the underlying hdf5 file"""
         if self.parent != ():
             self.parent.flush()
-        self.hdf5.flush()
+        if self.hdf5:  # is open
+            self.hdf5.flush()
 
     def close(self):
         """Close the underlying hdf5 file"""
@@ -300,6 +300,7 @@ class DataStore(collections.MutableMapping):
         if self.hdf5:  # is open
             self.hdf5.flush()
             self.hdf5.close()
+            self.hdf5 = None
 
     def clear(self):
         """Remove the datastore from the file system"""
@@ -368,10 +369,20 @@ class DataStore(collections.MutableMapping):
         del self.hdf5[key]
 
     def __enter__(self):
+        self.open()
         return self
 
     def __exit__(self, etype, exc, tb):
         self.close()
+
+    def __getstate__(self):
+        # make the datastore pickleable
+        return dict(export_dir=self.export_dir,
+                    mode='r',
+                    parent=self.parent,
+                    calc_id=self.calc_id,
+                    hdf5=None,
+                    hdf5path=self.hdf5path)
 
     def __iter__(self):
         if not self.hdf5:
@@ -387,15 +398,6 @@ class DataStore(collections.MutableMapping):
 
     def __repr__(self):
         return '<%s %d>' % (self.__class__.__name__, self.calc_id)
-
-
-class Fake(dict):
-    """
-    A fake datastore as a dict subclass, useful in tests and such
-    """
-    def __init__(self, attrs=None, **kwargs):
-        self.attrs = {k: repr(v) for k, v in attrs.items()} if attrs else {}
-        self.update(kwargs)
 
 
 def persistent_attribute(key):
