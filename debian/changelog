@@ -1,7 +1,7 @@
   [Michele Simionato]
-  * The loss curves are now computed on the fly for a given point or asset
-    even for the event based risk calculator; removed the .ext5 file for
-    the loss ratios
+  * The loss curves are now computed on the fly for a given asset
+    even for the event based risk calculator. The loss ratios are now stored
+    in the datastore and not in an external .hdf5 file.
   * Changed the CSV exporter for the loss curves: now it exports all the
     curves for a given site for the classical_risk calculator
   * Fixed the save_ruptures procedure when there are more than 256
