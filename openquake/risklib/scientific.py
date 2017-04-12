@@ -1302,18 +1302,6 @@ def mean_std(fractions):
     return numpy.mean(fractions, axis=0), numpy.std(fractions, axis=0, ddof=1)
 
 
-def loss_map_matrix(poes, curves):
-    """
-    Wrapper around :func:`openquake.risklib.scientific.conditional_loss_ratio`.
-    Return a matrix of shape (num-poes, num-curves). The curves are lists of
-    pairs (loss_ratios, poes).
-    """
-    return numpy.array(
-        [[conditional_loss_ratio(curve[0], curve[1], poe)
-          for curve in curves] for poe in poes]
-    ).reshape((len(poes), len(curves)))
-
-
 def loss_maps(curves, conditional_loss_poes):
     """
     :param curves: an array of loss curves
