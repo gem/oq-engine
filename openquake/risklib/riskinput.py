@@ -512,11 +512,10 @@ class PoeGetter(object):
         """
         rlzs = self.rlzs_by_gsim[gsim]
         out = [{} for _ in rlzs]
-        for gsim in self.rlzs_by_gsim:
-            for r, rlz in enumerate(rlzs):
-                for sid, haz in enumerate(self.hazard_by_site):
-                    for imti, imt in enumerate(self.imts):
-                        out[r][sid, imti] = haz[imt][rlz]
+        for r, rlz in enumerate(rlzs):
+            for sid, haz in enumerate(self.hazard_by_site):
+                for imti, imt in enumerate(self.imts):
+                    out[r][sid, imti] = haz[imt][rlz]
         return out
 
 
