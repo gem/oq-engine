@@ -27,6 +27,7 @@ Nick Ackerley           December 2015
 Trevor Allen            July 2016
 Jonathan Griffin        October 2016
 Ozkan Kale              October 2016
+Valerio Poggi           March 2017
 
 Research
 --------
@@ -40,3 +41,4 @@ Julio Garcia            March 2014
 Robin Gee               September 2015
 Silvia Canessa          December 2015
 Nick Ackerley           December 2015
+Valerio Poggi           March 2017

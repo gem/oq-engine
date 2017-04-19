@@ -1,3 +1,6 @@
+  [Abhineet Gupta, Anirudh Rao]
+  * Implements the Shahjouei & Pezeshk (2016) GMPE
+  
   [Michele Simionato]
   * Merged the Hazard Modeller Toolkit inside oq-hazardlib
   * Experimental support for the Grid Engine
