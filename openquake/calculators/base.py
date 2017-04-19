@@ -544,7 +544,7 @@ class HazardCalculator(BaseCalculator):
             if self.datastore.parent:
                 haz_sitecol = self.datastore.parent['sitecol']
             if haz_sitecol is not None and haz_sitecol != self.sitecol:
-                with self.monitor('assoc_assets_sites'):
+                with self.monitor('assoc_assets_sites', autoflush=True):
                     self.sitecol, self.assetcol = \
                         self.assoc_assets_sites(haz_sitecol.complete)
                 ok_assets = self.count_assets()
