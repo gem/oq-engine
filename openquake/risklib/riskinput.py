@@ -490,28 +490,25 @@ class PoeGetter(object):
     def __init__(self, grp_id, rlzs_by_gsim, hazards_by_rlz, sids, imts):
         self.grp_id = grp_id
         self.rlzs_by_gsim = rlzs_by_gsim
-        self.hazard_by_site = [{imt: {} for imt in imts} for _ in sids]
+        self.sids = sids
         self.imts = imts
-
-        # collect the hazards into a list of dicts imt -> rlz
-        for rlz, hazards_by_imt in hazards_by_rlz.items():
-            for imt in imts:
-                hazards_by_site = hazards_by_imt[imt]
-                for i, haz in enumerate(hazards_by_site[sids]):
-                    self.hazard_by_site[i][imt][rlz] = haz
+        self.data = {}
+        for gsim in rlzs_by_gsim:
+            rlzs = self.rlzs_by_gsim[gsim]
+            self.data[gsim] = d = [{} for _ in rlzs]
+            for r, rlz in enumerate(rlzs):
+                hazards_by_imt = hazards_by_rlz[rlz]
+                for imti, imt in enumerate(self.imts):
+                    hazard_by_site = hazards_by_imt[imt][self.sids]
+                    for idx, haz in enumerate(hazard_by_site):
+                        d[r][idx, imti] = haz
 
     def get_hazard(self, gsim):
         """
         :param gsim: a GSIM instance
         :returns: a list of dictionaries (num_sites, num_imts)
         """
-        rlzs = self.rlzs_by_gsim[gsim]
-        out = [{} for _ in rlzs]
-        for r, rlz in enumerate(rlzs):
-            for sid, haz in enumerate(self.hazard_by_site):
-                for imti, imt in enumerate(self.imts):
-                    out[r][sid, imti] = haz[imt][rlz]
-        return out
+        return self.data[gsim]
 
 
 gmv_dt = numpy.dtype([('sid', U32), ('eid', U64), ('imti', U8), ('gmv', F32)])
