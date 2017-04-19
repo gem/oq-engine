@@ -41,7 +41,7 @@ fi
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-hazardlib"
-GEM_DEPENDS="oq-libs|deb oq-libs-extra|deb"
+GEM_DEPENDS="oq-libs|deb oq-libs-extra|deb|sub"
 GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
@@ -615,6 +615,11 @@ devtest_run () {
     for dep_item in $GEM_DEPENDS; do
         dep="$(echo "$dep_item" | cut -d '|' -f 1)"
         dep_type="$(echo "$dep_item" | cut -d '|' -f 2)"
+        # if the deb is a subpackage we skip source check
+        dep_subtype="$(echo "$dep_item" | cut -d '|' -f 3)"
+        if [ "$dep_subtype" == "sub" ]; then
+            continue
+        fi
         found=0
         branch_cur="$branch"
         for repo in $repos; do
